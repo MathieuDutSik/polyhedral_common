@@ -24,6 +24,15 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   const bool use_scheme = false;
   std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
   Tgroup GRP = pair.first;
+  std::vector<Telt> l_elt = GRP.get_all_element();
+  std::set<Telt> s_elt;
+  for (auto & e_elt : l_elt) {
+    for (auto & f_elt : pair.second) {
+      Telt prod = f_elt * e_elt;
+      s_elt.insert(prod);
+    }
+  }
+  
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
     return;
