@@ -632,7 +632,6 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   return {};
 }
 
-
 template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
           typename Tgr, bool use_scheme>
 Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT, std::ostream& os) {
@@ -641,6 +640,18 @@ Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT, std::ostream&
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
   Tgroup GRP = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
   return GRP;
+}
+
+template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
+          typename Tgr, bool use_scheme>
+std::pair<Tgroup,std::vector<typename Tgroup::Telt>>
+LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT, std::ostream& os) {
+  using Tfield = typename overlying_field<Tint>::field_type;
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
+  std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+  return pair;
 }
 
 
