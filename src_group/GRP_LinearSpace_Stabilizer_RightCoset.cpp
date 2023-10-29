@@ -53,9 +53,12 @@ int main(int argc, char *argv[]) {
     GeneralMatrixGroupHelper<T, Telt> helper{n};
     std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pair = 
       LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGen, helper, eLatt, std::cerr);
+    CosetDescription<T> coset = pair.second;
+    CosetDescription<T>::iterator iter = coset.begin();
     std::vector<MyMatrix<T>> RightCoset;
-    for (auto & eMatr : pair.second) {
-      RightCoset.push_back(eMatr);
+    while (iter != coset.end()) {
+      RightCoset.push_back(*iter);
+      iter++;
     }
     //
     std::ofstream os(OUT_file);

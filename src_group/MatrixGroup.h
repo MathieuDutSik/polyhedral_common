@@ -158,7 +158,7 @@ struct CosetIterator {
   std::vector<Telt> ListRes;
   std::vector<size_t> ListLen;
   std::vector<size_t> ListPos;
-  CosetIterator(Telt const& _id, std::vector<std::vector<Telt>> const& _ListListCoset) : id(_id), len(ListListCoset.size()), ListListCoset(_ListListCoset) {
+  CosetIterator(Telt const& _id, std::vector<std::vector<Telt>> const& _ListListCoset) : id(_id), len(_ListListCoset.size()), ListListCoset(_ListListCoset) {
     for (auto & eListCoset : ListListCoset) {
       ListLen.push_back(eListCoset.size());
       ListPos.push_back(0);
@@ -194,7 +194,7 @@ struct CosetIterator {
     (void)increment();
     return tmp;
   }
-  const Telt &operator*() const { return evaluate(); }
+  Telt operator*() const { return evaluate(); }
   bool operator==(const CosetIterator<Telt> &x) const {
     if (len != x.len)
       return false;
@@ -1430,7 +1430,7 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
 
 
 template <typename T, typename Tgroup, typename Thelper>
-std::vector<std::vector<MyMatrix<T>>,CosetDescription<T>>
+std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>>
 LinearSpace_Stabilizer_RightCoset_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
                                          Thelper const &helper,
                                          MyMatrix<T> const &TheSpace,
@@ -1439,7 +1439,7 @@ LinearSpace_Stabilizer_RightCoset_Kernel(std::vector<MyMatrix<T>> const &ListMat
   int n = helper.n;
   CosetDescription<T> coset(n);
   auto f_stab=[&](Treturn const& eret, Tgroup const& GRP, Face const& eFace) -> std::vector<MyMatrix<T>> {
-    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRP, helper, eFace, os);
+    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair = MatrixIntegral_Stabilizer_RightCoset<T, Tgroup, Thelper>(eret, GRP, helper, eFace, os);
     coset.insert(pair.second);
     return pair.first;
   };
@@ -1502,7 +1502,7 @@ LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
   if (ListMatr_C.size() == 0) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
-  CosetDescription<T> & coset = pairB.second;
+  CosetDescription<T> coset = pairB.second;
   coset.conjugate(Pmat_T);
   return {ListMatr_C, coset};
 }
