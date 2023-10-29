@@ -1911,6 +1911,47 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(std::vector<
   return ListMatrGensB;
 }
 
+template <typename T, typename Tgroup>
+std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful, std::ostream& os) {
+  static_assert(
+      is_ring_field<T>::value,
+      "Requires T to be a field in LinPolytopeIntegral_Automorphism_Subspaces");
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
+  MyMatrix<T> InvBasis = Inverse(eBasis);
+  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  std::vector<MyMatrix<T>> ListMatrGens;
+  for (auto &eGen : ListMatr) {
+    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrGens.push_back(NewGen);
+  }
+  FiniteMatrixGroupHelper<T, Telt> helper =
+      ComputeFiniteMatrixGroupHelper<T, Telt>(EXTbas);
+  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+
+  std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> pair =
+    LinearSpace_Stabilizer<T, Tgroup>(ListMatrGens, helper, LattToStab, os);
+  std::vector<MyMatrix<T>> ListMatrGensB;
+  for (auto &eGen : pair.first) {
+    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrGensB.push_back(NewGen);
+  }
+  pair.second.conjugate(eBasis);
+  return {std::move(ListMatrGensB), pair.second};
+}
+
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,

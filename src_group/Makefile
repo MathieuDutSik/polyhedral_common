@@ -11,7 +11,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
                   GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect GRP_LinearSpace_Stabilizer_RightCoset \
 		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat \
-		  POLY_IsomorphismReduction
+		  GRP_IsomorphismReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
