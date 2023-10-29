@@ -1915,7 +1915,7 @@ template <typename T, typename Tgroup>
 std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful, std::ostream& os) {
   static_assert(
       is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Automorphism_Subspaces");
+      "Requires T to be a field in LinPolytopeIntegral_Automorphism_RightCoset_Subspaces");
   using Telt = typename Tgroup::Telt;
   MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
   MyMatrix<T> InvBasis = Inverse(eBasis);
@@ -2013,6 +2013,35 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
   for (auto &eMatr : ListMatr)
     ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os));
   return Tgroup(ListPermGens, nbVert);
+}
+
+template <typename T, typename Tgroup>
+std::pair<Tgroup,std::vector<typename Tgroup::Telt>>
+LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T, Tgroup const &GRPisom, std::ostream& os) {
+  static_assert(
+      is_ring_field<T>::value,
+      "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method8");
+  using Telt = typename Tgroup::Telt;
+  int nbVert = EXT_T.rows();
+  std::vector<MyMatrix<T>> ListMatrGen;
+  for (auto &eGen : GRPisom.GeneratorsOfGroup()) {
+    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
+    ListMatrGen.push_back(eMat);
+  }
+  using Thelper = FiniteMatrixGroupHelper<T, Telt>;
+  Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt>(EXT_T);
+  std::pair<std::vector<MyMatrix<T>>,CosetDescription<T>> pair =
+    LinPolytopeIntegral_Automorphism_RightCoset_Subspaces<T, Tgroup>(ListMatrGen, EXT_T, os);
+  std::vector<Telt> ListPermGens;
+  for (auto &eMatr : pair.first)
+    ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os));
+  Tgroup GRPret(ListPermGens, nbVert);
+  std::vector<Telt> RightCoset;
+  for (auto eMatr : pair.second) {
+    Telt eRepr = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
+    RightCoset.push_back(eRepr);
+  }
+  return {GRPret, std::move(RightCoset)};
 }
 
 template <typename T, typename Tgroup>
