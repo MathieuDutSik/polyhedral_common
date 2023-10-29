@@ -13,6 +13,7 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tidx_value = uint32_t;
+  using Tfield = typename overlying_field<Tint>::field_type;
   //    using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
@@ -23,16 +24,26 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   //    const bool use_scheme = true;
   const bool use_scheme = false;
   std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
+  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
   Tgroup GRP = pair.first;
   std::vector<Telt> l_elt = GRP.get_all_element();
   std::set<Telt> s_elt;
   for (auto & e_elt : l_elt) {
     for (auto & f_elt : pair.second) {
       Telt prod = f_elt * e_elt;
+      if (!GRPisom.isin(prod)) {
+        std::cerr << "The element is not in the product\n";
+        throw TerminalException{1};
+      }
       s_elt.insert(prod);
     }
   }
-  
+  Tint s_elt_size = s_elt.size();
+  if (s_elt_size != GRPisom.size()) {
+    std::cerr << "s_elt has the wrong size\n";
+    throw TerminalException{1};
+  }
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
     return;
