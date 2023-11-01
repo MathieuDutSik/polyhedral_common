@@ -136,10 +136,26 @@ int main(int argc, char *argv[]) {
     //
     std::cout << nbVect << "\n";
     for (i = 0; i < nbVect; i++) {
+      MyVector<Tint> const& V = info.short_vectors[i];
       std::cout << "[ unset ]: ";
       for (int iCol = 0; iCol < dim; iCol++)
-        std::cout << " " << info.short_vectors[i](iCol);
+        std::cout << " " << V(iCol);
       std::cout << "\n";
+#ifdef CHECK_SHVEC
+      MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+      if (coset && NeedBound) {
+        T eNorm(0);
+        for (int i=0; i<dim; i++) {
+          for (int j=0; j<dim; j++) {
+            eNorm += (V_T(i) + cosetVect(i)) * (V_T(j) + cosetVect(j)) * gram_matrix(i,j);
+          }
+        }
+        if (eNorm > bound) {
+          std::cerr << "eNorm=" << eNorm << " bound=" << bound << "\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

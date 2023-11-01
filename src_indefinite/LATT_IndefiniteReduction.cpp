@@ -12,9 +12,9 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 4 && argc != 2) {
-      std::cerr << "IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "IndefiniteReduction [FileI]\n";
+      std::cerr << "LATT_IndefiniteReduction [FileI]\n";
       std::cerr << "or\n";
       std::cerr << "FileI     : The input file\n";
       std::cerr << "OutFormat : Possible values, GAP and Oscar (if missing, then GAP)\n";

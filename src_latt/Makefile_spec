@@ -2,8 +2,8 @@
 #PROGRAM		= LATT_cannspanset
 #PROGRAM		= LATT_spanset
 #PROGRAM		= LATT_getMatrixScalProd
-#PROGRAM		= sv_exact
-PROGRAM		= sv_near
+PROGRAM		= sv_exact
+#PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 
@@ -21,16 +21,19 @@ CC		= g++ -std=c++17 -Wall -O3
 #CC              = g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
 #CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
 
-NOLINKFLAG 	= -c -DDEBUG_TIME
+NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I.
+COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
+#COPTIONS        =
+
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
 CFLAGS 		= -I$(GMP_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP)
+CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK)
 
 %.o: %.cpp

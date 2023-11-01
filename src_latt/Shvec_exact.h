@@ -10,9 +10,14 @@
 #include <vector>
 // clang-format on
 
-#define CHECK_BASIC_CONSISTENCY
-// #define PRINT_DEBUG_INFO
-// #define PRINT_DEBUG_INFO_VECTOR
+#ifdef CHECK
+#define CHECK_SHVEC
+#endif
+
+#ifdef DEBUG
+#define DEBUG_SHVEC
+#define DEBUG_SHVEC_VECTOR
+#endif
 
 namespace TempShvec_globals {
 const int TEMP_SHVEC_MODE_UNDEF = -1;
@@ -113,7 +118,7 @@ ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
 // We return floor(sqrt(A) + epsilon + B)
 template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
-#ifdef CHECK_BASIC_CONSISTENCY
+#ifdef CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Floor_V1\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -132,7 +137,7 @@ template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
 
 template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
-#ifdef CHECK_BASIC_CONSISTENCY
+#ifdef CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Ceil_V1\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -156,7 +161,7 @@ template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
 // And so to (n-b)^2 <= a
 template <typename T, typename Tint>
 Tint Infinitesimal_Floor(T const &a, T const &b) {
-#ifdef CHECK_BASIC_CONSISTENCY
+#ifdef CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Floor\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -198,7 +203,7 @@ Tint Infinitesimal_Floor(T const &a, T const &b) {
 // And so to (n-b)^2 <= a (and opposite for n-1)
 template <typename T, typename Tint>
 Tint Infinitesimal_Ceil(T const &a, T const &b) {
-#ifdef CHECK_BASIC_CONSISTENCY
+#ifdef CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Ceil\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -245,10 +250,10 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
   MyVector<Tint> x(dim);
-#if defined CHECK_BASIC_CONSISTENCY || defined PRINT_DEBUG_INFO
+#if defined CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "g=\n";
   for (i = 0; i < dim; i++) {
     for (j = 0; j < dim; j++)
@@ -265,7 +270,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
     for (int i2 = i + 1; i2 < dim; i2++)
       for (int j2 = i + 1; j2 < dim; j2++)
         q(i2, j2) -= q(i, i) * q(i, i2) * q(i, j2);
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
     std::cerr << "diag q=" << q(i, i) << "\n";
     for (int j = i + 1; j < dim; j++)
       std::cerr << "   j=" << j << " q=" << q(i, j) << "\n";
@@ -280,10 +285,10 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   }
   Trem(i) = bound;
   U(i) = 0;
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "Before while loop\n";
 #endif
-#ifdef PRINT_DEBUG_INFO_VECTOR
+#ifdef DEBUG_SHVEC_VECTOR
   size_t n_vector = 0;
 #endif
   T eQuot, eSum, hVal, eNorm;
@@ -306,7 +311,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
             j--;
           }
           if (!not_finished) {
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
             std::cerr << "Exiting because x=0 and central run\n";
 #endif
             return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
@@ -314,7 +319,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
         }
         hVal = x(0) + C(0) + U(0);
         eNorm = bound - Trem(0) + q(0, 0) * hVal * hVal;
-#ifdef CHECK_BASIC_CONSISTENCY
+#ifdef CHECK_SHVEC
         T norm = 0;
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
@@ -339,7 +344,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
           throw TerminalException{1};
         }
 #endif
-#ifdef PRINT_DEBUG_INFO_VECTOR
+#ifdef DEBUG_SHVEC_VECTOR
         std::cerr << "n_vector=" << n_vector;
         std::cerr << " x=";
         for (int i = 0; i < dim; i++)
@@ -372,7 +377,7 @@ template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<is_ring_field<T>::value, int>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "computeIt (field case)\n";
 #endif
   return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
@@ -383,7 +388,7 @@ template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<!is_ring_field<T>::value, int>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "computeIt (ring case)\n";
 #endif
   using Tfield = typename overlying_field<T>::field_type;
@@ -405,7 +410,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
   int retVal =
       computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(
           request_field, bound_field, f_insert_field, f_set_bound);
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "computeIt (ring case) exit\n";
 #endif
   return retVal;
@@ -443,7 +448,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
   std::cerr << "computeMinimum, begin\n";
 #endif
   int i, j;
@@ -467,7 +472,7 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
   T_shvec_info<T, Tint> info;
   info.minimum = get_minimum_atp();
   while (true) {
-#ifdef PRINT_DEBUG_INFO
+#ifdef DEBUG_SHVEC
     std::cerr << "Before computeIt (in computeMinimum while loop)\n";
 #endif
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
