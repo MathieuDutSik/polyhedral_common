@@ -155,10 +155,11 @@ struct CosetIterator {
   Telt id;
   size_t len;
   std::vector<std::vector<Telt>> ListListCoset;
+  bool is_end;
   std::vector<Telt> ListRes;
   std::vector<size_t> ListLen;
   std::vector<size_t> ListPos;
-  CosetIterator(Telt const& _id, std::vector<std::vector<Telt>> const& _ListListCoset) : id(_id), len(_ListListCoset.size()), ListListCoset(_ListListCoset) {
+  CosetIterator(Telt const& _id, std::vector<std::vector<Telt>> const& _ListListCoset, bool const& _is_end) : id(_id), len(_ListListCoset.size()), ListListCoset(_ListListCoset), is_end(_is_end) {
     for (auto & eListCoset : ListListCoset) {
       ListLen.push_back(eListCoset.size());
       ListPos.push_back(0);
@@ -166,7 +167,7 @@ struct CosetIterator {
     }
   }
   Telt evaluate() const {
-    Telt x;
+    Telt x = id;
     for (size_t u=0; u<ListPos.size(); u++) {
       x *= ListListCoset[u][ListPos[u]];
     }
@@ -181,8 +182,7 @@ struct CosetIterator {
         return true;
       }
     }
-    len = 0;
-    ListPos.clear();
+    is_end = true;
     return false;
   }
   CosetIterator &operator++() {
@@ -196,20 +196,24 @@ struct CosetIterator {
   }
   Telt operator*() const { return evaluate(); }
   bool operator==(const CosetIterator<Telt> &x) const {
-    if (len != x.len)
+    if (is_end != x.is_end)
       return false;
-    for (size_t u=0; u<len; u++) {
-      if (ListPos[u] != x.ListPos[u])
-        return false;
+    if (!is_end) {
+      for (size_t u=0; u<len; u++) {
+        if (ListPos[u] != x.ListPos[u])
+          return false;
+      }
     }
     return true;
   }
   bool operator!=(const CosetIterator<Telt> &x) const {
-    if (len != x.len)
+    if (is_end != x.is_end)
       return true;
-    for (size_t u=0; u<len; u++) {
-      if (ListPos[u] != x.ListPos[u])
-        return true;
+    if (!is_end) {
+      for (size_t u=0; u<len; u++) {
+        if (ListPos[u] != x.ListPos[u])
+          return true;
+      }
     }
     return false;
   }
@@ -241,10 +245,10 @@ struct CosetDescription {
     }
   }
   iterator get_begin() const {
-    return CosetIterator(IdentityMat<T>(n), ListListCoset);
+    return CosetIterator(IdentityMat<T>(n), ListListCoset, false);
   }
   iterator get_end() const {
-    return CosetIterator(IdentityMat<T>(n), {});
+    return CosetIterator(IdentityMat<T>(n), {}, true);
   }
   const_iterator cbegin() const { return get_begin(); }
   const_iterator cend() const { return get_end(); }
