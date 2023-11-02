@@ -26,6 +26,7 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
+  std::cerr << "|GRPisom|=" << GRPisom.size() << " |pair.first|=" << pair.first.size() << " |pair.second|=" << pair.second.size() << "\n";
   Tgroup GRP = pair.first;
   std::vector<Telt> l_elt = GRP.get_all_element();
   std::set<Telt> s_elt;
@@ -41,24 +42,30 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   }
   Tint s_elt_size = s_elt.size();
   if (s_elt_size != GRPisom.size()) {
+    std::cerr << "|s_elt|=" << s_elt.size() << " |GRPisom|=" << GRPisom.size() << "\n";
     std::cerr << "s_elt has the wrong size\n";
     throw TerminalException{1};
   }
-  if (OutFormat == "GAP") {
-    os << "return " << GRP.GapString() << ";\n";
-    return;
-  }
-  if (OutFormat == "RecGAP") {
+  auto get_as_string=[&](std::vector<Telt> const& l_elt) -> std::string {
     std::string strGAPmatr = "[";
     bool IsFirst = true;
-    for (auto & eGen : GRP.GeneratorsOfGroup()) {
-      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eGen);
+    for (auto & eElt : l_elt) {
+      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eElt);
       if (!IsFirst)
         strGAPmatr += ",";
       strGAPmatr += StringMatrixGAP(M);
     }
     strGAPmatr += "]";
-    os << "return rec(GAPperm:=" << GRP.GapString() << ", GAPmatr:=" << strGAPmatr << ");";
+    return strGAPmatr;
+  };
+  if (OutFormat == "GAP") {
+    os << "return " << GRP.GapString() << ";\n";
+    return;
+  }
+  if (OutFormat == "RecGAP") {
+    std::string strGAPgroup = "Group(" + get_as_string(GRP.GeneratorsOfGroup()) + ")";
+    std::string strCoset = get_as_string(pair.second);
+    os << "return rec(GAPperm:=" << GRP.GapString() << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
     return;
   }
   if (OutFormat == "Oscar") {
