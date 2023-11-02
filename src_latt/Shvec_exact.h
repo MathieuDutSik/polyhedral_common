@@ -17,6 +17,7 @@
 #ifdef DEBUG
 #define DEBUG_SHVEC
 #define DEBUG_SHVEC_VECTOR
+#define DEBUG_SHVEC_MATRIX
 #endif
 
 namespace TempShvec_globals {
@@ -75,15 +76,15 @@ ReductionMod1vector(MyVector<T> const &V) {
   Gred = P G P^T
   Q = P^{-1}
   G = Q Gred Q^T
-  looking for G[x - coset] = bound
-  That is (x - coset) Q Gred Q^T (x- coset)^T = bound
-  Or (y - coset_red) Gred (y - coset_red)^T = bound
+  looking for G[x + coset] = bound
+  That is (x + coset) Q Gred Q^T (x + coset)^T = bound
+  Or (y + coset_red) Gred (y + coset_red)^T = bound
   with coset_red = coset Q and y = x Q
   coset_red = V_T + V_i
-  Thus we have if z = y - V_i
-  (z - V_T) Gred (z - v_T)^T = bound
-  So y = z + V_i
-  and x = (z + V_i) P
+  Thus we have if z = y + V_i
+  (z + V_T) Gred (z + v_T)^T = bound
+  So y = z - V_i
+  and x = (z - V_i) P
  */
 template <typename T, typename Tint>
 std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>>
@@ -109,7 +110,7 @@ ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
                           cvp_reduction_info<Tint> const &red_info) {
   std::vector<MyVector<Tint>> short_vectors;
   for (auto &z_vec : info.short_vectors) {
-    MyVector<Tint> x = red_info.P.transpose() * (z_vec + red_info.shift);
+    MyVector<Tint> x = red_info.P.transpose() * (z_vec - red_info.shift);
     short_vectors.emplace_back(std::move(x));
   }
   return {std::move(short_vectors), info.minimum};
@@ -270,7 +271,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
     for (int i2 = i + 1; i2 < dim; i2++)
       for (int j2 = i + 1; j2 < dim; j2++)
         q(i2, j2) -= q(i, i) * q(i, i2) * q(i, j2);
-#ifdef DEBUG_SHVEC
+#ifdef DEBUG_SHVEC_MATRIX
     std::cerr << "diag q=" << q(i, i) << "\n";
     for (int j = i + 1; j < dim; j++)
       std::cerr << "   j=" << j << " q=" << q(i, j) << "\n";

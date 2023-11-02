@@ -134,6 +134,9 @@ int main(int argc, char *argv[]) {
     //
     // Data output
     //
+#ifdef CHECK_SHVEC
+    std::map<T, size_t> map_norm;
+#endif
     std::cout << nbVect << "\n";
     for (i = 0; i < nbVect; i++) {
       MyVector<Tint> const& V = info.short_vectors[i];
@@ -154,9 +157,17 @@ int main(int argc, char *argv[]) {
           std::cerr << "eNorm=" << eNorm << " bound=" << bound << "\n";
           throw TerminalException{1};
         }
+        map_norm[eNorm] += 1;
       }
 #endif
     }
+#ifdef CHECK_SHVEC
+    std::cerr << "map_norm =";
+    for (auto & kv : map_norm) {
+      std::cerr << " (" << kv.first << "," << kv.second << ")";
+    }
+    std::cerr << "\n";
+#endif
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in sv_exact\n";
