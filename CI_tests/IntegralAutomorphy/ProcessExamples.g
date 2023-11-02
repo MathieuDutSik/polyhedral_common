@@ -50,7 +50,7 @@ do
     Print("eFile=", eFile, " |ListEXT|=", Length(ListEXT), "\n");
     for EXT in ListEXT
     do
-#        TestCase_Automorphy(EXT);
+        TestCase_Automorphy(EXT);
         TestCase_Automorphy_RightCoset(EXT);
     od;
 od;

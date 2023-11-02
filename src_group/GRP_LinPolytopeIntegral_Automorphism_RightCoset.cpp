@@ -32,7 +32,7 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   std::set<Telt> s_elt;
   for (auto & e_elt : l_elt) {
     for (auto & f_elt : pair.second) {
-      Telt prod = f_elt * e_elt;
+      Telt prod = e_elt * f_elt;
       if (!GRPisom.isin(prod)) {
         std::cerr << "The element is not in the product\n";
         throw TerminalException{1};

@@ -169,7 +169,8 @@ struct CosetIterator {
   Telt evaluate() const {
     Telt x = id;
     for (size_t u=0; u<ListPos.size(); u++) {
-      x *= ListListCoset[u][ListPos[u]];
+      size_t v = ListPos.size() - 1 - u;
+      x *= ListListCoset[v][ListPos[v]];
     }
     return x;
   }
