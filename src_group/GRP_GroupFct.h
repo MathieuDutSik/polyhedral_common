@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_GRP_GROUPFCT_H_
-#define SRC_POLY_GRP_GROUPFCT_H_
+#ifndef SRC_GROUP_GRP_GROUPFCT_H_
+#define SRC_GROUP_GRP_GROUPFCT_H_
 
 // clang-format off
 #include "Basic_file.h"
@@ -944,5 +944,5 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_GRP_GROUPFCT_H_
+#endif  // SRC_GROUP_GRP_GROUPFCT_H_
 // clang-format on

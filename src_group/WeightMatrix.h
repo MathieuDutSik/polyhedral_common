@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_WEIGHTMATRIX_H_
-#define SRC_POLY_WEIGHTMATRIX_H_
+#ifndef SRC_GROUP_WEIGHTMATRIX_H_
+#define SRC_GROUP_WEIGHTMATRIX_H_
 
 #undef USE_BLISS
 #define USE_TRACES
@@ -1577,5 +1577,5 @@ WeightMatrixFromPairOrbits(Tgroup const &GRP, std::ostream &os) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_WEIGHTMATRIX_H_
+#endif  // SRC_GROUP_WEIGHTMATRIX_H_
 // clang-format on

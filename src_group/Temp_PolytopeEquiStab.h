@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
-#define SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
+#ifndef SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
+#define SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
 
 // clang-format off
 #include "MatrixGroup.h"
@@ -2112,5 +2112,5 @@ MyMatrix<T> LinPolytopeIntegralWMat_Canonic(
 }
 
 // clang-format off
-#endif  // SRC_POLY_TEMP_POLYTOPEEQUISTAB_H_
+#endif  // SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
 // clang-format on

@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_CHECK_BLISS_TRACES_H_
-#define SRC_POLY_CHECK_BLISS_TRACES_H_
+#ifndef SRC_GROUP_CHECK_BLISS_TRACES_H_
+#define SRC_GROUP_CHECK_BLISS_TRACES_H_
 
 // clang-format off
 #include "GRAPH_bliss.h"
@@ -25,5 +25,5 @@ void PrintStabilizerGroupSizes(std::ostream &os, Tgr const &eGR) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_CHECK_BLISS_TRACES_H_
+#endif  // SRC_GROUP_CHECK_BLISS_TRACES_H_
 // clang-format on

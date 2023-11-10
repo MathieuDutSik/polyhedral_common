@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_TESTGROUP_H_
-#define SRC_POLY_TESTGROUP_H_
+#ifndef SRC_GROUP_TESTGROUP_H_
+#define SRC_GROUP_TESTGROUP_H_
 
 // clang-format off
 #include "Group.h"
@@ -249,5 +249,5 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_TESTGROUP_H_
+#endif  // SRC_GROUP_TESTGROUP_H_
 // clang-format on

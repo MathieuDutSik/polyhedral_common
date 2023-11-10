@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_PERMLIB_SPECIFIC_H_
-#define SRC_POLY_PERMLIB_SPECIFIC_H_
+#ifndef SRC_GROUP_PERMLIB_SPECIFIC_H_
+#define SRC_GROUP_PERMLIB_SPECIFIC_H_
 
 // clang-format off
 #include "Boost_bitset.h"
@@ -454,5 +454,5 @@ bool IsSubgroup(TheGroupFormat<Tint> const &g1,
 }
 
 // clang-format off
-#endif  // SRC_POLY_PERMLIB_SPECIFIC_H_
+#endif  // SRC_GROUP_PERMLIB_SPECIFIC_H_
 // clang-format on

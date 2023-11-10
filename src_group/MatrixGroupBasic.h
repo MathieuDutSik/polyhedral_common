@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_MATRIXGROUPBASIC_H_
-#define SRC_POLY_MATRIXGROUPBASIC_H_
+#ifndef SRC_GROUP_MATRIXGROUPBASIC_H_
+#define SRC_GROUP_MATRIXGROUPBASIC_H_
 
 // clang-format off
 #include <vector>
@@ -73,5 +73,5 @@ bool IsSymmetryGroupOfPolytope(MyMatrix<T> const &EXT, Tgroup const &GRP) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_MATRIXGROUPBASIC_H_
+#endif  // SRC_GROUP_MATRIXGROUPBASIC_H_
 // clang-format on

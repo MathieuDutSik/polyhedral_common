@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_MATRIXGROUP_H_
-#define SRC_POLY_MATRIXGROUP_H_
+#ifndef SRC_GROUP_MATRIXGROUP_H_
+#define SRC_GROUP_MATRIXGROUP_H_
 
 // clang-format off
 #include "GRP_GroupFct.h"
@@ -2191,5 +2191,5 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
 }
 
 // clang-format off
-#endif  // SRC_POLY_MATRIXGROUP_H_
+#endif  // SRC_GROUP_MATRIXGROUP_H_
 // clang-format on

@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
-#define SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
+#ifndef SRC_GROUP_WEIGHTMATRIXSPECIFIED_H_
+#define SRC_GROUP_WEIGHTMATRIXSPECIFIED_H_
 
 // The hash map do not seem to make much difference in the overall
 // performance.
@@ -1233,5 +1233,5 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
 }
 
 // clang-format off
-#endif  // SRC_POLY_WEIGHTMATRIXSPECIFIED_H_
+#endif  // SRC_GROUP_WEIGHTMATRIXSPECIFIED_H_
 // clang-format on

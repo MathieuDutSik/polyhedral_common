@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_MATRIXGROUPPLESKEN_H_
-#define SRC_POLY_MATRIXGROUPPLESKEN_H_
+#ifndef SRC_GROUP_MATRIXGROUPPLESKEN_H_
+#define SRC_GROUP_MATRIXGROUPPLESKEN_H_
 
 // This was an attempt at devising a scheme based on Plesken
 // Souvignier kind of algorithms.
@@ -252,5 +252,5 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 }
 
 // clang-format off
-#endif  // SRC_POLY_MATRIXGROUP_H_
+#endif  // SRC_GROUP_MATRIXGROUP_H_
 // clang-format on

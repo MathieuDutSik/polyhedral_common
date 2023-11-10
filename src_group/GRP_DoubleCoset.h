@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_GRP_DOUBLECOSET_H_
-#define SRC_POLY_GRP_DOUBLECOSET_H_
+#ifndef SRC_GROUP_GRP_DOUBLECOSET_H_
+#define SRC_GROUP_GRP_DOUBLECOSET_H_
 
 // clang-format off
 #include "GRP_GroupFct.h"
@@ -783,5 +783,5 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 }
 
 // clang-format off
-#endif  // SRC_POLY_GRP_DOUBLECOSET_H_
+#endif  // SRC_GROUP_GRP_DOUBLECOSET_H_
 // clang-format on
