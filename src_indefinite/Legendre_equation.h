@@ -19,25 +19,8 @@
   https://public.csusm.edu/aitken_html/notes/legendre.pdf
   Refered to as P1 below.
   -
-  
+  Here we just put the test of existence.
  */
-
-
-
-template<typename T>
-MyVector<T> solve_ternary_equation(MyVector<T> const& aV) {
-  MyMatrix<T> RedMatrix = IdentityMat<T>(3);
-  while(true) {
-    
-
-    
-  }
-
-
-
-}
-
-
 
 
 
@@ -176,13 +159,15 @@ std::pair<MyMatrix<T>, MyVector<T>> reduction_information(MyVector<T> const& aV)
 
 
 template<typename T>
-std::optional<MyVector<T>> get_ternary_isotropic_vector(MyMatrix<T> const& M) {
-  
-
+bool ternary_has_isotropic_vector(MyMatrix<T> const& M) {
+  DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
+  MyVector<T> V1 = GetDiagonal(dsm.RedMat);
+  MyVector<T> V2 = RemoveFractionVector(V1);
+  using Tring = typename underlying_ring<T>::ring_type;
+  MyVector<Tring> V3 = UniversalVectorConversion<Tring,T>(V2);
+  MyVector<Tring> V4 = reduction_information(V3).second;
+  return determine_solvability(V4);
 }
-
-
-
 
 
 // clang-format off
