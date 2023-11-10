@@ -310,17 +310,18 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
                                           std::ostream &os) {
   using T = mpq_class;
   using Tint = mpz_class;
+  using Tlong = int64_t;
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   mpz_class n_col_mpz(n_col);
   size_t DimEXT = n_col + 1;
   size_t shift = GetShift(EXT, eCommand);
   Tint eScal;
-  long eScal_long;
+  Tlong eScal_Tlong;
   vectface vf(n_row);
   Face f(n_row);
   MyMatrix<Tint> EXT_int = RescaleRows<T, Tint>(EXT);
-  MyMatrix<long> EXT_long = MyMatrix<long>(n_row, n_col);
+  MyMatrix<Tlong> EXT_Tlong = MyMatrix<Tlong>(n_row, n_col);
   size_t max_bits = 0;
   auto f_bit = [&](mpz_class const &val) -> size_t {
     return mpz_sizeinbase(val.get_mpz_t(), 2);
@@ -328,27 +329,27 @@ vectface DualDescExternalProgramIncidence(MyMatrix<mpq_class> const &EXT,
   for (size_t iRow = 0; iRow < n_row; iRow++) {
     for (size_t iCol = 0; iCol < n_col; iCol++) {
       max_bits = std::max(f_bit(EXT_int(iRow, iCol)), max_bits);
-      EXT_long(iRow, iCol) = EXT_int(iRow, iCol).get_si();
+      EXT_Tlong(iRow, iCol) = EXT_int(iRow, iCol).get_si();
     }
   }
   max_bits += f_bit(n_col_mpz);
-  std::vector<long> LVal_long(DimEXT, 0);
+  std::vector<Tlong> LVal_Tlong(DimEXT, 0);
 
   auto f_insert = [&](std::vector<T> const &LVal) -> void {
     std::vector<Tint> LVal_int = RescaleVec<T, Tint>(LVal);
     size_t max_bits_LVal = 0;
     for (size_t i = shift; i < DimEXT; i++) {
       max_bits_LVal = std::max(max_bits_LVal, f_bit(LVal_int[i]));
-      LVal_long[i] = LVal_int[i].get_si();
+      LVal_Tlong[i] = LVal_int[i].get_si();
     }
 
     if (max_bits + max_bits_LVal <= 60) {
       // safe to use long
       for (size_t i_row = 0; i_row < n_row; i_row++) {
-        eScal_long = 0;
+        eScal_Tlong = 0;
         for (size_t i = shift; i < DimEXT; i++)
-          eScal_long += LVal_long[i] * EXT_long(i_row, i - shift);
-        f[i_row] = static_cast<bool>(eScal_long == 0);
+          eScal_Tlong += LVal_Tlong[i] * EXT_Tlong(i_row, i - shift);
+        f[i_row] = static_cast<bool>(eScal_Tlong == 0);
       }
     } else {
       for (size_t i_row = 0; i_row < n_row; i_row++) {
