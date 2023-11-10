@@ -497,7 +497,7 @@ template <typename T> struct PolyHeuristicSerial {
   bool SimpleExchangeScheme;
   SingletonTime start;
   int max_runtime;
-  short unsigned int port;
+  uint16_t port;
   bool BANK_Saving;
   std::string BANK_Prefix;
   std::string OutFormat;
@@ -514,7 +514,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   bool AdvancedTerminationCriterion = false;
   bool SimpleExchangeScheme = false;
   int max_runtime = -1;
-  short unsigned int port = 1234;
+  uint16_t port = 1234;
   bool BANK_Saving = false;
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";

@@ -2857,7 +2857,7 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   int port_i = BlockDATA.ListIntValues.at("port");
   os << "port_i=" << port_i << "\n";
-  short unsigned int port = port_i;
+  uint16_t port = port_i;
   AllArr.port = port;
   //
   std::string bank_parallelization_method =

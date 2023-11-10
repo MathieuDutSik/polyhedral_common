@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     std::string SavingPrefix = BlockPROC.ListStringValues.at("Prefix");
     int port_i = BlockPROC.ListIntValues.at("port");
     std::cerr << "port_i=" << port_i << "\n";
-    short unsigned int port = port_i;
+    uint16_t port = port_i;
     //
     endpoint_bank =
         boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port);
