@@ -6,6 +6,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
+#include <utility>
+#include <map>
+#include <set>
 #include "factorizations.h"
 // clang-format on
 

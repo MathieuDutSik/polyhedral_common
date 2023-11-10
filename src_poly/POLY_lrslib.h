@@ -255,7 +255,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   m = (*D_p)->m;
   d = (*D_p)->d;
   lastdv = Q->lastdv;
-  //  std::cerr << "lrs_getfirstbasis lastdv = " << lastdv << "\n";
 
   nredundcol = 0L;            /* will be set after getabasis        */
   nlinearity = Q->nlinearity; /* may be reset if new linearity read */
@@ -287,8 +286,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
     if (j == k)
       inequality[k++] = i;
   }
-  //  std::cerr << "Q->maximize/minimize = " << Q->maximize << " / " <<
-  //  Q->minimize << "\n";
 
   /* for voronoi convert to h-description using the transform */
   /* a_0 .. a_d-1 -> (a_0^2 + ... a_d-1 ^2)-2a_0x_0-...-2a_d-1x_d-1 + x_d >= 0
@@ -311,7 +308,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
     Q->nredundcol = 0;
   } else {
     if (!getabasis(*D_p, Q, inequality)) {
-      //      std::cerr << "Exit case 1\n";
       return globals::L_FALSE;
     }
   }
@@ -344,13 +340,11 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
         lrs_getray(*D_p, Q, Col[0], (*D_p)->C[0] + i - hull,
                    Lin[i]); /* adjust index for deletions */
       if (!removecobasicindex(*D_p, 0)) {
-        //	    std::cerr << "Exit case 2\n";
         return globals::L_FALSE;
       }
     }
   }
   if (!primalfeasible(*D_p, Q)) {
-    //    std::cerr << "Exit case 3\n";
     return globals::L_FALSE;
   }
 
@@ -358,7 +352,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   if (Q->maximize || Q->minimize) {
     Q->unbounded = !lrs_solvelp(*D_p, Q);
     if (Q->lponly) {
-      //	std::cerr << "Exit case 4\n";
       return globals::L_TRUE;
     } else { /* check to see if objective is dual degenerate */
       j = 1;
@@ -385,7 +378,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   if (Q->inputd > (*D_p)->d)
     *D_p = resize(*D_p, Q);
 
-  //  std::cerr << "Exit case 6\n";
   return globals::L_TRUE;
 }
 
@@ -1459,7 +1451,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   lrs_dic<T> *p;
   int64_t i, j;
   int64_t m, d, m_A;
-  //  std::cerr << "Q->hull=" << Q->hull << "\n";
   if (Q->hull)        /* d=col dimension of A */
     Q->inputd = Q->n; /* extra column for hull */
   else
@@ -1467,7 +1458,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
 
   m = Q->m;
   d = Q->inputd;
-  //  std::cerr << "m=" << m << " d=" << d << "\n";
   m_A = m;
 
   /* nonnegative flag set means that problem is d rows "bigger"     */
@@ -1655,39 +1645,38 @@ void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   delete[] num;
 }
 
-template <typename T> void PrintP(lrs_dic<T> *&P, std::string const &message) {
-  std::cerr << "message = " << message << "\n";
-  std::cerr << "P->A=\n";
+template <typename T> void PrintP(lrs_dic<T> *&P, std::string const &message, std::ostream & os) {
+  os << "message = " << message << "\n";
+  os << "P->A=\n";
   for (int i = 0; i <= P->m_A; i++) {
     for (int j = 0; j <= P->d; j++)
-      std::cerr << " " << P->A[i][j];
-    std::cerr << "\n";
+      os << " " << P->A[i][j];
+    os << "\n";
   }
 
-  std::cerr << "B=";
+  os << "B=";
   for (int i = 0; i <= P->m; i++)
-    std::cerr << P->B[i] << " ";
-  std::cerr << "\n";
-  std::cerr << "Row=";
+    os << P->B[i] << " ";
+  os << "\n";
+  os << "Row=";
   for (int i = 0; i <= P->m; i++)
-    std::cerr << P->Row[i] << " ";
-  std::cerr << "\n";
+    os << P->Row[i] << " ";
+  os << "\n";
   //
-  std::cerr << "C=";
+  os << "C=";
   for (int i = 0; i <= P->d; i++)
-    std::cerr << P->C[i] << " ";
-  std::cerr << "\n";
-  std::cerr << "Col=";
+    os << P->C[i] << " ";
+  os << "\n";
+  os << "Col=";
   for (int i = 0; i <= P->d; i++)
-    std::cerr << P->Col[i] << " ";
-  std::cerr << "\n";
+    os << P->Col[i] << " ";
+  os << "\n";
 }
 
 template <typename T>
 void initLRS(MyMatrix<T> const &EXT, lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   T **Lin;
   Q = lrs_alloc_dat<T>();
-  //  std::cerr << "After lrs_alloc_dat\n";
   if (Q == nullptr) {
     throw TerminalException{1};
   }
@@ -1695,21 +1684,19 @@ void initLRS(MyMatrix<T> const &EXT, lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   int nbcol = EXT.cols();
   Q->n = nbcol;
   Q->m = nbrow;
-  //  std::cerr << "no need to call a lrs_read_dat a priori\n";
   P = lrs_alloc_dic(Q);
-  //  PrintP(P, "after lrs_alloc_dic");
+  //  PrintP(P, "after lrs_alloc_dic", std::cerr);
   if (P == nullptr) {
     std::cerr << "We failed allocation, let's die\n";
     throw TerminalException{1};
   }
   fillModelLRS(EXT, P, Q);
-  //  PrintP(P, "Before lrs_getfirstbasis");
+  //  PrintP(P, "Before lrs_getfirstbasis", std::cerr);
 
   if (!lrs_getfirstbasis(&P, Q, Lin)) {
     std::cerr << "Error in call to lrs_getfirstbasis\n";
     throw TerminalException{1};
   }
-  //  std::cerr << "After lrs_getfirstbasis\n";
 }
 
 template <typename T> void freeLRS(lrs_dic<T> *&P, lrs_dat<T> *&Q) {

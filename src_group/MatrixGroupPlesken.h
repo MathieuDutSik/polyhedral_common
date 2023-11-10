@@ -2,6 +2,8 @@
 #ifndef SRC_GROUP_MATRIXGROUPPLESKEN_H_
 #define SRC_GROUP_MATRIXGROUPPLESKEN_H_
 
+#include <vector>
+
 // This was an attempt at devising a scheme based on Plesken
 // Souvignier kind of algorithms.
 

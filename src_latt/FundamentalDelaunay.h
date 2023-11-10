@@ -3,7 +3,6 @@
 #define SRC_LATT_FUNDAMENTALDELAUNAY_H_
 
 // clang-format off
-//#include "CVP_NiemeierAlgo.h"
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"

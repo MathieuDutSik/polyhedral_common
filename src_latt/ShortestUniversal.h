@@ -3,9 +3,7 @@
 #define SRC_LATT_SHORTESTUNIVERSAL_H_
 
 // clang-format off
-//#include "CVP_NiemeierAlgo.h"
 #include "Shvec_exact.h"
-
 #ifdef USE_LIBSHORT
 #include "Shvec_double.h"
 #endif
