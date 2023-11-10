@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_SMALL_POLYTOPES_H_
-#define SRC_POLY_SMALL_POLYTOPES_H_
+#ifndef SRC_POLY_SMALLPOLYTOPES_H_
+#define SRC_POLY_SMALLPOLYTOPES_H_
 
 // clang-format off
 #include "POLY_PolytopeFct.h"
@@ -171,5 +171,5 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_SMALL_POLYTOPES_H_
+#endif  // SRC_POLY_SMALLPOLYTOPES_H_
 // clang-format on

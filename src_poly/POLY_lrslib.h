@@ -438,16 +438,16 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       backtrack = globals::L_TRUE;
     else {
       cache_dict(D_p, Q, i, j, dict_count);
-      //	  PrintP(*D_p, "After cache_dict");
+      // PrintP(*D_p, "After cache_dict");
       /* Note that the next two lines must come _after_ the
          call to cache_dict */
 
       (*D_p)->depth++;
 
       pivot(*D_p, i, j);
-      //	  PrintP(*D_p, "After pivot");
+      // PrintP(*D_p, "After pivot");
       update(*D_p, &i, &j);
-      //	  PrintP(*D_p, "After update");
+      // PrintP(*D_p, "After update");
 
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
       return globals::L_TRUE;

@@ -30,7 +30,7 @@ void process(std::string const &eFileI, std::string const &choice,
     os << "V-representation\n";
     os << "begin\n";
     os << "****** " << nbCol << " rational\n";
-    long nVertices = 0;
+    size_t nVertices = 0;
     auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
                       [[maybe_unused]] lrs::lrs_dat<T> *Q,
                       [[maybe_unused]] int const &col, T *out) -> void {
@@ -46,11 +46,11 @@ void process(std::string const &eFileI, std::string const &choice,
   }
   if (choice == "GAP") {
     os << "return [";
-    long nVertices = 0;
+    bool IsFirst = true;
     auto fPrint = [&]([[maybe_unused]] lrs::lrs_dic<T> *P,
                       [[maybe_unused]] lrs::lrs_dat<T> *Q,
                       [[maybe_unused]] int const &col, T *out) -> void {
-      if (nVertices > 0)
+      if (!IsFirst)
         os << ",\n";
       os << "[";
       for (int iCol = shift; iCol < nbCol; iCol++) {
@@ -59,7 +59,7 @@ void process(std::string const &eFileI, std::string const &choice,
         os << out[iCol];
       }
       os << "]";
-      nVertices++;
+      IsFirst = false;
     };
     lrs::Kernel_DualDescription(EXT, fPrint);
     os << "];\n";
