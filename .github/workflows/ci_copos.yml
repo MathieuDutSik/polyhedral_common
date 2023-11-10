@@ -44,10 +44,6 @@ jobs:
       MPFR_INCDIR: /usr/include
       MPFR_LINK: "-lmpfr"
 
-
-
-
-
     steps:
       - uses: actions/checkout@v2
         with:

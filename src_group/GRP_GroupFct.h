@@ -336,61 +336,65 @@ Face OrbitUnion(Tgroup const &GRP, Face const &gList) {
 // Several building of new groups.
 //
 
-template <typename Telt>
-Telt ReduceElementAction(Telt const &eElt, Face const &eList) {
-  using Tidx = typename Telt::Tidx;
-  Tidx nb = eList.count();
-  if (nb == 0) {
-    std::cerr << "Call of ReducedGroupAction with 0 points\n";
+template<typename Tidx>
+struct ReducingArray {
+  size_t nb;
+  std::vector<Tidx> ListPositionRev;
+  std::vector<Tidx> ListPosition;
+};
+
+template <typename Tidx>
+ReducingArray<Tidx> GetReducingArray(Face const& eList) {
+  Tidx size = eList.size();
+  size_t nb = eList.count();
+  Tidx nb_i = nb;
+  if (nb_i == 0) {
+    std::cerr << "Call of ReduceElementAction with 0 points\n";
     throw TerminalException{1};
   }
-  std::vector<Tidx> ListPositionRev(eElt.size(), -1);
+  std::vector<Tidx> ListPositionRev(size, -1);
   boost::dynamic_bitset<>::size_type aRow = eList.find_first();
   std::vector<Tidx> ListPosition(nb);
-  for (Tidx iRow = 0; iRow < nb; iRow++) {
+  for (Tidx iRow = 0; iRow < nb_i; iRow++) {
     ListPositionRev[aRow] = iRow;
     ListPosition[iRow] = Tidx(aRow);
     aRow = eList.find_next(aRow);
   }
-  std::vector<Tidx> v(nb);
-  for (size_t i = 0; i < nb; i++) {
-    Tidx eVal1 = ListPosition[i];
+  return {nb, std::move(ListPositionRev), std::move(ListPosition)};
+}
+
+template<typename Telt>
+Telt SingleElementReduction(Telt const& eElt, ReducingArray<typename Telt::Tidx> const& ra) {
+  using Tidx = typename Telt::Tidx;
+  std::vector<Tidx> v(ra.nb);
+  for (size_t i = 0; i < ra.nb; i++) {
+    Tidx eVal1 = ra.ListPosition[i];
     Tidx eVal2 = OnPoints(eVal1, eElt);
-    Tidx eVal3 = ListPositionRev[eVal2];
+    Tidx eVal3 = ra.ListPositionRev[eVal2];
     v[i] = eVal3;
   }
   return Telt(std::move(v));
+}
+
+
+template <typename Telt>
+Telt ReduceElementAction(Telt const &eElt, Face const &eList) {
+  using Tidx = typename Telt::Tidx;
+  ReducingArray<Tidx> ra = GetReducingArray<Tidx>(eList);
+  return SingleElementReduction(eElt, ra);
 }
 
 template <typename Tgroup>
 Tgroup ReducedGroupAction(Tgroup const &TheGRP, Face const &eList) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  Tidx nb = eList.count();
-  if (nb == 0) {
-    std::cerr << "Call of ReducedGroupAction with 0 points\n";
-    throw TerminalException{1};
-  }
-  std::vector<Tidx> ListPositionRev(TheGRP.n_act(), -1);
-  boost::dynamic_bitset<>::size_type aRow = eList.find_first();
-  std::vector<Tidx> ListPosition(nb);
-  for (Tidx iRow = 0; iRow < nb; iRow++) {
-    ListPositionRev[aRow] = iRow;
-    ListPosition[iRow] = Tidx(aRow);
-    aRow = eList.find_next(aRow);
-  }
+  ReducingArray<Tidx> ra = GetReducingArray<Tidx>(eList);
   std::vector<Telt> ListGen;
   for (auto &eGen : TheGRP.GeneratorsOfGroup()) {
-    std::vector<Tidx> v(nb);
-    for (size_t i = 0; i < nb; i++) {
-      Tidx eVal1 = ListPosition[i];
-      Tidx eVal2 = OnPoints(eVal1, eGen);
-      Tidx eVal3 = ListPositionRev[eVal2];
-      v[i] = eVal3;
-    }
-    ListGen.emplace_back(std::move(Telt(std::move(v))));
+    Telt eGenRed = SingleElementReduction(eGen, ra);
+    ListGen.emplace_back(std::move(eGenRed));
   }
-  return Tgroup(ListGen, nb);
+  return Tgroup(ListGen, ra.nb);
 }
 
 template <typename Tgroup>
