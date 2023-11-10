@@ -7,8 +7,9 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-template<typename Tint>
-void process_A(std::string const& FileExt1, std::string const& FileExt2, std::string const& OutFormat, std::ostream & os) {
+template <typename Tint>
+void process_A(std::string const &FileExt1, std::string const &FileExt2,
+               std::string const &OutFormat, std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
@@ -24,8 +25,8 @@ void process_A(std::string const& FileExt1, std::string const& FileExt2, std::st
   //    const bool use_scheme = true;
   const bool use_scheme = false;
   std::optional<MyMatrix<Tint>> equiv =
-    LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr,
-                                    use_scheme>(EXT1, EXT2, std::cerr);
+      LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr,
+                                      use_scheme>(EXT1, EXT2, std::cerr);
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";
@@ -40,14 +41,14 @@ void process_A(std::string const& FileExt1, std::string const& FileExt2, std::st
   throw TerminalException{1};
 }
 
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Isomorphism arith [EXT1] [EXT2] [OutFormat] [FileOut]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Isomorphism arith [EXT1] [EXT2] "
+                   "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytopeIntegral_Isomorphism arith [EXT1] [EXT2]\n";
       std::cerr << "\n";
@@ -64,7 +65,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "         ----- FileOut -----\n";
       std::cerr << "\n";
-      std::cerr << "If stderr, or stdout, then output to standard error or standrd output\n";
+      std::cerr << "If stderr, or stdout, then output to standard error or "
+                   "standrd output\n";
       std::cerr << "Other output to the designated file name\n";
       return -1;
     }
@@ -79,7 +81,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[5];
     }
     //
-    auto process_B=[&](std::ostream & os) -> void {
+    auto process_B = [&](std::ostream &os) -> void {
       if (arith == "mpz_class") {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);

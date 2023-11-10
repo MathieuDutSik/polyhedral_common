@@ -16,7 +16,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_DatabaseRestructuration [FileGRP] [DatabaseInput] "
-                   "[NprocInput] [DatabaseOutput] [NprocOutput] [IgnoreLastI] [IgnoreLastO]\n";
+                   "[NprocInput] [DatabaseOutput] [NprocOutput] [IgnoreLastI] "
+                   "[IgnoreLastO]\n";
       std::cerr << "Be careful when using it, it depends on so many aspects of "
                    "the code\n";
       return -1;
@@ -43,18 +44,20 @@ int main(int argc, char *argv[]) {
     Tidx n_act = GRP.n_act();
     std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     size_t delta = ep.second;
-    std::string dbnameI = (NprocI>1) ? "database" : "D_"+std::to_string(n_act);
-    std::string dbnameO = (NprocO>1) ? "database" : "D_"+std::to_string(n_act);
+    std::string dbnameI =
+        (NprocI > 1) ? "database" : "D_" + std::to_string(n_act);
+    std::string dbnameO =
+        (NprocO > 1) ? "database" : "D_" + std::to_string(n_act);
     std::cerr << NprocI << " " << dbnameI << std::endl;
     std::cerr << NprocO << " " << dbnameO << std::endl;
     //
     // Reading the EXT and method file
     //
-    std::string eFileEXT; 
+    std::string eFileEXT;
     std::string eFileMethod;
     {
       std::string eDir = DatabaseI;
-      if(NprocI > 1)
+      if (NprocI > 1)
         update_path_using_nproc_iproc(eDir, NprocI, 0);
       eFileEXT = eDir + dbnameI + ".ext";
       eFileMethod = eDir + dbnameI + ".method";
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
     std::vector<FileFace *> List_FF(NprocO - IgnoreLastO, nullptr);
     for (int iProc = 0; iProc < NprocO - IgnoreLastO; iProc++) {
       std::string eDir = DatabaseO;
-      if( NprocO > 1)
+      if (NprocO > 1)
         update_path_using_nproc_iproc(eDir, NprocO, iProc);
       CreateDirectory(eDir);
       std::string eFileFN = eDir + dbnameO + ".nb";
@@ -88,7 +91,7 @@ int main(int argc, char *argv[]) {
     //
     for (int iProc = 0; iProc < NprocI - IgnoreLastI; iProc++) {
       std::string eDir = DatabaseI;
-      if(NprocI > 1)
+      if (NprocI > 1)
         update_path_using_nproc_iproc(eDir, NprocI, iProc);
       std::string eFileFN = eDir + dbnameI + ".nb";
       std::string eFileFB = eDir + dbnameI + ".fb";

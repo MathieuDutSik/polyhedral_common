@@ -8,10 +8,10 @@
 #include "MAT_MatrixInt.h"
 #include "MAT_functions.h"
 #include "MatrixGroup.h"
-#include "Parallel_Classes_Types.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_LinearProgramming_GLPK.h"
 #include "POLY_PolytopeInt.h"
+#include "Parallel_Classes_Types.h"
 #include "Temp_Positivity.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Temp_Tspace_General.h"
@@ -118,8 +118,7 @@ template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
-    std::string const &TheMethod,
-    [[maybe_unused]] std::ostream& os) {
+    std::string const &TheMethod, [[maybe_unused]] std::ostream &os) {
   ReplyRealizability<T, Tint> eRes;
   int n = ListVect[0].size();
   int nbVect = ListVect.size();
@@ -472,7 +471,8 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M) {
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
-                                                    MyMatrix<Tint> const &M2, std::ostream& os) {
+                                                    MyMatrix<Tint> const &M2,
+                                                    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx_value = int16_t;
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1);
@@ -484,7 +484,7 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec2.GramMat,
                                                       eRec2.SHVdisc, os);
   std::optional<Telt> eResEquiv =
-    TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2, os);
+      TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2, os);
   if (!eResEquiv)
     return {};
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(eRec1.SHVdisc);
@@ -498,7 +498,8 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M, std::ostream& os) {
+std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
+                                                std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
@@ -584,12 +585,13 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV) {
 template <typename T, typename Tint, typename Tgroup>
 ReplyRealizability<T, Tint>
 SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
-                                      std::string const &TheMethod, std::ostream& os) {
+                                      std::string const &TheMethod,
+                                      std::ostream &os) {
   SHVreduced<Tint> RecLLL = SHORT_GetLLLreduction_Kernel(Minput);
   MyMatrix<Tint> M = RecLLL.SHVred;
   int n = M.cols();
   std::vector<MyMatrix<Tint>> ListMatrGen =
-    SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
+      SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
   std::vector<MyMatrix<T>> StdBasis = StandardSymmetricBasis<T>(n);
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto &eGen : ListMatrGen)
@@ -633,7 +635,8 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       std::cerr << "RETURN case 9\n";
       return RecTest;
     }
-    RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(ListVectWork, ListMat, NoExtension, TheMethod, os);
+    RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(
+        ListVectWork, ListMat, NoExtension, TheMethod, os);
     if (RecTest.reply) {
       bool replyRet = static_cast<int>(ListVectWork.size()) == InitialSize;
       std::vector<MyVector<Tint>> ListVectComplete;
@@ -676,7 +679,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   }
 }
 
-template <typename T, typename Tint> struct SHVshortest { MyMatrix<Tint> SHV; };
+template <typename T, typename Tint> struct SHVshortest {
+  MyMatrix<Tint> SHV;
+};
 
 template <typename T, typename Tint>
 std::istream &operator>>(std::istream &is, SHVshortest<T, Tint> &obj) {
@@ -765,12 +770,12 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
                       std::vector<MyMatrix<Tint>> const &ListSHVinp,
-                      std::string const &TheMethod, std::ostream& os) {
+                      std::string const &TheMethod, std::ostream &os) {
   Tint eMaxDet = SHORT_GetMaximumDeterminant(M);
   int n = M.cols();
   int nbVect = M.rows();
   std::vector<MyMatrix<Tint>> ListMatrGen =
-    SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
+      SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
   //
   // Building the set of inequalities
   //
@@ -822,7 +827,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
   auto IsPresent = [&](MyMatrix<Tint> const &P) -> bool {
     for (auto &P2 : ListSHVinp) {
       std::optional<MyMatrix<Tint>> eResEquiv =
-        SHORT_TestEquivalence<T, Tint, Tgroup>(P, P2, os);
+          SHORT_TestEquivalence<T, Tint, Tgroup>(P, P2, os);
       if (eResEquiv)
         return true;
     }
@@ -847,12 +852,13 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
       return;
     for (auto &P2 : ListSpann) {
       std::optional<MyMatrix<Tint>> eResEquiv =
-        SHORT_TestEquivalence<T, Tint, Tgroup>(Mnew, P2, os);
+          SHORT_TestEquivalence<T, Tint, Tgroup>(Mnew, P2, os);
       if (eResEquiv)
         return;
     }
     ReplyRealizability<T, Tint> eTestRes =
-      SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew, TheMethod, os);
+        SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew, TheMethod,
+                                                               os);
     if (eTestRes.reply && eTestRes.replyCone)
       ListSpann.push_back(Mnew);
   };
@@ -1082,7 +1088,8 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
 
 template <typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<MyMatrix<Tint>>, std::vector<int>>
-SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV, std::ostream& os) {
+SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV,
+                          std::ostream &os) {
   std::map<SHVinvariant<T, Tint>, std::vector<int>> TheMap;
   std::vector<MyMatrix<Tint>> ListRet;
   int siz = 0;
@@ -1100,7 +1107,7 @@ SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV, std::ostre
     for (auto &iSpann : TheMap[eInv]) {
       MyMatrix<Tint> fSpann = ListRet[iSpann];
       std::optional<MyMatrix<Tint>> RecTest =
-        SHORT_TestEquivalence<T, Tint, Tgroup>(eSpann, fSpann, os);
+          SHORT_TestEquivalence<T, Tint, Tgroup>(eSpann, fSpann, os);
       if (RecTest)
         return iSpann;
     }

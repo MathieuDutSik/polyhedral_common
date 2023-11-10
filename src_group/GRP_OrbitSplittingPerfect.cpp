@@ -43,7 +43,8 @@ int main(int argc, char *argv[]) {
     //
     std::ofstream os2(argv[4]);
     std::ofstream os3(argv[5]);
-    OrbitSplittingPerfectFacet(BigGRP, SmaGRP, ListFaceBig, os2, os3, std::cerr);
+    OrbitSplittingPerfectFacet(BigGRP, SmaGRP, ListFaceBig, os2, os3,
+                               std::cerr);
     //
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

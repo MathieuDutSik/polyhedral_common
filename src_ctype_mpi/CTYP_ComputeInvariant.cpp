@@ -157,7 +157,8 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     //    using Tint = mpz_class; // This is defined above
     using Tgroup = permutalib::Group<Telt, Tint>;
-    StructuralInfo info = CTYP_GetStructuralInfo<Tint, Tgroup>(eType, std::cerr);
+    StructuralInfo info =
+        CTYP_GetStructuralInfo<Tint, Tgroup>(eType, std::cerr);
 #ifdef DEBUG_INFO
     std::cerr << "We have info\n";
 #endif

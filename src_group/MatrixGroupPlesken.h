@@ -5,9 +5,6 @@
 // This was an attempt at devising a scheme based on Plesken
 // Souvignier kind of algorithms.
 
-
-
-
 /*
 There are several challenges for this implementation.
 ---We need an invariant vector family which we may obtain
@@ -52,9 +49,6 @@ There are several challenges for this implementation.
 ---From ListMatr, we can compute the space of invariant quadratic forms
    and this can get us good efficient signatures.
  */
-
-
-
 
 /*
 There are several challenges for this implementation.
@@ -174,9 +168,6 @@ GetListQuadraticForms(FiniteMatrixGroupHelper<T, Telt> const &helper) {
   return {Qinv};
 }
 
-
-
-
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
 std::optional<std::vector<MyMatrix<T>>>
 PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
@@ -239,9 +230,11 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
       const bool use_scheme = true;
       using Tfield = typename overlying_field<T>::field_type;
       std::vector<std::vector<Tidx>> ListListIdx =
-          GetListGenAutomorphism_ListMat_Vdiag<T,Tfield,Tidx,use_scheme>(SHVbreak,
-BasisSymmMat, Vdiag); std::vector<MyMatrix<T>> NewListMatr; for (auto &eListIdx
-: ListListIdx) { std::optional<MyMatrix<T>> opt =
+          GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+              SHVbreak, BasisSymmMat, Vdiag);
+      std::vector<MyMatrix<T>> NewListMatr;
+      for (auto &eListIdx : ListListIdx) {
+        std::optional<MyMatrix<T>> opt =
             FindMatrixTransformationTest(SHVbreak, SHVbreak, eListIdx);
 #ifdef SANITY_CHECK_MATRIX_GROUP
         if (!opt) {
@@ -257,8 +250,6 @@ BasisSymmMat, Vdiag); std::vector<MyMatrix<T>> NewListMatr; for (auto &eListIdx
   std::cerr << "Failed to find a breaking invariant family\n";
   throw TerminalException{1};
 }
-
-
 
 // clang-format off
 #endif  // SRC_POLY_MATRIXGROUP_H_

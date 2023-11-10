@@ -162,13 +162,15 @@ int main(int argc, char *argv[]) {
     //
     auto InsertMatrixCan = [&](MyMatrix<Tint> const &M,
                                int const &NbAdj) -> void {
-      if (M.rows() != static_cast<int>(n_vect) || M.cols() != static_cast<int>(n)) {
+      if (M.rows() != static_cast<int>(n_vect) ||
+          M.cols() != static_cast<int>(n)) {
         std::cerr << "We have |M|=" << M.rows() << " / " << M.cols() << "\n";
         std::cerr << "But n_vect=" << n_vect << " and n=" << n << "\n";
         throw TerminalException{1};
       }
       if (ApplyCanonicalization) {
-        MyMatrix<Tint> Mcan = LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M, std::cerr);
+        MyMatrix<Tint> Mcan =
+            LinPolytopeAntipodalIntegral_CanonicForm<Tint>(M, std::cerr);
         InsertMatrix(Mcan, NbAdj);
       } else {
         InsertMatrix(M, NbAdj);

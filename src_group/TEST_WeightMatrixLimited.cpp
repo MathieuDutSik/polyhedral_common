@@ -30,7 +30,8 @@ int main(int argc, char *argv[]) {
     size_t len = EXT.rows();
     //
     const bool use_scheme1 = true;
-    Tgroup GRP = LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
+    Tgroup GRP =
+        LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     int n_iter1 = 20;
@@ -67,7 +68,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "i=" << i << " expo=" << expo
                 << " max_offdiag=" << max_offdiag << " total=" << total << "\n";
       WeightMatrixLimited<true, T> WMatLimited1 =
-        GetWeightMatrixLimited(EXT, max_offdiag, std::cerr);
+          GetWeightMatrixLimited(EXT, max_offdiag, std::cerr);
       test_WMat(WMatLimited1);
       WeightMatrixLimited<true, T> WMatLimited2(GRP, max_offdiag, std::cerr);
       test_WMat(WMatLimited2);

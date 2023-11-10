@@ -52,8 +52,8 @@ int main(int argc, char *argv[]) {
     //
     const bool use_scheme = true;
     std::optional<std::vector<Tidx>> equiv =
-        LinPolytope_Isomorphism_GramMat<Tint, Tidx, use_scheme>(EXT1, GramMat1,
-                                                                EXT2, GramMat2, std::cerr);
+        LinPolytope_Isomorphism_GramMat<Tint, Tidx, use_scheme>(
+            EXT1, GramMat1, EXT2, GramMat2, std::cerr);
     //
     auto print_info = [&](std::ostream &os) -> void {
       if (OutFormat == "Oscar") {

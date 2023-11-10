@@ -7,8 +7,9 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-template<typename Tint>
-void process_A(std::string const& FileExt, std::string const& OutFormat, std::ostream & os) {
+template <typename Tint>
+void process_A(std::string const &FileExt, std::string const &OutFormat,
+               std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
@@ -22,7 +23,9 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   //
   //    const bool use_scheme = true;
   const bool use_scheme = false;
-  Tgroup GRP = LinPolytopeIntegral_Automorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
+  Tgroup GRP =
+      LinPolytopeIntegral_Automorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr,
+                                       use_scheme>(EXT, std::cerr);
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
     return;
@@ -30,14 +33,15 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   if (OutFormat == "RecGAP") {
     std::string strGAPmatr = "[";
     bool IsFirst = true;
-    for (auto & eGen : GRP.GeneratorsOfGroup()) {
+    for (auto &eGen : GRP.GeneratorsOfGroup()) {
       MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eGen);
       if (!IsFirst)
         strGAPmatr += ",";
       strGAPmatr += StringMatrixGAP(M);
     }
     strGAPmatr += "]";
-    os << "return rec(GAPperm:=" << GRP.GapString() << ", GAPmatr:=" << strGAPmatr << ");";
+    os << "return rec(GAPperm:=" << GRP.GapString()
+       << ", GAPmatr:=" << strGAPmatr << ");";
     return;
   }
   if (OutFormat == "Oscar") {
@@ -48,14 +52,14 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   throw TerminalException{1};
 }
 
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT] [OutFormat] [FileOut]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT] "
+                   "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT]\n";
       std::cerr << "\n";
@@ -69,12 +73,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "         ----- OutFormat ------\n";
       std::cerr << "\n";
       std::cerr << "GAP    : The permutation group as a GAP readable file\n";
-      std::cerr << "RecGAP : The permutation group and the matrix group as a GAP readable file\n";
+      std::cerr << "RecGAP : The permutation group and the matrix group as a "
+                   "GAP readable file\n";
       std::cerr << "Oscar  : The output to the Oscar readable file\n";
       std::cerr << "\n";
       std::cerr << "         ----- FileOut -----\n";
       std::cerr << "\n";
-      std::cerr << "If stderr, or stdout, then output to standard error or standrd output\n";
+      std::cerr << "If stderr, or stdout, then output to standard error or "
+                   "standrd output\n";
       std::cerr << "Other output to the designated file name\n";
       return -1;
     }
@@ -88,7 +94,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
     //
-    auto process_B=[&](std::ostream & os) -> void {
+    auto process_B = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt, OutFormat, os);

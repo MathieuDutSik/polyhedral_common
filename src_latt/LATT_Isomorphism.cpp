@@ -14,7 +14,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_Isomorphism [ListMat1] [ListMat2] [OutFormat] [OutFile]\n";
+      std::cerr
+          << "LATT_Isomorphism [ListMat1] [ListMat2] [OutFormat] [OutFile]\n";
       std::cerr << "    or\n";
       std::cerr << "LATT_Isomorphism [ListMat1] [ListMat2]\n";
       return -1;
@@ -39,34 +40,39 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat1 = ReadListMatrixFile<T>(FileListMat1);
     std::vector<MyMatrix<T>> ListMat2 = ReadListMatrixFile<T>(FileListMat2);
 
-    MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0]);
-    MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0]);
+    MyMatrix<Tint> SHV1 =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0]);
+    MyMatrix<Tint> SHV2 =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0]);
 
-    MyMatrix<T> SHV1_T = UniversalMatrixConversion<T,Tint>(SHV1);
-    MyMatrix<T> SHV2_T = UniversalMatrixConversion<T,Tint>(SHV2);
+    MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
+    MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
     using Tfield = T;
 
-    auto get_equiv=[&]() -> std::optional<MyMatrix<Tint>> {
+    auto get_equiv = [&]() -> std::optional<MyMatrix<Tint>> {
       if (SHV1_T.rows() != SHV1.rows())
         return {};
       int n_rows = SHV1_T.rows();
       std::vector<T> Vdiag1(n_rows, 0);
       std::vector<T> Vdiag2(n_rows, 0);
       const bool use_scheme = true;
-      std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, std::cerr);
+      std::optional<std::vector<Tidx>> opt =
+          TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+              SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, std::cerr);
       if (!opt)
         return {};
-      std::optional<MyMatrix<T>> optB = FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
+      std::optional<MyMatrix<T>> optB =
+          FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
       if (!optB) {
         std::cerr << "We have a matrix bug\n";
         throw TerminalException{1};
       }
-      MyMatrix<T> const& M_T = *optB;
+      MyMatrix<T> const &M_T = *optB;
       if (!IsIntegralMatrix(M_T)) {
         std::cerr << "Bug: The matrix should be integral\n";
         throw TerminalException{1};
       }
-      for (size_t i=0; i<ListMat1.size(); i++) {
+      for (size_t i = 0; i < ListMat1.size(); i++) {
         MyMatrix<T> eMat1 = ListMat1[i];
         MyMatrix<T> eMat2 = ListMat2[i];
         MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
@@ -75,7 +81,7 @@ int main(int argc, char *argv[]) {
           throw TerminalException{1};
         }
       }
-      MyMatrix<Tint> M = UniversalMatrixConversion<Tint,T>(M_T);
+      MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
       return M;
     };
     std::optional<MyMatrix<Tint>> equiv = get_equiv();
@@ -100,7 +106,8 @@ int main(int argc, char *argv[]) {
         }
         return;
       }
-      std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat << "\n";
+      std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat
+                << "\n";
       throw TerminalException{1};
     };
     if (OutFile == "stderr") {

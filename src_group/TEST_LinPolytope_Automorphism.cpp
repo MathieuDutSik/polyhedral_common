@@ -29,10 +29,12 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
     const bool use_scheme1 = true;
-    Tgroup GRP1 = LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
+    Tgroup GRP1 =
+        LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
     //
     const bool use_scheme2 = false;
-    Tgroup GRP2 = LinPolytope_Automorphism<T, use_scheme2, Tgroup>(EXT, std::cerr);
+    Tgroup GRP2 =
+        LinPolytope_Automorphism<T, use_scheme2, Tgroup>(EXT, std::cerr);
     //
     bool test = GRP1 == GRP2;
     if (!test) {

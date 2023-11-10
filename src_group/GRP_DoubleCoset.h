@@ -435,7 +435,7 @@ vectface DoubleCosetDescription_Representation_Block(
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   WeightMatrix<true, int, Tidx_value> WMat =
-    WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP, os);
+      WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(SmaGRP, os);
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
@@ -756,11 +756,11 @@ vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 template <typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
-                                std::ostream &os3, std::ostream & os_err) {
+                                std::ostream &os3, std::ostream &os_err) {
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   os_err << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
-            << "\n";
+         << "\n";
   size_t nb_orbit_big = eListBig.size();
   Tint nb_orbit_sma;
   size_t pos = 0;
@@ -777,8 +777,7 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
       os3 << res << "\n";
     }
     os_err << "iInc=" << pos << " / " << nb_orbit_big
-            << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz
-            << "\n";
+           << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz << "\n";
   }
   os2 << nb_orbit_sma << "\n";
 }

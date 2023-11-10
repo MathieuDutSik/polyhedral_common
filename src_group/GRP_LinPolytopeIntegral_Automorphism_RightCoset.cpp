@@ -7,8 +7,9 @@
 #include "Temp_PolytopeEquiStab.h"
 // clang-format on
 
-template<typename Tint>
-void process_A(std::string const& FileExt, std::string const& OutFormat, std::ostream & os) {
+template <typename Tint>
+void process_A(std::string const &FileExt, std::string const &OutFormat,
+               std::ostream &os) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
@@ -23,15 +24,21 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   //
   //    const bool use_scheme = true;
   const bool use_scheme = false;
-  std::pair<Tgroup,std::vector<Telt>> pair = LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup, Tidx_value, Tgr, use_scheme>(EXT, std::cerr);
+  std::pair<Tgroup, std::vector<Telt>> pair =
+      LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup,
+                                                  Tidx_value, Tgr, use_scheme>(
+          EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
-  std::cerr << "|GRPisom|=" << GRPisom.size() << " |pair.first|=" << pair.first.size() << " |pair.second|=" << pair.second.size() << "\n";
+  Tgroup GRPisom =
+      LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
+  std::cerr << "|GRPisom|=" << GRPisom.size()
+            << " |pair.first|=" << pair.first.size()
+            << " |pair.second|=" << pair.second.size() << "\n";
   Tgroup GRP = pair.first;
   std::vector<Telt> l_elt = GRP.get_all_element();
   std::set<Telt> s_elt;
-  for (auto & e_elt : l_elt) {
-    for (auto & f_elt : pair.second) {
+  for (auto &e_elt : l_elt) {
+    for (auto &f_elt : pair.second) {
       Telt prod = e_elt * f_elt;
       if (!GRPisom.isin(prod)) {
         std::cerr << "The element is not in the product\n";
@@ -42,14 +49,15 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   }
   Tint s_elt_size = s_elt.size();
   if (s_elt_size != GRPisom.size()) {
-    std::cerr << "|s_elt|=" << s_elt.size() << " |GRPisom|=" << GRPisom.size() << "\n";
+    std::cerr << "|s_elt|=" << s_elt.size() << " |GRPisom|=" << GRPisom.size()
+              << "\n";
     std::cerr << "s_elt has the wrong size\n";
     throw TerminalException{1};
   }
-  auto get_as_string=[&](std::vector<Telt> const& l_elt) -> std::string {
+  auto get_as_string = [&](std::vector<Telt> const &l_elt) -> std::string {
     std::string strGAPmatr = "[";
     bool IsFirst = true;
-    for (auto & eElt : l_elt) {
+    for (auto &eElt : l_elt) {
       MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eElt);
       if (!IsFirst)
         strGAPmatr += ",";
@@ -63,9 +71,11 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
     return;
   }
   if (OutFormat == "RecGAP") {
-    std::string strGAPgroup = "Group(" + get_as_string(GRP.GeneratorsOfGroup()) + ")";
+    std::string strGAPgroup =
+        "Group(" + get_as_string(GRP.GeneratorsOfGroup()) + ")";
     std::string strCoset = get_as_string(pair.second);
-    os << "return rec(GAPperm:=" << GRP.GapString() << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
+    os << "return rec(GAPperm:=" << GRP.GapString()
+       << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
     return;
   }
   if (OutFormat == "Oscar") {
@@ -76,14 +86,14 @@ void process_A(std::string const& FileExt, std::string const& OutFormat, std::os
   throw TerminalException{1};
 }
 
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT] [OutFormat] [FileOut]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT] "
+                   "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT]\n";
       std::cerr << "\n";
@@ -97,12 +107,14 @@ int main(int argc, char *argv[]) {
       std::cerr << "         ----- OutFormat ------\n";
       std::cerr << "\n";
       std::cerr << "GAP    : The permutation group as a GAP readable file\n";
-      std::cerr << "RecGAP : The permutation group and the matrix group as a GAP readable file\n";
+      std::cerr << "RecGAP : The permutation group and the matrix group as a "
+                   "GAP readable file\n";
       std::cerr << "Oscar  : The output to the Oscar readable file\n";
       std::cerr << "\n";
       std::cerr << "         ----- FileOut -----\n";
       std::cerr << "\n";
-      std::cerr << "If stderr, or stdout, then output to standard error or standrd output\n";
+      std::cerr << "If stderr, or stdout, then output to standard error or "
+                   "standrd output\n";
       std::cerr << "Other output to the designated file name\n";
       return -1;
     }
@@ -116,7 +128,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
     //
-    auto process_B=[&](std::ostream & os) -> void {
+    auto process_B = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt, OutFormat, os);

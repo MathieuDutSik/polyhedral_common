@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
       Twmat WMat = GetWeightMatrix<T, Tidx_value>(EXT, std::cerr);
       WMat.ReorderingSetWeight();
       std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
-      GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, std::cerr);
+          GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(
+              WMat, std::cerr);
       const std::vector<Tidx> &ListIdx = epair.first;
       const std::vector<std::vector<Tidx>> &ListGen = epair.second;
       WMat.RowColumnReordering(ListIdx);

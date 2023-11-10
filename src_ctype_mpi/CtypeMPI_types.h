@@ -291,7 +291,7 @@ template<typename Tidx> struct hash<triple<Tidx>> {
 }  // namespace std
 // clang-format on
 
-template<typename Tidx>
+template <typename Tidx>
 bool operator==(triple<Tidx> const &obj1, triple<Tidx> const &obj2) {
   return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.j;
 }
@@ -560,8 +560,7 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M) {
   return Mret;
 }
 
-template <typename T, typename Tidx>
-struct DataCtypeFacet {
+template <typename T, typename Tidx> struct DataCtypeFacet {
   MyMatrix<T> TheCtype;
   MyMatrix<T> ListInequalities;
   std::vector<std::vector<triple<Tidx>>> ListInformations;
@@ -569,7 +568,8 @@ struct DataCtypeFacet {
 };
 
 template <typename T, typename Tidx>
-DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
+DataCtypeFacet<T, Tidx>
+CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -586,7 +586,7 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
 #endif
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
-    CTYP_GetListTriple<T,Tidx>(TheCtype);
+      CTYP_GetListTriple<T, Tidx>(TheCtype);
 
 #ifdef TIMINGS
   std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
@@ -798,7 +798,7 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
     }
   }
   auto TestFeasibilityListTriple =
-    [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
+      [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_ADJ
       std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
@@ -870,33 +870,33 @@ DataCtypeFacet<T,Tidx> CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeA
   std::cerr << "ListInequalitiesIrred=\n";
   WriteMatrix(std::cerr, ListInequalitiesIrred);
 #endif
-  return {std::move(TheCtype), std::move(ListInequalities), std::move(ListInformations), std::move(ListIrred)};
+  return {std::move(TheCtype), std::move(ListInequalities),
+          std::move(ListInformations), std::move(ListIrred)};
 }
 
-template<typename T, typename Tidx>
-MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T,Tidx> const& data) {
+template <typename T, typename Tidx>
+MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T, Tidx> const &data) {
   int n = data.TheCtype.cols();
   MyVector<T> V = GetSpaceInteriorPoint_Basic(data.ListInequalities);
   MyMatrix<T> eGram(n, n);
   int pos = 0;
-  for (int i=0; i<n; i++) {
-    eGram(i, i) = 2*V(pos);
+  for (int i = 0; i < n; i++) {
+    eGram(i, i) = 2 * V(pos);
     pos++;
   }
   for (int i = 0; i < n; i++)
     for (int j = i + 1; j < n; j++) {
-      eGram(i,j) = V(pos);
+      eGram(i, j) = V(pos);
       pos++;
     }
   return eGram;
 }
 
-
-template<typename T>
-TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
+template <typename T>
+TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG) {
   int n = eG.rows();
   int n_elt = 1;
-  for (int i=0; i<n; i++)
+  for (int i = 0; i < n; i++)
     n_elt *= 2;
   n_elt -= 1;
   MyMatrix<T> Mret(n_elt, n);
@@ -904,13 +904,13 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
   MyMatrix<int> M = BuildSet(n, 2);
   int n_row = M.rows();
   MyVector<T> Vmid(n);
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     int esum = 0;
-    for (int i=0; i<n; i++)
-      esum += M(i_row,i);
+    for (int i = 0; i < n; i++)
+      esum += M(i_row, i);
     if (esum > 0) {
-      for (int i=0; i<n; i++)
-        Vmid(i,0) = M(i_row,i) / 2;
+      for (int i = 0; i < n; i++)
+        Vmid(i, 0) = M(i_row, i) / 2;
       resultCVP<T, T> result = CVPVallentinProgram_exact(eG, Vmid);
       int n_closest = result.ListVect.rows();
       if (n_closest != 2) {
@@ -918,8 +918,8 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
         std::cerr << "The number of closest vector is not equal to 2\n";
         throw TerminalException{1};
       }
-      for (int i=0; i<n; i++)
-        Mret(pos,i) = result.ListVect(1,i) - result.ListVect(0,i);
+      for (int i = 0; i < n; i++)
+        Mret(pos, i) = result.ListVect(1, i) - result.ListVect(0, i);
       pos += 1;
     }
   }
@@ -930,24 +930,25 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const& eG) {
   return Mret;
 }
 
-
-
 template <typename T, typename Tidx>
 std::vector<TypeCtypeExch<T>>
-CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool const& canonicalize,
-                                     std::ostream& os) {
+CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
+                                     bool const &canonicalize,
+                                     std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  DataCtypeFacet<T,Tidx> data = CTYP_GetConeInformation<T,Tidx>(TheCtypeArr);
+  DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(TheCtypeArr);
 #ifdef TIMINGS
   std::cerr << "|data|=" << time << "\n";
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto &e_int : data.ListIrred) {
-    MyMatrix<T> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
+    MyMatrix<T> FlipMat =
+        CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
     if (canonicalize) {
-      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
+      MyMatrix<T> CanMat =
+          LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
       ListCtype.push_back({std::move(CanMat)});
     } else {
       ListCtype.push_back({std::move(FlipMat)});
@@ -965,12 +966,13 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, bool c
 
 template <typename T>
 std::vector<TypeCtypeExch<T>>
-CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
+CTYP_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
+                              std::ostream &os) {
   bool canonicalize = true;
   using Tidx = int8_t;
-  return CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize, os);
+  return CTYP_Kernel_GetAdjacentCanonicCtypes<T, Tidx>(TheCtypeArr,
+                                                       canonicalize, os);
 }
-
 
 struct StructuralInfo {
   int nb_triple;
@@ -1013,7 +1015,8 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 }
 
 template <typename T, typename Tgroup>
-StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
+StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
+                                      std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
@@ -1028,7 +1031,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr, std::
 #endif
 
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
-    CTYP_GetListTriple<T,Tidx>(TheCtype);
+      CTYP_GetListTriple<T, Tidx>(TheCtype);
   int nb_triple = PairTriple.first.size();
 #ifdef TIMINGS
   std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
@@ -1153,7 +1156,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr, std::
     }
   }
   auto TestFeasibilityListTriple =
-    [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
+      [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
     for (auto &e_triple : list_triple) {
 #ifdef PRINT_GET_STRUCTINFO
       std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
@@ -1195,7 +1198,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr, std::
 #endif
 
   std::vector<std::vector<unsigned int>> ListGen =
-    LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
+      LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
 #ifdef TIMINGS
   std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
 #endif

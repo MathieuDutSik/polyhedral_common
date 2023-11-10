@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     std::vector<Tidx> CanonicOrd =
-      LinPolytope_CanonicOrdering<T, Tidx, use_scheme>(EXT, std::cerr);
+        LinPolytope_CanonicOrdering<T, Tidx, use_scheme>(EXT, std::cerr);
     //
     if (argc == 3) {
       std::ofstream os(argv[2]);

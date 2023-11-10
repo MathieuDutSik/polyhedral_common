@@ -7,15 +7,15 @@
 #include <unordered_map>
 // clang-format on
 
-
-
-template<typename T>
-TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const& eMat) {
+template <typename T>
+TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const &eMat) {
   using Tidx = int32_t;
   TypeCtypeExch<T> WorkT = eMat;
-  for (int iter=0; iter<50; iter++) {
+  for (int iter = 0; iter < 50; iter++) {
     bool canonicalize = false;
-    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(WorkT, canonicalize, std::cerr);
+    std::vector<TypeCtypeExch<T>> ListAdj =
+        CTYP_Kernel_GetAdjacentCanonicCtypes<T, Tidx>(WorkT, canonicalize,
+                                                      std::cerr);
     int n_adj = ListAdj.size();
     int pos = random() % n_adj;
     WorkT = ListAdj[pos];
@@ -23,8 +23,9 @@ TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const& eMat) {
   return WorkT;
 }
 
-template<typename T>
-void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const& Prefix) {
+template <typename T>
+void GetLocalFreenessMinimum(int const &dim, int const &max_s,
+                             std::string const &Prefix) {
   std::cerr << "GetLocalFreenessMinimum, step 1\n";
   MyMatrix<T> M = GetPrincipalDomain<T>(dim);
   std::cerr << "M=\n";
@@ -36,12 +37,15 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
   int iter2 = 0;
   std::cerr << "GetLocalFreenessMinimum, step 3\n";
   using Tidx = int32_t;
-  while(true) {
-    std::cerr << "GetLocalFreenessMinimum, Before generation of adjacent domains\n";
+  while (true) {
+    std::cerr
+        << "GetLocalFreenessMinimum, Before generation of adjacent domains\n";
     bool canonicalize = false;
-    std::vector<TypeCtypeExch<T>> ListAdj = CTYP_Kernel_GetAdjacentCanonicCtypes<T,Tidx>(TheCtypeArr, canonicalize, std::cerr);
+    std::vector<TypeCtypeExch<T>> ListAdj =
+        CTYP_Kernel_GetAdjacentCanonicCtypes<T, Tidx>(TheCtypeArr, canonicalize,
+                                                      std::cerr);
     std::vector<int> ListNbFree;
-    for (auto & eAdj : ListAdj) {
+    for (auto &eAdj : ListAdj) {
       int nb_free = CTYP_GetNumberFreeVectors(eAdj);
       //      std::cerr << " nb_free=" << nb_free << "\n";
       ListNbFree.push_back(nb_free);
@@ -50,20 +54,23 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
     if (the_min >= curr_nb_free && curr_nb_free > 0) {
       TheCtypeArr = RandomWalk(TheCtypeArr);
       curr_nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
-      std::cerr << "iter1=" << iter1 << " iter2=" << iter2 << " After RandomWalk curr_nb_free=" << curr_nb_free << "\n";
+      std::cerr << "iter1=" << iter1 << " iter2=" << iter2
+                << " After RandomWalk curr_nb_free=" << curr_nb_free << "\n";
       iter1++;
       iter2 = 0;
     } else {
       curr_nb_free = the_min;
       std::vector<size_t> ListIdx;
-      for (size_t u=0; u<ListNbFree.size(); u++) {
+      for (size_t u = 0; u < ListNbFree.size(); u++) {
         if (ListNbFree[u] == the_min) {
           ListIdx.push_back(u);
         }
       }
       int n_min = ListIdx.size();
       int pos = random() % n_min;
-      std::cerr << "iter1=" << iter1 << " iter2=" << iter2 << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min << " pos=" << pos << "\n";
+      std::cerr << "iter1=" << iter1 << " iter2=" << iter2
+                << " curr_nb_free=" << curr_nb_free << " n_min=" << n_min
+                << " pos=" << pos << "\n";
       TheCtypeArr = ListAdj[ListIdx[pos]];
       if (curr_nb_free <= max_s) {
         std::string FileOut = FindAvailableFileFromPrefix(Prefix);
@@ -75,12 +82,7 @@ void GetLocalFreenessMinimum(int const& dim, int const& max_s, std::string const
       iter2++;
     }
   }
-
-
 }
-
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -94,7 +96,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "with:\n";
       std::cerr << "dim     : the dimension\n";
       std::cerr << "ntry    : the umber of tries\n";
-      std::cerr << "max_s   : the maximum number of free vectors that still renders it interesting\n";
+      std::cerr << "max_s   : the maximum number of free vectors that still "
+                   "renders it interesting\n";
       std::cerr << "FileOut : the file in output\n";
       throw TerminalException{1};
     }
@@ -105,7 +108,7 @@ int main(int argc, char *argv[]) {
     size_t n_try = ParseScalar<size_t>(argv[2]);
     int max_s = ParseScalar<size_t>(argv[3]);
     std::string Prefix = argv[4];
-    for (size_t i_try=0; i_try<n_try; i_try++) {
+    for (size_t i_try = 0; i_try < n_try; i_try++) {
       GetLocalFreenessMinimum<Tint>(dim, max_s, Prefix);
     }
     std::cerr << "Normal termination of the program\n";
@@ -115,4 +118,3 @@ int main(int argc, char *argv[]) {
   }
   runtime(time1);
 }
-

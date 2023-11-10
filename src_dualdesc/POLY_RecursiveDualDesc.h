@@ -162,9 +162,9 @@ template <typename T, typename Tidx, typename Tidx_value>
 std::pair<MyMatrix<T>, std::vector<Tidx>>
 CanonicalizationPolytopePair(MyMatrix<T> const &EXT,
                              WeightMatrix<true, T, Tidx_value> const &WMat,
-                             std::ostream& os) {
+                             std::ostream &os) {
   std::vector<Tidx> CanonicOrd =
-    GetCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat, os);
+      GetCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat, os);
   Tidx n_row = EXT.rows();
   Tidx n_col = EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
@@ -180,11 +180,11 @@ template <typename T, typename Tgroup, typename Tidx_value>
 TripleCanonic<T, Tgroup>
 CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
                                WeightMatrix<true, T, Tidx_value> const &WMat,
-                               std::ostream & os) {
+                               std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> PairCanGrp =
-    GetGroupCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat, os);
+      GetGroupCanonicalizationVector_Kernel<T, GraphBitset, Tidx>(WMat, os);
   Tidx n_row = EXT.rows();
   Tidx n_col = EXT.cols();
   MyMatrix<T> EXTcan(n_row, n_col);
@@ -216,9 +216,10 @@ CanonicalizationPolytopeTriple(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT, std::ostream& os) {
+MyMatrix<T> CanonicalizationPolytope(MyMatrix<T> const &EXT, std::ostream &os) {
   using Tidx_value = uint16_t;
-  WeightMatrix<true, T, Tidx_value> WMat = GetWeightMatrix<T, Tidx_value>(EXT, os);
+  WeightMatrix<true, T, Tidx_value> WMat =
+      GetWeightMatrix<T, Tidx_value>(EXT, os);
   WMat.ReorderingSetWeight();
   return CanonicalizationPolytopePair<T, int, Tidx_value>(EXT, WMat, os).first;
 }
@@ -670,7 +671,7 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
   using Tint = typename Tgroup::Tint;
   std::vector<Tint> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
   TripleCanonic<T, Tgroup> eTriple =
-    CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat, os);
+      CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat, os);
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
   size_t delta = ListOrbitFaceOrbitsize.vfo.get_n();
   Telt perm1 = Telt(eTriple.ListIdx);
@@ -724,7 +725,7 @@ void insert_entry_in_bank(
     // The computation was already done for the full symmetry group. Only
     // canonic form is needed.
     std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-      CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
+        CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
     vectface ListFaceO(delta);
     Telt perm1 = Telt(ePair.second);
     Telt ePerm = ~perm1;
@@ -780,7 +781,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
   std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
-    CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
+      CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
   const TripleStore<Tgroup> &RecAns = bank.GetDualDesc(ePair.first);
   if (RecAns.ListFace.size() == 0) {
     return vectface(0);
@@ -1299,7 +1300,8 @@ public:
         std::pair<Face, Tint> pair = foc.RetrieveListOrbitEntry(pos);
         Face const &f = pair.first;
         Tgroup StabRed = StabilizerUsingOrbSize_OnSets(GRP, pair);
-        return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP, StabRed};
+        return {pos, f, FlippingFramework<T>(EXT, EXT_int, f, os), GRP,
+                StabRed};
       }
     }
     std::cerr << "Failed to find an undone orbit\n";
@@ -2089,7 +2091,8 @@ public:
 
 template <typename T, typename Tidx_value> struct LazyWMat {
 public:
-  LazyWMat(const MyMatrix<T> &EXT, std::ostream& os) : EXT(EXT), WMat(os), HaveWMat(false), os(os) {}
+  LazyWMat(const MyMatrix<T> &EXT, std::ostream &os)
+      : EXT(EXT), WMat(os), HaveWMat(false), os(os) {}
   WeightMatrix<true, T, Tidx_value> &GetWMat() {
     if (HaveWMat)
       return WMat;
@@ -2103,7 +2106,7 @@ private:
   const MyMatrix<T> &EXT;
   WeightMatrix<true, T, Tidx_value> WMat;
   bool HaveWMat;
-  std::ostream& os;
+  std::ostream &os;
 };
 
 template <typename Tint, typename T, typename Tgroup>
@@ -2461,8 +2464,8 @@ vectface DUALDESC_AdjacencyDecomposition(
         HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
     os << "ansSymm=" << ansSymm << "\n";
     if (ansSymm == "yes") {
-      TheGRPrelevant =
-        GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(lwm.GetWMat(), os);
+      TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
+          lwm.GetWMat(), os);
       NeedSplit = TheGRPrelevant.size() != GRP.size();
       BankSymmCheck = false;
     } else {
@@ -2486,7 +2489,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     }
     if (ansChosenDatabase == "repr") {
       WeightMatrix<true, int, Tidx_value> WMat =
-        WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant, os);
+          WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant, os);
       auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
         auto test = TheGRPrelevant.RepresentativeAction_OnSets(f1, f2);
         if (test)
@@ -2741,7 +2744,7 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
     using Tidx_value = uint16_t;
     using Tint = typename Tgroup::Tint;
     WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrix<T, Tidx_value>(EXT, os);
+        GetWeightMatrix<T, Tidx_value>(EXT, os);
     WMat.ReorderingSetWeight();
     FaceOrbitsizeTableContainer<Tint> fotc(TheOutput, GRP);
     std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =

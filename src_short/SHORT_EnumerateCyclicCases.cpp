@@ -95,7 +95,8 @@ int main(int argc, char *argv[]) {
         std::cerr << "SHV : \n";
         WriteMatrix(std::cerr, SHV);
         ReplyRealizability<Tfield, Tint> eRes =
-            SHORT_TestRealizabilityShortestFamily<Tfield, Tint, Tgroup>(SHV, TheMethod, std::cerr);
+            SHORT_TestRealizabilityShortestFamily<Tfield, Tint, Tgroup>(
+                SHV, TheMethod, std::cerr);
         if (eRes.reply) {
           if (IsFirst == false)
             os << ",\n";

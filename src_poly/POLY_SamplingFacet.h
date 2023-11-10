@@ -29,14 +29,18 @@ struct recSamplingOption {
 };
 
 template <typename T>
-vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT, recSamplingOption const &eOption, int &nbCall, std::ostream& os) {
+vectface
+Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
+                                       recSamplingOption const &eOption,
+                                       int &nbCall, std::ostream &os) {
   int dim = RankMat(EXT);
   int len = EXT.rows();
   std::string prog = eOption.prog;
   int critlevel = eOption.critlevel;
   int maxnbcall = eOption.maxnbcall;
   int maxnbsize = eOption.maxnbsize;
-  os << "critlevel=" << critlevel << " prog=" << prog << " maxnbcall=" << maxnbcall << "\n";
+  os << "critlevel=" << critlevel << " prog=" << prog
+     << " maxnbcall=" << maxnbcall << "\n";
   auto IsRecursive = [&]() -> bool {
     if (len < critlevel)
       return false;
@@ -86,7 +90,7 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT, recSampl
         Face eFace = ListFace[iC];
         MyMatrix<T> EXTred = SelectRow(EXT, eFace);
         vectface ListRidge =
-          Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
+            Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
         for (auto &eRidge : ListRidge) {
           Face eFlip = ComputeFlipping(EXT, eFace, eRidge, os);
           FuncInsert(eFlip);
@@ -116,7 +120,8 @@ vectface Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT, recSampl
 template <typename T>
 vectface
 DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
-                                std::vector<std::string> const &ListOpt, std::ostream & os) {
+                                std::vector<std::string> const &ListOpt,
+                                std::ostream &os) {
   std::string prog = "lrs";
   int critlevel = 50;
   int maxnbcall = -1;

@@ -139,18 +139,19 @@ int main(int argc, char *argv[]) {
 #endif
     std::cout << nbVect << "\n";
     for (i = 0; i < nbVect; i++) {
-      MyVector<Tint> const& V = info.short_vectors[i];
+      MyVector<Tint> const &V = info.short_vectors[i];
       std::cout << "[ unset ]: ";
       for (int iCol = 0; iCol < dim; iCol++)
         std::cout << " " << V(iCol);
       std::cout << "\n";
 #ifdef CHECK_SHVEC
-      MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+      MyVector<T> V_T = UniversalVectorConversion<T, Tint>(V);
       if (coset && NeedBound) {
         T eNorm(0);
-        for (int i=0; i<dim; i++) {
-          for (int j=0; j<dim; j++) {
-            eNorm += (V_T(i) + cosetVect(i)) * (V_T(j) + cosetVect(j)) * gram_matrix(i,j);
+        for (int i = 0; i < dim; i++) {
+          for (int j = 0; j < dim; j++) {
+            eNorm += (V_T(i) + cosetVect(i)) * (V_T(j) + cosetVect(j)) *
+                     gram_matrix(i, j);
           }
         }
         if (eNorm > bound) {
@@ -163,7 +164,7 @@ int main(int argc, char *argv[]) {
     }
 #ifdef CHECK_SHVEC
     std::cerr << "map_norm =";
-    for (auto & kv : map_norm) {
+    for (auto &kv : map_norm) {
       std::cerr << " (" << kv.first << "," << kv.second << ")";
     }
     std::cerr << "\n";

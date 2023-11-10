@@ -73,9 +73,9 @@ int main(int argc, char *argv[]) {
       MyMatrix<T> EXTred = SelectRow(EXT, f);
       using Tidx_value = uint16_t;
       WeightMatrix<true, T, Tidx_value> WMat =
-        GetWeightMatrix<T, Tidx_value>(EXT, std::cerr);
-      Tgroup GRPred =
-        GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, std::cerr);
+          GetWeightMatrix<T, Tidx_value>(EXT, std::cerr);
+      Tgroup GRPred = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
+          WMat, std::cerr);
       //
       std::string FileGRP_out =
           DirectoryOutput + "GRP_" + std::to_string(iPolytope);

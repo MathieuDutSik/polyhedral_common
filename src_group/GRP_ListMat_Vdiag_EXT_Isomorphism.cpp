@@ -110,7 +110,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "Input read, now testing for equivalence\n";
     const bool use_scheme = true;
     std::optional<std::vector<Tidx>> PairTest =
-        TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, std::cerr);
+        TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+            EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {

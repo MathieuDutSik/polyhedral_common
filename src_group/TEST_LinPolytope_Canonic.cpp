@@ -24,7 +24,8 @@ int main(int argc, char *argv[]) {
     int nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    MyMatrix<Tint> EXT_can = LinPolytope_CanonicForm<Tint, use_scheme>(EXT, std::cerr);
+    MyMatrix<Tint> EXT_can =
+        LinPolytope_CanonicForm<Tint, use_scheme>(EXT, std::cerr);
     std::cerr
         << "------------------------------------------------------------\n";
     //
@@ -47,7 +48,8 @@ int main(int argc, char *argv[]) {
     for (int i_iter = 0; i_iter < n_iter; i_iter++) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
       MyMatrix<Tint> EXT2 = get_random_equivalent(EXT);
-      MyMatrix<Tint> EXT2_can = LinPolytope_CanonicForm<Tint, use_scheme>(EXT2, std::cerr);
+      MyMatrix<Tint> EXT2_can =
+          LinPolytope_CanonicForm<Tint, use_scheme>(EXT2, std::cerr);
       std::cerr
           << "------------------------------------------------------------\n";
       if (!TestEqualityMatrix(EXT_can, EXT2_can)) {

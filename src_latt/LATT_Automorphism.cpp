@@ -39,29 +39,32 @@ int main(int argc, char *argv[]) {
     }
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
-    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0]);
+    MyMatrix<Tint> SHV =
+        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0]);
 
-    MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
     int n_row = SHV_T.rows();
-    std::vector<T> Vdiag(n_row,0);
+    std::vector<T> Vdiag(n_row, 0);
 
     const bool use_scheme = true;
     std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, std::cerr);
+        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+            SHV_T, ListMat, Vdiag, std::cerr);
 
     std::vector<MyMatrix<Tint>> ListGenEquiv;
-    for (auto & eList : ListGen) {
-      std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, eList);
+    for (auto &eList : ListGen) {
+      std::optional<MyMatrix<T>> opt =
+          FindMatrixTransformationTest(SHV_T, SHV_T, eList);
       if (!opt) {
         std::cerr << "Failed to find the matrix\n";
         throw TerminalException{1};
       }
-      MyMatrix<T> const& M_T = *opt;
+      MyMatrix<T> const &M_T = *opt;
       if (!IsIntegralMatrix(M_T)) {
         std::cerr << "Bug: The matrix should be integral\n";
         throw TerminalException{1};
       }
-      MyMatrix<Tint> M = UniversalMatrixConversion<Tint,T>(M_T);
+      MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
       ListGenEquiv.push_back(M);
     }
     //
@@ -69,7 +72,7 @@ int main(int argc, char *argv[]) {
       if (OutFormat == "GAP") {
         os << "return [";
         bool IsFirst = true;
-        for (auto & eMat : ListGenEquiv) {
+        for (auto &eMat : ListGenEquiv) {
           if (!IsFirst)
             os << ",\n";
           IsFirst = false;
@@ -80,12 +83,13 @@ int main(int argc, char *argv[]) {
       }
       if (OutFormat == "Oscar") {
         os << ListGenEquiv.size() << "\n";
-        for (auto & eMat : ListGenEquiv) {
+        for (auto &eMat : ListGenEquiv) {
           WriteMatrix(os, eMat);
         }
         return;
       }
-      std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat << "\n";
+      std::cerr << "Failed to find a matching type for OutFormat=" << OutFormat
+                << "\n";
       throw TerminalException{1};
     };
     if (OutFile == "stderr") {

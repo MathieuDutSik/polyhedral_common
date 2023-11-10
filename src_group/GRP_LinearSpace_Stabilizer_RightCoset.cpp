@@ -51,8 +51,9 @@ int main(int argc, char *argv[]) {
     //
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};
-    std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pair = 
-      LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGen, helper, eLatt, std::cerr);
+    std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pair =
+        LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGen, helper, eLatt,
+                                                     std::cerr);
     CosetDescription<T> coset = pair.second;
     CosetDescription<T>::iterator iter = coset.begin();
     std::vector<MyMatrix<T>> RightCoset;
@@ -62,7 +63,7 @@ int main(int argc, char *argv[]) {
     }
     //
     std::ofstream os(OUT_file);
-    auto f_print=[&](std::vector<MyMatrix<T>> const& Lmat) -> void {
+    auto f_print = [&](std::vector<MyMatrix<T>> const &Lmat) -> void {
       os << "[";
       bool IsFirst = true;
       for (auto &eMat : Lmat) {

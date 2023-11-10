@@ -43,9 +43,9 @@ int main(int argc, char *argv[]) {
     using pair_char =
         std::pair<MyMatrix<T>, WeightMatrix<true, std::vector<T>, Tidx_value>>;
     //
-    pair_char ep{
-        EXT,
-        WeightedMatrixFromMyMatrix<true, std::vector<T>, Tidx_value>(WMat_EXT, std::cerr)};
+    pair_char ep{EXT,
+                 WeightedMatrixFromMyMatrix<true, std::vector<T>, Tidx_value>(
+                     WMat_EXT, std::cerr)};
     std::vector<MyMatrix<T>> LGen =
         LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
                                              Tidx_value>(ep, std::cerr);
