@@ -1,12 +1,16 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryCommon.h"
+#include "NumberTheoryGmp.h"
+#include "NumberTheorySafeInt.h"
 #include "Indefinite_LLL.h"
 // clang-format on
 
 template<typename T, typename Tint>
 void process(std::string const& FileI, std::string const& OutFormat, std::ostream & os) {
-  MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
+  MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   std::cerr << "We have M\n";
 
   ResultIndefiniteLLL<T, Tint> ResLLL = Indefinite_LLL<T, Tint>(M);
@@ -65,16 +69,18 @@ int main(int argc, char *argv[]) {
       }
       if (arith == "boost_cpp") {
         using T = boost::multiprecision::cpp_rational;
-        using Tint = boost::multiprecision::cpp_integer;
+        using Tint = boost::multiprecision::cpp_int;
         return process<T,Tint>(FileI, OutFormat, os);
       }
-      if (arith == "boost_mpq") {
+      /*
+      if (arith == "boost_gmp") {
         using T = boost::multiprecision::mpq_rational;
-        using Tint = boost::multiprecision::mpq_integer;
+        using Tint = boost::multiprecision::mpz_int;
         return process<T,Tint>(FileI, OutFormat, os);
       }
+      */
       std::cerr << "Failed to find a matching type\n";
-      throw TerminalExcpetion{1};
+      throw TerminalException{1};
     };
     if (FileO == "stderr") {
       f(std::cerr);
