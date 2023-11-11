@@ -32,8 +32,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_DetMinimization arithmetic [FileI]\n";
       throw TerminalException{1};
     }
-    using T = mpq_class;
-    using Tint = mpz_class;
     std::string arith = argv[1];
     std::string FileI = argv[2];
     std::string OutFormat = "GAP";

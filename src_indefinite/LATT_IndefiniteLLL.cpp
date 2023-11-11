@@ -4,48 +4,87 @@
 #include "Indefinite_LLL.h"
 // clang-format on
 
+template<typename T, typename Tint>
+void process(std::string const& FileI, std::string const& OutFormat, std::ostream & os) {
+  MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
+  std::cerr << "We have M\n";
+
+  ResultIndefiniteLLL<T, Tint> ResLLL = Indefinite_LLL<T, Tint>(M);
+  std::cerr << "B_T=\n";
+  WriteMatrix(std::cerr, ResLLL.B);
+  std::cerr << "Mred=\n";
+  WriteMatrix(std::cerr, ResLLL.Mred);
+  if (OutFormat == "GAP") {
+    if (ResLLL.success) {
+      os << "return rec(B:=";
+      WriteMatrixGAP(os, ResLLL.B);
+      os << ", Mred:=";
+      WriteMatrixGAP(os, ResLLL.Mred);
+      os << ");\n";
+    } else {
+      os << "return rec(Xisotrop:=";
+      WriteVectorGAP(os, ResLLL.Xisotrop);
+      os << ");\n";
+    }
+    return;
+  }
+  std::cerr << "Failed to find a matching OutFormat\n";
+  throw TerminalException{1};
+}
+
+
+
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 3 && argc != 2) {
-      std::cerr << "IndefiniteLLL [FileI] [FileO]\n";
+      std::cerr << "LATT_IndefiniteLLL arithmetic [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "IndefiniteLLL [FileI]\n";
+      std::cerr << "LATT_IndefiniteLLL arithmetic [FileI]\n";
       throw TerminalException{1};
     }
-    using T = mpq_class;
-    using Tint = mpz_class;
-
-    std::string FileI = argv[1];
+    std::string arith = argv[1];
+    std::string FileI = argv[2];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      FileO = argv[4];
+    }
     //
-    MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
-    std::cerr << "We have M\n";
-    //
-    auto print_result = [&](std::ostream &os) -> void {
-      ResultIndefiniteLLL<T, Tint> ResLLL = Indefinite_LLL<T, Tint>(M);
-      if (ResLLL.success) {
-        std::cerr << "B_T=\n";
-        WriteMatrix(std::cerr, ResLLL.B);
-        std::cerr << "Mred=\n";
-        WriteMatrix(std::cerr, ResLLL.Mred);
-
-        os << "return rec(B:=";
-        WriteMatrixGAP(os, ResLLL.B);
-        os << ", Mred:=";
-        WriteMatrixGAP(os, ResLLL.Mred);
-        os << ");\n";
-      } else {
-        os << "return rec(Xisotrop:=";
-        WriteVectorGAP(os, ResLLL.Xisotrop);
-        os << ");\n";
+    auto f = [&](std::ostream &os) -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return process<T,Tint>(FileI, OutFormat, os);
       }
+      if (arith == "safe") {
+        using T = Rational<SafeInt64>;
+        using Tint = SafeInt64;
+        return process<T,Tint>(FileI, OutFormat, os);
+      }
+      if (arith == "boost_cpp") {
+        using T = boost::multiprecision::cpp_rational;
+        using Tint = boost::multiprecision::cpp_integer;
+        return process<T,Tint>(FileI, OutFormat, os);
+      }
+      if (arith == "boost_mpq") {
+        using T = boost::multiprecision::mpq_rational;
+        using Tint = boost::multiprecision::mpq_integer;
+        return process<T,Tint>(FileI, OutFormat, os);
+      }
+      std::cerr << "Failed to find a matching type\n";
+      throw TerminalExcpetion{1};
     };
-    if (argc == 2) {
-      print_result(std::cerr);
+    if (FileO == "stderr") {
+      f(std::cerr);
     } else {
-      std::string FileO = argv[2];
-      std::ofstream os(FileO);
-      print_result(os);
+      if (FileO == "stdout") {
+        f(std::cout);
+      } else {
+        std::ofstream os(FileO);
+        f(os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
