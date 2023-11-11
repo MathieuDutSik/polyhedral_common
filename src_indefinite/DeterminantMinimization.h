@@ -49,10 +49,11 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
   MyMatrix<T> Qw = Q;
   MyMatrix<T> Pw = IdentityMat<T>(n);
   while(true) {
-    std::vector<T> list_P_erase;
+    std::vector<Tring> list_P_erase;
     bool DoSomethingGlobal = false;
     for (auto & kv : map) {
-      T p = kv.first;
+      Tring p_ring = kv.first;
+      T p = UniversalScalarConversion<T,Tring>(p_ring);
       size_t & v_mult_s = kv.second;
       int v_mult_i = v_mult_s;
       ResultNullspaceMod<T> res = NullspaceMatMod(Qw, p);
@@ -192,11 +193,11 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
         }
       }
       if (v_mult_s == 0) {
-        list_P_erase.push_back(p);
+        list_P_erase.push_back(p_ring);
       }
     }
     for (auto & p: list_P_erase) {
-      std::
+      //      typename std::map<Tring, size_t>::iterator it = map.find(p);
       map.erase(p);
     }
     if (!DoSomethingGlobal) {

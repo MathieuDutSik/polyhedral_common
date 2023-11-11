@@ -51,10 +51,12 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(FileI, OutFormat, os);
       }
+      /*
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
         return process<T>(FileI, OutFormat, os);
       }
+      */
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileI, OutFormat, os);
