@@ -1,15 +1,15 @@
-// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// Copyright (C) 2023 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_INDEFINITE_DETERMINANTMINIMIZATION_H_
 #define SRC_INDEFINITE_DETERMINANTMINIMIZATION_H_
 
-#include "GRAPH_BitsetType.h"
-#include "GRAPH_GraphicalBasic.h"
-#include "MAT_Matrix.h"
-#include "WeightMatrix.h"
+// clang-format off
+#include "factorizations.h"
+#include "MAT_MatrixMod.h"
 #include <algorithm>
 #include <limits>
 #include <utility>
 #include <vector>
+// clang-format on
 
 template<typename T>
 struct ResultDetMin {
@@ -28,15 +28,11 @@ struct ResultDetMin {
   * d = dim Ker_{F_p}(Q).
   We have the basic result d <= v.
   ---
-  Lemma 4 is clear.
-
-  The reduction of the matrix Q prior to can be done via NullspaceMatMod function.
-  So, for Lemma 5, we need to apply that function another time in order to reduce tilde(Q).
-  Lemma 5 is clear.
-
+  The ideas are clear from the manuscript except for Lemma 9, which I do not
+  understand yet.
+  Things are not done strictly in the same way, but the same ideas
+  are implemented.
  */
-
-
 template<typename T>
 ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
@@ -45,7 +41,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
     std::cerr << "The matrix M should be integral\n";
     throw TerminalException{1};
   }
-  int n_row = M.rows();
+  int n = Q.rows();
   T det = DeterminantMat(Q);
   T det_abs = T_abs(det);
   Tring det_ai = UniversalScalarConversion<Tring,T>(det_abs);
@@ -57,7 +53,6 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
     bool DoSomethingGlobal = false;
     for (auto & kv : map) {
       T p = kv.first;
-      list_P.push_back(p);
       size_t & v_mult_s = kv.second;
       int v_mult_i = v_mult_s;
       ResultNullspaceMod<T> res = NullspaceMatMod(Qw, p);
@@ -103,7 +98,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
       bool DoSomething = false;
       // Apply Lemma 4
       if (d_mult_i == n && !DoSomething) {
-        Mwork = Mwork / p;
+        Qw = Qw / p;
         DoSomething = true;
         DoSomethingGlobal = true;
         v_mult_i -= n;
@@ -113,7 +108,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
       if (d_mult_i < v_mult_i && !DoSomething) {
         change_basis();
         MyMatrix<T> Qtilde = get_qtilde();
-        ResultNullspaceMod<T> resB = NullspaceMatMod(Qtilde, TheMod);
+        ResultNullspaceMod<T> resB = NullspaceMatMod(Qtilde, p);
         MyMatrix<T> Hmat = IdentityMat<T>(n);
         for (int i=0; i<d_mult_i; i++) {
           for (int j=0; j<d_mult_i; j++) {
@@ -134,8 +129,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
           }
         }
 #endif
-        MyMatrix<T> U = IdentityMat(n,n);
-        for (int u=0; u<dimNSPB; u++)
+        MyMatrix<T> U = IdentityMat<T>(n);
+        for (int i=0; i<dimNSPB; i++)
           U(i, i) = 1 / p;
         Pw = U * Pw;
         Qw = U * Qw * U.transpose();
@@ -171,10 +166,10 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
         MyMatrix<T> Qtilde = get_qtilde();
         std::optional<MyVector<T>> opt = FindIsotropicVectorMod(Qtilde, p);
         if (opt) {
-          MyVector<T> const& V = *opt;
+          MyVector<T> const& eV = *opt;
           MyMatrix<T> M(1,n);
           for (int i=0; i<n; i++)
-            M(0,i) = V(i);
+            M(0,i) = eV(i);
           MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
           MyMatrix<T> U = Concatenate(M, BasisCompl);
           Pw = U * Pw;
@@ -189,10 +184,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
           MyMatrix<T> V = IdentityMat<T>(n);
           V(0,0) = 1 / p;
           Pw = V * Pw;
-          Qw = V * Qw * W.transpose();
+          Qw = V * Qw * V.transpose();
           DoSomething = true;
           DoSomethingGlobal = true;
-          int dec = n - 2 * d_mult_i;
           v_mult_i -= 2;
           v_mult_s -= 2;
         }
@@ -202,6 +196,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
       }
     }
     for (auto & p: list_P_erase) {
+      std::
       map.erase(p);
     }
     if (!DoSomethingGlobal) {

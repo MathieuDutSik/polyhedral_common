@@ -1,7 +1,11 @@
-// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// Copyright (C) 202" Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheory.h"
-#include "Indefinite_LLL.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryCommon.h"
+#include "NumberTheoryGmp.h"
+#include "NumberTheorySafeInt.h"
+#include "DeterminantMinimization.h"
 // clang-format on
 
 template<typename T>
