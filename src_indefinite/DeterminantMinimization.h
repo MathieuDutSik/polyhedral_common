@@ -34,43 +34,181 @@ struct ResultDetMin {
   So, for Lemma 5, we need to apply that function another time in order to reduce tilde(Q).
   Lemma 5 is clear.
 
-  
  */
 
 
 template<typename T>
-ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& M) {
+ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   using Tring = typename underlying_ring<T>::ring_type;
-  if (!IsIntegralMatrix(M)) {
+  if (!IsIntegralMatrix(Q)) {
     std::cerr << "The matrix M should be integral\n";
     throw TerminalException{1};
   }
   int n_row = M.rows();
-  T det = DeterminantMat(M);
+  T det = DeterminantMat(Q);
   T det_abs = T_abs(det);
   Tring det_ai = UniversalScalarConversion<Tring,T>(det_abs);
   std::map<Tring, size_t> map = FactorsIntMap(det_ai);
-  MyMatrix<T> Mwork = M;
-  // Apply Lemma 4
-  std::vector<T> cases_lemma4;
-  for (auto & kv : map) {
-    int q = kv.second / n_row;
-    for (int u=0; u<q; u++) {
-      cases_lemma4.push_back(kv.first);
+  MyMatrix<T> Qw = Q;
+  MyMatrix<T> Pw = IdentityMat<T>(n);
+  while(true) {
+    std::vector<T> list_P_erase;
+    bool DoSomethingGlobal = false;
+    for (auto & kv : map) {
+      T p = kv.first;
+      list_P.push_back(p);
+      size_t & v_mult_s = kv.second;
+      int v_mult_i = v_mult_s;
+      ResultNullspaceMod<T> res = NullspaceMatMod(Qw, p);
+      int d_mult_i = res.dimNSP;
+      auto change_basis=[&]() -> void {
+        Pw = res.BasisTot * Pw;
+        Qw = res.BasisTot * Qw * res.BasisTot.transpose();
+#ifdef DEBUG_DET_MINIMIZATION
+        for (int i=0; i<d_multi_i; i++) {
+          for (int j=0; j<n; j++) {
+            T res = ResInt(Qw(i,j), p);
+            if (res != 0) {
+              std::cerr << "The coefficient M(i,j) is not reduced modulo p\n";
+              std::cerr << "i=" << i << " j=" << j << " p=" << p << "\n";
+              throw TerminalException{1};
+            }
+          }
+        }
+        int p = n - d_mult_i;
+        MyMatrix<T> U(p, p);
+        for (int i=0; i<p; i++) {
+          for (int j=0; j<p; j++) {
+            U(i, j) = Qw(i + d_mult_i, j + d_mult_i);
+          }
+        }
+        T det = DeterminantMat(U);
+        T res_det = ResInt(det, p);
+        if (res_det == 0) {
+          std::cerr << "The matrix U is not invertible\n";
+          throw TerminalException{1};
+        }
+#endif
+      };
+      auto get_qtilde=[&]() -> MyMatrix<T> {
+        MyMatrix<T> Qtilde(d_mult_i, d_mult_i);
+        for (int i=0; i<d_mult_i; i++) {
+          for (int j=0; j<d_mult_i; j++) {
+            Qtilde(i,j) = Qw(i,j) / p;
+          }
+        }
+        return Qtilde;
+      };
+      bool DoSomething = false;
+      // Apply Lemma 4
+      if (d_mult_i == n && !DoSomething) {
+        Mwork = Mwork / p;
+        DoSomething = true;
+        DoSomethingGlobal = true;
+        v_mult_i -= n;
+        v_mult_s -= n;
+      }
+      // Apply Lemma 5
+      if (d_mult_i < v_mult_i && !DoSomething) {
+        change_basis();
+        MyMatrix<T> Qtilde = get_qtilde();
+        ResultNullspaceMod<T> resB = NullspaceMatMod(Qtilde, TheMod);
+        MyMatrix<T> Hmat = IdentityMat<T>(n);
+        for (int i=0; i<d_mult_i; i++) {
+          for (int j=0; j<d_mult_i; j++) {
+            Hmat(i, j) = resB.BasisTot(i,j);
+          }
+        }
+        Pw = Hmat * Pw;
+        Qw = Hmat * Qw * Hmat.transpose();
+        int dimNSPB = resB.dimNSP;
+#ifdef DEBUG_DET_MINIMIZATION
+        for (int i=0; dimNSPB; i++) {
+          for (int j=0; j<dimNSPB; j++) {
+            T res = ResInt(Qw(i,j), p * p);
+            if (res != 0) {
+              std::cerr << "Qw is not divisible by p * p as expected\n";
+              throw TerminalException{1};
+            }
+          }
+        }
+#endif
+        MyMatrix<T> U = IdentityMat(n,n);
+        for (int u=0; u<dimNSPB; u++)
+          U(i, i) = 1 / p;
+        Pw = U * Pw;
+        Qw = U * Qw * U.transpose();
+#ifdef DEBUG_DET_MINIMIZATION
+        if (!IsIntegralMatrix(Qw)) {
+          std::cerr << "The matrix Qw is not integral\n";
+          throw TerminalException{1};
+        }
+#endif
+        DoSomething = true;
+        DoSomethingGlobal = true;
+        v_mult_i -= dimNSPB;
+        v_mult_s -= dimNSPB;
+      }
+      // Apply Lemma 6
+      if (d_mult_i == v_mult_i && n > 2 * d_mult_i && !DoSomething) {
+        change_basis();
+        MyMatrix<T> U = IdentityMat<T>(n);
+        for (int u=d_mult_i; u<n; u++) {
+          U(u, u) = p;
+        }
+        Pw = U * Pw;
+        Qw = U * Qw * U.transpose() / p;
+        DoSomething = true;
+        DoSomethingGlobal = true;
+        int dec = n - 2 * d_mult_i;
+        v_mult_i -= dec;
+        v_mult_s -= dec;
+      }
+      // Apply Lemma 7 (joined with Lemma 8)
+      if (d_mult_i == v_mult_i && !DoSomething) {
+        change_basis();
+        MyMatrix<T> Qtilde = get_qtilde();
+        std::optional<MyVector<T>> opt = FindIsotropicVectorMod(Qtilde, p);
+        if (opt) {
+          MyVector<T> const& V = *opt;
+          MyMatrix<T> M(1,n);
+          for (int i=0; i<n; i++)
+            M(0,i) = V(i);
+          MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
+          MyMatrix<T> U = Concatenate(M, BasisCompl);
+          Pw = U * Pw;
+          Qw = U * Qw * U.transpose();
+#ifdef DEBUG_DET_MINIMIZATION
+          T res = ResInt(Qw(0,0), p*p);
+          if (res != 0) {
+            std::cerr << "We do not have tildeQ(0,0) divisible by p^2\n";
+            throw TerminalException{1};
+          }
+#endif
+          MyMatrix<T> V = IdentityMat<T>(n);
+          V(0,0) = 1 / p;
+          Pw = V * Pw;
+          Qw = V * Qw * W.transpose();
+          DoSomething = true;
+          DoSomethingGlobal = true;
+          int dec = n - 2 * d_mult_i;
+          v_mult_i -= 2;
+          v_mult_s -= 2;
+        }
+      }
+      if (v_mult_s == 0) {
+        list_P_erase.push_back(p);
+      }
     }
-  }
-  for (auto & p : cases_lemma4) {
-    map[p] -= n_row;
-    if (map[p] == 0) {
+    for (auto & p: list_P_erase) {
       map.erase(p);
     }
-    Mwork = Mwork / p;
+    if (!DoSomethingGlobal) {
+      break;
+    }
   }
-  
-  while(true) {
-  }
-
+  return {Pw, Qw};
 }
 
 // clang-format off
