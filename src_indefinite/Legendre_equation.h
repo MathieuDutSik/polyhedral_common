@@ -10,6 +10,7 @@
 #include <map>
 #include <set>
 #include "factorizations.h"
+#include "Temp_Positivity.h"
 // clang-format on
 
 /*
@@ -90,11 +91,11 @@ std::pair<MyMatrix<T>, MyVector<T>> reduction_information(MyVector<T> const& aV)
   //
   auto get_set=[&](std::map<T,size_t> const& map, int const& idx) -> std::set<T> {
     std::set<T> eset;
-    for (auto & kv : a_map) {
+    for (auto & kv : map) {
       T const& val = kv.first;
       size_t mult = kv.second;
-      size_t r = ResInt(mult, 2);
-      size_t q = QuoInt(mult, 2);
+      size_t r = mult % 2;
+      size_t q = mult / 2;
       if (r > 0)
         eset.insert(val);
       TransMat(idx, idx) *= MyPow(val, q);

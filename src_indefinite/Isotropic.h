@@ -44,10 +44,10 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const& M) {
   MyMatrix<T> const& Mred = res.Mred;
   for (int i=0; i<n; i++) {
     for (int j=i+1; j<n; j++) {
-      if (M(i,j) == 0 && M(i,i) + M(j, j) == 0) {
+      if (Mred(i,j) == 0 && Mred(i,i) + Mred(j, j) == 0) {
         MyVector<T> eV = ZeroVector<T>(n);
-        V(i) = 1;
-        V(j) = 1;
+        eV(i) = 1;
+        eV(j) = 1;
         MyVector<T> fV = Binv_T.transpose() * eV;
         return fV;
       }
@@ -94,7 +94,7 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const& M) {
   // or
   // x = -b + sqrt(b^2 - ac)  and y = a
   T Delta = b * b - a * c;
-  std::option<T> opt = UniversalSquareRoot(Delta);
+  std::optional<T> opt = UniversalSquareRoot(Delta);
   if (opt) {
     T const& sqrt_Delta = *opt;
     V(0) = -b + sqrt_Delta;
@@ -115,13 +115,13 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const& M) {
   The algorithm is purely 
  */
 template<typename T>
-MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const& M) {
-  int n = M.rows();
+MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const& Q) {
+  int n = Q.rows();
   ResultDetMin<T> res = DeterminantMinimization(Q);
   MyMatrix<T> Pw = res.P;
   MyMatrix<T> Qw = res.Mred;
   while (true) {
-    MyMatrix<T> Urand = get_random_int_matrix<T>(n);
+    MyMatrix<T> U = get_random_int_matrix<T>(n);
     Pw = U * Pw;
     Qw = U * Qw * U.transpose();
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw);
@@ -160,9 +160,8 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const& M) {
     std::cerr << "The following call might fail because there is no isotropic vectors\n";
     return Kernel_FindIsotropic(M);
   }
-  if (n == 5) {
-    return Kernel_FindIsotropic(M);
-  }
+  // Now n is greater than 5, so there is an isotropic vector
+  return Kernel_FindIsotropic(M);
 }
 
 // clang-format off
