@@ -197,7 +197,6 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const& Q) {
       }
     }
     for (auto & p: list_P_erase) {
-      //      typename std::map<Tring, size_t>::iterator it = map.find(p);
       map.erase(p);
     }
     if (!DoSomethingGlobal) {

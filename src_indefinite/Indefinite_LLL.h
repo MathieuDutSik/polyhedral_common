@@ -136,6 +136,28 @@ template <typename T, typename Tint> struct ResultReduction {
   MyMatrix<T> Mred;
 };
 
+template<typename Tint>
+MyMatrix<Tint> get_random_int_matrix(int const& n) {
+  std::vector<int> LPos(n);
+  for (int i = 0; i < n; i++)
+    LPos[i] = i;
+  for (int iter = 0; iter < 4 * n; iter++) {
+    int i = random() % n;
+    int j = random() % n;
+    if (i != j)
+      std::swap(LPos[i], LPos[j]);
+  }
+  std::vector<int> LDiag(n);
+  for (int i = 0; i < n; i++) {
+    int val = random() % 2;
+    LDiag[i] = -1 + 2 * val;
+  }
+  MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n, n);
+  for (int i = 0; i < n; i++)
+    Unit(i, LPos[i]) = LDiag[i];
+  return Unit;
+}
+
 template <typename T, typename Tint>
 ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
   std::cerr << "Beginning of ComputeReductionIndefinite\n";
@@ -155,31 +177,11 @@ ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
         sum += T_abs(mat(i, j));
     return sum;
   };
-  auto get_random_int_matrix = [&]() -> MyMatrix<Tint> {
-    std::vector<int> LPos(n);
-    for (int i = 0; i < n; i++)
-      LPos[i] = i;
-    for (int iter = 0; iter < 4 * n; iter++) {
-      int i = random() % n;
-      int j = random() % n;
-      if (i != j)
-        std::swap(LPos[i], LPos[j]);
-    }
-    std::vector<int> LDiag(n);
-    for (int i = 0; i < n; i++) {
-      int val = random() % 2;
-      LDiag[i] = -1 + 2 * val;
-    }
-    MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n, n);
-    for (int i = 0; i < n; i++)
-      Unit(i, LPos[i]) = LDiag[i];
-    return Unit;
-  };
   T norm_work = get_norm(Mwork);
   size_t iter_no_improv = 0;
   size_t limit_iter = 2 * n;
   while (true) {
-    MyMatrix<Tint> RandUnit = get_random_int_matrix();
+    MyMatrix<Tint> RandUnit = get_random_int_matrix<Tint>(n);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T, Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
