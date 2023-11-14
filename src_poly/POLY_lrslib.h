@@ -85,13 +85,9 @@ template <typename T> struct lrs_dat {
   /* count[4]=integer vertices                    */
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
-  int64_t runs;       /* probes for estimate function                 */
-  int64_t seed;       /* seed for random number generator             */
   /**** flags  **********                         */
   int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
   int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
-  int64_t getvolume; /* do volume calculation                        */
-  int64_t givenstart;  /* globals::TRUE if a starting cobasis is given  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
   int64_t lponly;   /* true if only lp solution wanted              */
@@ -102,8 +98,6 @@ template <typename T> struct lrs_dat {
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
-  int64_t truncate; /* globals::TRUE: truncate tree when moving from opt vert*/
-  int64_t restart;  /* globals::TRUE if restarting from some cobasis         */
 
   /* Variables for saving/restoring cobasis,  db */
 
@@ -191,8 +185,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->inputd = 0L;
   Q->nlinearity = 0L;
   Q->nredundcol = 0L;
-  Q->runs = 0L;
-  Q->seed = 1234L;
   Q->bound =
       globals::L_FALSE; /* upper/lower bound on objective function given */
   Q->homogeneous = globals::L_TRUE;
@@ -201,14 +193,8 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->nonnegative = globals::L_FALSE;
-  Q->truncate =
-      globals::L_FALSE; /* truncate tree when moving from opt vertex        */
   Q->maximize = globals::L_FALSE; /*flag for LP maximization */
   Q->minimize = globals::L_FALSE; /*flag for LP minimization */
-  Q->restart =
-      globals::L_FALSE; /* globals::TRUE if restarting from some cobasis */
-  Q->givenstart =
-      globals::L_FALSE; /* globals::TRUE if a starting cobasis is given */
   return Q;
 }
 
@@ -274,11 +260,7 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   for (i = 0; i < nlinearity; i++) /* put linearities first in the order */
     inequality[i] = linearity[i];
 
-  k = 0; /* index for linearity array   */
-  if (Q->givenstart)
-    k = d;
-  else
-    k = nlinearity;
+  k = nlinearity;
   for (i = m; i >= 1; i--) {
     j = 0;
     while (j < k && inequality[j] != i)
@@ -300,7 +282,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   /* Note these steps MUST be done, even if restarting, in order to get */
   /* the same index/inequality correspondance we had for the original prob. */
   /* The inequality array is used to give the insertion order */
-  /* and is defaulted to the last d rows when givenstart=globals::FALSE */
 
   if (Q->nonnegative) {
     /* no need for initial pivots here, labelling already done */
@@ -409,9 +390,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
         return globals::L_FALSE;
       }
     }
-    if (Q->truncate &&
-        (*D_p)->A[0][0] < 0) /* truncate when moving from opt. vertex */
-      backtrack = globals::L_TRUE;
 
     //      PrintP(*D_p, "Before backtrack test");
     if (backtrack) { /* go back to prev. dictionary, restore i,j */
@@ -913,14 +891,6 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
     d = P->d;
   }
 
-  /* Check feasability */
-  if (Q->givenstart) {
-    i = Q->lastdv + 1;
-    while (i <= m && A[Row[i]][0] >= 0)
-      i++;
-    if (i <= m)
-      std::cerr << "Infeasible startingcobasis - will be modified";
-  }
   return globals::L_TRUE;
 } /*  end of getabasis */
 
