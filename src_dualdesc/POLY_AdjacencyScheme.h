@@ -48,6 +48,10 @@
   Takada_M._Distributed_systems_for_fun_and_profit.epub (short one)
   Varela_C.A._Programming_distributed_computing_systems__a_foundational_approach.pdf
   (ok, teaches pi-calculus, join, etc.)
+  Raynal_M._Distributed_Algorithms_for_Message-Passing_Systems.pdf
+  (especially relevant to us)
+  Fokkink_W._Distributed_Algorithms_-_An_Intuitive_Approach.pdf
+  
 
 
 
