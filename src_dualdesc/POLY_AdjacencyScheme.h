@@ -112,11 +112,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   struct entry {
     Tobj x;
     size_t hash_hashmap;
-    int status;
+    bool is_treated;
     Ttrack track;
   };
   std::vector<entry> V;
-  std::unordered_set<size_t> undone;
+  std::vector<size_t> undone;
   //
   // The tracking information
   //
@@ -127,7 +127,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   // The lambda functions
   //
-  auto f_insert_local=[&](entry const& e, bool const& save_if_new) -> void {
+  auto f_insert_local=[&](entry const& e) -> void {
     std::vector<size_t>& vect = map[hash];
     for (auto & idx : vect) {
       entry & f = V[idx];
@@ -139,15 +139,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     V.push_back(e);
     vect.push_back(n_obj);
-    if (save_if_new) {
-      f_save(n_obj, e.x);
-      f_save_status(n_obj, e.status);
+    if (pair.second != i_proc) {
+      l_ack.push_back(pair);
     }
     n_obj++;
     nonce++;
-    if (max_time_second > 0 && pair.second != i_proc) {
-      l_ack.push_back(pair);
-    }
+  };
+  auto f_insert_local_and_save=[&](entry const& e) -> void {
+    f_save(n_obj, e.x);
+    f_save_status(n_obj, e.is_treated);
+    f_insert_local(e);
   };
   auto f_insert=[&](entry const& e) -> void {
     if (res == i_proc) {
@@ -182,9 +183,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_new_object) {
-      entry x;
-      comm.recv(e_src, tag_new_object, x);
-      f_insert_local(x, 0, e_src);
+      entry e;
+      comm.recv(e_src, tag_new_object, e);
+      f_insert_local(e);
       return false;
     }
     if (e_tag == tag_indicate_processed) {
@@ -208,23 +209,25 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
     throw TerminalException{1};
   };
+  auto get_undone_idx=[&]() -> size_t {
+    size_t idx = undone[undone.size() - 1];
+    undone.pop_back();
+    return idx;
+  };
   auto process_one_entry=[&]() -> void {
-    std::unordered_set<size_t>::iterator iter = undone.begin();
-    size_t idx = *iter;
-    undone.erase(idx);
+    size_t idx = get_undone_idx();
     entry & e = V[idx];
     std::vector<Tobj> l_adj = f_adj(e.x);
     for (auto & x : l_adj) {
-      size_t hash_partition = f_hash(seed_partition, e.x);
-      size_t hash_hashmap = f_hash(seed_hashmap, e.x);
+      size_t hash_partition = f_hash(seed_partition, x);
+      size_t hash_hashmap = f_hash(seed_hashmap, x);
       int res = static_cast<int>(hash_partition % size_t(n_proc));
       Track track{nonce, res};
       nonce++;
-      int status = 0;
-      entry e{x, hash_hashmap, status, track};
+      bool is_treated = false;
+      entry e{x, hash_hashmap, is_treated, track};
       f_insert(e);
     }
-    
   };
   //
   // Loading the data
@@ -234,8 +237,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       break;
     }
     Tobj x = f_load(n_obj);
-    int status = f_load_status(n_obj);
-    f_insert_local(x, status);
+    size_t hash_hashmap = f_hash(seed_hashmap, x);
+    bool is_treated = f_load_status(n_obj);
+    Ttrack track{nonce, i_rank};
+    entry e{x, hash_hashmap, is_treated, track};
+    f_insert_local_and_save(e);
   }
   //
   // The infinite loop
