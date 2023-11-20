@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
       }
       std::cerr << "\n";
     }
-    MyVector<T> cosetVect(dim);
+    MyVector<T> cosetVect = ZeroVector<T>(dim);
     if (coset) {
       for (i = 0; i < dim; i++) {
         std::cin >> eT;
@@ -131,6 +131,36 @@ int main(int argc, char *argv[]) {
     T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request);
     int nbVect = info.short_vectors.size();
     std::cerr << "After computeShvec |V|=" << nbVect << "\n";
+    //
+    // Checking central symmetry
+    //
+#ifdef CHECK_SHVEC
+    bool IsCentrallySymmetric = true;
+    for (i = 0; i < dim; i++) {
+      T twoT = 2 * eT;
+      if (!IsInteger(twoT)) {
+        IsCentrallySymmetric = false;
+      }
+    }
+    if (IsCentrallySymmetric) {
+      MyVector<T> TwoCoset_T = - 2 * cosetVect;
+      MyVector<Tint> TwoCoset = UniversalVectorConversion<Tint,T>(TwoCoset_T);
+      std::unordered_set<MyVector<Tint>> set;
+      for (auto & V : info.short_vectors) {
+        set.insert(V);
+      }
+      for (auto & V : info.short_vectors) {
+        MyVector<Tint> Vdiff = TwoCoset - V;
+        if (set.count(Vdiff) == 0) {
+          std::cerr << "The problem is centrally symmetric\n";
+          std::cerr << "cosetVect=" << StringVector(cosetVect) << "\n";
+          std::cerr << "But the vector V=" << StringVector(V) << " is in the solution\n";
+          std::cerr << "while Vdiff=" << StringVector(Vdiff) << " is not contained\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+#endif
     //
     // Data output
     //
