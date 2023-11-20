@@ -104,8 +104,8 @@ equations **Ax = b** by finding sparse solution **x** for sparse matrices
 **A** and **b**. The algorithmic method used is Generalized Approximate
 Message Passing.
 
-Compilation options
--------------------
+Compilation options related to debug
+------------------------------------
 
 There are several environment variables that can be used during runtime.
 * `DEBUG` for making some print statements and making some checks. Those checks have to be fast.

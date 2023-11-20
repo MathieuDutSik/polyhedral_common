@@ -141,7 +141,7 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen = ListGen.size();
   Tidx n = TheGRP.n_act();
-  os << int(TheGRP.n_act()) << " " << nbGen << "\n";
+  os << int(n) << " " << nbGen << "\n";
   for (auto &eGen : ListGen) {
     for (Tidx i = 0; i < n; i++) {
       Tidx eVal = OnPoints(i, eGen);
@@ -150,6 +150,26 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
     os << "\n";
   }
 }
+
+template <typename Tgroup>
+std::string StringGroup(Tgroup const &TheGRP) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
+  int nbGen = ListGen.size();
+  Tidx n = TheGRP.n_act();
+  std::string strOut = std::to_string(int(n)) + " " + std::to_string(nbGen);
+  for (auto &eGen : ListGen) {
+    for (Tidx i = 0; i < n; i++) {
+      Tidx eVal = OnPoints(i, eGen);
+      strOut += " " + std::to_string(int(eVal));
+    }
+  }
+  return strOut;
+}
+
+
+
 
 template <typename Tgroup>
 void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
