@@ -29,6 +29,8 @@
   ---The perfect forms of a T-space.
      ---There is likely no canonicalization for the T-space coming from number
         theory
+  ---The L-types of a T-space.
+     ---Basic setting as for perfect forms.
   ---The perfect form of the hyperbolic cone.
      ---This might work similarly to the Delaunay. Right now we have
   ---The C-types of Z^n (but we do not have realistic examples)
@@ -72,23 +74,30 @@
 
  */
 
+const size_t seed_partition = 10;
+const size_t seed_hashmap = 20;
+
+
 
 
 
 /*
   input clear from preceding discussion.
+  The returned boolean is:
+  true: if the enumeration finished
  */
-
 template<typename Tobj, typename Finit, typename Fadj, typename Fhash, typename Frepr>
-bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
-                       std::string const& Prefix, int const& max_time_second,
-                       Finit f_init, Fadj f_adj, Fhash f_hash, frepr f_repr) {
-
+bool compute_adjacency_mpi(boost::mpi::communicator &comm,
+                           int const& max_time_second,
+                           Fexist f_exist,
+                           Fsave f_save,
+                           Fload f_load,
+                           Fsave_status f_save_status,
+                           Fload_status f_load_status,
+                           Finit f_init, Fadj f_adj, Fhash f_hash, frepr f_repr) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  const size_t seed_partition = 10;
-  const size_t seed_hashmap = 20;
   const int tag_new_object = 34;
   const int tag_indicate_processed = 35;
   const int tag_query_n_oper_ask = 36;
@@ -118,7 +127,7 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
   //
   // The lambda functions
   //
-  auto f_insert_local=[&](entry const& e) -> void {
+  auto f_insert_local=[&](entry const& e, bool const& save_if_new) -> void {
     std::vector<size_t>& vect = map[hash];
     for (auto & idx : vect) {
       entry & f = V[idx];
@@ -129,14 +138,10 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
       }
     }
     V.push_back(e);
-    if (DoSaving) {
-      std::string FileO = Prefix + "_O_" + std::to_string(n_obj);
-      std::ofstring osO(FileO);
-      osO << e.x;
-      //
-      std::string FileS = Prefix + "_S_" + std::to_string(n_obj);
-      std::ofstring osS(FileS);
-      osO << e.status;
+    vect.push_back(n_obj);
+    if (save_if_new) {
+      f_save(n_obj, e.x);
+      f_save_status(n_obj, e.status);
     }
     n_obj++;
     nonce++;
@@ -157,9 +162,15 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
     if (s_ack_waiting.size() > 0) {
       return 0;
     }
-    if (
+    if (undone.size() == 0) {
+      return nonce;
+    }
+    if (max_time_second > 0 && si(start) > max_time_second) {
+      return nonce;
+    }
+    return 0;
   };
-  auto process_nonce=[&](track const& t) -> void {
+  auto process_received_nonce=[&](track const& t) -> void {
     std::unordered_set<Ttrack>::iterator iter =  s_ack_waiting.find(t);
     if (t == s_ack_waiting.end()) {
       std::cerr << "We have a consistency error\n";
@@ -179,7 +190,7 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
     if (e_tag == tag_indicate_processed) {
       track t;
       comm.recv(e_src, tag_indicate_processed, t);
-      process_nonce(t);
+      process_received_nonce(t);
       return false;
     }
     if (e_tag == tag_query_n_oper_ask) {
@@ -218,25 +229,13 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
   //
   // Loading the data
   //
-
-
-  if (DoSaving) {
-    while(true) {
-      std::string FileO = Prefix + "_O_" + std::to_string(n_obj);
-      if (IsExistingFile(FileO)) {
-        break;
-      }
-      std::ifstring isO(FileO);
-      Tobj x;
-      x << isO;
-      //
-      std::string FileS = Prefix + "_S_" + std::to_string(n_obj);
-      std::ifstring isS(FileS);
-      int status;
-      status << isS;
-      //
-      f_insert_local(x, status);
+  while(true) {
+    if (!f_exist(n_obj)) {
+      break;
     }
+    Tobj x = f_load(n_obj);
+    int status = f_load_status(n_obj);
+    f_insert_local(x, status);
   }
   //
   // The infinite loop
@@ -263,9 +262,74 @@ bool compute_adjacency(boost::mpi::communicator &comm, bool const& DoSaving,
   }
 }
 
-
-
-
+template<typename Tobj, typename Finit, typename Fadj, typename Fhash, typename Frepr>
+bool compute_adjacency_serial(int const& max_time_second,
+                              Fexist f_exist,
+                              Fsave f_save,
+                              Fload f_load,
+                              Fsave_status f_save_status,
+                              Fload_status f_load_status,
+                              Finit f_init, Fadj f_adj, Fhash f_hash, frepr f_repr) {
+  SingletonTime start;
+  size_t n_obj = 0;
+  std::vector<Tobj> V;
+  std::unordered_map<size_t, std::vector<size_t>> map;
+  std::vector<int> Vstatus;
+  std::vector<size_t> undone;
+  auto f_insert=[&](Tobj const& x, bool is_treated, bool const& save_if_new) -> void {
+    size_t hash = f_hash(seed_hashmap, x);
+    std::vector<size_t>& vect = map[hash];
+    for (auto & idx : vect) {
+      Tobj & y = V[idx];
+      if (f_repr(x, y)) {
+        return;
+      }
+    }
+    V.push_back(x);
+    vect.push_back(n_obj);
+    if (save_if_new) {
+      f_save(n_obj, x);
+      f_save_status(n_obj, is_new);
+    }
+    if (is_treated) {
+      undone.push_back(n_obj);
+    }
+    n_obj++;
+  };
+  auto get_undone_idx=[&]() -> size_t {
+    size_t idx = undone[undone.size() - 1];
+    undone.pop_back();
+    return idx;
+  };
+  while (true) {
+    if (!f_exist(n_obj)) {
+      break;
+    }
+    Tobj x = f_load(n_obj);
+    bool is_treated = f_load_status(n_obj);
+    bool save_if_new = false;
+    f_insert(x, is_treated, save_if_new);
+  }
+  if (n_obj == 0) {
+    Tobj x = f_init();
+    f_insert(x, 0, true);
+  }
+  while (true) {
+    if (unordered_set.size() == 0) {
+      return true;
+    }
+    if (max_time_second > 0 && si(start) > max_time_second) {
+      return false;
+    }
+    size_t idx = get_undone_idx();
+    Tobj const& x = V[idx];
+    for (auto & y : f_adj(x)) {
+      bool is_treated = false;
+      bool save_if_new = false;
+      f_insert(y, is_treated, save_if_new);
+    }
+  }
+}
 
 
 // clang-format off
