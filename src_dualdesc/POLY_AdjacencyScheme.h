@@ -108,6 +108,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   int n_obj = 0;
   std::unordered_map<size_t, std::vector<size_t>> map;
+  // First is the nonce, second is the creating process.
   using Ttrack = std::pair<size_t, int>;
   struct entry {
     Tobj x;
@@ -133,14 +134,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       entry & f = V[idx];
       if (f_repr(e.x, f.x)) {
         if (e.track.second != i_proc) {
-          l_ack.push_back(pair);
+          l_ack.push_back(e.track);
         }
       }
     }
     V.push_back(e);
     vect.push_back(n_obj);
-    if (pair.second != i_proc) {
-      l_ack.push_back(pair);
+    if (e.track.second != i_proc) {
+      l_ack.push_back(e.track);
     }
     n_obj++;
     nonce++;
@@ -229,6 +230,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       f_insert(e);
     }
   };
+  auto f_terminate=[&]() -> bool {
+  };
   //
   // Loading the data
   //
@@ -262,6 +265,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       } else {
         if (undone.size() > 0) {
           process_one_entry();
+        } else {
+          if (f_terminate()) {
+            return;
+          }
         }
       }
     }
