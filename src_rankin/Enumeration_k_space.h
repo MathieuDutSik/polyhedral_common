@@ -6,7 +6,10 @@
 #include "MAT_MatrixInt.h"
 
 // Returns the Hermite constant at the n-th power.
-// That is the minimum of min(A)^n / det(A)
+// That is the mmaximum of min(A)^n / det(A)
+// --
+// So we would have min(A)^n / det(A) <= H(n)
+// which gets us min(A)^n <= H(n) det(A)
 template<typename T>
 T GetUpperBoundHermitePower(int n) {
   if (n == 1) {
@@ -115,10 +118,21 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const& A, int const& k, T
   // We use the HermiteNormalForm
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   if (k == 1) {
-    
+    T bound = MaxDet;
+    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
+    std::vector<MyMatrix<Tint>> RetList;
+    for (auto & eV : SHVmin.short_vectors) {
+      MyMatrix<Tint> M = MatrixFromVector(eV);
+      RetList.push_back(M);
+    }
+    return RetList;
   } else {
+    // We are now using the Hermite constant to get a bound on the minimum
+    // That is we have min(A)^k <= H(n) * MaxDet
+    T upper = GetUpperBoundHermitePower(k) * MaxDet;
+    // What could be done to get upper bound on min(A)?
+    // 
     
-
     
   }
   std::vector<MyMatrix<Tint>> vec_subspaces;

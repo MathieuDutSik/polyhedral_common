@@ -591,7 +591,7 @@ T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request) {
   throw TerminalException{1};
 }
 
-// Compute the minimum
+// Compute the minimum and returns only half the vector matching it
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const& gram_matrix) {
   int dim = eG.rows();
@@ -609,6 +609,38 @@ T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const& gram_matrix) {
   //
   return computeMinimum<T, Tint>(request);
 }
+
+
+// Returns half the vector below a specific bound.
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const& gram_matrix, T const& bound) {
+  int dim = eG.rows();
+  MyVector<T> coset = ZeroVector<T>(n);
+  int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
+  bool central = true;
+  //
+  T_shvec_request<T> request;
+  request.dim = dim;
+  request.coset = coset;
+  request.gram_matrix = gram_matrix;
+  request.mode = mode;
+  request.bound = bound;
+  request.central = central;
+  //
+  T_shvec_info<T, Tint> info;
+  info.minimum = bound;
+  auto f_insert = [&](const MyVector<Tint> &V,
+                      [[maybe_unused]] const T &min) -> bool {
+    info.short_vectors.push_back(V);
+    return true;
+  };
+  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
+                                               f_insert);
+  return info;
+}
+
+
+
 
 
 
