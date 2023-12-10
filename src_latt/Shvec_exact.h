@@ -591,6 +591,27 @@ T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request) {
   throw TerminalException{1};
 }
 
+// Compute the minimum
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const& gram_matrix) {
+  int dim = eG.rows();
+  MyVector<T> coset = ZeroVector<T>(n);
+  int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
+  bool central = true;
+  //
+  T_shvec_request<T> request;
+  request.dim = dim;
+  request.coset = coset;
+  request.gram_matrix = gram_matrix;
+  request.mode = mode;
+  request.bound = bound;
+  request.central = central;
+  //
+  return computeMinimum<T, Tint>(request);
+}
+
+
+
 template<typename T, typename Tint>
 void check_shvec_info_request(T_shvec_info<T, Tint> const& info, T_shvec_request<T> const& request) {
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {

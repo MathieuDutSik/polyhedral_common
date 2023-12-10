@@ -3,6 +3,7 @@
 #define SRC_RANKIN_ENUMERATION_K_SPACE_H_
 
 #include "Shvec_exact.h"
+#include "MAT_MatrixInt.h"
 
 // Returns the Hermite constant at the n-th power.
 // That is the minimum of min(A)^n / det(A)
@@ -78,11 +79,40 @@ MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const& TheGramMat, MyMatrix<Tint>
 }
 
 template<typename T, typename Tint>
-std::vector<MyMatrix<Tint>> Compute_k_minimum(MyMatrix<T> const& A, int const& k);
+T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const& TheGramMat, int k) {
+  int n = TheGramMat.rows();
+  T_shvec_info<T, Tint> SHVmin = computeMinimum_GramMat(TheGramMat);
+  T rNorm = SHVmin.minimum;
+  if (k == 1) {
+    return rNorm;
+  }
+  MyVector<Tint> eVect = SHVmin.short_vectors[0];
+  MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+  MyVector<T> eVect_T_TheGramMat = TheGramMat * eVect_T.transpose();
+  MyMatrix<T> eVect_M = MatrixFromVector(eVect);
+  MyMatrix<Tint> TheCompl = SubspaceCompletionInt(eVect_M, n);
+  MyMatrix<T> TheProj(n-1, n);
+  for (int i=0; i<n-1; i++) {
+    MyVector<Tint> fVect = GetMatrixRow(TheCompl, i);
+    MyVector<T> fVect_T = UniversalVectorConversion<T,Tint>(fVect);
+    T scal = (eVect_T_TheGramMat.dot(fVect_T)) / rNorm;
+    MyVector<T> rVect = fVect - eVect * scal;
+    AssignMatrixRow(TheProj, i, rVect);
+  }
+  MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
+  T upper = UpperBoundRankinMinimalDeterminant(ReducedGramMat, k-1);
+  return rNorm * upper;
+}
+
 
 
 template<typename T, typename Tint>
-std::vector<MyMatrix<Tint>> Compute_k_minimum(MyMatrix<T> const& A, int const& k, T const& MaxDet) {
+std::vector<MyMatrix<Tint>> Randin_k_level(MyMatrix<T> const& A, int const& k, T const& MaxDet);
+
+
+template<typename T, typename Tint>
+std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const& A, int const& k, T const& MaxDet) {
+  // We use the HermiteNormalForm
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   if (k == 1) {
     
