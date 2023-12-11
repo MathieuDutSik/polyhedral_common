@@ -116,12 +116,89 @@ T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k) {
   return rNorm * upper;
 }
 
+template<typename T>
+T get_multiple_value(MyMatrix<T> const& M) {
+  FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(M);
+  int i = M.rows();
+  auto get_mat_mult=[&]() -> T {
+    for (int i=0; i<n; i++) {
+      T quot = M(i,i) / 2;
+      if (!IsInteger(quot)) {
+        return 1;
+      }
+    }
+    return 2;
+  };
+  return get_mat_mult(fr.TheMat) / fr.TheMult;
+}
+
 // Find the upper bound
 // --- For floating point types, use the power function
 // --- For exact types, like GMP we can use the denominators of M
 //     to get to the bound
+// We want to find the maximum feasible value of m such that m^k <= C
 template <typename T>
-T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {}
+T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
+  double expo = 1.0 / static_cast<double>(k);
+  if constexpr (std::is_same_v<T,double>) {
+    return std::pow(C, expo);
+  }
+  if constexpr (std::is_same_v<T,float>) {
+    return std::pow(C, expo);
+  }
+  // Assumed to be exact arithmetic.
+  // pretty inefficient but actually fine.
+  T delta = get_multiple_value(M);
+  auto is_corr=[&](T comnst& val) -> T {
+    T ret = val;
+    for (int i=1; i<k; i++) {
+      ret *= val;
+    }
+    return ret <= C;
+  };
+  T val = 0;
+  while(true) {
+    T val_new = val + delta;
+    if (is_corr(val_new)) {
+      val = val_new;
+    } else {
+      return val;
+    }
+  }
+}
+
+template <typename T, typename Tint>
+struct VectorProjection {
+  MyMatrix<T> TheProj;
+  MyMatrix<Tint> TheCompl;
+  MyVector<Tint> eV;
+  T rNorm;
+  MyMatrix<T> ReducedGramMat;
+};
+
+template <typename T, typename Tint>
+VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVector<Tint> const& eV) {
+  MyVector<T> eV_T = UniversalVectorConversion<T, Tint>(eV);
+  T rNorm = eV_T * A * eV_T.transpose();
+  std::pair<MyMatrix<T>, MyMatrix<Tint>> pair =
+    GetOrthogonalProjector_dim1(TheGramMat, eVect);
+  MyMatrix<T> const &TheProj = pair.first;
+  MyMatrix<Tint> const &TheCompl = pair.second;
+  MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
+  return {std::move(TheProj), std::move(TheCompl), eV, std::move(rNorm), std::move(ReducedGramMat)};
+}
+
+template <typename T, typename Tint>
+MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tint> const& eLatt) {
+  MyMatrix<Tint> ePart = eLatt * vp.TheCompl;
+  MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, cp.eV);
+  MyMatrix<Tint> gLatt = ComputeRowHermiteNormalForm_second(fLatt);
+  return gLatt;
+}
+
+
+
+
 
 // The function that returns the Rankin k-minimum.
 // It should work both for floating point types and exact types.
@@ -151,20 +228,12 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   T bound = MaxKBound(upper, k, A);
   T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
   for (auto &eV : SHVmin.short_vectors) {
-    MyVector<T> eV_T = UniversalVectorConversion<T, Tint>(eV);
-    T rNorm = eV_T * A * eV_T.transpose();
-    std::pair<MyMatrix<T>, MyMatrix<Tint>> pair =
-        GetOrthogonalProjector_dim1(TheGramMat, eVect);
-    MyMatrix<T> const &TheProj = pair.first;
-    MyMatrix<Tint> const &TheCompl = pair.second;
-    MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
-    T TheAskDet = MaxDet / rNorm;
+    VectorProjection<T,Tint> vp = GetVectorProjection(TheGramMat, eV);
+    T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
-        Rankin_k_level(ReducedGramMat, k - 1, TheAskDet);
+        Rankin_k_level(vp.ReducedGramMat, k - 1, TheAskDet);
     for (auto &eLatt : SpecEnum) {
-      MyMatrix<Tint> ePart = eLatt * TheCompl;
-      MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, eVect);
-      MyMatrix<Tint> gLatt = ComputeRowHermiteNormalForm_second(fLatt);
+      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
 #ifdef DEBUG_RANKIN
       MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
       MyMatrix<T> eProdMat = gLatt_T * TheGramMat * gLatt_T.transpose();
@@ -184,6 +253,32 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   }
   return vec_subspaces;
 }
+
+
+template <typename T, typename Tint>
+struct ResultKRankinMin {
+  T min;
+  std::vector<MyMatrix<Tint>> l_space;
+};
+
+
+
+
+template <typename T, typename Tint>
+ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
+                                           T const &tol);
+
+template <typename T, typename Tint>
+ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
+                                           T const &tol) {
+  if (k == 1) {
+
+  }
+
+}
+
+
+
 
 // clang-format off
 #endif  // SRC_RANKIN_ENUMERATION_K_SPACE_H_
