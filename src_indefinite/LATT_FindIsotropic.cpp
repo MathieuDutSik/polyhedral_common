@@ -8,15 +8,17 @@
 #include "Isotropic.h"
 // clang-format on
 
-template<typename T>
-void process(std::string const& FileI, std::string const& OutFormat, std::ostream & os) {
+template <typename T>
+void process(std::string const &FileI, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
   std::cerr << "We have Q\n";
   //
   std::optional<MyVector<T>> opt = FindIsotropic(Q);
   if (OutFormat == "GAP") {
     if (opt) {
-      os << "return rec(has_isotropic:=true, V:=" << StringVectorGAP(*opt) << ");\n";
+      os << "return rec(has_isotropic:=true, V:=" << StringVectorGAP(*opt)
+         << ");\n";
     } else {
       os << "return rec(has_isotropic:=false);\n";
     }
@@ -25,13 +27,12 @@ void process(std::string const& FileI, std::string const& OutFormat, std::ostrea
   throw TerminalException{1};
 }
 
-
-
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 3 && argc != 5) {
-      std::cerr << "LATT_FindIsotropic arithmetic [FileI] [OutFormat] [FileO]\n";
+      std::cerr
+          << "LATT_FindIsotropic arithmetic [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "LATT_FindIsotropic arithmetic [FileI]\n";
       throw TerminalException{1};

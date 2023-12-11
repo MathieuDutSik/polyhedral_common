@@ -151,8 +151,7 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   }
 }
 
-template <typename Tgroup>
-std::string StringGroup(Tgroup const &TheGRP) {
+template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
@@ -167,9 +166,6 @@ std::string StringGroup(Tgroup const &TheGRP) {
   }
   return strOut;
 }
-
-
-
 
 template <typename Tgroup>
 void WriteGroupFile(std::string const &eFile, Tgroup const &TheGRP) {
@@ -356,15 +352,14 @@ Face OrbitUnion(Tgroup const &GRP, Face const &gList) {
 // Several building of new groups.
 //
 
-template<typename Tidx>
-struct ReducingArray {
+template <typename Tidx> struct ReducingArray {
   size_t nb;
   std::vector<Tidx> ListPositionRev;
   std::vector<Tidx> ListPosition;
 };
 
 template <typename Tidx>
-ReducingArray<Tidx> GetReducingArray(Face const& eList) {
+ReducingArray<Tidx> GetReducingArray(Face const &eList) {
   Tidx size = eList.size();
   size_t nb = eList.count();
   Tidx nb_i = nb;
@@ -383,8 +378,9 @@ ReducingArray<Tidx> GetReducingArray(Face const& eList) {
   return {nb, std::move(ListPositionRev), std::move(ListPosition)};
 }
 
-template<typename Telt>
-Telt SingleElementReduction(Telt const& eElt, ReducingArray<typename Telt::Tidx> const& ra) {
+template <typename Telt>
+Telt SingleElementReduction(Telt const &eElt,
+                            ReducingArray<typename Telt::Tidx> const &ra) {
   using Tidx = typename Telt::Tidx;
   std::vector<Tidx> v(ra.nb);
   for (size_t i = 0; i < ra.nb; i++) {
@@ -395,7 +391,6 @@ Telt SingleElementReduction(Telt const& eElt, ReducingArray<typename Telt::Tidx>
   }
   return Telt(std::move(v));
 }
-
 
 template <typename Telt>
 Telt ReduceElementAction(Telt const &eElt, Face const &eList) {

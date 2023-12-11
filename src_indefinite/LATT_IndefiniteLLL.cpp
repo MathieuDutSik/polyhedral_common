@@ -8,8 +8,9 @@
 #include "Indefinite_LLL.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void process(std::string const& FileI, std::string const& OutFormat, std::ostream & os) {
+template <typename T, typename Tint>
+void process(std::string const &FileI, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   std::cerr << "We have M\n";
 
@@ -36,13 +37,12 @@ void process(std::string const& FileI, std::string const& OutFormat, std::ostrea
   throw TerminalException{1};
 }
 
-
-
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 3 && argc != 2) {
-      std::cerr << "LATT_IndefiniteLLL arithmetic [FileI] [OutFormat] [FileO]\n";
+      std::cerr
+          << "LATT_IndefiniteLLL arithmetic [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "LATT_IndefiniteLLL arithmetic [FileI]\n";
       throw TerminalException{1};
@@ -60,17 +60,17 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(FileI, OutFormat, os);
+        return process<T, Tint>(FileI, OutFormat, os);
       }
       if (arith == "safe") {
         using T = Rational<SafeInt64>;
         using Tint = SafeInt64;
-        return process<T,Tint>(FileI, OutFormat, os);
+        return process<T, Tint>(FileI, OutFormat, os);
       }
       if (arith == "boost_cpp") {
         using T = boost::multiprecision::cpp_rational;
         using Tint = boost::multiprecision::cpp_int;
-        return process<T,Tint>(FileI, OutFormat, os);
+        return process<T, Tint>(FileI, OutFormat, os);
       }
       /*
       if (arith == "boost_gmp") {

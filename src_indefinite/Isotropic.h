@@ -27,24 +27,23 @@
   ---
  */
 
-
 // Try to find isotropic subspace by using Indefinite LLL
-template<typename T>
-std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const& M) {
+template <typename T>
+std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n = M.rows();
   // Compute the LLL reduction.
-  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T,Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M);
   if (!res.success) {
     return res.Xisotrop;
   }
-  MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
   MyMatrix<T> Binv_T = Inverse(B_T);
   // Compute the product
-  MyMatrix<T> const& Mred = res.Mred;
-  for (int i=0; i<n; i++) {
-    for (int j=i+1; j<n; j++) {
-      if (Mred(i,j) == 0 && Mred(i,i) + Mred(j, j) == 0) {
+  MyMatrix<T> const &Mred = res.Mred;
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      if (Mred(i, j) == 0 && Mred(i, i) + Mred(j, j) == 0) {
         MyVector<T> eV = ZeroVector<T>(n);
         eV(i) = 1;
         eV(j) = 1;
@@ -56,27 +55,22 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const& M) {
   return {};
 }
 
-
-
-
 // For rank 1 this is trivial
-template<typename T>
-std::optional<MyVector<T>> FindIsotropicRankOne(MyMatrix<T> const& M) {
-  if (M(0,0) == 0)
+template <typename T>
+std::optional<MyVector<T>> FindIsotropicRankOne(MyMatrix<T> const &M) {
+  if (M(0, 0) == 0)
     return {};
   MyVector<T> V(1);
   V(0) = 1;
   return V;
 }
 
-
-
 // For rank 2 this is trivial
-template<typename T>
-std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const& M) {
-  T a = M(0,0);
-  T b = M(0,1);
-  T c = M(1,1);
+template <typename T>
+std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
+  T a = M(0, 0);
+  T b = M(0, 1);
+  T c = M(1, 1);
   // quadratic form q(x,y) = a x^2 + 2 b xy + c y^2
   // equation q(x,y) = 0
   MyVector<T> V(2);
@@ -96,7 +90,7 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const& M) {
   T Delta = b * b - a * c;
   std::optional<T> opt = UniversalSquareRoot(Delta);
   if (opt) {
-    T const& sqrt_Delta = *opt;
+    T const &sqrt_Delta = *opt;
     V(0) = -b + sqrt_Delta;
     V(1) = a;
     return V;
@@ -104,18 +98,10 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const& M) {
   return {};
 }
 
-
-
-
-
-
-
-
 /*
-  The algorithm is purely 
+  The algorithm is purely
  */
-template<typename T>
-MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const& Q) {
+template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q) {
   int n = Q.rows();
   ResultDetMin<T> res = DeterminantMinimization(Q);
   MyMatrix<T> Pw = res.P;
@@ -126,7 +112,7 @@ MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const& Q) {
     Qw = U * Qw * U.transpose();
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw);
     if (opt) {
-      MyVector<T> const& eV = *opt;
+      MyVector<T> const &eV = *opt;
       MyMatrix<T> Pw_inv = Inverse(Pw);
       MyVector<T> fV = Pw_inv.transpose() * eV;
       return fV;
@@ -134,11 +120,8 @@ MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const& Q) {
   }
 }
 
-
-
-
-template<typename T>
-std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const& M) {
+template <typename T>
+std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M) {
   int n = M.rows();
   if (n == 1) {
     return FindIsotropicRankOne(M);
@@ -157,7 +140,8 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const& M) {
   }
   if (n == 4) {
     // This is the case where we have a missing ingredient
-    std::cerr << "The following call might fail because there is no isotropic vectors\n";
+    std::cerr << "The following call might fail because there is no isotropic "
+                 "vectors\n";
     return Kernel_FindIsotropic(M);
   }
   // Now n is greater than 5, so there is an isotropic vector
