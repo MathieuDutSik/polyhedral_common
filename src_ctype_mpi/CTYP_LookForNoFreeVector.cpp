@@ -1,3 +1,4 @@
+// Copyright (C) 2023 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
 #include "CtypeMPI_types.h"

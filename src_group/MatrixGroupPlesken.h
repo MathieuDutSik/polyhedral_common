@@ -254,5 +254,5 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 }
 
 // clang-format off
-#endif  // SRC_GROUP_MATRIXGROUP_H_
+#endif  // SRC_GROUP_MATRIXGROUPPLESKEN_H_
 // clang-format on
