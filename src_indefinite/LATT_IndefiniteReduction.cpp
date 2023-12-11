@@ -17,8 +17,13 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_IndefiniteReduction [FileI]\n";
       std::cerr << "or\n";
       std::cerr << "FileI     : The input file\n";
-      std::cerr << "OutFormat : Possible values, GAP and Oscar (if missing, then GAP)\n";
-      std::cerr << "FileO     : The output file (is missing, then stderr)\n";
+      std::cerr << "OutFormat : Possible values, GAP and Oscar\n";
+      std::cerr << "            Default: GAP\n";
+      std::cerr << "FileO     : The output file\n";
+      std::cerr << "            stdout: write to std::cout\n";
+      std::cerr << "            stderr: write to std::cerr\n";
+      std::cerr << "            Other filename get written to files\n";
+      std::cerr << "            Default: stderr\n";
       throw TerminalException{1};
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
@@ -41,7 +46,7 @@ int main(int argc, char *argv[]) {
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> ResRed =
-        ComputeReductionIndefinitePermSign<T, Tint>(M, std::cerr);
+          ComputeReductionIndefinitePermSign<T, Tint>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       if (T_abs(DeterminantMat(B_T)) != 1) {
@@ -65,7 +70,8 @@ int main(int argc, char *argv[]) {
         WriteMatrix(os, ResRed.Mred);
         return;
       }
-      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+                << "\n";
       throw TerminalException{1};
     };
     if (FileO == "stderr") {

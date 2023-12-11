@@ -37,17 +37,17 @@
      ---We have canonicalization stuff.
 
   Conclusion: The canonicalization cannot be assumed to exist in general.
-  But we could work out with f_repr. And if by accident we have some canonicalization
-  then we can have a corresponding hash function and then an equality test. So,
-  there is no loss of generality in working that way.
+  But we could work out with f_repr. And if by accident we have some
+  canonicalization then we can have a corresponding hash function and then an
+  equality test. So, there is no loss of generality in working that way.
 
   TODO:
   ---Resolve the scheme so that we can conclude when everything has been treated
   without any heuristic.
-  ---When a node has everything processed, send a note to all others asking for their
-  status. If all of them reply then things are clear.
-  ---Have to learn about "distributed programming" from Leslie Lamport and others.
-  Takada_M._Distributed_systems_for_fun_and_profit.epub (short one)
+  ---When a node has everything processed, send a note to all others asking for
+  their status. If all of them reply then things are clear.
+  ---Have to learn about "distributed programming" from Leslie Lamport and
+  others. Takada_M._Distributed_systems_for_fun_and_profit.epub (short one)
   Varela_C.A._Programming_distributed_computing_systems__a_foundational_approach.pdf
   (ok, teaches pi-calculus, join, etc.)
   Raynal_M._Distributed_Algorithms_for_Message-Passing_Systems.pdf
@@ -59,10 +59,10 @@
 
   Possible design:
   ---We can have two outcomes from a sending of data:
-     ---For unlimited runtime: The termination is that all the entries in the vector<Tobj>
-     have their adjacencies being computed.
-     ---For specified runtime: The termination is that all the entries that have been sent
-     have been inserted into the database.
+     ---For unlimited runtime: The termination is that all the entries in the
+  vector<Tobj> have their adjacencies being computed.
+     ---For specified runtime: The termination is that all the entries that have
+  been sent have been inserted into the database.
   ---This is the definition of passive/active:
      ---It ensures that no message in flight is left.
      ---It ensures that no computation is finished.
@@ -70,31 +70,27 @@
   ---We need to keep a track of the number of operations done.
   ---So, we send a message to all the nodes and collect all the operation done.
   ---Then we call again and see if the nonce are the same.
-  ---But the problem is that sending all the entries can introduce some deadlocks maybe.
+  ---But the problem is that sending all the entries can introduce some
+  deadlocks maybe.
 
  */
 
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
 
-
-
-
-
 /*
   input clear from preceding discussion.
   The returned boolean is:
   true: if the enumeration finished
  */
-template<typename Tobj, typename Finit, typename Fadj, typename Fhash, typename Frepr>
+template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
+          typename Frepr>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
-                           int const& max_time_second,
-                           Fexist f_exist,
-                           Fsave f_save,
-                           Fload f_load,
+                           int const &max_time_second, Fexist f_exist,
+                           Fsave f_save, Fload f_load,
                            Fsave_status f_save_status,
-                           Fload_status f_load_status,
-                           Finit f_init, Fadj f_adj, Fhash f_hash, frepr f_repr) {
+                           Fload_status f_load_status, Finit f_init, Fadj f_adj,
+                           Fhash f_hash, frepr f_repr) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -123,15 +119,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   std::vector<Ttrack> l_ack_to_send;
   std::unordered_set<Ttrack> s_ack_waiting;
-  int nonce = 1; // This is so that never ever two objects get generated with the same id.
+  int nonce = 1; // This is so that never ever two objects get generated with
+                 // the same id.
   bool is_past_time = false;
   //
   // The lambda functions
   //
-  auto f_insert_local=[&](entry const& e) -> void {
-    std::vector<size_t>& vect = map[hash];
-    for (auto & idx : vect) {
-      entry & f = V[idx];
+  auto f_insert_local = [&](entry const &e) -> void {
+    std::vector<size_t> &vect = map[hash];
+    for (auto &idx : vect) {
+      entry &f = V[idx];
       if (f_repr(e.x, f.x)) {
         if (e.track.second != i_proc) {
           l_ack.push_back(e.track);
@@ -146,12 +143,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     n_obj++;
     nonce++;
   };
-  auto f_insert_local_and_save=[&](entry const& e) -> void {
+  auto f_insert_local_and_save = [&](entry const &e) -> void {
     f_save(n_obj, e.x);
     f_save_status(n_obj, e.is_treated);
     f_insert_local(e);
   };
-  auto f_insert=[&](entry const& e) -> void {
+  auto f_insert = [&](entry const &e) -> void {
     if (res == i_proc) {
       f_insert_local(e);
     } else {
@@ -172,15 +169,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return 0;
   };
-  auto process_received_nonce=[&](track const& t) -> void {
-    std::unordered_set<Ttrack>::iterator iter =  s_ack_waiting.find(t);
+  auto process_received_nonce = [&](track const &t) -> void {
+    std::unordered_set<Ttrack>::iterator iter = s_ack_waiting.find(t);
     if (t == s_ack_waiting.end()) {
       std::cerr << "We have a consistency error\n";
       throw TerminalException{1};
     }
     s_ack_waiting.erase(iter);
-  }
-  auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
+  } auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_new_object) {
@@ -210,16 +206,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
     throw TerminalException{1};
   };
-  auto get_undone_idx=[&]() -> size_t {
+  auto get_undone_idx = [&]() -> size_t {
     size_t idx = undone[undone.size() - 1];
     undone.pop_back();
     return idx;
   };
-  auto process_one_entry=[&]() -> void {
+  auto process_one_entry = [&]() -> void {
     size_t idx = get_undone_idx();
-    entry & e = V[idx];
+    entry &e = V[idx];
     std::vector<Tobj> l_adj = f_adj(e.x);
-    for (auto & x : l_adj) {
+    for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x);
       size_t hash_hashmap = f_hash(seed_hashmap, x);
       int res = static_cast<int>(hash_partition % size_t(n_proc));
@@ -230,12 +226,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       f_insert(e);
     }
   };
-  auto f_terminate=[&]() -> bool {
-  };
+  auto f_terminate = [&]() -> bool {};
   //
   // Loading the data
   //
-  while(true) {
+  while (true) {
     if (!f_exist(n_obj)) {
       break;
     }
@@ -249,7 +244,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   // The infinite loop
   //
-  while(true) {
+  while (true) {
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
@@ -259,7 +254,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     } else {
       if (l_ack_to_send.size() > 0) {
-        for (auto & track : l_ack_to_send) {
+        for (auto &track : l_ack_to_send) {
           comm.isend(e_src, tag_indicate_processed, track);
         }
       } else {
@@ -275,25 +270,25 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
 }
 
-template<typename Tobj, typename Finit, typename Fadj, typename Fhash, typename Frepr>
-bool compute_adjacency_serial(int const& max_time_second,
-                              Fexist f_exist,
-                              Fsave f_save,
-                              Fload f_load,
+template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
+          typename Frepr>
+bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
+                              Fsave f_save, Fload f_load,
                               Fsave_status f_save_status,
-                              Fload_status f_load_status,
-                              Finit f_init, Fadj f_adj, Fhash f_hash, frepr f_repr) {
+                              Fload_status f_load_status, Finit f_init,
+                              Fadj f_adj, Fhash f_hash, frepr f_repr) {
   SingletonTime start;
   size_t n_obj = 0;
   std::vector<Tobj> V;
   std::unordered_map<size_t, std::vector<size_t>> map;
   std::vector<int> Vstatus;
   std::vector<size_t> undone;
-  auto f_insert=[&](Tobj const& x, bool is_treated, bool const& save_if_new) -> void {
+  auto f_insert = [&](Tobj const &x, bool is_treated,
+                      bool const &save_if_new) -> void {
     size_t hash = f_hash(seed_hashmap, x);
-    std::vector<size_t>& vect = map[hash];
-    for (auto & idx : vect) {
-      Tobj & y = V[idx];
+    std::vector<size_t> &vect = map[hash];
+    for (auto &idx : vect) {
+      Tobj &y = V[idx];
       if (f_repr(x, y)) {
         return;
       }
@@ -309,7 +304,7 @@ bool compute_adjacency_serial(int const& max_time_second,
     }
     n_obj++;
   };
-  auto get_undone_idx=[&]() -> size_t {
+  auto get_undone_idx = [&]() -> size_t {
     size_t idx = undone[undone.size() - 1];
     undone.pop_back();
     return idx;
@@ -335,15 +330,14 @@ bool compute_adjacency_serial(int const& max_time_second,
       return false;
     }
     size_t idx = get_undone_idx();
-    Tobj const& x = V[idx];
-    for (auto & y : f_adj(x)) {
+    Tobj const &x = V[idx];
+    for (auto &y : f_adj(x)) {
       bool is_treated = false;
       bool save_if_new = false;
       f_insert(y, is_treated, save_if_new);
     }
   }
 }
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
