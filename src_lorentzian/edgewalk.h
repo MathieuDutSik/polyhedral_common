@@ -266,8 +266,8 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(MatV, ListMat,
-                                                                 Vdiag, std::cerr);
+      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
+          MatV, ListMat, Vdiag, std::cerr);
 #ifdef DEBUG_EDGEWALK_GENERIC
   std::cerr << "gen_cuspidal_request_full_info, step 3\n";
 #endif
@@ -448,8 +448,8 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
     if (fReq_full.hash == eReq_full.hash) {
       std::optional<MyMatrix<T>> equiv_opt =
           LinPolytopeIntegralWMat_Isomorphism<T, Tgroup, std::vector<T>,
-                                              uint16_t>(fReq_full.e_pair,
-                                                        eReq_full.e_pair, std::cerr);
+                                              uint16_t>(
+              fReq_full.e_pair, eReq_full.e_pair, std::cerr);
       if (equiv_opt) {
         MyMatrix<Tint> eEquiv = UniversalMatrixConversion<Tint, T>(*equiv_opt);
         std::vector<MyVector<Tint>> l_ui_ret;
