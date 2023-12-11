@@ -143,19 +143,21 @@ int main(int argc, char *argv[]) {
       }
     }
     if (IsCentrallySymmetric) {
-      MyVector<T> TwoCoset_T = - 2 * cosetVect;
-      MyVector<Tint> TwoCoset = UniversalVectorConversion<Tint,T>(TwoCoset_T);
+      MyVector<T> TwoCoset_T = -2 * cosetVect;
+      MyVector<Tint> TwoCoset = UniversalVectorConversion<Tint, T>(TwoCoset_T);
       std::unordered_set<MyVector<Tint>> set;
-      for (auto & V : info.short_vectors) {
+      for (auto &V : info.short_vectors) {
         set.insert(V);
       }
-      for (auto & V : info.short_vectors) {
+      for (auto &V : info.short_vectors) {
         MyVector<Tint> Vdiff = TwoCoset - V;
         if (set.count(Vdiff) == 0) {
           std::cerr << "The problem is centrally symmetric\n";
           std::cerr << "cosetVect=" << StringVector(cosetVect) << "\n";
-          std::cerr << "But the vector V=" << StringVector(V) << " is in the solution\n";
-          std::cerr << "while Vdiff=" << StringVector(Vdiff) << " is not contained\n";
+          std::cerr << "But the vector V=" << StringVector(V)
+                    << " is in the solution\n";
+          std::cerr << "while Vdiff=" << StringVector(Vdiff)
+                    << " is not contained\n";
           throw TerminalException{1};
         }
       }

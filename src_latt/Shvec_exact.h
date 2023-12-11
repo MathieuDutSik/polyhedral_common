@@ -593,7 +593,7 @@ T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request) {
 
 // Compute the minimum and returns only half the vector matching it
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const& gram_matrix) {
+T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
   int dim = eG.rows();
   MyVector<T> coset = ZeroVector<T>(n);
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
@@ -610,10 +610,10 @@ T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const& gram_matrix) {
   return computeMinimum<T, Tint>(request);
 }
 
-
 // Returns half the vector below a specific bound.
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const& gram_matrix, T const& bound) {
+T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
+                                           T const &bound) {
   int dim = eG.rows();
   MyVector<T> coset = ZeroVector<T>(n);
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
@@ -639,21 +639,17 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const& gram_matrix, T con
   return info;
 }
 
-
-
-
-
-
-template<typename T, typename Tint>
-void check_shvec_info_request(T_shvec_info<T, Tint> const& info, T_shvec_request<T> const& request) {
+template <typename T, typename Tint>
+void check_shvec_info_request(T_shvec_info<T, Tint> const &info,
+                              T_shvec_request<T> const &request) {
   if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {
     MyVector<T> c = request.coset;
-    for (auto & eV : info.short_vectors) {
-      MyVector<T> V_T = UniversalVectorConversion<T,Tint>(eV);
+    for (auto &eV : info.short_vectors) {
+      MyVector<T> V_T = UniversalVectorConversion<T, Tint>(eV);
       T norm(0);
-      for (int i=0; i<request.dim; i++) {
-        for (int j=0; j<request.dim; j++) {
-          norm += (V_T(i) + c(i)) * (V_T(j) + c(j)) * request.gram_matrix(i,j);
+      for (int i = 0; i < request.dim; i++) {
+        for (int j = 0; j < request.dim; j++) {
+          norm += (V_T(i) + c(i)) * (V_T(j) + c(j)) * request.gram_matrix(i, j);
         }
       }
       if (norm > request.bound) {
@@ -664,8 +660,6 @@ void check_shvec_info_request(T_shvec_info<T, Tint> const& info, T_shvec_request
     }
   }
 }
-
-
 
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
