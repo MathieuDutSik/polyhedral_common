@@ -86,8 +86,8 @@ template <typename T> struct lrs_dat {
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
   /**** flags  **********                         */
-  int64_t bound;     /* globals::TRUE if upper/lower bound on objective given */
-  int64_t dualdeg;   /* globals::TRUE if start dictionary is dual degenerate  */
+  int64_t bound;   /* globals::TRUE if upper/lower bound on objective given */
+  int64_t dualdeg; /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
   int64_t lponly;   /* true if only lp solution wanted              */
@@ -1615,7 +1615,8 @@ void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   delete[] num;
 }
 
-template <typename T> void PrintP(lrs_dic<T> *&P, std::string const &message, std::ostream & os) {
+template <typename T>
+void PrintP(lrs_dic<T> *&P, std::string const &message, std::ostream &os) {
   os << "message = " << message << "\n";
   os << "P->A=\n";
   for (int i = 0; i <= P->m_A; i++) {
