@@ -656,7 +656,8 @@ FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, std::string> ListIntValues1_doc;
   std::map<std::string, std::string> ListBoolValues1_doc;
   ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
-The input file for the vertices of the polytope. This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
+The input file for the vertices of the polytope.\n\
+This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
   ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
   ListStringValues1_doc["GRPfile"] =
       "The symmetry group used for the computation. It is a permutation group "
@@ -669,7 +670,8 @@ The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimpli
   ListStringValues1_doc["method_final"] = "Default: all\n\
 Available options are all and stop_nonsimplicial";
   ListStringValues1_doc["Arithmetic"] = "Default: rational\n\
-Other possibilities are safe_rational, Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
+Other possibilities are safe_rational, Qsqrt2, Qsqrt5 and\n\
+RealAlgebraic=FileDesc where FileDesc is the description";
   ListIntValues1_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
   ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\
@@ -685,9 +687,14 @@ Whether to compute the total number of faces by stabilizer computation";
   ListBoolValues2_doc["ComputeAutGroup"] = "Default: false\n\
 Whether to compute the automorphism group of the graph determined by the faces";
   ListStringValues2_doc["OutFormat"] = "Default: CPP\n\
-Format for the output of the group. Two possibilities: GAP (for the GAP programming system) or CPP (for polyhedral)";
+Format for the output of the group. Two possibilities:\n\
+GAP (for the GAP programming system)\n\
+CPP (for polyhedral)";
   ListStringValues2_doc["FileGroup"] = "Default: stdout\n\
-File for output of the group. stdout for std::cout, stderr for std::cerr and otherwise to the file";
+File for output of the group.\n\
+stdout for std::cout,\n\
+stderr for std::cerr and\n\
+otherwise to the file";
   SingleBlock BlockGROUP;
   BlockGROUP.setListBoolValues(ListBoolValues2_doc);
   BlockGROUP.setListStringValues(ListStringValues2_doc);
