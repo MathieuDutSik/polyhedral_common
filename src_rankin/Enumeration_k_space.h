@@ -258,7 +258,7 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
 template <typename T, typename Tint>
 struct ResultKRankinMin {
   T min;
-  std::vector<MyMatrix<Tint>> l_space;
+  std::vector<MyMatrix<Tint>> l_spaces;
 };
 
 
@@ -280,7 +280,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
       MyMatrix<Tint> M = MatrixFromVector(eV);
       RetList.push_back(M);
     }
-    return RetList;
+    return {bound, RetList};
   }
   // We use the HermiteNormalForm
   T DetMin;
@@ -323,7 +323,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   for (auto &mat : set_subspaces) {
     vec_subspaces.push_back(mat);
   }
-  return vec_subspaces;
+  return {DetMin, vec_subspaces};
 }
 
 // clang-format off

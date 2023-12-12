@@ -465,9 +465,11 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
       return eNorm;
     }
     T eMin = request.gram_matrix(0, 0);
-    for (i = 1; i < dim; i++)
-      if (eMin > request.gram_matrix(i, i))
-        eMin = request.gram_matrix(i, i);
+    for (i = 1; i < dim; i++) {
+      T diag_val = request.gram_matrix(i, i);
+      if (eMin > diag_val)
+        eMin = diag_val;
+    }
     return eMin;
   };
   T_shvec_info<T, Tint> info;
