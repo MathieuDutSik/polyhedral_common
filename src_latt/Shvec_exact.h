@@ -596,10 +596,11 @@ T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request) {
 // Compute the minimum and returns only half the vector matching it
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
-  int dim = eG.rows();
-  MyVector<T> coset = ZeroVector<T>(n);
+  int dim = gram_matrix.rows();
+  MyVector<T> coset = ZeroVector<T>(dim);
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   bool central = true;
+  T bound = 0;
   //
   T_shvec_request<T> request;
   request.dim = dim;
@@ -616,8 +617,8 @@ T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
                                            T const &bound) {
-  int dim = eG.rows();
-  MyVector<T> coset = ZeroVector<T>(n);
+  int dim = gram_matrix.rows();
+  MyVector<T> coset = ZeroVector<T>(dim);
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   bool central = true;
   //
