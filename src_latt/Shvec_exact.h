@@ -251,6 +251,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
   MyVector<Tint> x(dim);
+  MyVector<T> x_T(dim);
 #if defined CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
@@ -298,9 +299,11 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
       eQuot = Trem(i) / q(i, i);
       eSum = -U(i) - C(i);
       f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
+      x_T(i) = UniversalScalarConversion<T,Tint>(x(i));
       needs_new_bound = false;
     } else {
       x(i) += 1;
+      x_T(i) += 1;
     }
     if (x(i) <= Upper(i)) {
       if (i == 0) {
@@ -318,13 +321,13 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
             return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
           }
         }
-        hVal = x(0) + C(0) + U(0);
+        hVal = x_T(0) + C(0) + U(0);
         eNorm = bound - Trem(0) + q(0, 0) * hVal * hVal;
 #ifdef CHECK_SHVEC
         T norm = 0;
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
-            norm += g(i2, j2) * (x(i2) + C(i2)) * (x(j2) + C(j2));
+            norm += g(i2, j2) * (x_T(i2) + C(i2)) * (x_T(j2) + C(j2));
         if (norm != eNorm) {
           std::cerr << "Norm inconsistency\n";
           std::cerr << "norm=" << norm << "\n";
@@ -360,8 +363,8 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
         i--;
         U(i) = 0;
         for (j = i + 1; j < dim; j++)
-          U(i) += q(i, j) * (x(j) + C(j));
-        hVal = x(i + 1) + C(i + 1) + U(i + 1);
+          U(i) += q(i, j) * (x_T(j) + C(j));
+        hVal = x_T(i + 1) + C(i + 1) + U(i + 1);
         Trem(i) = Trem(i + 1) - q(i + 1, i + 1) * hVal * hVal;
         needs_new_bound = true;
       }

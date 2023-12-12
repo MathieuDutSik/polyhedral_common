@@ -96,7 +96,7 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
     MyVector<Tint> fVect = GetMatrixRow(TheCompl, i);
     MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
     T scal = (eVect_T_TheGramMat.dot(fVect_T)) / rNorm;
-    MyVector<T> rVect = fVect - eVect_T * scal;
+    MyVector<T> rVect = fVect_T - eVect_T * scal;
     AssignMatrixRow(TheProj, i, rVect);
   }
   return {TheProj, TheCompl};
@@ -122,14 +122,14 @@ T get_multiple_value(MyMatrix<T> const& M) {
   int n = M.rows();
   auto get_mat_mult=[&]() -> T {
     for (int i=0; i<n; i++) {
-      T quot = M(i,i) / 2;
+      T quot = fr.TheMat(i,i) / 2;
       if (!IsInteger(quot)) {
         return 1;
       }
     }
     return 2;
   };
-  return get_mat_mult(fr.TheMat) / fr.TheMult;
+  return get_mat_mult() / fr.TheMult;
 }
 
 // Find the upper bound
@@ -143,26 +143,25 @@ T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
   if constexpr (std::is_same_v<T,double>) {
     return std::pow(C, expo);
   }
-  if constexpr (std::is_same_v<T,float>) {
-    return std::pow(C, expo);
-  }
-  // Assumed to be exact arithmetic.
-  // pretty inefficient but actually fine.
-  T delta = get_multiple_value(M);
-  auto is_corr=[&](T const& val) -> T {
-    T ret = val;
-    for (int i=1; i<k; i++) {
-      ret *= val;
-    }
-    return ret <= C;
-  };
-  T val = 0;
-  while(true) {
-    T val_new = val + delta;
-    if (is_corr(val_new)) {
-      val = val_new;
-    } else {
-      return val;
+  if constexpr (!std::is_same_v<T,double>) {
+    // Assumed to be exact arithmetic.
+    // pretty inefficient but actually fine.
+    T delta = get_multiple_value(M);
+    auto is_corr=[&](T const& val) -> T {
+      T ret = val;
+      for (int i=1; i<k; i++) {
+        ret *= val;
+      }
+      return ret <= C;
+    };
+    T val = 0;
+    while(true) {
+      T val_new = val + delta;
+      if (is_corr(val_new)) {
+        val = val_new;
+      } else {
+        return val;
+      }
     }
   }
 }
@@ -201,19 +200,19 @@ MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tin
 
 
 
+//template <typename T, typename Tint>
+//std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
+//                                           T const &MaxDet);
+
 // The function that returns the Rankin k-minimum.
 // It should work both for floating point types and exact types.
 // If the threshold need to be used, then that should be in the MaxDet.
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
-                                           T const &MaxDet);
-
-template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
                                            T const &MaxDet) {
   if (k == 1) {
     T bound = MaxDet;
-    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
+    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : SHVmin.short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
@@ -227,12 +226,12 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   // That is we have min(A)^k <= H(n) * MaxDet
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
   T bound = MaxKBound(upper, k, A);
-  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
+  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
   for (auto &eV : SHVmin.short_vectors) {
     VectorProjection<T,Tint> vp = GetVectorProjection(A, eV);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
-        Rankin_k_level(vp.ReducedGramMat, k - 1, TheAskDet);
+      Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet);
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
 #ifdef DEBUG_RANKIN
@@ -265,9 +264,9 @@ struct ResultKRankinMin {
 
 
 
-template <typename T, typename Tint>
-ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
-                                           T const &tol);
+//template <typename T, typename Tint>
+//ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
+//                                          T const &tol);
 
 template <typename T, typename Tint>
 ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
