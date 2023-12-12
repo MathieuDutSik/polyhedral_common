@@ -177,7 +177,7 @@ Tint Infinitesimal_Floor(T const &a, T const &b) {
   long int eD2 = lround(eD1);
   Tint eReturn = eD2;
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = T(x) - b;
+    T eDiff = UniversalScalarConversion<T,Tint>(x) - b;
     if (eDiff <= 0)
       return true;
     if (eDiff * eDiff <= a)
@@ -219,7 +219,7 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
   long int eD2 = lround(eD1);
   Tint eReturn = eD2;
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = x - b;
+    T eDiff = UniversalScalarConversion<T,Tint>(x) - b;
     if (eDiff >= 0)
       return true;
     if (eDiff * eDiff <= a)

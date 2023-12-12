@@ -57,7 +57,6 @@ template <typename T, typename Tint>
 MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
                                    MyMatrix<Tint> const &TheSubBasis) {
   int n = TheGramMat.rows();
-  int hDim = TheSubBasis.rows();
   if (n != TheSubBasis.cols()) {
     std::cerr << "The matrix size does not match\n";
     throw TerminalException{1};
@@ -86,16 +85,18 @@ template <typename T, typename Tint>
 std::pair<MyMatrix<T>, MyMatrix<Tint>>
 GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
                             MyVector<Tint> const &eVect) {
+  int n = TheGramMat.rows();
   MyMatrix<Tint> eVect_M = MatrixFromVector(eVect);
   MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
   MyVector<T> eVect_T_TheGramMat = TheGramMat * eVect_T.transpose();
+  T rNorm = eVect_T_TheGramMat.dot(eVect_T);
   MyMatrix<Tint> TheCompl = SubspaceCompletionInt(eVect_M, n);
   MyMatrix<T> TheProj(n - 1, n);
   for (int i = 0; i < n - 1; i++) {
     MyVector<Tint> fVect = GetMatrixRow(TheCompl, i);
     MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
     T scal = (eVect_T_TheGramMat.dot(fVect_T)) / rNorm;
-    MyVector<T> rVect = fVect - eVect * scal;
+    MyVector<T> rVect = fVect - eVect_T * scal;
     AssignMatrixRow(TheProj, i, rVect);
   }
   return {TheProj, TheCompl};
@@ -103,8 +104,7 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
 
 template <typename T, typename Tint>
 T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k) {
-  int n = TheGramMat.rows();
-  T_shvec_info<T, Tint> SHVmin = computeMinimum_GramMat(TheGramMat);
+  T_shvec_info<T, Tint> SHVmin = computeMinimum_GramMat<T,Tint>(TheGramMat);
   T rNorm = SHVmin.minimum;
   if (k == 1) {
     return rNorm;
@@ -112,14 +112,14 @@ T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k) {
   MyVector<Tint> eVect = SHVmin.short_vectors[0];
   MyMatrix<T> TheProj = GetOrthogonalProjector_dim1(TheGramMat, eVect).first;
   MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
-  T upper = UpperBoundRankinMinimalDeterminant(ReducedGramMat, k - 1);
+  T upper = UpperBoundRankinMinimalDeterminant<T,Tint>(ReducedGramMat, k - 1);
   return rNorm * upper;
 }
 
 template<typename T>
 T get_multiple_value(MyMatrix<T> const& M) {
   FractionMatrix<T> fr = RemoveFractionMatrixPlusCoeff(M);
-  int i = M.rows();
+  int n = M.rows();
   auto get_mat_mult=[&]() -> T {
     for (int i=0; i<n; i++) {
       T quot = M(i,i) / 2;
@@ -149,7 +149,7 @@ T MaxKBound(T const &C, int const &k, MyMatrix<T> const &M) {
   // Assumed to be exact arithmetic.
   // pretty inefficient but actually fine.
   T delta = get_multiple_value(M);
-  auto is_corr=[&](T comnst& val) -> T {
+  auto is_corr=[&](T const& val) -> T {
     T ret = val;
     for (int i=1; i<k; i++) {
       ret *= val;
@@ -179,9 +179,10 @@ struct VectorProjection {
 template <typename T, typename Tint>
 VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVector<Tint> const& eV) {
   MyVector<T> eV_T = UniversalVectorConversion<T, Tint>(eV);
-  T rNorm = eV_T * A * eV_T.transpose();
+  MyVector<T> eV_T_gram = TheGramMat * eV_T.transpose();
+  T rNorm = eV_T_gram.dot(eV_T);
   std::pair<MyMatrix<T>, MyMatrix<Tint>> pair =
-    GetOrthogonalProjector_dim1(TheGramMat, eVect);
+    GetOrthogonalProjector_dim1(TheGramMat, eV);
   MyMatrix<T> const &TheProj = pair.first;
   MyMatrix<Tint> const &TheCompl = pair.second;
   MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
@@ -191,7 +192,7 @@ VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVe
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tint> const& eLatt) {
   MyMatrix<Tint> ePart = eLatt * vp.TheCompl;
-  MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, cp.eV);
+  MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, vp.eV);
   MyMatrix<Tint> gLatt = ComputeRowHermiteNormalForm_second(fLatt);
   return gLatt;
 }
@@ -224,11 +225,11 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   // We are now using the Hermite constant to get a bound on the minimum
   // That is we have min(A)^k <= H(n) * MaxDet
-  T upper = GetUpperBoundHermitePower(k) * MaxDet;
+  T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
   T bound = MaxKBound(upper, k, A);
   T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
   for (auto &eV : SHVmin.short_vectors) {
-    VectorProjection<T,Tint> vp = GetVectorProjection(TheGramMat, eV);
+    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
         Rankin_k_level(vp.ReducedGramMat, k - 1, TheAskDet);
@@ -272,9 +273,9 @@ template <typename T, typename Tint>
 ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
                                            T const &tol) {
   if (k == 1) {
-    T bound = UpperBoundRankinMinimalDeterminant(A, 1);
+    T bound = UpperBoundRankinMinimalDeterminant<T, Tint>(A, 1);
     T bound_search = bound * (1 + tol);
-    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound_search);
+    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound_search);
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : SHVmin.short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
@@ -287,7 +288,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   auto f_insert=[&](MyMatrix<Tint> const& gLatt) -> void {
     MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
-    MyMatrix<T> eProdMat = gLatt_T * TheGramMat * gLatt_T.transpose();
+    MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
     T eDet = DeterminantMat(eProdMat);
     if (set_subspaces.size() == 0) {
       DetMin = eDet;
@@ -306,14 +307,15 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   };
   // We are now using the Hermite constant to get a bound on the minimum
   // That is we have min(A)^k <= H(n) * MaxDet
-  T upper = GetUpperBoundHermitePower(k) * MaxDet;
+  T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k);
+  T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
   T bound = MaxKBound(upper, k, A);
-  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
+  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
   for (auto &eV : SHVmin.short_vectors) {
-    VectorProjection<T,Tint> vp = GetVectorProjection(TheGramMat, eV);
+    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
-        Rankin_k_level(vp.ReducedGramMat, k - 1, TheAskDet);
+      Rankin_k_level<T,Tint>(vp.ReducedGramMat, k - 1, TheAskDet);
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
       f_insert(gLatt);
