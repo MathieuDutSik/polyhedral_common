@@ -272,13 +272,59 @@ template <typename T, typename Tint>
 ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
                                            T const &tol) {
   if (k == 1) {
-
+    T bound = UpperBoundRankinMinimalDeterminant(A, 1);
+    T bound_search = bound * (1 + tol);
+    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound_search);
+    std::vector<MyMatrix<Tint>> RetList;
+    for (auto &eV : SHVmin.short_vectors) {
+      MyMatrix<Tint> M = MatrixFromVector(eV);
+      RetList.push_back(M);
+    }
+    return RetList;
   }
-
+  // We use the HermiteNormalForm
+  T DetMin;
+  std::unordered_set<MyMatrix<Tint>> set_subspaces;
+  auto f_insert=[&](MyMatrix<Tint> const& gLatt) -> void {
+    MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
+    MyMatrix<T> eProdMat = gLatt_T * TheGramMat * gLatt_T.transpose();
+    T eDet = DeterminantMat(eProdMat);
+    if (set_subspaces.size() == 0) {
+      DetMin = eDet;
+      set_subspaces.insert(gLatt);
+    } else {
+      if (eDet < DetMin*(1-tol)) {
+        set_subspaces.clear();
+        DetMin = eDet;
+        set_subspaces.insert(gLatt);
+      } else {
+        if (eDet < DetMin*(1 + tol)) {
+          set_subspaces.insert(gLatt);
+        }
+      }
+    }
+  };
+  // We are now using the Hermite constant to get a bound on the minimum
+  // That is we have min(A)^k <= H(n) * MaxDet
+  T upper = GetUpperBoundHermitePower(k) * MaxDet;
+  T bound = MaxKBound(upper, k, A);
+  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat(A, bound);
+  for (auto &eV : SHVmin.short_vectors) {
+    VectorProjection<T,Tint> vp = GetVectorProjection(TheGramMat, eV);
+    T TheAskDet = MaxDet / vp.rNorm;
+    std::vector<MyMatrix<Tint>> SpecEnum =
+        Rankin_k_level(vp.ReducedGramMat, k - 1, TheAskDet);
+    for (auto &eLatt : SpecEnum) {
+      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
+      f_insert(gLatt);
+    }
+  }
+  std::vector<MyMatrix<Tint>> vec_subspaces;
+  for (auto &mat : set_subspaces) {
+    vec_subspaces.push_back(mat);
+  }
+  return vec_subspaces;
 }
-
-
-
 
 // clang-format off
 #endif  // SRC_RANKIN_ENUMERATION_K_SPACE_H_
