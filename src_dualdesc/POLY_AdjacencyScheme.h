@@ -88,7 +88,7 @@ template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            std::ostream & os,
                            int const &max_time_second, Fexist f_exist,
-                           Fsave f_save, Fload f_load,
+                           Finsert f_insert, Fload f_load,
                            Fsave_status f_save_status,
                            Fload_status f_load_status, Finit f_init, Fadj f_adj,
                            Fhash f_hash, frepr f_repr) {
@@ -145,7 +145,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     nonce++;
   };
   auto f_insert_local_and_save = [&](entry const &e) -> void {
-    f_save(n_obj, e.x);
+    f_insert(n_obj, e.x);
     f_save_status(n_obj, e.is_treated);
     f_insert_local(e);
   };
@@ -275,7 +275,7 @@ template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
           typename Frepr>
 bool compute_adjacency_serial(std::ostream& os,
                               int const &max_time_second, Fexist f_exist,
-                              Fsave f_save, Fload f_load,
+                              Finsert f_insert, Fload f_load,
                               Fsave_status f_save_status,
                               Fload_status f_load_status, Finit f_init,
                               Fadj f_adj, Fhash f_hash, frepr f_repr) {
