@@ -86,6 +86,7 @@ const size_t seed_hashmap = 20;
 template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
           typename Frepr>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
+                           std::ostream & os,
                            int const &max_time_second, Fexist f_exist,
                            Fsave f_save, Fload f_load,
                            Fsave_status f_save_status,
@@ -272,7 +273,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 
 template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
           typename Frepr>
-bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
+bool compute_adjacency_serial(std::ostream& os,
+                              int const &max_time_second, Fexist f_exist,
                               Fsave f_save, Fload f_load,
                               Fsave_status f_save_status,
                               Fload_status f_load_status, Finit f_init,

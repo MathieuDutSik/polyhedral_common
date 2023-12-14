@@ -26,82 +26,6 @@ template <typename T, typename Tint> struct DataLattice {
   std::string CVPmethod;
 };
 
-// The types for the Delaunay polytopes
-template <typename T, typename Tint> struct Delaunay {
-  MyMatrix<Tint> EXT;
-};
-
-template <typename T, typename Tint>
-std::istream &operator>>(std::istream &is, Delaunay<T, Tint> &obj) {
-  MyMatrix<Tint> EXT = ReadMatrix<Tint>(is);
-  obj = {EXT};
-  return is;
-}
-
-template <typename T, typename Tint>
-std::ostream &operator<<(std::ostream &os, Delaunay<T, Tint> const &obj) {
-  WriteMatrix(os, obj.EXT);
-  return os;
-}
-
-template <typename T, typename Tint> struct DelaunayInv {
-  size_t nbVert;
-  Tint eIndex;
-  size_t ePolyInv;
-};
-
-template <typename T, typename Tint>
-bool operator==(DelaunayInv<T, Tint> const &x, DelaunayInv<T, Tint> const &y) {
-  if (x.nbVert != y.nbVert)
-    return false;
-  if (x.eIndex != y.eIndex)
-    return false;
-  if (x.ePolyInv != y.ePolyInv)
-    return false;
-  return true;
-}
-
-template <typename T, typename Tint>
-std::istream &operator>>(std::istream &is, DelaunayInv<T, Tint> &obj) {
-  size_t nbVert;
-  Tint eIndex;
-  size_t ePolyInv;
-  is >> nbVert;
-  is >> eIndex;
-  is >> ePolyInv;
-  obj = {nbVert, eIndex, ePolyInv};
-  return is;
-}
-
-template <typename T, typename Tint>
-std::ostream &operator<<(std::ostream &os, DelaunayInv<T, Tint> const &obj) {
-  os << " " << obj.nbVert;
-  os << " " << obj.eIndex;
-  os << " " << obj.ePolyInv;
-  return os;
-}
-
-template <typename T, typename Tint>
-bool operator<(DelaunayInv<T, Tint> const &x, DelaunayInv<T, Tint> const &y) {
-  if (x.nbVert < y.nbVert)
-    return true;
-  if (x.nbVert > y.nbVert)
-    return false;
-  if (x.eIndex < y.eIndex)
-    return true;
-  if (x.eIndex > y.eIndex)
-    return false;
-  return x.ePolyInv < y.ePolyInv;
-}
-
-template <typename T, typename Tint> struct invariant_info<Delaunay<T, Tint>> {
-  typedef DelaunayInv<T, Tint> invariant_type;
-};
-
-template <typename T, typename Tint> struct equiv_info<Delaunay<T, Tint>> {
-  typedef MyMatrix<Tint> equiv_type;
-};
-
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
 GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
@@ -257,178 +181,119 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
 }
 
 template <typename T, typename Tint>
-DelaunayInv<T, Tint> ComputeInvariantDelaunay(MyMatrix<T> const &GramMat,
-                                              Delaunay<T, Tint> const &eDel) {
+size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
+                                size_t const& seed,
+                                MyMatrix<Tint> const& EXT) {
   using Tidx_value = int16_t;
-  size_t nbVert = eDel.EXT.rows();
-  size_t n = eDel.EXT.cols() - 1;
-  Tint PreIndex = Int_IndexLattice(eDel.EXT);
+  int nbVert = EXT.rows();
+  int n = EXT.cols() - 1;
+  Tint PreIndex = Int_IndexLattice(EXT);
   Tint eIndex = T_abs(PreIndex);
   MyVector<T> V(n);
-  std::vector<T> ListDiagNorm(nbVert);
-  for (size_t iVert = 0; iVert < nbVert; iVert++) {
-    for (size_t i = 0; i < n; i++)
-      V(i) = eDel.EXT(iVert, i + 1);
-    ListDiagNorm[iVert] = EvaluationQuadForm<T, T>(GramMat, V);
+  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(eData.GramMat, EXT);
+  MyMatrix<T> EXT_T(nbVert, n);
+  for (int iVert=0; iVert<nbVert; iVert++) {
+    for (int i=0; i<n; i++) {
+      T val = UniversalScalarConversion<T,Tint>(EXT(iVert, i+1));
+      EXT_T(iVert, i) = val - eCP.eCent(i+1);
+    }
   }
-  size_t iVert_inp = 0;
-  auto f1 = [&](size_t iVert) -> void {
-    for (size_t i = 0; i < n; i++) {
+  std::map<T, size_t> ListDiagNorm;
+  std::map<T, size_t> ListOffDiagNorm;
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    MyVector<T> V(n);
+    for (int i=0; i<n; i++) {
       T eSum = 0;
-      for (size_t j = 0; j < n; j++) {
-        eSum += GramMat(i, j) * eDel.EXT(iVert, j + 1);
+      for (int j=0; j<n; j++) {
+        eSum += eData.GramMat(i,j) * EXT_T(iVert, j);
       }
       V(i) = eSum;
     }
-    iVert_inp = iVert;
+    T scal = 0;
+    for (int i=0; i<n; i++) {
+      scal += V(i) * EXT_T(iVert, i);
+    }
+    ListDiagNorm[scal] += 1;
+    for (int jVert=iVert+1; jVert<nbVert; jVert++) {
+      T scal = 0;
+      for (int i=0; i<n; i++) {
+        scal += V(i) * EXT_T(jVert, i);
+      }
+      ListOffDiagNorm[scal] += 1;
+    }
+  }
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };
-  auto f2 = [&](size_t jVert) -> T {
-    T eSum = ListDiagNorm[iVert_inp] + ListDiagNorm[jVert];
-    for (size_t i = 0; i < n; i++)
-      eSum -= V(i) * eDel.EXT(jVert, i + 1);
-    return eSum;
+  size_t hash = seed;
+  auto update_from_map=[&](std::map<T, size_t> const& map) -> void {
+    for (auto & kv : map) {
+      size_t hash1 = std::hash<T>()(kv.first);
+      size_t hash2 = kv.second;
+      combine_hash(hash, hash1);
+      combine_hash(hash, hash2);
+    }
   };
-  WeightMatrix<true, T, Tidx_value> WMat(nbVert, f1, f2);
-  size_t ePolyInv_T = GetInvariantWeightMatrix(WMat);
-  return {nbVert, eIndex, ePolyInv_T};
+  update_from_map(ListDiagNorm);
+  update_from_map(ListOffDiagNorm);
+  return hash;
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<Delaunay<T, Tint>>
-EnumerationDelaunayPolytopes(MainProcessor &MProc, int const &TheId,
-                             DataBank<PolyhedralEntry<T, Tgroup>> &TheBank,
-                             DataLattice<T, Tint> const &eData,
-                             PolyHeuristic<mpz_class> const &AllArr) {
-  std::function<bool(DelaunayInv<T, Tint> const &,
-                     DelaunayInv<T, Tint> const &)>
-      CompFCT = [](DelaunayInv<T, Tint> const &x,
-                   DelaunayInv<T, Tint> const &y) -> bool { return x < y; };
-  std::function<void(TrivialBalinski &, Delaunay<T, Tint> const &,
-                     DelaunayInv<T, Tint> const &, std::ostream &)>
-      UpgradeBalinskiStat =
-          [](TrivialBalinski const &eStat, Delaunay<T, Tint> const &eEnt,
-             DelaunayInv<T, Tint> const &eInv, std::ostream &os) -> void {};
-  std::function<std::optional<MyMatrix<Tint>>(Delaunay<T, Tint> const &,
-                                              Delaunay<T, Tint> const &)>
-      fEquiv =
-          [&](Delaunay<T, Tint> const &x,
-              Delaunay<T, Tint> const &y) -> std::optional<MyMatrix<Tint>> {
+std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
+                                                         DataBank<PolyhedralEntry<T, Tgroup>> &TheBank,
+                                                         DataLattice<T, Tint> const &eData,
+                                                         PolyHeuristic<mpz_class> const &AllArr) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::sto_string(i_rank);
+  std::ofstream os(FileLog);
+  using Tobj = MyMatrix<Tint>;
+  auto f_init=[&]() -> Tobj {
+    Tobj EXT = FindDelaunayPolytope<T, Tint>(
+       eData.GramMat, eData.CVPmethod, MProc.GetO(TheId));
+    os << "Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+  };
+  auto f_adj=[&](Tobj const& x) -> std::vector<Tobj> {
+    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, eDEL.EXT, eInv.eIndex);
+    vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
+    std::vector<Tobj> l_obj;
+    for (auto &eOrbB : TheOutput) {
+      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
+      l_obj.push_back(EXTadj);
+    }
+    return l_obj;
+  };
+  auto f_equiv=[&](Tobj const& x, Tobj const& y) -> bool {
     Tint PreIndex = Int_IndexLattice(x.EXT);
     Tint eIndex = T_abs(PreIndex);
     return Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y, eIndex);
   };
-  NewEnumerationWork<Delaunay<T, Tint>> ListOrbit(
-      AllArr.Saving, AllArr.eMemory, eData.PrefixDelaunay, CompFCT,
-      UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
-  auto FuncInsert = [&](Delaunay<T, Tint> const &x, std::ostream &os) -> int {
-    DelaunayInv<T, Tint> eInv =
-        ComputeInvariantDelaunay<T, Tint>(eData.GramMat, x);
-    return ListOrbit.InsertEntry({x, eInv}, os);
+  std::vector<Tobj> l_obj;
+  std::vector<int> l_status;
+  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+    return ComputeInvariantDelaunay(eData, seed, x);
   };
-  int nbPresentOrbit = ListOrbit.GetNbEntry();
-  if (nbPresentOrbit == 0) {
-    MyMatrix<Tint> EXT_I = FindDelaunayPolytope<T, Tint>(
-        eData.GramMat, eData.CVPmethod, MProc.GetO(TheId));
-    int RetVal = FuncInsert({EXT_I}, MProc.GetO(TheId));
-    if (RetVal != -1) {
-      std::cerr << "RetVal=" << RetVal << "\n";
-      std::cerr << "The first orbit should definitely be new\n";
-      std::cerr << "Otherwise, we have a clear bug\n";
-      throw TerminalException{1};
-    }
-  }
-  MProc.GetO(TheId) << "We have inserted eInc\n";
-  int nbSpannThread = 0;
-  std::condition_variable cv;
-  std::mutex mtx_cv;
-  auto WaitStuck = [&](int const &MyId) -> void {
-    std::unique_lock<std::mutex> lk(mtx_cv);
-    cv.wait(lk, [&] { return ListOrbit.IsStuck() == false; });
+  auto f_exists=[&](int const& n_obj) -> bool {
+    return false;
   };
-  auto WaitComplete = [&](int const &MyId) -> void {
-    std::unique_lock<std::mutex> lk(mtx_cv);
-    cv.wait(lk, [&] { return nbSpannThread == 0; });
+  auto f_insert=[&](Tobj const& x) -> void {
+    l_obj.push(x);
   };
-  auto CompDelaunayAdjacency = [&](int const &MyId, std::ostream &os) -> void {
-    int nbWork = 0;
-    nbSpannThread++;
-    while (true) {
-      bool testStuck = ListOrbit.IsStuck();
-      if (testStuck) {
-        WaitStuck(MyId);
-      }
-      int eEntry = ListOrbit.GetNonTreatedOrbit(os);
-      bool IsComplete = ListOrbit.GetCompleteStatus();
-      if (eEntry == -1)
-        break;
-      if (IsComplete)
-        break;
-      Delaunay<T, Tint> eDEL = ListOrbit.GetRepresentative(eEntry);
-      DelaunayInv<T, Tint> eInv = ListOrbit.GetInvariant(eEntry);
-      Tgroup GRPlatt =
-          Delaunay_Stabilizer<T, Tint, Tgroup>(eData, eDEL.EXT, eInv.eIndex);
-      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(eDEL.EXT);
-      CondTempDirectory eDir(AllArr.Saving, eData.PrefixPolyhedral + "ADM" +
-                                                IntToString(eEntry) + "/");
-      vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(
-          MProc, MyId, TheBank, EXT_T, GRPlatt, AllArr, eDir.str(), 0);
-      for (auto &eOrbB : TheOutput) {
-        MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-            eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
-        int eVal = FuncInsert({EXTadj}, os);
-        if (eVal == -1)
-          cv.notify_one();
-      }
-      ListOrbit.SetEntryAsDone(eEntry, os);
-      nbWork++;
-    }
-    if (MyId != TheId)
-      MProc.MPU_Terminate(MyId);
-    nbSpannThread--;
-    if (nbWork > 0) {
-      cv.notify_all();
-    }
+  auto f_load=[&](size_t const& pos) -> Tobj {
+    return l_obj[pos];
   };
-  int NbThr = MProc.MPU_NumberFree();
-  std::vector<std::thread> ListThreads(NbThr);
-  MProc.GetO(TheId) << "We have NbThr=" << NbThr << "\n";
-  while (true) {
-    bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
-    MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
-    if (IsCompleteSpann) {
-      WaitComplete(TheId);
+  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+    int val_i = static_cast<int>(val);
+    if (l_status.size() <= pos) {
+      l_status
     } else {
-      for (int iThr = 0; iThr < NbThr; iThr++) {
-        int NewId = MProc.MPU_GetId();
-        MProc.GetO(TheId) << "NewId=" << NewId << "\n";
-        if (NewId != -1) {
-          MProc.GetO(NewId) << "Before call to my_thread\n";
-          ListThreads[iThr] = std::thread(CompDelaunayAdjacency, NewId,
-                                          std::ref(MProc.GetO(NewId)));
-          MProc.GetO(NewId) << "After call to my_thread\n";
-          ListThreads[iThr].detach();
-        }
-      }
-      MProc.GetO(TheId) << "After the spanning of threads\n";
-      MProc.GetO(TheId) << "Before CompDelaunayAdjacency\n";
-      CompDelaunayAdjacency(TheId, MProc.GetO(TheId));
-      MProc.GetO(TheId) << "After my own call to CompDelaunayAdjacency\n";
     }
-    if (nbSpannThread == 0)
-      break;
-  }
-  bool IsComplete = ListOrbit.GetCompleteStatus();
-  MProc.GetO(TheId) << "IsComplete=" << IsComplete << "\n";
-  if (!IsComplete) {
-    std::cerr << "Major error in the code. We should be complete now\n";
-    throw TerminalException{1};
-  }
-  std::vector<Delaunay<T, Tint>> ReturnData;
-  if (eData.ReturnAll) {
-    ReturnData = ListOrbit.GetListRepr();
-    ListOrbit.FuncClear();
-  }
-  return ReturnData;
+  };
+  auto f_load_status=[&](size_t const& pos) -> bool {
+    static_cast<bool>(l_status[pos]);
+  };
+  return l_obj;
 }
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
@@ -499,7 +364,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-void TreatDelaunayEntry(FullNamelist const &eFull) {
+void ComputeDelaunayPolytope(FullNamelist const &eFull) {
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
@@ -515,19 +380,15 @@ void TreatDelaunayEntry(FullNamelist const &eFull) {
   //
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
-  IsExistingFileDie(GRAMfile);
-  std::cerr << "GRAMfile=" << GRAMfile << "\n";
+  MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
+  //
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
-  IsExistingFileDie(SVRfile);
-  std::cerr << "SVRfile=" << SVRfile << "\n";
+  MyMatrix<Tint> SVR = ReadMatrixFile<Tint>(SVRfile);
+  std::cerr << "|SVR|=" << SVR.rows() << "\n";
+  //
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
-  std::ifstream GRAMfs(GRAMfile);
-  MyMatrix<T> GramMat = ReadMatrix<T>(GRAMfs);
-  std::cerr << "dim(Gram)=" << GramMat.rows() << "\n";
-  std::ifstream SVRfs(SVRfile);
-  MyMatrix<Tint> SVR = ReadMatrix<Tint>(SVRfs);
-  std::cerr << "|SVR|=" << SVR.rows() << "\n";
+
   bool Delaunay_Saving = BlockDATA.ListBoolValues.at("SavingDelaunay");
   bool Delaunay_Memory = BlockDATA.ListBoolValues.at("FullDataInMemory");
   bool Delaunay_ReturnAll = BlockDATA.ListBoolValues.at("ReturnAll");
