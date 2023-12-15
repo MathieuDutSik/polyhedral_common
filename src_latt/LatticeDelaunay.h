@@ -178,13 +178,9 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                         DataBank<PolyhedralEntry<T, Tgroup>> &TheBank,
+                                                         std::ostream & os,
                                                          DataLattice<T, Tint> const &eData,
                                                          PolyHeuristic<mpz_class> const &AllArr) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::sto_string(i_rank);
-  std::ofstream os(FileLog);
   using Tobj = MyMatrix<Tint>;
   auto f_init=[&]() -> Tobj {
     Tobj EXT = FindDelaunayPolytope<T, Tint>(
@@ -203,9 +199,7 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
     return l_obj;
   };
   auto f_equiv=[&](Tobj const& x, Tobj const& y) -> bool {
-    Tint PreIndex = Int_IndexLattice(x.EXT);
-    Tint eIndex = T_abs(PreIndex);
-    return Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y, eIndex);
+    return Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y, os);
   };
   std::vector<Tobj> l_obj;
   std::vector<int> l_status;
@@ -224,13 +218,18 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     int val_i = static_cast<int>(val);
     if (l_status.size() <= pos) {
-      l_status
+      l_status.push_back(val_i);
     } else {
+      l_status[pos] = val_i;
     }
   };
   auto f_load_status=[&](size_t const& pos) -> bool {
     static_cast<bool>(l_status[pos]);
   };
+  compute_adjacency_mpi(comm, os, eData.max_time_second,
+                        f_exists, f_insert, f_load,
+                        f_save_status, f_load_status,
+                        f_init, f_adj, f_hash, f_repr);
   return l_obj;
 }
 
@@ -246,11 +245,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["GRAMfile"] = "unset.gram";
   ListStringValues1["SVRfile"] = "unset.svr";
+  ListStringValues1["OUTformat"] = "nothing";
   ListStringValues1["OUTfile"] = "unset.out";
-  ListBoolValues1["SavingDelaunay"] = false;
-  ListBoolValues1["FullDataInMemory"] = true;
-  ListBoolValues1["ReturnAll"] = false;
-  ListStringValues1["PrefixDelaunay"] = "/irrelevant/";
   ListStringValues1["FileDualDescription"] = "unset";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
@@ -281,12 +277,19 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template<typename Tint>
-void WriteFamilyDelaunay(std::string const& OutFormat, std::vector<MyMatrix<Tint>>) {
+void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OUTfile, std::vector<MyMatrix<Tint>> const& ListDel) {
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
   }
   if (OutFormat == "GAPformat") {
+    std::ofstream OUTfs(OUTfile);
+    int nbDel = ListDel.size();
+    OUTfs << "nbDel=" << nbDel << "\n";
+    for (int iDel = 0; iDel < nbDel; iDel++) {
+      OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
+      WriteMatrix(OUTfs, ListDel[iDel].EXT);
+    }
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};
@@ -295,6 +298,10 @@ void WriteFamilyDelaunay(std::string const& OutFormat, std::vector<MyMatrix<Tint
 
 template<typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::sto_string(i_rank);
+  std::ofstream os(FileLog);
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   //
@@ -324,11 +331,6 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
 
-  bool Delaunay_Saving = BlockDATA.ListBoolValues.at("SavingDelaunay");
-  std::string PrefixDelaunay = BlockDATA.ListStringValues.at("PrefixDelaunay");
-  if (Delaunay_Saving) {
-    CreateDirectory(PrefixDelaunay);
-  }
   std::string CVPmethod = BlockMETHOD.ListStringValues.at("CVPmethod");
   int n = GramMat.rows();
   DataLattice<T, Tint> eData{n,
@@ -346,18 +348,10 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   AllArr.eMemory = DD_Memory;
   //
   std::vector<MyMatrix<Tint>> ListDel =
-    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, TheBank, eData, AllArr);
-  std::cerr << "We now have ListDel\n";
+    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, TheBank, eData, AllArr);
+  os << "We now have ListDel\n";
   //
-  if (Delaunay_ReturnAll) {
-    std::ofstream OUTfs(OUTfile);
-    int nbDel = ListDel.size();
-    OUTfs << "nbDel=" << nbDel << "\n";
-    for (int iDel = 0; iDel < nbDel; iDel++) {
-      OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
-      WriteMatrix(OUTfs, ListDel[iDel].EXT);
-    }
-  }
+  WriteFamilyDelaunay(OutFormat, OUTfile, ListDel);
 }
 
 // clang-format off
