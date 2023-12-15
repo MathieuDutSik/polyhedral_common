@@ -209,10 +209,14 @@ VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVe
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tint> const& eLatt) {
+MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tint> const& eLatt, std::ostream& os) {
   MyMatrix<Tint> ePart = eLatt * vp.TheCompl;
   MyMatrix<Tint> fLatt = ConcatenateMatVec(ePart, vp.eV);
+  os << "ExtendSublattice, fLatt=\n";
+  WriteMatrix(os, fLatt);
   MyMatrix<Tint> gLatt = ComputeRowHermiteNormalForm_second(fLatt);
+  os << "ExtendSublattice, gLatt=\n";
+  WriteMatrix(os, gLatt);
   return gLatt;
 }
 
@@ -248,7 +252,7 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
     std::vector<MyMatrix<Tint>> SpecEnum =
       Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
     for (auto &eLatt : SpecEnum) {
-      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
+      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt, os);
 #ifdef DEBUG_RANKIN
       MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
       MyMatrix<T> eProdMat = gLatt_T * TheGramMat * gLatt_T.transpose();
@@ -301,6 +305,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
     MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
     T eDet = DeterminantMat(eProdMat);
+    os << "f_insert eDet=" << eDet << "\n";
     if (set_subspaces.size() == 0) {
       DetMin = eDet;
       os << "Now DetMin=" << DetMin << " Case 1\n";
@@ -312,7 +317,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
         os << "Now DetMin=" << DetMin << " Case 2\n";
         set_subspaces.insert(gLatt);
       } else {
-        if (eDet < DetMin*(1 + tol)) {
+        if (eDet <= DetMin*(1 + tol)) {
           set_subspaces.insert(gLatt);
           os << "Now |set_subspaces|=" << set_subspaces.size() << "\n";
         }
@@ -341,7 +346,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
       Rankin_k_level<T,Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
     os << "eV, step 4\n";
     for (auto &eLatt : SpecEnum) {
-      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
+      MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt, os);
       f_insert(gLatt);
     }
     os << "eV, step 5\n";
