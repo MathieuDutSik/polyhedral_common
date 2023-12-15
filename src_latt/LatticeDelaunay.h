@@ -16,10 +16,6 @@ template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
-  bool SavingDelaunay;
-  std::string PrefixDelaunay;
-  std::string PrefixPolyhedral;
-  bool ReturnAll;
   std::string CVPmethod;
 };
 
@@ -63,12 +59,6 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
-  WeightMatrix<true, T, Tidx_value> WMatRed =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, {});
-  Tgroup GRPisomRed =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMatRed);
-  if (IsGroupCorrect(EXT_T, GRPisomRed))
-    return GRPisomRed;
   //
   // Now extending with the SHV vector set
   //
@@ -84,17 +74,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   Tgroup PreGRPisom =
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
   Tgroup GRPisom = ReducedGroupAction(PreGRPisom, eFace);
-  if (IsGroupCorrect(EXT_T, GRPisom)) {
-    return GRPisom;
-  }
-  if (GRPisom.size() < eData.UpperLimitMethod4) {
-    auto f_correct = [](MyMatrix<T> const &M) -> bool {
-      return IsIntegralMatrix(M);
-    };
-    return LinPolytopeIntegral_Stabilizer_Method4(EXT_T, GRPisom, f_correct);
-  } else {
-    return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom);
-  }
+  return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -106,70 +86,35 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
-  std::cerr << "Begin Delaunay_TestEquivalence\n";
-  auto ConvertEquiv = [](std::optional<MyMatrix<T>> const &eEq)
-      -> std::optional<MyMatrix<Tint>> {
-    if (!eEq)
-      return {};
-    MyMatrix<Tint> eMat_I = UniversalMatrixConversion<Tint, T>(eEq.TheEquiv);
-    return eMat_I;
-  };
+  os << "Begin Delaunay_TestEquivalence\n";
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(RecEXT1.EXT);
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(RecEXT2.EXT);
-  WeightMatrix<true, T, Tidx_value> WMatRed1 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, {});
-  WeightMatrix<true, T, Tidx_value> WMatRed2 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, {});
-  std::optional<Telt> eResRed =
-      TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMatRed1, WMatRed2);
-  if (!eResRed) {
-    std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
-    return {};
-  }
-  MyMatrix<T> MatEquivRed_T =
-      FindTransformation(EXT1_T, EXT2_T, eResRed.TheEquiv);
-  if (IsIntegralMatrix(MatEquivRed_T)) {
-    MyMatrix<Tint> MatEquiv_I =
-        UniversalMatrixConversion<Tint, T>(MatEquivRed_T);
-    std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
-    return MatEquiv_I;
-  }
-  if (eIndex == 1) {
-    std::cerr << "We should not reach that stage. If eIndex=1 then\n";
-    std::cerr << "the basic algorithm should work\n";
-    throw TerminalException{1};
-  }
   //
   // Now extending by adding more vectors.
   //
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat1 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, SHV_T);
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat, eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat2 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, SHV_T);
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat, eData.SHV);
   std::optional<Telt> eRes =
       TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2);
   if (!eRes) {
-    std::cerr << "Leaving Delaunay_TestEquivalence with false\n";
+    os << "Leaving Delaunay_TestEquivalence with false\n";
     return {};
   }
   MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eRes.TheEquiv);
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-    std::cerr << "Leaving Delaunay_TestEquivalence with true\n";
+    os << "Leaving Delaunay_TestEquivalence with true\n";
     return {true, MatEquiv_I};
   }
-  std::cerr << "Trying other strategies\n";
+  os << "Trying other strategies\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1);
-  if (GRP1.size() < eData.UpperLimitMethod4) {
-    auto f_correct = [](MyMatrix<T> const &M) -> bool {
-      return IsIntegralMatrix(M);
-    };
-    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        EXT1_T, EXT2_T, GRP1, eRes.TheEquiv, f_correct));
-  }
-  return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method8(
-      EXT1_T, EXT2_T, GRP1, eRes.TheEquiv));
+  std::optional<MyMatrix<T>> eEq = LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, eRes.TheEquiv);
+  if (!eEq)
+    return {};
+  MyMatrix<Tint> eMat_I = UniversalMatrixConversion<Tint, T>(eEq.TheEquiv);
+  return eMat_I;
 }
 
 template <typename T, typename Tint>
@@ -335,7 +280,20 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   return {ListBlock, "undefined"};
 }
 
-template <typename T, typename Tint, typename Tgroup>
+template<typename Tint>
+void WriteFamilyDelaunay(std::string const& OutFormat, std::vector<MyMatrix<Tint>>) {
+  if (OutFormat == "nothing") {
+    std::cerr << "No output\n";
+    return;
+  }
+  if (OutFormat == "GAPformat") {
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
+}
+
+
+template<typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
