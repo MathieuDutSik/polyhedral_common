@@ -229,6 +229,10 @@ int main(int argc, char *argv[]) {
         using T = mpq_class;
         return process<T>(eFileI, choice, os);
       }
+      if (arith == "double") {
+        using T = double;
+        return process<T>(eFileI, choice, os);
+      }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
