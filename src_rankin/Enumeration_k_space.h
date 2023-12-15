@@ -89,7 +89,7 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
   int n = TheGramMat.rows();
   os << "GetOrthogonalProjector_dim1, step 2 n=" << n << "\n";
   MyMatrix<Tint> eVect_M = MatrixFromVector(eVect);
-  os << "GetOrthogonalProjector_dim1, step 3 eVect_M=" << StringVector(eVect_M) << "\n";
+  os << "GetOrthogonalProjector_dim1, step 3\n";
   MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
   os << "GetOrthogonalProjector_dim1, step 4 eVect_T=" << StringVector(eVect_T) << "\n";
   MyVector<T> eVect_T_TheGramMat = eVect_T.transpose() * TheGramMat;
