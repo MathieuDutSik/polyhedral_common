@@ -15,7 +15,7 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
     return 1;
   }
   if (n == 2) {
-    return 4 / 3;
+    return T(4) / 3;
   }
   if (n == 3) {
     return 2;
@@ -27,7 +27,7 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
     return 8;
   }
   if (n == 6) {
-    return 64 / 3;
+    return T(64) / 3;
   }
   if (n == 7) {
     return 64;
@@ -323,11 +323,12 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   // That is we have min(A)^k <= H(n) * MaxDet
   os << "Rankin_k_minimum, step 1\n";
   T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k, os);
-  os << "Rankin_k_minimum, step 2\n";
+  os << "Rankin_k_minimum, step 2 MaxDet=" << MaxDet << "\n";
+  os << "Rankin_k_minimum, k=" << k << " HermitePower=" << GetUpperBoundHermitePower<T>(k) << "\n";
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
-  os << "Rankin_k_minimum, step 3\n";
+  os << "Rankin_k_minimum, step 3 upper=" << upper << "\n";
   T bound = MaxKBound(upper, k, A);
-  os << "Rankin_k_minimum, step 4\n";
+  os << "Rankin_k_minimum, step 4 bound=" << bound << "\n";
   T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
   os << "Rankin_k_minimum, step 5\n";
   for (auto &eV : SHVmin.short_vectors) {
