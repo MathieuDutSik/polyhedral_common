@@ -1,4 +1,4 @@
-PROGRAM		= Rankin_k_min
+PROGRAM		= RANKIN_Compute_k_min
 
 #PROGRAM		= LORENTZ_ComputeDomain
 #PROGRAM		= Test
