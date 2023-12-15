@@ -84,14 +84,22 @@ MyMatrix<T> GetOrthogonalProjector(MyMatrix<T> const &TheGramMat,
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, MyMatrix<Tint>>
 GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
-                            MyVector<Tint> const &eVect) {
+                            MyVector<Tint> const &eVect, std::ostream & os) {
+  os << "GetOrthogonalProjector_dim1, step 1\n";
   int n = TheGramMat.rows();
+  os << "GetOrthogonalProjector_dim1, step 2 n=" << n << "\n";
   MyMatrix<Tint> eVect_M = MatrixFromVector(eVect);
+  os << "GetOrthogonalProjector_dim1, step 3 eVect_M=" << StringVector(eVect_M) << "\n";
   MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
-  MyVector<T> eVect_T_TheGramMat = TheGramMat * eVect_T.transpose();
+  os << "GetOrthogonalProjector_dim1, step 4 eVect_T=" << StringVector(eVect_T) << "\n";
+  MyVector<T> eVect_T_TheGramMat = eVect_T.transpose() * TheGramMat;
+  os << "GetOrthogonalProjector_dim1, step 5 eVect_T_GramMat=" << StringVector(eVect_T_TheGramMat) << "\n";
   T rNorm = eVect_T_TheGramMat.dot(eVect_T);
+  os << "GetOrthogonalProjector_dim1, step 6 rNorm=" << rNorm << "\n";
   MyMatrix<Tint> TheCompl = SubspaceCompletionInt(eVect_M, n);
+  os << "GetOrthogonalProjector_dim1, step 7\n";
   MyMatrix<T> TheProj(n - 1, n);
+  os << "GetOrthogonalProjector_dim1, step 8\n";
   for (int i = 0; i < n - 1; i++) {
     MyVector<Tint> fVect = GetMatrixRow(TheCompl, i);
     MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
@@ -99,20 +107,26 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
     MyVector<T> rVect = fVect_T - eVect_T * scal;
     AssignMatrixRow(TheProj, i, rVect);
   }
+  os << "GetOrthogonalProjector_dim1, step 9\n";
   return {TheProj, TheCompl};
 }
 
 template <typename T, typename Tint>
-T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k) {
+T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k, std::ostream& os) {
+  os << "UpperBoundRankinMinimalDeterminant k=" << k << "\n";
   T_shvec_info<T, Tint> SHVmin = computeMinimum_GramMat<T,Tint>(TheGramMat);
   T rNorm = SHVmin.minimum;
+  os << "UpperBoundRankinMinimalDeterminant rNorm=" << rNorm << "\n";
   if (k == 1) {
     return rNorm;
   }
   MyVector<Tint> eVect = SHVmin.short_vectors[0];
-  MyMatrix<T> TheProj = GetOrthogonalProjector_dim1(TheGramMat, eVect).first;
+  os << "UpperBoundRankinMinimalDeterminant eVect=" << StringVector(eVect) << "\n";
+  MyMatrix<T> TheProj = GetOrthogonalProjector_dim1(TheGramMat, eVect, os).first;
+  os << "UpperBoundRankinMinimalDeterminant TheProj\n";
   MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
-  T upper = UpperBoundRankinMinimalDeterminant<T,Tint>(ReducedGramMat, k - 1);
+  os << "UpperBoundRankinMinimalDeterminant ReducedGramMat\n";
+  T upper = UpperBoundRankinMinimalDeterminant<T,Tint>(ReducedGramMat, k - 1, os);
   return rNorm * upper;
 }
 
@@ -176,12 +190,12 @@ struct VectorProjection {
 };
 
 template <typename T, typename Tint>
-VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVector<Tint> const& eV) {
+VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVector<Tint> const& eV, std::ostream & os) {
   MyVector<T> eV_T = UniversalVectorConversion<T, Tint>(eV);
   MyVector<T> eV_T_gram = TheGramMat * eV_T.transpose();
   T rNorm = eV_T_gram.dot(eV_T);
   std::pair<MyMatrix<T>, MyMatrix<Tint>> pair =
-    GetOrthogonalProjector_dim1(TheGramMat, eV);
+    GetOrthogonalProjector_dim1(TheGramMat, eV, os);
   MyMatrix<T> const &TheProj = pair.first;
   MyMatrix<Tint> const &TheCompl = pair.second;
   MyMatrix<T> ReducedGramMat = TheProj * TheGramMat * TheProj.transpose();
@@ -199,17 +213,12 @@ MyMatrix<Tint> ExtendSublattice(VectorProjection<T,Tint> const& vp, MyMatrix<Tin
 
 
 
-
-//template <typename T, typename Tint>
-//std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
-//                                           T const &MaxDet);
-
 // The function that returns the Rankin k-minimum.
 // It should work both for floating point types and exact types.
 // If the threshold need to be used, then that should be in the MaxDet.
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
-                                           T const &MaxDet) {
+                                           T const &MaxDet, std::ostream & os) {
   if (k == 1) {
     T bound = MaxDet;
     T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
@@ -228,10 +237,10 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   T bound = MaxKBound(upper, k, A);
   T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
   for (auto &eV : SHVmin.short_vectors) {
-    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV);
+    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV, os);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
-      Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet);
+      Rankin_k_level<T, Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
 #ifdef DEBUG_RANKIN
@@ -263,18 +272,15 @@ struct ResultKRankinMin {
 
 
 
-
-//template <typename T, typename Tint>
-//ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
-//                                          T const &tol);
-
 template <typename T, typename Tint>
 ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
-                                           T const &tol) {
+                                           T const &tol, std::ostream & os) {
   if (k == 1) {
-    T bound = UpperBoundRankinMinimalDeterminant<T, Tint>(A, 1);
+    T bound = UpperBoundRankinMinimalDeterminant<T, Tint>(A, 1, os);
     T bound_search = bound * (1 + tol);
+    os << "k=" << k << " bound=" << bound << " bound_search=" << bound_search << "\n";
     T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound_search);
+    os << "|SHVmin.short_vectors|=" << SHVmin.short_vectors.size() << "\n";
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : SHVmin.short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
@@ -283,7 +289,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     return {bound, RetList};
   }
   // We use the HermiteNormalForm
-  T DetMin;
+  T DetMin = 0;
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   auto f_insert=[&](MyMatrix<Tint> const& gLatt) -> void {
     MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
@@ -291,39 +297,54 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     T eDet = DeterminantMat(eProdMat);
     if (set_subspaces.size() == 0) {
       DetMin = eDet;
+      os << "Now DetMin=" << DetMin << " Case 1\n";
       set_subspaces.insert(gLatt);
     } else {
       if (eDet < DetMin*(1-tol)) {
         set_subspaces.clear();
         DetMin = eDet;
+        os << "Now DetMin=" << DetMin << " Case 2\n";
         set_subspaces.insert(gLatt);
       } else {
         if (eDet < DetMin*(1 + tol)) {
           set_subspaces.insert(gLatt);
+          os << "Now |set_subspaces|=" << set_subspaces.size() << "\n";
         }
       }
     }
   };
   // We are now using the Hermite constant to get a bound on the minimum
   // That is we have min(A)^k <= H(n) * MaxDet
-  T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k);
+  os << "Rankin_k_minimum, step 1\n";
+  T MaxDet = UpperBoundRankinMinimalDeterminant<T, Tint>(A, k, os);
+  os << "Rankin_k_minimum, step 2\n";
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
+  os << "Rankin_k_minimum, step 3\n";
   T bound = MaxKBound(upper, k, A);
+  os << "Rankin_k_minimum, step 4\n";
   T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
+  os << "Rankin_k_minimum, step 5\n";
   for (auto &eV : SHVmin.short_vectors) {
-    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV);
+    os << "eV, step 1\n";
+    VectorProjection<T,Tint> vp = GetVectorProjection(A, eV, os);
+    os << "eV, step 2\n";
     T TheAskDet = MaxDet / vp.rNorm;
+    os << "eV, step 3\n";
     std::vector<MyMatrix<Tint>> SpecEnum =
-      Rankin_k_level<T,Tint>(vp.ReducedGramMat, k - 1, TheAskDet);
+      Rankin_k_level<T,Tint>(vp.ReducedGramMat, k - 1, TheAskDet, os);
+    os << "eV, step 4\n";
     for (auto &eLatt : SpecEnum) {
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt);
       f_insert(gLatt);
     }
+    os << "eV, step 5\n";
   }
+  os << "Rankin_k_minimum, step 6\n";
   std::vector<MyMatrix<Tint>> vec_subspaces;
   for (auto &mat : set_subspaces) {
     vec_subspaces.push_back(mat);
   }
+  os << "Rankin_k_minimum, step 7\n";
   return {DetMin, vec_subspaces};
 }
 

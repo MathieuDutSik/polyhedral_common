@@ -14,7 +14,7 @@ void compute_rankin_k_min_kernel(int const& k, std::string const &eFile, std::st
   WriteMatrix(std::cerr, A);
   T tol = ParseScalar<T>(strTol);
   std::cerr << "k=" << k << " tol=" << tol << "\n";
-  ResultKRankinMin<T, Tint> result = Rankin_k_minimum<T, Tint>(A, k, tol);
+  ResultKRankinMin<T, Tint> result = Rankin_k_minimum<T, Tint>(A, k, tol, std::cerr);
   std::cerr << "min=" << result.min << "\n";
   std::cerr << "|l_spaces|=" << result.l_spaces.size() << "\n";
 }
