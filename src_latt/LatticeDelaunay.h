@@ -6,8 +6,7 @@
 #include "FundamentalDelaunay.h"
 #include "GRP_DoubleCoset.h"
 #include "MatrixGroup.h"
-#include "Namelist.h"
-#include "POLY_ThreadDualDescription.h"
+#include "POLY_RecursiveDualDesc.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -16,13 +15,11 @@
 template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
-  MyMatrix<Tint> SHV;
+  MyMatrix<T> SHV;
   bool SavingDelaunay;
-  bool FullDataInMemory;
   std::string PrefixDelaunay;
   std::string PrefixPolyhedral;
   bool ReturnAll;
-  mpz_class UpperLimitMethod4;
   std::string CVPmethod;
 };
 
@@ -62,7 +59,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 
 template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
-                           MyMatrix<Tint> const &EXT, Tint const &eIndex) {
+                           MyMatrix<Tint> const &EXT) {
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
@@ -72,17 +69,11 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMatRed);
   if (IsGroupCorrect(EXT_T, GRPisomRed))
     return GRPisomRed;
-  if (eIndex == 1) {
-    std::cerr << "Inconsistent. If the index is 1, then GRPisomRed\n";
-    std::cerr << "should be the full group\n";
-    throw TerminalException{1};
-  }
   //
   // Now extending with the SHV vector set
   //
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(eData.SHV);
   WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, SHV_T);
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, eData.SHV);
   int nbVert = EXT_T.rows();
   int nbSHV = SHV_T.rows();
   Face eFace(nbVert + nbSHV);
@@ -109,8 +100,9 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
-                         Delaunay<T, Tint> const &RecEXT1,
-                         Delaunay<T, Tint> const &RecEXT2, Tint const &eIndex) {
+                         MyMatrix<Tint> const &EXT1,
+                         MyMatrix<Tint> const &RecEXT2,
+                         std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
@@ -251,8 +243,9 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
   using Tobj = MyMatrix<Tint>;
   auto f_init=[&]() -> Tobj {
     Tobj EXT = FindDelaunayPolytope<T, Tint>(
-       eData.GramMat, eData.CVPmethod, MProc.GetO(TheId));
+       eData.GramMat, eData.CVPmethod, os);
     os << "Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+    return EXT;
   };
   auto f_adj=[&](Tobj const& x) -> std::vector<Tobj> {
     Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, eDEL.EXT, eInv.eIndex);
@@ -304,6 +297,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListStringValues1["arithmetic_T"] = "gmp_rational";
+  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["GRAMfile"] = "unset.gram";
   ListStringValues1["SVRfile"] = "unset.svr";
   ListStringValues1["OUTfile"] = "unset.out";
@@ -311,6 +306,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListBoolValues1["FullDataInMemory"] = true;
   ListBoolValues1["ReturnAll"] = false;
   ListStringValues1["PrefixDelaunay"] = "/irrelevant/";
+  ListStringValues1["FileDualDescription"] = "unset";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -325,15 +321,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, std::string> ListStringValues2;
   std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListIntValues2["NPROC"] = 1;
-  ListIntValues2["UpperLimitMethod4"] = 10000;
   ListBoolValues2["Saving"] = false;
   ListStringValues2["PrefixPolyhedral"] = "/irrelevant/";
-  ListBoolValues2["FullDataInMemory"] = true;
-  ListStringValues2["SplittingHeuristicFile"] = "unset.heu";
-  ListStringValues2["AdditionalSymmetryHeuristicFile"] = "unset.heu";
-  ListStringValues2["DualDescriptionHeuristicFile"] = "unset.heu";
-  ListStringValues2["StabEquivFacetHeuristicFile"] = "unset.heu";
-  ListStringValues2["MethodInitialFacetSetFile"] = "unset.heu";
   ListStringValues2["CVPmethod"] = "SVexact";
   SingleBlock BlockMETHOD;
   BlockMETHOD.ListIntValues = ListIntValues2;
@@ -342,35 +331,16 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   BlockMETHOD.ListStringValues = ListStringValues2;
   BlockMETHOD.ListListStringValues = ListListStringValues2;
   ListBlock["METHOD"] = BlockMETHOD;
-  // BANK
-  std::map<std::string, int> ListIntValues3;
-  std::map<std::string, bool> ListBoolValues3;
-  std::map<std::string, double> ListDoubleValues3;
-  std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string>> ListListStringValues3;
-  ListStringValues3["BankSaveHeuristicFile"] = "unset.heu";
-  ListStringValues3["Prefix"] = "./unset/";
-  ListBoolValues3["Saving"] = false;
-  ListBoolValues3["FullDataInMemory"] = true;
-  SingleBlock BlockBANK;
-  BlockBANK.ListIntValues = ListIntValues3;
-  BlockBANK.ListBoolValues = ListBoolValues3;
-  BlockBANK.ListDoubleValues = ListDoubleValues3;
-  BlockBANK.ListStringValues = ListStringValues3;
-  BlockBANK.ListListStringValues = ListListStringValues3;
-  ListBlock["BANK"] = BlockBANK;
   // Merging all data
   return {ListBlock, "undefined"};
 }
 
 template <typename T, typename Tint, typename Tgroup>
-void ComputeDelaunayPolytope(FullNamelist const &eFull) {
+void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   //
   bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
-  bool BANK_Memory = BlockBANK.ListBoolValues.at("FullDataInMemory");
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   CreateDirectory(BANK_Prefix);
   FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
@@ -381,99 +351,44 @@ void ComputeDelaunayPolytope(FullNamelist const &eFull) {
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
+  int n = GramMat.rows();
   //
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
-  MyMatrix<Tint> SVR = ReadMatrixFile<Tint>(SVRfile);
+  auto get_SVR=[&]() -> MyMatrix<T> {
+    if (IsExistingFile(SVRfile)) {
+      return ReadMatrixFile<Tint>(SVRfile);
+    }
+    return ZeroMatrix<T>(n, 0);
+  };
+  MyMatrix<T> SVR = get_SVR();
   std::cerr << "|SVR|=" << SVR.rows() << "\n";
   //
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
 
   bool Delaunay_Saving = BlockDATA.ListBoolValues.at("SavingDelaunay");
-  bool Delaunay_Memory = BlockDATA.ListBoolValues.at("FullDataInMemory");
-  bool Delaunay_ReturnAll = BlockDATA.ListBoolValues.at("ReturnAll");
   std::string PrefixDelaunay = BlockDATA.ListStringValues.at("PrefixDelaunay");
-  CreateDirectory(PrefixDelaunay);
-  std::string PrefixPolyhedral =
-      BlockMETHOD.ListStringValues.at("PrefixPolyhedral");
-  CreateDirectory(PrefixPolyhedral);
-  int UppLimit = BlockMETHOD.ListIntValues.at("UpperLimitMethod4");
+  if (Delaunay_Saving) {
+    CreateDirectory(PrefixDelaunay);
+  }
   std::string CVPmethod = BlockMETHOD.ListStringValues.at("CVPmethod");
-  mpz_class UppLimit_z = UppLimit;
   int n = GramMat.rows();
   DataLattice<T, Tint> eData{n,
                              GramMat,
                              SVR,
                              Delaunay_Saving,
-                             Delaunay_Memory,
                              PrefixDelaunay,
-                             PrefixPolyhedral,
-                             Delaunay_ReturnAll,
-                             UppLimit_z,
                              CVPmethod};
   //
-  std::cerr << "Creating MPROC\n";
-  int NbThr = BlockMETHOD.ListIntValues.at("NPROC");
-  MainProcessor MProc(NbThr);
-  int TheId = MProc.MPU_GetId();
-  //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
-  //
-  std::string HeuSplitFile =
-      BlockMETHOD.ListStringValues.at("SplittingHeuristicFile");
-  if (HeuSplitFile != "unset.heu") {
-    IsExistingFileDie(HeuSplitFile);
-    std::ifstream SPLITfs(HeuSplitFile);
-    AllArr.Splitting = ReadHeuristic<mpz_class>(SPLITfs);
-  }
-  //
-  std::string AddiSymmFile =
-      BlockMETHOD.ListStringValues.at("AdditionalSymmetryHeuristicFile");
-  if (AddiSymmFile != "unset.heu") {
-    IsExistingFileDie(AddiSymmFile);
-    std::ifstream SYMMfs(AddiSymmFile);
-    AllArr.AdditionalSymmetry = ReadHeuristic<mpz_class>(SYMMfs);
-  }
-  //
-  std::string DualDescFile =
-      BlockMETHOD.ListStringValues.at("DualDescriptionHeuristicFile");
-  if (DualDescFile != "unset.heu") {
-    IsExistingFileDie(DualDescFile);
-    std::ifstream DDfs(DualDescFile);
-    AllArr.DualDescriptionProgram = ReadHeuristic<mpz_class>(DDfs);
-  }
-  //
-  std::string StabEquivFile =
-      BlockMETHOD.ListStringValues.at("StabEquivFacetHeuristicFile");
-  if (StabEquivFile != "unset.heu") {
-    IsExistingFileDie(StabEquivFile);
-    std::ifstream STEQfs(StabEquivFile);
-    AllArr.StabEquivFacet = ReadHeuristic<mpz_class>(STEQfs);
-  }
-  //
-  std::string MethodFacetFile =
-      BlockMETHOD.ListStringValues.at("MethodInitialFacetSetFile");
-  if (MethodFacetFile != "unset.heu") {
-    IsExistingFileDie(MethodFacetFile);
-    std::ifstream MIFSfs(MethodFacetFile);
-    AllArr.InitialFacetSet = ReadHeuristic<mpz_class>(MIFSfs);
-  }
-  //
-  std::string BankSaveFile =
-      BlockBANK.ListStringValues.at("BankSaveHeuristicFile");
-  if (BankSaveFile != "unset.heu") {
-    IsExistingFileDie(BankSaveFile);
-    std::ifstream BANKfs(BankSaveFile);
-    AllArr.BankSave = ReadHeuristic<mpz_class>(BANKfs);
-  }
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
   AllArr.Saving = DD_Saving;
   AllArr.eMemory = DD_Memory;
   //
-  std::vector<Delaunay<T, Tint>> ListDel =
-      EnumerationDelaunayPolytopes<T>(MProc, TheId, TheBank, eData, AllArr);
+  std::vector<MyMatrix<Tint>> ListDel =
+    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, TheBank, eData, AllArr);
   std::cerr << "We now have ListDel\n";
   //
   if (Delaunay_ReturnAll) {
