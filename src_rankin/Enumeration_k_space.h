@@ -191,8 +191,14 @@ struct VectorProjection {
 
 template <typename T, typename Tint>
 VectorProjection<T,Tint> GetVectorProjection(MyMatrix<T> const& TheGramMat, MyVector<Tint> const& eV, std::ostream & os) {
+  os << "Beginning of GetVectorProjection\n";
+  if (TheGramMat.rows() != eV.size()) {
+    std::cerr << "|TheGramMat|=" << TheGramMat.rows() << " |eV|=" << eV.size() << "\n";
+    std::cerr << "Error: They should be equal\n";
+    throw TerminalException{1};
+  }
   MyVector<T> eV_T = UniversalVectorConversion<T, Tint>(eV);
-  MyVector<T> eV_T_gram = TheGramMat * eV_T.transpose();
+  MyVector<T> eV_T_gram = eV_T.transpose() * TheGramMat;
   T rNorm = eV_T_gram.dot(eV_T);
   std::pair<MyMatrix<T>, MyMatrix<Tint>> pair =
     GetOrthogonalProjector_dim1(TheGramMat, eV, os);
