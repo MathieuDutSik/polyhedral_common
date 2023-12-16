@@ -81,17 +81,49 @@ const size_t seed_hashmap = 20;
 /*
   input clear from preceding discussion.
   The returned boolean is:
-  true: if the enumeration finished
+  true: if the enumeration finished. false otherwise.
+  ---
+  Types (cannot be set up via concept, but so be it)
+  Tobj: The object type being created (like L-type domain)
+  TadjI: The types returned by the spanning. Can be something like
+    std::pair<Face, Tobj> with Face indicating the relevant Face.
+  TadjO: The adjacency type after processing. Can be something like
+    {Face, Trans, idx} with Face the corresponding Face, Trans the
+    transformation realizing the equivalence and idx the equivalent
+    object.
+  All objects have to be transmitible via boost C++ mpi.
+  ---
+  Function types used:
+  f_exist(int) -> bool : whether there is an entry at this level
+  f_insert(Tobj) -> void : insert the new object.
+  f_load(int) -> Tobj : get one object from the database
+  f_save_status(int, bool) -> void : save the status in the database
+  f_load_status(int) -> bool : get the status in the database
+  f_init() -> Tobj : get a starting element
+  f_adj(Tobj) -> std::vector<TadjI> : get the adjacent object
+  f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the
+  f_hash(size_t, Tobj) -> size_t : compute the hash from a specified seed.
+  f_repr(Tobj, TadjI, int, int) -> std::optional<TadjO> : returns whether
+    Tobj is equivalent to the spanned TadjI and find the equivalence if that
+    is the case. Also take
+  f_spann(TadjI, int, int) -> std::pair<Tobj, TabjO> : Generate from the
+    equivalence the object to be inserted and the equivalence to be sent.
+  
  */
-template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
-          typename Frepr>
+template <typename Tobj, typename TadjI, typename TadjO,
+          typename Fexist, typename Finsert, typename Fload,
+          typename Fsave_status, typename Fload_status,
+          typename Finit, typename Fadj, typename Fset_adj,
+          typename Fhash,
+          typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            std::ostream & os,
                            int const &max_time_second, Fexist f_exist,
                            Finsert f_insert, Fload f_load,
                            Fsave_status f_save_status,
                            Fload_status f_load_status, Finit f_init, Fadj f_adj,
-                           Fhash f_hash, frepr f_repr) {
+                           Fset_adj f_set_adj,
+                           Fhash f_hash, Frepr f_repr, Fspann f_spann) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -100,6 +132,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_query_n_oper_ask = 36;
   const int tag_query_n_oper_reply = 37;
   const int tag_termination = 38;
+  std::vector<boost::mpi::request> rsl;
   //
   // The data sets
   //
@@ -120,6 +153,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   std::vector<Ttrack> l_ack_to_send;
   std::unordered_set<Ttrack> s_ack_waiting;
+  std::unordered_map<int, std::vector<TadjO>> map_adjO;
   int nonce = 1; // This is so that never ever two objects get generated with
                  // the same id.
   bool is_past_time = false;
@@ -155,7 +189,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     } else {
       l_ack_to_send.push_back(e.track);
       // We drop the return status here
-      comm.isend(res, tag_new_object, e);
+      rsl.push_back(comm.isend(res, tag_new_object, e));
     }
   };
   auto get_nonce = [&]() -> size_t {
@@ -196,7 +230,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int val;
       comm.recv(e_src, tag_query_n_oper_ask, val);
       size_t nonce = get_nonce();
-      comm.isend(e_src, tag_query_n_oper_reply, nonce);
+      rsl.push_back(comm.isend(e_src, tag_query_n_oper_reply, nonce));
       return false;
     }
     if (e_tag == tag_termination) {
@@ -227,7 +261,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       f_insert(e);
     }
   };
-  auto f_terminate = [&]() -> bool {};
+  auto f_terminate = [&]() -> bool {
+  };
   //
   // Loading the data
   //
@@ -256,7 +291,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     } else {
       if (l_ack_to_send.size() > 0) {
         for (auto &track : l_ack_to_send) {
-          comm.isend(e_src, tag_indicate_processed, track);
+          rsl.push_back(comm.isend(e_src, tag_indicate_processed, track));
         }
       } else {
         if (undone.size() > 0) {
