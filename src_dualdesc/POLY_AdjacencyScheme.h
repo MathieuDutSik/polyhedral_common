@@ -2,6 +2,22 @@
 #ifndef SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 #define SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 
+
+// We clear the mpi requests and return the total length.
+// Total length should be 0 in order to consider exiting.
+size_t clear_mpi_request(std::vector<boost::mpi::request> & rsl) {
+  size_t len = rsl.size();
+  std::vector<boost::mpi::request> new_rsl;
+  for (size_t u=0; u<len; u++) {
+    boost::optional<boost::mpi::status> stat = rsl[u].test();
+    if (!stat) {
+      new_rsl.emplace_back(std::move(rsl[u]));
+    }
+  }
+  rsl = std::move(new_rsl);
+  return rsl.size();
+}
+
 /*
   We want here fully templatized code that allows to work with
   general code. Common features:
@@ -108,7 +124,6 @@ const size_t seed_hashmap = 20;
     is the case. Also take
   f_spann(TadjI, int, int) -> std::pair<Tobj, TabjO> : Generate from the
     equivalence the object to be inserted and the equivalence to be sent.
-  
  */
 template <typename Tobj, typename TadjI, typename TadjO,
           typename Fexist, typename Finsert, typename Fload,
@@ -118,11 +133,10 @@ template <typename Tobj, typename TadjI, typename TadjO,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            std::ostream & os,
-                           int const &max_time_second, Fexist f_exist,
-                           Finsert f_insert, Fload f_load,
-                           Fsave_status f_save_status,
-                           Fload_status f_load_status, Finit f_init, Fadj f_adj,
-                           Fset_adj f_set_adj,
+                           int const &max_time_second,
+                           Fexist f_exist, Finsert f_insert, Fload f_load,
+                           Fsave_status f_save_status, Fload_status f_load_status,
+                           Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann) {
   SingletonTime start;
   int i_rank = comm.rank();
@@ -132,7 +146,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_query_n_oper_ask = 36;
   const int tag_query_n_oper_reply = 37;
   const int tag_termination = 38;
-  std::vector<boost::mpi::request> rsl;
+  const int tag_nonce = 39;
+  std::vector<boost::mpi::request> rsl_comp, rsl_admin;
   //
   // The data sets
   //
@@ -140,13 +155,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   std::unordered_map<size_t, std::vector<size_t>> map;
   // First is the nonce, second is the creating process.
   using Ttrack = std::pair<size_t, int>;
-  struct entry {
-    Tobj x;
+  struct entryI {
+    TadjI x;
     size_t hash_hashmap;
     bool is_treated;
     Ttrack track;
   };
-  std::vector<entry> V;
+  struct entryO {
+    TadjO x;
+    
+  };
+  std::vector<entryI> V;
   std::vector<size_t> undone;
   //
   // The tracking information
@@ -154,18 +173,23 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   std::vector<Ttrack> l_ack_to_send;
   std::unordered_set<Ttrack> s_ack_waiting;
   std::unordered_map<int, std::vector<TadjO>> map_adjO;
-  int nonce = 1; // This is so that never ever two objects get generated with
-                 // the same id.
+  // The nonce is used so that a number is associated to a specific computation.
+  // The function get_nonce returns 0 if there is something left to do and
+  // nonzero if there is no pending computation. If the get_nonce returns
+  // the same, then there was no computation going on.
+  size_t nonce = 1;
   bool is_past_time = false;
+  bool has_pending_work = true;
   //
   // The lambda functions
   //
-  auto f_insert_local = [&](entry const &e) -> void {
-    std::vector<size_t> &vect = map[hash];
+  auto insert_local = [&](entryI const &eI) -> void {
+    std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
       entry &f = V[idx];
-      if (f_repr(e.x, f.x)) {
-        if (e.track.second != i_proc) {
+      std::optional<TadjO> opt = f_repr(f.x, eI.x, i_rank, idx);
+      if (opt) {
+        if (eI.track.second != i_proc) {
           l_ack.push_back(e.track);
         }
       }
@@ -178,18 +202,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     n_obj++;
     nonce++;
   };
-  auto f_insert_local_and_save = [&](entry const &e) -> void {
-    f_insert(n_obj, e.x);
-    f_save_status(n_obj, e.is_treated);
-    f_insert_local(e);
+  auto insert_local_and_save = [&](entryI const &eI) -> void {
+    f_insert(n_obj, eI.x);
+    f_save_status(n_obj, eI.is_treated);
+    insert_local(eI);
   };
-  auto f_insert = [&](entry const &e) -> void {
-    if (res == i_proc) {
-      f_insert_local(e);
+  auto insert_entry = [&](entryI const &eI) -> void {
+    if (eI.track.second == i_proc) {
+      insert_local(eI);
     } else {
       l_ack_to_send.push_back(e.track);
-      // We drop the return status here
-      rsl.push_back(comm.isend(res, tag_new_object, e));
+      rsl_comp.push_back(comm.isend(res, tag_new_object, e));
     }
   };
   auto get_nonce = [&]() -> size_t {
@@ -211,13 +234,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       throw TerminalException{1};
     }
     s_ack_waiting.erase(iter);
-  } auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
+  };
+  auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_new_object) {
-      entry e;
+      entryI e;
       comm.recv(e_src, tag_new_object, e);
-      f_insert_local(e);
+      insert_local(e);
       return false;
     }
     if (e_tag == tag_indicate_processed) {
@@ -226,9 +250,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       process_received_nonce(t);
       return false;
     }
-    if (e_tag == tag_query_n_oper_ask) {
+    if (e_tag == tag_nonce) {
       int val;
-      comm.recv(e_src, tag_query_n_oper_ask, val);
+      comm.recv(e_src, tag_nonce, val);
       size_t nonce = get_nonce();
       rsl.push_back(comm.isend(e_src, tag_query_n_oper_reply, nonce));
       return false;
@@ -249,19 +273,20 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto process_one_entry = [&]() -> void {
     size_t idx = get_undone_idx();
     entry &e = V[idx];
-    std::vector<Tobj> l_adj = f_adj(e.x);
+    std::vector<TadjI> l_adj = f_adj(e.x);
+    nonce++;
     for (auto &x : l_adj) {
-      size_t hash_partition = f_hash(seed_partition, x);
-      size_t hash_hashmap = f_hash(seed_hashmap, x);
+      size_t hash_partition = f_hash(seed_partition, x.obj);
+      size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
       int res = static_cast<int>(hash_partition % size_t(n_proc));
       Track track{nonce, res};
       nonce++;
       bool is_treated = false;
-      entry e{x, hash_hashmap, is_treated, track};
-      f_insert(e);
+      entryI e{x, hash_hashmap, is_treated, track};
+      insert_entry(e);
     }
   };
-  auto f_terminate = [&]() -> bool {
+  auto terminate = [&]() -> bool {
   };
   //
   // Loading the data
@@ -291,14 +316,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     } else {
       if (l_ack_to_send.size() > 0) {
         for (auto &track : l_ack_to_send) {
-          rsl.push_back(comm.isend(e_src, tag_indicate_processed, track));
+          rsl_comp.push_back(comm.isend(e_src, tag_indicate_processed, track));
         }
       } else {
         if (undone.size() > 0) {
           process_one_entry();
         } else {
-          if (f_terminate()) {
-            return;
+          if (terminate()) {
+            return is_past_time;
           }
         }
       }
