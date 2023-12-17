@@ -18,6 +18,15 @@ size_t clear_mpi_request(std::vector<boost::mpi::request> & rsl) {
   return rsl.size();
 }
 
+template<typename T>
+void append_move(std::vector<T> & v1, std::vector<T> & v2) {
+  v1.insert(v1.end(),
+            std::make_move_iterator(v2.begin()),
+            std::make_move_iterator(v2.end()));
+  v2.clear();
+}
+
+
 /*
   We want here fully templatized code that allows to work with
   general code. Common features:
@@ -103,6 +112,7 @@ const size_t seed_hashmap = 20;
   Tobj: The object type being created (like L-type domain)
   TadjI: The types returned by the spanning. Can be something like
     std::pair<Face, Tobj> with Face indicating the relevant Face.
+    Doing the .obj should return the object.
   TadjO: The adjacency type after processing. Can be something like
     {Face, Trans, idx} with Face the corresponding Face, Trans the
     transformation realizing the equivalence and idx the equivalent
@@ -145,44 +155,63 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_indicate_processed = 35;
   const int tag_nonce_ask = 36;
   const int tag_nonce_reply = 37;
-  const int tag_termination = 38;
+  const int tag_entriesadji_send = 38;
+  const int tag_entriesadjo_send = 38;
+  const int tag_termination = 39;
   std::vector<boost::mpi::request> rsl_comp, rsl_admin;
+  //
+  // The combined data types
+  //
+  using Ttrack = std::pair<size_t,int>;
+  struct entryObj {
+    Tobj x; // The object 
+    size_t hash_hashmap;
+    bool is_treated;
+    int i_proc;
+  };
+  struct entryAdjI {
+    TadjI x;
+    size_t hash_hashmap;
+    Ttrack track;
+    int i_proc_orig;
+    int i_proc_dest;
+  };
+  struct entryAdjO {
+    TadjO x;
+  };
   //
   // The data sets
   //
-  int n_obj = 0;
+  int n_obj = 0; // The number of objects generated
+  // The map from the hash to the list of indices
   std::unordered_map<size_t, std::vector<size_t>> map;
-  // First is the nonce, second is the creating process.
-  using Ttrack = std::pair<size_t, int>;
-  struct entryI {
-    TadjI x;
-    size_t hash_hashmap;
-    bool is_treated;
-    Ttrack track;
-  };
-  struct entryO {
-    TadjO x;
-    
-  };
-  std::vector<entryI> V;
-  std::vector<size_t> undone;
+  std::vector<entryObj> V; // The objects
+  std::vector<size_t> undone; // The undone indices
   //
   // The tracking information
   //
-  std::vector<Ttrack> l_ack_to_send;
-  std::unordered_set<Ttrack> s_ack_waiting;
-  std::unordered_map<int, std::vector<TadjO>> map_adjO;
+  // The unsent entries by the processors.
+  std::vector<std::vector<entryAdjI>> unsent_entriesAdjI;
+  std::vector<std::vector<entryAdjO>> unsent_entriesAdjO;
+  std::vector<entryAdjI> unproc_entriesAdjI;
+  std::vector<entryAdjO> unproc_entriesAdjO;
+  // The mapping from the index to the list of adjacencices.
+  std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
+
+
+  
   // The nonce is used so that a number is associated to a specific computation.
   // The function get_nonce returns 0 if there is something left to do and
   // nonzero if there is no pending computation. If the get_nonce returns
   // the same, then there was no computation going on.
+  // The none is also used for the tracking of the adjacencies entries.
   size_t nonce = 1;
   bool is_past_time = false;
   bool has_pending_work = true;
   //
   // The lambda functions
   //
-  auto insert_local = [&](entryI const &eI) -> void {
+  auto insert_local = [&](entryAdjI const &eI) -> void {
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
       entry &f = V[idx];
@@ -218,6 +247,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (s_ack_waiting.size() > 0) {
       return 0;
     }
+    (void)clear_mpi_request(rsl_admin);
+    size_t left_oper = clear_mpi_request(rsl_comp);
+    if (left_oper > 0) {
+      return 0;
+    }
     if (undone.size() == 0) {
       return nonce;
     }
@@ -243,17 +277,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       insert_local(e);
       return false;
     }
-    if (e_tag == tag_indicate_processed) {
-      track t;
-      comm.recv(e_src, tag_indicate_processed, t);
-      process_received_nonce(t);
+    if (e_tag == tag_entriesadji_send) {
+      std::vector<entryAdjI>> v;
+      comm.recv(e_src, tag_entriesadji_send, v);
+      append_move(unproc_entriesAdjI, v);
       return false;
     }
     if (e_tag == tag_nonce_ask) {
       int val;
       comm.recv(e_src, tag_nonce_ask, val);
       size_t nonce = get_nonce();
-      rsl.push_back(comm.isend(e_src, tag_nonce_reply, nonce));
+      rsl_admin.push_back(comm.isend(e_src, tag_nonce_reply, nonce));
       return false;
     }
     if (e_tag == tag_termination) {
@@ -269,9 +303,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     undone.pop_back();
     return idx;
   };
-  auto process_one_entry = [&]() -> void {
+  auto process_one_entry_obj = [&]() -> void {
     size_t idx = get_undone_idx();
-    entry &e = V[idx];
+    entryObj &e = V[idx];
     std::vector<TadjI> l_adj = f_adj(e.x);
     nonce++;
     for (auto &x : l_adj) {
@@ -281,9 +315,49 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       Track track{nonce, res};
       nonce++;
       bool is_treated = false;
-      entryI e{x, hash_hashmap, is_treated, track};
-      insert_entry(e);
+      entryAdjI e{x, hash_hashmap, is_treated, track};
+      unsent_entriesAdjI[res].push_back(entryAdjI);
     }
+  };
+  auto flush_entriesAdjI=[&]() -> bool {
+    bool do_something = false;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      std::vector<entryAdjI> & v = unsent_entriesAdjI[i_proc];
+      if (v.size() > 0) {
+        do_something = true;
+        if (i_proc == i_rank) {
+          append_move(unproc_entriesAdjI, v);
+        } else {
+          // This does not work because v is passed as reference and
+          // so we cannot clear it. We need to transfer to a vector
+          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadji_send, v));
+        }
+      }
+    }
+    return do_something;
+  };
+  auto flush_entriesAdjO=[&]() -> bool {
+    bool do_something = false;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      std::vector<entryAdjO> & v = unsent_entriesAdjO[i_proc];
+      if (v.size() > 0) {
+        do_something = true;
+        if (i_proc == i_rank) {
+          for (auto &eEnt : v) {
+            
+          }
+          v.clear();
+        } else {
+          // This does not work because v is passed as reference and
+          // so we cannot clear it. We need to transfer to a vector
+          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadji_send, v));
+        }
+      }
+    }
+    return do_something;
+  };
+  auto write_set_adj=[&]() -> bool {
+    
   };
   auto terminate = [&]() -> bool {
     std::vector<size_t> l_nonce(n_proc-1);
@@ -340,7 +414,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
         }
       } else {
         if (undone.size() > 0) {
-          process_one_entry();
+          process_one_entry_obj();
         } else {
           if (terminate()) {
             return is_past_time;
