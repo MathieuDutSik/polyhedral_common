@@ -143,10 +143,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   int n_proc = comm.size();
   const int tag_new_object = 34;
   const int tag_indicate_processed = 35;
-  const int tag_query_n_oper_ask = 36;
-  const int tag_query_n_oper_reply = 37;
+  const int tag_nonce_ask = 36;
+  const int tag_nonce_reply = 37;
   const int tag_termination = 38;
-  const int tag_nonce = 39;
   std::vector<boost::mpi::request> rsl_comp, rsl_admin;
   //
   // The data sets
@@ -250,11 +249,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       process_received_nonce(t);
       return false;
     }
-    if (e_tag == tag_nonce) {
+    if (e_tag == tag_nonce_ask) {
       int val;
-      comm.recv(e_src, tag_nonce, val);
+      comm.recv(e_src, tag_nonce_ask, val);
       size_t nonce = get_nonce();
-      rsl.push_back(comm.isend(e_src, tag_query_n_oper_reply, nonce));
+      rsl.push_back(comm.isend(e_src, tag_nonce_reply, nonce));
       return false;
     }
     if (e_tag == tag_termination) {
@@ -287,6 +286,27 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   };
   auto terminate = [&]() -> bool {
+    std::vector<size_t> l_nonce(n_proc-1);
+    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+      int val = 0;
+      comm.send(i_proc, tag_nonce_ask, val);
+      size_t the_nonce;
+      comm.recv(e_src, tag_nonce_reply, the_nonce);
+      if (the_nonce == 0) {
+        return false;
+      }
+      l_nonce[i_proc-1] = the_nonce;
+    }
+    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+      int val = 0;
+      comm.send(i_proc, tag_nonce_ask, val);
+      size_t the_nonce;
+      comm.recv(e_src, tag_nonce_reply, the_nonce);
+      if (the_nonce != l_nonce[i_proc-1]) {
+        return false;
+      }
+    }
+    return true;
   };
   //
   // Loading the data
