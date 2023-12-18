@@ -252,13 +252,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (left_oper > 0) {
       return 0;
     }
-    if (undone.size() == 0) {
-      return nonce;
+    if (undone.size() > 0 && max_time_second == 0) {
+      return 0;
     }
-    if (max_time_second > 0 && si(start) > max_time_second) {
-      return nonce;
+    if (max_time_second > 0 && si(start) < max_time_second) {
+      return 0;
     }
-    return 0;
+    return nonce;
   };
   auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
@@ -295,7 +295,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     undone.pop_back();
     return idx;
   };
-  auto process_one_entry_obj = [&]() -> void {
+  auto process_one_entry_obj = [&]() -> bool {
+    if (max_time_second > 0 && si(start) > max_time_second) {
+      return false;
+    }
+    if (undone.size() > 0) {
+      return false;
+    }
     size_t idx = get_undone_idx();
     Tobj const& x = V[idx];
     std::vector<TadjI> l_adj = f_adj(x);
@@ -308,6 +314,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       entryAdjI e{x, hash_hashmap, i_proc_orig, idx};
       unsent_entriesAdjI[i_proc_orig].push_back(entryAdjI);
     }
+    return true;
   };
   auto flush_entriesAdjI=[&]() -> bool {
     bool do_something = false;
@@ -390,20 +397,30 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return do_something;
   };
+  auto compute_one_entry=[&]
   auto f_clear_buffers=[&]() -> bool {
+    // Transmitting the generated entriesAdjI
     bool test1 = flush_entriesAdjI();
     if (test1) {
       return true;
     }
+    // transmitting the generated entriesAdjO
     bool test2 = flush_entriesAdjO();
     if (test2) {
       return true;
     }
+    // compute the entryAdjO from entryAdjI
     bool test3 = compute_entries_adjI();
     if (test3) {
       return true;
     }
-    return write_set_adj();
+    // write down adjacencies if done
+    bool test4 = write_set_adj();
+    if (test3) {
+      return true;
+    }
+    // Nothing, then computing something new
+    return process_one_entry_obj();
   };
   auto terminate = [&]() -> bool {
     std::vector<size_t> l_nonce(n_proc-1);
@@ -456,21 +473,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
         break;
       }
     } else {
-      if (l_ack_to_send.size() > 0) {
-        for (auto &track : l_ack_to_send) {
-          rsl_comp.push_back(comm.isend(e_src, tag_indicate_processed, track));
-        }
-      } else {
-        if (undone.size() > 0) {
-          process_one_entry_obj();
-        } else {
-          if (terminate()) {
-            return is_past_time;
-          }
+      bool test = f_clear_buffers();
+      if (!test) {
+        if (terminate()) {
+          break;
         }
       }
     }
   }
+  size_t n_undone_max = 0, n_undone_loc = undone.size();
+  all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
+  return n_undone_max > 0;
 }
 
 template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
