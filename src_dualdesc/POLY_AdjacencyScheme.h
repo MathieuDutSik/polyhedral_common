@@ -3,6 +3,8 @@
 #define SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 
 
+#include "MPI_functionality.h"
+
 // We clear the mpi requests and return the total length.
 // Total length should be 0 in order to consider exiting.
 size_t clear_mpi_request(std::vector<boost::mpi::request> & rsl) {
@@ -134,6 +136,12 @@ const size_t seed_hashmap = 20;
     is the case. Also take
   f_spann(TadjI, int, int) -> std::pair<Tobj, TabjO> : Generate from the
     equivalence the object to be inserted and the equivalence to be sent.
+  ---
+  The exchanges that we have:
+  --- Sending of entriesAdjI
+  --- Sending of entriesAdjO
+  --- Sending of nonce
+  --- termination
  */
 template <typename Tobj, typename TadjI, typename TadjO,
           typename Fexist, typename Finsert, typename Fload,
@@ -151,8 +159,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  const int tag_new_object = 34;
-  const int tag_indicate_processed = 35;
   const int tag_nonce_ask = 36;
   const int tag_nonce_reply = 37;
   const int tag_entriesadji_send = 38;
@@ -276,15 +282,15 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       return false;
     }
     if (e_tag == tag_nonce_ask) {
-      int val;
-      comm.recv(e_src, tag_nonce_ask, val);
+      int val_recv;
+      comm.recv(e_src, tag_nonce_ask, val_recv);
       size_t nonce = get_nonce();
       rsl_admin.push_back(comm.isend(e_src, tag_nonce_reply, nonce));
       return false;
     }
     if (e_tag == tag_termination) {
-      int val;
-      comm.recv(e_src, tag_termination, val);
+      int val_recv;
+      comm.recv(e_src, tag_termination, val_recv);
       return true;
     }
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
@@ -303,6 +309,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       return false;
     }
     size_t idx = get_undone_idx();
+    f_save_status(idx, true);
     Tobj const& x = V[idx];
     std::vector<TadjI> l_adj = f_adj(x);
     nonce++;

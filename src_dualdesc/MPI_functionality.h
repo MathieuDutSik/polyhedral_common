@@ -249,6 +249,20 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
                                                     vf_undone_loc, os);
 }
 
+/*
+  The asynchronous exchanges require keeping track of when something has been
+  sent and some exchange is done.
+  We allow for:
+  --- A number of MaxFly messages in fly which can be larger than n_proc.
+  --- Two choices:
+     --- n_proc == MaxFly : Only one message from A to B at the same time.
+     --- MaxFly > n_proc : We can potentially have all the messages to node 0
+  --- Methods:
+     --- Access to the request
+     --- clear_and_get_nb_done : clear the messages and return how much is left.
+     --- GetFreeIndex : return an index for operation.
+     --- is_empty : true if no pending messages.
+ */
 struct request_status_list {
   size_t n_proc;
   size_t MaxFly;
@@ -345,9 +359,20 @@ struct empty_message_management {
   }
 };
 
-/* Managing exchanges at scale.
-   We can T = int, T_vector = std::vector<T>
-   or T = Face, T_vector = vectface
+/* The operations is done via
+   comm.isend(dest, tag, val);
+   with val a reference. This means that data has to be preplaced before being sent.
+   ---
+   So, we have a number of arrays for sending data by mpi (the l_under_cons).
+   And we have a number of pending messages to insert: (the l_messages)
+   ---
+   We have tzo kinds of template parameters
+   * The T
+   * The T_vector.
+   Basically, the T_vector must have a .push_back function available to push entries.
+   Eamplex:
+   *  T = int, T_vector = std::vector<T>
+   * T = Face, T_vector = vectface
  */
 template <typename T, typename T_vector> struct buffered_T_exchanges {
   boost::mpi::communicator &comm;
