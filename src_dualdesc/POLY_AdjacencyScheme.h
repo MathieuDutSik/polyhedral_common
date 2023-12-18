@@ -197,8 +197,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // the same, then there was no computation going on.
   // The none is also used for the tracking of the adjacencies entries.
   size_t nonce = 1;
-  bool is_past_time = false;
-  bool has_pending_work = true;
   //
   // The lambda functions
   //
@@ -235,7 +233,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     n_obj++;
   };
   auto get_nonce = [&]() -> size_t {
-    if (s_ack_waiting.size() > 0) {
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      if (unsent_entriesAdjI[i_proc].size() > 0) {
+        return 0;
+      }
+      if (unsent_entriesAdjO[i_proc].size() > 0) {
+        return 0;
+      }
+    }
+    if (unproc_entriesAdjI.size() > 0) {
+      return 0;
+    }
+    if (map_adjO.size() > 0) {
       return 0;
     }
     (void)clear_mpi_request(rsl_admin);
@@ -254,16 +263,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
     int e_src = stat.source();
-    if (e_tag == tag_new_object) {
-      entryI e;
-      comm.recv(e_src, tag_new_object, e);
-      insert_local(e);
-      return false;
-    }
     if (e_tag == tag_entriesadji_send) {
       std::vector<entryAdjI>> v;
       comm.recv(e_src, tag_entriesadji_send, v);
       append_move(unproc_entriesAdjI, v);
+      return false;
+    }
+    if (e_tag == tag_entriesadjo_send) {
+      std::vector<entryAdjO>> v;
+      comm.recv(e_src, tag_entriesadjo_send, v);
+      append_move(unproc_entriesAdjO, v);
       return false;
     }
     if (e_tag == tag_nonce_ask) {
@@ -416,6 +425,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       if (the_nonce != l_nonce[i_proc-1]) {
         return false;
       }
+    }
+    // no operation done. Sending the termination notices
+    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+      int val = 0;
+      comm.send(i_proc, tag_termination, val);
     }
     return true;
   };
