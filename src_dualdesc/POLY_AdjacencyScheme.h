@@ -163,11 +163,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The combined data types
   //
   using Ttrack = std::pair<size_t,int>;
-  struct entryObj {
-    Tobj x; // The object
-    size_t hash_hashmap;
-    int i_proc;
-  };
   struct entryAdjI {
     TadjI x;
     size_t hash_hashmap;
@@ -184,7 +179,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   int n_obj = 0; // The number of objects generated
   // The map from the hash to the list of indices
   std::unordered_map<size_t, std::vector<size_t>> map;
-  std::vector<entryObj> V; // The objects
+  std::vector<Tobj> V; // The objects
   std::vector<size_t> undone; // The undone indices
   //
   // The entries of AdjI / AdjO
@@ -212,25 +207,23 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     nonce++;
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
-      entry &f = V[idx];
-      std::optional<TadjO> opt = f_repr(f.x, eI.x, i_rank, idx);
+      Tobj &x = V[idx];
+      std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
       if (opt) {
         return *opt;
       }
     }
     std::pair<Tobj, entryAdjO> pair = f_spann(eI);
-    entryObj eO{pair.first, eI.hash_hashmap, i_rank};
-    V.emplace_back(std::move(eO));
+    V.emplace_back(std::move(pair.first));
     undone.push_back(n_obj);
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
     n_obj++;
-    return pair.first;
+    return pair.second;
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
-    entryObj eO{x, hash_hashmap, i_rank};
-    V.push_back(eO);
+    V.push_back(x);
     std::vector<size_t> &vect = map[hash_hashmap];
     vect[hash_hashmap].push_back(n_obj);
     if (!is_treated) {
@@ -292,17 +285,15 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto process_one_entry_obj = [&]() -> void {
     size_t idx = get_undone_idx();
-    entryObj &e = V[idx];
-    std::vector<TadjI> l_adj = f_adj(e.x);
+    Tobj const& x = V[idx];
+    std::vector<TadjI> l_adj = f_adj(x);
     nonce++;
     for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x.obj);
       size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
       int res = static_cast<int>(hash_partition % size_t(n_proc));
-      Track track{nonce, res};
       nonce++;
-      bool is_treated = false;
-      entryAdjI e{x, hash_hashmap, is_treated, track};
+      entryAdjI e{x, hash_hashmap, res};
       unsent_entriesAdjI[res].push_back(entryAdjI);
     }
   };
