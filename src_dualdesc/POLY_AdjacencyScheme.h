@@ -164,9 +164,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   using Ttrack = std::pair<size_t,int>;
   struct entryObj {
-    Tobj x; // The object 
+    Tobj x; // The object
     size_t hash_hashmap;
-    bool is_treated;
     int i_proc;
   };
   struct entryAdjI {
@@ -188,7 +187,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   std::vector<entryObj> V; // The objects
   std::vector<size_t> undone; // The undone indices
   //
-  // The tracking information
+  // The entries of AdjI / AdjO
   //
   // The unsent entries by the processors.
   std::vector<std::vector<entryAdjI>> unsent_entriesAdjI;
@@ -198,8 +197,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
 
-
-  
   // The nonce is used so that a number is associated to a specific computation.
   // The function get_nonce returns 0 if there is something left to do and
   // nonzero if there is no pending computation. If the get_nonce returns
@@ -211,37 +208,35 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   // The lambda functions
   //
-  auto insert_local = [&](entryAdjI const &eI) -> void {
+  auto process_entryAdjI = [&](entryAdjI const &eI) -> entryAdjO {
+    nonce++;
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
       entry &f = V[idx];
       std::optional<TadjO> opt = f_repr(f.x, eI.x, i_rank, idx);
       if (opt) {
-        if (eI.track.second != i_proc) {
-          l_ack.push_back(e.track);
-        }
+        return *opt;
       }
     }
-    V.push_back(e);
+    std::pair<Tobj, entryAdjO> pair = f_spann(eI);
+    entryObj eO{pair.first, eI.hash_hashmap, i_rank};
+    V.emplace_back(std::move(eO));
+    undone.push_back(n_obj);
     vect.push_back(n_obj);
-    if (e.track.second != i_proc) {
-      l_ack.push_back(e.track);
+    f_save_status(n_obj, false);
+    n_obj++;
+    return pair.first;
+  };
+  auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
+    size_t hash_hashmap = f_hash(seed_hashmap, x);
+    entryObj eO{x, hash_hashmap, i_rank};
+    V.push_back(eO);
+    std::vector<size_t> &vect = map[hash_hashmap];
+    vect[hash_hashmap].push_back(n_obj);
+    if (!is_treated) {
+      undone.push_back(n_obj);
     }
     n_obj++;
-    nonce++;
-  };
-  auto insert_local_and_save = [&](entryI const &eI) -> void {
-    f_insert(n_obj, eI.x);
-    f_save_status(n_obj, eI.is_treated);
-    insert_local(eI);
-  };
-  auto insert_entry = [&](entryI const &eI) -> void {
-    if (eI.track.second == i_proc) {
-      insert_local(eI);
-    } else {
-      l_ack_to_send.push_back(e.track);
-      rsl_comp.push_back(comm.isend(res, tag_new_object, e));
-    }
   };
   auto get_nonce = [&]() -> size_t {
     if (s_ack_waiting.size() > 0) {
@@ -259,14 +254,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       return nonce;
     }
     return 0;
-  };
-  auto process_received_nonce = [&](track const &t) -> void {
-    std::unordered_set<Ttrack>::iterator iter = s_ack_waiting.find(t);
-    if (t == s_ack_waiting.end()) {
-      std::cerr << "We have a consistency error\n";
-      throw TerminalException{1};
-    }
-    s_ack_waiting.erase(iter);
   };
   auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
     int e_tag = stat.tag();
@@ -350,14 +337,27 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
         } else {
           // This does not work because v is passed as reference and
           // so we cannot clear it. We need to transfer to a vector
-          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadji_send, v));
+          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadjo_send, v));
         }
       }
     }
     return do_something;
   };
   auto write_set_adj=[&]() -> bool {
-    
+    std::vector<int> l_erase;
+    bool do_something = false;
+    for (auto & kv : map_adjO) {
+      int i_orb = kv.first;
+      if (kv.second.first == kv.second.second.size()) {
+        f_set_adj(i_orb, kv.second.second);
+        l_erase.push_back(i_orb);
+        do_something = true;
+      }
+    }
+    for (auto & i_orb : l_erase) {
+      map_adjO.erase(i_orb);
+    }
+    return do_something;
   };
   auto terminate = [&]() -> bool {
     std::vector<size_t> l_nonce(n_proc-1);
@@ -390,11 +390,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       break;
     }
     Tobj x = f_load(n_obj);
-    size_t hash_hashmap = f_hash(seed_hashmap, x);
     bool is_treated = f_load_status(n_obj);
-    Ttrack track{nonce, i_rank};
-    entry e{x, hash_hashmap, is_treated, track};
-    f_insert_local_and_save(e);
+    insert_load(x, is_treated);
   }
   //
   // The infinite loop
