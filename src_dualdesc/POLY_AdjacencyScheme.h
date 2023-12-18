@@ -166,12 +166,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   struct entryAdjI {
     TadjI x;
     size_t hash_hashmap;
-    Ttrack track;
     int i_proc_orig;
-    int i_proc_dest;
+    int i_orb_orig;
   };
   struct entryAdjO {
     TadjO x;
+    int i_orb_orig;
   };
   //
   // The data sets
@@ -188,7 +188,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   std::vector<std::vector<entryAdjI>> unsent_entriesAdjI;
   std::vector<std::vector<entryAdjO>> unsent_entriesAdjO;
   std::vector<entryAdjI> unproc_entriesAdjI;
-  std::vector<entryAdjO> unproc_entriesAdjO;
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
 
@@ -203,14 +202,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   // The lambda functions
   //
-  auto process_entryAdjI = [&](entryAdjI const &eI) -> entryAdjO {
+  auto process_single_entryAdjI = [&](entryAdjI const &eI) -> std::pair<int,entryAdjO> {
+    auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO> {
+      entryAdjO eA{u, eI.i_orb_orig};
+      return {eI.i_proc_orig, eA};
+    };
     nonce++;
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
       Tobj &x = V[idx];
       std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
       if (opt) {
-        return *opt;
+        return f_ret(*opt);
       }
     }
     std::pair<Tobj, entryAdjO> pair = f_spann(eI);
@@ -219,7 +222,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
     n_obj++;
-    return pair.second;
+    return f_ret(pair.second);
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
@@ -291,46 +294,74 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x.obj);
       size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
-      int res = static_cast<int>(hash_partition % size_t(n_proc));
+      int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
-      entryAdjI e{x, hash_hashmap, res};
-      unsent_entriesAdjI[res].push_back(entryAdjI);
+      entryAdjI e{x, hash_hashmap, i_proc_orig, idx};
+      unsent_entriesAdjI[i_proc_orig].push_back(entryAdjI);
     }
   };
   auto flush_entriesAdjI=[&]() -> bool {
     bool do_something = false;
+    size_t max_size = 0;
+    int i_proc_max = -1;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       std::vector<entryAdjI> & v = unsent_entriesAdjI[i_proc];
-      if (v.size() > 0) {
-        do_something = true;
+      size_t e_size = v.size();
+      if (e_size > 0) {
         if (i_proc == i_rank) {
           append_move(unproc_entriesAdjI, v);
         } else {
-          // This does not work because v is passed as reference and
-          // so we cannot clear it. We need to transfer to a vector
-          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadji_send, v));
+          do_something = true;
+          if (e_size > max_size) {
+            max_size = e_size;
+            i_proc_max = i_proc;
+          }
         }
       }
+    }
+    if (i_proc_max >= 0) {
+      std::vector<entryAdjI> & v = unsent_entriesAdjI[i_proc_max];
+      // This does not work because v is passed as reference and
+      // so we cannot clear it. We need to transfer to a vector
+      rsl_comp.push_back(comm.isend(i_proc_max, tag_entriesadji_send, v));
     }
     return do_something;
   };
   auto flush_entriesAdjO=[&]() -> bool {
     bool do_something = false;
+    size_t max_size = 0;
+    int i_proc_max = -1;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       std::vector<entryAdjO> & v = unsent_entriesAdjO[i_proc];
       if (v.size() > 0) {
-        do_something = true;
         if (i_proc == i_rank) {
           for (auto &eEnt : v) {
-            
+            map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
           }
           v.clear();
         } else {
-          // This does not work because v is passed as reference and
-          // so we cannot clear it. We need to transfer to a vector
-          rsl_comp.push_back(comm.isend(i_proc, tag_entriesadjo_send, v));
+          do_something = true;
+          if (e_size > max_size) {
+            max_size = e_size;
+            i_proc_max = i_proc;
+          }
         }
       }
+    }
+    if (i_proc_max >= 0) {
+      std::vector<entryAdjO> & v = unsent_entriesAdjO[i_proc_max];
+      // This does not work because v is passed as reference and
+      // so we cannot clear it. We need to transfer to a vector
+      rsl_comp.push_back(comm.isend(i_proc_max, tag_entriesadjo_send, v));
+    }
+    return do_something;
+  };
+  auto compute_entries_adjI=[&]() -> bool {
+    bool do_something = false;
+    for (auto & eI : unproc_entriesAdjI) {
+      std::pair<int,entryAdjO> pair = process_single_entryAdjI(eI);
+      unsent_entriesAdjO[pair.first].push_back(pair.second);
+      do_something = true;
     }
     return do_something;
   };
@@ -349,6 +380,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       map_adjO.erase(i_orb);
     }
     return do_something;
+  };
+  auto f_clear_buffers=[&]() -> bool {
+    bool test1 = flush_entriesAdjI();
+    if (test1) {
+      return true;
+    }
+    bool test2 = flush_entriesAdjO();
+    if (test2) {
+      return true;
+    }
+    bool test3 = compute_entries_adjI();
+    if (test3) {
+      return true;
+    }
+    return write_set_adj();
   };
   auto terminate = [&]() -> bool {
     std::vector<size_t> l_nonce(n_proc-1);
