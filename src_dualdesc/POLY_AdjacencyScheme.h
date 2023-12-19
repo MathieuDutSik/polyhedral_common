@@ -5,30 +5,6 @@
 
 #include "MPI_functionality.h"
 
-// We clear the mpi requests and return the total length.
-// Total length should be 0 in order to consider exiting.
-size_t clear_mpi_request(std::vector<boost::mpi::request> & rsl) {
-  size_t len = rsl.size();
-  std::vector<boost::mpi::request> new_rsl;
-  for (size_t u=0; u<len; u++) {
-    boost::optional<boost::mpi::status> stat = rsl[u].test();
-    if (!stat) {
-      new_rsl.emplace_back(std::move(rsl[u]));
-    }
-  }
-  rsl = std::move(new_rsl);
-  return rsl.size();
-}
-
-template<typename T>
-void append_move(std::vector<T> & v1, std::vector<T> & v2) {
-  v1.insert(v1.end(),
-            std::make_move_iterator(v2.begin()),
-            std::make_move_iterator(v2.end()));
-  v2.clear();
-}
-
-
 /*
   We want here fully templatized code that allows to work with
   general code. Common features:
@@ -101,6 +77,14 @@ void append_move(std::vector<T> & v1, std::vector<T> & v2) {
   deadlocks maybe.
 
  */
+
+template<typename T>
+void append_move(std::vector<T> & v1, std::vector<T> & v2) {
+  v1.insert(v1.end(),
+            std::make_move_iterator(v2.begin()),
+            std::make_move_iterator(v2.end()));
+  v2.clear();
+}
 
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
@@ -191,8 +175,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The entries of AdjI / AdjO
   //
   // The unsent entries by the processors.
-  std::vector<std::vector<entryAdjI>> unsent_entriesAdjI;
-  std::vector<std::vector<entryAdjO>> unsent_entriesAdjO;
+  buffered_T_exchanges<entryAdjI, std::vector<entryAdjI>> buffer_entriesAdjI;
+  buffered_T_exchanges<entryAdjO, std::vector<entryAdjO>> buffer_entriesAdjO;
   std::vector<entryAdjI> unproc_entriesAdjI;
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
@@ -239,23 +223,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     n_obj++;
   };
   auto get_nonce = [&]() -> size_t {
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      if (unsent_entriesAdjI[i_proc].size() > 0) {
-        return 0;
-      }
-      if (unsent_entriesAdjO[i_proc].size() > 0) {
-        return 0;
-      }
+    if (!buffer_entriesAdjI.is_completely_clear()) {
+      return 0;
+    }
+    if (!buffer_entriesAdjO.is_completely_clear()) {
+      return 0;
     }
     if (unproc_entriesAdjI.size() > 0) {
       return 0;
     }
     if (map_adjO.size() > 0) {
-      return 0;
-    }
-    (void)clear_mpi_request(rsl_admin);
-    size_t left_oper = clear_mpi_request(rsl_comp);
-    if (left_oper > 0) {
       return 0;
     }
     if (undone.size() > 0 && max_time_second == 0) {
@@ -319,71 +296,28 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
       entryAdjI e{x, hash_hashmap, i_proc_orig, idx};
-      unsent_entriesAdjI[i_proc_orig].push_back(entryAdjI);
+      buffer_entriesAdjI.insert_entry(i_proc_orig, entryAdjI);
     }
     return true;
   };
   auto flush_entriesAdjI=[&]() -> bool {
-    bool do_something = false;
-    size_t max_size = 0;
-    int i_proc_max = -1;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      std::vector<entryAdjI> & v = unsent_entriesAdjI[i_proc];
-      size_t e_size = v.size();
-      if (e_size > 0) {
-        if (i_proc == i_rank) {
-          append_move(unproc_entriesAdjI, v);
-        } else {
-          do_something = true;
-          if (e_size > max_size) {
-            max_size = e_size;
-            i_proc_max = i_proc;
-          }
-        }
-      }
-    }
-    if (i_proc_max >= 0) {
-      std::vector<entryAdjI> & v = unsent_entriesAdjI[i_proc_max];
-      // This does not work because v is passed as reference and
-      // so we cannot clear it. We need to transfer to a vector
-      rsl_comp.push_back(comm.isend(i_proc_max, tag_entriesadji_send, v));
-    }
-    return do_something;
+    std::vector<entryAdjI> & v = buffer_entriesAdjI.l_message[i_rank];
+    append_move(unproc_entriesAdjI, v);
+    return buffer_entriesAdjI.clear_one_entry(os);
   };
   auto flush_entriesAdjO=[&]() -> bool {
-    bool do_something = false;
-    size_t max_size = 0;
-    int i_proc_max = -1;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      std::vector<entryAdjO> & v = unsent_entriesAdjO[i_proc];
-      if (v.size() > 0) {
-        if (i_proc == i_rank) {
-          for (auto &eEnt : v) {
-            map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
-          }
-          v.clear();
-        } else {
-          do_something = true;
-          if (e_size > max_size) {
-            max_size = e_size;
-            i_proc_max = i_proc;
-          }
-        }
-      }
+    std::vector<entryAdjI> & v = buffer_entriesAdjO.l_message[i_rank];
+    for (auto &eEnt : v) {
+      map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
-    if (i_proc_max >= 0) {
-      std::vector<entryAdjO> & v = unsent_entriesAdjO[i_proc_max];
-      // This does not work because v is passed as reference and
-      // so we cannot clear it. We need to transfer to a vector
-      rsl_comp.push_back(comm.isend(i_proc_max, tag_entriesadjo_send, v));
-    }
-    return do_something;
+    v.clear();
+    return buffer_entriesAdjO.clear_one_entry(os);
   };
   auto compute_entries_adjI=[&]() -> bool {
     bool do_something = false;
     for (auto & eI : unproc_entriesAdjI) {
       std::pair<int,entryAdjO> pair = process_single_entryAdjI(eI);
-      unsent_entriesAdjO[pair.first].push_back(pair.second);
+      buffer_entriesAdjO.insert_entry(pair.first, pair.second);
       do_something = true;
     }
     return do_something;

@@ -459,6 +459,14 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     //      return false;
     return get_unsent_size() == 0;
   }
+  bool is_completely_clear() {
+    for (auto &eEnt : l_message) {
+      if (eEnt.size() > 0) {
+        return false;
+      }
+    }
+    
+  }
 };
 
 template <typename Tint> struct database_balinski_info {
