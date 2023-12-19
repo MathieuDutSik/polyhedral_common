@@ -2,10 +2,11 @@
 #PROGRAM		= LATT_cannspanset
 #PROGRAM		= LATT_spanset
 #PROGRAM		= LATT_getMatrixScalProd
-PROGRAM		= sv_exact
+#PROGRAM		= sv_exact
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
+PROGRAM		= LATT_MPI_ComputeDelaunay
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -25,7 +26,7 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I.
 COPTIONS        =
 #COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS

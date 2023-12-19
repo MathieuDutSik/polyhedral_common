@@ -55,7 +55,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 
 template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
-                           MyMatrix<Tint> const &EXT) {
+                           MyMatrix<Tint> const &EXT, std::ostream& os) {
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
@@ -65,7 +65,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   WeightMatrix<true, T, Tidx_value> WMat =
       GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, eData.SHV);
   int nbVert = EXT_T.rows();
-  int nbSHV = SHV_T.rows();
+  int nbSHV = eData.SHV.rows();
   Face eFace(nbVert + nbSHV);
   for (int iVert = 0; iVert < nbVert; iVert++)
     eFace[iVert] = 1;
@@ -81,14 +81,14 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
                          MyMatrix<Tint> const &EXT1,
-                         MyMatrix<Tint> const &RecEXT2,
+                         MyMatrix<Tint> const &EXT2,
                          std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
   os << "Begin Delaunay_TestEquivalence\n";
-  MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(RecEXT1.EXT);
-  MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(RecEXT2.EXT);
+  MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
+  MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
   //
   // Now extending by adding more vectors.
   //
@@ -189,8 +189,9 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
     return EXT;
   };
   auto f_adj=[&](Tobj const& x) -> std::vector<Tobj> {
-    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, eDEL.EXT, eInv.eIndex);
+    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
     vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
     std::vector<Tobj> l_obj;
     for (auto &eOrbB : TheOutput) {
       MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
@@ -224,7 +225,7 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
     }
   };
   auto f_load_status=[&](size_t const& pos) -> bool {
-    static_cast<bool>(l_status[pos]);
+    return static_cast<bool>(l_status[pos]);
   };
   compute_adjacency_mpi(comm, os, eData.max_time_second,
                         f_exists, f_insert, f_load,
@@ -300,7 +301,7 @@ template<typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::sto_string(i_rank);
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
@@ -308,15 +309,10 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   CreateDirectory(BANK_Prefix);
-  FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
-      GetRec_FctsDataBank<T, Tgroup>();
-  DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_Saving, BANK_Memory,
-                                               BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
-  int n = GramMat.rows();
   //
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
   auto get_SVR=[&]() -> MyMatrix<T> {
@@ -343,9 +339,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
   AllArr.Saving = DD_Saving;
-  AllArr.eMemory = DD_Memory;
   //
   std::vector<MyMatrix<Tint>> ListDel =
     EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, TheBank, eData, AllArr);

@@ -67,12 +67,7 @@ int main(int argc, char *argv[]) {
     //
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    //
-    
-
-
-    
-    TreatDelaunayEntry<T, Tint, Tgroup>(eFull);
+    process_A(comm, eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in ComputeDelaunay\n";
