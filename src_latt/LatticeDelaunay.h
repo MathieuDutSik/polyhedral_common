@@ -16,6 +16,7 @@ template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
+  std::string CVPmethod;
   bool Saving;
   std::string Prefix;
 };
@@ -107,7 +108,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
     os << "Leaving Delaunay_TestEquivalence with true\n";
-    return {true, MatEquiv_I};
+    return MatEquiv_I;
   }
   os << "Trying other strategies\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1);
@@ -222,9 +223,10 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
       return {};
     }
     MyMatrix<Tint> const& P = *opt;
-    return {y.f, P, i_rank, i_orb};
+    TadjO ret{y.f, P, i_rank, i_orb};
+    return ret;
   };
-  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjI> {
+  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj EXT = x.EXT;
     MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
     TadjO ret{x.f, P, i_rank, i_orb};
@@ -237,7 +239,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     l_obj[i_orb].GRP = GRPlatt;
     vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
-    std::vector<Tobj> l_adj;
+    std::vector<TadjI> l_adj;
     for (auto &eOrbB : TheOutput) {
       MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
       TadjI eAdj{eOrbB, EXTadj};
@@ -253,7 +255,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   };
   auto f_insert=[&](Tobj const& x) -> void {
     Tgroup grp;
-    l_obj.push({x, grp, {} });
+    l_obj.push_back({x, grp, {} });
   };
   auto f_load=[&](size_t const& pos) -> Tobj {
     return l_obj[pos].EXT;
@@ -299,23 +301,22 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   BlockDATA.ListStringValues = ListStringValues1;
   BlockDATA.ListListStringValues = ListListStringValues1;
   ListBlock["DATA"] = BlockDATA;
-  // METHOD
+  // STORAGE
   std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
   std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
   std::map<std::string, std::vector<std::string>> ListListStringValues2;
-  ListIntValues2["NPROC"] = 1;
   ListBoolValues2["Saving"] = false;
-  ListStringValues2["PrefixPolyhedral"] = "/irrelevant/";
+  ListStringValues2["Prefix"] = "/irrelevant/";
   ListStringValues2["CVPmethod"] = "SVexact";
-  SingleBlock BlockMETHOD;
-  BlockMETHOD.ListIntValues = ListIntValues2;
-  BlockMETHOD.ListBoolValues = ListBoolValues2;
-  BlockMETHOD.ListDoubleValues = ListDoubleValues2;
-  BlockMETHOD.ListStringValues = ListStringValues2;
-  BlockMETHOD.ListListStringValues = ListListStringValues2;
-  ListBlock["METHOD"] = BlockMETHOD;
+  SingleBlock BlockSTORAGE;
+  BlockSTORAGE.ListIntValues = ListIntValues2;
+  BlockSTORAGE.ListBoolValues = ListBoolValues2;
+  BlockSTORAGE.ListDoubleValues = ListDoubleValues2;
+  BlockSTORAGE.ListStringValues = ListStringValues2;
+  BlockSTORAGE.ListListStringValues = ListListStringValues2;
+  ListBlock["STORAGE"] = BlockSTORAGE;
   // Merging all data
   return {ListBlock, "undefined"};
 }
@@ -346,12 +347,12 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
-  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
-  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
-  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
-  CreateDirectory(BANK_Prefix);
+  bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
+  std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
+  CreateDirectory(STORAGE_Prefix);
   //
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
@@ -360,7 +361,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
   auto get_SVR=[&]() -> MyMatrix<T> {
     if (IsExistingFile(SVRfile)) {
-      return ReadMatrixFile<Tint>(SVRfile);
+      return ReadMatrixFile<T>(SVRfile);
     }
     int n = GramMat.rows();
     return ZeroMatrix<T>(n, 0);
@@ -373,15 +374,17 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::cerr << "OutFile=" << OutFile << "\n";
 
   int n = GramMat.rows();
+  std::string CVPmethod = "SVexact";
   DataLattice<T, Tint> eData{n,
                              GramMat,
                              SVR,
-                             Delaunay_Saving,
-                             PrefixDelaunay};
+                             CVPmethod,
+                             STORAGE_Saving,
+                             STORAGE_Prefix};
   //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
-  std::vector<MyMatrix<Tint>> ListDel =
+  std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
     EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, eData, AllArr);
   os << "We now have ListDel\n";
   //
