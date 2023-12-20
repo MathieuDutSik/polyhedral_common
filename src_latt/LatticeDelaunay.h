@@ -78,7 +78,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   Tgroup PreGRPisom =
     GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
   Tgroup GRPisom = ReducedGroupAction(PreGRPisom, eFace);
-  return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom);
+  return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -185,20 +185,20 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
 template<typename Tint>
 struct Delaunay_AdjI {
   Face f;
-  MyMatrix<Tint> EXT;
+  MyMatrix<Tint> obj;
 };
 
 template<typename Tint>
 struct Delaunay_MPI_AdjO {
   Face f;
-  MyMatrix<Tint> EXT;
+  MyMatrix<Tint> P;
   int iProc;
   int iOrb;
 };
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
-  MyMatrix<Tint> EXT;
+  MyMatrix<Tint> obj;
   Tgroup GRP;
   std::vector<Delaunay_MPI_AdjO<Tint>> l_adj;
 };
@@ -222,7 +222,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     return ComputeInvariantDelaunay(eData, seed, x);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
     if (!opt) {
       return {};
     }
@@ -231,7 +231,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj EXT = x.EXT;
+    Tobj EXT = x.obj;
     MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
     TadjO ret{x.f, P, i_rank, i_orb};
     return {EXT, ret};
@@ -239,10 +239,10 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
     Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
     l_obj[i_orb].GRP = GRPlatt;
-    vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
+    vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt);
     std::vector<TadjI> l_adj;
     for (auto &eOrbB : TheOutput) {
       MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
@@ -257,12 +257,13 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   auto f_exists=[&](int const& n_obj) -> bool {
     return false;
   };
-  auto f_insert=[&](Tobj const& x) -> void {
+  auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;
     l_obj.push_back({x, grp, {} });
+    return false;
   };
   auto f_load=[&](size_t const& pos) -> Tobj {
-    return l_obj[pos].EXT;
+    return l_obj[pos].obj;
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     int val_i = static_cast<int>(val);
@@ -343,7 +344,7 @@ void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OUTfil
     OUTfs << "nbDel=" << nbDel << "\n";
     for (int iDel = 0; iDel < nbDel; iDel++) {
       OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
-      WriteMatrix(OUTfs, ListDel[iDel].EXT);
+      WriteMatrix(OUTfs, ListDel[iDel].obj);
     }
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";

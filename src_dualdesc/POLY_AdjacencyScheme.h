@@ -178,8 +178,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The entries of AdjI / AdjO
   //
   // The unsent entries by the processors.
-  buffered_T_exchanges<entryAdjI, std::vector<entryAdjI>> buffer_entriesAdjI;
-  buffered_T_exchanges<entryAdjO, std::vector<entryAdjO>> buffer_entriesAdjO;
+  buffered_T_exchanges<entryAdjI, std::vector<entryAdjI>> buffer_entriesAdjI(comm, n_proc, tag_entriesadji_send);
+  buffered_T_exchanges<entryAdjO, std::vector<entryAdjO>> buffer_entriesAdjO(comm, n_proc, tag_entriesadjo_send);
   std::vector<entryAdjI> unproc_entriesAdjI;
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
@@ -217,7 +217,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
         return f_ret(*opt);
       }
     }
-    std::pair<Tobj, entryAdjO> pair = f_spann(eI);
+    std::pair<Tobj, TadjO> pair = f_spann(eI.x, i_rank, n_obj);
     bool test = f_insert(pair.first);
     if (test) {
       send_early_termination();
@@ -314,16 +314,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       return false;
     }
     size_t idx = get_undone_idx();
+    int idx_i = static_cast<int>(idx);
     f_save_status(idx, true);
     Tobj const& x = V[idx];
-    std::vector<TadjI> l_adj = f_adj(x);
+    std::vector<TadjI> l_adj = f_adj(x, idx);
     nonce++;
     for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x.obj);
       size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
       int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
-      entryAdjI e{x, hash_hashmap, i_proc_orig, idx};
+      entryAdjI e{x, hash_hashmap, i_proc_orig, idx_i};
       buffer_entriesAdjI.insert_entry(i_proc_orig, e);
     }
     return true;
