@@ -2,7 +2,7 @@
 #ifndef SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 #define SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 
-
+#include "boost_serialization.h"
 #include "MPI_functionality.h"
 
 /*
@@ -89,6 +89,37 @@ void append_move(std::vector<T> & v1, std::vector<T> & v2) {
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
 
+
+template<typename TadjI>
+struct entryAdjI {
+  TadjI x;
+  size_t hash_hashmap;
+  int i_proc_orig;
+  int i_orb_orig;
+};
+
+template <class Archive, typename TadjI>
+inline void serialize(Archive &ar, entryAdjI<TadjI> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("hash_hashmap", eRec.hash_hashmap);
+  ar &make_nvp("i_proc_orig", eRec.i_proc_orig);
+  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+}
+
+template<typename TadjO>
+struct entryAdjO {
+  TadjO x;
+  int i_orb_orig;
+};
+
+template <class Archive, typename TadjO>
+inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+}
+
 /*
   input clear from preceding discussion.
   The returned boolean is:
@@ -153,20 +184,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_early_termination = 41;
   unlimited_request ur(comm);
   //
-  // The combined data types
-  //
-  using Ttrack = std::pair<size_t,int>;
-  struct entryAdjI {
-    TadjI x;
-    size_t hash_hashmap;
-    int i_proc_orig;
-    int i_orb_orig;
-  };
-  struct entryAdjO {
-    TadjO x;
-    int i_orb_orig;
-  };
-  //
   // The data sets
   //
   int n_obj = 0; // The number of objects generated
@@ -178,9 +195,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The entries of AdjI / AdjO
   //
   // The unsent entries by the processors.
-  buffered_T_exchanges<entryAdjI, std::vector<entryAdjI>> buffer_entriesAdjI(comm, n_proc, tag_entriesadji_send);
-  buffered_T_exchanges<entryAdjO, std::vector<entryAdjO>> buffer_entriesAdjO(comm, n_proc, tag_entriesadjo_send);
-  std::vector<entryAdjI> unproc_entriesAdjI;
+  buffered_T_exchanges<entryAdjI<TadjI>, std::vector<entryAdjI<TadjI>>> buffer_entriesAdjI(comm, n_proc, tag_entriesadji_send);
+  buffered_T_exchanges<entryAdjO<TadjO>, std::vector<entryAdjO<TadjO>>> buffer_entriesAdjO(comm, n_proc, tag_entriesadjo_send);
+  std::vector<entryAdjI<TadjI>> unproc_entriesAdjI;
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
 
@@ -203,9 +220,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     }
   };
-  auto process_single_entryAdjI = [&](entryAdjI const &eI) -> std::pair<int,entryAdjO> {
-    auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO> {
-      entryAdjO eA{u, eI.i_orb_orig};
+  auto process_single_entryAdjI = [&](entryAdjI<TadjI> const &eI) -> std::pair<int,entryAdjO<TadjO>> {
+    auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO<TadjO>> {
+      entryAdjO<TadjO> eA{u, eI.i_orb_orig};
       return {eI.i_proc_orig, eA};
     };
     nonce++;
@@ -239,7 +256,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     n_obj++;
   };
-  auto process_entriesAdjO=[&](std::vector<entryAdjO> & v) -> void {
+  auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
     for (auto &eEnt : v) {
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
@@ -269,13 +286,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_entriesadji_send) {
-      std::vector<entryAdjI> v;
+      std::vector<entryAdjI<TadjI>> v;
       comm.recv(e_src, tag_entriesadji_send, v);
       append_move(unproc_entriesAdjI, v);
       return false;
     }
     if (e_tag == tag_entriesadjo_send) {
-      std::vector<entryAdjO> v;
+      std::vector<entryAdjO<TadjO>> v;
       comm.recv(e_src, tag_entriesadjo_send, v);
       process_entriesAdjO(v);
       return false;
@@ -324,18 +341,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
       int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
-      entryAdjI e{x, hash_hashmap, i_proc_orig, idx_i};
+      entryAdjI<TadjI> e{x, hash_hashmap, i_proc_orig, idx_i};
       buffer_entriesAdjI.insert_entry(i_proc_orig, e);
     }
     return true;
   };
   auto flush_entriesAdjI=[&]() -> bool {
-    std::vector<entryAdjI> & v = buffer_entriesAdjI.l_message[i_rank];
+    std::vector<entryAdjI<TadjI>> & v = buffer_entriesAdjI.l_message[i_rank];
     append_move(unproc_entriesAdjI, v);
     return buffer_entriesAdjI.clear_one_entry(os);
   };
   auto flush_entriesAdjO=[&]() -> bool {
-    std::vector<entryAdjO> & v = buffer_entriesAdjO.l_message[i_rank];
+    std::vector<entryAdjO<TadjO>> & v = buffer_entriesAdjO.l_message[i_rank];
     process_entriesAdjO(v);
     v.clear();
     return buffer_entriesAdjO.clear_one_entry(os);
@@ -343,7 +360,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto compute_entries_adjI=[&]() -> bool {
     bool do_something = false;
     for (auto & eI : unproc_entriesAdjI) {
-      std::pair<int,entryAdjO> pair = process_single_entryAdjI(eI);
+      std::pair<int,entryAdjO<TadjO>> pair = process_single_entryAdjI(eI);
       buffer_entriesAdjO.insert_entry(pair.first, pair.second);
       do_something = true;
     }

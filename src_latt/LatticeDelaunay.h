@@ -3,6 +3,7 @@
 #define SRC_LATT_LATTICEDELAUNAY_H_
 
 // clang-format off
+#include "boost_serialization.h"
 #include "FundamentalDelaunay.h"
 #include "GRP_DoubleCoset.h"
 #include "MatrixGroup.h"
@@ -188,6 +189,13 @@ struct Delaunay_AdjI {
   MyMatrix<Tint> obj;
 };
 
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("f", eRec.f);
+  ar &make_nvp("obj", eRec.obj);
+}
+
 template<typename Tint>
 struct Delaunay_MPI_AdjO {
   Face f;
@@ -195,6 +203,16 @@ struct Delaunay_MPI_AdjO {
   int iProc;
   int iOrb;
 };
+
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("f", eRec.f);
+  ar &make_nvp("P", eRec.P);
+  ar &make_nvp("iProc", eRec.iProc);
+  ar &make_nvp("iOrb", eRec.iOrb);
+}
+
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
