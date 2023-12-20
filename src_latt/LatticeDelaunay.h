@@ -16,7 +16,6 @@ template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
-  std::string CVPmethod;
 };
 
 template <typename T, typename Tidx_value>
@@ -319,33 +318,30 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
     if (IsExistingFile(SVRfile)) {
       return ReadMatrixFile<Tint>(SVRfile);
     }
+    int n = GramMat.rows();
     return ZeroMatrix<T>(n, 0);
   };
   MyMatrix<T> SVR = get_SVR();
   std::cerr << "|SVR|=" << SVR.rows() << "\n";
   //
-  std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
-  std::cerr << "OUTfile=" << OUTfile << "\n";
+  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::cerr << "OutFile=" << OutFile << "\n";
 
-  std::string CVPmethod = BlockMETHOD.ListStringValues.at("CVPmethod");
   int n = GramMat.rows();
   DataLattice<T, Tint> eData{n,
                              GramMat,
                              SVR,
                              Delaunay_Saving,
-                             PrefixDelaunay,
-                             CVPmethod};
+                             PrefixDelaunay};
   //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
-  bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  AllArr.Saving = DD_Saving;
-  //
   std::vector<MyMatrix<Tint>> ListDel =
-    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, TheBank, eData, AllArr);
+    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, eData, AllArr);
   os << "We now have ListDel\n";
   //
-  WriteFamilyDelaunay(OutFormat, OUTfile, ListDel);
+  WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
 }
 
 // clang-format off

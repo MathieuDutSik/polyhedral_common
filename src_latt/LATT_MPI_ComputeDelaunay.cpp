@@ -2,6 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "LatticeDelaunay.h"
+#include "Permutation.h"
+#include "Group.h"
 // clang-format on
 
 
@@ -37,7 +39,7 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const& eFull) {
   std::string arithmetic_T = GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
   if (arithmetic_T == "gmp_rational") {
     using T = mpq_class;
-    process_B<T>(eFull);
+    process_B<T>(comm, eFull);
   }
   std::cerr << "Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
   throw TerminalException{1};
@@ -63,11 +65,10 @@ int main(int argc, char *argv[]) {
       NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
       return -1;
     }
-    using Tgroup = TheGroupFormat<mpz_class>;
     //
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    process_A(comm, eFull);
+    process_A(world, eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in ComputeDelaunay\n";

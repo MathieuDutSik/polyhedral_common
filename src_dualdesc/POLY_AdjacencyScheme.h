@@ -107,7 +107,8 @@ const size_t seed_hashmap = 20;
   ---
   Function types used:
   f_exist(int) -> bool : whether there is an entry at this level
-  f_insert(Tobj) -> void : insert the new object.
+  f_insert(Tobj) -> bool : insert the new object.
+     If return true then early termination is triggered.
   f_load(int) -> Tobj : get one object from the database
   f_save_status(int, bool) -> void : save the status in the database
   f_load_status(int) -> bool : get the status in the database
@@ -146,9 +147,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_nonce_ask = 36;
   const int tag_nonce_reply = 37;
   const int tag_entriesadji_send = 38;
-  const int tag_entriesadjo_send = 38;
-  const int tag_termination = 39;
-  std::vector<boost::mpi::request> rsl_comp, rsl_admin;
+  const int tag_entriesadjo_send = 39;
+  const int tag_termination = 40;
+  const int tag_early_termination = 41;
+  unlimited_request ur;
   //
   // The combined data types
   //
@@ -187,9 +189,19 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // the same, then there was no computation going on.
   // The none is also used for the tracking of the adjacencies entries.
   size_t nonce = 1;
+  bool early_termination = false;
   //
   // The lambda functions
   //
+  auto send_early_termination=[&]() -> void {
+    early_termination = true;
+    int val_final = 0;
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      if (i_proc != i_rank) {
+        ur.get_entry() = comm.isend(e_src, tag_early_termination, val_final);
+      }
+    }
+  };
   auto process_single_entryAdjI = [&](entryAdjI const &eI) -> std::pair<int,entryAdjO> {
     auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO> {
       entryAdjO eA{u, eI.i_orb_orig};
@@ -205,6 +217,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     }
     std::pair<Tobj, entryAdjO> pair = f_spann(eI);
+    bool test = f_insert(pair.first);
+    if (test) {
+      send_early_termination();
+    }
     V.emplace_back(std::move(pair.first));
     undone.push_back(n_obj);
     vect.push_back(n_obj);
@@ -262,12 +278,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int val_recv;
       comm.recv(e_src, tag_nonce_ask, val_recv);
       size_t nonce = get_nonce();
-      rsl_admin.push_back(comm.isend(e_src, tag_nonce_reply, nonce));
+      ur.get_entry() = comm.isend(e_src, tag_nonce_reply, nonce);
       return false;
     }
     if (e_tag == tag_termination) {
       int val_recv;
       comm.recv(e_src, tag_termination, val_recv);
+      return true;
+    }
+    if (e_tag == tag_early_termination) {
+      int val_recv;
+      comm.recv(e_src, tag_termination, val_recv);
+      early_termination=true;
       return true;
     }
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
@@ -338,7 +360,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return do_something;
   };
-  auto compute_one_entry=[&]
   auto f_clear_buffers=[&]() -> bool {
     // Transmitting the generated entriesAdjI
     bool test1 = flush_entriesAdjI();
@@ -406,6 +427,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The infinite loop
   //
   while (true) {
+    if (early_termination) {
+      break;
+    }
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
       os << "prob is not empty\n";
@@ -422,9 +446,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     }
   }
-  size_t n_undone_max = 0, n_undone_loc = undone.size();
-  all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
-  return n_undone_max > 0;
+  if (early_termination) {
+    return false;
+  } else {
+    size_t n_undone_max = 0, n_undone_loc = undone.size();
+    all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
+    return n_undone_max > 0;
+  }
 }
 
 template <typename Tobj, typename Finit, typename Fadj, typename Fhash,

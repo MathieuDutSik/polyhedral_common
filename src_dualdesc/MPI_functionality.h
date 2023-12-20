@@ -465,7 +465,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
         return false;
       }
     }
-    
+    return rsl.is_empty();
   }
 };
 
@@ -592,6 +592,70 @@ template <typename Tint> struct database_balinski_info {
     }
   }
 };
+
+/*
+  We want to handle a potentially unlimited number of pending requests.
+  This forces having a std::list since a std::vector can deallocate and reallocate
+  while being resized. This cannot happen for a std::list.
+  Of course, there is never any deallocation as that would lead to runtime bugs
+ */
+struct unlimited_request {
+  boost::mpi::communicator &comm;
+  int n_proc;
+  // First is false if not active.
+  using Tpair = std::pair<bool,boost::mpi::request>;
+  std::list<std::vector<Tpair>> tot_list;
+  unlimited_request(boost::mpi::communicator &comm) : comm(comm), n_proc(comm.size()) {
+  }
+  size_t clear_and_get_nb_undone() {
+    size_t n_undone = 0;
+    for (auto & eList : tot_list) {
+      for (int i_proc=0; i_proc<n_proc; i_proc++) {
+        Tpair & ePair = eList[i_proc];
+        if (ePair.first) {
+          boost::optional<boost::mpi::status> stat = ePair.second.test();
+          if (stat) {
+            ePair.first = false;
+          } else {
+            n_undone++;
+          }
+        }
+      }
+    }
+    return n_udone;
+  }
+  bool is_empty() {
+    return clear_and_get_nb_undone() > 0;
+  }
+  boost::mpi::request& get_entry() {
+    (void)clear_and_get_nb_undone();
+    for (auto & eList : tot_list) {
+      for (int i_proc=0; i_proc<n_proc; i_proc++) {
+        Tpair & ePair = eList[i_proc];
+        if (!ePair.first) {
+          ePair.first = true;
+          return ePair.second;
+        }
+      }
+    }
+    // That case should be rare indeed (and it is slow)
+    std::vector<Tpair> V(n_proc);
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      V[i_proc].first = false;
+    }
+    tot_list.push_back(V);
+    size_t siz = tot_list.size();
+    auto iter = tot_list.begin();
+    for (size_t u=1; u<siz; u++) {
+      iter++;
+    }
+    iter->first = true;
+    return iter->second;
+  }
+};
+
+
+
 
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_
