@@ -7,6 +7,7 @@
 #include "GRP_DoubleCoset.h"
 #include "MatrixGroup.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "POLY_AdjacencyScheme.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -17,6 +18,7 @@ template <typename T, typename Tint> struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   std::string CVPmethod;
+  int max_time_second;
   bool Saving;
   std::string Prefix;
 };
@@ -294,6 +296,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["OUTformat"] = "nothing";
   ListStringValues1["OUTfile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
+  ListIntValues1["max_time_second"] = 0;
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -347,13 +350,14 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
   bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  int max_time_second = BlockDATA.ListIntValues.at("max_time_second");
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
@@ -379,6 +383,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
                              GramMat,
                              SVR,
                              CVPmethod,
+                             max_time_second,
                              STORAGE_Saving,
                              STORAGE_Prefix};
   //

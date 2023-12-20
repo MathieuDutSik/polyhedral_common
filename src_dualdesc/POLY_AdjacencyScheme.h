@@ -260,7 +260,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return nonce;
   };
-  auto process_mpi_status = [&](boost::mpi::status const &stat) -> void {
+  auto process_mpi_status = [&](boost::mpi::status const &stat) -> bool {
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_entriesadji_send) {
@@ -319,7 +319,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
       entryAdjI e{x, hash_hashmap, i_proc_orig, idx};
-      buffer_entriesAdjI.insert_entry(i_proc_orig, entryAdjI);
+      buffer_entriesAdjI.insert_entry(i_proc_orig, e);
     }
     return true;
   };
@@ -379,7 +379,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     // write down adjacencies if done
     bool test4 = write_set_adj();
-    if (test3) {
+    if (test4) {
       return true;
     }
     // Nothing, then computing something new
@@ -391,7 +391,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int val = 0;
       comm.send(i_proc, tag_nonce_ask, val);
       size_t the_nonce;
-      comm.recv(e_src, tag_nonce_reply, the_nonce);
+      comm.recv(i_proc, tag_nonce_reply, the_nonce);
       if (the_nonce == 0) {
         return false;
       }
@@ -401,7 +401,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int val = 0;
       comm.send(i_proc, tag_nonce_ask, val);
       size_t the_nonce;
-      comm.recv(e_src, tag_nonce_reply, the_nonce);
+      comm.recv(i_proc, tag_nonce_reply, the_nonce);
       if (the_nonce != l_nonce[i_proc-1]) {
         return false;
       }

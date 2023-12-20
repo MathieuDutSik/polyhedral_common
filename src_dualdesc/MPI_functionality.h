@@ -622,7 +622,7 @@ struct unlimited_request {
         }
       }
     }
-    return n_udone;
+    return n_undone;
   }
   bool is_empty() {
     return clear_and_get_nb_undone() > 0;
@@ -649,8 +649,10 @@ struct unlimited_request {
     for (size_t u=1; u<siz; u++) {
       iter++;
     }
-    iter->first = true;
-    return iter->second;
+    std::vector<Tpair> & eList = *iter;
+    Tpair & ePair = eList[0];
+    ePair.first = true;
+    return ePair.second;
   }
 };
 
