@@ -98,13 +98,15 @@ struct entryAdjI {
   int i_orb_orig;
 };
 
-template <class Archive, typename TadjI>
-inline void serialize(Archive &ar, entryAdjI<TadjI> &eRec,
+namespace boost::serialization {
+  template <class Archive, typename TadjI>
+  inline void serialize(Archive &ar, entryAdjI<TadjI> &eRec,
                       [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("x", eRec.x);
-  ar &make_nvp("hash_hashmap", eRec.hash_hashmap);
-  ar &make_nvp("i_proc_orig", eRec.i_proc_orig);
-  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("hash_hashmap", eRec.hash_hashmap);
+    ar &make_nvp("i_proc_orig", eRec.i_proc_orig);
+    ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+  }
 }
 
 template<typename TadjO>
@@ -113,11 +115,13 @@ struct entryAdjO {
   int i_orb_orig;
 };
 
-template <class Archive, typename TadjO>
-inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("x", eRec.x);
-  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+namespace boost::serialization {
+  template <class Archive, typename TadjO>
+  inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
+  }
 }
 
 /*

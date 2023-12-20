@@ -127,7 +127,6 @@ template <typename T, typename Tint>
 size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
                                 size_t const& seed,
                                 MyMatrix<Tint> const& EXT) {
-  using Tidx_value = int16_t;
   int nbVert = EXT.rows();
   int n = EXT.cols() - 1;
   Tint PreIndex = Int_IndexLattice(EXT);
@@ -189,11 +188,13 @@ struct Delaunay_AdjI {
   MyMatrix<Tint> obj;
 };
 
-template <class Archive, typename Tint>
-inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("f", eRec.f);
-  ar &make_nvp("obj", eRec.obj);
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("f", eRec.f);
+    ar &make_nvp("obj", eRec.obj);
+  }
 }
 
 template<typename Tint>
@@ -204,15 +205,16 @@ struct Delaunay_MPI_AdjO {
   int iOrb;
 };
 
-template <class Archive, typename Tint>
-inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
-                      [[maybe_unused]] const unsigned int version) {
-  ar &make_nvp("f", eRec.f);
-  ar &make_nvp("P", eRec.P);
-  ar &make_nvp("iProc", eRec.iProc);
-  ar &make_nvp("iOrb", eRec.iOrb);
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("f", eRec.f);
+    ar &make_nvp("P", eRec.P);
+    ar &make_nvp("iProc", eRec.iProc);
+    ar &make_nvp("iOrb", eRec.iOrb);
+  }
 }
-
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
