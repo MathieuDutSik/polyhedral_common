@@ -151,7 +151,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_entriesadjo_send = 39;
   const int tag_termination = 40;
   const int tag_early_termination = 41;
-  unlimited_request ur;
+  unlimited_request ur(comm);
   //
   // The combined data types
   //
@@ -199,7 +199,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     int val_final = 0;
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       if (i_proc != i_rank) {
-        ur.get_entry() = comm.isend(e_src, tag_early_termination, val_final);
+        ur.get_entry() = comm.isend(i_proc, tag_early_termination, val_final);
       }
     }
   };
@@ -233,7 +233,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     size_t hash_hashmap = f_hash(seed_hashmap, x);
     V.push_back(x);
     std::vector<size_t> &vect = map[hash_hashmap];
-    vect[hash_hashmap].push_back(n_obj);
+    vect.push_back(n_obj);
     if (!is_treated) {
       undone.push_back(n_obj);
     }
@@ -264,13 +264,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     int e_tag = stat.tag();
     int e_src = stat.source();
     if (e_tag == tag_entriesadji_send) {
-      std::vector<entryAdjI>> v;
+      std::vector<entryAdjI> v;
       comm.recv(e_src, tag_entriesadji_send, v);
       append_move(unproc_entriesAdjI, v);
       return false;
     }
     if (e_tag == tag_entriesadjo_send) {
-      std::vector<entryAdjO>> v;
+      std::vector<entryAdjO> v;
       comm.recv(e_src, tag_entriesadjo_send, v);
       append_move(unproc_entriesAdjO, v);
       return false;
@@ -464,7 +464,7 @@ bool compute_adjacency_serial(std::ostream& os,
                               Finsert f_insert, Fload f_load,
                               Fsave_status f_save_status,
                               Fload_status f_load_status, Finit f_init,
-                              Fadj f_adj, Fhash f_hash, frepr f_repr) {
+                              Fadj f_adj, Fhash f_hash, Frepr f_repr) {
   SingletonTime start;
   size_t n_obj = 0;
   std::vector<Tobj> V;
