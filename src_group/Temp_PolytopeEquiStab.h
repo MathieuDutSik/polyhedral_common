@@ -316,11 +316,11 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
 
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
-GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput) {
+GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput, std::ostream& os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
-    return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2);
+    return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
   };
   //
   size_t n_rows = TheEXT.rows();
@@ -1845,7 +1845,7 @@ T_TranslateToMatrix_ListMat_SHV(std::vector<MyMatrix<T>> const &ListMat,
 template <bool is_symmetric, typename T, typename Tidx_value>
 WeightMatrix<is_symmetric, std::vector<T>, Tidx_value>
 GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
-                         std::vector<MyMatrix<T>> const &ListComm) {
+                         std::vector<MyMatrix<T>> const &ListComm, std::ostream& os) {
   size_t nbRow = TheEXT.rows();
   size_t nbCol = TheEXT.cols();
   size_t nbComm = ListComm.size();
@@ -1876,13 +1876,13 @@ GetWeightMatrix_ListComm(MyMatrix<T> const &TheEXT, MyMatrix<T> const &GramMat,
     }
     return eVectSum;
   };
-  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
+  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
 }
 
 template <typename T, typename Tidx_value>
 WeightMatrix<false, std::vector<T>, Tidx_value>
 GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const &ListMatrix,
-                           MyMatrix<T> const &TheEXT) {
+                           MyMatrix<T> const &TheEXT, std::ostream& os) {
   size_t nbRow = TheEXT.rows();
   size_t nbCol = TheEXT.cols();
   size_t nbMat = ListMatrix.size();
@@ -1907,7 +1907,7 @@ GetWeightMatrix_ListMatrix(std::vector<MyMatrix<T>> const &ListMatrix,
     }
     return eVectScal;
   };
-  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2);
+  return WeightMatrix<false, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
 }
 
 //

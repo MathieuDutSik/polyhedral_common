@@ -151,23 +151,24 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   eCent(0) = 1;
   for (int i = 0; i < n; i++)
     eCent(i + 1) = eSol(i);
-  T SquareRadius;
-  for (int iVert = 0; iVert < nbVert; iVert++) {
+  auto get_sqr_dist=[&](int iVert) -> T {
     MyVector<T> eW(n);
     for (int i = 0; i < n; i++)
       eW(i) = eSol(i) - EXT(iVert, i + 1);
-    T eNorm = EvaluationQuadForm<T, T>(GramMat, eW);
-    if (iVert == 0) {
-      SquareRadius = eNorm;
-    } else {
-      if (SquareRadius != eNorm) {
-        std::cerr << "SquareRadius=" << SquareRadius << "\n";
-        std::cerr << "eNorm=" << eNorm << "\n";
-        std::cerr << "Error in the Solutioning\n";
-        throw TerminalException{1};
-      }
+    return EvaluationQuadForm<T, T>(GramMat, eW);
+  };
+  T SquareRadius = get_sqr_dist(0);
+#ifdef DEBUG_DELAUNAY
+  for (int iVert = 1; iVert < nbVert; iVert++) {
+    T eNorm = get_sqr_dist(iVert);
+    if (SquareRadius != eNorm) {
+      std::cerr << "SquareRadius=" << SquareRadius << "\n";
+      std::cerr << "eNorm=" << eNorm << "\n";
+      std::cerr << "Error in the Solutioning\n";
+      throw TerminalException{1};
     }
   }
+#endif
   return {SquareRadius, eCent};
 }
 
