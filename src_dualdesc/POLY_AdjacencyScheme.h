@@ -239,6 +239,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     n_obj++;
   };
+  auto process_entriesAdjO=[&](std::vector<entryAdjO> & v) -> void {
+    for (auto &eEnt : v) {
+      map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
+    }
+  };
   auto get_nonce = [&]() -> size_t {
     if (!buffer_entriesAdjI.is_completely_clear()) {
       return 0;
@@ -272,7 +277,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (e_tag == tag_entriesadjo_send) {
       std::vector<entryAdjO> v;
       comm.recv(e_src, tag_entriesadjo_send, v);
-      append_move(unproc_entriesAdjO, v);
+      process_entriesAdjO(v);
       return false;
     }
     if (e_tag == tag_nonce_ask) {
@@ -329,10 +334,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     return buffer_entriesAdjI.clear_one_entry(os);
   };
   auto flush_entriesAdjO=[&]() -> bool {
-    std::vector<entryAdjI> & v = buffer_entriesAdjO.l_message[i_rank];
-    for (auto &eEnt : v) {
-      map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
-    }
+    std::vector<entryAdjO> & v = buffer_entriesAdjO.l_message[i_rank];
+    process_entriesAdjO(v);
     v.clear();
     return buffer_entriesAdjO.clear_one_entry(os);
   };
@@ -457,13 +460,16 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
 }
 
-template <typename Tobj, typename Finit, typename Fadj, typename Fhash,
+template <typename Tobj, typename Fexist,
+          typename Finsert, typename Fload,
+          typename Fsave_status, typename Fload_status,
+          typename Finit, typename Fadj, typename Fhash,
           typename Frepr>
 bool compute_adjacency_serial(std::ostream& os,
                               int const &max_time_second, Fexist f_exist,
                               Finsert f_insert, Fload f_load,
-                              Fsave_status f_save_status,
-                              Fload_status f_load_status, Finit f_init,
+                              Fsave_status f_save_status, Fload_status f_load_status,
+                              Finit f_init,
                               Fadj f_adj, Fhash f_hash, Frepr f_repr) {
   SingletonTime start;
   size_t n_obj = 0;
@@ -471,7 +477,7 @@ bool compute_adjacency_serial(std::ostream& os,
   std::unordered_map<size_t, std::vector<size_t>> map;
   std::vector<int> Vstatus;
   std::vector<size_t> undone;
-  auto f_insert = [&](Tobj const &x, bool is_treated,
+  auto insert_entry = [&](Tobj const &x, bool is_treated,
                       bool const &save_if_new) -> void {
     size_t hash = f_hash(seed_hashmap, x);
     std::vector<size_t> &vect = map[hash];
@@ -485,6 +491,7 @@ bool compute_adjacency_serial(std::ostream& os,
     vect.push_back(n_obj);
     if (save_if_new) {
       f_save(n_obj, x);
+      bool is_new = true;
       f_save_status(n_obj, is_new);
     }
     if (is_treated) {
@@ -504,14 +511,14 @@ bool compute_adjacency_serial(std::ostream& os,
     Tobj x = f_load(n_obj);
     bool is_treated = f_load_status(n_obj);
     bool save_if_new = false;
-    f_insert(x, is_treated, save_if_new);
+    insert_entry(x, is_treated, save_if_new);
   }
   if (n_obj == 0) {
     Tobj x = f_init();
-    f_insert(x, 0, true);
+    insert_entry(x, 0, true);
   }
   while (true) {
-    if (unordered_set.size() == 0) {
+    if (map.size() == 0) {
       return true;
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
@@ -522,7 +529,7 @@ bool compute_adjacency_serial(std::ostream& os,
     for (auto &y : f_adj(x)) {
       bool is_treated = false;
       bool save_if_new = false;
-      f_insert(y, is_treated, save_if_new);
+      insert_entry(y, is_treated, save_if_new);
     }
   }
 }

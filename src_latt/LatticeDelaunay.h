@@ -273,7 +273,12 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   auto f_load_status=[&](size_t const& pos) -> bool {
     return static_cast<bool>(l_status[pos]);
   };
-  compute_adjacency_mpi(comm, os, eData.max_time_second,
+  compute_adjacency_mpi<Tobj,TadjI,TadjO,
+    decltype(f_exists),decltype(f_insert),decltype(f_load),
+    decltype(f_save_status),decltype(f_load_status),
+    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
+    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
+    (comm, os, eData.max_time_second,
                         f_exists, f_insert, f_load,
                         f_save_status, f_load_status,
                         f_init, f_adj, f_set_adj,
