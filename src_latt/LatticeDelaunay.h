@@ -16,6 +16,8 @@ template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
+  bool Saving;
+  std::string Prefix;
 };
 
 template <typename T, typename Tidx_value>
@@ -175,45 +177,86 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
   return hash;
 }
 
+template<typename Tint>
+struct Delaunay_AdjI {
+  Face f;
+  MyMatrix<Tint> EXT;
+};
+
+template<typename Tint>
+struct Delaunay_MPI_AdjO {
+  Face f;
+  MyMatrix<Tint> EXT;
+  int iProc;
+  int iOrb;
+};
+
+template<typename Tint, typename Tgroup>
+struct Delaunay_MPI_Entry {
+  MyMatrix<Tint> EXT;
+  Tgroup GRP;
+  std::vector<Delaunay_MPI_AdjO<Tint>> l_adj;
+};
+
+
 template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                         std::ostream & os,
-                                                         DataLattice<T, Tint> const &eData,
-                                                         PolyHeuristic<mpz_class> const &AllArr) {
+std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
+                                                                           std::ostream & os,
+                                                                           DataLattice<T, Tint> const &eData,
+                                                                           PolyHeuristic<mpz_class> const &AllArr) {
   using Tobj = MyMatrix<Tint>;
+  using TadjI = Delaunay_AdjI<Tint>;
+  using TadjO = Delaunay_MPI_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
     Tobj EXT = FindDelaunayPolytope<T, Tint>(
        eData.GramMat, eData.CVPmethod, os);
     os << "Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
     return EXT;
   };
-  auto f_adj=[&](Tobj const& x) -> std::vector<Tobj> {
-    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
-    vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
-    std::vector<Tobj> l_obj;
-    for (auto &eOrbB : TheOutput) {
-      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
-      l_obj.push_back(EXTadj);
-    }
-    return l_obj;
-  };
-  auto f_equiv=[&](Tobj const& x, Tobj const& y) -> bool {
-    return Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y, os);
-  };
-  std::vector<Tobj> l_obj;
-  std::vector<int> l_status;
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
     return ComputeInvariantDelaunay(eData, seed, x);
+  };
+  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& P = *opt;
+    return {y.f, P, i_rank, i_orb};
+  };
+  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjI> {
+    Tobj EXT = x.EXT;
+    MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
+    TadjO ret{x.f, P, i_rank, i_orb};
+    return {EXT, ret};
+  };
+  std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
+  std::vector<int> l_status;
+  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
+    l_obj[i_orb].GRP = GRPlatt;
+    vectface TheOutput = DualDescriptionStandard(x, GRPlatt);
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
+    std::vector<Tobj> l_adj;
+    for (auto &eOrbB : TheOutput) {
+      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
+      TadjI eAdj{eOrbB, EXTadj};
+      l_adj.push_back(eAdj);
+    }
+    return l_adj;
+  };
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
+    l_obj[i_orb].l_adj = l_adj;
   };
   auto f_exists=[&](int const& n_obj) -> bool {
     return false;
   };
   auto f_insert=[&](Tobj const& x) -> void {
-    l_obj.push(x);
+    Tgroup grp;
+    l_obj.push({x, grp, {} });
   };
   auto f_load=[&](size_t const& pos) -> Tobj {
-    return l_obj[pos];
+    return l_obj[pos].EXT;
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     int val_i = static_cast<int>(val);
@@ -229,7 +272,8 @@ std::vector<MyMatrix<Tint>> EnumerationDelaunayPolytopes(boost::mpi::communicato
   compute_adjacency_mpi(comm, os, eData.max_time_second,
                         f_exists, f_insert, f_load,
                         f_save_status, f_load_status,
-                        f_init, f_adj, f_hash, f_repr);
+                        f_init, f_adj, f_set_adj,
+                        f_hash, f_repr, f_spann);
   return l_obj;
 }
 
@@ -276,8 +320,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   return {ListBlock, "undefined"};
 }
 
-template<typename Tint>
-void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OUTfile, std::vector<MyMatrix<Tint>> const& ListDel) {
+template<typename Tint, typename Tgroup>
+void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OUTfile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;

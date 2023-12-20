@@ -15,7 +15,7 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const& eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint_grp>;
-  return ComputeDelaunayPolytope<T,Tint,Tgroup>(eFull);
+  return ComputeDelaunayPolytope<T,Tint,Tgroup>(comm, eFull);
 }
 
 
@@ -25,7 +25,7 @@ void process_B(boost::mpi::communicator &comm, FullNamelist const& eFull) {
   std::string arithmetic_Tint = GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
   if (arithmetic_Tint == "gmp_integer") {
     using Tint = mpz_class;
-    process_C<T, Tint>(eFull);
+    process_C<T, Tint>(comm, eFull);
   }
   std::cerr << "Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
   throw TerminalException{1};

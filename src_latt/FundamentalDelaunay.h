@@ -16,10 +16,8 @@ resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
                                        std::string const &NameMeth) {
   if (NameMeth == "SVexact")
     return CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
-  //
-  if (NameMeth == "SVdouble")
-    return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
-  //
+  //  if (NameMeth == "SVdouble")
+  //    return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
   std::cerr << "No matching method found\n";
   throw TerminalException{1};
 }

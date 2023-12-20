@@ -113,7 +113,8 @@ const size_t seed_hashmap = 20;
   f_save_status(int, bool) -> void : save the status in the database
   f_load_status(int) -> bool : get the status in the database
   f_init() -> Tobj : get a starting element
-  f_adj(Tobj) -> std::vector<TadjI> : get the adjacent object
+  f_adj(Tobj, i_orb) -> std::vector<TadjI> : get the adjacent object
+     with i_orb the index of the orbit (used to assign for example the group)
   f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the
   f_hash(size_t, Tobj) -> size_t : compute the hash from a specified seed.
   f_repr(Tobj, TadjI, int, int) -> std::optional<TadjO> : returns whether
@@ -447,6 +448,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   }
   if (early_termination) {
+    // We terminate early so by definition the 
     return false;
   } else {
     size_t n_undone_max = 0, n_undone_loc = undone.size();
