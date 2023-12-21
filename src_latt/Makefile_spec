@@ -6,8 +6,8 @@
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
-#PROGRAM		= LATT_MPI_ComputeDelaunay
-PROGRAM		= LATT_GenerateCharacteristicVectorSet
+PROGRAM		= LATT_MPI_ComputeDelaunay
+#PROGRAM		= LATT_GenerateCharacteristicVectorSet
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -19,18 +19,19 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++11 -Wall -O9 -DDEBUG
-CC		= g++ -std=c++17 -Wall -O3
-#CC              = g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
-#CC		= g++ -std=c++11 -Wall -g -O2 -static-libgcc -static-libstdc++
+#CC		= g++ -std=c++17 -Wall -g -O3
+CC              = g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
+#CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I.
-COPTIONS        =
+#COPTIONS        =
 #COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS
+COPTIONS        = -DTIMINGS
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)

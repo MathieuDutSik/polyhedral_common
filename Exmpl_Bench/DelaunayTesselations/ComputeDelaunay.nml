@@ -1,7 +1,7 @@
 &DATA
  arithmetic_T = "gmp_rational"
  arithmetic_Tint = "gmp_integer"
- GRAMfile = "Lambda10.ext"
+ GRAMfile = "Lambda10.txt"
  SVRfile = "unset.svr"
  OutFormat = "nothing"
  OutFile = "ListOrbit"

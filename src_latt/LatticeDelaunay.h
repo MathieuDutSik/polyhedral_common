@@ -14,6 +14,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TIMINGS
+#define TIMINGS_DELAUNAY_ENUMERATION
+#endif
+
 template <typename T, typename Tint> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
@@ -239,10 +243,23 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     return EXT;
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
-    return ComputeInvariantDelaunay(eData, seed, x);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    MicrosecondTime time;
+#endif
+    size_t hash = ComputeInvariantDelaunay(eData, seed, x);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    std::cerr << "|ComputeInvariantDelaunay|=" << time << "\n";
+#endif
+    return hash;
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    MicrosecondTime time;
+#endif
     std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    std::cerr << "|Delaunay_TestEquivalence|=" << time << "\n";
+#endif
     if (!opt) {
       return {};
     }
@@ -259,13 +276,28 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    MicrosecondTime time;
+#endif
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
     Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    std::cerr << "|Delaunay_Stabilizer|=" << time << "\n";
+#endif
     l_obj[i_orb].GRP = GRPlatt;
     vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    std::cerr << "|DualDescriptionStandard|=" << time << "\n";
+#endif
     std::vector<TadjI> l_adj;
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    std::cerr << "|l_adj|=" << l_adj.size() << "\n";
+#endif
     for (auto &eOrbB : TheOutput) {
       MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+      std::cerr << "|FindAdjacentDelaunayPolytope|=" << time << "\n";
+#endif
       TadjI eAdj{eOrbB, EXTadj};
       l_adj.push_back(eAdj);
     }
@@ -378,17 +410,21 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
+  std::cerr << "ComputeDelaunayPolytope, step 1\n";
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
+  std::cerr << "ComputeDelaunayPolytope, step 2\n";
   //
   bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
   CreateDirectory(STORAGE_Prefix);
+  std::cerr << "ComputeDelaunayPolytope, step 3\n";
   //
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  int max_time_second = BlockDATA.ListIntValues.at("max_time_second");
+  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
+  std::cerr << "ComputeDelaunayPolytope, step 4\n";
   //
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
   auto get_SVR=[&]() -> MyMatrix<T> {
@@ -411,7 +447,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
                              GramMat,
                              SVR,
                              CVPmethod,
-                             max_time_second,
+                             max_runtime_second,
                              STORAGE_Saving,
                              STORAGE_Prefix};
   //
