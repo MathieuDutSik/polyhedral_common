@@ -19,7 +19,7 @@ template <typename T, typename Tint> struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   std::string CVPmethod;
-  int max_time_second;
+  int max_runtime_second;
   bool Saving;
   std::string Prefix;
 };
@@ -301,7 +301,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     decltype(f_save_status),decltype(f_load_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (comm, os, eData.max_time_second,
+    (comm, os, eData.max_runtime_second,
                         f_exists, f_insert, f_load,
                         f_save_status, f_load_status,
                         f_init, f_adj, f_set_adj,
@@ -321,10 +321,10 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["GRAMfile"] = "unset.gram";
   ListStringValues1["SVRfile"] = "unset.svr";
-  ListStringValues1["OUTformat"] = "nothing";
-  ListStringValues1["OUTfile"] = "unset.out";
+  ListStringValues1["OutFormat"] = "nothing";
+  ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
-  ListIntValues1["max_time_second"] = 0;
+  ListIntValues1["max_runtime_second"] = 0;
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -353,13 +353,13 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template<typename Tint, typename Tgroup>
-void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OUTfile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
+void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
   }
   if (OutFormat == "GAPformat") {
-    std::ofstream OUTfs(OUTfile);
+    std::ofstream OUTfs(OutFile);
     int nbDel = ListDel.size();
     OUTfs << "nbDel=" << nbDel << "\n";
     for (int iDel = 0; iDel < nbDel; iDel++) {

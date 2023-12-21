@@ -1,0 +1,15 @@
+&DATA
+ arithmetic_T = "gmp_rational"
+ arithmetic_Tint = "gmp_integer"
+ GRAMfile = "Lambda10.ext"
+ SVRfile = "unset.svr"
+ OutFormat = "nothing"
+ OutFile = "ListOrbit"
+ max_runtime_second = 10800
+/
+
+&STORAGE
+ Saving = T
+ Prefix = "DATA/Delaunay_"
+/
+
