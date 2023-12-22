@@ -331,7 +331,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (max_time_second > 0 && si(start) > max_time_second) {
       return false;
     }
-    if (undone.size() > 0) {
+    if (undone.size() == 0) {
       return false;
     }
     size_t idx = get_undone_idx();

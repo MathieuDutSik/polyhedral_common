@@ -25,9 +25,10 @@ void process_B(boost::mpi::communicator &comm, FullNamelist const& eFull) {
   std::string arithmetic_Tint = GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
   if (arithmetic_Tint == "gmp_integer") {
     using Tint = mpz_class;
-    process_C<T, Tint>(comm, eFull);
+    return process_C<T, Tint>(comm, eFull);
   }
   std::cerr << "Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
+  std::cerr << "Available types: gmp_integer\n";
   throw TerminalException{1};
 }
 
@@ -39,9 +40,10 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const& eFull) {
   std::string arithmetic_T = GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
   if (arithmetic_T == "gmp_rational") {
     using T = mpq_class;
-    process_B<T>(comm, eFull);
+    return process_B<T>(comm, eFull);
   }
   std::cerr << "Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
+  std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }
 
