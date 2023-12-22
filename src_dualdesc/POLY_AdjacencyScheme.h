@@ -260,6 +260,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     n_obj++;
   };
+  auto initial_init=[&]() -> void {
+    Tobj x = f_init();
+    bool is_treated = false;
+    insert_load(x, is_treated);
+  };
   auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
     for (auto &eEnt : v) {
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
@@ -448,6 +453,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     Tobj x = f_load(n_obj);
     bool is_treated = f_load_status(n_obj);
     insert_load(x, is_treated);
+  }
+  size_t n_orb_max = 0, n_orb_loc = V.size();
+  all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
+  if (n_orb_max == 0 && i_rank == 0) {
+    initial_init();
   }
   //
   // The infinite loop

@@ -27,7 +27,7 @@ void process_B(boost::mpi::communicator &comm, FullNamelist const& eFull) {
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
+  std::cerr << "LATT_MPI_ComputeDelaunay B: Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
   std::cerr << "Available types: gmp_integer\n";
   throw TerminalException{1};
 }
@@ -42,7 +42,7 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const& eFull) {
     using T = mpq_class;
     return process_B<T>(comm, eFull);
   }
-  std::cerr << "Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
+  std::cerr << "LATT_MPI_ComputeDelaunay A: Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
   std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }

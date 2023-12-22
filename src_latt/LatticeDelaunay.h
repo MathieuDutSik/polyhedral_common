@@ -410,21 +410,17 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
-  std::cerr << "ComputeDelaunayPolytope, step 1\n";
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
-  std::cerr << "ComputeDelaunayPolytope, step 2\n";
   //
   bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
   CreateDirectory(STORAGE_Prefix);
-  std::cerr << "ComputeDelaunayPolytope, step 3\n";
   //
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
-  std::cerr << "ComputeDelaunayPolytope, step 4\n";
   //
   std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
   auto get_SVR=[&]() -> MyMatrix<T> {
@@ -432,7 +428,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
       return ReadMatrixFile<T>(SVRfile);
     }
     int n = GramMat.rows();
-    return ZeroMatrix<T>(n, 0);
+    return ZeroMatrix<T>(0, n);
   };
   MyMatrix<T> SVR = get_SVR();
   std::cerr << "|SVR|=" << SVR.rows() << "\n";
