@@ -23,6 +23,7 @@ template <typename T, typename Tint> struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   std::string CVPmethod;
+  PolyHeuristic<mpz_class> AllArr;
   int max_runtime_second;
   bool Saving;
   std::string Prefix;
@@ -274,14 +275,28 @@ struct Delaunay_Entry {
 };
 
 
-
+template<typename T, typename Tint, typename Tgroup>
+std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint> const &eData, MyMatrix<Tint> const& x, std::ostream& os) {
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
+  Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
+  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, os);
+  std::vector<Delaunay_AdjI<Tint>> l_adj;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  std::cerr << "|l_adj|=" << l_adj.size() << "\n";
+#endif
+  for (auto &eOrbB : TheOutput) {
+    MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
+    Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
+    l_adj.push_back(eAdj);
+  }
+  return {GRPlatt, std::move(l_adj)};
+}
 
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                               std::ostream & os,
                                                                                DataLattice<T, Tint> const &eData,
-                                                                               PolyHeuristic<mpz_class> const &AllArr) {
+                                                                               std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_MPI_AdjO<Tint>;
@@ -312,21 +327,10 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
-    Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
-    std::cerr << "i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
-    l_obj[i_orb].GRP = GRPlatt;
-    vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, os);
-    std::vector<TadjI> l_adj;
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    std::cerr << "|l_adj|=" << l_adj.size() << "\n";
-#endif
-    for (auto &eOrbB : TheOutput) {
-      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
-      TadjI eAdj{eOrbB, EXTadj};
-      l_adj.push_back(eAdj);
-    }
-    return l_adj;
+    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
+    os << "i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
+    l_obj[i_orb].GRP = pair.first;
+    return pair.second;
   };
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
     l_obj[i_orb].l_adj = l_adj;
@@ -464,18 +468,18 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
 
   int n = GramMat.rows();
   std::string CVPmethod = "SVexact";
+  PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   DataLattice<T, Tint> eData{n,
                              GramMat,
                              SVR,
                              CVPmethod,
+                             AllArr,
                              max_runtime_second,
                              STORAGE_Saving,
                              STORAGE_Prefix};
   //
-  PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
-  //
   std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
-    MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, eData, AllArr);
+    MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
   os << "We now have ListDel\n";
   //
   WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
