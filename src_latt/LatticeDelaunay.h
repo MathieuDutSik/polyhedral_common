@@ -284,6 +284,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     std::cerr << "|Delaunay_Stabilizer|=" << time << "\n";
 #endif
+    std::cerr << "i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
     l_obj[i_orb].GRP = GRPlatt;
     vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION

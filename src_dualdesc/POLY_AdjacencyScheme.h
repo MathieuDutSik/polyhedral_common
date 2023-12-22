@@ -261,8 +261,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     n_obj++;
   };
   auto initial_init=[&]() -> void {
+    nonce++;
     Tobj x = f_init();
+    bool test = f_insert(x);
+    if (test) {
+      send_early_termination();
+    }
     bool is_treated = false;
+    f_save_status(n_obj, is_treated);
     insert_load(x, is_treated);
   };
   auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
