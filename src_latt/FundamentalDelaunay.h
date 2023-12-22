@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef TIMINGS
+#define TIMINGS_DELAUNAY_ENUMERATION
+#endif
+
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
                                        MyVector<T> const &eV,
@@ -175,16 +179,14 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint>
 MyMatrix<Tint>
 FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
-                             Face const &eInc, std::string const &CVPmethod) {
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 1\n";
+                             Face const &eInc, std::string const &CVPmethod, std::ostream& os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
   int dim = GramMat.rows();
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 1.1\n";
   MyMatrix<T> EXTred = SelectRow(EXT, eInc);
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 1.2\n";
   MyMatrix<T> IndependentBasis = RowReduction(EXTred);
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 1.3\n";
   MyVector<T> TheFac = FindFacetInequality(EXT, eInc);
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 2\n";
   int iColFind = -1;
   for (int iCol = 0; iCol < dim; iCol++)
     if (iColFind == -1 && TheFac(1 + iCol) != 0)
@@ -193,22 +195,18 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
   eVect(1 + iColFind) = -T_sign(TheFac(1 + iColFind));
   int jRow = eInc.find_first();
   MyVector<T> SelectedVertex(1 + dim);
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 3\n";
   for (int iCol = 0; iCol <= dim; iCol++)
     SelectedVertex(iCol) = EXT(jRow, iCol) + eVect(iCol);
   auto GetCenterRadius = [&](MyVector<T> const &TheVert) -> CP<T> {
     MyMatrix<T> VSet(dim + 1, dim + 1);
     for (int i = 0; i < dim; i++)
       VSet.row(i) = IndependentBasis.row(i);
-    //    std::cerr << "IndependentBasis part of VSet assigned\n";
     for (int j = 0; j <= dim; j++)
       VSet(dim, j) = TheVert(j);
-    //    std::cerr << "TheVert put in VSet\n";
     return CenterRadiusDelaunayPolytopeGeneral(GramMat, VSet);
   };
   T MinRadius = GetCenterRadius(SelectedVertex).SquareRadius;
   std::vector<MyVector<T>> ListGraverOptions;
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 4\n";
   for (int i = 0; i < dim; i++) {
     MyVector<T> V1 = ZeroVector<T>(dim + 1);
     V1(i + 1) = 1;
@@ -217,7 +215,6 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
     V2(i + 1) = -1;
     ListGraverOptions.push_back(V2);
   }
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 5\n";
   auto fGraverUpdate = [&]() -> void {
     while (true) {
       bool IsImprovement = false;
@@ -240,23 +237,21 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
     }
   };
   fGraverUpdate();
-  resultCVP<T, Tint> reply;
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 6\n";
-  while (true) {
-    CP<T> eCP = GetCenterRadius(SelectedVertex);
-    MyVector<T> eCenter(dim);
-    for (int i = 0; i < dim; i++)
-      eCenter(i) = eCP.eCent(i + 1);
-    //    std::cerr << "Before CVPVallentinProgram\n";
-    reply = CVPVallentinProgram<T, Tint>(GramMat, eCenter, CVPmethod);
-    //    std::cerr << "After CVPVallentinProgram\n";
-    if (reply.TheNorm == eCP.SquareRadius)
-      break;
-    for (int i = 0; i < dim; i++)
-      SelectedVertex(i + 1) = reply.ListVect(0, i);
-    fGraverUpdate();
-  }
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 7\n";
+  auto get_reply=[&]() -> resultCVP<T, Tint> {
+    while (true) {
+      CP<T> eCP = GetCenterRadius(SelectedVertex);
+      MyVector<T> eCenter(dim);
+      for (int i = 0; i < dim; i++)
+        eCenter(i) = eCP.eCent(i + 1);
+      resultCVP<T, Tint> reply = CVPVallentinProgram<T, Tint>(GramMat, eCenter, CVPmethod);
+      if (reply.TheNorm == eCP.SquareRadius)
+        return reply;
+      for (int i = 0; i < dim; i++)
+        SelectedVertex(i + 1) = reply.ListVect(0, i);
+      fGraverUpdate();
+    }
+  };
+  resultCVP<T, Tint> reply = get_reply();
   int nbVect = reply.ListVect.rows();
   MyMatrix<Tint> RetEXT(nbVect, dim + 1);
   for (int iVect = 0; iVect < nbVect; iVect++) {
@@ -264,7 +259,9 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
     for (int i = 0; i < dim; i++)
       RetEXT(iVect, i + 1) = reply.ListVect(iVect, i);
   }
-  //  std::cerr << "FindAdjacentDelaunayPolytope, step 8\n";
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|FindAdjacentDelaunayPolytope|=" << time << "\n";
+#endif
   return RetEXT;
 }
 

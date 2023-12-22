@@ -2983,7 +2983,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
 }
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
+vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std::ostream& os) {
   using Tint = typename Tgroup::Tint;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
@@ -2993,17 +2993,17 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
   PolyHeuristicSerial<Tint> AllArr =
-      AllStandardHeuristicSerial<Tint>(std::cerr);
-  std::cerr << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  std::cerr << "AdditionalSymmetryHeuristicFile\n"
-            << AllArr.AdditionalSymmetry << "\n";
-  std::cerr << "DualDescriptionHeuristicFile\n"
-            << AllArr.DualDescriptionProgram << "\n";
-  std::cerr << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
-  std::cerr << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
-  std::cerr << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
-  std::cerr << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
-  std::cerr << "OrbitSplitTechique\n" << AllArr.OrbitSplitTechnique << "\n";
+      AllStandardHeuristicSerial<Tint>(os);
+  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  os << "AdditionalSymmetryHeuristicFile\n"
+     << AllArr.AdditionalSymmetry << "\n";
+  os << "DualDescriptionHeuristicFile\n"
+     << AllArr.DualDescriptionProgram << "\n";
+  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  os << "OrbitSplitTechique\n" << AllArr.OrbitSplitTechnique << "\n";
   //
   bool DD_Saving = false;
   std::string DD_Prefix = "totally_irrelevant_second";
@@ -3012,11 +3012,11 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   using Tbank = DataBank<Tkey, Tval>;
-  Tbank TheBank(BANK_Saving, BANK_Prefix, std::cerr);
+  Tbank TheBank(BANK_Saving, BANK_Prefix, os);
   std::map<std::string, Tint> TheMap =
       ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, std::cerr);
+      TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, os);
 }
 
 // clang-format off

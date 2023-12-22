@@ -1662,7 +1662,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
       MyMatrix<T> ListIneq =
           -UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(LVect)) *
           G;
-      vectface vf = DualDescriptionStandard(ListIneq, GRP);
+      vectface vf = DualDescriptionStandard(ListIneq, GRP, std::cerr);
       bool AllRaysInside = true;
       for (auto &eFace : vf) {
         MyVector<T> V = FindFacetInequality(ListIneq, eFace);

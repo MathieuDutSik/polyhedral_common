@@ -65,6 +65,9 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
                            MyMatrix<Tint> const &EXT, std::ostream& os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
   using Tidx_value = int16_t;
   using Tgr = GraphListAdj;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
@@ -83,7 +86,11 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
   Tgroup PreGRPisom =
     GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
   Tgroup GRPisom = ReducedGroupAction(PreGRPisom, eFace);
-  return LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|Delaunay_Stabilizer|=" << time << "\n";
+#endif
+  return GRPlatt;
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -92,6 +99,9 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
                          MyMatrix<Tint> const &EXT1,
                          MyMatrix<Tint> const &EXT2,
                          std::ostream & os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
@@ -108,29 +118,47 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
   std::optional<Telt> eRes =
     TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
   if (!eRes) {
-    os << "Leaving Delaunay_TestEquivalence with false\n";
+    os << "Leaving Delaunay_TestEquivalence 1 with false\n";
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+#endif
     return {};
   }
   Telt const& eElt = *eRes;
   MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-    os << "Leaving Delaunay_TestEquivalence with true\n";
+    os << "Leaving Delaunay_TestEquivalence 2 with true\n";
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+#endif
     return MatEquiv_I;
   }
   os << "Trying other strategies\n";
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
   std::optional<MyMatrix<T>> eEq = LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, eElt, os);
-  if (!eEq)
+  if (!eEq) {
+    os << "Leaving Delaunay_TestEquivalence 3 with false\n";
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+#endif
     return {};
+  }
   MyMatrix<Tint> eMat_I = UniversalMatrixConversion<Tint, T>(*eEq);
+  os << "Leaving Delaunay_TestEquivalence 4 with true\n";
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|Delaunay_TestEquivalence|=" << time << "\n";
+#endif
   return eMat_I;
 }
 
 template <typename T, typename Tint>
 size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
                                 size_t const& seed,
-                                MyMatrix<Tint> const& EXT) {
+                                MyMatrix<Tint> const& EXT, std::ostream & os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
   int nbVert = EXT.rows();
   int n = EXT.cols() - 1;
   Tint PreIndex = Int_IndexLattice(EXT);
@@ -183,6 +211,9 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
   };
   update_from_map(ListDiagNorm);
   update_from_map(ListOffDiagNorm);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|ComputeInvariantDelaunay|=" << time << "\n";
+#endif
   return hash;
 }
 
@@ -209,6 +240,13 @@ struct Delaunay_MPI_AdjO {
   int iOrb;
 };
 
+template<typename Tint>
+struct Delaunay_AdjO {
+  Face f;
+  MyMatrix<Tint> P;
+  int iOrb;
+};
+
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
@@ -228,11 +266,22 @@ struct Delaunay_MPI_Entry {
 };
 
 
+template<typename Tint, typename Tgroup>
+struct Delaunay_Entry {
+  MyMatrix<Tint> obj;
+  Tgroup GRP;
+  std::vector<Delaunay_AdjO<Tint>> l_adj;
+};
+
+
+
+
+
 template <typename T, typename Tint, typename Tgroup>
-std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                           std::ostream & os,
-                                                                           DataLattice<T, Tint> const &eData,
-                                                                           PolyHeuristic<mpz_class> const &AllArr) {
+std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
+                                                                               std::ostream & os,
+                                                                               DataLattice<T, Tint> const &eData,
+                                                                               PolyHeuristic<mpz_class> const &AllArr) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_MPI_AdjO<Tint>;
@@ -243,23 +292,10 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
     return EXT;
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    MicrosecondTime time;
-#endif
-    size_t hash = ComputeInvariantDelaunay(eData, seed, x);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    std::cerr << "|ComputeInvariantDelaunay|=" << time << "\n";
-#endif
-    return hash;
+    return ComputeInvariantDelaunay(eData, seed, x, os);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    MicrosecondTime time;
-#endif
     std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    std::cerr << "|Delaunay_TestEquivalence|=" << time << "\n";
-#endif
     if (!opt) {
       return {};
     }
@@ -276,29 +312,17 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> EnumerationDelaunayPolytopes(boost
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    MicrosecondTime time;
-#endif
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
     Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    std::cerr << "|Delaunay_Stabilizer|=" << time << "\n";
-#endif
     std::cerr << "i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
     l_obj[i_orb].GRP = GRPlatt;
-    vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-    std::cerr << "|DualDescriptionStandard|=" << time << "\n";
-#endif
+    vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, os);
     std::vector<TadjI> l_adj;
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef DEBUG_DELAUNAY_ENUMERATION
     std::cerr << "|l_adj|=" << l_adj.size() << "\n";
 #endif
     for (auto &eOrbB : TheOutput) {
-      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-      std::cerr << "|FindAdjacentDelaunayPolytope|=" << time << "\n";
-#endif
+      MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
       TadjI eAdj{eOrbB, EXTadj};
       l_adj.push_back(eAdj);
     }
@@ -451,7 +475,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
   std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
-    EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, eData, AllArr);
+    MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, os, eData, AllArr);
   os << "We now have ListDel\n";
   //
   WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
