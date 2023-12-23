@@ -18,6 +18,10 @@
 #define TIMINGS_DELAUNAY_ENUMERATION
 #endif
 
+#ifdef DEBUG
+#define DEBUG_DELAUNAY_ENUMERATION
+#endif
+
 template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
@@ -278,17 +282,26 @@ struct Delaunay_Entry {
 template<typename T, typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> & eData, MyMatrix<Tint> const& x, std::ostream& os) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
-  Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
-  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
-  std::vector<Delaunay_AdjI<Tint>> l_adj;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  std::cerr << "|l_adj|=" << l_adj.size() << "\n";
+  os << "DEL_ENUM: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
 #endif
+  Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
+#endif
+  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
+#endif
+  std::vector<Delaunay_AdjI<Tint>> l_adj;
   for (auto &eOrbB : TheOutput) {
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
     Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
     l_adj.push_back(eAdj);
   }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: |l_adj|=" << l_adj.size() << "\n";
+#endif
   return {GRPlatt, std::move(l_adj)};
 }
 
@@ -303,7 +316,9 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   auto f_init=[&]() -> Tobj {
     Tobj EXT = FindDelaunayPolytope<T, Tint>(
        eData.GramMat, eData.CVPmethod, os);
-    os << "Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+#endif
     return EXT;
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
@@ -328,7 +343,9 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
-    os << "i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
+#endif
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
   };

@@ -230,7 +230,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto process_single_entryAdjI = [&](entryAdjI<TadjI> const &eI) -> std::pair<int,entryAdjO<TadjO>> {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "Beginning of process_single_entryAdjI\n";
+    os << "ADJ_SCH: Beginning of process_single_entryAdjI\n";
 #endif
     auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO<TadjO>> {
       entryAdjO<TadjO> eA{u, eI.i_orb_orig};
@@ -256,7 +256,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     f_save_status(n_obj, false);
     n_obj++;
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "process_single_entryAdjI, now n_obj=" << n_obj << "\n";
+    os << "ADJ_SCH: process_single_entryAdjI, now n_obj=" << n_obj << "\n";
 #endif
     return f_ret(pair.second);
   };
@@ -361,7 +361,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     Tobj const& x = V[idx];
     std::vector<TadjI> l_adj = f_adj(x, idx);
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
+    os << "ADJ_SCH: process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
 #endif
     nonce++;
     for (auto &x : l_adj) {
@@ -401,7 +401,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       int i_orb = kv.first;
       if (kv.second.first == kv.second.second.size()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-        os << "write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
+        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
 #endif
         f_set_adj(i_orb, kv.second.second);
         l_erase.push_back(i_orb);
@@ -490,7 +490,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
-      os << "prob is not empty\n";
+      os << "ADJ_SCH: prob is not empty\n";
       bool test = process_mpi_status(*prob);
       if (test) {
         break;
@@ -505,7 +505,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   }
   if (early_termination) {
-    // We terminate early so by definition the 
+    // We terminate early so by definition the enumeration is partial
     return false;
   } else {
     size_t n_undone_max = 0, n_undone_loc = undone.size();
