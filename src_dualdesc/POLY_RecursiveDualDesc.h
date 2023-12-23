@@ -2148,22 +2148,12 @@ void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr) 
   }
 }
 
-// Needs initial definition due to template crazyness
-template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
-vectface DUALDESC_AdjacencyDecomposition(
-    Tbank &TheBank, MyMatrix<T> const &EXT,
-    MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP,
-    std::map<std::string, typename Tgroup::Tint> &TheMap,
-    PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
-    std::string const &ePrefix, std::ostream& os);
-
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
-          typename TbasicBank, typename Finsert>
+          typename TbasicBank, typename Finsert, typename Fdd>
 void DUALDESC_AdjacencyDecomposition_and_insert(
     Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> &df,
     PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, Finsert f_insert,
-    std::string const &ePrefix, std::ostream &os) {
+    Fdd & f_dd, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
@@ -2242,7 +2232,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 #endif
   } else {
     vectface TheOutput =
-        DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+      f_dd(
             TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
             AllArr, ePrefix, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -2289,14 +2279,14 @@ void vectface_update_method(vectface &vfo, TbasicBank &bb, std::ostream &os) {
 }
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
-          typename TbasicBank>
+          typename TbasicBank, typename Fdd>
 FaceOrbitsizeTableContainer<typename Tgroup::Tint>
 Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
     PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> const &TheMap,
-    std::ostream &os) {
+    std::map<std::string, typename Tgroup::Tint> & TheMap,
+    Fdd & f_dd, std::ostream &os) {
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.DD_Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   // The choice only really makes sense for the canonic, for repr no choice is
@@ -2411,8 +2401,8 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank, T, Tgroup, Tidx_value,
-                                               TbasicBank, decltype(f_insert)>(
-        TheBank, bb, df, AllArr, f_insert, NewPrefix, os);
+                                               TbasicBank, decltype(f_insert), decltype(f_dd)>(
+        TheBank, bb, df, AllArr, f_insert, f_dd, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
   return RPL.GetListFaceOrbitsize();
@@ -2429,9 +2419,16 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
     MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> const& TheMap,
+    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> & TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
+  auto f_dd=[](Tbank & TheBank_i, MyMatrix<T> const& EXT_i,
+               MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int_i,
+               Tgroup const& GRP_i, std::map<std::string, typename Tgroup::Tint> & TheMap_i,
+               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr_i,
+               std::string const &ePrefix_i, std::ostream &os_i) -> vectface {
+    return DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank_i, EXT_i, EXT_int_i, GRP_i, TheMap_i, AllArr_i, ePrefix_i, os_i);
+  };
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
   os << "Beginning of DUALDESC_AdjacencyDecomposition\n";
@@ -2492,7 +2489,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-          TheBank, bb, AllArr, MainPrefix, TheMap, os);
+                                                                            TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
     if (ansChosenDatabase == "repr") {
       WeightMatrix<true, int, Tidx_value> WMat =
@@ -2515,7 +2512,7 @@ vectface DUALDESC_AdjacencyDecomposition(
                     os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-          TheBank, bb, AllArr, MainPrefix, TheMap, os);
+                                                                            TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
     std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
     std::cerr << "Authorized values: canonic, repr\n";
@@ -2523,10 +2520,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   };
   FaceOrbitsizeTableContainer<Tint> ListOrbitFaceOrbitsize =
       compute_decomposition();
-  SingletonTime end;
-  TheMap["time"] = s(start, end);
+  TheMap["time"] = si(start);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  os << "elapsed_seconds=" << s(start, end) << " ansBank=" << ansBank
+  os << "elapsed_seconds=" << s(start) << " ansBank=" << ansBank
      << " NeedSplit=" << NeedSplit << "\n";
   if (ansBank == "yes") {
     os << "Before insert_entry_in_bank\n";
