@@ -1622,6 +1622,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv,
     TheHeuristic<Tint> const &HeuristicTryTerminateDualDescription) {
   MyMatrix<T> const &G = si.G;
+  using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<FundDomainVertex<T, Tint>> l_orbit_vertices_ret;
@@ -1662,7 +1663,8 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
       MyMatrix<T> ListIneq =
           -UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(LVect)) *
           G;
-      vectface vf = DualDescriptionStandard(ListIneq, GRP, std::cerr);
+      PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(std::cerr);
+      vectface vf = DualDescriptionStandard(ListIneq, GRP, AllArr, std::cerr);
       bool AllRaysInside = true;
       for (auto &eFace : vf) {
         MyVector<T> V = FindFacetInequality(ListIneq, eFace);

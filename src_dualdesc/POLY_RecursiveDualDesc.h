@@ -2118,7 +2118,7 @@ private:
 template <typename Tint, typename T, typename Tgroup>
 std::map<std::string, Tint>
 ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
-                  PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
+                  PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
@@ -2133,7 +2133,7 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
 }
 
 template <typename Tgroup>
-void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
+void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr) {
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
@@ -2151,11 +2151,12 @@ void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> &AllArr) {
 // Needs initial definition due to template crazyness
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
-    Tbank &TheBank, MyMatrix<T> const &EXT, Tgroup const &GRP,
+    Tbank &TheBank, MyMatrix<T> const &EXT,
     MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
+    Tgroup const &GRP,
     std::map<std::string, typename Tgroup::Tint> &TheMap,
-    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
-    std::string const &ePrefix);
+    PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
+    std::string const &ePrefix, std::ostream& os);
 
 template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert>
@@ -2166,7 +2167,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+    ComputeInitialMap<Tint,T,Tgroup>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -2292,7 +2293,7 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
 FaceOrbitsizeTableContainer<typename Tgroup::Tint>
 Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
-    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr,
     std::string const &ePrefix,
     std::map<std::string, typename Tgroup::Tint> const &TheMap,
     std::ostream &os) {
@@ -2428,7 +2429,7 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
     MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
+    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> const& TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
   using Tgr = GraphListAdj;
@@ -2954,7 +2955,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, std::cerr);
   //
   std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
+    ComputeInitialMap<Tint,T,Tgroup>(EXTred, GRP, AllArr);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
@@ -2983,8 +2984,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
 }
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std::ostream& os) {
-  using Tint = typename Tgroup::Tint;
+vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, std::ostream& os) {
+  using TintGroup = typename Tgroup::Tint;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
   using Tidx_value = int32_t;
@@ -2992,8 +2993,6 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std:
   bool BANK_Saving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
-  PolyHeuristicSerial<Tint> AllArr =
-      AllStandardHeuristicSerial<Tint>(os);
   os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
   os << "AdditionalSymmetryHeuristicFile\n"
      << AllArr.AdditionalSymmetry << "\n";
@@ -3005,16 +3004,14 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std:
   os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   os << "OrbitSplitTechique\n" << AllArr.OrbitSplitTechnique << "\n";
   //
-  bool DD_Saving = false;
   std::string DD_Prefix = "totally_irrelevant_second";
-  AllArr.DD_Saving = DD_Saving;
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   using Tbank = DataBank<Tkey, Tval>;
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
+  std::map<std::string, TintGroup> TheMap =
+    ComputeInitialMap<TintGroup,T,Tgroup>(EXTred, GRP, AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, os);
 }

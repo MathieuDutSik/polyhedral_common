@@ -18,12 +18,12 @@
 #define TIMINGS_DELAUNAY_ENUMERATION
 #endif
 
-template <typename T, typename Tint> struct DataLattice {
+template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   std::string CVPmethod;
-  PolyHeuristic<mpz_class> AllArr;
+  PolyHeuristicSerial<typename Tgroup::Tint> AllArr;
   int max_runtime_second;
   bool Saving;
   std::string Prefix;
@@ -279,7 +279,7 @@ template<typename T, typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint> const &eData, MyMatrix<Tint> const& x, std::ostream& os) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
   Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
-  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, os);
+  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
   std::vector<Delaunay_AdjI<Tint>> l_adj;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   std::cerr << "|l_adj|=" << l_adj.size() << "\n";
@@ -468,7 +468,8 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
 
   int n = GramMat.rows();
   std::string CVPmethod = "SVexact";
-  PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
+  using TintGroup = typename Tgroup::Tint;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   DataLattice<T, Tint> eData{n,
                              GramMat,
                              SVR,
