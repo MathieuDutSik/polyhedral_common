@@ -19,8 +19,8 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++11 -Wall -O9 -DDEBUG
-#CC		= g++ -std=c++17 -Wall -g -O3
-CC              = g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
+CC		= g++ -std=c++17 -Wall -g -O3
+#CC              = g++ -std=c++17 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
 #CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
@@ -31,7 +31,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        =
 #COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS
-COPTIONS        = -DTIMINGS
+#COPTIONS        = -DTIMINGS
+COPTIONS        = -DDEBUG
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)

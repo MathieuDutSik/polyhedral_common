@@ -5,6 +5,10 @@
 #include "boost_serialization.h"
 #include "MPI_functionality.h"
 
+#ifdef DEBUG
+#define DEBUG_ADJACENCY_SCHEME
+#endif
+
 /*
   We want here fully templatized code that allows to work with
   general code. Common features:
@@ -225,6 +229,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   };
   auto process_single_entryAdjI = [&](entryAdjI<TadjI> const &eI) -> std::pair<int,entryAdjO<TadjO>> {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "Beginning of process_single_entryAdjI\n";
+#endif
     auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO<TadjO>> {
       entryAdjO<TadjO> eA{u, eI.i_orb_orig};
       return {eI.i_proc_orig, eA};
@@ -248,6 +255,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
     n_obj++;
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "process_single_entryAdjI, now n_obj=" << n_obj << "\n";
+#endif
     return f_ret(pair.second);
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
@@ -350,6 +360,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     f_save_status(idx, true);
     Tobj const& x = V[idx];
     std::vector<TadjI> l_adj = f_adj(x, idx);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
+#endif
     nonce++;
     for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x.obj);
@@ -387,6 +400,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     for (auto & kv : map_adjO) {
       int i_orb = kv.first;
       if (kv.second.first == kv.second.second.size()) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+        os << "write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
+#endif
         f_set_adj(i_orb, kv.second.second);
         l_erase.push_back(i_orb);
         do_something = true;

@@ -1133,7 +1133,7 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
   std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr, TidxIn>(eGR);
 #endif
 #ifdef USE_TRACES
-  std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr, TidxIn>(eGR);
+  std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr, TidxIn>(eGR, os);
 #endif
   return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
 }
@@ -1194,7 +1194,7 @@ GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow, Tgr const &eGR,
 #endif
 #ifdef USE_TRACES
   std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      TRACES_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow);
+    TRACES_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow, os);
 #endif
   std::vector<Tidx> MapVectRev2 =
       GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first, os);
@@ -1274,7 +1274,7 @@ GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
 #endif
 #ifdef USE_TRACES
   std::vector<std::vector<Tidx>> ListGen =
-      TRACES_GetListGenerators<Tgr, Tidx>(eGR, nbRow);
+    TRACES_GetListGenerators<Tgr, Tidx>(eGR, nbRow, os);
 #endif
   return ListGen;
 }
@@ -1382,8 +1382,8 @@ std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
   std::vector<Tidx> cl2 = BLISS_GetCanonicalOrdering<Tgr, Tidx>(eGR2);
 #endif
 #ifdef USE_TRACES
-  std::vector<Tidx> cl1 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR1);
-  std::vector<Tidx> cl2 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR2);
+  std::vector<Tidx> cl1 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR1, os);
+  std::vector<Tidx> cl2 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR2, os);
 #endif
   std::vector<unsigned int> clR2(nof_vertices);
   for (unsigned int i = 0; i < nof_vertices; i++)

@@ -888,23 +888,23 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
   DataTraces DT = GetDataTraces<T, F1, F2>(f1, f2, WMVS, os);
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxIn = uint8_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
     return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
   }
   if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxIn = uint16_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
     return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
   }
   if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxIn = uint32_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
     return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
   }
 #if !defined __APPLE__
   if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxIn = uint64_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT);
+    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
     return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
   }
 #endif
@@ -930,7 +930,7 @@ GetGroupCanonicalization_KnownSignature(
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow);
+      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
         GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
                                                          os);
@@ -939,7 +939,7 @@ GetGroupCanonicalization_KnownSignature(
   if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow);
+      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
         GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
                                                          os);
@@ -948,7 +948,7 @@ GetGroupCanonicalization_KnownSignature(
   if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow);
+      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
         GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
                                                          os);
@@ -958,7 +958,7 @@ GetGroupCanonicalization_KnownSignature(
   if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow);
+      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
         GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
                                                          os);
@@ -983,7 +983,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
     throw TerminalException{1};
   }
   DataTraces DT = GetDataTraces<T, F1, F2>(f1, f2, WMVS, os);
-  return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow);
+  return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow, os);
 }
 
 /*

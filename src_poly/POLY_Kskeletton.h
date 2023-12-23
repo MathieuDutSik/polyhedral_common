@@ -705,16 +705,16 @@ otherwise to the file";
 
 template <typename Tgroup, typename Tgr>
 Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
-                                  Tgroup const &GRPin) {
+                                  Tgroup const &GRPin, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   HumanTime time;
   int n = GRPin.n_act();
   size_t tidx_max = std::numeric_limits<Tidx>::max();
-  std::cerr << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
-            << "\n";
+  os << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
+     << "\n";
   std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
-  std::cerr << "|LGen|=" << LGen.size() << "\n";
+  os << "|LGen|=" << LGen.size() << "\n";
   std::vector<vectface> l_vf_tot;
   size_t n_vert_tot = 0;
   for (auto &vf : l_vf) {
@@ -727,14 +727,14 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       MapLenSize[len] += cnt;
       vf_tot.append(vf_orbit);
     }
-    std::cerr << "MapLenSize =";
+    os << "MapLenSize =";
     for (auto &kv : MapLenSize)
-      std::cerr << " (" << kv.first << "/" << kv.second << ")";
-    std::cerr << "\n";
+      os << " (" << kv.first << "/" << kv.second << ")";
+    os << "\n";
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
-  std::cerr << "n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
+  os << "n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
   Tgr eGR(n_vert_tot);
   eGR.SetHasColor(true);
   for (int i = 0; i < n; i++) {
@@ -743,7 +743,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   int shift = n;
   for (size_t i_level = 1; i_level < l_vf_tot.size(); i_level++) {
     vectface const &vf = l_vf_tot.at(i_level);
-    std::cerr << "i_level=" << i_level << " |vf|=" << vf.size() << "\n";
+    os << "i_level=" << i_level << " |vf|=" << vf.size() << "\n";
     for (auto &face : vf) {
       for (int i = 0; i < n; i++) {
         if (face[i] == 1) {
@@ -755,20 +755,20 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       shift++;
     }
   }
-  std::cerr << "shift=" << shift << " |eGR|=" << time << "\n";
+  os << "shift=" << shift << " |eGR|=" << time << "\n";
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect =
-      TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out);
-  std::cerr << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time
-            << "\n";
+    TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
+  os << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time
+     << "\n";
   std::vector<Telt> ListGen;
   for (auto &eList : ListGen_vect) {
     Telt ePerm(eList);
     ListGen.emplace_back(std::move(ePerm));
   }
   Tgroup GRPfull(ListGen, n_out);
-  std::cerr << "|GRPfull|=" << time << "\n";
+  os << "|GRPfull|=" << time << "\n";
   return GRPfull;
 }
 
@@ -846,7 +846,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   if (ComputeAutGroup) {
     //    using Tgr = GraphBitset;
     using Tgr = GraphListAdj;
-    Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP);
+    Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, std::cerr);
     std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
     std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
     std::cerr << "FileGroup=" << FileGroup << "\n";

@@ -710,7 +710,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   std::vector<std::pair<Face, MyVector<T>>> TheOutput =
       OrbitSplittingMap(ListReturn, GRP);
-#ifdef DEBUG_DUAL_DESC
+#ifdef TIMINGS_DUAL_DESC
   os << "|OrbitSplittingMap|=" << time << "\n";
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
