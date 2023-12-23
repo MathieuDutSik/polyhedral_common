@@ -2899,28 +2899,28 @@ bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, std::ostream &os) {
 
 template<typename Tint>
 void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const& AllArr, std::ostream & os) {
-  os << "OUTfile=" << AllArr.OUTfile << "\n";
-  os << "OutFormat=" << AllArr.OutFormat << "\n";
-  os << "DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
-  os << "port=" << AllArr.port << "\n";
-  os << "bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
-  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  os << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
-  os << "DualDescriptionThompsonFile\n" << AllArr.DualDescriptionProgram << "\n";
-  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
-  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
-  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
-  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
-  os << "OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
-  os << "CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
-  os << "ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
-  os << "max_runtime=" << AllArr.max_runtime << "\n";
-  os << "DD_Saving=" << AllArr.DD_Saving << "\n";
-  os << "DD_Prefix=" << AllArr.DD_Prefix << "\n";
-  os << "BANK_Saving=" << AllArr.BANK_Saving << "\n";
-  os << "BANK_Prefix=" << AllArr.BANK_Prefix << "\n";
-  os << "AdvancedTerminationCriterion=" << AllArr.AdvancedTerminationCriterion << "\n";
-  os << "SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
+  os << "REC_DD: OUTfile=" << AllArr.OUTfile << "\n";
+  os << "REC_DD: OutFormat=" << AllArr.OutFormat << "\n";
+  os << "REC_DD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
+  os << "REC_DD: port=" << AllArr.port << "\n";
+  os << "REC_DD: bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
+  os << "REC_DD: SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  os << "REC_DD: AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
+  os << "REC_DD: DualDescriptionThompsonFile\n" << AllArr.DualDescriptionProgram << "\n";
+  os << "REC_DD: MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  os << "REC_DD: BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  os << "REC_DD: CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  os << "REC_DD: ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  os << "REC_DD: OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
+  os << "REC_DD: CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
+  os << "REC_DD: ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
+  os << "REC_DD: max_runtime=" << AllArr.max_runtime << "\n";
+  os << "REC_DD: DD_Saving=" << AllArr.DD_Saving << "\n";
+  os << "REC_DD: DD_Prefix=" << AllArr.DD_Prefix << "\n";
+  os << "REC_DD: BANK_Saving=" << AllArr.BANK_Saving << "\n";
+  os << "REC_DD: BANK_Prefix=" << AllArr.BANK_Prefix << "\n";
+  os << "REC_DD: AdvancedTerminationCriterion=" << AllArr.AdvancedTerminationCriterion << "\n";
+  os << "REC_DD: SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
 }
 
 

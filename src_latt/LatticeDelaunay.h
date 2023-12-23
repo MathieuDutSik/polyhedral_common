@@ -415,6 +415,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
   ListIntValues1["max_runtime_second"] = 0;
+  ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -468,13 +469,19 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
+  if (ApplyStdUnitbuf(eFull)) {
+    os << std::unitbuf;
+    os << "Apply UnitBuf\n";
+  } else {
+    os << "Do not apply UnitBuf\n";
+  }
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
   bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
   std::cerr << "Reading DATA\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
