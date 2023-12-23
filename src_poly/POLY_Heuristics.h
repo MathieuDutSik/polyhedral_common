@@ -353,37 +353,35 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_proba = {"&PROBABILITY_DISTRIBUTIONS",
                                          " ListName = \"distri1\" ",
-                                         " ListNmax = 100 ",
-                                         " ListNstart = 100",
+                                         " ListNmax = 25 ",
+                                         " ListNstart = 2",
                                          " ListNature = \"dirac\"",
-                                         " ListDescription = \"1:100\"",
+                                         " ListDescription = \"0.0\"",
                                          "/"};
   //
   std::vector<std::string> lstr_thompson_prior{"&THOMPSON_PRIOR"};
+  std::string s1 = " ListAnswer = \"cdd\", \"lrs_ring\"";
+  std::string s2 = " ListName = \"only_cdd\", \"only_lrs\"";
+  std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"";
   bool test = IsProgramInPath("ppl_lcdd");
   if (test) {
-    lstr_thompson_prior.push_back(
-        " ListAnswer = \"cdd\", \"lrs_ring\", \"ppl_ext\"");
-    lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_ppl\"");
-    lstr_thompson_prior.push_back(
-        " ListDescription = \"cdd:distri1\", \"ppl_ext:distri1\"");
-  } else {
-    lstr_thompson_prior.push_back(" ListAnswer = \"cdd\", \"lrs_ring\"");
-    lstr_thompson_prior.push_back(" ListName = \"only_cdd\", \"only_lrs\"");
-    lstr_thompson_prior.push_back(
-        " ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"");
+    s1 += ", \"ppl_ext\"";
+    s2 += ", \"only_ppl\"";
+    s3 += ", \"ppl_ext:distri1\"";
   }
+  lstr_thompson_prior.push_back(s1);
+  lstr_thompson_prior.push_back(s2);
+  lstr_thompson_prior.push_back(s3);
   lstr_thompson_prior.push_back("/");
   //
   std::vector<std::string> lstr_key = {
-      "&KEY_COMPRESSION", " ListKey = \"incidence\"",
-      " ListDescription = "
-      "\"1-30,31-35,36-40,41-45,46-50,51-55,56-60,61-65,66-70,71-infinity\"",
+      "&KEY_COMPRESSION", " ListKey = \"delta\"",
+      " ListDescription = \"superfine\"",
       "/"};
   //
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
-      " ListFullCond = \"incidence > 70\""};
+      " ListFullCond = \"delta > 30\""};
   if (test) {
     lstr_heuristic_prior.push_back(" ListConclusion = \"only_ppl\"");
   } else {
@@ -400,9 +398,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   //
   // Putting things together
   //
-  std::vector<std::string> lstr = lstr_proba;
+  std::vector<std::string> lstr;
   for (auto &e_lstr :
-       {lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
+         {lstr_proba, lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
     lstr.push_back("");
     for (auto &estr : e_lstr)
       lstr.push_back(estr);
