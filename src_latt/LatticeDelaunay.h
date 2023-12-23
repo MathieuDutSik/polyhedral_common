@@ -276,7 +276,7 @@ struct Delaunay_Entry {
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> const &eData, MyMatrix<Tint> const& x, std::ostream& os) {
+std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> & eData, MyMatrix<Tint> const& x, std::ostream& os) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
   Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
   vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
@@ -295,7 +295,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                               DataLattice<T, Tint, Tgroup> const &eData,
+                                                                               DataLattice<T, Tint, Tgroup> & eData,
                                                                                std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
