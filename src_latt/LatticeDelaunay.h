@@ -64,7 +64,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
+Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
                            MyMatrix<Tint> const &EXT, std::ostream& os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
@@ -96,7 +96,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint> const &eData,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
+Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
                          MyMatrix<Tint> const &EXT1,
                          MyMatrix<Tint> const &EXT2,
                          std::ostream & os) {
@@ -153,8 +153,8 @@ Delaunay_TestEquivalence(DataLattice<T, Tint> const &eData,
   return eMat_I;
 }
 
-template <typename T, typename Tint>
-size_t ComputeInvariantDelaunay(DataLattice<T, Tint> const &eData,
+template <typename T, typename Tint, typename Tgroup>
+size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
                                 size_t const& seed,
                                 MyMatrix<Tint> const& EXT, std::ostream & os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
@@ -276,7 +276,7 @@ struct Delaunay_Entry {
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint> const &eData, MyMatrix<Tint> const& x, std::ostream& os) {
+std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> const &eData, MyMatrix<Tint> const& x, std::ostream& os) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
   Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
   vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
@@ -295,7 +295,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                               DataLattice<T, Tint> const &eData,
+                                                                               DataLattice<T, Tint, Tgroup> const &eData,
                                                                                std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
@@ -470,14 +470,14 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::string CVPmethod = "SVexact";
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
-  DataLattice<T, Tint> eData{n,
-                             GramMat,
-                             SVR,
-                             CVPmethod,
-                             AllArr,
-                             max_runtime_second,
-                             STORAGE_Saving,
-                             STORAGE_Prefix};
+  DataLattice<T, Tint, Tgroup> eData{n,
+                                     GramMat,
+                                     SVR,
+                                     CVPmethod,
+                                     AllArr,
+                                     max_runtime_second,
+                                     STORAGE_Saving,
+                                     STORAGE_Prefix};
   //
   std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
     MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
