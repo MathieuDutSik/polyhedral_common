@@ -242,11 +242,20 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       Tobj &x = V[idx];
       std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
       if (opt) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+        os << "ADJ_SCH: Conclude with an equivalence\n";
+#endif
         return f_ret(*opt);
       }
     }
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: Conclude with a new one\n";
+#endif
     std::pair<Tobj, TadjO> pair = f_spann(eI.x, i_rank, n_obj);
     bool test = f_insert(pair.first);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: f_insert test=" << test << "\n";
+#endif
     if (test) {
       send_early_termination();
     }
@@ -285,6 +294,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     for (auto &eEnt : v) {
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
+    v.clear();
   };
   auto get_nonce = [&]() -> size_t {
     if (!buffer_entriesAdjI.is_completely_clear()) {
@@ -355,7 +365,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (undone.size() == 0) {
       return false;
     }
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: |undone|=" << undone.size() << " Before \n";
+#endif
     size_t idx = get_undone_idx();
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: |undone|=" << undone.size() << " After idx=" << idx << "\n";
+#endif
     int idx_i = static_cast<int>(idx);
     f_save_status(idx, true);
     Tobj const& x = V[idx];
@@ -392,6 +408,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       buffer_entriesAdjO.insert_entry(pair.first, pair.second);
       do_something = true;
     }
+    unproc_entriesAdjI.clear();
     return do_something;
   };
   auto write_set_adj=[&]() -> bool {

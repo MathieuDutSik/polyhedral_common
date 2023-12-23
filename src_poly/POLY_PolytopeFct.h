@@ -433,7 +433,7 @@ public:
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
-    os << "FlippingFramework_Field<T> before check\n";
+    os << "FLIP: FlippingFramework_Field<T> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
     return fret;
@@ -566,15 +566,15 @@ public:
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_FLIP
-    os << "|PairIncs|=" << PairIncs.first.size() << " / "
+    os << "FLIP: |PairIncs|=" << PairIncs.first.size() << " / "
        << PairIncs.second.size() << "\n";
-    os << "OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
-    os << "f_select=" << f_select.size() << " / " << f_select.count() << "\n";
-    os << "sInc=" << sInc.size() << " / " << sInc.count() << " eSign=" << eSign
+    os << "FLIP: OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
+    os << "FLIP: f_select=" << f_select.size() << " / " << f_select.count() << "\n";
+    os << "FLIP: sInc=" << sInc.size() << " / " << sInc.count() << " eSign=" << eSign
        << "\n";
-    os << "beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den
+    os << "FLIP: beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den
        << "\n";
-    os << "FlippingFramework_Accelerate<mpq_class> before check\n";
+    os << "FLIP: FlippingFramework_Accelerate<mpq_class> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
     return fret;

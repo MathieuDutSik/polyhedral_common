@@ -518,7 +518,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
     MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: We now have ListDel\n";
+  os << "DEL_ENUM: We now have ListDel |ListDel|=" << ListDel.size() << "\n";
 #endif
   //
   WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
