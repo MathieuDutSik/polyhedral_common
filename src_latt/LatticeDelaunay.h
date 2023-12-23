@@ -110,7 +110,9 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
-  os << "Begin Delaunay_TestEquivalence\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Begin Delaunay_TestEquivalence\n";
+#endif
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
   //
@@ -123,7 +125,9 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
   std::optional<Telt> eRes =
     TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
   if (!eRes) {
-    os << "Leaving Delaunay_TestEquivalence 1 with false\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 1 with false\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     os << "|Delaunay_TestEquivalence|=" << time << "\n";
 #endif
@@ -133,24 +137,32 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
   MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-    os << "Leaving Delaunay_TestEquivalence 2 with true\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     os << "|Delaunay_TestEquivalence|=" << time << "\n";
 #endif
     return MatEquiv_I;
   }
-  os << "Trying other strategies\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Trying other strategies\n";
+#endif
   Tgroup GRP1 = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
   std::optional<MyMatrix<T>> eEq = LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, eElt, os);
   if (!eEq) {
-    os << "Leaving Delaunay_TestEquivalence 3 with false\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 3 with false\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     os << "|Delaunay_TestEquivalence|=" << time << "\n";
 #endif
     return {};
   }
   MyMatrix<Tint> eMat_I = UniversalMatrixConversion<Tint, T>(*eEq);
-  os << "Leaving Delaunay_TestEquivalence 4 with true\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 4 with true\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   os << "|Delaunay_TestEquivalence|=" << time << "\n";
 #endif
@@ -498,7 +510,9 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   //
   std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
     MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
-  os << "We now have ListDel\n";
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: We now have ListDel\n";
+#endif
   //
   WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
 }
