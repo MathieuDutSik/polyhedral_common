@@ -36,6 +36,7 @@
 
 #ifdef DEBUG
 #define DEBUG_CANONICAL_LIMITED
+#define DEBUG_RECURSIVE_DUAL_DESC
 #endif
 
 // #define MURMUR_HASH
@@ -265,7 +266,7 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   os << "Entry " << StringGroup(GRP) << " " << StringFace(f) << "\n";
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageDualDesc method_choice=" << method_choice
+  os << "CAN_LIM: Beginning of CanonicalImageDualDesc method_choice=" << method_choice
      << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
@@ -273,21 +274,21 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
     Face f_red = GRP.CanonicalImage(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImage\n";
+    os << "CAN_LIM: After CanonicalImage\n";
 #endif
     return f_red;
   }
   if (method_choice == CANONIC_STRATEGY__STORE) {
     Face f_red = GRP.StoreCanonicalImage(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After StoreCanonicalImage\n";
+    os << "CAN_LUM: After StoreCanonicalImage\n";
 #endif
     return f_red;
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
     Face f_red = GRP.CanonicalImageInitialTriv(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImageInitialTriv\n";
+    os << "CAN_LIM: After CanonicalImageInitialTriv\n";
 #endif
     return f_red;
   }
@@ -295,7 +296,7 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
     try {
       Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
-      os << "After CanonicalImageInitialTrivLimited\n";
+      os << "CAN_LIM: After CanonicalImageInitialTrivLimited\n";
 #endif
       return f_red;
     } catch (...) {
@@ -399,29 +400,29 @@ Face CanonicalImageGeneralDualDesc(
   os << "Entry " << StringGroup(GRP) << " " << StringFace(f) << "\n";
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "Beginning of CanonicalImageGeneralDualDesc method_choice="
+  os << "CAN_LIM: Beginning of CanonicalImageGeneralDualDesc method_choice="
      << method_choice << "\n";
   WriteGroup(os, GRP);
-  os << "f=" << StringFace(f) << "\n";
+  os << "CAN_LIM: f=" << StringFace(f) << "\n";
 #endif
   if (method_choice == CANONIC_STRATEGY__CANONICAL_IMAGE) {
     std::pair<Face, TintGroup> pair = GRP.CanonicalImageOrbitSize(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImageOrbitSize\n";
+    os << "CAN_LIM: After CanonicalImageOrbitSize\n";
 #endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
   if (method_choice == CANONIC_STRATEGY__STORE) {
     std::pair<Face, TintGroup> pair = GRP.StoreCanonicalImageOrbitSize(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After StoreCanonicalImageOrbitSize\n";
+    os << "CAN_LIM: After StoreCanonicalImageOrbitSize\n";
 #endif
     return recConvert.ConvertFaceOrbitSize(pair);
   }
   if (method_choice == CANONIC_STRATEGY__INITIAL_TRIV) {
     Face f_red = GRP.CanonicalImageInitialTriv(f);
 #ifdef DEBUG_CANONICAL_LIMITED
-    os << "After CanonicalImageInitialTriv\n";
+    os << "CAN_LIM: After CanonicalImageInitialTriv\n";
 #endif
     return f_red;
   }
@@ -429,11 +430,11 @@ Face CanonicalImageGeneralDualDesc(
     try {
       Face f_red = GRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
 #ifdef DEBUG_CANONICAL_LIMITED
-      os << "After CanonicalImageInitialTrivLimited\n";
+      os << "CAN_LIM: After CanonicalImageInitialTrivLimited\n";
 #endif
       return f_red;
     } catch (...) {
-      os << "Catching some exception from CanonicalImageInitialTrivLimited\n";
+      std::cerr << "Catching some exception from CanonicalImageInitialTrivLimited\n";
       throw TerminalException{1};
     }
   }
@@ -792,7 +793,9 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   if (RecAns.ListFace.size() == 0) {
     return vectface(0);
   }
-  os << "Finding a matching entry in the bank\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: Finding a matching entry in the bank\n";
+#endif
   Telt ePerm = Telt(ePair.second);
   size_t n = EXT.rows();
   if (GRP.size() == RecAns.GRP.size()) {
@@ -1026,7 +1029,7 @@ public:
     Face const &face = face_pair.first;
     Tint const &orbSize = face_pair.second;
 #ifdef TRACK_DATABASE
-    os << "InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol
+    os << "REC_DD: InsertEntryDatabase |EXT|=" << nbRow << "/" << nbCol
        << " status=" << status << " face.size=" << face.size()
        << " face.count=" << face.count() << " orbSize=" << orbSize
        << " pos=" << pos << "\n";
@@ -1089,7 +1092,7 @@ public:
 #ifdef ROBIN_HOOD_HASH
       const uint64_t seed = UINT64_C(0xe17a1465);
       size_t hash = robin_hood_hash_bytes(V_hash.data(), n_act_div8, seed);
-      os << "hash=" << hash << "\n";
+      os << "REC_DD: hash=" << hash << "\n";
       return hash;
 #endif
 #endif
@@ -1182,25 +1185,25 @@ public:
     if (face_can.size() != static_cast<size_t>(nbRow)) {
       std::cerr << "We have |face_can|=" << face_can.size()
                 << " but nbRow=" << nbRow << "\n";
-      os << "We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow
+      os << "REC_DD: We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow
          << "\n";
       throw TerminalException{1};
     }
 #endif
     // The face should have been canonicalized beforehand.
 #ifdef TRACK_DATABASE
-    os << "FuncInsert face_can.size=" << face_can.size()
+    os << "REC_DD: FuncInsert face_can.size=" << face_can.size()
        << " face_can.count=" << face_can.count() << "\n";
 #endif
     foc.InsertListOrbitFace(face_can);
     DictOrbit.insert(foc.nbOrbit);
 #ifdef TRACK_DATABASE
-    os << "DictOrbit.size=" << DictOrbit.size()
+    os << "REC_DD: DictOrbit.size=" << DictOrbit.size()
        << " foc.nbOrbit=" << foc.nbOrbit << "\n";
 #endif
     if (DictOrbit.size() == foc.nbOrbit) {
 #ifdef TRACK_DATABASE
-      os << "FuncInsert : Already present exit\n";
+      os << "REC_DD: FuncInsert : Already present exit\n";
 #endif
       // Insertion did not raise the count
       // and so it was already present
@@ -1210,12 +1213,12 @@ public:
      * expensive stabilizer */
     Tint orbSize = GRP.OrbitSize_OnSets(face_can);
 #ifdef TRACK_DATABASE
-    os << "FuncInsert : New orbSize=" << orbSize << "\n";
+    os << "REC_DD: FuncInsert : New orbSize=" << orbSize << "\n";
 #endif
     foc.FinishWithOrbSizeAssignation(orbSize);
 #ifdef CHECK_INSERT
     Tgroup eStab = GRP.Stabilizer_OnSets(face_can);
-    os << "FuncInsert: Inserting a face of size |face_can|=" << face_can.count()
+    os << "REC_DD: FuncInsert: Inserting a face of size |face_can|=" << face_can.count()
        << " |eStab|=" << eStab.size() << " f=" << StringFace(face_can) << "\n";
 #endif
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
@@ -1225,13 +1228,13 @@ public:
     if (face_orbsize.size() != delta) {
       std::cerr << "We have |face_orbsize|=" << face_orbsize.size()
                 << " but delta=" << delta << "\n";
-      os << "We have |face_orbsize|=" << face_orbsize.size()
+      os << "REC_DD: We have |face_orbsize|=" << face_orbsize.size()
          << " but delta=" << delta << "\n";
       throw TerminalException{1};
     }
 #endif
 #ifdef TRACK_DATABASE
-    os << "FuncInsertPair face_orbsize.size=" << face_orbsize.size()
+    os << "REC_DD: FuncInsertPair face_orbsize.size=" << face_orbsize.size()
        << " face_orbsize.count=" << face_orbsize.count() << "\n";
 #endif
     // The face should have been canonicalized beforehand and also contains the
@@ -1240,7 +1243,7 @@ public:
     DictOrbit.insert(foc.nbOrbit);
     if (DictOrbit.size() == foc.nbOrbit) {
 #ifdef TRACK_DATABASE
-      os << "FuncInsertPair : Already present exit\n";
+      os << "REC_DD: FuncInsertPair : Already present exit\n";
 #endif
       // Insertion did not raise the count
       // and so it was already present
@@ -1248,41 +1251,41 @@ public:
     }
     std::pair<Face, Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
 #ifdef TRACK_DATABASE
-    os << "FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
+    os << "REC_DD: FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
 #endif
 #ifdef CHECK_INSERT
-    os << "FuncInsertPair: Inserting a face of size |face_can|="
+    os << "REC_DD: FuncInsertPair: Inserting a face of size |face_can|="
        << pair.first.count() << " |O|=" << pair.second << "\n";
 #endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
 #ifdef TRACK_DATABASE
-    os << "FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
-    os << "FuncPutOrbitAsDone : CompleteList_SetUndone\n";
+    os << "REC_DD: FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+    os << "REC_DD: FuncPutOrbitAsDone : CompleteList_SetUndone\n";
     for (auto &kv : CompleteList_SetUndone) {
       os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size()
          << "\n";
     }
-    os << "FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
+    os << "REC_DD: FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
 #endif
     std::pair<Face, Tint> eEnt = foc.RetrieveListOrbitEntry(i_orb);
     size_t len = eEnt.first.count();
 #ifdef TRACK_DATABASE
-    os << "FuncPutOrbitAsDone : len=" << len << "\n";
+    os << "REC_DD: FuncPutOrbitAsDone : len=" << len << "\n";
 #endif
     /* TRICK 1: We copy the last element in first position to erase it and then
      * pop_back the vector. */
     std::vector<Tidx_orbit> &V = CompleteList_SetUndone[len];
 #ifdef TRACK_DATABASE
-    os << "FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
+    os << "REC_DD: FuncPutOrbitAsDone : |V|=" << V.size() << "\n";
 #endif
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
 #ifdef TRACK_DATABASE
       if (V.size() == 0) {
-        os << "We have V.size = 0 which is not allowed here\n";
+        std::cerr << "We have V.size = 0 which is not allowed here\n";
         throw TerminalException{1};
       }
 #endif
@@ -1742,17 +1745,25 @@ public:
     os_file << method;
   }
   int read_method(std::string const &eFileMethod) const {
+#ifdef TRACK_DATABASE
     os << "SavingTrigger=" << SavingTrigger << " eFileMethod=" << eFileMethod
        << "\n";
+#endif
     if (SavingTrigger) {
+#ifdef TRACK_DATABASE
       os << "Running the save system\n";
+#endif
       if (!IsExistingFile(eFileMethod)) {
+#ifdef TRACK_DATABASE
         os << "The file does not exists\n";
+#endif
         int the_method = bb.get_default_strategy();
         write_method(eFileMethod, the_method);
         return the_method;
       } else {
+#ifdef TRACK_DATABASE
         os << "The file exists\n";
+#endif
         std::ifstream is_file(eFileMethod);
         int method;
         is_file >> method;
@@ -1775,7 +1786,9 @@ public:
     // remove it
     // optional future function: check for equivalence and convert
     if (SavingTrigger) {
+#ifdef TRACK_DATABASE
       os << "Database got changed, removing old one\n";
+#endif
       RemoveFileIfExist(eFileNB);
       RemoveFileIfExist(eFileFB);
       RemoveFileIfExist(eFileFF);
@@ -1790,17 +1803,21 @@ public:
   DatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
   DatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
-    os << "Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
        << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone) << ") facet=("
        << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone)
        << "," << bb.foc.nbUndone << ")\n\n";
+#endif
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
                  const bool &_SavingTrigger,
                  const bool &_AdvancedTerminationCriterion, std::ostream &os)
       : CritSiz(bb.EXT.cols() - 2), bb(bb), SavingTrigger(_SavingTrigger),
         AdvancedTerminationCriterion(_AdvancedTerminationCriterion), os(os) {
-    os << "MainPrefix=" << MainPrefix << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: MainPrefix=" << MainPrefix << "\n";
+#endif
     eFileEXT = MainPrefix + ".ext";
     eFileGRP = MainPrefix + ".grp";
     eFileNB = MainPrefix + ".nb";
@@ -1813,19 +1830,23 @@ public:
     delta = bb.delta;
     NeedToFlush = true;
     int val = read_method(eFileMethod);
-    os << "read_method val=" << val << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: read_method val=" << val << "\n";
+#endif
     bb.the_method = val;
     if (SavingTrigger && !is_database_present()) {
       if (!FILE_IsFileMakeable(eFileEXT)) {
-        os << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
-           << " is not makeable\n";
+        std::cerr << "Error in DatabaseOrbits: File eFileEXT=" << eFileEXT
+                  << " is not makeable\n";
         throw TerminalException{1};
       }
       initial_writes();
     }
   }
   void initial_writes() {
-    os << "Creating the initial files (NB, FB, FF) with zero state\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Creating the initial files (NB, FB, FF) with zero state\n";
+#endif
     FileNumber fn(eFileNB, true);
     FileBool fb(eFileFB);
     FileFace ff(eFileFF, bb.delta);
@@ -1847,13 +1868,17 @@ public:
   }
   void LoadDatabase() {
     if (is_database_present()) {
-      os << "Opening existing files (NB, FB, FF)\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: Opening existing files (NB, FB, FF)\n";
+#endif
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       MicrosecondTime time;
 #endif
       FileNumber fn(eFileNB, false);
       size_t n_orbit = fn.getval();
-      os << "Loading database with n_orbit=" << n_orbit << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: Loading database with n_orbit=" << n_orbit << "\n";
+#endif
       FileBool fb(eFileFB, n_orbit);
       FileFace ff(eFileFF, bb.delta, n_orbit);
       for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
@@ -1867,20 +1892,26 @@ public:
       os << "|Loading Database|=" << time << "\n";
 #endif
     } else {
-      os << "No database present\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: No database present\n";
+#endif
     }
     print_status();
   }
   vectface ReadDatabase(size_t const &n_read) const {
     vectface vfo(bb.delta + 1);
     if (is_database_present()) {
-      os << "Opening existing files (NB, FB, FF)\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: Opening existing files (NB, FB, FF)\n";
+#endif
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       MicrosecondTime time;
 #endif
       FileNumber fn(eFileNB, false);
       size_t n_orbit = fn.getval();
-      os << "Reading database with n_orbit=" << n_orbit << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: Reading database with n_orbit=" << n_orbit << "\n";
+#endif
       FileBool fb(eFileFB, n_orbit);
       FileFace ff(eFileFF, bb.delta, n_orbit);
       size_t n_read_eff = std::min(n_read, n_orbit);
@@ -1898,7 +1929,9 @@ public:
       os << "|Reading Database|=" << time << "\n";
 #endif
     } else {
-      os << "No database present\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: No database present\n";
+#endif
     }
     return vfo;
   }
@@ -1906,8 +1939,10 @@ public:
     size_t n_orbit = preload_nb_orbit();
     size_t n_target = 100;
     int nbRow = bb.nbRow;
-    os << "get_runtime_testcase n_orbit=" << n_orbit << " n_target=" << n_target
-       << " nbRow=" << nbRow << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: get_runtime_testcase n_orbit=" << n_orbit
+       << " n_target=" << n_target << " nbRow=" << nbRow << "\n";
+#endif
     if (n_orbit == 0) {
       vectface vf(nbRow);
       for (size_t i = 0; i < n_target; i++) {
@@ -1986,10 +2021,14 @@ public:
     if (SavingTrigger && NeedToFlush) {
       flush();
     }
-    os << "Clean closing of the DatabaseOrbits\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Clean closing of the DatabaseOrbits\n";
+#endif
   }
   void flush() const {
-    os << "Doing the flushing operation\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Doing the flushing operation\n";
+#endif
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time;
 #endif
@@ -2058,23 +2097,29 @@ public:
   bool IsFinished() const { return bb.foc.nbOrbit == bb.foc.nbOrbitDone; }
   DataFacet<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     DataFacet<T, Tgroup> data = bb.FuncGetMinimalUndoneOrbit();
-    os << strPresChar << " Considering orbit " << data.SelectedOrbit
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: " << strPresChar << " Considering orbit " << data.SelectedOrbit
        << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size()
        << "\n";
+#endif
     return data;
   }
   bool GetTerminationStatus() const {
     auto get_val = [&]() -> bool {
       if (bb.foc.nbOrbitDone > 0) {
         if (bb.foc.nbUndone <= CritSiz) {
-          os << "Termination by classic Balinski criterion nbUndone="
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+          os << "REC_DD: Termination by classic Balinski criterion nbUndone="
              << bb.foc.nbUndone << "\n";
+#endif
           return true;
         }
         Face eSetUndone = ComputeIntersectionUndone();
         if (eSetUndone.count() > 0) {
-          os << "Termination by linear programming criterion |eSetUndone|="
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+          os << "REC_DD: Termination by linear programming criterion |eSetUndone|="
              << eSetUndone.count() << "\n";
+#endif
           return true;
         }
       }
@@ -2083,9 +2128,11 @@ public:
       return false;
     };
     if (get_val()) {
-      os << "End of computation, nbObj=" << bb.foc.TotalNumber
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "REC_DD: End of computation, nbObj=" << bb.foc.TotalNumber
          << " |EXT|=" << bb.nbRow << "/" << bb.nbCol
          << " time=" << time.const_eval() << "\n";
+#endif
       return true;
     }
     return false;
@@ -2235,9 +2282,11 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
       f_dd(
             TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
             AllArr, ePrefix, os);
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: |outputsize|=" << TheOutput.size() << "\n";
+#endif
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
     MicrosecondTime time_full;
-    os << "|outputsize|=" << TheOutput.size() << "\n";
 #endif
     for (auto &eOrb : TheOutput) {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -2266,9 +2315,11 @@ template <typename TbasicBank>
 void vectface_update_method(vectface &vfo, TbasicBank &bb, std::ostream &os) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
-  os << "vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
      << "\n";
-  os << "vectface_update_method bb.the_method=" << bb.the_method << "\n";
+  os << "REC_DD: vectface_update_method bb.the_method=" << bb.the_method << "\n";
+#endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
     Face f = face_reduction(fo, nbRow);
@@ -2367,7 +2418,9 @@ Kernel_DUALDESC_AdjacencyDecomposition(
   };
   set_up();
   bool use_f_insert_pair = bb.use_f_insert_pair();
-  os << "use_f_insert_pair=" << use_f_insert_pair << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: use_f_insert_pair=" << use_f_insert_pair << "\n";
+#endif
   auto f_insert = [&](Face const &face) -> void {
     if (use_f_insert_pair) {
       RPL.FuncInsertPair(face);
@@ -2431,7 +2484,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   };
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
-  os << "Beginning of DUALDESC_AdjacencyDecomposition\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: Beginning of DUALDESC_AdjacencyDecomposition\n";
+#endif
   CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -2466,7 +2521,9 @@ vectface DUALDESC_AdjacencyDecomposition(
   auto compute_decomposition = [&]() -> FaceOrbitsizeTableContainer<Tint> {
     std::string ansSymm =
         HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-    os << "ansSymm=" << ansSymm << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: ansSymm=" << ansSymm << "\n";
+#endif
     if (ansSymm == "yes") {
       TheGRPrelevant = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(
           lwm.GetWMat(), os);
@@ -2522,20 +2579,30 @@ vectface DUALDESC_AdjacencyDecomposition(
       compute_decomposition();
   TheMap["time"] = si(start);
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  os << "elapsed_seconds=" << s(start) << " ansBank=" << ansBank
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: elapsed_seconds=" << s(start) << " ansBank=" << ansBank
      << " NeedSplit=" << NeedSplit << "\n";
+#endif
   if (ansBank == "yes") {
-    os << "Before insert_entry_in_bank\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Before insert_entry_in_bank\n";
+#endif
     insert_entry_in_bank(TheBank, EXT, lwm.GetWMat(), TheGRPrelevant,
                          BankSymmCheck, ListOrbitFaceOrbitsize, os);
   }
-  os << "Before return section\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: Before return section\n";
+#endif
   if (NeedSplit) {
-    os << "Before OrbitSplittingListOrbit\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Before OrbitSplittingListOrbit\n";
+#endif
     return OrbitSplittingListOrbitGen(TheGRPrelevant, GRP,
                                       ListOrbitFaceOrbitsize, AllArr, os);
   } else {
-    os << "Returning ListOrbitFaces\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+    os << "REC_DD: Returning ListOrbitFaces\n";
+#endif
     return ListOrbitFaceOrbitsize.GetListFaces();
   }
 }
@@ -2788,7 +2855,9 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
-  os << "EXTfile=" << EXTfile << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: EXTfile=" << EXTfile << "\n";
+#endif
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT = ReadMatrix<T>(EXTfs);
   if (size_t(EXT.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
@@ -2811,7 +2880,9 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
-  os << "GRPfile=" << GRPfile << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: GRPfile=" << GRPfile << "\n";
+#endif
   std::ifstream GRPfs(GRPfile);
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
   return GRP;
@@ -2820,16 +2891,44 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
 bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   bool intercept_ctrl_c = BlockDATA.ListBoolValues.at("InterceptCtrlC");
-  os << "intercept_ctrl_c=" << intercept_ctrl_c << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  os << "REC_DD: intercept_ctrl_c=" << intercept_ctrl_c << "\n";
+#endif
   return intercept_ctrl_c;
 }
+
+template<typename Tint>
+void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const& AllArr, std::ostream & os) {
+  os << "OUTfile=" << AllArr.OUTfile << "\n";
+  os << "OutFormat=" << AllArr.OutFormat << "\n";
+  os << "DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
+  os << "port=" << AllArr.port << "\n";
+  os << "bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
+  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
+  os << "AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
+  os << "DualDescriptionThompsonFile\n" << AllArr.DualDescriptionProgram << "\n";
+  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
+  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
+  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
+  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
+  os << "OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
+  os << "CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
+  os << "ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
+  os << "max_runtime=" << AllArr.max_runtime << "\n";
+  os << "DD_Saving=" << AllArr.DD_Saving << "\n";
+  os << "DD_Prefix=" << AllArr.DD_Prefix << "\n";
+  os << "BANK_Saving=" << AllArr.BANK_Saving << "\n";
+  os << "BANK_Prefix=" << AllArr.BANK_Prefix << "\n";
+  os << "AdvancedTerminationCriterion=" << AllArr.AdvancedTerminationCriterion << "\n";
+  os << "SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
+}
+
 
 template <typename T, typename Tint>
 PolyHeuristicSerial<Tint>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
                                 MyMatrix<T> const &EXTred, std::ostream &os) {
   PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
-  os << "We have AllArr\n";
   //
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
@@ -2843,66 +2942,37 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
   AllArr.OUTfile = OUTfile;
-  os << "OUTfile=" << OUTfile << "\n";
   //
   bool DeterministicRuntime =
       BlockDATA.ListBoolValues.at("DeterministicRuntime");
-  os << "DeterministicRuntime=" << DeterministicRuntime << "\n";
   if (!DeterministicRuntime) {
     unsigned seed = get_random_seed();
-    os << "seed=" << seed << "\n";
     srand(seed);
   }
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   AllArr.OutFormat = OutFormat;
-  os << "OutFormat=" << OutFormat << "\n";
   //
   int port_i = BlockDATA.ListIntValues.at("port");
-  os << "port_i=" << port_i << "\n";
   uint16_t port = port_i;
   AllArr.port = port;
   //
   std::string bank_parallelization_method =
       BlockDATA.ListStringValues.at("bank_parallelization_method");
   AllArr.bank_parallelization_method = bank_parallelization_method;
-  os << "bank_parallelization_method=" << bank_parallelization_method << "\n";
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
-  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  //
-  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
-               AllArr.AdditionalSymmetry, os);
-  os << "AdditionalSymmetryHeuristicFile\n"
-     << AllArr.AdditionalSymmetry << "\n";
-  //
+  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry, os);
   SetThompsonSampling(eFull, "DualDescriptionThompsonFile",
                       AllArr.DualDescriptionProgram, os);
-  os << "DualDescriptionThompsonFile\n"
-     << AllArr.DualDescriptionProgram << "\n";
-  //
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, os);
-  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
-  //
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, os);
-  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
-  //
   SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank, os);
-  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
-  //
   SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase, os);
-  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
-  //
-  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique,
-               os);
-  os << "OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
-  //
+  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique, os);
   SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
-  os << "CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
-  //
   SetHeuristic(eFull, "ChoiceCanonicalizationFile",
                AllArr.ChoiceCanonicalization, os);
-  os << "ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
   //
   bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
   AllArr.DD_Saving = DD_Saving;
@@ -2923,6 +2993,9 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
   //
   AllArr.dimEXT = EXTred.cols();
   //
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  PrintPolyHeuristicSerial(AllArr, os);
+#endif
   return AllArr;
 }
 
@@ -2989,16 +3062,9 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, Poly
   bool BANK_Saving = false;
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
-  os << "SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  os << "AdditionalSymmetryHeuristicFile\n"
-     << AllArr.AdditionalSymmetry << "\n";
-  os << "DualDescriptionHeuristicFile\n"
-     << AllArr.DualDescriptionProgram << "\n";
-  os << "MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
-  os << "BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
-  os << "CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
-  os << "ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
-  os << "OrbitSplitTechique\n" << AllArr.OrbitSplitTechnique << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  PrintPolyHeuristicSerial(AllArr, os);
+#endif
   //
   std::string DD_Prefix = "totally_irrelevant_second";
   //

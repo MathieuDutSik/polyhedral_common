@@ -503,6 +503,7 @@ template <typename T> struct PolyHeuristicSerial {
   std::string bank_parallelization_method;
   std::string DD_Prefix;
   size_t dimEXT;
+  bool DeterministicRuntime;
 };
 
 template <typename T>
@@ -520,6 +521,7 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
   size_t dimEXT = std::numeric_limits<size_t>::max();
+  bool DeterministicRuntime = true;
   return {StandardHeuristicSplitting<T>(),
           StandardHeuristicBankSave<T>(),
           StandardHeuristicAdditionalSymmetry<T>(),
@@ -542,7 +544,8 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
           OUTfile,
           bank_parallelization_method,
           DD_Prefix,
-          dimEXT};
+          dimEXT,
+          DeterministicRuntime};
 }
 
 // clang-format off

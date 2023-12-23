@@ -16,6 +16,10 @@
   For the vector, simple syntactic sugar
  */
 
+#ifdef DEBUG
+#define DEBUG_MPI_FCT
+#endif
+
 template <typename T>
 inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
 my_mpi_gather(boost::mpi::communicator &comm, T const &x, int const &i_proc) {
@@ -69,17 +73,27 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
 
 vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf,
                             std::string const &ansSamp, std::ostream &os) {
-  os << "merge_initial_samp, |vf|=" << vf.size() << "\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: merge_initial_samp, |vf|=" << vf.size() << "\n";
+#endif
   vectface vf_gather = my_mpi_allgather(comm, vf);
-  os << "merge_initial_samp, |vf_gather|=" << vf_gather.size() << "\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: merge_initial_samp, |vf_gather|=" << vf_gather.size() << "\n";
+#endif
   std::vector<std::string> ListStr = STRING_Split(ansSamp, ":");
   std::string ansOpt = ListStr[0];
-  os << "ansSamp=" << ansSamp << " ansOpt=" << ansOpt << "\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: ansSamp=" << ansSamp << " ansOpt=" << ansOpt << "\n";
+#endif
   if (ansOpt == "lp_cdd_min") {
     vectface vf_ret = select_minimum_count(vf_gather);
-    os << "merge_initial_samp, |vf_ret|=" << vf_ret.size() << "\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT: merge_initial_samp, |vf_ret|=" << vf_ret.size() << "\n";
+#endif
     Face f_first = vf_ret[0];
-    os << "f_first.count=" << f_first.count() << "\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT: f_first.count=" << f_first.count() << "\n";
+#endif
     return vf_ret;
   }
   return vf_gather;
@@ -174,23 +188,31 @@ bool EvaluationConnectednessCriterion_KernelMPI_field(
     vectface const &vf_undone_loc, std::ostream &os) {
   vectface vf_undone_tot = my_mpi_allgather(comm, vf_undone_loc);
   MyMatrix<T> EXT_undone_loc = GetVertexSet_from_vectface(FAC, vf_undone_loc);
-  os << "EvaluationConnectednessCriterion_MPI, step 4.1\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 4.1\n";
+#endif
   MyMatrix<T> EXT_undone_tot = my_mpi_allgather(comm, EXT_undone_loc);
   // Every processor is computing the adjacency stuff. Fairly inefficient but ok
   // for the time being.
-  os << "EvaluationConnectednessCriterion_MPI, step 5\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 5\n";
+#endif
   size_t max_iter = 100;
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
     n_iter++;
-    os << "  f_recur n_iter=" << n_iter << "\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT:   f_recur n_iter=" << n_iter << "\n";
+#endif
     if (n_iter == max_iter)
       return false;
     if (pfr.first > 1)
       return false;
     return true;
   };
-  os << "EvaluationConnectednessCriterion_MPI, step 6\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 6\n";
+#endif
   return EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone_tot,
                                                  vf_undone_tot, f_recur, os);
 }
@@ -223,7 +245,9 @@ template <typename TbasicBank>
 bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
                                           TbasicBank const &bb,
                                           std::ostream &os) {
-  os << "EvaluationConnectednessCriterion_MPI, step 1\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 1\n";
+#endif
   using Tint = typename TbasicBank::Tint;
   // We need an heuristic to avoid building too large orbits.
   // A better system would have to balance out the cost of
@@ -237,13 +261,19 @@ bool EvaluationConnectednessCriterion_MPI(boost::mpi::communicator &comm,
     return false;
   // In order for the check not to be too expensive, we limit ourselves to 1000
   Tint max_siz = 1000;
-  os << "EvaluationConnectednessCriterion_MPI, step 2 nbUndone="
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 2 nbUndone="
      << bb.foc.nbUndone << "\n";
+#endif
   Tint nbUndone_tot = my_mpi_allreduce_sum(comm, bb.foc.nbUndone);
-  os << "nbUndone_tot=" << nbUndone_tot << "\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: nbUndone_tot=" << nbUndone_tot << "\n";
+#endif
   if (nbUndone_tot > max_siz)
     return false;
-  os << "EvaluationConnectednessCriterion_MPI, step 3\n";
+#ifdef DEBUG_MPI_FCT
+  os << "MPI_FCT: EvaluationConnectednessCriterion_MPI, step 3\n";
+#endif
   vectface vf_undone_loc = ComputeSetUndone(bb);
   return EvaluationConnectednessCriterion_KernelMPI(comm, bb.EXT, bb.GRP,
                                                     vf_undone_loc, os);
@@ -411,27 +441,37 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     };
     if (strict) {
       size_t nb_undone = rsl.clear_and_get_nb_undone();
-      os << "strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
+#ifdef DEBUG_MPI_FCT
+      os << "MPI_FCT: strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
+#endif
       size_t max_siz = 0;
       int chosen_iproc = -1;
       for (int i_proc = 0; i_proc < n_proc; i_proc++) {
         bool test = rsl.is_ok(i_proc);
-        os << "i_proc=" << i_proc << " test=" << test << "\n";
+#ifdef DEBUG_MPI_FCT
+        os << "MPI_FCT: i_proc=" << i_proc << " test=" << test << "\n";
+#endif
         if (test) {
           size_t siz = l_message[i_proc].size();
-          os << "  siz=" << siz << "\n";
+#ifdef DEBUG_MPI_FCT
+          os << "MPI_FCT:  siz=" << siz << "\n";
+#endif
           if (siz > max_siz) {
             max_siz = siz;
             chosen_iproc = i_proc;
           }
         }
       }
-      os << "strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
+#ifdef DEBUG_MPI_FCT
+      os << "MPI_FCT: strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
          << "\n";
+#endif
       return process(chosen_iproc, chosen_iproc);
     } else {
       size_t idx = rsl.GetFreeIndex(-1); // The dest is unused in that case
-      os << "idx=" << idx << "\n";
+#ifdef DEBUG_MPI_FCT
+      os << "MPI_FCT: idx=" << idx << "\n";
+#endif
       if (idx == std::numeric_limits<size_t>::max())
         return false;
       size_t max_siz = 0;
@@ -443,8 +483,10 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
           chosen_iproc = i_proc;
         }
       }
-      os << "no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
+#ifdef DEBUG_MPI_FCT
+      os << "MPI_FCT: no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
          << "\n";
+#endif
       return process(chosen_iproc, idx);
     }
   }
@@ -501,11 +543,15 @@ template <typename Tint> struct database_balinski_info {
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
       if (ListStatus_Emptyness[i_proc] == 0) {
         int val = ListStatus_Emptyness[i_proc];
-        os << "Returning false at i_proc=" << i_proc << " val=" << val << "\n";
+#ifdef DEBUG_MPI_FCT
+        os << "MPI_FCT: Returning false at i_proc=" << i_proc << " val=" << val << "\n";
+#endif
         return false;
       }
     UndoneOrbitInfo<Tint> uoi = CombineUndoneOrbitInfo(ListBalinski);
-    os << "Merged uoi=" << uoi << "\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT: Merged uoi=" << uoi << "\n";
+#endif
     return ComputeStatusUndone(uoi, CritSiz);
   }
   void read_request(int source) {
@@ -545,7 +591,9 @@ template <typename Tint> struct database_balinski_info {
     last_database_update_time = std::chrono::system_clock::now();
   }
   void flush(std::ostream &os) {
-    os << "Beginning of flush operation\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT: Beginning of flush operation\n";
+#endif
     UndoneOrbitInfo<Tint> const &uoi_local = ListBalinski[i_rank];
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
@@ -553,10 +601,14 @@ template <typename Tint> struct database_balinski_info {
         int dur_i = std::chrono::duration_cast<std::chrono::seconds>(
                         last_database_update_time - last_update[i_proc])
                         .count();
-        os << "i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc]
+#ifdef DEBUG_MPI_FCT
+        os << "MPI_FCT: i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc]
            << " test=" << test << " dur_i=" << dur_i << "\n";
+#endif
         if (ToBeAnswered[i_proc] == 1 && test) {
-          os << "flush: Doing submit_info for i_proc=" << i_proc << "\n";
+#ifdef DEBUG_MPI_FCT
+          os << "MPI_FCT: flush: Doing submit_info for i_proc=" << i_proc << "\n";
+#endif
           submit_info(i_proc, uoi_local);
         }
       }
@@ -564,12 +616,16 @@ template <typename Tint> struct database_balinski_info {
   }
   void submit_request_uoi(std::ostream &os) {
     // First checking natively
-    os << "Beginning of submit_uoi\n";
+#ifdef DEBUG_MPI_FCT
+    os << "MPI_FCT: Beginning of submit_uoi\n";
+#endif
     // First checking for unassigned
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
       if (i_proc != i_rank && ListStatus_Emptyness[i_proc] == 0 &&
           RequestNat[i_proc] == 0) {
-        os << "submit_request_uoi (Case 0) at i_proc=" << i_proc << "\n";
+#ifdef DEBUG_MPI_FCT
+        os << "MPI_FCT: submit_request_uoi (Case 0) at i_proc=" << i_proc << "\n";
+#endif
         return submit_request(i_proc);
       }
     // Getting the highest value
@@ -587,7 +643,9 @@ template <typename Tint> struct database_balinski_info {
     if (chosen_idx == -1)
       return;
     if (RequestNat[chosen_idx] == 0) {
-      os << "submit_request_uoi (Case 1) at chosen_idx=" << chosen_idx << "\n";
+#ifdef DEBUG_MPI_FCT
+      os << "MPI_FCT: submit_request_uoi (Case 1) at chosen_idx=" << chosen_idx << "\n";
+#endif
       return submit_request(chosen_idx);
     }
   }
