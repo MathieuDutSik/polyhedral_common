@@ -837,7 +837,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = nbVert * hS;
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+  os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
      << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
   return nbVertTot;
@@ -855,10 +855,10 @@ GetGraphFromWeightedMatrix_color_adj(
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+  os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
      << " e_pow=" << e_pow << "\n";
   for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
-    os << "i_pow=" << i_pow << "  (" << V[2 * i_pow] << " | "
+    os << "WEIGHT: i_pow=" << i_pow << "  (" << V[2 * i_pow] << " | "
        << V[2 * i_pow + 1] << ")\n";
   }
 #endif
@@ -922,7 +922,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   size_t nbVert = nbRow + 2;
   size_t nbVertTot = hS * nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
+  os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
      << " nbRow=" << nbRow << " nbVertTot=" << nbVertTot << "\n";
 #endif
   return nbVertTot;
@@ -937,7 +937,7 @@ GetGraphFromWeightedMatrix_color_adj(
   size_t nbWei = WMat.GetWeightSize();
   size_t nbMult = nbWei + 2;
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
+  os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
   size_t hS = GetNeededPower(nbMult);
   size_t nbRow = WMat.rows();
@@ -1016,11 +1016,11 @@ inline
   size_t nof_vertices =
       get_total_number_vertices<T, Tidx_value, use_pairs>(WMat, os);
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nof_vertices=" << nof_vertices << "\n";
+  os << "WEIGHT: nof_vertices=" << nof_vertices << "\n";
 #endif
   Tgr eGR(nof_vertices);
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "eGR built\n";
+  os << "WEIGHT: eGR built\n";
 #endif
   eGR.SetHasColor(true);
   auto f_color = [&](size_t iVert, size_t eColor) -> void {
@@ -1074,7 +1074,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   size_t nbVert = nbRow + 2;
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices
+  os << "WEIGHT: nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices
      << "\n";
   if (hS * nbVert != nof_vertices) {
     std::cerr << "Error in the number of vertices\n";

@@ -14,11 +14,11 @@
 #define CHECK_SHVEC
 #endif
 
-#ifdef DEBUG
-#define DEBUG_SHVEC
-#define DEBUG_SHVEC_VECTOR
-#define DEBUG_SHVEC_MATRIX
-#endif
+//#ifdef DEBUG
+//#define DEBUG_SHVEC
+//#define DEBUG_SHVEC_VECTOR
+//#define DEBUG_SHVEC_MATRIX
+//#endif
 
 namespace TempShvec_globals {
 const int TEMP_SHVEC_MODE_UNDEF = -1;
@@ -256,7 +256,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
 #ifdef DEBUG_SHVEC
-  std::cerr << "g=\n";
+  std::cerr << "SHVEC: g=\n";
   for (i = 0; i < dim; i++) {
     for (j = 0; j < dim; j++)
       std::cerr << " " << g(i, j);
@@ -273,7 +273,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
       for (int j2 = i + 1; j2 < dim; j2++)
         q(i2, j2) -= q(i, i) * q(i, i2) * q(i, j2);
 #ifdef DEBUG_SHVEC_MATRIX
-    std::cerr << "diag q=" << q(i, i) << "\n";
+    std::cerr << "SHVEC: diag q=" << q(i, i) << "\n";
     for (int j = i + 1; j < dim; j++)
       std::cerr << "   j=" << j << " q=" << q(i, j) << "\n";
 #endif
@@ -288,7 +288,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   Trem(i) = bound;
   U(i) = 0;
 #ifdef DEBUG_SHVEC
-  std::cerr << "Before while loop\n";
+  std::cerr << "SHVEC: Before while loop\n";
 #endif
 #ifdef DEBUG_SHVEC_VECTOR
   size_t n_vector = 0;
@@ -316,7 +316,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
           }
           if (!not_finished) {
 #ifdef DEBUG_SHVEC
-            std::cerr << "Exiting because x=0 and central run\n";
+            std::cerr << "SHVEC: Exiting because x=0 and central run\n";
 #endif
             return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
           }
@@ -349,7 +349,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
         }
 #endif
 #ifdef DEBUG_SHVEC_VECTOR
-        std::cerr << "n_vector=" << n_vector;
+        std::cerr << "SHVEC: n_vector=" << n_vector;
         std::cerr << " x=";
         for (int i = 0; i < dim; i++)
           std::cerr << " " << x(i);
@@ -382,7 +382,7 @@ inline typename std::enable_if<is_ring_field<T>::value, int>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
-  std::cerr << "computeIt (field case)\n";
+  std::cerr << "SHVEC: computeIt (field case)\n";
 #endif
   return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
       request, bound, f_insert, f_set_bound);
@@ -393,7 +393,7 @@ inline typename std::enable_if<!is_ring_field<T>::value, int>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
-  std::cerr << "computeIt (ring case)\n";
+  std::cerr << "SHVEC: computeIt (ring case)\n";
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   //
@@ -415,7 +415,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
       computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(
           request_field, bound_field, f_insert_field, f_set_bound);
 #ifdef DEBUG_SHVEC
-  std::cerr << "computeIt (ring case) exit\n";
+  std::cerr << "SHVEC: computeIt (ring case) exit\n";
 #endif
   return retVal;
 }
@@ -453,7 +453,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
 #ifdef DEBUG_SHVEC
-  std::cerr << "computeMinimum, begin\n";
+  std::cerr << "SHVEC: computeMinimum, begin\n";
 #endif
   int i, j;
   int dim = request.dim;
@@ -479,7 +479,7 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
   info.minimum = get_minimum_atp();
   while (true) {
 #ifdef DEBUG_SHVEC
-    std::cerr << "Before computeIt (in computeMinimum while loop)\n";
+    std::cerr << "SHVEC: Before computeIt (in computeMinimum while loop)\n";
 #endif
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == info.minimum) {
