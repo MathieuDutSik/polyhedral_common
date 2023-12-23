@@ -1454,7 +1454,15 @@ bool RenormalizeWeightMatrix(
   std::vector<T> const &ListWeight1 = WMatRef.GetWeight();
   std::vector<T> const &ListWeight2 = WMat2.GetWeight();
   for (size_t iEnt = 0; iEnt < nbEnt; iEnt++) {
-    if (ListWeight1[iEnt] == ListWeight2[iEnt]) {
+    if (ListWeight1[iEnt] != ListWeight2[iEnt]) {
+      std::cerr << "iEnt=" << iEnt << " weight1=" << ListWeight1[iEnt] << " weight2=" << ListWeight2[iEnt] << "\n";
+      std::cerr << "Full weights=\n";
+      for (int u=0; u<nbEnt; u++) {
+        std::cerr << "u=" << u << " weight1=" << ListWeight1[u] << " weight2=" << ListWeight2[u] << "\n";
+      }
+      for (int u=0; u<nbEnt; u++) {
+        std::cerr << "u=" << u << " gListRev=" << gListRev[u] << "\n";
+      }
       std::cerr << "ERROR: The reordering failed\n";
       throw TerminalException{1};
     }
