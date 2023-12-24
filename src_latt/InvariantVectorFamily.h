@@ -306,8 +306,22 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const& GramMat, MyMatrix<Tint> const& Li
       }
     }
   }
+  std::cerr << "Failed to terminate and find a correct family for the filtration\n";
+  std::cerr << "This indicates that the original family was not a spanning one\n";
+  throw TerminalException{1};
 }
 
+/*
+  See the paper "A canonical form for positive definite matrices"
+ */
+/*
+template<typename T, typename Tint>
+MyMatrix<Tint> WellRoundedInvariantVectorFamily(MyMatrix<Tint> const& GramMat) {
+  T_shvec_info<T, Tint> info = computeMinimum_GramMat<T,Tint>(GramMat);
+  MyMatrix<Tint> SHV = MatrixFromVectorFamily(info.short_vectors);
+
+}
+*/
 
 // clang-format off
 #endif  // SRC_LATT_INVARIANTVECTORFAMILY_H_

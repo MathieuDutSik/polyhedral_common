@@ -15,6 +15,10 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
     if (choice == "relevant_voronoi") {
       return ComputeVoronoiRelevantVector<T,Tint>(GramMat);
     }
+    if (choice == "filtered_relevant_voronoi") {
+      MyMatrix<Tint> M = ComputeVoronoiRelevantVector<T,Tint>(GramMat);
+      return FilterByNorm(GramMat, M);
+    }
     if (choice == "fullrank") {
       return ExtractInvariantVectorFamilyFullRank<T,Tint>(GramMat);
     }
