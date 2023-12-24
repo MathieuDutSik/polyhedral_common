@@ -33,6 +33,22 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   std::string Prefix;
 };
 
+template <typename T, typename Tint, typename Tgroup>
+DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat) {
+  using TintGroup = typename Tgroup::Tint;
+  int n = GramMat.rows();
+  MyMatrix<T> SHV(0,n);
+  std::string CVPmethod = "SVexact";
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+  int max_runtime_second = 0;
+  bool Saving = false;
+  std::string Prefix = "/irrelevant";
+  return {n, GramMat, SHV, CVPmethod, AllArr, max_runtime_second, Saving, Prefix};
+  
+}
+
+
+
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
 GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
@@ -491,8 +507,9 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
 
 
 
-template <typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<Tint,Tgroup> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & eData,
+template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
+std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & eData,
+                                                              Fincorrect f_incorrect,
                                                               std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
@@ -535,7 +552,7 @@ DelaunayTesselation<Tint,Tgroup> EnumerationDelaunayPolytopes(DataLattice<T, Tin
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;
     l_obj.push_back({x, grp, {} });
-    return false;
+    return f_incorrect(x);
   };
   auto f_load=[&](size_t const& pos) -> Tobj {
     return l_obj[pos].obj;
@@ -551,7 +568,7 @@ DelaunayTesselation<Tint,Tgroup> EnumerationDelaunayPolytopes(DataLattice<T, Tin
   auto f_load_status=[&](size_t const& pos) -> bool {
     return static_cast<bool>(l_status[pos]);
   };
-  compute_adjacency_serial<Tobj,TadjI,TadjO,
+  bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
     decltype(f_exists),decltype(f_insert),decltype(f_load),
     decltype(f_save_status),decltype(f_load_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
@@ -561,7 +578,11 @@ DelaunayTesselation<Tint,Tgroup> EnumerationDelaunayPolytopes(DataLattice<T, Tin
      f_save_status, f_load_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
-  return l_obj;
+  if (!test) {
+    return {};
+  }
+  DelaunayTesselation<Tint,Tgroup>> DT = {l_obj};
+  return DT;
 }
 
 

@@ -18,8 +18,28 @@ template <typename T> struct LinSpaceMatrix {
   int n;
   MyMatrix<T> SuperMat;
   std::vector<MyMatrix<T>> ListMat;
+  std::vector<std::vector<T>> ListLineMat;
   std::vector<MyMatrix<T>> ListComm;
 };
+
+
+template<typename T>
+MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
+  int n = LinSpa.n;
+  MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
+  int N = 2;
+  for (auto & eMat : LinSpa.ListMat) {
+    int coef = random() % (2 * N + 1) - N;
+    TheMat += coef * eMat;
+  }
+  while(true) {
+    if (IsPositiveDefinite(TheMat)) {
+      return TheMat;
+    }
+    TheMat += LinSpa.SuperMat;
+  }
+}
+
 
 template <typename T>
 std::istream &operator>>(std::istream &is, LinSpaceMatrix<T> &obj) {

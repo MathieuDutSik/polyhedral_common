@@ -28,16 +28,23 @@
 template<typename T>
 struct VoronoiInequalityPreComput {
   //  MyMatrix<Tvert> VertBasis;
+  Face f_basis;
   MyMatrix<T> VertBasis_T;
   MyMatrix<T> VertBasisInv_T;
   std::vector<MyVector<T>> VertBasisRed_T;
 };
 
-template<typename T>
+template<typename T, typename Tvert>
 VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& EXT) {
   int n = EXT.cols() - 1;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
-  MyMatrix<T> VertBasis_T = RowReduction(EXT_T);
+  SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT_T);
+  std::vector<int> ListRowSelect = eSelect.ListRowSelect;
+  Face f_basis(EXT_T.rows());
+  for (auto & eIdx : ListRowSelect) {
+    f_basis[eIdx] = 1;
+  }
+  MyMatrix<T> VertBasis_T = SelectRow(EXT_T, ListRowSelect);
   MyMatrix<T> VertBasisInv_T = TransposedMat(Inverse(VertBasis_T));
   std::vector<MyVector<T>> VertBasisRed_T;
   for (int i=0; i<=n; i++) {
@@ -47,7 +54,7 @@ VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& 
     }
     VertBasisRed_T.push_back(V);
   }
-  return {std::move(VertBasis_T), std::move(VertBasisInv_T), std::move(VertBasisRed_T)};
+  return {f_basis, std::move(VertBasis_T), std::move(VertBasisInv_T), std::move(VertBasisRed_T)};
 }
 
 
@@ -73,6 +80,24 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
   }
   return Ineq;
 }
+
+template<typename T, typename Tvert>
+bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, std::vector<std::vector<T>> const& ListGram) {
+  int n_row = EXT.rows();
+  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    if (vipc.f_basis[i_row] == 0) {
+      MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
+      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, ListGram);
+      if (!IsZeroVector(V)) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+
 
 struct AdjInfo {
   int iOrb;
@@ -108,6 +133,10 @@ std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelau
     };
     for (int i_adj=0; i_adj<n_adj; i_adj++) {
       MyVector<T> V = get_ineq(i_adj);
+      // That canonicalization is incorrect because it is not invariant under the group of transformation.
+      // The right group transformations are the ones that
+      // The list of matrices ListGram must be an integral basis of the T-space. This forces the transformations
+      // to be integral in that basis and so the canonicalization by the integer 
       MyVector<T> V_red = ScalarCanonicalizationVector(V);
       AdjInfo eAdj{i_del, i_adj};
       map[V_red].push_back(eAdj);
@@ -115,6 +144,67 @@ std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelau
   }
   return map;
 }
+
+
+template<typename T, typename Tint>
+bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  int n_row = SHV.rows();
+  std::vector<T> Vdiag(n_row,0);
+  std::vector<MyMatrix<T>> ListMat = {GramMat};
+  const bool use_scheme = true;
+  std::vector<std::vector<Tidx>> ListGen =
+    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+  for (auto &eList : ListGen) {
+    std::optional<MyMatrix<T>> opt =
+      FindMatrixTransformationTest(SHV_T, SHV_T, eList);
+    if (!opt) {
+      std::cerr << "Failed to find the matrix\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> const &M_T = *opt;
+    if (!IsIntegralMatrix(M_T)) {
+      std::cerr << "Bug: The matrix should be integral\n";
+      throw TerminalException{1};
+    }
+    for (auto & eMat : LinSpa.ListMat) {
+      MyMatrix<T> eMatImg = M_T * eMat * M_T.transpose();
+      if (eMatImg != eMat) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+  auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
+    return IsDelaunayPolytopeInducingEqualities(EXT, LinSpa.ListLineMat);
+  };
+  auto test_matrix=[&](MyMatrix<T> const& GramMat) -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
+    bool test = IsSymmetryGroupCorrect(GramMat, LinSpa, os);
+    if (!test) {
+      return {};
+    }
+    DataLattice<T,Tint,Tgroup> eData = GetDataLattice<T,Tint,Tgroup>(GramMat);
+    return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(eData, f_incorrect, os);
+  };
+  while(true) {
+    MyMatrix<T> GramMat = GetRandomPositiveDefinite(LinSpa);
+    std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix();
+    if (opt) {
+      return *opt;
+    }
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
+}
+
+
+
 
 
 
