@@ -97,6 +97,70 @@ std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat) {
   return AllowedNorms;
 }
 
+/*
+  The rank ought to be self explanatory.
+  The index is the index in the lattice obtaine by the saturation
+  of the spanned lattce
+ */
+template<typename Tint>
+struct FundInvariantVectorFamily {
+  int rank;
+  Tint index;
+};
+
+template<typename Tint>
+FundInvariantVectorFamily<Tint> TrivFundamentalInvariant() {
+  return {0, 1};
+}
+
+template<typename Tint>
+bool IsCompleteSystem(FundInvariantVectorFamily<Tint> const& fi, int n) {
+  if (fi.rank != n) {
+    return false;
+  }
+  return fi.index == 1;
+}
+
+template<typename Tint>
+FundInvariantVectorFamily<Tint> ComputeFundamentalInvariant(MyMatrix<Tint> const& M) {
+  int n = M.cols();
+  std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pair = SmithNormalForm(M);
+  MyMatrix<Tint> Mred = pair.first * M * pair.second;
+  int rank = 0;
+  Tint index = 1;
+  for (int i=0; i<n; i++) {
+    if (Mred(i,i) != 0) {
+      rank++;
+      index *= Mred(i,i);
+    }
+  }
+#ifdef DEBUG_IVF
+  if (rank != RankMat(M)) {
+    std::cerr << "Something is inconsistent here\n";
+    throw TerminalException{1};
+  }
+  if (rank == n) {
+    Tint index_B = Int_IndexLattice(M);
+    if (index != index_B) {
+      std::cerr << "index=" << index << " but index_B=" << index_B << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return {rank, index};
+}
+
+template<typename Tint>
+bool operator>(FundInvariantVectorFamily<Tint> const& x, FundInvariantVectorFamily<Tint> const& y) {
+  if (x.rank != y.rank) {
+    return x.rank > y.rank;
+  }
+  if (x.index != y.index) {
+    return x.index < y.index;
+  }
+  return false;
+}
+
 template <typename T, typename Tint, typename Fcorrect>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
                                             Fcorrect f_correct) {
@@ -136,9 +200,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     if (RankMat(M) < n)
       return false;
-    //    std::cerr << "Before Int_IndexLattice computation\n";
     Tint indx = Int_IndexLattice(M);
-    //    std::cerr << "indx=" << indx << "\n";
     if (T_NormGen(indx) == 1)
       return true;
     return false;
@@ -187,6 +249,65 @@ template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
   }
   return true;
 }
+
+template<typename T, typename Tint>
+MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const& GramMat) {
+  int n = GramMat.rows();
+  std::vector<MyVector<Tint>> ListVect;
+  BlockCppIterator blk(n, 2);
+  for (auto & eVect : blk) {
+    int sum = 0;
+    for (auto & eVal : eVect) {
+      sum += eVal;
+    }
+    if (sum > 0) {
+      MyVector<T> eV(n);
+      for (int u=0; u<n; u++) {
+        T val = UniversalScalarConversion<T,int>(eVect[u]);
+        eV(u) = val / 2;
+        resultCVP<T, Tint> result = CVPVallentinProgram_exact<T,Tint>(GramMat, eV);
+        if (result.ListVect.rows() == 2) {
+          MyVector<Tint> Vins(n);
+          for (int u=0; u<n; u++) {
+            Vins(u) = result.ListVect(0,u) - result.ListVect(1,u);
+          }
+          ListVect.push_back(Vins);
+          ListVect.push_back(-Vins);
+        }
+      }
+    }
+  }
+  return MatrixFromVectorFamily(ListVect);
+}
+
+template<typename T, typename Tint>
+MyMatrix<Tint> FilterByNorm(MyMatrix<T> const& GramMat, MyMatrix<Tint> const& ListVect) {
+  int n = GramMat.rows();
+  std::map<T, std::vector<MyVector<Tint>>> map;
+  std::vector<T> LineMat = GetLineVector(GramMat);
+  int n_vect = ListVect.rows();
+  for (int i_vect = 0; i_vect<n_vect; i_vect++) {
+    MyVector<Tint> V = GetMatrixRow(ListVect, i_vect);
+    MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+    T norm = EvaluateLineVector(LineMat, V_T);
+    map[norm].push_back(V);
+  }
+  MyMatrix<Tint> SHV_ret(0,n);
+  FundInvariantVectorFamily<Tint> fi_ret = TrivFundamentalInvariant<Tint>();
+  for (auto & kv : map) {
+    MyMatrix<Tint> BlkMat = MatrixFromVectorFamily(kv.second);
+    MyMatrix<Tint> SHV_new = Concatenate(SHV_ret, BlkMat);
+    FundInvariantVectorFamily<Tint> fi_new = ComputeFundamentalInvariant(SHV_new);
+    if (fi_new > fi_ret) {
+      SHV_ret = SHV_new;
+      fi_ret = fi_new;
+      if (IsCompleteSystem(fi_ret, n)) {
+        return SHV_ret;
+      }
+    }
+  }
+}
+
 
 // clang-format off
 #endif  // SRC_LATT_INVARIANTVECTORFAMILY_H_
