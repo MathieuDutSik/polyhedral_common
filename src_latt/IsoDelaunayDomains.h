@@ -74,6 +74,48 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
   return Ineq;
 }
 
+struct AdjInfo {
+  int iOrb;
+  int i_adj;
+};
+
+
+/*
+  Compute the defining inequalities of an iso-Delaunay domain
+ */
+template<typename T, typename Tvert, typename Tgroup>
+std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTesselation<Tvert, Tgroup> const& DT, std::vector<std::vector<T>> const& ListGram) {
+  std::unordered_map<MyVector<T>,std::vector<AdjInfo>> map;
+  int n_del = DT.l_dels.size();
+  for (int i_del=0; i_del<n_del; i_del++) {
+    int n_adj = DT.l_dels.l_adj.size();
+    VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute(DT.l_dels[i_del].obj);
+    ContainerMatrix<Tvert> cont(DT.l_dels[i_del].obj);
+    auto get_ineq=[&](int const& i_adj) -> MyVector<T> {
+      Delaunay_AdjO<Tvert> adj = DT.l_dels[i_del].l_adj[i_adj];
+      int j_del = adj.iOrb;
+      MyMatrix<Tvert> EXTadj = DT.l_dels[j_del].obj * adj.P;
+      int len = EXTadj.rows();
+      for (int u=0; u<len; u++) {
+        MyVector<Tvert> TheVert = GetMatrixRow(EXTadj, u);
+        std::optional<size_t> opt = cont.GetIdx_v(TheVert);
+        if (!opt) {
+          return VoronoiLinearInequality(vipc, TheVert, ListGram);
+        }
+      }
+      std::cerr << "Failed to find a matching entry\n";
+      throw TerminalException{1};
+    };
+    for (int i_adj=0; i_adj<n_adj; i_adj++) {
+      MyVector<T> V = get_ineq(i_adj);
+      MyVector<T> V_red = ScalarCanonicalizationVector(V);
+      AdjInfo eAdj{i_del, i_adj};
+      map[V_red].push_back(eAdj);
+    }
+  }
+  return map;
+}
+
 
 
 
