@@ -175,12 +175,12 @@ template <typename Tobj, typename TadjI, typename TadjO,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
-                           std::ostream & os,
                            int const &max_time_second,
                            Fexist f_exist, Finsert f_insert, Fload f_load,
                            Fsave_status f_save_status, Fload_status f_load_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
-                           Fhash f_hash, Frepr f_repr, Fspann f_spann) {
+                           Fhash f_hash, Frepr f_repr, Fspann f_spann,
+                           std::ostream & os) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -536,36 +536,48 @@ template <typename Tobj, typename Fexist,
           typename Fsave_status, typename Fload_status,
           typename Finit, typename Fadj, typename Fhash,
           typename Frepr>
-bool compute_adjacency_serial(std::ostream& os,
-                              int const &max_time_second, Fexist f_exist,
+bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
                               Finsert f_insert, Fload f_load,
                               Fsave_status f_save_status, Fload_status f_load_status,
                               Finit f_init,
-                              Fadj f_adj, Fhash f_hash, Frepr f_repr) {
+                              Fadj f_adj, Fhash f_hash, Frepr f_repr,
+                              std::ostream& os) {
   SingletonTime start;
   size_t n_obj = 0;
   std::vector<Tobj> V;
   std::unordered_map<size_t, std::vector<size_t>> map;
-  std::vector<int> Vstatus;
   std::vector<size_t> undone;
-  auto insert_entry = [&](Tobj const &x, bool is_treated,
-                      bool const &save_if_new) -> void {
-    size_t hash = f_hash(seed_hashmap, x);
+  bool early_termination = false;
+  auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
+                      bool const &save_if_new
+    size_t hash = f_hash(seed_hashmap, x_adjI.obj);
     std::vector<size_t> &vect = map[hash];
     for (auto &idx : vect) {
       Tobj &y = V[idx];
-      if (f_repr(x, y)) {
-        return;
+      std::optional<TadjO> opt = f_repr(y, x_adjI, idx);
+      if (opt) {
+        return *opt;
       }
     }
-    V.push_back(x);
+    V.push_back(x.obj);
     vect.push_back(n_obj);
-    if (save_if_new) {
-      f_save(n_obj, x);
-      bool is_new = true;
-      f_save_status(n_obj, is_new);
+    std::pair<Tobj, TadjO> pair = f_spann(x, n_obj);
+    bool test = f_insert(n_obj, pair.first);
+    if (test) {
+      early_termination = true;
     }
-    if (is_treated) {
+    bool is_treated = false;
+    f_save_status(n_obj, is_treated);
+    undone.push_back(n_obj);
+    n_obj++;
+    return pair.second;
+  };
+  auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
+    size_t hash_hashmap = f_hash(seed_hashmap, x);
+    V.push_back(x);
+    std::vector<size_t> &vect = map[hash_hashmap];
+    vect.push_back(n_obj);
+    if (!is_treated) {
       undone.push_back(n_obj);
     }
     n_obj++;
@@ -575,33 +587,46 @@ bool compute_adjacency_serial(std::ostream& os,
     undone.pop_back();
     return idx;
   };
+  auto treat_one_entry=[&]() -> void {
+    size_t idx = get_undone_idx();
+    f_save_status(idx, true);
+    Tobj const &x = V[idx];
+    std::vector<TadjO> l_adj;
+    for (auto &y : f_adj(x)) {
+      TadjO adj = process_singleEntry_AdjI(y);
+      l_adj.push_back(adj);
+    }
+    f_set_adj(idx, l_orb);
+  };
   while (true) {
     if (!f_exist(n_obj)) {
       break;
     }
     Tobj x = f_load(n_obj);
     bool is_treated = f_load_status(n_obj);
-    bool save_if_new = false;
-    insert_entry(x, is_treated, save_if_new);
+    insert_load(x, is_treated);
   }
   if (n_obj == 0) {
     Tobj x = f_init();
-    insert_entry(x, 0, true);
+    bool is_treated = false;
+    insert_load(x, is_treated);
+    f_save_status(0, is_treated);
+    bool test = f_insert(x);
+    if (test) {
+      early_termination = true;
+    }
   }
   while (true) {
-    if (map.size() == 0) {
+    if (early_termination) {
+      return false;
+    }
+    if (undone.size() == 0) {
       return true;
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
       return false;
     }
-    size_t idx = get_undone_idx();
-    Tobj const &x = V[idx];
-    for (auto &y : f_adj(x)) {
-      bool is_treated = false;
-      bool save_if_new = false;
-      insert_entry(y, is_treated, save_if_new);
-    }
+    treat_one_entry();
   }
 }
 

@@ -14,6 +14,10 @@
 #define TIMINGS_DELAUNAY_ENUMERATION
 #endif
 
+#ifdef DEBUG
+#define DEBUG_DELAUNAY_ENUMERATION
+#endif
+
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
                                        MyVector<T> const &eV,
@@ -89,6 +93,9 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         for (int i = 0; i < dim; i++)
           RetEXT(iVect, 1 + i) = TheCVP.ListVect(iVect, i);
       }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+      os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+#endif
       return RetEXT;
     } else {
       for (int iVect = 0; iVect < nbVectTot; iVect++) {

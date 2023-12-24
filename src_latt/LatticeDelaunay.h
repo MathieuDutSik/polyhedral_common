@@ -415,7 +415,6 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
   return {GRPlatt, std::move(l_adj)};
 }
 
-
 template <typename T, typename Tint, typename Tgroup>
 std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
                                                                                DataLattice<T, Tint, Tgroup> & eData,
@@ -424,12 +423,8 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_MPI_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
-    Tobj EXT = FindDelaunayPolytope<T, Tint>(
+    return FindDelaunayPolytope<T, Tint>(
        eData.GramMat, eData.CVPmethod, os);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
-#endif
-    return EXT;
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
     return ComputeInvariantDelaunay(eData, seed, x, os);
@@ -453,9 +448,6 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   std::vector<int> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: i_orb=" << i_orb << " |l_obj|=" << l_obj.size() << "\n";
-#endif
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
   };
@@ -489,13 +481,93 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     decltype(f_save_status),decltype(f_load_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (comm, os, eData.max_runtime_second,
-                        f_exists, f_insert, f_load,
-                        f_save_status, f_load_status,
-                        f_init, f_adj, f_set_adj,
-                        f_hash, f_repr, f_spann);
+    (comm, eData.max_runtime_second,
+     f_exists, f_insert, f_load,
+     f_save_status, f_load_status,
+     f_init, f_adj, f_set_adj,
+     f_hash, f_repr, f_spann, os);
   return l_obj;
 }
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+DelaunayTesselation<Tint,Tgroup> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & eData,
+                                                              std::ostream & os) {
+  using Tobj = MyMatrix<Tint>;
+  using TadjI = Delaunay_AdjI<Tint>;
+  using TadjO = Delaunay_AdjO<Tint>;
+  auto f_init=[&]() -> Tobj {
+    return FindDelaunayPolytope<T, Tint>(
+       eData.GramMat, eData.CVPmethod, os);
+  };
+  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+    return ComputeInvariantDelaunay(eData, seed, x, os);
+  };
+  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_orb) -> std::optional<TadjO> {
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& P = *opt;
+    TadjO ret{y.f, P, i_orb};
+    return ret;
+  };
+  auto f_spann=[&](TadjI const& x, int i_orb) -> std::pair<Tobj, TadjO> {
+    Tobj EXT = x.obj;
+    MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
+    TadjO ret{x.f, std::move(P), i_orb};
+    return {std::move(EXT), ret};
+  };
+  std::vector<Delaunay_Entry<Tint,Tgroup>> l_obj;
+  std::vector<int> l_status;
+  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
+    l_obj[i_orb].GRP = pair.first;
+    return pair.second;
+  };
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
+    l_obj[i_orb].l_adj = l_adj;
+  };
+  auto f_exists=[&](int const& n_obj) -> bool {
+    return false;
+  };
+  auto f_insert=[&](Tobj const& x) -> bool {
+    Tgroup grp;
+    l_obj.push_back({x, grp, {} });
+    return false;
+  };
+  auto f_load=[&](size_t const& pos) -> Tobj {
+    return l_obj[pos].obj;
+  };
+  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+    int val_i = static_cast<int>(val);
+    if (l_status.size() <= pos) {
+      l_status.push_back(val_i);
+    } else {
+      l_status[pos] = val_i;
+    }
+  };
+  auto f_load_status=[&](size_t const& pos) -> bool {
+    return static_cast<bool>(l_status[pos]);
+  };
+  compute_adjacency_serial<Tobj,TadjI,TadjO,
+    decltype(f_exists),decltype(f_insert),decltype(f_load),
+    decltype(f_save_status),decltype(f_load_status),
+    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
+    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
+    (eData.max_runtime_second,
+     f_exists, f_insert, f_load,
+     f_save_status, f_load_status,
+     f_init, f_adj, f_set_adj,
+     f_hash, f_repr, f_spann, os);
+  return l_obj;
+}
+
+
+
+
+
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
@@ -621,6 +693,9 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   //
   WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
 }
+
+
+
 
 // clang-format off
 #endif  // SRC_LATT_LATTICEDELAUNAY_H_
