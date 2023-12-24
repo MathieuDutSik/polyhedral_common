@@ -1243,6 +1243,117 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
 }
 
 template <typename T>
+std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC) {
+  int nbCol = FAC.cols();
+  int nbRow = FAC.rows();
+  PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC);
+  //  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
+  if (!eRes.eTestExist) {
+    MyMatrix<T> Spa = IdentityMat<T>(nbCol);
+    Face f(nbRow);
+    return {std::move(Spa), std::move(f)};
+  } else {
+    std::vector<int> ListIdx;
+    MyVector<T> const &TheRelat = *eRes.TheRelat;
+    for (int iRow = 0; iRow < nbRow; iRow++)
+      if (TheRelat(iRow) > 0)
+        ListIdx.push_back(iRow);
+    MyMatrix<T> FACred = SelectRow(FAC, ListIdx);
+    SelectionRowCol<T> eSelect = TMat_SelectRowCol(FACred);
+    if (eSelect.NSP.rows() == 0) {
+      MyMatrix<T> Spa = MyMatrix<T>(0, nbCol);
+      Face f(nbRow);
+      for (int u=0; u<nbRow; u++)
+        f[u] = 1;
+      return {std::move(Spa), std::move(f)};
+    }
+    MyMatrix<T> FACproj = FAC * eSelect.NSP.transpose();
+    int FACproj_col = FACproj.cols();
+    auto IsZeroLine=[&](int const& iLine) -> bool {
+      for (int u=0; u<FACproj_col; u++)
+        if (FACproj(iLine, u) != 0)
+          return false;
+      return true;
+    };
+    std::vector<int> ListIdxZ, ListIdxNZ;
+    for (int u=0; u<FACproj.rows(); u++) {
+      if (IsZeroLine(u)) {
+        ListIdxZ.push_back(u);
+      } else {
+        ListIdxNZ.push_back(u);
+      }
+    }
+    MyMatrix<T> FACprojCor = SelectRow(FACproj, ListIdxNZ);
+    auto f_recursive=[&]() -> std::pair<MyMatrix<T>, Face> {
+      if (FACprojCor.rows() == 0) {
+        MyMatrix<T> TheSpann = IdentityMat<T>(eSelect.NSP.rows());
+        Face f(0);
+        return {std::move(TheSpann), f};
+      } else {
+        return KernelLinearDeterminedByInequalities(FACprojCor);
+      }
+    };
+    std::pair<MyMatrix<T>, Face> pair = f_recursive();
+    if (pair.first.rows() == 0) {
+      MyMatrix<T> Spann = MyMatrix<T>(0, nbCol);
+      Face f(nbRow);
+      for (int u=0; u<nbRow; u++) {
+        f[u] = 1;
+      }
+      return {std::move(Spann), std::move(f)};
+    } else {
+      MyMatrix<T> TheSpann = pair.first * eSelect.NSP;
+      Face f(nbRow);
+      for (auto & eVal : ListIdxZ)
+        f[eVal] = 1;
+      int len = ListIdxNZ.size();
+      for (int u=0; u<len; u++) {
+        f[ListIdxNZ[u]] = pair.second[u];
+      }
+      return {std::move(TheSpann), std::move(f)};
+    }
+  }
+}
+
+/*
+  Return the corresponding subspace and the indices of the inequalities that are matching
+  with equality.
+ */
+template <typename T>
+std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  int n_row = FAC.rows();
+  int n_col = FAC.cols();
+  auto IsZeroLine=[&](int const& iLine) -> bool {
+    for (int u=0; u<n_col; u++)
+      if (FAC(iLine, u) != 0)
+        return false;
+    return true;
+  };
+  std::vector<int> ListIdxZ, ListIdxNZ;
+  for (int u=0; u<n_row; u++) {
+    if (IsZeroLine(u)) {
+      ListIdxZ.push_back(u);
+    } else {
+      ListIdxNZ.push_back(u);
+    }
+  }
+  MyMatrix<T> FACred = SelectRow(FACred, ListIdxNZ);
+  std::pair<MyMatrix<T>,Face> pair = KernelLinearDeterminedByInequalitiesAndIndices(FACred);
+  Face f(n_row);
+  for (auto & eVal : ListIdxZ) {
+    f[eVal] = 1;
+  }
+  int len = ListIdxNZ.size();
+  for (int u=0; u<len; u++) {
+    f[ListIdxNZ[u]] = f[pair.second[u]];
+  }
+  return {std::move(pair.first), std::move(f)};
+}
+
+
+
+template <typename T>
 MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
@@ -1273,6 +1384,8 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC) {
       return TheSpann * eSelect.NSP;
   }
 }
+
+
 
 template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC) {
   return !TestExistPositiveRelation(FAC);
@@ -1343,9 +1456,65 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 }
 
 template <typename T>
+MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC) {
+  int n_rows = FAC.rows();
+  int n_cols = FAC.cols();
+  MyMatrix<T> ListInequalities = ZeroMatrix<T>(n_rows, n_cols + 1);
+  MyVector<T> ToBeMinimized = ZeroVector<T>(n_cols + 1);
+  for (int i_row = 0; i_row < n_rows; i_row++) {
+    ListInequalities(i_row, 0) = -1;
+    for (int i_col = 0; i_col < n_cols; i_col++)
+      ListInequalities(i_row, i_col + 1) = FAC(i_row, i_col);
+    for (int i_col = 0; i_col <= n_cols; i_col++)
+      ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
+  }
+  LpSolution<T> eSol = CDD_LinearProgramming(ListInequalities, ToBeMinimized);
+  if (!eSol.PrimalDefined || !eSol.DualDefined) {
+    std::cerr << "Failed to find an interior point by linear programming\n";
+    std::cerr << "Maybe the cone is actually not full dimensional\n";
+    throw TerminalException{1};
+  }
+  // Now computing the kernel of the attained kernel.
+  ToBeMinimized(0) -= eSol.OptimalValue;
+  MyMatrix<T> M(1, n_cols+1);
+  for (int u=0; u<=n_cols; u++)
+    M(0,u) = ToBeMinimized(u);
+  MyMatrix<T> NSP = NullspaceTrMat(M);
+  MyMatrix<T> ListIneqRed = ListInequalities * NSP.transpose();
+  // Now the subspace built by the matching inequalities. It is of strictly smaller dimension since
+  // otherwise the solution is not optimal.
+  std::pair<MyMatrix<T>,Face> pair = LinearDeterminedByInequalitiesAndIndices(ListIneqRed);
+#ifdef DEBUG_LINEAR_PROGRAM
+  if (pair.first.rows() == 0) {
+    std::cerr << "The dimension is 0 which is impossible\n";
+    throw TerminalException{1};
+  }
+#endif
+  if (pair.first.rows() == 1) {
+    // The happy scenario where the linear programming directly gets us something unique
+    return eSol.DirectSolution;
+  }
+  std::vector<int> ListIdxNZ;
+  int len = ListIneqRed.rows();
+  for (int u=0; u<len; u++) {
+    if (pair.second[u] == 0) {
+      ListIdxNZ.push_back(u);
+    }
+  }
+  MyMatrix<T> ListIneqRedB = SelectRow(ListIneqRed, ListIdxNZ) * pair.first.transpose();
+  MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB);
+  MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
+  MyVector<T> eSolFinal = NSP.transpose() * SolSubspace;
+  return eSolFinal;
+}
+
+
+
+
+template <typename T>
 MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
                                   MyMatrix<T> const &Equa) {
-  MyMatrix<T> NSP = NullspaceMat(TransposedMat(Equa));
+  MyMatrix<T> NSP = NullspaceTrMat(Equa);
   MyMatrix<T> FACred = FAC * NSP.transpose();
   MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred);
   MyVector<T> TheSol = NSP.transpose() * eVectInt;
