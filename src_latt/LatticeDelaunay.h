@@ -319,10 +319,15 @@ namespace boost::serialization {
   }
 }
 
+template<typename Tvert, typename Tgroup>
+struct DelaunayTesselation {
+  std::vector<Delaunay_Entry<Tvert,Tgroup>> l_dels;
+};
+
 template<typename Tint, typename Tgroup>
-std::vector<Delaunay_Entry<Tint, Tgroup>> my_mpi_gather(boost::mpi::communicator &comm,
-                                                        std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
-                                                        int const& i_proc_out) {
+DelaunayTesselation<Tint,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
+                                               std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
+                                               int const& i_proc_out) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
   using T = typename std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>;
@@ -353,7 +358,7 @@ std::vector<Delaunay_Entry<Tint, Tgroup>> my_mpi_gather(boost::mpi::communicator
   } else {
     boost::mpi::gather<T>(comm, blk, i_proc_out);
   }
-  return V;
+  return {V};
 }
 
 

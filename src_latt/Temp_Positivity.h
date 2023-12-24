@@ -285,6 +285,41 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
   return TheSet;
 }
 
+template<typename T>
+std::vector<T> GetLineVector(MyMatrix<T> const& M) {
+  int n = M.rows();
+  int dim = n * (n+1) / 2;
+  std::vector<T> V(dim);
+  int pos = 0;
+  for (int i=0; i<n; i++) {
+    for (int j=i; j<n; j++) {
+      if (i == j) {
+        V[pos] = M(i, i);
+      } else {
+        V[pos] = 2 * M(i, j);
+      }
+      pos++;
+    }
+  }
+  return V;
+}
+
+template<typename T>
+T EvaluateLineVector(std::vector<T> const& V_mat, MyVector<T> const& V) {
+  T sum = 0;
+  T pSum = 0;
+  int n = V.size();
+  for (int i=0; i<n; i++) {
+    pSum = 0;
+    for (int j=i; j<n; j++) {
+      pSum += V_mat[pos] * V[j];
+    }
+    sum += pSum * V[i];
+  }
+  return sum;
+}
+
+
 // clang-format off
 #endif  // SRC_LATT_TEMP_POSITIVITY_H_
 // clang-format on

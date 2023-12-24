@@ -6,6 +6,7 @@
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
+#include "LatticeDelaunay.h"
 #include <string>
 #include <vector>
 // clang-format on
@@ -18,26 +19,60 @@
   ---Periodic structure case: Then the coordinates are no longer integral.
     Also the equivalence are no longer integral. Sure the matrix transformation is
     integral, but the translation vector is not necessarily so.
+
+  We use the definitions from LatticeDelaunay.h
+  They are for the lattice case but can be generalized for the periodic case.
  */
 
-template<typename Tvert>
-struct SingleEquiv {
-  Face incd;
-  MyMatrix<Tvert> P;
-  int i_orb;
+
+template<typename T>
+struct VoronoiInequalityPreComput {
+  //  MyMatrix<Tvert> VertBasis;
+  MyMatrix<T> VertBasis_T;
+  MyMatrix<T> VertBasisInv_T;
+  std::vector<MyVector<T>> VertBasisRed_T;
 };
 
-template<typename Tvert, typename Tgroup>
-struct SingleDelaunay {
-  MyMatrix<Tvert> EXT;
-  Tgroup GRPlatt;
-  std::vector<SingleEquiv<Tvert>> l_adj;
-};
+template<typename T>
+VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& EXT) {
+  int n = EXT.cols() - 1;
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+  MyMatrix<T> VertBasis_T = RowReduction(EXT_T);
+  MyMatrix<T> VertBasisInv_T = TransposedMat(Inverse(VertBasis_T));
+  std::vector<MyVector<T>> VertBasisRed_T;
+  for (int i=0; i<=n; i++) {
+    MyVector<T> V(n);
+    for (int u=0; u<n; u++) {
+      V(u) = VertBasis_T(i,u+1);
+    }
+    VertBasisRed_T.push_back(V);
+  }
+  return {std::move(VertBasis_T), std::move(VertBasisInv_T), std::move(VertBasisRed_T)};
+}
 
-template<typename Tvert, typename Tgroup>
-struct DelaunayTesselation {
-  std::vector<SingleDelaunay<Tvert,Tgroup>> l_dels;
-};
+
+template<typename T, typename Tvert>
+MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, MyVector<Tvert> const& TheVert, std::vector<std::vector<T>> const& ListGram) {
+  int n = ListGram[0].rows();
+  int dimSpace = ListGram.size();
+  MyVector<T> TheVert_T = UniversalVectorConversion<T,Tvert>(TheVert);
+  MyVector<T> B = vipc.VertBasisInv_T * TheVert_T.transpose();
+  MyVector<T> Ineq(dimSpace);
+  MyVector<T> TheVertRed(n);
+  for (int u=0; u<n; u++) {
+    TheVertRed(u) = TheVert_T(u+1);
+  }
+  int iGram = 0;
+  for (auto & eLineMat : ListGram) {
+    T val = EvaluateLineVector(eLineMat, TheVertRed);
+    for (int k=0; k<=n; k++) {
+      val += B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+    }
+    Ineq(iGram) = val;
+    iGram++;
+  }
+  return Ineq;
+}
 
 
 
