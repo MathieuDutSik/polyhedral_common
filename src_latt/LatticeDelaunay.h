@@ -320,9 +320,9 @@ namespace boost::serialization {
 }
 
 template<typename Tint, typename Tgroup>
-std::vector<Delaunay_Entry<Tint, Tgroup>> merge_delaunayblocks(boost::mpi::communicator &comm,
-                                                               std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
-                                                               int const& i_proc_out) {
+std::vector<Delaunay_Entry<Tint, Tgroup>> my_mpi_gather(boost::mpi::communicator &comm,
+                                                        std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
+                                                        int const& i_proc_out) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
   using T = typename std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>;
@@ -354,6 +354,32 @@ std::vector<Delaunay_Entry<Tint, Tgroup>> merge_delaunayblocks(boost::mpi::commu
     boost::mpi::gather<T>(comm, blk, i_proc_out);
   }
   return V;
+}
+
+
+template<typename Tint, typename Tgroup>
+void check_delaunay_tessellation(std::vector<Delaunay_Entry<Tint, Tgroup>> const& l_del) {
+  for (auto & eDel : l_del) {
+    MyMatrix<Tint> const& EXT = eDel.obj;
+    ContainerMatrix<Tint> cont(EXT);
+    for (auto & e_adj : eDel.l_adj) {
+      Face const& f = e_adj.f;
+      Face f_att(EXT.rows());
+      MyMatrix<Tint> EXTadj = l_del[e_adj.iOrb] * e_adj.P;
+      int len = EXTadj.rows();
+      for (int u=0; u<len; u++) {
+        MyVector<Tint> V = GetMatrixRow(EXTadj, u);
+        std::optional<size_t> opt = cont.GetIdx_v(V);
+        if (opt) {
+          f_att[*opt] = 1;
+        }
+      }
+      if (f_att != f) {
+        std::cerr << "Inconsistency in the adjacency\n";
+        throw TerminalException{1};
+      }
+    }
+  }
 }
 
 
