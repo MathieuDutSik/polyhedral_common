@@ -1290,7 +1290,7 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
         Face f(0);
         return {std::move(TheSpann), f};
       } else {
-        return KernelLinearDeterminedByInequalities(FACprojCor);
+        return KernelLinearDeterminedByInequalitiesAndIndices(FACprojCor);
       }
     };
     std::pair<MyMatrix<T>, Face> pair = f_recursive();
@@ -1338,7 +1338,7 @@ std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T>
       ListIdxNZ.push_back(u);
     }
   }
-  MyMatrix<T> FACred = SelectRow(FACred, ListIdxNZ);
+  MyMatrix<T> FACred = SelectRow(FAC, ListIdxNZ);
   std::pair<MyMatrix<T>,Face> pair = KernelLinearDeterminedByInequalitiesAndIndices(FACred);
   Face f(n_row);
   for (auto & eVal : ListIdxZ) {
