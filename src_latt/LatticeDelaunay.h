@@ -257,13 +257,6 @@ struct Delaunay_MPI_AdjO {
   int iOrb;
 };
 
-template<typename Tint>
-struct Delaunay_AdjO {
-  Face f;
-  MyMatrix<Tint> P;
-  int iOrb;
-};
-
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
@@ -275,6 +268,23 @@ namespace boost::serialization {
   }
 }
 
+template<typename Tint>
+struct Delaunay_AdjO {
+  Face f;
+  MyMatrix<Tint> P;
+  int iOrb;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_AdjO<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("f", eRec.f);
+    ar &make_nvp("P", eRec.P);
+    ar &make_nvp("iOrb", eRec.iOrb);
+  }
+}
+
 template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
   MyMatrix<Tint> obj;
@@ -282,6 +292,15 @@ struct Delaunay_MPI_Entry {
   std::vector<Delaunay_MPI_AdjO<Tint>> l_adj;
 };
 
+namespace boost::serialization {
+  template <class Archive, typename Tint, typename Tgroup>
+  inline void serialize(Archive &ar, Delaunay_MPI_Entry<Tint, Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("GRP", eRec.GRP);
+    ar &make_nvp("l_adj", eRec.iOrb);
+  }
+}
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_Entry {
@@ -289,6 +308,54 @@ struct Delaunay_Entry {
   Tgroup GRP;
   std::vector<Delaunay_AdjO<Tint>> l_adj;
 };
+
+namespace boost::serialization {
+  template <class Archive, typename Tint, typename Tgroup>
+  inline void serialize(Archive &ar, Delaunay_Entry<Tint,Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("GRP", eRec.GRP);
+    ar &make_nvp("l_adj", eRec.iOrb);
+  }
+}
+
+template<typename Tint, typename Tgroup>
+std::vector<Delaunay_Entry<Tint, Tgroup>> merge_delaunayblocks(boost::mpi::communicator &comm,
+                                                               std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
+                                                               int const& i_proc_out) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  using T = typename std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>;
+  std::vector<Delaunay_Entry<Tint, Tgroup>> V;
+  if (i_rank == i_proc_out) {
+    std::vector<T> l_blk;
+    boost::mpi::gather<T>(comm, blk, l_blk, i_proc_out);
+    std::vector<int> l_sizes(n_proc), l_shift(n_proc);
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      l_sizes[i_proc] = l_blk[i_proc].size();
+    }
+    l_shift[0] = 0;
+    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+      l_shift[i_proc] = l_shift[i_proc-1] + l_sizes[i_proc-1];
+    }
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      for (int u=0; u<l_sizes[i_proc]; u++) {
+        std::vector<Delaunay_Entry<Tint, Tgroup>> l_adj;
+        for (auto & ent : l_blk[i_proc][u].l_adj) {
+          int iOrb = ent.iOrb + l_shift[ent.iProc];
+          Delaunay_AdjO<Tint> adj{ent.f, ent.P, iOrb};
+          l_adj.push_back(adj);
+        }
+        Delaunay_Entry<Tint, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, l_adj};
+        V.push_back(eDel);
+      }
+    }
+  } else {
+    boost::mpi::gather<T>(comm, blk, i_proc_out);
+  }
+  return V;
+}
+
 
 
 template<typename T, typename Tint, typename Tgroup>

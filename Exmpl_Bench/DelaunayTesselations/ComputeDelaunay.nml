@@ -1,8 +1,8 @@
 &DATA
  arithmetic_T = "gmp_rational"
  arithmetic_Tint = "gmp_integer"
-! GRAMfile = "Lambda10.txt"
- GRAMfile = "E6.txt"
+ GRAMfile = "Lambda10.txt"
+! GRAMfile = "E6.txt"
  SVRfile = "unset.svr"
  OutFormat = "nothing"
  OutFile = "ListOrbit"
