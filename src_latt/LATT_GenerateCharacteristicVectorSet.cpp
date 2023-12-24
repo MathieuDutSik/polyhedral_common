@@ -12,6 +12,9 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
       T_shvec_info<T, Tint> info = computeMinimum_GramMat<T,Tint>(GramMat);
       return MatrixFromVectorFamily(info.short_vectors);
     }
+    if (choice == "relevant_voronoi") {
+      return ComputeVoronoiRelevantVector<T,Tint>(GramMat);
+    }
     if (choice == "fullrank") {
       return ExtractInvariantVectorFamilyFullRank<T,Tint>(GramMat);
     }

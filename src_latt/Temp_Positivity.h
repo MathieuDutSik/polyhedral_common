@@ -309,10 +309,12 @@ T EvaluateLineVector(std::vector<T> const& V_mat, MyVector<T> const& V) {
   T sum = 0;
   T pSum = 0;
   int n = V.size();
+  size_t pos = 0;
   for (int i=0; i<n; i++) {
     pSum = 0;
     for (int j=i; j<n; j++) {
       pSum += V_mat[pos] * V[j];
+      pos++;
     }
     sum += pSum * V[i];
   }

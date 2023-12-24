@@ -6,8 +6,8 @@
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
-PROGRAM		= LATT_MPI_ComputeDelaunay
-#PROGRAM		= LATT_GenerateCharacteristicVectorSet
+#PROGRAM		= LATT_MPI_ComputeDelaunay
+PROGRAM		= LATT_GenerateCharacteristicVectorSet
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

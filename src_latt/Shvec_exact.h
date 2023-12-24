@@ -713,6 +713,38 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   return {TheNorm, std::move(ListClos)};
 }
 
+template<typename T, typename Tint>
+MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const& GramMat) {
+  int n = GramMat.rows();
+  std::vector<MyVector<Tint>> ListVect;
+  BlockCppIterator blk(n, 2);
+  for (auto & eVect : blk) {
+    int sum = 0;
+    for (auto & eVal : eVect) {
+      sum += eVal;
+    }
+    if (sum > 0) {
+      MyVector<T> eV(n);
+      for (int u=0; u<n; u++) {
+        T val = UniversalScalarConversion<T,int>(eVect[u]);
+        eV(u) = val / 2;
+        resultCVP<T, Tint> result = CVPVallentinProgram_exact<T,Tint>(GramMat, eV);
+        if (result.ListVect.rows() == 2) {
+          MyVector<Tint> Vins(n);
+          for (int u=0; u<n; u++) {
+            Vins(u) = result.ListVect(0,u) - result.ListVect(1,u);
+          }
+          ListVect.push_back(Vins);
+          ListVect.push_back(-Vins);
+        }
+      }
+    }
+  }
+  return MatrixFromVectorFamily(ListVect);
+}
+
+
+
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
                                    T const &MaxNorm) {
