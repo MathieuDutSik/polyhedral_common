@@ -1,11 +1,10 @@
-#PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_InvariantZBasisShortVectorNoGroup LATT_Automorphism LATT_Isomorphism LATT_near LATT_MPI_ComputeDelaunay LATT_GenerateCharacteristicVectorSet
+#PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_Automorphism LATT_Isomorphism LATT_near LATT_MPI_ComputeDelaunay LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= CheckPositiveSemiDefinite
 #PROGRAM		= LATT_canonicalize
 #PROGRAM		= LATT_canonicalizeMultiple
 #PROGRAM		= LATT_canonicalizeSymplectic
 #PROGRAM		= sv_exact
 PROGRAM		= LATT_MPI_ComputeDelaunay
-#PROGRAM		= LATT_InvariantZBasisShortVectorNoGroup
 
 
 OBJECTS		= $(PROGRAM:%=%.o)
