@@ -204,18 +204,232 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceM
 }
 
 
+template<typename Tvert>
+struct RepartEntry {
+  MyMatrix<Tvert> EXT;
+  int8_t Position; // -1: lower, 0: barrel, 1: higher
+};
+
+template<typename T>
+struct RepartEntryProv {
+  MyVector<T> eFAC;
+  Face Linc;
+  bool Status; // true: YES, false: NO
+};
+
+template<typename Tvert>
+std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> const& ListGen, MyVector<Tvert> const& eV, std::ostream & os) {
+  auto f_prod=[](MyVector<Tvert> const& v, MyMatrix<Tvert> const& M) -> MyVector<Tvert> {
+    return M.transpose() * v;
+  };
+  return OrbitComputation<MyMatrix<Tvert>,MyVector<Tvert>,decltype(f_prod)>(ListGen, eV, f_prod, os);
+}
+
+
 template<typename T, typename Tvert, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tint, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
+std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n = InteriorElement.rows();
+  std::vector<std::vector<Tidx>> ListPermGenList;
+  std::vector<MyMatrix<Tvert>> ListMatGens;
+  Tgroup PermGRP;
+  auto StandardGroupUpdate=[&]() -> void {
+    std::vector<Telt> ListGen;
+    for (auto & eList : ListPermGenList) {
+      Telt x(eList);
+      ListGen.push_back(x);
+    }
+    PermGRP = Tgroup(ListGen);
+  };
+  StandardGroupUpdate();
+  std::vector<MyVector<Tvert>> ListVertices;
+  std::unordered_map<MyVector<Tvert>, size_t> ListVertices_rev;
+  size_t n_vertices = 1;
+  struct TypeOrbitCenter {
+    int iDelaunay;
+    MyMatrix<Tvert> eBigMat;
+    bool status;
+    std::vector<Tidx> Linc;
+    MyVector<Tvert> EXT;
+  };
+  struct TypeOrbitCenterMin {
+    int iDelaunay;
+    MyMatrix<Tvert> eBigMat;
+  };
+  std::vector<TypeOrbitCenter> ListOrbitCenter;
+  auto FuncInsertVertex=[&](MyVector<Tvert> const& eVert) -> void {
+    if (ListVertices_rev.count(eVert) == 1) {
+      break;
+    }
+    std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, os);
+    for (auto &eV : O) {
+      ListVertices.push_back(eV);
+      ListVertices_rev[eV] = n_vertices;
+      n_vertices++;
+    }
+    size_t n_gen = ListPermGenList.size();
+    for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+      std::vector<Tidx> & ePermGen = ListPermGenList[i_gen];
+      MyMatrix<Tvert> eMatrGen = ListMatGens[i_gen];
+      for (auto & eVert : O) {
+        MyVector<Tvert> eVertImg = eMatrGen.transpose() * eVert;
+        size_t pos = ListVertices_rev.at(eVertImg);
+        Tidx pos_idx = static_cast<Tidx>(pos - 1);
+        ePermGen.push_back(pos_idx);
+      }
+    }
+  };
+  auto get_v_positions=[&](MyMatrix<Tvert> const& eMat) -> std::optional<std::vector<Tidx>> {
+    size_t len = n_vertices - 1;
+    std::vector<Tidx> v_ret(len);
+    for (size_t i=0; i<len; i++) {
+      MyVector<Tvert> eVimg = eMat.transpose() * ListVertices[i];
+      size_t pos = ListVertices_rev.at(eVimg);
+      if (pos == 0) {
+        return {};
+      }
+      Tidx pos_idx = static_cast<Tidx>(pos - 1);
+      v_ret[i] = pos_idx;
+    }
+    return v_ret;
+  };
+  auto FuncInsertGenerator=[&](MyMatrix<Tvert> const& eMat) -> void {
+    std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
+    auto get_test_belong=[&]() -> bool {
+      if (opt) {
+        Telt elt(*opt);
+        return PermGRP.isin(elt);
+      } else {
+        std::vector<MyMatrix<Tvert>> LGen = ListMatGens;
+        LGen.push_back(eMat);
+        for (auto & eVert : ListVertices) {
+          for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, os)) {
+            FuncInsertVertex(eVertB);
+          }
+        }
+        return false;
+      }
+    };
+    if (!get_test_belong()) {
+      std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
+      ListPermGenList.push_back(*opt);
+      ListMatGens.push_back(eMat);
+      StandardGroupUpdate();
+    }
+  };
+  auto FuncInsertCenter=[&](TypeOrbitCenterMin const& TheRec) -> void {
+    MyMatrix<Tvert> LVert = ListOrbitDelaunay.l_dels[TheRec.iDelaunay] * TheRec.eBigMat;
+    for (int u=0; u<LVert.rows(); u++) {
+      MyVector<Tvert> eVert = GetMatrixRow(LVert, u);
+      FuncInsertVertex(eVert);
+    }
+    StandardGroupUpdate();
+    auto get_iOrbFound=[&]() -> std::optional<size_t> {
+      for (size_t iOrb=0; iOrb<ListOrbitCenter.size(); iOrb++) {
+        if (ListOrbitCenter[iOrb].iDelaunay == TheRec.iDelaunay) {
+          return iOrb;
+        }
+      }
+      return {};
+    };
+    std::optional<size_t> opt = get_iOrbFound();
+    if (opt) {
+      MyMatrix<Tvert> eGen = Inverse(TheRec.eBigMat) * ListOrbitCenter[*opt].eBigMat;
+      FuncInsertGenerator(eGen);
+    } else {
+      MyMatrix<Tvert> const& BigMatR = TheRec.eBigMat;
+      MyMatrix<Tvert> BigMatI = Inverse(BigMatR);
+      MyMatrix<Tvert> const& EXT = ListOrbitDelaunay.l_dels[TheRec.iDelaunay].obj;
+      for (auto & ePermGen : ListOrbitDelaunay.l_dels[TheRec.iDelaunay].GRPlatt.GeneratorsOfGroup()) {
+        MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, ePermGen);
+        MyMatrix<Tvert> eBigMat_new = BigMatI * eBigMat * BigMatR;
+        FuncInsertGenerator(eBigMat_new);
+      }
+      std::vector<Tidx> Linc;
+      for (auto & eV : LVert) {
+        size_t pos = ListVertices_rev.at(eV);
+        Tidx pos_idx = static_cast<Tidx>(pos - 1);
+        Linc.push_back(pos_idx);
+      }
+      TypeOrbitCenter OrbCent{TheRec.iDelaunay, TheRec.eBigMat, false, Linc, LVert};
+      ListOrbitCenter.push_back(OrbCent);
+    }
+  };
+  TypeOrbitCenterMin TheRec{eIdx, IdentityMat<Tvert>(n+1)};
+  FuncInsertCenter(TheRec);
+  while(true) {
+    bool IsFinished = true;
+    size_t nbCent = ListOrbitCenter.size();
+    for (size_t iCent=0; iCent<nbCent; iCent++) {
+      TypeOrbitCenter & eEnr = ListOrbitCenter[iCent];
+      if (!eEnt.Status) {
+        IsFinished = false;
+        eEnr.Status = true;
+        for (auto & eCase : ListInformationsOneFlipping) {
+          if (eEnr.iDelaunay == eCase.iOrb) {
+            MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].l_adj[eCase.i_adj].P;
+            MyMatrix<Tvert> eBigMatNew = eBigMat * eEnr.eBigMat;
+            TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
+            FuncInsertCenter(TheRec);
+          }
+        }
+      }
+    }
+    if (IsFinished) {
+      break;
+    }
+  }
+  // second part, the convex decomposition
+  int len = ListVertices.rows();
+  MyMatrix<T> TotalListVertices(len, 2+n);
+  for (int i=0; i<len; i++) {
+    
+  }
+}
+
+
+template<typename T, typename Tvert, typename Tgroup>
+DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
   using Tgr = GraphListAdj;
   int n_dels = ListOrbitDelaunay.l_dels.size();
   Tgr Gra(n_dels);
   Face ListMatched(n_dels);
   for (auto & eAI : ListInformationsOneFlipping) {
-    int iOrbAdj = ListOrbitDelaunay.l_dels[eAI.iOrb].l_adj[eAI.i_adj].iOrb;
-    Gra.AddAdjacent(eAI.iOrb, iOrbAdj);
-    Gra.AddAdjacent(iOrbAdj, eAI.iOrb);
     ListMatched[eAI.iOrb] = 1;
-    ListMatched[iOrbAdj] = 1;
+    int iOrbAdj = ListOrbitDelaunay.l_dels[eAI.iOrb].l_adj[eAI.i_adj].iOrb;
+    if (eAI.iOrb != iOrbAdj) {
+      Gra.AddAdjacent(eAI.iOrb, iOrbAdj);
+    }
+  }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  if (!IsSymmetricGraph(Gra)) {
+    std::cerr << "ISO_DEL: The graph is not symmetric\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<std::vector<size_t>> ListConn = ConnectedComponents_set(GR);
+  std::vector<std::vector<size_t>> ListGroupMelt, ListGroupUnMelt;
+  auto is_melt=[&](std::vector<size_t> const& eConn) -> bool {
+    size_t n_matched = 0;
+    for (auto & eVal : eConn) {
+      n_matched += ListMatched[eVal];
+    }
+    if (n_matched == eConn.size()) {
+      return true;
+    }
+    if (n_matched == 0) {
+      return false;
+    }
+    std::cerr << "ISO_DEL: The melt should be total or none at all\n";
+    throw TerminalException{1};
+  };
+  for (auto & eConn : ListConn) {
+    if (is_melt(eConn)) {
+      ListGroupMelt.push_back(eConn);
+    } else {
+      ListGroupUnMelt.push_back(eConn);
+    }
   }
   
 
