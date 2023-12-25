@@ -204,6 +204,23 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceM
 }
 
 
+template<typename T, typename Tvert, typename Tgroup>
+DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tint, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
+  using Tgr = GraphListAdj;
+  int n_dels = ListOrbitDelaunay.l_dels.size();
+  Tgr Gra(n_dels);
+  Face ListMatched(n_dels);
+  for (auto & eAI : ListInformationsOneFlipping) {
+    int iOrbAdj = ListOrbitDelaunay.l_dels[eAI.iOrb].l_adj[eAI.i_adj].iOrb;
+    Gra.AddAdjacent(eAI.iOrb, iOrbAdj);
+    Gra.AddAdjacent(iOrbAdj, eAI.iOrb);
+    ListMatched[eAI.iOrb] = 1;
+    ListMatched[iOrbAdj] = 1;
+  }
+  
+
+}
+
 
 
 
