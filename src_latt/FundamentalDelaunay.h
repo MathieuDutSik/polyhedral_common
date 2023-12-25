@@ -94,7 +94,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
           RetEXT(iVect, 1 + i) = TheCVP.ListVect(iVect, i);
       }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-      os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << EXT.rows() << " vertices\n";
+      os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << RetEXT.rows() << " vertices\n";
 #endif
       return RetEXT;
     } else {
@@ -186,7 +186,7 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint>
 MyMatrix<Tint>
 FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
-                             Face const &eInc, std::string const &CVPmethod, std::ostream& os) {
+                             Face const &eInc, std::string const &CVPmethod, [[maybe_unused]] std::ostream& os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif

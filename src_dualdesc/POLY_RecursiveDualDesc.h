@@ -2312,7 +2312,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 }
 
 template <typename TbasicBank>
-void vectface_update_method(vectface &vfo, TbasicBank &bb, std::ostream &os) {
+void vectface_update_method(vectface &vfo, TbasicBank &bb, [[maybe_unused]] std::ostream &os) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -2851,7 +2851,7 @@ std::string GetNumericalType(FullNamelist const &eFull) {
 }
 
 template <typename T, typename Tidx>
-MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, std::ostream &os) {
+MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
@@ -2876,7 +2876,7 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
 }
 
 template <typename Tgroup>
-Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
+Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
@@ -2888,7 +2888,7 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, std::ostream &os) {
   return GRP;
 }
 
-bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, std::ostream &os) {
+bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   bool intercept_ctrl_c = BlockDATA.ListBoolValues.at("InterceptCtrlC");
 #ifdef DEBUG_RECURSIVE_DUAL_DESC

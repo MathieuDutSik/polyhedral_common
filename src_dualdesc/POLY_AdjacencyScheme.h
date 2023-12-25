@@ -180,7 +180,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            Fsave_status f_save_status, Fload_status f_load_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
-                           std::ostream & os) {
+                           [[maybe_unused]] std::ostream & os) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -507,7 +507,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     boost::optional<boost::mpi::status> prob = comm.iprobe();
     if (prob) {
+#ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: prob is not empty\n";
+#endif
       bool test = process_mpi_status(*prob);
       if (test) {
         break;
@@ -531,17 +533,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
 }
 
-template <typename Tobj, typename Fexist,
-          typename Finsert, typename Fload,
+template <typename Tobj, typename TadjI, typename TadjO,
+          typename Fexist, typename Finsert, typename Fload,
           typename Fsave_status, typename Fload_status,
-          typename Finit, typename Fadj, typename Fhash,
-          typename Frepr>
-bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
-                              Finsert f_insert, Fload f_load,
+          typename Finit, typename Fadj, typename Fset_adj,
+          typename Fhash,
+          typename Frepr, typename Fspann>
+bool compute_adjacency_serial(int const &max_time_second,
+                              Fexist f_exist, Finsert f_insert, Fload f_load,
                               Fsave_status f_save_status, Fload_status f_load_status,
-                              Finit f_init,
-                              Fadj f_adj, Fhash f_hash, Frepr f_repr,
-                              std::ostream& os) {
+                              Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
+                              Fhash f_hash, Frepr f_repr, Fspann f_spann,
+                              [[maybe_unused]] std::ostream& os) {
   SingletonTime start;
   size_t n_obj = 0;
   std::vector<Tobj> V;
@@ -549,7 +552,6 @@ bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
   std::vector<size_t> undone;
   bool early_termination = false;
   auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
-                      bool const &save_if_new
     size_t hash = f_hash(seed_hashmap, x_adjI.obj);
     std::vector<size_t> &vect = map[hash];
     for (auto &idx : vect) {
@@ -559,9 +561,9 @@ bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
         return *opt;
       }
     }
-    V.push_back(x.obj);
+    std::pair<Tobj, TadjO> pair = f_spann(x_adjI, n_obj);
+    V.push_back(pair.first);
     vect.push_back(n_obj);
-    std::pair<Tobj, TadjO> pair = f_spann(x, n_obj);
     bool test = f_insert(n_obj, pair.first);
     if (test) {
       early_termination = true;
@@ -596,7 +598,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fexist f_exist,
       TadjO adj = process_singleEntry_AdjI(y);
       l_adj.push_back(adj);
     }
-    f_set_adj(idx, l_orb);
+    f_set_adj(idx, l_adj);
   };
   while (true) {
     if (!f_exist(n_obj)) {

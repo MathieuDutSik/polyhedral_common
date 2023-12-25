@@ -22,7 +22,8 @@
 #define DEBUG_DELAUNAY_ENUMERATION
 #endif
 
-template <typename T, typename Tint, typename Tgroup> struct DataLattice {
+template <typename T, typename Tint, typename Tgroup>
+struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
@@ -34,7 +35,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
 };
 
 template <typename T, typename Tint, typename Tgroup>
-DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat) {
+DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
   int n = GramMat.rows();
   MyMatrix<T> SHV(0,n);
@@ -44,7 +45,6 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat) {
   bool Saving = false;
   std::string Prefix = "/irrelevant";
   return {n, GramMat, SHV, CVPmethod, AllArr, max_runtime_second, Saving, Prefix};
-  
 }
 
 
@@ -188,7 +188,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
 template <typename T, typename Tint, typename Tgroup>
 size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
                                 size_t const& seed,
-                                MyMatrix<Tint> const& EXT, std::ostream & os) {
+                                MyMatrix<Tint> const& EXT, [[maybe_unused]] std::ostream & os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -470,7 +470,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
     l_obj[i_orb].l_adj = l_adj;
   };
-  auto f_exists=[&](int const& n_obj) -> bool {
+  auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
     return false;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
@@ -546,7 +546,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
     l_obj[i_orb].l_adj = l_adj;
   };
-  auto f_exists=[&](int const& n_obj) -> bool {
+  auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
     return false;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
@@ -581,7 +581,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   if (!test) {
     return {};
   }
-  DelaunayTesselation<Tint,Tgroup>> DT = {l_obj};
+  DelaunayTesselation<Tint,Tgroup> DT = {l_obj};
   return DT;
 }
 

@@ -72,7 +72,7 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
 }
 
 vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf,
-                            std::string const &ansSamp, std::ostream &os) {
+                            std::string const &ansSamp, [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MPI_FCT
   os << "MPI_FCT: merge_initial_samp, |vf|=" << vf.size() << "\n";
 #endif
@@ -430,7 +430,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     comm.recv(source, tag, vf);
     return vf;
   }
-  bool clear_one_entry(std::ostream &os) {
+  bool clear_one_entry([[maybe_unused]] std::ostream &os) {
     auto process = [&](int chosen_iproc, int idx) -> bool {
       if (chosen_iproc == -1)
         return false;
@@ -440,9 +440,11 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
       return true;
     };
     if (strict) {
-      size_t nb_undone = rsl.clear_and_get_nb_undone();
 #ifdef DEBUG_MPI_FCT
+      size_t nb_undone = rsl.clear_and_get_nb_undone();
       os << "MPI_FCT: strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
+#else
+      (void)rsl.clear_and_get_nb_undone();
 #endif
       size_t max_siz = 0;
       int chosen_iproc = -1;
@@ -539,11 +541,11 @@ template <typename Tint> struct database_balinski_info {
         last_update(n_proc, get_cpp_time(7, 1, 1974)),
         last_database_update_time(get_cpp_time(6, 1, 1974)),
         ToBeAnswered(n_proc) {}
-  bool get_status(std::ostream &os) const {
+  bool get_status([[maybe_unused]] std::ostream &os) const {
     for (int i_proc = 0; i_proc < n_proc; i_proc++)
       if (ListStatus_Emptyness[i_proc] == 0) {
-        int val = ListStatus_Emptyness[i_proc];
 #ifdef DEBUG_MPI_FCT
+        int val = ListStatus_Emptyness[i_proc];
         os << "MPI_FCT: Returning false at i_proc=" << i_proc << " val=" << val << "\n";
 #endif
         return false;
@@ -590,7 +592,7 @@ template <typename Tint> struct database_balinski_info {
     ListStatus_Emptyness[i_rank] = 1;
     last_database_update_time = std::chrono::system_clock::now();
   }
-  void flush(std::ostream &os) {
+  void flush([[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MPI_FCT
     os << "MPI_FCT: Beginning of flush operation\n";
 #endif
@@ -598,10 +600,10 @@ template <typename Tint> struct database_balinski_info {
     for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
         bool test = last_database_update_time > last_update[i_proc];
+#ifdef DEBUG_MPI_FCT
         int dur_i = std::chrono::duration_cast<std::chrono::seconds>(
                         last_database_update_time - last_update[i_proc])
                         .count();
-#ifdef DEBUG_MPI_FCT
         os << "MPI_FCT: i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc]
            << " test=" << test << " dur_i=" << dur_i << "\n";
 #endif
@@ -614,7 +616,7 @@ template <typename Tint> struct database_balinski_info {
       }
     }
   }
-  void submit_request_uoi(std::ostream &os) {
+  void submit_request_uoi([[maybe_unused]] std::ostream &os) {
     // First checking natively
 #ifdef DEBUG_MPI_FCT
     os << "MPI_FCT: Beginning of submit_uoi\n";
