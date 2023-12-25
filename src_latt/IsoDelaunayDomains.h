@@ -203,18 +203,21 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceM
   throw TerminalException{1};
 }
 
-
-template<typename Tvert>
-struct RepartEntry {
-  MyMatrix<Tvert> EXT;
-  int8_t Position; // -1: lower, 0: barrel, 1: higher
+template<typename Tvert, typename Tgroup>
+struct AdjRepart {
+  int iOrb;
+  std::vector<typename Tgroup::Telt::Tidx> eInc;
+  MyMatrix<Tvert> eBigMat;
 };
 
-template<typename T>
-struct RepartEntryProv {
-  MyVector<T> eFAC;
-  Face Linc;
-  bool Status; // true: YES, false: NO
+template<typename Tvert, typename Tgroup>
+struct RepartEntry {
+  MyMatrix<Tvert> EXT;
+  Tgroup TheStab;
+  int8_t Position; // -1: lower, 0: barrel, 1: higher
+  int iDelaunayOrigin;
+  std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+  MyMatrix<Tvert> eBigMat;
 };
 
 template<typename Tvert>
@@ -227,7 +230,7 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
 
 
 template<typename T, typename Tvert, typename Tgroup>
-std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
+std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = InteriorElement.rows();
@@ -381,11 +384,30 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     }
   }
   // second part, the convex decomposition
-  int len = ListVertices.rows();
+  int nVert = ListVertices.rows();
   MyMatrix<T> TotalListVertices(len, 2+n);
-  for (int i=0; i<len; i++) {
-    
+  std::vector<T> LineInterior = GetLineVector(InteriorElement);
+  MyVector<Tvert> eV(n);
+  for (int iVert=0; iVert<nVert; iVert++) {
+    for (int iCol=1; iCol<n; iCol++) {
+      T val = UniversalScalarConversion<T,Tvert>(ListVertices(iVert, iCol+1));
+      TotalListVertices(iVert, iCol+1) = val;
+      eV(iCol) = val;
+    }
+    T Height = EvaluateLineVector(LineInterior, eV);
+    TotalListVertices(iVert, n+1) = Height;
   }
+  struct RepartEntryProv {
+    MyVector<T> eFAC;
+    std::vector<Tidx> Linc;
+    bool Status; // true: YES, false: NO
+  };
+  std::vector<RepartEntry<Tvert, Tgroup>> ListOrbitFacet;
+  std::vector<RepartEntryProv> ListOrbitFacet_prov;
+  for (auto & eRec : ListOrbitCenter) {
+    MyVector<T> eFac = FindFacetInequality(TotalListVertices
+  }
+  
 }
 
 

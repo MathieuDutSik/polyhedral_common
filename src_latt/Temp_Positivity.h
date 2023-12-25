@@ -321,6 +321,23 @@ T EvaluateLineVector(std::vector<T> const& V_mat, MyVector<T> const& V) {
   return sum;
 }
 
+template<typename T>
+T EvaluateLineVectorShift(std::vector<T> const& V_mat, MyVector<T> const& V, int shift) {
+  T sum = 0;
+  T pSum = 0;
+  int n = V.size();
+  size_t pos = 0;
+  for (int i=shift; i<n; i++) {
+    pSum = 0;
+    for (int j=i; j<n; j++) {
+      pSum += V_mat[pos] * V[j];
+      pos++;
+    }
+    sum += pSum * V[i];
+  }
+  return sum;
+}
+
 
 // clang-format off
 #endif  // SRC_LATT_TEMP_POSITIVITY_H_
