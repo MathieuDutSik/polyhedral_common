@@ -230,7 +230,7 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
 
 
 template<typename T, typename Tvert, typename Tgroup>
-std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo, std::ostream & os) {
+std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = InteriorElement.rows();
@@ -269,7 +269,7 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     if (ListVertices_rev.count(eVert) == 1) {
       break;
     }
-    std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, os);
+    std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, rddo.os);
     for (auto &eV : O) {
       ListVertices.push_back(eV);
       ListVertices_rev[eV] = n_vertices;
@@ -311,7 +311,7 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
         std::vector<MyMatrix<Tvert>> LGen = ListMatGens;
         LGen.push_back(eMat);
         for (auto & eVert : ListVertices) {
-          for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, os)) {
+          for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, rddo.os)) {
             FuncInsertVertex(eVertB);
           }
         }
@@ -482,7 +482,7 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
         MyMatrix<Tvert> EXT1 = SelectRow(ListVertices, Linc_face);
         MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
         vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
-        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
+        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, rddo.os);
         for (auto & eFace : vf) {
           Face eInc = frame.FlipFace(eFace);
           MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
@@ -511,7 +511,7 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
 
 
 template<typename T, typename Tvert, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr, [[maybe_unused]] std::ostream & os) {
+DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Tgr = GraphListAdj;
   int n_dels = ListOrbitDelaunay.l_dels.size();
   Tgr Gra(n_dels);
@@ -552,8 +552,63 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       ListGroupUnMelt.push_back(eConn);
     }
   }
+  std::vector<std::vector<RepartEntry<Tvert>>> ListInfo;
+  for (auto &eConn : ListGroupMelt) {
+    Tidx eIdx = eConn[0];
+    std::vector<RepartEntry<Tvert>> LORB2 = FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement, rddo);
+    ListInfo.push_back(LORB2);
+  }
+  int n_info = ListInfo.size();
+  int8_t Position_old = 4, Position_old = 5;
+  struct DelaunaySymb {
+    int8_t Position;
+    int iDelaunay;
+    int iInfo;
+    int iFacet;
+  };
+  std::vector<DelaunaySymb> NewListOrbitDelaunay;
+  auto get_symbol_position=[&](DelaunaySymb const& ds) -> size_t {
+    if (ds.Position == Position_old) {
+      for (size_t i=0; i<NewListOrbitDelaunay.size(); i++) {
+        if (NewListOrbitDelaunay[i].Position == ds.Position_old) {
+          if (NewListOrbitDelaunay[i].iDelaunay == ds.iDelaunay) {
+            return i;
+          }
+        }
+      }
+    }
+    if (ds.Position == Position_new) {
+      for (size_t i=0; i<NewListOrbitDelaunay.size(); i++) {
+        if (NewListOrbitDelaunay[i].Position == ds.Position_new) {
+          if (NewListOrbitDelaunay[i].iInfo == ds.iInfo && NewListOrbitDelaunay[i].iFacet == ds.iFacet) {
+            return i;
+          }
+        }
+      }
+    }
+    std::cerr << "Error in get_symbol_position\n";
+    throw TerminalException{1};
+  };
+  for (auto & eConn : ListGroupUnMelt) {
+    if (eConn.size() > 1) {
+      std::cerr << "Error of connected component computation\n";
+      throw TerminalException{1};
+    }
+    int iDelaunay = eConn[0];
+    DelaunaySymb ds{Position_old, iDelaunay, -1, -1};
+    NewListOrbitDelaunay.push_back(ds);
+  }
+  for (int iInfo=0; iInfo<n_info; iInfo++) {
+    int n_facet = ListInfo[iInfo].size();
+    for (int iFacet=0; iFacet<n_facet; iFacet++) {
+      int8_t Position = ListInfo[iInfo][iFacet].Position;
+      if (Position == 1) {
+        DelaunaySymb ds{Position_old, -1, iInfo, iFacet};
+        NewListOrbitDelaunay.push_back(ds);
+      }
+    }
+  }
   
-
 }
 
 
