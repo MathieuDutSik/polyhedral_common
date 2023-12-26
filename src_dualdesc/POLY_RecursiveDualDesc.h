@@ -35,7 +35,7 @@
 #endif
 
 #ifdef DEBUG
-#define DEBUG_CANONICAL_LIMITED
+//#define DEBUG_CANONICAL_LIMITED
 #define DEBUG_RECURSIVE_DUAL_DESC
 #endif
 
