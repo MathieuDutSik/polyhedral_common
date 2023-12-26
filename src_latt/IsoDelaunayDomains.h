@@ -260,6 +260,10 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     int iDelaunay;
     MyMatrix<Tvert> eBigMat;
   };
+  struct FacetEntryEquiv {
+    int iOrb;
+    MyMatrix<Tvert> eBigMat;
+  };
   std::vector<TypeOrbitCenter> ListOrbitCenter;
   auto FuncInsertVertex=[&](MyVector<Tvert> const& eVert) -> void {
     if (ListVertices_rev.count(eVert) == 1) {
@@ -398,15 +402,66 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     TotalListVertices(iVert, n+1) = Height;
   }
   struct RepartEntryProv {
-    MyVector<T> eFAC;
+    MyVector<T> eFac;
     std::vector<Tidx> Linc;
+    Face Linc_face;
     bool Status; // true: YES, false: NO
   };
   std::vector<RepartEntry<Tvert, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
   for (auto & eRec : ListOrbitCenter) {
-    MyVector<T> eFac = FindFacetInequality(TotalListVertices
+    Face Linc_face = VectorToFace(eRec.Linc);
+    MyVector<T> eFac = FindFacetInequality(TotalListVertices, Linc_face);
+    Tgroup TheStab;
+    bool Status = false;
+    int8_t Position = -1;
+    std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+    int iDelaunayOrigin = eRec.iDelaunay;
+    MyMatrix<Tvert> const& eBigMat = eRec.eBigMat;
+    MyMatrix<Tvert> const& EXT = eRec.EXT;
+    RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
+    RepartEntryProv rep{eFac, eRec.Linc, Linc_face, Status};
+    ListOrbitFacet.push_back(re);
+    ListOrbitFacet_prov.push_back(rep);
   }
+  auto FuncInsertFace=[&](MyVector<T> const& eFac) -> FacetEntryEquiv {
+    std::vector<Tidx> Linc;
+    Face Linc_face(nVert);
+    for (int iVert=0; iVert<nVert; iVert++) {
+      T eSum = 0;
+      for (int u=0; u<=n+1; u++) {
+        eSum += TotalListVertices(iVert,u) * eFac(u);
+      }
+      if (eSum == 0) {
+        Linc.push_back(iVert);
+        Linc_face[iVert] = 1;
+      }
+    }
+    int nOrb = ListOrbitFacet.size();
+    for (int iOrb=0; iOrb<nOrb; iOrb++) {
+      std::optional<Telt> opt = PermGRP.RepresentativeAction(ListOrbitFacet_prov[iOrb].Linc_face, Linc_face);
+      if (opt) {
+        MyMatrix<Tvert> const& EXT = ListOrbitFacet[iOrb].EXT;
+        MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+        return {iOrb, eBigMat};
+      }
+    }
+    // A new facet is either barrel or higher because we put all the loiwer ones already
+    int8_t Position = 1;
+    if (eFac(n+1) == 0) {
+      Position = 0;
+    }
+    bool Status = false;
+    Tgroup TheStab;
+    int iDelaunayOrigin = -1;
+    std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+    MyMatrix<Tvert> eBigMat;
+    RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
+    RepartEntryProv rep{eFac, eLinc, Linc_face, Status};
+    int iOrb = nOrb;
+    MyMatrix<Tvert> eBigMat = IdentityMat<Tvert>(n+1);
+    return {iOrb, eBigMat};
+  };
   
 }
 
