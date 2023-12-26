@@ -110,6 +110,17 @@ int main(int argc, char *argv[]) {
       std::cerr
           << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
       std::cerr << "     field whose description is in FileDesc\n";
+      std::cerr << "\n";
+      std::cerr << "        --- OutFormat ---\n";
+      std::cerr << "\n";
+      std::cerr << "GAP   : Output to a GAP readable format (default)\n";
+      std::cerr << "Oscar : Output to a CPP like format\n";
+      std::cerr << "\n";
+      std::cerr << "        --- FileGRP ---\n";
+      std::cerr << "\n";
+      std::cerr << "stderr : standard error (default)\n";
+      std::cerr << "stdout : standard output\n";
+      std::cerr << "otherwise output to the named file\n";
       return -1;
     }
     //
