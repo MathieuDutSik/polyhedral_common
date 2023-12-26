@@ -401,6 +401,13 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     T Height = EvaluateLineVector(LineInterior, eV);
     TotalListVertices(iVert, n+1) = Height;
   }
+  auto get_incd_status=[&](int iVert, MyVector<T> const& eFac) -> bool {
+    T eSum = 0;
+    for (int u=0; u<=n+1; u++) {
+      eSum += TotalListVertices(iVert,u) * eFac(u);
+    }
+    return eSum == 0;
+  };
   struct RepartEntryProv {
     MyVector<T> eFac;
     std::vector<Tidx> Linc;
@@ -424,15 +431,11 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
   }
-  auto FuncInsertFace=[&](MyVector<T> const& eFac) -> FacetEntryEquiv {
+  auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> AdjReport<Tvert, Tgroup> {
     std::vector<Tidx> Linc;
     Face Linc_face(nVert);
     for (int iVert=0; iVert<nVert; iVert++) {
-      T eSum = 0;
-      for (int u=0; u<=n+1; u++) {
-        eSum += TotalListVertices(iVert,u) * eFac(u);
-      }
-      if (eSum == 0) {
+      if (get_incd_status(iVert, eFac)) {
         Linc.push_back(iVert);
         Linc_face[iVert] = 1;
       }
@@ -443,7 +446,7 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
       if (opt) {
         MyMatrix<Tvert> const& EXT = ListOrbitFacet[iOrb].EXT;
         MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
-        return {iOrb, eBigMat};
+        return {iOrb, {}, eBigMat};
       }
     }
     // A new facet is either barrel or higher because we put all the loiwer ones already
@@ -458,11 +461,52 @@ std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eId
     MyMatrix<Tvert> eBigMat;
     RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
     RepartEntryProv rep{eFac, eLinc, Linc_face, Status};
+    ListOrbitFacet.push_back(re);
+    ListOrbitFacet_prov.push_back(rep);
     int iOrb = nOrb;
     MyMatrix<Tvert> eBigMat = IdentityMat<Tvert>(n+1);
-    return {iOrb, eBigMat};
+    return {iOrb, {}, eBigMat};
   };
-  
+  using Text_int = typename SubsetRankOneSolver<T>::Tint;
+  MyMatrix<Text_int> TotalListVertices_int = Get_EXT_int(TotalListVertices);
+  while(true) {
+    bool IsFinished = true;
+    int nOrb = ListOrbitFacet.size();
+    for (int iOrb=0; iOrb<nOrb; iOrb++) {
+      if (!ListOrbitFacet_prov[iOrb].Status) {
+        Face const& Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
+        Tgroup Stab = PermGRP.Stabiliser_OnSets(Linc_face);
+        Tgroup TheStab = RenormStabilizer(Stab);
+        ListOrbitFacet[iOrb].TheStab = TheStab;
+        std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+        MyMatrix<Tvert> EXT1 = SelectRow(ListVertices, Linc_face);
+        MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
+        vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
+        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
+        for (auto & eFace : vf) {
+          Face eInc = frame.FlipFace(eFace);
+          MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
+          AdjReport<Tvert, Tgroup> eAdj = FuncInsertFacet(eFac);
+          std::vector<Tidx> eInc;
+          for (size_t iInc=0; iInc<ListOrbitFacet_prov[iOrb].Linc.size(); iInc++) {
+            Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
+            if (get_incd_status(jInc, eFac)) {
+              eInc.push_back(iInc);
+            }
+          }
+          eAdj.eInc = eInc;
+          ListAdj.push_back(eAdj);
+        }
+        ListOrbitFacet[iOrb].ListAdj = ListAdj;
+        ListOrbitFacet_prov[iOrb].Status = true;
+        IsFinished = false;
+      }
+    }
+    if (IsFinished) {
+      break;
+    }
+  }
+  return ListOrbitFacet;
 }
 
 
