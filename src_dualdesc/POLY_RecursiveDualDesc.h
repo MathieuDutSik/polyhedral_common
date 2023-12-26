@@ -3101,7 +3101,7 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, Record
   std::string BANK_Prefix = "totally_irrelevant_first";
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  PrintPolyHeuristicSerial(AllArr, os);
+  PrintPolyHeuristicSerial(rddo.AllArr, rddo.os);
 #endif
   //
   std::string DD_Prefix = "totally_irrelevant_second";
