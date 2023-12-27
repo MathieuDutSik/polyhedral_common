@@ -230,7 +230,7 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
 
 
 template<typename T, typename Tvert, typename Tgroup>
-std::vector<RepartEntry<Tvert>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
+std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = InteriorElement.rows();
@@ -552,11 +552,25 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       ListGroupUnMelt.push_back(eConn);
     }
   }
-  std::vector<std::vector<RepartEntry<Tvert>>> ListInfo;
+  std::vector<std::vector<RepartEntry<Tvert,Tgroup>>> ListInfo;
+  std::vector<int> vect_iInfo(n_dels, -1);
+  std::vector<int> vect_lower_iFacet(n_dels, -1);
+  int iInfo = 0;
   for (auto &eConn : ListGroupMelt) {
     Tidx eIdx = eConn[0];
-    std::vector<RepartEntry<Tvert>> LORB2 = FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement, rddo);
+    std::vector<RepartEntry<Tvert,Tgroup>> LORB2 = FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement, rddo);
+    int n_facet = LORB2.size();
+    for (int iFacet=0; iFacet<n_facet; iFacet++) {
+      RepartEntry<Tvert,Tgroup> const& eFacet = LORB2[iFacet];
+      if (eFacet.Position == -1) {
+        vect_lower_iFacet[eFacet.iDelaunayOrigin] = iFacet;
+      }
+    }
     ListInfo.push_back(LORB2);
+    for (auto &pos : eConn) {
+      vect_iInfo[pos] = iInfo;
+    }
+    iInfo++;
   }
   int n_info = ListInfo.size();
   int8_t Position_old = 4, Position_old = 5;
@@ -642,9 +656,20 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       int iDelaunay = ds.iDelaunay;
       for (auto & eAdj : ListOrbitDelaunay.l_dels[iDelaunay].l_adj) {
         int iDelaunayOld = eAdj.iOrb;
-        if (ListMatched[iDelaunayOld] == 0) {
-          
+        DelaunaySymb ds_search{Position_Old, iDelaunayOld, -1, -1};
+        std::optional<size_t> opt = get_symbol_position(ds_search);
+        if (opt) {
+          Delaunay_AdjO<Tvert> NAdj{eAdj.f, eAdj.P, *opt};
+          check_adj(iOrb, NAdj, "Case 1");
+          ListAdj.push_back(NAdj);
         } else {
+          int iInfo = vect_iInfo[iDelaunayOld];
+          int iFacet = vect_lower_iFacet[iDelaunayOld];
+          RepartEntry<Tvert,Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
+          MyMatrix<Tvert> const& BigMat2 = eFacet.eBigMat;
+          MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj * eAdj.P;
+          Face Linc(ImageEXT.rows());
+          for (auto & iVert : 
         }
       }
     } else {
