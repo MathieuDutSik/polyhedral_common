@@ -567,7 +567,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     int iFacet;
   };
   std::vector<DelaunaySymb> NewListOrbitDelaunay;
-  auto get_symbol_position=[&](DelaunaySymb const& ds) -> size_t {
+  auto get_symbol_position=[&](DelaunaySymb const& ds) -> std::optional<size_t> {
     if (ds.Position == Position_old) {
       for (size_t i=0; i<NewListOrbitDelaunay.size(); i++) {
         if (NewListOrbitDelaunay[i].Position == ds.Position_old) {
@@ -586,9 +586,9 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
         }
       }
     }
-    std::cerr << "Error in get_symbol_position\n";
-    throw TerminalException{1};
+    return {};
   };
+  std::vector<Delaunay_Entry<Tvert,Tgroup>> l_dels;
   for (auto & eConn : ListGroupUnMelt) {
     if (eConn.size() > 1) {
       std::cerr << "Error of connected component computation\n";
@@ -597,6 +597,8 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     int iDelaunay = eConn[0];
     DelaunaySymb ds{Position_old, iDelaunay, -1, -1};
     NewListOrbitDelaunay.push_back(ds);
+    Delaunay_Entry<Tvert, Tgroup> del{ListOrbitDelaunay[iDelaunay].obj, ListOrbitDelaunay[iDelaunay].GRP, {}};
+    l_dels.push_back(del);
   }
   for (int iInfo=0; iInfo<n_info; iInfo++) {
     int n_facet = ListInfo[iInfo].size();
@@ -605,10 +607,50 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       if (Position == 1) {
         DelaunaySymb ds{Position_old, -1, iInfo, iFacet};
         NewListOrbitDelaunay.push_back(ds);
+        MyMatrix<Tvert> EXT = ListInfo[iInfo][iFacet].EXT;
+        Tgroup GRP = ListInfo[iInfo][iFacet].TheStab;
+        Delaunay_Entry<Tvert, Tgroup> del{EXT, GRP, {} };
+        l_dels.push_back(del);
       }
     }
   }
-  
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  auto check_adj=[&](int iOrb, Delaunay_AdjO<Tvert> const& NewAdj, std::string const& context) -> void {
+    MyMatrix<Tvert> const& EXT = l_dels[iOrb].obj;
+    ContainerMatrix<Tint> cont(EXT);
+    Face f_att(EXT.rows());
+    MyMatrix<Tvert> EXTadj = l_dels[NewAdj.iOrb] * NewAdj.P;
+    int len = EXTadj.rows();
+    for (int iVert=0; iVert<len; iVert++) {
+      MyVector<Tvert> V = GetMatrixRow(EXTadj, u);
+      std::optional<size_t> opt = cont.GetIdx_v(V);
+      if (opt) {
+        f_att[*opt] = 1;
+      }
+    }
+    if (f_att != NewAdj.f) {
+      std::cerr << "Consistency error in context=" << context << "\n";
+      throw TerminalException{1};
+    }
+  };
+#endif
+  int n_del_ret = l_dels.size();
+  for (int iOrb=0; iOrb<n_del_ret; iOrb++) {
+    DelaunaySymb ds = NewListOrbitDelaunay[iOrb];
+    std::vector<Delaunay_AdjO<Tvert>> ListAdj;
+    if (ds.Position == Position_old) {
+      int iDelaunay = ds.iDelaunay;
+      for (auto & eAdj : ListOrbitDelaunay.l_dels[iDelaunay].l_adj) {
+        int iDelaunayOld = eAdj.iOrb;
+        if (ListMatched[iDelaunayOld] == 0) {
+          
+        } else {
+        }
+      }
+    } else {
+    }
+  }
+  return {l_dels};
 }
 
 
