@@ -252,7 +252,7 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
 
 template<typename Tint>
 struct Delaunay_AdjI {
-  Face f;
+  Face eInc;
   MyMatrix<Tint> obj;
 };
 
@@ -260,44 +260,44 @@ namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("f", eRec.f);
+    ar &make_nvp("eInc", eRec.eInc);
     ar &make_nvp("obj", eRec.obj);
   }
 }
 
 template<typename Tint>
 struct Delaunay_MPI_AdjO {
-  Face f;
-  MyMatrix<Tint> P;
   int iProc;
   int iOrb;
+  Face eInc;
+  MyMatrix<Tint> eBigMat;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("f", eRec.f);
-    ar &make_nvp("P", eRec.P);
     ar &make_nvp("iProc", eRec.iProc);
     ar &make_nvp("iOrb", eRec.iOrb);
+    ar &make_nvp("eInc", eRec.eInc);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
 
 template<typename Tint>
 struct Delaunay_AdjO {
-  Face f;
-  MyMatrix<Tint> P;
   int iOrb;
+  Face eInc;
+  MyMatrix<Tint> eBigMat;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("f", eRec.f);
-    ar &make_nvp("P", eRec.P);
     ar &make_nvp("iOrb", eRec.iOrb);
+    ar &make_nvp("eInc", eRec.eInc);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
 
@@ -305,7 +305,7 @@ template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
   MyMatrix<Tint> obj;
   Tgroup GRP;
-  std::vector<Delaunay_MPI_AdjO<Tint>> l_adj;
+  std::vector<Delaunay_MPI_AdjO<Tint>> ListAdj;
 };
 
 namespace boost::serialization {
@@ -314,7 +314,7 @@ namespace boost::serialization {
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("obj", eRec.obj);
     ar &make_nvp("GRP", eRec.GRP);
-    ar &make_nvp("l_adj", eRec.iOrb);
+    ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
 
@@ -322,7 +322,7 @@ template<typename Tint, typename Tgroup>
 struct Delaunay_Entry {
   MyMatrix<Tint> obj;
   Tgroup GRP;
-  std::vector<Delaunay_AdjO<Tint>> l_adj;
+  std::vector<Delaunay_AdjO<Tint>> ListAdj;
 };
 
 namespace boost::serialization {
@@ -331,7 +331,7 @@ namespace boost::serialization {
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("obj", eRec.obj);
     ar &make_nvp("GRP", eRec.GRP);
-    ar &make_nvp("l_adj", eRec.iOrb);
+    ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
 
@@ -361,13 +361,13 @@ DelaunayTesselation<Tint,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
     }
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       for (int u=0; u<l_sizes[i_proc]; u++) {
-        std::vector<Delaunay_Entry<Tint, Tgroup>> l_adj;
-        for (auto & ent : l_blk[i_proc][u].l_adj) {
+        std::vector<Delaunay_Entry<Tint, Tgroup>> ListAdj;
+        for (auto & ent : l_blk[i_proc][u].ListAdj) {
           int iOrb = ent.iOrb + l_shift[ent.iProc];
-          Delaunay_AdjO<Tint> adj{ent.f, ent.P, iOrb};
-          l_adj.push_back(adj);
+          Delaunay_AdjO<Tint> adj{iOrb, ent.eInc, ent.eBigMat, iOrb};
+          ListAdj.push_back(adj);
         }
-        Delaunay_Entry<Tint, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, l_adj};
+        Delaunay_Entry<Tint, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, ListAdj};
         V.push_back(eDel);
       }
     }
@@ -383,19 +383,19 @@ void check_delaunay_tessellation(std::vector<Delaunay_Entry<Tint, Tgroup>> const
   for (auto & eDel : l_del) {
     MyMatrix<Tint> const& EXT = eDel.obj;
     ContainerMatrix<Tint> cont(EXT);
-    for (auto & e_adj : eDel.l_adj) {
-      Face const& f = e_adj.f;
-      Face f_att(EXT.rows());
-      MyMatrix<Tint> EXTadj = l_del[e_adj.iOrb] * e_adj.P;
+    for (auto & eAdj : eDel.ListAdj) {
+      Face const& eInc = eAdj.eInc;
+      Face eIncEff(EXT.rows());
+      MyMatrix<Tint> EXTadj = l_del[eAdj.iOrb] * eAdj.P;
       int len = EXTadj.rows();
       for (int u=0; u<len; u++) {
         MyVector<Tint> V = GetMatrixRow(EXTadj, u);
         std::optional<size_t> opt = cont.GetIdx_v(V);
         if (opt) {
-          f_att[*opt] = 1;
+          eIncEff[*opt] = 1;
         }
       }
-      if (f_att != f) {
+      if (eIncEff != eInc) {
         std::cerr << "Inconsistency in the adjacency\n";
         throw TerminalException{1};
       }
@@ -419,16 +419,16 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
 #endif
-  std::vector<Delaunay_AdjI<Tint>> l_adj;
+  std::vector<Delaunay_AdjI<Tint>> ListAdj;
   for (auto &eOrbB : TheOutput) {
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
     Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
-    l_adj.push_back(eAdj);
+    ListAdj.push_back(eAdj);
   }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: |l_adj|=" << l_adj.size() << "\n";
+  os << "DEL_ENUM: |ListAdj|=" << ListAdj.size() << "\n";
 #endif
-  return {GRPlatt, std::move(l_adj)};
+  return {GRPlatt, std::move(ListAdj)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -467,8 +467,8 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
-    l_obj[i_orb].l_adj = l_adj;
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+    l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
     return false;
@@ -526,14 +526,14 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     if (!opt) {
       return {};
     }
-    MyMatrix<Tint> const& P = *opt;
-    TadjO ret{y.f, P, i_orb};
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{i_orb, y.eInc, eBigMat};
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj EXT = x.obj;
-    MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
-    TadjO ret{x.f, std::move(P), i_orb};
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
+    TadjO ret{i_orb, x.eInc, std::move(eBigMat)};
     return {std::move(EXT), ret};
   };
   std::vector<Delaunay_Entry<Tint,Tgroup>> l_obj;
@@ -543,8 +543,8 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& l_adj) -> void {
-    l_obj[i_orb].l_adj = l_adj;
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+    l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
     return false;

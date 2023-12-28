@@ -113,13 +113,13 @@ std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelau
   std::unordered_map<MyVector<T>,std::vector<AdjInfo>> map;
   int n_del = DT.l_dels.size();
   for (int i_del=0; i_del<n_del; i_del++) {
-    int n_adj = DT.l_dels.l_adj.size();
+    int n_adj = DT.l_dels[i_del].ListAdj.size();
     VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute(DT.l_dels[i_del].obj);
     ContainerMatrix<Tvert> cont(DT.l_dels[i_del].obj);
     auto get_ineq=[&](int const& i_adj) -> MyVector<T> {
-      Delaunay_AdjO<Tvert> adj = DT.l_dels[i_del].l_adj[i_adj];
+      Delaunay_AdjO<Tvert> adj = DT.l_dels[i_del].ListAdj[i_adj];
       int j_del = adj.iOrb;
-      MyMatrix<Tvert> EXTadj = DT.l_dels[j_del].obj * adj.P;
+      MyMatrix<Tvert> EXTadj = DT.l_dels[j_del].obj * adj.eBigMat;
       int len = EXTadj.rows();
       for (int u=0; u<len; u++) {
         MyVector<Tvert> TheVert = GetMatrixRow(EXTadj, u);
@@ -206,7 +206,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceM
 template<typename Tvert, typename Tgroup>
 struct AdjRepart {
   int iOrb;
-  std::vector<typename Tgroup::Telt::Tidx> eInc;
+  Face eInc;
   MyMatrix<Tvert> eBigMat;
 };
 
@@ -216,7 +216,7 @@ struct RepartEntry {
   Tgroup TheStab;
   int8_t Position; // -1: lower, 0: barrel, 1: higher
   int iDelaunayOrigin;
-  std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+  std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
   MyMatrix<Tvert> eBigMat;
 };
 
@@ -375,7 +375,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
         eEnr.Status = true;
         for (auto & eCase : ListInformationsOneFlipping) {
           if (eEnr.iDelaunay == eCase.iOrb) {
-            MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].l_adj[eCase.i_adj].P;
+            MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
             MyMatrix<Tvert> eBigMatNew = eBigMat * eEnr.eBigMat;
             TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
             FuncInsertCenter(TheRec);
@@ -422,7 +422,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     Tgroup TheStab;
     bool Status = false;
     int8_t Position = -1;
-    std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+    std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
     int iDelaunayOrigin = eRec.iDelaunay;
     MyMatrix<Tvert> const& eBigMat = eRec.eBigMat;
     MyMatrix<Tvert> const& EXT = eRec.EXT;
@@ -457,7 +457,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     bool Status = false;
     Tgroup TheStab;
     int iDelaunayOrigin = -1;
-    std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+    std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
     MyMatrix<Tvert> eBigMat;
     RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
     RepartEntryProv rep{eFac, eLinc, Linc_face, Status};
@@ -478,7 +478,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
         Tgroup Stab = PermGRP.Stabiliser_OnSets(Linc_face);
         Tgroup TheStab = RenormStabilizer(Stab);
         ListOrbitFacet[iOrb].TheStab = TheStab;
-        std::vector<AdjRepart<Tvert, Tgroup>> ListAdj;
+        std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
         MyMatrix<Tvert> EXT1 = SelectRow(ListVertices, Linc_face);
         MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
         vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
@@ -518,7 +518,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
   Face ListMatched(n_dels);
   for (auto & eAI : ListInformationsOneFlipping) {
     ListMatched[eAI.iOrb] = 1;
-    int iOrbAdj = ListOrbitDelaunay.l_dels[eAI.iOrb].l_adj[eAI.i_adj].iOrb;
+    int iOrbAdj = ListOrbitDelaunay.l_dels[eAI.iOrb].ListAdj[eAI.i_adj].iOrb;
     if (eAI.iOrb != iOrbAdj) {
       Gra.AddAdjacent(eAI.iOrb, iOrbAdj);
     }
@@ -572,6 +572,69 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     }
     iInfo++;
   }
+  struct MatchFacet {
+    Delaunay_AdjO<Tvert> adj;
+    MyMatrix<Tvert> eBigMat;
+  };
+  auto get_matching_listinfo=[&](int iInfo, int iFacet, Face eInc) -> MatchFacet {
+    MyMatrix<Tvert> const& EXT = ListInfo[iInfo][iFacet].EXT;
+    for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
+      std::optional<Telt> opt = ListInfo[iInfo][iFacet].GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+      if (opt) {
+        MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+        return {eAdj, eBigMat};
+      }
+    }
+    std::cerr << "Failed to find a matching entry in get_matching_listinfo\n";
+    throw TerminalException{1};
+  };
+  auto get_matching_old_tessel=[&](int iDelaunayOld, Face eInc) -> MatchFacet {
+    MyMatrix<Tvert> const& EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj;
+    for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
+      std::optional<Telt> opt = ListOrbitDelaunay.l_dels[iDelaunayOld].GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+      if (opt) {
+        MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+        return {eAdj, eBigMat};
+      }
+    }
+    std::cerr << "Failed to find a matching entry in get_matching_listinfo\n";
+    throw TerminalException{1};
+  };
+  auto get_lower_adjacency=[&](int iInfo, int iFacet) -> Delaunay_AdjO<Tvert> {
+    for (auto & fAdj : ListInfo[iInfo][iFacet].ListAdj) {
+      if (ListInfo[iInfo][fAdj.iOrb].Position == -1) {
+        return fAdj;
+      }
+    }
+    std::cerr << "Failed to find a lower facet\n";
+    throw TerminalException{1};
+  };
+  auto get_face_m_m=[&](MyMatrix<Tvert> const M1, MyMatrix<Tvert> const& M2) -> Face {
+    int nVert1=M1.rows();
+    int nVert2=M2.rows();
+    Face f2(nVert2);
+    for (int i1=0; i1<nVert1; i1++) {
+      MyVector<Tvert> V = GetMatrixRow(M1, i1);
+      std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
+      int pos2 = unfolt_opt(opt, "Error in get_face_m_m");
+      f2[pos2] = 1;
+    }
+    return f2;
+  };
+  auto get_face_msub_m=[&](MyMatrix<Tvert> const M1, Face const& f1, MyMatrix<Tvert> const& M2) -> Face {
+    int nVert1=M1.rows();
+    int nVert2=M2.rows();
+    Face f2(nVert2);
+    for (int i1=0; i1<nVert1; i1++) {
+      if (f1[i1] == 1) {
+        MyVector<Tvert> V = GetMatrixRow(M1, i1);
+        std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
+        int pos2 = unfolt_opt(opt, "Error in get_face_m_m");
+        f2[pos2] = 1;
+      }
+    }
+    return f2;
+  };
   int n_info = ListInfo.size();
   int8_t Position_old = 4, Position_old = 5;
   struct DelaunaySymb {
@@ -633,7 +696,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     MyMatrix<Tvert> const& EXT = l_dels[iOrb].obj;
     ContainerMatrix<Tint> cont(EXT);
     Face f_att(EXT.rows());
-    MyMatrix<Tvert> EXTadj = l_dels[NewAdj.iOrb] * NewAdj.P;
+    MyMatrix<Tvert> EXTadj = l_dels[NewAdj.iOrb] * NewAdj.eBigMat;
     int len = EXTadj.rows();
     for (int iVert=0; iVert<len; iVert++) {
       MyVector<Tvert> V = GetMatrixRow(EXTadj, u);
@@ -654,25 +717,138 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     std::vector<Delaunay_AdjO<Tvert>> ListAdj;
     if (ds.Position == Position_old) {
       int iDelaunay = ds.iDelaunay;
-      for (auto & eAdj : ListOrbitDelaunay.l_dels[iDelaunay].l_adj) {
+      for (auto & eAdj : ListOrbitDelaunay.l_dels[iDelaunay].ListAdj) {
         int iDelaunayOld = eAdj.iOrb;
-        DelaunaySymb ds_search{Position_Old, iDelaunayOld, -1, -1};
-        std::optional<size_t> opt = get_symbol_position(ds_search);
+        DelaunaySymb dss{Position_Old, iDelaunayOld, -1, -1};
+        std::optional<size_t> opt = get_symbol_position(dss);
         if (opt) {
-          Delaunay_AdjO<Tvert> NAdj{eAdj.f, eAdj.P, *opt};
+          Delaunay_AdjO<Tvert> NAdj{*opt, eAdj.f, eAdj.eBigMat};
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 1");
+#endif
           ListAdj.push_back(NAdj);
         } else {
           int iInfo = vect_iInfo[iDelaunayOld];
           int iFacet = vect_lower_iFacet[iDelaunayOld];
-          RepartEntry<Tvert,Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
+          //          RepartEntry<Tvert,Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<Tvert> const& BigMat2 = eFacet.eBigMat;
-          MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj * eAdj.P;
-          Face Linc(ImageEXT.rows());
-          for (auto & iVert : 
+          MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj * eAdj.eBigMat;
+          Face Linc = get_face_msub_m(ListOrbitDelaunay[iDelaunay].obj, eAdj.eInc, ImageEXT);
+          MatchedFacet RecMatch = get_matching_listinfo(iInfo, iFacet, Linc);
+          int iOrbFound = RecMatch.adj.iOrb;
+          if (ListInfo[iInfo][iFacet].Position == 0) {
+            std::cerr << "Illogic error concerning the structure of repartitionning polytope\n";
+            throw TerminalException{1};
+          }
+          DelaunaySymb dss{Position_New, -1, iInfo, iOrbFound};
+          std::optional<int> optN = get_symbol_position(dss);
+          int Pos = unfold_opt(optN, "Failed to find entry for Case2");
+          MyMatrix<Tvert> BigMat1 = RecMatch.adj.eBigMat * RecMatch.eBigMat * Inverse(BigMat2) * eAdj.eBigMat;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          check_adj(iOrb, NAdj, "Case 2");
+#endif
+          ListAdj.push_back(NAdj);
         }
       }
     } else {
+      int iInfo = ds.iInfo;
+      int iFacet = ds.iFacet;
+      for (auto & eAdj : ListInfo[iInfo][iFacet].ListAdj) {
+        int jFacet = eAdj.iOrb;
+        if (ListInfo[iInfo][jFacet].Position == 0) {
+          MyMatrix<Tvert> const& eMat1 = eAdj.eBigMat;
+          MyMatrix<Tvert> LincEXT = SelectRow(ListInfo[iInfo][iFacet].EXT, eAdj.eInc);
+          MyMatrix<Tvert> ImageEXTbarrel = ListInfo[iInfo][jFacet].EXT * eMat1;
+          Face LLinc = get_face_m_m(LincEXT, ImageEXTbarrel);
+          Delaunay_adjO<Tvert> TheFoundAdj = get_lower_adjacency(iInfo, jFacet);
+          int kFacet = TheFoundAdj.iOrb;
+          MyMatrix<Tvert> const& eMat2 = TheFoundAdj.eBigMat;
+          int iDelaunayOrigin = ListInfo[iInfo][kFacet].iDelaunayOrigin;
+          MyMatrix<Tvert> ImageEXT = ListInfo[iInfo][kFacet].EXT * TheFoundAdj.eBigMat;
+          Face LLinc2 = get_face_msub_m(ListInfo[iInfo][jFacet].EXT, TheFoundAdj.eInc, ImageEXT);
+          MatchedFacet match2 = get_matching_old_tessel(iDelaunayOrigin, LLinc2);
+          Delaunay_adjO<Tvert> const& TheFoundAdj2 = match2.adj;
+          MyMatrix<Tvert> const& TheMat2 = match2.eBigMat;
+          int jDelaunayOrigin = TheFoundAdj2.iOrb;
+          MyMatrix<Tvert> const& eMat3 = TheFoundAdj2.eBigMat;
+          ImageEXT = ListOrbitDelaunay.l_dels[jDelaunayOrigin].obj * eMat3;
+          Face LLinc3 = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunayOrigin].obj, TheFoundAdj2.eInc, ImageEXT);
+          int jInfo = vect_iInfo[jDelaunayOrigin];
+          int iFacet2 = vect_lower_iFacet[jDelaunayOrigin];
+          MatchedFacet match3 = get_matching_listinfo(jInfo, iFacet2, LLinc3);
+          Delaunay_adjO<Tvert> const& TheFoundAdj3 = match3.adj;
+          MyMatrix<Tvert> const& TheMat3 = match3.eBigMat;
+          MyMatrix<Tvert> BigMat1 = TheFoundAdj3.eBigMat*TheMat3*Inverse(ListInfo[jInfo][iFacet2].eBigMat)*eMat3*TheMat2*ListInfo[iInfo][kFacet].eBigMat*eMat2*eMat1;
+          MyMatrix<Tvert> EXT7 = ListInfo[jInfo][TheFoundAdj3.iOrb].EXT * BigMat1;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          if (SortMatrix(EXT7) != SortMatrix(ImageEXTbarrel)) {
+            std::cerr << "We fail an important test with the barrel images\n";
+            throw TerminalException{1};
+          }
+#endif
+          Face LLinc4 = get_face_m_m(LincEXT, EXT7);
+          MatchedFace match4 = get_matching_listinfo(jInfo, TheFoundAdj3.iOrb, LLinc4);
+          Delaunay_adjO<Tvert> const& TheFoundAdj4 = match4.adj;
+          MyMatrix<Tvert> const& TheMat4 = match4.eBigMat;
+          DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj4.iOrb};
+          std::optional<size_t> opt = get_symbol_position(dss);
+          int Pos = unfold_opt(optN, "Failed to find entry for Case3");
+          MyMatrix<Tvert> BigMat2 = TheFoundAdj4.eBigMat * TheMat4 * BigMat1;
+          Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat2};
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          check_adj(iOrb, NAdj, "Case 3");
+#endif
+          ListAdj.push_back(NAdj);
+        }
+        if (ListInfo[iInfo][jFacet].Position == -1) {
+          int iDelaunayOrigin = ListInfo[iInfo][jFacet].iDelaunayOrigin;
+          MyMatrix<Tvert> const& eMat1 = eAdj.eBigMat;
+          MaMatrix<Tvert> ImageEXT = ListInfo[iInfo][jFacet].EXT * eMat1;
+          Face LLinc = get_face_msub_m(ListInfo[iInfo][iFacet].EXT, eAdj.eInc, ImageEXT);
+          MatchedFacet match1 = get_matching_old_tessel(iDelaunayOrigin, LLinc);
+          Delaunay_adjO<Tvert> const& TheFoundAdj1 = match1.adj;
+          MyMatrix<Tvert> const& TheMat1 = match1.eBigMat;
+          int jDelaunayOld = TheFoundAdj1.iDelaunay;
+          if (vect_iInfo[jDelaunayOld] == -1) {
+            DelaunaySymb dss{Position_old, jDelaunayOld, -1, -1};
+            std::optional<size_t> opt = get_symbol_position(dss);
+            int Pos2 = unfold_opt(opt, "Case 4");
+            MyMatrix<Tvert> BigMat1 = TheFoundAdj1.eBigMat*TheMat1*ListInfo[iInfo][jFacet].eBigMat*eAdj.eBigMat;
+            Delaunay_adjO<Tvert> NAdj{Pos2, eAdj.eInc, BigMat1};
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+            check_adj(iOrb, NAdj, "Case 4");
+#endif
+            ListAdj.push_back(NAdj);
+          } else {
+            int jInfo = vect_iInfo[jDelaunayOld];
+            int iFacet2 = vect_lower_iFacet[jDelaunayOld];
+            MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[jDelaunayOld].obj * TheFoundAdj1.eBigMat;
+            Face LLinc2 = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunayOrigin].obj, TheFoundAdj1.eInc, ImageEXT);
+            MatchedFace match2 = get_matching_listinfo(jInfo, iFacet2, LLinc2);
+            Delaunay_adjO<Tvert> const& TheFoundAdj2 = match2.adj;
+            MyMatrix<Tvert> const& TheMat2 = match2.eBigMat;
+            DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj2.iOrb};
+            std::optional<size_t> opt = get_symbol_position(dss);
+            int Pos = unfold_opt(opt, "Case 5");
+            MyMatrix<Tvert> BigMat1 = TheFoundAdj2.eBigMat*TheMat2*Inverse(ListInfo[jInfo][iFacet2].eBigMat)*TheFoundAdj1.eBigMat*TheMat1*ListInfo[iInfo][jFacet].eBigMat*eAdj.eBigMat;
+            Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat1};
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+            check_adj(iOrb, NAdj, "Case 5");
+#endif
+            ListAdj.push_back(NAdj);
+          }
+        }
+        if (ListInfo[iInfo][jFacet].Position == 1) {
+          DelaunaySymb dss{Position_new, -1, iInfo, jFacet};
+          std::optional<size_t> opt = get_symbol_position(dss);
+          int Pos = unfold_opt(opt, "Case 5");
+          Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, eAdj.eBigMat};
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          check_adj(iOrb, NAdj, "Case 6");
+#endif
+          ListAdj.push_back(NAdj);
+        }
+      }
     }
   }
   return {l_dels};
