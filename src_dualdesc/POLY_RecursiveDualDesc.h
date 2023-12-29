@@ -3097,8 +3097,6 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, Record
   using Tbank = typename RecordDualDescOperation<T, Tgroup>::Tbank;
   using Tidx_value = int32_t;
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
-  bool BANK_Saving = false;
-  std::string BANK_Prefix = "totally_irrelevant_first";
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   PrintPolyHeuristicSerial(rddo.AllArr, rddo.os);

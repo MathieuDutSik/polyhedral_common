@@ -450,14 +450,14 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     if (!opt) {
       return {};
     }
-    MyMatrix<Tint> const& P = *opt;
-    TadjO ret{y.f, P, i_rank, i_orb};
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{i_rank, i_orb, y.eInc, eBigMat};
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj EXT = x.obj;
-    MyMatrix<Tint> P = IdentityMat<Tint>(eData.n);
-    TadjO ret{x.f, P, i_rank, i_orb};
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
+    TadjO ret{i_rank, i_orb, x.eInc, eBigMat};
     return {EXT, ret};
   };
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
