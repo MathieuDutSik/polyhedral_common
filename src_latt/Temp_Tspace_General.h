@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_TSPACE_GENERAL
+#endif
+
 // Here we use SuperMat as an array because if we declare
 // it directly then we need to give a size and we do not
 // want that
@@ -412,191 +416,54 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
   return TheBasis;
 }
 
-template <typename T> struct PairV {
-  T val;
-  int nb;
-};
 
-template <typename T> bool operator==(PairV<T> const &x, PairV<T> const &y) {
-  if (x.val != y.val)
-    return false;
-  if (x.nb != y.nb)
-    return false;
-  return true;
-}
-
-template <typename T> bool operator<(PairV<T> const &x, PairV<T> const &y) {
-  if (x.val < y.val)
-    return true;
-  if (x.val > y.val)
-    return false;
-  return x.nb < y.nb;
-}
-
-template <typename T> bool operator>(PairV<T> const &x, PairV<T> const &y) {
-  return y < x;
-}
-
-template <typename T> struct GramInvVect {
-  T eDet;
-  std::vector<PairV<T>> ListValOff;
-  std::vector<PairV<T>> ListValDiag;
-};
-
-template <typename T>
-bool operator<(GramInvVect<T> const &x, GramInvVect<T> const &y) {
-  if (x.eDet < y.eDet)
-    return true;
-  if (x.eDet > y.eDet)
-    return false;
-  int xSizOff = x.ListValOff.size();
-  int ySizOff = y.ListValOff.size();
-  if (xSizOff < ySizOff)
-    return true;
-  if (xSizOff > ySizOff)
-    return false;
-  for (int i = 0; i < xSizOff; i++) {
-    if (x.ListValOff[i] < y.ListValOff[i])
-      return true;
-    if (x.ListValOff[i] > y.ListValOff[i])
-      return false;
-  }
-  int xSizDiag = x.ListValDiag.size();
-  int ySizDiag = y.ListValDiag.size();
-  if (xSizDiag < ySizDiag)
-    return true;
-  if (xSizDiag > ySizDiag)
-    return false;
-  for (int i = 0; i < xSizDiag; i++) {
-    if (x.ListValDiag[i] < y.ListValDiag[i])
-      return true;
-    if (x.ListValDiag[i] > y.ListValDiag[i])
-      return false;
-  }
-  return false;
-}
-
-template <typename T>
-std::istream &operator>>(std::istream &is, GramInvVect<T> &obj) {
-  T eDet;
-  is >> eDet;
-  int nbOff;
-  is >> nbOff;
-  std::vector<PairV<T>> ListValOff(nbOff);
-  for (int i = 0; i < nbOff; i++) {
-    T eVal;
-    int nb;
-    is >> eVal;
-    is >> nb;
-    ListValOff[i] = {eVal, nb};
-  }
-  int nbDiag;
-  is >> nbDiag;
-  std::vector<PairV<T>> ListValDiag(nbDiag);
-  for (int i = 0; i < nbOff; i++) {
-    T eVal;
-    int nb;
-    is >> eVal;
-    is >> nb;
-    ListValDiag[i] = {eVal, nb};
-  }
-  obj = {eDet, ListValOff, ListValDiag};
-  return is;
-}
-
-template <typename T>
-std::ostream &operator<<(std::ostream &os, GramInvVect<T> const &obj) {
-  os << obj.eDet << "\n";
-  int nbOff = obj.ListValOff.size();
-  os << nbOff << "\n";
-  for (int i = 0; i < nbOff; i++)
-    os << obj.ListValOff[i].val << " " << obj.ListValOff[i].nb << "\n";
-  int nbDiag = obj.ListValDiag.size();
-  os << nbDiag << "\n";
-  for (int i = 0; i < nbDiag; i++)
-    os << obj.ListValDiag[i].val << " " << obj.ListValDiag[i].nb << "\n";
-  return os;
-}
-
-template <typename T>
-bool operator==(GramInvVect<T> const &x, GramInvVect<T> const &y) {
-  if (x.eDet != y.eDet)
-    return false;
-  if (x.ListValOff != y.ListValOff)
-    return false;
-  if (x.ListValDiag != y.ListValDiag)
-    return false;
-  return true;
-}
-
+/*
+  Compute an invariant of the gram matrix
+  so that it does not change after arithmetic
+  equivalence.
+  However, it is not invariant under scaling.
+*/
 template <typename T, typename Tint>
-GramInvVect<T> GetInvariantGram(MyMatrix<T> const &eGram,
-                                MyMatrix<Tint> const &SHV) {
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eGram);
-  MyMatrix<T> eGramRef = eGram / eRec.eMin;
+size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
+                                MyMatrix<Tint> const &SHV,
+                                size_t const& seed,
+                                [[maybe_unused]] std::ostream & os) {
   T eDet = DeterminantMat(eGramRef);
   int nbVect = SHV.rows();
-  //  std::cerr << "eDet=" << eDet << " nbVect=" << nbVect << "\n";
-  std::vector<T> ListValOff;
-  std::vector<int> ListNbOff;
-  std::vector<T> ListValDiag;
-  std::vector<int> ListNbDiag;
+#ifdef DEBUG_TSPACE_GENERAL
+  os << "eDet=" << eDet << " nbVect=" << nbVect << "\n";
+#endif
+  std::vector<MyVector<T>> ListV;
+  for (int iVect=0; iVect<nbVect; iVect++) {
+    MyVector<Tint> V = GetMatrixRow(SHV, iVect);
+    MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+    ListV.push_back(V_T);
+  }
+  std::map<T,size_t> map_diag, map_off_diag;
   for (int iVect = 0; iVect < nbVect; iVect++) {
-    MyVector<Tint> eRow = GetMatrixRow(SHV, iVect);
-    T eNorm = EvaluationQuadForm(eGramRef, eRow);
-    int pos = PositionVect(ListValDiag, eNorm);
-    if (pos == -1) {
-      ListValDiag.push_back(eNorm);
-      ListNbDiag.push_back(1);
-    } else {
-      ListNbDiag[pos]++;
-    }
-    for (int jVect = iVect + 1; jVect < nbVect; jVect++) {
-      MyVector<Tint> fRow = GetMatrixRow(SHV, jVect);
-      T eScal = ScalarProductQuadForm(eGramRef, eRow, fRow);
-      int posB = PositionVect(ListValOff, eScal);
-      //      std::cerr << "iVect=" << iVect << " jVect=" << jVect << " eScal="
-      //      << eScal << " posB=" << posB << "\n";
-      if (posB == -1) {
-        ListValOff.push_back(eScal);
-        ListNbOff.push_back(1);
-      } else {
-        ListNbOff[posB]++;
-      }
+    MyVector<T> Vprod = eGram * ListV[iVect];
+    T eNorm = Vprod.dot(ListV[iVect]);
+    map_diag[eNorm] += 1;
+    for (int jVect=iVect+1; jVect<nbVect; jVect++) {
+      T eScal = Vprod.dot(ListV[jVect]);
+      map_off_diag[eScal] += 1;
     }
   }
-  /*
-  std::cerr << "sum(ListNbOff)=" << VectorSum(ListNbOff) << "\n";
-  std::cerr << "LComb =";
-  for (int u=0; u<int(ListNbOff.size()); u++) {
-    std::cerr << " [" << ListValOff[u] << "," << ListNbOff[u] << "]";
-  }
-  std::cerr << "\n";*/
-  std::function<bool(PairV<T> const &, PairV<T> const &)> Comp =
-      [](PairV<T> const &x, PairV<T> const &y) -> bool {
-    if (x.val < y.val)
-      return true;
-    if (x.val > y.val)
-      return false;
-    return x.nb < y.nb;
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };
-  std::set<PairV<T>, std::function<bool(PairV<T> const &, PairV<T> const &)>>
-      ListValOff_B(Comp);
-  std::set<PairV<T>, std::function<bool(PairV<T> const &, PairV<T> const &)>>
-      ListValDiag_B(Comp);
-  int nbOff = ListValOff.size();
-  int nbDiag = ListValDiag.size();
-  for (int i = 0; i < nbOff; i++)
-    ListValOff_B.insert({ListValOff[i], ListNbOff[i]});
-  for (int i = 0; i < nbDiag; i++)
-    ListValDiag_B.insert({ListValDiag[i], ListNbDiag[i]});
-  std::vector<PairV<T>> ListValOff_C;
-  for (auto &x : ListValOff_B)
-    ListValOff_C.push_back(x);
-  std::vector<PairV<T>> ListValDiag_C;
-  for (auto &x : ListValDiag_B)
-    ListValDiag_C.push_back(x);
-  return {eDet, ListValOff_C, ListValDiag_C};
+  size_t hash_ret = seed;
+  size_t hash_det = std::hash<T>()(eDet);
+  combine_hash(hash_ret, hash_det);
+  for (auto & kv : map_diag) {
+    combine_hash(hash_ret, kv.first);
+    combine_hash(hash_ret, kv.second);
+  }
+  for (auto & kv : map_off_diag) {
+    combine_hash(hash_ret, kv.first);
+    combine_hash(hash_ret, kv.second);
+  }
+  return hash_ret;
 }
 
 template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {

@@ -698,7 +698,7 @@ std::ostream &operator<<(std::ostream &os, SHVshortest<T, Tint> const &obj) {
 }
 
 template <typename T, typename Tint> struct SHVinvariant {
-  GramInvVect<T> eInv;
+  size_t eInv;
 };
 
 template <typename T, typename Tint>
@@ -730,7 +730,8 @@ template <typename T, typename Tint>
 SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann) {
   SHVshortest<T, Tint> eEnt{eSpann};
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann);
-  GramInvVect<T> eInvGV = GetInvariantGram(eShIso.GramMat, eShIso.SHVdisc);
+  size_t seed = 146;
+  size_t eInvGV = GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, std::cerr);
   return {eInvGV};
 }
 

@@ -60,18 +60,18 @@ size_t ComputeInvariantDelaunayTessellation(DelaunayTesselation<Tvert,Tgroup> co
     size_t hash_del = 123;
     size_t hash1 = std::hash<int>()(e_del.obj.rows());
     size_t hash2 = std::hash<TintGroup>()(e_del.GRP.order());
-    hash_del = combine_hash(hash_del, hash1);
-    hash_del = combine_hash(hash_del, hash2);
+    combine_hash(hash_del, hash1);
+    combine_hash(hash_del, hash2);
     for (auto & kv : map_siz) {
-      hash_del = combine_hash(hash_del, kv.first);
-      hash_del = combine_hash(hash_del, kv.second);
+      combine_hash(hash_del, kv.first);
+      combine_hash(hash_del, kv.second);
     }
     map[hash_del] += 1;
   }
   size_t hash_ret = seed;
   for (auto & kv : map) {
-    hash_ret = combine_hash(hash_ret, kv.first);
-    hash_ret = combine_hash(hash_ret, kv.second);
+    combine_hash(hash_ret, kv.first);
+    combine_hash(hash_ret, kv.second);
   }
   return hash_ret;
 }
