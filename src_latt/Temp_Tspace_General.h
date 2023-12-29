@@ -15,9 +15,16 @@
 #define DEBUG_TSPACE_GENERAL
 #endif
 
-// Here we use SuperMat as an array because if we declare
-// it directly then we need to give a size and we do not
-// want that
+/*
+  The structure of a T-space (see the papers by Mathieu Dutour Sikiric,
+  Frank Vallentin and Achill Schuermann).
+
+  We have the following:
+  * A SuperMat is a positive definite matrix in the T-space.
+  * The ListMat is a basis of matrices of the T-space.
+  * The ListLineMat is the line matrix for effective computation.
+  * The ListComm is a set of commuting matrices (to what?????)
+ */
 template <typename T> struct LinSpaceMatrix {
   int n;
   MyMatrix<T> SuperMat;
@@ -159,7 +166,8 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   eMatB = IdentityMat<int>(n);
   ZeroAssignation(eMatC);
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
-  MyMatrix<T> eComm(2 * n, 2 * n);
+  // The matrix eComm represent multiplication by the primitive element
+  MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
   for (i = 0; i < n; i++) {
     eComm(i, n + i) = eOne;
     eComm(n + i, i) = -eProd;
@@ -219,12 +227,11 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     //
     SuperMat(n + i, n + i) = eProd;
   }
-  MyMatrix<T> eComm(2 * n, 2 * n);
-  ZeroAssignation(eComm);
+  // The matrix eComm represent multiplication by the primitive element
+  MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
   for (i = 0; i < n; i++) {
     eComm(i, n + i) = eOne;
-    eVal = -eProd;
-    eComm(n + i, i) = eVal;
+    eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
   return {2 * n, SuperMat, ListMat, {eComm}};
@@ -267,12 +274,8 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
     AssignMatrixRow(TotalMatrix, iLinSpa, V);
   }
   std::optional<MyVector<T>> RecSol = SolutionMat(TotalMatrix, eMatVect);
-  if (!RecSol) {
-    std::cerr << "The matrix does not belong to the linear space of matrix. "
-                 "Exclude it\n";
-    throw TerminalException{1};
-  }
-  return *RecSol;
+  MyVector<T> V = unfold_opt(RecSol, "Failure in SolutionMat");
+  return V;
 }
 
 template <typename T> T T_GRAM_GetUpperBound(MyMatrix<T> const &TheMat) {
