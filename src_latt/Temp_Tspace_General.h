@@ -23,7 +23,9 @@
   * A SuperMat is a positive definite matrix in the T-space.
   * The ListMat is a basis of matrices of the T-space.
   * The ListLineMat is the line matrix for effective computation.
-  * The ListComm is a set of commuting matrices (to what?????)
+  * The ListComm is a set of matrices which are not necessarily of
+    determinant 1. The group of symmetries has to commutes with the
+    elements in ListComm.
  */
 template <typename T> struct LinSpaceMatrix {
   int n;
