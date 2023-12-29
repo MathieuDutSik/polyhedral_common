@@ -34,6 +34,49 @@ struct VoronoiInequalityPreComput {
   std::vector<MyVector<T>> VertBasisRed_T;
 };
 
+/*
+  We implement the hash of a Delaunay tessellationn. The constraint is that two different
+  but equivalent tessellations, must have the same hash. Hopefully, this is not a problem
+  since we have many invariants:
+  * The number of vertices of the orbit representatives of Delaunay polytopes.
+  * The size of their automorphism groups
+  * The number of vertices of the orbit representative of their facets.
+ */
+template<typename Tvert, typename Tgroup>
+size_t ComputeInvariantDelaunayTessellation(DelaunayTesselation<Tvert,Tgroup> const& DT,
+                                            size_t const& seed,
+                                            [[maybe_unused]] std::ostream & os) {
+  using TintGroup = typename Tgroup::Tint;
+  std::map<size_t,size_t> map;
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
+  };
+  for (auto & e_del : DT.l_dels) {
+    std::map<size_t,size_t> map_siz;
+    for (auto & eAdj : e_del.ListAdj) {
+      size_t siz = eAdj.eInc.count();
+      map_siz[siz] += 1;
+    }
+    size_t hash_del = 123;
+    size_t hash1 = std::hash<int>()(e_del.obj.rows());
+    size_t hash2 = std::hash<TintGroup>()(e_del.GRP.order());
+    hash_del = combine_hash(hash_del, hash1);
+    hash_del = combine_hash(hash_del, hash2);
+    for (auto & kv : map_siz) {
+      hash_del = combine_hash(hash_del, kv.first);
+      hash_del = combine_hash(hash_del, kv.second);
+    }
+    map[hash_del] += 1;
+  }
+  size_t hash_ret = seed;
+  for (auto & kv : map) {
+    hash_ret = combine_hash(hash_ret, kv.first);
+    hash_ret = combine_hash(hash_ret, kv.second);
+  }
+  return hash_ret;
+}
+
+
 template<typename T, typename Tvert>
 VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& EXT) {
   int n = EXT.cols() - 1;
