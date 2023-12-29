@@ -428,7 +428,7 @@ size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
                                 MyMatrix<Tint> const &SHV,
                                 size_t const& seed,
                                 [[maybe_unused]] std::ostream & os) {
-  T eDet = DeterminantMat(eGramRef);
+  T eDet = DeterminantMat(eGram);
   int nbVect = SHV.rows();
 #ifdef DEBUG_TSPACE_GENERAL
   os << "eDet=" << eDet << " nbVect=" << nbVect << "\n";
@@ -456,11 +456,13 @@ size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
   size_t hash_det = std::hash<T>()(eDet);
   combine_hash(hash_ret, hash_det);
   for (auto & kv : map_diag) {
-    combine_hash(hash_ret, kv.first);
+    size_t hash_T = std::hash<T>()(kv.first);
+    combine_hash(hash_ret, hash_T);
     combine_hash(hash_ret, kv.second);
   }
   for (auto & kv : map_off_diag) {
-    combine_hash(hash_ret, kv.first);
+    size_t hash_T = std::hash<T>()(kv.first);
+    combine_hash(hash_ret, hash_T);
     combine_hash(hash_ret, kv.second);
   }
   return hash_ret;
