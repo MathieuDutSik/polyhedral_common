@@ -298,21 +298,40 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto get_nonce = [&]() -> size_t {
     if (!buffer_entriesAdjI.is_completely_clear()) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: the_nonce=0, because !buffer_entriesAdjI.is_completely_clear()\n";
+#endif
       return 0;
     }
     if (!buffer_entriesAdjO.is_completely_clear()) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: the_nonce=0, because !buffer_entriesAdjO.is_completely_clear()\n";
+#endif
       return 0;
     }
     if (unproc_entriesAdjI.size() > 0) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: the_nonce=0, because unproc_entriesAdjI.size() > 0\n";
+#endif
       return 0;
     }
     if (map_adjO.size() > 0) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: the_nonce=0, because map_adjO.size() > 0\n";
+#endif
       return 0;
     }
     if (undone.size() > 0 && max_time_second == 0) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: the_nonce=0, because undone.size() > 0 && max_time_second == 0\n";
+#endif
       return 0;
     }
-    if (max_time_second > 0 && si(start) < max_time_second) {
+    if (undone.size() > 0 && max_time_second > 0 && si(start) < max_time_second) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: max_time_second=" << max_time_second << " si(start)=" << si(start) << " |undone|=" << undone.size() << "\n";
+      os << "ADJ_SCH: the_nonce=0, because max_time_second > 0 && si(start) < max_time_second\n";
+#endif
       return 0;
     }
     return nonce;
@@ -414,21 +433,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto write_set_adj=[&]() -> bool {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: Begin of write_set_adj\n";
+    //    os << "ADJ_SCH: Begin of write_set_adj\n";
 #endif
     std::vector<int> l_erase;
     bool do_something = false;
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
+    //    os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
 #endif
     for (auto & kv : map_adjO) {
       int i_orb = kv.first;
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
+      //      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
 #endif
       if (kv.second.first == kv.second.second.size()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
+        //        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
 #endif
         f_set_adj(i_orb, kv.second.second);
         l_erase.push_back(i_orb);
@@ -443,21 +462,33 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto f_clear_buffers=[&]() -> bool {
     // Transmitting the generated entriesAdjI
     bool test1 = flush_entriesAdjI();
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: f_clear_buffer : flush_entriesAdjI=" << test1 << "\n";
+#endif
     if (test1) {
       return true;
     }
     // transmitting the generated entriesAdjO
     bool test2 = flush_entriesAdjO();
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: f_clear_buffer : flush_entriesAdjO=" << test2 << "\n";
+#endif
     if (test2) {
       return true;
     }
     // compute the entryAdjO from entryAdjI
     bool test3 = compute_entries_adjI();
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: f_clear_buffer : compute_entries_adjI=" << test3 << "\n";
+#endif
     if (test3) {
       return true;
     }
     // write down adjacencies if done
     bool test4 = write_set_adj();
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: f_clear_buffer : write_set_adj=" << test4 << "\n";
+#endif
     if (test4) {
       return true;
     }
@@ -465,6 +496,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     return process_one_entry_obj();
   };
   auto terminate = [&]() -> bool {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: terminate, begin\n";
+#endif
+    if (i_rank > 0) {
+      return false;
+    }
     std::vector<size_t> l_nonce(n_proc-1);
     for (int i_proc=1; i_proc<n_proc; i_proc++) {
       int val = 0;
@@ -472,6 +509,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       size_t the_nonce;
       comm.recv(i_proc, tag_nonce_reply, the_nonce);
       if (the_nonce == 0) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+        os << "ADJ_SCH: exiting at i_proc=" << i_proc << " for the_nonce=0\n";
+#endif
         return false;
       }
       l_nonce[i_proc-1] = the_nonce;
@@ -482,6 +522,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       size_t the_nonce;
       comm.recv(i_proc, tag_nonce_reply, the_nonce);
       if (the_nonce != l_nonce[i_proc-1]) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+        os << "ADJ_SCH: exiting at i_proc=" << i_proc << " the_nonce=" << the_nonce << " l_nonce=" << l_nonce[i_proc-1] << "\n";
+#endif
         return false;
       }
     }
@@ -505,6 +548,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
   size_t n_orb_max = 0, n_orb_loc = V.size();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
+#ifdef DEBUG_ADJACENCY_SCHEME
+  os << "ADJ_SCH: beginning n_orb_max=" << n_orb_max << " n_orb_loc=" << n_orb_loc << "\n";
+#endif
   if (n_orb_max == 0 && i_rank == 0) {
     initial_init();
   }
@@ -512,6 +558,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The infinite loop
   //
   while (true) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: Start while loop, early_termination=" << early_termination << "\n";
+#endif
     if (early_termination) {
       break;
     }
@@ -526,8 +575,15 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     } else {
       bool test = f_clear_buffers();
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: f_clear_buffer test=" << test << "\n";
+#endif
       if (!test) {
-        if (terminate()) {
+        bool test_terminate=terminate();
+#ifdef DEBUG_ADJACENCY_SCHEME
+        os << "ADJ_SCH: test_terminate=" << test_terminate << "\n";
+#endif
+        if (test_terminate) {
           break;
         }
       }
