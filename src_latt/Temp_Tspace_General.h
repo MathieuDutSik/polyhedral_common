@@ -53,7 +53,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
   }
 }
 
-
+/*
 template <typename T>
 std::istream &operator>>(std::istream &is, LinSpaceMatrix<T> &obj) {
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
@@ -93,6 +93,8 @@ std::ostream &operator<<(std::ostream &os, LinSpaceMatrix<T> const &obj) {
     WriteMatrix(os, obj.ListComm[iComm]);
   return os;
 }
+*/
+
 
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;

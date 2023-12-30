@@ -340,14 +340,14 @@ struct DelaunayTesselation {
   std::vector<Delaunay_Entry<Tvert,Tgroup>> l_dels;
 };
 
-template<typename Tint, typename Tgroup>
-DelaunayTesselation<Tint,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
-                                               std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& blk,
+template<typename Tvert, typename Tgroup>
+DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
+                                               std::vector<Delaunay_MPI_Entry<Tvert, Tgroup>> const& blk,
                                                int const& i_proc_out) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  using T = typename std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>;
-  std::vector<Delaunay_Entry<Tint, Tgroup>> V;
+  using T = typename std::vector<Delaunay_MPI_Entry<Tvert, Tgroup>>;
+  std::vector<Delaunay_Entry<Tvert, Tgroup>> V;
   if (i_rank == i_proc_out) {
     std::vector<T> l_blk;
     boost::mpi::gather<T>(comm, blk, l_blk, i_proc_out);
@@ -361,13 +361,13 @@ DelaunayTesselation<Tint,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
     }
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       for (int u=0; u<l_sizes[i_proc]; u++) {
-        std::vector<Delaunay_Entry<Tint, Tgroup>> ListAdj;
+        std::vector<Delaunay_AdjO<Tvert>> ListAdj;
         for (auto & ent : l_blk[i_proc][u].ListAdj) {
           int iOrb = ent.iOrb + l_shift[ent.iProc];
-          Delaunay_AdjO<Tint> adj{iOrb, ent.eInc, ent.eBigMat, iOrb};
+          Delaunay_AdjO<Tvert> adj{iOrb, ent.eInc, ent.eBigMat};
           ListAdj.push_back(adj);
         }
-        Delaunay_Entry<Tint, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, ListAdj};
+        Delaunay_Entry<Tvert, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, ListAdj};
         V.push_back(eDel);
       }
     }
@@ -378,18 +378,18 @@ DelaunayTesselation<Tint,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
 }
 
 
-template<typename Tint, typename Tgroup>
-void check_delaunay_tessellation(std::vector<Delaunay_Entry<Tint, Tgroup>> const& l_del) {
-  for (auto & eDel : l_del) {
-    MyMatrix<Tint> const& EXT = eDel.obj;
-    ContainerMatrix<Tint> cont(EXT);
+template<typename Tvert, typename Tgroup>
+void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT) {
+  for (auto & eDel : DT.l_dels) {
+    MyMatrix<Tvert> const& EXT = eDel.obj;
+    ContainerMatrix<Tvert> cont(EXT);
     for (auto & eAdj : eDel.ListAdj) {
       Face const& eInc = eAdj.eInc;
       Face eIncEff(EXT.rows());
-      MyMatrix<Tint> EXTadj = l_del[eAdj.iOrb] * eAdj.P;
+      MyMatrix<Tvert> EXTadj = DT.l_dels[eAdj.iOrb].obj * eAdj.eBigMat;
       int len = EXTadj.rows();
       for (int u=0; u<len; u++) {
-        MyVector<Tint> V = GetMatrixRow(EXTadj, u);
+        MyVector<Tvert> V = GetMatrixRow(EXTadj, u);
         std::optional<size_t> opt = cont.GetIdx_v(V);
         if (opt) {
           eIncEff[*opt] = 1;
@@ -402,6 +402,21 @@ void check_delaunay_tessellation(std::vector<Delaunay_Entry<Tint, Tgroup>> const
     }
   }
 }
+
+template<typename Tvert, typename Tgroup>
+void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
+  std::ofstream os(OutFile);
+  os << "return [\n";
+  size_t n_del = DT.l_dels.size();
+  for (size_t i_del=0; i_del<n_del; i_del++) {
+    if (i_del > 0)
+      os << ",";
+    
+  }
+}
+
+
+
 
 
 
@@ -635,12 +650,22 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template<typename Tint, typename Tgroup>
-void WriteFamilyDelaunay(std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
+void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
+  int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
   }
-  if (OutFormat == "GAPformat") {
+  if (OutFormat == "CheckMergedOutput") {
+    int i_proc_out = 0;
+    DelaunayTesselation<Tint,Tgroup> DT = my_mpi_gather(comm, ListDel, i_proc_out);
+    if (i_proc_out == i_rank) {
+      check_delaunay_tessellation(DT);
+    }
+    std::cerr << "Everything is ok\n";
+    return;
+  }
+  if (OutFormat == "RAW") {
     std::ofstream OUTfs(OutFile);
     int nbDel = ListDel.size();
     OUTfs << "nbDel=" << nbDel << "\n";
@@ -712,7 +737,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   os << "DEL_ENUM: We now have ListDel |ListDel|=" << ListDel.size() << "\n";
 #endif
   //
-  WriteFamilyDelaunay(OutFormat, OutFile, ListDel);
+  WriteFamilyDelaunay(comm, OutFormat, OutFile, ListDel);
 }
 
 
