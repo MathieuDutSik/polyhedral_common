@@ -297,9 +297,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   };
   auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH:process_entriesAdjO : Before |v|=" << v.size() << " |map_adjO|=" << map_adjO.size() << " \n";
+    for (auto & kv : map_adjO) {
+      os << "ADJ_SCH:process_entriesAdjO : Before i_orb=" << kv.first << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size() << "\n";
+    }
+#endif
     for (auto &eEnt : v) {
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH:process_entriesAdjO : After |map_adjO|=" << map_adjO.size() << " \n";
+    for (auto & kv : map_adjO) {
+      os << "ADJ_SCH:process_entriesAdjO : After i_orb=" << kv.first << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size() << "\n";
+    }
+#endif
     v.clear();
   };
   auto get_nonce = [&]() -> size_t {
@@ -360,6 +372,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (e_tag == tag_entriesadjo_send) {
       std::vector<entryAdjO<TadjO>> v;
       comm.recv(e_src, tag_entriesadjo_send, v);
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: Call process_entriesAdjO from process_mpi_status\n";
+#endif
       process_entriesAdjO(v);
       return false;
     }
@@ -415,10 +430,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     for (auto &x : l_adj) {
       size_t hash_partition = f_hash(seed_partition, x.obj);
       size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
-      int i_proc_orig = static_cast<int>(hash_partition % size_t(n_proc));
+      int i_proc_dest = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
-      entryAdjI<TadjI> e{x, hash_hashmap, i_proc_orig, idx_i};
-      buffer_entriesAdjI.insert_entry(i_proc_orig, e);
+      entryAdjI<TadjI> e{x, hash_hashmap, i_rank, idx_i};
+      buffer_entriesAdjI.insert_entry(i_proc_dest, e);
     }
     return true;
   };
@@ -429,8 +444,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto flush_entriesAdjO=[&]() -> bool {
     std::vector<entryAdjO<TadjO>> & v = buffer_entriesAdjO.l_message[i_rank];
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: Call process_entriesAdjO from flush_entriesAdjO\n";
+#endif
     process_entriesAdjO(v);
-    v.clear();
     return buffer_entriesAdjO.clear_one_entry(os);
   };
   auto compute_entries_adjI=[&]() -> bool {
@@ -445,21 +462,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto write_set_adj=[&]() -> bool {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    //    os << "ADJ_SCH: Begin of write_set_adj\n";
+    os << "ADJ_SCH: Begin of write_set_adj\n";
 #endif
     std::vector<int> l_erase;
     bool do_something = false;
 #ifdef DEBUG_ADJACENCY_SCHEME
-    //    os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
+    os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
 #endif
     for (auto & kv : map_adjO) {
       int i_orb = kv.first;
 #ifdef DEBUG_ADJACENCY_SCHEME
-      //      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
+      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
 #endif
       if (kv.second.first == kv.second.second.size()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-        //        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
+        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
 #endif
         f_set_adj(i_orb, kv.second.second);
         l_erase.push_back(i_orb);
@@ -467,6 +484,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     }
     for (auto & i_orb : l_erase) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: write_set_adj erasing i_orb=" << i_orb << "\n";
+#endif
       map_adjO.erase(i_orb);
     }
     return do_something;
