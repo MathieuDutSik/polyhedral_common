@@ -1,12 +1,13 @@
 &DATA
  arithmetic_T = "gmp_rational"
  arithmetic_Tint = "gmp_integer"
- GRAMfile = "GRAM_Lambda11min_dual.txt"
+! GRAMfile = "GRAM_Lambda11min_dual.txt"
 ! GRAMfile = "GRAM_Lambda10.txt"
-! GRAMfile = "GRAM_E6.txt"
+ GRAMfile = "GRAM_E6.txt"
  SVRfile = "unset.svr"
 ! OutFormat = "nothing"
- OutFormat = "CheckMergedOutput"
+! OutFormat = "CheckMergedOutput"
+ OutFormat = "GAP"
  OutFile = "ListOrbit"
  max_runtime_second = 10800
  ApplyStdUnitbuf = T

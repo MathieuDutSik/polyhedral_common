@@ -376,6 +376,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     f_save_status(idx, true);
     Tobj const& x = V[idx];
     std::vector<TadjI> l_adj = f_adj(x, idx);
+    map_adjO[idx] = {l_adj.size(), {}};
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
 #endif
@@ -412,10 +413,19 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     return do_something;
   };
   auto write_set_adj=[&]() -> bool {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: Begin of write_set_adj\n";
+#endif
     std::vector<int> l_erase;
     bool do_something = false;
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
+#endif
     for (auto & kv : map_adjO) {
       int i_orb = kv.first;
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
+#endif
       if (kv.second.first == kv.second.second.size()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";

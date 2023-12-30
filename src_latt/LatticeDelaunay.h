@@ -417,7 +417,7 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
     if (i_del > 0)
       os << ",";
     os << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
-    std::vector<Telt> LGen = eDel.GRP.GeneratorsOfGroup();
+    std::vector<Telt> LGen = eDel.GRP.SmallGeneratingSet();
     auto get_gap_string=[&]() -> std::string {
       if (LGen.size() == 0) {
         return "Group(())";
