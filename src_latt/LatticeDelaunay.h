@@ -379,14 +379,19 @@ DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
 
 
 template<typename Tvert, typename Tgroup>
-void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT) {
+void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT, [[maybe_unused]] std::ostream& os) {
   for (auto & eDel : DT.l_dels) {
     MyMatrix<Tvert> const& EXT = eDel.obj;
     ContainerMatrix<Tvert> cont(EXT);
     for (auto & eAdj : eDel.ListAdj) {
       Face const& eInc = eAdj.eInc;
       Face eIncEff(EXT.rows());
-      MyMatrix<Tvert> EXTadj = DT.l_dels[eAdj.iOrb].obj * eAdj.eBigMat;
+      MyMatrix<Tvert> const& EXT2 = DT.l_dels[eAdj.iOrb].obj;
+      MyMatrix<Tvert> const& eBigMat = eAdj.eBigMat;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+      os << "DEL_ENUM: check_delaunay_tessellation |EXT2}=" << EXT2.rows() << "/" << EXT2.cols() << " |eBigMat|=" << eBigMat.rows() << "/" << eBigMat.cols() << "\n";
+#endif
+      MyMatrix<Tvert> EXTadj = EXT2 * eBigMat;
       int len = EXTadj.rows();
       for (int u=0; u<len; u++) {
         MyVector<Tvert> V = GetMatrixRow(EXTadj, u);
@@ -407,16 +412,16 @@ template<typename Tvert, typename Tgroup>
 void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
   using T = typename overlying_field<Tvert>::field_type;
   using Telt = typename Tgroup::Telt;
-  std::ofstream os(OutFile);
-  os << "return [\n";
+  std::ofstream OUTfs(OutFile);
+  OUTfs << "return [\n";
   size_t n_del = DT.l_dels.size();
   for (size_t i_del=0; i_del<n_del; i_del++) {
     Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
     MyMatrix<Tvert> EXT = eDel.obj;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
     if (i_del > 0)
-      os << ",";
-    os << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
+      OUTfs << ",";
+    OUTfs << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
     std::vector<Telt> LGen = eDel.GRP.SmallGeneratingSet();
     auto get_gap_string=[&]() -> std::string {
       if (LGen.size() == 0) {
@@ -449,33 +454,28 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
     str_perm += "]";
     str_matr += "]";
     std::string str_phi = "GroupHomomorphismByImagesNC(Group(" + str_perm + "), Group(" + str_matr + "), " + str_perm + ", " + str_matr + ")";
-    os << "TheStab:=rec(PermutationStabilizer:=" << get_gap_string() << ", PhiPermMat:=" << str_phi << "), ";
-    os << "Adjacencies:=[";
+    OUTfs << "TheStab:=rec(PermutationStabilizer:=" << get_gap_string() << ", PhiPermMat:=" << str_phi << "), ";
+    OUTfs << "Adjacencies:=[";
     IsFirst = true;
     for (auto & eAdj : eDel.ListAdj) {
       if (!IsFirst)
-        os << ",";
+        OUTfs << ",";
       IsFirst = false;
-      os << "rec(iDelaunay:=" << (eAdj.iOrb + 1) << ", ";
-      os << "eInc:=[";
+      OUTfs << "rec(iDelaunay:=" << (eAdj.iOrb + 1) << ", ";
+      OUTfs << "eInc:=[";
       std::vector<int> V = FaceToVector<int>(eAdj.eInc);
       for (size_t u=0; u<V.size(); u++) {
         if (u > 0)
-          os << ",";
-        os << (V[u] + 1);
+          OUTfs << ",";
+        OUTfs << (V[u] + 1);
       }
-      os << "],\n";
-      os << "eBigMat:=" << StringMatrixGAP(eAdj.eBigMat) << ")";
+      OUTfs << "],\n";
+      OUTfs << "eBigMat:=" << StringMatrixGAP(eAdj.eBigMat) << ")";
     }
-    os << "])";
+    OUTfs << "])";
   }
-  os << "];\n";
+  OUTfs << "];\n";
 }
-
-
-
-
-
 
 template<typename T, typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> & eData, MyMatrix<Tint> const& x, std::ostream& os) {
@@ -528,7 +528,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj EXT = x.obj;
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n+1);
     TadjO ret{i_rank, i_orb, x.eInc, eBigMat};
     return {EXT, ret};
   };
@@ -707,7 +707,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template<typename Tint, typename Tgroup>
-void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel) {
+void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel, std::ostream & os) {
   int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
@@ -717,7 +717,7 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
     int i_proc_out = 0;
     DelaunayTesselation<Tint,Tgroup> DT = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
-      check_delaunay_tessellation(DT);
+      check_delaunay_tessellation(DT, os);
     }
     std::cerr << "The Delaunay tesselation passed the adjacency check\n";
     return;
@@ -803,7 +803,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   os << "DEL_ENUM: We now have ListDel |ListDel|=" << ListDel.size() << "\n";
 #endif
   //
-  WriteFamilyDelaunay(comm, OutFormat, OutFile, ListDel);
+  WriteFamilyDelaunay(comm, OutFormat, OutFile, ListDel, os);
 }
 
 
