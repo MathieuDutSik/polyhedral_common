@@ -184,6 +184,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
+  const int tag_initial = 35;
   const int tag_nonce_ask = 36;
   const int tag_nonce_reply = 37;
   const int tag_entriesadji_send = 38;
@@ -279,16 +280,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     n_obj++;
   };
-  auto initial_init=[&]() -> void {
+  auto initial_insert=[&](Tobj const& x) -> void {
     nonce++;
-    Tobj x = f_init();
-    bool test = f_insert(x);
-    if (test) {
-      send_early_termination();
+    size_t hash_partition = f_hash(seed_partition, x);
+    int i_proc_belong = static_cast<int>(hash_partition % size_t(n_proc));
+    if (i_proc_belong != i_rank) {
+      comm.send(i_proc_belong, tag_initial, x);
+    } else {
+      bool test = f_insert(x);
+      if (test) {
+        send_early_termination();
+      }
+      bool is_treated = false;
+      f_save_status(n_obj, is_treated);
+      insert_load(x, is_treated);
     }
-    bool is_treated = false;
-    f_save_status(n_obj, is_treated);
-    insert_load(x, is_treated);
   };
   auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
     for (auto &eEnt : v) {
@@ -339,6 +345,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto process_mpi_status = [&](boost::mpi::status const &stat) -> bool {
     int e_tag = stat.tag();
     int e_src = stat.source();
+    if (e_tag == tag_initial) {
+      Tobj x;
+      comm.recv(e_src, tag_initial, x);
+      initial_insert(x);
+      return false;
+    }
     if (e_tag == tag_entriesadji_send) {
       std::vector<entryAdjI<TadjI>> v;
       comm.recv(e_src, tag_entriesadji_send, v);
@@ -552,7 +564,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   os << "ADJ_SCH: beginning n_orb_max=" << n_orb_max << " n_orb_loc=" << n_orb_loc << "\n";
 #endif
   if (n_orb_max == 0 && i_rank == 0) {
-    initial_init();
+    Tobj x = f_init();
+    initial_insert(x);
   }
   //
   // The infinite loop
