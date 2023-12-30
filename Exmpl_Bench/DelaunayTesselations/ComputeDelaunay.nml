@@ -5,7 +5,8 @@
 ! GRAMfile = "GRAM_Lambda10.txt"
 ! GRAMfile = "GRAM_E6.txt"
  SVRfile = "unset.svr"
- OutFormat = "nothing"
+! OutFormat = "nothing"
+ OutFormat = "CheckMergedOutput"
  OutFile = "ListOrbit"
  max_runtime_second = 10800
  ApplyStdUnitbuf = T

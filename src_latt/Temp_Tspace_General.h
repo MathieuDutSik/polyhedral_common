@@ -35,6 +35,17 @@ template <typename T> struct LinSpaceMatrix {
   std::vector<MyMatrix<T>> ListComm;
 };
 
+template<typename T>
+LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatrix<T>> const& ListMat, std::vector<MyMatrix<T>> const& ListComm) {
+  int n = SuperMat.rows();
+  std::vector<std::vector<T>> ListLineMat;
+  for (auto & eMat : ListMat) {
+    std::vector<T> eV = GetLineVector(eMat);
+    ListLineMat.push_back(eV);
+  }
+  return {n, SuperMat, ListMat, ListLineMat, ListComm};
+}
+
 
 template<typename T>
 MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
@@ -96,6 +107,13 @@ std::ostream &operator<<(std::ostream &os, LinSpaceMatrix<T> const &obj) {
 */
 
 
+
+
+
+//
+// Examples of spaces of use
+//
+
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;
   int i, j;
@@ -113,7 +131,7 @@ template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   ZeroAssignation(SuperMat);
   for (i = 0; i < n; i++)
     SuperMat(i, i) = eAss;
-  return {n, SuperMat, ListMat, {}};
+  return BuildLinSpace(SuperMat, ListMat, {});
 }
 
 template <typename T>
@@ -177,7 +195,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
-  return {2 * n, SuperMat, ListMat, {eComm}};
+  return BuildLinSpace(SuperMat, ListMat, {eComm});
 }
 
 template <typename T>
@@ -238,7 +256,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
-  return {2 * n, SuperMat, ListMat, {eComm}};
+  return BuildLinSpace(SuperMat, ListMat, {eComm});
 }
 
 template <typename T>
