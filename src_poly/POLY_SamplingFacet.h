@@ -235,11 +235,13 @@ Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   for (auto &eFace : ListIncd) {
     map_incd[eFace.count()] += 1;
   }
+#ifdef DEBUG_SAMPLING_FACET
   os << "Found incidences =";
   for (auto &kv : map_incd) {
     os << " (" << kv.first << "," << kv.second << ")";
   }
   os << "\n";
+#endif
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|DirectComputationInitialFacetSet|=" << time << "\n";
 #endif

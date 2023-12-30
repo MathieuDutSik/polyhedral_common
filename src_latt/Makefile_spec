@@ -32,7 +32,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS
 #COPTIONS        = -DTIMINGS
-COPTIONS        = -DDEBUG
+#COPTIONS        = -DDEBUG
+COPTIONS        =
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)

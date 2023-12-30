@@ -2489,7 +2489,6 @@ vectface DUALDESC_AdjacencyDecomposition(
 #endif
   CheckTermination<Tgroup>(AllArr);
   int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
   LazyWMat<T, Tidx_value> lwm(EXT, os);
   //
   // Checking if the entry is present in the map.
@@ -2534,13 +2533,17 @@ vectface DUALDESC_AdjacencyDecomposition(
       BankSymmCheck = true;
     }
     Tint GroupSizeComp = TheGRPrelevant.size();
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
-       << " TheDim=" << nbCol << " |EXT|=" << nbRow << "\n";
+    << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
+#endif
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
     std::string ansChosenDatabase =
         HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase
        << "\n";
+#endif
     if (ansChosenDatabase == "canonic") {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
       TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);

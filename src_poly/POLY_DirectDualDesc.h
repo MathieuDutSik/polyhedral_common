@@ -125,7 +125,9 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
 #ifdef TIMINGS_DUAL_DESC
   os << "|FileWriting|=" << time << "\n";
 #endif
-  //  os << "FileO=" << FileO << " created\n";
+#ifdef DEBUG_DUAL_DESC
+  os << "FileO=" << FileO << " created\n";
+#endif
   //
   // Now calling the external program
   //
@@ -135,28 +137,32 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   } else {
     order = eCommand + " " + FileI + " > " + FileO + " 2> " + FileE;
   }
+#ifdef DEBUG_DUAL_DESC
   os << "order=" << order << "\n";
+#endif
   int iret1 = system(order.c_str());
 #ifdef TIMINGS_DUAL_DESC
   os << "|glrs/ppl/cdd|=" << time << "\n";
 #endif
+#ifdef DEBUG_DUAL_DESC
   os << "External program terminated\n";
+#endif
   if (iret1 != 0) {
-    os << "The program has not terminated correctly\n";
-    os << "FileI = " << FileI << "\n";
-    os << "FileO = " << FileO << "\n";
-    os << "FileE = " << FileE << "\n";
+    std::cerr << "The program has not terminated correctly\n";
+    std::cerr << "FileI = " << FileI << "\n";
+    std::cerr << "FileO = " << FileO << "\n";
+    std::cerr << "FileE = " << FileE << "\n";
     throw TerminalException{1};
   }
   size_t n_facet = 0;
   size_t n_insert = 0;
   auto check_consistency = [&]() -> void {
     if (n_insert != n_facet) {
-      os << "Consistency error\n";
-      os << "n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
-      os << "FileI = " << FileI << "\n";
-      os << "FileO = " << FileO << "\n";
-      os << "FileE = " << FileE << "\n";
+      std::cerr << "Consistency error\n";
+      std::cerr << "n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
+      std::cerr << "FileI = " << FileI << "\n";
+      std::cerr << "FileO = " << FileO << "\n";
+      std::cerr << "FileE = " << FileE << "\n";
       throw TerminalException{1};
     }
   };
@@ -182,7 +188,9 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     bool has_n_facet = false;
     size_t iLineLimit = 0;
     while (std::getline(is, line)) {
+#ifdef DEBUG_DUAL_DESC
       os << "iLine=" << iLine << " line=" << line << "\n";
+#endif
       if (has_n_facet) {
         if (iLine < iLineLimit) {
           process_line();
@@ -237,12 +245,14 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
 #ifdef TIMINGS_DUAL_DESC
   os << "|FileRead|=" << time << "\n";
 #endif
+#ifdef DEBUG_DUAL_DESC
   os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+#endif
   if (n_insert == 0) {
     std::cerr << "We inserted zero entries\n";
-    os << "FileI = " << FileI << "\n";
-    os << "FileO = " << FileO << "\n";
-    os << "FileE = " << FileE << "\n";
+    std::cerr << "FileI = " << FileI << "\n";
+    std::cerr << "FileO = " << FileO << "\n";
+    std::cerr << "FileE = " << FileE << "\n";
     throw TerminalException{1};
   }
   RemoveFileIfExist(FileI);

@@ -391,7 +391,7 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   //
   std::vector<std::string> lstr_io = {"&IO",
                                       " name = \"split\"",
-                                      " WriteLog = T",
+                                      " WriteLog = F",
                                       " ProcessExistingDataIfExist = F",
                                       " LogFileToProcess = \"input_logfile\"",
                                       "/"};

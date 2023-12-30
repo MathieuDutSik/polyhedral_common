@@ -104,7 +104,9 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         ListRelevantPoint.push_back(fVect_T);
       }
     }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "|ListRelevantPoint|=" << ListRelevantPoint.size() << "\n";
+#endif
   }
 }
 
