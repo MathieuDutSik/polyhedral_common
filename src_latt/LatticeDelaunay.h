@@ -405,14 +405,69 @@ void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT) {
 
 template<typename Tvert, typename Tgroup>
 void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
+  using Telt = typename Tgroup::Telt;
   std::ofstream os(OutFile);
   os << "return [\n";
   size_t n_del = DT.l_dels.size();
   for (size_t i_del=0; i_del<n_del; i_del++) {
+    Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
+    MyMatrix<Tvert> EXT = eDel.obj;
     if (i_del > 0)
       os << ",";
-    
+    os << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
+    std::vector<Telt> LGen = eDel.GRP.GeneratorsOfGroup();
+    auto get_gap_string=[&] -> std::string {
+      if (LGen.size() == 0) {
+        return "Group(())";
+      } else {
+        std::string str_ret = "Group([";
+        bool IsFirst = true;
+        for (auto & eElt : LGen) {
+          if (!IsFirst)
+            str_ret += ",";
+          IsFirst = false;
+          str_ret += GapStyleString(eElt);
+        }
+        str_ret += "])";
+        return str_ret;
+      }
+    };
+    std::string str_perm = "[", str_matr = "[";
+    bool IsFirst = true;
+    for (auto & eElt : LGen) {
+      if (!IsFirst) {
+        str_perm += ",";
+        str_matr += ",";
+      }
+      IsFirst = false;
+      MyMatrix<Tvert> M = FindTransformation(EXT, EXT, eElt);
+      str_perm += GapStyleString(eElt);
+      str_matr += StringMatrixGAP(M);
+    }
+    str_perm += "]";
+    str_matr += "]";
+    std::string str_phi = "GroupHomomorphismByImagesNC(Group(" + str_perm + "), Group(" + str_matr + "), " + str_perm + ", " + str_matr + ")";
+    os << "TheStab:=rec(PermutationStabilizer:=" << get_gap_string() << ", PhiPermMat:=" << str_phi << "), ";
+    os << "Adjacencies:=[";
+    IsFirst = true;
+    for (auto & eAdj : eDel.ListAdj) {
+      if (!IsFirst)
+        os << ",";
+      IsFirst = false;
+      os << "rec(iDelaunay:=" << (eAdj.iOrb + 1) << ", ";
+      os << "eInc:=[";
+      std::vector<int> V = FaceToVector<int>(eAdj.eInc);
+      for (size_t u=0; u<V.size(); u++) {
+        if (u > 0)
+          os << ",";
+        os << (V[u] + 1);
+      }
+      os << "],\n";
+      os << "eBigMat:=" << StringMatrixGAP(eAdj.eBigMat) << ")";
+    }
+    os << "])";
   }
+  os << "];\n";
 }
 
 
@@ -662,7 +717,16 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
     if (i_proc_out == i_rank) {
       check_delaunay_tessellation(DT);
     }
-    std::cerr << "Everything is ok\n";
+    std::cerr << "The Delaunay tesselation passed the adjacency check\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    int i_proc_out = 0;
+    DelaunayTesselation<Tint,Tgroup> DT = my_mpi_gather(comm, ListDel, i_proc_out);
+    if (i_proc_out == i_rank) {
+      WriteGAPformat(DT, OutFile);
+    }
+    std::cerr << "The Delaunay tesselation has been written to file\n";
     return;
   }
   if (OutFormat == "RAW") {
