@@ -64,52 +64,6 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
   }
 }
 
-/*
-template <typename T>
-std::istream &operator>>(std::istream &is, LinSpaceMatrix<T> &obj) {
-  MyMatrix<T> SuperMat = ReadMatrix<T>(is);
-  int n = SuperMat.rows();
-  //
-  int nbMat;
-  is >> nbMat;
-  std::vector<MyMatrix<T>> ListMat(nbMat);
-  for (int iMat = 0; iMat < nbMat; iMat++) {
-    MyMatrix<T> eMat = ReadMatrix<T>(is);
-    ListMat[iMat] = eMat;
-  }
-  //
-  int nbComm;
-  is >> nbComm;
-  std::vector<MyMatrix<T>> ListComm(nbComm);
-  for (int iComm = 0; iComm < nbComm; iComm++) {
-    MyMatrix<T> eComm = ReadMatrix<T>(is);
-    ListComm[iComm] = eComm;
-  }
-  obj = {n, SuperMat, ListMat, ListComm};
-  return is;
-}
-
-template <typename T>
-std::ostream &operator<<(std::ostream &os, LinSpaceMatrix<T> const &obj) {
-  WriteMatrix(os, obj.SuperMat);
-  //
-  int nbMat = obj.ListMat.size();
-  os << " " << nbMat << "\n";
-  for (int iMat = 0; iMat < nbMat; iMat++)
-    WriteMatrix(os, obj.ListMat[iMat]);
-  //
-  int nbComm = obj.ListComm.size();
-  os << " " << nbComm << "\n";
-  for (int iComm = 0; iComm < nbComm; iComm++)
-    WriteMatrix(os, obj.ListComm[iComm]);
-  return os;
-}
-*/
-
-
-
-
-
 //
 // Examples of spaces of use
 //

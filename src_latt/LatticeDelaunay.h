@@ -405,6 +405,7 @@ void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT) {
 
 template<typename Tvert, typename Tgroup>
 void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
+  using T = typename overlying_field<Tvert>::field_type;
   using Telt = typename Tgroup::Telt;
   std::ofstream os(OutFile);
   os << "return [\n";
@@ -412,11 +413,12 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
   for (size_t i_del=0; i_del<n_del; i_del++) {
     Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
     MyMatrix<Tvert> EXT = eDel.obj;
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
     if (i_del > 0)
       os << ",";
     os << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
     std::vector<Telt> LGen = eDel.GRP.GeneratorsOfGroup();
-    auto get_gap_string=[&] -> std::string {
+    auto get_gap_string=[&]() -> std::string {
       if (LGen.size() == 0) {
         return "Group(())";
       } else {
@@ -440,7 +442,7 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
         str_matr += ",";
       }
       IsFirst = false;
-      MyMatrix<Tvert> M = FindTransformation(EXT, EXT, eElt);
+      MyMatrix<T> M = FindTransformation(EXT_T, EXT_T, eElt);
       str_perm += GapStyleString(eElt);
       str_matr += StringMatrixGAP(M);
     }
