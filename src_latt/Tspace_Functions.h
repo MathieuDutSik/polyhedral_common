@@ -64,6 +64,11 @@
   characterized as the ones commuting with the multiplication by t.
   This is especially convenient since we can nicely characterize
   commuting operation [1, Section 3.3].
+  Another example is if a group G stabilize a subspace. Then the
+  normalizer of G will also stabilize the subspace.
+  The stabilization of a subspace and the fact that there is a
+  canonically associated scalar product allows to define an orthognal
+  and so a projector to commute with.
   ----
   The big problem that we have is given A in X, to compute the
   stabilizer in GlStab(X) and given two matrices A, B in X, check
@@ -71,7 +76,17 @@
   Both problems are clearly finite: We can compute the stabilizer
   in GL_n(Z) of a matrix A and then keep the elements that
   stabilize X.
-  Can we do better? 
+  Can we do better?
+  * We can use cosets with the point stabilizer, but it is never that
+  large and if the index is too high, that can sink us.
+  * The preserved subspace trick should help us in some cases.
+  * For case like number ring with us not looking at GL_n(Z[t]) what
+  can we actually do? Can we describe some normalizer or something?
+  For gaussian or eisenstein, we have a conjugation operation. Could we
+  generalize that?
+  * We could map the problem into the matrix space, but the transformation
+  would be matricial in S^n. How could we characterize the ones coming as
+  X -> P X P^T ? See the linear preserver problem literature about that.
 
   References:
   [1]: David Bremner, Mathieu Dutour Sikiric, Dmitrii V. Pasechnik,
