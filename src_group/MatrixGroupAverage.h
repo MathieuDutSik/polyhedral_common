@@ -91,6 +91,99 @@ MyVector<T> OrbitBarycenter(MyVector<T> const&a, std::vector<MyMatrix<T>> const&
   return TheSol;
 }
 
+
+
+
+
+/*
+  Now doing it over the action of the group over symmetric matrices by
+  M -> g M g^T
+ */
+template <typename T>
+MyMatrix<T> OrbitBarycenterSymmetricMatrix(MyMatrix<T> const&M, std::vector<MyMatrix<T>> const& LGen) {
+  int n = M.rows();
+  int sym_dim = (n * (n+1)) / 2;
+  MyVector<T> a(sym_dim);
+  MyMatrix<int> C(sym_dim, 2);
+  MyMatrix<int> Crev(n, n);
+  int off_dim = (n * (n - 1)) / 2;
+  std::vector<int> LOff(off_dim);
+  int pos_sym = 0;
+  int pos_off = 0;
+  for (int i=0; i<n; i++) {
+    for (int j=i; j<n; j++) {
+      a(pos_sym) = M(i,j);
+      C(pos_sym, 0) = i;
+      C(pos_sym, 1) = j;
+      Crev(i, j) = pos_sym;
+      Crev(j, i) = pos_sym;
+      if (i != j) {
+        LOff[pos_off] = pos_sym;
+        pos_off++;
+      }
+      pos_sym++;
+    }
+  }
+  MyMatrix<int> LHalf(alt_dim, 2);
+  int pos = 0;
+  for (int i=0; i<n; i++) {
+    for (int j=i+1; j<n; j++) {
+      LHalf(pos, 0) = i;
+      LHalf(pos, 1) = j;
+      pos++;
+    }
+  }
+  std::vector<MyMatrix<T>> LGenExt;
+  for (auto & eGen : LGen) {
+    MyMatrix<T> eGenExt = ZeroMatrix<T>(sym_dim, sym_dim);
+    for (int i_sym=0; i_sym<sym_dim; i_sym++) {
+      int i = C(i_sym, 0);
+      int j = C(i_sym, 1);
+      // A matrix entry with 1 in position (i,j) and (j,i)
+      //
+      // We need to Compute the products
+      // P E_{i,i} P^T and
+      // P (E_{i,j} + E_{j,i}) P^T
+      //
+      // Let us compute the initial product
+      // P E_{i,j} P^T
+      // First the product P E_{i,j}
+      // It is a n x n matrix with the i-th column of P in the column j;
+      // The product P E_{i,j} P^T is
+      // [p_{k,i} p_{l,j}]_{1 \leq k,l \leq n}
+      // k is row and l is the column.
+      for (int k=0; k<n; k++) {
+        for (int l=0; l<n; l++) {
+          int pos = Crev(k, l);
+          eGenExt(i_sym, pos) += eGen(k, i) * eGen(l, j);
+          if (i != j) {
+            eGenExt(i_sym, pos) += eGen(k, j) * eGen(l, i);
+          }
+        }
+      }
+    }
+    for (int i_off=0; i_off<off_dim; i_off++) {
+      int pos_sym = LOff[i_off];
+      for (int i_sym=0; i_sym<sym_dim; i_sym++) {
+        eGenExt(i_sym, pos_sym) /= 2;
+      }
+    }
+    LGenExt.push_back(eGenExt);
+  }
+  MyVector<T> a_bary = OrbitBarycenter(a, LGenExt);
+  MyMatrix<T> M_bary(n,n);
+  int pos_sym = 0;
+  for (int i=0; i<n; i++) {
+    for (int j=i; j<n; j++) {
+      M_bary(i,j) = a_bary(pos_sym);
+      M_bary(j,i) = a_bary(pos_sym);
+      pos_sym++;
+    }
+  }
+  return M_bary;
+}
+
+
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUPAVERAGE_H_
 // clang-format on

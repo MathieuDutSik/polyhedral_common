@@ -2,6 +2,10 @@
 #ifndef SRC_LATT_TSPACE_GENERATION_H_
 #define SRC_LATT_TSPACE_GENERATION_H_
 
+#ifdef DEBUG
+#define DEBUG_TSPACE_GENERATION
+#endif
+
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;
   int i, j;
@@ -154,14 +158,19 @@ template <typename T>
 std::vector<MyMatrix<T>>
 BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
   std::vector<std::vector<int>> ListCoeff;
-  for (int iLin = 0; iLin < n; iLin++)
-    for (int iCol = 0; iCol <= iLin; iCol++)
+  MyMatrix<int> ListCoeffRev(n,n);
+  int pos = 0;
+  for (int iLin = 0; iLin < n; iLin++) {
+    for (int iCol = 0; iCol <= iLin; iCol++) {
       ListCoeff.push_back({iLin, iCol});
-  int nbCoeff = ListCoeff.size();
+      ListCoeffRev(iLin, iCol) = pos;
+      ListCoeffRev(iCol, iLin) = pos;
+      pos++;
+    }
+  }
+  int nbCoeff = pos;
   auto FuncPos = [&](int const &i, int const &j) -> int {
-    if (i < j)
-      return PositionVect(ListCoeff, {j, i});
-    return PositionVect(ListCoeff, {i, j});
+    return ListCoeffRev(i, j);
   };
   std::vector<MyVector<T>> ListEquations;
   for (auto &eGen : ListGen)
@@ -193,11 +202,19 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
         eMat(i, j) = eRow(FuncPos(i, j));
     TheBasis[iDim] = eMat;
   }
+#ifdef DEBUG_TSPACE_GENERATION
+  for (auto & eBasis : TheBasis) {
+    for (auto & eGen : ListGen) {
+      MyMatrix<T> eProd = eGen * eBasis * eGen.transpose();
+      if (eProd != eBasis) {
+        std::cerr << "We have eProd <> eBasis, so a linear algebra bug\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   return TheBasis;
 }
-
-
-
 
 template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
   std::vector<MyMatrix<T>> ListMat;
