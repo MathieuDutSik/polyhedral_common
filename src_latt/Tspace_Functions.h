@@ -130,6 +130,23 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatri
   return {n, SuperMat, ListMat, ListLineMat, ListComm};
 }
 
+template<typename T, typename Tint>
+std::vector<MyMatrix<Tint>> ComputePointStabilizerTspace(MyMatrix<T> const& SuperMat, std::vector<MyMatrix<T>> const& ListMat, std::ostream & os) {
+  using Tidx = uint32_t;
+  using Tfield = T;
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  bool use_scheme = true;
+  std::vector<std::vector<Tidx>> ListGenPerm =
+    GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+  std::vector<MyMatrix<Tint>> ListGenMatr;
+  for (auto & eList : ListGenPerm) {
+    MyMatrix<T> eMatr_T = FindTransformation_vect(SHV_T, SHV_T, eList);
+    MyMatrix<Tint> eMatr = UniversalMatrixConversion<Tint,T>(eMatr_T);
+    ListGenMatr.push_back(eMatr);
+  }
+  return ListGenMatr;
+}
 
 template<typename T>
 MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
@@ -187,98 +204,6 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
   std::optional<MyVector<T>> RecSol = SolutionMat(TotalMatrix, eMatVect);
   MyVector<T> V = unfold_opt(RecSol, "Failure in SolutionMat");
   return V;
-}
-
-template <typename T> T T_GRAM_GetUpperBound(MyMatrix<T> const &TheMat) {
-  T TheLowEst = 0;
-  int n = TheMat.rows();
-  for (int i = 0; i < n; i++) {
-    T eVal = TheMat(i, i);
-    if (eVal > TheLowEst)
-      TheLowEst = eVal;
-  }
-  T MaxNorm = TheLowEst;
-  return MaxNorm;
-}
-
-template <typename T>
-void T_UpdateListValue(MyMatrix<T> const &eMat, T const &TheTol,
-                       std::vector<T> &ListVal) {
-  int nbRow = eMat.nbRow;
-  int nbCol = eMat.nbCol;
-  for (int iRow = 0; iRow < nbRow; iRow++)
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      bool WeFound = false;
-      int nb = ListVal.size();
-      T fVal = eMat(iRow, iCol);
-      for (int iVal = 0; iVal < nb; iVal++) {
-        T hVal = ListVal[iVal];
-        if (T_abs(hVal - fVal) < TheTol)
-          WeFound = true;
-      }
-      if (!WeFound)
-        ListVal.push_back(fVal);
-    }
-}
-
-template <typename T>
-MyMatrix<T> T_GRAM_GetScalProdMat(MyMatrix<T> const &eMat,
-                                  MyMatrix<int> const &ListShort) {
-  int nbShort = ListShort.rows();
-  int n = ListShort.cols();
-  MyMatrix<T> ScalProdMat(nbShort, nbShort);
-  for (int iShort = 0; iShort < nbShort; iShort++)
-    for (int jShort = 0; jShort < nbShort; jShort++) {
-      T eScal = 0;
-      for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++) {
-          int eVal12 = ListShort(jShort, j) * ListShort(iShort, i);
-          T eVal = eMat(i, j);
-          eScal += eVal12 * eVal;
-        }
-      ScalProdMat(iShort, jShort) = eScal;
-    }
-  return ScalProdMat;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-void T_GetGramMatrixAutomorphismGroup(
-    MyMatrix<T> const &eMat, Tgroup &GRPperm,
-    std::vector<MyMatrix<Tint>> &ListMatrGens) {
-  using Tidx_value = int16_t;
-  T MaxDet = T_GRAM_GetUpperBound(eMat);
-  MyMatrix<Tint> ListShort = T_ShortVector(eMat, MaxDet);
-  MyMatrix<T> ListShort_T = UniversalMatrixConversion<T, Tint>(ListShort);
-  WeightMatrix<true, T, Tidx_value> WMat =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eMat, ListShort);
-  GRPperm = GetStabilizerWeightMatrix(WMat);
-  ListMatrGens.clear();
-  for (auto &eGen : GRPperm.group->S) {
-    MyMatrix<T> M3_T =
-        RepresentVertexPermutation(ListShort_T, ListShort_T, *eGen);
-    MyMatrix<Tint> M3_I = UniversalMatrixConversion<Tint, T>(M3_T);
-    ListMatrGens.push_back(M3_I);
-  }
-}
-
-template <typename T, typename Tint, typename Telt>
-bool T_TestGramMatrixEquivalence(MyMatrix<T> const &eMat1,
-                                 MyMatrix<T> const &eMat2) {
-  using Tidx_value = int16_t;
-  T MaxDet1 = T_GRAM_GetUpperBound(eMat1);
-  T MaxDet2 = T_GRAM_GetUpperBound(eMat2);
-  T MaxDet = MaxDet1;
-  if (MaxDet1 > MaxDet2)
-    MaxDet = MaxDet2;
-  MyMatrix<Tint> ListShort1 = T_ShortVector(eMat1, MaxDet);
-  MyMatrix<Tint> ListShort2 = T_ShortVector(eMat2, MaxDet);
-  WeightMatrix<true, T, Tidx_value> WMat1 =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eMat1, ListShort1);
-  WeightMatrix<true, T, Tidx_value> WMat2 =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eMat2, ListShort2);
-  std::optional<Telt> eResEquiv =
-      TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2);
-  return eResEquiv;
 }
 
 /*
