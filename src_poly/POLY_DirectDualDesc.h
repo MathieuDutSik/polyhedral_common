@@ -77,7 +77,7 @@ size_t GetShift([[maybe_unused]] MyMatrix<T> const &EXT,
 template <typename T, typename Finsert>
 void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
                                     std::string const &eCommand,
-                                    std::ostream &os) {
+                                    [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_DUAL_DESC
   MicrosecondTime time;
 #endif

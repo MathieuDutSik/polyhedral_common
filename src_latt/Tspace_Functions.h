@@ -165,6 +165,58 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
   }
 }
 
+/*
+  We need the space of matrices to be spanning the integral saturation so that the elements
+  of GlStab are integral.
+ */
+template<typename T>
+std::vector<MyMatrix<T>> IntegralSaturationSpace(std::vector<MyMatrix<T>> const& ListMat) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr << "We have n_mat=0\n";
+    std::cerr << "The code could work with n_mat=0 but we are not sure it makes sense\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+  int sym_dim = (n+1) *n / 2;
+  if (n_mat == sym_dim) {
+    std::cerr << "We have n_mat=" << n_mat << " equal to sym_dim=" << sym_dim << "\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> BigMat(n_mat, sym_dim);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    int pos = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=i; j<n; j++) {
+        BigMat(i_mat, pos) = LustMat[i_mat](i,j);
+        pos++;
+      }
+    }
+  }
+  MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
+  MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);
+  if (BigMat_renorm.rows() != n_mat) {
+    std::cerr << "Incoherence in the dimensions\n";
+    throw TerminalException{1};
+  }
+  std::vector<MyMatrix<T>> ListMatRet;
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyMatrix<T> eMat(n, n);
+    int pos = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=i; j<n; j++) {
+        T val = BigMat_renorm(i_mat, pos);
+        eMat(i, j) = val;
+        eMat(j, i) = val;
+      }
+    }
+    ListMatRet.push_back(eMat);
+  }
+  return ListMatRet;
+}
+
+
+
 template <typename T>
 MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
                                MyVector<T> const &eVect) {
