@@ -27,13 +27,56 @@
   However, if the total number of combinatorial possibilities is expected to be smaller,
   the combinatorial complexity on programming and thinking is definitely higher.
   The thing that are considered in this section:
-  * The generation of the T-spaces
+  * Finding the integral saturation (useful for integral separation)
+  * The generation of the T-spaces (see other include)
   * The computation of stabilizer and equivalence of positive definite matrices in
   the T-space.
-  ---
+ */
 
 
+/*
+  Aspects of equivalence issues.
+  * The point stabilizer of the T-space X, that is:
+  PtStab(X) = {g in GL_n(Z) s.t. g M g^T = M for all M in X}
+  * The global stabilizer of the T-space X, that is
+  GlStab(X) = {g in GL_n(Z) s.t. g M g^T \in X for all M in X}
+  -----
+  Facts:
+  * The group PtStab(X) is finite.
+  * The group GlStab(X) is finitely generated.
+  * If X = {M s.t. g M g^T = M for all g in G0} for G0 a finite
+  subgroup of GL_n(Z) then GlStab(X) is the normalizer of G0.
+  * If a saturating integral basis is chosen for X then the
+  expression of GlStab(X) is integral in that basis.
+  * The group PtStab(X) is easy to compute: Take a basis of the
+  T-space, a supermat, an invariant set for the supermat and then
+  the combined scalar product for the basis.
+  * The group GlStab(X) is much harder to compute. A generating
+  set is usually a byproduct of the polyhedral tessellation like
+  coming from the perfect form or the Delaunay polytopes. This is
+  the Opgenorth algorithm.
+  ----
+  Usually, we want to compute with the full group GlStab(X).
+  However, for some application for example to number theory we
+  want to compute with the group GL_n(Z[t]) with t a generating
+  element. If the degree of t is d then expressed in a good basis
+  the matrix is in GL_{nd}(Z) and the matrix of GL_{n}(Z[t]) are
+  characterized as the ones commuting with the multiplication by t.
+  This is especially convenient since we can nicely characterize
+  commuting operation [1, Section 3.3].
+  ----
+  The big problem that we have is given A in X, to compute the
+  stabilizer in GlStab(X) and given two matrices A, B in X, check
+  if there is an element g in GlStab(X) such that g A g^T = B.
+  Both problems are clearly finite: We can compute the stabilizer
+  in GL_n(Z) of a matrix A and then keep the elements that
+  stabilize X.
+  Can we do better? 
 
+  References:
+  [1]: David Bremner, Mathieu Dutour Sikiric, Dmitrii V. Pasechnik,
+  Thomas Rehn and Achill Schuermann, Computing symmetry groups of polyhedra
+  LMS J. Comput. Math. 17 (1) (2014) 565–581, doi:10.1112/S1461157014000400
  */
 
 
@@ -58,6 +101,7 @@ template <typename T> struct LinSpaceMatrix {
   std::vector<MyMatrix<T>> ListMat;
   std::vector<std::vector<T>> ListLineMat;
   std::vector<MyMatrix<T>> ListComm;
+  std::vector<MyMatrix<T>> PtStab;
 };
 
 template<typename T>
