@@ -8,21 +8,15 @@
 
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;
-  int i, j;
-  T eAss;
-  eAss = 1;
-  for (i = 0; i < n; i++)
-    for (j = i; j < n; j++) {
+  for (int i = 0; i < n; i++)
+    for (int j = i; j < n; j++) {
       MyMatrix<T> eMat(n, n);
       ZeroAssignation(eMat);
-      eMat(i, j) = eAss;
-      eMat(j, i) = eAss;
+      eMat(i, j) = 1;
+      eMat(j, i) = 1;
       ListMat.push_back(eMat);
     }
-  MyMatrix<T> SuperMat(n, n);
-  ZeroAssignation(SuperMat);
-  for (i = 0; i < n; i++)
-    SuperMat(i, i) = eAss;
+  MyMatrix<T> SuperMat = IdentityMat<T>(n);
   return BuildLinSpace(SuperMat, ListMat, {});
 }
 
@@ -30,20 +24,16 @@ template <typename T>
 MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
                                MyMatrix<T> const &eMatC, int n, T const &eSum,
                                T const &eProd) {
-  int i2, j2;
-  T eVal1, eVal1b, eVal2;
-  T bVal, cVal;
-  MyMatrix<T> eMatN(2 * n, 2 * n);
-  ZeroAssignation(eMatN);
-  for (i2 = 0; i2 < n; i2++)
-    for (j2 = 0; j2 < n; j2++) {
-      bVal = eMatB(i2, j2);
-      cVal = eMatC(i2, j2);
-      eVal1 = 2 * bVal + eSum * cVal;
-      eVal1b = (eSum * eSum - 2 * eProd) * bVal + eSum * eProd * cVal;
+  MyMatrix<T> eMatN = ZeroMatrix<T>(2 * n, 2 * n);
+  for (int i2 = 0; i2 < n; i2++)
+    for (int j2 = 0; j2 < n; j2++) {
+      T bVal = eMatB(i2, j2);
+      T cVal = eMatC(i2, j2);
+      T eVal1 = 2 * bVal + eSum * cVal;
+      T eVal1b = (eSum * eSum - 2 * eProd) * bVal + eSum * eProd * cVal;
       eMatN(i2, j2) = eVal1;
       eMatN(i2 + n, j2 + n) = eVal1b;
-      eVal2 = eSum * bVal + 2 * eProd * cVal;
+      T eVal2 = eSum * bVal + 2 * eProd * cVal;
       eMatN(i2, j2 + n) = eVal2;
       eMatN(i2 + n, j2) = eVal2;
     }
@@ -55,24 +45,22 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
                                             T const &eProd) {
   std::vector<MyMatrix<T>> ListMat;
   int i, j;
-  T eOne;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
-  eOne = 1;
-  for (i = 0; i < n; i++)
-    for (j = 0; j < n; j++) {
+  for (int i = 0; i < n; i++)
+    for (int j = 0; j < n; j++) {
       ZeroAssignation(eMatB);
       ZeroAssignation(eMatC);
-      eMatB(i, j) = eOne;
-      eMatB(j, i) = eOne;
+      eMatB(i, j) = 1;
+      eMatB(j, i) = 1;
       //
       MyMatrix<T> eMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
       ListMat.push_back(eMat);
       //
       ZeroAssignation(eMatB);
       ZeroAssignation(eMatC);
-      eMatC(i, j) = eOne;
-      eMatC(j, i) = eOne;
+      eMatC(i, j) = 1;
+      eMatC(j, i) = 1;
       //
       MyMatrix<T> fMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
       ListMat.push_back(fMat);
@@ -83,7 +71,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
   for (i = 0; i < n; i++) {
-    eComm(i, n + i) = eOne;
+    eComm(i, n + i) = 1;
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
@@ -94,23 +82,18 @@ template <typename T>
 LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
                                             T const &eProd) {
   std::vector<MyMatrix<T>> ListMat;
-  int i, j;
-  T eOne, eVal;
-  T Discriminant;
-  Discriminant = eSum * eSum - 4 * eProd;
+  T Discriminant = eSum * eSum - 4 * eProd;
   if (Discriminant >= 0) {
     std::cerr << "Discriminant is positive\n";
     std::cerr << "Impossible for an imaginary space\n";
     throw TerminalException{1};
   }
-  eOne = 1;
-  for (i = 0; i < n; i++)
-    for (j = i; j < n; j++) {
-      MyMatrix<T> eMat(2 * n, 2 * n);
-      ZeroAssignation(eMat);
-      eMat(i, j) = eOne;
-      eMat(j, i) = eOne;
-      eVal = eSum / 2;
+  for (int i = 0; i < n; i++)
+    for (int j = i; j < n; j++) {
+      MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
+      eMat(i, j) = 1;
+      eMat(j, i) = 1;
+      T eVal = eSum / 2;
       eMat(n + i, j) = eVal;
       eMat(n + j, i) = eVal;
       eMat(i, n + j) = eVal;
@@ -120,22 +103,21 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
       eMat(n + j, n + i) = eProd;
       ListMat.push_back(eMat);
     }
-  for (i = 0; i < n - 1; i++)
-    for (j = i + 1; j < n; j++) {
+  for (int i = 0; i < n - 1; i++)
+    for (int j = i + 1; j < n; j++) {
       MyMatrix<T> eMat(2 * n, 2 * n);
       ZeroAssignation(eMat);
-      eMat(n + i, j) = eOne;
-      eMat(j, n + i) = eOne;
-      eVal = -1;
-      eMat(n + j, i) = eVal;
-      eMat(i, n + j) = eVal;
+      eMat(n + i, j) = 1;
+      eMat(j, n + i) = 1;
+      eMat(n + j, i) = -1;
+      eMat(i, n + j) = -1;
       ListMat.push_back(eMat);
     }
   MyMatrix<T> SuperMat(2 * n, 2 * n);
   ZeroAssignation(SuperMat);
-  for (i = 0; i < n; i++) {
-    SuperMat(i, i) = eOne;
-    eVal = eSum / 2;
+  for (int i = 0; i < n; i++) {
+    SuperMat(i, i) = 1;
+    T eVal = eSum / 2;
     SuperMat(n + i, i) = eVal;
     SuperMat(i, n + i) = eVal;
     //
@@ -144,7 +126,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
   for (i = 0; i < n; i++) {
-    eComm(i, n + i) = eOne;
+    eComm(i, n + i) = 1;
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
@@ -218,12 +200,11 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
 
 template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
   std::vector<MyMatrix<T>> ListMat;
-  T eOne = 1;
   for (int i = 0; i < n; i++)
     for (int j = 0; j <= i; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
-      eMat(i, j) = eOne;
-      eMat(j, i) = eOne;
+      eMat(i, j) = 1;
+      eMat(j, i) = 1;
       ListMat.push_back(eMat);
     }
   return ListMat;

@@ -112,11 +112,18 @@
  */
 template <typename T> struct LinSpaceMatrix {
   int n;
+  // The positive definite matrix.
   MyMatrix<T> SuperMat;
+  // The basis of the T-space
   std::vector<MyMatrix<T>> ListMat;
+  // The basis but expressed as line matrices
   std::vector<std::vector<T>> ListLineMat;
+  // The list of matrices with which the global stabilizing elements must commute
   std::vector<MyMatrix<T>> ListComm;
-  std::vector<MyMatrix<T>> PtStab;
+  // The list of preserved subspaces by the element of the global stabilizer
+  std::vector<MyMatrix<T>> ListSubspaces;
+  // The point stabilizer of the T-space
+  std::vector<MyMatrix<T>> PtStabGens;
 };
 
 template<typename T>
@@ -127,7 +134,10 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatri
     std::vector<T> eV = GetLineVector(eMat);
     ListLineMat.push_back(eV);
   }
-  return {n, SuperMat, ListMat, ListLineMat, ListComm};
+  std::vector<MyMatrix<T>> ListSubspaces;
+  MyMatrix<T> eGen = -IdentityMat<T>(n);
+  std::vector<MyMatrix<T>> PtStab{eGen};
+  return {n, SuperMat, ListMat, ListLineMat, ListComm, ListSubspaces, PtStab};
 }
 
 template<typename T, typename Tint>
@@ -147,6 +157,80 @@ std::vector<MyMatrix<Tint>> ComputePointStabilizerTspace(MyMatrix<T> const& Supe
   }
   return ListGenMatr;
 }
+
+template<typename T, typename Tint>
+MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr << "The number of matrices is 0 so we cannot build a positive definite matrix\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+  std::vector<MyVector<Tint>> ListV;
+  for (int i=0; i<n; i++) {
+    MyVector<Tint> V = ZeroVector<Tint>(n);
+    V(i) = 1;
+    ListV.push_back(V);
+  }
+  for (int i=0; i<n; i++) {
+    for (int j=i+1; j<n; j++) {
+      for (int sign=0; sign<2; sign++) {
+        int signB = -1 + 2*sign;
+        MyVector<Tint> V = ZeroVector<Tint>(n);
+        V(i) = 1;
+        V(j) = signB;
+        ListV.push_back(V);
+      }
+    }
+  }
+  while(true) {
+    int n_vect = ListV.size();
+    MyMatrix<T> ListIneq(n_vect, 1 + n_mat);
+    MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_mat);
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      ListIneq(i_vect,0) = -1;
+      MyVector<Tint> V = ListV[i_vect];
+      MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+      for (int i_mat=0; i_mat<n_mat; i_mat++) {
+        T val = EvaluationQuadForm(ListMat[i_mat], V_T);
+        ListIneq(i_vect, 1 + i_mat) = val;
+        ToBeMinimized(1+i_mat) += val;
+      }
+    }
+    //
+    // Solving the linear program
+    //
+    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized);
+    if (!eSol.PrimalDefined || !eSol.DualDefined) {
+      std::cerr << "The LpSolution dual and primal solutions should be defined\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
+    }
+    if (IsPositiveDefinite(TheMat)) {
+      return TrySuperMat;
+    }
+    //
+    // Failed, trying to find a vector
+    //
+    auto get_one_vect=[&]() -> MyVector<Tint> {
+      T CritNorm = 0;
+      if (RankMat(TrySuperMat) < n) {
+        return GetShortVectorDegenerate<T, Tint>(TrySuperMat, CritNorm);
+      } else {
+        bool NeedNonZero = true;
+        bool StrictIneq = true;
+        return GetShortVector_unlimited_float<Tint, T>(TrySuperMat, CritNorm, StrictIneq, NeedNonZero);
+      }
+    };
+    MyVector<Tint> V = get_one_vect();
+    ListV.push_back();
+  }
+}
+
+
 
 template<typename T>
 MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
@@ -214,8 +298,6 @@ std::vector<MyMatrix<T>> IntegralSaturationSpace(std::vector<MyMatrix<T>> const&
   }
   return ListMatRet;
 }
-
-
 
 template <typename T>
 MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
