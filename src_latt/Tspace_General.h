@@ -5,6 +5,7 @@
 // clang-format off
 #include "Tspace_Functions.h"
 #include "Tspace_Generation.h"
+#include "Tspace_Namelist.h"
 // clang-format on
 
 
