@@ -250,19 +250,6 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
   return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }
 
-template <typename T>
-std::vector<MyMatrix<T>> ReadListMatrixFile(std::string const &eFile) {
-  std::ifstream is(eFile);
-  int n_mat;
-  is >> n_mat;
-  std::vector<MyMatrix<T>> ListMat;
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> eMat = ReadMatrix<T>(is);
-    ListMat.push_back(eMat);
-  }
-  return ListMat;
-}
-
 // clang-format off
 #endif  // SRC_LATT_MATRIXCANONICALFORM_H_
 // clang-format on

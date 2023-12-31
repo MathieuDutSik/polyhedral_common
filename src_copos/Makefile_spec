@@ -16,7 +16,7 @@ CC		= g++ -std=c++11 -Wall -O9
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_latt -I../src_comb -I../src_poly -I../src_graph -I../src_perfect -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_latt -I../src_comb -I../src_poly -I../src_graph -I../src_perfect -I../src_short -I.
 
 
 CFLAGS 		= -I$(GMP_INCDIR)  -I$(PERMLIB_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) -I$(TBB_INCDIR) -I$(GSL_INCDIR) $(MPREAL_INCLUDE) $(GLPK_INCLUDE)

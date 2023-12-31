@@ -114,7 +114,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     }
     if (PtGroupMethod == "File") {
       std::string FilePtGroupGenerator = Blk.ListStringValues.at("FilePtGroupGenerator");
-      if (FilePtGroupGenerate == "unset") {
+      if (FilePtGroupGenerator == "unset") {
         std::cerr << "The FilePtGroupGenerator has not been set up, or set to unset\n";
         throw TerminalException{1};
       }
@@ -126,7 +126,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
   };
   auto set_supermat=[&]() -> void {
     std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
-    if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" || TypeTspace != "InvGroup") {
+    if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" && TypeTspace != "InvGroup") {
       if (SuperMatMethod == "NotNeeded") {
         std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
         std::cerr << "For NotNeeded, the option needs to be RealQuad, ImagQuad or InvGroup\n";
@@ -139,7 +139,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       }
     }
     if (TypeTspace == "InvGroup") {
-      MyMatrix<T> eMat = IdentityMat<T>(n);
+      MyMatrix<T> eMat = IdentityMat<T>(LinSpaRet.n);
       LinSpaRet.SuperMat = OrbitBarycenterSymmetricMatrix(eMat, LinSpaRet.ListMat);
       return;
     }
@@ -183,7 +183,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       throw TerminalException{1};
     }
     LinSpaRet.n = LGen[0].rows();
-    LinSpaRet.ListMat = BasisInvariantForm(n, LGen);
+    LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen);
     set_list_line_mat();
     set_supermat();
     set_listcomm();

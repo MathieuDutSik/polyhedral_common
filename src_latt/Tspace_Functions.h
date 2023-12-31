@@ -7,6 +7,7 @@
 #include "ShortestUniversal.h"
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
+#include "SHORT_ShortestConfig.h"
 #include <set>
 #include <vector>
 // clang-format on
@@ -144,8 +145,9 @@ template<typename T, typename Tint>
 std::vector<MyMatrix<Tint>> ComputePointStabilizerTspace(MyMatrix<T> const& SuperMat, std::vector<MyMatrix<T>> const& ListMat, std::ostream & os) {
   using Tidx = uint32_t;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  std::vector<T> Vdiag(SHV_T.rows(), 0);
   bool use_scheme = true;
   std::vector<std::vector<Tidx>> ListGenPerm =
     GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
@@ -209,7 +211,7 @@ MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
       TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
     }
-    if (IsPositiveDefinite(TheMat)) {
+    if (IsPositiveDefinite(TrySuperMat)) {
       return TrySuperMat;
     }
     //
@@ -272,7 +274,7 @@ std::vector<MyMatrix<T>> IntegralSaturationSpace(std::vector<MyMatrix<T>> const&
     int pos = 0;
     for (int i=0; i<n; i++) {
       for (int j=i; j<n; j++) {
-        BigMat(i_mat, pos) = LustMat[i_mat](i,j);
+        BigMat(i_mat, pos) = ListMat[i_mat](i,j);
         pos++;
       }
     }

@@ -44,7 +44,6 @@ template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
                                             T const &eProd) {
   std::vector<MyMatrix<T>> ListMat;
-  int i, j;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
   for (int i = 0; i < n; i++)
@@ -70,7 +69,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
-  for (i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
     eComm(i, n + i) = 1;
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
@@ -125,7 +124,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   }
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
-  for (i = 0; i < n; i++) {
+  for (int i = 0; i < n; i++) {
     eComm(i, n + i) = 1;
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
