@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+//
+// Storing a single number to file
+//
+
 struct FileNumber {
 private:
   std::FILE *fp;
@@ -61,6 +65,10 @@ public:
     }
   }
 };
+
+//
+// Storing a sequence of bits that can be extended
+//
 
 struct FileBool {
 private:
@@ -190,6 +198,10 @@ public:
     return sm;
   }
 };
+
+//
+// Storing a sequence of faces that can be extended
+//
 
 struct FileFace {
 private:
@@ -355,6 +367,155 @@ public:
     }
   }
 };
+
+//
+// Storing a sequence of data that can be extended
+//
+
+size_t read_size_t(std::FILE* fp, size_t pos) {
+  size_t ret_val;
+  size_t* ptr1 = &ret_val;
+  uint8_t* ptr2 = reinterpret_cast<uint8_t*>(ptr1);
+  size_t pos_eff = pos * sizeof(size_t);
+  std::fseek(fp, pos_eff, SEEK_SET);
+  size_t n_read = std::fread(ptr2, sizeof(size_t), 1, fp);
+  if (n_read != 1) {
+    std::cerr << "n_read=" << n_read << "\n";
+    std::cerr << "Failed to read the correct number of entries\n";
+    throw TerminalException{1};
+  }
+  return ret_val;
+}
+
+void write_size_t(std::FILE* fp, size_t pos, size_t val) {
+  size_t* ptr1 = &val;
+  uint8_t* ptr2 = reinterpret_cast<uint8_t*>(ptr1);
+  size_t pos_eff = pos * sizeof(size_t);
+  std::fseek(fp, pos_eff, SEEK_SET);
+  size_t n_write = std::fwrite(ptr2, sizeof(size_t), 1, fp);
+  if (n_write != 1) {
+    std::cerr << "n_write=" << n_write << "\n";
+    std::cerr << "Failed to read the correct number of entries\n";
+    throw TerminalException{1};
+  }
+}
+
+
+
+template<typename T>
+struct FileData {
+private:
+  size_t n_ent;
+  size_t shift;
+  std::FILE *fp_number;
+  std::FILE *fp_data;
+  std::string file;
+  struct IteratorData {
+    size_t n_ent;
+    std::FILE *fp_number;
+    std::FILE *fp_data;
+    size_t pos;
+    T read_state() {
+      size_t len = read_size_t(fp_number, pos+2);
+      std::vector<char> V(len);
+      size_t n_read = std::fread(V.data(), sizeof(uint8_t), len, fp_data);
+      if (n_read != len) {
+        std::cerr << "n_read=" << n_read << " len=" << len << "\n";
+        std::cerr << "Failed to read the correct number of entries\n";
+        throw TerminalException{1};
+      }
+      std::string str(V.data(), len);
+      std::istringstream iss(str);
+      T val;
+      boost::archive::text_iarchive ia(iss);
+      ia >> val;
+      return val;
+    }
+    void single_increase() {
+      pos++;
+    }
+    T operator*() { return read_state(); }
+    IteratorData &operator++() {
+      single_increase();
+      return *this;
+    }
+    IteratorData operator++(int) {
+      IteratorData tmp = *this;
+      single_increase();
+      return tmp;
+    }
+    bool operator!=(IteratorData const &iter) {
+      return iter.pos != pos;
+    }
+    bool operator==(IteratorData const &iter) {
+      return iter.pos == pos;
+    }
+  };
+
+public:
+  FileData(const FileFace &) = delete;
+  FileData &operator=(const FileFace &) = delete;
+  FileData(FileData &&) = delete;
+  FileData() = delete;
+
+  FileData(std::string const &file, bool overwrite) : file(file) {
+    std::string file_number = file + ".nb";
+    std::string file_data = file + ".data";
+    if (overwrite) {
+      fp_number = std::fopen(file_number.data(), "w+");
+      fp_data = std::fopen(file_data.data(), "w+");
+      n_ent = 0;
+      shift = 0;
+      write_size_t(fp_number, 0, n_ent);
+      write_size_t(fp_number, 1, shift);
+    } else {
+      if (!IsExistingFile(file_number) || !IsExistingFile(file_data)) {
+        std::cerr << "FileData: The file " << file << " should not be missing\n";
+        throw TerminalException{1};
+      }
+      fp_number = std::fopen(file.data(), "r+");
+      fp_data = std::fopen(file.data(), "r+");
+      // Reading the number of elements and the total shift
+      n_ent = read_size_t(fp_number, 0);
+      shift = read_size_t(fp_number, 1);
+    }
+  }
+
+  ~FileData() {
+    std::fclose(fp_number);
+    std::fclose(fp_data);
+  }
+
+  void push_back(T const& val) {
+    std::ostringstream ofs;
+    boost::archive::text_oarchive oa(ofs);
+    oa << val;
+    std::string strO = ofs.str();
+    size_t len = strO.size();
+    write_size_t(n_ent+2, len);
+    shift += len;
+    n_ent++;
+    write_size_t(0, n_ent);
+    write_size_t(1, shift);
+    char* ptr = strO.data();
+    size_t n_write = std::fwrite(ptr, sizeof(uint8_t), len, fp_data);
+    if (n_write != len) {
+      std::cerr << "n_write=" << n_write << " len=" << len << "\n";
+      std::cerr << "Failed to read the correct number of entries\n";
+      throw TerminalException{1};
+    }
+  }
+
+  // The iterator business
+  using iterator = IteratorData;
+  using const_iterator = IteratorData;
+  const_iterator cbegin() const { return {n_ent, fp_number, fp_data, 0}; }
+  const_iterator cend() const { return {n_ent, fp_number, fp_data, n_ent}; }
+  const_iterator begin() const { return {n_ent, fp_number, fp_data, 0}; }
+  const_iterator end() const { return {n_ent, fp_number, fp_data, n_ent}; }
+};
+
+
 
 // clang-format off
 #endif  //  SRC_DUALDESC_BASIC_DATAFILE_H_
