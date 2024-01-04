@@ -233,12 +233,21 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTessela
 
 
 template<typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceMatrix<T> & LinSpa) {
+DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
   std::ostream & os = LinSpa.rddo.os;
   auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
-    bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, LinSpa.ListLineMat);
-    
-    return 
+    bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, eData.LinSpa.ListLineMat);
+    if (test1) {
+      return true;
+    }
+    if (eData.CommonGramMat) {
+      MyMatrix<T> const& TestGram = *eData.CommonGramMat;
+      bool test2 = IsDelaunayAcceptableForGramMat(EXT, eData.LinSpa, TestGram);
+      if (!test2) {
+        return true;
+      }
+    }
+    return false;
   };
   auto test_matrix=[&](MyMatrix<T> const& GramMat) -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
     bool test = IsSymmetryGroupCorrect(GramMat, LinSpa, os);
@@ -992,35 +1001,43 @@ namespace boost::serialization {
   }
 }
 
-
-
+/*
+  We do not use the ComputeInvariantDelaunay function since it requires having the
+  GramMatrix, which would be an additional computation.
+ */
 template<typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> GetPrimitiveRandomElement(DataIsoDelaunayDomains<T,Tint,Tgroup> & eData) {
-  while(true) {
-    auto get_random=[&]() -> std::optional<DelaunayTesselation<Tint,Tgroup>> {
-      MyMatrix<T> GramMat = GetRandomPositiveDefiniteNoNontrialSymm(eData.LinSpa);
-      if (eData.CommonGramMat) {
-        auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
-          
-        };
-        return EnumerationDelaunayPolytopes(eData, f_incorrect, eData.rddo.os);
-      } else {
-        auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
-          return false;
-        };
-        return EnumerationDelaunayPolytopes(eData, f_incorrect, eData.rddo.os);
-      }
-    };
-    std::optional<DelaunayTesselation<Tint,Tgroup>> opt = get_random();
-    if (opt) {
-      return *opt;
+size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
+  using TintGroup = typename Tgroup::Tint;
+  std::map<size_t, size_t> map_delaunays;
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
+  };
+  size_t seed_delaunay = 10;
+  for (auto & eDel : DT.l_dels) {
+    size_t hash = seed_delaunay;
+    size_t hash_nVert = eDel.obj.rows();
+    TintGroup order = eDel.GRP.order();
+    size_t hash_grp = std::hash<TintGroup>()(order);
+    combine_hash(hash, hash_nVert);
+    combine_hash(hash, hash_grp);
+    std::map<size_t, size_t> map_facesiz;
+    for (auto& eAdj : eDel.ListAdj) {
+      size_t cnt = eAdj.eInc.count();
+      map_facesiz[cnt] += 1;
     }
+    for (auto & kv : map_facesiz) {
+      combine_hash(hash, kv.first);
+      combine_hash(hash, kv.second);
+    }
+    map_delaunays[hash] += 1;
   }
+  size_t hash_ret = seed;
+  for (auto & kv : map_delaunays) {
+    combine_hash(hash_ret, kv.first);
+    combine_hash(hash_ret, kv.second);
+  }
+  return hash_ret;
 }
-
-
-
-
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
@@ -1028,8 +1045,19 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   using TadjI = IsoDelaunayDomain_AdjI<Tint>;
   using TadjO = IsoDelaunayDomain_MPI_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
-    return FindDelaunayPolytope<T, Tint>(
-       eData.GramMat, eData.CVPmethod, os);
+    return GetInitialGenericDelaunayTesselation(eData);
+  };
+  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+    return ComputeInvariantIsoDelaunayDomain(eData, seed, x);
+  };
+  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{i_rank, i_orb, y.eInc, eBigMat};
+    return ret;
   };
 
   
