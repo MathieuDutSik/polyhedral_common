@@ -119,6 +119,8 @@ template <typename T> struct LinSpaceMatrix {
   std::vector<MyMatrix<T>> ListMat;
   // The basis but expressed as line matrices
   std::vector<std::vector<T>> ListLineMat;
+  // The basis expressed as a big matrix, useful for membership questions
+  MyMatrix<T> ListMatAsBigMat;
   // The list of matrices with which the global stabilizing elements must commute
   std::vector<MyMatrix<T>> ListComm;
   // The list of preserved subspaces by the element of the global stabilizer

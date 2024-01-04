@@ -61,10 +61,21 @@ template<typename T, typename Tint>
 LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
   std::string TypeTspace = Blk.ListStringValues.at("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
-  auto set_list_line_mat=[&]() -> void {
+  auto set_paperwork=[&]() -> void {
     for (auto & eMat : LinSpaRet.ListMat) {
       std::vector<T> eV = GetLineVector(eMat);
       LinSpaRet.ListLineMat.push_back(eV);
+    }
+    int n_mat = LinSpaRet.ListMat.size();
+    if (n_mat > 0) {
+      int n = LinSpaRet.ListMat[0].rows();
+      int sym_dim = (n*(n+1)) / 2;
+      MyMatrix<T> BigMat(n_mat, sym_dim);
+      for (int i_mat=0; i_mat<n_mat; i_mat++) {
+        MyMatrix<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
+        AssignMatrixRow(BigMat, i_mat, V);
+      }
+      LinSpaRet.ListMatAsBigMat = BigMat;
     }
   };
   auto set_listcomm=[&]() -> void {
@@ -184,7 +195,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     }
     LinSpaRet.n = LGen[0].rows();
     LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen);
-    set_list_line_mat();
+    set_paperwork();
     set_supermat();
     set_listcomm();
     set_subspaces();
@@ -199,7 +210,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       throw TerminalException{1};
     }
     LinSpaRet.n = LinSpaRet.ListMat[0].rows();
-    set_list_line_mat();
+    set_paperwork();
     set_supermat();
     set_listcomm();
     set_subspaces();
