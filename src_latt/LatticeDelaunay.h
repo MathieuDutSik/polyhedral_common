@@ -765,7 +765,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  std::cerr << "Reading DATA\n";
+  std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
   //

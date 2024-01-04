@@ -12,6 +12,16 @@
 #include <vector>
 // clang-format on
 
+template <typename T, typename Tint, typename Tgroup>
+struct DataIsoDelaunayDomains {
+  LinSpaceMatrix<T> LinSpa;
+  RecordDualDescOperation<T,Tgroup> rddo;
+  std::optional<MyMatrix<T>> CommonGramMat;
+  int max_runtime_second;
+  bool Saving;
+  std::string Prefix;
+};
+
 /*
   Code for the L-type domains.
 
@@ -148,12 +158,18 @@ struct AdjInfo {
   int i_adj;
 };
 
+template<typename T>
+struct FullAdjInfo {
+  MyVector<T> eIneq;
+  std::vector<AdjInfo> ListAdjInfo;
+};
+
 
 /*
   Compute the defining inequalities of an iso-Delaunay domain
  */
 template<typename T, typename Tvert, typename Tgroup>
-std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTesselation<Tvert, Tgroup> const& DT, std::vector<std::vector<T>> const& ListGram) {
+std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTesselation<Tvert, Tgroup> const& DT, std::vector<std::vector<T>> const& ListGram) {
   std::unordered_map<MyVector<T>,std::vector<AdjInfo>> map;
   int n_del = DT.l_dels.size();
   for (int i_del=0; i_del<n_del; i_del++) {
@@ -186,7 +202,12 @@ std::unordered_map<MyVector<T>,std::vector<AdjInfo>> ComputeDefiningIneqIsoDelau
       map[V_red].push_back(eAdj);
     }
   }
-  return map;
+  std::vector<FullAdjInfo<T>> l_ret;
+  for (auto & kv : map) {
+    FullAdjInfo<T> fai{kv.first, kv.second};
+    l_ret.push_back(fai);
+  }
+  return l_ret;
 }
 
 
@@ -898,7 +919,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
   return {l_dels};
 }
 
-FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
+FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
@@ -929,8 +950,139 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   return {ListBlock, "undefined"};
 }
 
+template<typename Tint>
+struct IsoDelaunayDomain_MPI_AdjO {
+  int iProc;
+  int iOrb;
+  MyMatrix<Tint> eBigMat;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_AdjO<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("iProc", eRec.iProc);
+    ar &make_nvp("iOrb", eRec.iOrb);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
+  }
+}
+
+template<typename Tint>
+struct IsoDelaunayDomain_AdjO {
+  int iOrb;
+  MyMatrix<Tint> eBigMat;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("iOrb", eRec.iOrb);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
+  }
+}
+
+template<typename T, typename Tint, typename Tgroup>
+struct IsoDelaunayDomain_MPI_Entry {
+  DelaunayTesselation<Tint, Tgroup> obj;
+  std::vector<FullAdjInfo<T>> ListIneq;
+  MyMatrix<T> InteriorElement;
+  std::vector<IsoDelaunayDomain_MPI_AdjO<Tint>> ListAdj;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename T, typename Tint, typename Tgroup>
+  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("ListIneq", eRec.ListIneq);
+    ar &make_nvp("InteriorElement", eRec.InteriorElement);
+    ar &make_nvp("ListAdj", eRec.ListAdj);
+  }
+}
 
 
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
+  using Tobj = DelaunayTesselation<Tint, Tgroup>;
+  using TadjI = IsoDelaunayDomain_AdjI<Tint>;
+  using TadjO = IsoDelaunayDomain_MPI_AdjO<Tint>;
+  auto f_init=[&]() -> Tobj {
+    return FindDelaunayPolytope<T, Tint>(
+       eData.GramMat, eData.CVPmethod, os);
+  };
+
+  
+}
+
+template<typename T, typename Tint, typename Tgroup>
+void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, os) {
+  int i_rank = comm.rank();
+  if (OutFormat == "nothing") {
+    std::cerr << "No output\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
+}
+
+
+template<typename T, typename Tint, typename Tgroup>
+void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::ofstream os(FileLog);
+  if (ApplyStdUnitbuf(eFull)) {
+    os << std::unitbuf;
+    os << "Apply UnitBuf\n";
+  } else {
+    os << "Do not apply UnitBuf\n";
+  }
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  //
+  bool DATA_Saving = BlockDATA.ListBoolValues.at("Saving");
+  std::string DATA_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  CreateDirectory(DATA_Prefix);
+  //
+  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  std::cerr << "max_runtime_second=" <<	max_runtime_second << "\n";
+  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  auto get_common=[&]() -> std::optional<MyMatrix<T>> {
+    std::string CommonGramMat = BlockDATA.ListStringValues.at("CommonGramMat");
+    if (CommonGramMat == "unset") {
+      return {};
+    }
+    MyMatrix<T> eMat = ReadMatrix<T>(CommonGamMat);
+    return eMat;
+  };
+  std::optional<MyMatrix<T>> CommonGramMat = get_common();
+  //
+  using TintGroup = typename Tgroup::Tint;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+
+  LinSpaceMatrix<T> LinSpa = ReadTspace(BlockTSPACE, os);
+
+  DataIsoDelaunayDomains<T,Tint,Tgroup> eData{LinSpa,
+    std::move(rddo),
+    CommonGramMat,
+    max_runtime_second,
+    DATA_Saving,
+    DATA_Prefix};
+
+  std::vector<IsoDelaunayDomain_MPI_Entry<Tint, Tgroup>> ListIDD = MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(comm, eData);
+  WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, ListIDD, os);
+}
 
 
 
