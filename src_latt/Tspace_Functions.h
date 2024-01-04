@@ -232,8 +232,6 @@ MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat
   }
 }
 
-
-
 template<typename T>
 MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
   int n = LinSpa.n;
@@ -248,6 +246,55 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
       return TheMat;
     }
     TheMat += LinSpa.SuperMat;
+  }
+}
+
+template<typename T, typename Tint>
+bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  int n_row = SHV.rows();
+  std::vector<T> Vdiag(n_row,0);
+  std::vector<MyMatrix<T>> ListMat = {GramMat};
+  const bool use_scheme = true;
+  std::vector<std::vector<Tidx>> ListGen =
+    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+  for (auto &eList : ListGen) {
+    std::optional<MyMatrix<T>> opt =
+      FindMatrixTransformationTest(SHV_T, SHV_T, eList);
+    if (!opt) {
+      std::cerr << "Failed to find the matrix\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> const &M_T = *opt;
+    if (!IsIntegralMatrix(M_T)) {
+      std::cerr << "Bug: The matrix should be integral\n";
+      throw TerminalException{1};
+    }
+    for (auto & eMat : LinSpa.ListMat) {
+      MyMatrix<T> eMatImg = M_T * eMat * M_T.transpose();
+      if (eMatImg != eMat) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
+/*
+  We want to find symmetries of the polytope that are pointwise stabilizer of the T-space.
+  Two behaviors that we want to avoid:
+  * Not globally stabilizing the T-space.
+  * Having an action on the T-space that is non-trivial.
+ */
+template<typename T, typename Tint>
+MyMatrix<T> GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+  while(true) {
+    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa);
+    bool test = IsSymmetryGroupCorrect(TheMat, LinSpa, os);
+    if (test) {
+      return TheMat;
+    }
   }
 }
 

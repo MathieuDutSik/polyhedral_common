@@ -136,13 +136,13 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
 }
 
 template<typename T, typename Tvert>
-bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, std::vector<std::vector<T>> const& ListGram) {
+bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa) {
   int n_row = EXT.rows();
   VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT);
   for (int i_row=0; i_row<n_row; i_row++) {
     if (vipc.f_basis[i_row] == 0) {
       MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
-      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, ListGram);
+      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat);
       if (!IsZeroVector(V)) {
         return true;
       }
@@ -150,6 +150,26 @@ bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, std::vecto
   }
   return false;
 }
+
+template<typename T, typename Tvert>
+bool IsDelaunayAcceptableForGramMat(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const& TestGram) {
+  int n_row = EXT.rows();
+  MyVector<T> TestV = LINSPA_GetVectorOfMatrixExpression(LinSpa, TestGram);
+  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    if (vipc.f_basis[i_row] == 0) {
+      MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
+      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat);
+      T TheScal = V.dot(TestV);
+      if (TheScal < 0) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+
 
 
 
@@ -211,43 +231,14 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTessela
 }
 
 
-template<typename T, typename Tint>
-bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
-  int n_row = SHV.rows();
-  std::vector<T> Vdiag(n_row,0);
-  std::vector<MyMatrix<T>> ListMat = {GramMat};
-  const bool use_scheme = true;
-  std::vector<std::vector<Tidx>> ListGen =
-    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
-  for (auto &eList : ListGen) {
-    std::optional<MyMatrix<T>> opt =
-      FindMatrixTransformationTest(SHV_T, SHV_T, eList);
-    if (!opt) {
-      std::cerr << "Failed to find the matrix\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<T> const &M_T = *opt;
-    if (!IsIntegralMatrix(M_T)) {
-      std::cerr << "Bug: The matrix should be integral\n";
-      throw TerminalException{1};
-    }
-    for (auto & eMat : LinSpa.ListMat) {
-      MyMatrix<T> eMatImg = M_T * eMat * M_T.transpose();
-      if (eMatImg != eMat) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-
 
 template<typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceMatrix<T> & LinSpa) {
+  std::ostream & os = LinSpa.rddo.os;
   auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
-    return IsDelaunayPolytopeInducingEqualities(EXT, LinSpa.ListLineMat);
+    bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, LinSpa.ListLineMat);
+    
+    return 
   };
   auto test_matrix=[&](MyMatrix<T> const& GramMat) -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
     bool test = IsSymmetryGroupCorrect(GramMat, LinSpa, os);
@@ -258,7 +249,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(LinSpaceM
     return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(eData, f_incorrect, os);
   };
   while(true) {
-    MyMatrix<T> GramMat = GetRandomPositiveDefinite(LinSpa);
+    MyMatrix<T> GramMat = GetRandomPositiveDefiniteNoNontrialSymm(eData.LinSpa);
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix();
     if (opt) {
       return *opt;
@@ -998,6 +989,32 @@ namespace boost::serialization {
     ar &make_nvp("ListIneq", eRec.ListIneq);
     ar &make_nvp("InteriorElement", eRec.InteriorElement);
     ar &make_nvp("ListAdj", eRec.ListAdj);
+  }
+}
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+DelaunayTesselation<Tint, Tgroup> GetPrimitiveRandomElement(DataIsoDelaunayDomains<T,Tint,Tgroup> & eData) {
+  while(true) {
+    auto get_random=[&]() -> std::optional<DelaunayTesselation<Tint,Tgroup>> {
+      MyMatrix<T> GramMat = GetRandomPositiveDefiniteNoNontrialSymm(eData.LinSpa);
+      if (eData.CommonGramMat) {
+        auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
+          
+        };
+        return EnumerationDelaunayPolytopes(eData, f_incorrect, eData.rddo.os);
+      } else {
+        auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
+          return false;
+        };
+        return EnumerationDelaunayPolytopes(eData, f_incorrect, eData.rddo.os);
+      }
+    };
+    std::optional<DelaunayTesselation<Tint,Tgroup>> opt = get_random();
+    if (opt) {
+      return *opt;
+    }
   }
 }
 
