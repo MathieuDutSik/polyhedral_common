@@ -251,6 +251,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
 
 template<typename T, typename Tint>
 bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
+  using Tidx = uint32_t;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row,0);
@@ -388,6 +389,152 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
   MyVector<T> V = unfold_opt(RecSol, "Failure in SolutionMat");
   return V;
 }
+
+/*
+  For a positive definite matrix in the T-space, we compute the group
+  of transformations that presrves:
+  * The positive definite quadratic form
+  * The T-space itself
+
+  We incorporate all the ideas that we have put forward:
+  * Use of the ListComm
+  * Use of the subspaces to build commutting projectors which are stabilized.
+  * If all else fails, use of the cosets.
+ */
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
+                                                  MyMatrix<T> const& eMat,
+                                                  std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using TintGroup = typename Tgroup::Tint;
+  using Tfield = T;
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  int n_row = SHV.rows();
+  std::vector<T> Vdiag(n_row,0);
+  std::vector<MyMatrix<T>> ListMat = {eMat};
+  const bool use_scheme = true;
+  std::vector<std::vector<Tidx>> ListGen =
+    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+  //
+  // Try the direct strategy and hopes to be lucky
+  //
+  auto is_corr_and_solve=[&](Telt const& elt) -> std::optional<MyMatrix<T>> {
+    std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, elt);
+    MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
+    for (auto & eMat : LinSpa.ListMat) {
+      MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
+      MyVector<T> eMatImg_V = SymmetricMatrixToVector(eMatImg);
+      std::optional<MyVector<T>> opt = SolutionMat(LinSpa.ListMatAsBigMat, eMatImg_V);
+      if (!opt) {
+        return {};
+      }
+    }
+    return TransMat;
+  };
+  auto get_generators=[&]() -> std::optional<std::vector<MyMatrix<T>>> {
+    std::vector<MyMatrix<T>> ListTransMat;
+    for (auto & eGen : ListGen) {
+      Telt elt(eGen);
+      std::optional<MyMatrix<T>> opt = is_corr_and_solve(elt);
+      if (opt) {
+        ListTransMat.push_back(*opt);
+      } else {
+        return {};
+      }
+    }
+    return ListTransMat;
+  };
+  std::optional<std::vector<MyMatrix<T>>> opt = get_generators();
+  if (opt) {
+    return *opt;
+  }
+  //
+  // The direct approach failed, let us use the pt-wise-stab and the cosets for resolving that.
+  //
+  std::vector<Telt> LGenPerm;
+  for (auto & eList : ListGen) {
+    Telt ePerm(eList);
+    LGenPerm.push_back(ePerm);
+  }
+  Tgroup FullGRP(LGenPerm, n_row);
+  std::vector<Telt> LGenPermPtWiseStab;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, size_t> MapV;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(SHV_T, i_row);
+    ListV.push_back(V);
+    MapV[V] = i_row;
+  }
+  std::vector<Telt> LGenGlobStab_perm;
+  for (auto & eGen : LinSpa.PtStabGens) {
+    std::vector<Tidx> eList(n_row);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      MyVector<T> Vimg = eGen.transpose() * ListV[i_row];
+      int pos = MapV.at(Vimg);
+      eList[i_row] = pos;
+    }
+    Telt ePerm(eList);
+    LGenGlobStab_perm.push_back(ePerm);
+  }
+  Tgroup GRPsub(LGenGlobStab, n_row);
+  auto try_upgrade=[&]() -> std::optional<Telt> {
+    // Not sure if left or right cosets.
+    std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
+    for (auto & eGen : ListCos) {
+      // Not sure if the is_identity works
+      if (!elt.is_identity()) {
+        std::optional<MyMatrix<T>> opt = is_corr_and_solve(elt);
+        if (opt) {
+          return *opt;
+        }
+      }
+    }
+    return {};
+  };
+  while(true) {
+    std::optional<Telt> opt = try_upgrade();
+    if (opt) {
+      // Found another stabilizing element, upgrading the group and retry.
+      LGenGlobStab_perm.push_back(*opt);
+      GRPsub = Tgroup(LGenGlobStab_perm, n);
+    } else {
+      break;
+    }
+  }
+  std::vector<MyMatrix<T>> LGenGlobStab_matr;
+  for (auto & eGen : LGenGlobStab_perm) {
+    std::optional<MyMatrix<T>> opt = is_corr_and_solve();
+    MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
+    LGenGlobStab_matr.push_back(eGenMatr);
+  }
+  return LGenGlobStab_matr;
+}
+
+/*
+  For two positive definite matrices M1 find if it exists a transformation P such that
+  * P M1 P^T = M2
+  * P LinSpa.ListMat P^T  image is LinSpa.ListMat
+*/
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
+                                                            MyMatrix<T> const& eMat1,
+                                                            MyMatrix<T> const& eMat1,
+                                                            std::ostream & os) {
+  using Tidx = uint32_t;
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  std::vector<T> Vdiag(SHV_T.rows(), 0);
+  bool use_scheme = true;
+  std::vector<std::vector<Tidx>> ListGenPerm =
+    GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+
+
+}
+
+
 
 /*
   Compute an invariant of the gram matrix
