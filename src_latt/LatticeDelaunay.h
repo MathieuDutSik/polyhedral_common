@@ -28,7 +28,7 @@ struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   std::string CVPmethod;
-  PolyHeuristicSerial<typename Tgroup::Tint> AllArr;
+  RecordDualDescOperation<T,Tgroup> rddo;
   int max_runtime_second;
   bool Saving;
   std::string Prefix;
@@ -487,7 +487,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
 #endif
-  vectface TheOutput = DualDescriptionStandard(EXT_T, GRPlatt, eData.AllArr, os);
+  vectface TheOutput = DualDescriptionRecord(EXT_T, GRPlatt, eData.rddo);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
 #endif
@@ -581,8 +581,8 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
 
 template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & eData,
-                                                              Fincorrect f_incorrect,
-                                                              std::ostream & os) {
+                                                                             Fincorrect f_incorrect,
+                                                                             std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_AdjO<Tint>;
@@ -782,17 +782,18 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  std::cerr << "OutFile=" << OutFile << "\n";
+  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   int n = GramMat.rows();
   std::string CVPmethod = "SVexact";
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   DataLattice<T, Tint, Tgroup> eData{n,
                                      GramMat,
                                      SVR,
                                      CVPmethod,
-                                     AllArr,
+                                     std::move(rddo),
                                      max_runtime_second,
                                      STORAGE_Saving,
                                      STORAGE_Prefix};

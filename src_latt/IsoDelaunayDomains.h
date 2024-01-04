@@ -7,6 +7,7 @@
 #include "ShortestUniversal.h"
 #include "Temp_Positivity.h"
 #include "LatticeDelaunay.h"
+#include "Tspace_General.h"
 #include <string>
 #include <vector>
 // clang-format on
@@ -897,7 +898,36 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
   return {l_dels};
 }
 
-
+FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListStringValues1["arithmetic_T"] = "gmp_rational";
+  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
+  ListStringValues1["OutFormat"] = "nothing";
+  ListStringValues1["OutFile"] = "unset.out";
+  ListStringValues1["FileDualDescription"] = "unset";
+  ListIntValues1["max_runtime_second"] = 0;
+  ListBoolValues1["ApplyStdUnitbuf"] = false;
+  ListBoolValues1["Saving"] = false;
+  ListStringValues1["Prefix"] = "/irrelevant/";
+  ListStringValues1["CVPmethod"] = "SVexact";
+  SingleBlock BlockDATA;
+  BlockDATA.ListIntValues = ListIntValues1;
+  BlockDATA.ListBoolValues = ListBoolValues1;
+  BlockDATA.ListDoubleValues = ListDoubleValues1;
+  BlockDATA.ListStringValues = ListStringValues1;
+  BlockDATA.ListListStringValues = ListListStringValues1;
+  ListBlock["DATA"] = BlockDATA;
+  // TSPACE
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
 
 
 

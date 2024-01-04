@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "ComputeDelaunay [file.nml]\n";
+      std::cerr << "LATT_MPI_ComputeDelaunay [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
       NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
       return -1;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     process_A(world, eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in ComputeDelaunay\n";
+    std::cerr << "Error in LATT_MPI_ComputeDelaunay\n";
     exit(e.eVal);
   }
   runtime(time1);

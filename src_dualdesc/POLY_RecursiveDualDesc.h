@@ -3088,9 +3088,9 @@ struct RecordDualDescOperation {
   using Tval = TripleStore<Tgroup>;
   using Tbank = DataBank<Tkey, Tval>;
   PolyHeuristicSerial<TintGroup> & AllArr;
-  Tbank TheBank;
   std::ostream & os;
-  RecordDualDescOperation(PolyHeuristicSerial<TintGroup> & _AllArr, std::ostream & _os) : AllArr(_AllArr), TheBank(false, "/irrelevant", os), os(_os) {
+  Tbank TheBank;
+  RecordDualDescOperation(PolyHeuristicSerial<TintGroup> & _AllArr, std::ostream & _os) : AllArr(_AllArr), os(_os), TheBank(false, "/irrelevant", os) {
   }
 };
 
