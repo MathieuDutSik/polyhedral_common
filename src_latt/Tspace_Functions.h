@@ -141,7 +141,7 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const& ListMat) {
   int sym_dim = (n*(n+1)) / 2;
   MyMatrix<T> BigMat(n_mat, sym_dim);
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    MyVector<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
+    MyVector<T> V = SymmetricMatrixToVector(ListMat[i_mat]);
     AssignMatrixRow(BigMat, i_mat, V);
   }
   return BigMat;
@@ -170,9 +170,9 @@ std::vector<MyMatrix<Tint>> ComputePointStabilizerTspace(MyMatrix<T> const& Supe
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
   std::vector<T> Vdiag(SHV_T.rows(), 0);
-  bool use_scheme = true;
+  const bool use_scheme = true;
   std::vector<std::vector<Tidx>> ListGenPerm =
-    GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
   std::vector<MyMatrix<Tint>> ListGenMatr;
   for (auto & eList : ListGenPerm) {
     MyMatrix<T> eMatr_T = FindTransformation_vect(SHV_T, SHV_T, eList);
@@ -431,7 +431,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
                                                   std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using TintGroup = typename Tgroup::Tint;
+  //  using TintGroup = typename Tgroup::Tint;
   using Tfield = T;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
@@ -546,8 +546,8 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
                                                             MyMatrix<T> const& eMat1,
                                                             MyMatrix<T> const& eMat2,
                                                             std::ostream & os) {
-  using Tidx = uint32_t;
-  using Tfield = T;
+  //  using Tidx = uint32_t;
+  //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T,Tint>(SHV1);
@@ -555,9 +555,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   if (SHV1_T.rows() != SHV2_T.rows()) {
     return {};
   }
-  int n_row = SHV1_T.rows();
-  std::vector<T> Vdiag(n_row, 0);
-  bool use_scheme = true;
+  //  int n_row = SHV1_T.rows();
+  //  std::vector<T> Vdiag(n_row, 0);
+  //  bool use_scheme = true;
   //  std::vector<std::vector<Tidx>> ListGenPerm =
   //    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
 
