@@ -8,6 +8,7 @@
 #include "Temp_PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
 #include "SHORT_ShortestConfig.h"
+#include "Temp_PolytopeEquiStab.h"
 #include <set>
 #include <vector>
 // clang-format on
@@ -130,6 +131,24 @@ template <typename T> struct LinSpaceMatrix {
 };
 
 template<typename T>
+MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const& ListMat) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr << "We have n_mat = 0\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+  int sym_dim = (n*(n+1)) / 2;
+  MyMatrix<T> BigMat(n_mat, sym_dim);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyVector<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
+    AssignMatrixRow(BigMat, i_mat, V);
+  }
+  return BigMat;
+}
+
+
+template<typename T>
 LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatrix<T>> const& ListMat, std::vector<MyMatrix<T>> const& ListComm) {
   int n = SuperMat.rows();
   std::vector<std::vector<T>> ListLineMat;
@@ -137,10 +156,11 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatri
     std::vector<T> eV = GetLineVector(eMat);
     ListLineMat.push_back(eV);
   }
+  MyMatrix<T> BigMat = GetListMatAsBigMat(ListMat);
   std::vector<MyMatrix<T>> ListSubspaces;
   MyMatrix<T> eGen = -IdentityMat<T>(n);
   std::vector<MyMatrix<T>> PtStab{eGen};
-  return {n, SuperMat, ListMat, ListLineMat, ListComm, ListSubspaces, PtStab};
+  return {n, SuperMat, ListMat, ListLineMat, BigMat, ListComm, ListSubspaces, PtStab};
 }
 
 template<typename T, typename Tint>
@@ -230,7 +250,7 @@ MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat
       }
     };
     MyVector<Tint> V = get_one_vect();
-    ListV.push_back();
+    ListV.push_back(V);
   }
 }
 

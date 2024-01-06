@@ -86,12 +86,12 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
 template<typename T>
 void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
   std::ofstream os(eFile);
-  WriteMatrixFile(os, LinSpa.SuperMat);
-  WriteListMatrixFile(os, LinSpa.ListMat);
-  WriteMatrixFile(os, LinSpa.ListMatAsBigMat);
-  WriteListMatrixFile(os, LinSpa.ListComm);
-  WriteListMatrixFile(os, LinSpa.ListSubspaces);
-  WriteListMatrixFile(os, LinSpa.PtStabGens);
+  WriteMatrix(os, LinSpa.SuperMat);
+  WriteListMatrix(os, LinSpa.ListMat);
+  WriteMatrix(os, LinSpa.ListMatAsBigMat);
+  WriteListMatrix(os, LinSpa.ListComm);
+  WriteListMatrix(os, LinSpa.ListSubspaces);
+  WriteListMatrix(os, LinSpa.PtStabGens);
 }
 
 template<typename T, typename Tint>
@@ -105,14 +105,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     }
     int n_mat = LinSpaRet.ListMat.size();
     if (n_mat > 0) {
-      int n = LinSpaRet.ListMat[0].rows();
-      int sym_dim = (n*(n+1)) / 2;
-      MyMatrix<T> BigMat(n_mat, sym_dim);
-      for (int i_mat=0; i_mat<n_mat; i_mat++) {
-        MyVector<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
-        AssignMatrixRow(BigMat, i_mat, V);
-      }
-      LinSpaRet.ListMatAsBigMat = BigMat;
+      LinSpaRet.ListMatAsBigMat = GetListMatAsBigMat(LinSpaRet.ListMat);
     }
   };
   auto set_listcomm=[&]() -> void {

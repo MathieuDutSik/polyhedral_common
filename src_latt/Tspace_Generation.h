@@ -64,7 +64,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
       MyMatrix<T> fMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
       ListMat.push_back(fMat);
     }
-  eMatB = IdentityMat<int>(n);
+  eMatB = IdentityMat<T>(n);
   ZeroAssignation(eMatC);
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
   // The matrix eComm represent multiplication by the primitive element

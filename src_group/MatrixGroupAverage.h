@@ -14,9 +14,9 @@
  */
 template<typename T>
 MyMatrix<T> DirectSpannEquivariantSpace(MyMatrix<T> const& TheBasis, std::vector<MyMatrix<T>> const& LGen) {
-  MyMatrix<T> TheMatrixRet = TheBasis;
+  MyMatrix<T> TheBasisRet = TheBasis;
   while(true) {
-    SolutionMatRepetitivee<T> smr(TheBasisRet);
+    SolutionMatRepetitive<T> smr(TheBasisRet);
     auto get_update=[&]() -> std::optional<MyVector<T>> {
       int len = TheBasisRet.rows();
       for (int u=0; u<len; u++) {
@@ -62,7 +62,7 @@ MyVector<T> OrbitBarycenter(MyVector<T> const&a, std::vector<MyMatrix<T>> const&
     return a;
   }
   // Not invariant, need to build a linear system
-  int n_gen = LGen.rows();
+  int n_gen = LGen.size();
   int dim = a.size();
   MyMatrix<T> ListSpann(n_gen, dim);
   for (int i_gen=0; i_gen<n_gen; i_gen++) {
@@ -92,7 +92,7 @@ MyVector<T> OrbitBarycenter(MyVector<T> const&a, std::vector<MyMatrix<T>> const&
   }
   std::optional<MyVector<T>> opt = SolutionMat(TheBigMat, Vbig);
   MyVector<T> Alpha = unfold_opt(opt, "Failed to solve the linear system");
-  MyVector<T> TheSol = a + TheBasis.transpose() * Alpha;
+  MyVector<T> TheSol = a + TheBasis2.transpose() * Alpha;
 #ifdef DEBUG_MATRIX_GROUP_AVERAGE
   if (!is_invariant(TheSol)) {
     std::cerr << "The vector TheSol is not invariant\n";
@@ -135,7 +135,7 @@ MyMatrix<T> OrbitBarycenterSymmetricMatrix(MyMatrix<T> const&M, std::vector<MyMa
       pos_sym++;
     }
   }
-  MyMatrix<int> LHalf(alt_dim, 2);
+  MyMatrix<int> LHalf(off_dim, 2);
   int pos = 0;
   for (int i=0; i<n; i++) {
     for (int j=i+1; j<n; j++) {
@@ -183,12 +183,12 @@ MyMatrix<T> OrbitBarycenterSymmetricMatrix(MyMatrix<T> const&M, std::vector<MyMa
   }
   MyVector<T> a_bary = OrbitBarycenter(a, LGenExt);
   MyMatrix<T> M_bary(n,n);
-  int pos_sym = 0;
+  int pos_sym_b = 0;
   for (int i=0; i<n; i++) {
     for (int j=i; j<n; j++) {
-      M_bary(i,j) = a_bary(pos_sym);
-      M_bary(j,i) = a_bary(pos_sym);
-      pos_sym++;
+      M_bary(i,j) = a_bary(pos_sym_b);
+      M_bary(j,i) = a_bary(pos_sym_b);
+      pos_sym_b++;
     }
   }
 #ifdef DEBUG_MATRIX_GROUP_AVERAGE
