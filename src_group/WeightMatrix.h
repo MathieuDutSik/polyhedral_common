@@ -348,6 +348,22 @@ public:
       return miss_val;
     return g[specificPosition];
   }
+  bool is_actually_symmetric() const {
+    if constexpr(is_symmetric) {
+      return true;
+    } else {
+      for (size_t i=0; i<nbRow; i++) {
+        for (size_t j=i+1; j<nbRow; j++) {
+          size_t pos1 = weightmatrix_idx<false>(nbRow, i, j);
+          size_t pos2 = weightmatrix_idx<false>(nbRow, j, i);
+          if (pos1 != pos2) {
+            return false;
+          }
+        }
+      }
+      return true;
+    }
+  }
   WeightMatrix<true, T, Tidx_value> GetSymmetricWeightMatrix() const {
     size_t siz = ListWeight.size();
     size_t nb = nbRow * (2 * nbRow + 1);
