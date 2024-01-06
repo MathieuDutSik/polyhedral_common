@@ -197,18 +197,6 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
   return TheBasis;
 }
 
-template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
-  std::vector<MyMatrix<T>> ListMat;
-  for (int i = 0; i < n; i++)
-    for (int j = 0; j <= i; j++) {
-      MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
-      eMat(i, j) = 1;
-      eMat(j, i) = 1;
-      ListMat.push_back(eMat);
-    }
-  return ListMat;
-}
-
 // clang-format off
 #endif  // SRC_LATT_TSPACE_GENERATION_H_
 // clang-format on

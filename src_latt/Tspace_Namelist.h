@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "Namelist.h"
+#include "MatrixGroupAverage.h"
 // clang-format on
 
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
@@ -58,8 +59,14 @@ The filename used for reading the whole T-space";
   return BlockTSPACE;
 }
 
+FullNamelist NAMELIST_GetOneTSPACE() {
+  std::map<std::string, SingleBlock> ListBlock;
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  return {ListBlock, "undefined"};
+}
+
 template<typename T>
-LinSpaceMatrix<T> ReadLinSpaceMatrixFile(std::string const& eFile) {
+LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
   std::ifstream is(eFile);
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
   int n = SuperMat.rows();
@@ -67,7 +74,7 @@ LinSpaceMatrix<T> ReadLinSpaceMatrixFile(std::string const& eFile) {
   std::vector<std::vector<T>> ListLineMat;
   for (auto & eMat : ListMat) {
     std::vector<T> eV = GetLineVector(eMat);
-    LinSpaRet.ListLineMat.push_back(eV);
+    ListLineMat.push_back(eV);
   }
   MyMatrix<T> ListMatAsBigMat = ReadMatrix<T>(is);
   std::vector<MyMatrix<T>> ListComm = ReadListMatrix<T>(is);
@@ -77,8 +84,8 @@ LinSpaceMatrix<T> ReadLinSpaceMatrixFile(std::string const& eFile) {
 }
 
 template<typename T>
-void WriteLinSpaceMatrixFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
-  std::ofstream & os(eFile);
+void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
+  std::ofstream os(eFile);
   WriteMatrixFile(os, LinSpa.SuperMat);
   WriteListMatrixFile(os, LinSpa.ListMat);
   WriteMatrixFile(os, LinSpa.ListMatAsBigMat);
@@ -86,11 +93,6 @@ void WriteLinSpaceMatrixFile(std::string const& eFile, LinSpaceMatrix<T> const& 
   WriteListMatrixFile(os, LinSpa.ListSubspaces);
   WriteListMatrixFile(os, LinSpa.PtStabGens);
 }
-
-
-
-
-
 
 template<typename T, typename Tint>
 LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
@@ -107,7 +109,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       int sym_dim = (n*(n+1)) / 2;
       MyMatrix<T> BigMat(n_mat, sym_dim);
       for (int i_mat=0; i_mat<n_mat; i_mat++) {
-        MyMatrix<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
+        MyVector<T> V = SymmetricMatrixToVector(LinSpaRet.ListMat[i_mat]);
         AssignMatrixRow(BigMat, i_mat, V);
       }
       LinSpaRet.ListMatAsBigMat = BigMat;
@@ -150,7 +152,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       return;
     }
     if (PtGroupMethod == "Compute") {
-      LinSpaRet.PtStabGens = ComputePointStabilizerTspace(LinSpaRet.SuperMat, LinSpaRet.ListMat, os);
+      std::vector<MyMatrix<Tint>> ListGens = ComputePointStabilizerTspace<T,Tint>(LinSpaRet.SuperMat, LinSpaRet.ListMat, os);
+      for (auto & eGen : ListGens) {
+        LinSpaRet.PtStabGens.push_back(UniversalMatrixConversion<T,Tint>(eGen));
+      }
       return;
     }
     if (PtGroupMethod == "InvGroupInit") {
@@ -254,7 +259,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
   }
   if (TypeTspace == "File") {
     std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
-    return ReadLinSpaFile<T>(FileLinSpa);
+    return ReadLinSpaceFile<T>(FileLinSpa);
   }
   std::cerr << "Failed to find an option for TypeTspace that suits\n";
   throw TerminalException{1};

@@ -254,7 +254,9 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const& LinSpa) {
 template<typename T, typename Tint>
 bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
   using Tidx = uint32_t;
+  using Tfield = T;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row,0);
   std::vector<MyMatrix<T>> ListMat = {GramMat};
@@ -426,7 +428,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, elt);
     MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
     for (auto & eMat : LinSpa.ListMat) {
-      MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
+      MyMatrix<T> eMatImg = TransMat * eMat * TransMat.transpose();
       MyVector<T> eMatImg_V = SymmetricMatrixToVector(eMatImg);
       std::optional<MyVector<T>> opt = SolutionMat(LinSpa.ListMatAsBigMat, eMatImg_V);
       if (!opt) {
@@ -480,14 +482,14 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     Telt ePerm(eList);
     LGenGlobStab_perm.push_back(ePerm);
   }
-  Tgroup GRPsub(LGenGlobStab, n_row);
+  Tgroup GRPsub(LGenGlobStab_perm, n_row);
   auto try_upgrade=[&]() -> std::optional<Telt> {
     // Not sure if left or right cosets.
     std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
-    for (auto & eGen : ListCos) {
+    for (auto & eCos : ListCos) {
       // Not sure if the is_identity works
-      if (!elt.is_identity()) {
-        std::optional<MyMatrix<T>> opt = is_corr_and_solve(elt);
+      if (!eCos.is_identity()) {
+        std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCos);
         if (opt) {
           return *opt;
         }
@@ -500,7 +502,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     if (opt) {
       // Found another stabilizing element, upgrading the group and retry.
       LGenGlobStab_perm.push_back(*opt);
-      GRPsub = Tgroup(LGenGlobStab_perm, n);
+      GRPsub = Tgroup(LGenGlobStab_perm, n_row);
     } else {
       break;
     }
@@ -522,18 +524,24 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
                                                             MyMatrix<T> const& eMat1,
-                                                            MyMatrix<T> const& eMat1,
+                                                            MyMatrix<T> const& eMat2,
                                                             std::ostream & os) {
   using Tidx = uint32_t;
+  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
-  std::vector<T> Vdiag(SHV_T.rows(), 0);
+  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T,Tint>(SHV1);
+  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T,Tint>(SHV2);
+  if (SHV1_T.rows() != SHV2_T.rows()) {
+    return {};
+  }
+  int n_row = SHV1_T.rows();
+  std::vector<T> Vdiag(n_row, 0);
   bool use_scheme = true;
-  std::vector<std::vector<Tidx>> ListGenPerm =
-    GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
+  //  std::vector<std::vector<Tidx>> ListGenPerm =
+  //    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);
 
-
+  return {};
 }
 
 
