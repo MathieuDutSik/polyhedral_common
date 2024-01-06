@@ -48,12 +48,47 @@ The filename for the list of generators of the pointwise stabilizer";
   ListStringValues1_doc["FileListSubspaces"] = "Default: unset\n\
 unset: If unset then the file is not needed\n\
 The filename for the list of subspaces that are preserved";
+  ListStringValues1_doc["FileLinSpa"] = "Default: unset\n\
+unset: If unset then the file is not needed\n\
+The filename used for reading the whole T-space";
   SingleBlock BlockTSPACE;
   BlockTSPACE.setListStringValues(ListStringValues1_doc);
   BlockTSPACE.setListBoolValues(ListBoolValues1_doc);
   BlockTSPACE.setListIntValues(ListIntValues1_doc);
   return BlockTSPACE;
 }
+
+template<typename T>
+LinSpaceMatrix<T> ReadLinSpaceMatrixFile(std::string const& eFile) {
+  std::ifstream is(eFile);
+  MyMatrix<T> SuperMat = ReadMatrix<T>(is);
+  int n = SuperMat.rows();
+  std::vector<MyMatrix<T>> ListMat = ReadListMatrix<T>(is);
+  std::vector<std::vector<T>> ListLineMat;
+  for (auto & eMat : ListMat) {
+    std::vector<T> eV = GetLineVector(eMat);
+    LinSpaRet.ListLineMat.push_back(eV);
+  }
+  MyMatrix<T> ListMatAsBigMat = ReadMatrix<T>(is);
+  std::vector<MyMatrix<T>> ListComm = ReadListMatrix<T>(is);
+  std::vector<MyMatrix<T>> ListSubspaces = ReadListMatrix<T>(is);
+  std::vector<MyMatrix<T>> PtStabGens = ReadListMatrix<T>(is);
+  return {n, SuperMat, ListMat, ListLineMat, ListMatAsBigMat, ListComm, ListSubspaces, PtStabGens};
+}
+
+template<typename T>
+void WriteLinSpaceMatrixFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
+  std::ofstream & os(eFile);
+  WriteMatrixFile(os, LinSpa.SuperMat);
+  WriteListMatrixFile(os, LinSpa.ListMat);
+  WriteMatrixFile(os, LinSpa.ListMatAsBigMat);
+  WriteListMatrixFile(os, LinSpa.ListComm);
+  WriteListMatrixFile(os, LinSpa.ListSubspaces);
+  WriteListMatrixFile(os, LinSpa.PtStabGens);
+}
+
+
+
 
 
 
@@ -216,6 +251,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     set_subspaces();
     set_pt_stab();
     return LinSpaRet;
+  }
+  if (TypeTspace == "File") {
+    std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
+    return ReadLinSpaFile<T>(FileLinSpa);
   }
   std::cerr << "Failed to find an option for TypeTspace that suits\n";
   throw TerminalException{1};
