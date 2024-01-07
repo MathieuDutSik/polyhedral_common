@@ -724,6 +724,9 @@ struct ListMatSymm_Vdiag_WeightMat {
 
 
 
+
+
+
 // This a piece of code used for purposes of
 // ---Computation of automorphism group
 // ---Computing canonicalization
@@ -789,40 +792,18 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
-  size_t nbCol = TheEXT.cols();
-  size_t nMat = ListMat.size();
   std::vector<MyMatrix<Tfield>> ListMat_F;
   for (auto &eMat : ListMat) {
     MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield, T>(eMat);
     ListMat_F.push_back(eMat_F);
   }
   //
-  MyMatrix<T> MatV(nMat, nbCol);
-  std::vector<T> LScal(nMat + 1);
-  size_t iRow_stor = 0;
+  ListMatSymm_Vdiag_WeightMat lms(TheEXT, ListMat, Vdiag);
   auto f1 = [&](size_t iRow) -> void {
-    for (size_t iMat = 0; iMat < nMat; iMat++) {
-      for (size_t iCol = 0; iCol < nbCol; iCol++) {
-        T eSum = 0;
-        for (size_t jCol = 0; jCol < nbCol; jCol++)
-          eSum += ListMat[iMat](jCol, iCol) * TheEXT(iRow, jCol);
-        MatV(iMat, iCol) = eSum;
-      }
-    }
-    iRow_stor = iRow;
+    lms.f1(iRow);
   };
   auto f2 = [&](size_t jRow) -> std::vector<T> {
-    for (size_t iMat = 0; iMat < nMat; iMat++) {
-      T eSum = 0;
-      for (size_t iCol = 0; iCol < nbCol; iCol++)
-        eSum += MatV(iMat, iCol) * TheEXT(jRow, iCol);
-      LScal[iMat] = eSum;
-    }
-    T eVal = 0;
-    if (iRow_stor == jRow)
-      eVal = Vdiag[jRow];
-    LScal[nMat] = eVal;
-    return LScal;
+    return lms.f2(jRow);
   };
   // Preemptive check that the subset is adequate
   auto f3 = [&](std::vector<Tidx> const &Vsubset) -> bool {
