@@ -925,7 +925,7 @@ template <typename T, typename Tfield, typename Tidx_value>
 size_t GetInvariant_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
-  using Tidx = unsigned int;
+  using Tidx = uint32_t;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -1440,7 +1440,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   os << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
 #endif
 
-  using Tidx = unsigned int;
+  using Tidx = uint32_t;
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> ePair =
       GetGroupCanonicalizationVector_Kernel<Tint, Tgr, Tidx, Tidx_value>(
           WMatAbs.WMat, os);
@@ -1744,7 +1744,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
   os << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
 #endif
 
-  using Tidx = unsigned int;
+  using Tidx = uint32_t;
   std::vector<std::vector<Tidx>> ListGen =
       GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(
           WMatAbs.WMat, os);
@@ -1872,7 +1872,7 @@ template <typename Tint, typename Tidx_value>
 std::vector<std::vector<unsigned int>>
 LinPolytopeAntipodalIntegral_Automorphism_Tidx_value(MyMatrix<Tint> const &EXT,
                                                      std::ostream &os) {
-  using Tidx = unsigned int;
+  using Tidx = uint32_t;
   using Tgr = GraphBitset;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
