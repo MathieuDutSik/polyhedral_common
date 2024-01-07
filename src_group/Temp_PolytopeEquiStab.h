@@ -854,12 +854,12 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
 //       of the full set.
 
 // ---ListMat is assumed to be symmetric
-// ---Note that TheEXT does not have to be of full rank.
+// ---Note that EXT does not have to be of full rank.
 //    It makes perfect sense to compute some group
 //    and get it only as permutation group.
 template <typename T, typename Tfield, typename Tidx, typename Treturn,
           typename F>
-Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
+Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f,
                           [[maybe_unused]] std::ostream &os) {
@@ -871,7 +871,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
     }
   }
 #endif
-  size_t nbRow = TheEXT.rows();
+  size_t nbRow = EXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
     std::cerr
@@ -880,13 +880,8 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
-  std::vector<MyMatrix<Tfield>> ListMat_F;
-  for (auto &eMat : ListMat) {
-    MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield, T>(eMat);
-    ListMat_F.push_back(eMat_F);
-  }
-  //
-  ListMatSymm_Vdiag_WeightMat lms(TheEXT, ListMat, Vdiag);
+  // The lambda for the construction of the weight matrix.
+  ListMatSymm_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
   auto f1 = [&](size_t iRow) -> void {
     lms.f1(iRow);
   };
@@ -895,18 +890,18 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
   };
   // Preemptive check that the subset is adequate
   auto f3 = [&](std::vector<Tidx> const &Vsubset) -> bool {
-    return IsSubsetFullRank<T, Tfield, Tidx>(TheEXT, Vsubset);
+    return IsSubsetFullRank<T, Tfield, Tidx>(EXT, Vsubset);
   };
   // Extension of the partial automorphism
   auto f4 = [&](const std::vector<Tidx> &Vsubset, const std::vector<Tidx> &Vin,
                 const std::vector<std::vector<Tidx>> &ListBlocks)
       -> DataMapping<Tidx> {
-    return ExtendPartialAutomorphism<T, Tfield, Tidx>(TheEXT, Vsubset, Vin, ListBlocks, ListMat, os);
+    return ExtendPartialAutomorphism<T, Tfield, Tidx>(EXT, Vsubset, Vin, ListBlocks, ListMat, os);
   };
   // Extension of the partial canonicalization
   auto f5 = [&](std::vector<Tidx> const &Vsubset,
                 std::vector<Tidx> const &PartOrd) -> std::vector<Tidx> {
-    return ExtendPartialCanonicalization<T, Tfield, Tidx>(TheEXT, Vsubset,
+    return ExtendPartialCanonicalization<T, Tfield, Tidx>(EXT, Vsubset,
                                                           PartOrd);
   };
   return f(nbRow, f1, f2, f3, f4, f5);
