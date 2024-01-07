@@ -1,5 +1,5 @@
 #PROGRAM		= POLY_CheckCanonicalGAP
-PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
@@ -9,6 +9,7 @@ PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= POLY_DatabaseRestructuration
 #PROGRAM		= POLY_UpgradeDatabase POLY_SerialDualDesc
 #PROGRAM		= POLY_UpgradeDatabase
+PROGRAM		= POLY_ReadPartialEnum
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

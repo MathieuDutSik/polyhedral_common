@@ -2801,18 +2801,24 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
 
 template <typename T, typename Tgroup>
 void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
-                  const vectface &TheOutput, const std::string &OUTfile,
+                  const vectface &TheOutput, const std::string &OutFile,
                   const std::string &OutFormat, std::ostream &os) {
   if (OutFormat == "Magma") {
-    return VectVectInt_Magma_PrintFile(OUTfile, TheOutput);
+    return VectVectInt_Magma_PrintFile(OutFile, TheOutput);
   }
   if (OutFormat == "GAP") {
-    return VectVectInt_Gap_PrintFile(OUTfile, TheOutput);
+    return VectVectInt_Gap_PrintFile(OutFile, TheOutput);
   }
   if (OutFormat == "SetInt") {
-    return VectVectInt_SetInt_PrintFile<mpz_class>(OUTfile, TheOutput);
+    return VectVectInt_SetInt_PrintFile<mpz_class>(OutFile, TheOutput);
   }
   if (OutFormat == "BankEntry") {
+    size_t n_rows = EXT.rows();
+    size_t n_act = GRP.n_act();
+    if (n_rows != n_act) {
+      std::cerr << "The number of rows does not match the group size\n";
+      throw TerminalException{1};
+    }
     // We are creating a bank entry for further works.
     using Tidx_value = uint16_t;
     using Tint = typename Tgroup::Tint;
@@ -2822,7 +2828,7 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
     FaceOrbitsizeTableContainer<Tint> fotc(TheOutput, GRP);
     std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
         GetCanonicalInformation(EXT, WMat, GRP, fotc, os);
-    Write_BankEntry(OUTfile, eP.first, eP.second);
+    Write_BankEntry(OutFile, eP.first, eP.second);
   }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
