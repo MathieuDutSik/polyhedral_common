@@ -492,11 +492,11 @@ public:
     oa << val;
     std::string strO = ofs.str();
     size_t len = strO.size();
-    write_size_t(n_ent+2, len);
+    write_size_t(fp_number, n_ent+2, len);
     shift += len;
     n_ent++;
-    write_size_t(0, n_ent);
-    write_size_t(1, shift);
+    write_size_t(fp_number, 0, n_ent);
+    write_size_t(fp_number, 1, shift);
     char* ptr = strO.data();
     size_t n_write = std::fwrite(ptr, sizeof(uint8_t), len, fp_data);
     if (n_write != len) {
