@@ -415,8 +415,48 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
 }
 
 /*
+  Compute the orthogonal projector from the subspace and the gram matrix
+ */
+template<typename T>
+MyMatrix<T> GetOrthogonalProjectorMatrix(MyMatrix<T> const& eG, MyMatrix<T> const& subspace) {
+  int n = eG.rows();
+  int dim_space = subspace.rows();
+  MyMatrix<T> prod = subspace * eG;
+  MyMatrix<T> OrthSpace = NullspaceTrMat(prod);
+  MyMatrix<T> FullBasis = Concatenation(subspace, OrthSpace);
+  MyMatrix<T> InvFullBasis = Inverse(FullBasis);
+  MyMatrix<T> DiagMat = ZeroMatrix<T>(n);
+  for (int i=0; i<dim_space; i++) {
+    DiagMat(i,i) = 1;
+  }
+  MyMatrix<T> RetMat = InvFullBasis * DiagMat * FullBasis;
+  return RetMat;
+}
+
+/*
+  Computes the set of matrices to be used for the product preservation
+ */
+template<typename T>
+std::vector<MyMatrix<T>> GetFamilyDiscMatrices(MyMatrix<T> const& eG, std::vector<MyMatrix<T>> const& ListComm, std::vector<MyMatrix<T>> const& ListSubspace) {
+  std::vector<MyMatrix<T>> ListDisc {eG};
+  for (auto & eComm : ListComm) {
+    MyMatrix<T> prod = eG * eComm;
+    ListDisc.push_back(prod);
+  }
+  for (auto & subspace : ListSubspace) {
+    MyMatrix<T> ProjMat = GetOrthogonalProjectorMatrix(eG, subspace);
+    MyMatrix<T> prod = eG * ProjMat;
+    ListDisc.push_back(prod);
+  }
+  return ListDisc;
+}
+
+
+
+
+/*
   For a positive definite matrix in the T-space, we compute the group
-  of transformations that presrves:
+  of transformations that preserves:
   * The positive definite quadratic form
   * The T-space itself
 
@@ -427,17 +467,21 @@ MyVector<T> LINSPA_GetVectorOfMatrixExpression(LinSpaceMatrix<T> const &LinSpa,
  */
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                                                  MyMatrix<T> const& eMat,
+                                                  MyMatrix<T> const& eGram,
                                                   std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   //  using TintGroup = typename Tgroup::Tint;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eGram);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row,0);
-  std::vector<MyMatrix<T>> ListMat = {eMat};
+  std::vector<MyMatrix<T>> ListMat = {eGram};
+  std::vector<MyMatrix<T>> ListMat = GetFamilyDiscMatrices(eGram, LinSpa.ListComm, LinSpa.ListSubspace);
+  
+
+  
   const bool use_scheme = true;
   std::vector<std::vector<Tidx>> ListGen =
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(SHV_T, ListMat, Vdiag, os);

@@ -672,9 +672,95 @@ LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT,
   return pair;
 }
 
+template<typename T>
+bool is_family_symmmetric(std::vector<MyMatrix<T>> const &ListMat) {
+  for (auto &eMat : ListMat) {
+    if (!IsSymmetricMatrix(eMat)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template<typename T>
+struct ListMatSymm_Vdiag_WeightMat {
+  MyMatrix<T> const& EXT;
+  std::vector<MyMatrix<T>> const& ListMat;
+  std::vector<T> const& Vdiag;
+  int nbRow;
+  int nbCol;
+  int nMat;
+  MyMatrix<T> MatV;
+  std::vector<T> LScal;
+  int i_set;
+  ListMatSymm_Vdiag_WeightMat(MyMatrix<T> const& _EXT, std::vector<MyMatrix<T>> const& _ListMat, std::vector<T> const& _Vdiag) : EXT(_EXT), ListMat(_ListMat), Vdiag(_Vdiag), nbRow(EXT.rows()), nbCol(EXT.cols()), nMat(ListMat.size()), MatV(nMat, nbCol), LScal(nMat + 1) {
+  }
+  void f1(int i) {
+    for (int iMat = 0; iMat < nMat; iMat++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        T eSum = 0;
+        for (int jCol = 0; jCol < nbCol; jCol++) {
+          eSum += ListMat[iMat](jCol, iCol) * EXT(i, jCol);
+        }
+        MatV(iMat, iCol) = eSum;
+      }
+    }
+    i_set = i;
+  }
+  std::vector<T> f2(int j) {
+    for (int iMat = 0; iMat < nMat; iMat++) {
+      T eSum = 0;
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eSum += MatV(iMat, iCol) * EXT(j, iCol);
+      LScal[iMat] = eSum;
+    }
+    T eVal = 0;
+    if (i_set == j)
+      eVal = Vdiag[j];
+    LScal[nMat] = eVal;
+    return LScal;
+  }
+};
+
+
+
+// This a piece of code used for purposes of
+// ---Computation of automorphism group
+// ---Computing canonicalization
+// ---(Testing isomorphism) unsure because canonicalization
+//    does the job.
+// ---Computation of the weight matrix.
 //
-// The Lorentzian case that cause us so much trouble.
+// The code isusing a strategy of subset where subsets are
+// used for equivalence and then we see if the conclusion
+// reached can be used to get a general conclusion.
 //
+// The input of the function is:
+// ---TheEXT: The polytope in input.
+// ---ListMat: The list of matrices
+//    Whether they are symmetric or not is an issue.
+// ---Vdiag: The list of diagonal values.
+// ---f: The funciton doing the actual processing
+//    That takes nbRow and 5 functions f1, f2, f3,
+//    f4, f5:
+//    ---f1: Set up for the computation of the row
+//       of a WeightMatrix
+//    ---f2: The computation of the row of the
+//       WeightMatrix
+//    ---f3: Test whether a subset is acceptable
+//       or not for testing isomorphism
+//    ---f4: for a transformation on a subset
+//       returns the following.
+//       --correct: bool, whether it is indeed an
+//         equivalence of the full set
+//       --block_status: Whether the blocks are
+//         preserved or not. So, to know which can be
+//         used for extension
+//       --eGen: The global transformation of the index
+//         if correct=true.
+//    ---f5: The input is a canonicalization of
+//       a subset and returns from this a canonicalization
+//       of the full set.
 
 // ---ListMat is assumed to be symmetric
 // ---Note that TheEXT does not have to be of full rank.
@@ -853,6 +939,8 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
+// The use_scheme boolean means that we used subsets to get
+// hopefully faster computation of subsets.
 template <typename T, typename Tfield, typename Tidx, bool use_scheme,
           typename Tidx_value>
 std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
@@ -910,6 +998,8 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag(
   throw TerminalException{1};
 }
 
+// The use_scheme means that we use subsets in order to compute
+// the canonical form. It may or may not work as expected.
 template <typename T, typename Tfield, typename Tidx, bool use_scheme,
           typename Tidx_value>
 std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
