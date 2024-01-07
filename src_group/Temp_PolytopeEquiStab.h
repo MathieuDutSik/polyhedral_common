@@ -722,7 +722,95 @@ struct ListMatSymm_Vdiag_WeightMat {
   }
 };
 
+template<typename T>
+struct ListMat_Vdiag_WeightMat {
+  MyMatrix<T> const& EXT;
+  std::vector<MyMatrix<T>> const& ListMat;
+  std::vector<T> const& Vdiag;
+  int nbRow;
+  int nbCol;
+  int nMat;
+  MyMatrix<T> MatV;
+  std::vector<T> LScal;
+  int i_set;
+  ListMat_Vdiag_WeightMat(MyMatrix<T> const& _EXT, std::vector<MyMatrix<T>> const& _ListMat, std::vector<T> const& _Vdiag) : EXT(_EXT), ListMat(_ListMat), Vdiag(_Vdiag), nbRow(EXT.rows()), nbCol(EXT.cols()), nMat(ListMat.size()), MatV(nMat, nbCol), LScal(nMat + 1) {
+  }
+  void f1(int i) {
+    int i_red = i % nbRow;
+    for (int iMat = 0; iMat < nMat; iMat++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        T eSum = 0;
+        for (int jCol = 0; jCol < nbCol; jCol++) {
+          eSum += ListMat[iMat](jCol, iCol) * EXT(i_red, jCol);
+        }
+        MatV(iMat, iCol) = eSum;
+      }
+    }
+    i_set = i;
+  }
+  std::vector<T> f2(int j) {
+    int pos_j = j / nbRow;
+    int j_red = j % nbRow;
+    int pos_i = i_set / nbRow;
+    if (pos_i == pos_j) {
+      for (int iMat = 1; iMat < nMat; iMat++)
+        LScal[iMat] = 0;
+      if (pos_i == 0) {
+        LScal[0] = 0;
+      } else {
+        LScal[0] = 1;
+      }
+    } else {
+      for (int iMat = 0; iMat < nMat; iMat++) {
+        T eSum = 0;
+        for (int iCol = 0; iCol < nbCol; iCol++)
+          eSum += MatV(iMat, iCol) * EXT(j_red, iCol);
+        LScal[iMat] = eSum;
+      }
+    }
+    T eVal = 0;
+    if (i_set == j)
+      eVal = Vdiag[j];
+    LScal[nMat] = eVal;
+    return LScal;
+  }
+};
 
+template<typename T, typename Tfield, typename Tidx>
+DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
+                                            const std::vector<Tidx> &Vsubset,
+                                            const std::vector<Tidx> &Vin,
+                                            const std::vector<std::vector<Tidx>> &ListBlocks,
+                                            [[maybe_unused]] const std::vector<MyMatrix<T>> & ListMat,
+                                            [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "Before FindMatrixTransformationTest_Subset\n";
+#endif
+  std::optional<MyMatrix<Tfield>> test1 =
+    FindMatrixTransformationTest_Subset<T, Tfield, Tidx>(EXT, Vsubset, Vin);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "After test1=" << test1.has_value() << "\n";
+#endif
+  Face block_status(ListBlocks.size());
+  if (!test1) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "f4 exit false 1\n";
+#endif
+    return {false, block_status, {}};
+  }
+  const MyMatrix<Tfield> &P = *test1;
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  for (auto &eMat : ListMat) {
+    MyMatrix<Tfield> eMat_F = UniversalMatrxConversion<Tfield,T>(eMat);
+    MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
+    if (!TestEqualityMatrix(eProd, eMat_F)) {
+      std::cerr << "The matrix P should preserve the matrices at this point\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  return RepresentVertexPermutationTest_Blocks<T, Tfield, Tidx>(EXT, P, Vsubset, Vin, ListBlocks);
+}
 
 
 
@@ -813,34 +901,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
   auto f4 = [&](const std::vector<Tidx> &Vsubset, const std::vector<Tidx> &Vin,
                 const std::vector<std::vector<Tidx>> &ListBlocks)
       -> DataMapping<Tidx> {
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-    os << "Before FindMatrixTransformationTest_Subset\n";
-#endif
-    std::optional<MyMatrix<Tfield>> test1 =
-        FindMatrixTransformationTest_Subset<T, Tfield, Tidx>(TheEXT, Vsubset,
-                                                             Vin);
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-    os << "After test1=" << test1.has_value() << "\n";
-#endif
-    Face block_status(ListBlocks.size());
-    if (!test1) {
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-      os << "f4 exit false 1\n";
-#endif
-      return {false, block_status, {}};
-    }
-    const MyMatrix<Tfield> &P = *test1;
-    for (auto &eMat_F : ListMat_F) {
-      MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
-      if (!TestEqualityMatrix(eProd, eMat_F)) {
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-        os << "f4 exit false 2\n";
-#endif
-        return {false, block_status, {}};
-      }
-    }
-    return RepresentVertexPermutationTest_Blocks<T, Tfield, Tidx>(
-        TheEXT, *test1, Vsubset, Vin, ListBlocks);
+    return ExtendPartialAutomorphism<T, Tfield, Tidx>(TheEXT, Vsubset, Vin, ListBlocks, ListMat, os);
   };
   // Extension of the partial canonicalization
   auto f5 = [&](std::vector<Tidx> const &Vsubset,
