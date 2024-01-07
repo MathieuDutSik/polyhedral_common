@@ -29,10 +29,13 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::ifstream GRPfs(FileGRP);
     Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
+    std::cerr << "|GRP|=" << GRP.size() << "\n";
     std::map<Tidx, int> LFact = GRP.factor_size();
     Tidx n_act = GRP.n_act();
+    std::cerr << "n_act=" << static_cast<size_t>(n_act) << "\n";
     std::pair<size_t, size_t> ep = get_delta(LFact, n_act);
     size_t delta = ep.second;
+    std::cerr << "delta=" << delta << "\n";
     using Torbsize = uint32_t;
     DataFaceOrbitSize<Torbsize, Tgroup> dfo(GRP);
     //
@@ -44,12 +47,17 @@ int main(int argc, char *argv[]) {
     bool overwrite = false;
     FileNumber fn(eFileFN, overwrite);
     size_t n_orbit = fn.getval();
+    std::cerr << "n_orbit=" << n_orbit << "\n";
     FileBool fb(eFileFB, n_orbit);
     FileFace ff(eFileFF, delta, n_orbit);
     std::map<size_t, size_t> map_incidence;
     std::map<Tint, size_t> map_stabsize;
     vectface TheOutput(n_act);
     for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      size_t res = i_orbit % 1000;
+      if (res == 0) {
+        std::cerr << "i_orbit=" << i_orbit << " n_orbit=" << n_orbit << "\n";
+      }
       Face f = ff.getface(i_orbit);
       std::pair<Face, Tint> pair = dfo.ConvertFace(f);
       Tint stabSize = GRP.size() / pair.second;
@@ -59,6 +67,7 @@ int main(int argc, char *argv[]) {
       map_incidence[cnt] += 1;
       map_stabsize[stabSize] += 1;
     }
+    std::cerr << "Full data read\n";
     for (auto & kv : map_incidence) {
       std::cerr << "incidence " << kv.first << " attained " << kv.second << " times\n";
     }
