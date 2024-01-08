@@ -770,7 +770,7 @@ struct ListMat_Vdiag_WeightMat {
     }
     T eVal = 0;
     if (i_set == j)
-      eVal = Vdiag[j];
+      eVal = Vdiag[j_red];
     LScal[nMat] = eVal;
     return LScal;
   }
@@ -852,6 +852,10 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
 //    ---f5: The input is a canonicalization of
 //       a subset and returns from this a canonicalization
 //       of the full set.
+//
+// Some issues to address:
+
+
 
 // ---ListMat is assumed to be symmetric
 // ---Note that EXT does not have to be of full rank.
@@ -925,15 +929,35 @@ template <typename T, typename Tfield, typename Tidx_value>
 size_t GetInvariant_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
-  using Tidx = uint32_t;
+  int nbRow = EXT.rows();
+  auto get_wmat=[&]() -> WeightMatrix<true, std::vector<T>, Tidx_value> {
+    bool is_symm = is_family_symmmetric(ListMat);
+    if (is_symm) {
+      ListMatSymm_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
+      auto f1 = [&](size_t iRow) -> void {
+        lms.f1(iRow);
+      };
+      auto f2 = [&](size_t jRow) -> std::vector<T> {
+        return lms.f2(jRow);
+      };
+      return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
+    } else {
+      ListMat_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
+      auto f1 = [&](size_t iRow) -> void {
+        lms.f1(iRow);
+      };
+      auto f2 = [&](size_t jRow) -> std::vector<T> {
+        return lms.f2(jRow);
+      };
+      return WeightMatrix<true, std::vector<T>, Tidx_value>(2 * nbRow, f1, f2, os);
+    }
+  };
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(EXT, ListMat,
-                                                                 Vdiag, os);
+  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = get_wmat();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
+  os << "|get_wmat|=" << time << "\n";
 #endif
 
   WMat.ReorderingSetWeight();
