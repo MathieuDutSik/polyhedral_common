@@ -22,11 +22,8 @@ void process_A(std::string const &FileExt1, std::string const &FileExt2,
   size_t nbRow = EXT1.rows();
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
-  //    const bool use_scheme = true;
-  const bool use_scheme = false;
   std::optional<MyMatrix<Tint>> equiv =
-      LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr,
-                                      use_scheme>(EXT1, EXT2, std::cerr);
+      LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr>(EXT1, EXT2, std::cerr);
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";

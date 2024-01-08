@@ -17,7 +17,6 @@ int main(int argc, char *argv[]) {
     }
     //
     using Tint = mpz_class;
-    const bool use_scheme = true;
     std::string eFile = argv[1];
     MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(eFile);
     int nbCol = EXT.cols();
@@ -25,7 +24,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     MyMatrix<Tint> EXT_can =
-        LinPolytope_CanonicForm<Tint, use_scheme>(EXT, std::cerr);
+        LinPolytope_CanonicForm<Tint>(EXT, std::cerr);
     std::cerr
         << "------------------------------------------------------------\n";
     //
@@ -49,7 +48,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
       MyMatrix<Tint> EXT2 = get_random_equivalent(EXT);
       MyMatrix<Tint> EXT2_can =
-          LinPolytope_CanonicForm<Tint, use_scheme>(EXT2, std::cerr);
+          LinPolytope_CanonicForm<Tint>(EXT2, std::cerr);
       std::cerr
           << "------------------------------------------------------------\n";
       if (!TestEqualityMatrix(EXT_can, EXT2_can)) {

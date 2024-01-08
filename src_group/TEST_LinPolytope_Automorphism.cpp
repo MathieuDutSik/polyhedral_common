@@ -28,21 +28,15 @@ int main(int argc, char *argv[]) {
     std::string eFile = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
-    const bool use_scheme1 = true;
-    Tgroup GRP1 =
-        LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
+    Tgroup GRP =
+        LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
     //
-    const bool use_scheme2 = false;
-    Tgroup GRP2 =
-        LinPolytope_Automorphism<T, use_scheme2, Tgroup>(EXT, std::cerr);
-    //
-    bool test = GRP1 == GRP2;
-    if (!test) {
-      std::cerr << "test = False\n";
-      std::cerr << "The groups are different. It is the clear bug\n";
-      throw TerminalException{1};
-    } else {
-      std::cerr << "test = True\n";
+    for (auto & eGen : GRP.GeneratorsOfGroup()) {
+      std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT, EXT, eGen);
+      if (!opt) {
+        std::cerr << "Failed to find a transformation\n";
+        throw TerminalException{1};
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

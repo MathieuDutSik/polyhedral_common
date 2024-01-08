@@ -229,10 +229,9 @@ PleskenSouvignier_Subspace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
       }
 #endif
       //
-      const bool use_scheme = true;
       using Tfield = typename overlying_field<T>::field_type;
       std::vector<std::vector<Tidx>> ListListIdx =
-          GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+          GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(
               SHVbreak, BasisSymmMat, Vdiag);
       std::vector<MyMatrix<T>> NewListMatr;
       for (auto &eListIdx : ListListIdx) {

@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
     }
     //
     using T = mpq_class;
-    const bool use_scheme = true;
     using Tidx = int16_t;
     std::string FileExt = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(FileExt);
@@ -30,7 +29,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     std::vector<Tidx> CanonicOrd =
-        LinPolytope_CanonicOrdering<T, Tidx, use_scheme>(EXT, std::cerr);
+        LinPolytope_CanonicOrdering<T, Tidx>(EXT, std::cerr);
     //
     if (argc == 3) {
       std::ofstream os(argv[2]);

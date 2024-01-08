@@ -22,15 +22,13 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   size_t nbRow = EXT.rows();
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
-  //    const bool use_scheme = true;
-  const bool use_scheme = false;
   std::pair<Tgroup, std::vector<Telt>> pair =
       LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup,
-                                                  Tidx_value, Tgr, use_scheme>(
+                                                  Tidx_value, Tgr>(
           EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom =
-      LinPolytope_Automorphism<Tfield, use_scheme, Tgroup>(EXT_T, os);
+      LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
   std::cerr << "|GRPisom|=" << GRPisom.size()
             << " |pair.first|=" << pair.first.size()
             << " |pair.second|=" << pair.second.size() << "\n";

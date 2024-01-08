@@ -37,9 +37,8 @@ int main(int argc, char *argv[]) {
     size_t nbRow = EXT1.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
-    const bool use_scheme = true;
     std::optional<std::vector<Tidx>> equiv =
-        LinPolytope_Isomorphism<Tint, Tidx, use_scheme>(EXT1, EXT2, std::cerr);
+        LinPolytope_Isomorphism<Tint, Tidx>(EXT1, EXT2, std::cerr);
     //
     auto print_info = [&](std::ostream &os) -> void {
       if (OutFormat == "Oscar") {

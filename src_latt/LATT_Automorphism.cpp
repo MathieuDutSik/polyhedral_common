@@ -46,9 +46,8 @@ int main(int argc, char *argv[]) {
     int n_row = SHV_T.rows();
     std::vector<T> Vdiag(n_row, 0);
 
-    const bool use_scheme = true;
     std::vector<std::vector<Tidx>> ListGen =
-        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx, use_scheme>(
+        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(
             SHV_T, ListMat, Vdiag, std::cerr);
 
     std::vector<MyMatrix<Tint>> ListGenEquiv;

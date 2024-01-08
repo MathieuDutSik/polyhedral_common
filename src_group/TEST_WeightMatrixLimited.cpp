@@ -29,9 +29,8 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     size_t len = EXT.rows();
     //
-    const bool use_scheme1 = true;
     Tgroup GRP =
-        LinPolytope_Automorphism<T, use_scheme1, Tgroup>(EXT, std::cerr);
+        LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     int n_iter1 = 20;

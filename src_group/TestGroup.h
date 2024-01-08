@@ -16,7 +16,6 @@
 
 using Tidx = int32_t;
 using Tint = mpz_class;
-const bool use_scheme1 = true;
 using Telt1 = permutalib::SingleSidedPerm<Tidx>;
 using Tgroup1 = permutalib::Group<Telt1, Tint>;
 
@@ -29,7 +28,7 @@ void TestPolytopeFace_Stabilizer(MyMatrix<T> const &M, Face const &f) {
   MyMatrix<T> id_matr = IdentityMat<T>(M.cols());
   std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
   Tgroup1 GRP1 =
-      LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M, std::cerr);
+      LinPolytope_Automorphism<T, Tgroup1>(M, std::cerr);
   std::cerr << "We have |GRP1|=" << GRP1.size() << "  n_vert=" << n_vert
             << "\n";
   Face fo = OrbitUnion(GRP1, f);
@@ -135,7 +134,7 @@ void TestPolytopeFace_Equivalence(MyMatrix<T> const &M, Face const &f1) {
   MyMatrix<T> id_matr = IdentityMat<T>(M.cols());
   std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
   Tgroup1 GRP1 =
-      LinPolytope_Automorphism<T, use_scheme1, Tgroup1>(M, std::cerr);
+      LinPolytope_Automorphism<T, Tgroup1>(M, std::cerr);
   Telt1 elt1 = GRP1.rand();
   Face f2 = permutalib::OnSets(f1, elt1);
   std::cerr << "We have |GRP1|=" << GRP1.size() << "  n_vert=" << n_vert
