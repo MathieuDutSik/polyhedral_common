@@ -736,14 +736,16 @@ struct ListMat_Vdiag_WeightMat {
   ListMat_Vdiag_WeightMat(MyMatrix<T> const& _EXT, std::vector<MyMatrix<T>> const& _ListMat, std::vector<T> const& _Vdiag) : EXT(_EXT), ListMat(_ListMat), Vdiag(_Vdiag), nbRow(EXT.rows()), nbCol(EXT.cols()), nMat(ListMat.size()), MatV(nMat, nbCol), LScal(nMat + 1) {
   }
   void f1(int i) {
-    int i_red = i % nbRow;
-    for (int iMat = 0; iMat < nMat; iMat++) {
-      for (int iCol = 0; iCol < nbCol; iCol++) {
-        T eSum = 0;
-        for (int jCol = 0; jCol < nbCol; jCol++) {
-          eSum += ListMat[iMat](jCol, iCol) * EXT(i_red, jCol);
+    if (i < nbRow) {
+      // Needed only for the upper part of the matrix
+      for (int iMat = 0; iMat < nMat; iMat++) {
+        for (int iCol = 0; iCol < nbCol; iCol++) {
+          T eSum = 0;
+          for (int jCol = 0; jCol < nbCol; jCol++) {
+            eSum += ListMat[iMat](jCol, iCol) * EXT(i, jCol);
+          }
+          MatV(iMat, iCol) = eSum;
         }
-        MatV(iMat, iCol) = eSum;
       }
     }
     i_set = i;
@@ -853,8 +855,39 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
 //       a subset and returns from this a canonicalization
 //       of the full set.
 //
-// Some issues to address:
-
+// Logic for how to handle the symmetry:
+// ---If ListMat is symmetric then the formalism is quite
+//    clear.
+// ---For non-symmetric matrices, we have to assume that
+//    one matrix (assumed to be the first) is non-degenerate.
+// ---Shall we assume that one matrix is positive definite?
+//    Statement in question: If (v_i), (v'_i) are full
+//    dimensional vector family and Q, Q' are non-degenerate
+//    matrices. If c_ij = v_i Q v_j and c'_ij = v'_i Q' v'_j
+//    if c_ij = c'_ij then there exist a matrix A such that
+//    v'_i A = v_i and A Q A^T = Q'.
+//    Proof: If P is the matrix formed with rows the vectors
+//    v_i and P' the matrix formed with rows the vectors v'_i
+//    then we have P Q P^T = P' Q' P'^T.
+//    assuming without loss of generality that the first n
+//    rows of P are linearly independent, we obtain P_red, P'_red
+//    the restricted matrix obtained by selecting those n rows
+//    then we get P_red Q P_red^T = P'_red Q' P'_red^T.
+//    So, P_red and P'_red are invertible and we define
+//    A = P'_red^{-1} P_red we get A Q A^T = Q'.
+//    So, we get P'_red A = P_red which results in v'_i A = v_i
+//    for the first n vectors.
+//    For the other vectors we have if we write
+//    delta = v'_k A - v_k the following equality
+//    For i <= n we have
+//    delta Q v^T_i = v'_k A Q v^T_i - v_k Q v^T_i
+//                  = v'_k A Q A^T v'_i^T - c_{k,i}
+//                  = v'_k Q' v'_i^T - c_{k,i}
+//                  = c'_{k,i} - c_{k,i} = 0
+//    So, delta being orthogonal to a basis of v_i and Q
+//    non-degenerate, delta = 0 and v'_k A = v_k for all k.
+// ---So, the first matrix should be symmetric non-degenerate
+// ---For the equality c_{k,i}
 
 
 // ---ListMat is assumed to be symmetric
@@ -867,14 +900,6 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f,
                           [[maybe_unused]] std::ostream &os) {
-#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
-  for (auto &eMat : ListMat) {
-    if (!IsSymmetricMatrix(eMat)) {
-      std::cerr << "The matrix eMat should be symmetric\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
   size_t nbRow = EXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
@@ -1007,6 +1032,12 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
     std::vector<T> const &Vdiag, std::ostream &os) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  for (!is_family_symmmetric(ListMat)) {
+    std::cerr << "The matrices of ListMat are not symmetric\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -1064,6 +1095,12 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
     std::vector<T> const &Vdiag, std::ostream &os) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
+#ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
+  for (!is_family_symmmetric(ListMat)) {
+    std::cerr << "The matrices of ListMat are not symmetric\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
