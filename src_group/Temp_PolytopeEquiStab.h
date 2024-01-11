@@ -1170,36 +1170,6 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
 
   size_t nbRow = EXT1.rows();
 
-  // Different scenario depending on the size
-  if (nbRow < 2000) {
-    WeightMatrix<true, std::vector<T>, Tidx_value> WMat1 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
-            EXT1, ListMat1, Vdiag1, os);
-    WeightMatrix<true, std::vector<T>, Tidx_value> WMat2 =
-        GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
-            EXT2, ListMat2, Vdiag2, os);
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB
-    os << "|GetWeightMatrix_ListMatrix_Subset|=" << time << "\n";
-#endif
-
-    WMat1.ReorderingSetWeight();
-    WMat2.ReorderingSetWeight();
-    if (WMat1.GetWeight() != WMat2.GetWeight()) {
-      return {};
-    }
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB
-    os << "|ReorderingSetWeight|=" << time << "\n";
-#endif
-
-    std::optional<std::vector<Tidx>> PairTest =
-        TestEquivalenceWeightMatrix_norenorm<std::vector<T>, Tidx, Tidx_value>(
-            WMat1, WMat2, os);
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB
-    os << "|TestEquivalence_ListMat_Vdiag|=" << time << "\n";
-#endif
-    return PairTest;
-  }
-
   std::vector<Tidx> CanonicReord1 =
       Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(
           EXT1, ListMat1, Vdiag1, os);
@@ -1212,8 +1182,16 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
                                                    CanonicReord2);
   if (!IsoInfo)
     return {};
+  const std::vector<Tidx> &eList = IsoInfo->first;
   const MyMatrix<Tfield> &P = IsoInfo->second;
-  // Now checking the mapping of matrices
+  // The checks below are basically needed:
+  // ---If we used a ListMat with ListMat.size() == 1 and it is
+  // (sum_i v_i^T v_i)^{-1} then the success of the computation
+  // IsomorphismFromCanonicReord is equivalent to the resolution
+  // of the problems.
+  // ---However, for more than 1 matrix, more is needed.
+  // And so in the end it is better to check everything, if only
+  // to be safe.
   size_t nMat = ListMat1.size();
   for (size_t iMat = 0; iMat < nMat; iMat++) {
     MyMatrix<Tfield> eMat1 =
@@ -1225,7 +1203,6 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
       return {};
     }
   }
-  const std::vector<Tidx> &eList = IsoInfo->first;
   Tidx nbRow_tidx = nbRow;
   for (Tidx i1 = 0; i1 < nbRow_tidx; i1++) {
     Tidx i2 = eList[i1];
