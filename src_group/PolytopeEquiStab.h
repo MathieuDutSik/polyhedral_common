@@ -887,7 +887,17 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
 //    So, delta being orthogonal to a basis of v_i and Q
 //    non-degenerate, delta = 0 and v'_k A = v_k for all k.
 // ---So, the first matrix should be symmetric non-degenerate
-// ---For the equality c_{k,i}
+// ---How can we handle the non-symmetric case?
+//    ---Working with the overgraph with twice as many vertices
+//       is the way to go.
+//    ---However, with the subset system, we need to see where
+//       we are doing that folding.
+//    ---After reflection, when we do the subsetting, it has
+//       to respect the partitioning. So, the subsetting has
+//       to be done before the folding.
+//    ---In other words, the folding is done at the same step
+//       as when e go from edge colored to vertex colored
+//       graphs.
 
 
 // ---ListMat is assumed to be symmetric
