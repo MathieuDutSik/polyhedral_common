@@ -1140,7 +1140,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 template <typename T, typename Tidx, typename F1, typename F2, typename F3,
           typename F4>
 std::vector<std::vector<Tidx>>
-GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
+GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, [[maybe_unused]] bool is_symm,
                                     std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1193,7 +1193,8 @@ template <typename T, typename Tidx, typename F1, typename F2, typename F3,
           typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
-                                         F4 f4, F5 f5, std::ostream &os) {
+                                         F4 f4, F5 f5, [[maybe_unused]] bool is_symm,
+                                         std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : We have nbRow="

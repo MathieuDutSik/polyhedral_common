@@ -397,13 +397,31 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
   return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
 }
 
+template<typename Tvalue, typename Tidx, typename Tidx_value, typename F1, typename F2, typename F3, typename F4>
+std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, bool is_symm, std::ostream & os) {
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
+  if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
+    return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx>(nbRow, f1, f2, f3, f4, is_symm, os);
+  } else {
+    if (is_symm) {
+      WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
+      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx,
+                                              Tidx_value>(WMat, os);
+    } else {
+      WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
+      // Need to complete the code.
+      throw TerminalException{1};
+    }
+  }
+}
+
 template <typename T, typename Tgroup, typename Tidx_value>
 Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
                                                    MyMatrix<T> const &GramMat,
                                                    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Tgr = GraphListAdj;
   size_t nbRow = EXT.rows();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   HumanTime time;
@@ -411,15 +429,8 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
                [[maybe_unused]] auto f5,
-               [[maybe_unused]] bool is_symm) -> Treturn {
-    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-      return GetStabilizerWeightMatrix_Heuristic<T, Tidx>(nbRow, f1, f2, f3, f4,
-                                                          os);
-    } else {
-      WeightMatrix<true, T, Tidx_value> WMat(nbRow, f1, f2, os);
-      return GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat,
-                                                                        os);
-    }
+               bool is_symm) -> Treturn {
+    return f_for_stab<T, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f3), decltype(f4)>(nbRow, f1, f2, f3, f4, is_symm, os);
   };
   Treturn ListGen =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
@@ -474,10 +485,31 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT, std::ostream &os) {
                                                                  os);
 }
 
+template<typename Tvalue, typename Tidx, typename Tidx_value, typename F1, typename F2, typename F3, typename F4, typename F5>
+std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5, bool is_symm, std::ostream & os) {
+  //  using Tgr = GraphBitset;
+  using Tgr = GraphListAdj;
+  if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
+    return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx>(nbRow, f1, f2, f3, f4, f5, is_symm, os)
+      .first;
+  } else {
+    if (is_symm) {
+      WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
+      WMat.ReorderingSetWeight();
+      return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx, Tidx_value>(WMat, os)
+        .first;
+    } else {
+      WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
+      WMat.ReorderingSetWeight();
+      // Need to add additional code
+      throw TerminalException{1};
+    }
+  }
+}
+
 template <typename T, typename Tidx, typename Tidx_value>
 std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
     MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat, std::ostream &os) {
-  using Tgr = GraphBitset;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -485,18 +517,8 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
   using Treturn = std::vector<Tidx>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
                auto f5,
-               [[maybe_unused]] bool is_symm) -> Treturn {
-    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-      return GetGroupCanonicalizationVector_Heuristic<T, Tidx>(nbRow, f1, f2,
-                                                               f3, f4, f5, os)
-          .first;
-    } else {
-      WeightMatrix<true, T, Tidx_value> WMat(nbRow, f1, f2, os);
-      WMat.ReorderingSetWeight();
-      return GetGroupCanonicalizationVector_Kernel<T, Tgr, Tidx, Tidx_value>(
-                 WMat, os)
-          .first;
-    }
+               bool is_symm) -> Treturn {
+    return f_for_canonic<T, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f3), decltype(f4), decltype(f5)>(nbRow, f1, f2, f3, f4, f5, is_symm, os);
   };
   std::vector<Tidx> CanonicOrd =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
@@ -1050,8 +1072,6 @@ template <typename T, typename Tfield, typename Tidx,
 std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
-  //  using Tgr = GraphBitset;
-  using Tgr = GraphListAdj;
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (!is_family_symmmetric(ListMat)) {
     std::cerr << "The matrices of ListMat are not symmetric\n";
@@ -1064,15 +1084,8 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
                [[maybe_unused]] auto f5,
-               [[maybe_unused]] bool is_symm) -> Treturn {
-    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-      return GetStabilizerWeightMatrix_Heuristic<std::vector<T>, Tidx>(
-          nbRow, f1, f2, f3, f4, os);
-    } else {
-      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2, os);
-      return GetStabilizerWeightMatrix_Kernel<std::vector<T>, Tgr, Tidx,
-                                              Tidx_value>(WMat, os);
-    }
+               bool is_symm) -> Treturn {
+    return f_for_stab<std::vector<T>, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f3), decltype(f4)>(nbRow, f1, f2, f3, f4, is_symm, os);
   };
   Treturn ListGen = FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
       EXT, ListMat, Vdiag, f, os);
@@ -1114,8 +1127,6 @@ template <typename T, typename Tfield, typename Tidx,
 std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
-  //  using Tgr = GraphBitset;
-  using Tgr = GraphListAdj;
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (!is_family_symmmetric(ListMat)) {
     std::cerr << "The matrices of ListMat are not symmetric\n";
@@ -1129,15 +1140,7 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
                auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
-    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-      return GetGroupCanonicalizationVector_Heuristic<std::vector<T>, Tidx>(
-                 nbRow, f1, f2, f3, f4, f5, os)
-          .first;
-    } else {
-      WeightMatrix<true, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2, os);
-      return GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
-                                              Tidx_value>(WMat, os);
-    }
+    return f_for_canonic<std::vector<T>, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f3), decltype(f4), decltype(f5)>(nbRow, f1, f2, f3, f4, f5, is_symm, os);
   };
   Treturn CanonicReord =
       FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
