@@ -25,6 +25,8 @@
 #define TIMINGS_LIN_POLYTOPE_INTEGRAL_WMAT
 #endif
 
+static const size_t THRESHOLD_USE_SUBSET_SCHEME = 1000;
+
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix
 //
@@ -237,7 +239,8 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
     return ExtendPartialCanonicalization<T, Tfield, Tidx>(TheEXT, Vsubset,
                                                           PartOrd);
   };
-  return f(nbRow, f1, f2, f3, f4, f5);
+  bool is_symm = IsSymmetricMatrix(Qinput);
+  return f(nbRow, f1, f2, f3, f4, f5, is_symm);
 }
 
 template <typename T, typename Tidx, typename Treturn, typename F>
@@ -319,7 +322,8 @@ WeightMatrix<true, T, Tidx_value>
 GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput, std::ostream& os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
-               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
+               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
   };
   //
@@ -351,7 +355,8 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
                                                   std::ostream &os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
-               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
+               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
   };
   //
@@ -384,7 +389,8 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
                                                     std::ostream &os) {
   using Treturn = WeightMatrixLimited<true, T>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
-               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
+               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrixLimited<true, T>(nbRow, f1, f2, max_offdiag, os);
   };
   using Tidx = size_t;
@@ -404,8 +410,9 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
-               [[maybe_unused]] auto f5) -> Treturn {
-    if (nbRow > 1000) {
+               [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
+    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
       return GetStabilizerWeightMatrix_Heuristic<T, Tidx>(nbRow, f1, f2, f3, f4,
                                                           os);
     } else {
@@ -477,8 +484,9 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
 
   using Treturn = std::vector<Tidx>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
-               auto f5) -> Treturn {
-    if (nbRow > 1000) {
+               auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
+    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
       return GetGroupCanonicalizationVector_Heuristic<T, Tidx>(nbRow, f1, f2,
                                                                f3, f4, f5, os)
           .first;
@@ -910,6 +918,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
                           std::vector<MyMatrix<T>> const &ListMat,
                           std::vector<T> const &Vdiag, F f,
                           [[maybe_unused]] std::ostream &os) {
+  bool is_symm = is_family_symmmetric(ListMat);
   size_t nbRow = EXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
@@ -943,7 +952,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
     return ExtendPartialCanonicalization<T, Tfield, Tidx>(EXT, Vsubset,
                                                           PartOrd);
   };
-  return f(nbRow, f1, f2, f3, f4, f5);
+  return f(nbRow, f1, f2, f3, f4, f5, is_symm);
 }
 
 template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
@@ -953,7 +962,8 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                               std::vector<T> const &Vdiag, std::ostream &os) {
   using Treturn = WeightMatrix<true, std::vector<T>, Tidx_value>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
-               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5) -> Treturn {
+               [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
   };
   return FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
@@ -1053,8 +1063,9 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
-               [[maybe_unused]] auto f5) -> Treturn {
-    if (nbRow > 1000) {
+               [[maybe_unused]] auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
+    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
       return GetStabilizerWeightMatrix_Heuristic<std::vector<T>, Tidx>(
           nbRow, f1, f2, f3, f4, os);
     } else {
@@ -1116,8 +1127,9 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
 #endif
   using Treturn = std::vector<Tidx>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
-               auto f5) -> Treturn {
-    if (nbRow > 1000) {
+               auto f5,
+               [[maybe_unused]] bool is_symm) -> Treturn {
+    if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
       return GetGroupCanonicalizationVector_Heuristic<std::vector<T>, Tidx>(
                  nbRow, f1, f2, f3, f4, f5, os)
           .first;
