@@ -10,7 +10,7 @@
 #include "POLY_Heuristics.h"
 #include "POLY_Kskeletton.h"
 #include "POLY_SamplingFacet.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 #include "Timings.h"
 #include "MPI_basic.h"
 #include "POLY_GAP.h"

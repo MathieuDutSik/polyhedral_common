@@ -5,10 +5,9 @@
 // clang-format off
 #include "POLY_PolytopeFct.h"
 #include "ShortestUniversal.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 #include "Temp_Positivity.h"
 #include "SHORT_ShortestConfig.h"
-#include "Temp_PolytopeEquiStab.h"
 #include <set>
 #include <vector>
 // clang-format on

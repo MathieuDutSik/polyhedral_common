@@ -3,7 +3,7 @@
 #include "NumberTheory.h"
 #include "Group.h"
 #include "Permutation.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

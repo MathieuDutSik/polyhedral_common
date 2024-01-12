@@ -4,7 +4,7 @@
 #include "GRP_GroupFct.h"
 #include "Group.h"
 #include "Permutation.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 template <typename Tint>

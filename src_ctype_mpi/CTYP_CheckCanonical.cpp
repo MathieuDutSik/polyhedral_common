@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

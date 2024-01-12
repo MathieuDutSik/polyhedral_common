@@ -6,7 +6,7 @@
 #include "Group.h"
 #include "MatrixGroup.h"
 #include "Permutation.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 #include <algorithm>
 #include <unordered_map>
 #include <vector>

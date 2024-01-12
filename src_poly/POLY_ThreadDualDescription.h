@@ -12,7 +12,7 @@
 #include "POLY_Heuristics.h"
 #include "POLY_SamplingFacet.h"
 #include "Parallel_Classes.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 #include "ThreadManagement.h"
 #include <map>
 #include <string>

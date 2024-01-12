@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 template <typename T, typename Tfield>

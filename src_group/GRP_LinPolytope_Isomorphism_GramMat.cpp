@@ -6,7 +6,7 @@
 #else
 # include "NumberTheory.h"
 #endif
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

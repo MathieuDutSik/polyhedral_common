@@ -11,7 +11,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "Permutation.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 template <typename T, typename Tgroup>

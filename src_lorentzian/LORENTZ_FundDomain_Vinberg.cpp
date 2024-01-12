@@ -3,7 +3,7 @@
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
 #include "MatrixCanonicalForm.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 #include "vinberg.h"
 // clang-format on
 

@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "GRP_GroupFct.h"
-#include "Temp_PolytopeEquiStab.h"
+#include "PolytopeEquiStab.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
