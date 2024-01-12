@@ -944,6 +944,26 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   return nbVertTot;
 }
 
+/*
+  We build an ordinary vertex colored graph from a symmetric vertex
+  and edge colored graph G.
+  ---
+  The transformation is done in two steps:
+  1. If G has n vertices then we build a graph G1 with n+2 vertices
+  which is only edge colored. We do this by adding another vertex V1
+  and V2. V1 is adjacent to an old vertex v with an edge weight equal
+  to the vertex weight of v in the old graph. The vertex V2 is adjacent
+  to all the old vertices with weight nWei and to the vertex V1 with
+  weight nWei+1.
+  2. Then an ordinary graph is build from an edge weighted one by
+  duplicating the original graph k times. That number k is chosen such
+  that nWei+1 <= 2^k. Then we expand the edge weights according to
+  the construction.
+  ---
+  There are two versions of the code:
+  1. One below that uses only the pairs (i,i) in the duplicated graph.
+  2. Another more complex that also uses the pairs (i,j) in the duplication.
+ */
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
 inline typename std::enable_if<!use_pairs, void>::type
@@ -1270,6 +1290,20 @@ GetGroupCanonicalizationVector_Kernel(
   return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow, os);
 }
 
+template<typename Tgr, typename TidxIn>
+std::vector<std::vector<TidxIn>> GetStabilizerWeightMatrix_Kernel_idxin(Tgr const& eGR, size_t nbRow, std::ostream &os) {
+#ifdef USE_BLISS
+  std::vector<std::vector<TidxIn>> ListGen =
+      BLISS_GetListGenerators<Tgr, TidxIn>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  std::vector<std::vector<TidxIn>> ListGen =
+    TRACES_GetListGenerators<Tgr, TidxIn>(eGR, nbRow, os);
+#endif
+  return ListGen;
+}
+
+
 template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
 std::vector<std::vector<Tidx>>
 GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
@@ -1283,16 +1317,7 @@ GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
-
-#ifdef USE_BLISS
-  std::vector<std::vector<Tidx>> ListGen =
-      BLISS_GetListGenerators<Tgr, Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<Tidx>> ListGen =
-    TRACES_GetListGenerators<Tgr, Tidx>(eGR, nbRow, os);
-#endif
-  return ListGen;
+  return GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
 }
 
 template <typename T, typename Tgr, typename Tgroup, typename Tidx_value>
