@@ -886,7 +886,7 @@ get_total_number_vertices(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
   having it confused with the original vertices.
  */
 template<typename Tidx_value, typename T, bool is_symm>
-inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<true, T, Tidx_value> const &WMat) {
+inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
   if (jVert == nbRow + 1) {
     if (iVert == nbRow)
       return nbWei;
@@ -922,7 +922,7 @@ inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_i
      from V by the colors nWei (or nWei+1, nWei+2)
  */
 template<typename Tidx_value, typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<true, T, Tidx_value> const &WMat) {
+inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
   size_t iVertRed = iVert % nbRow;
   size_t jVertRed = jVert % nbRow;
   if (jVert == 2 * nbRow) {
@@ -952,13 +952,13 @@ inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_
 }
 
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
-          bool use_pairs>
+          bool use_pairs, bool is_symm>
 inline typename std::enable_if<use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
-    WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
     [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = get_effective_nb_weight<true>(nbWei);
+  size_t nbMult = get_effective_nb_weight<is_symm>(nbWei);
   size_t hS = Pairs_GetNeededN(nbMult);
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
@@ -971,7 +971,7 @@ GetGraphFromWeightedMatrix_color_adj(
   }
 #endif
   size_t nbRow = WMat.rows();
-  size_t nbVert = get_effective_nb_vert<true>(nbRow);
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
   for (size_t iVert = 0; iVert < nbVert; iVert++)
     for (size_t iH = 0; iH < hS; iH++) {
       size_t aVert = iVert + nbVert * iH;
@@ -988,7 +988,7 @@ GetGraphFromWeightedMatrix_color_adj(
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,true>(nbWei, nbRow, iVert, jVert, WMat);
+      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
       size_t shift = eVal * e_pow;
       for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
         if (f_total[shift + i_pow] == 1) {
@@ -1046,19 +1046,19 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   2. Another more complex that also uses the pairs (i,j) in the duplication.
  */
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
-          bool use_pairs>
+          bool use_pairs, bool is_symm>
 inline typename std::enable_if<!use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
-    WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
     [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = get_effective_nb_weight<true>(nbWei);
+  size_t nbMult = get_effective_nb_weight<is_symm>(nbWei);
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
   size_t hS = GetNeededPower(nbMult);
   size_t nbRow = WMat.rows();
-  size_t nbVert = get_effective_nb_vert<true>(nbRow);
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
   for (size_t iVert = 0; iVert < nbVert; iVert++)
     for (size_t iH = 0; iH < hS; iH++) {
       size_t aVert = iVert + nbVert * iH;
@@ -1075,7 +1075,7 @@ GetGraphFromWeightedMatrix_color_adj(
   Face f_total = GetAllBinaryExpressionsByWeight(hS, nbMult);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,true>(nbWei, nbRow, iVert, jVert, WMat);
+      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
       size_t shift = eVal * hS;
       for (size_t iH = 0; iH < hS; iH++)
         if (f_total[shift + iH] == 1) {
@@ -1087,40 +1087,16 @@ GetGraphFromWeightedMatrix_color_adj(
     }
 }
 
-#ifdef USE_BLISS
-
-template <typename T, typename Tidx_value>
-bliss::Graph
-GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
-                                std::ostream &os) {
-  const bool use_pairs = true;
-  size_t nbVert = get_total_number_vertices<T, Tidx_value, use_pairs, true>(WMat, os);
-  bliss::Graph g(nbVert);
-  auto f_color = [&](size_t iVert, size_t eColor) -> void {
-    g.change_color(iVert, eColor);
-  };
-  auto f_adj = [&](size_t iVert, size_t jVert) -> void {
-    g.add_edge(iVert, jVert);
-  };
-  GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
-                                       Tidx_value, use_pairs>(WMat, f_color,
-                                                              f_adj, os);
-  return g;
-}
-
-#endif
-
-template <typename T, typename Tgr, typename Tidx_value>
-inline
-    typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
-    GetGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
-                               std::ostream &os) {
+template <typename T, typename Tgr, typename Tidx_value, bool is_symm>
+inline typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
+GetGraphFromWeightedMatrix(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
+                           std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX
   MicrosecondTime time;
 #endif
   const bool use_pairs = true;
   size_t nof_vertices =
-    get_total_number_vertices<T, Tidx_value, use_pairs, true>(WMat, os);
+    get_total_number_vertices<T, Tidx_value, use_pairs, is_symm>(WMat, os);
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nof_vertices=" << nof_vertices << "\n";
 #endif
@@ -1136,7 +1112,7 @@ inline
     eGR.AddAdjacent(iVert, jVert);
   };
   GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
-                                       Tidx_value, use_pairs>(WMat, f_color,
+                                       Tidx_value, use_pairs, is_symm>(WMat, f_color,
                                                               f_adj, os);
 #ifdef TIMINGS_WEIGHT_MATRIX
   os << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
@@ -1248,9 +1224,9 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
-template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
+template <typename T, typename Tgr, typename Tidx, typename Tidx_value, bool is_symm>
 std::vector<Tidx>
-GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
+GetCanonicalizationVector_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
                                  std::ostream &os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
@@ -1261,7 +1237,7 @@ GetCanonicalizationVector_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
     throw TerminalException{1};
   }
 
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
     using TidxIn = uint8_t;
@@ -1343,10 +1319,10 @@ GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR, size_t const &nbRow,
 // that canonicalize it.
 // This depends on the construction of the graph from GetGraphFromWeightedMatrix
 //
-template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
+template <typename T, typename Tgr, typename Tidx, typename Tidx_value, bool is_symm>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Kernel(
-    WeightMatrix<true, T, Tidx_value> const &WMat, std::ostream &os) {
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat, std::ostream &os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1356,7 +1332,7 @@ GetGroupCanonicalizationVector_Kernel(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
   return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow, os);
 }
 
@@ -1374,9 +1350,9 @@ std::vector<std::vector<TidxIn>> GetStabilizerWeightMatrix_Kernel_idxin(Tgr cons
 }
 
 
-template <typename T, typename Tgr, typename Tidx, typename Tidx_value>
+template <typename T, typename Tgr, typename Tidx, typename Tidx_value, bool is_symm>
 std::vector<std::vector<Tidx>>
-GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
+GetStabilizerWeightMatrix_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
                                  std::ostream &os) {
   size_t nbRow = WMat.rows();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
@@ -1386,7 +1362,7 @@ GetStabilizerWeightMatrix_Kernel(WeightMatrix<true, T, Tidx_value> const &WMat,
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr>(WMat, os);
+  Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
   return GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
 }
 
@@ -1464,14 +1440,14 @@ GetCanonicalizationFromSymmetrized(std::vector<Tidx> const &CanonicOrdSymmRev) {
   return MapVectRev;
 }
 
-template <typename T, typename Tidx, typename Tidx_value>
+template <typename T, typename Tidx, typename Tidx_value, bool is_symm>
 std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
-    WeightMatrix<true, T, Tidx_value> const &WMat1,
-    WeightMatrix<true, T, Tidx_value> const &WMat2, std::ostream &os) {
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat1,
+    WeightMatrix<is_symm, T, Tidx_value> const &WMat2, std::ostream &os) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
-  Tgr eGR1 = GetGraphFromWeightedMatrix<T, Tgr>(WMat1, os);
-  Tgr eGR2 = GetGraphFromWeightedMatrix<T, Tgr>(WMat2, os);
+  Tgr eGR1 = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat1, os);
+  Tgr eGR2 = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat2, os);
   unsigned int nof_vertices1 = eGR1.GetNbVert();
   unsigned int nof_vertices2 = eGR2.GetNbVert();
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());

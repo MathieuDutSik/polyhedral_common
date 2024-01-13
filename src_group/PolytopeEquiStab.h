@@ -407,11 +407,11 @@ std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx,
-                                              Tidx_value>(WMat, os);
+                                              Tidx_value, true>(WMat, os);
     } else {
       WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
-      // Need to complete the code.
-      throw TerminalException{1};
+      return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx,
+                                              Tidx_value, false>(WMat, os);
     }
   }
 }
@@ -496,13 +496,13 @@ std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5,
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       WMat.ReorderingSetWeight();
-      return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx, Tidx_value>(WMat, os)
+      return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx, Tidx_value, true>(WMat, os)
         .first;
     } else {
       WeightMatrix<false, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       WMat.ReorderingSetWeight();
-      // Need to add additional code
-      throw TerminalException{1};
+      return GetGroupCanonicalizationVector_Kernel<Tvalue, Tgr, Tidx, Tidx_value, false>(WMat, os)
+        .first;
     }
   }
 }
