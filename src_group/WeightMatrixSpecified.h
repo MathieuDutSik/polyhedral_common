@@ -39,6 +39,7 @@
 #endif
 
 // clang-format off
+#include "WeightMatrix.h"
 #include <algorithm>
 #include <limits>
 #include <map>
@@ -617,7 +618,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
 #endif
 }
 
-template <typename T, typename F1, typename F2>
+template <typename T, bool is_symm, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2,
                          WeightMatrixVertexSignatures<T> const &WMVS,
                          [[maybe_unused]] std::ostream &os) {
@@ -874,7 +875,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
 }
 
 /*
-template <typename T, typename Tidx, typename F1, typename F2, bool is_symm>
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
     WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
     std::ostream &os) {
@@ -886,7 +887,7 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  DataTraces DT = GetDataTraces<T, F1, F2>(f1, f2, WMVS, os);
+  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxIn = uint8_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
@@ -928,7 +929,7 @@ GetGroupCanonicalization_KnownSignature(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  DataTraces DT = GetDataTraces<T, F1, F2>(f1, f2, WMVS, os);
+  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
@@ -972,7 +973,7 @@ GetGroupCanonicalization_KnownSignature(
   throw TerminalException{1};
 }
 
-template <typename T, typename Tidx, typename F1, typename F2>
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
     WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
     std::ostream &os) {
@@ -984,7 +985,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
-  DataTraces DT = GetDataTraces<T, F1, F2>(f1, f2, WMVS, os);
+  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow, os);
 }
 
@@ -1159,7 +1160,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   using Tret3 = std::vector<std::vector<Tidx>>;
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
-    return GetStabilizerWeightMatrix_KnownSignature<T, Tidx>(WMVS_res, f1_res,
+    return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(WMVS_res, f1_res,
                                                              f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
