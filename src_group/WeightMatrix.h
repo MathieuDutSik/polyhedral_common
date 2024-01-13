@@ -13,6 +13,27 @@
 #include "GRAPH_traces.h"
 #endif
 
+/*
+  Weight matrices are used for equivalence and compuing
+  stabilizer.
+
+  Weight Matrices (the goal is to handle matrices as
+  large as possible):
+  ---There is a template parameter for being symmetric or
+  not.
+  ---There is a types for the size of the index (Tidx_value)
+  ---A type T being used.
+
+  A number of functions for constructing the Weight matrix
+  (but nothing about polytopes)
+
+  Then a number of functions for computing canonical
+  ordering of indices or computing the stabilizer of a weighted
+  matrix (symmetric or not).
+ */
+
+
+
 // clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"

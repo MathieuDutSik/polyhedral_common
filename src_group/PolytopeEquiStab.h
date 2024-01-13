@@ -2,6 +2,23 @@
 #ifndef SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
 #define SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
 
+/*
+  The code for working with polytope, canonical ordering of
+  their vertices stabilizer.
+
+  This is based on WeightMatrix and WeightMatrixSpecified
+  codes.
+
+  Other specific interest:
+  ---Computing the integral stabilizers and computing the
+  integral equivalence.
+  ---Computing the integral subgroup rightcoset computations.
+  ---For centrally symmetric polytope, implement the
+  absolute value trick.
+
+ */
+
+
 // clang-format off
 #include "MatrixGroup.h"
 #include "Timings.h"

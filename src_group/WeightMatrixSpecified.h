@@ -2,6 +2,31 @@
 #ifndef SRC_GROUP_WEIGHTMATRIXSPECIFIED_H_
 #define SRC_GROUP_WEIGHTMATRIXSPECIFIED_H_
 
+/*
+  The two main applications of weight matrices are:
+  ---Computing the canonical ordering of the vertices.
+  ---Computing the stabilizer of weight matrix.
+
+  This can be slow at times so we need to apply a
+  number of tricks to accelerate. In this section
+  we apply the idea of computing on a subset of
+  the vertices and then checking from that that
+  everything is correct.
+
+  The check of correctness is done in the following way:
+  ---For the stabilizer we check that the obtained
+  automorphism are actually ok.
+  ---For the canonical form, we also compute the
+  automorphism group. If the automorphism happens to be
+  correct, then this implies that the canonical form
+  is actually also ok.
+
+  The code uses a number of template functions provided
+  as input: f1, f2, f3, f4, f5.
+ */
+
+
+
 // The hash map do not seem to make much difference in the overall
 // performance.
 
@@ -412,7 +437,14 @@ std::vector<int> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
 // computation cannot be avoided when building our objects. However, for
 // breaking down the vertex set into blocks, they are too expensive
 //
-
+// Explanations:
+// ---nbRow: The number of vertices of the corresponding graph corresponding
+//    graph.
+// ---ListWeight: The list of weights occurring in that specified subset.
+// ---ListPossibleSignatures: The list of possible signatures.
+//    The signature is the list of possible 
+// ---ListSignatureByVertex: The signature by the vertices.
+// ---ListNbCase: For each possible signature, 
 template <typename T> struct WeightMatrixVertexSignatures {
   size_t nbRow;
   size_t nbWeight;
@@ -874,47 +906,6 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   return DT;
 }
 
-/*
-template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
-std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
-    WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
-    std::ostream &os) {
-  size_t nbRow = WMVS.nbRow;
-  size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
-  if (nbRow >= max_poss_rows) {
-    std::cerr << "GetCanonicalizationVector_KnownSignature : We have nbRow="
-              << nbRow << " which is larger than the possible values of Tidx : "
-              << max_poss_rows << "\n";
-    throw TerminalException{1};
-  }
-  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
-  if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    using TidxIn = uint8_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
-  }
-  if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    using TidxIn = uint16_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
-  }
-  if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    using TidxIn = uint32_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
-  }
-#if !defined __APPLE__
-  if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    using TidxIn = uint64_t;
-    std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
-  }
-#endif
-  std::cerr << "Failed to find matching type in "
-               "GetCanonicalizationVector_KnownSignature\n";
-  throw TerminalException{1};
-}
-*/
 
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
