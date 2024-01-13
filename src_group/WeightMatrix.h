@@ -842,15 +842,35 @@ std::vector<int> Pairs_GetListPair(int N, int nb_color) {
   return V;
 }
 
-template <typename T, typename Tidx_value, bool use_pairs>
+template<bool is_symm>
+inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
+  return nbWei + 2;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
+  return nbWei + 3;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
+  return nbRow + 2;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
+  return 2 * nbRow + 1;
+}
+
+template <typename T, typename Tidx_value, bool use_pairs, bool is_symm>
 inline typename std::enable_if<use_pairs, size_t>::type
-get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
+get_total_number_vertices(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
                           [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = nbWei + 2;
+  size_t nbMult = get_effective_nb_weight<is_symm>(nbWei);
   size_t hS = Pairs_GetNeededN(nbMult);
   size_t nbRow = WMat.rows();
-  size_t nbVert = nbRow + 2;
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
   size_t nbVertTot = nbVert * hS;
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
@@ -931,27 +951,6 @@ inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_
   return WMat.GetValue(iVertRed, jVertRed);
 }
 
-template<bool is_symm>
-inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
-  return nbWei + 2;
-}
-
-template<bool is_symm>
-inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
-  return nbWei + 3;
-}
-
-template<bool is_symm>
-inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
-  return nbRow + 2;
-}
-
-template<bool is_symm>
-inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
-  return 2 * nbRow + 1;
-}
-
-
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
 inline typename std::enable_if<use_pairs, void>::type
@@ -1009,15 +1008,15 @@ GetGraphFromWeightedMatrix_color_adj(
     }
 }
 
-template <typename T, typename Tidx_value, bool use_pairs>
+template <typename T, typename Tidx_value, bool use_pairs, bool is_symm>
 inline typename std::enable_if<!use_pairs, size_t>::type
 get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
                           [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = nbWei + 2;
+  size_t nbMult = get_effective_nb_weight<is_symm>(nbWei);
   size_t hS = GetNeededPower(nbMult);
   size_t nbRow = WMat.rows();
-  size_t nbVert = nbRow + 2;
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
   size_t nbVertTot = hS * nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << " hS=" << hS
@@ -1095,7 +1094,7 @@ bliss::Graph
 GetBlissGraphFromWeightedMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
                                 std::ostream &os) {
   const bool use_pairs = true;
-  size_t nbVert = get_total_number_vertices<T, Tidx_value, use_pairs>(WMat, os);
+  size_t nbVert = get_total_number_vertices<T, Tidx_value, use_pairs, true>(WMat, os);
   bliss::Graph g(nbVert);
   auto f_color = [&](size_t iVert, size_t eColor) -> void {
     g.change_color(iVert, eColor);
@@ -1121,7 +1120,7 @@ inline
 #endif
   const bool use_pairs = true;
   size_t nof_vertices =
-      get_total_number_vertices<T, Tidx_value, use_pairs>(WMat, os);
+    get_total_number_vertices<T, Tidx_value, use_pairs, true>(WMat, os);
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nof_vertices=" << nof_vertices << "\n";
 #endif
@@ -1178,7 +1177,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
     clR[cl[i]] = i;
   }
   //
-  size_t nbVert = nbRow + 2;
+  size_t nbVert = get_effective_nb_vert<true>(nbRow);
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices
