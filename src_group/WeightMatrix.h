@@ -951,8 +951,7 @@ inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_
   return WMat.GetValue(iVertRed, jVertRed);
 }
 
-template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
-          bool use_pairs, bool is_symm>
+template <typename T, typename Tidx_value, bool use_pairs, bool is_symm, typename Fcolor, typename Fadj>
 inline typename std::enable_if<use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
@@ -1045,8 +1044,7 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   1. One below that uses only the pairs (i,i) in the duplicated graph.
   2. Another more complex that also uses the pairs (i,j) in the duplication.
  */
-template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
-          bool use_pairs, bool is_symm>
+template <typename T, typename Tidx_value, bool use_pairs, bool is_symm, typename Fcolor, typename Fadj>
 inline typename std::enable_if<!use_pairs, void>::type
 GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
@@ -1111,9 +1109,7 @@ GetGraphFromWeightedMatrix(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
     eGR.AddAdjacent(iVert, jVert);
   };
-  GetGraphFromWeightedMatrix_color_adj<T, decltype(f_color), decltype(f_adj),
-                                       Tidx_value, use_pairs, is_symm>(WMat, f_color,
-                                                              f_adj, os);
+  GetGraphFromWeightedMatrix_color_adj<T, Tidx_value, use_pairs, is_symm>(WMat, f_color, f_adj, os);
 #ifdef TIMINGS_WEIGHT_MATRIX
   os << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
 #endif
@@ -1124,7 +1120,7 @@ GetGraphFromWeightedMatrix(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
 // The computation of group and equivalences
 //
 
-template <typename Tidx, typename TidxIn>
+template <typename Tidx, typename TidxIn, bool is_symm>
 std::vector<Tidx>
 GetCanonicalizationVector_KernelBis(size_t const &nbRow,
                                     std::vector<TidxIn> const &cl,
@@ -1153,7 +1149,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
     clR[cl[i]] = i;
   }
   //
-  size_t nbVert = get_effective_nb_vert<true>(nbRow);
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
   size_t hS = nof_vertices / nbVert;
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbVert=" << nbVert << " hS=" << hS << " nof_vertices=" << nof_vertices
@@ -1207,7 +1203,7 @@ GetCanonicalizationVector_KernelBis(size_t const &nbRow,
   return MapVectRev2;
 }
 
-template <typename Tgr, typename Tidx, typename TidxIn>
+template <typename Tgr, typename Tidx, typename TidxIn, bool is_symm>
 std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
                                                          Tgr const &eGR,
                                                          std::ostream &os) {
@@ -1217,7 +1213,7 @@ std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
 #ifdef USE_TRACES
   std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr, TidxIn>(eGR, os);
 #endif
-  return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
+  return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
 }
 
 // This function takes a matrix and returns the vector
@@ -1241,23 +1237,23 @@ GetCanonicalizationVector_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMa
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max())) {
     using TidxIn = uint8_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow, eGR,
+    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(nbRow, eGR,
                                                                      os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max())) {
     using TidxIn = uint16_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow, eGR,
+    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(nbRow, eGR,
                                                                      os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max())) {
     using TidxIn = uint32_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow, eGR,
+    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(nbRow, eGR,
                                                                      os);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max())) {
     using TidxIn = uint64_t;
-    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn>(nbRow, eGR,
+    return GetCanonicalizationVector_Kernel_idxin<Tgr, Tidx, TidxIn, is_symm>(nbRow, eGR,
                                                                      os);
   }
 #endif
@@ -1266,7 +1262,7 @@ GetCanonicalizationVector_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMa
   throw TerminalException{1};
 }
 
-template <typename Tgr, typename Tidx, typename TidxC>
+template <typename Tgr, typename Tidx, typename TidxC, bool is_symm>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow, Tgr const &eGR,
                                             std::ostream &os) {
@@ -1279,34 +1275,34 @@ GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow, Tgr const &eGR,
     TRACES_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow, os);
 #endif
   std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first, os);
+    GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first, os);
   return {std::move(MapVectRev2), std::move(ePair.second)};
 }
 
-template <typename Tgr, typename Tidx>
+template <typename Tgr, typename Tidx, bool is_symm>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Graph_Kernel(Tgr const &eGR, size_t const &nbRow,
                                             std::ostream &os) {
   //
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC, is_symm>(
         nbRow, eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC, is_symm>(
         nbRow, eGR, os);
   }
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC, is_symm>(
         nbRow, eGR, os);
   }
 #if !defined __APPLE__
   if (eGR.GetNbVert() < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
-    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC>(
+    return GetGroupCanonicalizationVector_Kernel_tidxc<Tgr, Tidx, TidxC, is_symm>(
         nbRow, eGR, os);
   }
 #endif
@@ -1333,7 +1329,7 @@ GetGroupCanonicalizationVector_Kernel(
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
-  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx>(eGR, nbRow, os);
+  return GetGroupCanonicalizationVector_Graph_Kernel<Tgr, Tidx, is_symm>(eGR, nbRow, os);
 }
 
 template<typename Tgr, typename TidxIn>

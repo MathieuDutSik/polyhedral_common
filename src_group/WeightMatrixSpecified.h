@@ -873,7 +873,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   return DT;
 }
 
-template <typename T, typename Tidx, typename F1, typename F2>
+/*
+template <typename T, typename Tidx, typename F1, typename F2, bool is_symm>
 std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
     WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
     std::ostream &os) {
@@ -889,31 +890,32 @@ std::vector<Tidx> GetCanonicalizationVector_KnownSignature(
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxIn = uint8_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
+    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
   }
   if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxIn = uint16_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
+    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
   }
   if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxIn = uint32_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
+    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
   }
 #if !defined __APPLE__
   if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxIn = uint64_t;
     std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering_Arr<TidxIn>(DT, os);
-    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn>(nbRow, cl, os);
+    return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
   }
 #endif
   std::cerr << "Failed to find matching type in "
                "GetCanonicalizationVector_KnownSignature\n";
   throw TerminalException{1};
 }
+*/
 
-template <typename T, typename Tidx, typename F1, typename F2>
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalization_KnownSignature(
     WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
@@ -932,7 +934,7 @@ GetGroupCanonicalization_KnownSignature(
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
       TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
+      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
@@ -941,7 +943,7 @@ GetGroupCanonicalization_KnownSignature(
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
       TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
+      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
@@ -950,7 +952,7 @@ GetGroupCanonicalization_KnownSignature(
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
       TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
+      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
@@ -960,7 +962,7 @@ GetGroupCanonicalization_KnownSignature(
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
       TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC>(nbRow, ePair.first,
+      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
@@ -1137,10 +1139,10 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tidx, typename F1, typename F2, typename F3,
-          typename F4>
+template <typename T, typename Tidx, bool is_symm,
+          typename F1, typename F2, typename F3, typename F4>
 std::vector<std::vector<Tidx>>
-GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, [[maybe_unused]] bool is_symm,
+GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
                                     std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -1189,12 +1191,11 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, [[
   returning the big generators.
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
-template <typename T, typename Tidx, typename F1, typename F2, typename F3,
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2, typename F3,
           typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
-                                         F4 f4, F5 f5, [[maybe_unused]] bool is_symm,
-                                         std::ostream &os) {
+                                         F4 f4, F5 f5, std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : We have nbRow="
@@ -1210,8 +1211,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
   using Tret3 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
-    return GetGroupCanonicalization_KnownSignature<T, Tidx>(WMVS_res, f1_res,
-                                                            f2_res, os);
+    return GetGroupCanonicalization_KnownSignature<T, Tidx, is_symm>(WMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ePair) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED

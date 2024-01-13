@@ -402,7 +402,11 @@ std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-    return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx>(nbRow, f1, f2, f3, f4, is_symm, os);
+    if (is_symm) {
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f3, f4, os);
+    } else {
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f3, f4, os);
+    }
   } else {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
@@ -490,8 +494,13 @@ std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5,
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
-    return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx>(nbRow, f1, f2, f3, f4, f5, is_symm, os)
+    if (is_symm) {
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f3, f4, f5, os)
       .first;
+    } else {
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f3, f4, f5, os)
+      .first;
+    }
   } else {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
