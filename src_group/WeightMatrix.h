@@ -859,6 +859,24 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
   return nbVertTot;
 }
 
+/*
+ */
+template<typename Tidx_value, typename T, bool is_symm>
+Tidx_value get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<true, T, Tidx_value> const &WMat) {
+  if (jVert == nbRow + 1) {
+    if (iVert == nbRow)
+      return nbWei;
+    else
+      return nbWei + 1;
+  } else {
+    if (jVert == nbRow)
+      return WMat.GetValue(iVert, iVert);
+    else
+      return WMat.GetValue(iVert, jVert);
+  }
+}
+
+
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
 inline typename std::enable_if<use_pairs, void>::type
@@ -896,18 +914,7 @@ GetGraphFromWeightedMatrix_color_adj(
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      Tidx_value eVal;
-      if (jVert == nbRow + 1) {
-        if (iVert == nbRow)
-          eVal = nbWei;
-        else
-          eVal = nbWei + 1;
-      } else {
-        if (jVert == nbRow)
-          eVal = WMat.GetValue(iVert, iVert);
-        else
-          eVal = WMat.GetValue(iVert, jVert);
-      }
+      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,true>(nbWei, nbRow, iVert, jVert, WMat);
       size_t shift = eVal * e_pow;
       for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
         if (f_total[shift + i_pow] == 1) {
@@ -994,18 +1001,7 @@ GetGraphFromWeightedMatrix_color_adj(
   Face f_total = GetAllBinaryExpressionsByWeight(hS, nbMult);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      Tidx_value eVal;
-      if (jVert == nbRow + 1) {
-        if (iVert == nbRow)
-          eVal = nbWei;
-        else
-          eVal = nbWei + 1;
-      } else {
-        if (jVert == nbRow)
-          eVal = WMat.GetValue(iVert, iVert);
-        else
-          eVal = WMat.GetValue(iVert, jVert);
-      }
+      Tidx_value eVal = get_effective_weight_index<Tidx_value,T,true>(nbWei, nbRow, iVert, jVert, WMat);
       size_t shift = eVal * hS;
       for (size_t iH = 0; iH < hS; iH++)
         if (f_total[shift + iH] == 1) {
