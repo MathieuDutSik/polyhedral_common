@@ -931,6 +931,26 @@ inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_
   return WMat.GetValue(iVertRed, jVertRed);
 }
 
+template<bool is_symm>
+inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
+  return nbWei + 2;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_weight(size_t nbWei) {
+  return nbWei + 3;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
+  return nbRow + 2;
+}
+
+template<bool is_symm>
+inline typename std::enable_if<!is_symm, size_t>::type get_effective_nb_vert(size_t nbRow) {
+  return 2 * nbRow + 1;
+}
+
 
 template <typename T, typename Fcolor, typename Fadj, typename Tidx_value,
           bool use_pairs>
@@ -939,7 +959,7 @@ GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
     [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = nbWei + 2;
+  size_t nbMult = get_effective_nb_weight<true>(nbWei);
   size_t hS = Pairs_GetNeededN(nbMult);
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
@@ -952,7 +972,7 @@ GetGraphFromWeightedMatrix_color_adj(
   }
 #endif
   size_t nbRow = WMat.rows();
-  size_t nbVert = nbRow + 2;
+  size_t nbVert = get_effective_nb_vert<true>(nbRow);
   for (size_t iVert = 0; iVert < nbVert; iVert++)
     for (size_t iH = 0; iH < hS; iH++) {
       size_t aVert = iVert + nbVert * iH;
@@ -1033,13 +1053,13 @@ GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<true, T, Tidx_value> const &WMat, Fcolor f_color, Fadj f_adj,
     [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
-  size_t nbMult = nbWei + 2;
+  size_t nbMult = get_effective_nb_weight<true>(nbWei);
 #ifdef DEBUG_WEIGHT_MATRIX
   os << "WEIGHT: nbWei=" << nbWei << " nbMult=" << nbMult << "\n";
 #endif
   size_t hS = GetNeededPower(nbMult);
   size_t nbRow = WMat.rows();
-  size_t nbVert = nbRow + 2;
+  size_t nbVert = get_effective_nb_vert<true>(nbRow);
   for (size_t iVert = 0; iVert < nbVert; iVert++)
     for (size_t iH = 0; iH < hS; iH++) {
       size_t aVert = iVert + nbVert * iH;
