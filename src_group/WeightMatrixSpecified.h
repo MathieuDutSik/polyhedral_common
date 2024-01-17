@@ -711,25 +711,28 @@ inline typename std::enable_if<!is_symm, size_t>::type evaluate_f2(size_t nbRow,
   return map.at(f2(jVertRed));
 }
 
+/*
+  When computing the big graph, ze need to have the symbolic information.
+  Those information allow to determine the number of adjacency for each vertex.
+  -- For each vertex, add the possible contribution of other vertices.
+  -- Expand the list of vertex_to_signature to cover everything.
+ */
 struct ExpandedSymbolic {
-  std::vector<std::vector<std::pair<int, int>>> new_list_signature;
-  std::vector<int> list_signature;
+  std::vector<std::vector<std::pair<int, int>>> list_signature;
+  std::vector<int> vertex_to_signature;
 };
-
-
 
 template<typename T, bool is_symm>
 inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS) {
   size_t nbRow = WMVS.nbRow;
-  //
-  // Now building the list of possibilities for the 2 added vertices
-  //
-  std::vector<std::vector<std::pair<int, int>>> new_list_signature;
+  // The old vertices, but there ar now two more vertices being added
+  std::vector<std::vector<std::pair<int, int>>> list_signature;
   for (auto &esign : WMVS.ListPossibleSignatures) {
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
     for (size_t u = 0; u < len; u++)
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
+    // We use a O(n) algorithm since we insert just one entry.
     auto fInsert = [&](int e_val) -> void {
       for (auto &e_pair : e_vect) {
         if (e_pair.first == e_val) {
@@ -739,40 +742,111 @@ inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_sym
       }
       e_vect.push_back({e_val, 1});
     };
-    fInsert(esign[0]);
+    int diag_val = esign[0]; // The diagonal value
+    fInsert(diag_val);
     fInsert(nbWeight + 1);
-    new_list_signature.push_back(e_vect);
+    list_signature.push_back(e_vect);
   }
   // nbRow : Adding the column corresponding to the diagonal values
-  std::map<int, int> map_vert_nRow;
+  std::unordered_map<int, int> map_vert_nRow;
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     int isign = WMVS.ListSignatureByVertex[iRow];
-    int iweight_specific = WMVS.ListPossibleSignatures[isign][0];
-    map_vert_nRow[iweight_specific]++;
+    int iweight_diag = WMVS.ListPossibleSignatures[isign][0];
+    map_vert_nRow[iweight_diag]++;
   }
   map_vert_nRow[nbWeight]++;
   std::vector<std::pair<int, int>> f_vect;
   for (auto &kv : map_vert_nRow)
     f_vect.push_back({kv.first, kv.second});
-  new_list_signature.push_back(f_vect);
+  list_signature.push_back(f_vect);
   // nbRow+1 : Adding the column corresponding to the external vertex
   std::vector<std::pair<int, int>> g_vect{{nbWeight, 1}, {nbWeight + 1, nbRow}};
-  new_list_signature.push_back(g_vect);
-  size_t nbCase = new_list_signature.size();
+  list_signature.push_back(g_vect);
+  size_t nbCase = list_signature.size();
   // Now adding the list_of index
-  std::vector<int> list_signature = WMVS.ListSignatureByVertex;
+  std::vector<int> vertex_to_signature = WMVS.ListSignatureByVertex;
   // nbCase - 2 corresponds to for nbRow
   // nbCase - 1 corresponds to for nbRow + 1
-  list_signature.push_back(nbCase - 2);
-  list_signature.push_back(nbCase - 1);
-  return {std::move(new_list_signature), std::move(list_signature)};
+  vertex_to_signature.push_back(nbCase - 2);
+  vertex_to_signature.push_back(nbCase - 1);
+  return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
 template<typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS) {
-  std::vector<std::vector<std::pair<int, int>>> new_list_signature;
-  std::vector<int> list_signature;
-  return {new_list_signature, list_signature};
+inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS) {
+  size_t nbRow = WMVS.nbRow;
+  std::vector<std::vector<std::pair<int, int>>> list_signature;
+  std::vector<int> vertex_to_signature;
+  auto fUpdate = [](std::vector<std::pair<int,int>> & e_vect, int i_weight, int shift) -> void {
+    // We use a O(n) algorithm since we update only few entries. shift can be negative.
+    for (auto &e_pair : e_vect) {
+      if (e_pair.first == i_weight) {
+        e_pair.second += shift;
+        return;
+      }
+    }
+    e_vect.push_back({i_weight, shift}); // Thus shift shouldn be positive here
+  };
+  size_t n_sign_old = WMVS.ListPossibleSignatures.size();
+  // First block of vertices; updates:
+  // -- Add the weight nWei+1 for nbRow-1 times (the (v1, w1) adjacencies for v != w)
+  // -- Add the weight nWei for just one time (the (v1,v2) adjacency)
+  // -- Add the diagonal weight just one time (on 
+  for (auto &esign : WMVS.ListPossibleSignatures) {
+    std::vector<std::pair<int, int>> e_vect;
+    size_t len = esign.size() / 2;
+    for (size_t u = 0; u < len; u++)
+      e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
+    fUpdate(e_vect, nWei + 1, nbRow-1);
+    fUpdate(e_vect, nWei, 1);
+    int diag_val = esign[0]; // The diagonal value
+    fUpdate(e_vect, diag_val, 1);
+    list_signature.push_back(e_vect);
+  }
+  // Second block of vertices; updates:
+  // -- Add the value nWei + 2 for nbRow-1 times (the (v2,w2) adjacencies for v != w)
+  // -- Subtract the diagonal value by 1 (the diagonal value is replaced by nWei and not moved)
+  // -- Add the value mWei for just one time (the (v1,v2) adjacency)
+  // -- Add the value nWei + 1 for two times (PURE GUESS at this point)
+  for (auto &esign : WMVS.ListPossibleSignatures) {
+    std::vector<std::pair<int, int>> e_vect;
+    size_t len = esign.size() / 2;
+    for (size_t u = 0; u < len; u++)
+      e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
+    int diag_val = esign[0]; // The diagonal value
+    fUpdate(e_vect, nWei + 2, nbRow-1);
+    fUpdate(e_vect, diag_val, -1);
+    fUpdate(e_vect, nWei, 1);
+    fUpdate(e_vect, nWei + 2, 2);
+    list_signature.push_back(e_vect);
+  }
+  // Third vertex added:
+  // -- We take the diagonal values
+  // -- The value nWei + 1 is for nbRow times
+  std::unordered_map<int, int> map_vert_nRow;
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
+    int isign = WMVS.ListSignatureByVertex[iRow];
+    int iweight_diag = WMVS.ListPossibleSignatures[isign][0];
+    map_vert_nRow[iweight_diag]++;
+  }
+  map_vert_nRow[nWei + 1] = nbRow;
+  std::vector<std::pair<int, int>> f_vect;
+  for (auto &kv : map_vert_nRow)
+    f_vect.push_back({kv.first, kv.second});
+  list_signature.push_back(f_vect);
+  // Now the signatures.
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
+    int iCaseOld = WMVS.ListSignatureByVertex[i_row];
+    vertex_to_signature.push_back(iCaseOld);
+  }
+  for (size_t i_row=0; i_row<nbRow; i_row++) {
+    int iCaseOld = WMVS.ListSignatureByVertex[i_row];
+    int iCaseNew = iCaseOld + n_sign_old;
+    vertex_to_signature.push_back(iCaseNew);
+  }
+  vertex_to_signature.push_back(2 * n_sign_old);
+  // Moving the results.
+  return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
 
@@ -803,13 +877,13 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
   ExpandedSymbolic expand = get_expanded_symbolic<T,is_symm>(nbWeight, WMVS);
-  size_t nbCase = expand.new_list_signature.size();
+  size_t nbCase = expand.list_signature.size();
   //
   // Determining the number of cases
   //
   std::vector<int> ListNbCase(nbCase, 0);
   for (size_t i = 0; i < nbVert; i++) {
-    int iCase = expand.list_signature[i];
+    int iCase = expand.vertex_to_signature[i];
     ListNbCase[iCase]++;
   }
   //
@@ -818,7 +892,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   std::vector<size_t> WeightByMult(nbMult, 0);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     int sizCase = ListNbCase[iCase];
-    std::vector<std::pair<int, int>> e_vect = expand.new_list_signature[iCase];
+    std::vector<std::pair<int, int>> const& e_vect = expand.list_signature[iCase];
     for (auto &e_pair : e_vect) {
       int iWeight = e_pair.first;
       int eMult = e_pair.second;
@@ -852,7 +926,15 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   //
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
-    std::vector<std::pair<int, int>> e_vect = expand.new_list_signature[iCase];
+    std::vector<std::pair<int, int>> const& e_vect = expand.list_signature[iCase];
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    for (auto & epair : e_vect) {
+      if (epair.second < 0) {
+        std::cerr << "A negative multiplicity is inserted which is not allowed\n";
+        throw TerminalException[1];
+      }
+    }
+#endif
     for (auto &e_pair : e_vect) {
       int iWeight = ListIdx[e_pair.first];
       int eMult = e_pair.second;
@@ -885,7 +967,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   for (size_t i = 0; i < nbVertTot; i++) {
     size_t iVert = i % nbVert;
     size_t iH = i / nbVert;
-    int iCase = expand.list_signature[iVert];
+    int iCase = expand.vertex_to_signature[iVert];
     int nbAdj = MatrixAdj(iH, iCase);
     DT.sg1.d[i] = nbAdj;
     DT.sg1.v[i] = pos;
@@ -900,7 +982,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     DT.ptn[i] = NAUTY_INFINITY;
   }
   for (size_t iH = 0; iH < hS; iH++) {
-    size_t pos = iH * nbVert + nbVert - 1;
+  size_t pos = iH * nbVert + nbVert - 1;
     DT.ptn[pos] = 0;
   }
   //
