@@ -925,16 +925,18 @@ inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_i
   This is the effective transformation for the non-symmetric case:
   ---First, every vertex v becomes (v1, v2) with the following
      properties:
-     ---A: c(v1,w1) = nWei + 1 and c(v2,v2) = nWei + 2 with those
-     two colors occurring only in those cases. Then we get that
-     the symmetries will preserve the class of vertices of the
-     form v1 and the class of vertices of the form v2.
+     ---A: For v != w, c(v1,w1) = nWei + 1 and c(v2,v2) = nWei + 2
+     with those two colors occurring only in those cases. Then we
+     get that the symmetries will preserve the class of vertices
+     of the form v1 and the class of vertices of the form v2.
      ---B: c(v1,v2) = c(v2,v1) = nWei and the color nWei will occur
      only in that case. That condition ensures that a symmetry that
      maps v1 to w1 will also map v2 to w2.
-     ---C: c(v1,v1) = c(v2,v2) = c(v,v). This means that the symmetries
+     ---C: c(v1,v1) = c(v,v). This means that the symmetries
      will preserve the diagonal values.
-     ---D: For v != w, c(v1, w2) = c(w2, v1) = c(v, w). This means
+     ---D: c(v2,v2) = nWei + 1. We could have set up c(v2,v2) = c(v,v)
+     but that would have been overkill and require more computation.
+     ---E: For v != w, c(v1, w2) = c(w2, v1) = c(v, w). This means
      the symmetries will preserve the scalar product.
   ---Second, in order to get rid of the vertex colors, we add
      another vertex V which has colors equals to the diagonal one
@@ -943,32 +945,37 @@ inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_i
      from V by the colors nWei (or nWei+1, nWei+2)
  */
 template<typename Tidx_value, typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
+inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_index(size_t nWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
   size_t iVertRed = iVert % nbRow;
   size_t jVertRed = jVert % nbRow;
   if (jVert == 2 * nbRow) {
     // This is the diagonal case of the symmetries
-    // Case C
-    return WMat.GetValue(iVertRed, iVertRed);
+    if (iVert < nbRow) {
+      // Case C
+      return WMat.GetValue(iVert, iVert);
+    } else {
+      // Case D
+      return nWei+1;
+    }
   }
   if (iVertRed == jVertRed) {
     // Because iVert < jVert, that case can only occurs if iVert = v1 and jVert = v2 for some v.
     // Case B
-    return nbWei;
+    return nWei;
   }
   if (jVert < nbRow) {
     // Because iVert < jVert, that case only occurs if iVert = v1, jVert = w1 with v != w
     // Case A1
-    return nbWei + 1;
+    return nWei + 1;
   }
   if (nbRow <= iVert) {
     // Because iVert < jVert, that case only occurs if iVert = v2, jVert = w2 with v != w
     // Case A2
-    return nbWei + 1;
+    return nWei + 2;
   }
   // From previous check, we are now in the situation where iVert = v1 and jVert = w2
   // with v != w.
-  // Case D
+  // Case E
   return WMat.GetValue(iVertRed, jVertRed);
 }
 

@@ -104,6 +104,13 @@ GetReorderingInfoWeight(const std::vector<T> &ListWeight) {
   return {std::move(NewListWeight), std::move(g)};
 }
 
+/*
+  Data structure for the partitionning of the vertex set.
+  --- MapVertexBlock maps the vertices to the blocks.
+  --- The ListBlocks is the corresponding data structure that
+  is the list of blocks (has to be coherent with MapVertexBlock
+  of course).
+ */
 template <typename Tidx> struct VertexPartition {
   size_t nbRow;
   std::vector<Tidx> MapVertexBlock;
@@ -650,32 +657,70 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
 #endif
 }
 
-template <typename T, bool is_symm, typename F1, typename F2>
-DataTraces GetDataTraces(F1 f1, F2 f2,
-                         WeightMatrixVertexSignatures<T> const &WMVS,
-                         [[maybe_unused]] std::ostream &os) {
-#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  MicrosecondTime time;
-#endif
-  size_t nbRow = WMVS.nbRow;
-  size_t nbWeight = WMVS.nbWeight;
-  std::vector<T> const &ListWeight = WMVS.ListWeight;
-  std::unordered_map<T, int> map;
-  for (size_t iWei = 0; iWei < nbWeight; iWei++) {
-    map[ListWeight[iWei]] = iWei;
+/*
+  See WeightMatrix.h : get_effective_weight_index for underlying logic
+ */
+template<typename T, bool is_symm, typename F2>
+inline typename std::enable_if<is_symm, size_t>::type evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const& map, size_t iVert, size_t jVert, F2 f2) {
+  if (jVert == nbRow + 1) {
+    if (iVert == nbRow)
+      return nWei;
+    else
+      return nWei + 1;
+  } else {
+    if (jVert == nbRow) {
+      return map.at(f2(iVert));
+    } else {
+      return map.at(f2(jVert));
+    }
   }
-  //
-  size_t nbMult = nbWeight + 2;
-  size_t hS = Pairs_GetNeededN(nbMult);
-  size_t nbVert = nbRow + 2;
-  size_t nbVertTot = nbVert * hS;
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow
-     << " nbVert=" << nbVert << " nbVertTot=" << nbVertTot << "\n";
-#endif
-  //
-  std::vector<int> V = Pairs_GetListPair(hS, nbMult);
-  size_t e_pow = V.size() / 2;
+}
+
+template<typename T, bool is_symm, typename F2>
+inline typename std::enable_if<!is_symm, size_t>::type evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const& map, size_t iVert, size_t jVert, F2 f2) {
+  size_t iVertRed = iVert % nbRow;
+  size_t jVertRed = jVert % nbRow;
+  if (jVert == 2 * nbRow) {
+    // This is the diagonal case of the symmetries
+    if (iVert < nbRow) {
+      // Case C
+      return map.at(f2(iVert));
+    } else {
+      // Case D
+      return nWei + 1;
+    }
+  }
+  if (iVertRed == jVertRed) {
+    // Because iVert < jVert, that case can only occurs if iVert = v1 and jVert = v2 for some v.
+    // Case B
+    return nWei;
+  }
+  if (jVert < nbRow) {
+    // Because iVert < jVert, that case only occurs if iVert = v1, jVert = w1 with v != w
+    // Case A1
+    return nWei + 1;
+  }
+  if (nbRow <= iVert) {
+    // Because iVert < jVert, that case only occurs if iVert = v2, jVert = w2 with v != w
+    // Case A2
+    return nWei + 2;
+  }
+  // From previous check, we are now in the situation where iVert = v1 and jVert = w2
+  // with v != w.
+  // Case E
+  return map.at(f2(jVertRed));
+}
+
+struct ExpandedSymbolic {
+  std::vector<std::vector<std::pair<int, int>>> new_list_signature;
+  std::vector<int> list_signature;
+};
+
+
+
+template<typename T, bool is_symm>
+inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS) {
+  size_t nbRow = WMVS.nbRow;
   //
   // Now building the list of possibilities for the 2 added vertices
   //
@@ -720,12 +765,51 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   // nbCase - 1 corresponds to for nbRow + 1
   list_signature.push_back(nbCase - 2);
   list_signature.push_back(nbCase - 1);
+  return {std::move(new_list_signature), std::move(list_signature)};
+}
+
+template<typename T, bool is_symm>
+inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS) {
+  std::vector<std::vector<std::pair<int, int>>> new_list_signature;
+  std::vector<int> list_signature;
+  return {new_list_signature, list_signature};
+}
+
+
+template <typename T, bool is_symm, typename F1, typename F2>
+DataTraces GetDataTraces(F1 f1, F2 f2,
+                         WeightMatrixVertexSignatures<T> const &WMVS,
+                         [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  MicrosecondTime time;
+#endif
+  size_t nbRow = WMVS.nbRow;
+  size_t nbWeight = WMVS.nbWeight;
+  std::vector<T> const &ListWeight = WMVS.ListWeight;
+  std::unordered_map<T, size_t> map;
+  for (size_t iWei = 0; iWei < nbWeight; iWei++) {
+    map[ListWeight[iWei]] = iWei;
+  }
+  //
+  size_t nbMult = get_effective_nb_weight<is_symm>(nbWeight);
+  size_t hS = Pairs_GetNeededN(nbMult);
+  size_t nbVert = get_effective_nb_vert<is_symm>(nbRow);
+  size_t nbVertTot = nbVert * hS;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "nbMult=" << nbMult << " hS=" << hS << " nbRow=" << nbRow
+     << " nbVert=" << nbVert << " nbVertTot=" << nbVertTot << "\n";
+#endif
+  //
+  std::vector<int> V = Pairs_GetListPair(hS, nbMult);
+  size_t e_pow = V.size() / 2;
+  ExpandedSymbolic expand = get_expanded_symbolic<T,is_symm>(nbWeight, WMVS);
+  size_t nbCase = expand.new_list_signature.size();
   //
   // Determining the number of cases
   //
   std::vector<int> ListNbCase(nbCase, 0);
   for (size_t i = 0; i < nbVert; i++) {
-    int iCase = list_signature[i];
+    int iCase = expand.list_signature[i];
     ListNbCase[iCase]++;
   }
   //
@@ -734,7 +818,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   std::vector<size_t> WeightByMult(nbMult, 0);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     int sizCase = ListNbCase[iCase];
-    std::vector<std::pair<int, int>> e_vect = new_list_signature[iCase];
+    std::vector<std::pair<int, int>> e_vect = expand.new_list_signature[iCase];
     for (auto &e_pair : e_vect) {
       int iWeight = e_pair.first;
       int eMult = e_pair.second;
@@ -768,7 +852,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   //
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
-    std::vector<std::pair<int, int>> e_vect = new_list_signature[iCase];
+    std::vector<std::pair<int, int>> e_vect = expand.new_list_signature[iCase];
     for (auto &e_pair : e_vect) {
       int iWeight = ListIdx[e_pair.first];
       int eMult = e_pair.second;
@@ -801,7 +885,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   for (size_t i = 0; i < nbVertTot; i++) {
     size_t iVert = i % nbVert;
     size_t iH = i / nbVert;
-    int iCase = list_signature[iVert];
+    int iCase = expand.list_signature[iVert];
     int nbAdj = MatrixAdj(iH, iCase);
     DT.sg1.d[i] = nbAdj;
     DT.sg1.v[i] = pos;
@@ -841,23 +925,13 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
         f_adj(bVert, aVert);
       }
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
-    if (iVert < nbRow)
+    if (iVert < nbRow) {
+      // Both for is_symm = true/false, only the iVert < nbRow needs to be computed.
       f1(iVert);
+    }
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      int eVal;
-      if (jVert == nbRow + 1) {
-        if (iVert == nbRow)
-          eVal = nbWeight;
-        else
-          eVal = nbWeight + 1;
-      } else {
-        if (jVert == nbRow) {
-          eVal = map.at(f2(iVert));
-        } else {
-          eVal = map.at(f2(jVert));
-        }
-      }
-      size_t shift = e_pow * ListIdx[eVal];
+      size_t val = evaluate_f2<T,is_symm>(nbRow, nbWeight, map, iVert, jVert, f2);
+      size_t shift = e_pow * ListIdx[val];
       for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
         if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2 * i_pow];
