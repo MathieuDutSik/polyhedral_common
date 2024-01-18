@@ -282,7 +282,7 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const&
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
   for (auto &eList : ListGen) {
     std::optional<MyMatrix<T>> opt =
-      FindMatrixTransformationTest(SHV_T, SHV_T, eList);
+      FindTransformationGeneral_vect(SHV_T, SHV_T, eList);
     if (!opt) {
       std::cerr << "Failed to find the matrix\n";
       throw TerminalException{1};
@@ -464,7 +464,8 @@ bool is_stab_space(MyMatrix<T> const& Pmat, LinSpaceMatrix<T> const &LinSpa) {
 
 template<typename T, typename Telt>
 MyMatrix<T> get_mat_from_shv_perm(Telt const& elt, MyMatrix<T> const& SHV_T, [[maybe_unused]] MyMatrix<T> const& eMat) {
-  std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, elt);
+  std::optional<MyMatrix<T>> opt =
+    FindTransformationGeneral(SHV_T, SHV_T, elt);
   MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_GENERAL
   if (!IsIntegralMat(Pmat)) {
@@ -638,7 +639,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
   std::vector<MyMatrix<T>> ListMat1 = GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
-  std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+  std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
   if (!opt1) {
     return {};
   }
@@ -647,7 +648,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   //
   Telt eltEquiv(*opt1);
   Telt eltInv = Inverse(eltEquiv);
-  std::optional<MyMatrix<T>> opt2 = FindMatrixTransformationTest(SHV2_T, SHV1_T, eltInv);
+  std::optional<MyMatrix<T>> opt2 = FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_GENERAL
   if (!IsIntegralMat(OneEquiv)) {
@@ -686,7 +687,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
     std::optional<Telt> new_gen;
     std::optional<MyMatrix<T>> sol;
   };
-  auto try_solution=[&]() -> std::optional<Telt> {
+  auto try_solution=[&]() -> PartSol {
     // Not sure if left or right cosets.
     std::vector<Telt> ListCos = FullGRP1.LeftTransversal_Direct(GRPsub1);
     for (auto & eCosReprPerm : ListCos) {
