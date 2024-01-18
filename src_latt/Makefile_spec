@@ -7,7 +7,7 @@
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
-PROGRAM		= LATT_ConvertTspace
+PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 
 OBJECTS		= $(PROGRAM:%=%.o)
