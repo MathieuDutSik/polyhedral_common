@@ -420,9 +420,9 @@ MyMatrix<T> GetOrthogonalProjectorMatrix(MyMatrix<T> const& eG, MyMatrix<T> cons
   int dim_space = subspace.rows();
   MyMatrix<T> prod = subspace * eG;
   MyMatrix<T> OrthSpace = NullspaceTrMat(prod);
-  MyMatrix<T> FullBasis = Concatenation(subspace, OrthSpace);
+  MyMatrix<T> FullBasis = Concatenate(subspace, OrthSpace);
   MyMatrix<T> InvFullBasis = Inverse(FullBasis);
-  MyMatrix<T> DiagMat = ZeroMatrix<T>(n);
+  MyMatrix<T> DiagMat = ZeroMatrix<T>(n, n);
   for (int i=0; i<dim_space; i++) {
     DiagMat(i,i) = 1;
   }
@@ -540,7 +540,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row,0);
-  std::vector<MyMatrix<T>> ListMat = GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspace);
+  std::vector<MyMatrix<T>> ListMat = GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
 
   std::vector<std::vector<Tidx>> ListGen =
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
@@ -584,12 +584,11 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
   auto try_upgrade=[&]() -> std::optional<Telt> {
     // Not sure if left or right cosets.
     std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
-    for (auto & eCos : ListCos) {
-      // Not sure if the is_identity works
-      if (!eCos.is_identity()) {
-        std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCos, SHV_T, eMat, LinSpa);
+    for (auto & eCosReprPerm : ListCos) {
+      if (!eCosReprPerm.isIdentity()) {
+        std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
         if (opt) {
-          return *opt;
+          return eCosReprPerm;
         }
       }
     }
@@ -637,8 +636,8 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   }
   int n_row = SHV1_T.rows();
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
-  std::vector<MyMatrix<T>> ListMat1 = GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspace);
-  std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspace);
+  std::vector<MyMatrix<T>> ListMat1 = GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
+  std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
   if (!opt1) {
     return {};
@@ -691,8 +690,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
     // Not sure if left or right cosets.
     std::vector<Telt> ListCos = FullGRP1.LeftTransversal_Direct(GRPsub1);
     for (auto & eCosReprPerm : ListCos) {
-      // Not sure if the is_identity works
-      if (!eCosReprPerm.is_identity()) {
+      if (!eCosReprPerm.isIdentity()) {
         MyMatrix<T> eCosReprMatr = get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
         MyMatrix<T> eProd = eCosReprMatr * OneEquiv;
         if (is_stab_space(eProd, LinSpa)) {
