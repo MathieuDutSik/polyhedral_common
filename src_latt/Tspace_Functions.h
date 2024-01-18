@@ -624,7 +624,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
                                                             MyMatrix<T> const& eMat1,
                                                             MyMatrix<T> const& eMat2,
                                                             std::ostream & os) {
-  //  using Tidx = uint32_t;
+  using Tfield = typename overlying_field<T>::field_type;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2);
@@ -637,17 +639,17 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
   std::vector<MyMatrix<T>> ListMat1 = GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspace);
   std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspace);
-  std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
-  if (!opt) {
+  std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+  if (!opt1) {
     return {};
   }
   //
   // Building one equivalence that should preserve the basics and which we can work on.
   //
-  Telt eltEquiv(*opt);
+  Telt eltEquiv(*opt1);
   Telt eltInv = Inverse(eltEquiv);
-  std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV2_T, SHV1_T, eltInv);
-  MyMatrix<T> OneEquiv = unfold_opt(opt, "Failed to get transformation");
+  std::optional<MyMatrix<T>> opt2 = FindMatrixTransformationTest(SHV2_T, SHV1_T, eltInv);
+  MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_GENERAL
   if (!IsIntegralMat(OneEquiv)) {
     std::cerr << "The matrix TransMat should be integral\n";
@@ -687,17 +689,17 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   };
   auto try_solution=[&]() -> std::optional<Telt> {
     // Not sure if left or right cosets.
-    std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
-    for (auto & eCosRepr : ListCos) {
+    std::vector<Telt> ListCos = FullGRP1.LeftTransversal_Direct(GRPsub1);
+    for (auto & eCosReprPerm : ListCos) {
       // Not sure if the is_identity works
-      if (!eCosRepr.is_identity()) {
-        MyMatrix<T> eCosMatr = get_mat_from_shv_perm(eCosRepr, SHV1_T, eMat1);
-        MyMatrix<T> eProd = eCosMatr * OneEquiv;
+      if (!eCosReprPerm.is_identity()) {
+        MyMatrix<T> eCosReprMatr = get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
+        MyMatrix<T> eProd = eCosReprMatr * OneEquiv;
         if (is_stab_space(eProd, LinSpa)) {
           return {{}, eProd};
         }
-        if (is_stab_space(eCosMatr, LinSpa)) {
-          return {eCosPerm, {}};
+        if (is_stab_space(eCosReprMatr, LinSpa)) {
+          return {eCosReprPerm, {}};
         }
       }
     }
@@ -712,7 +714,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
       return {};
     }
     LGenGlobStab1_perm.push_back(*p_sol.new_gen);
-    GRPsub = Tgroup(LGenGlobStab1_perm, n_row);
+    GRPsub1 = Tgroup(LGenGlobStab1_perm, n_row);
   }
 }
 

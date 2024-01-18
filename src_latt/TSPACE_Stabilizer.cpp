@@ -2,6 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "Tspace_General.h"
+#include "Permutation.h"
+#include "Group.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
