@@ -449,7 +449,73 @@ std::vector<MyMatrix<T>> GetFamilyDiscMatrices(MyMatrix<T> const& eG, std::vecto
 }
 
 
+template<typename T>
+bool is_stab_space(MyMatrix<T> const& Pmat, LinSpaceMatrix<T> const &LinSpa) {
+  for (auto & eMatSp : LinSpa.ListMat) {
+    MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
+    MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
+    std::optional<MyVector<T>> opt = SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
+    if (!opt) {
+      return false;
+    }
+  }
+  return true;
+}
 
+template<typename T, typename Telt>
+MyMatrix<T> get_mat_from_shv_perm(Telt const& elt, MyMatrix<T> const& SHV_T, [[maybe_unused]] MyMatrix<T> const& eMat) {
+  std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, elt);
+  MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
+#ifdef DEBUG_TSPACE_GENERAL
+  if (!IsIntegralMat(Pmat)) {
+    std::cerr << "The matrix TransMat should be integral\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> eMatImg = Pmat * eMat * Pmat.transpose();
+  if (eMatImg != eMat) {
+    std::cerr << "The matrix TransMat does not preserve eMat\n";
+    throw TerminalException{1};
+  }
+#endif
+  return TransMat;
+}
+
+
+template<typename T, typename Telt>
+std::optional<MyMatrix<T>> is_corr_and_solve(Telt const& elt, MyMatrix<T> const& SHV_T, MyMatrix<T> const& eMat, LinSpaceMatrix<T> const &LinSpa) {
+  MyMatrix<T> Pmat = get_mat_from_shv_perm(elt, SHV_T, eMat);
+  if (!is_stab_space(Pmat, LinSpa)) {
+    return {};
+  }
+  return Pmat;
+}
+
+template<typename T, typename Telt>
+struct PermutationBuilder {
+public:
+  using Tidx = typename Telt::Tidx;
+  int n_row;
+  std::vector<MyVector<T>> ListV;
+  std::unordered_map<MyVector<T>, Tidx> MapV;
+  PermutationBuilder(MyMatrix<T> const& SHV_T) {
+    n_row = SHV_T.rows();
+    for (int i_row=0; i_row<n_row; i_row++) {
+      MyVector<T> eV = GetMatrixRow(SHV_T, i_row);
+      Tidx i_row_idx = static_cast<Tidx>(i_row);
+      ListV.push_back(eV);
+      MapV[eV] = i_row_idx;
+    }
+  }
+  Telt get_permutation(MyMatrix<T> const& M) {
+    std::vector<Tidx> eList(n_row);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      MyVector<T> Vimg = M.transpose() * ListV[i_row];
+      Tidx pos = MapV.at(Vimg);
+      eList[i_row] = pos;
+    }
+    return Telt(eList);
+  }
+};
 
 /*
   For a positive definite matrix in the T-space, we compute the group
@@ -464,44 +530,28 @@ std::vector<MyMatrix<T>> GetFamilyDiscMatrices(MyMatrix<T> const& eG, std::vecto
  */
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                                                  MyMatrix<T> const& eGram,
+                                                  MyMatrix<T> const& eMat,
                                                   std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   //  using TintGroup = typename Tgroup::Tint;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eGram);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row,0);
-  std::vector<MyMatrix<T>> ListMat = {eGram};
-  //  std::vector<MyMatrix<T>> ListMat = GetFamilyDiscMatrices(eGram, LinSpa.ListComm, LinSpa.ListSubspace);
-  
+  std::vector<MyMatrix<T>> ListMat = GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspace);
 
-  
   std::vector<std::vector<Tidx>> ListGen =
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
   //
   // Try the direct strategy and hopes to be lucky
   //
-  auto is_corr_and_solve=[&](Telt const& elt) -> std::optional<MyMatrix<T>> {
-    std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV_T, SHV_T, elt);
-    MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
-    for (auto & eMat : LinSpa.ListMat) {
-      MyMatrix<T> eMatImg = TransMat * eMat * TransMat.transpose();
-      MyVector<T> eMatImg_V = SymmetricMatrixToVector(eMatImg);
-      std::optional<MyVector<T>> opt = SolutionMat(LinSpa.ListMatAsBigMat, eMatImg_V);
-      if (!opt) {
-        return {};
-      }
-    }
-    return TransMat;
-  };
   auto get_generators=[&]() -> std::optional<std::vector<MyMatrix<T>>> {
     std::vector<MyMatrix<T>> ListTransMat;
     for (auto & eGen : ListGen) {
       Telt elt(eGen);
-      std::optional<MyMatrix<T>> opt = is_corr_and_solve(elt);
+      std::optional<MyMatrix<T>> opt = is_corr_and_solve(elt, SHV_T, eMat, LinSpa);
       if (opt) {
         ListTransMat.push_back(*opt);
       } else {
@@ -524,22 +574,10 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
   }
   Tgroup FullGRP(LGenPerm, n_row);
   std::vector<Telt> LGenPermPtWiseStab;
-  std::vector<MyVector<T>> ListV;
-  std::unordered_map<MyVector<T>, size_t> MapV;
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<T> V = GetMatrixRow(SHV_T, i_row);
-    ListV.push_back(V);
-    MapV[V] = i_row;
-  }
+  PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
   for (auto & eGen : LinSpa.PtStabGens) {
-    std::vector<Tidx> eList(n_row);
-    for (int i_row=0; i_row<n_row; i_row++) {
-      MyVector<T> Vimg = eGen.transpose() * ListV[i_row];
-      int pos = MapV.at(Vimg);
-      eList[i_row] = pos;
-    }
-    Telt ePerm(eList);
+    Telt ePerm = builder.get_permutation(eGen);
     LGenGlobStab_perm.push_back(ePerm);
   }
   Tgroup GRPsub(LGenGlobStab_perm, n_row);
@@ -549,7 +587,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     for (auto & eCos : ListCos) {
       // Not sure if the is_identity works
       if (!eCos.is_identity()) {
-        std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCos);
+        std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCos, SHV_T, eMat, LinSpa);
         if (opt) {
           return *opt;
         }
@@ -569,7 +607,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
   }
   std::vector<MyMatrix<T>> LGenGlobStab_matr;
   for (auto & eGen : LGenGlobStab_perm) {
-    std::optional<MyMatrix<T>> opt = is_corr_and_solve();
+    std::optional<MyMatrix<T>> opt = is_corr_and_solve(eGen, SHV_T, eMat, LinSpa);
     MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
     LGenGlobStab_matr.push_back(eGenMatr);
   }
@@ -595,12 +633,87 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   if (SHV1_T.rows() != SHV2_T.rows()) {
     return {};
   }
-  //  int n_row = SHV1_T.rows();
-  //  std::vector<T> Vdiag(n_row, 0);
-  //  std::vector<std::vector<Tidx>> ListGenPerm =
-  //    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
-
-  return {};
+  int n_row = SHV1_T.rows();
+  std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
+  std::vector<MyMatrix<T>> ListMat1 = GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspace);
+  std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspace);
+  std::optional<std::vector<Tidx>> opt = TestEquivalence_ListMat_Vdiag(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+  if (!opt) {
+    return {};
+  }
+  //
+  // Building one equivalence that should preserve the basics and which we can work on.
+  //
+  Telt eltEquiv(*opt);
+  Telt eltInv = Inverse(eltEquiv);
+  std::optional<MyMatrix<T>> opt = FindMatrixTransformationTest(SHV2_T, SHV1_T, eltInv);
+  MyMatrix<T> OneEquiv = unfold_opt(opt, "Failed to get transformation");
+#ifdef DEBUG_TSPACE_GENERAL
+  if (!IsIntegralMat(OneEquiv)) {
+    std::cerr << "The matrix TransMat should be integral\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> eMat1_img = OneEquiv * eMat1 * OneEquiv.transpose();
+  if (eMat1_img != eMat2) {
+    std::cerr << "The matrix TransMat does not preserve eMat\n";
+    throw TerminalException{1};
+  }
+#endif
+  if (is_stab_space(OneEquiv, LinSpa)) {
+    return OneEquiv;
+  }
+  //
+  // The direct approach failed, let us use the pt-wise-stab and the cosets for resolving that.
+  //
+  std::vector<std::vector<Tidx>> ListGen1 =
+    GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV1_T, ListMat1, Vdiag1, os);
+  std::vector<Telt> LGenPerm1;
+  for (auto & eList1 : ListGen1) {
+    Telt ePerm1(eList1);
+    LGenPerm1.push_back(ePerm1);
+  }
+  Tgroup FullGRP1(LGenPerm1, n_row);
+  std::vector<Telt> LGenPermPtWiseStab1;
+  PermutationBuilder<T, Telt> builder1(SHV1_T);
+  std::vector<Telt> LGenGlobStab1_perm;
+  for (auto & eGen : LinSpa.PtStabGens) {
+    Telt ePerm = builder1.get_permutation(eGen);
+    LGenGlobStab1_perm.push_back(ePerm);
+  }
+  Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
+  struct PartSol {
+    std::optional<Telt> new_gen;
+    std::optional<MyMatrix<T>> sol;
+  };
+  auto try_solution=[&]() -> std::optional<Telt> {
+    // Not sure if left or right cosets.
+    std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
+    for (auto & eCosRepr : ListCos) {
+      // Not sure if the is_identity works
+      if (!eCosRepr.is_identity()) {
+        MyMatrix<T> eCosMatr = get_mat_from_shv_perm(eCosRepr, SHV1_T, eMat1);
+        MyMatrix<T> eProd = eCosMatr * OneEquiv;
+        if (is_stab_space(eProd, LinSpa)) {
+          return {{}, eProd};
+        }
+        if (is_stab_space(eCosMatr, LinSpa)) {
+          return {eCosPerm, {}};
+        }
+      }
+    }
+    return {{},{}};
+  };
+  while(true) {
+    PartSol p_sol = try_solution();
+    if (p_sol.sol) {
+      return *p_sol.sol;
+    }
+    if (!p_sol.new_gen) {
+      return {};
+    }
+    LGenGlobStab1_perm.push_back(*p_sol.new_gen);
+    GRPsub = Tgroup(LGenGlobStab1_perm, n_row);
+  }
 }
 
 
