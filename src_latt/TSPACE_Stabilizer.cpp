@@ -6,6 +6,29 @@
 #include "Group.h"
 // clang-format on
 
+template<typename T>
+void write_group(std::vector<MyMatrix<T>> const& LGen, std::string const& OutFormat, std::ostream & os) {
+  if (OutFormat == "count") {
+    os << "number of generators=" << LGen.size() << "\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "return Group([";
+    bool IsFirst = true;
+    for (auto & eGen : LGen) {
+      if (!IsFirst) {
+        os << ",\n";
+      }
+      os << StringMatrixGAP_line(eGen);
+      IsFirst = false;
+    }
+    os << "]);\n";
+  }
+  std::cerr << "Failed to find a matching format\n";
+  throw TerminalException{1};
+}
+
+
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
@@ -15,19 +38,36 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint_grp = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint_grp>;
-    if (argc != 3) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram]\n";
+      std::cerr << "or\n";
+      std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram] [OutFormat] [FileOut]\n";
       return -1;
     }
     std::string FileTspace = argv[1];
     std::string FileGram = argv[2];
+    std::string OutFormat = "count";
+    std::string FileOut = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      FileOut = argv[4];
+    }
     //
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
     std::vector<MyMatrix<T>> ListGen = LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
-    std::cerr << "|ListGen|=" << ListGen.size() << "\n";
+    if (FileOut == "stderr") {
+      write_group(ListGen, OutFormat, std::cerr);
+    } else {
+      if (FileOut == "stdout") {
+        write_group(ListGen, OutFormat, std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        write_group(ListGen, OutFormat, os);
+      }
+    }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Stabilizer\n";

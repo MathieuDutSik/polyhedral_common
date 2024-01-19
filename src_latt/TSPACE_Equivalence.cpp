@@ -6,6 +6,29 @@
 #include "Group.h"
 // clang-format on
 
+template<typename T>
+void write_result(std::optional<MyMatrix<T>> const& opt, std::string const& OutFormat, std::ostream & os) {
+  if (OutFormat == "simple") {
+    if (opt) {
+      os << "It is equivalence\n";
+    } else {
+      os << "It is not equivalence\n";
+    }
+    return;
+  }
+  if (OutFormat == "GAP") {
+    if (opt) {
+      os << "return " << StringMatrixGAP_line(*opt) << ";\n";
+    } else {
+      os << "return fail;\n";
+    }
+    return;
+  }
+  std::cerr << "Failed to find a matching OutFormat\n";
+  throw TerminalException{1};
+}
+
+
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
@@ -16,25 +39,37 @@ int main(int argc, char *argv[]) {
     using Tint_grp = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint_grp>;
     FullNamelist eFull = NAMELIST_GetOneTSPACE();
-    if (argc != 4) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "TSPACE_Equivalence [FileLinSpa] [FileMat1] [FileMat2]\n";
-      std::cerr << "\n";
+      std::cerr << "or\n";
+      std::cerr << "TSPACE_Equivalence [FileLinSpa] [FileMat1] [FileMat2] [OutFormat] [FileOut]\n";
       return -1;
     }
     std::string FileTspace = argv[1];
     std::string FileGram1 = argv[2];
     std::string FileGram2 = argv[3];
+    std::string OutFormat = "simple";
+    std::string FileOut = "stderr";
+    if (argc == 6) {
+      OutFormat = argv[4];
+      FileOut = argv[5];
+    }
     //
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
     MyMatrix<T> eMat1 = ReadMatrixFile<T>(FileGram1);
     MyMatrix<T> eMat2 = ReadMatrixFile<T>(FileGram2);
     std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(LinSpa, eMat1, eMat2, std::cerr);
-    if (opt) {
-      std::cerr << "It is equivalence\n";
+    if (FileOut == "stderr") {
+      write_result(opt, OutFormat, std::cerr);
     } else {
-      std::cerr << "It is not equivalence\n";
+      if (FileOut == "stdout") {
+        write_result(opt, OutFormat, std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        write_result(opt, OutFormat, os);
+      }
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
