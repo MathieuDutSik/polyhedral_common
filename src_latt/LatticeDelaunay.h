@@ -550,6 +550,9 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     l_obj.push_back({x, grp, {} });
     return false;
   };
+  auto f_obj=[&](TadjI const& x) -> Tobj {
+    return x.obj;
+  };
   auto f_load=[&](size_t const& pos) -> Tobj {
     return l_obj[pos].obj;
   };
@@ -565,12 +568,12 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     return static_cast<bool>(l_status[pos]);
   };
   compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_exists),decltype(f_insert),decltype(f_load),
+    decltype(f_exists),decltype(f_insert),decltype(f_obj),decltype(f_load),
     decltype(f_save_status),decltype(f_load_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (comm, eData.max_runtime_second,
-     f_exists, f_insert, f_load,
+     f_exists, f_insert, f_obj, f_load,
      f_save_status, f_load_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
@@ -626,6 +629,9 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     l_obj.push_back({x, grp, {} });
     return f_incorrect(x);
   };
+  auto f_obj=[&](TadjI const& x) -> Tobj {
+    return x.obj;
+  };
   auto f_load=[&](size_t const& pos) -> Tobj {
     return l_obj[pos].obj;
   };
@@ -641,12 +647,12 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     return static_cast<bool>(l_status[pos]);
   };
   bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
-    decltype(f_exists),decltype(f_insert),decltype(f_load),
+    decltype(f_exists),decltype(f_insert),decltype(f_obj),decltype(f_load),
     decltype(f_save_status),decltype(f_load_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (eData.max_runtime_second,
-     f_exists, f_insert, f_load,
+     f_exists, f_insert, f_obj, f_load,
      f_save_status, f_load_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);

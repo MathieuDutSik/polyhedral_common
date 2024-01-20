@@ -137,7 +137,6 @@ namespace boost::serialization {
   Tobj: The object type being created (like L-type domain)
   TadjI: The types returned by the spanning. Can be something like
     std::pair<Face, Tobj> with Face indicating the relevant Face.
-    Doing the .obj should return the object.
   TadjO: The adjacency type after processing. Can be something like
     {Face, Trans, idx} with Face the corresponding Face, Trans the
     transformation realizing the equivalence and idx the equivalent
@@ -148,13 +147,16 @@ namespace boost::serialization {
   f_exist(int) -> bool : whether there is an entry at this level
   f_insert(Tobj) -> bool : insert the new object.
      If return true then early termination is triggered.
+  f_obj(TadjI) -> Tobj: should return the created object from the
+     input adjacency.
   f_load(int) -> Tobj : get one object from the database
   f_save_status(int, bool) -> void : save the status in the database
   f_load_status(int) -> bool : get the status in the database
   f_init() -> Tobj : get a starting element
   f_adj(Tobj, i_orb) -> std::vector<TadjI> : get the adjacent object
      with i_orb the index of the orbit (used to assign for example the group)
-  f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the
+  f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the ones
+     computed.
   f_hash(size_t, Tobj) -> size_t : compute the hash from a specified seed.
   f_repr(Tobj, TadjI, int, int) -> std::optional<TadjO> : returns whether
     Tobj is equivalent to the spanned TadjI and find the equivalence if that
@@ -169,14 +171,14 @@ namespace boost::serialization {
   --- termination
  */
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fexist, typename Finsert, typename Fload,
+          typename Fexist, typename Finsert, typename Fobj, typename Fload,
           typename Fsave_status, typename Fload_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            int const &max_time_second,
-                           Fexist f_exist, Finsert f_insert, Fload f_load,
+                           Fexist f_exist, Finsert f_insert, Fobj f_obj, Fload f_load,
                            Fsave_status f_save_status, Fload_status f_load_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
@@ -428,8 +430,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     nonce++;
     for (auto &x : l_adj) {
-      size_t hash_partition = f_hash(seed_partition, x.obj);
-      size_t hash_hashmap = f_hash(seed_hashmap, x.obj);
+      Tobj x_obj = f_obj(x);
+      size_t hash_partition = f_hash(seed_partition, x_obj);
+      size_t hash_hashmap = f_hash(seed_hashmap, x_obj);
       int i_proc_dest = static_cast<int>(hash_partition % size_t(n_proc));
       nonce++;
       entryAdjI<TadjI> e{x, hash_hashmap, i_rank, idx_i};
@@ -633,13 +636,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fexist, typename Finsert, typename Fload,
+          typename Fexist, typename Finsert, typename Fobj, typename Fload,
           typename Fsave_status, typename Fload_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_serial(int const &max_time_second,
-                              Fexist f_exist, Finsert f_insert, Fload f_load,
+                              Fexist f_exist, Finsert f_insert, Fobj f_obj, Fload f_load,
                               Fsave_status f_save_status, Fload_status f_load_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
@@ -651,7 +654,7 @@ bool compute_adjacency_serial(int const &max_time_second,
   std::vector<size_t> undone;
   bool early_termination = false;
   auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
-    size_t hash = f_hash(seed_hashmap, x_adjI.obj);
+    size_t hash = f_hash(seed_hashmap, f_obj(x_adjI));
     std::vector<size_t> &vect = map[hash];
     for (auto &idx : vect) {
       Tobj &y = V[idx];

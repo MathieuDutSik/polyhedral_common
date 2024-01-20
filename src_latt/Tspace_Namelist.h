@@ -76,7 +76,7 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
     std::vector<T> eV = GetLineVector(eMat);
     ListLineMat.push_back(eV);
   }
-  MyMatrix<T> ListMatAsBigMat = ReadMatrix<T>(is);
+  MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   std::vector<MyMatrix<T>> ListComm = ReadListMatrix<T>(is);
   std::vector<MyMatrix<T>> ListSubspaces = ReadListMatrix<T>(is);
   std::vector<MyMatrix<T>> PtStabGens = ReadListMatrix<T>(is);
@@ -88,7 +88,6 @@ void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa
   std::ofstream os(eFile);
   WriteMatrix(os, LinSpa.SuperMat);
   WriteListMatrix(os, LinSpa.ListMat);
-  WriteMatrix(os, LinSpa.ListMatAsBigMat);
   WriteListMatrix(os, LinSpa.ListComm);
   WriteListMatrix(os, LinSpa.ListSubspaces);
   WriteListMatrix(os, LinSpa.PtStabGens);
