@@ -534,7 +534,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     return {EXT, ret};
   };
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
-  std::vector<int> l_status;
+  std::vector<uint8_t> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
     l_obj[i_orb].GRP = pair.first;
@@ -562,7 +562,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     FileBool fb(FileStatus, n_orbit);
     for (size_t i=0; i<n_orbit; i++) {
       bool test = fb.getbit(i);
-      int test_i = static_cast<int>(test);
+      uint8_t test_i = static_cast<uint8_t>(test);
       l_status.push_back(test_i);
     }
     FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, false);
@@ -599,14 +599,14 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     return false;
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
-    int val_i = static_cast<int>(val);
+    uint8_t val_i = static_cast<uint8_t>(val);
     if (l_status.size() <= pos) {
       l_status.push_back(val_i);
     } else {
       l_status[pos] = val_i;
     }
   };
-  compute_adjacency_mpi<Tobj,TadjI,TadjO,
+  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
     decltype(f_next),decltype(f_insert),decltype(f_obj),
     decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
@@ -616,6 +616,25 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
      f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
+  os << "Termination test=" << test << "\n";
+  if (eData.Saving) {
+    bool overwrite = true;
+    size_t n_obj = l_obj.size();
+    // The data
+    FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, overwrite);
+    for (auto & val : l_obj) {
+      fdata.push_back(val);
+    }
+    // The status
+    FileBool fb(FileStatus);
+    for (size_t i=0; i<n_obj; i++) {
+      bool test = static_cast<bool>(l_status[i]);
+      fb.setbit(i, test);
+    }
+    // The number
+    FileNumber fn(FileNb, overwrite);
+    fn.setval(n_obj);
+  }
   return l_obj;
 }
 
@@ -651,7 +670,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     return {std::move(EXT), ret};
   };
   std::vector<Delaunay_Entry<Tint,Tgroup>> l_obj;
-  std::vector<int> l_status;
+  std::vector<uint8_t> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
     l_obj[i_orb].GRP = pair.first;
@@ -672,7 +691,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     return {};
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
-    int val_i = static_cast<int>(val);
+    uint8_t val_i = static_cast<uint8_t>(val);
     if (l_status.size() <= pos) {
       l_status.push_back(val_i);
     } else {
