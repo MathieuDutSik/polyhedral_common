@@ -144,14 +144,14 @@ namespace boost::serialization {
   All objects have to be transmitible via boost C++ mpi.
   ---
   Function types used:
-  f_exist(int) -> bool : whether there is an entry at this level
+  f_next() -> std::optional<std::pair<bool,Tobj>>: returns the entry
+     to insert into the database together with its status. If a none
+     if returned, then nothing else needs to be inserted.
   f_insert(Tobj) -> bool : insert the new object.
      If return true then early termination is triggered.
   f_obj(TadjI) -> Tobj: should return the created object from the
      input adjacency.
-  f_load(int) -> Tobj : get one object from the database
   f_save_status(int, bool) -> void : save the status in the database
-  f_load_status(int) -> bool : get the status in the database
   f_init() -> Tobj : get a starting element
   f_adj(Tobj, i_orb) -> std::vector<TadjI> : get the adjacent object
      with i_orb the index of the orbit (used to assign for example the group)
@@ -171,15 +171,15 @@ namespace boost::serialization {
   --- termination
  */
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fexist, typename Finsert, typename Fobj, typename Fload,
-          typename Fsave_status, typename Fload_status,
+          typename Fnext, typename Finsert, typename Fobj,
+          typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            int const &max_time_second,
-                           Fexist f_exist, Finsert f_insert, Fobj f_obj, Fload f_load,
-                           Fsave_status f_save_status, Fload_status f_load_status,
+                           Fnext f_next, Finsert f_insert, Fobj f_obj,
+                           Fsave_status f_save_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
                            [[maybe_unused]] std::ostream & os) {
@@ -574,12 +574,15 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // Loading the data
   //
   while (true) {
-    if (!f_exist(n_obj)) {
+    std::optional<std::pair<bool, Tobj>> opt = f_next();
+    if (opt) {
+      std::pair<bool, Tobj> const& pair = *opt;
+      Tobj const& x = pair.second;
+      bool is_treated = pair.first;
+      insert_load(x, is_treated);
+    } else {
       break;
     }
-    Tobj x = f_load(n_obj);
-    bool is_treated = f_load_status(n_obj);
-    insert_load(x, is_treated);
   }
   size_t n_orb_max = 0, n_orb_loc = V.size();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
@@ -636,14 +639,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fexist, typename Finsert, typename Fobj, typename Fload,
-          typename Fsave_status, typename Fload_status,
+          typename Fnext, typename Finsert, typename Fobj,
+          typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_serial(int const &max_time_second,
-                              Fexist f_exist, Finsert f_insert, Fobj f_obj, Fload f_load,
-                              Fsave_status f_save_status, Fload_status f_load_status,
+                              Fnext f_next, Finsert f_insert, Fobj f_obj,
+                              Fsave_status f_save_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
                               [[maybe_unused]] std::ostream& os) {
@@ -703,12 +706,15 @@ bool compute_adjacency_serial(int const &max_time_second,
     f_set_adj(idx, l_adj);
   };
   while (true) {
-    if (!f_exist(n_obj)) {
+    std::optional<std::pair<bool, Tobj>> opt = f_next();
+    if (opt) {
+      std::pair<bool, Tobj> const& pair = *opt;
+      Tobj const& x = pair.second;
+      bool is_treated = pair.first;
+      insert_load(x, is_treated);
+    } else {
       break;
     }
-    Tobj x = f_load(n_obj);
-    bool is_treated = f_load_status(n_obj);
-    insert_load(x, is_treated);
   }
   if (n_obj == 0) {
     Tobj x = f_init();

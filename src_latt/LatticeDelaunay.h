@@ -9,6 +9,7 @@
 #include "MatrixGroup.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "basic_datafile.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -542,19 +543,60 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
-    return false;
+  auto f_obj=[&](TadjI const& x) -> Tobj {
+    return x.obj;
+  };
+  //
+  // Some data
+  //
+  std::string FileNb = eData.Prefix + "number_orbit";
+  std::string FileStatus = eData.Prefix + "orbit_status";
+  std::string FileDatabase = eData.Prefix + "database";
+  bool is_database_present = false;
+  if (eData.Saving) {
+    is_database_present = IsExistingFile(FileNb);
+  }
+  if (is_database_present) {
+    FileNumber fn(FileNb, false);
+    size_t n_orbit = fn.getval();
+    FileBool fb(FileStatus, n_orbit);
+    for (size_t i=0; i<n_orbit; i++) {
+      bool test = fb.getbit(i);
+      int test_i = static_cast<int>(test);
+      l_status.push_back(test_i);
+    }
+    FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, false);
+    using Iterator = typename FileData<Delaunay_MPI_Entry<Tint,Tgroup>>::iterator;
+    Iterator iter = fdata.begin();
+    size_t n_ent = 0;
+    while (iter != fdata.end()) {
+      Delaunay_MPI_Entry<Tint,Tgroup> val = *iter;
+      l_obj.push_back(val);
+      iter++;
+      n_ent++;
+    }
+    if (n_ent != n_orbit) {
+      std::cerr << "We have n_ent=" << n_ent << " n_orbit=" << n_orbit << "\n";
+      std::cerr << "But they should be matching\n";
+      throw TerminalException{1};
+    }
+  }
+  size_t pos_next = 0;
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    if (pos_next >= l_obj.size()) {
+      return {};
+    } else {
+      bool is_treated = static_cast<bool>(l_status[pos_next]);
+      Tobj x = l_obj[pos_next].obj;
+      std::pair<bool, Tobj> pair{is_treated, x};
+      pos_next++;
+      return pair;
+    }
   };
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;
     l_obj.push_back({x, grp, {} });
     return false;
-  };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
-    return x.obj;
-  };
-  auto f_load=[&](size_t const& pos) -> Tobj {
-    return l_obj[pos].obj;
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     int val_i = static_cast<int>(val);
@@ -564,17 +606,14 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
       l_status[pos] = val_i;
     }
   };
-  auto f_load_status=[&](size_t const& pos) -> bool {
-    return static_cast<bool>(l_status[pos]);
-  };
   compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_exists),decltype(f_insert),decltype(f_obj),decltype(f_load),
-    decltype(f_save_status),decltype(f_load_status),
+    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (comm, eData.max_runtime_second,
-     f_exists, f_insert, f_obj, f_load,
-     f_save_status, f_load_status,
+     f_next, f_insert, f_obj,
+     f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   return l_obj;
@@ -621,19 +660,16 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_exists=[&]([[maybe_unused]] int const& n_obj) -> bool {
-    return false;
+  auto f_obj=[&](TadjI const& x) -> Tobj {
+    return x.obj;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;
     l_obj.push_back({x, grp, {} });
     return f_incorrect(x);
   };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
-    return x.obj;
-  };
-  auto f_load=[&](size_t const& pos) -> Tobj {
-    return l_obj[pos].obj;
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    return {};
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     int val_i = static_cast<int>(val);
@@ -643,17 +679,14 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
       l_status[pos] = val_i;
     }
   };
-  auto f_load_status=[&](size_t const& pos) -> bool {
-    return static_cast<bool>(l_status[pos]);
-  };
   bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
-    decltype(f_exists),decltype(f_insert),decltype(f_obj),decltype(f_load),
-    decltype(f_save_status),decltype(f_load_status),
+    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (eData.max_runtime_second,
-     f_exists, f_insert, f_obj, f_load,
-     f_save_status, f_load_status,
+     f_next, f_insert, f_obj,
+     f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   if (!test) {
