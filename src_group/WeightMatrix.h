@@ -1013,6 +1013,24 @@ GetGraphFromWeightedMatrix_color_adj(
         f_adj(bVert, aVert);
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
+#ifdef DEBUG_WEIGHT_MATRIX
+  for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
+    for (size_t jVert = 0; jVert < nbVert; jVert++) {
+      if (iVert == jVert) {
+        os << " D";
+      } else {
+        size_t eVal;
+        if (iVert < jVert) {
+          eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
+        } else {
+          eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, jVert, iVert, WMat);
+        }
+        os << " " << eVal;
+      }
+    }
+    os << "\n";
+  }
+#endif
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++)
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
       Tidx_value eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
@@ -1387,7 +1405,24 @@ GetStabilizerWeightMatrix_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMa
     throw TerminalException{1};
   }
   Tgr eGR = GetGraphFromWeightedMatrix<T, Tgr, Tidx_value, is_symm>(WMat, os);
-  return GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
+  std::vector<std::vector<Tidx>> LGen = GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
+#ifdef DEBUG_WEIGHT_MATRIX
+  for (auto & eGen : LGen) {
+    for (int i=0; i<nbRow; i++) {
+      for (int j=0; j<nbRow; j++) {
+        int iImg = eGen[i];
+        int jImg = eGen[j];
+        Tidx_value val1 = WMat.GetValue(i, j);
+        Tidx_value val2 = WMat.GetValue(iImg, jImg);
+        if (val1 != val2) {
+          std::cerr << "Inconsistency. we do not have one automorphism\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  }
+#endif
+  return LGen;
 }
 
 template <typename T, typename Tgr, typename Tgroup, typename Tidx_value>
@@ -1397,6 +1432,9 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
   using Tidx = typename Telt::Tidx;
   std::vector<std::vector<Tidx>> ListGen =
       GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, os);
+
+
+  
   size_t nbRow = WMat.rows();
   std::vector<Telt> LGen;
   for (auto &eList : ListGen)

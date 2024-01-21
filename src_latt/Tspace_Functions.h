@@ -545,6 +545,9 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
 
   std::vector<std::vector<Tidx>> ListGen =
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
+#ifdef DEBUG_TSPACE_GENERAL
+  os << "TSPACE: LINSPA_ComputeStabilizer |ListGen|=" << ListGen.size() << "\n";
+#endif
   //
   // Try the direct strategy and hopes to be lucky
   //
@@ -574,6 +577,9 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     LGenPerm.push_back(ePerm);
   }
   Tgroup FullGRP(LGenPerm, n_row);
+#ifdef DEBUG_TSPACE_GENERAL
+  os << "TSPACE: LINSPA_ComputeStabilizer |FullGRP|=" << FullGRP.size() << "\n";
+#endif
   std::vector<Telt> LGenPermPtWiseStab;
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
@@ -582,13 +588,21 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     LGenGlobStab_perm.push_back(ePerm);
   }
   Tgroup GRPsub(LGenGlobStab_perm, n_row);
+#ifdef DEBUG_TSPACE_GENERAL
+  os << "TSPACE: LINSPA_ComputeStabilizer |GRPsub|=" << GRPsub.size() << "\n";
+#endif
   auto try_upgrade=[&]() -> std::optional<Telt> {
     // Not sure if left or right cosets.
+    // Left  transversals are g H
+    // Right transversals are H g
     std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
     for (auto & eCosReprPerm : ListCos) {
       if (!eCosReprPerm.isIdentity()) {
         std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
         if (opt) {
+#ifdef DEBUG_TSPACE_GENERAL
+          os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
+#endif
           return eCosReprPerm;
         }
       }
@@ -601,6 +615,9 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
       // Found another stabilizing element, upgrading the group and retry.
       LGenGlobStab_perm.push_back(*opt);
       GRPsub = Tgroup(LGenGlobStab_perm, n_row);
+#ifdef DEBUG_TSPACE_GENERAL
+      os << "TSPACE: LINSPA_ComputeStabilizer Now |GRPsub|=" << GRPsub.size() << "\n";
+#endif
     } else {
       break;
     }
@@ -733,7 +750,7 @@ size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
   T eDet = DeterminantMat(eGram);
   int nbVect = SHV.rows();
 #ifdef DEBUG_TSPACE_GENERAL
-  os << "eDet=" << eDet << " nbVect=" << nbVect << "\n";
+  os << "TSPACE: eDet=" << eDet << " nbVect=" << nbVect << "\n";
 #endif
   std::vector<MyVector<T>> ListV;
   for (int iVect=0; iVect<nbVect; iVect++) {

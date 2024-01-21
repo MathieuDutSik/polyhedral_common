@@ -899,6 +899,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
       WeightByMult[iWeight] += sizCase * eMult;
     }
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  for (size_t iMult=0; iMult<nbMult; iMult++) {
+    os << "iMult=" << iMult << "/" << nbMult << " WeightByMult=" << WeightByMult[iMult] << "\n";
+  }
+#endif
   //
   // Reordering the multiplier to maximize the sparsity
   // (This is not perfect since if iH1 != iH2 we need to add more edges. See
@@ -912,6 +917,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
                    [&](const size_t &idx1, const size_t &idx2) -> bool {
                      return WeightByMult[idx1] > WeightByMult[idx2];
                    });
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "After sort\n";
+#endif
   //
   // Now computing the list of signature
   //
@@ -953,6 +961,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
       }
     }
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "MatrixAdj built\n";
+#endif
   //
   // Now building the adjacencies for traces
   //
@@ -985,6 +996,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   size_t pos = iH * nbVert + nbVert - 1;
     DT.ptn[pos] = 0;
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "DT.sg1.d / v / lab1 / ptn set up\n";
+#endif
   //
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::vector<int> ListDegExpe1(nbVertTot, 0);

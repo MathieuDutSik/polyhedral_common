@@ -8,7 +8,8 @@
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= TSPACE_FileFormatConversion
-PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
+#PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
+PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 
 OBJECTS		= $(PROGRAM:%=%.o)

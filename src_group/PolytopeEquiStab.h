@@ -418,6 +418,9 @@ template<typename Tvalue, typename Tidx, typename Tidx_value, typename F1, typen
 std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, bool is_symm, std::ostream & os) {
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: nbRow=" << nbRow << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME << "\n";
+#endif
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
     if (is_symm) {
       return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f3, f4, os);
@@ -842,17 +845,17 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
                                             [[maybe_unused]] const std::vector<MyMatrix<T>> & ListMat,
                                             [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "Before FindMatrixTransformationTest_Subset\n";
+  os << "POLYEQUISTAB: Before FindMatrixTransformationTest_Subset\n";
 #endif
   std::optional<MyMatrix<Tfield>> test1 =
     FindMatrixTransformationTest_Subset<T, Tfield, Tidx>(EXT, Vsubset, Vin);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "After test1=" << test1.has_value() << "\n";
+  os << "POLYEQUISTAB: After test1=" << test1.has_value() << "\n";
 #endif
   Face block_status(ListBlocks.size());
   if (!test1) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-    os << "f4 exit false 1\n";
+    os << "POLYEQUISTAB: f4 exit false 1\n";
 #endif
     return {false, block_status, {}};
   }
@@ -1370,11 +1373,11 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(
   WeightMatrix<true, T, Tidx_value> WMat(nbPair, INP_TheMat, INP_ListWeight,
                                          weight_ordered, os);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "Before positionZero=" << positionZero << "\n";
+  os << "POLYEQUISTAB: Before positionZero=" << positionZero << "\n";
 #endif
   positionZero = WMat.ReorderingSetWeight_specificPosition(positionZero);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "After positionZero=" << positionZero << "\n";
+  os << "POLYEQUISTAB: After positionZero=" << positionZero << "\n";
 #endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
@@ -1607,7 +1610,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   ListSigns[0] = 1;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   std::string strAssign;
-  os << "positionZero=" << WMatAbs.positionZero << "\n";
+  os << "POLYEQUISTAB: positionZero=" << WMatAbs.positionZero << "\n";
 #endif
   auto SetSign = [&](size_t const &i_row) -> void {
     int i_row_orig = CanonicOrd[i_row];
@@ -1642,8 +1645,8 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   }
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   Tint eHash2 = MD5_hash_T<Tint>(strAssign);
-  os << "strAssign=" << strAssign << "\n";
-  os << "eHash2=" << eHash2 << "\n";
+  os << "POLYEQUISTAB: strAssign=" << strAssign << "\n";
+  os << "POLYEQUISTAB: eHash2=" << eHash2 << "\n";
   std::string strWMat;
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int i_rowC = CanonicOrd[i_row];
@@ -1666,7 +1669,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
       EXTreord(i_row, i_col) = eSign * EXT(j_row, i_col);
   }
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "EXTreord=\n";
+  os << "POLYEQUISTAB: EXTreord=\n";
   WriteMatrix(os, EXTreord);
   WriteMatrixGAP(os, EXTreord);
   os << "\n";
