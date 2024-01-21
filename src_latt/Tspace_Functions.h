@@ -658,6 +658,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
   if (!opt1) {
+#ifdef DEBUG_TSPACE_GENERAL
+    os << "TSPACE: Exiting here at opt1\n";
+#endif
     return {};
   }
   //

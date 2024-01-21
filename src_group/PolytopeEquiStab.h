@@ -1227,17 +1227,30 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
   std::vector<Tidx> CanonicReord1 =
       Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(
           EXT1, ListMat1, Vdiag1, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: We have CanonicReord1\n";
+#endif
   std::vector<Tidx> CanonicReord2 =
       Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(
           EXT2, ListMat2, Vdiag2, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: We have CanonicReord2\n";
+#endif
 
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,
                                                    CanonicReord2);
-  if (!IsoInfo)
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: We have IsoInfo\n";
+#endif
+  if (!IsoInfo) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "POLYEQUISTAB: Not equiv from IsomorphismFromCanonicReord\n";
+#endif
     return {};
+  }
   const std::vector<Tidx> &eList = IsoInfo->first;
-  const MyMatrix<Tfield> &P = IsoInfo->second;
+  MyMatrix<Tfield> P = Inverse(IsoInfo->second);
   // The checks below are basically needed:
   // ---If we used a ListMat with ListMat.size() == 1 and it is
   // (sum_i v_i^T v_i)^{-1} then the success of the computation
@@ -1247,6 +1260,9 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
   // And so in the end it is better to check everything, if only
   // to be safe.
   size_t nMat = ListMat1.size();
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: nMat=" << nMat << "\n";
+#endif
   for (size_t iMat = 0; iMat < nMat; iMat++) {
     MyMatrix<Tfield> eMat1 =
         UniversalMatrixConversion<Tfield, T>(ListMat1[iMat]);
@@ -1254,15 +1270,28 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
         UniversalMatrixConversion<Tfield, T>(ListMat2[iMat]);
     MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat2)) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+      os << "POLYEQUISTAB: Not equiv from TestEqualityMatrix from iMat=" << iMat << "\n";
+#endif
       return {};
     }
   }
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: Pass the ListMat1 / ListMat2 checks\n";
+#endif
   Tidx nbRow_tidx = nbRow;
   for (Tidx i1 = 0; i1 < nbRow_tidx; i1++) {
     Tidx i2 = eList[i1];
-    if (Vdiag1[i1] != Vdiag2[i2])
+    if (Vdiag1[i1] != Vdiag2[i2]) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+      os << "POLYEQUISTAB: Not equiv from Vdiag1 different from Vdiag2\n";
+#endif
       return {};
+    }
   }
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: Before returning eList\n";
+#endif
   return eList;
 }
 
@@ -1272,11 +1301,20 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
     std::ostream &os) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: Beginning of TestEquivalence_ListMat_Vdiag nbRow=" << EXT1.rows() << "\n";
+#endif
   if (EXT1.rows() != EXT2.rows()) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "POLYEQUISTAB: Not equiv because |EXT1|=" << EXT1.rows() << " |EXT2|=" << EXT2.rows() << "\n";
+#endif
     return {};
   }
   size_t nbRow = EXT1.rows();
   size_t max_poss_val = nbRow * nbRow / 2 + 1;
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "POLYEQUISTAB: max_poss_val=" << max_poss_val << "\n";
+#endif
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx,
                                                     uint8_t>(
