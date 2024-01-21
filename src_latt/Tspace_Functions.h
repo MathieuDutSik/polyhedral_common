@@ -437,12 +437,12 @@ template<typename T>
 std::vector<MyMatrix<T>> GetFamilyDiscMatrices(MyMatrix<T> const& eG, std::vector<MyMatrix<T>> const& ListComm, std::vector<MyMatrix<T>> const& ListSubspace) {
   std::vector<MyMatrix<T>> ListDisc {eG};
   for (auto & eComm : ListComm) {
-    MyMatrix<T> prod = eG * eComm;
+    MyMatrix<T> prod = eComm * eG;
     ListDisc.push_back(prod);
   }
   for (auto & subspace : ListSubspace) {
     MyMatrix<T> ProjMat = GetOrthogonalProjectorMatrix(eG, subspace);
-    MyMatrix<T> prod = eG * ProjMat;
+    MyMatrix<T> prod = ProjMat * eG;
     ListDisc.push_back(prod);
   }
   return ListDisc;

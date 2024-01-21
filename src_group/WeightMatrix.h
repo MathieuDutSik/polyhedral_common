@@ -266,6 +266,12 @@ public:
   size_t rows(void) const { return nbRow; }
   size_t GetWeightSize(void) const { return ListWeight.size(); }
   Tidx_value GetValue(size_t const &iRow, size_t const &iCol) const {
+#ifdef DEBUG_WEIGHT_MATRIX
+    if (iRow >= nbRow || iCol >= nbRow) {
+      std::cerr << "The GetValue is called with wrong iRow/iCol\n";
+      throw TerminalException{1};
+    }
+#endif
     size_t idx = weightmatrix_idx<is_symmetric>(nbRow, iRow, iCol);
     return TheMat[idx];
   }
@@ -1014,10 +1020,18 @@ GetGraphFromWeightedMatrix_color_adj(
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
 #ifdef DEBUG_WEIGHT_MATRIX
-  for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
+  os << "The original matrix\n";
+  for (size_t iVert = 0; iVert < nbRow; iVert++) {
+    for (size_t jVert = 0; jVert < nbRow; jVert++) {
+      os << " " << WMat.GetValue(iVert, jVert);
+    }
+    os << "\n";
+  }
+  os << "The mapped matrix\n";
+  for (size_t iVert = 0; iVert < nbVert; iVert++) {
     for (size_t jVert = 0; jVert < nbVert; jVert++) {
       if (iVert == jVert) {
-        os << " D";
+        os << " " << (nbWei+4);
       } else {
         size_t eVal;
         if (iVert < jVert) {
