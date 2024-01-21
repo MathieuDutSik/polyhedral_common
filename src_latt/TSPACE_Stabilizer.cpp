@@ -23,6 +23,7 @@ void write_group(std::vector<MyMatrix<T>> const& LGen, std::string const& OutFor
       IsFirst = false;
     }
     os << "]);\n";
+    return;
   }
   std::cerr << "Failed to find a matching format\n";
   throw TerminalException{1};
