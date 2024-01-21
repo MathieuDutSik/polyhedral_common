@@ -859,7 +859,7 @@ DataMapping<Tidx> ExtendPartialAutomorphism(MyMatrix<T> const& EXT,
   const MyMatrix<Tfield> &P = *test1;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   for (auto &eMat : ListMat) {
-    MyMatrix<Tfield> eMat_F = UniversalMatrxConversion<Tfield,T>(eMat);
+    MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield,T>(eMat);
     MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat_F)) {
       std::cerr << "The matrix P should preserve the matrices at this point\n";

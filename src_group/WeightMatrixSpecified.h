@@ -303,7 +303,7 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
 }
 
 template <typename Tidx>
-void PrintVertexParttionInfo(const VertexPartition<Tidx> &VP,
+void PrintVertexPartitionInfo(const VertexPartition<Tidx> &VP,
                              const std::vector<uint8_t> &status,
                              std::ostream &os) {
   os << "nbRow=" << VP.nbRow << "\n";
@@ -336,7 +336,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "After ComputeInitialVertexPartition\n";
-  PrintVertexParttionInfo(VP, status, os);
+  PrintVertexPartitionInfo(VP, status, os);
 #endif
   auto GetPreferable_iBlock = [&]() -> int {
     size_t min_size = nbRow + 1;
@@ -414,7 +414,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
 #endif
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "After Dorefinement\n";
-    PrintVertexParttionInfo(VP, status);
+    PrintVertexPartitionInfo(VP, status, os);
     os << "test=" << test << "\n";
 #endif
     if (!test)
@@ -931,7 +931,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     for (auto & epair : e_vect) {
       if (epair.second < 0) {
         std::cerr << "A negative multiplicity is inserted which is not allowed\n";
-        throw TerminalException[1];
+        throw TerminalException{1};
       }
     }
 #endif
@@ -1242,7 +1242,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
           ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res, os);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "WMVS_res=\n";
-      PrintWMVS(os, WMVS_res);
+      PrintWMVS(WMVS_res, os);
 #endif
       Tret1 ret1 = fproc1(WMVS_res, f1_res, f2_res);
       bool IsCorrect = true;

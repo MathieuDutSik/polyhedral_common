@@ -466,9 +466,9 @@ template<typename T, typename Telt>
 MyMatrix<T> get_mat_from_shv_perm(Telt const& elt, MyMatrix<T> const& SHV_T, [[maybe_unused]] MyMatrix<T> const& eMat) {
   std::optional<MyMatrix<T>> opt =
     FindTransformationGeneral(SHV_T, SHV_T, elt);
-  MyMatrix<T> TransMat = unfold_opt(opt, "Failed to get transformation");
+  MyMatrix<T> Pmat = unfold_opt(opt, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_GENERAL
-  if (!IsIntegralMat(Pmat)) {
+  if (!IsIntegralMatrix(Pmat)) {
     std::cerr << "The matrix TransMat should be integral\n";
     throw TerminalException{1};
   }
@@ -478,7 +478,7 @@ MyMatrix<T> get_mat_from_shv_perm(Telt const& elt, MyMatrix<T> const& SHV_T, [[m
     throw TerminalException{1};
   }
 #endif
-  return TransMat;
+  return Pmat;
 }
 
 
@@ -651,7 +651,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   std::optional<MyMatrix<T>> opt2 = FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_GENERAL
-  if (!IsIntegralMat(OneEquiv)) {
+  if (!IsIntegralMatrix(OneEquiv)) {
     std::cerr << "The matrix TransMat should be integral\n";
     throw TerminalException{1};
   }

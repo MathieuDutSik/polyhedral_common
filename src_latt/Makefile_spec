@@ -6,9 +6,9 @@
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
-PROGRAM		= LATT_MPI_ComputeDelaunay
+#PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= TSPACE_FileFormatConversion
-#PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
+PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 
 OBJECTS		= $(PROGRAM:%=%.o)
@@ -35,8 +35,9 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS
 #COPTIONS        = -DTIMINGS
 #COPTIONS        = -DDEBUG
+COPTIONS        = -DDEBUG -DTIMINGS
 #COPTIONS        = -DDEBUG_DELAUNAY_ENUMERATION
-COPTIONS        = -DDEBUG_DELAUNAY_ENUMERATION -DDEBUG_ADJACENCY_SCHEME
+#COPTIONS        = -DDEBUG_DELAUNAY_ENUMERATION -DDEBUG_ADJACENCY_SCHEME
 #COPTIONS        =
 
 
