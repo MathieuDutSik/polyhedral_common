@@ -313,7 +313,7 @@ template<typename T, typename Tint>
 MyMatrix<T> GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const& LinSpa, std::ostream & os) {
   while(true) {
     MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa);
-    bool test = IsSymmetryGroupCorrect(TheMat, LinSpa, os);
+    bool test = IsSymmetryGroupCorrect<T,Tint>(TheMat, LinSpa, os);
     if (test) {
       return TheMat;
     }

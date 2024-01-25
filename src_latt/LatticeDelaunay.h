@@ -254,7 +254,7 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
 template<typename Tint>
 struct Delaunay_AdjI {
   Face eInc;
-  MyMatrix<Tint> obj;
+  MyMatrix<Tint> EXT;
 };
 
 namespace boost::serialization {
@@ -262,7 +262,7 @@ namespace boost::serialization {
   inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("eInc", eRec.eInc);
-    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("EXT", eRec.EXT);
   }
 }
 
@@ -304,7 +304,7 @@ namespace boost::serialization {
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_MPI_Entry {
-  MyMatrix<Tint> obj;
+  MyMatrix<Tint> EXT;
   Tgroup GRP;
   std::vector<Delaunay_MPI_AdjO<Tint>> ListAdj;
 };
@@ -313,7 +313,7 @@ namespace boost::serialization {
   template <class Archive, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, Delaunay_MPI_Entry<Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("EXT", eRec.EXT);
     ar &make_nvp("GRP", eRec.GRP);
     ar &make_nvp("ListAdj", eRec.ListAdj);
   }
@@ -321,7 +321,7 @@ namespace boost::serialization {
 
 template<typename Tint, typename Tgroup>
 struct Delaunay_Entry {
-  MyMatrix<Tint> obj;
+  MyMatrix<Tint> EXT;
   Tgroup GRP;
   std::vector<Delaunay_AdjO<Tint>> ListAdj;
 };
@@ -330,7 +330,7 @@ namespace boost::serialization {
   template <class Archive, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, Delaunay_Entry<Tint,Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("EXT", eRec.EXT);
     ar &make_nvp("GRP", eRec.GRP);
     ar &make_nvp("ListAdj", eRec.ListAdj);
   }
@@ -368,7 +368,7 @@ DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
           Delaunay_AdjO<Tvert> adj{iOrb, ent.eInc, ent.eBigMat};
           ListAdj.push_back(adj);
         }
-        Delaunay_Entry<Tvert, Tgroup> eDel{l_blk[i_proc][u].obj, l_blk[i_proc][u].GRP, ListAdj};
+        Delaunay_Entry<Tvert, Tgroup> eDel{l_blk[i_proc][u].EXT, l_blk[i_proc][u].GRP, ListAdj};
         V.push_back(eDel);
       }
     }
@@ -382,12 +382,12 @@ DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
 template<typename Tvert, typename Tgroup>
 void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT, [[maybe_unused]] std::ostream& os) {
   for (auto & eDel : DT.l_dels) {
-    MyMatrix<Tvert> const& EXT = eDel.obj;
+    MyMatrix<Tvert> const& EXT = eDel.EXT;
     ContainerMatrix<Tvert> cont(EXT);
     for (auto & eAdj : eDel.ListAdj) {
       Face const& eInc = eAdj.eInc;
       Face eIncEff(EXT.rows());
-      MyMatrix<Tvert> const& EXT2 = DT.l_dels[eAdj.iOrb].obj;
+      MyMatrix<Tvert> const& EXT2 = DT.l_dels[eAdj.iOrb].EXT;
       MyMatrix<Tvert> const& eBigMat = eAdj.eBigMat;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
       os << "DEL_ENUM: check_delaunay_tessellation |EXT2}=" << EXT2.rows() << "/" << EXT2.cols() << " |eBigMat|=" << eBigMat.rows() << "/" << eBigMat.cols() << "\n";
@@ -418,7 +418,7 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
   size_t n_del = DT.l_dels.size();
   for (size_t i_del=0; i_del<n_del; i_del++) {
     Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
-    MyMatrix<Tvert> EXT = eDel.obj;
+    MyMatrix<Tvert> const& EXT = eDel.EXT;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
     if (i_del > 0)
       OUTfs << ",";
@@ -519,7 +519,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     return ComputeInvariantDelaunay(eData, seed, x, os);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
     if (!opt) {
       return {};
     }
@@ -528,10 +528,10 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj EXT = x.obj;
+    Tobj EXT = x.EXT;
     MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n+1);
     TadjO ret{i_rank, i_orb, x.eInc, eBigMat};
-    return {EXT, ret};
+    return {std::move(EXT), ret};
   };
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
@@ -544,7 +544,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_obj=[&](TadjI const& x) -> Tobj {
-    return x.obj;
+    return x.EXT;
   };
   //
   // Some data
@@ -587,7 +587,7 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
       return {};
     } else {
       bool is_treated = static_cast<bool>(l_status[pos_next]);
-      Tobj x = l_obj[pos_next].obj;
+      Tobj x = l_obj[pos_next].EXT;
       std::pair<bool, Tobj> pair{is_treated, x};
       pos_next++;
       return pair;
@@ -655,7 +655,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     return ComputeInvariantDelaunay(eData, seed, x, os);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
     if (!opt) {
       return {};
     }
@@ -664,7 +664,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj EXT = x.obj;
+    Tobj EXT = x.EXT;
     MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
     TadjO ret{i_orb, x.eInc, std::move(eBigMat)};
     return {std::move(EXT), ret};
@@ -680,7 +680,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_obj=[&](TadjI const& x) -> Tobj {
-    return x.obj;
+    return x.EXT;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;

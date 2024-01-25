@@ -669,7 +669,7 @@ bool compute_adjacency_serial(int const &max_time_second,
     std::pair<Tobj, TadjO> pair = f_spann(x_adjI, n_obj);
     V.push_back(pair.first);
     vect.push_back(n_obj);
-    bool test = f_insert(n_obj, pair.first);
+    bool test = f_insert(pair.first);
     if (test) {
       early_termination = true;
     }
@@ -699,7 +699,7 @@ bool compute_adjacency_serial(int const &max_time_second,
     f_save_status(idx, true);
     Tobj const &x = V[idx];
     std::vector<TadjO> l_adj;
-    for (auto &y : f_adj(x)) {
+    for (auto &y : f_adj(x, idx)) {
       TadjO adj = process_singleEntry_AdjI(y);
       l_adj.push_back(adj);
     }
