@@ -169,10 +169,6 @@ bool IsDelaunayAcceptableForGramMat(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T
   return true;
 }
 
-
-
-
-
 struct AdjInfo {
   int iOrb;
   int i_adj;
@@ -216,7 +212,7 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTessela
       // That canonicalization is incorrect because it is not invariant under the group of transformation.
       // The right group transformations are the ones that
       // The list of matrices ListGram must be an integral basis of the T-space. This forces the transformations
-      // to be integral in that basis and so the canonicalization by the integer 
+      // to be integral in that basis and so the canonicalization by the integer
       MyVector<T> V_red = ScalarCanonicalizationVector(V);
       AdjInfo eAdj{i_del, i_adj};
       map[V_red].push_back(eAdj);
@@ -229,6 +225,36 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTessela
   }
   return l_ret;
 }
+
+template<typename T>
+MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
+  int dim_spa = ListIneq[0].eIneq.size();
+  int n_ineq = ListIneq.size();
+  MyMatrix<T> FAC(n_ineq, dim_spa);
+  for (int i_ineq=0; i<n_ineq; i_ineq++) {
+    for (int u=0; u<dim_spa; u++) {
+      FAC(i_ineq, u) = ListIneq[i_ineq].eIneq(u);
+    }
+  }
+  return FAC;
+}
+
+template<typename T, typename Tvert, typename Tgroup>
+MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+  int n = LinSpa.n;
+  int dim_spa = LinSpa.ListMat.size();
+  std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain(DT, LinSpa.ListMat);
+  MyMatrix<T> FAC = GetFACineq(ListIneq);
+  MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC);
+  MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
+  for (int u=0; u<n; u++) {
+    RetMat += ThePt(u) * LinSpa.ListMat[u];
+  }
+  return RetMat;
+}
+
+
+
 
 
 
@@ -954,6 +980,7 @@ template<typename Tint>
 struct IsoDelaunayDomain_MPI_AdjO {
   int iProc;
   int iOrb;
+  MyVector<T> V;
   MyMatrix<Tint> eBigMat;
 };
 
@@ -966,6 +993,14 @@ namespace boost::serialization {
     ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
+
+
+template<typename T, typename Tint, typename Tgroup>
+struct IsoDelaunayDomain_AdjI {
+  MyVector<T> V;
+  IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
+};
+
 
 template<typename Tint>
 struct IsoDelaunayDomain_AdjO {
@@ -983,10 +1018,15 @@ namespace boost::serialization {
 }
 
 template<typename T, typename Tint, typename Tgroup>
+struct IsoDelaunayDomain {
+  DelaunayTesselation<Tint, Tgroup> DT;
+  MyMatrix<T> GramMat;
+};
+
+template<typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain_MPI_Entry {
-  DelaunayTesselation<Tint, Tgroup> obj;
+  IsoDelaunayDomain<T, Tint, Tgroup> obj;
   std::vector<FullAdjInfo<T>> ListIneq;
-  MyMatrix<T> InteriorElement;
   std::vector<IsoDelaunayDomain_MPI_AdjO<Tint>> ListAdj;
 };
 
@@ -994,9 +1034,8 @@ namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("obj", eRec.obj);
+    ar &make_nvp("obj", eRec.DT_gram);
     ar &make_nvp("ListIneq", eRec.ListIneq);
-    ar &make_nvp("InteriorElement", eRec.InteriorElement);
     ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
@@ -1015,7 +1054,7 @@ size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> c
   size_t seed_delaunay = 10;
   for (auto & eDel : DT.l_dels) {
     size_t hash = seed_delaunay;
-    size_t hash_nVert = eDel.obj.rows();
+    size_t hash_nVert = eDel.EXT.rows();
     TintGroup order = eDel.GRP.order();
     size_t hash_grp = std::hash<TintGroup>()(order);
     combine_hash(hash, hash_nVert);
@@ -1040,9 +1079,19 @@ size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> c
 }
 
 template<typename T, typename Tint, typename Tgroup>
+IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
+  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(eData);
+  MyMatrix<T> GramMat = GetInteriorGramMatrix(eData.LinSpa, DT);
+  return {DT, GramMat};
+}
+
+
+
+
+template<typename T, typename Tint, typename Tgroup>
 std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
-  using Tobj = DelaunayTesselation<Tint, Tgroup>;
-  using TadjI = IsoDelaunayDomain_AdjI<Tint>;
+  using Tobj = IsoDelaunayDomain<T, Tint, Tgroup>;
+  using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
   using TadjO = IsoDelaunayDomain_MPI_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
     return GetInitialGenericDelaunayTesselation(eData);
@@ -1051,16 +1100,72 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
     return ComputeInvariantIsoDelaunayDomain(eData, seed, x);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.obj, os);
+    std::optional<MyMatrix<Tint>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(eData.LinSpa, x.GramMat, y.DT_gram.GramMat, os);
     if (!opt) {
       return {};
     }
     MyMatrix<Tint> const& eBigMat = *opt;
-    TadjO ret{i_rank, i_orb, y.eInc, eBigMat};
+    TadjO ret{i_rank, i_orb, eBigMat};
     return ret;
   };
-
-  
+  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
+    Tobj IsoDel = x.DT_gram;
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
+    TadjO ret{i_rank, i_orb, x.V, eBigMat};
+    return {IsoDel, ret};
+  };
+  std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
+  std::vector<uint8_t> l_status;
+  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain(x.DT, LinSpa.ListMat);
+    l_obj[i_orb].ListIneq = ListIneq;
+    MyMatrix<T> FAC = GetFACineq(ListIneq);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC);
+    std::vector<TadjI> l_adj;
+    for (auto & idxIrred : ListIrred) {
+      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
+      DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype(x.DT, x.GramMat, eRecIneq.ListAdjInfo, eData.rddo);
+      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(eData.LinSpa, DTadj);
+      Tobj obj{DTadj, GramMat};
+      TadjI eAdj{obj];
+      l_adj.push_back(eAdj);
+    }
+    return l_adj;
+  };
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+    l_obj[i_orb].ListAdj = ListAdj;
+  };
+  auto f_obj=[&](TadjI const& x) -> Tobj {
+    return x.DT_gram;
+  };
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    return {};
+  };
+  auto f_insert=[&](Tobj const& x) -> bool {
+    Tgroup grp;
+    l_obj.push_back({x, grp, {} });
+    return false;
+  };
+  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+    uint8_t val_i = static_cast<uint8_t>(val);
+    if (l_status.size() <= pos) {
+      l_status.push_back(val_i);
+    } else {
+      l_status[pos] = val_i;
+    }
+  };
+  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
+    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_save_status),
+    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
+    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
+    (comm, eData.max_runtime_second,
+     f_next, f_insert, f_obj,
+     f_save_status,
+     f_init, f_adj, f_set_adj,
+     f_hash, f_repr, f_spann, os);
+  os << "Termination test=" << test << "\n";
+  return l_obj;
 }
 
 template<typename T, typename Tint, typename Tgroup>

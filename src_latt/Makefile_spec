@@ -10,8 +10,9 @@
 #PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
 #PROGRAM		= TSPACE_Stabilizer
-PROGRAM		= TSPACE_Equivalence
+#PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
+PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
