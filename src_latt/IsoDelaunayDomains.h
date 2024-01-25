@@ -231,7 +231,7 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
   int dim_spa = ListIneq[0].eIneq.size();
   int n_ineq = ListIneq.size();
   MyMatrix<T> FAC(n_ineq, dim_spa);
-  for (int i_ineq=0; i<n_ineq; i_ineq++) {
+  for (int i_ineq=0; i_ineq<n_ineq; i_ineq++) {
     for (int u=0; u<dim_spa; u++) {
       FAC(i_ineq, u) = ListIneq[i_ineq].eIneq(u);
     }
@@ -242,7 +242,6 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
 template<typename T, typename Tvert, typename Tgroup>
 MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT) {
   int n = LinSpa.n;
-  int dim_spa = LinSpa.ListMat.size();
   std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain(DT, LinSpa.ListMat);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC);
@@ -260,7 +259,7 @@ MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesse
 
 template<typename T, typename Tint, typename Tgroup>
 DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
-  std::ostream & os = LinSpa.rddo.os;
+  std::ostream & os = eData.rddo.os;
   auto f_incorrect=[&](MyMatrix<Tint> const& EXT) -> bool {
     bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, eData.LinSpa.ListLineMat);
     if (test1) {
@@ -276,7 +275,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
     return false;
   };
   auto test_matrix=[&](MyMatrix<T> const& GramMat) -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
-    bool test = IsSymmetryGroupCorrect(GramMat, LinSpa, os);
+    bool test = IsSymmetryGroupCorrect(GramMat, eData.LinSpa, os);
     if (!test) {
       return {};
     }
@@ -307,7 +306,7 @@ struct RepartEntry {
   Tgroup TheStab;
   int8_t Position; // -1: lower, 0: barrel, 1: higher
   int iDelaunayOrigin;
-  std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
+  std::vector<Delaunay_AdjO<Tvert>> ListAdj;
   MyMatrix<Tvert> eBigMat;
 };
 
@@ -321,7 +320,7 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
 
 
 template<typename T, typename Tvert, typename Tgroup>
-std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
+std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = InteriorElement.rows();
@@ -358,7 +357,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
   std::vector<TypeOrbitCenter> ListOrbitCenter;
   auto FuncInsertVertex=[&](MyVector<Tvert> const& eVert) -> void {
     if (ListVertices_rev.count(eVert) == 1) {
-      break;
+      return;
     }
     std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, rddo.os);
     for (auto &eV : O) {
@@ -460,14 +459,14 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     bool IsFinished = true;
     size_t nbCent = ListOrbitCenter.size();
     for (size_t iCent=0; iCent<nbCent; iCent++) {
-      TypeOrbitCenter & eEnr = ListOrbitCenter[iCent];
+      TypeOrbitCenter & eEnt = ListOrbitCenter[iCent];
       if (!eEnt.Status) {
         IsFinished = false;
-        eEnr.Status = true;
+        eEnt.Status = true;
         for (auto & eCase : ListInformationsOneFlipping) {
-          if (eEnr.iDelaunay == eCase.iOrb) {
+          if (eEnt.iDelaunay == eCase.iOrb) {
             MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
-            MyMatrix<Tvert> eBigMatNew = eBigMat * eEnr.eBigMat;
+            MyMatrix<Tvert> eBigMatNew = eBigMat * eEnt.eBigMat;
             TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
             FuncInsertCenter(TheRec);
           }
@@ -480,7 +479,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
   }
   // second part, the convex decomposition
   int nVert = ListVertices.rows();
-  MyMatrix<T> TotalListVertices(len, 2+n);
+  MyMatrix<T> TotalListVertices(nVert, 2+n);
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
   MyVector<Tvert> eV(n);
   for (int iVert=0; iVert<nVert; iVert++) {
@@ -513,7 +512,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     Tgroup TheStab;
     bool Status = false;
     int8_t Position = -1;
-    std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
+    std::vector<Delaunay_AdjO<Tvert>> ListAdj;
     int iDelaunayOrigin = eRec.iDelaunay;
     MyMatrix<Tvert> const& eBigMat = eRec.eBigMat;
     MyMatrix<Tvert> const& EXT = eRec.EXT;
@@ -522,7 +521,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
   }
-  auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> AdjReport<Tvert, Tgroup> {
+  auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> AdjRepart<Tvert, Tgroup> {
     std::vector<Tidx> Linc;
     Face Linc_face(nVert);
     for (int iVert=0; iVert<nVert; iVert++) {
@@ -548,7 +547,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
     bool Status = false;
     Tgroup TheStab;
     int iDelaunayOrigin = -1;
-    std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
+    std::vector<Delaunay_AdjO<Tvert>> ListAdj;
     MyMatrix<Tvert> eBigMat;
     RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
     RepartEntryProv rep{eFac, eLinc, Linc_face, Status};
@@ -569,7 +568,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
         Tgroup Stab = PermGRP.Stabiliser_OnSets(Linc_face);
         Tgroup TheStab = RenormStabilizer(Stab);
         ListOrbitFacet[iOrb].TheStab = TheStab;
-        std::vector<Delaunay_AdjO<Tvert, Tgroup>> ListAdj;
+        std::vector<Delaunay_AdjO<Tvert>> ListAdj;
         MyMatrix<Tvert> EXT1 = SelectRow(ListVertices, Linc_face);
         MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
         vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
@@ -577,7 +576,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
         for (auto & eFace : vf) {
           Face eInc = frame.FlipFace(eFace);
           MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
-          AdjReport<Tvert, Tgroup> eAdj = FuncInsertFacet(eFac);
+          AdjRepart<Tvert, Tgroup> eAdj = FuncInsertFacet(eFac);
           std::vector<Tidx> eInc;
           for (size_t iInc=0; iInc<ListOrbitFacet_prov[iOrb].Linc.size(); iInc++) {
             Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
@@ -602,7 +601,7 @@ std::vector<RepartEntry<Tvert,Tgroup>> FindRepartitionningInfoNextGeneration(siz
 
 
 template<typename T, typename Tvert, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, RecordDualDescOperation<T, Tgroup> & rddo) {
+DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Tgr = GraphListAdj;
   int n_dels = ListOrbitDelaunay.l_dels.size();
   Tgr Gra(n_dels);
@@ -643,16 +642,16 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       ListGroupUnMelt.push_back(eConn);
     }
   }
-  std::vector<std::vector<RepartEntry<Tvert,Tgroup>>> ListInfo;
+  std::vector<std::vector<RepartEntry<Tvert, Tgroup>>> ListInfo;
   std::vector<int> vect_iInfo(n_dels, -1);
   std::vector<int> vect_lower_iFacet(n_dels, -1);
   int iInfo = 0;
   for (auto &eConn : ListGroupMelt) {
     Tidx eIdx = eConn[0];
-    std::vector<RepartEntry<Tvert,Tgroup>> LORB2 = FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement, rddo);
+    std::vector<RepartEntry<Tvert, Tgroup>> LORB2 = FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay, ListInformationsOneFlipping, InteriorElement, rddo);
     int n_facet = LORB2.size();
     for (int iFacet=0; iFacet<n_facet; iFacet++) {
-      RepartEntry<Tvert,Tgroup> const& eFacet = LORB2[iFacet];
+      RepartEntry<Tvert, Tgroup> const& eFacet = LORB2[iFacet];
       if (eFacet.Position == -1) {
         vect_lower_iFacet[eFacet.iDelaunayOrigin] = iFacet;
       }
@@ -663,11 +662,11 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     }
     iInfo++;
   }
-  struct MatchFacet {
+  struct MatchedFacet {
     Delaunay_AdjO<Tvert> adj;
     MyMatrix<Tvert> eBigMat;
   };
-  auto get_matching_listinfo=[&](int iInfo, int iFacet, Face eInc) -> MatchFacet {
+  auto get_matching_listinfo=[&](int iInfo, int iFacet, Face eInc) -> MatchedFacet {
     MyMatrix<Tvert> const& EXT = ListInfo[iInfo][iFacet].EXT;
     for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
       std::optional<Telt> opt = ListInfo[iInfo][iFacet].GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
@@ -679,7 +678,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     std::cerr << "Failed to find a matching entry in get_matching_listinfo\n";
     throw TerminalException{1};
   };
-  auto get_matching_old_tessel=[&](int iDelaunayOld, Face eInc) -> MatchFacet {
+  auto get_matching_old_tessel=[&](int iDelaunayOld, Face eInc) -> MatchedFacet {
     MyMatrix<Tvert> const& EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj;
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
       std::optional<Telt> opt = ListOrbitDelaunay.l_dels[iDelaunayOld].GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
@@ -707,7 +706,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
     for (int i1=0; i1<nVert1; i1++) {
       MyVector<Tvert> V = GetMatrixRow(M1, i1);
       std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
-      int pos2 = unfolt_opt(opt, "Error in get_face_m_m");
+      int pos2 = unfold_opt(opt, "Error in get_face_m_m");
       f2[pos2] = 1;
     }
     return f2;
@@ -720,14 +719,14 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       if (f1[i1] == 1) {
         MyVector<Tvert> V = GetMatrixRow(M1, i1);
         std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
-        int pos2 = unfolt_opt(opt, "Error in get_face_m_m");
+        int pos2 = unfold_opt(opt, "Error in get_face_m_m");
         f2[pos2] = 1;
       }
     }
     return f2;
   };
   int n_info = ListInfo.size();
-  int8_t Position_old = 4, Position_old = 5;
+  int8_t Position_old = 4, Position_new = 5;
   struct DelaunaySymb {
     int8_t Position;
     int iDelaunay;
@@ -810,7 +809,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
       int iDelaunay = ds.iDelaunay;
       for (auto & eAdj : ListOrbitDelaunay.l_dels[iDelaunay].ListAdj) {
         int iDelaunayOld = eAdj.iOrb;
-        DelaunaySymb dss{Position_Old, iDelaunayOld, -1, -1};
+        DelaunaySymb dss{Position_old, iDelaunayOld, -1, -1};
         std::optional<size_t> opt = get_symbol_position(dss);
         if (opt) {
           Delaunay_AdjO<Tvert> NAdj{*opt, eAdj.f, eAdj.eBigMat};
@@ -821,7 +820,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
         } else {
           int iInfo = vect_iInfo[iDelaunayOld];
           int iFacet = vect_lower_iFacet[iDelaunayOld];
-          //          RepartEntry<Tvert,Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
+          //  RepartEntry<Tvert, Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<Tvert> const& BigMat2 = eFacet.eBigMat;
           MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].obj * eAdj.eBigMat;
           Face Linc = get_face_msub_m(ListOrbitDelaunay[iDelaunay].obj, eAdj.eInc, ImageEXT);
@@ -831,7 +830,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
             std::cerr << "Illogic error concerning the structure of repartitionning polytope\n";
             throw TerminalException{1};
           }
-          DelaunaySymb dss{Position_New, -1, iInfo, iOrbFound};
+          DelaunaySymb dss{Position_new, -1, iInfo, iOrbFound};
           std::optional<int> optN = get_symbol_position(dss);
           int Pos = unfold_opt(optN, "Failed to find entry for Case2");
           MyMatrix<Tvert> BigMat1 = RecMatch.adj.eBigMat * RecMatch.eBigMat * Inverse(BigMat2) * eAdj.eBigMat;
@@ -851,14 +850,14 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
           MyMatrix<Tvert> LincEXT = SelectRow(ListInfo[iInfo][iFacet].EXT, eAdj.eInc);
           MyMatrix<Tvert> ImageEXTbarrel = ListInfo[iInfo][jFacet].EXT * eMat1;
           Face LLinc = get_face_m_m(LincEXT, ImageEXTbarrel);
-          Delaunay_adjO<Tvert> TheFoundAdj = get_lower_adjacency(iInfo, jFacet);
+          Delaunay_AdjO<Tvert> TheFoundAdj = get_lower_adjacency(iInfo, jFacet);
           int kFacet = TheFoundAdj.iOrb;
           MyMatrix<Tvert> const& eMat2 = TheFoundAdj.eBigMat;
           int iDelaunayOrigin = ListInfo[iInfo][kFacet].iDelaunayOrigin;
           MyMatrix<Tvert> ImageEXT = ListInfo[iInfo][kFacet].EXT * TheFoundAdj.eBigMat;
           Face LLinc2 = get_face_msub_m(ListInfo[iInfo][jFacet].EXT, TheFoundAdj.eInc, ImageEXT);
           MatchedFacet match2 = get_matching_old_tessel(iDelaunayOrigin, LLinc2);
-          Delaunay_adjO<Tvert> const& TheFoundAdj2 = match2.adj;
+          Delaunay_AdjO<Tvert> const& TheFoundAdj2 = match2.adj;
           MyMatrix<Tvert> const& TheMat2 = match2.eBigMat;
           int jDelaunayOrigin = TheFoundAdj2.iOrb;
           MyMatrix<Tvert> const& eMat3 = TheFoundAdj2.eBigMat;
@@ -867,7 +866,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
           int jInfo = vect_iInfo[jDelaunayOrigin];
           int iFacet2 = vect_lower_iFacet[jDelaunayOrigin];
           MatchedFacet match3 = get_matching_listinfo(jInfo, iFacet2, LLinc3);
-          Delaunay_adjO<Tvert> const& TheFoundAdj3 = match3.adj;
+          Delaunay_AdjO<Tvert> const& TheFoundAdj3 = match3.adj;
           MyMatrix<Tvert> const& TheMat3 = match3.eBigMat;
           MyMatrix<Tvert> BigMat1 = TheFoundAdj3.eBigMat*TheMat3*Inverse(ListInfo[jInfo][iFacet2].eBigMat)*eMat3*TheMat2*ListInfo[iInfo][kFacet].eBigMat*eMat2*eMat1;
           MyMatrix<Tvert> EXT7 = ListInfo[jInfo][TheFoundAdj3.iOrb].EXT * BigMat1;
@@ -878,14 +877,14 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
           }
 #endif
           Face LLinc4 = get_face_m_m(LincEXT, EXT7);
-          MatchedFace match4 = get_matching_listinfo(jInfo, TheFoundAdj3.iOrb, LLinc4);
-          Delaunay_adjO<Tvert> const& TheFoundAdj4 = match4.adj;
+          MatchedFacet match4 = get_matching_listinfo(jInfo, TheFoundAdj3.iOrb, LLinc4);
+          Delaunay_AdjO<Tvert> const& TheFoundAdj4 = match4.adj;
           MyMatrix<Tvert> const& TheMat4 = match4.eBigMat;
           DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj4.iOrb};
-          std::optional<size_t> opt = get_symbol_position(dss);
+          std::optional<size_t> optN = get_symbol_position(dss);
           int Pos = unfold_opt(optN, "Failed to find entry for Case3");
           MyMatrix<Tvert> BigMat2 = TheFoundAdj4.eBigMat * TheMat4 * BigMat1;
-          Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat2};
+          Delaunay_AdjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat2};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 3");
 #endif
@@ -894,10 +893,10 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
         if (ListInfo[iInfo][jFacet].Position == -1) {
           int iDelaunayOrigin = ListInfo[iInfo][jFacet].iDelaunayOrigin;
           MyMatrix<Tvert> const& eMat1 = eAdj.eBigMat;
-          MaMatrix<Tvert> ImageEXT = ListInfo[iInfo][jFacet].EXT * eMat1;
+          MyMatrix<Tvert> ImageEXT = ListInfo[iInfo][jFacet].EXT * eMat1;
           Face LLinc = get_face_msub_m(ListInfo[iInfo][iFacet].EXT, eAdj.eInc, ImageEXT);
           MatchedFacet match1 = get_matching_old_tessel(iDelaunayOrigin, LLinc);
-          Delaunay_adjO<Tvert> const& TheFoundAdj1 = match1.adj;
+          Delaunay_AdjO<Tvert> const& TheFoundAdj1 = match1.adj;
           MyMatrix<Tvert> const& TheMat1 = match1.eBigMat;
           int jDelaunayOld = TheFoundAdj1.iDelaunay;
           if (vect_iInfo[jDelaunayOld] == -1) {
@@ -905,7 +904,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
             std::optional<size_t> opt = get_symbol_position(dss);
             int Pos2 = unfold_opt(opt, "Case 4");
             MyMatrix<Tvert> BigMat1 = TheFoundAdj1.eBigMat*TheMat1*ListInfo[iInfo][jFacet].eBigMat*eAdj.eBigMat;
-            Delaunay_adjO<Tvert> NAdj{Pos2, eAdj.eInc, BigMat1};
+            Delaunay_AdjO<Tvert> NAdj{Pos2, eAdj.eInc, BigMat1};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 4");
 #endif
@@ -915,14 +914,14 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
             int iFacet2 = vect_lower_iFacet[jDelaunayOld];
             MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[jDelaunayOld].obj * TheFoundAdj1.eBigMat;
             Face LLinc2 = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunayOrigin].obj, TheFoundAdj1.eInc, ImageEXT);
-            MatchedFace match2 = get_matching_listinfo(jInfo, iFacet2, LLinc2);
-            Delaunay_adjO<Tvert> const& TheFoundAdj2 = match2.adj;
+            MatchedFacet match2 = get_matching_listinfo(jInfo, iFacet2, LLinc2);
+            Delaunay_AdjO<Tvert> const& TheFoundAdj2 = match2.adj;
             MyMatrix<Tvert> const& TheMat2 = match2.eBigMat;
             DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj2.iOrb};
             std::optional<size_t> opt = get_symbol_position(dss);
             int Pos = unfold_opt(opt, "Case 5");
             MyMatrix<Tvert> BigMat1 = TheFoundAdj2.eBigMat*TheMat2*Inverse(ListInfo[jInfo][iFacet2].eBigMat)*TheFoundAdj1.eBigMat*TheMat1*ListInfo[iInfo][jFacet].eBigMat*eAdj.eBigMat;
-            Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat1};
+            Delaunay_AdjO<Tvert> NAdj{Pos, eAdj.eInc, BigMat1};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
             check_adj(iOrb, NAdj, "Case 5");
 #endif
@@ -933,7 +932,7 @@ DelaunayTesselation<Tint, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgrou
           DelaunaySymb dss{Position_new, -1, iInfo, jFacet};
           std::optional<size_t> opt = get_symbol_position(dss);
           int Pos = unfold_opt(opt, "Case 5");
-          Delaunay_adjO<Tvert> NAdj{Pos, eAdj.eInc, eAdj.eBigMat};
+          Delaunay_AdjO<Tvert> NAdj{Pos, eAdj.eInc, eAdj.eBigMat};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 6");
 #endif
@@ -976,7 +975,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   return {ListBlock, "undefined"};
 }
 
-template<typename Tint>
+template<typename T, typename Tint>
 struct IsoDelaunayDomain_MPI_AdjO {
   int iProc;
   int iOrb;
@@ -985,11 +984,12 @@ struct IsoDelaunayDomain_MPI_AdjO {
 };
 
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_AdjO<Tint> &eRec,
+  template <class Archive, typename T, typename Tint>
+  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_AdjO<T, Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("iProc", eRec.iProc);
     ar &make_nvp("iOrb", eRec.iOrb);
+    ar &make_nvp("V", eRec.V);
     ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
@@ -1027,7 +1027,7 @@ template<typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain_MPI_Entry {
   IsoDelaunayDomain<T, Tint, Tgroup> obj;
   std::vector<FullAdjInfo<T>> ListIneq;
-  std::vector<IsoDelaunayDomain_MPI_AdjO<Tint>> ListAdj;
+  std::vector<IsoDelaunayDomain_MPI_AdjO<T, Tint>> ListAdj;
 };
 
 namespace boost::serialization {
@@ -1089,10 +1089,10 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDo
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
+std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, std::ostream & os) {
   using Tobj = IsoDelaunayDomain<T, Tint, Tgroup>;
   using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
-  using TadjO = IsoDelaunayDomain_MPI_AdjO<Tint>;
+  using TadjO = IsoDelaunayDomain_MPI_AdjO<T, Tint>;
   auto f_init=[&]() -> Tobj {
     return GetInitialGenericDelaunayTesselation(eData);
   };
@@ -1117,7 +1117,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
-    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain(x.DT, LinSpa.ListMat);
+    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain(x.DT, eData.LinSpa.ListMat);
     l_obj[i_orb].ListIneq = ListIneq;
     MyMatrix<T> FAC = GetFACineq(ListIneq);
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC);
@@ -1126,8 +1126,8 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
       FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
       DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype(x.DT, x.GramMat, eRecIneq.ListAdjInfo, eData.rddo);
       MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(eData.LinSpa, DTadj);
-      Tobj obj{DTadj, GramMat};
-      TadjI eAdj{obj];
+      Tobj obj{DTadj, GramMatAdj};
+      TadjI eAdj{eRecIneq.V, obj};
       l_adj.push_back(eAdj);
     }
     return l_adj;
@@ -1170,7 +1170,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
 
 template<typename T, typename Tint, typename Tgroup>
 void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, os) {
-  int i_rank = comm.rank();
+  //  int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
@@ -1212,7 +1212,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     if (CommonGramMat == "unset") {
       return {};
     }
-    MyMatrix<T> eMat = ReadMatrix<T>(CommonGamMat);
+    MyMatrix<T> eMat = ReadMatrixFile<T>(CommonGramMat);
     return eMat;
   };
   std::optional<MyMatrix<T>> CommonGramMat = get_common();
@@ -1221,7 +1221,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
-  LinSpaceMatrix<T> LinSpa = ReadTspace(BlockTSPACE, os);
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T>(BlockTSPACE, os);
 
   DataIsoDelaunayDomains<T,Tint,Tgroup> eData{LinSpa,
     std::move(rddo),
@@ -1230,7 +1230,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     DATA_Saving,
     DATA_Prefix};
 
-  std::vector<IsoDelaunayDomain_MPI_Entry<Tint, Tgroup>> ListIDD = MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(comm, eData);
+  std::vector<IsoDelaunayDomain_MPI_Entry<Tint, Tgroup>> ListIDD = MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(comm, eData, os);
   WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, ListIDD, os);
 }
 
