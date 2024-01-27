@@ -637,10 +637,10 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
   * P LinSpa.ListMat P^T  image is LinSpa.ListMat
 */
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
-                                                            MyMatrix<T> const& eMat1,
-                                                            MyMatrix<T> const& eMat2,
-                                                            std::ostream & os) {
+std::optional<MyMatrix<Tint>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
+                                                               MyMatrix<T> const& eMat1,
+                                                               MyMatrix<T> const& eMat2,
+                                                               std::ostream & os) {
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -682,7 +682,8 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   }
 #endif
   if (is_stab_space(OneEquiv, LinSpa)) {
-    return OneEquiv;
+    MyMatrix<Tint> OneEquiv_tint = UniversalMatrixConversion<Tint,T>(OneEquiv);
+    return OneEquiv_tint;
   }
   //
   // The direct approach failed, let us use the pt-wise-stab and the cosets for resolving that.
@@ -727,7 +728,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> co
   while(true) {
     PartSol p_sol = try_solution();
     if (p_sol.sol) {
-      return *p_sol.sol;
+      MyMatrix<T> const& Pmat_T = *p_sol.sol;
+      MyMatrix<Tint> Pmat = UniversalMatrixConversion<Tint,T>(Pmat_T);
+      return Pmat;
     }
     if (!p_sol.new_gen) {
       return {};

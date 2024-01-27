@@ -284,7 +284,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
     return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(eData, f_incorrect, os);
   };
   while(true) {
-    MyMatrix<T> GramMat = GetRandomPositiveDefiniteNoNontrialSymm(eData.LinSpa);
+    MyMatrix<T> GramMat = GetRandomPositiveDefiniteNoNontrialSymm<T,Tint>(eData.LinSpa, os);
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix(GramMat);
     if (opt) {
       return *opt;
@@ -1118,7 +1118,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj IsoDel = x.DT_gram;
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.LinSpa.n);
     TadjO ret{i_rank, i_orb, x.V, eBigMat};
     return {IsoDel, ret};
   };
@@ -1150,8 +1150,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
     return {};
   };
   auto f_insert=[&](Tobj const& x) -> bool {
-    Tgroup grp;
-    l_obj.push_back({x, grp, {} });
+    l_obj.push_back({x, {}, {} });
     return false;
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
