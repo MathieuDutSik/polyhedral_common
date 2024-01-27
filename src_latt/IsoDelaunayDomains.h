@@ -484,7 +484,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   int nVert = ListVertices.size();
   MyMatrix<T> TotalListVertices(nVert, 2+n);
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
-  MyVector<Tvert> eV(n);
+  MyVector<T> eV(n);
   for (int iVert=0; iVert<nVert; iVert++) {
     MyVector<Tvert> const& eVert = ListVertices[iVert];
     TotalListVertices(iVert, 0) = 1;
@@ -512,7 +512,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   std::vector<RepartEntry<Tvert, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
   for (auto & eRec : ListOrbitCenter) {
-    Face Linc_face = VectorToFace(eRec.Linc);
+    Face Linc_face = VectorToFace(eRec.Linc, nVert);
     MyVector<T> eFac = FindFacetInequality(TotalListVertices, Linc_face);
     Tgroup TheStab;
     bool Status = false;
