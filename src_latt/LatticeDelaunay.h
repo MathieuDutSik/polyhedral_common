@@ -42,10 +42,11 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   MyMatrix<T> SHV(0,n);
   std::string CVPmethod = "SVexact";
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int max_runtime_second = 0;
   bool Saving = false;
   std::string Prefix = "/irrelevant";
-  return {n, GramMat, SHV, CVPmethod, AllArr, max_runtime_second, Saving, Prefix};
+  return {n, GramMat, SHV, CVPmethod, std::move(rddo), max_runtime_second, Saving, Prefix};
 }
 
 

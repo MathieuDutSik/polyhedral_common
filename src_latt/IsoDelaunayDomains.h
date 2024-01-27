@@ -1097,7 +1097,7 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDo
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, std::ostream & os) {
+std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaunayDomains(boost::mpi::communicator &comm, DataIsoDelaunayDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
   using Tobj = IsoDelaunayDomain<T, Tint, Tgroup>;
   using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
   using TadjO = IsoDelaunayDomain_MPI_AdjO<T, Tint>;
