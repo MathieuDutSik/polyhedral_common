@@ -342,6 +342,14 @@ struct DelaunayTesselation {
   std::vector<Delaunay_Entry<Tvert,Tgroup>> l_dels;
 };
 
+namespace boost::serialization {
+  template <class Archive, typename Tvert, typename Tgroup>
+  inline void serialize(Archive &ar, DelaunayTesselation<Tvert,Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("l_dels", eRec.l_dels);
+  }
+}
+
 template<typename Tvert, typename Tgroup>
 DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
                                                std::vector<Delaunay_MPI_Entry<Tvert, Tgroup>> const& blk,
