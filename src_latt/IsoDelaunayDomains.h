@@ -525,12 +525,15 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> AdjRepart<Tvert, Tgroup> {
     std::vector<Tidx> Linc;
     Face Linc_face(nVert);
+    std::vector<MyVector<T>> EXT_list;
     for (int iVert=0; iVert<nVert; iVert++) {
       if (get_incd_status(iVert, eFac)) {
         Linc.push_back(iVert);
         Linc_face[iVert] = 1;
+        EXT_list.push_back(ListVertices[iVert]);
       }
     }
+    MyMatrix<T> EXT = MatrixFromVectorFamily(EXT_list);
     int nOrb = ListOrbitFacet.size();
     for (int iOrb=0; iOrb<nOrb; iOrb++) {
       std::optional<Telt> opt = PermGRP.RepresentativeAction(ListOrbitFacet_prov[iOrb].Linc_face, Linc_face);
@@ -549,9 +552,9 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     Tgroup TheStab;
     int iDelaunayOrigin = -1;
     std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-    MyMatrix<Tvert> eBigMat;
-    RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
-    RepartEntryProv rep{eFac, eLinc, Linc_face, Status};
+    MyMatrix<Tvert> eMatUnused; // That matrix should never be used
+    RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eMatUnused};
+    RepartEntryProv rep{eFac, Linc, Linc_face, Status};
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
     int iOrb = nOrb;
@@ -578,14 +581,14 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
           Face eInc = frame.FlipFace(eFace);
           MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
           AdjRepart<Tvert, Tgroup> eAdj = FuncInsertFacet(eFac);
-          std::vector<Tidx> eInc;
+          std::vector<Tidx> LEV;
           for (size_t iInc=0; iInc<ListOrbitFacet_prov[iOrb].Linc.size(); iInc++) {
             Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
             if (get_incd_status(jInc, eFac)) {
-              eInc.push_back(iInc);
+              LEV.push_back(iInc);
             }
           }
-          eAdj.eInc = eInc;
+          eAdj.eInc = LEV;
           ListAdj.push_back(eAdj);
         }
         ListOrbitFacet[iOrb].ListAdj = ListAdj;
@@ -705,10 +708,11 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     int nVert1=M1.rows();
     int nVert2=M2.rows();
     Face f2(nVert2);
+    ContainerMatrix<Tvert> cont(M2);
     for (int i1=0; i1<nVert1; i1++) {
       MyVector<Tvert> V = GetMatrixRow(M1, i1);
-      std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
-      int pos2 = unfold_opt(opt, "Error in get_face_m_m");
+      std::optional<size_t> opt = cont.GetIdx_v(V);
+      size_t pos2 = unfold_opt(opt, "Error in get_face_m_m");
       f2[pos2] = 1;
     }
     return f2;
@@ -717,10 +721,11 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     int nVert1=M1.rows();
     int nVert2=M2.rows();
     Face f2(nVert2);
+    ContainerMatrix<Tvert> cont(M2);
     for (int i1=0; i1<nVert1; i1++) {
       if (f1[i1] == 1) {
         MyVector<Tvert> V = GetMatrixRow(M1, i1);
-        std::optional<int> opt = get_matrix_m_v(ImageEXT, V);
+        std::optional<size_t> opt = cont.GetIdx_v(V);
         int pos2 = unfold_opt(opt, "Error in get_face_m_m");
         f2[pos2] = 1;
       }
