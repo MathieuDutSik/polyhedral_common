@@ -440,13 +440,14 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       MyMatrix<Tvert> const& BigMatR = TheRec.eBigMat;
       MyMatrix<Tvert> BigMatI = Inverse(BigMatR);
       MyMatrix<Tvert> const& EXT = ListOrbitDelaunay.l_dels[TheRec.iDelaunay].EXT;
-      for (auto & ePermGen : ListOrbitDelaunay.l_dels[TheRec.iDelaunay].GRPlatt.GeneratorsOfGroup()) {
+      for (auto & ePermGen : ListOrbitDelaunay.l_dels[TheRec.iDelaunay].GRP.SmallGeneratingSet()) {
         MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, ePermGen);
         MyMatrix<Tvert> eBigMat_new = BigMatI * eBigMat * BigMatR;
         FuncInsertGenerator(eBigMat_new);
       }
       std::vector<Tidx> Linc;
-      for (auto & eV : LVert) {
+      for (int u=0; u<LVert.rows(); u++) {
+        MyVector<Tvert> eV = GetMatrixRow(LVert, u);
         size_t pos = ListVertices_rev.at(eV);
         Tidx pos_idx = static_cast<Tidx>(pos - 1);
         Linc.push_back(pos_idx);
@@ -462,9 +463,9 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     size_t nbCent = ListOrbitCenter.size();
     for (size_t iCent=0; iCent<nbCent; iCent++) {
       TypeOrbitCenter & eEnt = ListOrbitCenter[iCent];
-      if (!eEnt.Status) {
+      if (!eEnt.status) {
         IsFinished = false;
-        eEnt.Status = true;
+        eEnt.status = true;
         for (auto & eCase : ListInformationsOneFlipping) {
           if (eEnt.iDelaunay == eCase.iOrb) {
             MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
@@ -822,7 +823,8 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
         DelaunaySymb dss{Position_old, iDelaunayOld, -1, -1};
         std::optional<size_t> opt = get_symbol_position(dss);
         if (opt) {
-          Delaunay_AdjO<Tvert> NAdj{*opt, eAdj.f, eAdj.eBigMat};
+          int iOrb = *opt;
+          Delaunay_AdjO<Tvert> NAdj{iOrb, eAdj.eInc, eAdj.eBigMat};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           check_adj(iOrb, NAdj, "Case 1");
 #endif
@@ -830,7 +832,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
         } else {
           int iInfo = vect_iInfo[iDelaunayOld];
           int iFacet = vect_lower_iFacet[iDelaunayOld];
-          //  RepartEntry<Tvert, Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
+          RepartEntry<Tvert, Tgroup> const& eFacet = ListInfo[iInfo][iFacet];
           MyMatrix<Tvert> const& BigMat2 = eFacet.eBigMat;
           MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat;
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT, eAdj.eInc, ImageEXT);
