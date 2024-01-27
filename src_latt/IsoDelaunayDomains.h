@@ -417,7 +417,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     }
   };
   auto FuncInsertCenter=[&](TypeOrbitCenterMin const& TheRec) -> void {
-    MyMatrix<Tvert> LVert = ListOrbitDelaunay.l_dels[TheRec.iDelaunay] * TheRec.eBigMat;
+    MyMatrix<Tvert> LVert = ListOrbitDelaunay.l_dels[TheRec.iDelaunay].EXT * TheRec.eBigMat;
     for (int u=0; u<LVert.rows(); u++) {
       MyVector<Tvert> eVert = GetMatrixRow(LVert, u);
       FuncInsertVertex(eVert);
@@ -454,7 +454,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       ListOrbitCenter.push_back(OrbCent);
     }
   };
-  TypeOrbitCenterMin TheRec{eIdx, IdentityMat<Tvert>(n+1)};
+  TypeOrbitCenterMin TheRec{static_cast<int>(eIdx), IdentityMat<Tvert>(n+1)};
   FuncInsertCenter(TheRec);
   while(true) {
     bool IsFinished = true;
@@ -479,13 +479,15 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     }
   }
   // second part, the convex decomposition
-  int nVert = ListVertices.rows();
+  int nVert = ListVertices.size();
   MyMatrix<T> TotalListVertices(nVert, 2+n);
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
   MyVector<Tvert> eV(n);
   for (int iVert=0; iVert<nVert; iVert++) {
+    MyVector<Tvert> const& eVert = ListVertices[iVert];
+    TotalListVertices(iVert, 0) = 1;
     for (int iCol=1; iCol<n; iCol++) {
-      T val = UniversalScalarConversion<T,Tvert>(ListVertices(iVert, iCol+1));
+      T val = UniversalScalarConversion<T,Tvert>(eVert(iCol+1));
       TotalListVertices(iVert, iCol+1) = val;
       eV(iCol) = val;
     }
@@ -744,7 +746,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
   auto get_symbol_position=[&](DelaunaySymb const& ds) -> std::optional<size_t> {
     if (ds.Position == Position_old) {
       for (size_t i=0; i<NewListOrbitDelaunay.size(); i++) {
-        if (NewListOrbitDelaunay[i].Position == ds.Position_old) {
+        if (NewListOrbitDelaunay[i].Position == Position_old) {
           if (NewListOrbitDelaunay[i].iDelaunay == ds.iDelaunay) {
             return i;
           }
@@ -753,7 +755,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     }
     if (ds.Position == Position_new) {
       for (size_t i=0; i<NewListOrbitDelaunay.size(); i++) {
-        if (NewListOrbitDelaunay[i].Position == ds.Position_new) {
+        if (NewListOrbitDelaunay[i].Position == Position_new) {
           if (NewListOrbitDelaunay[i].iInfo == ds.iInfo && NewListOrbitDelaunay[i].iFacet == ds.iFacet) {
             return i;
           }
