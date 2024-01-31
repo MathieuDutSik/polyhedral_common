@@ -635,12 +635,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   os << "ADJ_SCH: compute_adjacency_mpi, end : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
 #endif
   if (early_termination) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: compute_adjacency_mpi, early_termination case\n";
+#endif
     // We terminate early so by definition the enumeration is partial
     return false;
   } else {
     size_t n_undone_max = 0, n_undone_loc = undone.size();
     all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
-    return n_undone_max > 0;
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: compute_adjacency_mpi, n_undone_max=" << n_undone_max << " n_undone_loc=" << n_undone_loc << "\n";
+#endif
+    return n_undone_max == 0;
   }
 }
 

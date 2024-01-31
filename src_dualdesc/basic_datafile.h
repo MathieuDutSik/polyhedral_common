@@ -8,6 +8,10 @@
 #include <string>
 #include <vector>
 
+#ifdef DEBUG
+#define DEBUG_BASIC_DATAFILE
+#endif
+
 //
 // Storing a single number to file
 //
@@ -412,27 +416,52 @@ private:
   std::string file;
   struct IteratorData {
     size_t n_ent;
+    size_t pos;
+    size_t shift;
     std::FILE *fp_number;
     std::FILE *fp_data;
-    size_t pos;
     T read_state() {
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, pos=" << pos << " n_ent=" << n_ent << "\n";
+#endif
       size_t len = read_size_t(fp_number, pos+2);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, len=" << len << "\n";
+#endif
       std::vector<char> V(len);
+      std::fseek(fp_data, shift, SEEK_SET);
       size_t n_read = std::fread(V.data(), sizeof(uint8_t), len, fp_data);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, fread done\n";
+#endif
       if (n_read != len) {
         std::cerr << "n_read=" << n_read << " len=" << len << "\n";
         std::cerr << "Failed to read the correct number of entries\n";
         throw TerminalException{1};
       }
       std::string str(V.data(), len);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, str built\n";
+#endif
       std::istringstream iss(str);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, iss built\n";
+#endif
       T val;
       boost::archive::text_iarchive ia(iss);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, ia built\n";
+#endif
       ia >> val;
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: read_state, returning\n";
+#endif
       return val;
     }
     void single_increase() {
+      size_t len = read_size_t(fp_number, pos+2);
       pos++;
+      shift += len;
     }
     T operator*() { return read_state(); }
     IteratorData &operator++() {
@@ -461,6 +490,9 @@ public:
   FileData(std::string const &file, bool overwrite) : file(file) {
     std::string file_number = file + ".nb";
     std::string file_data = file + ".data";
+#ifdef DEBUG_BASIC_DATAFILE
+    std::cerr << "BASIC_DATAFILE: FileData overwrite=" << overwrite << "n";
+#endif
     if (overwrite) {
       fp_number = std::fopen(file_number.data(), "w+");
       fp_data = std::fopen(file_data.data(), "w+");
@@ -493,6 +525,7 @@ public:
     std::string strO = ofs.str();
     size_t len = strO.size();
     write_size_t(fp_number, n_ent+2, len);
+    std::fseek(fp_data, shift, SEEK_SET);
     shift += len;
     n_ent++;
     write_size_t(fp_number, 0, n_ent);
@@ -509,10 +542,10 @@ public:
   // The iterator business
   using iterator = IteratorData;
   using const_iterator = IteratorData;
-  const_iterator cbegin() const { return {n_ent, fp_number, fp_data, 0}; }
-  const_iterator cend() const { return {n_ent, fp_number, fp_data, n_ent}; }
-  const_iterator begin() const { return {n_ent, fp_number, fp_data, 0}; }
-  const_iterator end() const { return {n_ent, fp_number, fp_data, n_ent}; }
+  const_iterator cbegin() const { return {n_ent, 0, 0, fp_number, fp_data}; }
+  const_iterator cend() const { return {n_ent, n_ent, 0, fp_number, fp_data}; }
+  const_iterator begin() const { return {n_ent, 0, 0, fp_number, fp_data}; }
+  const_iterator end() const { return {n_ent, n_ent, 0, fp_number, fp_data}; }
 };
 
 

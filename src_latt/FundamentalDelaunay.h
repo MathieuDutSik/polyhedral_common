@@ -225,6 +225,12 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
     ListGraverOptions.push_back(V2);
   }
   auto fGraverUpdate = [&]() -> void {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    MicrosecondTime time_graver;
+#endif
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    size_t n_update = 0, n_loop = 0;
+#endif
     while (true) {
       bool IsImprovement = false;
       for (auto &fVect : ListGraverOptions) {
@@ -238,11 +244,24 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
             IsImprovement = true;
             SelectedVertex = NewTestVert;
             MinRadius = TheRadius;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+            n_update++;
+#endif
           }
         }
       }
-      if (!IsImprovement)
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+      n_loop++;
+#endif
+      if (!IsImprovement) {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+        os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update << " |ListGraverOptions|=" << ListGraverOptions.size() << "\n";
+#endif
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+        os << "|fGraverUpdate|=" << time_graver << "\n";
+#endif
         break;
+      }
     }
   };
   fGraverUpdate();
