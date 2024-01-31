@@ -491,7 +491,7 @@ public:
     std::string file_number = file + ".nb";
     std::string file_data = file + ".data";
 #ifdef DEBUG_BASIC_DATAFILE
-    std::cerr << "BASIC_DATAFILE: FileData overwrite=" << overwrite << "n";
+    std::cerr << "BASIC_DATAFILE: FileData overwrite=" << overwrite << "\n";
 #endif
     if (overwrite) {
       fp_number = std::fopen(file_number.data(), "w+");
@@ -501,15 +501,27 @@ public:
       write_size_t(fp_number, 0, n_ent);
       write_size_t(fp_number, 1, shift);
     } else {
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: FileData constructor ow=F step 1\n";
+#endif
       if (!IsExistingFile(file_number) || !IsExistingFile(file_data)) {
         std::cerr << "FileData: The file " << file << " should not be missing\n";
         throw TerminalException{1};
       }
-      fp_number = std::fopen(file.data(), "r+");
-      fp_data = std::fopen(file.data(), "r+");
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: FileData constructor ow=F step 2\n";
+#endif
+      fp_number = std::fopen(file_number.data(), "r+");
+      fp_data = std::fopen(file_data.data(), "r+");
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: FileData constructor ow=F step 3\n";
+#endif
       // Reading the number of elements and the total shift
       n_ent = read_size_t(fp_number, 0);
       shift = read_size_t(fp_number, 1);
+#ifdef DEBUG_BASIC_DATAFILE
+      std::cerr << "BASIC_DATAFILE: FileData constructor ow=F step 4\n";
+#endif
     }
   }
 
