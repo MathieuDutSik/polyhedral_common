@@ -584,6 +584,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       break;
     }
   }
+#ifdef DEBUG_ADJACENCY_SCHEME
+  os << "ADJ_SCH: compute_adjacency_mpi, start : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
+#endif
   size_t n_orb_max = 0, n_orb_loc = V.size();
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -628,6 +631,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       }
     }
   }
+#ifdef DEBUG_ADJACENCY_SCHEME
+  os << "ADJ_SCH: compute_adjacency_mpi, end : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
+#endif
   if (early_termination) {
     // We terminate early so by definition the enumeration is partial
     return false;

@@ -514,9 +514,9 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                               DataLattice<T, Tint, Tgroup> & eData,
-                                                                               std::ostream & os) {
+std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
+                                                                                                DataLattice<T, Tint, Tgroup> & eData,
+                                                                                                std::ostream & os) {
   using Tobj = MyMatrix<Tint>;
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_MPI_AdjO<Tint>;
@@ -568,12 +568,20 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
   if (is_database_present) {
     FileNumber fn(FileNb, false);
     size_t n_orbit = fn.getval();
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: reading database n_orbit=" << n_orbit << "\n";
+#endif
     FileBool fb(FileStatus, n_orbit);
+    int sum_status = 0;
     for (size_t i=0; i<n_orbit; i++) {
       bool test = fb.getbit(i);
+      sum_status += static_cast<int>(test);
       uint8_t test_i = static_cast<uint8_t>(test);
       l_status.push_back(test_i);
     }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: reading database sum_status=" << sum_status << "\n";
+#endif
     FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, false);
     using Iterator = typename FileData<Delaunay_MPI_Entry<Tint,Tgroup>>::iterator;
     Iterator iter = fdata.begin();
@@ -584,6 +592,9 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
       iter++;
       n_ent++;
     }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: reading database l_obj read\n";
+#endif
     if (n_ent != n_orbit) {
       std::cerr << "We have n_ent=" << n_ent << " n_orbit=" << n_orbit << "\n";
       std::cerr << "But they should be matching\n";
@@ -634,17 +645,26 @@ std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> MPI_EnumerationDelaunayPolytopes(b
     for (auto & val : l_obj) {
       fdata.push_back(val);
     }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: writing database fdata written down\n";
+#endif
     // The status
     FileBool fb(FileStatus);
     for (size_t i=0; i<n_obj; i++) {
-      bool test = static_cast<bool>(l_status[i]);
-      fb.setbit(i, test);
+      bool test_done = static_cast<bool>(l_status[i]);
+      fb.setbit(i, test_done);
     }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: writing database FileStatus written down\n";
+#endif
     // The number
     FileNumber fn(FileNb, overwrite);
     fn.setval(n_obj);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: writing database FileNumber written down\n";
+#endif
   }
-  return l_obj;
+  return {test, std::move(l_obj)};
 }
 
 
@@ -804,7 +824,7 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
     OUTfs << "nbDel=" << nbDel << "\n";
     for (int iDel = 0; iDel < nbDel; iDel++) {
       OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
-      WriteMatrix(OUTfs, ListDel[iDel].obj);
+      WriteMatrix(OUTfs, ListDel[iDel].EXT);
     }
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
@@ -865,13 +885,16 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
                                      STORAGE_Saving,
                                      STORAGE_Prefix};
   //
-  std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> ListDel =
+  std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> pair =
     MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: We now have ListDel |ListDel|=" << ListDel.size() << "\n";
+  os << "DEL_ENUM: We now have IsFinished=" << pair.first << "\n";
+  os << "DEL_ENUM: We now have ListDel |ListDel|=" << pair.second.size() << "\n";
 #endif
   //
-  WriteFamilyDelaunay(comm, OutFormat, OutFile, ListDel, os);
+  if (pair.first) {
+    WriteFamilyDelaunay(comm, OutFormat, OutFile, pair.second, os);
+  }
 }
 
 
