@@ -268,11 +268,7 @@ public:
     get_point_direction();
   }
   // v2 should be a point outside of the plane
-  CP<T> GetCenterRadius(MyVector<T> const& TheVertex) {
-    MyVector<T> v2(n);
-    for (int i=0; i<n; i++) {
-      v2(i) = TheVertex(i+1);
-    }
+  CP<T> GetCenterRadius(MyVector<T> const& v2) {
     T G_v2 = EvaluateLineVector(LineGramMat, v2);
     MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
     T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
@@ -310,17 +306,19 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
   int iColFind = get_iColFind();
   T delta = -T_sign(TheFac(1 + iColFind));
   int jRow = eInc.find_first();
-  MyVector<T> SelectedVertex = GetMatrixRow(EXT, jRow);
-  SelectedVertex(1 + iColFind) += delta;
+  MyVector<T> SelectedVertex(dim);
+  for (int i=0; i<dim; i++)
+    SelectedVertex(i) = EXT(jRow, i + 1);
+  SelectedVertex(iColFind) += delta;
   AdjacentDelaunayPointSolver<T> adps(GramMat, EXT, eInc, os);
   T MinRadius = adps.GetCenterRadius(SelectedVertex).SquareRadius;
   std::vector<MyVector<T>> ListGraverOptions;
   for (int i = 0; i < dim; i++) {
-    MyVector<T> V1 = ZeroVector<T>(dim + 1);
-    V1(i + 1) = 1;
+    MyVector<T> V1 = ZeroVector<T>(dim);
+    V1(i) = 1;
     ListGraverOptions.push_back(V1);
-    MyVector<T> V2 = ZeroVector<T>(dim + 1);
-    V2(i + 1) = -1;
+    MyVector<T> V2 = ZeroVector<T>(dim);
+    V2(i) = -1;
     ListGraverOptions.push_back(V2);
   }
   auto fGraverUpdate = [&]() -> void {
@@ -334,9 +332,9 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
       bool IsImprovement = false;
       for (auto &fVect : ListGraverOptions) {
         MyVector<T> NewTestVert = SelectedVertex + fVect;
-        T eScal = 0;
-        for (int i = 0; i <= dim; i++)
-          eScal += NewTestVert(i) * TheFac(i);
+        T eScal = TheFac(0);
+        for (int i = 0; i < dim; i++)
+          eScal += NewTestVert(i) * TheFac(i + 1);
         if (eScal < 0) {
           T TheRadius = adps.GetCenterRadius(NewTestVert).SquareRadius;
           if (TheRadius < MinRadius) {
@@ -374,7 +372,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
       if (reply.TheNorm == eCP.SquareRadius)
         return reply;
       for (int i = 0; i < dim; i++)
-        SelectedVertex(i + 1) = reply.ListVect(0, i);
+        SelectedVertex(i) = UniversalScalarConversion<T,Tint>(reply.ListVect(0, i));
       fGraverUpdate();
     }
   };
