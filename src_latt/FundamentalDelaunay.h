@@ -185,6 +185,108 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   return {SquareRadius, eCent};
 }
 
+
+// This is for finding cirsumscribing spheres and their radius
+//
+// In the constructor we compute the point at the center of the facet
+// and the direction. It is basically an affine space.
+//
+// G[v1 - v] = G[v2 - v]
+// G[v1] - G[v2] = 2 v1 G v - 2 v2 G v
+//               = (2 v1 G - 2 v2 G) v
+// So, this is a linear system for which we need the solution
+// Expressed as an homogeneous system we obtain
+// 0 = h (G[v1] - G[v2]) + (2 v2 G - 2 v1 G) v
+//
+// Next we want to get the center and radius.
+// The equation to resolve is
+// G[ePt + t eDir - v1] = G[ePt + t eDir - v2]
+// with v1 in the facet and v2 outside of it.
+// That reduces to
+// G[v1] - G[v2] = (2 v1 G - 2 v2 G) (ePt + t eDir)
+// The linear system is then written as
+// C = t D
+template<typename T>
+struct AdjacentDelaunayPointSolver {
+private:
+  int n;
+  MyMatrix<T> const& GramMat;
+  MyMatrix<T> const& EXT;
+  Face const& eInc;
+  std::vector<T> LineGramMat;
+  MyVector<T> ePt;
+  MyVector<T> eDir;
+  MyVector<T> v1;
+  T G_v1;
+  MyVector<T> two_v1_G;
+  std::ostream& os;
+public:
+  AdjacentDelaunayPointSolver(MyMatrix<T> const &_GramMat, MyMatrix<T> const &_EXT, Face const &_eInc, std::ostream& _os) : n(_GramMat.rows()), GramMat(_GramMat), EXT(_EXT), eInc(_eInc), LineGramMat(GetLineVector(GramMat)), ePt(GramMat.rows()), eDir(GramMat.rows()), os(_os) {
+    std::vector<size_t> V;
+    size_t n_vert = EXT.rows();
+    for (size_t i=0; i<n_vert; i++) {
+      if (eInc[i] == 1) {
+        V.push_back(i);
+      }
+    }
+    size_t cnt = V.size();
+    v1 = GetMatrixRow(EXT, V[0]);
+    G_v1 = EvaluateLineVector(LineGramMat, v1);
+    two_v1_G = 2 * GramMat * v1;
+    MyMatrix<T> Equa(cnt-1, n+1);
+    for (size_t i_vert=0; i_vert<cnt-1; i_vert++) {
+      MyVector<T> v2 = GetMatrixRow(EXT, V[i_vert + 1]);
+      T G_v2 = EvaluateLineVector(LineGramMat, v2);
+      MyVector<T> two_v2_G = 2 * GramMat * v2;
+      Equa(i_vert, 0) = G_v1 - G_v2;
+      for (int i=0; i<n; i++) {
+        Equa(i_vert, i + 1) = two_v2_G(i) - two_v1_G(i);
+      }
+    }
+    MyMatrix<T> NSP = NullspaceTrMat(Equa);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    if (NSP.rows() != 2) {
+      std::cerr << "Error in the computation of the kernel\n";
+      throw TerminalException{1};
+    }
+#endif
+    auto get_point_direction=[&]() -> void {
+      for (int pos=0; pos<2; pos++) {
+        if (NSP(pos,0) != 0) {
+          for (int i=0; i<n; i++) {
+            ePt(i) = NSP(pos,i+1) / NSP(pos,0);
+          }
+          for (int i=0; i<n; i++) {
+            eDir(i) = NSP(1-pos, i+1) - ePt(i) * NSP(1-pos,0);
+          }
+          return;
+        }
+      }
+      std::cerr << "Failed to find a non-zero entry\n";
+      throw TerminalException{1};
+    };
+    get_point_direction();
+  }
+  // v2 should be a point outside of the plane
+  CP<T> GetCenterRadius(MyVector<T> const& v2) {
+    T G_v2 = EvaluateLineVector(LineGramMat, v2);
+    MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
+    T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
+    T D_cst = two_v1_m_v2_G.dot(eDir);
+    T t = C_cst / D_cst;
+    MyVector<T> eCent = ePt + t * eDir;
+    MyVector<T> delta = eCent - v1;
+    T eSqrDist = EvaluateLineVector(LineGramMat, delta);
+    MyVector<T> eCentRet(n+1);
+    eCentRet(0) = 1;
+    for (int i=0; i<n; i++)
+      eCentRet(i+1) = eCent(i);
+    return {eSqrDist, eCentRet};
+  }
+};
+
+
+
 template <typename T, typename Tint>
 MyMatrix<Tint>
 FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
