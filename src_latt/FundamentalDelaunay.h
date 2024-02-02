@@ -182,7 +182,7 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
     }
   }
 #endif
-  return {SquareRadius, eCent};
+  return {std::move(SquareRadius), std::move(eCent)};
 }
 
 
@@ -221,7 +221,7 @@ private:
   MyVector<T> two_v1_G;
   std::ostream& os;
 public:
-  AdjacentDelaunayPointSolver(MyMatrix<T> const &_GramMat, MyMatrix<T> const &_EXT, Face const &_eInc, std::ostream& _os) : n(_GramMat.rows()), GramMat(_GramMat), EXT(_EXT), eInc(_eInc), LineGramMat(GetLineVector(GramMat)), ePt(GramMat.rows()), eDir(GramMat.rows()), os(_os) {
+  AdjacentDelaunayPointSolver(MyMatrix<T> const &_GramMat, MyMatrix<T> const &_EXT, Face const &_eInc, std::ostream& _os) : n(_GramMat.rows()), GramMat(_GramMat), EXT(_EXT), eInc(_eInc), LineGramMat(GetLineVector(GramMat)), ePt(GramMat.rows()), eDir(GramMat.rows()), v1(n), os(_os) {
     std::vector<size_t> V;
     size_t n_vert = EXT.rows();
     for (size_t i=0; i<n_vert; i++) {
@@ -230,12 +230,17 @@ public:
       }
     }
     size_t cnt = V.size();
-    v1 = GetMatrixRow(EXT, V[0]);
+    for (int i=0; i<n; i++) {
+      v1(i) = EXT(V[0], i+1);
+    }
     G_v1 = EvaluateLineVector(LineGramMat, v1);
     two_v1_G = 2 * GramMat * v1;
     MyMatrix<T> Equa(cnt-1, n+1);
+    MyVector<T> v2(n);
     for (size_t i_vert=0; i_vert<cnt-1; i_vert++) {
-      MyVector<T> v2 = GetMatrixRow(EXT, V[i_vert + 1]);
+      for (int i=0; i<n; i++) {
+        v2(i) = EXT(V[i_vert + 1], i+1);
+      }
       T G_v2 = EvaluateLineVector(LineGramMat, v2);
       MyVector<T> two_v2_G = 2 * GramMat * v2;
       Equa(i_vert, 0) = G_v1 - G_v2;
