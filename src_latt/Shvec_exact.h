@@ -723,19 +723,68 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   return {TheNorm, std::move(ListClos)};
 }
 
-/*
 template <typename T, typename Tint>
 struct CVPSolver {
 private:
   MyMatrix<T> const &GramMat;
-  T_shvec_request<T> request;
+  int dim;
+  LLLreduction<T, Tint> eRec;
   std::ostream& os;
-  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream& _os) GramMat(_GramMat), os(_os) {
+  MyMatrix<T> Q_T;
+  T_shvec_request<T> request;
+  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream& _os) : GramMat(_GramMat), dim(GramMat.rows()), eRec(LLLreducedBasisDual<T, Tint>(GramMat)), os(_os) {
+    MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
+    Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
+    T bound_unset = 0;
+    MyVector<T> V_unset(dim);
+    bool central = false;
+    request = T_shvec_request<T>{
+      dim,          bound_unset,
+      V_unset, eRec.GramMatRed, central};
   }
   resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) {
+    if (IsIntegralVector(eV)) {
+      T TheNorm = 0;
+      MyMatrix<Tint> ListVect(1, dim);
+      for (int i = 0; i < dim; i++)
+        ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
+      return {TheNorm, ListVect};
+    }
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+    std::pair<MyVector<Tint>, MyVector<T>> ePair =
+      ReductionMod1vector<T, Tint>(cosetRed);
+    request.coset = ePair.second;
+    T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
+    int nbVect = info.short_vectors.size();
+    MyMatrix<Tint> ListClos(nbVect, dim);
+    for (int iVect = 0; iVect < nbVect; iVect++) {
+      MyVector<Tint> x = eRec.P.transpose() * (info.short_vectors[iVect] - ePair.first);
+      for (int i = 0; i < dim; i++) {
+        ListClos(iVect, i) = x(i);
+      }
+    }
+    MyVector<T> eDiff(dim);
+    for (int i = 0; i < dim; i++)
+      eDiff(i) = ListClos(0, i) - eV(i);
+    T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
+#ifdef DEBUG_SHVEC
+    for (int iVect = 0; iVect < nbVect; iVect++) {
+      for (int i = 0; i < dim; i++)
+        eDiff(i) = ListClos(iVect, i) - eV(i);
+      if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+    }
+    resultCVP<T, Tint> res = CVPVallentinProgram_exact(GramMat, eV, os);
+    if (res.TheNorm != TheNorm || res.ListVect.rows() != ListClos.rows()) {
+      std::cerr << "Inconsistecy error between the two methods\n";
+      throw TerminalException{1};
+    }
+#endif
+    return {TheNorm, std::move(ListClos)};
   }
 };
-*/
 
 
 
