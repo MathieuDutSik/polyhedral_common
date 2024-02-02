@@ -4,9 +4,14 @@
 
 #include "boost_serialization.h"
 #include "MPI_functionality.h"
+#include "Timings.h"
 
 #ifdef DEBUG
 #define DEBUG_ADJACENCY_SCHEME
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_ADJACENCY_SCHEME
 #endif
 
 /*
@@ -243,7 +248,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
       Tobj &x = V[idx];
+#ifdef TIMINGS_ADJACENCY_SCHEME
+      MicrosecondTime time;
+#endif
       std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
+#ifdef TIMINGS_ADJACENCY_SCHEME
+      os << "|f_repr|=" << time << "\n";
+#endif
       if (opt) {
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: Conclude with an equivalence\n";

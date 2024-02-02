@@ -127,8 +127,8 @@ int main(int argc, char *argv[]) {
     //
     T_shvec_request<T> request =
         initShvecReq(gram_matrix, cosetVect, bound, mode);
-    std::cerr << "Before computeShvec mode=" << request.mode << "\n";
-    T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, std::cerr);
+    std::cerr << "Before computeShvec mode=" << mode << "\n";
+    T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, mode, std::cerr);
     int nbVect = info.short_vectors.size();
     std::cerr << "After computeShvec |V|=" << nbVect << "\n";
     //
