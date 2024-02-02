@@ -893,7 +893,7 @@ MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T, Tidx> const &data) {
 }
 
 template <typename T>
-TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG) {
+TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG, std::ostream& os) {
   int n = eG.rows();
   int n_elt = 1;
   for (int i = 0; i < n; i++)
@@ -911,7 +911,7 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG) {
     if (esum > 0) {
       for (int i = 0; i < n; i++)
         Vmid(i, 0) = M(i_row, i) / 2;
-      resultCVP<T, T> result = CVPVallentinProgram_exact(eG, Vmid);
+      resultCVP<T, T> result = CVPVallentinProgram_exact(eG, Vmid, os);
       int n_closest = result.ListVect.rows();
       if (n_closest != 2) {
         std::cerr << "n_closest=" << n_closest << "\n";

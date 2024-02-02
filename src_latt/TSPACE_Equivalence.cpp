@@ -60,7 +60,7 @@ int main(int argc, char *argv[]) {
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
     MyMatrix<T> eMat1 = ReadMatrixFile<T>(FileGram1);
     MyMatrix<T> eMat2 = ReadMatrixFile<T>(FileGram2);
-    std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(LinSpa, eMat1, eMat2, std::cerr);
+    std::optional<MyMatrix<Tint>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(LinSpa, eMat1, eMat2, std::cerr);
     if (FileOut == "stderr") {
       write_result(opt, OutFormat, std::cerr);
     } else {

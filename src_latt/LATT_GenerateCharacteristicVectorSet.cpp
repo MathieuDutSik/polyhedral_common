@@ -13,10 +13,10 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
       return MatrixFromVectorFamily(info.short_vectors);
     }
     if (choice == "relevant_voronoi") {
-      return ComputeVoronoiRelevantVector<T,Tint>(GramMat);
+      return ComputeVoronoiRelevantVector<T,Tint>(GramMat, std::cerr);
     }
     if (choice == "filtered_relevant_voronoi") {
-      MyMatrix<Tint> M = ComputeVoronoiRelevantVector<T,Tint>(GramMat);
+      MyMatrix<Tint> M = ComputeVoronoiRelevantVector<T,Tint>(GramMat, std::cerr);
       return FilterByNorm(GramMat, M);
     }
     if (choice == "fullrank") {

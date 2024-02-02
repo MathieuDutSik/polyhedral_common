@@ -14,6 +14,10 @@
 #define CHECK_SHVEC
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_SHVEC
+#endif
+
 //#ifdef DEBUG
 //#define DEBUG_SHVEC
 //#define DEBUG_SHVEC_VECTOR
@@ -668,15 +672,27 @@ void check_shvec_info_request(T_shvec_info<T, Tint> const &info,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
+T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request, [[maybe_unused]] std::ostream & os) {
+#ifdef TIMINGS_SHVEC
+  MicrosecondTime time;
+#endif
   std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>> ePair =
       GetReducedShvecRequest<T, Tint>(request);
+#ifdef TIMINGS_SHVEC
+  os << "|GetReducedShvecRequest|=" << time << "\n";
+#endif
   T_shvec_info<T, Tint> info1 = T_computeShvec_Kernel<T, Tint>(ePair.first);
+#ifdef TIMINGS_SHVEC
+  os << "|T_computeShvec_Kernel|=" << time << "\n";
+#endif
 #ifdef CHECK_SHVEC
   std::cerr << "Case 1\n";
   check_shvec_info_request(info1, ePair.first);
 #endif
   T_shvec_info<T, Tint> info2 = ApplyReductionToShvecInfo(info1, ePair.second);
+#ifdef TIMINGS_SHVEC
+  os << "|ApplyReductionToShvecInfo|=" << time << "\n";
+#endif
 #ifdef CHECK_SHVEC
   std::cerr << "Case 2\n";
   check_shvec_info_request(info2, request);
@@ -686,7 +702,10 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request) {
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
-                                             MyVector<T> const &eV) {
+                                             MyVector<T> const &eV, std::ostream& os) {
+#ifdef TIMINGS_SHVEC
+  MicrosecondTime time;
+#endif
   int dim = GramMat.rows();
   MyVector<T> cosetVect = -eV;
   if (IsIntegralVector(eV)) {
@@ -700,7 +719,13 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   T bound = 0;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
-  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request);
+#ifdef TIMINGS_SHVEC
+  os << "|initShvecReq|=" << time << "\n";
+#endif
+  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, os);
+#ifdef TIMINGS_SHVEC
+  os << "|T_computeShvec|=" << time << "\n";
+#endif
   int nbVect = info.short_vectors.size();
   MyMatrix<Tint> ListClos(nbVect, dim);
   for (int iVect = 0; iVect < nbVect; iVect++)
@@ -710,12 +735,15 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   for (int i = 0; i < dim; i++)
     eDiff(i) = ListClos(0, i) - eV(i);
   T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
+#ifdef TIMINGS_SHVEC
+  os << "|T_computeShvec|=" << time << "\n";
+#endif
   return {TheNorm, std::move(ListClos)};
 }
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
-                                   T const &MaxNorm) {
+                                   T const &MaxNorm, std::ostream& os) {
   int dim = GramMat.rows();
   if (dim == 1) {
     std::vector<MyVector<Tint>> ListVect;
@@ -737,7 +765,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
   request.central = true;
   //
-  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request);
+  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, os);
   //
   return MatrixFromVectorFamily(info.short_vectors);
 }

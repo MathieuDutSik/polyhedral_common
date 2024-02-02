@@ -13,11 +13,11 @@
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
                                               MyVector<T> const &eV,
-                                              std::string const &NameMeth) {
+                                              std::string const &NameMeth, std::ostream& os) {
   /*
   bool DoCheck = false;
   if (DoCheck) {
-    resultCVP<T, Tint> res1 = CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
+    resultCVP<T, Tint> res1 = CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
     resultCVP<T, Tint> res2 = CVP_N23_24A1<T, Tint>(eV);
     if (res1 != res2) {
       std::cerr << "res1.TheNorm=" << res1.TheNorm << "\n";
@@ -36,7 +36,7 @@ resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
   */
   //
   if (NameMeth == "SVexact")
-    return CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
+    return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
     //
 #ifdef USE_LIBSHORT
   if (NameMeth == "SVdouble")
@@ -49,13 +49,13 @@ resultCVP<T, Tint> CVPVallentinProgram_choice(MyMatrix<T> const &GramMat,
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
-                                       MyVector<T> const &eV) {
-  return CVPVallentinProgram_exact<T, Tint>(GramMat, eV);
+                                       MyVector<T> const &eV, std::ostream& os) {
+  return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm) {
-  return T_ShortVector_exact<T, Tint>(GramMat, MaxNorm);
+MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm, std::ostream& os) {
+  return T_ShortVector_exact<T, Tint>(GramMat, MaxNorm, os);
 }
 
 template <typename T, typename Tint>
