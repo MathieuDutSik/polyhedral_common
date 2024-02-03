@@ -732,6 +732,7 @@ private:
   std::ostream& os;
   MyMatrix<T> Q_T;
   T_shvec_request<T> request;
+public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream& _os) : GramMat(_GramMat), dim(GramMat.rows()), eRec(LLLreducedBasisDual<T, Tint>(GramMat)), os(_os) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);

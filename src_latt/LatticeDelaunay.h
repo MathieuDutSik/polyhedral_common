@@ -28,6 +28,7 @@ struct DataLattice {
   int n;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
+  CVPSolver<T,Tint> solver;
   std::string CVPmethod;
   RecordDualDescOperation<T,Tgroup> rddo;
   int max_runtime_second;
@@ -41,12 +42,13 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   int n = GramMat.rows();
   MyMatrix<T> SHV(0,n);
   std::string CVPmethod = "SVexact";
+  CVPSolver<T,Tint> solver(GramMat, os);
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int max_runtime_second = 0;
   bool Saving = false;
   std::string Prefix = "/irrelevant";
-  return {n, GramMat, SHV, CVPmethod, std::move(rddo), max_runtime_second, Saving, Prefix};
+  return {n, GramMat, SHV, solver, CVPmethod, std::move(rddo), max_runtime_second, Saving, Prefix};
 }
 
 
@@ -885,9 +887,11 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  CVPSolver<T,Tint> solver(GramMat, os);
   DataLattice<T, Tint, Tgroup> eData{n,
                                      GramMat,
                                      SVR,
+                                     solver,
                                      CVPmethod,
                                      std::move(rddo),
                                      max_runtime_second,
