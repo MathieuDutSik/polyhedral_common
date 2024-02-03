@@ -29,7 +29,6 @@ struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   CVPSolver<T,Tint> solver;
-  std::string CVPmethod;
   RecordDualDescOperation<T,Tgroup> rddo;
   int max_runtime_second;
   bool Saving;
@@ -41,14 +40,13 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   using TintGroup = typename Tgroup::Tint;
   int n = GramMat.rows();
   MyMatrix<T> SHV(0,n);
-  std::string CVPmethod = "SVexact";
   CVPSolver<T,Tint> solver(GramMat, os);
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int max_runtime_second = 0;
   bool Saving = false;
   std::string Prefix = "/irrelevant";
-  return {n, GramMat, SHV, solver, CVPmethod, std::move(rddo), max_runtime_second, Saving, Prefix};
+  return {n, GramMat, SHV, solver, std::move(rddo), max_runtime_second, Saving, Prefix};
 }
 
 
@@ -791,7 +789,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListBoolValues2["Saving"] = false;
   ListStringValues2["Prefix"] = "/irrelevant/";
-  ListStringValues2["CVPmethod"] = "SVexact";
   SingleBlock BlockSTORAGE;
   BlockSTORAGE.ListIntValues = ListIntValues2;
   BlockSTORAGE.ListBoolValues = ListBoolValues2;
@@ -882,7 +879,6 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   int n = GramMat.rows();
-  std::string CVPmethod = "SVexact";
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
@@ -891,7 +887,6 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
                                      GramMat,
                                      SVR,
                                      solver,
-                                     CVPmethod,
                                      std::move(rddo),
                                      max_runtime_second,
                                      STORAGE_Saving,
