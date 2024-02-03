@@ -505,7 +505,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 #endif
   std::vector<Delaunay_AdjI<Tint>> ListAdj;
   for (auto &eOrbB : TheOutput) {
-    MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, EXT_T, eOrbB, eData.CVPmethod, os);
+    MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, eData.solver, EXT_T, eOrbB, os);
     Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
     ListAdj.push_back(eAdj);
   }
@@ -523,8 +523,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   using TadjI = Delaunay_AdjI<Tint>;
   using TadjO = Delaunay_MPI_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
-    return FindDelaunayPolytope<T, Tint>(
-       eData.GramMat, eData.CVPmethod, os);
+    return FindDelaunayPolytope<T, Tint>(eData.GramMat, eData.solver, os);
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
     return ComputeInvariantDelaunay(eData, seed, x, os);
@@ -689,7 +688,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   using TadjO = Delaunay_AdjO<Tint>;
   auto f_init=[&]() -> Tobj {
     return FindDelaunayPolytope<T, Tint>(
-       eData.GramMat, eData.CVPmethod, os);
+       eData.GramMat, eData.solver, os);
   };
   auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
     return ComputeInvariantDelaunay(eData, seed, x, os);

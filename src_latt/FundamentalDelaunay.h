@@ -43,7 +43,7 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
-                                    std::string const &CVPmethod,
+                                    CVPSolver<T,Tint> & solver,
                                     std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
@@ -81,8 +81,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     assert(eSol.PrimalDefined);
     MyVector<T> eVect = eSol.DirectSolution;
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
-    resultCVP<T, Tint> TheCVP =
-      CVPVallentinProgram<T, Tint>(GramMat, eVect, CVPmethod, os);
+    resultCVP<T, Tint> TheCVP = solver.SingleSolver(eVect);
     int nbVectTot = TheCVP.ListVect.rows();
     if (TheCVP.TheNorm == TheNorm) {
       MyMatrix<Tint> RetEXT(nbVectTot, dim + 1);
@@ -292,8 +291,8 @@ public:
 
 template <typename T, typename Tint>
 MyMatrix<Tint>
-FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
-                             Face const &eInc, std::string const &CVPmethod, std::ostream& os) {
+FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & solver, MyMatrix<T> const &EXT,
+                             Face const &eInc, std::ostream& os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -371,7 +370,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT,
       MyVector<T> eCenter(dim);
       for (int i = 0; i < dim; i++)
         eCenter(i) = eCP.eCent(i + 1);
-      resultCVP<T, Tint> reply = CVPVallentinProgram<T, Tint>(GramMat, eCenter, CVPmethod, os);
+      resultCVP<T, Tint> reply = solver.SingleSolver(eCenter);
       if (reply.TheNorm == eCP.SquareRadius)
         return reply;
       for (int i = 0; i < dim; i++)

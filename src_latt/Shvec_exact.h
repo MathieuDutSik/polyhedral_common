@@ -759,7 +759,7 @@ public:
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
-      MyVector<Tint> x = eRec.P.transpose() * (info.short_vectors[iVect] - ePair.first);
+      MyVector<Tint> x = eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
       for (int i = 0; i < dim; i++) {
         ListClos(iVect, i) = x(i);
       }
