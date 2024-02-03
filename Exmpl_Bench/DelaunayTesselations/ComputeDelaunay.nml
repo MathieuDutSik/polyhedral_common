@@ -17,6 +17,6 @@
 
 &STORAGE
  Saving = T
- Prefix = "DATA/Delaunay_"
+ Prefix = "DATA/"
 /
 

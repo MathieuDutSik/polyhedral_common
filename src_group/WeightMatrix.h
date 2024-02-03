@@ -1422,8 +1422,8 @@ GetStabilizerWeightMatrix_Kernel(WeightMatrix<is_symm, T, Tidx_value> const &WMa
   std::vector<std::vector<Tidx>> LGen = GetStabilizerWeightMatrix_Kernel_idxin<Tgr, Tidx>(eGR, nbRow, os);
 #ifdef DEBUG_WEIGHT_MATRIX
   for (auto & eGen : LGen) {
-    for (int i=0; i<nbRow; i++) {
-      for (int j=0; j<nbRow; j++) {
+    for (size_t i=0; i<nbRow; i++) {
+      for (size_t j=0; j<nbRow; j++) {
         int iImg = eGen[i];
         int jImg = eGen[j];
         Tidx_value val1 = WMat.GetValue(i, j);
@@ -1446,9 +1446,6 @@ Tgroup GetStabilizerWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
   using Tidx = typename Telt::Tidx;
   std::vector<std::vector<Tidx>> ListGen =
       GetStabilizerWeightMatrix_Kernel<T, Tgr, Tidx, Tidx_value>(WMat, os);
-
-
-  
   size_t nbRow = WMat.rows();
   std::vector<Telt> LGen;
   for (auto &eList : ListGen)

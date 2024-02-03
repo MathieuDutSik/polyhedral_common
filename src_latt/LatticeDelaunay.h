@@ -29,11 +29,23 @@ struct DataLattice {
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   CVPSolver<T,Tint> solver;
+  MyMatrix<Tint> ShvGraverBasis;
   RecordDualDescOperation<T,Tgroup> rddo;
   int max_runtime_second;
   bool Saving;
   std::string Prefix;
 };
+
+template<typename T, typename Tint>
+MyMatrix<Tint> GetGraverBasis(MyMatrix<T> const& GramMat) {
+  int n = GramMat.rows();
+  MyMatrix<Tint> M = ZeroMatrix<Tint>(2*n, n);
+  for (int i=0; i<n; i++) {
+    M(i, i) = 1;
+    M(i + n, i) = -1;
+  }
+  return M;
+}
 
 template <typename T, typename Tint, typename Tgroup>
 DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostream& os) {
@@ -41,12 +53,13 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   int n = GramMat.rows();
   MyMatrix<T> SHV(0,n);
   CVPSolver<T,Tint> solver(GramMat, os);
+  MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int max_runtime_second = 0;
   bool Saving = false;
   std::string Prefix = "/irrelevant";
-  return {n, GramMat, SHV, solver, std::move(rddo), max_runtime_second, Saving, Prefix};
+  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo), max_runtime_second, Saving, Prefix};
 }
 
 
@@ -503,7 +516,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 #endif
   std::vector<Delaunay_AdjI<Tint>> ListAdj;
   for (auto &eOrbB : TheOutput) {
-    MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, eData.solver, EXT_T, eOrbB, os);
+    MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(eData.GramMat, eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
     Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
     ListAdj.push_back(eAdj);
   }
@@ -883,10 +896,12 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   CVPSolver<T,Tint> solver(GramMat, os);
+  MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
   DataLattice<T, Tint, Tgroup> eData{n,
                                      GramMat,
                                      SVR,
                                      solver,
+                                     ShvGraverBasis,
                                      std::move(rddo),
                                      max_runtime_second,
                                      STORAGE_Saving,

@@ -14,6 +14,10 @@
 #define CHECK_SHVEC
 #endif
 
+#ifdef DEBUG
+#define DEBUG_SHVEC
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_SHVEC
 #endif
@@ -768,7 +772,7 @@ public:
     for (int i = 0; i < dim; i++)
       eDiff(i) = ListClos(0, i) - eV(i);
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
-#ifdef DEBUG_SHVEC
+#ifdef DEBUG_SHVEC_DISABLED
     for (int iVect = 0; iVect < nbVect; iVect++) {
       for (int i = 0; i < dim; i++)
         eDiff(i) = ListClos(iVect, i) - eV(i);
@@ -777,7 +781,7 @@ public:
         throw TerminalException{1};
       }
     }
-    resultCVP<T, Tint> res = CVPVallentinProgram_exact(GramMat, eV, os);
+    resultCVP<T, Tint> res = CVPVallentinProgram_exact<T,Tint>(GramMat, eV, os);
     if (res.TheNorm != TheNorm || res.ListVect.rows() != ListClos.rows()) {
       std::cerr << "Inconsistecy error between the two methods\n";
       throw TerminalException{1};

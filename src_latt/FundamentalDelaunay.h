@@ -285,14 +285,24 @@ public:
       eCentRet(i+1) = eCent(i);
     return {eSqrDist, eCentRet};
   }
+  T GetRadius(MyVector<T> const& v2) {
+    T G_v2 = EvaluateLineVector(LineGramMat, v2);
+    MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
+    T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
+    T D_cst = two_v1_m_v2_G.dot(eDir);
+    T t = C_cst / D_cst;
+    MyVector<T> eCent = ePt + t * eDir;
+    MyVector<T> delta = eCent - v1;
+    return EvaluateLineVector(LineGramMat, delta);
+  }
 };
 
 
 
 template <typename T, typename Tint>
 MyMatrix<Tint>
-FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & solver, MyMatrix<T> const &EXT,
-                             Face const &eInc, std::ostream& os) {
+FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & solver, MyMatrix<Tint> const& ShvGraverBasis,
+                             MyMatrix<T> const &EXT, Face const &eInc, std::ostream& os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -313,16 +323,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
     SelectedVertex(i) = EXT(jRow, i + 1);
   SelectedVertex(iColFind) += delta;
   AdjacentDelaunayPointSolver<T> adps(GramMat, EXT, eInc, os);
-  T MinRadius = adps.GetCenterRadius(SelectedVertex).SquareRadius;
-  std::vector<MyVector<T>> ListGraverOptions;
-  for (int i = 0; i < dim; i++) {
-    MyVector<T> V1 = ZeroVector<T>(dim);
-    V1(i) = 1;
-    ListGraverOptions.push_back(V1);
-    MyVector<T> V2 = ZeroVector<T>(dim);
-    V2(i) = -1;
-    ListGraverOptions.push_back(V2);
-  }
+  T MinRadius = adps.GetRadius(SelectedVertex);
   auto fGraverUpdate = [&]() -> void {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     MicrosecondTime time_graver;
@@ -332,13 +333,17 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
 #endif
     while (true) {
       bool IsImprovement = false;
-      for (auto &fVect : ListGraverOptions) {
-        MyVector<T> NewTestVert = SelectedVertex + fVect;
+      MyVector<T> NewTestVert(dim);
+      int n_graver = ShvGraverBasis.rows();
+      for (int i_graver=0; i_graver<n_graver; i_graver++) {
+        for (int i=0; i<dim; i++) {
+          NewTestVert(i) = SelectedVertex(i) + ShvGraverBasis(i_graver, i);
+        }
         T eScal = TheFac(0);
         for (int i = 0; i < dim; i++)
           eScal += NewTestVert(i) * TheFac(i + 1);
         if (eScal < 0) {
-          T TheRadius = adps.GetCenterRadius(NewTestVert).SquareRadius;
+          T TheRadius = adps.GetRadius(NewTestVert);
           if (TheRadius < MinRadius) {
             IsImprovement = true;
             SelectedVertex = NewTestVert;
@@ -354,7 +359,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
 #endif
       if (!IsImprovement) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-        os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update << " |ListGraverOptions|=" << ListGraverOptions.size() << "\n";
+        os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update << " |ShvGraverBasis|=" << n_graver << "\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
         os << "|fGraverUpdate|=" << time_graver << "\n";
