@@ -570,9 +570,12 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   //
   // Some data
   //
-  std::string FileNb = eData.Prefix + "number_orbit";
-  std::string FileStatus = eData.Prefix + "orbit_status";
-  std::string FileDatabase = eData.Prefix + "database";
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string BigPrefix = eData.Prefix + "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+  std::string FileNb = BigPrefix + "number_orbit";
+  std::string FileStatus = BigPrefix + "orbit_status";
+  std::string FileDatabase = BigPrefix + "database";
   bool is_database_present = false;
   if (eData.Saving) {
     is_database_present = IsExistingFile(FileNb);

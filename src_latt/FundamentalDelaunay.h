@@ -44,7 +44,7 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
 template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
                                     CVPSolver<T,Tint> & solver,
-                                    std::ostream &os) {
+                                    [[maybe_unused]] std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
   std::vector<MyVector<T>> ListRelevantPoint;
