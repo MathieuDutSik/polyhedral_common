@@ -505,11 +505,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return do_something;
   };
+  // Returns true if something was actually done.
   auto f_clear_buffers=[&]() -> bool {
     // Transmitting the generated entriesAdjI
     bool test1 = flush_entriesAdjI();
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: f_clear_buffer : flush_entriesAdjI=" << test1 << "\n";
+    os << "ADJ_SCH: f_clear_buffers : flush_entriesAdjI=" << test1 << "\n";
 #endif
     if (test1) {
       return true;
@@ -517,7 +518,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     // transmitting the generated entriesAdjO
     bool test2 = flush_entriesAdjO();
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: f_clear_buffer : flush_entriesAdjO=" << test2 << "\n";
+    os << "ADJ_SCH: f_clear_buffers : flush_entriesAdjO=" << test2 << "\n";
 #endif
     if (test2) {
       return true;
@@ -525,7 +526,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     // compute the entryAdjO from entryAdjI
     bool test3 = compute_entries_adjI();
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: f_clear_buffer : compute_entries_adjI=" << test3 << "\n";
+    os << "ADJ_SCH: f_clear_buffers : compute_entries_adjI=" << test3 << "\n";
 #endif
     if (test3) {
       return true;
@@ -533,7 +534,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     // write down adjacencies if done
     bool test4 = write_set_adj();
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: f_clear_buffer : write_set_adj=" << test4 << "\n";
+    os << "ADJ_SCH: f_clear_buffers : write_set_adj=" << test4 << "\n";
 #endif
     if (test4) {
       return true;
@@ -617,21 +618,24 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (early_termination) {
       break;
     }
-    boost::optional<boost::mpi::status> prob = comm.iprobe();
-    if (prob) {
+    bool did_something = false;
+    boost::optional<boost::mpi::status> opt = comm.iprobe();
+    if (opt) {
+      did_something = true;
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: prob is not empty\n";
 #endif
-      bool test = process_mpi_status(*prob);
+      boost::mpi::status const& prob = *opt;
+      bool test = process_mpi_status(prob);
       if (test) {
         break;
       }
     } else {
-      bool test = f_clear_buffers();
+      did_something = f_clear_buffers();
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: f_clear_buffer test=" << test << "\n";
+      os << "ADJ_SCH: f_clear_buffers did_something=" << did_something << "\n";
 #endif
-      if (!test) {
+      if (!did_something) {
         bool test_terminate=terminate();
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: test_terminate=" << test_terminate << "\n";
@@ -639,6 +643,17 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
         if (test_terminate) {
           break;
         }
+      }
+    }
+    if (!did_something) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: Going to the blocking wait\n";
+#endif
+      // Nothing was done, so we switch from iprobe to probe
+      boost::mpi::status prob = comm.probe();
+      bool test = process_mpi_status(prob);
+      if (test) {
+        break;
       }
     }
   }
