@@ -295,13 +295,6 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
 }
 
 template<typename Tvert, typename Tgroup>
-struct AdjRepart {
-  int iOrb;
-  Face eInc;
-  MyMatrix<Tvert> eBigMat;
-};
-
-template<typename Tvert, typename Tgroup>
 struct RepartEntry {
   MyMatrix<Tvert> EXT;
   Tgroup TheStab;
@@ -378,6 +371,21 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
         ePermGen.push_back(pos_idx);
       }
     }
+  };
+  auto get_sub_vertices=[&](Face const& f) -> MyMatrix<Tvert> {
+    int siz = f.count();
+    MyMatrix<Tvert> EXT(siz, n+1);
+    int nVert=f.size();
+    int pos = 0;
+    for (int iVert=0; iVert<nVert; iVert++) {
+      if (f[iVert] == 1) {
+        for (int i=0; i<=n; i++) {
+          EXT(pos,i) = ListVertices[iVert](i);
+        }
+        pos++;
+      }
+    }
+    return EXT;
   };
   auto get_v_positions=[&](MyMatrix<Tvert> const& eMat) -> std::optional<std::vector<Tidx>> {
     size_t len = n_vertices - 1;
@@ -526,7 +534,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
   }
-  auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> AdjRepart<Tvert, Tgroup> {
+  auto FuncInsertFacet=[&](MyVector<T> const& eFac) -> Delaunay_AdjO<Tvert> {
     std::vector<Tidx> Linc;
     Face Linc_face(nVert);
     std::vector<MyVector<Tvert>> EXT_list;
@@ -544,7 +552,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       if (opt) {
         MyMatrix<Tvert> const& EXT = ListOrbitFacet[iOrb].EXT;
         MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
-        return {iOrb, {}, eBigMat};
+        return {iOrb, {}, std::move(eBigMat)};
       }
     }
     // A new facet is either barrel or higher because we put all the loiwer ones already
@@ -563,7 +571,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     ListOrbitFacet_prov.push_back(rep);
     int iOrb = nOrb;
     MyMatrix<Tvert> eBigMat = IdentityMat<Tvert>(n+1);
-    return {iOrb, {}, eBigMat};
+    return {iOrb, {}, std::move(eBigMat)};
   };
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<Text_int> TotalListVertices_int = Get_EXT_int(TotalListVertices);
@@ -574,22 +582,23 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       if (!ListOrbitFacet_prov[iOrb].Status) {
         Face const& Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
         Tgroup Stab = PermGRP.Stabilizer_OnSets(Linc_face);
-        Tgroup TheStab = RenormStabilizer(Stab);
+        Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
         ListOrbitFacet[iOrb].TheStab = TheStab;
         std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-        MyMatrix<Tvert> EXT1 = SelectRow(ListVertices, Linc_face);
+        MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
         MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
         vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
         FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, rddo.os);
         for (auto & eFace : vf) {
           Face eInc = frame.FlipFace(eFace);
           MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
-          AdjRepart<Tvert, Tgroup> eAdj = FuncInsertFacet(eFac);
-          std::vector<Tidx> LEV;
-          for (size_t iInc=0; iInc<ListOrbitFacet_prov[iOrb].Linc.size(); iInc++) {
+          Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
+          size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
+          Face LEV(nVert);
+          for (size_t iInc=0; iInc<nVert; iInc++) {
             Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
             if (get_incd_status(jInc, eFac)) {
-              LEV.push_back(iInc);
+              LEV[iInc] = 1;
             }
           }
           eAdj.eInc = LEV;
@@ -1198,7 +1207,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
 }
 
 template<typename T, typename Tint, typename Tgroup>
-void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, std::ostream & os) {
+void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
   //  int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
