@@ -223,6 +223,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // the same, then there was no computation going on.
   // The none is also used for the tracking of the adjacencies entries.
   size_t nonce = 1;
+  // We have two ways of terminating a computation.
+  // * One is by runtime elapsing. When this is reached, the processes need to
+  //   finish the processing of the entries that are being treated.
+  // * Another is by the early_termination. In that case, disorderly exit is fine.
+  //   We got something wrong, no point in continuing.
+  // They behave in different ways
   bool early_termination = false;
   //
   // The lambda functions

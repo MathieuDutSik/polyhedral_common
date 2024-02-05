@@ -42,7 +42,11 @@
 #define TIMINGS_LIN_POLYTOPE_INTEGRAL_WMAT
 #endif
 
+#ifdef DEBUG
+static const size_t THRESHOLD_USE_SUBSET_SCHEME = 100;
+#else
 static const size_t THRESHOLD_USE_SUBSET_SCHEME = 1000;
+#endif
 
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix
