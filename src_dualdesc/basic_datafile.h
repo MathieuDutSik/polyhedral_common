@@ -551,6 +551,15 @@ public:
     }
   }
 
+  std::vector<size_t> read_all_sizes() {
+    std::vector<size_t> l_sizes(n_ent);
+    for (size_t i=0; i<n_ent; i++) {
+      size_t len = read_size_t(fp_number, i + 2);
+      l_sizes[i] = len;
+    }
+    return l_sizes;
+  }
+
   // The iterator business
   using iterator = IteratorData;
   using const_iterator = IteratorData;

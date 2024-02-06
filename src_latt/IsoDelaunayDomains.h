@@ -1082,6 +1082,8 @@ namespace boost::serialization {
 /*
   We do not use the ComputeInvariantDelaunay function since it requires having the
   GramMatrix, which would be an additional computation.
+  ---
+  BUT we should have some invariants coming from the Tspace and right now we have none.
  */
 template<typename T, typename Tint, typename Tgroup>
 size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
