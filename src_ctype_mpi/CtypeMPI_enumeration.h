@@ -14,28 +14,10 @@
 #include <unordered_map>
 // clang-format on
 
-template<typename Tvert, typename Tgroup>
+template<typename Tint, typename Tgroup>
 struct DataCtype {
   int n;
 };
-
-
-
-/*
-  We implement the hash of a Delaunay tessellationn. The constraint is that two different
-  but equivalent tessellations, must have the same hash. Hopefully, this is not a problem
-  since we have many invariants:
-  * The number of vertices of the orbit representatives of Delaunay polytopes.
-  * The size of their automorphism groups
-  * The number of vertices of the orbit representative of their facets.
- */
-template<typename Tvert, typename Tgroup>
-size_t CTYP_ComputeInvariant(DataCtype<Tvert,Tgroup> const& data,
-                             size_t const& seed,
-                             TypeCtypeExch<T> const &eCtype,
-                             [[maybe_unused]] std::ostream & os) {
-
-}
 
 
 struct AdjInfo {
@@ -49,7 +31,7 @@ struct FullAdjInfo {
   std::vector<AdjInfo> ListAdjInfo;
 };
 
-FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
+FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
@@ -97,32 +79,32 @@ namespace boost::serialization {
 
 template<typename T, typename Tint, typename Tgroup>
 struct IsoEdgeDomain_AdjI {
-  MyVector<T> V;
+  TypeCtypeExch<Tint> ctype_arr;
 };
 
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, IsoEdgeDomain_AdjI<T, Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("V", eRec.V);
+    ar &make_nvp("ctype_arr", eRec.ctype_arr);
   }
 }
 
 template<typename Tint>
-struct IsoDelaunayDomain_AdjO {
+struct IsoEdgeDomain_AdjO {
   int iOrb;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<Tint> &eRec,
+  inline void serialize(Archive &ar, IsoEdgeDomain_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("iOrb", eRec.iOrb);
   }
 }
 
 template<typename T, typename Tint, typename Tgroup>
-struct IsoDelaunayDomain_MPI_Entry {
+struct IsoEdgeDomain_MPI_Entry {
   TypeCtypeExch<Tint> ctype_arr;
   StructuralInfo struct_info;
   std::vector<IsoEdgeDomain_MPI_AdjO<T, Tint>> ListAdj;
@@ -130,7 +112,7 @@ struct IsoDelaunayDomain_MPI_Entry {
 
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
+  inline void serialize(Archive &ar, IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("ctype_arr", eRec.ctype_arr);
     ar &make_nvp("struct_info", eRec.struct_info);
@@ -139,18 +121,8 @@ namespace boost::serialization {
 }
 
 template<typename T, typename Tint, typename Tgroup>
-IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
-  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(eData);
-  MyMatrix<T> GramMat = GetInteriorGramMatrix(eData.LinSpa, DT);
-  return {DT, GramMat};
-}
-
-
-
-
-template<typename T, typename Tint, typename Tgroup>
-std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
-  using Tobj = TypeCtypeExch<Tvert>;
+std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
+  using Tobj = TypeCtypeExch<Tint>;
   using TadjI = IsoEdgeDomain_AdjI<T, Tint, Tgroup>;
   using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
   auto f_init=[&]() -> Tobj {
@@ -170,37 +142,35 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDo
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
     Tobj IsoDel = x.DT_gram;
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.LinSpa.n);
-    TadjO ret{i_rank, i_orb, x.V, eBigMat};
+    TadjO ret{i_rank, i_orb};
     return {IsoDel, ret};
   };
-  std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> l_obj;
+  std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
-
     int nb_free = CTYP_GetNumberFreeVectors(x);
-    
-    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, eData.LinSpa.ListLineMat);
-    l_obj[i_orb].ListIneq = ListIneq;
-    l_obj[i_orb].nb_free = nb_free;
-    MyMatrix<T> FAC = GetFACineq(ListIneq);
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC);
-    std::vector<TadjI> l_adj;
-    for (auto & idxIrred : ListIrred) {
-      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
-      DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, eData.rddo);
-      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(eData.LinSpa, DTadj);
-      Tobj pair{DTadj, GramMatAdj};
-      TadjI eAdj{eRecIneq.eIneq, pair};
-      l_adj.push_back(eAdj);
+    int nb_autom = CTYP_GetNbAutom<T, Tgroup>(x, os);
+    DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(x);
+    int nb_triple = data.nb_triple;
+    int nb_ineq = data.nb_ineq;
+    int nb_ineq_after_crit = data.nb_ineq_after_crit;
+    StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
+    l_obj[i_orb].struct_info = struct_info;
+    std::vector<TadjI> ListRet;
+    for (auto &e_int : data.ListIrred) {
+      MyMatrix<T> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
+      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
+      TypeCtypeExch<Tint> x{std::move(CanMat)};
+      TadjI x_adjI{x};
+      ListRet.push_back(x_adjI);
     }
-    return l_adj;
+    return ListRet;
   };
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_obj=[&](TadjI const& x) -> Tobj {
-    return x.DT_gram;
+    return x.ctype_arr;
   };
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
     return {};
@@ -259,7 +229,6 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     os << "Do not apply UnitBuf\n";
   }
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
   //
   bool DATA_Saving = BlockDATA.ListBoolValues.at("Saving");
   std::string DATA_Prefix = BlockDATA.ListStringValues.at("Prefix");
