@@ -565,6 +565,7 @@ template <typename T, typename Tidx> struct DataCtypeFacet {
   MyMatrix<T> ListInequalities;
   std::vector<std::vector<triple<Tidx>>> ListInformations;
   std::vector<int> ListIrred;
+  int nb_triple;
 };
 
 template <typename T, typename Tidx>
@@ -681,14 +682,13 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
                        PairTriple.second[i_edge * n_edge + j_edge]);
     std::cerr << "\n";
   }
-  int nb_triple = PairTriple.first.size() / 3;
-  ;
+  int nb_triple_div3 = PairTriple.first.size() / 3;
   std::unordered_map<triple<Tidx>, int> MapTriple;
-  for (int i_triple = 0; i_triple < nb_triple; i_triple++) {
+  for (int i_triple = 0; i_triple < nb_triple_div3; i_triple++) {
     MapTriple[PairTriple.first[3 * i_triple]] = i_triple;
   }
-  std::cerr << "nb_triple=" << nb_triple << "\n";
-  for (int i_triple = 0; i_triple < nb_triple; i_triple++) {
+  std::cerr << "nb_triple_div3=" << nb_triple_div3 << "\n";
+  for (int i_triple = 0; i_triple < nb_triple_div3; i_triple++) {
     triple et = PairTriple.first[3 * i_triple];
     std::cerr << "et=" << static_cast<int>(et.i) << " "
               << static_cast<int>(et.j) << " " << static_cast<int>(et.k)
@@ -870,8 +870,10 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "ListInequalitiesIrred=\n";
   WriteMatrix(std::cerr, ListInequalitiesIrred);
 #endif
+  int nb_triple = PairTriple.first.size();
   return {std::move(TheCtype), std::move(ListInequalities),
-          std::move(ListInformations), std::move(ListIrred)};
+          std::move(ListInformations), std::move(ListIrred),
+          nb_triple};
 }
 
 template <typename T, typename Tidx>
