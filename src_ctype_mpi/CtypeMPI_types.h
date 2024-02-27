@@ -1015,11 +1015,38 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 }
 
 template <typename T, typename Tgroup>
+int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
+                    std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tint = typename Tgroup::Tint;
+
+  int nbRow = TheCtypeArr.eMat.rows();
+  int n_edge = 2 * nbRow;
+  std::vector<std::vector<unsigned int>> ListGen =
+      LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
+#ifdef TIMINGS
+  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
+#endif
+
+  std::vector<Tidx> v(n_edge);
+  std::vector<Telt> ListGenPerm;
+  for (auto &eGen : ListGen) {
+    for (int i_edge = 0; i_edge < n_edge; i_edge++)
+      v[i_edge] = eGen[i_edge];
+    ListGenPerm.push_back(Telt(v));
+  }
+  Tgroup GRP(ListGenPerm, n_edge);
+  Tint e_size = GRP.size();
+  int nb_autom = UniversalScalarConversion<int, Tint>(e_size);
+  return nb_autom;
+}
+
+template <typename T, typename Tgroup>
 StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
                                       std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using Tint = typename Tgroup::Tint;
 #ifdef TIMINGS
   Microsecond time;
 #endif
@@ -1197,22 +1224,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   std::cerr << "|GetNumberFreeVectors|=" << time << "\n";
 #endif
 
-  std::vector<std::vector<unsigned int>> ListGen =
-      LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
-#ifdef TIMINGS
-  std::cerr << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
-#endif
-
-  std::vector<Tidx> v(n_edge);
-  std::vector<Telt> ListGenPerm;
-  for (auto &eGen : ListGen) {
-    for (int i_edge = 0; i_edge < n_edge; i_edge++)
-      v[i_edge] = eGen[i_edge];
-    ListGenPerm.push_back(Telt(v));
-  }
-  Tgroup GRP(ListGenPerm, n_edge);
-  Tint e_size = GRP.size();
-  int nb_autom = UniversalScalarConversion<int, Tint>(e_size);
+  int nb_autom = CTYP_GetNbAutom<T,Tgroup>(TheCtypeArr, os);
 
 #ifdef TIMINGS
   std::cerr << "|NumberAutomorphism|=" << time << "\n";
