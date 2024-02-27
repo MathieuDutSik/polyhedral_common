@@ -987,6 +987,18 @@ struct StructuralInfo {
   int nb_autom;
 };
 
+namespace boost::serialization {
+  template <class Archive>
+  inline void serialize(Archive &ar, StructuralInfo &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("nb_triple", eRec.nb_triple);
+    ar &make_nvp("nb_ineq", eRec.nb_ineq);
+    ar &make_nvp("nb_ineq_after_crit", eRec.nb_ineq_after_crit);
+    ar &make_nvp("nb_free", eRec.nb_free);
+    ar &make_nvp("nb_autom", eRec.nb_autom);
+  }
+}
+
 template <typename T>
 int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
   int n = TheCtypeArr.eMat.cols();
@@ -1025,6 +1037,9 @@ int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
+#ifdef TIMINGS
+  MicrosecondTime time;
+#endif
 
   int nbRow = TheCtypeArr.eMat.rows();
   int n_edge = 2 * nbRow;
@@ -1053,176 +1068,16 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS
-  Microsecond time;
+  MicrosecondTime time;
 #endif
 
-  MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
-  int n_edge = TheCtype.rows();
+  DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(TheCtypeArr);
 #ifdef TIMINGS
-  std::cerr << "|ExpressMatrixForCType|=" << time < "\n";
+  std::cerr << "|GetNumberFreeVectors|=" << time << "\n";
 #endif
-
-  std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
-      CTYP_GetListTriple<T, Tidx>(TheCtype);
-  int nb_triple = PairTriple.first.size();
-#ifdef TIMINGS
-  std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
-#endif
-
-  Tidx n = TheCtype.cols();
-  Tidx tot_dim = n * (n + 1) / 2;
-  auto ComputeInequality = [&](MyVector<T> const &V1,
-                               MyVector<T> const &V2) -> MyVector<T> {
-    MyVector<T> TheVector(tot_dim);
-    int idx = 0;
-    for (Tidx i = 0; i < n; i++) {
-      TheVector(idx) = V1(i) * V1(i) - V2(i) * V2(i);
-      idx++;
-    }
-    for (Tidx i = 0; i < n; i++)
-      for (Tidx j = i + 1; j < n; j++) {
-        // Factor 2 removed for simplification and faster code.
-        TheVector(idx) = V1(i) * V1(j) - V2(i) * V2(j);
-        idx++;
-      }
-    return TheVector;
-  };
-  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_map;
-  auto FuncInsertInequality = [&](Tidx i, Tidx j, Tidx k) -> void {
-    MyVector<T> V1(n), V2(n);
-    for (Tidx i_col = 0; i_col < n; i_col++) {
-      V1(i_col) = 2 * TheCtype(k, i_col) + TheCtype(i, i_col);
-      V2(i_col) = TheCtype(i, i_col);
-    }
-    MyVector<T> TheVector = ComputeInequality(V1, V2);
-    triple<Tidx> TheInfo = {i, j, k};
-    std::vector<triple<Tidx>> &list_trip = Tot_map[TheVector];
-    list_trip.push_back(TheInfo);
-  };
-  for (auto &e_triple : PairTriple.first)
-    FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
-#ifdef PRINT_GET_STRUCTINFO
-  std::cerr << "Input |Tot_map|=" << Tot_map.size() << "\n";
-#endif
-  int nb_ineq = Tot_map.size();
-#ifdef TIMINGS
-  std::cerr << "|Insert inequalities|=" << time << "\n";
-#endif
-
-  int n_edgered = n_edge / 2;
-#ifdef PRINT_GET_STRUCTINFO
-  int nb_match = 0;
-  int nb_pass = 0;
-#endif
-#ifdef PRINT_GET_STRUCTINFO
-  for (int i_edge = 0; i_edge < n_edgered; i_edge++) {
-    for (int j_edge = 0; j_edge < n_edgered; j_edge++)
-      std::cerr << " "
-                << static_cast<int>(
-                       PairTriple.second[i_edge * n_edgered + j_edge]);
-    std::cerr << "\n";
-  }
-#endif
-  auto TestApplicabilityCriterion_with_e = [&](triple<Tidx> const &e_triple,
-                                               Tidx const &e) -> bool {
-#ifdef PRINT_GET_STRUCTINFO
-    nb_pass++;
-#endif
-    Tidx i = e_triple.i / 2;
-    Tidx j = e_triple.j / 2;
-    Tidx k = e_triple.k / 2;
-    //
-    // testing e
-    if (e == i || e == j || e == k)
-      return false;
-    //
-    // getting f and testing it
-    Tidx f = PairTriple.second[i * n_edgered + e];
-    if (f == -1 || f == j || f == k)
-      return false;
-    //
-    // getting g and testing it
-    Tidx g = PairTriple.second[j * n_edgered + e];
-    if (g == -1 || g == f || g == i || g == k)
-      return false;
-    //
-    // getting h and testing it
-    Tidx h = PairTriple.second[i * n_edgered + g];
-    if (h == -1 || h == f || h == e || h == j || h == k)
-      return false;
-    //
-    // testing presence of {j,f,h}
-    Tidx h2 = PairTriple.second[j * n_edgered + f];
-    if (h2 != h)
-      return false;
-      //
-      // We have the 7-uple.
-#ifdef PRINT_GET_STRUCTINFO
-    nb_match++;
-#endif
-    return true;
-  };
-  auto TestApplicabilityCriterion = [&](triple<Tidx> const &e_triple) -> bool {
-    for (Tidx e = 0; e < n_edgered; e++)
-      if (TestApplicabilityCriterion_with_e(e_triple, e))
-        return true;
-    return false;
-  };
-  std::vector<Tidx> ListResultCriterion(n_edge * n_edge, 0);
-  for (auto &e_triple : PairTriple.first) {
-    if (TestApplicabilityCriterion(e_triple)) {
-      Tidx i = e_triple.i;
-      Tidx j = e_triple.j;
-      Tidx k = e_triple.k;
-#ifdef PRINT_GET_STRUCTINFO
-      std::cerr << "FOUND i=" << static_cast<int>(i)
-                << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
-                << "\n";
-      std::cerr << "ENT1 = " << static_cast<int>(j) << " "
-                << static_cast<int>(k) << "\n";
-      std::cerr << "ENT2 = " << static_cast<int>(i) << " "
-                << static_cast<int>(j) << "\n";
-#endif
-      ListResultCriterion[j * n_edge + k] = 1;
-      ListResultCriterion[i * n_edge + j] = 1;
-    }
-  }
-  auto TestFeasibilityListTriple =
-      [&](std::vector<triple<Tidx>> const &list_triple) -> bool {
-    for (auto &e_triple : list_triple) {
-#ifdef PRINT_GET_STRUCTINFO
-      std::cerr << "e_triple i=" << static_cast<int>(e_triple.i) << " "
-                << static_cast<int>(e_triple.j) << "\n";
-#endif
-      if (ListResultCriterion[e_triple.i * n_edge + e_triple.j] == 1)
-        return false;
-    }
-    return true;
-  };
-  // erasing the inequalities that are sure to be redundant.
-#ifdef DEBUG
-  int nb_redund = 0;
-#endif
-  std::unordered_map<MyVector<T>, std::vector<triple<Tidx>>> Tot_mapB;
-  for (auto &kv : Tot_map) {
-    if (!TestFeasibilityListTriple(kv.second)) {
-#ifdef DEBUG
-      nb_redund++;
-#endif
-    } else {
-      Tot_mapB[kv.first] = kv.second;
-    }
-  }
-  int nb_ineq_after_crit = Tot_mapB.size();
-#ifdef DEBUG
-  if (nb_ineq_after_crit + nb_redund != nb_ineq) {
-    std::cerr << "inconsistency in the computation\n";
-    throw TerminalException{1};
-  }
-#endif
-#ifdef TIMINGS
-  std::cerr << "|Criterion Ineq Drop|=" << time << "\n";
-#endif
+  int nb_triple = data.nb_triple;
+  int nb_ineq = data.nb_ineq;
+  int nb_ineq_after_crit = data.nb_ineq_after_crit;
 
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
 #ifdef TIMINGS

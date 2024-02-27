@@ -84,8 +84,6 @@ template<typename T, typename Tint>
 struct IsoEdgeDomain_MPI_AdjO {
   int iProc;
   int iOrb;
-  //  MyVector<T> V;
-  //  MyMatrix<Tint> eBigMat;
 };
 
 namespace boost::serialization {
@@ -94,8 +92,6 @@ namespace boost::serialization {
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("iProc", eRec.iProc);
     ar &make_nvp("iOrb", eRec.iOrb);
-    //    ar &make_nvp("V", eRec.V);
-    //    ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
 
@@ -127,23 +123,17 @@ namespace boost::serialization {
 
 template<typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain_MPI_Entry {
-  IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
-  std::vector<MyMatrix<Tint>> ListMatrGens;
-  int nb_triple;
-  int nb_ineq;
-  int nb_ineq_after_crit;
-  int n_free;
-  int nb_autom;
-  std::vector<FullAdjInfo<T>> ListIneq;
-  std::vector<IsoDelaunayDomain_MPI_AdjO<T, Tint>> ListAdj;
+  TypeCtypeExch<Tint> ctype_arr;
+  StructuralInfo struct_info;
+  std::vector<IsoEdgeDomain_MPI_AdjO<T, Tint>> ListAdj;
 };
 
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("DT_gram", eRec.DT_gram);
-    ar &make_nvp("ListIneq", eRec.ListIneq);
+    ar &make_nvp("ctype_arr", eRec.ctype_arr);
+    ar &make_nvp("struct_info", eRec.struct_info);
     ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
@@ -161,8 +151,8 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDo
 template<typename T, typename Tint, typename Tgroup>
 std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
   using Tobj = TypeCtypeExch<Tvert>;
-  using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
-  using TadjO = IsoDelaunayDomain_MPI_AdjO<T, Tint>;
+  using TadjI = IsoEdgeDomain_AdjI<T, Tint, Tgroup>;
+  using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
   auto f_init=[&]() -> Tobj {
     MyMatrix<Tint> M = GetPrincipalDomain<Tint>(eData.n);
     MyMatrix<Tint> CanM = LinPolytopeAntipodalIntegral_CanonicForm(M, os);
@@ -172,13 +162,10 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDo
     return Matrix_Hash(x.eMat, seed);
   };
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    if (x.eMat != y.
-    std::optional<MyMatrix<Tint>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(eData.LinSpa, x.GramMat, y.DT_gram.GramMat, os);
-    if (!opt) {
+    if (x.eMat != y.ctype_arr.eMat) {
       return {};
     }
-    MyMatrix<Tint> const& eBigMat = *opt;
-    TadjO ret{i_rank, i_orb, y.V, eBigMat};
+    TadjO ret{i_rank, i_orb};
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
