@@ -566,6 +566,8 @@ template <typename T, typename Tidx> struct DataCtypeFacet {
   std::vector<std::vector<triple<Tidx>>> ListInformations;
   std::vector<int> ListIrred;
   int nb_triple;
+  int nb_ineq;
+  int nb_ineq_after_crit;
 };
 
 template <typename T, typename Tidx>
@@ -637,6 +639,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   };
   for (auto &e_triple : PairTriple.first)
     FuncInsertInequality(e_triple.i, e_triple.j, e_triple.k);
+  int nb_ineq = Tot_map.size();
 #ifdef PRINT_GET_ADJ
   std::cerr << "Input |Tot_map|=" << Tot_map.size() << "\n";
 #endif
@@ -835,8 +838,8 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_ADJ
   std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
 #endif
-  size_t n_ineq = Tot_mapB.size();
-  MyMatrix<T> ListInequalities(n_ineq, tot_dim);
+  int nb_ineq_after_crit = Tot_mapB.size();
+  MyMatrix<T> ListInequalities(nb_ineq_after_crit, tot_dim);
   std::vector<std::vector<triple<Tidx>>> ListInformations;
   size_t i_ineq = 0;
   for (auto &kv : Tot_mapB) {
@@ -873,7 +876,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   int nb_triple = PairTriple.first.size();
   return {std::move(TheCtype), std::move(ListInequalities),
           std::move(ListInformations), std::move(ListIrred),
-          nb_triple};
+          nb_triple, nb_ineq, nb_ineq_after_crit};
 }
 
 template <typename T, typename Tidx>
