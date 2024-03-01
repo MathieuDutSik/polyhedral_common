@@ -70,6 +70,18 @@ public:
   }
 };
 
+size_t FileNumber_Read(std::string const& FileNb) {
+  bool overwrite = false;
+  FileNumber fn(FileNb, overwrite);
+  return fn.getval();
+}
+
+void FileNumber_Write(std::string const& FileNb, size_t const& val) {
+  bool overwrite = true;
+  FileNumber fn(FileNb, overwrite);
+  fn.setval(val);
+}
+
 //
 // Storing a sequence of bits that can be extended
 //

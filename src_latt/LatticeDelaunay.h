@@ -581,8 +581,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
     is_database_present = IsExistingFile(FileNb);
   }
   if (is_database_present) {
-    FileNumber fn(FileNb, false);
-    size_t n_orbit = fn.getval();
+    size_t n_orbit = FileNumber_Read(FileNb);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: reading database n_orbit=" << n_orbit << "\n";
 #endif
@@ -660,8 +659,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
     os << "DEL_ENUM: writing database FileStatus written down\n";
 #endif
     // The number
-    FileNumber fn(FileNb, overwrite);
-    fn.setval(n_obj);
+    FileNumber_Write(FileNb, n_obj);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: writing database FileNumber written down\n";
 #endif
