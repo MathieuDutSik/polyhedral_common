@@ -19,18 +19,6 @@ struct DataCtype {
   int n;
 };
 
-
-struct AdjInfo {
-  int iOrb;
-  int i_adj;
-};
-
-template<typename T>
-struct FullAdjInfo {
-  MyVector<T> eIneq;
-  std::vector<AdjInfo> ListAdjInfo;
-};
-
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
@@ -230,8 +218,8 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   }
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   //
-  bool DATA_Saving = BlockDATA.ListBoolValues.at("Saving");
-  std::string DATA_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
+  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
   CreateDirectory(DATA_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
@@ -250,19 +238,15 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   std::optional<MyMatrix<T>> CommonGramMat = get_common();
   //
   using TintGroup = typename Tgroup::Tint;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
 
-  DataIsoDelaunayDomains<T,Tint,Tgroup> eData{LinSpa,
-    std::move(rddo),
-    CommonGramMat,
+  DataIsoDelaunayDomains<T,Tint,Tgroup> eData{n,
     max_runtime_second,
-    DATA_Saving,
-    DATA_Prefix};
+    STORAGE_Saving,
+    STORAGE_Prefix};
 
-  std::vector<IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup>> ListIDD = MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(comm, eData, os);
+  std::p
+  std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>> ListIDD = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
   WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, ListIDD, os);
 }
 

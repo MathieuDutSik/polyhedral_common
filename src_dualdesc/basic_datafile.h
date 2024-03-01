@@ -569,6 +569,38 @@ public:
   const_iterator end() const { return {n_ent, n_ent, 0, fp_number, fp_data}; }
 };
 
+template<typename T>
+std::vector<T> FileData_FullRead(std::string const& FileDatabase) {
+  bool overwrite = false;
+  FileData<T> fdata(FileDatabase, overwrite);
+  using Iterator = typename FileData<T>::iterator;
+  Iterator iter = fdata.begin();
+#ifdef DEBUG_BASIC_DATAFILE
+  os << "BASIC_DATAFILE: reading database We have iter\n";
+#endif
+  std::vector<T> l_obj;
+  while (iter != fdata.end()) {
+#ifdef DEBUG_BASIC_DATAFILE
+    os << "BASIC_DATAFILE: reading database Before *iter\n";
+#endif
+    T val = *iter;
+#ifdef DEBUG_BASIC_DATAFILE
+    os << "BASIC_DATAFILE: reading database After *iter\n";
+#endif
+    l_obj.emplace_back(std::move(val));
+    iter++;
+  }
+  return l_obj;
+}
+
+template<typename T>
+void FileData_FullWrite(std::string const& FileDatabase, std::vector<T> const& l_obj) {
+  bool overwrite = true;
+  FileData<T> fdata(FileDatabase, overwrite);
+  for (auto & val : l_obj) {
+    fdata.push_back(val);
+  }
+}
 
 
 // clang-format off

@@ -597,30 +597,12 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: reading database sum_status=" << sum_status << "\n";
 #endif
-    FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, false);
-    using Iterator = typename FileData<Delaunay_MPI_Entry<Tint,Tgroup>>::iterator;
-    Iterator iter = fdata.begin();
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: reading database We have iter\n";
-#endif
-    size_t n_ent = 0;
-    while (iter != fdata.end()) {
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-      os << "DEL_ENUM: reading database Before *iter\n";
-#endif
-      Delaunay_MPI_Entry<Tint,Tgroup> val = *iter;
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-      os << "DEL_ENUM: reading database After *iter\n";
-#endif
-      l_obj.push_back(val);
-      iter++;
-      n_ent++;
-    }
+    l_obj = FileData_FullRead<Delaunay_MPI_Entry<Tint,Tgroup>>(FileDatabase);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: reading database l_obj read\n";
 #endif
-    if (n_ent != n_orbit) {
-      std::cerr << "We have n_ent=" << n_ent << " n_orbit=" << n_orbit << "\n";
+    if (l_obj.size() != n_orbit) {
+      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit << "\n";
       std::cerr << "But they should be matching\n";
       throw TerminalException{1};
     }
@@ -662,13 +644,9 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
   if (eData.Saving) {
-    bool overwrite = true;
     size_t n_obj = l_obj.size();
     // The data
-    FileData<Delaunay_MPI_Entry<Tint,Tgroup>> fdata(FileDatabase, overwrite);
-    for (auto & val : l_obj) {
-      fdata.push_back(val);
-    }
+    FileData_FullWrite(FileDatabase, l_obj);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: writing database fdata written down\n";
 #endif
