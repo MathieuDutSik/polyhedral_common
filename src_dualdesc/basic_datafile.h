@@ -215,6 +215,41 @@ public:
   }
 };
 
+// The use of std::vector<uint8_t> is quite not great.
+// Could we represent that by the Face type? (from dynamic_byteset)
+// The question is about the extendibility of the Face type.
+// Clearly, this is a technical debt to pay later one way or the other.
+std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n_orbit) {
+  FileBool fb(eFile, n_orbit);
+#ifdef DEBUG_BASIC_DATAFILE
+  int sum_status = 0;
+#endif
+  for (size_t i=0; i<n_orbit; i++) {
+    bool test = fb.getbit(i);
+#ifdef DEBUG_BASIC_DATAFILE
+    sum_status += static_cast<int>(test);
+#endif
+    uint8_t test_i = static_cast<uint8_t>(test);
+    l_status.push_back(test_i);
+  }
+#ifdef DEBUG_BASIC_DATAFILE
+  os << "BASIC_DATAFILE: reading database sum_status=" << sum_status << "\n";
+#endif
+  return l_status;
+}
+
+void FileBool_FullWrite(std::string const& eFile, std::vector<uint8_t> const& l_status) {
+  FileBool fb(FileStatus);
+  size_t n_obj = l_status.size();
+  for (size_t i=0; i<n_obj; i++) {
+    bool test_done = static_cast<bool>(l_status[i]);
+    fb.setbit(i, test_done);
+  }
+}
+
+
+
+
 //
 // Storing a sequence of faces that can be extended
 //

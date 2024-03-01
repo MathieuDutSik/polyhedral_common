@@ -585,17 +585,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: reading database n_orbit=" << n_orbit << "\n";
 #endif
-    FileBool fb(FileStatus, n_orbit);
-    int sum_status = 0;
-    for (size_t i=0; i<n_orbit; i++) {
-      bool test = fb.getbit(i);
-      sum_status += static_cast<int>(test);
-      uint8_t test_i = static_cast<uint8_t>(test);
-      l_status.push_back(test_i);
-    }
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: reading database sum_status=" << sum_status << "\n";
-#endif
+    l_status = FileBool_Read(FileStatus, n_orbit);
     l_obj = FileData_FullRead<Delaunay_MPI_Entry<Tint,Tgroup>>(FileDatabase);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: reading database l_obj read\n";
@@ -650,11 +640,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
     os << "DEL_ENUM: writing database fdata written down\n";
 #endif
     // The status
-    FileBool fb(FileStatus);
-    for (size_t i=0; i<n_obj; i++) {
-      bool test_done = static_cast<bool>(l_status[i]);
-      fb.setbit(i, test_done);
-    }
+    FileBool_FullWrite(FileStatus, l_status);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: writing database FileStatus written down\n";
 #endif

@@ -17,6 +17,9 @@
 template<typename Tint, typename Tgroup>
 struct DataCtype {
   int n;
+  int max_runtime_second;
+  bool Saving;
+  std::string Prefix;
 };
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
@@ -31,12 +34,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["OutFormat"] = "nothing";
   ListStringValues1["OutFile"] = "unset.out";
-  ListStringValues1["FileDualDescription"] = "unset";
+  ListIntValues1["n"] = -1;
   ListIntValues1["max_runtime_second"] = 0;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
   ListBoolValues1["Saving"] = false;
   ListStringValues1["Prefix"] = "/irrelevant/";
-  ListStringValues1["CVPmethod"] = "SVexact";
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
@@ -44,8 +46,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   BlockDATA.ListStringValues = ListStringValues1;
   BlockDATA.ListListStringValues = ListListStringValues1;
   ListBlock["DATA"] = BlockDATA;
-  // TSPACE
-  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
   return {ListBlock, "undefined"};
 }
@@ -109,7 +109,7 @@ namespace boost::serialization {
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
+std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
   using Tobj = TypeCtypeExch<Tint>;
   using TadjI = IsoEdgeDomain_AdjI<T, Tint, Tgroup>;
   using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
@@ -186,7 +186,7 @@ std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoEdgeDomain
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
-  return l_obj;
+  return {test, l_obj};
 }
 
 template<typename T, typename Tint, typename Tgroup>
@@ -245,13 +245,11 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     STORAGE_Saving,
     STORAGE_Prefix};
 
-  std::p
-  std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>> ListIDD = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
-  WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, ListIDD, os);
+  std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>>> pair = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
+  if (pair.first) {
+    WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, pair.second, os);
+  }
 }
-
-
-
 
 // clang-format off
 #endif  // SRC_LATT_ISODELAUNAYDOMAINS_H_
