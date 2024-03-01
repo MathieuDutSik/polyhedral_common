@@ -838,11 +838,11 @@ void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix,
 
 template<typename Tstor, typename Tout, typename F>
 struct NextIterator {
-  F f;
-  std::vector<uint8_t> & l_status;
   std::vector<Tstor> & l_obj;
+  std::vector<uint8_t> & l_status;
+  F f;
   size_t pos_next;
-  NextIterator(F _f, std::vector<uint8_t> & _l_status, std::vector<Tstor> & _l_obj) : f(_f), l_status(_l_status), l_obj(_l_obj), pos_next(0) {
+  NextIterator(std::vector<Tstor> & _l_obj, std::vector<uint8_t> & _l_status, F _f) : l_obj(_l_obj), l_status(_l_status), f(_f), pos_next(0) {
   }
   std::optional<std::pair<bool, Tout>> f_next() {
     if (pos_next >= l_obj.size()) {

@@ -129,12 +129,15 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
     return ret;
   };
   auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj IsoDel = x.DT_gram;
+    Tobj IsoDel = x.ctype_arr;
     TadjO ret{i_rank, i_orb};
     return {IsoDel, ret};
   };
   std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
+  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
+  NextIterator<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>,Tobj> next_iterator(l_obj, l_status, [](IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup> const& x) -> Tobj {
+  });
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<T, Tgroup>(x, os);
@@ -160,9 +163,7 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   auto f_obj=[&](TadjI const& x) -> Tobj {
     return x.ctype_arr;
   };
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    return {};
-  };
+  auto f_next=next_iterator.f_next;
   auto f_insert=[&](Tobj const& x) -> bool {
     l_obj.push_back({x, {}, {} });
     return false;
@@ -222,20 +223,12 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
   CreateDirectory(DATA_Prefix);
   //
+  int n = BlockDATA.ListIntValues.at("n");
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
   std::cerr << "max_runtime_second=" <<	max_runtime_second << "\n";
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
-  auto get_common=[&]() -> std::optional<MyMatrix<T>> {
-    std::string CommonGramMat = BlockDATA.ListStringValues.at("CommonGramMat");
-    if (CommonGramMat == "unset") {
-      return {};
-    }
-    MyMatrix<T> eMat = ReadMatrixFile<T>(CommonGramMat);
-    return eMat;
-  };
-  std::optional<MyMatrix<T>> CommonGramMat = get_common();
   //
   using TintGroup = typename Tgroup::Tint;
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
