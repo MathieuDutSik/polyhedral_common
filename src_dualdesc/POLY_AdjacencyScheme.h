@@ -784,6 +784,59 @@ bool compute_adjacency_serial(int const &max_time_second,
   }
 }
 
+template<typename T>
+void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> & l_obj, std::vector<uint8_t> & l_status) {
+  std::string FileNb = prefix + "number_orbit" + suffix;
+  std::string FileStatus = prefix + "orbit_status" + suffix;
+  std::string FileDatabase = prefix + "database" + suffix;
+  bool is_database_present = false;
+  if (eData.Saving) {
+    is_database_present = IsExistingFile(FileNb);
+  }
+  if (is_database_present) {
+    size_t n_orbit = FileNumber_Read(FileNb);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "ADJ_SCH: reading database n_orbit=" << n_orbit << "\n";
+#endif
+    l_status = FileBool_Read(FileStatus, n_orbit);
+    l_obj = FileData_FullRead<T>(FileDatabase);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "ADJ_SCH: reading database l_obj read\n";
+#endif
+    if (l_obj.size() != n_orbit) {
+      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit << "\n";
+      std::cerr << "But they should be matching\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+template<typename T>
+void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> const& l_obj, std::vector<uint8_t> const& l_status) {
+  std::string FileNb = prefix + "number_orbit" + suffix;
+  std::string FileStatus = prefix + "orbit_status" + suffix;
+  std::string FileDatabase = prefix + "database" + suffix;
+  if (Saving) {
+    size_t n_obj = l_obj.size();
+    // The data
+    FileData_FullWrite(FileDatabase, l_obj);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database fdata written down\n";
+#endif
+    // The status
+    FileBool_FullWrite(FileStatus, l_status);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database FileStatus written down\n";
+#endif
+    // The number
+    FileNumber_Write(FileNb, n_obj);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: writing database FileNumber written down\n";
+#endif
+  }
+}
+
+
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 // clang-format on

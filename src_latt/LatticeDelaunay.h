@@ -573,29 +573,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
-  std::string FileNb = eData.Prefix + "number_orbit" + str_proc;
-  std::string FileStatus = eData.Prefix + "orbit_status" + str_proc;
-  std::string FileDatabase = eData.Prefix + "database" + str_proc;
-  bool is_database_present = false;
-  if (eData.Saving) {
-    is_database_present = IsExistingFile(FileNb);
-  }
-  if (is_database_present) {
-    size_t n_orbit = FileNumber_Read(FileNb);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: reading database n_orbit=" << n_orbit << "\n";
-#endif
-    l_status = FileBool_Read(FileStatus, n_orbit);
-    l_obj = FileData_FullRead<Delaunay_MPI_Entry<Tint,Tgroup>>(FileDatabase);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: reading database l_obj read\n";
-#endif
-    if (l_obj.size() != n_orbit) {
-      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit << "\n";
-      std::cerr << "But they should be matching\n";
-      throw TerminalException{1};
-    }
-  }
+  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
   size_t pos_next = 0;
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
     if (pos_next >= l_obj.size()) {
@@ -632,24 +610,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
-  if (eData.Saving) {
-    size_t n_obj = l_obj.size();
-    // The data
-    FileData_FullWrite(FileDatabase, l_obj);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: writing database fdata written down\n";
-#endif
-    // The status
-    FileBool_FullWrite(FileStatus, l_status);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: writing database FileStatus written down\n";
-#endif
-    // The number
-    FileNumber_Write(FileNb, n_obj);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: writing database FileNumber written down\n";
-#endif
-  }
+  PartialEnum_FullWrite(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
   return {test, std::move(l_obj)};
 }
 
