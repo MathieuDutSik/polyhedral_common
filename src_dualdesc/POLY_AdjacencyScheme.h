@@ -836,6 +836,26 @@ void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix,
   }
 }
 
+template<typename Tstor, typename Tout, typename F>
+struct NextIterator {
+  F f;
+  std::vector<uint8_t> & l_status;
+  std::vector<Tstor> & l_obj;
+  size_t pos_next;
+  NextIterator(F _f, std::vector<uint8_t> & _l_status, std::vector<Tstor> & _l_obj) : f(_f), l_status(_l_status), l_obj(_l_obj), pos_next(0) {
+  }
+  std::optional<std::pair<bool, Tout>> f_next() {
+    if (pos_next >= l_obj.size()) {
+      return {};
+    } else {
+      bool is_treated = static_cast<bool>(l_status[pos_next]);
+      Tout x = f(l_obj[pos_next]);
+      std::pair<bool, Tout> pair{is_treated, x};
+      pos_next++;
+      return pair;
+    }
+  }
+};
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
