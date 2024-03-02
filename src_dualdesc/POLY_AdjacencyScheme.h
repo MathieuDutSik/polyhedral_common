@@ -790,7 +790,7 @@ void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, 
   std::string FileStatus = prefix + "orbit_status" + suffix;
   std::string FileDatabase = prefix + "database" + suffix;
   bool is_database_present = false;
-  if (eData.Saving) {
+  if (Saving) {
     is_database_present = IsExistingFile(FileNb);
   }
   if (is_database_present) {
@@ -798,7 +798,7 @@ void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, 
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "ADJ_SCH: reading database n_orbit=" << n_orbit << "\n";
 #endif
-    l_status = FileBool_Read(FileStatus, n_orbit);
+    l_status = FileBool_FullRead(FileStatus, n_orbit);
     l_obj = FileData_FullRead<T>(FileDatabase);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "ADJ_SCH: reading database l_obj read\n";
