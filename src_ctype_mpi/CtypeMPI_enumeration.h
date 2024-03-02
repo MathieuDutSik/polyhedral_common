@@ -1,20 +1,19 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_ISODELAUNAYDOMAINS_H_
-#define SRC_LATT_ISODELAUNAYDOMAINS_H_
+#ifndef SRC_CTYPEMPI_ENUMERATION_H_
+#define SRC_CTYPEMPI_ENUMERATION_H_
 
 // clang-format off
 #include "NumberTheory.h"
 #include "CtypeMPI_types.h"
+#include "POLY_AdjacencyScheme.h"
 #include "Namelist.h"
 #include "hash_functions.h"
 #include "rational.h"
 #include "sparse-map/include/tsl/sparse_map.h"
 #include <boost/mpi.hpp>
-#include <netcdf>
 #include <unordered_map>
 // clang-format on
 
-template<typename Tint, typename Tgroup>
 struct DataCtype {
   int n;
   int max_runtime_second;
@@ -109,7 +108,10 @@ namespace boost::serialization {
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataIsoEdgeDomains<T,Tint,Tgroup> & eData, std::ostream & os) {
+std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataCtype const& eData, std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tover = IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>;
   using Tobj = TypeCtypeExch<Tint>;
   using TadjI = IsoEdgeDomain_AdjI<T, Tint, Tgroup>;
   using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
@@ -133,11 +135,17 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
     TadjO ret{i_rank, i_orb};
     return {IsoDel, ret};
   };
-  std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> l_obj;
+  std::vector<Tover> l_obj;
   std::vector<uint8_t> l_status;
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
   PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
-  NextIterator<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>,Tobj> next_iterator(l_obj, l_status, [](IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup> const& x) -> Tobj {
-  });
+  auto f=[](Tover const& x) -> Tobj {
+    return x.ctype_arr;
+  };
+  auto next_iterator(l_obj, l_status, f);
+  //  NextIterator<Tover,Tobj,decltype(f)> next_iterator(l_obj, l_status, f);
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<T, Tgroup>(x, os);
@@ -191,7 +199,7 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
 }
 
 template<typename T, typename Tint, typename Tgroup>
-void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
+void WriteFamilyIsoEdgeDomain([[maybe_unused]] boost::mpi::communicator &comm, std::string const& OutFormat, [[maybe_unused]] std::string const& OutFile, [[maybe_unused]] std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
   //  int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
@@ -206,22 +214,23 @@ void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string co
 
 
 template<typename T, typename Tint, typename Tgroup>
-void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  bool ApplyStdUnitbuf = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
+  if (ApplyStdUnitbuf) {
     os << std::unitbuf;
     os << "Apply UnitBuf\n";
   } else {
     os << "Do not apply UnitBuf\n";
   }
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   //
   bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
-  CreateDirectory(DATA_Prefix);
+  CreateDirectory(STORAGE_Prefix);
   //
   int n = BlockDATA.ListIntValues.at("n");
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
@@ -231,19 +240,18 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   //
   using TintGroup = typename Tgroup::Tint;
-  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
 
-  DataIsoDelaunayDomains<T,Tint,Tgroup> eData{n,
+  DataCtype eData{n,
     max_runtime_second,
     STORAGE_Saving,
     STORAGE_Prefix};
 
   std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>>> pair = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
   if (pair.first) {
-    WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyIsoEdgeDomain(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
 // clang-format off
-#endif  // SRC_LATT_ISODELAUNAYDOMAINS_H_
+#endif  // SRC_CTYPEMPI_ENUMERATION_H_
 // clang-format on

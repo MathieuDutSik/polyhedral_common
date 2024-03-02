@@ -4,6 +4,7 @@
 
 #include "boost_serialization.h"
 #include "MPI_functionality.h"
+#include "basic_datafile.h"
 #include "Timings.h"
 
 #ifdef DEBUG

@@ -1,15 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "CtypeMPI_types.h"
 #include "CtypeMPI_enumeration.h"
-#include "Namelist.h"
-#include "hash_functions.h"
-#include "rational.h"
-#include "sparse-map/include/tsl/sparse_map.h"
-#include <unordered_map>
+#include "Permutation.h"
+#include "Group.h"
 // clang-format on
-namespace mpi = boost::mpi;
 
 int main(int argc, char *argv[]) {
   boost::mpi::environment env(boost::mpi::threading::serialized);
@@ -37,7 +32,7 @@ int main(int argc, char *argv[]) {
     }
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    ComputeLatticeIsoDelaunayDomains<T,Tint,Tgroup>(world, eFull);
+    ComputeLatticeIsoEdgeDomains<T,Tint,Tgroup>(world, eFull);
   } catch (TerminalException const &e) {
     std::cerr << "Error in CTYP_MPI_AdjScheme\n";
     exit(e.eVal);
