@@ -221,6 +221,7 @@ public:
 // Clearly, this is a technical debt to pay later one way or the other.
 std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n_orbit) {
   FileBool fb(eFile, n_orbit);
+  std::vector<uint8_t> l_status(n_orbit);
 #ifdef DEBUG_BASIC_DATAFILE
   int sum_status = 0;
 #endif
@@ -230,7 +231,7 @@ std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n
     sum_status += static_cast<int>(test);
 #endif
     uint8_t test_i = static_cast<uint8_t>(test);
-    l_status.push_back(test_i);
+    l_status[i] = test_i;
   }
 #ifdef DEBUG_BASIC_DATAFILE
   os << "BASIC_DATAFILE: reading database sum_status=" << sum_status << "\n";
@@ -239,7 +240,7 @@ std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n
 }
 
 void FileBool_FullWrite(std::string const& eFile, std::vector<uint8_t> const& l_status) {
-  FileBool fb(FileStatus);
+  FileBool fb(eFile);
   size_t n_obj = l_status.size();
   for (size_t i=0; i<n_obj; i++) {
     bool test_done = static_cast<bool>(l_status[i]);
