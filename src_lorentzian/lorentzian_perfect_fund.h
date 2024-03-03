@@ -66,19 +66,44 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     std::optional<MyVector<Tint>> opt = SolutionMat(Ubasis, eTrans);
     MyVector<Tint> eSol = unfold_opt(opt);
     T eSquareDist = alpha * alpha * eNorm;
-    std::vector<MyVector<Tint>> ListSolA = 
-    
-    if (OnlyShortest 
-    
+    auto iele=[&]() -> std::vector<MyVector<Tint>> {
+      if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
+        return solver.FixedNormVectors(eSol, eSquareDist);
+      } else {
+        return solver.AtMostNormVectors(eSol, eSquareDist);
+      }
+    };
+    for (auto & eSolA : iele()) {
+      MyVector<Tint> eSolC = eBasSol + Ubasis.transpose() * eSolA;
+      TotalListSol.emplace_back(std::move(eSolC));
+    }
+    if (OnlyShortest && TotalListSol.size()) {
+      return ListSol;
+    }
     eVal += 1;
+    if (MaxScal > 0) {
+      T scal = TheRec.gcd * eVal;
+      if (scal > MaxScal) {
+        break;
+      }
+    }
   }
   return TotalListSol;
 }
 
+template<typename T, typename Tint>
+std::vector<MyVector<Tint>> LORENTZ_SearchInitialVector(MyMatrix<T> const& LorMat, MyVector<T> const& PosVect, int const& TheOption, std::ostream & os) {
+  bool OnlyShortest = true;
+  T MaxScal = 0;
+  return LORENTZ_FindPositiveVectors(LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
+}
 
-LORENTZ_SearchInitialVector
+template<typename T, typename Tint>
+MyVector<Tint> LORENTZ_GetShortPositiveVector(MyVector<T> const& LorMat) {
+  int n = LorMat.rows();
+  auto L1_norm=[&](
 
-LORENTZ_GetShortPositiveVector
+}
 
 
 template<typename T, typename Tint>
