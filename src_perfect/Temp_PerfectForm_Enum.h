@@ -33,11 +33,12 @@ public:
     return {false, nbOrbit, {-1, {}, eTrivFace}};
   }
   PerfEquivInfo InsertForm(LinSpaceMatrix<T> const &LinSpa,
-                           MyMatrix<T> const &eGram) {
+                           MyMatrix<T> const &eGram,
+                           std::ostream& os) {
     std::vector<PerfEquivInfo> eListEquivInfo;
     Face eTrivFace;
     int n = LinSpa.n;
-    Tshortest<T, int> RecSHV = T_ShortestVector<T, int>(eGram);
+    Tshortest<T, int> RecSHV = T_ShortestVector<T, int>(eGram, os);
     QueryEquivInfo eQuery = IsPresentNoLock(0, LinSpa, eGram, RecSHV.SHV);
     if (eQuery.result)
       return eQuery.eEquiv;
@@ -264,7 +265,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       if (IsComplete)
         break;
       SimplePerfect<T, Tint> ePERF = ListOrbit.GetRepresentative(eEntry);
-      Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ePERF.Gram);
+      Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ePERF.Gram, os);
       NakedPerfect<T, Tint> eNaked =
           GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV);
       Tgroup GRPshv =

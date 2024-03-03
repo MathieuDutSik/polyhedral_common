@@ -2,6 +2,8 @@
 #ifndef SRC_SHORT_SHORT_SHORTESTCONFIG_H_
 #define SRC_SHORT_SHORT_SHORTESTCONFIG_H_
 
+// clang-format off
+#include "ShortestUniversal.h"
 #include "COMB_Combinatorics.h"
 #include "InvariantVectorFamily.h"
 #include "LatticeDefinitions.h"
@@ -21,6 +23,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 template <typename Tint>
 MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
@@ -47,48 +50,6 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
   for (auto &eV : setVect)
     ListVect.push_back(eV);
   return MatrixFromVectorFamily(ListVect);
-}
-
-template <typename T, typename Tint>
-MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
-                                       std::vector<MyVector<T>> const &ListVect,
-                                       T const &MaxNorm) {
-  int n = M.rows();
-  Tint eMult = 1;
-  while (true) {
-    for (auto &eVect : ListVect) {
-      MyVector<Tint> V(n);
-      for (int i = 0; i < n; i++) {
-        T eNear = UniversalNearestScalarInteger<T, T>(eMult * eVect(i));
-        Tint eNear_i = UniversalScalarConversion<Tint, T>(eNear);
-        V(i) = eNear_i;
-      }
-      T eVal = EvaluationQuadForm(M, V);
-      if (eVal < MaxNorm)
-        return V;
-    }
-    eMult++;
-  }
-}
-
-template <typename T, typename Tint>
-MyVector<Tint> GetShortVector(MyMatrix<T> const &M, T const &MaxNorm) {
-  std::vector<MyVector<T>> ListNeg = GetSetNegativeOrZeroVector(M);
-  return GetShortVectorSpecified<T, Tint>(M, ListNeg, MaxNorm);
-}
-
-template <typename T, typename Tint>
-MyVector<Tint> GetShortVectorDegenerate(MyMatrix<T> const &M,
-                                        T const &MaxNorm) {
-  MyMatrix<T> NSP = NullspaceMat(M);
-  int nbRow = NSP.rows();
-  std::vector<MyVector<T>> ListVect(nbRow);
-  for (int i = 0; i < nbRow; i++) {
-    MyVector<T> eVect = GetMatrixRow(NSP, i);
-    T eMax = eVect.maxCoeff();
-    ListVect[i] = eVect / eMax;
-  }
-  return GetShortVectorSpecified<T, Tint>(M, ListVect, MaxNorm);
 }
 
 template <typename T, typename Tint> struct ReplyRealizability {
@@ -118,7 +79,7 @@ template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
-    std::string const &TheMethod, [[maybe_unused]] std::ostream &os) {
+    std::string const &TheMethod, std::ostream &os) {
   ReplyRealizability<T, Tint> eRes;
   int n = ListVect[0].size();
   int nbVect = ListVect.size();
@@ -346,7 +307,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       if (testPosDef) {
         std::cerr << "Before computation of T_ShortestVector\n";
         WriteMatrix(std::cerr, eMatSec);
-        Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eMatSec);
+        Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eMatSec, os);
         std::cerr << " After computation of T_ShortestVector\n";
         int nbRow = RecSHV.SHV.rows();
         std::vector<MyVector<Tint>> SHV(nbRow);

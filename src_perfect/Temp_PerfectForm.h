@@ -400,25 +400,25 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
-Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir) {
+Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir, std::ostream & os) {
   std::function<bool(MyMatrix<T> const &)> IsAdmissible =
       [](MyMatrix<T> const &eMat) -> bool {
     return IsPositiveDefinite<T>(eMat);
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T> const &)> ShortestFunction =
-      [](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
-    return T_ShortestVector<T, Tint>(eMat);
+      [&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
+    return T_ShortestVector<T, Tint>(eMat, os);
   };
   RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
   return Kernel_Flipping_Perfect(eRecShort, eMatIn, eMatDir);
 }
 
 template <typename T>
-MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa) {
+MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream & os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
   while (true) {
-    Tshortest<T, int> RecSHV = T_ShortestVector<T, int>(ThePerfMat);
+    Tshortest<T, int> RecSHV = T_ShortestVector<T, int>(ThePerfMat, os);
     int nbShort = RecSHV.SHV.rows();
     MyMatrix<T> ScalMat(nbShort, nbMat);
     for (int iShort = 0; iShort < nbShort; iShort++) {
@@ -434,7 +434,7 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa) {
       break;
     MyVector<T> eVect = eSelect.NSP.row(0);
     MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(LinSpa, eVect);
-    MyMatrix<T> eMatRet = Flipping_Perfect<T, int>(ThePerfMat, DirMat).first;
+    MyMatrix<T> eMatRet = Flipping_Perfect<T, int>(ThePerfMat, DirMat, os).first;
     ThePerfMat = eMatRet;
   }
   return ThePerfMat;
@@ -506,10 +506,10 @@ template <typename T, typename Tint> struct equiv_info<SimplePerfect<T, Tint>> {
 };
 
 template <typename T, typename Tint>
-SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram) {
+SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram, std::ostream& os) {
   using Tidx_value = int16_t;
   int n = eGram.rows();
-  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram);
+  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram, os);
   MyMatrix<T> eG = eGram / RecSHV.eMin;
   int nbSHV = RecSHV.SHV.size();
   MyVector<Tint> V1(n), V2(n);
@@ -540,11 +540,12 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
                               MyMatrix<T> const &Gram1,
-                              MyMatrix<T> const &Gram2) {
+                              MyMatrix<T> const &Gram2,
+                              std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx_value = int16_t;
-  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(Gram1);
-  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(Gram2);
+  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(Gram1, os);
+  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(Gram2, os);
   MyMatrix<T> T_SHV1 = UniversalMatrixConversion<T, Tint>(RecSHV1.SHV);
   MyMatrix<T> T_SHV2 = UniversalMatrixConversion<T, Tint>(RecSHV2.SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1 =

@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
       //
       int eStatus = 0;
       //
-      Tshortest<Tmat, Tint> eRec = T_ShortestVector<Tmat, Tint>(ePerfect_Tmat);
+      Tshortest<Tmat, Tint> eRec = T_ShortestVector<Tmat, Tint>(ePerfect_Tmat, std::cerr);
       int incd = (eRec.SHV.rows()) / 2;
       //
       HumanTime time;

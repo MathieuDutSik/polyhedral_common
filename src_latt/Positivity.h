@@ -352,6 +352,48 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
   return TheSet;
 }
 
+template <typename T, typename Tint>
+MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
+                                       std::vector<MyVector<T>> const &ListVect,
+                                       T const &MaxNorm) {
+  int n = M.rows();
+  Tint eMult = 1;
+  while (true) {
+    for (auto &eVect : ListVect) {
+      MyVector<Tint> V(n);
+      for (int i = 0; i < n; i++) {
+        T eNear = UniversalNearestScalarInteger<T, T>(eMult * eVect(i));
+        Tint eNear_i = UniversalScalarConversion<Tint, T>(eNear);
+        V(i) = eNear_i;
+      }
+      T eVal = EvaluationQuadForm(M, V);
+      if (eVal < MaxNorm)
+        return V;
+    }
+    eMult++;
+  }
+}
+
+template <typename T, typename Tint>
+MyVector<Tint> GetShortVector(MyMatrix<T> const &M, T const &MaxNorm) {
+  std::vector<MyVector<T>> ListNeg = GetSetNegativeOrZeroVector(M);
+  return GetShortVectorSpecified<T, Tint>(M, ListNeg, MaxNorm);
+}
+
+template <typename T, typename Tint>
+MyVector<Tint> GetShortVectorDegenerate(MyMatrix<T> const &M,
+                                        T const &MaxNorm) {
+  MyMatrix<T> NSP = NullspaceMat(M);
+  int nbRow = NSP.rows();
+  std::vector<MyVector<T>> ListVect(nbRow);
+  for (int i = 0; i < nbRow; i++) {
+    MyVector<T> eVect = GetMatrixRow(NSP, i);
+    T eMax = eVect.maxCoeff();
+    ListVect[i] = eVect / eMax;
+  }
+  return GetShortVectorSpecified<T, Tint>(M, ListVect, MaxNorm);
+}
+
 template<typename T>
 std::vector<T> GetLineVector(MyMatrix<T> const& M) {
   int n = M.rows();

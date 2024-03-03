@@ -59,9 +59,9 @@ MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm, std::
 }
 
 template <typename T, typename Tint>
-Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat) {
+Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat, std::ostream& os) {
   T MinNorm = MinimumDiagonal(eMat);
-  MyMatrix<Tint> TheSHVall = T_ShortVector<T, Tint>(eMat, MinNorm);
+  MyMatrix<Tint> TheSHVall = T_ShortVector<T, Tint>(eMat, MinNorm, os);
   return SelectShortestVector(eMat, TheSHVall);
 }
 

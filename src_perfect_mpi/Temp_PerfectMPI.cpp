@@ -43,9 +43,9 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI() {
 
 template <typename T, typename Tint>
 std::vector<TypePerfectExch<Tint>>
-GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn) {
+GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
   MyMatrix<T> eMat_T = UniversalMatrixConversion<T, Tint>(eObjIn.eMat);
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eMat_T);
+  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eMat_T, os);
   int n = eRec.SHV.cols();
   int nbShort = eRec.SHV.rows() / 2;
   int dimSymm = n * (n + 1) / 2;
@@ -64,7 +64,7 @@ GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn) {
       Vexpand(i) = eFacet(i) / Wvect(i);
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePairAdj =
-        Flipping_Perfect<T, Tint>(eMat_T, eMatDir);
+      Flipping_Perfect<T, Tint>(eMat_T, eMatDir, os);
     int incd = ePairAdj.second.SHV.rows() / 2;
     //
     MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first).Mat;
@@ -102,8 +102,8 @@ int main() {
   int irank = world.rank();
   int size = world.size();
   std::string eFileO = "LOG_" + IntToString(irank);
-  std::ofstream log(eFileO);
-  log << "Initial log entry" << std::endl;
+  std::ofstream os(eFileO);
+  os << "Initial log entry" << std::endl;
   //
   std::ifstream is(FileMatrix);
   int nbMatrixStart;
@@ -147,19 +147,19 @@ int main() {
     TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
     auto it1 = ListCasesDone.find(ePerfect);
     if (it1 != ListCasesDone.end()) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
+      os << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     int pos = ePerfect.incd - MinIncidenceRealized;
     auto it2 = ListCasesNotDone[pos].find(ePerfect);
     if (it2 != ListCasesNotDone[pos].end()) {
-      log << "Processed entry=" << ePair.eIndex << "END" << std::endl;
+      os << "Processed entry=" << ePair.eIndex << "END" << std::endl;
       return;
     }
     ListCasesNotDone[pos][ePerfect] = {idxMatrixCurrent};
-    log << "Inserting New perfect form" << ePair.ePerfect
-        << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from "
-        << ePair.eIndex << "END" << std::endl;
+    os << "Inserting New perfect form" << ePair.ePerfect
+       << " idxMatrixCurrent=" << idxMatrixCurrent << " Obtained from "
+       << ePair.eIndex << "END" << std::endl;
     std::cerr << "Inserting new form, now we have pos=" << pos
               << " |ListCasesNotDone[pos]|=" << ListCasesNotDone[pos].size()
               << " |ListCasesDone|=" << ListCasesDone.size() << "\n";
@@ -237,8 +237,8 @@ int main() {
       } else {
         ListCasesDone[eRecMat] = eData;
       }
-      log << "Reading existing matrix=" << eRecMat
-          << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
+      os << "Reading existing matrix=" << eRecMat
+         << " idxMatrixCurrent=" << idxMatrixCurrent << "END" << std::endl;
       idxMatrixCurrent++;
     }
   }
@@ -284,10 +284,10 @@ int main() {
           int idxMatrixF = eReq->second;
           std::cerr << "irank=" << irank << " Starting Adjacent Form Method\n";
           std::vector<TypePerfectExch<Tint>> ListAdjacentObject =
-              GetAdjacentObjects<T, Tint>(eReq->first);
+            GetAdjacentObjects<T, Tint>(eReq->first, os);
           int nbAdjacent = ListAdjacentObject.size();
-          log << "Number of Adjacent for idxMatrixF=" << idxMatrixF
-              << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
+          os << "Number of Adjacent for idxMatrixF=" << idxMatrixF
+             << " nbAdjacent=" << nbAdjacent << " END" << std::endl;
           std::cerr << "irank=" << irank
                     << " Number of Adjacent for idxMatrixF=" << idxMatrixF
                     << " nbAdjacent=" << nbAdjacent << " END\n";
