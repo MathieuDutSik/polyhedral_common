@@ -577,7 +577,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   MicrosecondTime time;
 #endif
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 1\n";
+  std::cerr << "CTYP_GetConeInformation, step 1\n";
 #endif
   MyMatrix<T> TheCtype = ExpressMatrixForCType(TheCtypeArr.eMat);
   int n_edge = TheCtype.rows();
@@ -586,7 +586,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "|ExpressMatrixForCType|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 2\n";
+  std::cerr << "CTYP_GetConeInformation, step 2\n";
 #endif
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
       CTYP_GetListTriple<T, Tidx>(TheCtype);
@@ -595,7 +595,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "|CTYP_GetListTriple|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 3\n";
+  std::cerr << "CTYP_GetConeInformation, step 3\n";
 #endif
   Tidx n = TheCtype.cols();
   uint8_t n_i = static_cast<uint8_t>(n);
@@ -836,7 +836,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   std::cerr << "|Criterion Ineq Drop|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 4\n";
+  std::cerr << "CTYP_GetConeInformation, step 4\n";
 #endif
   int nb_ineq_after_crit = Tot_mapB.size();
   MyMatrix<T> ListInequalities(nb_ineq_after_crit, tot_dim);
@@ -849,7 +849,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
     ListInformations.push_back(std::move(kv.second));
   }
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 5\n";
+  std::cerr << "CTYP_GetConeInformation, step 5\n";
   std::cerr << "ListInequalities=\n";
   WriteMatrix(std::cerr, ListInequalities);
 #endif
@@ -960,7 +960,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
     }
   }
 #ifdef PRINT_GET_ADJ
-  std::cerr << "CTYP_GetAdjacentCanonicCtypes, step 7\n";
+  std::cerr << "CTYP_GetConeInformation, step 7\n";
 #endif
 
 #ifdef TIMINGS

@@ -144,12 +144,15 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   auto f=[](Tover const& x) -> Tobj {
     return x.ctype_arr;
   };
-  auto next_iterator(l_obj, l_status, f);
-  //  NextIterator<Tover,Tobj,decltype(f)> next_iterator(l_obj, l_status, f);
+  //  auto next_iterator(l_obj, l_status, f);
+  NextIterator<Tover,Tobj,decltype(f)> next_iterator(l_obj, l_status, f);
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    return next_iterator.f_next();
+  };
   auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
     int nb_free = CTYP_GetNumberFreeVectors(x);
-    int nb_autom = CTYP_GetNbAutom<T, Tgroup>(x, os);
-    DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(x);
+    int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, os);
+    DataCtypeFacet<Tint, Tidx> data = CTYP_GetConeInformation<Tint, Tidx>(x);
     int nb_triple = data.nb_triple;
     int nb_ineq = data.nb_ineq;
     int nb_ineq_after_crit = data.nb_ineq_after_crit;
@@ -157,8 +160,8 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
     l_obj[i_orb].struct_info = struct_info;
     std::vector<TadjI> ListRet;
     for (auto &e_int : data.ListIrred) {
-      MyMatrix<T> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
-      MyMatrix<T> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
+      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
+      MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
       TypeCtypeExch<Tint> x{std::move(CanMat)};
       TadjI x_adjI{x};
       ListRet.push_back(x_adjI);
@@ -171,7 +174,6 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   auto f_obj=[&](TadjI const& x) -> Tobj {
     return x.ctype_arr;
   };
-  auto f_next=next_iterator.f_next;
   auto f_insert=[&](Tobj const& x) -> bool {
     l_obj.push_back({x, {}, {} });
     return false;
@@ -195,7 +197,7 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
-  return {test, l_obj};
+  return {test, std::move(l_obj)};
 }
 
 template<typename T, typename Tint, typename Tgroup>
