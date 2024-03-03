@@ -98,6 +98,16 @@ std::vector<MyVector<Tint>> LORENTZ_SearchInitialVector(MyMatrix<T> const& LorMa
   return LORENTZ_FindPositiveVectors(LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
 }
 
+
+template<typename T, typename Tint>
+MyVector<Tint> 
+
+
+
+
+
+
+
 template<typename T, typename Tint>
 MyVector<Tint> LORENTZ_GetShortPositiveVector(MyVector<T> const& LorMat) {
   int n = LorMat.rows();

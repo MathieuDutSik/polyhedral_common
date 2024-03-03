@@ -3,12 +3,20 @@
 #define SRC_LATT_TEMP_POSITIVITY_H_
 
 // clang-format off
-#include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
 #include <vector>
 // clang-format on
+
+// This code does the following:
+// * diagonalization of symmetric matrices
+// * Finding a vector of positive norm in a vector.
+
+#ifdef DEBUG
+#define DEBUG_POSITIVITY
+#endif
+
 
 template <typename T> T MinimumDiagonal(MyMatrix<T> const &eMat) {
   int n = eMat.rows();
@@ -231,13 +239,13 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat) {
 }
 
 template <typename T>
-MyVector<T> GetNegativeNormVector(MyMatrix<T> const &SymMat) {
+MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
   MyMatrix<T> const &RedMat = DiagInfo.RedMat;
   int n = SymMat.rows();
   for (int i = 0; i < n; i++) {
-    if (RedMat(i, i) < 0) {
+    if (RedMat(i, i) > 0) {
       MyVector<T> eVect = GetMatrixRow(Transform, i);
       T norm = eVect.dot(SymMat * eVect);
       if (norm != RedMat(i, i)) {
@@ -251,16 +259,73 @@ MyVector<T> GetNegativeNormVector(MyMatrix<T> const &SymMat) {
   throw TerminalException{1};
 }
 
-template <typename T> void CheckPositiveDefinite(MyMatrix<T> const &SymMat) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
-  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 0) {
-    std::cerr << "SymMat should be positive definite\n";
-    std::cerr << "SymMat=\n";
-    WriteMatrix(std::cerr, SymMat);
-    std::cerr << "nZero = " << DiagInfo.nbZero << " nMinus=" << DiagInfo.nbMinus
-              << "\n";
-    throw TerminalException{1};
+
+template<typename T, typename Tint, typename Ttest>
+MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, MyMatrix<T> const& M) {
+  int scal = 1;
+  MyVector<Tint> V_ret(n);
+  while(true) {
+    for (auto & eV : ListVect) {
+      for (int i=0; i<n; ui++) {
+        Ttest val_d = scal * eV(i);
+        Tint val = UniversalNearestScalarInteger<Tint, Ttest>(val_d);
+        V_ret(i) = val;
+      }
+      T eNorm = EvaluationQuadForm<T,Tint>(M, V_ret);
+      if (eNorm > 0) {
+        return V_ret;
+      }
+    }
+#ifdef DEBUG_POSITIVITY
+    os << "POS: GetPositiveNormVector_family |ListVect|=" << ListVect.size() << " scal=" << scal << "\n";
+#endif
+    scal += 1;
   }
+}
+
+
+
+
+template <typename T, typename Tint>
+MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M) {
+  int n = M.rows();
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
+  MyMatrix<T> const &Transform = DiagInfo.Transform;
+  MyMatrix<T> const &RedMat = DiagInfo.RedMat;
+  std::vector<MyVector<T>> ListVect;
+  for (int i = 0; i < n; i++) {
+    if (RedMat(i, i) > 0) {
+      MyVector<T> eVect = GetMatrixRow(Transform, i);
+      T sum = 0;
+      for (int j=0; j<n; j++) {
+        sum += T_abs(eVect(j));
+      }
+      MyVector<T> fVect = eVect / sum;
+      ListVect.push_back(fVect);
+    }
+  }
+  return GetIntegralPositiveVector_family<T,Tint,T>(ListVect, M);
+}
+
+
+template<typename T, typename Tint>
+MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
+  int n = M.rows();
+  MyMatrix<double> M_double = UniversalMatrixConversion<double,T>(M);
+  Eigen::SelfAdjointEigenSolver<MyMatrix<double>> eig(M_double);
+  MyVector<T> ListEig = eig.eigenvalues();
+  MyMatrix<T> ListVect = eig.eigenvectors();
+  std::vector<MyVector<double>> ListEigVect;
+  for (int i=0; i<n; i++) {
+    if (ListEig(i) > 0) {
+      MyVector<double> V(n);
+      for (int j=0; j<n; j++) {
+        V(j) = ListVect(i, j);
+      }
+      ListEigVect.push_back(V);
+    }
+  }
+  return GetIntegralPositiveVector_family<T,Tint,double>(ListEigVect, M);
 }
 
 template <typename T>

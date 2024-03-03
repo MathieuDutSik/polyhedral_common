@@ -1786,7 +1786,6 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
     MyMatrix<Tint> Latt_i_Orth_tint =
         UniversalMatrixConversion<Tint, T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
-    CheckPositiveDefinite(G_P);
     std::vector<MyVector<Tint>> l_v =
         FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm);
     for (auto &e_v : l_v) {
@@ -1883,7 +1882,6 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       //
       MyMatrix<T> const &RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
-      //      CheckPositiveDefinite(G_P);
       std::vector<MyVector<Tint>> l_v =
           FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm);
       std::cerr << "|l_v|=" << l_v.size() << "\n";
@@ -1949,11 +1947,11 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
     std::cerr << "We have Pplane\n";
     auto get_kP = [&]() -> MyVector<T> {
-      MyMatrix<T> Gprod = Pplane * G * Pplane.transpose();
+      MyMatrix<T> Gprod = - Pplane * G * Pplane.transpose();
       T CritNorm = 0;
       std::cerr << "Gprod=\n";
       WriteMatrix(std::cerr, Gprod);
-      MyVector<T> eVect_A = GetNegativeNormVector(Gprod);
+      MyVector<T> eVect_A = GetPositiveNormVector(Gprod);
       MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
       T scal = V.dot(G * eVect_B);
       // This is because of the sign convention
