@@ -6,6 +6,7 @@
 #include "MAT_Matrix.h"
 #include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
+#include "COMB_Vectors.h"
 #include <vector>
 // clang-format on
 
@@ -262,11 +263,12 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
 
 template<typename T, typename Tint, typename Ttest>
 MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, MyMatrix<T> const& M) {
+  int n = M.rows();
   int scal = 1;
   MyVector<Tint> V_ret(n);
   while(true) {
     for (auto & eV : ListVect) {
-      for (int i=0; i<n; ui++) {
+      for (int i=0; i<n; i++) {
         Ttest val_d = scal * eV(i);
         Tint val = UniversalNearestScalarInteger<Tint, Ttest>(val_d);
         V_ret(i) = val;
