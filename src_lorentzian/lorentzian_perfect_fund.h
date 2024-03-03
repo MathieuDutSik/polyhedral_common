@@ -12,7 +12,7 @@ static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
 
 template<typename T, typename Tint>
-std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMat, MyVector<T> const& eVect, T const& MaxScal, int const& TheOption, bool const& OnlyShortest) {
+std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMat, MyVector<T> const& eVect, T const& MaxScal, int const& TheOption, bool const& OnlyShortest, std::ostream & os) {
   int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT_FUND
@@ -48,6 +48,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   MyMatrix<Tint> Ubasis = NullspaceIntMat(eVectM_LorMat_tint_M);
   MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T,Tint>(Ubasis);
   MyMatrix<T> GramMat = - Ubasis_T * LorMat * Ubasis_T.transpose();
+  CVPSolver<T,Tint> solver(GramMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT_FUND
   if (!IsPositiveDefiniteSymmetricMatrix(GramMat)) {
     std::cerr << "GramMat should be positive definite\n";
@@ -64,7 +65,10 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     MyVector<Tint> eTrans = eBasSol - alpha * eVect;
     std::optional<MyVector<Tint>> opt = SolutionMat(Ubasis, eTrans);
     MyVector<Tint> eSol = unfold_opt(opt);
+    T eSquareDist = alpha * alpha * eNorm;
+    std::vector<MyVector<Tint>> ListSolA = 
     
+    if (OnlyShortest 
     
     eVal += 1;
   }

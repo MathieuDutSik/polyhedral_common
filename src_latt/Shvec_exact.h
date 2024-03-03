@@ -16,17 +16,13 @@
 
 #ifdef DEBUG
 #define DEBUG_SHVEC
+//#define DEBUG_SHVEC_VECTOR
+//#define DEBUG_SHVEC_MATRIX
 #endif
 
 #ifdef TIMINGS
 #define TIMINGS_SHVEC
 #endif
-
-//#ifdef DEBUG
-//#define DEBUG_SHVEC
-//#define DEBUG_SHVEC_VECTOR
-//#define DEBUG_SHVEC_MATRIX
-//#endif
 
 namespace TempShvec_globals {
 const int TEMP_SHVEC_MODE_UNDEF = -1;
@@ -457,20 +453,19 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeMinimum, begin\n";
 #endif
-  int i, j;
   int dim = request.dim;
   const MyVector<T> &C = request.coset;
   const bool &central = request.central;
   auto get_minimum_atp = [&]() -> T {
     if (!central) {
       T eNorm = 0;
-      for (i = 0; i < dim; i++)
-        for (j = 0; j < dim; j++)
+      for (int i = 0; i < dim; i++)
+        for (int j = 0; j < dim; j++)
           eNorm += request.gram_matrix(i, j) * C(i) * C(j);
       return eNorm;
     }
     T eMin = request.gram_matrix(0, 0);
-    for (i = 1; i < dim; i++) {
+    for (int i = 1; i < dim; i++) {
       T diag_val = request.gram_matrix(i, i);
       if (eMin > diag_val)
         eMin = diag_val;
@@ -788,6 +783,66 @@ public:
     }
 #endif
     return {TheNorm, std::move(ListClos)};
+  }
+  std::vector<MyVector<Tint>> FixedNormVectors(MyVector<T> const &eV, T const& TheNorm) {
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+    std::pair<MyVector<Tint>, MyVector<T>> ePair =
+      ReductionMod1vector<T, Tint>(cosetRed);
+    request.coset = ePair.second;
+    request.central = false;
+    request.bound = TheNorm;
+    std::vector<MyVector<Tint>> ListVect;
+    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
+      if (min == TheNorm) {
+        MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
+        ListVect.push_back(x);
+      }
+      return true;
+    };
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
+#ifdef DEBUG_SHVEC
+    MyVector<T> eDiff(dim);
+    for (auto & eVect : ListVect) {
+      for (int i = 0; i < dim; i++) {
+        T val = UniversalScalarScalarConversion<T,Tint>(eVect(i));
+        eDiff(i) = val - eV(i);
+      }
+      if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return ListVect;
+  }
+  std::vector<MyVector<Tint>> AtMostNormVectors(MyVector<T> const &eV, T const& MaxNorm) {
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+    std::pair<MyVector<Tint>, MyVector<T>> ePair =
+      ReductionMod1vector<T, Tint>(cosetRed);
+    request.coset = ePair.second;
+    request.central = false;
+    request.bound = MaxNorm;
+    std::vector<MyVector<Tint>> ListVect;
+    auto f_insert = [&](const MyVector<Tint> &V, [[maybe_unused]] const T &min) -> bool {
+      MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
+      ListVect.push_back(x);
+      return true;
+    };
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
+#ifdef DEBUG_SHVEC
+    MyVector<T> eDiff(dim);
+    for (auto & eVect : ListVect) {
+      for (int i = 0; i < dim; i++) {
+        T val = UniversalScalarScalarConversion<T,Tint>(eVect(i));
+        eDiff(i) = val - eV(i);
+      }
+      if (TheNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return ListVect;
   }
 };
 
