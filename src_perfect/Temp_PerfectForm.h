@@ -4,7 +4,7 @@
 
 #include "MatrixGroup.h"
 #include "Parallel_Classes_Types.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include "Tspace_General.h"
 #include <map>
 #include <string>

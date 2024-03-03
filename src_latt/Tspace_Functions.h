@@ -6,7 +6,7 @@
 #include "POLY_PolytopeFct.h"
 #include "ShortestUniversal.h"
 #include "PolytopeEquiStab.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include "SHORT_ShortestConfig.h"
 #include <set>
 #include <vector>

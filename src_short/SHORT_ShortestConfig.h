@@ -12,7 +12,7 @@
 #include "POLY_LinearProgramming_GLPK.h"
 #include "POLY_PolytopeInt.h"
 #include "Parallel_Classes_Types.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include "Temp_ShortVectorUndefinite.h"
 #include "Tspace_General.h"
 #include <algorithm>

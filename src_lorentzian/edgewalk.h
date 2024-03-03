@@ -8,7 +8,7 @@
 #include "Namelist.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "PolytopeEquiStab.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include "Timings.h"
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"

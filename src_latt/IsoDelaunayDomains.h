@@ -5,7 +5,7 @@
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include "LatticeDelaunay.h"
 #include "Tspace_General.h"
 #include <string>

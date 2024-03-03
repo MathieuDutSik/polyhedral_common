@@ -5,7 +5,7 @@
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include <string>
 #include <vector>
 // clang-format on

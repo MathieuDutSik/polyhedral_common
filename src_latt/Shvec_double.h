@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "LatticeDefinitions.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 #include <la_support.h>
 #include <shvec.h>
 #include <vector>

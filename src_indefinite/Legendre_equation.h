@@ -10,7 +10,7 @@
 #include <map>
 #include <set>
 #include "factorizations.h"
-#include "Temp_Positivity.h"
+#include "Positivity.h"
 // clang-format on
 
 /*
