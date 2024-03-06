@@ -43,7 +43,7 @@
 #endif
 
 #ifdef DEBUG
-static const size_t THRESHOLD_USE_SUBSET_SCHEME = 100;
+static const size_t THRESHOLD_USE_SUBSET_SCHEME = 2;
 #else
 static const size_t THRESHOLD_USE_SUBSET_SCHEME = 1000;
 #endif

@@ -262,7 +262,7 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
 
 
 template<typename T, typename Tint, typename Ttest>
-MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, MyMatrix<T> const& M) {
+MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
   int n = M.rows();
   int scal = 1;
   MyVector<Tint> V_ret(n);
@@ -285,11 +285,8 @@ MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> con
   }
 }
 
-
-
-
 template <typename T, typename Tint>
-MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M) {
+MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
@@ -306,12 +303,12 @@ MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M) {
       ListVect.push_back(fVect);
     }
   }
-  return GetIntegralPositiveVector_family<T,Tint,T>(ListVect, M);
+  return GetIntegralPositiveVector_family<T,Tint,T>(ListVect, M, os);
 }
 
 
 template<typename T, typename Tint>
-MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
+MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, std::ostream & os) {
   int n = M.rows();
   MyMatrix<double> M_double = UniversalMatrixConversion<double,T>(M);
   Eigen::SelfAdjointEigenSolver<MyMatrix<double>> eig(M_double);
@@ -327,7 +324,7 @@ MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, [[maybe_unu
       ListEigVect.push_back(V);
     }
   }
-  return GetIntegralPositiveVector_family<T,Tint,double>(ListEigVect, M);
+  return GetIntegralPositiveVector_family<T,Tint,double>(ListEigVect, M, os);
 }
 
 template <typename T>

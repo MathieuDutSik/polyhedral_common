@@ -836,7 +836,7 @@ public:
         T val = UniversalScalarScalarConversion<T,Tint>(eVect(i));
         eDiff(i) = val - eV(i);
       }
-      if (TheNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+      if (MaxNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
       }
