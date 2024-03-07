@@ -952,6 +952,13 @@ inline typename std::enable_if<is_symm, Tidx_value>::type get_effective_weight_i
  */
 template<typename Tidx_value, typename T, bool is_symm>
 inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_index(size_t nWei, size_t nbRow, size_t iVert, size_t jVert, WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
+#ifdef DEBUG_WEIGHT_MATRIX
+  if (iVert >= jVert) {
+    std::cerr << "iVert=" << iVert << " jVert=" << jVert << "\n";
+    std::cerr << "But we should have iVert < jVert\n";
+    throw TerminalException{1};
+  }
+#endif
   size_t iVertRed = iVert % nbRow;
   size_t jVertRed = jVert % nbRow;
   if (jVert == 2 * nbRow) {
@@ -961,7 +968,7 @@ inline typename std::enable_if<!is_symm, Tidx_value>::type get_effective_weight_
       return WMat.GetValue(iVert, iVert);
     } else {
       // Case D
-      return nWei+1;
+      return nWei + 1;
     }
   }
   if (iVertRed == jVertRed) {
@@ -1028,19 +1035,19 @@ GetGraphFromWeightedMatrix_color_adj(
     os << "\n";
   }
   os << "The mapped matrix\n";
+  auto get_effective_weight_index_gen=[&](size_t iVert, size_t jVert) -> size_t {
+    if (iVert == jVert) {
+      return nbMult;
+    }
+    if (iVert < jVert) {
+      return get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
+    } else {
+      return get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, jVert, iVert, WMat);
+    }
+  };
   for (size_t iVert = 0; iVert < nbVert; iVert++) {
     for (size_t jVert = 0; jVert < nbVert; jVert++) {
-      if (iVert == jVert) {
-        os << " " << (nbWei+4);
-      } else {
-        size_t eVal;
-        if (iVert < jVert) {
-          eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, iVert, jVert, WMat);
-        } else {
-          eVal = get_effective_weight_index<Tidx_value,T,is_symm>(nbWei, nbRow, jVert, iVert, WMat);
-        }
-        os << " " << eVal;
-      }
+      os << " " << get_effective_weight_index_gen(iVert, jVert);
     }
     os << "\n";
   }

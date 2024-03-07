@@ -512,6 +512,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
 template <typename T>
 void PrintWMVS(WeightMatrixVertexSignatures<T> const &WMVS, std::ostream &os) {
   size_t nbCase = WMVS.ListNbCase.size();
+  os << "-----------------------------------------\n";
   os << "nbRow=" << WMVS.nbRow << " nbWeight=" << WMVS.nbWeight
      << " nbCase=" << nbCase << "\n";
   os << "ListWeight =";
@@ -574,7 +575,7 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
   std::vector<int> esign;
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     f1(iRow);
-    int idx_specific;
+    int idx_diagonal;
     for (size_t jRow = 0; jRow < nbRow; jRow++) {
       T val = f2(jRow);
       int idx = get_T_idx(val);
@@ -585,10 +586,10 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
       if (iRow != jRow) {
         list_mult[idx]++;
       } else {
-        idx_specific = idx;
+        idx_diagonal = idx;
       }
     }
-    esign.push_back(idx_specific);
+    esign.push_back(idx_diagonal);
     for (int u = 0; u < len; u++)
       if (list_mult[u] > 0) {
         esign.push_back(u);
@@ -723,7 +724,7 @@ struct ExpandedSymbolic {
 };
 
 template<typename T, bool is_symm>
-inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS) {
+inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS, [[maybe_unused]] std::ostream& os) {
   size_t nbRow = WMVS.nbRow;
   // The old vertices, but there ar now two more vertices being added
   std::vector<std::vector<std::pair<int, int>>> list_signature;
@@ -772,9 +773,27 @@ inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_sym
   return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
+// The computation for the non-symmetric;
+// It corresponds to the code in get_effective_weight_index in WeightMatrix.h
+// The matrix is built according to following ideas:
+// | A B C |
+// |   E F |
+// |     I |
+// * C is a column matrix formed by WMat.GetValue(iVert, iVert) (Case C)
+// * F is nWei + 1 (Case D)
+// * A is nWei + 1 all around (Case A1)
+// * E is nWei + 2 all around (Case A2)
+// * B is nWei on the diagonal
+// *      and WMat.GetValue(iVert, jVert) off the diagonal.
+//
+// The diagonal value is available via WMVS in the first value.
 template<typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS) {
+inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS, [[maybe_unused]] std::ostream& os) {
   size_t nbRow = WMVS.nbRow;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "nWei=" << nWei << " nbRow=" << nbRow << "\n";
+  PrintWMVS(WMVS, os);
+#endif
   std::vector<std::vector<std::pair<int, int>>> list_signature;
   std::vector<int> vertex_to_signature;
   auto fUpdate = [](std::vector<std::pair<int,int>> & e_vect, int i_weight, int shift) -> void {
@@ -788,19 +807,41 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
     e_vect.push_back({i_weight, shift}); // Thus shift shouldn be positive here
   };
   size_t n_sign_old = WMVS.ListPossibleSignatures.size();
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  auto f_check=[&](std::vector<std::pair<int,int>> const& e_vect, int the_case) -> void {
+    int sum_vert = 0;
+    for (auto & ent : e_vect) {
+      sum_vert += ent.second;
+    }
+    if (sum_vert != 2 * nbRow) {
+      std::cerr << "case=" << the_case << "\n";
+      std::cerr << "sum_vert=" << sum_vert << " but should be 2*nbRow=" << (2 * nbRow) << "\n";
+      throw TerminalException{1};
+    }
+  };
+#endif
+  // The vertices are written first with a block of v1 then a block of v2 and then spec = 2 * nbRow
   // First block of vertices; updates:
   // -- Add the weight nWei+1 for nbRow-1 times (the (v1, w1) adjacencies for v != w)
   // -- Add the weight nWei for just one time (the (v1,v2) adjacency)
   // -- Add the diagonal weight just one time (on 
   for (auto &esign : WMVS.ListPossibleSignatures) {
+    // Our vertex is named V and is of the form v1
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
+    // The off diagonal values of the old matrix. So adjacencies (V = v1, w2) with v <> w.
     for (size_t u = 0; u < len; u++)
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
-    fUpdate(e_vect, nWei + 1, nbRow-1);
+    // Adjacency (V = v1, v2) that we missed from the above
     fUpdate(e_vect, nWei, 1);
+    // Adjacencies (V = v1, w1) with v  <> w.
+    fUpdate(e_vect, nWei + 1, nbRow-1);
+    // Adjacency (V, spec = 2*nbRow)
     int diag_val = esign[0]; // The diagonal value
     fUpdate(e_vect, diag_val, 1);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    f_check(e_vect, 1);
+#endif
     list_signature.push_back(e_vect);
   }
   // Second block of vertices; updates:
@@ -809,15 +850,21 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
   // -- Add the value mWei for just one time (the (v1,v2) adjacency)
   // -- Add the value nWei + 1 for two times (PURE GUESS at this point)
   for (auto &esign : WMVS.ListPossibleSignatures) {
+    // Our vertex is of the form V = v2
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
+    // The adjacencies (V = v2, w1) with v <> w
     for (size_t u = 0; u < len; u++)
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
-    int diag_val = esign[0]; // The diagonal value
-    fUpdate(e_vect, nWei + 2, nbRow-1);
-    fUpdate(e_vect, diag_val, -1);
+    // The adjacency (V = v2, w1) that we missed from above
     fUpdate(e_vect, nWei, 1);
-    fUpdate(e_vect, nWei + 2, 2);
+    // The adjacency (V = v2, w2) for v<> w
+    fUpdate(e_vect, nWei + 2, nbRow - 1);
+    // The adjacency (V = v2, spec)
+    fUpdate(e_vect, nWei + 1, 1);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    f_check(e_vect, 2);
+#endif
     list_signature.push_back(e_vect);
   }
   // Third vertex added:
@@ -833,6 +880,9 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
   std::vector<std::pair<int, int>> f_vect;
   for (auto &kv : map_vert_nRow)
     f_vect.push_back({kv.first, kv.second});
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  f_check(f_vect, 3);
+#endif
   list_signature.push_back(f_vect);
   // Now the signatures.
   for (size_t i_row=0; i_row<nbRow; i_row++) {
@@ -853,9 +903,12 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
 template <typename T, bool is_symm, typename F1, typename F2>
 DataTraces GetDataTraces(F1 f1, F2 f2,
                          WeightMatrixVertexSignatures<T> const &WMVS,
-                         [[maybe_unused]] std::ostream &os) {
+                         std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
+#endif
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "Beginning of GetDataTraces\n";
 #endif
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
@@ -876,8 +929,23 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   //
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
-  ExpandedSymbolic expand = get_expanded_symbolic<T,is_symm>(nbWeight, WMVS);
+  ExpandedSymbolic expand = get_expanded_symbolic<T,is_symm>(nbWeight, WMVS, os);
   size_t nbCase = expand.list_signature.size();
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "|vertex_to_signature|=" << expand.vertex_to_signature.size() << "\n";
+  for (size_t i=0; i<expand.vertex_to_signature.size(); i++) {
+    os << " " << expand.vertex_to_signature[i];
+  }
+  os << "\n";
+  os << "|List_signature|=" << expand.list_signature.size() << "\n";
+  for (size_t iCase=0; iCase<nbCase; iCase++) {
+    os << "iCase=" << iCase << " V =";
+    for (auto & ent : expand.list_signature[iCase]) {
+      os << " (" << ent.first << "," << ent.second << ")";
+    }
+    os << "\n";
+  }
+#endif
   //
   // Determining the number of cases
   //
@@ -926,9 +994,35 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   MyMatrix<int> MatrixAdj = ZeroMatrix<int>(hS, nbCase);
   // Adjacencies (iVert + nbVert*iH , iVert + nbVert*jH)
   size_t nb_adj1 = hS - 1;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "hS=" << hS << " nb_adj1=" << nb_adj1 << "\n";
+#endif
   for (size_t iH = 0; iH < hS; iH++)
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       MatrixAdj(iH, iCase) += nb_adj1;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  auto f_print=[&]() -> void {
+    os << "hS=" << hS << " nbCase=" << nbCase << " MatrixAdj=\n";
+    for (size_t iH = 0; iH < hS; iH++) {
+      os << "iH=" << iH << " MatrixAdj =";
+      for (size_t iCase = 0; iCase < nbCase; iCase++) {
+        os << " " << MatrixAdj(iH, iCase);
+      }
+      os << "\n";
+    }
+    os << "nbMult=" << nbMult << "\n";
+    os << "ListIdx =";
+    for (size_t iMult = 0; iMult < nbMult; iMult++) {
+      os << " " << ListIdx[iMult];
+    }
+    os << "\n";
+    os << "WeightByMult =";
+    for (size_t iMult = 0; iMult < nbMult; iMult++) {
+      os << " " << WeightByMult[iMult];
+    }
+    os << "\n";
+  };
+#endif
   //
   // Now computing the contribution of the adjacencies
   //
@@ -938,6 +1032,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     for (auto & epair : e_vect) {
       if (epair.second < 0) {
+        os << "iCase=" << iCase << "\n";
+        f_print();
         std::cerr << "A negative multiplicity is inserted which is not allowed\n";
         throw TerminalException{1};
       }
@@ -1090,6 +1186,9 @@ GetGroupCanonicalization_KnownSignature(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "Before calling GetDataTraces from GetGroupCanonicalization_KnownSignature\n";
+#endif
   DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
@@ -1146,6 +1245,9 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
               << max_poss_rows << "\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "Before calling GetDataTraces from GetStabilizerWeightMatrix_KnownSignature\n";
+#endif
   DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow, os);
 }
@@ -1259,11 +1361,17 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       PrintWMVS(WMVS_res, os);
 #endif
       Tret1 ret1 = fproc1(WMVS_res, f1_res, f2_res);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+      os << "After fproc1\n";
+#endif
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       Face f_incorr(ListEnt.size());
       for (auto &eList : fproc2(ret1)) {
         DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+        os << "After f2\n";
+#endif
         if (test.correct) {
           LGen.push_back(test.eGen);
         } else {
@@ -1280,19 +1388,25 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
           break;
         }
       }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "f_incorr=";
       for (size_t u = 0; u < ListEnt.size(); u++)
         os << int(f_incorr[u]);
       os << "\n";
       os << "|ListEnt|=" << ListEnt.size() << "\n";
+#endif
       for (size_t u = 0; u < ListEnt.size(); u++) {
         size_t pos = ListEnt[u];
         if (f_incorr[u] == 0)
           f_covered[pos] = 1;
       }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "Before IsCorrect test IsCorrect=" << IsCorrect << "\n";
+#endif
       if (IsCorrect) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
         os << "Before fproc3\n";
+#endif
         return fproc3(CurrentListIdx, ret1, LGen);
       }
     }
@@ -1319,6 +1433,32 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   using Tret1 = std::vector<std::vector<Tidx>>;
   using Tret2 = std::vector<std::vector<Tidx>>;
   using Tret3 = std::vector<std::vector<Tidx>>;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "Thematrix=\n";
+  std::unordered_map<T, size_t> map_T;
+  size_t n_val = 0;
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    f1(iRow);
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
+      T val = f2(iCol);
+      size_t & pos = map_T[val];
+      if (pos == 0) {
+        n_val++;
+        pos = n_val;
+      }
+    }
+  }
+  for (size_t iRow=0; iRow<nbRow; iRow++) {
+    f1(iRow);
+    for (size_t iCol=0; iCol<nbRow; iCol++) {
+      T val = f2(iCol);
+      size_t pos = map_T[val] - 1;
+      os << " " << pos;
+    }
+    os << "\n";
+  }
+  os << "Beginning of GetStabilizerWeightMatrix_Heuristic\n";
+#endif
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
     return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(WMVS_res, f1_res,
