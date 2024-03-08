@@ -264,6 +264,7 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
 
 template<typename T, typename Tint, typename Ttest>
 std::optional<MyVector<Tint>> TestIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, int const& scal, MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
+  int n = M.rows();
   MyVector<Tint> V_ret(n);
   for (auto & eV : ListVect) {
     for (int i=0; i<n; i++) {
@@ -317,7 +318,7 @@ std::vector<MyVector<T>> GetNegativeDirections_diag(MyMatrix<T> const& M) {
   return ListVect;
 }
 
-template <typename T>
+template <typename T, typename Tint>
 MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M, std::ostream& os) {
   std::vector<MyVector<T>> ListVect = GetNegativeDirections_diag(M);
   return GetIntegralPositiveVector_family<T,Tint,T>(ListVect, M, os);
