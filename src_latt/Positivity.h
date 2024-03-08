@@ -12,7 +12,8 @@
 
 // This code does the following:
 // * diagonalization of symmetric matrices
-// * Finding a vector of positive norm in a vector.
+// * Finding a vector of positive norm for a symmetric matrix
+// * 
 
 #ifdef DEBUG
 #define DEBUG_POSITIVITY
@@ -262,21 +263,31 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
 
 
 template<typename T, typename Tint, typename Ttest>
+std::optional<MyVector<Tint>> TestIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, int const& scal, MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
+  MyVector<Tint> V_ret(n);
+  for (auto & eV : ListVect) {
+    for (int i=0; i<n; i++) {
+      Ttest val_d = scal * eV(i);
+      Tint val = UniversalNearestScalarInteger<Tint, Ttest>(val_d);
+      V_ret(i) = val;
+    }
+    T eNorm = EvaluationQuadForm<T,Tint>(M, V_ret);
+    if (eNorm > 0) {
+      return V_ret;
+    }
+  }
+  return {};
+}
+
+template<typename T, typename Tint, typename Ttest>
 MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> const& ListVect, MyMatrix<T> const& M, [[maybe_unused]] std::ostream & os) {
   int n = M.rows();
   int scal = 1;
   MyVector<Tint> V_ret(n);
   while(true) {
-    for (auto & eV : ListVect) {
-      for (int i=0; i<n; i++) {
-        Ttest val_d = scal * eV(i);
-        Tint val = UniversalNearestScalarInteger<Tint, Ttest>(val_d);
-        V_ret(i) = val;
-      }
-      T eNorm = EvaluationQuadForm<T,Tint>(M, V_ret);
-      if (eNorm > 0) {
-        return V_ret;
-      }
+    std::optional<MyVector<Tint>> opt = TestIntegralPositiveVector_family<T, Tint, Ttest>(ListVect, scal, M, os);
+    if (opt) {
+      return *opt;
     }
 #ifdef DEBUG_POSITIVITY
     os << "POS: GetPositiveNormVector_family |ListVect|=" << ListVect.size() << " scal=" << scal << "\n";
@@ -285,8 +296,8 @@ MyVector<Tint> GetIntegralPositiveVector_family(std::vector<MyVector<Ttest>> con
   }
 }
 
-template <typename T, typename Tint>
-MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M, std::ostream& os) {
+template<typename T>
+std::vector<MyVector<T>> GetNegativeDirections_diag(MyMatrix<T> const& M) {
   int n = M.rows();
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
@@ -303,12 +314,17 @@ MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M, std::ostream
       ListVect.push_back(fVect);
     }
   }
+  return ListVect;
+}
+
+template <typename T>
+MyVector<Tint> GetIntegralPositiveVector_diag(MyMatrix<T> const &M, std::ostream& os) {
+  std::vector<MyVector<T>> ListVect = GetNegativeDirections_diag(M);
   return GetIntegralPositiveVector_family<T,Tint,T>(ListVect, M, os);
 }
 
-
-template<typename T, typename Tint>
-MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, std::ostream & os) {
+template<typename T>
+std::vector<MyVector<double>> GetNegativeDirections_eigen(MyMatrix<T> const& M) {
   int n = M.rows();
   MyMatrix<double> M_double = UniversalMatrixConversion<double,T>(M);
   Eigen::SelfAdjointEigenSolver<MyMatrix<double>> eig(M_double);
@@ -324,8 +340,58 @@ MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, std::ostrea
       ListEigVect.push_back(V);
     }
   }
+  return ListEigVect;
+}
+
+template<typename T, typename Tint>
+MyVector<Tint> GetIntegralPositiveVector_eigen(MyMatrix<T> const& M, std::ostream & os) {
+  std::vector<MyVector<double>> ListEigVect = GetNegativeDirections_eigen(M);
   return GetIntegralPositiveVector_family<T,Tint,double>(ListEigVect, M, os);
 }
+
+// That code applies several techniques together in order to get a short
+// vector.
+// * The diagonalization method should work all the time but maybe not get us
+// an optimal vector
+// * The eigenvector method is not guaranteed to work. But if it works, it should get
+// us a very good vector.
+template<typename T, typename Tint>
+MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const& M, std::ostream & os) {
+  std::vector<MyVector<T>> ListVect = GetNegativeDirections_diag(M);
+  std::vector<MyVector<double>> ListEigVect = GetNegativeDirections_eigen(M);
+  int scal = 1;
+  while (true) {
+    std::optional<MyVector<Tint>> opt1 = TestIntegralPositiveVector_family<T,Tint,T>(ListVect, scal, M, os);
+    if (opt1) {
+      return *opt1;
+    }
+    std::optional<MyVector<Tint>> opt2 = TestIntegralPositiveVector_family<T,Tint,double>(ListEigVect, scal, M, os);
+    if (opt2) {
+      return *opt2;
+    }
+    scal += 1;
+  }
+}
+
+
+
+
+template<typename T, typename Tint>
+MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M) {
+  int n = M.rows();
+  auto L1_norm=[&](MyMatrix<T> const& eMat) -> T {
+    T sum = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        sum += T_abs(M(i,j));
+      }
+    }
+    return sum;
+  };
+  
+}
+
+
 
 template <typename T>
 std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
