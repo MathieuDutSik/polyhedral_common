@@ -12,8 +12,8 @@
 
 // This code does the following:
 // * diagonalization of symmetric matrices
-// * Finding a vector of positive norm for a symmetric matrix
-// * 
+// * Finding a vector of positive norm for a symmetric matrix.
+// * Find a short positive norm vector for a symmetric matrix.
 
 #ifdef DEBUG
 #define DEBUG_POSITIVITY
@@ -374,10 +374,34 @@ MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const& M, std::ostr
 }
 
 
-
+template<typename Tint>
+MyMatrix<Tint> GetRandomMatrixPerturbation(int const& n) {
+  int choice = rand() % 2;
+  auto get_rnd_sign=[]() -> int {
+    int pos = rand() % 2;
+    return 2 * pos - 1;
+  };
+  if (choice == 0) {
+    std::vector<int> ePerm = RandomPermutation<int>(n);
+    MyMatrix<Tint> eMat = ZeroMatrix<Tint>(n,n);
+    for (int iRow=0; iRow<n; iRow++) {
+      int iCol = ePerm[iRow];
+      eMat(iRow, iCol) = get_rnd_sign();
+    }
+    return eMat;
+  }
+  if (choice == 1) {
+    MyMatrix<Tint> eMat = IdentityMat<Tint>(n);
+    int i = rand() % n;
+    int j = rand() % n;
+    eMat(i,j) = get_rnd_sign();
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
+}
 
 template<typename T, typename Tint>
-MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M) {
+MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M, std::ostream& os) {
   int n = M.rows();
   auto L1_norm=[&](MyMatrix<T> const& eMat) -> T {
     T sum = 0;
@@ -388,7 +412,69 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M) {
     }
     return sum;
   };
-  
+  std::vector<MyVector<Tint>> GraverBasis = GetGraverKbasis<Tint>(n, 2);
+  auto GetAlpha=[&](MyVector<Tint> const& TheVect, MyVector<Tint> const& DirVect) -> int {
+    T Norm1 = EvaluationQuadForm<T,Tint>(M, TheVect);
+    int alpha = 0;
+    while(true) {
+      MyVector<Tint> NewVect = TheVect + (alpha + 1) * DirVect;
+      T Norm2 = EvaluationQuadForm<T,Tint>(M, NewVect);
+      if (Norm2 < Norm1 && Norm2 > 0) {
+        Norm1 = Norm2;
+        alpha += 1;
+      } else {
+        return alpha;
+      }
+    }
+  };
+  auto DirectImprovement=[&](MyVector<Tint> const& TheVect) -> MyVector<Tint> {
+    MyVector<Tint> ImpVect = TheVect;
+    while(true) {
+      int n_chg = 0;
+      for (auto & eVectBasis : GraverBasis) {
+        int alpha = GetAlpha(ImpVect, eVectBasis);
+        ImpVect += alpha * eVectBasis;
+        n_chg += alpha;
+      }
+      if (n_chg == 0) {
+        return ImpVect;
+      }
+    }
+  };
+  MyMatrix<Tint> ePerturb = IdentityMat<Tint>(n);
+  int n_no_improv = 0;
+  std::optional<T> CurrNorm;
+  std::optional<MyVector<Tint>> CurrVect;
+  while(true) {
+    MyMatrix<T> ePerturb_T = UniversalMatrixConversion<T,Tint>(ePerturb);
+    MyMatrix<T> M_Pert = ePerturb_T * M * ePerturb_T.transpose();
+    MyVector<Tint> uVect_Pert = GetIntegralPositiveVector_allmeth<T,Tint>(M_Pert, os);
+    MyVector<Tint> uVect = ePerturb.transpose() * uVect_Pert;
+    MyVector<Tint> TheVect = DirectImprovement(uVect);
+    T eNorm = EvaluationQuadForm<T,Tint>(M, TheVect);
+    auto is_lower=[&]() -> bool {
+      if (CurrNorm) {
+        return eNorm < *CurrNorm;
+      }
+      return true;
+    };
+    if (is_lower()) {
+      n_no_improv = 0;
+      CurrVect = TheVect;
+      CurrNorm = eNorm;
+    } else {
+      n_no_improv += 1;
+    }
+    if (n_no_improv == 500 || CurrNorm < 10) {
+      return *CurrVect;
+    }
+    T norm1 = L1_Norm(M_Pert);
+    T norm2 = L1_Norm(M);
+    if (norm1 > 1000 * norm2) {
+      ePerturb = IdentityMat<Tint>(n);
+    }
+    ePerturb = ePerturb * GetRandomMatrixPerturbation<Tint>(n);
+  }
 }
 
 
