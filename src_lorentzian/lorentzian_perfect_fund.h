@@ -155,7 +155,7 @@ MyVector<T> GetReducedVector(MyVector<T> const& V) {
 }
 
 template<typename T>
-MyVector<T> ConcatenateScalerVector(T const& scal, MyVector<T> const& V) {
+MyVector<T> ConcatenateScalarVector(T const& scal, MyVector<T> const& V) {
   int n = V.size();
   MyVector<T> Vret(n + 1);
   Vret(0) = scal;
@@ -272,7 +272,6 @@ struct ResultFlipping {
   T MaxScal;
 }
 
-
 // Given a Critical set a vector eNSPbas and a direction eNSPdir
 // we are looking for a lambda > 0 such that eNSP = eNSPbas + lambda * eNSPdir
 // such that the list of vectors satisfying eNSP * v = 0 defines a bigger
@@ -281,7 +280,7 @@ struct ResultFlipping {
 // eNSPbas must be of positive norm. eNSPdir must be of negative norm.
 //
 template<typename T, typename Tint>
-ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& CritSet, MyVector<T> const& eNSPbas, MyVector<T> const& eNSPdir, int option) {
+ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& CritSet, MyVector<T> const& eNSPbas, MyVector<T> const& eNSPdir, int option, [[maybe_unused]] std::ostream & os) {
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
 #ifdef DEBUG_LORENTZIAN_PERFECT_FUND
@@ -324,9 +323,65 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
   MyVector<T> eVectDir = LorMatInv * GetReducedVector(eNSPdir);
   T eNormBas = EvaluationQuadForm<T,T>(LorMat, eVectBas);
   T eNormDir = EvaluationQuadForm<T,T>(LorMat, eVectDir);
-  
+  int n_iter = 0;
+  while(true) {
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+    os << "TheLowerBound=" << TheLowerBound << " TheUpperBound=" << TheUpperBound << " n_iter=" << n_iter << "\n";
+#endif
+    T TheMidVal = GetMidVal(TheLowerBound, TheUpperBound);
+    MyVector<T> eNSPtest = eNSPbas + TheMidVal * eNSPdir;
+    MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
+    T eNormTest = EvaluationQuadForm<T,T>(LorMat, eVectTest);
+    T MaxScal = ScalarProductQuadForm(LorMat, CritSet[0], eVectTest);
+    if (eNormTest <= 0 && MaxScal <= 0) {
+      TheUpperBound = MidVal;
+    } else {
+      std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest);
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+      os << "|ListTotal|=" << ListTotal.size() << "\n";
+      if (IsSubset(CritSet, ListTotal) && CritSet.size() > ListTotal.size()) {
+        std::cerr << "Bug: if included, it should be equal\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (Set(ListTotal) == Set(CritSet)) {
+        TheLowerBound = MidVal;
+      } else {
+        if (IsSubset(ListTotal, CritSet)) {
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+          os << "EXIT 1 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal << "\n";
+          os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
+#endif
+          return {ListTotal, eNSPtest, eVectTest, MaxScal};
+        } else {
+          break;
+        }
+      }
+    }
+    n_iter += 1;
+  }
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+  os << "Going to the second scheme\n";
+#endif
+  while (true) {
+    MyVector<Tint> eVect = ListTotal[0];
+    MyVector<Tint> eVert = ConcatenateScalarVector(1, eVect);
+    std::vector<MyVector<Tint>> ListIsoTest = CritSet;
+    ListIsoTest.push_back(eVect);
+    T aShift = - (eNSPbas.dot(eVert)) / (eNSPdir.dot(eVert));
+    MyVector<Tint> eNSPtest = eNSPbas + aShift * eNSPdir;
+    MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
+    T MaxScal = ScalarProductQuadForm(LorMat, CritSet[0], eVectTest);
+    std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest);
+    if (IsSubset(ListTotal, CritSet)) {
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+      os << "EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal << "\n";
+      os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
+#endif
+      return {ListTotal, eNSPtest, eVectTest, MaxScal};
+    }
+  }
 
-  
 }
 
 
