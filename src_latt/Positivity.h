@@ -7,6 +7,8 @@
 #include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
 #include "COMB_Vectors.h"
+#include "GraverBasis.h"
+#include "COMB_Combinatorics.h"
 #include <vector>
 // clang-format on
 
@@ -404,7 +406,7 @@ MyMatrix<Tint> GetRandomMatrixPerturbation(int const& n) {
 template<typename T, typename Tint>
 MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M, std::ostream& os) {
   int n = M.rows();
-  auto L1_norm=[&](MyMatrix<T> const& eMat) -> T {
+  auto L1_norm=[&](MyMatrix<T> const& M) -> T {
     T sum = 0;
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {

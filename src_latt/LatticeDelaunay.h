@@ -9,6 +9,7 @@
 #include "MatrixGroup.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "GraverBasis.h"
 #include "basic_datafile.h"
 #include <map>
 #include <string>
@@ -35,17 +36,6 @@ struct DataLattice {
   bool Saving;
   std::string Prefix;
 };
-
-template<typename T, typename Tint>
-MyMatrix<Tint> GetGraverBasis(MyMatrix<T> const& GramMat) {
-  int n = GramMat.rows();
-  MyMatrix<Tint> M = ZeroMatrix<Tint>(2*n, n);
-  for (int i=0; i<n; i++) {
-    M(i, i) = 1;
-    M(i + n, i) = -1;
-  }
-  return M;
-}
 
 template <typename T, typename Tint, typename Tgroup>
 DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostream& os) {
