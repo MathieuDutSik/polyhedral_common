@@ -565,7 +565,7 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
 
 template<typename T, typename Tint>
 std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalence(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, MyMatrix<Tint> const& eFamEXT1, MyMatrix<Tint> const& eFamEXT2, std::ostream& os) {
-  
+  return LinPolytopeIntegral_Isomorphism_GramMat(eFamEXT1, LorMat1, eFamEXT2, LorMat2, os);
 }
 
 
@@ -578,7 +578,19 @@ struct ResultStabilizer {
 
 template<typename T, typename Tint, typename Tgroup>
 ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorMat, MyMatrix<Tint> const& eFamEXT, std::ostream& os) {
-  
+  MyMatrix<T> eFamEXT_T = UniversalMatrixConversion<T,Tint>(eFamEXT);
+  Tgroup GRPisom = LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
+  Tgroup GRPperm = LinPolytopeIntegral_Stabilizer_Method8(eFamEXT_T, GRPisom, os);
+  std::vector<MyMatrix<Tint>> ListGen;
+  for (auto & eGen : GRPperm.SmallGeneratingSet()) {
+    std::optional<MyMatrix<Tint>> opt = FindTransformationGeneral(eFamEXT, eFamEXT, eGen);
+    if (!opt) {
+      std::cerr << "Failed to find a tramsformation\n";
+      throw TerminalException{1};
+    }
+    ListGen.push_back(*opt);
+  }
+  return {ListGen, GRPperm};
 }
 
 

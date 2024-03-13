@@ -14,8 +14,6 @@ void process_A(std::string const &FileExt1, std::string const &FileExt2,
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tidx_value = uint32_t;
-  //    using Tgr = GraphBitset;
-  using Tgr = GraphListAdj;
   MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(FileExt1);
   MyMatrix<Tint> EXT2 = ReadMatrixFile<Tint>(FileExt2);
   size_t nbCol = EXT1.cols();
@@ -23,7 +21,7 @@ void process_A(std::string const &FileExt1, std::string const &FileExt2,
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::optional<MyMatrix<Tint>> equiv =
-      LinPolytopeIntegral_Isomorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr>(EXT1, EXT2, std::cerr);
+      LinPolytopeIntegral_Isomorphism<Tint, Tgroup>(EXT1, EXT2, std::cerr);
   if (OutFormat == "GAP") {
     if (equiv) {
       os << "return ";

@@ -15,17 +15,13 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tidx_value = uint32_t;
   using Tfield = typename overlying_field<Tint>::field_type;
-  //    using Tgr = GraphBitset;
-  using Tgr = GraphListAdj;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
   size_t nbCol = EXT.cols();
   size_t nbRow = EXT.rows();
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::pair<Tgroup, std::vector<Telt>> pair =
-      LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tidx, Tgroup,
-                                                  Tidx_value, Tgr>(
-          EXT, std::cerr);
+      LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tgroup>(EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom =
       LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);

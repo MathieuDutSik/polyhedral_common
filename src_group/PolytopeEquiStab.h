@@ -678,18 +678,18 @@ std::optional<std::vector<Tidx>> LinPolytope_Isomorphism_GramMat(
   return IsoInfo->first;
 }
 
-template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
-          typename Tgr>
+template <typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
                                 const MyMatrix<Tint> &EXT2, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   std::vector<Tidx> CanonicReord1 =
       LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, os);
   std::vector<Tidx> CanonicReord2 =
       LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, os);
   //
   using Tfield = typename overlying_field<Tint>::field_type;
-  using Telt = typename Tgroup::Telt;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,
                                                       CanonicReord2);
@@ -708,8 +708,37 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   return {};
 }
 
-template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
-          typename Tgr>
+template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
+std::optional<MyMatrix<Tint>>
+LinPolytopeIntegral_Isomorphism_GramMat(const MyMatrix<Tint> &EXT1, const MyMatrix<T> &GramMat1,
+                                        const MyMatrix<Tint> &EXT2, const MyMatrix<T> &GramMat2,
+                                        std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  MyMatrix<T> EXT1_T = UniversalMatrixConversion<T,Tint>(EXT1);
+  MyMatrix<T> EXT2_T = UniversalMatrixConversion<T,Tint>(EXT2);
+  std::vector<Tidx> CanonicReord1 =
+      LinPolytope_CanonicOrdering<T, Tidx>(EXT1_T, os);
+  std::vector<Tidx> CanonicReord2 =
+      LinPolytope_CanonicOrdering<T, Tidx>(EXT2_T, os);
+  //
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
+      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(
+          EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2);
+  if (!IsoInfo)
+    return {};
+  Telt ePerm(IsoInfo->first);
+
+  Tgroup GRP1 =
+      LinPolytope_Automorphism<T, Tgroup>(EXT1_T, os);
+  std::optional<MyMatrix<T>> eRes =
+      LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, ePerm, os);
+  if (eRes)
+    return UniversalMatrixConversion<Tint, T>(*eRes);
+  return {};
+}
+
+template <typename Tint, typename Tgroup>
 Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT,
                                         std::ostream &os) {
   using Tfield = typename overlying_field<Tint>::field_type;
@@ -720,8 +749,7 @@ Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT,
   return GRP;
 }
 
-template <typename Tint, typename Tidx, typename Tgroup, typename Tidx_value,
-          typename Tgr>
+template <typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
 LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT,
                                             std::ostream &os) {

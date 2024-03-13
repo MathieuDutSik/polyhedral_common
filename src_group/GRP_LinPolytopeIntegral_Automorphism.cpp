@@ -21,8 +21,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   size_t nbRow = EXT.rows();
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
-  Tgroup GRP =
-      LinPolytopeIntegral_Automorphism<Tint, Tidx, Tgroup, Tidx_value, Tgr>(EXT, std::cerr);
+  Tgroup GRP = LinPolytopeIntegral_Automorphism<Tint, Tgroup>(EXT, std::cerr);
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";
     return;
