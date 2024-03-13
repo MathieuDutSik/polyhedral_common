@@ -468,7 +468,7 @@ struct LorentzianPerfectEntry {
 
 
 template<typename T, typename Tint>
-MyMatrix<Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
+LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat);
@@ -502,6 +502,87 @@ MyMatrix<Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOp
     eNSPbas = eRecB.eNSPtest;
   }
 }
+
+template<typename T, typename Tint>
+LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& ListIso, Face eInc, int const& TheOption, std::ostream& os) {
+  int n = LorMat.rows();
+  size_t n_vect = eInc.size();
+  MyMatrix<T> EXT = GetFullExpanded<T,Tint>(ListIso);
+  auto get_eVert=[&]() -> size_t {
+    for (size_t i_vect=0; i_vect<n_vect; i_vect++) {
+      if (eInc[i_vect] == 0) {
+        return i_vect;
+      }
+    }
+    std::cerr << "Failed to find a matching entry\n";
+    throw TerminalException{1};
+  };
+  size_t eVert = get_eVert();
+  std::vector<MyVector<T>> ListIsoSel;
+  for (size_t i_vect=0; i_vect<n_vect; i_vect++) {
+    if (eInc[i_vect] == 1) {
+      MyVector<T> eVect = UniversalVectorConversion<T,Tint>(ListIso[i_vect]);
+      ListIsoSel.push_back(eVect);
+    }
+  }
+  MyMatrix<T> MatrIsoSel = MatrixFromVectorFamily(ListIsoSel);
+  MyMatrix<T> NSP = NullspaceTrMat(MatrIsoSel);
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+  if (NSP.rows() != 1) {
+    std::cerr << "NSP should have size 1\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyVector<T> TheDir = GetMatrixRow(NSP, 0);
+  MyVector<T> eIso = UniversalVectorConversion<T,Tint>(ListIso[eVert]);
+  auto get_eNSPdir=[&]() -> MyVector<T> {
+    T eScal = TheDir.dot(eIso);
+    if (eScal < 0) {
+      return ConcatenateScalarVect(0, -TheDir);
+    } else {
+      return ConcatenateScalarVect(0, TheDir);
+    }
+  };
+  MyVector<T> eNSPdir = get_eNSPdir();
+  MyMatrix<T> NSPb = NullspaceTrMat(EXT);
+  MyVector<T> NSPb_0 = GetMatrixRow(NSPb, 0);
+  MyVector<T> eVectB = GetReducedVector(NSPb_0);
+  auto get_eNSPbas=[&]() -> MyVector<T> {
+    if (eVectB.dot(eIso) > 0) {
+      return NSPb_0;
+    } else {
+      return -NSPb_0;
+    }
+  };
+  MyVector<T> eNSPbas = get_eNSPbas();
+  std::vector<MyVector<Tint>> TheFlip = LORENTZ_Kernel_Flipping(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os).ListTotal;
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+  LORENTZ_CheckCorrectnessVectorFamily(LorMat, TheFlip);
+#endif
+  return TheFlip;
+}
+
+
+template<typename T, typename Tint>
+std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalence(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, MyMatrix<Tint> const& eFamEXT1, MyMatrix<Tint> const& eFamEXT2, std::ostream& os) {
+  
+}
+
+
+template<typename Tint, typaneme Tgroup>
+struct ResultStabilizer {
+  std::vector<MyMatrix<Tint>> ListGen;
+  Tgroup GRPperm;
+};
+
+
+template<typename T, typename Tint, typename Tgroup>
+ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorMat, MyMatrix<Tint> const& eFamEXT, std::ostream& os) {
+  
+}
+
+
+
 
 
 
