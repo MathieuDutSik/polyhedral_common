@@ -251,11 +251,13 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
   for (int i = 0; i < n; i++) {
     if (RedMat(i, i) > 0) {
       MyVector<T> eVect = GetMatrixRow(Transform, i);
+#ifdef DEBUG_POSITIVITY
       T norm = eVect.dot(SymMat * eVect);
       if (norm != RedMat(i, i)) {
         std::cerr << "We have a consistency error\n";
         throw TerminalException{1};
       }
+#endif
       return eVect;
     }
   }
@@ -492,11 +494,13 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
       MyVector<T> eVect = ZeroVector<T>(n);
       eVect(i) = 1;
       MyVector<T> fVect = (eRecDiag.Transform.transpose()) * eVect;
+#ifdef DEBUG_POSITIVITY
       T eEval = EvaluationQuadForm(SymMat, fVect);
       if (eEval > 0) {
         std::cerr << "Big bad error\n";
         throw TerminalException{1};
       }
+#endif
       T eMax = fVect.maxCoeff();
       MyVector<T> gVect = fVect / eMax;
       TheSet.push_back(gVect);

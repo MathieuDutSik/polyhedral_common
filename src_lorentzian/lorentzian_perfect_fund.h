@@ -391,18 +391,116 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
 
 
 
-template<typename T, typename Tint>
-MyVector<Tint> LORENTZ_GetShortPositiveVector(MyVector<T> const& LorMat) {
-  int n = LorMat.rows();
-  auto L1_norm=[&](
-
+template<typename T>
+MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& SpannBasis, std::vector<MyVector<T>> const& TheSet, MyVector<T> const& eNSPbas, std::ostream& os) {
+  MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+  DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat);
+  if (dsm.nbMinus == 0) {
+    std::cerr << "We should have a negative in the entry\n";
+    throw TerminalException{1};
+  }
+#endif
+  int n_dim = TheMat.rows();
+  MyMatrix<T> ePerturb = IdentityMat<T>(n_dim);
+  while(true) {
+    MyMatrix<T> TheMatPerturb = - ePerturb * TheMat * ePerturb.transpose();
+    MyMatrix<T> uVect = GetIntegralPositiveVector_allmeth<T,T>(TheMatPerturb, os);
+    MyMatrix<T> SpannMatrixPert = ePerturb * SpannBasis;
+    MyVector<T> RetVect = SpannMatrixPert.transpose() * uVect;
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+    T TheNorm = EvaluationQuadForm<T,T>(LorMat, RetVect);
+    if (TheNorm == 0) {
+      std::cerr << "The vector should be outside of the cone and so have negative norm\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyVector<T> tVect = LorMat * RetVect;
+    T eScal = tVect.dot(TheSet[0]);
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+    for (auto & eVect : TheSet) {
+      T fScal = tVect.dot(eVect);
+      if (eScal != fScal) {
+        std::cerr << "The scalar products are incorrect\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    MyVector<T> eNSPdir = ConcatenateScalarVector(-eScal, tVect);
+    std::optional<T> TheUpperBound_opt = GetUpperBound(LorMat, eNSPbas, eNSPdir);
+    if (TheUpperBound_opt.has_value()) {
+      return eNSPdir;
+    }
+    ePerturb = ePerturb * GetRandomMatrixPerturbation<T>(n_dim);
+  }
 }
 
+template<typename T, typename Tint>
+MyMatrix<T> GetFullExpanded(std::vector<MyVector<Tint>> const& CritSet) {
+  int dim = LorMat.rows();
+  int n_vect = CritSet.size();
+  MyMatrix<T> ListVectExt(n_next, dim + 1);
+  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+    ListVectExt(i_vect, 0);
+    for (int i=0; i<dim; i++) {
+      ListVectExt(i_vect, i + 1) = UniversalScalarConversion<T,Tint>(CritSet[i_vect](i));
+    }
+  }
+  return ListVectExt;
+}
 
 template<typename T, typename Tint>
-MyMatrix<Tint> LORENTZ_GetOnePerfect(MyMatrix<Tint> const& LorMat) {
-  
+void LORENTZ_CheckCorrectnessVectorFamily(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& CritSet) {
+  MyMatrix<T> ListVectExt = GetFullExpanded<T,Tint>(CritSet);
+  int rnk = RankMat(ListVectExt);
+  if (rnk != n) {
+    std::cerr << "We have dim=" << dim << " n=" << n << " they should be equal\n";
+    throw TerminalException{1};
+  }
+}
 
+template<typename T, typename Tint>
+struct LorentzianPerfectEntry {
+  std::vector<MyVector<Tint>> ListTotal;
+  MyVector<T> eNSPtest;
+  MyVector<T> eVectTest;
+};
+
+
+template<typename T, typename Tint>
+MyMatrix<Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
+  int n = LorMat.rows();
+  MyMatrix<T> LorMatInv = Inverse(LorMat);
+  MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat);
+  std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector(LorMat, CentralVect, TheOption);
+  MyVector<T> LorMat_Central = LorMat * CentralVect;
+  T eScal = LorMat_Central.dot(CritSet[0]);
+  MyVector<T> eNSPbas = ConcatenateScalarVector(-eScal, LorMat_Central);
+  while(true) {
+    int rnk = RankMat(CritSet);
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+    os << "LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size() << "\n";
+#endif
+    if (rnk == n) {
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+      LORENTZ_CheckCorrectnessVectorFamily(LorMat, CritSet);
+#endif
+      return {ListTotal, eNSPbas, CentralVect};
+    }
+    MyMatrix<T> EXT = GetFullExpanded<T,Tint>(CritSet);
+    MyMatrix<T> NSP = NullspaceTrMat(EXT);
+#ifdef DEBUG_LORENTZIAN_PERFECT_FUND
+    if (NSP.rows() == 0) {
+      std::cerr << "NSP should be non-empty\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
+    MyMatrix<T> eNSPdir = GetOneOutsideRay(LorMat, ListDir, CritSet, eNSPbas, os);
+    ResultFlipping<T,Tint> eRecB = LORENTZ_Kernel_Flipping(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
+    CritSet = eRecB.ListTotal;
+    eNSPbas = eRecB.eNSPtest;
+  }
 }
 
 
