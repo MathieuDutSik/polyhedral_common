@@ -88,6 +88,35 @@
 
  */
 
+/*
+  Possible extension to the scheme.
+  ---Since in the scheme, we compute everything, if the first entry returned by the
+  f_init is a big monster like the biggest entry in the list, then we are going
+  to spend all the time on that one and the other nodes are not going to do anything.
+  ---This is damaging since there are many well agreed use cases where we want to
+  do a partial enumeration for this and that reason (mostly curiosity).
+  ---So, there are some realistic scenario where we want to do the enumeration
+  from the easiest to the hardest.
+
+  How this can be implemented:
+  ---We would simply need to have a function f_complexity that returns an size_t
+  that encodes the complexity of the object considered.
+  ---The task of having a good initial guess would be incumbent on the asker. A
+  good f_init would be needed.
+  ---(For example a good f_init could be obtained by an initial random walk).
+  ---Therefore, we would have a std::map<size_t, ....> encoding the unused entries
+  by complexity.
+  ---Each node should have a value of first undone entry. We should also have
+  something global.
+  ---If node A and B have level X but B passes to X+1, in order to upgrade the
+  global value, we need to know that there is no other node at X. So this
+  forces having a std::vector<size_t> first_undone(m_proc)
+  ---Any change of a node own level has to be followed by the emission to all
+  nodes of the new level.
+  ---
+ */
+
+
 template<typename T>
 void append_move(std::vector<T> & v1, std::vector<T> & v2) {
   v1.insert(v1.end(),
