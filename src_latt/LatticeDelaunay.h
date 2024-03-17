@@ -707,13 +707,13 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   auto f_idx_obj=[&](size_t const& idx) -> Tobj {
     return l_obj[idx].EXT;
   };
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    return {};
+  };
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;
     l_obj.push_back({x, grp, {} });
     return f_incorrect(x);
-  };
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    return {};
   };
   auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
     uint8_t val_i = static_cast<uint8_t>(val);
