@@ -186,6 +186,7 @@ namespace boost::serialization {
      If return true then early termination is triggered.
   f_adji_obj(TadjI) -> Tobj: should return the created object from the
      input adjacency.
+  f_idx_obj(size_t) -> Tobj: should return the object from the database.
   f_save_status(int, bool) -> void : save the status in the database
   f_init() -> Tobj : get a starting element
   f_adj(Tobj, i_orb) -> std::vector<TadjI> : get the adjacent object
@@ -235,7 +236,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   int n_obj = 0; // The number of objects generated
   // The map from the hash to the list of indices
   std::unordered_map<size_t, std::vector<size_t>> map;
-  std::vector<Tobj> V; // The objects
   std::vector<size_t> undone; // The undone indices
   //
   // The entries of AdjI / AdjO
@@ -283,7 +283,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     nonce++;
     std::vector<size_t> &vect = map[eI.hash_hashmap];
     for (auto &idx : vect) {
-      Tobj &x = V[idx];
+      Tobj x = f_idx_obj(idx);
 #ifdef TIMINGS_ADJACENCY_SCHEME
       MicrosecondTime time;
 #endif
@@ -309,7 +309,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (test) {
       send_early_termination();
     }
-    V.emplace_back(std::move(pair.first));
     undone.push_back(n_obj);
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
@@ -321,7 +320,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
-    V.push_back(x);
     std::vector<size_t> &vect = map[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
@@ -469,7 +467,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     int idx_i = static_cast<int>(idx);
     f_save_status(idx, true);
-    Tobj const& x = V[idx];
+    Tobj x = f_idx_obj(idx);
     std::vector<TadjI> l_adj = f_adj(x, idx);
     map_adjO[idx] = {l_adj.size(), {}};
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -635,7 +633,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_ADJACENCY_SCHEME
   os << "ADJ_SCH: compute_adjacency_mpi, start : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
 #endif
-  size_t n_orb_max = 0, n_orb_loc = V.size();
+  size_t n_orb_max = 0, n_orb_loc = n_obj;
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
 #ifdef DEBUG_ADJACENCY_SCHEME
   os << "ADJ_SCH: beginning n_orb_max=" << n_orb_max << " n_orb_loc=" << n_orb_loc << "\n";
@@ -726,7 +724,6 @@ bool compute_adjacency_serial(int const &max_time_second,
                               [[maybe_unused]] std::ostream& os) {
   SingletonTime start;
   size_t n_obj = 0;
-  std::vector<Tobj> V;
   std::unordered_map<size_t, std::vector<size_t>> map;
   std::vector<size_t> undone;
   bool early_termination = false;
@@ -734,14 +731,13 @@ bool compute_adjacency_serial(int const &max_time_second,
     size_t hash = f_hash(seed_hashmap, f_adji_obj(x_adjI));
     std::vector<size_t> &vect = map[hash];
     for (auto &idx : vect) {
-      Tobj &y = V[idx];
+      Tobj y = f_idx_obj(idx);
       std::optional<TadjO> opt = f_repr(y, x_adjI, idx);
       if (opt) {
         return *opt;
       }
     }
     std::pair<Tobj, TadjO> pair = f_spann(x_adjI, n_obj);
-    V.push_back(pair.first);
     vect.push_back(n_obj);
     bool test = f_insert(pair.first);
     if (test) {
@@ -755,7 +751,6 @@ bool compute_adjacency_serial(int const &max_time_second,
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
-    V.push_back(x);
     std::vector<size_t> &vect = map[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
@@ -771,7 +766,7 @@ bool compute_adjacency_serial(int const &max_time_second,
   auto treat_one_entry=[&]() -> void {
     size_t idx = get_undone_idx();
     f_save_status(idx, true);
-    Tobj const &x = V[idx];
+    Tobj x = f_idx_obj(idx);
     std::vector<TadjO> l_adj;
     for (auto &y : f_adj(x, idx)) {
       TadjO adj = process_singleEntry_AdjI(y);
