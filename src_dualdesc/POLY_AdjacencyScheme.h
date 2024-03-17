@@ -999,7 +999,7 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO_work> {
     std::optional<TadjO> opt = data.f_repr(x, y);
     if (opt) {
-      TadjO ret{*opt, i_rank, i_orb};
+      TadjO_work ret{*opt, i_rank, i_orb};
       return ret;
     } else {
       return {};
@@ -1017,7 +1017,7 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
     Tobj & x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO_work> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_adji_obj=[&](TadjI const& x) -> Tobj {

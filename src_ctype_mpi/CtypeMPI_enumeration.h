@@ -132,13 +132,15 @@ struct DataCtypeFunc {
   Tobj f_init() {
     MyMatrix<Tint> M = GetPrincipalDomain<Tint>(data.n);
     MyMatrix<Tint> CanM = LinPolytopeAntipodalIntegral_CanonicForm(M, data.os);
-    return {CanM};
+    TypeCtypeExch<Tint> ctype_arr{CanM};
+    Tobj x{ctype_arr, {}};
+    return x;
   }
   size_t f_hash(size_t const& seed, Tobj const& x) {
-    return Matrix_Hash(x.eMat, seed);
+    return Matrix_Hash(x.ctype_arr.eMat, seed);
   };
   std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
-    if (x.eMat != y.ctype_arr.eMat) {
+    if (x.ctype_arr.eMat != y.ctype_arr.eMat) {
       return {};
     }
     TadjO ret{};
@@ -151,19 +153,19 @@ struct DataCtypeFunc {
     return {x_ret, ret};
   }
   std::vector<TadjI> f_adj(Tobj & x_in) {
-    using Tidx = typename Tgroup::Tidx;
-    Tobj x = x_in.ctype_arr;
+    using Tidx = typename Tgroup::Telt::Tidx;
+    TypeCtypeExch<Tint> x = x_in.ctype_arr;
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, data.os);
-    DataCtypeFacet<Tint, Tidx> data = CTYP_GetConeInformation<Tint, Tidx>(x);
-    int nb_triple = data.nb_triple;
-    int nb_ineq = data.nb_ineq;
-    int nb_ineq_after_crit = data.nb_ineq_after_crit;
+    DataCtypeFacet<Tint, Tidx> data_facet = CTYP_GetConeInformation<Tint, Tidx>(x);
+    int nb_triple = data_facet.nb_triple;
+    int nb_ineq = data_facet.nb_ineq;
+    int nb_ineq_after_crit = data_facet.nb_ineq_after_crit;
     StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
     x_in.struct_info = struct_info;
     std::vector<TadjI> ListRet;
-    for (auto &e_int : data.ListIrred) {
-      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
+    for (auto &e_int : data_facet.ListIrred) {
+      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data_facet.TheCtype, data_facet.ListInformations[e_int]);
       MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, data.os);
       TypeCtypeExch<Tint> x{std::move(CanMat)};
       TadjI x_adjI{x};
@@ -171,110 +173,12 @@ struct DataCtypeFunc {
     }
     return ListRet;
   }
-  Tobj f_adji_obj=[&](TadjI const& x) {
+  Tobj f_adji_obj(TadjI const& x) {
     TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
     Tobj x_ret{ctype_arr, {} };
     return x_ret;
   };
 };
-
-
-template<typename T, typename Tint, typename Tgroup>
-std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataCtype const& eData, std::ostream & os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using Tover = IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>;
-  using Tobj = TypeCtypeExch<Tint>;
-  using TadjI = IsoEdgeDomain_AdjI<Tint>;
-  using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
-  auto f_init=[&]() -> Tobj {
-    MyMatrix<Tint> M = GetPrincipalDomain<Tint>(eData.n);
-    MyMatrix<Tint> CanM = LinPolytopeAntipodalIntegral_CanonicForm(M, os);
-    return {CanM};
-  };
-  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
-    return Matrix_Hash(x.eMat, seed);
-  };
-  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    if (x.eMat != y.ctype_arr.eMat) {
-      return {};
-    }
-    TadjO ret{i_rank, i_orb};
-    return ret;
-  };
-  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj IsoDel = x.ctype_arr;
-    TadjO ret{i_rank, i_orb};
-    return {IsoDel, ret};
-  };
-  std::vector<Tover> l_obj;
-  std::vector<uint8_t> l_status;
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
-  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
-  auto f=[](Tover const& x) -> Tobj {
-    return x.ctype_arr;
-  };
-  //  auto next_iterator(l_obj, l_status, f);
-  NextIterator<Tover,Tobj,decltype(f)> next_iterator(l_obj, l_status, f);
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    return next_iterator.f_next();
-  };
-  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
-    Tobj x = l_obj[i_orb].ctype_arr;
-    int nb_free = CTYP_GetNumberFreeVectors(x);
-    int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, os);
-    DataCtypeFacet<Tint, Tidx> data = CTYP_GetConeInformation<Tint, Tidx>(x);
-    int nb_triple = data.nb_triple;
-    int nb_ineq = data.nb_ineq;
-    int nb_ineq_after_crit = data.nb_ineq_after_crit;
-    StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
-    l_obj[i_orb].struct_info = struct_info;
-    std::vector<TadjI> ListRet;
-    for (auto &e_int : data.ListIrred) {
-      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
-      MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, os);
-      TypeCtypeExch<Tint> x{std::move(CanMat)};
-      TadjI x_adjI{x};
-      ListRet.push_back(x_adjI);
-    }
-    return ListRet;
-  };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
-    l_obj[i_orb].ListAdj = ListAdj;
-  };
-  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
-    return x.ctype_arr;
-  };
-  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
-    return l_obj[idx].ctype_arr;
-  };
-  auto f_insert=[&](Tobj const& x) -> bool {
-    l_obj.push_back({x, {}, {} });
-    return false;
-  };
-  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
-    uint8_t val_i = static_cast<uint8_t>(val);
-    if (l_status.size() <= pos) {
-      l_status.push_back(val_i);
-    } else {
-      l_status[pos] = val_i;
-    }
-  };
-  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_idx_obj), decltype(f_save_status),
-    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
-    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (comm, eData.max_runtime_second,
-     f_next, f_insert, f_adji_obj,
-     f_idx_obj, f_save_status,
-     f_init, f_adj, f_set_adj,
-     f_hash, f_repr, f_spann, os);
-  os << "Termination test=" << test << "\n";
-  return {test, std::move(l_obj)};
-}
 
 template<typename T, typename Tint, typename Tgroup>
 void WriteFamilyIsoEdgeDomain([[maybe_unused]] boost::mpi::communicator &comm, std::string const& OutFormat, [[maybe_unused]] std::string const& OutFile, [[maybe_unused]] std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
@@ -316,17 +220,19 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
-  //
-  using TintGroup = typename Tgroup::Tint;
 
-  DataCtype eData{n,
+  DataCtype data{n,
     max_runtime_second,
     STORAGE_Saving,
     STORAGE_Prefix, os};
-
-  std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>>> pair = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
+  using Tdata = DataCtypeFunc<T, Tint, Tgroup>;
+  Tdata data_fct{data};
+  using Tobj = typename DataCtypeFunc<T, Tint, Tgroup>::Tobj;
+  using TadjO = typename DataCtypeFunc<T, Tint, Tgroup>::TadjO;
+  using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
+  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyIsoEdgeDomain(comm, OutFormat, OutFile, pair.second, os);
+    //    WriteFamilyIsoEdgeDomain(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
