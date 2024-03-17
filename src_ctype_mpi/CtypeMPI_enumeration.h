@@ -19,6 +19,7 @@ struct DataCtype {
   int max_runtime_second;
   bool Saving;
   std::string Prefix;
+  std::ostream& os;
 };
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
@@ -64,29 +65,26 @@ namespace boost::serialization {
   }
 }
 
-template<typename T, typename Tint, typename Tgroup>
+template<typename Tint>
 struct IsoEdgeDomain_AdjI {
   TypeCtypeExch<Tint> ctype_arr;
 };
 
 namespace boost::serialization {
-  template <class Archive, typename T, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, IsoEdgeDomain_AdjI<T, Tint, Tgroup> &eRec,
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, IsoEdgeDomain_AdjI<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("ctype_arr", eRec.ctype_arr);
   }
 }
 
-template<typename Tint>
 struct IsoEdgeDomain_AdjO {
-  int iOrb;
 };
 
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, IsoEdgeDomain_AdjO<Tint> &eRec,
+  template <class Archive>
+  inline void serialize([[maybe_unused]] Archive &ar, [[maybe_unused]] IsoEdgeDomain_AdjO &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("iOrb", eRec.iOrb);
   }
 }
 
@@ -107,13 +105,87 @@ namespace boost::serialization {
   }
 }
 
+template<typename Tint>
+struct IsoEdgeDomain_Obj {
+  TypeCtypeExch<Tint> ctype_arr;
+  StructuralInfo struct_info;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, IsoEdgeDomain_Obj<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("ctype_arr", eRec.ctype_arr);
+    ar &make_nvp("struct_info", eRec.struct_info);
+  }
+}
+
+template<typename T, typename Tint, typename Tgroup>
+struct DataCtypeFunc {
+  DataCtype data;
+  using Tobj = IsoEdgeDomain_Obj<Tint>;
+  using TadjI = IsoEdgeDomain_AdjI<Tint>;
+  using TadjO = IsoEdgeDomain_AdjO;
+  std::ostream& get_os() {
+    return data.os;
+  }
+  Tobj f_init() {
+    MyMatrix<Tint> M = GetPrincipalDomain<Tint>(data.n);
+    MyMatrix<Tint> CanM = LinPolytopeAntipodalIntegral_CanonicForm(M, data.os);
+    return {CanM};
+  }
+  size_t f_hash(size_t const& seed, Tobj const& x) {
+    return Matrix_Hash(x.eMat, seed);
+  };
+  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
+    if (x.eMat != y.ctype_arr.eMat) {
+      return {};
+    }
+    TadjO ret{};
+    return ret;
+  }
+  std::pair<Tobj, TadjO> f_spann(TadjI const& x) {
+    TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
+    Tobj x_ret{ctype_arr, {} };
+    TadjO ret{};
+    return {x_ret, ret};
+  }
+  std::vector<TadjI> f_adj(Tobj & x_in) {
+    using Tidx = typename Tgroup::Tidx;
+    Tobj x = x_in.ctype_arr;
+    int nb_free = CTYP_GetNumberFreeVectors(x);
+    int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, data.os);
+    DataCtypeFacet<Tint, Tidx> data = CTYP_GetConeInformation<Tint, Tidx>(x);
+    int nb_triple = data.nb_triple;
+    int nb_ineq = data.nb_ineq;
+    int nb_ineq_after_crit = data.nb_ineq_after_crit;
+    StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
+    x_in.struct_info = struct_info;
+    std::vector<TadjI> ListRet;
+    for (auto &e_int : data.ListIrred) {
+      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data.TheCtype, data.ListInformations[e_int]);
+      MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, data.os);
+      TypeCtypeExch<Tint> x{std::move(CanMat)};
+      TadjI x_adjI{x};
+      ListRet.push_back(x_adjI);
+    }
+    return ListRet;
+  }
+  Tobj f_adji_obj=[&](TadjI const& x) {
+    TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
+    Tobj x_ret{ctype_arr, {} };
+    return x_ret;
+  };
+};
+
+
 template<typename T, typename Tint, typename Tgroup>
 std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_EnumerationIsoEdgeDomains(boost::mpi::communicator &comm, DataCtype const& eData, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tover = IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>;
   using Tobj = TypeCtypeExch<Tint>;
-  using TadjI = IsoEdgeDomain_AdjI<T, Tint, Tgroup>;
+  using TadjI = IsoEdgeDomain_AdjI<Tint>;
   using TadjO = IsoEdgeDomain_MPI_AdjO<T, Tint>;
   auto f_init=[&]() -> Tobj {
     MyMatrix<Tint> M = GetPrincipalDomain<Tint>(eData.n);
@@ -250,7 +322,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   DataCtype eData{n,
     max_runtime_second,
     STORAGE_Saving,
-    STORAGE_Prefix};
+    STORAGE_Prefix, os};
 
   std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup>>> pair = MPI_EnumerationIsoEdgeDomains<T,Tint,Tgroup>(comm, eData, os);
   if (pair.first) {
