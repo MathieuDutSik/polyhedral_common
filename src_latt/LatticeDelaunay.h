@@ -594,12 +594,12 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   };
   bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
     decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_save_status),
+    decltype(f_idx_obj), decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (comm, eData.max_runtime_second,
      f_next, f_insert, f_adji_obj,
-     f_save_status,
+     f_idx_obj, f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
@@ -672,12 +672,12 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   };
   bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
     decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_save_status),
+    decltype(f_idx_obj), decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (eData.max_runtime_second,
      f_next, f_insert, f_adji_obj,
-     f_save_status,
+     f_idx_obj, f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   if (!test) {

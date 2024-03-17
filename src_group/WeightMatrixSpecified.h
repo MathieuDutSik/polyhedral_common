@@ -449,9 +449,9 @@ std::vector<int> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
 //    graph.
 // ---ListWeight: The list of weights occurring in that specified subset.
 // ---ListPossibleSignatures: The list of possible signatures.
-//    The signature is the list of possible 
+//    The signature is the list of possible values.
 // ---ListSignatureByVertex: The signature by the vertices.
-// ---ListNbCase: For each possible signature, 
+// ---ListNbCase: For each possible signature, the number of matching entries.
 template <typename T> struct WeightMatrixVertexSignatures {
   size_t nbRow;
   size_t nbWeight;
@@ -809,7 +809,7 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
   size_t n_sign_old = WMVS.ListPossibleSignatures.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   auto f_check=[&](std::vector<std::pair<int,int>> const& e_vect, int the_case) -> void {
-    int sum_vert = 0;
+    size_t sum_vert = 0;
     for (auto & ent : e_vect) {
       sum_vert += ent.second;
     }

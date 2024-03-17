@@ -207,14 +207,14 @@ namespace boost::serialization {
  */
 template <typename Tobj, typename TadjI, typename TadjO,
           typename Fnext, typename Finsert, typename Fadji_obj,
-          typename Fsave_status,
+          typename Fidx_obj, typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            int const &max_time_second,
                            Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
-                           Fsave_status f_save_status,
+                           Fidx_obj f_idx_obj, Fsave_status f_save_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
                            [[maybe_unused]] std::ostream & os) {
@@ -714,13 +714,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 
 template <typename Tobj, typename TadjI, typename TadjO,
           typename Fnext, typename Finsert, typename Fadji_obj,
-          typename Fsave_status,
+          typename Fidx_obj, typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_serial(int const &max_time_second,
                               Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
-                              Fsave_status f_save_status,
+                              Fidx_obj f_idx_obj, Fsave_status f_save_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
                               [[maybe_unused]] std::ostream& os) {
@@ -886,6 +886,10 @@ struct NextIterator {
     }
   }
 };
+
+
+
+
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
