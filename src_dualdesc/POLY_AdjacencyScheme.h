@@ -979,19 +979,25 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
   calls.
   It also manages the storage stuff.
  */
-/*
-template<typename Tobj, typename TadjI, typename TadjO,
-         typename Finit, typename Fhash, typename Frepr,
-         typename Fspann, typename Fadj>
-std::pair<bool, std::vector<DatabaseEntry_MPI<Tobj,TadjO>>> MPI_EnumerateAndStore(boost::mpi::communicator &comm,
-                                                                                  Finit f_init, Fhash f_hash, Frepr f_repr,
-                                                                                  Fspann f_spann, Fadj f_adj_pre,
+template<typename Tdata>
+std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdata::TadjO>>> MPI_EnumerateAndStore(boost::mpi::communicator &comm,
+                                                                                  Tdata data,
                                                                                   std::string const& Prefix,
                                                                                   bool const& Saving,
+                                                                                  int const& max_runtime_second,
                                                                                   std::ostream& os) {
+  using Tobj = typename Tdata::Tobj;
+  using TadjI = typename Tdata::TadjI;
+  using TadjO = typename Tdata::TadjO;
   using TadjO_work = AdjO_MPI<TadjO>;
-  auto f_repr_work=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO_work> {
-    std::optional<TadjO> opt = f_repr(x, y);
+  auto f_init=[&]() -> Tobj {
+    return data.f_init();
+  };
+  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+    return data.f_hash(seed, x);
+  };
+  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO_work> {
+    std::optional<TadjO> opt = data.f_repr(x, y);
     if (opt) {
       TadjO ret{*opt, i_rank, i_orb};
       return ret;
@@ -999,13 +1005,66 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<Tobj,TadjO>>> MPI_EnumerateAndStor
       return {};
     }
   };
-  std::vector<DatabaseEntry_MPI<Tobj, TadjO_pre>> l_obj;
+  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
+    return data.f_spann(x, i_rank, i_orb);
+  };
+  std::vector<DatabaseEntry_MPI<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
   auto f_adj=[&](int const& i_orb) -> std::vector<TadjI> {
-    Tobj & x = l_obj[
+    Tobj & x = l_obj[i_orb].x;
+    return data.f_adj(x);
   };
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+    l_obj[i_orb].ListAdj = ListAdj;
+  };
+  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
+    return data.f_adji_obj(x);
+  };
+  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
+    return l_obj[idx].x;
+  };
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+  PartialEnum_FullRead(Prefix, str_proc, Saving, l_obj, l_status, os);
+  size_t pos_next = 0;
+  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+    if (pos_next >= l_obj.size()) {
+      return {};
+    } else {
+      bool is_treated = static_cast<bool>(l_status[pos_next]);
+      Tobj x = l_obj[pos_next].x;
+      std::pair<bool, Tobj> pair{is_treated, x};
+      pos_next++;
+      return pair;
+    }
+  };
+  auto f_insert=[&](Tobj const& x) -> bool {
+    l_obj.push_back({x, {} });
+    return false;
+  };
+  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+    uint8_t val_i = static_cast<uint8_t>(val);
+    if (l_status.size() <= pos) {
+      l_status.push_back(val_i);
+    } else {
+      l_status[pos] = val_i;
+    }
+  };
+  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO_work,
+    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
+    decltype(f_idx_obj), decltype(f_save_status),
+    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
+    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
+    (comm, max_runtime_second,
+     f_next, f_insert, f_adji_obj,
+     f_idx_obj, f_save_status,
+     f_init, f_adj, f_set_adj,
+     f_hash, f_repr, f_spann, os);
+  os << "Termination test=" << test << "\n";
+  PartialEnum_FullWrite(Prefix, str_proc, Saving, l_obj, l_status, os);
+  return {test, std::move(l_obj)};
 }
-*/
 
 
 
