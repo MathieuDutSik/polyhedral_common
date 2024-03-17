@@ -959,12 +959,12 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
     for (int i_proc=0; i_proc<n_proc; i_proc++) {
       for (int u=0; u<l_sizes[i_proc]; u++) {
         std::vector<AdjO_Serial<TadjO>> ListAdj;
-        for (auto & ent : l_blk[i_proc][u].ListAdj) {
-          int iOrb = ent.iOrb + l_shift[ent.iProc];
-          AdjO_Serial<TadjO> adj{ent.x, iOrb};
+        for (auto & eAdj : l_blk[i_proc][u].ListAdj) {
+          int iOrb = eAdj.iOrb + l_shift[eAdj.iProc];
+          AdjO_Serial<TadjO> adj{eAdj.x, iOrb};
           ListAdj.emplace_back(std::move(adj));
         }
-        DatabaseEntry_Serial<Tobj, TadjO> entry{l_blk[i_proc].x, std::move(ListAdj)};
+        DatabaseEntry_Serial<Tobj, TadjO> entry{l_blk[i_proc][u].x, std::move(ListAdj)};
         V.emplace_back(std::move(entry));
       }
     }
@@ -980,11 +980,9 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
   It also manages the storage stuff.
  */
 template<typename Tdata>
-std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdata::TadjO>>> EnumerateAndStore_MPI(boost::mpi::communicator &comm,
-                                                                                  Tdata data,
-                                                                                  std::string const& Prefix,
-                                                                                  bool const& Saving,
-                                                                                  int const& max_runtime_second) {
+std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdata::TadjO>>> EnumerateAndStore_MPI(
+    boost::mpi::communicator &comm, Tdata & data,
+    std::string const& Prefix, bool const& Saving, int const& max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
   using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;

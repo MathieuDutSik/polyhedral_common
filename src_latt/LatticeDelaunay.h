@@ -291,16 +291,31 @@ namespace boost::serialization {
 
 template<typename Tint>
 struct Delaunay_AdjO {
-  int iOrb;
   Face eInc;
   MyMatrix<Tint> eBigMat;
+  int iOrb;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, Delaunay_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("eInc", eRec.eInc);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
     ar &make_nvp("iOrb", eRec.iOrb);
+  }
+}
+
+template<typename Tint>
+struct Delaunay_AdjO_spec {
+  Face eInc;
+  MyMatrix<Tint> eBigMat;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_AdjO_spec<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("eInc", eRec.eInc);
     ar &make_nvp("eBigMat", eRec.eBigMat);
   }
@@ -352,44 +367,6 @@ namespace boost::serialization {
     ar &make_nvp("l_dels", eRec.l_dels);
   }
 }
-
-template<typename Tvert, typename Tgroup>
-DelaunayTesselation<Tvert,Tgroup> my_mpi_gather(boost::mpi::communicator &comm,
-                                               std::vector<Delaunay_MPI_Entry<Tvert, Tgroup>> const& blk,
-                                               int const& i_proc_out) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  using T = typename std::vector<Delaunay_MPI_Entry<Tvert, Tgroup>>;
-  std::vector<Delaunay_Entry<Tvert, Tgroup>> V;
-  if (i_rank == i_proc_out) {
-    std::vector<T> l_blk;
-    boost::mpi::gather<T>(comm, blk, l_blk, i_proc_out);
-    std::vector<int> l_sizes(n_proc), l_shift(n_proc);
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      l_sizes[i_proc] = l_blk[i_proc].size();
-    }
-    l_shift[0] = 0;
-    for (int i_proc=1; i_proc<n_proc; i_proc++) {
-      l_shift[i_proc] = l_shift[i_proc-1] + l_sizes[i_proc-1];
-    }
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      for (int u=0; u<l_sizes[i_proc]; u++) {
-        std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-        for (auto & ent : l_blk[i_proc][u].ListAdj) {
-          int iOrb = ent.iOrb + l_shift[ent.iProc];
-          Delaunay_AdjO<Tvert> adj{iOrb, ent.eInc, ent.eBigMat};
-          ListAdj.push_back(adj);
-        }
-        Delaunay_Entry<Tvert, Tgroup> eDel{l_blk[i_proc][u].EXT, l_blk[i_proc][u].GRP, ListAdj};
-        V.push_back(eDel);
-      }
-    }
-  } else {
-    boost::mpi::gather<T>(comm, blk, i_proc_out);
-  }
-  return {V};
-}
-
 
 template<typename Tvert, typename Tgroup>
 void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT, [[maybe_unused]] std::ostream& os) {
@@ -522,24 +499,35 @@ struct Delaunay_Obj {
   Tgroup GRP;
 };
 
+namespace boost::serialization {
+  template <class Archive, typename Tint, typename Tgroup>
+  inline void serialize(Archive &ar, Delaunay_Obj<Tint, Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("EXT", eRec.EXT);
+    ar &make_nvp("GRP", eRec.GRP);
+  }
+}
+
 
 template <typename T, typename Tint, typename Tgroup>
 struct DataLatticeFunc {
   DataLattice<T, Tint, Tgroup> data;
-  using Tobj = MyMatrix<Tint>;
+  using Tobj = Delaunay_Obj<Tint, Tgroup>;
   using TadjI = Delaunay_AdjI<Tint>;
-  using TadjO = Delaunay_AdjO<Tint>;
+  using TadjO = Delaunay_AdjO_spec<Tint>;
   std::ostream& get_os() {
     return data.rddo.os;
   }
   Tobj f_init() {
-    return FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+    MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+    Tobj x{std::move(EXT), {} };
+    return x;
   }
   size_t f_hash(size_t const& seed, Tobj const& x) {
-    return ComputeInvariantDelaunay(data, seed, x, data.rddo.os);
+    return ComputeInvariantDelaunay(data, seed, x.EXT, data.rddo.os);
   }
   std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x, y.EXT, data.rddo.os);
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT, data.rddo.os);
     if (!opt) {
       return {};
     }
@@ -566,98 +554,25 @@ struct DataLatticeFunc {
   };
 };
 
-
-template <typename T, typename Tint, typename Tgroup>
-std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
-                                                                                                DataLattice<T, Tint, Tgroup> & eData,
-                                                                                                std::ostream & os) {
-  using Tobj = MyMatrix<Tint>;
-  using TadjI = Delaunay_AdjI<Tint>;
-  using TadjO = Delaunay_MPI_AdjO<Tint>;
-  auto f_init=[&]() -> Tobj {
-    return FindDelaunayPolytope<T, Tint>(eData.GramMat, eData.solver, os);
-  };
-  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
-    return ComputeInvariantDelaunay(eData, seed, x, os);
-  };
-  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
-    if (!opt) {
-      return {};
+template<typename T, typename Tvert, typename Tgroup>
+DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_MPI(std::vector<DatabaseEntry_Serial<typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj, typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const& l_ent) {
+  std::vector<Delaunay_Entry<Tvert,Tgroup>> l_dels;
+  for (auto & eDel : l_ent) {
+    std::vector<Delaunay_AdjO<Tvert>> ListAdj;
+    for (auto & eAdj : eDel.ListAdj) {
+      Delaunay_AdjO<Tvert> fAdj{eAdj.x.eInc, eAdj.x.eBigMat, eAdj.iOrb};
+      ListAdj.push_back(fAdj);
     }
-    MyMatrix<Tint> const& eBigMat = *opt;
-    TadjO ret{i_rank, i_orb, y.eInc, eBigMat};
-    return ret;
-  };
-  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj EXT = x.EXT;
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n+1);
-    TadjO ret{i_rank, i_orb, x.eInc, eBigMat};
-    return {std::move(EXT), ret};
-  };
-  std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
-  std::vector<uint8_t> l_status;
-  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
-    Tobj x = l_obj[i_orb].EXT;
-    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
-    l_obj[i_orb].GRP = pair.first;
-    return pair.second;
-  };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
-    l_obj[i_orb].ListAdj = ListAdj;
-  };
-  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
-    return x.EXT;
-  };
-  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
-    return l_obj[idx].EXT;
-  };
-  //
-  // Some data
-  //
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
-  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
-  size_t pos_next = 0;
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    if (pos_next >= l_obj.size()) {
-      return {};
-    } else {
-      bool is_treated = static_cast<bool>(l_status[pos_next]);
-      Tobj x = l_obj[pos_next].EXT;
-      std::pair<bool, Tobj> pair{is_treated, x};
-      pos_next++;
-      return pair;
-    }
-  };
-  auto f_insert=[&](Tobj const& x) -> bool {
-    Tgroup grp;
-    l_obj.push_back({x, grp, {} });
-    return false;
-  };
-  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
-    uint8_t val_i = static_cast<uint8_t>(val);
-    if (l_status.size() <= pos) {
-      l_status.push_back(val_i);
-    } else {
-      l_status[pos] = val_i;
-    }
-  };
-  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_idx_obj), decltype(f_save_status),
-    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
-    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (comm, eData.max_runtime_second,
-     f_next, f_insert, f_adji_obj,
-     f_idx_obj, f_save_status,
-     f_init, f_adj, f_set_adj,
-     f_hash, f_repr, f_spann, os);
-  os << "Termination test=" << test << "\n";
-  PartialEnum_FullWrite(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
-  return {test, std::move(l_obj)};
+    Delaunay_Entry<Tvert,Tgroup> fDel{eDel.x.EXT, eDel.x.GRP, ListAdj};
+    l_dels.push_back(fDel);
+  }
+  return {l_dels};
 }
+
+
+
+
+
 
 
 
@@ -788,17 +703,19 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   return {ListBlock, "undefined"};
 }
 
-template<typename Tint, typename Tgroup>
-void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>> const& ListDel, std::ostream & os) {
+template<typename T, typename Tvert, typename Tgroup>
+void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj, typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const& ListDel, std::ostream & os) {
   int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
   }
+  using Tout = DatabaseEntry_Serial<typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj, typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>;
   if (OutFormat == "CheckMergedOutput") {
     int i_proc_out = 0;
-    DelaunayTesselation<Tint,Tgroup> DT = my_mpi_gather(comm, ListDel, i_proc_out);
+    std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
+      DelaunayTesselation<Tvert, Tgroup> DT = DelaunayTesselation_From_DatabaseEntries_MPI<T,Tvert,Tgroup>(l_ent);
       check_delaunay_tessellation(DT, os);
     }
     std::cerr << "The Delaunay tesselation passed the adjacency check\n";
@@ -806,8 +723,9 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
   }
   if (OutFormat == "GAP") {
     int i_proc_out = 0;
-    DelaunayTesselation<Tint,Tgroup> DT = my_mpi_gather(comm, ListDel, i_proc_out);
+    std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
+      DelaunayTesselation<Tvert, Tgroup> DT = DelaunayTesselation_From_DatabaseEntries_MPI<T,Tvert,Tgroup>(l_ent);
       WriteGAPformat(DT, OutFile);
     }
     std::cerr << "The Delaunay tesselation has been written to file\n";
@@ -819,7 +737,7 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
     OUTfs << "nbDel=" << nbDel << "\n";
     for (int iDel = 0; iDel < nbDel; iDel++) {
       OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
-      WriteMatrix(OUTfs, ListDel[iDel].EXT);
+      WriteMatrix(OUTfs, ListDel[iDel].x.EXT);
     }
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
@@ -872,25 +790,30 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   CVPSolver<T,Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
-  DataLattice<T, Tint, Tgroup> eData{n,
-                                     GramMat,
-                                     SVR,
-                                     solver,
-                                     ShvGraverBasis,
-                                     std::move(rddo),
-                                     max_runtime_second,
-                                     STORAGE_Saving,
-                                     STORAGE_Prefix};
+  DataLattice<T, Tint, Tgroup> data{n,
+                                    GramMat,
+                                    SVR,
+                                    solver,
+                                    ShvGraverBasis,
+                                    std::move(rddo),
+                                    max_runtime_second,
+                                    STORAGE_Saving,
+                                    STORAGE_Prefix};
+  using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjI = typename Tdata::TadjI;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   //
-  std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> pair =
-    MPI_EnumerationDelaunayPolytopes<T,Tint,Tgroup>(comm, eData, os);
+  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: We now have IsFinished=" << pair.first << "\n";
   os << "DEL_ENUM: We now have ListDel |ListDel|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {
-    WriteFamilyDelaunay(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyDelaunay<T, Tint, Tgroup>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
