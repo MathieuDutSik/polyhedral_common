@@ -1049,7 +1049,6 @@ namespace boost::serialization {
 
 template<typename Tint>
 struct IsoDelaunayDomain_AdjO {
-  int iOrb;
   MyMatrix<Tint> eBigMat;
 };
 
@@ -1057,7 +1056,6 @@ namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("iOrb", eRec.iOrb);
     ar &make_nvp("eBigMat", eRec.eBigMat);
   }
 }
@@ -1126,7 +1124,60 @@ IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDo
   return {DT, GramMat};
 }
 
+template<typename T, typename Tint, typename Tgroup>
+struct IsoDelaunayDomain_Obj {
+  IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
+  std::vector<FullAdjInfo<T>> ListIneq;
+};
 
+template<typename T, typename Tint, typename Tgroup>
+struct DataIsoDelaunayDomainsFunc {
+  DataIsoDelaunayDomains<T,Tint,Tgroup> data;
+  using Tobj = IsoDelaunayDomain_Obj<T, Tint, Tgroup>;
+  using TadjI = IsoDelaunayDomain_AdjI<T, Tint, Tgroup>;
+  using TadjO = IsoDelaunayDomain_AdjO<Tint>;
+  Tobj f_init() {
+    return GetInitialIsoDelaunayDomain(data);
+  }
+  size_t f_hash(size_t const& seed, Tobj const& x) {
+    return ComputeInvariantIsoDelaunayDomain<T,Tint,Tgroup>(data, seed, x.DT);
+  }
+  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
+    std::optional<MyMatrix<Tint>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(data.LinSpa, x.GramMat, y.DT_gram.GramMat, data.rddo.os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{y.V, eBigMat};
+    return ret;
+  }
+  std::pair<Tobj, TadjO> f_spann(TadjI const& x) {
+    Tobj IsoDel = x.DT_gram;
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
+    TadjO ret{x.V, eBigMat};
+    return {std::move(IsoDel), std::move(ret)};
+  }
+  std::vector<TadjI> f_adj(Tobj & x_in) {
+    IsoDelaunayDomain<T, Tint, Tgroup> & x = x_in.DT_gram;
+    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, data.LinSpa.ListLineMat);
+    x_in.ListIneq = ListIneq;
+    MyMatrix<T> FAC = GetFACineq(ListIneq);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC);
+    std::vector<TadjI> l_adj;
+    for (auto & idxIrred : ListIrred) {
+      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
+      DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
+      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj);
+      Tobj pair{DTadj, GramMatAdj};
+      TadjI eAdj{eRecIneq.eIneq, pair};
+      l_adj.push_back(eAdj);
+    }
+    return l_adj;
+  }
+  Tobj f_adji_obj(TadjI const& x) {
+    return {x.DT_gram, {} };
+  }
+};
 
 
 template<typename T, typename Tint, typename Tgroup>
