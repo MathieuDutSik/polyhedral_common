@@ -1179,6 +1179,9 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.DT_gram;
   };
+  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
+    return l_obj[idx].DT_gram;
+  };
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
     return {};
   };

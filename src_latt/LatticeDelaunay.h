@@ -557,6 +557,9 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.EXT;
   };
+  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
+    return l_obj[idx].EXT;
+  };
   //
   // Some data
   //
@@ -647,6 +650,9 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   };
   auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.EXT;
+  };
+  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
+    return l_obj[idx].EXT;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
     Tgroup grp;

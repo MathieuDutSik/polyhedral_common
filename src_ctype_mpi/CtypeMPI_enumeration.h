@@ -171,8 +171,11 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
+  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.ctype_arr;
+  };
+  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
+    return l_obj[idx].ctype_arr;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
     l_obj.push_back({x, {}, {} });
