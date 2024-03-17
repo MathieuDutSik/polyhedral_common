@@ -16,9 +16,6 @@
 
 struct DataCtype {
   int n;
-  int max_runtime_second;
-  bool Saving;
-  std::string Prefix;
   std::ostream& os;
 };
 
@@ -221,10 +218,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
-  DataCtype data{n,
-    max_runtime_second,
-    STORAGE_Saving,
-    STORAGE_Prefix, os};
+  DataCtype data{n, os};
   using Tdata = DataCtypeFunc<T, Tint, Tgroup>;
   Tdata data_fct{data};
   using Tobj = typename DataCtypeFunc<T, Tint, Tgroup>::Tobj;
