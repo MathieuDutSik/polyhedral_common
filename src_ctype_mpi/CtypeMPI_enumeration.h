@@ -149,7 +149,8 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
     return next_iterator.f_next();
   };
-  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
+    Tobj x = l_obj[i_orb].ctype_arr;
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, os);
     DataCtypeFacet<Tint, Tidx> data = CTYP_GetConeInformation<Tint, Tidx>(x);

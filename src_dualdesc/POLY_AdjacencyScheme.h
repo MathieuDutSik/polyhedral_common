@@ -189,7 +189,7 @@ namespace boost::serialization {
   f_idx_obj(size_t) -> Tobj: should return the object from the database.
   f_save_status(int, bool) -> void : save the status in the database
   f_init() -> Tobj : get a starting element
-  f_adj(Tobj, i_orb) -> std::vector<TadjI> : get the adjacent object
+  f_adj(i_orb) -> std::vector<TadjI> : get the adjacent object
      with i_orb the index of the orbit (used to assign for example the group)
   f_set_adj(int, std::vector<TadjO>) -> void : set the adjacencies to the ones
      computed.
@@ -467,8 +467,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     int idx_i = static_cast<int>(idx);
     f_save_status(idx, true);
-    Tobj x = f_idx_obj(idx);
-    std::vector<TadjI> l_adj = f_adj(x, idx);
+    std::vector<TadjI> l_adj = f_adj(idx);
     map_adjO[idx] = {l_adj.size(), {}};
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
@@ -766,9 +765,8 @@ bool compute_adjacency_serial(int const &max_time_second,
   auto treat_one_entry=[&]() -> void {
     size_t idx = get_undone_idx();
     f_save_status(idx, true);
-    Tobj x = f_idx_obj(idx);
     std::vector<TadjO> l_adj;
-    for (auto &y : f_adj(x, idx)) {
+    for (auto &y : f_adj(idx)) {
       TadjO adj = process_singleEntry_AdjI(y);
       l_adj.push_back(adj);
     }
@@ -975,6 +973,43 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
   }
   return V;
 }
+
+/*
+  This code takes functions and then build new integrated functions for the MPI
+  calls.
+  It also manages the storage stuff.
+ */
+/*
+template<typename Tobj, typename TadjI, typename TadjO,
+         typename Finit, typename Fhash, typename Frepr,
+         typename Fspann, typename Fadj>
+std::pair<bool, std::vector<DatabaseEntry_MPI<Tobj,TadjO>>> MPI_EnumerateAndStore(boost::mpi::communicator &comm,
+                                                                                  Finit f_init, Fhash f_hash, Frepr f_repr,
+                                                                                  Fspann f_spann, Fadj f_adj_pre,
+                                                                                  std::string const& Prefix,
+                                                                                  bool const& Saving,
+                                                                                  std::ostream& os) {
+  using TadjO_work = AdjO_MPI<TadjO>;
+  auto f_repr_work=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO_work> {
+    std::optional<TadjO> opt = f_repr(x, y);
+    if (opt) {
+      TadjO ret{*opt, i_rank, i_orb};
+      return ret;
+    } else {
+      return {};
+    }
+  };
+  std::vector<DatabaseEntry_MPI<Tobj, TadjO_pre>> l_obj;
+  std::vector<uint8_t> l_status;
+  auto f_adj=[&](int const& i_orb) -> std::vector<TadjI> {
+    Tobj & x = l_obj[
+  };
+}
+*/
+
+
+
+
 
 
 

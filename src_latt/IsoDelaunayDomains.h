@@ -1157,7 +1157,8 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   };
   std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
+    IsoDelaunayDomain<T, Tint, Tgroup> x = l_obj[i_orb].DT_gram;
     std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, eData.LinSpa.ListLineMat);
     l_obj[i_orb].ListIneq = ListIneq;
     MyMatrix<T> FAC = GetFACineq(ListIneq);
@@ -1276,8 +1277,6 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   std::vector<IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup>> ListIDD = MPI_EnumerationIsoDelaunayDomains<T,Tint,Tgroup>(comm, eData, os);
   WriteFamilyIsoDelaunayDomain(comm, OutFormat, OutFile, ListIDD, os);
 }
-
-
 
 
 // clang-format off

@@ -546,7 +546,8 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   };
   std::vector<Delaunay_MPI_Entry<Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
+    Tobj x = l_obj[i_orb].EXT;
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
@@ -640,7 +641,8 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   };
   std::vector<Delaunay_Entry<Tint,Tgroup>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj=[&](Tobj const& x, int i_orb) -> std::vector<TadjI> {
+  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
+    Tobj x = l_obj[i_orb].EXT;
     std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
     l_obj[i_orb].GRP = pair.first;
     return pair.second;
