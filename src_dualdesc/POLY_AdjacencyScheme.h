@@ -984,12 +984,12 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
                                                                                   Tdata data,
                                                                                   std::string const& Prefix,
                                                                                   bool const& Saving,
-                                                                                  int const& max_runtime_second,
-                                                                                  std::ostream& os) {
+                                                                                  int const& max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
   using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using TadjO_work = AdjO_MPI<TadjO>;
+  std::ostream& os = data.get_os();
   auto f_init=[&]() -> Tobj {
     return data.f_init();
   };
@@ -1005,8 +1005,11 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
       return {};
     }
   };
-  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO> {
-    return data.f_spann(x, i_rank, i_orb);
+  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO_work> {
+    std::pair<Tobj,TadjO> pair = data.f_spann(x, i_rank, i_orb);
+    TadjO_work xo_work{pair.second, i_rank, i_orb};
+    std::pair<Tobj, TadjO_work> pair_ret{pair.first, xo_work};
+    return pair_ret;
   };
   std::vector<DatabaseEntry_MPI<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;

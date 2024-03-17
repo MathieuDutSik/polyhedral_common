@@ -516,6 +516,57 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
   return {GRPlatt, std::move(ListAdj)};
 }
 
+template<typename Tint, typename Tgroup>
+struct Delaunay_Obj {
+  MyMatrix<Tint> EXT;
+  Tgroup GRP;
+};
+
+
+template <typename T, typename Tint, typename Tgroup>
+struct DataLatticeFunc {
+  DataLattice<T, Tint, Tgroup> data;
+  using Tobj = MyMatrix<Tint>;
+  using TadjI = Delaunay_AdjI<Tint>;
+  using TadjO = Delaunay_AdjO<Tint>;
+  std::ostream& get_os() {
+    return data.rddo.os;
+  }
+  Tobj f_init() {
+    return FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+  }
+  size_t f_hash(size_t const& seed, Tobj const& x) {
+    return ComputeInvariantDelaunay(data, seed, x, data.rddo.os);
+  }
+  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x, y.EXT, data.rddo.os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{y.eInc, eBigMat};
+    return ret;
+  }
+  std::pair<Tobj,TadjO> f_spann(TadjI const& x) {
+    MyMatrix<Tint> EXT = x.EXT;
+    Tobj x_ret{EXT, {} };
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.n + 1);
+    TadjO ret{x.eInc, eBigMat};
+    return {x_ret, ret};
+  }
+  std::vector<TadjI> f_adj(Tobj & x) {
+    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(data, x.EXT, data.rddo.os);
+    x.GRP = pair.first;
+    return pair.second;
+  }
+  Tobj f_adji_obj(TadjI const& x) {
+    MyMatrix<Tint> EXT = x.EXT;
+    Tobj x_ret{EXT, {} };
+    return x_ret;
+  };
+};
+
+
 template <typename T, typename Tint, typename Tgroup>
 std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDelaunayPolytopes(boost::mpi::communicator &comm,
                                                                                                 DataLattice<T, Tint, Tgroup> & eData,
