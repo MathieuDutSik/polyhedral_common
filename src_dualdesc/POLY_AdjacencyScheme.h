@@ -882,6 +882,100 @@ struct NextIterator {
   }
 };
 
+template<typename TadjO>
+struct AdjO_MPI {
+  TadjO x;
+  int iProc;
+  int iOrb;
+};
+
+template<typename TadjO>
+struct AdjO_Serial {
+  TadjO x;
+  int iOrb;
+};
+
+
+namespace boost::serialization {
+  template <class Archive, typename TadjO>
+  inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("iProc", eRec.iProc);
+    ar &make_nvp("iOrb", eRec.iOrb);
+  }
+  template <class Archive, typename TadjO>
+  inline void serialize(Archive &ar, AdjO_Serial<TadjO> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("iOrb", eRec.iOrb);
+  }
+}
+
+template<typename Tobj, typename TadjO>
+struct DatabaseEntry_MPI {
+  Tobj x;
+  std::vector<AdjO_MPI<TadjO>> ListAdj;
+};
+
+template<typename Tobj, typename TadjO>
+struct DatabaseEntry_Serial {
+  Tobj x;
+  std::vector<AdjO_Serial<TadjO>> ListAdj;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tobj, typename TadjO>
+  inline void serialize(Archive &ar, DatabaseEntry_MPI<Tobj,TadjO> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("ListAdj", eRec.ListAdj);
+  }
+  template <class Archive, typename Tobj, typename TadjO>
+  inline void serialize(Archive &ar, DatabaseEntry_Serial<Tobj,TadjO> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("ListAdj", eRec.ListAdj);
+  }
+}
+
+template<typename Tobj, typename TadjO>
+std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communicator &comm,
+                                                             std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const& blk,
+                                                             int const& i_proc_out) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  using T = typename std::vector<DatabaseEntry_MPI<Tobj, TadjO>>;
+  std::vector<DatabaseEntry_Serial<Tobj, TadjO>> V;
+  if (i_rank == i_proc_out) {
+    std::vector<T> l_blk;
+    boost::mpi::gather<T>(comm, blk, l_blk, i_proc_out);
+    std::vector<int> l_sizes(n_proc), l_shift(n_proc);
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      l_sizes[i_proc] = l_blk[i_proc].size();
+    }
+    l_shift[0] = 0;
+    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+      l_shift[i_proc] = l_shift[i_proc-1] + l_sizes[i_proc-1];
+    }
+    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+      for (int u=0; u<l_sizes[i_proc]; u++) {
+        std::vector<AdjO_Serial<TadjO>> ListAdj;
+        for (auto & ent : l_blk[i_proc][u].ListAdj) {
+          int iOrb = ent.iOrb + l_shift[ent.iProc];
+          AdjO_Serial<TadjO> adj{ent.x, iOrb};
+          ListAdj.emplace_back(std::move(adj));
+        }
+        DatabaseEntry_Serial<Tobj, TadjO> entry{l_blk[i_proc].x, std::move(ListAdj)};
+        V.emplace_back(std::move(entry));
+      }
+    }
+  } else {
+    boost::mpi::gather<T>(comm, blk, i_proc_out);
+  }
+  return V;
+}
+
 
 
 
