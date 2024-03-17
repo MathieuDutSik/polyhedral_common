@@ -219,7 +219,7 @@ public:
 // Could we represent that by the Face type? (from dynamic_byteset)
 // The question is about the extendibility of the Face type.
 // Clearly, this is a technical debt to pay later one way or the other.
-std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n_orbit) {
+std::vector<uint8_t> FileBool_FullRead(std::string const& eFile, size_t const& n_orbit, [[maybe_unused]] std::ostream& os) {
   FileBool fb(eFile, n_orbit);
   std::vector<uint8_t> l_status(n_orbit);
 #ifdef DEBUG_BASIC_DATAFILE
@@ -618,7 +618,7 @@ public:
 };
 
 template<typename T>
-std::vector<T> FileData_FullRead(std::string const& FileDatabase) {
+std::vector<T> FileData_FullRead(std::string const& FileDatabase, [[maybe_unused]] std::ostream& os) {
   bool overwrite = false;
   FileData<T> fdata(FileDatabase, overwrite);
   using Iterator = typename FileData<T>::iterator;

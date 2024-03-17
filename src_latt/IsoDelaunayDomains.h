@@ -1176,7 +1176,7 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
+  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.DT_gram;
   };
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
@@ -1195,12 +1195,12 @@ std::vector<IsoDelaunayDomain_MPI_Entry<T,Tint,Tgroup>> MPI_EnumerationIsoDelaun
     }
   };
   bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
     decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (comm, eData.max_runtime_second,
-     f_next, f_insert, f_obj,
+     f_next, f_insert, f_adji_obj,
      f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);

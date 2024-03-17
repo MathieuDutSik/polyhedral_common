@@ -554,7 +554,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
+  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.EXT;
   };
   //
@@ -563,7 +563,7 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
-  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
+  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
   size_t pos_next = 0;
   auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
     if (pos_next >= l_obj.size()) {
@@ -590,17 +590,17 @@ std::pair<bool, std::vector<Delaunay_MPI_Entry<Tint, Tgroup>>> MPI_EnumerationDe
     }
   };
   bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
     decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (comm, eData.max_runtime_second,
-     f_next, f_insert, f_obj,
+     f_next, f_insert, f_adji_obj,
      f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
-  PartialEnum_FullWrite(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
+  PartialEnum_FullWrite(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
   return {test, std::move(l_obj)};
 }
 
@@ -645,7 +645,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_obj=[&](TadjI const& x) -> Tobj {
+  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
     return x.EXT;
   };
   auto f_insert=[&](Tobj const& x) -> bool {
@@ -665,12 +665,12 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
     }
   };
   bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_obj),
+    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
     decltype(f_save_status),
     decltype(f_init),decltype(f_adj),decltype(f_set_adj),
     decltype(f_hash),decltype(f_repr),decltype(f_spann)>
     (eData.max_runtime_second,
-     f_next, f_insert, f_obj,
+     f_next, f_insert, f_adji_obj,
      f_save_status,
      f_init, f_adj, f_set_adj,
      f_hash, f_repr, f_spann, os);

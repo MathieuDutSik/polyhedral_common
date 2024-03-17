@@ -184,7 +184,7 @@ namespace boost::serialization {
      if returned, then nothing else needs to be inserted.
   f_insert(Tobj) -> bool : insert the new object.
      If return true then early termination is triggered.
-  f_obj(TadjI) -> Tobj: should return the created object from the
+  f_adji_obj(TadjI) -> Tobj: should return the created object from the
      input adjacency.
   f_save_status(int, bool) -> void : save the status in the database
   f_init() -> Tobj : get a starting element
@@ -206,14 +206,14 @@ namespace boost::serialization {
   --- termination
  */
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fnext, typename Finsert, typename Fobj,
+          typename Fnext, typename Finsert, typename Fadji_obj,
           typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
                            int const &max_time_second,
-                           Fnext f_next, Finsert f_insert, Fobj f_obj,
+                           Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
                            Fsave_status f_save_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
@@ -477,7 +477,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     nonce++;
     for (auto &x : l_adj) {
-      Tobj x_obj = f_obj(x);
+      Tobj x_obj = f_adji_obj(x);
       size_t hash_partition = f_hash(seed_partition, x_obj);
       size_t hash_hashmap = f_hash(seed_hashmap, x_obj);
       int i_proc_dest = static_cast<int>(hash_partition % size_t(n_proc));
@@ -713,13 +713,13 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fnext, typename Finsert, typename Fobj,
+          typename Fnext, typename Finsert, typename Fadji_obj,
           typename Fsave_status,
           typename Finit, typename Fadj, typename Fset_adj,
           typename Fhash,
           typename Frepr, typename Fspann>
 bool compute_adjacency_serial(int const &max_time_second,
-                              Fnext f_next, Finsert f_insert, Fobj f_obj,
+                              Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
                               Fsave_status f_save_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
@@ -731,7 +731,7 @@ bool compute_adjacency_serial(int const &max_time_second,
   std::vector<size_t> undone;
   bool early_termination = false;
   auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
-    size_t hash = f_hash(seed_hashmap, f_obj(x_adjI));
+    size_t hash = f_hash(seed_hashmap, f_adji_obj(x_adjI));
     std::vector<size_t> &vect = map[hash];
     for (auto &idx : vect) {
       Tobj &y = V[idx];
@@ -815,7 +815,7 @@ bool compute_adjacency_serial(int const &max_time_second,
 }
 
 template<typename T>
-void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> & l_obj, std::vector<uint8_t> & l_status) {
+void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> & l_obj, std::vector<uint8_t> & l_status, std::ostream& os) {
   std::string FileNb = prefix + "number_orbit" + suffix;
   std::string FileStatus = prefix + "orbit_status" + suffix;
   std::string FileDatabase = prefix + "database" + suffix;
@@ -828,8 +828,8 @@ void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, 
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "ADJ_SCH: reading database n_orbit=" << n_orbit << "\n";
 #endif
-    l_status = FileBool_FullRead(FileStatus, n_orbit);
-    l_obj = FileData_FullRead<T>(FileDatabase);
+    l_status = FileBool_FullRead(FileStatus, n_orbit, os);
+    l_obj = FileData_FullRead<T>(FileDatabase, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "ADJ_SCH: reading database l_obj read\n";
 #endif
@@ -842,7 +842,7 @@ void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, 
 }
 
 template<typename T>
-void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> const& l_obj, std::vector<uint8_t> const& l_status) {
+void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> const& l_obj, std::vector<uint8_t> const& l_status, [[maybe_unused]] std::ostream & os) {
   std::string FileNb = prefix + "number_orbit" + suffix;
   std::string FileStatus = prefix + "orbit_status" + suffix;
   std::string FileDatabase = prefix + "database" + suffix;

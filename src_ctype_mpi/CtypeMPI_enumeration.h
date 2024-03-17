@@ -140,7 +140,7 @@ std::pair<bool, std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>>> MPI_Enumera
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
-  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status);
+  PartialEnum_FullRead(eData.Prefix, str_proc, eData.Saving, l_obj, l_status, os);
   auto f=[](Tover const& x) -> Tobj {
     return x.ctype_arr;
   };
