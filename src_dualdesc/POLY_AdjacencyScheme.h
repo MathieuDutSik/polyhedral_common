@@ -1070,8 +1070,8 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
 template<typename Tdata, typename Fincorrect>
 std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tdata::TadjO>>> EnumerateAndStore_Serial(
         Tdata & data,
-        int max_runtime_second,
-        Fincorrect f_incorrect) {
+        Fincorrect f_incorrect,
+        int const& max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
   using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
@@ -1086,7 +1086,7 @@ std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tda
   auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_orb) -> std::optional<TadjO_work> {
     std::optional<TadjO> opt = data.f_repr(x, y);
     if (opt) {
-      TadjO ret{*opt, i_orb};
+      TadjO_work ret{*opt, i_orb};
       return ret;
     } else {
       return {};
@@ -1104,7 +1104,7 @@ std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tda
     Tobj & x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
+  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO_work> const& ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
   auto f_adji_obj=[&](TadjI const& x) -> Tobj {

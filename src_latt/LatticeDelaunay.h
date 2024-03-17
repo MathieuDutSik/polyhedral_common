@@ -577,87 +577,23 @@ DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_MPI(
 
 
 template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
-std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & eData,
+std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & data,
                                                                              Fincorrect f_incorrect,
-                                                                             std::ostream & os) {
-  using Tobj = MyMatrix<Tint>;
-  using TadjI = Delaunay_AdjI<Tint>;
-  using TadjO = Delaunay_AdjO<Tint>;
-  auto f_init=[&]() -> Tobj {
-    return FindDelaunayPolytope<T, Tint>(
-       eData.GramMat, eData.solver, os);
-  };
-  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
-    return ComputeInvariantDelaunay(eData, seed, x, os);
-  };
-  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_orb) -> std::optional<TadjO> {
-    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(eData, x, y.EXT, os);
-    if (!opt) {
-      return {};
-    }
-    MyMatrix<Tint> const& eBigMat = *opt;
-    TadjO ret{i_orb, y.eInc, eBigMat};
-    return ret;
-  };
-  auto f_spann=[&](TadjI const& x, int i_orb) -> std::pair<Tobj, TadjO> {
-    Tobj EXT = x.EXT;
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(eData.n);
-    TadjO ret{i_orb, x.eInc, std::move(eBigMat)};
-    return {std::move(EXT), ret};
-  };
-  std::vector<Delaunay_Entry<Tint,Tgroup>> l_obj;
-  std::vector<uint8_t> l_status;
-  auto f_adj=[&](int i_orb) -> std::vector<TadjI> {
-    Tobj x = l_obj[i_orb].EXT;
-    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(eData, x, os);
-    l_obj[i_orb].GRP = pair.first;
-    return pair.second;
-  };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO> const& ListAdj) -> void {
-    l_obj[i_orb].ListAdj = ListAdj;
-  };
-  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
-    return x.EXT;
-  };
-  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
-    return l_obj[idx].EXT;
-  };
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    return {};
-  };
-  auto f_insert=[&](Tobj const& x) -> bool {
-    Tgroup grp;
-    l_obj.push_back({x, grp, {} });
-    return f_incorrect(x);
-  };
-  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
-    uint8_t val_i = static_cast<uint8_t>(val);
-    if (l_status.size() <= pos) {
-      l_status.push_back(val_i);
-    } else {
-      l_status[pos] = val_i;
-    }
-  };
-  bool test = compute_adjacency_serial<Tobj,TadjI,TadjO,
-    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_idx_obj), decltype(f_save_status),
-    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
-    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (eData.max_runtime_second,
-     f_next, f_insert, f_adji_obj,
-     f_idx_obj, f_save_status,
-     f_init, f_adj, f_set_adj,
-     f_hash, f_repr, f_spann, os);
-  if (!test) {
+                                                                             int const& max_runtime_second) {
+  using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjI = typename Tdata::TadjI;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = std::vector<DatabaseEntry_Serial<Tobj, TadjO>>;
+  std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
+  if (opt) {
+    DelaunayTesselation<Tint, Tgroup> DT = DelaunayTesselation_From_DatabaseEntries_MPI<T,Tint,Tgroup>(*opt);
+    return DT;
+  } else {
     return {};
   }
-  DelaunayTesselation<Tint,Tgroup> DT = {l_obj};
-  return DT;
 }
-
-
-
-
 
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
