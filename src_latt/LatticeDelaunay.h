@@ -32,9 +32,6 @@ struct DataLattice {
   CVPSolver<T,Tint> solver;
   MyMatrix<Tint> ShvGraverBasis;
   RecordDualDescOperation<T,Tgroup> rddo;
-  int max_runtime_second;
-  bool Saving;
-  std::string Prefix;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -46,10 +43,7 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-  int max_runtime_second = 0;
-  bool Saving = false;
-  std::string Prefix = "/irrelevant";
-  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo), max_runtime_second, Saving, Prefix};
+  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo)};
 }
 
 
@@ -730,10 +724,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
                                     SVR,
                                     solver,
                                     ShvGraverBasis,
-                                    std::move(rddo),
-                                    max_runtime_second,
-                                    STORAGE_Saving,
-                                    STORAGE_Prefix};
+                                    std::move(rddo)};
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

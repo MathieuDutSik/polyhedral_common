@@ -12,9 +12,9 @@
 #PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
-PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
+#PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
-#PROGRAM		= LATT_MPI_ComputeDelaunay
+PROGRAM		= LATT_MPI_ComputeDelaunay
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
