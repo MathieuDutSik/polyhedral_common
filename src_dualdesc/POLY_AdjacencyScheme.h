@@ -229,13 +229,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   const int tag_entriesadjo_send = 39;
   const int tag_termination = 40;
   const int tag_early_termination = 41;
+  const int tag_no_operation = 42;
   unlimited_request ur(comm);
   //
   // The data sets
   //
   int n_obj = 0; // The number of objects generated
   // The map from the hash to the list of indices
-  std::unordered_map<size_t, std::vector<size_t>> map;
+  std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
   std::vector<size_t> undone; // The undone indices
   //
   // The entries of AdjI / AdjO
@@ -281,7 +282,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       return {eI.i_proc_orig, eA};
     };
     nonce++;
-    std::vector<size_t> &vect = map[eI.hash_hashmap];
+    std::vector<size_t> &vect = indices_by_hash[eI.hash_hashmap];
     for (auto &idx : vect) {
       Tobj x = f_idx_obj(idx);
 #ifdef TIMINGS_ADJACENCY_SCHEME
@@ -320,7 +321,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
-    std::vector<size_t> &vect = map[hash_hashmap];
+    std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
       undone.push_back(n_obj);
@@ -443,6 +444,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       early_termination=true;
       return true;
     }
+    if (e_tag == tag_no_operation) {
+      int val_recv;
+      comm.recv(e_src, tag_no_operation, val_recv);
+      return false;
+    }
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
     throw TerminalException{1};
   };
@@ -484,7 +490,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     return true;
   };
-  auto flush_entriesAdjI=[&]() -> bool {
+  auto flush_entriesAdjI = [&]() -> bool {
     std::vector<entryAdjI<TadjI>> & v = buffer_entriesAdjI.l_message[i_rank];
     append_move(unproc_entriesAdjI, v);
     return buffer_entriesAdjI.clear_one_entry(os);
@@ -497,7 +503,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     process_entriesAdjO(v);
     return buffer_entriesAdjO.clear_one_entry(os);
   };
-  auto compute_entries_adjI=[&]() -> bool {
+  auto compute_entries_adjI = [&]() -> bool {
     bool do_something = false;
     for (auto & eI : unproc_entriesAdjI) {
       std::pair<int,entryAdjO<TadjO>> pair = process_single_entryAdjI(eI);
@@ -539,7 +545,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     return do_something;
   };
   // Returns true if something was actually done.
-  auto f_clear_buffers=[&]() -> bool {
+  auto f_clear_buffers = [&]() -> bool {
     // Transmitting the generated entriesAdjI
     bool test1 = flush_entriesAdjI();
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -575,13 +581,34 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     // Nothing, then computing something new
     return process_one_entry_obj();
   };
+#ifdef DEBUG_ADJACENCY_SCHEME
+  auto print_status = [&](std::ostream& os_out) -> void {
+    os_out << "ADJ_SCH: status n_obj=" << n_obj << "\n";
+    os_out << "ADJ_SCH: status |map_adjO|=" << map_adjO.size() << "\n";
+    for (auto & ent : map_adjO) {
+      os_out << "ADJ_SCH: status index=" << ent.first << " value=(" << ent.second.first << " | " << ent.second.second.size() << ")\n";
+    }
+    os_out << "ADJ_SCH: status |undone|=" << undone.size() << "\n";
+  };
+#endif
+  int i_proc_termination = 0;
+  auto consider_termination =[&]() -> void {
+    int val_send = 42;
+    ur.get_entry() = comm.isend(i_proc_termination, tag_no_operation, val_send);
+  };
   auto terminate = [&]() -> bool {
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: terminate, begin\n";
 #endif
+#ifdef DEBUG_ADJACENCY_SCHEME
     if (i_rank > 0) {
-      return false;
+      std::cerr << "The terminate cannot be called for a i_rank>0\n";
+      std::cerr << "The reason is that the check for termination is a\n";
+      std::cerr << "blocking check and so only one processor can do\n";
+      std::cerr << "at a given time\n";
+      throw TerminalException{1};
     }
+#endif
     std::vector<size_t> l_nonce(n_proc-1);
     for (int i_proc=1; i_proc<n_proc; i_proc++) {
       int val = 0;
@@ -651,7 +678,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (early_termination) {
       break;
     }
-    bool did_something = false;
+    bool did_something;
     boost::optional<boost::mpi::status> opt = comm.iprobe();
     if (opt) {
       did_something = true;
@@ -659,8 +686,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       os << "ADJ_SCH: prob is not empty\n";
 #endif
       boost::mpi::status const& prob = *opt;
-      bool test = process_mpi_status(prob);
-      if (test) {
+      bool test_process = process_mpi_status(prob);
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: process_mpi_status test_process=" << test_process << "\n";
+#endif
+      if (test_process) {
         break;
       }
     } else {
@@ -669,18 +699,24 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       os << "ADJ_SCH: f_clear_buffers did_something=" << did_something << "\n";
 #endif
       if (!did_something) {
-        bool test_terminate=terminate();
+        if (i_rank != i_proc_termination) {
+          consider_termination();
+        } else {
+          bool test_terminate = terminate();
 #ifdef DEBUG_ADJACENCY_SCHEME
-        os << "ADJ_SCH: test_terminate=" << test_terminate << "\n";
+          os << "ADJ_SCH: test_terminate=" << test_terminate << "\n";
 #endif
-        if (test_terminate) {
-          break;
+          if (test_terminate) {
+            break;
+          }
         }
       }
     }
     if (!did_something) {
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: Going to the blocking wait\n";
+      os << "ADJ_SCH: time=" << timeanddate() << "\n";
+      print_status(os);
 #endif
       // Nothing was done, so we switch from iprobe to probe
       boost::mpi::status prob = comm.probe();
@@ -723,12 +759,12 @@ bool compute_adjacency_serial(int const &max_time_second,
                               [[maybe_unused]] std::ostream& os) {
   SingletonTime start;
   size_t n_obj = 0;
-  std::unordered_map<size_t, std::vector<size_t>> map;
+  std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
   std::vector<size_t> undone;
   bool early_termination = false;
   auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
     size_t hash = f_hash(seed_hashmap, f_adji_obj(x_adjI));
-    std::vector<size_t> &vect = map[hash];
+    std::vector<size_t> &vect = indices_by_hash[hash];
     for (auto &idx : vect) {
       Tobj y = f_idx_obj(idx);
       std::optional<TadjO> opt = f_repr(y, x_adjI, idx);
@@ -750,7 +786,7 @@ bool compute_adjacency_serial(int const &max_time_second,
   };
   auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
-    std::vector<size_t> &vect = map[hash_hashmap];
+    std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
       undone.push_back(n_obj);
