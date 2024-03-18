@@ -17,9 +17,6 @@ struct DataIsoDelaunayDomains {
   LinSpaceMatrix<T> LinSpa;
   RecordDualDescOperation<T,Tgroup> rddo;
   std::optional<MyMatrix<T>> CommonGramMat;
-  int max_runtime_second;
-  bool Saving;
-  std::string Prefix;
 };
 
 /*
@@ -1277,14 +1274,10 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
 
   DataIsoDelaunayDomains<T,Tint,Tgroup> data{LinSpa,
     std::move(rddo),
-    CommonGramMat,
-    max_runtime_second,
-    STORAGE_Saving,
-    STORAGE_Prefix};
+    CommonGramMat};
   using Tdata = DataIsoDelaunayDomainsFunc<T,Tint,Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
-  using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);

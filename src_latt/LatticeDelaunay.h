@@ -583,7 +583,6 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
-  using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using Tout = std::vector<DatabaseEntry_Serial<Tobj, TadjO>>;
   std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
@@ -738,7 +737,6 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
-  using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   //

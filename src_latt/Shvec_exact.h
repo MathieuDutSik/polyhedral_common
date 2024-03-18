@@ -804,7 +804,7 @@ public:
     MyVector<T> eDiff(dim);
     for (auto & eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarScalarConversion<T,Tint>(eVect(i));
+        T val = UniversalScalarConversion<T,Tint>(eVect(i));
         eDiff(i) = val - eV(i);
       }
       if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
@@ -833,7 +833,7 @@ public:
     MyVector<T> eDiff(dim);
     for (auto & eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarScalarConversion<T,Tint>(eVect(i));
+        T val = UniversalScalarConversion<T,Tint>(eVect(i));
         eDiff(i) = val - eV(i);
       }
       if (MaxNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
