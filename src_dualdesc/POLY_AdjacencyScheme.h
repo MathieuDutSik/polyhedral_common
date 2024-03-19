@@ -683,6 +683,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       os_out << "ADJ_SCH: status index=" << ent.first << " value=(" << ent.second.first << " | " << ent.second.second.size() << ")\n";
     }
     os_out << "ADJ_SCH: status |undone|=" << undone.size() << "\n";
+    os_out << "ADJ_SCH: |buffer_entriesAdjI|=" << buffer_entriesAdjI.get_unsent_size() << "\n";
+    os_out << "ADJ_SCH: |buffer_entriesAdjO|=" << buffer_entriesAdjO.get_unsent_size() << "\n";
   };
 #endif
   int i_proc_termination = 0;
