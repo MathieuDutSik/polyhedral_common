@@ -4,7 +4,8 @@
 #PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
-PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
+#PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
+PROGRAM		= TEST_GeometricallyUniquePoint
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_LinearDetermineByInequalities

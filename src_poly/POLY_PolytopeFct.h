@@ -281,23 +281,6 @@ template <typename T> int get_idx_drop(MyVector<T> const &V) {
   return idx_drop;
 }
 
-template <typename T>
-MyMatrix<T> DropColumn(MyMatrix<T> const &M, int const &idx_drop) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<T> Mred(nbRow, nbCol - 1);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    int pos = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      if (iCol != idx_drop) {
-        Mred(iRow, pos) = M(iRow, iCol);
-        pos++;
-      }
-    }
-  }
-  return Mred;
-}
-
 size_t get_pos_outside(Face const &f) {
   size_t pos_outside = 0;
   while (true) {
