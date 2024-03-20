@@ -650,6 +650,24 @@ void FileData_FullWrite(std::string const& FileDatabase, std::vector<T> const& l
   }
 }
 
+template<typename T>
+void SingleData_Write(std::string const& FileData, T const& obj) {
+  std::ofstream ofs(FileData);
+  boost::archive::text_oarchive oa(ofs);
+  // write class instance to archive
+  oa << obj;
+}
+
+template<typename T>
+T SingleData_Read(std::string const& FileData) {
+  T obj;
+  std::ifstream ifs(FileData);
+  boost::archive::text_iarchive ia(ifs);
+  ia >> obj;
+  return obj;
+}
+
+
 
 // clang-format off
 #endif  //  SRC_DUALDESC_BASIC_DATAFILE_H_
