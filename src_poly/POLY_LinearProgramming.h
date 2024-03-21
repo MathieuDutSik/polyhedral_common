@@ -1459,6 +1459,17 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 template <typename T>
 MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ostream& os) {
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  auto check_return=[&](MyVector<T> const& Vret) -> void {
+    int len = FAC.rows();
+    for (int i=0; i<len; i++) {
+      MyVector<T> eFAC = GetMatrixRow(FAC, i);
+      T scal = eFAC.dot(Vret);
+      if (scal <= 0) {
+        std::cerr << "We should have strictly positive scalar product\n";
+        throw TerminalException{1};
+      }
+    }
+  };
   os << "LP: GetGeometricallyUniqueInteriorPoint(GGUIP) : beginning\n";
 #endif
   int n_rows = FAC.rows();
@@ -1519,7 +1530,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     MyVector<T> V = eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
-    os << "LP: GGUIP V=" << StringVectorGAP(V) << "\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 1\n";
+    check_return(V);
 #endif
     // The happy scenario where the linear programming directly gets us something unique
     return V;
@@ -1543,11 +1555,13 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #endif
   MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
-  MyVector<T> eSolFinal = NSP.transpose() * SolSubspace;
+  MyVector<T> V = NSP.transpose() * SolSubspace;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, eSolFinal found\n";
+  os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 2\n";
+  check_return(V);
 #endif
-  return eSolFinal;
+  return V;
 }
 
 

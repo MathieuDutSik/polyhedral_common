@@ -34,6 +34,8 @@ int main(int argc, char *argv[]) {
       }
       MyVector<T> eCentProd = GetGeometricallyUniqueInteriorPoint(NewFAC, std::cerr);
       MyVector<T> eCentMap = eUnitMod_cgr.transpose() * eCent;
+      std::cerr << "eCentMap =" << StringVectorGAP(eCentMap) << "\n";
+      std::cerr << "eCentProd=" << StringVectorGAP(eCentProd) << "\n";
       if (eCentMap != eCentProd) {
         std::cerr << "Inconsistency in the transformation\n";
         throw TerminalException{1};
