@@ -255,11 +255,11 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
 }
 
 template<typename T, typename Tvert, typename Tgroup>
-MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT, std::ostream& os) {
   int n = LinSpa.n;
   std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tvert,Tgroup>(DT, LinSpa.ListLineMat);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
-  MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC);
+  MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
   for (int u=0; u<n; u++) {
     RetMat += ThePt(u) * LinSpa.ListMat[u];
@@ -1136,9 +1136,9 @@ size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> c
 }
 
 template<typename T, typename Tint, typename Tgroup>
-IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData) {
-  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(eData);
-  MyMatrix<T> GramMat = GetInteriorGramMatrix(eData.LinSpa, DT);
+IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
+  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(data, data.rddo.os);
+  MyMatrix<T> GramMat = GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
   return {DT, GramMat};
 }
 
@@ -1205,7 +1205,7 @@ struct DataIsoDelaunayDomainsFunc {
     for (auto & idxIrred : ListIrred) {
       FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
       DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
-      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj);
+      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, data.rddo.os);
       IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{DTadj, GramMatAdj};
       TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
       l_adj.push_back(eAdj);

@@ -8,7 +8,7 @@
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 2 && argc != 3) {
+    if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "TEST_GeometricallyUniquePoint [FAC]\n";
       return -1;
@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
     int n_row = FAC.rows();
     int n_col = FAC.cols();
-    MyVector<T> eCent = GetGeometricallyUniqueInteriorPoint(FAC);
+    MyVector<T> eCent = GetGeometricallyUniqueInteriorPoint(FAC, std::cerr);
     for (int i=0; i<100; i++) {
       std::vector<int> ePerm = RandomPermutation<int>(n_row);
       MyMatrix<T> eUnitMod = RandomUnimodularMatrix<T>(n_col);
@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
         int j_row = ePerm[i_row];
         NewFAC.row(i_row) = FACprod.row(j_row);
       }
-      MyVector<T> eCentProd = GetGeometricallyUniqueInteriorPoint(NewFAC);
+      MyVector<T> eCentProd = GetGeometricallyUniqueInteriorPoint(NewFAC, std::cerr);
       MyVector<T> eCentMap = eUnitMod_cgr.transpose() * eCent;
       if (eCentMap != eCentProd) {
         std::cerr << "Inconsistency in the transformation\n";

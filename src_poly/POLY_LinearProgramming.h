@@ -15,6 +15,7 @@
 #ifdef DEBUG
 #define DEBUG_LINEAR_PROGRAM
 #define DEBUG_SEARCH_POSITIVE_RELATION
+#define DEBUG_GEOMETRICALLY_UNIQUE
 #endif
 
 template <typename T> struct LpSolution {
@@ -1456,9 +1457,15 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 }
 
 template <typename T>
-MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC) {
+MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ostream& os) {
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GetGeometricallyUniqueInteriorPoint(GGUIP) : beginning\n";
+#endif
   int n_rows = FAC.rows();
   int n_cols = FAC.cols();
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+#endif
   MyMatrix<T> ListInequalities = ZeroMatrix<T>(n_rows, n_cols + 1);
   MyVector<T> ToBeMinimized = ZeroVector<T>(n_cols + 1);
   for (int i_row = 0; i_row < n_rows; i_row++) {
@@ -1468,7 +1475,13 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC) {
     for (int i_col = 0; i_col <= n_cols; i_col++)
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, CDD_LinearProgramming, before\n";
+#endif
   LpSolution<T> eSol = CDD_LinearProgramming(ListInequalities, ToBeMinimized);
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, CDD_LinearProgramming, after\n";
+#endif
   if (!eSol.PrimalDefined || !eSol.DualDefined) {
     std::cerr << "Failed to find an interior point by linear programming\n";
     std::cerr << "Maybe the cone is actually not full dimensional\n";
@@ -1480,20 +1493,40 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC) {
   for (int u=0; u<=n_cols; u++)
     M(0,u) = ToBeMinimized(u);
   MyMatrix<T> NSP = NullspaceTrMat(M);
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+#endif
   MyMatrix<T> ListIneqRed = ListInequalities * NSP.transpose();
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, |ListIneqRed|=" << ListIneqRed.rows() << " / " << ListIneqRed.cols() << "\n";
+#endif
   // Now the subspace built by the matching inequalities. It is of strictly smaller dimension since
   // otherwise the solution is not optimal.
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, before\n";
+#endif
   std::pair<MyMatrix<T>,Face> pair = LinearDeterminedByInequalitiesAndIndices(ListIneqRed);
-#ifdef DEBUG_LINEAR_PROGRAM
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, after\n";
+#endif
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
   if (pair.first.rows() == 0) {
     std::cerr << "The dimension is 0 which is impossible\n";
     throw TerminalException{1};
   }
 #endif
   if (pair.first.rows() == 1) {
+    MyVector<T> V = eSol.DirectSolution;
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+    os << "LP: GGUIP, returns a solution\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << "\n";
+#endif
     // The happy scenario where the linear programming directly gets us something unique
-    return eSol.DirectSolution;
+    return V;
   }
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, Recurring\n";
+#endif
   std::vector<int> ListIdxNZ;
   int len = ListIneqRed.rows();
   for (int u=0; u<len; u++) {
@@ -1501,10 +1534,19 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC) {
       ListIdxNZ.push_back(u);
     }
   }
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, |ListIdxNZ|=" << ListIdxNZ.size() << "\n";
+#endif
   MyMatrix<T> ListIneqRedB = SelectRow(ListIneqRed, ListIdxNZ) * pair.first.transpose();
-  MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB);
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, |ListIneqRedB|=" << ListIneqRedB.rows() << " / " << ListIneqRedB.cols() << "\n";
+#endif
+  MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
   MyVector<T> eSolFinal = NSP.transpose() * SolSubspace;
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, eSolFinal found\n";
+#endif
   return eSolFinal;
 }
 
