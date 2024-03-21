@@ -1137,7 +1137,7 @@ size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> c
 
 template<typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
-  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(data, data.rddo.os);
+  DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(data);
   MyMatrix<T> GramMat = GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
   return {DT, GramMat};
 }
