@@ -1456,6 +1456,51 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
   return eVect;
 }
 
+// We check whether the linear program is non-degenerate or not.
+// By this, we mean, whether there is a unique solution to the
+// linear program or not.
+//
+// The argument should be to take a solution of the linear program.
+// eSol should a valid solution to the linear program.
+// If 
+template<typename T>
+bool IsLinearProgramNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] MyVector<T> const& ToBeMinimized, LpSolution<T> const& eSol, [[maybe_unused]] std::ostream& os) {
+  int n_row = ListIneq.rows();
+  int n_col = ListIneq.cols();
+  MyVector<T> eSolDual = - eSol.DualSolution;
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
+  os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
+  MyVector<T> TheSum = ToBeMinimized;
+  TheSum(0) -= eSol.OptimalValue;
+  os << "LP: 1: TheSum=" << StringVectorGAP(TheSum) << "\n";
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
+    TheSum -= eSolDual(i_row) * eRow;
+  }
+  os << "LP: 2: TheSum=" << StringVectorGAP(TheSum) << "\n";
+  if (!IsZeroVector(TheSum)) {
+    std::cerr << "The vector TheSum should be zero\n";
+    throw TerminalException{1};
+  }
+#endif
+  int n_non_zero = 0;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    if (eSolDual(i_row) > 0) {
+      n_non_zero += 1;
+    }
+  }
+  int target_dim = n_col - 1;
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col << " target_dim=" << target_dim << "\n";
+#endif
+  if (n_non_zero == target_dim) {
+    return true;
+  }
+  return false;
+}
+
+
 template <typename T>
 MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ostream& os) {
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
@@ -1498,6 +1543,20 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     std::cerr << "Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
+  bool is_non_degenerate = IsLinearProgramNonDegenerate(ListInequalities, ToBeMinimized, eSol, os);
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, is_non_degenerate=" << is_non_degenerate << "\n";
+#endif
+  if (is_non_degenerate) {
+    MyVector<T> V = eSol.DirectSolution;
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+    os << "LP: GGUIP, returns a solution\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 1\n";
+    check_return(V);
+#endif
+    // The happy scenario where the linear programming directly gets us something unique
+    return V;
+  }
   // Now computing the kernel of the attained kernel.
   ToBeMinimized(0) -= eSol.OptimalValue;
   MyMatrix<T> M(1, n_cols+1);
@@ -1530,7 +1589,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     MyVector<T> V = eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
-    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 1\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 2\n";
     check_return(V);
 #endif
     // The happy scenario where the linear programming directly gets us something unique
@@ -1558,7 +1617,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   MyVector<T> V = NSP.transpose() * SolSubspace;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, eSolFinal found\n";
-  os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 2\n";
+  os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 3\n";
   check_return(V);
 #endif
   return V;
