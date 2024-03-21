@@ -1483,6 +1483,16 @@ bool IsLinearProgramNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] 
     std::cerr << "The vector TheSum should be zero\n";
     throw TerminalException{1};
   }
+  std::vector<MyVector<T>> vect;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    if (eSolDual(i_row) > 0) {
+      MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
+      vect.push_back(eRow);
+    }
+  }
+  MyMatrix<T> MatIncd = MatrixFromVectorFamily(vect);
+  int rnk_incd = RankMat(MatIncd);
+  os << "LP: rnk_incd=" << rnk_incd << "\n";
 #endif
   int n_non_zero = 0;
   for (int i_row=0; i_row<n_row; i_row++) {
@@ -1492,7 +1502,7 @@ bool IsLinearProgramNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] 
   }
   int target_dim = n_col - 1;
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col << " target_dim=" << target_dim << "\n";
+  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col << " target_dim=" << target_dim << " rnk_incd=" << rnk_incd << "\n";
 #endif
   if (n_non_zero == target_dim) {
     return true;
