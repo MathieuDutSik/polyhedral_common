@@ -14,7 +14,7 @@ void process(std::string const &eFile, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
   //
-  MyVector<T> eSol = GetGeometricallyUniqueInteriorPoint(FAC);
+  MyVector<T> eSol = GetGeometricallyUniqueInteriorPoint(FAC, std::cerr);
   if (OutFormat == "GAP") {
     os << "return ";
     WriteVectorGAP(os, eSol);

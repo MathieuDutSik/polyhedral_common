@@ -5473,7 +5473,7 @@ _L999:
 }
 
 template <typename T>
-int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
+void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
                                dd_rowset *imp_linrows, dd_ErrorType *error)
 /* 092 */
 {
@@ -5510,7 +5510,8 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
   dd_ErrorType err = dd_NoError;
   T *cvec; /* certificate for implicit linearity */
 
-  int answer = 0, localdebug = false;
+  bool localdebug = false;
+  int answer = 0; // Used to return the value in the old CDD code.
 
   *error = dd_NoError;
   /* Create an LP data for redundancy checking */
@@ -5591,8 +5592,6 @@ int dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
   }
 _L999:
   dd_FreeLPData(lp);
-
-  return answer;
 }
 
 template <typename T>
@@ -5602,8 +5601,6 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
   dd_colrange d;
   dd_rowset imp_linset;
   T *cvec; /* certificate */
-  int foi;
-  bool localdebug = false;
 
   if (M->representation == dd_Generator) {
     d = M->colsize + 2;
@@ -5612,7 +5609,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
   }
 
   dd_AllocateArow(d, &cvec);
-  foi = dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error);
+  dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error);
 
   dd_FreeArow(cvec);
   return imp_linset;
@@ -8097,6 +8094,20 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   set_free(redset);
   return ListIdx;
 }
+
+template <typename T>
+std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC) {
+  dd_ErrorType err;
+  int nbRow = TheEXT.rows();
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
+  M->representation = dd_Inequality;
+  std::vector<MyVector<T>> ListEqua;
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    
+  }
+  
+}
+
 
 template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err;
