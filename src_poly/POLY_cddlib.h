@@ -5084,12 +5084,6 @@ template <typename T>
 dd_rowset
 dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
                                   std::vector<int> const &BlockBelong) {
-  /*
-     For H-representation only and not quite reliable,
-     especially when floating-point arithmetic is used.
-     Use the ordinary (slower) method dd_RedundantRows.
-  */
-
   dd_rowrange i, m, ired;
   dd_colrange j, k, d;
   T *shootdir;
@@ -5618,30 +5612,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
   }
 
   dd_AllocateArow(d, &cvec);
-  if (localdebug)
-    fprintf(stdout, "\ndd_ImplicitLinearityRows: Check whether the system "
-                    "contains any implicit linearity.\n");
   foi = dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error);
-  if (localdebug) {
-    switch (foi) {
-    case 1:
-      fprintf(stdout, "  It is free of implicit linearity.\n");
-      break;
-
-    case 0:
-      fprintf(stdout, "  It is not free of implicit linearity.\n");
-      break;
-
-    case -1:
-      fprintf(stdout, "  The input system is trivial (i.e. the empty "
-                      "H-polytope or the V-rep of the whole space.\n");
-      break;
-
-    default:
-      fprintf(stdout, "  The LP was not solved correctly.\n");
-      break;
-    }
-  }
 
   dd_FreeArow(cvec);
   return imp_linset;
@@ -8087,6 +8058,10 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT) {
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
+  if (err != dd_NoError) {
+    std::cerr << "RedundancyReductionClarkson internal CDD error\n";
+    throw TerminalException{1};
+  }
   std::vector<int> ListIdx;
   for (int i_row = 0; i_row < nbRow; i_row++) {
     bool isin = set_member(i_row + 1, redset);
@@ -8108,6 +8083,10 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   dd_rowset redset = dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong);
+  if (err != dd_NoError) {
+    std::cerr << "RedundancyReductionClarksonBlocks internal CDD error\n";
+    throw TerminalException{1};
+  }
   std::vector<int> ListIdx;
   for (int i_row = 0; i_row < nbRow; i_row++) {
     bool isin = set_member(i_row + 1, redset);
@@ -8124,6 +8103,10 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
   int nbCol = TheEXT.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  if (err != dd_NoError) {
+    std::cerr << "DualDescription internal CDD error\n";
+    throw TerminalException{1};
+  }
   MyMatrix<T> TheFAC = FAC_from_poly(poly, nbCol);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
@@ -8134,6 +8117,10 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  if (err != dd_NoError) {
+    std::cerr << "DualDescription_incd internal CDD error\n";
+    throw TerminalException{1};
+  }
   vectface ListIncd = ListIncd_from_poly(poly, TheEXT);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);
@@ -8145,6 +8132,10 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process) {
   dd_ErrorType err;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  if (err != dd_NoError) {
+    std::cerr << "DualDescriptionFaceIneq internal CDD error\n";
+    throw TerminalException{1};
+  }
   ListFaceIneq_from_poly(poly, TheEXT, f_process);
   dd_FreePolyhedra(poly);
   dd_FreeMatrix(M);

@@ -1462,9 +1462,11 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC) {
 //
 // The argument should be to take a solution of the linear program.
 // eSol should a valid solution to the linear program.
-// If 
+//
+// If the code returns true, then the vertex is indeed non-degenerate.
+// If not, then the vertex may or may not be non-degenerate.
 template<typename T>
-bool IsLinearProgramNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] MyVector<T> const& ToBeMinimized, LpSolution<T> const& eSol, [[maybe_unused]] std::ostream& os) {
+bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] MyVector<T> const& ToBeMinimized, LpSolution<T> const& eSol, [[maybe_unused]] std::ostream& os) {
   int n_row = ListIneq.rows();
   int n_col = ListIneq.cols();
   MyVector<T> eSolDual = - eSol.DualSolution;
@@ -1483,16 +1485,31 @@ bool IsLinearProgramNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] 
     std::cerr << "The vector TheSum should be zero\n";
     throw TerminalException{1};
   }
-  std::vector<MyVector<T>> vect;
+  std::vector<MyVector<T>> vect_incd1;
   for (int i_row=0; i_row<n_row; i_row++) {
     if (eSolDual(i_row) > 0) {
       MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-      vect.push_back(eRow);
+      vect_incd1.push_back(eRow);
     }
   }
-  MyMatrix<T> MatIncd = MatrixFromVectorFamily(vect);
-  int rnk_incd = RankMat(MatIncd);
+  MyMatrix<T> MatIncd1 = MatrixFromVectorFamily(vect_incd1);
+  int rnk_incd = RankMat(MatIncd1);
   os << "LP: rnk_incd=" << rnk_incd << "\n";
+  std::vector<MyVector<T>> vect_incd2;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
+    T scal = eRow.dot(eSol.DirectSolutionExt);
+    if (scal < 0) {
+      std::cerr << "The scalar product is negative, which is not allowed\n";
+      throw TerminalException{1};
+    }
+    if (scal == 0) {
+      vect_incd2.push_back(eRow);
+    }
+  }
+  MyMatrix<T> MatIncd2 = MatrixFromVectorFamily(vect_incd2);
+  int rnk_incd2 = RankMat(MatIncd2);
+  os << "LP: rnk_incd2=" << rnk_incd2 << "\n";
 #endif
   int n_non_zero = 0;
   for (int i_row=0; i_row<n_row; i_row++) {
@@ -1553,7 +1570,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     std::cerr << "Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
-  bool is_non_degenerate = IsLinearProgramNonDegenerate(ListInequalities, ToBeMinimized, eSol, os);
+  bool is_non_degenerate = TestCriterionNonDegenerate(ListInequalities, ToBeMinimized, eSol, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, is_non_degenerate=" << is_non_degenerate << "\n";
 #endif
