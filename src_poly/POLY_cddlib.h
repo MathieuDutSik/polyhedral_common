@@ -8095,19 +8095,111 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   return ListIdx;
 }
 
+
 template <typename T>
 std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC) {
   dd_ErrorType err;
-  int nbRow = TheEXT.rows();
-  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
+  int nbRow = FAC.rows();
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(FAC);
   M->representation = dd_Inequality;
-  std::vector<MyVector<T>> ListEqua;
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    
+  dd_rowset linset = dd_ImplicitLinearityRows(M, &err);
+  if (err != dd_NoError) {
+    std::cerr << "DualDescription_incd internal CDD error\n";
+    throw TerminalException{1};
   }
-  
+  Face f(nbRow);
+  std::vector<MyVector<T>> ListV;
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    long elem = iRow + 1;
+    bool test = set_member(elem, linset);
+    f[iRow] = test;
+    if (test) {
+      MyVector<T> eFAC = GetMatrixRow(FAC, iRow);
+      ListV.push_back(eFAC);
+    }
+  }
+  MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
+  MyMatrix<T> NSP = NullspaceTrMat(MatEqua);
+  dd_FreeMatrix(M);
+  set_free(linset);
+  return {std::move(NSP), f};
 }
 
+/*
+  We apply the preceding algorithm. But when we find an equality, we use it
+  to reduce the dimensionality.
+  ---
+  The reasoning of the method is that any gain in dimensionality has to
+  exploited to the full. Note that the gain is not just about the dimensionality
+  but also the number of inequalities since many inequalities become multiple
+  of each other when going to a lower dimensional subspace.
+ */
+template <typename T>
+std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC) {
+  int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
+  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(FAC);
+  M->representation = dd_Inequality;
+  int d1 = M->colsize; // We are in the inequality case.
+  std::vector<T> cvec(d1);
+  auto get_linear_entry=[&]() -> std::optional<int> {
+    dd_ErrorType err;
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      long i = iRow + 1;
+      bool test = dd_ImplicitLinearity(M, i, cvec.data(), &err);
+      if (err != dd_NoError) {
+        std::cerr << "LinearDeterminedByInequalitiesAndIndices_LPandNullspace internal CDD error\n";
+        throw TerminalException{1};
+      }
+      if (test) {
+        return iRow;
+      }
+    }
+    return {};
+  };
+  std::optional<int> opt = get_linear_entry();
+  if (opt) {
+    int idx = *opt;
+    MyVector<T> Vlin = GetMatrixRow(FAC, idx);
+    MyMatrix<T> NSP = NullspaceMatSingleVector(Vlin);
+    std::unordered_map<MyVector<T>, std::vector<int>> map;
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (iRow != idx) {
+        MyVector<T> V = GetMatrixRow(FAC, iRow);
+        MyVector<T> ScalV = NSP * V;
+        MyVector<T> ScalVcan = CanonicalizeVector(ScalV);
+        map[ScalVcan].push_back(iRow);
+      }
+    }
+    int siz = map.size();
+    MyMatrix<T> FACred(siz, nbCol - 1);
+    std::vector<std::vector<int>> ll_idx(siz);
+    int pos = 0;
+    for (auto & kv : map) {
+      for (int u=0; u<nbCol-1; u++) {
+        FACred(pos, u) = kv.first(u);
+      }
+      ll_idx[pos] = kv.second;
+      pos++;
+    }
+    std::pair<MyMatrix<T>, Face> pairRed = LinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred);
+    MyMatrix<T> NSPnew = pairRed.first * NSP;
+    Face f(nbRow);
+    f[idx] = 1;
+    for (int u=0; u<siz; u++) {
+      if (pairRed.second[u]) {
+        for (auto & pos : ll_idx[u]) {
+          f[pos] = 1;
+        }
+      }
+    }
+    return {std::move(NSPnew), std::move(f)};
+  } else {
+    MyMatrix<T> Spa = IdentityMat<T>(nbCol);
+    Face f(nbRow);
+    return {std::move(Spa), std::move(f)};
+  }
+}
 
 template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err;
@@ -8126,8 +8218,8 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
 
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err;
-  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
+  dd_polyhedradata<T>* poly = dd_DDMatrix2Poly(M, &err);
   if (err != dd_NoError) {
     std::cerr << "DualDescription_incd internal CDD error\n";
     throw TerminalException{1};
