@@ -13,7 +13,6 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
-  using Tidx_value = uint32_t;
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
   size_t nbCol = EXT.cols();

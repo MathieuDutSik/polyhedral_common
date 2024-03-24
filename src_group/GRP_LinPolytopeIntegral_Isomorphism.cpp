@@ -13,7 +13,6 @@ void process_A(std::string const &FileExt1, std::string const &FileExt2,
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
-  using Tidx_value = uint32_t;
   MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(FileExt1);
   MyMatrix<Tint> EXT2 = ReadMatrixFile<Tint>(FileExt2);
   size_t nbCol = EXT1.cols();
