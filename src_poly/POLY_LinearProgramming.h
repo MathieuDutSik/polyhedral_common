@@ -1244,7 +1244,7 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
 }
 
 template <typename T>
-std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC) {
+std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC);
@@ -1291,7 +1291,7 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
         Face f(0);
         return {std::move(TheSpann), f};
       } else {
-        return KernelLinearDeterminedByInequalitiesAndIndices(FACprojCor);
+        return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FACprojCor);
       }
     };
     std::pair<MyMatrix<T>, Face> pair = f_recursive();
@@ -1316,6 +1316,56 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
   }
 }
 
+
+template<typename T>
+std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC) {
+  int n_row = FAC.rows();
+  int n_col = FAC.cols();
+  int dim_direct = n_col;
+  int dim_dual = n_row - n_col;
+#ifdef DEBUG_LINEAR_PROGRAM
+  auto test_equa=[](std::pair<MyMatrix<T>,Face> const& res1, std::pair<MyMatrix<T>,Face> const& res2) -> bool {
+    if (res1.second != res2.second) {
+      return false;
+    }
+    return TestEqualitySpannedSpaces(res1.first, res2.first);
+  };
+  std::pair<MyMatrix<T>,Face> res_dual = KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC);
+  std::pair<MyMatrix<T>,Face> res_dir_lp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC);
+  std::pair<MyMatrix<T>,Face> res_dir_lp_nsp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC);
+  if (!test_equa(res_dual, res_dir_lp)) {
+    std::cerr << "res_dual and res_dir_lp are not equal\n";
+    throw TerminalException{1};
+  }
+  if (!test_equa(res_dual, res_dir_lp_nsp)) {
+    std::cerr << "res_dual and res_dir_lp_nsp are not equal\n";
+    throw TerminalException{1};
+  }
+  auto test_correct=[&](std::pair<MyMatrix<T>,Face> const& res) -> void {
+    for (int i_row=0; i_row<n_row; i_row++) {
+      if (res.second[i_row] == 1) {
+        MyVector<T> eRow = GetMatrixRow(FAC, i_row);
+        MyVector<T> Vscal = res.first * eRow;
+        if (!IsZeroVector(Vscal)) {
+          std::cerr << "The vector Vscal is not zero\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+  };
+  test_correct(res_dual);
+  test_correct(res_dir_lp);
+  test_correct(res_dir_lp_nsp);
+#endif
+  if (dim_dual < dim_direct) {
+    return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC);
+  } else {
+    return cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC);
+  }
+}
+
+
+
 /*
   Return the corresponding subspace and the indices of the inequalities that are matching
   with equality.
@@ -1325,29 +1375,39 @@ std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T>
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_row = FAC.rows();
   int n_col = FAC.cols();
-  auto IsZeroLine=[&](int const& iLine) -> bool {
-    for (int u=0; u<n_col; u++)
-      if (FAC(iLine, u) != 0)
-        return false;
-    return true;
-  };
-  std::vector<int> ListIdxZ, ListIdxNZ;
+  std::vector<int> ListIdxZ;
+  std::unordered_map<MyVector<T>, std::vector<int>> map;
   for (int u=0; u<n_row; u++) {
-    if (IsZeroLine(u)) {
+    MyVector<T> eRow = GetMatrixRow(FAC, u);
+    if (IsZeroVector(eRow)) {
       ListIdxZ.push_back(u);
     } else {
-      ListIdxNZ.push_back(u);
+      MyVector<T> eRowCan = CanonicalizeVector(eRow);
+      map[eRowCan].push_back(u);
     }
   }
-  MyMatrix<T> FACred = SelectRow(FAC, ListIdxNZ);
+  int siz = map.size();
+  MyMatrix<T> FACred(siz, n_col);
+  std::vector<std::vector<int>> ll_idx;
+  int pos = 0;
+  for (auto & kv : map) {
+    for (int u=0; u<n_col; u++) {
+      FACred(pos, u) = kv.first(u);
+    }
+    ll_idx.push_back(kv.second);
+    pos++;
+  }
   std::pair<MyMatrix<T>,Face> pair = KernelLinearDeterminedByInequalitiesAndIndices(FACred);
   Face f(n_row);
   for (auto & eVal : ListIdxZ) {
     f[eVal] = 1;
   }
-  int len = ListIdxNZ.size();
-  for (int u=0; u<len; u++) {
-    f[ListIdxNZ[u]] = f[pair.second[u]];
+  for (int pos=0; pos<siz; pos++) {
+    if (f[pos] == 1) {
+      for (auto && idx : ll_idx[pos]) {
+        f[idx] = 1;
+      }
+    }
   }
   return {std::move(pair.first), std::move(f)};
 }

@@ -5425,7 +5425,7 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
 
   dd_colrange j;
   dd_lpdata<T> *lp;
-  dd_lpsolution<T> *lps;
+  //  dd_lpsolution<T> *lps;
   dd_ErrorType err = dd_NoError;
   bool answer = false, localdebug = false;
 
@@ -8097,7 +8097,7 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
 
 
 template <typename T>
-std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC) {
+std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC) {
   dd_ErrorType err;
   int nbRow = FAC.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(FAC);
@@ -8135,7 +8135,7 @@ std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_DirectLP(M
   of each other when going to a lower dimensional subspace.
  */
 template <typename T>
-std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC) {
+std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(FAC);
@@ -8182,7 +8182,7 @@ std::pair<MyMatrix<T>, Face> LinearDeterminedByInequalitiesAndIndices_LPandNulls
       ll_idx[pos] = kv.second;
       pos++;
     }
-    std::pair<MyMatrix<T>, Face> pairRed = LinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred);
+    std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred);
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
     f[idx] = 1;
