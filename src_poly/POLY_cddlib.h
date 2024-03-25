@@ -27,7 +27,9 @@
 #include <utility>
 // clang-format on
 
+#ifdef DEBUG
 #define DEBUG_CDD
+#endif
 
 // templatized code of the CDD library
 

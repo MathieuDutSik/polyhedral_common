@@ -1312,19 +1312,30 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
   };
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
   std::pair<MyMatrix<T>,Face> res_dual = KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
+  os << "|res_dual|=" << res_dual.first.rows() << " / " << res_dual.first.cols() << "\n";
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
+  os << "res_dual.first=\n";
+  WriteMatrix(os, res_dual.first);
   std::pair<MyMatrix<T>,Face> res_dir_lp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+  os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / " << res_dir_lp.first.cols() << "\n";
+  os << "res_dir_lp.first=\n";
+  WriteMatrix(os, res_dir_lp.first);
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   std::pair<MyMatrix<T>,Face> res_dir_lp_nsp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
+  os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / " << res_dir_lp_nsp.first.cols() << "\n";
+  os << "res_dir_lp_nsp.first=\n";
+  WriteMatrix(os, res_dir_lp_nsp.first);
   os << "After KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   if (!test_equa(res_dual, res_dir_lp)) {
     std::cerr << "res_dual and res_dir_lp are not equal\n";
     throw TerminalException{1};
   }
+  os << "After test_equa1\n";
   if (!test_equa(res_dual, res_dir_lp_nsp)) {
     std::cerr << "res_dual and res_dir_lp_nsp are not equal\n";
     throw TerminalException{1};
   }
+  os << "After test_equa2\n";
   auto test_correct=[&](std::pair<MyMatrix<T>,Face> const& res) -> void {
     for (int i_row=0; i_row<n_row; i_row++) {
       if (res.second[i_row] == 1) {
