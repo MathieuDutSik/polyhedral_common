@@ -1303,6 +1303,15 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
   int n_col = FAC.cols();
   int dim_direct = n_col;
   int dim_dual = n_row - n_col;
+#ifdef TIMINGS_LINEAR_PROGRAM
+  HumanTime time;
+  (void)KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time << "\n";
+  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time << "\n";
+  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|=" << time << "\n";
+#endif
 #ifdef DEBUG_LINEAR_PROGRAM
   auto test_equa=[](std::pair<MyMatrix<T>,Face> const& res1, std::pair<MyMatrix<T>,Face> const& res2) -> bool {
     if (res1.second != res2.second) {
