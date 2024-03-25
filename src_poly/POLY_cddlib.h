@@ -7984,6 +7984,33 @@ dd_matrixdata<T> *MyMatrix_PolyFile2Matrix(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T>
+dd_matrixdata<T> *MyMatrix_PolyFile2MatrixExt(MyMatrix<T> const &TheEXT) {
+  dd_matrixdata<T> *M = nullptr;
+  dd_rowrange m_input, i;
+  dd_colrange d_input, j;
+  dd_RepresentationType rep;
+  bool localdebug = false;
+
+  m_input = TheEXT.rows();
+  d_input = TheEXT.cols();
+
+  rep = dd_Generator; /* using dd_Inequality led to horrible bugs */
+  M = dd_CreateMatrix<T>(m_input, d_input + 1);
+  M->representation = rep;
+
+  for (i = 0; i < m_input; i++) {
+    M->matrix[i][0] = 0;
+    for (j = 0; j < d_input; j++) {
+      M->matrix[i][j+1] = TheEXT(i, j);
+      if (localdebug)
+        std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
+                  << "\n";
+    }
+  }
+  return M;
+}
+
+template <typename T>
 MyMatrix<T> FAC_from_poly(dd_polyhedradata<T> const *poly, int const &nbCol) {
   dd_raydata<T> *RayPtr = poly->child->FirstRay;
   int nbRay = 0;
@@ -8141,10 +8168,13 @@ template <typename T>
 std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC, std::ostream& os) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
-  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(FAC);
+  dd_matrixdata<T>* M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
   int d1 = M->colsize; // We are in the inequality case.
   std::vector<T> cvec(d1);
+#ifdef DEBUG_CDD
+  os << "CDD: LPandNullspace, nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+#endif
   auto get_linear_entry=[&]() -> std::optional<int> {
     dd_ErrorType err;
     for (int iRow=0; iRow<nbRow; iRow++) {
@@ -8163,18 +8193,43 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
   std::optional<int> opt = get_linear_entry();
   if (opt) {
     int idx = *opt;
+#ifdef DEBUG_CDD
+    os << "CDD: LPandNullspace, idx=" << idx << "\n";
+#endif
     MyVector<T> Vlin = GetMatrixRow(FAC, idx);
     MyMatrix<T> NSP = NullspaceMatSingleVector(Vlin);
+#ifdef DEBUG_CDD
+    os << "Vlin=";
+    WriteVectorNoDim(os, Vlin);
+    os << "FAC=\n";
+    WriteMatrix(os, FAC);
+    os << "NSP=\n";
+    WriteMatrix(os, NSP);
+#endif
+    std::vector<int> l_zeros;
     std::unordered_map<MyVector<T>, std::vector<int>> map;
     for (int iRow=0; iRow<nbRow; iRow++) {
-      if (iRow != idx) {
-        MyVector<T> V = GetMatrixRow(FAC, iRow);
-        MyVector<T> ScalV = NSP * V;
+      MyVector<T> V = GetMatrixRow(FAC, iRow);
+      MyVector<T> ScalV = NSP * V;
+#ifdef DEBUG_CDD
+      os << "   ScalV=";
+      WriteVectorNoDim(os, ScalV);
+#endif
+      if (IsZeroVector(ScalV)) {
+        l_zeros.push_back(iRow);
+      } else {
         MyVector<T> ScalVcan = CanonicalizeVector(ScalV);
+#ifdef DEBUG_CDD
+        os << "ScalVcan=";
+        WriteVectorNoDim(os, ScalVcan);
+#endif
         map[ScalVcan].push_back(iRow);
       }
     }
     int siz = map.size();
+#ifdef DEBUG_CDD
+    os << "siz=" << siz << " nbRow=" << nbRow << "\n";
+#endif
     MyMatrix<T> FACred(siz, nbCol - 1);
     std::vector<std::vector<int>> ll_idx(siz);
     int pos = 0;
@@ -8185,10 +8240,21 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
       ll_idx[pos] = kv.second;
       pos++;
     }
+#ifdef DEBUG_CDD
+    os << "FACred=\n";
+    WriteMatrix(os, FACred);
+    if (FACred.rows() > 0) {
+      std::pair<MyMatrix<T>, Face> pair_loc = KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, os);
+      os << "pair_loc.first=\n";
+      WriteMatrix(os, pair_loc.first);
+    }
+#endif
     std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred, os);
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
-    f[idx] = 1;
+    for (auto & idx : l_zeros) {
+      f[idx] = 1;
+    }
     for (int u=0; u<siz; u++) {
       if (pairRed.second[u]) {
         for (auto & pos : ll_idx[u]) {
@@ -8198,6 +8264,9 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
     }
     return {std::move(NSPnew), std::move(f)};
   } else {
+#ifdef DEBUG_CDD
+    os << "None case\n";
+#endif
     MyMatrix<T> Spa = IdentityMat<T>(nbCol);
     Face f(nbRow);
     return {std::move(Spa), std::move(f)};
