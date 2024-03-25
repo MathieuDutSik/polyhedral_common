@@ -675,10 +675,11 @@ public:
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   std::unordered_set<CombElt<T>> known_redundant;
-  void print_statistics(std::ostream &os) const {
-    os << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
-    os << "|ListNeighborCoset|=" << ListNeighborCoset.size()
-       << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
+  std::ostream& os;
+  void print_statistics(std::ostream &os_out) const {
+    os_out << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
+    os_out << "|ListNeighborCoset|=" << ListNeighborCoset.size()
+           << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
     std::map<size_t, size_t> map_by_cos;
     for (auto &ePair : ListNeighborData) {
       map_by_cos[ePair.first]++;
@@ -687,56 +688,56 @@ public:
     for (auto &kv : map_by_cos) {
       map_by_size[kv.second]++;
     }
-    os << "Sizes :";
+    os_out << "Sizes :";
     for (auto &kv : map_by_size) {
-      os << " [" << kv.first << "," << kv.second << "]";
+      os_out << " [" << kv.first << "," << kv.second << "]";
     }
-    os << "\n";
+    os_out << "\n";
     std::vector<int> V = ComputeMatchingVector();
     int n_missing = 0;
     for (size_t i_mat = 0; i_mat < V.size(); i_mat++) {
       int val = V[i_mat];
-      //      os << "i_mat=" << i_mat << " j=" << val << "\n";
+      //      os_out << "i_mat=" << i_mat << " j=" << val << "\n";
       if (val == -1) {
         n_missing++;
       }
     }
     if (n_missing > 0) {
-      os << "ERROR: We have some matching missing n_missing=" << n_missing
+      os_out << "ERROR: We have some matching missing n_missing=" << n_missing
          << "\n";
     } else {
-      os << "OK: All facets have matching on the other side\n";
+      os_out << "OK: All facets have matching on the other side\n";
     }
   }
   void write_description_to_file(std::string const &eFile,
                                  DataFAC<T> const &datafac) const {
-    std::ofstream os(eFile);
+    std::ofstream osF(eFile);
     size_t n_mat = datafac.ListAdj.size();
-    os << n_mat << "\n";
+    osF << n_mat << "\n";
     for (size_t i_mat = 0; i_mat < n_mat; i_mat++) {
-      WriteTrackGroup(os, datafac.ListAdj[i_mat].tg);
-      WriteMatrix(os, datafac.ListAdj[i_mat].mat);
+      WriteTrackGroup(osF, datafac.ListAdj[i_mat].tg);
+      WriteMatrix(osF, datafac.ListAdj[i_mat].mat);
     }
-    WriteMatrix(os, datafac.FAC);
+    WriteMatrix(osF, datafac.FAC);
   }
   void write_step_enum_to_file(std::string const &eFile) const {
-    std::ofstream os(eFile);
-    WriteVector(os, x);
-    os << stabilizerElt.size() << "\n";
+    std::ofstream osF(eFile);
+    WriteVector(osF, x);
+    osF << stabilizerElt.size() << "\n";
     for (auto &eElt : stabilizerElt) {
-      WriteComb(os, eElt);
+      WriteComb(osF, eElt);
     }
-    os << ListNeighborCoset.size() << "\n";
+    osF << ListNeighborCoset.size() << "\n";
     for (auto &eElt : ListNeighborCoset) {
-      WriteComb(os, eElt);
+      WriteComb(osF, eElt);
     }
-    os << ListNeighborX.size() << "\n";
+    osF << ListNeighborX.size() << "\n";
     for (auto &eVect : ListNeighborX) {
-      WriteVector(os, eVect);
+      WriteVector(osF, eVect);
     }
-    os << ListNeighborData.size() << "\n";
+    osF << ListNeighborData.size() << "\n";
     for (auto &ePair : ListNeighborData) {
-      os << ePair.first << " " << ePair.second << "\n";
+      osF << ePair.first << " " << ePair.second << "\n";
     }
   }
   void clear() {
@@ -1210,7 +1211,7 @@ public:
       for (int i_adj_img = 0; i_adj_img < n_adj_img; i_adj_img++) {
         MyVector<T> eVect = GetMatrixRow(FAC_localImg, i_adj_img);
         SolutionMatNonnegativeComplete<T> SolCompl =
-            GetSolutionMatNonnegativeComplete(FAC_local, eVect);
+            GetSolutionMatNonnegativeComplete(FAC_local, eVect, os);
         if (!SolCompl.SolNonnegative) {
           if (!SolCompl.ExtremeRay) {
             std::cerr << "Failed to have an extreme ray\n";
@@ -2100,7 +2101,8 @@ public:
 
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
-                                        RecOption const &rec_option) {
+                                        RecOption const &rec_option,
+                                        std::ostream& os) {
   std::string eCommand = rec_option.eCommand;
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
@@ -2247,11 +2249,11 @@ void PrintGroupPresentation(
 }
 
 template <typename T>
-StepEnum<T> compute_step_enum(RecOption const &rec_option) {
+StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   DataPoincare<T> dp =
       ReadDataPoincare<T>(rec_option.FileDataPoincare, rec_option.n_expand);
   std::cerr << "We have dp\n";
-  StepEnum<T> se(dp.x);
+  StepEnum<T> se(dp.x, os);
   auto f_init = [&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
       return se.InsertAndCheckRedundancy(
@@ -2268,26 +2270,26 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option) {
 }
 
 template <typename T, typename Tgroup>
-void full_process_type(RecOption const &rec_option) {
-  std::cerr << "Beginning of full_process_type\n";
-  StepEnum<T> se = compute_step_enum<T>(rec_option);
-  std::cerr << "We have se\n";
+void full_process_type(RecOption const &rec_option, std::ostream& os) {
+  os << "Beginning of full_process_type\n";
+  StepEnum<T> se = compute_step_enum<T>(rec_option, os);
+  os << "We have se\n";
   PrintAdjacencyInfo(se, rec_option.FileO);
-  std::cerr << "se has been written to file\n";
+  os << "se has been written to file\n";
   bool ComputeStabilizerPermutation = rec_option.ComputeStabilizerPermutation;
   bool ComputeGroupPresentation = rec_option.ComputeGroupPresentation;
-  std::cerr << "ComputeStabilizerPermutation = " << ComputeStabilizerPermutation
+  os << "ComputeStabilizerPermutation = " << ComputeStabilizerPermutation
             << "\n";
-  std::cerr << "ComputeGroupPresentation = " << ComputeGroupPresentation
+  os << "ComputeGroupPresentation = " << ComputeGroupPresentation
             << "\n";
   if (ComputeStabilizerPermutation) {
-    std::cerr << "Writing the permutation group stabilizer\n";
+    os << "Writing the permutation group stabilizer\n";
     Tgroup GRP = se.template GetPermutationGroup<Tgroup>();
-    std::cerr << "GRP=" << GRP.GapString() << "\n";
+    os << "GRP=" << GRP.GapString() << "\n";
   }
   if (ComputeGroupPresentation) {
     AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand);
-    std::cerr << "Writing the group presentation\n";
+    os << "Writing the group presentation\n";
     std::pair<int, std::vector<std::vector<int>>> ThePres =
         se.GetGroupPresentation(ai);
     PrintGroupPresentation(std::cerr, ThePres);

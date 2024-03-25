@@ -15,7 +15,7 @@
 template <typename T, typename Tgroup>
 void process(std::string const &FileEXT, std::string const &FileGRP,
              std::string const &method, std::string const &OutFormat,
-             std::ostream &os) {
+             std::ostream &os_out, std::ostream& os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   size_t nbRow = EXT.rows();
@@ -36,10 +36,10 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
           }
         }
       }
-      return cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong);
+      return cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong, os);
     }
     if (method == "Equivariant") {
-      return GetNonRedundant_Equivariant(EXT, GRP);
+      return GetNonRedundant_Equivariant(EXT, GRP, os);
     }
     std::cerr << "Failed to find a relevant method\n";
     std::cerr << "Allowed ones: ClarksonBlock and Equivariant\n";
@@ -48,22 +48,22 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
   std::vector<int> ListIrred = get_list_irred();
   int nbIrred = ListIrred.size();
   if (OutFormat == "GAP") {
-    os << "return [";
+    os_out << "return [";
     for (int i = 0; i < nbIrred; i++) {
       if (i > 0)
-        os << ",";
+        os_out << ",";
       int eVal = ListIrred[i] + 1;
-      os << eVal;
+      os_out << eVal;
     }
-    os << "];\n";
+    os_out << "];\n";
     return;
   }
   if (OutFormat == "MyVector") {
-    os << nbIrred << "\n";
+    os_out << nbIrred << "\n";
     for (int i = 0; i < nbIrred; i++) {
-      os << " ";
+      os_out << " ";
       int eVal = ListIrred[i];
-      os << eVal;
+      os_out << eVal;
     }
     return;
   }
@@ -124,24 +124,24 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[5];
       FileOut = argv[6];
     }
-    auto compute_redundancy = [&](std::ostream &os) -> void {
+    auto compute_redundancy = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -157,7 +157,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
@@ -171,8 +171,8 @@ int main(int argc, char *argv[]) {
       if (FileOut == "stdout") {
         compute_redundancy(std::cout);
       } else {
-        std::ofstream os(FileOut);
-        compute_redundancy(os);
+        std::ofstream osF(FileOut);
+        compute_redundancy(osF);
       }
     }
     std::cerr << "Normal termination of the program\n";

@@ -11,15 +11,16 @@
 
 template <typename T>
 void process_A(std::string const &eFileI, std::string const &eFileO,
-               std::string const &method, std::string const &OutFormat) {
+               std::string const &method, std::string const &OutFormat,
+               std::ostream& os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   auto get_list_irred = [&]() -> std::vector<int> {
     if (method == "Clarkson") {
-      return cdd::RedundancyReductionClarkson(EXT);
+      return cdd::RedundancyReductionClarkson(EXT, os);
     }
     if (method == "HitAndRun") {
-      return EliminationByRedundance_HitAndRun(EXT);
+      return EliminationByRedundance_HitAndRun(EXT, os);
     }
     std::cerr << "Failed to find a matching method\n";
     std::cerr << "Allowed ones: Clarkson and HitAndRun\n";
@@ -28,26 +29,26 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
   std::vector<int> ListIrred = get_list_irred();
   int nbIrred = ListIrred.size();
   std::cerr << "nbIrred=" << nbIrred << "\n";
-  auto print_result = [&](std::ostream &os) -> void {
+  auto print_result = [&](std::ostream &os_out) -> void {
     if (OutFormat == "GAP") {
-      os << "return [";
+      os_out << "return [";
       for (int i = 0; i < nbIrred; i++) {
         if (i > 0)
-          os << ",";
+          os_out << ",";
         int eVal = ListIrred[i] + 1;
-        os << eVal;
+        os_out << eVal;
       }
-      os << "];\n";
+      os_out << "];\n";
       return;
     }
     if (OutFormat == "Python") {
       for (int i = 0; i < nbIrred; i++) {
         if (i > 0)
-          os << " ";
+          os_out << " ";
         int eVal = ListIrred[i];
-        os << eVal;
+        os_out << eVal;
       }
-      os << "\n";
+      os_out << "\n";
       return;
     }
     std::cerr << "Failed to find a matching entry\n";
@@ -57,30 +58,30 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
     return print_result(std::cerr);
   if (eFileO == "stdout")
     return print_result(std::cout);
-  std::ofstream os(eFileO);
-  return print_result(os);
+  std::ofstream osF(eFileO);
+  return print_result(osF);
 }
 
 void process_B(std::string const &eFileI, std::string const &eFileO,
                std::string const &method, std::string const &OutFormat,
-               std::string const &arith) {
+               std::string const &arith, std::ostream& os) {
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
-    return process_A<T>(eFileI, eFileO, method, OutFormat);
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   if (arith == "rational") {
     using T = mpq_class;
-    return process_A<T>(eFileI, eFileO, method, OutFormat);
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return process_A<T>(eFileI, eFileO, method, OutFormat);
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return process_A<T>(eFileI, eFileO, method, OutFormat);
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -96,7 +97,7 @@ void process_B(std::string const &eFileI, std::string const &eFileO,
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return process_A<T>(eFileI, eFileO, method, OutFormat);
+    return process_A<T>(eFileI, eFileO, method, OutFormat, os);
   }
   std::cerr << "Failed to find a matching field for arith=" << arith << "\n";
   std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
@@ -152,7 +153,7 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[4];
       eFileO = argv[5];
     }
-    process_B(eFileI, eFileO, method, OutFormat, arith);
+    process_B(eFileI, eFileO, method, OutFormat, arith, std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Something wrong happenned somewhere\n";

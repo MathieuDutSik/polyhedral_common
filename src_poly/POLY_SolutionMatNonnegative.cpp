@@ -15,7 +15,7 @@ void full_process_type(std::string const &FileFAC,
             << "\n";
   MyVector<T> Ineq = ReadVectorFile<T>(FileINEQ);
   //
-  std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, Ineq);
+  std::optional<MyVector<T>> opt = SolutionMatNonnegative(FAC, Ineq, std::cerr);
   //
   if (opt) {
     MyVector<T> V = *opt;

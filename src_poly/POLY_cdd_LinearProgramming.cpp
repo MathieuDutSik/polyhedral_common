@@ -22,7 +22,7 @@ void process(std::string const &eFileFAC, std::string const &eFileIneq,
     std::cerr << "This is inconsistentt\n";
     throw TerminalException{1};
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(TheEXT, eVect);
+  LpSolution<T> eSol = CDD_LinearProgramming(TheEXT, eVect, std::cerr);
   if (OutFormat == "GAP") {
     os << "return rec(";
     os << "answer:=\"" << eSol.Answer << "\",\n";

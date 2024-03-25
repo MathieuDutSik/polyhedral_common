@@ -8,18 +8,18 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::ostream &os) {
+void process(std::string const &eFileI, std::ostream &os_out, std::ostream& os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFileI);
-  Face f_adj = ComputeSkeletonClarkson(FAC);
+  Face f_adj = ComputeSkeletonClarkson(FAC, os);
   int n_fac = FAC.rows();
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     int n_adj = 0;
     for (int j_fac = 0; j_fac < n_fac; j_fac++) {
       int val = f_adj[j_fac + i_fac * n_fac];
-      os << " " << val;
+      os_out << " " << val;
       n_adj += val;
     }
-    os << " n_adj=" << n_adj << "\n";
+    os_out << " n_adj=" << n_adj << "\n";
   }
 }
 
@@ -47,24 +47,24 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string eFileI = argv[2];
-    auto compute_skeleton = [&](std::ostream &os) -> void {
+    auto compute_skeleton = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T>(eFileI, os);
+        return process<T>(eFileI, os_out, std::cerr);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T>(eFileI, os);
+        return process<T>(eFileI, os_out, std::cerr);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, os);
+        return process<T>(eFileI, os_out, std::cerr);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, os);
+        return process<T>(eFileI, os_out, std::cerr);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, os);
+        return process<T>(eFileI, os_out, std::cerr);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

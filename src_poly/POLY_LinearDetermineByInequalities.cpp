@@ -11,18 +11,18 @@
 
 template <typename T>
 void process(std::string const &eFile, std::string const &OutFormat,
-             std::ostream &os) {
+             std::ostream &os_out, std::ostream& os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
   //
-  MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FAC);
+  MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FAC, os);
   if (OutFormat == "GAP") {
-    os << "return ";
-    WriteMatrixGAP(os, LinSpace);
-    os << ";\n";
+    os_out << "return ";
+    WriteMatrixGAP(os_out, LinSpace);
+    os_out << ";\n";
     return;
   }
   if (OutFormat == "CPP") {
-    return WriteMatrix(os, LinSpace);
+    return WriteMatrix(os_out, LinSpace);
   }
   std::cerr << "Error in process, missing support for OutFormat=" << OutFormat
             << "\n";
@@ -87,32 +87,32 @@ int main(int argc, char *argv[]) {
       FileSPA = argv[4];
     }
 
-    auto f = [&](std::ostream &os) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -128,7 +128,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out, std::cerr);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

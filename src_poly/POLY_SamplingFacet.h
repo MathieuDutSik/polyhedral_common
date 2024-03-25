@@ -76,7 +76,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     nbCall++;
     return ListFace;
   }
-  Face eInc = FindOneInitialVertex(EXT);
+  Face eInc = FindOneInitialVertex(EXT, os);
   FuncInsert(eInc);
   while (true) {
     int nbCases = ListFace.size();
@@ -157,7 +157,7 @@ template <typename T>
 vectface
 Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
                                         std::string const &ansSamp,
-                                        [[maybe_unused]] std::ostream &os) {
+                                        std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   MicrosecondTime time;
 #endif
@@ -191,12 +191,12 @@ Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     if (ansOpt == "lp_cdd") {
       // So possible format is lp_cdd:iter_100
       int iter = get_iter();
-      return FindVertices(EXT, iter);
+      return FindVertices(EXT, iter, os);
     }
     if (ansOpt == "lp_cdd_min") {
       // So possible format is lp_cdd_min:iter_100
       int iter = get_iter();
-      vectface vf = FindVertices(EXT, iter);
+      vectface vf = FindVertices(EXT, iter, os);
       return select_minimum_count(vf);
     }
     if (ansOpt == "sampling") {
@@ -286,7 +286,7 @@ vectface Kernel_GetFullRankFacetSet(
     vf_ret.push_back(f2);
     return vf_ret;
   }
-  Face eSet = Kernel_FindSingleVertex(EXT);
+  Face eSet = Kernel_FindSingleVertex(EXT, os);
   // Here we use a trick that the ColumnReduction will select the first column
   // and so will return a matrix that is polytopal
   MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
@@ -338,7 +338,7 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|ColumnReduction|=" << time << "\n";
 #endif
-  MyMatrix<T> EXT_C = Polytopization(EXT_B);
+  MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|Polytopization|=" << time << "\n";
 #endif

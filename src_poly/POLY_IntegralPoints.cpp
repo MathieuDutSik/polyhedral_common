@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> EXT = ReadMatrixFile<T>(argv[2]);
     //
     std::vector<MyVector<Tint>> ListPoint =
-        GetListIntegralPoint<T, Tint>(FAC, EXT);
+      GetListIntegralPoint<T, Tint>(FAC, EXT, std::cerr);
     //
     std::ofstream os(argv[3]);
     os << "return [";

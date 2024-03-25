@@ -8048,7 +8048,7 @@ void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
 }
 
 template <typename T>
-std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT) {
+std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT, [[maybe_unused]] std::ostream& os) {
   dd_ErrorType err;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8073,7 +8073,8 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT) {
 template <typename T>
 std::vector<int>
 RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
-                                  std::vector<int> const &BlockBelong) {
+                                  std::vector<int> const &BlockBelong,
+                                  [[maybe_unused]] std::ostream& os) {
   dd_ErrorType err;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8097,7 +8098,7 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
 
 
 template <typename T>
-std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC) {
+std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC, [[maybe_unused]] std::ostream& os) {
   dd_ErrorType err;
   int nbRow = FAC.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(FAC);
@@ -8135,7 +8136,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_Dire
   of each other when going to a lower dimensional subspace.
  */
 template <typename T>
-std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC) {
+std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC, std::ostream& os) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(FAC);
@@ -8182,7 +8183,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
       ll_idx[pos] = kv.second;
       pos++;
     }
-    std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred);
+    std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred, os);
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
     f[idx] = 1;

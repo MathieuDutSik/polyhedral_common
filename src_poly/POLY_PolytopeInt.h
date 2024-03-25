@@ -11,7 +11,7 @@
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                                 Finsert f_insert) {
+                                 Finsert f_insert, std::ostream& os) {
   int nbVert = EXT.rows();
   int n = EXT.cols();
   int dim = n - 1;
@@ -51,10 +51,10 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
     ListSize[iDim] = UniversalScalarConversion<int, Tint>(eSiz);
     eProd *= eSiz;
   }
-  std::cerr << "ListBound =";
+  os << "ListBound =";
   for (int iDim = 0; iDim < dim; iDim++)
-    std::cerr << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
-  std::cerr << " dim=" << dim << " eProd=" << eProd << "\n";
+    os << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
+  os << " dim=" << dim << " eProd=" << eProd << "\n";
   int nbFac = FAC.rows();
   auto IsCorrect = [&](MyVector<Tint> const &eVect) -> bool {
     for (int iFac = 0; iFac < nbFac; iFac++) {
@@ -82,18 +82,19 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
 
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const &FAC,
-                                                 MyMatrix<T> const &EXT) {
+                                                 MyMatrix<T> const &EXT,
+                                                 std::ostream& os) {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
     ListPoint.push_back(ePoint);
     return true;
   };
-  Kernel_GetListIntegralPoint<T, Tint, decltype(f_insert)>(FAC, EXT, f_insert);
+  Kernel_GetListIntegralPoint<T, Tint, decltype(f_insert)>(FAC, EXT, f_insert, os);
   return ListPoint;
 }
 
 template <typename T, typename Tint, typename Finsert>
-void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
+void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert, std::ostream& os) {
   //
   // Basic functionality
   //
@@ -118,7 +119,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
     LpSolution<T> eSol;
     for (size_t i = 0; i < dim - pos; i++) {
       Vminimize(1 + i) = 1;
-      eSol = CDD_LinearProgramming(FACred, Vminimize);
+      eSol = CDD_LinearProgramming(FACred, Vminimize, os);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
         std::cerr << "eSol.DualDefined=" << eSol.DualDefined
                   << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
@@ -131,7 +132,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
       ListLow[i + pos] = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
       //
       Vminimize(1 + i) = -1;
-      eSol = CDD_LinearProgramming(FACred, Vminimize);
+      eSol = CDD_LinearProgramming(FACred, Vminimize, os);
       if (!eSol.DualDefined || !eSol.PrimalDefined) {
         std::cerr << "eSol.DualDefined=" << eSol.DualDefined
                   << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
@@ -234,13 +235,13 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert) {
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC) {
+std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC, std::ostream& os) {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
     ListPoint.push_back(ePoint);
     return true;
   };
-  Kernel_GetListIntegralPoint_LP<T, Tint, decltype(f_insert)>(FAC, f_insert);
+  Kernel_GetListIntegralPoint_LP<T, Tint, decltype(f_insert)>(FAC, f_insert, os);
   return ListPoint;
 }
 
