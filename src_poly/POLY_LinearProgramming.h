@@ -1209,7 +1209,7 @@ template <typename T> Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, st
 template <typename T>
 LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
                                             MyVector<T> const &ToBeMinimized, std::ostream& os) {
-  LpSolution<T> TheLP = GLPK_LinearProgramming(ListIneq, ToBeMinimized);
+  LpSolution<T> TheLP = GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (TheLP.method == "cdd")
     return TheLP;
   std::vector<int> ListRowSelect = FaceToVector<int>(TheLP.eFace);
@@ -1432,8 +1432,8 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC, std::os
 
 
 
-template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC) {
-  return !TestExistPositiveRelation(FAC);
+template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC, std::ostream& os) {
+  return !TestExistPositiveRelation(FAC, os);
 }
 
 template <typename T>
@@ -1699,10 +1699,11 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 
 template <typename T>
 MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
-                                  MyMatrix<T> const &Equa) {
+                                  MyMatrix<T> const &Equa,
+                                  std::ostream& os) {
   MyMatrix<T> NSP = NullspaceTrMat(Equa);
   MyMatrix<T> FACred = FAC * NSP.transpose();
-  MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred);
+  MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred, os);
   MyVector<T> TheSol = NSP.transpose() * eVectInt;
 #ifdef DEBUG_LINEAR_PROGRAM
   MyVector<T> ListScal_FAC = FAC * TheSol;
@@ -1726,7 +1727,7 @@ MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
 }
 
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f) {
+MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std::ostream& os) {
   int n_row = FAC.rows();
   int n = FAC.cols();
   int n_f = f.size();
@@ -1748,7 +1749,7 @@ MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f) {
       pos_equa++;
     }
   }
-  return GetSpaceInteriorPoint(FACred, Equa);
+  return GetSpaceInteriorPoint(FACred, Equa, os);
 }
 
 template <typename T> struct EmbeddedPolytope {

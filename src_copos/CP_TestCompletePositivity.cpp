@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       if (argc >= 5)
         InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       TestStrictPositivity<T, Tint> StrictPos =
-          TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis);
+        TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
       WriteStrictPositivityResult(os, OutFormat, StrictPos);
     };
     if (argc >= 4) {

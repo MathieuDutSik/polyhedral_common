@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
         InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       //
       std::pair<SingleTestResult<Tint>, size_t> eResult =
-          TestCopositivity<T, Tint>(eSymmMat, InitialBasis);
+        TestCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
       //
       WriteSingleTestResult(os, OutFormat, eResult);
     };

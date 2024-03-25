@@ -10,7 +10,8 @@
 
 template <typename T, typename Tint, typename Finsert>
 int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
-                       const MyMatrix<T> &FAC, Finsert f_insert) {
+                       const MyMatrix<T> &FAC, Finsert f_insert,
+                       std::ostream& os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_rows = FAC.rows();
   int n_col = FAC.cols();
@@ -38,7 +39,7 @@ int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
     MyVector<T> Vminimize = ZeroVector<T>(len);
     //
     Vminimize(1 + i) = 1;
-    eSol = CDD_LinearProgramming(FACwork, Vminimize);
+    eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
     if (eSol.DualDefined && eSol.PrimalDefined) {
       // Well defined so we get a potential lower bound
       Tint eLow = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
@@ -56,7 +57,7 @@ int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
     }
     //
     Vminimize(1 + i) = -1;
-    eSol = CDD_LinearProgramming(FACwork, Vminimize);
+    eSol = CDD_LinearProgramming(FACwork, Vminimize, os);
     if (eSol.DualDefined && eSol.PrimalDefined) {
       // Well defined so we get a potential upper bound
       Tint eUpp = UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);

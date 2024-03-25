@@ -936,7 +936,7 @@ public:
     print_statistics(std::cerr);
     return DidSomething;
   }
-  StepEnum(MyVector<T> const &_x) {
+  StepEnum(MyVector<T> const &_x, std::ostream& _os) : os(_os) {
     x = _x;
     int n = x.size();
     CombElt<T> IdMat = GenerateIdentity<T>(n);
@@ -992,7 +992,7 @@ public:
     int rnk = RankMat(FAC);
     std::optional<MyVector<T>> eVectInt;
     if (rnk == FAC.cols()) {
-      eVectInt = GetSpaceInteriorPoint_Basic(FAC);
+      eVectInt = GetSpaceInteriorPoint_Basic(FAC, os);
     }
     std::vector<CombElt<T>> ListAdj;
     std::vector<CombElt<T>> ListAdjInv;
@@ -1023,7 +1023,7 @@ public:
     // Doing the redundancy computation
     //
     std::cerr << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp, os);
     std::cerr << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat
               << " time=" << time << "\n";
     //
@@ -1126,14 +1126,14 @@ public:
         MyVector<T> x_ineq = GetIneq(wInv);
         HumanTime time1;
         std::optional<MyVector<T>> opt =
-            SolutionMatNonnegative(datafac.FAC, x_ineq);
+          SolutionMatNonnegative(datafac.FAC, x_ineq, os);
         std::cerr << "|SolutionMatNonnegative|=" << time1 << "\n";
         if (opt) {
           // Finding by nearest group point.
           Face f(n_mat);
           f[i_mat] = 1;
           HumanTime time2;
-          MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f);
+          MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f, os);
           std::cerr << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
           T target_scal = eVectInt.dot(x);
           svg_mem.ComputeInsertSolution(eVectInt, target_scal);
@@ -1164,7 +1164,7 @@ public:
     std::cerr << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac
               << " dim=" << dim << "\n";
     ShortVectorGroupMemoize<T> svg_mem(svg);
-    Face f_adj = ComputeSkeletonClarkson(datafac.FAC);
+    Face f_adj = ComputeSkeletonClarkson(datafac.FAC, os);
     std::cerr << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
     //
     auto get_nsp = [&](int const &i_fac) -> MyMatrix<T> {
@@ -1642,7 +1642,7 @@ public:
         return {1, {}};
       }
       std::optional<MyVector<T>> opt =
-          SolutionMatNonnegative(datafac.FAC, x_ineq);
+        SolutionMatNonnegative(datafac.FAC, x_ineq, os);
       if (opt) {
         MyVector<T> V = *opt;
         std::vector<ResultOptim> l_cand;
@@ -1750,7 +1750,7 @@ public:
       }
       if (strategy == "strategy1") {
         std::optional<MyVector<T>> opt =
-            SolutionMatNonnegative(datafac.FAC, x_ineq);
+          SolutionMatNonnegative(datafac.FAC, x_ineq, os);
         if (opt) {
           MyVector<T> V = *opt;
           // If we take just 1 then we go into infinite loops.
@@ -1974,7 +1974,7 @@ public:
   bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt) {
     MyMatrix<T> FACimg = FAC * eElt.mat;
     MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
-    return IsFullDimensional(FACtot);
+    return IsFullDimensional(FACtot, os);
   }
   std::vector<CombElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai) {
     int n = x.size();
@@ -2102,7 +2102,7 @@ public:
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
                                         RecOption const &rec_option,
-                                        std::ostream& os) {
+                                        [[maybe_unused]] std::ostream& os) {
   std::string eCommand = rec_option.eCommand;
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
@@ -2266,7 +2266,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
     throw TerminalException{1};
   };
   f_init();
-  return IterativePoincareRefinement(se, rec_option);
+  return IterativePoincareRefinement(se, rec_option, os);
 }
 
 template <typename T, typename Tgroup>

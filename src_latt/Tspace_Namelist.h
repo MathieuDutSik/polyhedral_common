@@ -190,7 +190,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       return;
     }
     if (SuperMatMethod == "Compute") {
-      LinSpaRet.SuperMat = GetOnePositiveDefiniteMatrix<T,Tint>(LinSpaRet.ListMat);
+      LinSpaRet.SuperMat = GetOnePositiveDefiniteMatrix<T,Tint>(LinSpaRet.ListMat, os);
       return;
     }
     if (SuperMatMethod == "File") {

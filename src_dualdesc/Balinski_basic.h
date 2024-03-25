@@ -266,7 +266,7 @@ bool EvaluationConnectednessCriterion_Kernel(
       //      os << "After the f_recur\n";
       Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
       //      os << "We have |eStab|=" << eStab.size() << "\n";
-      vectface vf_span = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP);
+      vectface vf_span = SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP, os);
       //      os << "We have vf_span\n";
       auto get_value = [&]() -> bool {
         Tint siz_false = 0;

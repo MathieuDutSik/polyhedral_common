@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     for (auto &u_cone : ll_cones) {
       std::cerr << "|u_cone|=" << u_cone.size() << "\n";
       std::optional<ConeSimpDesc<T>> opt =
-          TestPolyhedralPartition(TestPairwiseIntersection, u_cone);
+        TestPolyhedralPartition(TestPairwiseIntersection, u_cone, std::cerr);
       if (!opt) {
         std::cerr << "Failed to find the full polyhedral cone\n";
         throw TerminalException{1};

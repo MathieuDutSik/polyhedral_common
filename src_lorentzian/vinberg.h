@@ -209,7 +209,8 @@ std::vector<MyVector<Tint>> GetIntegerPoints(const MyMatrix<Tint> &m) {
 
 template <typename Tint>
 std::vector<MyVector<Tint>>
-ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot) {
+ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot,
+               std::ostream& os) {
   MyMatrix<Tint> M_Tint = MatrixFromVectorFamily(ListRoot);
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> M_Tfield = UniversalMatrixConversion<Tfield, Tint>(M_Tint);
@@ -220,12 +221,12 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot) {
     }
     if (ChosenMethod == 2) {
       MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
-      return cdd::RedundancyReductionClarkson(M2);
+      return cdd::RedundancyReductionClarkson(M2, os);
     }
     if (ChosenMethod == 3) {
       std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield);
       MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
-      std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2);
+      std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2, os);
       if (ListIdx1 != ListIdx2) {
         std::cerr << "Inequality between ListIdx1 and ListIdx2\n";
         std::cerr << "ListIdx1=" << ListIdx1 << "\n";
@@ -587,7 +588,7 @@ template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
                 const Tint &k, const std::vector<MyVector<Tint>> &ListRoot,
-                const MyMatrix<T> &FACfeasible) {
+                const MyMatrix<T> &FACfeasible, std::ostream & os) {
   std::vector<MyVector<Tint>> list_root;
   DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k);
   if (!data.is_feasible) {
@@ -685,9 +686,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       return true;
     };
     (void)computeIt_polytope<T, Tint, decltype(f_insert)>(request, data.norm,
-                                                          FAC, f_insert);
-    std::cerr << "n_pass=" << n_pass << " |list_root|=" << list_root.size()
-              << "\n";
+                                                          FAC, f_insert, os);
+    os << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";
   };
   //
   int TheRank = 0;
@@ -1133,25 +1133,25 @@ void Print_DataReflectionGroup(const DataReflectionGroup<T, Tint> &data,
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FundCone(const VinbergTot<T, Tint> &Vtot) {
+std::vector<MyVector<Tint>> FundCone(const VinbergTot<T, Tint> &Vtot, std::ostream& os) {
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<Tint> a = ZeroVector<Tint>(n);
-  std::cerr << "FundCone, step 1.1\n";
+  os << "FundCone, step 1.1\n";
   for (auto &k : Vtot.root_lengths) {
-    std::cerr << " k=" << k << "\n";
+    os << " k=" << k << "\n";
     std::vector<MyVector<Tint>> list_root_cand =
         FindRoot_no_filter<T, Tint>(Vtot, a, k);
     for (const MyVector<Tint> &root_cand : list_root_cand)
       V1_roots.push_back(root_cand);
-    std::cerr << "k=" << k << " |V1_roots|=" << V1_roots.size()
-              << " |list_root_cand|=" << list_root_cand.size() << "\n";
+    os << "k=" << k << " |V1_roots|=" << V1_roots.size()
+       << " |list_root_cand|=" << list_root_cand.size() << "\n";
   }
-  std::cerr << "FundCone |V1_roots|=" << V1_roots.size() << "\n";
+  os << "FundCone |V1_roots|=" << V1_roots.size() << "\n";
   if (V1_roots.size() == 0) {
     return {};
   } else {
-    return GetFacetOneDomain(V1_roots);
+    return GetFacetOneDomain(V1_roots, os);
   }
 }
 
@@ -1322,9 +1322,9 @@ GetInitial_FACfeasible(const VinbergTot<T, Tint> &Vtot,
 }
 
 template <typename T, typename Tint, typename F>
-void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit) {
+void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit, std::ostream& os) {
   std::cerr << "FindRoots, step 1\n";
-  std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot);
+  std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot, os);
   MyMatrix<T> FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
   std::cerr << "FindRoots, step 2\n";
 
@@ -1342,7 +1342,7 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit) {
     std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k
               << " |ListRoot|=" << ListRoot.size() << "\n";
     std::vector<MyVector<Tint>> list_root_cand =
-        FindRoot_filter<T, Tint>(Vtot, a, k, ListRoot, FACfeasible);
+      FindRoot_filter<T, Tint>(Vtot, a, k, ListRoot, FACfeasible, os);
     if (list_root_cand.size() > 0) {
       need_consideration = true;
       for (auto &eRoot : list_root_cand) {
@@ -1355,7 +1355,7 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit) {
       int rnk = RankMat(MatrixFromVectorFamily(ListRoot));
       std::cerr << "After insert |ListRoot|=" << ListRoot.size()
                 << " rnk=" << rnk << " dim=" << Vtot.G.rows() << "\n";
-      ListRoot = ReduceListRoot(ListRoot);
+      ListRoot = ReduceListRoot(ListRoot, os);
       std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size()
                 << "\n";
       FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
@@ -1364,7 +1364,7 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit) {
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T, Tint> &Vtot) {
+std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T, Tint> &Vtot, std::ostream& os) {
   std::vector<MyVector<Tint>> ListRootRet;
   int dim = Vtot.G.rows();
   auto f_exit = [&](std::vector<MyVector<Tint>> const &ListRoot,
@@ -1377,12 +1377,12 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T, Tint> &Vtot) {
     }
     return false;
   };
-  FindRoots_Kernel(Vtot, f_exit);
+  FindRoots_Kernel(Vtot, f_exit, os);
   return ListRootRet;
 }
 
 template <typename T, typename Tint, typename Tgroup>
-MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot) {
+MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot, std::ostream& os) {
   MyVector<Tint> v;
   int dim = Vtot.G.rows();
   auto f_exit = [&](std::vector<MyVector<Tint>> const &ListRoot,
@@ -1424,7 +1424,7 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot) {
     std::cerr << "Exiting false 3\n";
     return false;
   };
-  FindRoots_Kernel(Vtot, f_exit);
+  FindRoots_Kernel(Vtot, f_exit, os);
   return v;
 }
 
@@ -1496,7 +1496,7 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
   //
   VinbergTot<T, Tint> Vtot = GetVinbergAux<T, Tint>(
       G_i, v0, root_lengths, DualDescProg, ReflectivityEarlyTermination);
-  std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot);
+  std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot, std::cerr);
   DataReflectionGroup<T, Tint> data =
       GetDataReflectionGroup<T, Tint>(ListRoot, G_i);
   //

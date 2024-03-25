@@ -181,7 +181,7 @@ std::vector<MyMatrix<Tint>> ComputePointStabilizerTspace(MyMatrix<T> const& Supe
 }
 
 template<typename T, typename Tint>
-MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat) {
+MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat, std::ostream& os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
     std::cerr << "The number of matrices is 0 so we cannot build a positive definite matrix\n";
@@ -222,7 +222,7 @@ MyMatrix<T> GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const& ListMat
     //
     // Solving the linear program
     //
-    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized);
+    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.PrimalDefined || !eSol.DualDefined) {
       std::cerr << "The LpSolution dual and primal solutions should be defined\n";
       throw TerminalException{1};

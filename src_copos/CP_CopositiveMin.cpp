@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       RequestCopositivity<T> CopoReq{MaxNorm, false};
       CopositivityEnumResult<Tint> CopoRes =
           EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
-                                                  CopoReq);
+                                                  CopoReq, std::cerr);
       //
       WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
     };

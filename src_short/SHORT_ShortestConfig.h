@@ -196,9 +196,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     auto GetLpSolution = [&](MyMatrix<T> const &MatIneq,
                              MyVector<T> const &TheMinimized) -> LpSolution<T> {
       if (TheMethod == "cdd")
-        return CDD_LinearProgramming(MatIneq, TheMinimized);
+        return CDD_LinearProgramming(MatIneq, TheMinimized, os);
       if (TheMethod == "glpk_secure")
-        return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized);
+        return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized, os);
       std::cerr << "We have TheMethod = " << TheMethod << "\n";
       throw TerminalException{1};
     };
@@ -783,7 +783,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
   }
   MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
   MyMatrix<T> EXT = cdd::DualDescription(FAC);
-  std::vector<MyVector<Tint>> ListPt = GetListIntegralPoint<T, Tint>(FAC, EXT);
+  std::vector<MyVector<Tint>> ListPt = GetListIntegralPoint<T, Tint>(FAC, EXT, os);
   //
   // Breaking into orbits
   //

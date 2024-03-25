@@ -1770,17 +1770,18 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 get_simple_cone_from_lattice(SublattInfos<T> const &si,
-                             MyMatrix<Tint> const &NSP_tint) {
+                             MyMatrix<Tint> const &NSP_tint,
+                             std::ostream& os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
-  std::cerr << "Beginning of get_simple_cone\n";
+  os << "Beginning of get_simple_cone_from_lattice\n";
   int dimSpace = NSP_tint.rows();
   MyMatrix<T> NSP = UniversalMatrixConversion<T, Tint>(NSP_tint);
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(G);
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
   for (auto &e_norm : l_norms) {
-    std::cerr << "-------- e_norm=" << e_norm << " --------------\n";
+    os << "-------- e_norm=" << e_norm << " --------------\n";
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
     MyMatrix<Tint> Latt_i_Orth_tint =
@@ -1798,9 +1799,9 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
         throw TerminalException{1};
       }
     }
-    std::cerr << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
+    os << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
   }
-  std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain(l_roots);
+  std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain(l_roots, os);
   if (facet_one_cone.size() != size_t(dimSpace)) {
     std::cerr << "dimSpace =" << dimSpace
               << " |facet_one_cone|=" << facet_one_cone.size() << "\n";
@@ -1817,7 +1818,7 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
 
 template <typename T, typename Tint>
 MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
-                               MyVector<T> const &V) {
+                               MyVector<T> const &V, std::ostream& os) {
   std::cerr << "------------------------------ get_simple_cone "
                "--------------------------\n";
   MyMatrix<T> const &G = si.G;
@@ -1841,7 +1842,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
     std::cerr << "Ordinary case\n";
     // ordinary point case
     std::vector<MyVector<Tint>> l_vect =
-        get_simple_cone_from_lattice(si, NSP_tint);
+      get_simple_cone_from_lattice(si, NSP_tint, os);
     return MatrixFromVectorFamily(l_vect);
   } else {
     std::cerr << "Ideal case\n";
@@ -1936,7 +1937,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       std::cerr << "Failed to find the vector in the list\n";
       throw TerminalException{1};
     };
-    std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect);
+    std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect, os);
     std::cerr << "We have facet_one_cone\n";
     std::vector<MyVector<Tint>> l_ui;
     for (auto &e_vt : facet_one_cone) {
@@ -1973,7 +1974,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
 template <typename T, typename Tint, typename Tgroup>
 MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
                          std::string const &DualDescProg,
-                         bool const &EarlyTerminationIfNotReflective) {
+                         bool const &EarlyTerminationIfNotReflective,
+                         std::ostream& os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
   ResultReduction<T, Tint> ResRed =
@@ -1983,7 +1985,7 @@ MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   */
   VinbergTot<T, Tint> Vtot = GetVinbergFromG<T, Tint>(
       ResRed.Mred, l_norms, DualDescProg, EarlyTerminationIfNotReflective);
-  MyVector<Tint> V1 = FindOneInitialRay<T, Tint, Tgroup>(Vtot);
+  MyVector<Tint> V1 = FindOneInitialRay<T, Tint, Tgroup>(Vtot, os);
   MyVector<Tint> V2 = ResRed.B.transpose() * V1;
   MyVector<Tint> V3 = RemoveFractionVector(V2);
   MyVector<T> V4 = UniversalVectorConversion<T, Tint>(V3);
@@ -1996,7 +1998,8 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
                    std::string const &DualDescProg,
                    bool const &EarlyTerminationIfNotReflective,
                    std::string const &OptionInitialVertex,
-                   std::string const &FileInitialVertex) {
+                   std::string const &FileInitialVertex,
+                   std::ostream& os) {
   std::cerr << "Beginning of get_initial_vertex\n";
   if (OptionInitialVertex == "FileVertex") {
     if (!IsExistingFile(FileInitialVertex)) {
@@ -2006,7 +2009,7 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
     }
     std::ifstream is(FileInitialVertex);
     MyVector<T> gen = ReadVector<T>(is);
-    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, gen);
+    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, gen, os);
     return {RemoveFractionVector(gen), MatRoot};
   }
   if (OptionInitialVertex == "FileVertexRoots") {
@@ -2022,9 +2025,8 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   }
 #ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
   if (OptionInitialVertex == "vinberg") {
-    MyVector<T> V = GetOneVertex<T, Tint, Tgroup>(
-        si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective);
-    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, V);
+    MyVector<T> V = GetOneVertex<T, Tint, Tgroup>(si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, os);
+    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, V, os);
     return {RemoveFractionVector(V), MatRoot};
   }
 #endif
@@ -2129,7 +2131,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull) {
   try {
     FundDomainVertex<T, Tint> eVert = get_initial_vertex<T, Tint, Tgroup>(
         si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
-        OptionInitialVertex, FileInitialVertex);
+        OptionInitialVertex, FileInitialVertex, std::cerr);
 #ifdef PRINT_SYMBOL_INFORMATION
     PrintVertexInformation(G, eVert);
 #endif
@@ -2205,10 +2207,10 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull) {
   bool EarlyTerminationIfNotReflective = false;
   FundDomainVertex<T, Tint> eVert1 = get_initial_vertex<T, Tint, Tgroup>(
       si1, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
-      OptionInitialVertex, FileInitialVertex);
+      OptionInitialVertex, FileInitialVertex, std::cerr);
   FundDomainVertex<T, Tint> eVert2 = get_initial_vertex<T, Tint, Tgroup>(
       si2, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
-      OptionInitialVertex, FileInitialVertex);
+      OptionInitialVertex, FileInitialVertex, std::cerr);
   //
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_RunEdgewalkAlgorithm_Isomorphism<T, Tint, Tgroup>(

@@ -18,7 +18,8 @@ template <typename T, typename Tint> struct TestStrictPositivity {
 
 template <typename T, typename Tint>
 PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const &SHV,
-                                                      MyMatrix<T> const &eMat) {
+                                                      MyMatrix<T> const &eMat,
+                                                      std::ostream& os) {
   MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
   int dimSymm = eMatVect.size();
   int nbBlock = SHV.rows();
@@ -28,13 +29,14 @@ PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const &SHV,
     TestMat.row(iBlock) = ConeClassical.row(iBlock);
   MyVector<T> V = -eMatVect;
   AssignMatrixRow(TestMat, nbBlock, V);
-  return SearchPositiveRelationSimple_Direct(TestMat);
+  return SearchPositiveRelationSimple_Direct(TestMat, os);
 }
 
 template <typename T, typename Tint>
 TestStrictPositivity<T, Tint>
 TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
-                               MyMatrix<Tint> const &InitialBasis) {
+                               MyMatrix<Tint> const &InitialBasis,
+                               std::ostream& os) {
   if (!IsSymmetricMatrix(eMat)) {
     std::cerr << "The matrix should be symmetric\n";
     throw TerminalException{1};
@@ -59,7 +61,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     WriteMatrix(std::cerr, eMatI);
 #endif
     CopoRes =
-        EnumerateCopositiveShortVector<T, Tint>(eMatI, InitialBasis, CopoReq);
+      EnumerateCopositiveShortVector<T, Tint>(eMatI, InitialBasis, CopoReq, os);
     return CopoRes.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
@@ -68,7 +70,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "Case 2 eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
 #endif
-    return T_CopositiveShortestVector<T, Tint>(eMatI, InitialBasis);
+    return T_CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
   };
   RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
@@ -80,7 +82,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     nbIter++;
 #endif
     Tshortest<T, Tint> RecSHV =
-        T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis);
+      T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV);
     int nbBlock = eNaked.ListBlock.size();
@@ -103,7 +105,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
               << RankMat(ConeClassical) << " nbIter=" << nbIter << "\n";
 #endif
     PosRelRes<T> eRel =
-        SearchForExistenceStrictPositiveRelation(eNaked.SHVred, eMat);
+      SearchForExistenceStrictPositiveRelation(eNaked.SHVred, eMat, os);
 #ifdef STRICT_POSITIVITY
     std::cerr << "We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
 #endif
@@ -145,7 +147,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "Before FindViolatedFace nbIter=" << nbIter << "\n";
 #endif
     MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
-    Face eFace = FindViolatedFace(ConeClassical, eMatVect);
+    Face eFace = FindViolatedFace(ConeClassical, eMatVect, os);
 #ifdef STRICT_POSITIVITY
     std::cerr << "eFace.count=" << eFace.count()
               << " eFace.size=" << eFace.size() << "\n";

@@ -218,7 +218,7 @@ template <typename T> struct LatticeProjectionFramework {
 
 template <typename T>
 std::vector<size_t>
-GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect) {
+GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect, std::ostream& os) {
   using Tfield = typename overlying_field<T>::field_type;
   int dimSpace = l_vect[0].size();
   if (l_vect.size() < size_t(2 * dimSpace)) {
@@ -265,7 +265,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect) {
       pos++;
     }
   }
-  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT);
+  std::vector<int> list_red = cdd::RedundancyReductionClarkson(EXT, os);
   size_t siz = list_red.size();
   std::vector<size_t> l_idx(siz);
   for (size_t i = 0; i < siz; i++) {
@@ -277,14 +277,14 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect) {
 
 template <typename T>
 std::vector<MyVector<T>>
-GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect) {
+GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream& os) {
   size_t n_vect = l_vect.size();
   MyMatrix<T> Mvect = MatrixFromVectorFamily(l_vect);
   MyMatrix<T> MvectRed = ColumnReduction(Mvect);
   std::vector<MyVector<T>> l_vect_red(n_vect);
   for (size_t i = 0; i < n_vect; i++)
     l_vect_red[i] = GetMatrixRow(MvectRed, i);
-  std::vector<size_t> l_idx = GetFacetOneDomain_ListIdx(l_vect_red);
+  std::vector<size_t> l_idx = GetFacetOneDomain_ListIdx(l_vect_red, os);
   std::vector<MyVector<T>> l_vect_ret;
   for (auto &idx : l_idx)
     l_vect_ret.push_back(l_vect[idx]);

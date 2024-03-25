@@ -667,7 +667,11 @@ T SingleData_Read(std::string const& FileData) {
   return obj;
 }
 
-
+template<typename T>
+void SingleData_DebugWrite(std::string const& prefix, T const& obj) {
+  std::string FileData = FindAvailableFileFromPrefix(prefix);
+  SingleData_Write(FileData, obj);
+}
 
 // clang-format off
 #endif  //  SRC_DUALDESC_BASIC_DATAFILE_H_

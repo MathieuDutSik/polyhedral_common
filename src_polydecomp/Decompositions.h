@@ -752,7 +752,8 @@ template <typename T> struct ConeSimpDesc {
 template <typename T>
 std::optional<ConeSimpDesc<T>>
 TestPolyhedralPartition(bool const &TestPairwiseIntersection,
-                        std::vector<ConeSimpDesc<T>> const &l_cone) {
+                        std::vector<ConeSimpDesc<T>> const &l_cone,
+                        std::ostream& os) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
   HumanTime time;
@@ -763,7 +764,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
       for (size_t j_cone = i_cone + 1; j_cone < n_cone; j_cone++) {
         MyMatrix<T> FACtot =
             Concatenate(l_cone[i_cone].FAC, l_cone[j_cone].FAC);
-        if (IsFullDimensional_V1(FACtot)) {
+        if (IsFullDimensional_V1(FACtot, os)) {
           std::cerr << "Cone i_cone=" << i_cone << " and j_cone=" << j_cone
                     << " are overlapping\n";
           return {};

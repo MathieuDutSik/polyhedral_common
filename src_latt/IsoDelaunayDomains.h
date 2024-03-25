@@ -1200,7 +1200,7 @@ struct DataIsoDelaunayDomainsFunc {
     std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, data.LinSpa.ListLineMat);
     x_in.ListIneq = ListIneq;
     MyMatrix<T> FAC = GetFACineq(ListIneq);
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, data.rddo.os);
     std::vector<TadjI> l_adj;
     for (auto & idxIrred : ListIrred) {
       FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
