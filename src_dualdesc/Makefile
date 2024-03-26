@@ -1,4 +1,4 @@
-PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc POLY_ReadPartialEnum Read_MPI_sizes
+PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc POLY_ReadPartialEnum Read_MPI_sizes POLY_UpgradeDatabase
 #PROGRAM		= POLY_CheckCanonicalGAP
 #PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= POLY_SerialDualDesc POLY_MPI_DualDesc
