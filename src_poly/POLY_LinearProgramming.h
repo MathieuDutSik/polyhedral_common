@@ -9,6 +9,7 @@
 #include "POLY_PolytopeFct.h"
 #include "POLY_LinearProgrammingFund.h"
 #include "POLY_cddlib.h"
+#include "basic_datafile.h"
 #include <string>
 #include <vector>
 // clang-format on
@@ -1686,6 +1687,10 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     // The happy scenario where the linear programming directly gets us something unique
     return V;
   }
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  std::string prefix = "Non_geometrically_unique_case_";
+  SingleData_DebugWrite(prefix, FAC);
+#endif
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, Recurring\n";
 #endif
