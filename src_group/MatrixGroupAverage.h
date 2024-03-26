@@ -2,10 +2,13 @@
 #ifndef SRC_GROUP_MATRIXGROUPAVERAGE_H_
 #define SRC_GROUP_MATRIXGROUPAVERAGE_H_
 
+// clang-format off
+#include "MAT_Matrix.h"
+// clang-format on
+
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP_AVERAGE
 #endif
-
 
 /*
   Builds the smallest vector space containing the space TheBasis and invariant by
