@@ -4,6 +4,7 @@ DoTest3_Equivariant:=true;
 DoTest4_ClarksonBlock:=false; # This requires more work
 
 
+n_error:=0;
 ListIdx:=[1..76];
 #ListIdx:=[7];
 for i in ListIdx
@@ -36,7 +37,7 @@ do
         #
         if U1<>U2 then
             Print("Inconsistency problem between method 1 and 2 at i=", i, "\n");
-            GAP_EXIT_CODE(1);
+            n_error:=n_error + 1;
         fi;
     fi;
     #
@@ -50,7 +51,7 @@ do
         #
         if U1<>U3 then
             Print("Inconsistency problem between method 1 and 3 at i=", i, "\n");
-            GAP_EXIT_CODE(1);
+            n_error:=n_error + 1;
         fi;
     fi;
     #
@@ -64,8 +65,14 @@ do
         #
         if U1<>U4 then
             Print("Inconsistency problem between method 1 and 4 at i=", i, "\n");
-            GAP_EXIT_CODE(1);
+            n_error:=n_error + 1;
         fi;
     fi;
 od;
-GAP_EXIT_CODE(0);
+if n_error > 0 then
+    GAP_EXIT_CODE(1);
+else
+    GAP_EXIT_CODE(0);
+fi;
+
+

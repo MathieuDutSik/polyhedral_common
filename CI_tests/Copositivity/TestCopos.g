@@ -55,14 +55,19 @@ end;
 
 ListCase:=[case1, case2, case3, case4, case5];
 
-
+n_error:=0;
 for eCase in ListCase
 do
     test:=TestCopositivity(eCase);
     if test=false then
-        # Error case
-        GAP_EXIT_CODE(1);
+        n_error:=n_error + 1;
     fi;
 od;
-# No error case
-GAP_EXIT_CODE(0);
+if n_error > 0 then
+    # Error case
+    GAP_EXIT_CODE(1);
+else
+    # No error case
+    GAP_EXIT_CODE(0);
+fi;
+

@@ -47,6 +47,7 @@ File2:="Example2_lrs_cdd_27_99";
 File3:="Example3_48_11432";
 ListFiles:=[File1, File2, File3];
 
+n_error:=0;
 for eFile in ListFiles
 do
     eRec:=ReadAsFunction(eFile)();
@@ -54,10 +55,15 @@ do
     do
         test:=TestSimpleDD(eRec.EXT, command, eRec.n_fac);
         if test=false then
-            # Error case
-            GAP_EXIT_CODE(1);
+            n_error:=n_error + 1;
         fi;
     od;
 od;
-# No error case
-GAP_EXIT_CODE(0);
+if n_error > 0 then
+    # Error case
+    GAP_EXIT_CODE(1);
+else
+    # No error case
+    GAP_EXIT_CODE(0);
+fi;
+

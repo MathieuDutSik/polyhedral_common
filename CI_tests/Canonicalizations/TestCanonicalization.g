@@ -43,7 +43,7 @@ end;
 
 
 
-
+n_error:=0;
 for iMat in [1..Length(ListMat)]
 do
     eMat:=ListMat[iMat];
@@ -63,10 +63,15 @@ do
         eMat_B:=eP * eMat * TransposedMat(eP);
         TheCan_B:=GetCanonicalForm(eMat_B);
         if TheCan_B<>TheCan then
-            # Error case
-            GAP_EXIT_CODE(1);
+            n_error:=n_error + 1;
         fi;
     od;
 od;
-# No error case
-GAP_EXIT_CODE(0);
+if n_error > 0 then
+    # Error case
+    GAP_EXIT_CODE(1);
+else
+    # No error case
+    GAP_EXIT_CODE(0);
+fi;
+

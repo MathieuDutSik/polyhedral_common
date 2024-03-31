@@ -1,23 +1,33 @@
 Print("Beginning TestReflectivity\n");
 
+WriteMatrix:=function(TheFile, TheMat)
+    local output, nRow, nCol, iRow, iCol;
+    nRow:=Length(TheMat);
+    nCol:=Length(TheMat[1]);
+    output:=OutputTextFile(TheFile, true);
+    AppendTo(output, nRow, " ", nCol, "\n");
+    for iRow in [1..nRow]
+    do
+        for iCol in [1..nCol]
+        do
+            AppendTo(output, " ", TheMat[iRow][iCol]);
+        od;
+        AppendTo(output, "\n");
+    od;
+    CloseStream(output);
+end;
+
 TestReflectivity:=function(eRec)
     local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U;
     n:=Length(eRec.LorMat);
     FileIn:="Test.in";
     FileNml:="Test.nml";
     FileOut:="Test.out";
+    RemoveFileIfExist(FileIn);
+    RemoveFileIfExist(FileNml);
+    RemoveFileIfExist(FileOut);
     #
-    output:=OutputTextFile(FileIn, true);
-    AppendTo(output, n, " ", n, "\n");
-    for i in [1..n]
-    do
-        for j in [1..n]
-        do
-            AppendTo(output, " ", eRec.LorMat[i][j]);
-        od;
-        AppendTo(output, "\n");
-    od;
-    CloseStream(output);
+    WriteMatrix(FileIn, eRec.LorMat);
     #
     output:=OutputTextFile(FileNml, true);
     AppendTo(output, "&PROC\n");
@@ -42,18 +52,26 @@ TestReflectivity:=function(eRec)
     RemoveFile(FileIn);
     RemoveFile(FileNml);
     RemoveFile(FileOut);
+    GRPmatr:=Group(eRec.ListIsomCox);
+    Print("|GRPmatr|=", Order(GRPmatr), "\n");
     return eRec.n_simple = U.n_simple;
 end;
 
 ListRec:=ReadAsFunction("ListReflect")();;
 
+n_error:=0;
 for eRec in ListRec
 do
     test:=TestReflectivity(eRec);
     if test=false then
-        # Error case
-        GAP_EXIT_CODE(1);
+        n_error:=n_error+1;
     fi;
 od;
-# No error case
-GAP_EXIT_CODE(0);
+if n_error > 0 then
+    # Error case
+    GAP_EXIT_CODE(1);
+else
+    # No error case
+    GAP_EXIT_CODE(0);
+fi;
+
