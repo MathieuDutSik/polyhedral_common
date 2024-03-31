@@ -1281,11 +1281,14 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
                          ResultEdgewalk<T, Tint> const &re, std::ostream &os_out,
                          const std::string &OutFormat,
                          bool const &ComputeAllSimpleRoots,
-                         std::ostream& os) {
+                         [[maybe_unused]] std::ostream& os) {
   std::vector<T> l_norms = get_list_norms(G, re);
   std::vector<MyVector<Tint>> l_simple_root;
   if (ComputeAllSimpleRoots)
     l_simple_root = compute_full_root_orbit(re);
+  size_t n_orbit_vertices = re.l_orbit_vertices.size();
+  size_t n_simple = l_simple_root.size();
+#ifdef DEBUG_EDGEWALK
   os << "We write G\n";
   os << "We write l_norms\n";
   if (re.is_reflective) {
@@ -1299,10 +1302,9 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     os << "No reflectivity computation\n";
   }
   os << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
-  size_t n_orbit_vertices = re.l_orbit_vertices.size();
   os << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
-  size_t n_simple = l_simple_root.size();
   os << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << " n_simple=" << n_simple << "\n";
+#endif
   if (OutFormat == "GAP") {
     os_out << "return rec(LorMat:=";
     WriteMatrixGAP(os_out, G);

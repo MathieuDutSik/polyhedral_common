@@ -468,7 +468,9 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   std::vector<T> ListPrime;
   for (T val = 2; val <= N + 1; val++) {
     bool test = is_prime(val);
+#ifdef DEBUG_LORENTZIAN_LINALG
     std::cerr << "val=" << val << " test=" << test << "\n";
+#endif
     if (test)
       ListPrime.push_back(val);
   }
