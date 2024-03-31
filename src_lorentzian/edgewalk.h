@@ -25,6 +25,12 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+#define DEBUG_EDGEWALK
+#define DEBUG_ENUM_PROCESS
+#endif
+
+
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
 template <typename F>
@@ -235,7 +241,7 @@ CuspidalRequest_FullInfo<T, Tint>
 gen_cuspidal_request_full_info(MyMatrix<T> const &G,
                                CuspidalRequest<T, Tint> const &eReq,
                                [[maybe_unused]] std::ostream& os) {
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "gen_cuspidal_request_full_info, step 1\n";
 #endif
   std::unordered_map<MyVector<Tint>, uint8_t> map_v;
@@ -262,21 +268,21 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
   //
   MyMatrix<T> MatV =
       UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(l_vect));
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "gen_cuspidal_request_full_info, step 2\n";
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListMat_Vdiag<T, Tfield, Tidx, Tidx_value>(
           MatV, ListMat, Vdiag, std::cerr);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "gen_cuspidal_request_full_info, step 3\n";
 #endif
   WMat.ReorderingSetWeight();
   std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>> epair =
       GetGroupCanonicalizationVector_Kernel<std::vector<T>, Tgr, Tidx,
                                             Tidx_value>(WMat, std::cerr);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "gen_cuspidal_request_full_info, step 4\n";
 #endif
   const std::vector<Tidx> &ListIdx = epair.first;
@@ -293,7 +299,7 @@ gen_cuspidal_request_full_info(MyMatrix<T> const &G,
   size_t seed = 1440;
   size_t hash = ComputeHashWeightMatrix_raw(WMat, seed);
   pair_char<T> e_pair{std::move(MatV_reord), std::move(WMat)};
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "gen_cuspidal_request_full_info, step 5\n";
 #endif
   return {eReq, std::move(e_pair), hash};
@@ -335,7 +341,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
     T quant = (scal * scal) / e_norm;
     return {get_sign_sing(scal), quant, e_norm, v};
   };
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "DetermineRootsCuspidalCase, beginning\n";
 #endif
   bool only_spherical = false;
@@ -344,7 +350,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
 #ifdef TIMINGS
   os << "Timing |ComputePossibleExtensions|=" << time << "\n";
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size() << "\n";
 #endif
   std::vector<RootCandidateCuspidal> l_candidates;
@@ -361,7 +367,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
       }
     }
   }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size() << "\n";
 #endif
 #ifdef TIMINGS
@@ -387,7 +393,7 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
 #ifdef TIMINGS
   os << "Timing |sort|=" << time << "\n";
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   for (auto &x : l_candidates) {
     os << "x : sign=" << x.sign << " quant=" << x.quant
        << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
@@ -407,14 +413,14 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   for (auto &eV : l_candidates) {
     MyVector<Tint> eV_i = eV.v;
     if (is_approved(eV_i)) {
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "Inserting eV_i=";
       WriteVectorNoDim(os, eV_i);
 #endif
       l_ui_ret.push_back(eV_i);
     }
   }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size() << "\n";
 #endif
 #ifdef TIMINGS
@@ -441,7 +447,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
   size_t len = cusp_bank.l_request.size();
   for (size_t i = 0; i < len; i++) {
     const CuspidalRequest_FullInfo<T, Tint> &fReq_full = cusp_bank.l_request[i];
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "i=" << i << "/" << len << " hash: eReq=" << eReq_full.hash
        << " fReq=" << fReq_full.hash << "\n";
 #endif
@@ -457,7 +463,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
           MyVector<Tint> Vret = eEquiv.transpose() * eV;
           l_ui_ret.push_back(Vret);
         }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
         os << "DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
 #endif
 #ifdef TIMINGS
@@ -470,7 +476,7 @@ DetermineRootsCuspidalCase_Memoized(CuspidalBank<T, Tint> &cusp_bank,
 #ifdef TIMINGS
   os << "Timing |query(fail)|=" << time << "\n";
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "DetermineRootsCuspidalCase_Memoized, failed to find some isomorphism\n";
 #endif
   std::vector<MyVector<Tint>> l_ui_ret = DetermineRootsCuspidalCase(si, eReq, os);
@@ -544,7 +550,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #endif
   const std::vector<MyVector<Tint>> &l_ui = ad.l_ui;
   const MyVector<Tint> &v_disc = ad.v_disc;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "-------------------------------------- EDGEWALK PROCEDURE "
     "---------------------------------------------\n";
   os << "k=" << StringVectorGAP(k) << "\n";
@@ -566,7 +572,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   MyVector<T> v_disc_t = UniversalVectorConversion<T, Tint>(v_disc);
   int n = G.rows();
   size_t n_root = l_ui.size();
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "n_root=" << n_root << "\n";
 #endif
   MyMatrix<T> EquaRvect(n_root + 1, n);
@@ -583,7 +589,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
   MyVector<T> eP = G * k;
   T norm = k.dot(eP);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "k=" << StringVectorGAP(k) << " norm=" << norm << "\n";
 #endif
   AssignMatrixRow(EquaRvect, n_root, eP);
@@ -602,7 +608,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
    */
   MyVector<T> r0 = GetMatrixRow(NSP, 0);
   T scal_r0 = r0.dot(G * v_disc_t);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "scal_r0=" << scal_r0 << "\n";
 #endif
   if (scal_r0 > 0)
@@ -612,14 +618,14 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   MyMatrix<T> OrientedBasis(2, n);
   if (norm < 0) {
     // the point is inner, the oriented basis is clear.
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "Builging OrientedBasis, ordinary case\n";
 #endif
     AssignMatrixRow(OrientedBasis, 0, r0);
     AssignMatrixRow(OrientedBasis, 1, k);
   } else {
     // Now the point is ideal
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "Builging OrientedBasis, ideal case\n";
 #endif
     /*
@@ -639,7 +645,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
           for (int u = -1; u < 2; u += 2) {
             MyVector<T> v_pos_cand = k + u * alpha * v_bas;
             T norm = v_pos_cand.dot(G * v_pos_cand);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
             os << "u=" << u << " alpha=" << alpha
                << " v_pos_cand=" << v_pos_cand << " norm=" << norm
                << "\n";
@@ -661,7 +667,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     AssignMatrixRow(OrientedBasis, 1, k);
     r0 = -k; // Follows Right part of Figure 8.1
   }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "r0=" << StringVectorGAP(r0) << "\n";
 #endif
 #ifdef TIMINGS
@@ -674,7 +680,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   bool only_spherical = true;
   std::vector<Possible_Extension<T>> l_extension =
       ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
 #endif
 #ifdef TIMINGS
@@ -711,7 +717,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     }
     MyMatrix<T> Expr =
         ExpressVectorsInIndependentFamilt(BasisProj, OrientedBasis);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "Det(Expr)=" << DeterminantMat(Expr) << "\n";
 #endif
     if (DeterminantMat(Expr) < 0) {
@@ -731,7 +737,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     MyVector<T> r0_NSP = *opt_r0;
     MyVector<Tint> r0_work =
         UniversalVectorConversion<Tint, T>(RemoveFractionVector(r0_NSP));
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "r0_work=" << StringVectorGAP(r0_work) << "\n";
 #endif
     return r0_work;
@@ -740,7 +746,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef TIMINGS
     MicrosecondTime timeA;
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << " -------------- get_sing_comp_anisotropic, e_norm=" << e_norm << " ------------------------\n";
 #endif
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
@@ -765,7 +771,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       return {Latt, r0_work, Basis_ProjP_LN, Basis_P_inter_LN, Gwork, {}};
     }
     const std::vector<MyVector<Tint>> &l_vect1 = opt->second;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "|l_vect1|=" << l_vect1.size() << "\n";
 #endif
     const MyMatrix<Tint> &TransformSma = opt->first;
@@ -792,7 +798,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     }
     size_t order =
         GetMatrixExponentSublattice_TrivClass(TransformSma_T, Expr_t);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "order=" << order << "\n";
 #endif
     std::vector<MyMatrix<Tint>> l_vect2;
@@ -808,7 +814,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
         ord++;
       }
     }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "|l_vect2|=" << l_vect2.size() << "\n";
 #endif
     std::vector<MyVector<Tint>> l_vect3;
@@ -820,7 +826,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       }
       TheMat = TheMat * TransformSma;
     }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "|l_vect3|=" << l_vect3.size() << "\n";
 #endif
 #ifdef TIMINGS
@@ -832,7 +838,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef TIMINGS
     MicrosecondTime timeB;
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "get_sing_comp_isotropic, e_norm=" << e_norm << "\n";
 #endif
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
@@ -858,21 +864,21 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(Gtest);
     if (opt) {
       is_isotropic = true;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "Case is_isotropic = true\n";
 #endif
       for (auto &u_norm : l_norms)
         map_isotropic[u_norm] = get_sing_comp_isotropic(u_norm);
     } else {
       is_isotropic = false;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "Case is_isotropic = false\n";
 #endif
       for (auto &u_norm : l_norms)
         map_anisotropic[u_norm] = get_sing_comp_anisotropic(u_norm);
     }
   }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "Edgewalk Procedure, step 7\n";
 #endif
   // Evaluation of fun
@@ -890,7 +896,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
           std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
           if (eSol) {
             MyVector<Tint> v_i = UniversalVectorConversion<Tint, T>(v_T);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
             os << "Returning v_i=" << StringVectorGAP(v_i) << "\n";
 #endif
             return v_i;
@@ -898,7 +904,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
         }
       }
     }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "No good vector found\n";
 #endif
     return {};
@@ -929,13 +935,13 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
       Tint eDet = det(e_comp.r0_work, x);
       return eDet > 0;
     };
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "|l_vect1|=" << l_vect1.size() << "\n";
 #endif
     for (auto &e_vect1 : l_vect1)
       if (is_corr(e_vect1))
         l_vect2.push_back(e_vect1);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "We found |l_vect2|=" << l_vect2.size() << "\n";
 #endif
     std::sort(l_vect2.begin(), l_vect2.end(),
@@ -950,29 +956,29 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     T const &e_norm = poss.e_norm;
     SingCompIsotropic &e_comp = map_isotropic[e_norm];
     T const &res_norm = poss.res_norm;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "get_next_isotropic with e_norm=" << e_norm << " res_norm=" << res_norm << "\n";
 #endif
     std::vector<MyVector<Tint>> l_vect =
         get_successive_list_cand(e_comp, res_norm);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "|l_vect|=" << l_vect.size() << "\n";
 #endif
     for (auto &e_vect : l_vect) {
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "e_vect=" << StringVectorGAP(e_vect) << "\n";
 #endif
       MyVector<T> v_T =
           poss.u_component + e_comp.Basis_ProjP_LN.transpose() *
                                  UniversalVectorConversion<T, Tint>(e_vect);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "After v_T computation v_T=" << StringVectorGAP(v_T) << "\n";
 #endif
       if (IsIntegerVector(v_T)) {
         std::optional<MyVector<T>> eSol = SolutionIntMat(e_comp.Latt, v_T);
         if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint, T>(v_T);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
           os << "get_next_isotropic. Returning v_i=" << StringVectorGAP(v_i) << "\n";
 #endif
           return v_i;
@@ -995,7 +1001,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   for (auto &e_extension : l_extension) {
     T e_norm = e_extension.e_norm;
     T res_norm = e_extension.res_norm;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "------ u_component="
        << StringVectorGAP(e_extension.u_component) << " norm=" << e_norm
        << " res_norm=" << res_norm << " ----------\n";
@@ -1004,7 +1010,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
     if (opt_v) {
       MyVector<Tint> const &alpha = *opt_v;
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "alpha=" << StringVectorGAP(alpha) << "\n";
 #endif
       std::vector<MyVector<Tint>> l_roots = l_ui;
@@ -1018,7 +1024,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
         throw TerminalException{1};
       }
       MyVector<T> gen = GetMatrixRow(NSP, 0);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
       os << "gen=" << StringVectorGAP(gen) << " k=" << StringVectorGAP(k) << "\n";
 #endif
       T scal = gen.dot(G * k);
@@ -1050,14 +1056,14 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef TIMINGS
   os << "Timing |l_candidates|=" << time << "\n";
 #endif
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "EdgewalkProcedure : |l_candidates|=" << l_candidates.size() << "\n";
 #endif
   if (l_candidates.size() > 0) {
     RootCandidate<T, Tint> best_cand = get_best_candidate(l_candidates);
     return best_cand.fund_v;
   }
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
   os << "         --------------- Looking for an isotropic vector ------------\n";
 #endif
   // So, no candidates were found. We need to find isotropic vectors.
@@ -1069,7 +1075,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // We want a vector inside of the cone (there are two: C and -C)
   auto get_can_gen = [&](MyVector<T> const &v) -> MyVector<T> {
     T scal = k.dot(G * v);
-#ifdef DEBUG_EDGEWALK_GENERIC
+#ifdef DEBUG_EDGEWALK
     os << "  scal=" << scal << "\n";
 #endif
     if (scal < 0) {
@@ -1763,14 +1769,18 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
                              std::ostream& os) {
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
+#ifdef DEBUG_EDGEWALK
   os << "Beginning of get_simple_cone_from_lattice\n";
+#endif
   int dimSpace = NSP_tint.rows();
   MyMatrix<T> NSP = UniversalMatrixConversion<T, Tint>(NSP_tint);
   MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(G);
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
   for (auto &e_norm : l_norms) {
+#ifdef DEBUG_EDGEWALK
     os << "-------- e_norm=" << e_norm << " --------------\n";
+#endif
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
     MyMatrix<T> Latt_i_Orth = IntersectionLattice(NSP, Latt);
     MyMatrix<Tint> Latt_i_Orth_tint =
@@ -1788,7 +1798,9 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
         throw TerminalException{1};
       }
     }
+#ifdef DEBUG_EDGEWALK
     os << "e_norm=" << e_norm << " |l_v|=" << l_v.size() << "\n";
+#endif
   }
   std::vector<MyVector<Tint>> facet_one_cone = GetFacetOneDomain(l_roots, os);
   if (facet_one_cone.size() != size_t(dimSpace)) {
@@ -1808,18 +1820,20 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
 template <typename T, typename Tint>
 MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
                                MyVector<T> const &V, std::ostream& os) {
-  os << "------------------------------ get_simple_cone --------------------------\n";
   MyMatrix<T> const &G = si.G;
+  T norm = V.dot(G * V);
+#ifdef DEBUG_EDGEWALK
+  os << "------------------------------ get_simple_cone --------------------------\n";
   os << "G=\n";
   WriteMatrixGAP(os, G);
   os << "\n";
-  T norm = V.dot(G * V);
   os << "V=" << StringVectorGAP(V) << " norm=" << norm << "\n";
   if (norm > 0) {
     std::cerr << "We need a vector of negative norm or zero norm in order to "
                  "build a system of simple roots\n";
     throw TerminalException{1};
   }
+#endif
   int dim = G.rows();
   MyVector<T> eProd = G * V;
   MyMatrix<T> eProdB(1, dim);
@@ -1827,13 +1841,17 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
   MyMatrix<T> NSP = NullspaceIntTrMat(eProdB);
   MyMatrix<Tint> NSP_tint = UniversalMatrixConversion<Tint, T>(NSP);
   if (norm < 0) {
+#ifdef DEBUG_EDGEWALK
     os << "Ordinary case\n";
+#endif
     // ordinary point case
     std::vector<MyVector<Tint>> l_vect =
       get_simple_cone_from_lattice(si, NSP_tint, os);
     return MatrixFromVectorFamily(l_vect);
   } else {
+#ifdef DEBUG_EDGEWALK
     os << "Ideal case\n";
+#endif
     // ideal point case
     MyVector<Tint> V_i =
         UniversalVectorConversion<Tint, T>(RemoveFractionVector(V));
@@ -1844,7 +1862,9 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       throw TerminalException{1};
     }
     MyVector<Tint> const &Vnsp = *opt;
+#ifdef DEBUG_EDGEWALK
     os << "We have Vnsp\n";
+#endif
     /*
       We need a more general code for finding complement of subspace, possibly
       using HermiteNormalForm
@@ -1860,7 +1880,9 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
     std::vector<T> list_norm;
     size_t pos = 0;
     for (auto &e_norm : si.l_norms) {
+#ifdef DEBUG_EDGEWALK
       os << "e_norm=" << e_norm << "\n";
+#endif
       MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
       MyMatrix<T> Latt_inter_NSP_pre = IntersectionLattice(Latt, NSP);
       MyMatrix<T> Latt_inter_NSP =
@@ -1873,7 +1895,9 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
       std::vector<MyVector<Tint>> l_v =
           FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm);
+#ifdef DEBUG_EDGEWALK
       os << "|l_v|=" << l_v.size() << "\n";
+#endif
       for (auto &e_v : l_v) {
         MyVector<T> e_vt = UniversalVectorConversion<T, Tint>(e_v);
         MyVector<T> e_vect = RelBasis.transpose() * e_vt;
@@ -1887,7 +1911,9 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
           throw TerminalException{1};
         }
       }
+#ifdef DEBUG_EDGEWALK
       os << "Insertion done for all vectors\n";
+#endif
       pos++;
     }
     if (list_vect.size() == 0) {
@@ -1896,7 +1922,9 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       throw NonReflectivityException{};
     }
     int rnk = RankMat(MatrixFromVectorFamily(list_vect));
+#ifdef DEBUG_EDGEWALK
     os << "|list_vect|=" << list_vect.size() << " Rank(list_vect)=" << rnk << "\n";
+#endif
     if (rnk < G.rows() - 2) {
       std::cerr << "The list of roots is not of correct rank. Cannot be "
                    "reflective. In any case, we cannot continue\n";
@@ -1925,20 +1953,28 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       throw TerminalException{1};
     };
     std::vector<MyVector<T>> facet_one_cone = GetFacetOneDomain(list_vect, os);
+#ifdef DEBUG_EDGEWALK
     os << "We have facet_one_cone\n";
+#endif
     std::vector<MyVector<Tint>> l_ui;
     for (auto &e_vt : facet_one_cone) {
       MyVector<Tint> e_vi = get_one_root(e_vt);
       l_ui.push_back(e_vi);
     }
+#ifdef DEBUG_EDGEWALK
     os << "We have l_ui\n";
+#endif
     MyMatrix<T> Pplane = Get_Pplane(G, l_ui);
+#ifdef DEBUG_EDGEWALK
     os << "We have Pplane\n";
+#endif
     auto get_kP = [&]() -> MyVector<T> {
       MyMatrix<T> Gprod = - Pplane * G * Pplane.transpose();
       T CritNorm = 0;
+#ifdef DEBUG_EDGEWALK
       os << "Gprod=\n";
       WriteMatrix(os, Gprod);
+#endif
       MyVector<T> eVect_A = GetPositiveNormVector(Gprod);
       MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
       T scal = V.dot(G * eVect_B);
@@ -1950,10 +1986,14 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si,
       }
     };
     MyVector<T> kP = get_kP();
+#ifdef DEBUG_EDGEWALK
     os << "we have kP\n";
+#endif
     CuspidalRequest<T, Tint> eReq{l_ui, V, kP};
     std::vector<MyVector<Tint>> l_vect = DetermineRootsCuspidalCase(si, eReq, os);
+#ifdef DEBUG_EDGEWALK
     os << "get_simple_cone, step 8\n";
+#endif
     return MatrixFromVectorFamily(l_vect);
   }
 }
@@ -1986,7 +2026,9 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
                    std::string const &OptionInitialVertex,
                    std::string const &FileInitialVertex,
                    std::ostream& os) {
+#ifdef DEBUG_EDGEWALK
   os << "Beginning of get_initial_vertex\n";
+#endif
   if (OptionInitialVertex == "FileVertex") {
     if (!IsExistingFile(FileInitialVertex)) {
       std::cerr << "The file FileInitialVertex=" << FileInitialVertex
@@ -2041,6 +2083,7 @@ template <typename T> void TestLorentzianity(MyMatrix<T> const &G) {
   }
 }
 
+#ifdef PRINT_SYMBOL_INFORMATION
 template <typename T, typename Tint>
 void PrintVertexInformation(MyMatrix<T> const &G,
                             FundDomainVertex<T, Tint> const &eVert, std::ostream& os) {
@@ -2067,6 +2110,7 @@ void PrintVertexInformation(MyMatrix<T> const &G,
   os << "l_roots=\n";
   WriteMatrix(os, eVert.MatRoot);
 }
+#endif
 
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream& os) {
@@ -2082,7 +2126,9 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream& os) {
   bool ApplyReduction = BlockPROC.ListBoolValues.at("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+#ifdef DEBUG_EDGEWALK
   os << "We have l_norms\n";
+#endif
   //
   std::string FileHeuristicIdealStabEquiv =
       BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
@@ -2102,8 +2148,10 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream& os) {
     std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
     bool ComputeAllSimpleRoots =
         BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
+#ifdef DEBUG_EDGEWALK
     os << "OutFormat=" << OutFormat << " FileOut=" << FileOut
        << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
+#endif
     auto f_print = [&](std::ostream &os_out) -> void {
       PrintResultEdgewalk(G, re, os_out, OutFormat, ComputeAllSimpleRoots, os);
     };
@@ -2127,16 +2175,21 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream& os) {
         HeuristicTryTerminateDualDescription, os);
     print_result_edgewalk(re);
   } catch (NonReflectivityException const &e) {
+#ifdef DEBUG_EDGEWALK
     if (!EarlyTerminationIfNotReflective) {
-      os << "The program cannot go forward. Since we have "
-                   "EarlyTerminationIfNotReflective = F\n";
-      os << "this is actually a runtime error\n";
+      std::cerr << "The program cannot go forward. Since we have "
+        "EarlyTerminationIfNotReflective = F\n";
+      std::cerr << "this is actually a runtime error\n";
+      throw TerminalException{1};
     }
+#endif
     ResultEdgewalk<T, Tint> re{
         {}, {}, LorentzianFinitenessGroupTester<T, Tint>(G), false};
     print_result_edgewalk(re);
   }
+#ifdef DEBUG_EDGEWALK
   os << "We are after the PrintResultEdgewalk\n";
+#endif
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2156,14 +2209,14 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull, std::ostream& o
   //
   auto print_result = [&](std::optional<MyMatrix<Tint>> const &opt) -> void {
     std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
-    auto print_result_isomorphism = [&](std::ostream &os) -> void {
+    auto print_result_isomorphism = [&](std::ostream &os_out) -> void {
       if (OutFormat == "GAP") {
         if (opt) {
-          os << "return ";
-          WriteMatrixGAP(os, *opt);
-          os << ";\n";
+          os_out << "return ";
+          WriteMatrixGAP(os_out, *opt);
+          os_out << ";\n";
         } else {
-          os << "return fail;\n";
+          os_out << "return fail;\n";
         }
       }
       std::cerr << "We fil to have a matching format. OutFormat=" << OutFormat
@@ -2186,7 +2239,9 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull, std::ostream& o
   std::vector<T> l_norms = l_norms1;
   SublattInfos<T> si1 = ComputeSublatticeInfos<T, Tint>(G1, l_norms);
   SublattInfos<T> si2 = ComputeSublatticeInfos<T, Tint>(G1, l_norms);
+#ifdef DEBUG_EDGEWALK
   os << "We have l_norms\n";
+#endif
   //
   std::string OptionInitialVertex = "vinberg";
   std::string FileInitialVertex = "irrelevant";
