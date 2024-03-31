@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionEdgewalk_Isomorphism<T, Tint, Tgroup>(eFull);
+    MainFunctionEdgewalk_Isomorphism<T, Tint, Tgroup>(eFull, std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism\n";

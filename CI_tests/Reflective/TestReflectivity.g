@@ -18,7 +18,7 @@ WriteMatrix:=function(TheFile, TheMat)
 end;
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U;
+    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr;
     n:=Length(eRec.LorMat);
     FileIn:="Test.in";
     FileNml:="Test.nml";
@@ -59,14 +59,21 @@ end;
 
 ListRec:=ReadAsFunction("ListReflect")();;
 
-n_error:=0;
-for eRec in ListRec
-do
-    test:=TestReflectivity(eRec);
-    if test=false then
-        n_error:=n_error+1;
-    fi;
-od;
+FullTest:=function()
+    local n_error, eRec, test;
+    n_error:=0;
+    for eRec in ListRec
+    do
+        test:=TestReflectivity(eRec);
+        if test=false then
+            n_error:=n_error+1;
+            return n_error;
+        fi;
+    od;
+    return n_error;
+end;
+
+n_error:=FullTest();
 if n_error > 0 then
     # Error case
     GAP_EXIT_CODE(1);
