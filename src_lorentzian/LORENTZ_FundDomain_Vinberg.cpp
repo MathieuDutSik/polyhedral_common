@@ -22,7 +22,7 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    MainFunctionVinberg<T, Tint>(eFull);
+    MainFunctionVinberg<T, Tint>(eFull, std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_Vinberg\n";

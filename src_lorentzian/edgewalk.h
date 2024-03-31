@@ -1970,8 +1970,7 @@ MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
-  VinbergTot<T, Tint> Vtot = GetVinbergFromG<T, Tint>(
-      ResRed.Mred, l_norms, DualDescProg, EarlyTerminationIfNotReflective);
+  VinbergTot<T, Tint> Vtot = GetVinbergFromG<T, Tint>(ResRed.Mred, l_norms, DualDescProg, EarlyTerminationIfNotReflective, os);
   MyVector<Tint> V1 = FindOneInitialRay<T, Tint, Tgroup>(Vtot, os);
   MyVector<Tint> V2 = ResRed.B.transpose() * V1;
   MyVector<Tint> V3 = RemoveFractionVector(V2);
@@ -2081,7 +2080,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream& os) {
   bool EarlyTerminationIfNotReflective =
       BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
   bool ApplyReduction = BlockPROC.ListBoolValues.at("ApplyReduction");
-  std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
+  std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
   os << "We have l_norms\n";
   //
@@ -2178,8 +2177,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull, std::ostream& o
   std::string OptionNorms = "all";
   bool ApplyReduction = BlockPROC.ListBoolValues.at("ApplyReduction");
   std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
-  std::vector<T> l_norms1 = get_initial_list_norms<T, Tint>(G1, OptionNorms);
-  std::vector<T> l_norms2 = get_initial_list_norms<T, Tint>(G2, OptionNorms);
+  std::vector<T> l_norms1 = get_initial_list_norms<T, Tint>(G1, OptionNorms, os);
+  std::vector<T> l_norms2 = get_initial_list_norms<T, Tint>(G2, OptionNorms, os);
   if (l_norms1 != l_norms2) {
     print_result({});
     return;

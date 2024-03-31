@@ -24,22 +24,16 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
 #define DEBUG_VINBERG
+#endif
 
 // Compute the solutions of G [x - eV] = a
 template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
                                const MyVector<T> &eV, const T &norm,
-                               Fins f_ins) {
-  bool PrintInput = false;
-  if (PrintInput) {
-    std::cerr << "GramMat=\n";
-    WriteMatrix(std::cerr, GramMat);
-    std::cerr << "det=" << DeterminantMat(GramMat) << "\n";
-    std::cerr << "eV=";
-    WriteVectorNoDim(std::cerr, eV);
-    std::cerr << "norm=" << norm << "\n";
-  }
+                               Fins f_ins,
+                               [[maybe_unused]] std::ostream& os) {
   LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
   const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
   const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
@@ -62,9 +56,13 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
   T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
   //
+#ifdef DEBUG_VINBERG
   size_t n_iter = 0;
+#endif
   auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
+#ifdef DEBUG_VINBERG
     n_iter++;
+#endif
     if (min == norm) {
       MyVector<Tint> V_x = Pmat.transpose() * V_y;
 #ifdef DEBUG_VINBERG
@@ -82,7 +80,9 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
     return true;
   };
   (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
-  std::cerr << "n_iter=" << n_iter << "\n";
+#ifdef DEBUG_VINBERG
+  os << "n_iter=" << n_iter << "\n";
+#endif
 }
 
 //
@@ -109,7 +109,7 @@ template <typename Tint> Tint En_Quantity(const MyMatrix<Tint> &M) {
 }
 
 template <typename Tint>
-std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M) {
+std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M, [[maybe_unused]] std::ostream& os) {
   Tint TheEn = En_Quantity(M);
   Tint limit = 2 * TheEn;
   std::vector<Tint> root_lengths;
@@ -140,22 +140,25 @@ std::vector<Tint> Get_root_lengths(const MyMatrix<Tint> &M) {
       break;
     k++;
   }
-  std::cerr << "root_lengths =";
+#ifdef DEBUG_VINBERG
+  os << "root_lengths =";
   for (auto &eN : root_lengths)
-    std::cerr << " " << eN;
-  std::cerr << "\n";
+    os << " " << eN;
+  os << "\n";
+#endif
   return root_lengths;
 }
 
 template <typename T, typename Tint>
 std::vector<T> get_initial_list_norms(MyMatrix<T> const &G,
-                                      std::string const &OptionNorms) {
+                                      std::string const &OptionNorms,
+                                      std::ostream& os) {
   if (OptionNorms == "K3")
     return {T(2)};
   if (OptionNorms == "all") {
     FractionMatrix<T> Fr = RemoveFractionMatrixPlusCoeff(G);
     MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint, T>(Fr.TheMat);
-    std::vector<Tint> l_norms_tint = Get_root_lengths(G_Tint);
+    std::vector<Tint> l_norms_tint = Get_root_lengths(G_Tint, os);
     std::vector<T> l_norms;
     for (auto &eN : l_norms_tint) {
       T val1 = UniversalScalarConversion<T, Tint>(eN);
@@ -250,7 +253,8 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
                                   const MyVector<Tint> &v0,
                                   std::vector<Tint> const &root_lengths,
                                   std::string const &DualDescProg,
-                                  bool const &ReflectivityEarlyTermination) {
+                                  bool const &ReflectivityEarlyTermination,
+                                  [[maybe_unused]] std::ostream& os) {
   int n = G.rows();
   // Computing the complement of the space.
   MyMatrix<T> G_T = UniversalMatrixConversion<T, Tint>(G);
@@ -267,7 +271,9 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   MyMatrix<Tint> M = ConcatenateMatVec_Tr(Morth, V_i);
   MyMatrix<Tint> M2 = ConcatenateMatVec_Tr(Morth, v0);
   MyMatrix<Tint> M2_tr = M2.transpose();
-  std::cerr << "Before GetIntegerPoints\n";
+#ifdef DEBUG_VINBERG
+  os << "Before GetIntegerPoints\n";
+#endif
   std::vector<MyVector<Tint>> W_in = GetIntegerPoints(M2_tr);
   std::vector<MyVector<Tint>> W;
   Tint norm_shift = -v0.dot(G * v0);
@@ -277,25 +283,31 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
     Tint res = ResInt(scal, norm_shift);
     MyVector<Tint> eW_out = eW_in - q * v0;
     Tint scal_o = eW_out.dot(G * v0);
-    std::cerr << "scal=" << scal << " norm_shift=" << norm_shift << " q=" << q
-              << " res=" << res << " scal_o=" << scal_o << "\n";
+#ifdef DEBUG_VINBERG
+    os << "scal=" << scal << " norm_shift=" << norm_shift << " q=" << q
+       << " res=" << res << " scal_o=" << scal_o << "\n";
+#endif
     W.push_back(eW_out);
   }
 
-  std::cerr << "|W|=" << W.size() << "\n";
-  std::cerr << "W=[";
+#ifdef DEBUG_VINBERG
+  os << "|W|=" << W.size() << "\n";
+  os << "W=[";
   bool IsFirst = true;
   for (auto &eVect : W) {
     if (!IsFirst)
-      std::cerr << ",";
+      os << ",";
     IsFirst = false;
-    std::cerr << StringVectorGAP(eVect);
+    os << StringVectorGAP(eVect);
   }
-  std::cerr << "]";
+  os << "]";
+#endif
   // The determinant. The scalar tell us how much we need to the quotient.
   // We will need to consider the vectors k (V_i / eDet) for k=1, 2, 3, ....
   Tint eDet = T_abs(DeterminantMat(M));
-  std::cerr << "eDet=" << eDet << "\n";
+#ifdef DEBUG_VINBERG
+  os << "eDet=" << eDet << "\n";
+#endif
 
   // Gram matrix of the space.
   MyMatrix<Tint> Gorth = Morth.transpose() * G * Morth;
@@ -303,10 +315,12 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   MyMatrix<T> GorthInv = Inverse(Gorth_T);
   // Computing the side comput
   MyMatrix<T> GM_iGorth = G_T * Morth_T * GorthInv;
-  std::cerr << "s.root_lengths =";
+#ifdef DEBUG_VINBERG
+  os << "s.root_lengths =";
   for (auto &eVal : root_lengths)
-    std::cerr << " " << eVal;
-  std::cerr << "\n";
+    os << " " << eVal;
+  os << "\n";
+#endif
   return {DualDescProg,
           ReflectivityEarlyTermination,
           G,
@@ -345,15 +359,18 @@ template <typename T, typename Tint>
 VinbergTot<T, Tint> GetVinbergFromG(const MyMatrix<T> &G,
                                     std::vector<T> const &root_lengths,
                                     std::string const &DualDescProg,
-                                    bool const &ReflectivityEarlyTermination) {
+                                    bool const &ReflectivityEarlyTermination,
+                                    std::ostream& os) {
   MyVector<Tint> v0 = GetV0_vector<T, Tint>(G);
-  std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
+#ifdef DEBUG_VINBERG
+  os << "v0=" << StringVectorGAP(v0) << "\n";
+#endif
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint, T>(G);
   std::vector<Tint> root_lengths_i;
   for (auto &eN : root_lengths)
     root_lengths_i.push_back(UniversalScalarConversion<Tint, T>(eN));
   return GetVinbergAux<T, Tint>(G_i, v0, root_lengths_i, DualDescProg,
-                                ReflectivityEarlyTermination);
+                                ReflectivityEarlyTermination, os);
 }
 
 template <typename T, typename Tint> struct IterateRootDecompositions {
@@ -415,16 +432,22 @@ template <typename T, typename Tint> struct DataMappingVinbergProblem {
 
 template <typename T, typename Tint, typename Fins_root>
 void Solutioner_CVP(const DataMappingVinbergProblem<T, Tint> &data,
-                    Fins_root f_ins_root) {
+                    Fins_root f_ins_root, std::ostream& os) {
+#ifdef DEBUG_VINBERG
   size_t n_sol = 0;
+#endif
 
   auto f_ins = [&](const MyVector<Tint> &u) -> void {
     MyVector<Tint> x = data.shift_u + data.trans_u * u;
+#ifdef DEBUG_VINBERG
     n_sol++;
-    f_ins_root(x);
+#endif
+   f_ins_root(x);
   };
-  ComputeSphericalSolutions<T, Tint>(data.G, data.V, data.norm, f_ins);
-  std::cerr << "|ListSol|=" << n_sol << "\n";
+  ComputeSphericalSolutions<T, Tint>(data.G, data.V, data.norm, f_ins, os);
+#ifdef DEBUG_VINBERG
+  os << "|ListSol|=" << n_sol << "\n";
+#endif
 }
 
 /*
@@ -468,7 +491,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T, Tint> &data,
 template <typename T, typename Tint>
 DataMappingVinbergProblem<T, Tint>
 Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
-                const Tint &k) {
+                const Tint &k, [[maybe_unused]] std::ostream& os) {
   if (k == 1 || k == 2) {
     // No need for some complex linear algebra work,
     // returning directly
@@ -515,7 +538,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     std::cerr << "vv_T should be integral\n";
     throw TerminalException{1};
   }
-  std::cerr << "w0=" << StringVectorGAP(w0) << "\n";
+  os << "w0=" << StringVectorGAP(w0) << "\n";
 #endif
   MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
   size_t dim = U_block.rows();
@@ -541,8 +564,8 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       throw TerminalException{1};
     }
   }
-  std::cerr << "U=\n";
-  WriteMatrix(std::cerr, U);
+  os << "U=\n";
+  WriteMatrix(os, U);
 #endif
   //
   MyMatrix<Tint> Gs =
@@ -565,22 +588,25 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
 template <typename T, typename Tint, typename Fins_root>
 void Roots_decomposed_into_select(const VinbergTot<T, Tint> &Vtot,
                                   const MyVector<Tint> &a, const Tint &k,
-                                  Fins_root f_ins_root) {
-  DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k);
+                                  Fins_root f_ins_root, std::ostream& os) {
+  DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k, os);
   if (data.is_feasible)
-    Solutioner_CVP(data, f_ins_root);
+    Solutioner_CVP(data, f_ins_root, os);
 }
 
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> FindRoot_no_filter(const VinbergTot<T, Tint> &Vtot,
                                                const MyVector<Tint> &a,
-                                               const Tint &k) {
+                                               const Tint &k,
+                                               std::ostream& os) {
   std::vector<MyVector<Tint>> list_root;
   auto f_ins_root = [&](const MyVector<Tint> &V) -> void {
     list_root.push_back(V);
   };
-  Roots_decomposed_into_select(Vtot, a, k, f_ins_root);
-  std::cerr << "|list_root|=" << list_root.size() << "\n";
+  Roots_decomposed_into_select(Vtot, a, k, f_ins_root, os);
+#ifdef DEBUG_VINBERG
+  os << "|list_root|=" << list_root.size() << "\n";
+#endif
   return list_root;
 }
 
@@ -590,7 +616,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
                 const Tint &k, const std::vector<MyVector<Tint>> &ListRoot,
                 const MyMatrix<T> &FACfeasible, std::ostream & os) {
   std::vector<MyVector<Tint>> list_root;
-  DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k);
+  DataMappingVinbergProblem<T, Tint> data = Get_DataMapping(Vtot, a, k, os);
   if (!data.is_feasible) {
     return {};
   }
@@ -598,7 +624,9 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   MicrosecondTime time;
 #endif
   auto fct_CVP = [&]() -> void {
-    std::cerr << "Beginning of fct_CVP\n";
+#ifdef DEBUG_VINBERG
+    os << "Beginning of fct_CVP\n";
+#endif
     std::vector<MyVector<Tint>> list_GV;
     for (auto &e_root : ListRoot) {
       MyVector<Tint> e_gv = Vtot.G * e_root;
@@ -624,11 +652,13 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       }
       list_root.push_back(V);
     };
-    Solutioner_CVP(data, f_ins_root);
+    Solutioner_CVP(data, f_ins_root, os);
   };
   //
   auto fct_CVP_Poly = [&]() -> void {
-    std::cerr << "Beginning of fct_CVP_Poly\n";
+#ifdef DEBUG_VINBERG
+    os << "Beginning of fct_CVP_Poly\n";
+#endif
     size_t n_root = ListRoot.size();
     size_t dim = Vtot.G.rows();
     MyMatrix<T> FAC(n_root, dim);
@@ -702,19 +732,22 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   }
   //
 #ifdef TIMINGS
-  std::cerr << "|list_root|=" << list_root.size()
-            << " |FindRoot_filter|=" << time << "\n";
+  os << "|list_root|=" << list_root.size()
+     << " |FindRoot_filter|=" << time << "\n";
 #endif
   return list_root;
 }
 
 template <typename T, typename Tint>
 MyMatrix<int> GetWeightMatrix(const VinbergTot<T, Tint> &Vtot,
-                              const std::vector<MyVector<Tint>> &ListRoot) {
+                              const std::vector<MyVector<Tint>> &ListRoot,
+                              [[maybe_unused]] std::ostream& os) {
   size_t n_root = ListRoot.size();
+#ifdef DEBUG_VINBERG
   size_t nbCol = Vtot.G.rows();
-  std::cerr << "GetWeightMatrix : begin, n_root=" << n_root
-            << " nbCol=" << nbCol << "\n";
+  os << "GetWeightMatrix : begin, n_root=" << n_root
+     << " nbCol=" << nbCol << "\n";
+#endif
   MyMatrix<T> M(n_root, n_root);
   std::unordered_map<T, int> DiagVal;
   std::unordered_map<T, int> OffDiagVal;
@@ -731,15 +764,16 @@ MyMatrix<int> GetWeightMatrix(const VinbergTot<T, Tint> &Vtot,
       }
     }
   }
-  std::cerr << "GetWeightMatrix : Diag =";
+#ifdef DEBUG_VINBERG
+  os << "GetWeightMatrix : Diag =";
   for (auto &kv : DiagVal)
-    std::cerr << " [" << kv.first << "," << kv.second << "]";
-  std::cerr << "\n";
-  std::cerr << "GetWeightMatrix : OffDiag =";
+    os << " [" << kv.first << "," << kv.second << "]";
+  os << "\n";
+  os << "GetWeightMatrix : OffDiag =";
   for (auto &kv : OffDiagVal)
-    std::cerr << " [" << kv.first << "," << kv.second << "]";
-  std::cerr << "\n";
-
+    os << " [" << kv.first << "," << kv.second << "]";
+  os << "\n";
+#endif
   std::unordered_map<T, int> CosVal;
   MyMatrix<T> Cos(n_root, n_root);
   for (size_t i_root = 0; i_root < n_root; i_root++) {
@@ -753,10 +787,12 @@ MyMatrix<int> GetWeightMatrix(const VinbergTot<T, Tint> &Vtot,
         CosVal[cos2] += 1;
     }
   }
-  std::cerr << "GetWeightMatrix : Cos =";
+#ifdef DEBUG_VINBERG
+  os << "GetWeightMatrix : Cos =";
   for (auto &kv : CosVal)
-    std::cerr << " [" << kv.first << "," << kv.second << "]";
-  std::cerr << "\n";
+    os << " [" << kv.first << "," << kv.second << "]";
+  os << "\n";
+#endif
   //
   // Building of the input
   //
@@ -830,7 +866,8 @@ std::vector<MyVector<Tint>>& ListRoot)
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyVector<Tint>>
 GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
-                     const std::vector<MyVector<Tint>> &ListRoot) {
+                     const std::vector<MyVector<Tint>> &ListRoot,
+                     std::ostream & os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -846,7 +883,9 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
 #ifdef TIMINGS
   size_t n_iter = 0;
 #endif
-  std::cerr << "DualDescProg=" << Vtot.DualDescProg << "\n";
+#ifdef DEBUG_VINBERG
+  os << "DualDescProg=" << Vtot.DualDescProg << "\n";
+#endif
   if (Vtot.DualDescProg == "lrs_iterate") {
     MyMatrix<Tint> FACwork = lrs::FirstColumnZero(FAC);
     bool IsFirst = true;
@@ -873,7 +912,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
-        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, std::cerr);
+        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS
@@ -891,7 +930,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
   }
 #ifdef TIMINGS
   bool test = opt.has_value();
-  std::cerr << "has found vertex=" << test << " n_iter=" << n_iter
+  os << "has found vertex=" << test << " n_iter=" << n_iter
             << " |GetOneInteriorVertex|=" << time << "\n";
 #endif
   return opt;
@@ -899,7 +938,8 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
 
 template <typename T, typename Tint>
 bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
-                     const std::vector<MyVector<Tint>> &ListRoot) {
+                     const std::vector<MyVector<Tint>> &ListRoot,
+                     std::ostream& os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -943,7 +983,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
   } else {
     MyMatrix<T> FAC_T = UniversalMatrixConversion<T, Tint>(FAC);
     vectface ListIncd =
-        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, std::cerr);
+        DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
 #ifdef TIMINGS
@@ -961,19 +1001,22 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     look_for_vector();
   }
 #ifdef TIMINGS
-  std::cerr << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
+  os << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
             << " |is_FundPoly_LRS|=" << time << "\n";
 #endif
-  std::cerr << "norm multiplicities =";
+#ifdef DEBUG_VINBERG
+  os << "norm multiplicities =";
   for (auto &kv : map)
-    std::cerr << " [" << kv.first << "," << kv.second << "]";
-  std::cerr << "\n";
+    os << " [" << kv.first << "," << kv.second << "]";
+  os << "\n";
+#endif
   return IsFiniteCovolume;
 }
 
 template <typename T, typename Tint>
 bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
-                         const std::vector<MyVector<Tint>> &ListRoot) {
+                         const std::vector<MyVector<Tint>> &ListRoot,
+                         [[maybe_unused]] std::ostream& os) {
   MyMatrix<int> WeightMatrix = GetWeightMatrix(Vtot, ListRoot);
   size_t n_root = ListRoot.size();
   int d = Vtot.G.rows() - 1;
@@ -981,13 +1024,13 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   std::string FileI = "/tmp/CoxIter_" + rnd_str + ".input";
   std::string FileO = "/tmp/CoxIter_" + rnd_str + ".out";
   {
-    std::ofstream os(FileI);
-    os << n_root << " " << d << "\n";
+    std::ofstream osF(FileI);
+    osF << n_root << " " << d << "\n";
     for (size_t i = 0; i < n_root; i++)
       for (size_t j = 0; j < i; j++)
         if (WeightMatrix(i, j) != 444)
-          os << (j + 1) << " " << (i + 1) << " " << WeightMatrix(i, j) << "\n";
-    os << "\n";
+          osF << (j + 1) << " " << (i + 1) << " " << WeightMatrix(i, j) << "\n";
+    osF << "\n";
   }
   //
   // Running the CoxIter program
@@ -996,13 +1039,15 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   std::string opt = "-fv";
   eCommand += " " + opt;
   eCommand += " < " + FileI + " > " + FileO;
-  std::cerr << "eCommand=" << eCommand << "\n";
+#ifdef DEBUG_VINBERG
+  os << "eCommand=" << eCommand << "\n";
+#endif
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
   int iret = system(eCommand.c_str());
 #ifdef TIMINGS
-  std::cerr << "|system|=" << time << "\n";
+  os << "|system|=" << time << "\n";
 #endif
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
@@ -1022,8 +1067,7 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
         IsFiniteCovolume = true;
   }
 #ifdef TIMINGS
-  std::cerr << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume
-            << "  |coxiter|=" << time << "\n";
+  os << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "  |coxiter|=" << time << "\n";
 #endif
   return IsFiniteCovolume;
 }
@@ -1077,54 +1121,54 @@ GetDataReflectionGroup(const std::vector<MyVector<Tint>> &ListRoot,
 
 template <typename T, typename Tint>
 void Print_DataReflectionGroup_TXT(const DataReflectionGroup<T, Tint> &data,
-                                   std::ostream &os) {
+                                   std::ostream &os_out) {
   size_t n_root = data.ListRoot.size();
-  os << "|ListRoot|=" << n_root << "\n";
+  os_out << "|ListRoot|=" << n_root << "\n";
   for (size_t i = 0; i < n_root; i++)
-    WriteVectorNoDim(os, data.ListRoot[i]);
-  os << "G=\n";
-  WriteMatrix(os, data.G);
-  os << "M=\n";
-  WriteMatrix(os, data.M);
-  os << "Cos=\n";
-  WriteMatrix(os, data.Cos);
+    WriteVectorNoDim(os_out, data.ListRoot[i]);
+  os_out << "G=\n";
+  WriteMatrix(os_out, data.G);
+  os_out << "M=\n";
+  WriteMatrix(os_out, data.M);
+  os_out << "Cos=\n";
+  WriteMatrix(os_out, data.Cos);
 }
 
 template <typename T, typename Tint>
 void Print_DataReflectionGroup_GAP(const DataReflectionGroup<T, Tint> &data,
-                                   std::ostream &os) {
+                                   std::ostream &os_out) {
   std::unordered_set<Tint> s_norm;
   for (auto &root : data.ListRoot) {
     Tint e_norm = root.dot(data.G * root);
     s_norm.insert(e_norm);
   }
-  os << "return rec(n_simple:=" << data.ListRoot.size() << ", ListNorm:=[";
+  os_out << "return rec(n_simple:=" << data.ListRoot.size() << ", ListNorm:=[";
   bool IsFirst = true;
   for (auto &e_norm : s_norm) {
     if (!IsFirst)
-      os << ",";
+      os_out << ",";
     IsFirst = false;
-    os << e_norm;
+    os_out << e_norm;
   }
-  os << "], ListRoot:=";
+  os_out << "], ListRoot:=";
   MyMatrix<Tint> MatRoot = MatrixFromVectorFamily(data.ListRoot);
-  WriteMatrixGAP(os, MatRoot);
-  os << ", G:=";
-  WriteMatrixGAP(os, data.G);
-  os << ", M:=";
-  WriteMatrixGAP(os, data.M);
-  os << ", Cos:=";
-  WriteMatrixGAP(os, data.Cos);
-  os << ");\n";
+  WriteMatrixGAP(os_out, MatRoot);
+  os_out << ", G:=";
+  WriteMatrixGAP(os_out, data.G);
+  os_out << ", M:=";
+  WriteMatrixGAP(os_out, data.M);
+  os_out << ", Cos:=";
+  WriteMatrixGAP(os_out, data.Cos);
+  os_out << ");\n";
 }
 
 template <typename T, typename Tint>
 void Print_DataReflectionGroup(const DataReflectionGroup<T, Tint> &data,
-                               const std::string &OutFormat, std::ostream &os) {
+                               const std::string &OutFormat, std::ostream &os_out) {
   if (OutFormat == "TXT")
-    return Print_DataReflectionGroup_TXT(data, os);
+    return Print_DataReflectionGroup_TXT(data, os_out);
   if (OutFormat == "GAP")
-    return Print_DataReflectionGroup_GAP(data, os);
+    return Print_DataReflectionGroup_GAP(data, os_out);
   std::cerr
       << "Failed to find matching entry in Print_DataReflectionGroup_TXT\n";
   std::cerr << "OutFormat=" << OutFormat
@@ -1137,17 +1181,25 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T, Tint> &Vtot, std::ostre
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<Tint> a = ZeroVector<Tint>(n);
+#ifdef DEBUG_VINBERG
   os << "FundCone, step 1.1\n";
+#endif
   for (auto &k : Vtot.root_lengths) {
+#ifdef DEBUG_VINBERG
     os << " k=" << k << "\n";
+#endif
     std::vector<MyVector<Tint>> list_root_cand =
-        FindRoot_no_filter<T, Tint>(Vtot, a, k);
+      FindRoot_no_filter<T, Tint>(Vtot, a, k, os);
     for (const MyVector<Tint> &root_cand : list_root_cand)
       V1_roots.push_back(root_cand);
+#ifdef DEBUG_VINBERG
     os << "k=" << k << " |V1_roots|=" << V1_roots.size()
        << " |list_root_cand|=" << list_root_cand.size() << "\n";
+#endif
   }
+#ifdef DEBUG_VINBERG
   os << "FundCone |V1_roots|=" << V1_roots.size() << "\n";
+#endif
   if (V1_roots.size() == 0) {
     return {};
   } else {
@@ -1156,31 +1208,41 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T, Tint> &Vtot, std::ostre
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
+std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot, std::ostream& os) {
   //
   // First building the initial set of roots
   //
-  std::cerr << "FundCone, step 1\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 1\n";
+#endif
   std::vector<MyVector<Tint>> V1_roots;
   size_t n = Vtot.G.rows();
   MyVector<Tint> a = ZeroVector<Tint>(n);
-  std::cerr << "FundCone, step 1.1\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 1.1\n";
+#endif
   for (auto &k : Vtot.root_lengths) {
-    std::cerr << " k=" << k << "\n";
+#ifdef DEBUG_VINBERG
+    os << " k=" << k << "\n";
+#endif
     std::set<MyVector<Tint>> set;
     std::vector<MyVector<Tint>> list_root_cand =
-        FindRoot_no_filter<T, Tint>(Vtot, a, k);
+      FindRoot_no_filter<T, Tint>(Vtot, a, k, os);
     for (const MyVector<Tint> &root_cand : list_root_cand) {
       MyVector<Tint> root_can = SignCanonicalizeVector(root_cand);
       set.insert(root_can);
     }
     for (auto &eV : set)
       V1_roots.push_back(eV);
-    std::cerr << "k=" << k << " |set|=" << set.size()
-              << " |V1_roots|=" << V1_roots.size()
-              << " |list_root_cand|=" << list_root_cand.size() << "\n";
+#ifdef DEBUG_VINBERG
+    os << "k=" << k << " |set|=" << set.size()
+       << " |V1_roots|=" << V1_roots.size()
+       << " |list_root_cand|=" << list_root_cand.size() << "\n";
+#endif
   }
-  std::cerr << "FundCone, step 2\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 2\n";
+#endif
   //
   // Selecting a basis of roots as a starting point
   // (Not sure if that initial family is full dimensional or not. We assume full
@@ -1194,8 +1256,10 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
   size_t nbCol = n;
   SelectionRowCol<T> eSelect = TMat_SelectRowCol_Kernel<T>(nbRow, nbCol, f);
   size_t TheRank = eSelect.TheRank;
-  std::cerr << "eSelect.TheRank=" << TheRank << "\n";
-  std::cerr << "FundCone, step 3\n";
+#ifdef DEBUG_VINBERG
+  os << "eSelect.TheRank=" << TheRank << "\n";
+  os << "FundCone, step 3\n";
+#endif
   Face selected(nbRow);
   std::vector<MyVector<Tint>> SelectedRoots;
   for (auto &idx : eSelect.ListRowSelect) {
@@ -1215,7 +1279,9 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
     else
       SelectedRoots.push_back(-uRoot);
   }
-  std::cerr << "FundCone, step 4\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 4\n";
+#endif
   //
   // Now iterating over the roots.
   //
@@ -1228,14 +1294,18 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
         Mroot(i_root, i) =
             UniversalScalarConversion<T, Tint>(SelectedRoots[i_root](iCol));
       }
-    std::cerr << "Mroot=\n";
-    WriteMatrix(std::cerr, Mroot);
-    std::cerr << "Before cdd::DualDescription\n";
+#ifdef DEBUG_VINBERG
+    os << "Mroot=\n";
+    WriteMatrix(os, Mroot);
+    os << "Before cdd::DualDescription\n";
+#endif
     // maybe use another dual description function
     return cdd::DualDescription(Mroot);
   };
   MyMatrix<T> FAC = get_facets();
-  std::cerr << "FundCone, step 5\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 5\n";
+#endif
   auto insert_root = [&](const MyVector<Tint> &V) -> void {
     size_t n_plus = 0;
     size_t n_minus = 0;
@@ -1290,16 +1360,20 @@ std::vector<MyVector<Tint>> FundCone_V1(const VinbergTot<T, Tint> &Vtot) {
     }
     SelectedRoots = TheSelect;
   };
-  std::cerr << "FundCone, step 6\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 6\n";
+#endif
   for (size_t iRow = 0; iRow < nbRow; iRow++)
     if (selected[iRow] == 0) {
       const MyVector<Tint> &uRoot = V1_roots[iRow];
       insert_root(uRoot);
     }
-  std::cerr << "FundCone, step 7\n";
-  std::cerr << "SelectedRoots=\n";
+#ifdef DEBUG_VINBERG
+  os << "FundCone, step 7\n";
+  os << "SelectedRoots=\n";
   for (auto &eVect : SelectedRoots)
-    WriteVectorNoDim(std::cerr, eVect);
+    WriteVectorNoDim(os, eVect);
+#endif
   return SelectedRoots;
 }
 
@@ -1322,14 +1396,19 @@ GetInitial_FACfeasible(const VinbergTot<T, Tint> &Vtot,
 }
 
 template <typename T, typename Tint, typename F>
-void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit, std::ostream& os) {
-  std::cerr << "FindRoots, step 1\n";
+void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit, [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_VINBERG
+  os << "FindRoots, step 1\n";
+#endif
   std::vector<MyVector<Tint>> ListRoot = FundCone(Vtot, os);
   MyMatrix<T> FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
-  std::cerr << "FindRoots, step 2\n";
-
+#ifdef DEBUG_VINBERG
+  os << "FindRoots, step 2\n";
+#endif
   IterateRootDecompositions<T, Tint> iter(Vtot);
-  std::cerr << "FindRoots, step 3\n";
+#ifdef DEBUG_VINBERG
+  os << "FindRoots, step 3\n";
+#endif
   bool need_consideration = true;
   while (true) {
     if (need_consideration)
@@ -1339,8 +1418,10 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit, std::ostream& o
     const std::pair<MyVector<Tint>, Tint> pair = iter.get_cand();
     const MyVector<Tint> &a = pair.first;
     const Tint &k = pair.second;
-    std::cerr << "CHOICE a=" << StringVectorGAP(a) << " k=" << k
-              << " |ListRoot|=" << ListRoot.size() << "\n";
+#ifdef DEBUG_VINBERG
+    os << "CHOICE a=" << StringVectorGAP(a) << " k=" << k
+       << " |ListRoot|=" << ListRoot.size() << "\n";
+#endif
     std::vector<MyVector<Tint>> list_root_cand =
       FindRoot_filter<T, Tint>(Vtot, a, k, ListRoot, FACfeasible, os);
     if (list_root_cand.size() > 0) {
@@ -1348,16 +1429,19 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit, std::ostream& o
       for (auto &eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);
       }
-      std::cerr << "ListRoot=\n";
+#ifdef DEBUG_VINBERG
+      os << "ListRoot=\n";
       for (auto &eRoot : ListRoot) {
-        WriteVectorNoDim(std::cerr, eRoot);
+        WriteVectorNoDim(os, eRoot);
       }
       int rnk = RankMat(MatrixFromVectorFamily(ListRoot));
-      std::cerr << "After insert |ListRoot|=" << ListRoot.size()
-                << " rnk=" << rnk << " dim=" << Vtot.G.rows() << "\n";
+      os << "After insert |ListRoot|=" << ListRoot.size()
+         << " rnk=" << rnk << " dim=" << Vtot.G.rows() << "\n";
+#endif
       ListRoot = ReduceListRoot(ListRoot, os);
-      std::cerr << "After ReduceListRoot |ListRoot|=" << ListRoot.size()
-                << "\n";
+#ifdef DEBUG_VINBERG
+      os << "After ReduceListRoot |ListRoot|=" << ListRoot.size() << "\n";
+#endif
       FACfeasible = GetInitial_FACfeasible(Vtot, ListRoot);
     }
   }
@@ -1388,9 +1472,13 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot, std::ostream& 
   auto f_exit = [&](std::vector<MyVector<Tint>> const &ListRoot,
                     MyMatrix<T> const &FACfeasible) -> bool {
     int TheRank = RankMat(FACfeasible);
-    std::cerr << "f_exit begin TheRank=" << TheRank << " dim=" << dim << "\n";
+#ifdef DEBUG_VINBERG
+    os << "f_exit begin TheRank=" << TheRank << " dim=" << dim << "\n";
+#endif
     if (TheRank < dim - 1) {
-      std::cerr << "Exiting false 1\n";
+#ifdef DEBUG_VINBERG
+      os << "Exiting false 1\n";
+#endif
       return false;
     }
     if (TheRank == dim - 1) {
@@ -1405,23 +1493,31 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot, std::ostream& 
       Tint norm = v3.dot(Vtot.G * v3);
       if (norm <= 0) {
         v = v3;
-        std::cerr << "Exiting true 1\n";
+#ifdef DEBUG_VINBERG
+        os << "Exiting true 1\n";
+#endif
         return true;
       }
-      std::cerr << "Exiting false 2\n";
+#ifdef DEBUG_VINBERG
+      os << "Exiting false 2\n";
+#endif
       return false;
     }
     std::optional<MyVector<Tint>> opt =
-        GetOneInteriorVertex<T, Tint, Tgroup>(Vtot, ListRoot);
+      GetOneInteriorVertex<T, Tint, Tgroup>(Vtot, ListRoot, os);
     if (opt) {
       // We cannot use the roots in order to get a cone.
       // This is because while we got a vertex, we might need more roots
       // in order to get a cone
       v = *opt;
-      std::cerr << "Exiting true 2\n";
+#ifdef DEBUG_VINBERG
+      os << "Exiting true 2\n";
+#endif
       return true;
     }
-    std::cerr << "Exiting false 3\n";
+#ifdef DEBUG_VINBERG
+    os << "Exiting false 3\n";
+#endif
     return false;
   };
   FindRoots_Kernel(Vtot, f_exit, os);
@@ -1455,35 +1551,28 @@ FullNamelist NAMELIST_GetStandard_VINBERG() {
 }
 
 template <typename T, typename Tint>
-void MainFunctionVinberg(FullNamelist const &eFull) {
+void MainFunctionVinberg(FullNamelist const &eFull, std::ostream& os) {
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string FileLorMat = BlockPROC.ListStringValues.at("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
-  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
-    std::cerr << "G=\n";
-    WriteMatrix(std::cerr, G);
-    std::cerr << "We have nbZero=" << DiagInfo.nbZero
-              << " nbPlus=" << DiagInfo.nbPlus
-              << " nbMinus=" << DiagInfo.nbMinus << "\n";
-    std::cerr
-        << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
-    throw TerminalException{1};
-  }
+  TestLorentzianity(G);
   //
   std::string OptionNorms = BlockPROC.ListStringValues.at("OptionNorms");
   std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
   bool ReflectivityEarlyTermination =
       BlockPROC.ListBoolValues.at("ReflectivityEarlyTermination");
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint, T>(G);
-  std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms);
+  std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   std::vector<Tint> root_lengths;
-  std::cerr << "root_lengths =";
   for (auto &eN : l_norms) {
-    std::cerr << " " << eN;
     root_lengths.push_back(UniversalScalarConversion<Tint, T>(eN));
   }
-  std::cerr << "\n";
+#ifdef DEBUG_VINBERG
+  os << "root_lengths =";
+  for (auto &eN : l_norms) {
+    os << " " << eN;
+  os << "\n";
+#endif
   //
   std::string FileV0 = BlockPROC.ListStringValues.at("FileV0");
   MyVector<Tint> v0;
@@ -1492,11 +1581,13 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
   } else {
     MyVector<Tint> v0 = ReadVectorFile<Tint>(FileV0);
   }
-  std::cerr << "v0=" << StringVectorGAP(v0) << "\n";
+#ifdef DEBUG_VINBERG
+  os << "v0=" << StringVectorGAP(v0) << "\n";
+#endif
   //
   VinbergTot<T, Tint> Vtot = GetVinbergAux<T, Tint>(
       G_i, v0, root_lengths, DualDescProg, ReflectivityEarlyTermination);
-  std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot, std::cerr);
+  std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot, os);
   DataReflectionGroup<T, Tint> data =
       GetDataReflectionGroup<T, Tint>(ListRoot, G_i);
   //
@@ -1508,8 +1599,8 @@ void MainFunctionVinberg(FullNamelist const &eFull) {
     if (FileOut == "stdout") {
       Print_DataReflectionGroup(data, OutFormat, std::cout);
     } else {
-      std::ofstream os(FileOut);
-      Print_DataReflectionGroup(data, OutFormat, os);
+      std::ofstream osF(FileOut);
+      Print_DataReflectionGroup(data, OutFormat, osF);
     }
   }
 }

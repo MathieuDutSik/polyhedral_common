@@ -4890,7 +4890,8 @@ _L99:
 
 template <typename T>
 dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
-                                      dd_ErrorType *error) {
+                                      dd_ErrorType *error,
+                                      [[maybe_unused]] std::ostream& os) {
   /*
      For H-representation only and not quite reliable,
      especially when floating-point arithmetic is used.
@@ -4915,6 +4916,9 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
   if (set_card(M->linset) != 0) {
     std::cerr << "This code works only in the absence of linearity relations\n";
     *error = dd_NonZeroLinearity;
+#ifdef DEBUG_CDD
+    os << "Error dd_NonZeroLinearity\n";
+#endif
     return redset;
   }
 
@@ -5071,6 +5075,11 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
     redset = dd_RedundantRows(M, error);
+#ifdef DEBUG_CDD
+    if (*error != dd_NoError) {
+      os << "Error in dd_RedundantRows\n";
+    }
+#endif
   }
   free_data_simplex(data);
 
@@ -8077,14 +8086,16 @@ void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
 }
 
 template <typename T>
-std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT, [[maybe_unused]] std::ostream& os) {
+std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_ErrorType err;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
-  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err);
+  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err, os);
   if (err != dd_NoError) {
+    std::cerr << "TheEXT=\n";
+    WriteMatrix(std::cerr, TheEXT);
     std::cerr << "RedundancyReductionClarkson internal CDD error\n";
     throw TerminalException{1};
   }
