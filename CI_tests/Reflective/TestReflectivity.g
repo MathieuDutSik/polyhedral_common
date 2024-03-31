@@ -52,8 +52,7 @@ TestReflectivity:=function(eRec)
     RemoveFile(FileIn);
     RemoveFile(FileNml);
     RemoveFile(FileOut);
-    GRPmatr:=Group(eRec.ListIsomCox);
-    Print("|GRPmatr|=", Order(GRPmatr), "\n");
+    Print("|GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
     return eRec.n_simple = U.n_simple;
 end;
 

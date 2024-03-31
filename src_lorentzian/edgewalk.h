@@ -1308,8 +1308,14 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     WriteMatrixGAP(os_out, G);
     os_out << ", l_norms:=";
     WriteStdVectorGAP(os_out, l_norms);
-    os_out << ", ListIsomCox:=";
-    WriteVectorMatrixGAP(os_out, re.l_gen_isom_cox);
+    os_out << ", GrpIsomCoxMatr:=";
+    if (re.l_gen_isom_cox.size() > 0) {
+      os_out << "Group(";
+      WriteVectorMatrixGAP(os_out, re.l_gen_isom_cox);
+      os_out << ")";
+    } else {
+      os_out << "Group([IdentityMat(" << G.rows() << ")])";
+    }
     if (re.is_reflective) {
       bool val = *re.is_reflective;
       if (val) {
@@ -1330,7 +1336,7 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     bool IsFirst = true;
     for (size_t i = 0; i < n_orbit_vertices; i++) {
       if (!IsFirst)
-        os << ",\n";
+        os_out << ",\n";
       IsFirst = false;
       const FundDomainVertex<T, Tint> &evert = re.l_orbit_vertices[i];
       WriteFundDomainVertex(G, evert, os_out, OutFormat);
