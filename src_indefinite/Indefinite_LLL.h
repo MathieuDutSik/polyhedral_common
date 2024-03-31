@@ -11,7 +11,9 @@
 #include <utility>
 #include <vector>
 
-// #define DEBUG_INDEFINITE_LLL
+#ifdef DEBUG
+#define DEBUG_INDEFINITE_LLL
+#endif
 
 template <typename T> struct ResultGramSchmidt_Indefinite {
   // true means we have a basis. False that we have an isotropic vector
@@ -159,10 +161,14 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
+#ifdef DEBUG_INDEFINITE_LLL
   std::cerr << "Beginning of ComputeReductionIndefinite\n";
+#endif
   int n = M.rows();
   ResultIndefiniteLLL<T, Tint> eRes = Indefinite_LLL<T, Tint>(M);
+#ifdef DEBUG_INDEFINITE_LLL
   std::cerr << "We have computed eRes\n";
+#endif
   bool early_term = false;
   if (eRes.success && early_term) {
     return {std::move(eRes.B), std::move(eRes.Mred)};

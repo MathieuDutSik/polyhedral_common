@@ -12,6 +12,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+#define DEBUG_LORENTZIAN_LINALG
+#endif
+
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
@@ -242,14 +246,17 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect, std::ostream& 
     while (true) {
       for (int i = 0; i < dimSpace; i++)
         w(i) = random() % tot_spr - spr;
-      std::cerr << "get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
+#ifdef DEBUG_LORENTZIAN_LINALG
+      os << "get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
+#endif
       if (is_corr(w))
         return w;
     }
   };
   MyVector<T> selVect = get_random_vect();
-  std::cerr << "Random splitting vector selVect=" << StringVectorGAP(selVect)
-            << "\n";
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
+#endif
   int n_vect = l_vect.size() / 2;
   MyMatrix<Tfield> EXT(n_vect, 1 + dimSpace);
   std::vector<size_t> list_idx(n_vect);
