@@ -7,6 +7,10 @@
 #include "POLY_LinearProgramming.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_SHVEC_EXACT_POLYTOPE
+#endif
+
 
 template <typename T, typename Tint, typename Finsert>
 int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
@@ -19,7 +23,9 @@ int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
     std::cerr << "Error in the size of FAC\n";
     throw TerminalException{1};
   }
+#ifdef DEBUG_SHVEC_EXACT_POLYTOPE
   std::cerr << "Beginning of computeIt_polytope\n";
+#endif
   auto f_set_bound = [&](const T &eQuot, const T &eSum,
                          [[maybe_unused]] const MyMatrix<T> &q,
                          const MyVector<Tint> &x, const int &i, Tint &upper,

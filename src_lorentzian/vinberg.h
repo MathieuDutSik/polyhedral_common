@@ -717,7 +717,9 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     };
     (void)computeIt_polytope<T, Tint, decltype(f_insert)>(request, data.norm,
                                                           FAC, f_insert, os);
+#ifdef DEBUG_VINBERG
     os << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";
+#endif
   };
   //
   int TheRank = 0;

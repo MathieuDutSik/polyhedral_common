@@ -514,7 +514,9 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
     n_case *= len;
     VectSiz.push_back(len);
   }
+#ifdef DEBUG_LORENTZIAN_LINALG
   std::cerr << "n_case=" << n_case << "\n";
+#endif
   std::vector<T> l_order;
   for (auto &V : BlockIterationMultiple(VectSiz)) {
     T tot_dim = 0;
@@ -550,7 +552,9 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
   for (size_t u = 0; u <= max_finite_order; u++) {
     // We go a little bit over the needed range
     if (is_identity(ThePow)) {
+#ifdef DEBUG_LORENTZIAN_LINALG
       std::cerr << "is_infinite_order expo=" << expo << "\n";
+#endif
       return true;
     }
     ThePow *= M;
