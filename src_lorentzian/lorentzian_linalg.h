@@ -507,11 +507,15 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   std::vector<Desc> l_desc;
   for (auto &ePrime : ListPrime)
     l_desc.push_back({ePrime, get_l_pair(ePrime)});
+#ifdef DEBUG_LORENTZIAN_LINALG
   size_t n_case = 1;
+#endif
   std::vector<int> VectSiz;
   for (auto eDesc : l_desc) {
     size_t len = eDesc.l_pair.size();
+#ifdef DEBUG_LORENTZIAN_LINALG
     n_case *= len;
+#endif
     VectSiz.push_back(len);
   }
 #ifdef DEBUG_LORENTZIAN_LINALG

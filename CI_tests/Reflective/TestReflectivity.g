@@ -18,7 +18,7 @@ WriteMatrix:=function(TheFile, TheMat)
 end;
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr;
+    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact;
     n:=Length(eRec.LorMat);
     FileIn:="Test.in";
     FileNml:="Test.nml";
@@ -52,7 +52,9 @@ TestReflectivity:=function(eRec)
     RemoveFile(FileIn);
     RemoveFile(FileNml);
     RemoveFile(FileOut);
-    Print("n=", Length(eRec.LorMat), " n_simple=", eRec.n_simple, " |GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
+    ListVertNorm:=List(U.ListVertices, x->x.norm);
+    isCocompact:=Maximum(ListVertNorm) < 0;
+    Print("n=", Length(eRec.LorMat), " n_simple=", eRec.n_simple, " isCocompact=", isCocompact, " |GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
     return eRec.n_simple = U.n_simple;
 end;
 
