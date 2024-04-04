@@ -874,6 +874,9 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
       eSum += NSP(iRel, iVect);
     ToBeMinimized(iRel + 1) = eSum;
   }
+#ifdef DEBUG_SEARCH_POSITIVE_RELATION
+  os << "LP: |ListInequalities|=" << ListInequalities.size() << "\n";
+#endif
   MyMatrix<T> MatInequalities = MatrixFromVectorFamily(ListInequalities);
   LpSolution<T> eSol = CDD_LinearProgramming(MatInequalities, ToBeMinimized, os);
   PosRelRes<T> eResult;
@@ -1557,6 +1560,7 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
       vect_incd1.push_back(eRow);
     }
   }
+  os << "LP: |vect_incd1|=" << vect_incd1.size() << "\n";
   MyMatrix<T> MatIncd1 = MatrixFromVectorFamily(vect_incd1);
   int rnk_incd = RankMat(MatIncd1);
   os << "LP: rnk_incd=" << rnk_incd << "\n";
@@ -1572,6 +1576,7 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
       vect_incd2.push_back(eRow);
     }
   }
+  os << "LP: |vect_incd2|=" << vect_incd2.size() << "\n";
   MyMatrix<T> MatIncd2 = MatrixFromVectorFamily(vect_incd2);
   int rnk_incd2 = RankMat(MatIncd2);
   os << "LP: rnk_incd2=" << rnk_incd2 << "\n";
@@ -1691,6 +1696,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   std::string prefix = "Non_geometrically_unique_case_";
   SingleData_DebugWrite(prefix, FAC);
 #endif
+  std::cerr << "Debugging from that point\n";
+  throw TerminalException{1};
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, Recurring\n";
 #endif
@@ -1709,6 +1716,9 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   os << "LP: GGUIP, |ListIneqRedB|=" << ListIneqRedB.rows() << " / " << ListIneqRedB.cols() << "\n";
 #endif
   MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, We have SolSubspaceB\n";
+#endif
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
   MyVector<T> V = NSP.transpose() * SolSubspace;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE

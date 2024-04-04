@@ -2,6 +2,7 @@
 #ifndef SRC_LORENTZIAN_EDGEWALK_H_
 #define SRC_LORENTZIAN_EDGEWALK_H_
 
+// clang-format off
 #include "Heuristic_ThompsonSampling.h"
 #include "LatticeDefinitions.h"
 #include "MatrixCanonicalForm.h"
@@ -24,6 +25,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_EDGEWALK
@@ -1281,13 +1283,9 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
                          ResultEdgewalk<T, Tint> const &re, std::ostream &os_out,
                          const std::string &OutFormat,
                          bool const &ComputeAllSimpleRoots,
-                         [[maybe_unused]] std::ostream& os) {
+                         std::ostream& os) {
   std::vector<T> l_norms = get_list_norms(G, re);
-  std::vector<MyVector<Tint>> l_simple_root;
-  if (ComputeAllSimpleRoots)
-    l_simple_root = compute_full_root_orbit(re);
   size_t n_orbit_vertices = re.l_orbit_vertices.size();
-  size_t n_simple = l_simple_root.size();
 #ifdef DEBUG_EDGEWALK
   os << "We write G\n";
   os << "We write l_norms\n";
@@ -1303,7 +1301,7 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   }
   os << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
   os << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
-  os << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << " n_simple=" << n_simple << "\n";
+  os << "ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
 #endif
   if (OutFormat == "GAP") {
     os_out << "return rec(LorMat:=";
@@ -1345,13 +1343,20 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     }
     os_out << "], n_orbit_vertices:=" << n_orbit_vertices;
     if (ComputeAllSimpleRoots) {
+      std::vector<MyVector<Tint>> l_simple_root = compute_full_root_orbit(re);
+      size_t n_simple = l_simple_root.size();
+      MyMatrix<Tint> Mat_simple_root = MatrixFromVectorFamily(l_simple_root);
+      MyMatrix<T> Mat_simple_root_T = UniversalMatrixConversion<T,Tint>(Mat_simple_root);
+      MyVector<T> eCent = GetGeometricallyUniqueInteriorPoint(Mat_simple_root_T, os);
       os_out << ", ListSimpleRoots:=[";
       for (size_t i = 0; i < n_simple; i++) {
         if (i > 0)
           os_out << ",";
         os_out << StringVectorGAP(l_simple_root[i]);
       }
-      os_out << "], n_simple:=" << n_simple;
+      os_out << "]";
+      os_out << ", CentVect:=" << StringVectorGAP(eCent);
+      os_out << ", n_simple:=" << n_simple;
     }
     os_out << ");\n";
     return;

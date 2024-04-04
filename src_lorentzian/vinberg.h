@@ -1571,7 +1571,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream& os) {
   }
 #ifdef DEBUG_VINBERG
   os << "root_lengths =";
-  for (auto &eN : l_norms) {
+  for (auto &eN : l_norms)
     os << " " << eN;
   os << "\n";
 #endif

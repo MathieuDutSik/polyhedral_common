@@ -4923,7 +4923,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
     std::cerr << "This code works only in the absence of linearity relations\n";
     *error = dd_NonZeroLinearity;
 #ifdef DEBUG_CDD
-    os << "Error dd_NonZeroLinearity\n";
+    os << "CDD: Error dd_NonZeroLinearity\n";
 #endif
     return redset;
   }
@@ -5095,7 +5095,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
     redset = dd_RedundantRows(M, error);
 #ifdef DEBUG_CDD
     if (*error != dd_NoError) {
-      os << "Error in dd_RedundantRows\n";
+      os << "CDD: Error in dd_RedundantRows\n";
     }
 #endif
   }
@@ -8165,6 +8165,7 @@ template <typename T>
 std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC, [[maybe_unused]] std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = FAC.rows();
+  int nbCol = FAC.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(FAC);
   M->representation = dd_Inequality;
   dd_rowset linset = dd_ImplicitLinearityRows(M, &err);
@@ -8183,8 +8184,18 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_Dire
       ListV.push_back(eFAC);
     }
   }
-  MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
-  MyMatrix<T> NSP = NullspaceTrMat(MatEqua);
+#ifdef DEBUG_CDD
+  os << "CDD: |ListV|=" << ListV.size() << "\n";
+#endif
+  auto get_nsp=[&]() -> MyMatrix<T> {
+    if (ListV.size() > 0) {
+      MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
+      return NullspaceTrMat(MatEqua);
+    } else {
+      return IdentityMat<T>(nbCol);
+    }
+  };
+  MyMatrix<T> NSP = get_nsp();
   dd_FreeMatrix(M);
   set_free(linset);
   return {std::move(NSP), f};
@@ -8234,11 +8245,11 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
     MyVector<T> Vlin = GetMatrixRow(FAC, idx);
     MyMatrix<T> NSP = NullspaceMatSingleVector(Vlin);
 #ifdef DEBUG_CDD
-    os << "Vlin=";
+    os << "CDD: Vlin=";
     WriteVectorNoDim(os, Vlin);
-    os << "FAC=\n";
+    os << "CDD: FAC=\n";
     WriteMatrix(os, FAC);
-    os << "NSP=\n";
+    os << "CDD: NSP=\n";
     WriteMatrix(os, NSP);
 #endif
     std::vector<int> l_zeros;
@@ -8247,7 +8258,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
       MyVector<T> V = GetMatrixRow(FAC, iRow);
       MyVector<T> ScalV = NSP * V;
 #ifdef DEBUG_CDD
-      os << "   ScalV=";
+      os << "CDD:    ScalV=";
       WriteVectorNoDim(os, ScalV);
 #endif
       if (IsZeroVector(ScalV)) {
@@ -8255,7 +8266,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
       } else {
         MyVector<T> ScalVcan = CanonicalizeVector(ScalV);
 #ifdef DEBUG_CDD
-        os << "ScalVcan=";
+        os << "CDD: ScalVcan=";
         WriteVectorNoDim(os, ScalVcan);
 #endif
         map[ScalVcan].push_back(iRow);
@@ -8263,7 +8274,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
     }
     int siz = map.size();
 #ifdef DEBUG_CDD
-    os << "siz=" << siz << " nbRow=" << nbRow << "\n";
+    os << "CDD: siz=" << siz << " nbRow=" << nbRow << "\n";
 #endif
     MyMatrix<T> FACred(siz, nbCol - 1);
     std::vector<std::vector<int>> ll_idx(siz);
@@ -8276,15 +8287,19 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
       pos++;
     }
 #ifdef DEBUG_CDD
-    os << "FACred=\n";
+    os << "CDD: FACred=\n";
     WriteMatrix(os, FACred);
+    os << "CDD: |FACred|=" << FACred.rows() << " / " << FACred.cols() << "\n";
     if (FACred.rows() > 0) {
       std::pair<MyMatrix<T>, Face> pair_loc = KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, os);
-      os << "pair_loc.first=\n";
+      os << "CDD: pair_loc.first=\n";
       WriteMatrix(os, pair_loc.first);
     }
 #endif
     std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred, os);
+#ifdef DEBUG_CDD
+    os << "CDD: We have pairRed\n";
+#endif
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
     for (auto & idx : l_zeros) {
@@ -8297,6 +8312,9 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
         }
       }
     }
+#ifdef DEBUG_CDD
+    os << "CDD: We have NSPnew / f\n";
+#endif
     return {std::move(NSPnew), std::move(f)};
   } else {
 #ifdef DEBUG_CDD
