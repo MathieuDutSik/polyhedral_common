@@ -1323,19 +1323,22 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
     }
     return TestEqualitySpannedSpaces(res1.first, res2.first);
   };
-  os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
+  os << "LP: Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
   std::pair<MyMatrix<T>,Face> res_dual = KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
-  os << "|res_dual|=" << res_dual.first.rows() << " / " << res_dual.first.cols() << "\n";
+  os << "LP: |res_dual|=" << res_dual.first.rows() << " / " << res_dual.first.cols() << "\n";
+  os << "LP: res_dual.second=" << StringFace(res_dual.second) << "\n";
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
   os << "res_dual.first=\n";
   WriteMatrix(os, res_dual.first);
   std::pair<MyMatrix<T>,Face> res_dir_lp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
   os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / " << res_dir_lp.first.cols() << "\n";
+  os << "LP: res_dir_lp.second=" << StringFace(res_dir_lp.second) << "\n";
   os << "res_dir_lp.first=\n";
   WriteMatrix(os, res_dir_lp.first);
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   std::pair<MyMatrix<T>,Face> res_dir_lp_nsp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
   os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / " << res_dir_lp_nsp.first.cols() << "\n";
+  os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second) << "\n";
   os << "res_dir_lp_nsp.first=\n";
   WriteMatrix(os, res_dir_lp_nsp.first);
   os << "After KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
@@ -1395,6 +1398,9 @@ std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T>
     }
   }
   int siz = map.size();
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: n_row=" << n_row << " n_col=" << n_col << " siz=" << siz << " |ListIdxZ|=" << ListIdxZ.size() << "\n";
+#endif
   MyMatrix<T> FACred(siz, n_col);
   std::vector<std::vector<int>> ll_idx;
   int pos = 0;
@@ -1406,17 +1412,26 @@ std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T>
     pos++;
   }
   std::pair<MyMatrix<T>,Face> pair = KernelLinearDeterminedByInequalitiesAndIndices(FACred, os);
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: LinearDeterminedByInequalitiesAndIndices pair.second=" << StringFace(pair.second) << "\n";
+#endif
   Face f(n_row);
   for (auto & eVal : ListIdxZ) {
     f[eVal] = 1;
   }
   for (int pos=0; pos<siz; pos++) {
-    if (f[pos] == 1) {
+#ifdef DEBUG_LINEAR_PROGRAM
+    os << "LP: LinearDeterminedByInequalitiesAndIndices pos=" << pos << " |ll_idx|=" << ll_idx[pos].size() << "\n";
+#endif
+    if (pair.second[pos] == 1) {
       for (auto && idx : ll_idx[pos]) {
         f[idx] = 1;
       }
     }
   }
+#ifdef DEBUG_LINEAR_PROGRAM
+  os << "LP: LinearDeterminedByInequalitiesAndIndices f=" << StringFace(f) << "\n";
+#endif
   return {std::move(pair.first), std::move(f)};
 }
 
@@ -1671,12 +1686,13 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   // otherwise the solution is not optimal.
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, before\n";
+  os << "LP: ListIneqRed=\n";
+  WriteMatrix(os, ListIneqRed);
 #endif
   std::pair<MyMatrix<T>,Face> pair = LinearDeterminedByInequalitiesAndIndices(ListIneqRed, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, after\n";
-#endif
-#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: pair.second=" << StringFace(pair.second) << " |pair.first|=" << pair.first.rows() << " / " << pair.first.cols() << " RankMat(pair.first)=" << RankMat(pair.first) << "\n";
   if (pair.first.rows() == 0) {
     std::cerr << "The dimension is 0 which is impossible\n";
     throw TerminalException{1};
@@ -1693,11 +1709,12 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     return V;
   }
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  std::string prefix = "Non_geometrically_unique_case_";
-  SingleData_DebugWrite(prefix, FAC);
+  std::string prefix_boost = "Non_geometrically_unique_case_BOOST_";
+  SingleData_DebugWrite(prefix_boost, FAC);
+  std::string prefix_txt = "Non_geometrically_unique_case_TXT_";
+  std::string FileData = FindAvailableFileFromPrefix(prefix_txt);
+  WriteMatrixFile(FileData, FAC);
 #endif
-  std::cerr << "Debugging from that point\n";
-  throw TerminalException{1};
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, Recurring\n";
 #endif
@@ -1714,6 +1731,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   MyMatrix<T> ListIneqRedB = SelectRow(ListIneqRed, ListIdxNZ) * pair.first.transpose();
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, |ListIneqRedB|=" << ListIneqRedB.rows() << " / " << ListIneqRedB.cols() << "\n";
+  os << "LP: ListIneqRedB=\n";
+  WriteMatrix(os, ListIneqRedB);
 #endif
   MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
