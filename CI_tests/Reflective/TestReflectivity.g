@@ -46,7 +46,8 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     #
     output:=OutputTextFile(FilePoincare_Nml, true);
     AppendTo(output, "&PROC\n");
-    AppendTo(output, " eCommand = \"linear_programming\"\n");
+    AppendTo(output, " method_adjacent = \"linear_programming\"\n");
+    AppendTo(output, " eCommand_DD = \"glrs\"\n");
     AppendTo(output, " MethodMissingI = \"Gen2\"\n");
     AppendTo(output, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
     AppendTo(output, " FileO = \"output.test\"\n");

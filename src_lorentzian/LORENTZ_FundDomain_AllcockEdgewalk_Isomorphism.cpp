@@ -9,7 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     FullNamelist eFull = NAMELIST_GetStandard_EDGEWALK_Isomorphism();
     if (argc != 2) {
@@ -38,5 +38,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

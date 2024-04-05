@@ -2082,20 +2082,6 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   throw TerminalException{1};
 }
 
-template <typename T> void TestLorentzianity(MyMatrix<T> const &G) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
-  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
-    std::cerr << "G=\n";
-    WriteMatrix(std::cerr, G);
-    std::cerr << "We have nbZero=" << DiagInfo.nbZero
-              << " nbPlus=" << DiagInfo.nbPlus
-              << " nbMinus=" << DiagInfo.nbMinus << "\n";
-    std::cerr
-        << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
-    throw TerminalException{1};
-  }
-}
-
 #ifdef PRINT_SYMBOL_INFORMATION
 template <typename T, typename Tint>
 void PrintVertexInformation(MyMatrix<T> const &G,

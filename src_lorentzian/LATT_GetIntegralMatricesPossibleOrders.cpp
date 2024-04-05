@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 2) {
       std::cerr << "LATT_GetIntegralMatricesPossibleOrders [dim]\n";
@@ -26,5 +26,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LATT_GetIntegralMatricesPossibleOrders\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

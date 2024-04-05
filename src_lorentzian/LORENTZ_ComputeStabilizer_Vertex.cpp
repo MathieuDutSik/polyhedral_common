@@ -9,7 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 3 && argc != 4) {
       std::cerr << "Program is used as\n";
@@ -89,5 +89,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LORENTZ_ComputeStabilizer_Vertex\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

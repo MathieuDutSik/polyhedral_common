@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 3) {
       std::cerr << "COXDYN_GetFacetOneDomain [FileI] [FileO]\n";
@@ -36,5 +36,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in COXDYN_GetFacetOneDomain\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

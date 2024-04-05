@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 5) {
       std::cerr << "COXDYN_FindExtensionsCoxMat [FileCoxMat] [opt_sph_eucl] "
@@ -71,5 +71,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in COXDYN_FindExtensionsCoxMat\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

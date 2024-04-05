@@ -9,7 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 2) {
       std::cerr << "Program is used as\n";
@@ -77,5 +77,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LORENTZ_SingleEdgewalk\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

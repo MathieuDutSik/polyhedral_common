@@ -5,7 +5,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 4) {
       std::cerr
@@ -73,5 +73,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Something went wrong\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

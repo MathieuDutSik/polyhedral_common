@@ -1022,8 +1022,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
 template <typename T, typename Tint>
 bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
                          const std::vector<MyVector<Tint>> &ListRoot,
-                         [[maybe_unused]] std::ostream& os) {
-  MyMatrix<int> WeightMatrix = GetWeightMatrix(Vtot, ListRoot);
+                         std::ostream& os) {
+  MyMatrix<int> WeightMatrix = GetWeightMatrix(Vtot, ListRoot, os);
   size_t n_root = ListRoot.size();
   int d = Vtot.G.rows() - 1;
   std::string rnd_str = random_string(20);
@@ -1080,12 +1080,13 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
 
 template <typename T, typename Tint>
 bool is_FundPoly(const VinbergTot<T, Tint> &Vtot,
-                 const std::vector<MyVector<Tint>> &ListRoot) {
+                 const std::vector<MyVector<Tint>> &ListRoot,
+                 std::ostream& os) {
   int ChosenMethod = 2;
   if (ChosenMethod == 1)
-    return is_FundPoly_Coxiter(Vtot, ListRoot);
+    return is_FundPoly_Coxiter(Vtot, ListRoot, os);
   if (ChosenMethod == 2)
-    return is_FundPoly_LRS(Vtot, ListRoot);
+    return is_FundPoly_LRS(Vtot, ListRoot, os);
   //
   std::cerr << "Failed to find a matching entry\n";
   throw TerminalException{1};
@@ -1461,7 +1462,7 @@ std::vector<MyVector<Tint>> FindRoots(const VinbergTot<T, Tint> &Vtot, std::ostr
                     MyMatrix<T> const &FACfeasible) -> bool {
     if (RankMat(FACfeasible) != dim)
       return false;
-    if (is_FundPoly(Vtot, ListRoot)) {
+    if (is_FundPoly(Vtot, ListRoot, os)) {
       ListRootRet = ListRoot;
       return true;
     }
@@ -1591,8 +1592,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream& os) {
   os << "v0=" << StringVectorGAP(v0) << "\n";
 #endif
   //
-  VinbergTot<T, Tint> Vtot = GetVinbergAux<T, Tint>(
-      G_i, v0, root_lengths, DualDescProg, ReflectivityEarlyTermination);
+  VinbergTot<T, Tint> Vtot = GetVinbergAux<T, Tint>(G_i, v0, root_lengths, DualDescProg, ReflectivityEarlyTermination, os);
   std::vector<MyVector<Tint>> ListRoot = FindRoots(Vtot, os);
   DataReflectionGroup<T, Tint> data =
       GetDataReflectionGroup<T, Tint>(ListRoot, G_i);
