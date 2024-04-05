@@ -691,9 +691,13 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     T_shvec_request<T> request =
         initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
     //
+#ifdef DEBUG_VINBERG
     size_t n_pass = 0;
+#endif
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
+#ifdef DEBUG_VINBERG
       n_pass++;
+#endif
       if (min == data.norm) {
         MyVector<Tint> x = data.shift_u + trans_P * V;
         MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);

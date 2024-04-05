@@ -552,7 +552,9 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
     return true;
   };
   MyMatrix<T> ThePow = M;
+#ifdef DEBUG_LORENTZIAN_LINALG
   size_t expo = 1;
+#endif
   for (size_t u = 0; u <= max_finite_order; u++) {
     // We go a little bit over the needed range
     if (is_identity(ThePow)) {
@@ -562,7 +564,9 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
       return true;
     }
     ThePow *= M;
+#ifdef DEBUG_LORENTZIAN_LINALG
     expo++;
+#endif
   }
   return false;
 }

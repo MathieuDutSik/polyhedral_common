@@ -49,7 +49,7 @@ RemoveFileIfExist:=function(FileName)
 end;
 
 ListFileDirectory:=function(TheDir)
-    local FileOUT, TheCommand, ListFiles, file, TheRead, TheReadRed;
+    local FileOUT, TheCommand, ListFiles, file, TheRead, len, TheReadRed;
     FileOUT:=Filename(DirectoryTemporary(), "LSfile");
     TheCommand:=Concatenation("ls ", TheDir, " > ", FileOUT);
     Exec(TheCommand);

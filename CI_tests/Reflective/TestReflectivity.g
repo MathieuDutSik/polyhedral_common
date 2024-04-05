@@ -32,7 +32,7 @@ end;
 
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact;
+    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen;
     n:=Length(eRec.LorMat);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
