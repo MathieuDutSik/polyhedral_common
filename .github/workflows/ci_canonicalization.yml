@@ -116,7 +116,7 @@ jobs:
 
       - name: Test canonicalization
         run: |
-          cd src_latt && make && cd ..
+          cd src_latt && make -f Makefile_canonicalization && cd ..
           pwd
           echo "After compilation of lattice code"
 
