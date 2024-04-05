@@ -48,6 +48,14 @@ RemoveFileIfExist:=function(FileName)
     fi;
 end;
 
+SaveDataToFile:=function(FileName, OBJ)
+  local output;
+  Exec("rm -f ", FileName,"\n");
+  output:=OutputTextFile(FileName, true);;
+  AppendTo(output, "return ", OBJ, ";\n");
+  CloseStream(output);
+end;
+
 ListFileDirectory:=function(TheDir)
     local FileOUT, TheCommand, ListFiles, file, TheRead, len, TheReadRed;
     FileOUT:=Filename(DirectoryTemporary(), "LSfile");

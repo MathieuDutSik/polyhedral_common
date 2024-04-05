@@ -31,8 +31,41 @@ LORENTZ_GetReflection:=function(LorMat, eRoot)
 end;
 
 
+WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
+    local FilePoincare_Data, FilePoincare_Nml, output, eGen;
+    FilePoincare_Data:=Concatenation(PrefixPoincare, ".data");
+    FilePoincare_Nml:=Concatenation(PrefixPoincare, ".nml");
+    output:=OutputTextFile(FilePoincare_Data, true);
+    WriteVector(output, ThePt);
+    AppendTo(output, Length(ListGen), "\n");
+    for eGen in ListGen
+    do
+        WriteMatrix(output, eGen);
+    od;
+    CloseStream(output);
+    #
+    output:=OutputTextFile(FilePoincare_Nml, true);
+    AppendTo(output, "&PROC\n");
+    AppendTo(output, " eCommand = \"linear_programming\"\n");
+    AppendTo(output, " MethodMissingI = \"Gen2\"\n");
+    AppendTo(output, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
+    AppendTo(output, " FileO = \"output.test\"\n");
+    AppendTo(output, " FileStepEnum = \"unset\"\n");
+    AppendTo(output, " Approach = \"IncrementallyAdd\"\n");
+    AppendTo(output, " n_iter_max = 1\n");
+    AppendTo(output, " n_expand = 0\n");
+    AppendTo(output, " Arithmetic = \"rational\"\n");
+    AppendTo(output, " ComputeStabilizerPermutation = T\n");
+    AppendTo(output, " ComputeGroupPresentation = T\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+end;
+
+
+
+
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen;
+    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom;
     n:=Length(eRec.LorMat);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
@@ -72,8 +105,6 @@ TestReflectivity:=function(eRec)
     if GeneratePoincareFundamentalInput and isCocompact then
         iPoincare:=iPoincare + 1;
         PrefixPoincare:=Concatenation("Poincare_", String(iPoincare), "_-_", String(n), "_", String(U.n_simple));
-        FilePoincare_Data:=Concatenation(PrefixPoincare, ".data");
-        FilePoincare_Nml:=Concatenation(PrefixPoincare, ".nml");
         ListGen:=[];
         for eRoot in U.ListSimpleRoots
         do
@@ -82,30 +113,13 @@ TestReflectivity:=function(eRec)
         od;
         ThePt:=U.CentVect * Inverse(eRec.LorMat);
         #
-        output:=OutputTextFile(FilePoincare_Data, true);
-        WriteVector(output, ThePt);
-        AppendTo(output, Length(ListGen), "\n");
-        for eGen in ListGen
-        do
-            WriteMatrix(output, eGen);
-        od;
-        CloseStream(output);
-        #
-        output:=OutputTextFile(FilePoincare_Nml, true);
-        AppendTo(output, "&PROC\n");
-        AppendTo(output, " eCommand = \"linear_programming\"\n");
-        AppendTo(output, " MethodMissingI = \"Gen2\"\n");
-        AppendTo(output, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
-        AppendTo(output, " FileO = \"output.test\"\n");
-        AppendTo(output, " FileStepEnum = \"unset\"\n");
-        AppendTo(output, " Approach = \"IncrementallyAdd\"\n");
-        AppendTo(output, " n_iter_max = 1\n");
-        AppendTo(output, " n_expand = 0\n");
-        AppendTo(output, " Arithmetic = \"rational\"\n");
-        AppendTo(output, " ComputeStabilizerPermutation = T\n");
-        AppendTo(output, " ComputeGroupPresentation = T\n");
-        AppendTo(output, "/\n");
-        CloseStream(output);
+        WritePoincareCase(PrefixPoincare, ThePt, ListGen);
+        if Order(U.GrpIsomCoxMatr) > 1 then
+            ListGenIsom:=Filtered(GeneratorsOfGroup(U.GrpIsomCoxMatr), x->x<>IdentityMat(n));
+            ListGenTot:=Concatenation(ListGen, ListGenIsom);
+            PrefixPoincareTot:=Concatenation(PrefixPoincare, "_Isom");
+            WritePoincareCase(PrefixPoincareTot, ThePt, ListGenTot);
+        fi;
         #
     fi;
     return eRec.n_simple = U.n_simple;
