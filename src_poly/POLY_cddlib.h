@@ -8166,7 +8166,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_Dire
   dd_ErrorType err = dd_NoError;
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
-  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(FAC);
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
   dd_rowset linset = dd_ImplicitLinearityRows(M, &err);
   if (err != dd_NoError) {
