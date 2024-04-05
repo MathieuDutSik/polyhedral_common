@@ -1734,11 +1734,11 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     return V;
   }
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  std::string prefix_boost = "Non_geometrically_unique_case_BOOST_";
-  SingleData_DebugWrite(prefix_boost, FAC);
-  std::string prefix_txt = "Non_geometrically_unique_case_TXT_";
-  std::string FileData = FindAvailableFileFromPrefix(prefix_txt);
-  WriteMatrixFile(FileData, FAC);
+  //  std::string prefix_boost = "Non_geometrically_unique_case_BOOST_";
+  //  SingleData_DebugWrite(prefix_boost, FAC);
+  //std::string prefix_txt = "Non_geometrically_unique_case_TXT_";
+  //std::string FileData = FindAvailableFileFromPrefix(prefix_txt);
+  //WriteMatrixFile(FileData, FAC);
 #endif
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, Recurring\n";

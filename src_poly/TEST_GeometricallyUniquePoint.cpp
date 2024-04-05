@@ -23,8 +23,6 @@ bool TestMatrixFile(std::string const& FileFAC) {
     }
     MyVector<T> eCentProd = GetGeometricallyUniqueInteriorPoint(NewFAC, std::cerr);
     MyVector<T> eCentMap = eUnitMod_cgr.transpose() * eCent;
-    std::cerr << "eCentMap =" << StringVectorGAP(eCentMap) << "\n";
-    std::cerr << "eCentProd=" << StringVectorGAP(eCentProd) << "\n";
     if (eCentMap != eCentProd) {
       return false;
     }
