@@ -620,7 +620,8 @@ template <typename T> struct ShortVectorGroupMemoize {
 //
 
 struct RecOption {
-  std::string eCommand;
+  std::string method_adjacent;
+  std::string eCommand_DD;
   std::string FileStepEnum;
   std::string FileDataPoincare;
   std::string FileO;
@@ -1246,7 +1247,7 @@ public:
   // elements.
   std::vector<CombElt<T>>
   GetMissingFacetMatchingElement_DD(DataFAC<T> const &datafac,
-                                    std::string const &eCommand,
+                                    std::string const &eCommand_DD,
                                     ShortVectorGroup<T> const &svg) const {
     HumanTime time;
     //
@@ -1254,7 +1255,7 @@ public:
     //
     std::cerr << "GetMissingFacetMatchingElement_DD, beginning\n";
     MyMatrix<T> EXT =
-        DirectFacetComputationInequalities(datafac.FAC, eCommand, std::cerr);
+        DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, std::cerr);
     std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols()
               << " time=" << time << "\n";
     std::vector<int> V = ComputeMatchingVector();
@@ -1388,7 +1389,7 @@ public:
   // The mapping A ----> AQ maps to the adjacent domain.
   // The mapping of the X ----> X c(Q)^T with c(Q) the
   // contragredient representation.
-  AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand) {
+  AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand_DD) {
     size_t miss_val = std::numeric_limits<size_t>::max();
     MyMatrix<T> FAC = GetFAC();
     int n = x.size();
@@ -1402,7 +1403,7 @@ public:
     std::cerr << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows()
               << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n
               << " nk=" << rnk << "\n";
-    vectface vf = DirectFacetComputationIncidence(FAC, eCommand, std::cerr);
+    vectface vf = DirectFacetComputationIncidence(FAC, eCommand_DD, std::cerr);
     std::cerr << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();
@@ -1826,7 +1827,8 @@ public:
   }
   void InsertAndCheckRedundancy(std::vector<CombElt<T>> const &l_elt_pre,
                                 std::string const &MethodMissingI,
-                                std::string eCommand) {
+                                std::string const& method_adjacent,
+                                std::string const& eCommand_DD) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
     std::cerr << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(),
@@ -1902,17 +1904,19 @@ public:
       }
     };
     auto f_facet_matching = [&]() -> bool {
-      if (eCommand == "unset")
-        return false;
-      if (eCommand == "linear_programming") {
+      if (method_adjacent == "linear_programming") {
         std::vector<CombElt<T>> ListMiss =
             GetMissingFacetMatchingElement_LP(datafac, svg);
         return insert_generator(ListMiss);
-      } else {
+      }
+      if (method_adjacent == "dual_description") {
         std::vector<CombElt<T>> ListMiss =
-            GetMissingFacetMatchingElement_DD(datafac, eCommand, svg);
+            GetMissingFacetMatchingElement_DD(datafac, eCommand_DD, svg);
         return insert_generator(ListMiss);
       }
+      std::cerr << "Failed to find a matching for\n";
+      std::cerr << "method_adjacent=" << method_adjacent << "\n";
+      throw TerminalException{1};
     };
     auto f_coherency_update = [&]() -> bool {
       HumanTime time;
@@ -2104,7 +2108,8 @@ template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
                                         RecOption const &rec_option,
                                         [[maybe_unused]] std::ostream& os) {
-  std::string eCommand = rec_option.eCommand;
+  std::string method_adjacent = rec_option.method_adjacent;
+  std::string eCommand_DD = rec_option.eCommand_DD;
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
@@ -2121,7 +2126,7 @@ StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
     //
     // Iteration Type II
     //
-    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand);
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand_DD);
     std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
     std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
@@ -2162,7 +2167,9 @@ Compute the presentation of the greoup from facets and ridges";
 The maximum number of iteration. If negative then infinite";
   ListIntValues_doc["n_expand"] = "Default: 0\n\
 The number of iteration to expand the initial set of group elements";
-  ListStringValues_doc["eCommand"] = "eCommand: lrs\n\
+  ListStringValues_doc["method_adjacent"] = "method_adjacent: linear_programming\n\
+The available methods are linear_programming and dual_description";
+  ListStringValues_doc["eCommand_DD"] = "eCommand_DD: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
   ListStringValues_doc["FileStepEnum"] = "Default: unset\n\
 The step enum current state";
@@ -2187,7 +2194,8 @@ Whether to generate new elements from vertex matchings";
 
 RecOption ReadInitialData(FullNamelist const &eFull) {
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-  std::string eCommand = BlockPROC.ListStringValues.at("eCommand");
+  std::string method_adjacent = BlockPROC.ListStringValues.at("method_adjacent");
+  std::string eCommand_DD = BlockPROC.ListStringValues.at("eCommand_DD");
   std::string FileStepEnum = BlockPROC.ListStringValues.at("FileStepEnum");
   std::string FileDataPoincare =
       BlockPROC.ListStringValues.at("FileDataPoincare");
@@ -2203,7 +2211,8 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
       BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation =
       BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
-  return {eCommand,
+  return {method_adjacent,
+          eCommand_DD,
           FileStepEnum,
           FileDataPoincare,
           FileO,
@@ -2258,7 +2267,8 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   auto f_init = [&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
       return se.InsertAndCheckRedundancy(
-          dp.ListGroupElt, rec_option.MethodMissingI, rec_option.eCommand);
+          dp.ListGroupElt, rec_option.MethodMissingI,
+          rec_option.method_adjacent, rec_option.eCommand_DD);
     }
     if (rec_option.Approach == "FacetAdjacencies") {
       return se.read_step_enum_from_file(rec_option.FileStepEnum);
@@ -2289,7 +2299,7 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
     os << "GRP=" << GRP.GapString() << "\n";
   }
   if (ComputeGroupPresentation) {
-    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand);
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand_DD);
     os << "Writing the group presentation\n";
     std::pair<int, std::vector<std::vector<int>>> ThePres =
         se.GetGroupPresentation(ai);

@@ -105,6 +105,7 @@ TestReflectivity:=function(eRec)
     if GeneratePoincareFundamentalInput and isCocompact then
         iPoincare:=iPoincare + 1;
         PrefixPoincare:=Concatenation("Poincare_", String(iPoincare), "_-_", String(n), "_", String(U.n_simple));
+        SaveDataToFile(PrefixPoincare, U);
         ListGen:=[];
         for eRoot in U.ListSimpleRoots
         do
