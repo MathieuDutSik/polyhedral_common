@@ -118,7 +118,7 @@ jobs:
 
       - name: Test reflectivity
         run: |
-          cd src_lorentzian && make && cd ..
+          cd src_lorentzian && make -f Makefile_Allcock_edgewalk && cd ..
           pwd
           echo "After compilation of Lorentzian code"
 
