@@ -1,33 +1,47 @@
+Read("../common.g");
 Print("Beginning TestReflectivity\n");
 
-WriteMatrix:=function(TheFile, TheMat)
-    local output, nRow, nCol, iRow, iCol;
-    nRow:=Length(TheMat);
-    nCol:=Length(TheMat[1]);
-    output:=OutputTextFile(TheFile, true);
-    AppendTo(output, nRow, " ", nCol, "\n");
-    for iRow in [1..nRow]
+GeneratePoincareFundamentalInput:=true;
+iPoincare:=0;
+
+LORENTZ_GetReflection:=function(LorMat, eRoot)
+    local n, eNorm, TheMat, eLine, eScal, fLine;
+    n:=Length(eRoot);
+    eNorm:=eRoot * LorMat * eRoot;
+    TheMat:=[];
+    for eLine in IdentityMat(n)
     do
-        for iCol in [1..nCol]
-        do
-            AppendTo(output, " ", TheMat[iRow][iCol]);
-        od;
-        AppendTo(output, "\n");
+        eScal:=eLine * LorMat * eRoot;
+        fLine:=eLine - 2 * (eScal / eNorm) * eRoot;
+        Add(TheMat, fLine);
     od;
-    CloseStream(output);
+    if TheMat * LorMat * TransposedMat(TheMat) <> LorMat then
+        Error("TheMat does not preserve the quadratic form");
+    fi;
+    if eRoot * TheMat<>-eRoot then
+        Error("TheMat does not reflect eRoot");
+    fi;
+    if IsIntegralMat(TheMat)=false then
+        Error("TheMat should be integral");
+    fi;
+    if TheMat * TheMat<>IdentityMat(n) then
+        Error("The matrix TheMat *TheMat is not the identity");
+    fi;
+    return TheMat;
 end;
+
 
 TestReflectivity:=function(eRec)
     local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact;
     n:=Length(eRec.LorMat);
-    FileIn:="Test.in";
-    FileNml:="Test.nml";
-    FileOut:="Test.out";
+    FileIn:=Filename(DirectoryTemporary(), "Test.in");
+    FileNml:=Filename(DirectoryTemporary(), "Test.nml");
+    FileOut:=Filename(DirectoryTemporary(), "Test.out");
     RemoveFileIfExist(FileIn);
     RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileOut);
     #
-    WriteMatrix(FileIn, eRec.LorMat);
+    WriteMatrixFile(FileIn, eRec.LorMat);
     #
     output:=OutputTextFile(FileNml, true);
     AppendTo(output, "&PROC\n");
@@ -55,21 +69,63 @@ TestReflectivity:=function(eRec)
     ListVertNorm:=List(U.ListVertices, x->x.norm);
     isCocompact:=Maximum(ListVertNorm) < 0;
     Print("n=", Length(eRec.LorMat), " n_simple=", eRec.n_simple, " isCocompact=", isCocompact, " |GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
+    if GeneratePoincareFundamentalInput and isCocompact then
+        iPoincare:=iPoincare + 1;
+        PrefixPoincare:=Concatenation("Poincare_", String(iPoincare), "_-_", String(n), "_", String(U.n_simple));
+        FilePoincare_Data:=Concatenation(PrefixPoincare, ".data");
+        FilePoincare_Nml:=Concatenation(PrefixPoincare, ".nml");
+        ListGen:=[];
+        for eRoot in U.ListSimpleRoots
+        do
+            eGen:=LORENTZ_GetReflection(eRec.LorMat, eRoot);
+            Add(ListGen, eGen);
+        od;
+        ThePt:=U.CentVect * Inverse(eRec.LorMat);
+        #
+        output:=OutputTextFile(FilePoincare_Data, true);
+        WriteVector(output, ThePt);
+        AppendTo(output, Length(ListGen), "\n");
+        for eGen in ListGen
+        do
+            WriteMatrix(output, eGen);
+        od;
+        CloseStream(output);
+        #
+        output:=OutputTextFile(FilePoincare_Nml, true);
+        AppendTo(output, "&PROC\n");
+        AppendTo(output, " eCommand = \"linear_programming\"\n");
+        AppendTo(output, " MethodMissingI = \"Gen2\"\n");
+        AppendTo(output, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
+        AppendTo(output, " FileO = \"output.test\"\n");
+        AppendTo(output, " FileStepEnum = \"unset\"\n");
+        AppendTo(output, " Approach = \"IncrementallyAdd\"\n");
+        AppendTo(output, " n_iter_max = 1\n");
+        AppendTo(output, " n_expand = 0\n");
+        AppendTo(output, " Arithmetic = \"rational\"\n");
+        AppendTo(output, " ComputeStabilizerPermutation = T\n");
+        AppendTo(output, " ComputeGroupPresentation = T\n");
+        AppendTo(output, "/\n");
+        CloseStream(output);
+        #
+    fi;
     return eRec.n_simple = U.n_simple;
 end;
 
 ListRec:=ReadAsFunction("ListReflect")();;
 
 FullTest:=function()
-    local n_error, eRec, test;
+    local n_error, iRec, eRec, test;
     n_error:=0;
+    iRec:=0;
     for eRec in ListRec
     do
+        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
         test:=TestReflectivity(eRec);
         if test=false then
             n_error:=n_error+1;
             return n_error;
         fi;
+        iRec:=iRec + 1;
     od;
     return n_error;
 end;

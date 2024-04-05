@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_
 #define SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_
+
 // clang-format off
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"

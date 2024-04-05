@@ -1,6 +1,5 @@
-WriteMatrixFile:=function(eFile, EXT)
-    local output, eEXT, eVal;
-    output:=OutputTextFile(eFile, true);
+WriteMatrix:=function(output, EXT)
+    local eEXT, eVal;
     AppendTo(output, Length(EXT), " ", Length(EXT[1]), "\n");
     for eEXT in EXT
     do
@@ -10,7 +9,37 @@ WriteMatrixFile:=function(eFile, EXT)
         od;
         AppendTo(output, "\n");
     od;
+end;
+
+WriteMatrixFile:=function(eFile, EXT)
+    local output, eEXT, eVal;
+    output:=OutputTextFile(eFile, true);
+    WriteMatrix(output, EXT);
     CloseStream(output);
+end;
+
+WriteVector:=function(output, V)
+    local eVal;
+    AppendTo(output, Length(V), "\n");
+    for eVal in V
+    do
+        AppendTo(output, " ", eVal);
+    od;
+    AppendTo(output, "\n");
+end;
+
+IsIntegralMat:=function(eMat)
+  local eLine, eVal;
+  for eLine in eMat
+  do
+    for eVal in eLine
+    do
+      if IsInt(eVal)=false then
+        return false;
+      fi;
+    od;
+  od;
+  return true;
 end;
 
 RemoveFileIfExist:=function(FileName)
