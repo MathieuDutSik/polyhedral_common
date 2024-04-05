@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
         l_vect.push_back(V);
       }
     }
-    std::vector<MyVector<T>> l_vect_red = GetFacetOneDomain(l_vect);
+    std::vector<MyVector<T>> l_vect_red = GetFacetOneDomain(l_vect, std::cerr);
     //
     std::string FileO = argv[2];
     MyMatrix<T> Mred = MatrixFromVectorFamily(l_vect_red);
