@@ -33,7 +33,7 @@ ListFileDirectory:=function(TheDir)
             break;
         fi;
         len:=Length(TheRead);
-        TheReadRed:=TheRead{[1..len-2]};
+        TheReadRed:=TheRead{[1..len-1]};
         Add(ListFiles, TheReadRed);
     od;
     CloseStream(file);
