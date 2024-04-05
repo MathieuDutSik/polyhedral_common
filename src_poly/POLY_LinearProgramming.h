@@ -1627,7 +1627,19 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
   return false;
 }
 
-
+/*
+  The Interior point obtained by a regular linear program corresponds essentially
+  to just one vertex solution of the linear program.
+  This code gives a solution with is geometrically unique:
+  * If you permute the rows then you get the same point.
+  * If you apply a matrix transformation to the rows of FAC then the interior point is
+  changed by the contragredient action.
+  Note that rescaling each rows by some scalar which varies from row to row will
+  get you a different interior point.
+  ---
+  The whole computation is done with only linear programming though lots of it and
+  does not involve full dual description.
+ */
 template <typename T>
 MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ostream& os) {
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
