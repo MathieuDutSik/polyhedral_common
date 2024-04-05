@@ -1323,6 +1323,12 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
     }
     return TestEqualitySpannedSpaces(res1.first, res2.first);
   };
+  auto f_print=[&os](std::string const& origin, std::pair<MyMatrix<T>,Face> const& res) -> void {
+    os << "LP: f_print origin=" << origin << "\n";
+    os << "LP: Face=" << StringFace(res.second) << "\n";
+    os << "LP: Space=\n";
+    WriteMatrix(os, res.first);
+  };
   os << "LP: Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
   std::pair<MyMatrix<T>,Face> res_dual = KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
   os << "LP: |res_dual|=" << res_dual.first.rows() << " / " << res_dual.first.cols() << "\n";
@@ -1341,14 +1347,23 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
   os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second) << "\n";
   os << "res_dir_lp_nsp.first=\n";
   WriteMatrix(os, res_dir_lp_nsp.first);
+  auto f_print_all=[&]() -> void {
+    os << "LP: f_print_all. FAC=\n";
+    WriteMatrix(os, FAC);
+    f_print("res_dual", res_dual);
+    f_print("res_dir_lp", res_dir_lp);
+    f_print("res_dir_lp_nsp", res_dir_lp_nsp);
+  };
   os << "After KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   if (!test_equa(res_dual, res_dir_lp)) {
     std::cerr << "res_dual and res_dir_lp are not equal\n";
+    f_print_all();
     throw TerminalException{1};
   }
   os << "After test_equa1\n";
   if (!test_equa(res_dual, res_dir_lp_nsp)) {
     std::cerr << "res_dual and res_dir_lp_nsp are not equal\n";
+    f_print_all();
     throw TerminalException{1};
   }
   os << "After test_equa2\n";
@@ -1620,6 +1635,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     int len = FAC.rows();
     for (int i=0; i<len; i++) {
       MyVector<T> eFAC = GetMatrixRow(FAC, i);
+      os << "i=" << i << " |eFAC|=" << eFAC.size() << " |retV|=" << Vret.size() << "\n";
       T scal = eFAC.dot(Vret);
       if (scal <= 0) {
         std::cerr << "We should have strictly positive scalar product\n";
@@ -1671,10 +1687,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   }
   // Now computing the kernel of the attained kernel.
   ToBeMinimized(0) -= eSol.OptimalValue;
-  MyMatrix<T> M(1, n_cols+1);
-  for (int u=0; u<=n_cols; u++)
-    M(0,u) = ToBeMinimized(u);
-  MyMatrix<T> NSP = NullspaceTrMat(M);
+  MyMatrix<T> NSP = NullspaceMatSingleVector(ToBeMinimized);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
 #endif
@@ -1736,16 +1749,26 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #endif
   MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, We have SolSubspaceB\n";
+  os << "LP: GGUIP, We have SolSubspaceB=" << StringVectorGAP(SolSubspaceB) << "\n";
 #endif
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
   MyVector<T> V = NSP.transpose() * SolSubspace;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, eSolFinal found\n";
-  os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 3\n";
-  check_return(V);
+  if (V(0) <= 0) {
+    std::cerr << "The first coordinate should be strictly positive\n";
+    throw TerminalException{1};
+  }
 #endif
-  return V;
+  MyVector<T> Vret(n_cols);
+  for (int i=0; i<n_cols; i++) {
+    Vret(i) = V(i + 1) / V(0);
+  }
+#ifdef DEBUG_GEOMETRICALLY_UNIQUE
+  os << "LP: GGUIP, eSolFinal found\n";
+  os << "LP: GGUIP Vret=" << StringVectorGAP(Vret) << " |V|=" << Vret.size() << " case 3\n";
+  check_return(Vret);
+#endif
+  return Vret;
 }
 
 
