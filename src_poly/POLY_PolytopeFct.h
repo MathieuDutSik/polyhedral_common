@@ -21,27 +21,6 @@
 #define DEBUG_FLIP
 #endif
 
-struct GLPKoption {
-  bool UseDouble;
-  bool UseExact;
-  bool UseXcheck;
-};
-
-template <typename T> struct LpSolutionSimple {
-  bool PrimalDefined;
-  T OptimalValue;
-  int nbRow;
-  int nbCol;
-  MyVector<T> DirectSolution;
-  MyVector<T> DirectSolutionExt;
-  // Value 0 for not assigned.
-  // Value 1 for "B"
-  // Value 2 for "NF"
-  // Value 3 for "NL"
-  MyVector<int> RowStatus;
-  MyVector<int> ColumnStatus;
-};
-
 template <typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
   int nbCol = eMat.cols();
@@ -68,20 +47,6 @@ MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
     jRow = eList.find_next(jRow);
   }
   return TheProv;
-}
-
-template <typename T> MyMatrix<T> CyclicPolytope(int n, int k) {
-  int i, j, b;
-  MyMatrix<T> TheEXT(n, k + 1);
-  for (i = 1; i <= n; i++) {
-    T a = 1;
-    b = i + 1;
-    for (j = 0; j <= k; j++) {
-      TheEXT(i - 1, j) = a;
-      a = a * b;
-    }
-  }
-  return TheEXT;
 }
 
 // Compute an upper bound on the determinant of maximal minor

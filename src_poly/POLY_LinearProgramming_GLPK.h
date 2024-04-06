@@ -9,6 +9,12 @@
 #include <vector>
 // clang-format on
 
+struct GLPKoption {
+  bool UseDouble;
+  bool UseExact;
+  bool UseXcheck;
+};
+
 /*
   GLPK does not return the unfeasibility proof as opposed to CDD.
   We may have to write an auxilliary program for that.
@@ -608,6 +614,101 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
   return GLPK_LinearProgramming_Kernel_Sparse_PROC(
       RecSpDecomp.Aspmat, RecSpDecomp.ListAconst, RecSpDecomp.Bspmat,
       RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);
+}
+
+template <typename T>
+LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
+                                     MyVector<T> const &ToBeMinimized,
+                                     std::ostream& os) {
+  int dimTot = ToBeMinimized.size();
+  MyMatrix<T> ListEqua(0, dimTot);
+  GLPKoption eGLPKoption;
+  LpSolutionSimple<double> eResSimple =
+      GLPK_LinearProgramming_Kernel_Dense_LIBRARY(ListEqua, ListIneq,
+                                                  ToBeMinimized, eGLPKoption);
+  if (!eResSimple.PrimalDefined) {
+    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+  }
+  int nbIneq = ListIneq.rows();
+  std::cerr << "nbIneq=" << nbIneq << "\n";
+  std::cerr << "|eResSimple.RowStatus|=" << eResSimple.RowStatus.size() << "\n";
+  std::cerr << "|eResSimple.ColumnStatus|=" << eResSimple.ColumnStatus.size()
+            << "\n";
+  std::vector<int> ListRowSelect;
+  for (int iIneq = 0; iIneq < nbIneq; iIneq++)
+    if (eResSimple.RowStatus(iIneq) == 3)
+      ListRowSelect.push_back(iIneq);
+  MyMatrix<T> ListIneqSel = SelectRow(ListIneq, ListRowSelect);
+  MyMatrix<T> NSP = NullspaceTrMat(ListIneqSel);
+  int dimNSP = NSP.rows();
+  if (dimNSP == 0) {
+    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+  }
+  MyVector<T> TheVert;
+  int nbCol = NSP.cols();
+  if (dimNSP == 1) {
+    MyVector<T> eNSP = GetMatrixRow(NSP, 0);
+    TheVert = eNSP / eNSP(0);
+  } else {
+    MyVector<T> eFirstPoint;
+    int iNSPselect = -1;
+    for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
+      if (iNSPselect == -1) {
+        T eVAL = NSP(iNSP, 0);
+        if (eVAL != 0) {
+          eFirstPoint = GetMatrixRow(NSP, iNSP) / eVAL;
+          iNSPselect = iNSP;
+        }
+      }
+    }
+    if (iNSPselect == -1)
+      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    MyMatrix<T> ColumnSpace(dimNSP, nbCol);
+    AssignMatrixRow(ColumnSpace, 0, eFirstPoint);
+    int pos = 0;
+    for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
+      if (iNSP != iNSPselect) {
+        pos++;
+        MyVector<T> eNSP = GetMatrixRow(NSP, iNSP);
+        MyVector<T> eVec = eNSP - eNSP(0) * eFirstPoint;
+        AssignMatrixRow(ColumnSpace, pos, eVec);
+      }
+    }
+    MyMatrix<T> SEC_ListIneq = ListIneq * TransposedMat(ColumnSpace);
+    MyVector<T> SEC_ToBeMinimized = ColumnSpace * ToBeMinimized;
+    LpSolution<T> TheLP = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    if (TheLP.PrimalDefined && TheLP.DualDefined)
+      TheVert = TransposedMat(ColumnSpace) * TheLP.DirectSolutionExt;
+    else
+      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+  }
+  T optimal = ScalarProduct(ToBeMinimized, TheVert);
+  MyVector<T> TheVertRed(nbCol - 1);
+  for (int i = 0; i < nbCol - 1; i++)
+    TheVertRed(i) = TheVert(i + 1);
+  int nbRow = ListIneq.rows();
+  Face eFace(nbRow);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    MyVector<T> eRow = GetMatrixRow(ListIneq, iRow);
+    T scal = ScalarProduct(eRow, TheVert);
+    if (scal < 0)
+      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    if (scal == 0)
+      eFace[iRow] = 1;
+  }
+  //
+  LpSolution<T> eRes;
+  eRes.method = "glpk";
+  eRes.PrimalDefined = true;
+  eRes.DualDefined = true;
+  //  MyVector<T> DualSolution;
+  eRes.OptimalValue = optimal;
+  //
+  eRes.DirectSolution = TheVertRed;
+  eRes.DirectSolutionExt = TheVert;
+  eRes.eFace = eFace;
+  eRes.Answer = "dd_Optimal";
+  return eRes;
 }
 
 // clang-format off
