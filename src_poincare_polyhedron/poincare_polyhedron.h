@@ -803,15 +803,15 @@ public:
   bool InsertStabilizerGenerator(CombElt<T> const &eElt) {
     if (IsPresentInStabilizer(eElt))
       return false;
-    std::cerr << "InsertStabilizerGenerator 1 |stabilizerElt|="
-              << stabilizerElt.size() << "\n";
+    os << "InsertStabilizerGenerator 1 |stabilizerElt|="
+       << stabilizerElt.size() << "\n";
     std::vector<CombElt<T>> ExtListGen = stabilizerElt;
     ExtListGen.push_back(eElt);
-    std::cerr << "InsertStabilizerGenerator 2 |ExtListGen|="
-              << ExtListGen.size() << "\n";
+    os << "InsertStabilizerGenerator 2 |ExtListGen|="
+       << ExtListGen.size() << "\n";
     stabilizerElt = GroupGeneration(ExtListGen);
-    std::cerr << "InsertStabilizerGenerator 3 |stabilizerElt|="
-              << stabilizerElt.size() << "\n";
+    os << "InsertStabilizerGenerator 3 |stabilizerElt|="
+       << stabilizerElt.size() << "\n";
     stabilizerElt_set.clear();
     for (auto &eElt : stabilizerElt)
       stabilizerElt_set.insert(eElt);
@@ -908,8 +908,7 @@ public:
     };
     auto f_insert = [&](CombElt<T> const &e_elt) -> void {
       if (known_redundant.count(e_elt) == 1) {
-        std::cerr << "Exiting f_insert because the element is already known to "
-                     "be redundant\n";
+        os << "Exiting f_insert because the element is already known to be redundant\n";
         return;
       }
       MyVector<T> x_img = e_elt.mat.transpose() * x;
@@ -935,7 +934,7 @@ public:
     };
     for (auto &e_elt : ListGen)
       f_insert(e_elt);
-    print_statistics(std::cerr);
+    print_statistics(os);
     return DidSomething;
   }
   StepEnum(MyVector<T> const &_x, std::ostream& _os) : os(_os) {
@@ -945,7 +944,7 @@ public:
     stabilizerElt = {IdMat};
     stabilizerElt_set.insert(IdMat);
   }
-  MyVector<T> GetIneq(CombElt<T> const e_elt) const {
+  MyVector<T> GetIneq(CombElt<T> const& e_elt) const {
     MyMatrix<T> const &eMat = e_elt.mat;
     MyVector<T> x_img = eMat.transpose() * x;
     MyVector<T> x_diff = x_img - x;
@@ -961,8 +960,8 @@ public:
       size_t &val = map_test[x_diff];
       if (val != 0) {
         size_t j_mat = val - 1;
-        std::cerr << "Collision found between i_mat=" << i_mat
-                  << " j_mat=" << j_mat << "\n";
+        os << "Collision found between i_mat=" << i_mat
+           << " j_mat=" << j_mat << "\n";
         std::pair<size_t, size_t> i_pair = ListNeighborData[i_mat];
         std::pair<size_t, size_t> j_pair = ListNeighborData[j_mat];
         std::cerr << "i_pair=" << i_pair.first << "/" << i_pair.second
@@ -1004,7 +1003,7 @@ public:
       ListAdj.push_back(uElt);
       ListAdjInv.push_back(uEltInv);
     }
-    std::cerr << "New DataFAC computed time=" << time << "\n";
+    os << "New DataFAC computed time=" << time << "\n";
     return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
   int RemoveRedundancy() {
@@ -1013,8 +1012,7 @@ public:
     int n = x.size();
     int n_mat = FAC.rows();
     int rnk = RankMat(FAC);
-    std::cerr << "RemoveRedundancy : n=" << n << " n_mat=" << n_mat
-              << " rnk=" << rnk << "\n";
+    os << "RemoveRedundancy : n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
     if (rnk != n) {
       std::cerr << "Error in RemoveRedundancy\n";
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
@@ -1024,10 +1022,9 @@ public:
     //
     // Doing the redundancy computation
     //
-    std::cerr << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
+    os << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp, os);
-    std::cerr << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat
-              << " time=" << time << "\n";
+    os << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat << " time=" << time << "\n";
     //
     // Paperwork
     //
@@ -1061,17 +1058,17 @@ public:
         throw TerminalException{1};
       }
     }
-    std::cerr << "RemoveRedundancy : |l_keep|=" << l_keep.size()
-              << " n_remove=" << n_remove << " time=" << time << "\n";
+    os << "RemoveRedundancy : |l_keep|=" << l_keep.size()
+       << " n_remove=" << n_remove << " time=" << time << "\n";
     if (n_remove > 0) {
       std::vector<CombElt<T>> ListNeighborCosetRed;
       for (auto &i_coset : l_keep) {
         ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
       }
       ComputeCosets(ListNeighborCosetRed);
-      print_statistics(std::cerr);
+      print_statistics(os);
     }
-    std::cerr << "ComputeCosets time=" << time << "\n";
+    os << "ComputeCosets time=" << time << "\n";
     return n_remove;
   }
   // For a facet of the cone, there should be a matching element in the adjacent
@@ -1097,7 +1094,7 @@ public:
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       MatchVector.push_back(get_j_mat(i_mat));
     }
-    std::cerr << "ComputingMatchingVector time=" << time << "\n";
+    os << "ComputingMatchingVector time=" << time << "\n";
     return MatchVector;
   }
   // Find attemps missing elements
@@ -1129,20 +1126,20 @@ public:
         HumanTime time1;
         std::optional<MyVector<T>> opt =
           SolutionMatNonnegative(datafac.FAC, x_ineq, os);
-        std::cerr << "|SolutionMatNonnegative|=" << time1 << "\n";
+        os << "|SolutionMatNonnegative|=" << time1 << "\n";
         if (opt) {
           // Finding by nearest group point.
           Face f(n_mat);
           f[i_mat] = 1;
           HumanTime time2;
           MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f, os);
-          std::cerr << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
+          os << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
           T target_scal = eVectInt.dot(x);
           svg_mem.ComputeInsertSolution(eVectInt, target_scal);
-          std::cerr << "Found new elements by Short Group Element\n";
+          os << "Found new elements by Short Group Element\n";
         } else {
           ListMiss.push_back(wInv);
-          std::cerr << "wInv actually define a new inequality\n";
+          os << "wInv actually define a new inequality\n";
         }
       }
     }
@@ -1150,7 +1147,7 @@ public:
       ListMiss.push_back(eElt);
       ListMiss.push_back(InverseComb(eElt));
     }
-    std::cerr << "GetMissingInverseElement time=" << time << "\n";
+    os << "GetMissingInverseElement time=" << time << "\n";
     return ListMiss;
   }
   // Compute by linear programming the structure.
@@ -1163,11 +1160,10 @@ public:
     //
     int dim = datafac.FAC.cols();
     int n_fac = datafac.FAC.rows();
-    std::cerr << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac
-              << " dim=" << dim << "\n";
+    os << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac << " dim=" << dim << "\n";
     ShortVectorGroupMemoize<T> svg_mem(svg);
     Face f_adj = ComputeSkeletonClarkson(datafac.FAC, os);
-    std::cerr << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
+    os << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
     //
     auto get_nsp = [&](int const &i_fac) -> MyMatrix<T> {
       MyMatrix<T> Equa(dim, 1);
@@ -1226,20 +1222,19 @@ public:
           n_found++;
         }
       }
-      std::cerr << "i_fac=" << i_fac << "/" << n_fac << "  n_adj=" << n_adj
-                << " n_adj_img=" << n_adj_img << " n_found=" << n_found << "\n";
+      os << "i_fac=" << i_fac << "/" << n_fac << "  n_adj=" << n_adj
+         << " n_adj_img=" << n_adj_img << " n_found=" << n_found << "\n";
     }
     //
     // Now calling the SGE code
     //
-    std::cerr << "We have computed svg_mem, time=" << time << "\n";
+    os << "We have computed svg_mem, time=" << time << "\n";
     std::vector<CombElt<T>> ListMiss;
     for (auto &eElt : svg_mem.GetListMiss()) {
       ListMiss.push_back(eElt);
       ListMiss.push_back(InverseComb(eElt));
     }
-    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time
-              << "\n";
+    os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
     return ListMiss;
   }
   // The facets can be defined by the same inequality but with opposite signs.
@@ -1253,11 +1248,10 @@ public:
     //
     // Preprocessing information
     //
-    std::cerr << "GetMissingFacetMatchingElement_DD, beginning\n";
+    os << "GetMissingFacetMatchingElement_DD, beginning\n";
     MyMatrix<T> EXT =
-        DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, std::cerr);
-    std::cerr << "|EXT|=" << EXT.rows() << " / " << EXT.cols()
-              << " time=" << time << "\n";
+        DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, os);
+    os << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
     std::vector<int> V = ComputeMatchingVector();
     for (auto &eVal : V) {
       if (eVal == -1) {
@@ -1271,7 +1265,7 @@ public:
     int n_fac = datafac.FAC.rows();
     int n_ext = EXT.rows();
     int n = EXT.cols();
-    std::cerr << "n_fac=" << n_fac << " n_ext=" << n_ext << " n=" << n << "\n";
+    os << "n_fac=" << n_fac << " n_ext=" << n_ext << " n=" << n << "\n";
     vectface vf(n_ext);
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       Face f(n_ext);
@@ -1282,10 +1276,10 @@ public:
         if (scal == 0)
           f[i_ext] = 1;
       }
-      std::cerr << "i_fac=" << i_fac << "  |f|=" << f.count() << "\n";
+      os << "i_fac=" << i_fac << "  |f|=" << f.count() << "\n";
       vf.push_back(f);
     }
-    std::cerr << "We have vf time=" << time << "\n";
+    os << "We have vf time=" << time << "\n";
     Face f_incidence(n_fac * n_fac);
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++) {
@@ -1313,9 +1307,9 @@ public:
           n_adj++;
         }
       }
-      std::cerr << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
+      os << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
     }
-    std::cerr << "We have f_incidence, time=" << time << "\n";
+    os << "We have f_incidence, time=" << time << "\n";
     //
     // Determining the vertices which are
     //
@@ -1350,8 +1344,8 @@ public:
         f_set(i_ext);
     }
     size_t count = f_insert_svg.count();
-    std::cerr << "We have f_insert_svg |f_insert_svg|=" << count
-              << " n_ext=" << n_ext << " time=" << time << "\n";
+    os << "We have f_insert_svg |f_insert_svg|=" << count
+       << " n_ext=" << n_ext << " time=" << time << "\n";
     //
     // Now calling the SGE code
     //
@@ -1359,22 +1353,20 @@ public:
     size_t pos = 0;
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       if (f_insert_svg[i_ext] == 1) {
-        std::cerr << "pos=" << pos << " / " << count << "      i_ext=" << i_ext
-                  << " / " << n_ext << "\n";
+        os << "pos=" << pos << " / " << count << "      i_ext=" << i_ext << " / " << n_ext << "\n";
         MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
         T target_scal = eEXT.dot(x);
         svg_mem.ComputeInsertSolution(eEXT, target_scal);
         pos++;
       }
     }
-    std::cerr << "We have computed svg_mem, time=" << time << "\n";
+    os << "We have computed svg_mem, time=" << time << "\n";
     std::vector<CombElt<T>> ListMiss;
     for (auto &eElt : svg_mem.GetListMiss()) {
       ListMiss.push_back(eElt);
       ListMiss.push_back(InverseComb(eElt));
     }
-    std::cerr << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time
-              << "\n";
+    os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
     return ListMiss;
   }
   // The domain is defined originally as
@@ -1400,17 +1392,17 @@ public:
       std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
       throw TerminalException{1};
     }
-    std::cerr << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows()
-              << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n
-              << " nk=" << rnk << "\n";
-    vectface vf = DirectFacetComputationIncidence(FAC, eCommand_DD, std::cerr);
-    std::cerr << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
+    os << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows()
+       << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n
+       << " nk=" << rnk << "\n";
+    vectface vf = DirectFacetComputationIncidence(FAC, eCommand_DD, os);
+    os << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
     DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
     int n_ext = dataext.EXT.rows();
-    std::cerr << "n_ext=" << n_ext << "\n";
+    os << "n_ext=" << n_ext << "\n";
     std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
 
-    std::cerr << "First part: adjacency structure within the polyhedron\n";
+    os << "First part: adjacency structure within the polyhedron\n";
     std::vector<Tfacet> ll_adj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       Face const &f1 = dataext.v_red[i_mat];
@@ -1451,7 +1443,7 @@ public:
         ll_adj[i_mat].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
       }
     }
-    std::cerr << "Second part: computing the opposite facets\n";
+    os << "Second part: computing the opposite facets\n";
     MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
     std::vector<int> V = ComputeMatchingVector();
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1520,16 +1512,16 @@ public:
     }
     bool print_ai = false;
     if (print_ai) {
-      std::cerr << "ai: n_mat=" << n_mat << "\n";
+      os << "ai: n_mat=" << n_mat << "\n";
       for (int i_mat = 0; i_mat < n_mat; i_mat++) {
         int n_adj = ll_adj[i_mat].l_sing_adj.size();
-        std::cerr << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
+        os << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
         for (int i_adj = 0; i_adj < n_adj; i_adj++) {
           TsingAdj const &singAdj = ll_adj[i_mat].l_sing_adj[i_adj];
-          std::cerr << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj
-                    << " iPolyAdj=" << singAdj.iPolyAdj
-                    << " iFaceOpp=" << singAdj.iFaceOpp
-                    << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
+          os << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj
+             << " iPolyAdj=" << singAdj.iPolyAdj
+             << " iFaceOpp=" << singAdj.iFaceOpp
+             << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
         }
       }
     }
@@ -1580,14 +1572,11 @@ public:
       int iter = 0;
       while (true) {
         std::vector<ResultOptim> l_result;
-        std::cerr << "iter=" << iter
-                  << " f_all_decrease |l_active|=" << l_active.size() << "\n";
+        os << "iter=" << iter << " f_all_decrease |l_active|=" << l_active.size() << "\n";
         // It is uncertain whether looking at negative values is a good idea at
         // all. What is certain is that it ends the infinite loop.
         bool has_negative = false;
         for (auto &ro : l_active) {
-          //          std::cerr << "  ro.the_scal_d=" <<
-          //          UniversalScalarConversion<double,T>(ro.the_scal) << "\n";
           for (int i = 0; i < datafac.n_mat; i++) {
             ResultOptim ro_new = f_increment(ro, i + 1);
             if (ro_new.the_scal < ro.the_scal) {
@@ -1602,8 +1591,7 @@ public:
             }
           }
         }
-        std::cerr << "   f_all_decrease |l_result|=" << l_result.size()
-                  << " has_negative=" << has_negative << "\n";
+        os << "   f_all_decrease |l_result|=" << l_result.size() << " has_negative=" << has_negative << "\n";
         if (l_result.size() == 0 || has_negative) {
           return l_total;
         }
@@ -1614,7 +1602,7 @@ public:
     auto f_decrease_best = [&](ResultOptim const &ro) -> ResultOptim {
       ResultOptim ro_ret = ro;
       std::vector<ResultOptim> l_result = f_all_decrease(ro);
-      std::cerr << "f_decrease_best: |l_result|=" << l_result.size() << "\n";
+      os << "f_decrease_best: |l_result|=" << l_result.size() << "\n";
       for (auto &ro_cand : l_result) {
         if (ro_cand.the_scal < ro_ret.the_scal) {
           ro_ret = ro_cand;
@@ -1658,13 +1646,13 @@ public:
         }
         size_t len = l_cand.size();
         if (len == 0) {
-          std::cerr << "Case 2, failed to find a new position\n";
+          os << "Case 2, failed to find a new position\n";
           return {3, {}};
         }
         size_t pos = rand() % len;
         return {2, l_cand[pos]};
       } else {
-        std::cerr << "  SolMatNonNeg : no solution found\n";
+        os << "  SolMatNonNeg : no solution found\n";
         return {0, {}};
       }
     };
@@ -1684,26 +1672,25 @@ public:
     ResultOptim ro = f_start(start_x);
     int n_iter = 0;
     while (true) {
-      std::cerr << "  n_iter=" << n_iter << "\n";
+      os << "  n_iter=" << n_iter << "\n";
       l_new_point.insert(ro.the_x);
       ro = f_decrease_best(ro);
-      std::cerr << "    We have ro\n";
+      os << "    We have ro\n";
       ResultLP res = f_linear_programming(ro);
-      std::cerr << "    res.result=" << res.result << "\n";
+      os << "    res.result=" << res.result << "\n";
       if (res.result == 0) {
         CombElt<T> ResidualElt = f_evaluate(ro);
-        std::cerr << "  SolMatNonNeg : no solution found\n";
+        os << "  SolMatNonNeg : no solution found\n";
         return ResidualElt;
       }
       if (res.result == 1) {
         CombElt<T> ResidualElt = f_evaluate(ro);
         bool test_stab = IsPresentInStabilizer(ResidualElt);
         if (test_stab) {
-          std::cerr << "It is already in stabilizer so nothing to be done\n";
+          os << "It is already in stabilizer so nothing to be done\n";
           return {};
         } else {
-          std::cerr << "It stabilizes but is not already known so interesting "
-                       "by itself\n";
+          os << "It stabilizes but is not already known so interesting by itself\n";
           return ResidualElt;
         }
       }
@@ -1715,9 +1702,9 @@ public:
       }
       n_iter++;
       if (max_iter > 0) {
-        std::cerr << "    Going to iteration termination check\n";
+        os << "    Going to iteration termination check\n";
         if (max_iter < n_iter) {
-          std::cerr << "    Exiting the enumeration\n";
+          os << "    Exiting the enumeration\n";
           return {};
         }
       }
@@ -1730,23 +1717,22 @@ public:
     ;
     CombElt<T> WorkElt = TestElt;
     int n_iter = 0;
-    std::cerr << "Beginning of f_insert\n";
+    os << "Beginning of f_insert\n";
     MyVector<T> curr_x = WorkElt.mat.transpose() * x;
     T curr_scal = curr_x.dot(*datafac.eVectInt);
     T target_scal = x.dot(*datafac.eVectInt);
     double target_scal_d = UniversalScalarConversion<double, T>(target_scal);
-    std::cerr << "target_scal=" << target_scal_d << "\n";
+    os << "target_scal=" << target_scal_d << "\n";
     while (true) {
-      std::cerr << "  n_iter=" << n_iter << "\n";
+      os << "  n_iter=" << n_iter << "\n";
       MyVector<T> x_ineq = GetIneq(WorkElt);
       if (IsZeroVector(x_ineq)) {
         bool test_stab = IsPresentInStabilizer(WorkElt);
         if (test_stab) {
-          std::cerr << "It is already in stabilizer so nothing to be done\n";
+          os << "It is already in stabilizer so nothing to be done\n";
           return {};
         } else {
-          std::cerr << "It stabilizes but is not already known so interesting "
-                       "by itself\n";
+          os << "It stabilizes but is not already known so interesting by itself\n";
           return WorkElt;
         }
       }
@@ -1764,14 +1750,14 @@ public:
             }
           }
         } else {
-          std::cerr << "  SolMatNonNeg : no solution found\n";
+          os << "  SolMatNonNeg : no solution found\n";
           return WorkElt;
         }
       }
       if (strategy == "strategy2") {
         int n_oper = 0;
         if (curr_scal < target_scal) {
-          std::cerr << "The decreasing process has found some contradiction\n";
+          os << "The decreasing process has found some contradiction\n";
           return WorkElt;
         }
         for (auto &eAdj : datafac.ListAdj) {
@@ -1782,30 +1768,29 @@ public:
                 UniversalScalarConversion<double, T>(curr_scal);
             double test_scal_d =
                 UniversalScalarConversion<double, T>(test_scal);
-            std::cerr << "    Improving scalar product from curr_scal_d="
-                      << curr_scal_d << " to test_scal_d=" << test_scal_d
-                      << "\n";
+            os << "    Improving scalar product from curr_scal_d="
+               << curr_scal_d << " to test_scal_d=" << test_scal_d
+               << "\n";
             curr_x = test_x;
             curr_scal = test_scal;
             WorkElt = ProductComb(WorkElt, eAdj);
             n_oper++;
             if (curr_scal < target_scal) {
-              std::cerr << "    The decreasing process has found some "
-                           "contradiction\n";
+              os << "    The decreasing process has found some contradiction\n";
               return WorkElt;
             }
           }
         }
         if (n_oper == 0) {
-          std::cerr << "  Switching to strategy1\n";
+          os << "  Switching to strategy1\n";
           strategy = "strategy1";
         }
       }
       n_iter++;
       if (max_iter > 0) {
-        std::cerr << "    Going to iteration termination check\n";
+        os << "    Going to iteration termination check\n";
         if (max_iter < n_iter) {
-          std::cerr << "    Exiting the enumeration\n";
+          os << "    Exiting the enumeration\n";
           return {};
         }
       }
@@ -1830,7 +1815,7 @@ public:
                                 std::string const& method_adjacent,
                                 std::string const& eCommand_DD) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
-    std::cerr << "InsertAndCheckRedundancy before std::sort\n";
+    os << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(),
               [](CombElt<T> const &x, CombElt<T> const &y) -> bool {
                 T norm_x = NormCombElt(x);
@@ -1845,7 +1830,7 @@ public:
     for (int i_elt = 0; i_elt < n_elt; i_elt++) {
       double norm =
           UniversalScalarConversion<double, T>(NormCombElt(l_elt[i_elt]));
-      std::cerr << "i_elt=" << i_elt << " norm=" << norm << "\n";
+      os << "i_elt=" << i_elt << " norm=" << norm << "\n";
     }
     DataFAC<T> datafac;
     size_t idx_write = 0;
@@ -1870,7 +1855,7 @@ public:
           datafac = GetDataCone();
         }
       }
-      std::cerr << "insert_generator, time=" << time << "\n";
+      os << "insert_generator, time=" << time << "\n";
       write_files();
       return test;
     };
@@ -1889,13 +1874,12 @@ public:
             ListTried.insert(eElt);
           }
         }
-        std::cerr << "|ListMiss|=" << ListMiss.size()
-                  << " |ListMissB|=" << ListMissB.size()
-                  << " |ListTried|=" << ListTried.size() << " time=" << time
-                  << "\n";
+        os << "|ListMiss|=" << ListMiss.size()
+           << " |ListMissB|=" << ListMissB.size()
+           << " |ListTried|=" << ListTried.size() << " time=" << time
+           << "\n";
         if (ListMissB.size() == 0) {
-          std::cerr << "Exiting the f_inverses_clear loop time=" << time
-                    << "\n";
+          os << "Exiting the f_inverses_clear loop time=" << time << "\n";
           return DidSomething;
         }
         bool test = insert_generator(ListMissB);
@@ -1926,13 +1910,11 @@ public:
           bool result1 = f_inverses_clear();
           if (result1)
             DidSomething = true;
-          std::cerr << "f_coherency_update, f_inverses_clear : time=" << time
-                    << "\n";
+          os << "f_coherency_update, f_inverses_clear : time=" << time << "\n";
           bool result2 = f_facet_matching();
           if (result1)
             DidSomething = true;
-          std::cerr << "f_coherency_update, f_facet_matching : time=" << time
-                    << "\n";
+          os << "f_coherency_update, f_facet_matching : time=" << time << "\n";
           if (!result1 && !result2)
             return DidSomething;
         }
@@ -1955,7 +1937,7 @@ public:
             n_pair.push_back(uElt2);
           }
         }
-        std::cerr << "|n_pair|=" << n_pair.size() << "\n";
+        os << "|n_pair|=" << n_pair.size() << "\n";
         return n_pair;
       } else {
         return e_pair;
@@ -1963,14 +1945,12 @@ public:
     };
     int pos = 0;
     for (auto &e_elt : l_elt) {
-      std::cerr << "       pos = " << pos << "\n";
-      std::cerr << "       |known_redundant| = " << known_redundant.size()
-                << "\n";
+      os << "       pos = " << pos << "\n";
+      os << "       |known_redundant| = " << known_redundant.size() << "\n";
       std::vector<CombElt<T>> l_cand = f_get_candidates(e_elt);
       bool test = insert_generator(l_cand);
       if (test) {
-        std::cerr
-            << "We did something therefore we need to do a coherency update\n";
+        os << "We did something therefore we need to do a coherency update\n";
         f_coherency_update();
       }
       pos++;
@@ -2107,7 +2087,7 @@ public:
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
                                         RecOption const &rec_option,
-                                        [[maybe_unused]] std::ostream& os) {
+                                        std::ostream& os) {
   std::string method_adjacent = rec_option.method_adjacent;
   std::string eCommand_DD = rec_option.eCommand_DD;
   bool DidSomething = false;
@@ -2128,7 +2108,7 @@ StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
     //
     AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand_DD);
     std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
-    std::cerr << "|ListMissII|=" << ListMissII.size() << "\n";
+    os << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
     //
     // Terminating if ok.
@@ -2262,7 +2242,7 @@ template <typename T>
 StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   DataPoincare<T> dp =
       ReadDataPoincare<T>(rec_option.FileDataPoincare, rec_option.n_expand);
-  std::cerr << "We have dp\n";
+  os << "We have dp\n";
   StepEnum<T> se(dp.x, os);
   auto f_init = [&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
@@ -2303,7 +2283,7 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
     os << "Writing the group presentation\n";
     std::pair<int, std::vector<std::vector<int>>> ThePres =
         se.GetGroupPresentation(ai);
-    PrintGroupPresentation(std::cerr, ThePres);
+    PrintGroupPresentation(os, ThePres);
   }
 }
 
