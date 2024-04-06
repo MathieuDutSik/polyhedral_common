@@ -17,6 +17,21 @@
 #include <unordered_set>
 // clang-format on
 
+template <typename T>
+MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
+  int nbCol = eMat.cols();
+  MyVector<T> eVec = ZeroVector<T>(nbCol);
+  int eSize = eList.count();
+  //
+  boost::dynamic_bitset<>::size_type aRow = eList.find_first();
+  for (int i = 0; i < eSize; i++) {
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      eVec(iCol) += eMat(aRow, iCol);
+    aRow = eList.find_next(aRow);
+  }
+  return eVec;
+}
+
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
 template <typename T, typename Tgroup>

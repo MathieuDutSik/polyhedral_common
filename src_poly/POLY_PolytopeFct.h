@@ -6,8 +6,6 @@
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
-#include "rational.h"
-#include "Fp.h"
 #include "NumberTheoryGeneric.h"
 #include "MAT_Matrix_SubsetSolver.h"
 #include <string>
@@ -20,21 +18,6 @@
 #ifdef DEBUG
 #define DEBUG_FLIP
 #endif
-
-template <typename T>
-MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
-  int nbCol = eMat.cols();
-  MyVector<T> eVec = ZeroVector<T>(nbCol);
-  int eSize = eList.count();
-  //
-  boost::dynamic_bitset<>::size_type aRow = eList.find_first();
-  for (int i = 0; i < eSize; i++) {
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      eVec(iCol) += eMat(aRow, iCol);
-    aRow = eList.find_next(aRow);
-  }
-  return eVec;
-}
 
 template <typename T>
 MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
@@ -597,22 +580,6 @@ Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
   MyMatrix<Tint> TheEXT_int = Get_EXT_int(TheEXT);
   FlippingFramework TheFram(TheEXT, TheEXT_int, OneInc, os);
   return TheFram.FlipFace(sInc);
-}
-
-void PrintListOrbit(std::ostream &os, vectface const &ListOrbit) {
-  size_t nbOrbit = ListOrbit.size();
-  os << "nbOrbit=" << nbOrbit << "\n";
-  for (size_t iOrbit = 0; iOrbit < nbOrbit; iOrbit++) {
-    Face eInc = ListOrbit[iOrbit];
-    size_t siz = eInc.count();
-    os << "O" << iOrbit + 1 << ": inc=" << siz << "list=";
-    boost::dynamic_bitset<>::size_type eVal = eInc.find_first();
-    for (size_t i = 0; i < siz; i++) {
-      os << " " << eVal;
-      eVal = eInc.find_next(eVal);
-    }
-    os << "\n";
-  }
 }
 
 MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {
