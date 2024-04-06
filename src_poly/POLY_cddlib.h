@@ -8619,6 +8619,20 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   return eSol;
 }
 
+template <typename T>
+LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
+                                              MyVector<T> const &eVect,
+                                              std::ostream& os) {
+  LpSolution<T> eSol1 = CDD_LinearProgramming(TheEXT, eVect, os);
+  LpSolution<T> eSol2 = CDD_LinearProgramming_External(TheEXT, eVect, os);
+  if (eSol1.PrimalDefined != eSol2.PrimalDefined ||
+      eSol1.DualDefined != eSol2.DualDefined) {
+    WriteInputFileCdd("bugSearch.ine", TheEXT, eVect);
+    std::cerr << "We find the bug we were after\n";
+    throw TerminalException{1};
+  }
+  return eSol1;
+}
 
 #endif  // SRC_POLY_POLY_CDDLIB_H_
 // clang-format on

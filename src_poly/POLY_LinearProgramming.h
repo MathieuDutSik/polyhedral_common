@@ -2,6 +2,15 @@
 #ifndef SRC_POLY_POLY_LINEARPROGRAMMING_H_
 #define SRC_POLY_POLY_LINEARPROGRAMMING_H_
 
+/*
+  Code for computing by using linear programming functionalities.
+
+  The linear programming code is typically not in that place
+  but in another. Typically we use CDD.
+  But there are potential alternatives, for example GLPK or LRS
+  though they do not yet offer the full functionalities as CDD.
+ */
+
 // clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
@@ -165,21 +174,6 @@ LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   eRes.eFace = eFace;
   eRes.Answer = "dd_Optimal";
   return eRes;
-}
-
-template <typename T>
-LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
-                                              MyVector<T> const &eVect,
-                                              std::ostream& os) {
-  LpSolution<T> eSol1 = CDD_LinearProgramming(TheEXT, eVect, os);
-  LpSolution<T> eSol2 = CDD_LinearProgramming_External(TheEXT, eVect, os);
-  if (eSol1.PrimalDefined != eSol2.PrimalDefined ||
-      eSol1.DualDefined != eSol2.DualDefined) {
-    WriteInputFileCdd("bugSearch.ine", TheEXT, eVect);
-    std::cerr << "We find the bug we were after\n";
-    throw TerminalException{1};
-  }
-  return eSol1;
 }
 
 template <typename T> bool IsPolytopal(MyMatrix<T> const &EXT) {
