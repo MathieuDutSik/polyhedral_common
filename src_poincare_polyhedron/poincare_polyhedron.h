@@ -5,7 +5,7 @@
 // clang-format off
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "POLY_LinearProgramming.h"
 #include <set>
 #include <limits>

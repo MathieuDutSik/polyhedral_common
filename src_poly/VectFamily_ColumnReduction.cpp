@@ -4,7 +4,7 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "LatticeDefinitions.h"
 // clang-format on
 

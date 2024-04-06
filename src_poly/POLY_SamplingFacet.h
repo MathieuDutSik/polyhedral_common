@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "POLY_LinearProgramming.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "POLY_lrslib.h"
 #include <map>
 #include <limits>

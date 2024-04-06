@@ -3,7 +3,7 @@
 #define SRC_LATT_TSPACE_FUNCTIONS_H_
 
 // clang-format off
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "ShortestUniversal.h"
 #include "PolytopeEquiStab.h"
 #include "Positivity.h"

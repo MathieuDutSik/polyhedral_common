@@ -3,7 +3,7 @@
 #define SRC_POLY_SMALLPOLYTOPES_H_
 
 // clang-format off
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include <vector>
 #include <utility>
 // clang-format on

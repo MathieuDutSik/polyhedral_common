@@ -7,7 +7,7 @@
 #include "MAT_Matrix.h"
 #include "Namelist.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "PolytopeEquiStab.h"
 #include <limits>
 #include <map>

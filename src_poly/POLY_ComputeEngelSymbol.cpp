@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "POLY_EngelSymbol.h"
 // clang-format on
 

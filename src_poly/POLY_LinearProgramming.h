@@ -15,7 +15,7 @@
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "MAT_MatrixInt.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "POLY_LinearProgrammingFund.h"
 #include "POLY_cddlib.h"
 #include "basic_datafile.h"

@@ -1,6 +1,6 @@
 /// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_POLY_POLY_POLYTOPEFCT_H_
-#define SRC_POLY_POLY_POLYTOPEFCT_H_
+#ifndef SRC_POLY_POLY_FUNDAMENTAL_H_
+#define SRC_POLY_POLY_FUNDAMENTAL_H_
 
 // clang-format off
 #include "Boost_bitset.h"
@@ -595,5 +595,5 @@ MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {
 }
 
 // clang-format off
-#endif  // SRC_POLY_POLY_POLYTOPEFCT_H_
+#endif  // SRC_POLY_POLY_FUNDAMENTAL_H_
 // clang-format on

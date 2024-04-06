@@ -8,7 +8,7 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "POLY_DirectDualDesc.h"
 #include "GRP_DoubleCoset.h"
 #include "GRP_GroupFct.h"

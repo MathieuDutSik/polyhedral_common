@@ -22,7 +22,7 @@
 // clang-format off
 #include "Boost_bitset.h"
 #include "POLY_LinearProgrammingFund.h"
-#include "POLY_PolytopeFct.h"
+#include "POLY_Fundamental.h"
 #include "MAT_Matrix.h"
 #include <cassert>
 #include <vector>
