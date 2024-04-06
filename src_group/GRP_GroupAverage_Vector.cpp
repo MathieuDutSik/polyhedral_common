@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_GroupAverage_Matrix [VectorFile] [GroupFile]\n";
+      std::cerr << "GRP_GroupAverage_Vector [VectorFile] [GroupFile]\n";
       return -1;
     }
     using T = mpq_class;
