@@ -10,22 +10,22 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 3) {
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_GroupAverage_Matrix [MatrixFile] [GroupFile]\n";
+      std::cerr << "GRP_GroupAverage_Matrix [VectorFile] [GroupFile]\n";
       return -1;
     }
     using T = mpq_class;
     //
-    std::string MatrixFile = argv[1];
+    std::string VectorFile = argv[1];
     std::string GroupFile = argv[2];
-    MyMatrix<T> eMatrix = ReadMatrixFile<T>(MatrixFile);
+    MyVector<T> eVector = ReadVectorFile<T>(VectorFile);
     std::vector<MyMatrix<T>> LGen = ReadListMatrixFile<T>(GroupFile);
-    MyMatrix<T> eMatAvg = OrbitBarycenterSymmetricMatrix(eMatrix, LGen);
-    std::cerr << "eMatAvg=\n";
-    WriteMatrix(std::cerr, eMatAvg);
+    MyVector<T> eVecAvg = OrbitBarycenter(eVector, LGen);
+    std::cerr << "eVecAvg=\n";
+    WriteVector(std::cerr, eVecAvg);
     //
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_GroupAverage_Matrix\n";
+    std::cerr << "Error in GRP_GroupAverage_Vector\n";
     exit(e.eVal);
   }
   runtime(time1);
