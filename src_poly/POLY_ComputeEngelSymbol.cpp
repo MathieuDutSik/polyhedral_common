@@ -2,6 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "POLY_PolytopeFct.h"
+#include "POLY_EngelSymbol.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
