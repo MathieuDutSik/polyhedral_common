@@ -28,6 +28,21 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
     os << "return " << GRP.GapString() << ";\n";
     return;
   }
+  if (OutFormat == "ListMatrixFile") {
+    int rnk = RankMat(EXT);
+    if (rnk != nbCol) {
+      std::cerr << "We have rnk=" << rnk << " but nbCol=" << nbCol << "\n";
+      std::cerr << "Therefore, we cannot build the matrix generators\n";
+      throw TerminalException{1};
+    }
+    std::vector<MyMatrix<T>> ListGenMatr;
+    for (auto & eGen : GRP.SmallGeneratingSet()) {
+      MyMatrix<T> eGenMatr = RepresentVertexPermutation(EXT, EXT, eGen);
+      ListGenMatr.push_back(eGenMatr);
+    }
+    WriteListMatrix(os, ListGenMatr);
+    return;
+  }
   if (OutFormat == "Oscar") {
     WriteGroup(os, GRP);
     return;
