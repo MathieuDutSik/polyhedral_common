@@ -119,5 +119,5 @@ jobs:
           # Running the test
           cd CI_tests/GeometricallyUnique
           tar -vxzf AllExamples.tar.gz
-          ./gap.sh < ProcessEntries.g
+          ../../gap.sh < ProcessEntries.g
           cd ../..
