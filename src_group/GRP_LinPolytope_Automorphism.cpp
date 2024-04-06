@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT]\n";
       std::cerr << "\n";
       std::cerr << "FileEXT   : The list of vectors\n";
-      std::cerr << "OutFormat : The format of output (GAP or Oscar)\n";
+      std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or Oscar)\n";
       std::cerr << "FileGRP   : The file for outputting the group\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
@@ -117,18 +117,18 @@ int main(int argc, char *argv[]) {
           << "safe_rational           : safe_rational arithmetic on uint64_t\n";
       std::cerr << "     that fails gracefully\n";
       std::cerr << "rational                : rational arithmetic on input\n";
-      std::cerr
-          << "Qsqrt2                  : arithmetic over the field Q(sqrt(2))\n";
-      std::cerr
-          << "Qsqrt5                  : arithmetic over the field Q(sqrt(5))\n";
-      std::cerr
-          << "RealAlgebraic=FileDesc  : For the real algebraic case of a ";
-      std::cerr << "     field whose description is in FileDesc\n";
+      std::cerr << "Qsqrt2                  : arithmetic over the field\n";
+      std::cerr << "                          Q(sqrt(2))\n";
+      std::cerr << "Qsqrt5                  : arithmetic over the field\n";
+      std::cerr << "                          Q(sqrt(5))\n";
+      std::cerr << "RealAlgebraic=FileDesc  : For the real algebraic case\n";
+      std::cerr << "          of a field whose description is in FileDesc\n";
       std::cerr << "\n";
       std::cerr << "        --- OutFormat ---\n";
       std::cerr << "\n";
-      std::cerr << "GAP   : Output to a GAP readable format (default)\n";
-      std::cerr << "Oscar : Output to a CPP like format\n";
+      std::cerr << "GAP            : Output to a GAP readable format (default)\n";
+      std::cerr << "ListMatrixFile : To be used by other software of polyhedral\n";
+      std::cerr << "Oscar          : Output to a CPP like format\n";
       std::cerr << "\n";
       std::cerr << "        --- FileGRP ---\n";
       std::cerr << "\n";
