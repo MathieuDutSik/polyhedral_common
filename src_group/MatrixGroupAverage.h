@@ -18,7 +18,14 @@
 template<typename T>
 MyMatrix<T> DirectSpannEquivariantSpace(MyMatrix<T> const& TheBasis, std::vector<MyMatrix<T>> const& LGen) {
   MyMatrix<T> TheBasisRet = TheBasis;
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+  int n_iter = 0;
+  std::cerr << "GA: |LGen|=" << LGen.size() << " |TheBasis|=" << TheBasis.rows() << " / " << TheBasis.cols() << "\n";
+#endif
   while(true) {
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+    std::cerr << "GA: n_iter=" << n_iter << " |TheBasisRet|=" << TheBasisRet.rows() << " / " << TheBasisRet.cols() << "\n";
+#endif
     SolutionMatRepetitive<T> smr(TheBasisRet);
     auto get_update=[&]() -> std::optional<MyVector<T>> {
       int len = TheBasisRet.rows();
@@ -38,8 +45,14 @@ MyMatrix<T> DirectSpannEquivariantSpace(MyMatrix<T> const& TheBasis, std::vector
     if (opt) {
       TheBasisRet = ConcatenateMatVec(TheBasisRet, *opt);
     } else {
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+      std::cerr << "GA: Returning\n";
+#endif
       return TheBasisRet;
     }
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+    n_iter += 1;
+#endif
   }
 }
 
@@ -72,11 +85,20 @@ MyVector<T> OrbitBarycenter(MyVector<T> const&a, std::vector<MyMatrix<T>> const&
     MyMatrix<T> const& eGen = LGen[i_gen];
     MyVector<T> a_img = eGen.transpose() * a;
     for (int u=0; u<dim; u++) {
-      ListSpann(i_gen,u) = a_img(u);
+      ListSpann(i_gen,u) = a_img(u) - a(u);
     }
   }
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+  std::cerr << "GA: rnk(ListSpann)=" << RankMat(ListSpann) << " n_gen=" << n_gen << " dim=" << dim << "\n";
+#endif
   MyMatrix<T> TheBasis1 = RowReduction(ListSpann);
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+  std::cerr << "GA: |TheBasis1|=" << TheBasis1.rows() << " / " << TheBasis1.cols() << "\n";
+#endif
   MyMatrix<T> TheBasis2 = DirectSpannEquivariantSpace(TheBasis1, LGen);
+#ifdef DEBUG_MATRIX_GROUP_AVERAGE
+  std::cerr << "GA: |TheBasis2|=" << TheBasis2.rows() << " / " << TheBasis2.cols() << "\n";
+#endif
   int dim_space = TheBasis2.rows();
   MyMatrix<T> TheBigMat(dim_space, n_gen * dim);
   MyVector<T> Vbig(n_gen * dim);
