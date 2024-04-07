@@ -466,6 +466,12 @@ struct LorentzianPerfectEntry {
   MyVector<T> eVectTest;
 };
 
+template<typename T, typename Tint>
+MyMatrix<Tint> LORENTZ_GetEXT(LorentzianPerfectEntry<T,Tint> const& eRec) {
+  return MatrixFromVectorFamily(eRec.ListTotal);
+}
+
+
 
 template<typename T, typename Tint>
 LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
@@ -594,11 +600,53 @@ ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorM
 }
 
 
+template<typename T, typename Tint>
+size_t ComputeInvariantPerfectForm(MyMatrix<T> const& LorMat,
+                                   MyMatrix<Tint> const& EXT,
+                                   [[maybe_unused]] std::ostream & os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
+  int n = LorMat.rows();
+  int nbRow = EXT.rows();
+  std::map<T, size_t> ListDiagNorm;
+  std::map<T, size_t> ListOffDiagNorm;
+  MyVector<T> V(n);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int i=0; i<n; i++) {
+      T sum = 0;
+      for (int j=0; j<n; j++) {
+        sum += LorMat(i,j) * EXT(iRow, j);
+      }
+      V(i) = sum;
+    }
+    T scal = 0;
+    for (int i=0; i<n; i++) {
+      scal += V(i) * EXT_T(iRow, i);
+    }
+    ListDiagNorm[scal] += 1;
+    for (int jRow=iRow+1; jRow<nbRow; jRow++) {
+      T scal = 0;
+      for (int i=0; i<n; i++) {
+        scal += V(i) * EXT_T(jRow, i);
+      }
+      ListOffDiagNorm[scal] += 1;
+    }
+  }
+  size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|ComputeInvariantDelaunay|=" << time << "\n";
+#endif
+  return hash;
+}
+
+
 
 template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectLorentzian {
   int n;
   MyMatrix<T> LorMat;
+  int TheOption;
   RecordDualDescOperation<T,Tgroup> rddo;
 };
 
@@ -619,34 +667,47 @@ namespace boost::serialization {
 }
 
 template<typename Tint>
-struct Delaunay_AdjI {
+struct PerfLorentzian_AdjI {
   Face eInc;
   MyMatrix<Tint> EXT;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
+  inline void serialize(Archive &ar, PerfLorentzian_AdjI<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("eInc", eRec.eInc);
     ar &make_nvp("EXT", eRec.EXT);
   }
 }
 
+template<typename Tint>
+struct Delaunay_AdjO {
+  Face eInc;
+  MyMatrix<Tint> eBigMat;
+};
 
-
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_AdjO<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("eInc", eRec.eInc);
+    ar &make_nvp("eBigMat", eRec.eBigMat);
+  }
+}
 
 template <typename T, typename Tint, typename Tgroup>
-struct DataLatticeFunc {
-  DataLattice<T, Tint, Tgroup> data;
-  using Tobj = Delaunay_Obj<Tint, Tgroup>;
-  using TadjI = Delaunay_AdjI<Tint>;
-  using TadjO = Delaunay_AdjO_spec<Tint>;
+struct DataPerfectLorentzianFunc {
+  DataPerfectLorentzian<T, Tint, Tgroup> data;
+  using Tobj = PerfLorentzian_Obj<Tint, Tgroup>;
+  using TadjI = PerfLorentzian_AdjI<Tint>;
+  using TadjO = PerfLorentzian_AdjO<Tint>;
   std::ostream& get_os() {
     return data.rddo.os;
   }
   Tobj f_init() {
-    MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+    LorentzianPerfectEntry<T,Tint> eRec = LORENTZ_GetOnePerfect(data.LorMat, data.TheOption, data.rddo.os);
+    MyMatrix<Tint> EXT = LORENTZ_GetEXT(eRec);
     Tobj x{std::move(EXT), {} };
     return x;
   }
