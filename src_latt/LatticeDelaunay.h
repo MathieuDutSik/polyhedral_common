@@ -265,25 +265,6 @@ namespace boost::serialization {
 }
 
 template<typename Tint>
-struct Delaunay_MPI_AdjO {
-  int iProc;
-  int iOrb;
-  Face eInc;
-  MyMatrix<Tint> eBigMat;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, Delaunay_MPI_AdjO<Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("iProc", eRec.iProc);
-    ar &make_nvp("iOrb", eRec.iOrb);
-    ar &make_nvp("eInc", eRec.eInc);
-    ar &make_nvp("eBigMat", eRec.eBigMat);
-  }
-}
-
-template<typename Tint>
 struct Delaunay_AdjO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
@@ -312,23 +293,6 @@ namespace boost::serialization {
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("eInc", eRec.eInc);
     ar &make_nvp("eBigMat", eRec.eBigMat);
-  }
-}
-
-template<typename Tint, typename Tgroup>
-struct Delaunay_MPI_Entry {
-  MyMatrix<Tint> EXT;
-  Tgroup GRP;
-  std::vector<Delaunay_MPI_AdjO<Tint>> ListAdj;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, Delaunay_MPI_Entry<Tint, Tgroup> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("EXT", eRec.EXT);
-    ar &make_nvp("GRP", eRec.GRP);
-    ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
 

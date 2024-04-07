@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LORENTZIAN_PERFECT_H_
-#define SRC_LORENTZIAN_PERFECT_H_
+#ifndef SRC_LORENTZIAN_PERFECT_FUND_H_
+#define SRC_LORENTZIAN_PERFECT_FUND_H_
 
 #ifdef DEBUG
 #define DEBUG_LORENTZIAN_PERFECT_FUND
@@ -595,10 +595,97 @@ ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorM
 
 
 
+template <typename T, typename Tint, typename Tgroup>
+struct DataPerfectLorentzian {
+  int n;
+  MyMatrix<T> LorMat;
+  RecordDualDescOperation<T,Tgroup> rddo;
+};
+
+
+template<typename Tint, typename Tgroup>
+struct PerfLorentzian_Obj {
+  MyMatrix<Tint> EXT;
+  Tgroup GRP;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint, typename Tgroup>
+  inline void serialize(Archive &ar, PerfLorentzian_Obj<Tint, Tgroup> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("EXT", eRec.EXT);
+    ar &make_nvp("GRP", eRec.GRP);
+  }
+}
+
+template<typename Tint>
+struct Delaunay_AdjI {
+  Face eInc;
+  MyMatrix<Tint> EXT;
+};
+
+namespace boost::serialization {
+  template <class Archive, typename Tint>
+  inline void serialize(Archive &ar, Delaunay_AdjI<Tint> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("eInc", eRec.eInc);
+    ar &make_nvp("EXT", eRec.EXT);
+  }
+}
+
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+struct DataLatticeFunc {
+  DataLattice<T, Tint, Tgroup> data;
+  using Tobj = Delaunay_Obj<Tint, Tgroup>;
+  using TadjI = Delaunay_AdjI<Tint>;
+  using TadjO = Delaunay_AdjO_spec<Tint>;
+  std::ostream& get_os() {
+    return data.rddo.os;
+  }
+  Tobj f_init() {
+    MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+    Tobj x{std::move(EXT), {} };
+    return x;
+  }
+  size_t f_hash(size_t const& seed, Tobj const& x) {
+    return ComputeInvariantDelaunay(data, seed, x.EXT, data.rddo.os);
+  }
+  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
+    std::optional<MyMatrix<Tint>> opt = Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT, data.rddo.os);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& eBigMat = *opt;
+    TadjO ret{y.eInc, eBigMat};
+    return ret;
+  }
+  std::pair<Tobj,TadjO> f_spann(TadjI const& x) {
+    MyMatrix<Tint> EXT = x.EXT;
+    Tobj x_ret{EXT, {} };
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.n + 1);
+    TadjO ret{x.eInc, eBigMat};
+    return {x_ret, ret};
+  }
+  std::vector<TadjI> f_adj(Tobj & x) {
+    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(data, x.EXT, data.rddo.os);
+    x.GRP = pair.first;
+    return pair.second;
+  }
+  Tobj f_adji_obj(TadjI const& x) {
+    MyMatrix<Tint> EXT = x.EXT;
+    Tobj x_ret{EXT, {} };
+    return x_ret;
+  };
+};
+
+
 
 
 
 
 // clang-format off
-#endif  // SRC_LORENTZIAN_PERFECT_H_
+#endif  // SRC_LORENTZIAN_PERFECT_FUND_H_
 // clang-format on
