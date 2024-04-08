@@ -755,7 +755,9 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListStringValues1["LorMat"] = "unset.gram";
+  ListStringValues1["arithmetic_T"] = "gmp_rational";
+  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
+  ListStringValues1["LorMatFile"] = "unset.gram";
   ListStringValues1["Option"] = "unset";
   ListStringValues1["OutFormat"] = "nothing";
   ListStringValues1["OutFile"] = "unset.out";
@@ -841,8 +843,8 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   //
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: We now have IsFinished=" << pair.first << "\n";
-  os << "DEL_ENUM: We now have ListDel |ListDel|=" << pair.second.size() << "\n";
+  os << "PERF_LOR: We now have IsFinished=" << pair.first << "\n";
+  os << "PERF_LOR: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {
