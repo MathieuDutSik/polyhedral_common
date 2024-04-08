@@ -10,7 +10,6 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "GraverBasis.h"
-#include "basic_datafile.h"
 #include <map>
 #include <string>
 #include <vector>

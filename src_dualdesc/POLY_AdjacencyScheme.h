@@ -2,10 +2,12 @@
 #ifndef SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 #define SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_
 
+// clang-format off
 #include "boost_serialization.h"
 #include "MPI_functionality.h"
 #include "basic_datafile.h"
 #include "Timings.h"
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_ADJACENCY_SCHEME
