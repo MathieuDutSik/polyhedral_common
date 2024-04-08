@@ -27,7 +27,7 @@ void process_B(boost::mpi::communicator &comm, FullNamelist const& eFull) {
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_PerfectLorentzian B: Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
+  std::cerr << "LORENTZ_MPI_PerfectLorentzian B: Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
   std::cerr << "Available types: gmp_integer\n";
   throw TerminalException{1};
 }
@@ -42,7 +42,7 @@ void process_A(boost::mpi::communicator &comm, FullNamelist const& eFull) {
     using T = mpq_class;
     return process_B<T>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_PerfectLorentzian A: Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
+  std::cerr << "LORENTZ_MPI_PerfectLorentzian A: Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
   std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }
@@ -62,7 +62,7 @@ int main(int argc, char *argv[]) {
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_MPI_PerfectLorentzian [file.nml]\n";
+      std::cerr << "LORENTZ_MPI_PerfectLorentzian [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
       NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
       return -1;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     process_A(world, eFull);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_MPI_PerfectLorentzian\n";
+    std::cerr << "Error in LORENTZ_MPI_PerfectLorentzian\n";
     exit(e.eVal);
   }
   runtime(time1);
