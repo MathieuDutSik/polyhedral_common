@@ -333,8 +333,8 @@ std::vector<MyVector<double>> GetNegativeDirections_eigen(MyMatrix<T> const& M) 
   int n = M.rows();
   MyMatrix<double> M_double = UniversalMatrixConversion<double,T>(M);
   Eigen::SelfAdjointEigenSolver<MyMatrix<double>> eig(M_double);
-  MyVector<T> ListEig = eig.eigenvalues();
-  MyMatrix<T> ListVect = eig.eigenvectors();
+  MyVector<double> ListEig = eig.eigenvalues();
+  MyMatrix<double> ListVect = eig.eigenvectors();
   std::vector<MyVector<double>> ListEigVect;
   for (int i=0; i<n; i++) {
     if (ListEig(i) > 0) {
@@ -473,8 +473,8 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const& M, std::ostr
     if (n_no_improv == 500 || CurrNorm < 10) {
       return *CurrVect;
     }
-    T norm1 = L1_Norm(M_Pert);
-    T norm2 = L1_Norm(M);
+    T norm1 = L1_norm(M_Pert);
+    T norm2 = L1_norm(M);
     if (norm1 > 1000 * norm2) {
       ePerturb = IdentityMat<Tint>(n);
     }

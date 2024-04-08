@@ -7,6 +7,7 @@
 #include "FundamentalDelaunay.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "fractions.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -59,7 +60,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   MyMatrix<T> GramMat = - Ubasis_T * LorMat * Ubasis_T.transpose();
   CVPSolver<T,Tint> solver(GramMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  if (!IsPositiveDefiniteSymmetricMatrix(GramMat)) {
+  if (!IsPositiveDefinite(GramMat)) {
     std::cerr << "GramMat should be positive definite\n";
     throw TerminalException{1};
   }
@@ -73,7 +74,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     Tint alpha = eVal * TheRec.gcd / eNorm;
     MyVector<Tint> eTrans = eBasSol - alpha * eVect;
     std::optional<MyVector<Tint>> opt = SolutionMat(Ubasis, eTrans);
-    MyVector<Tint> eSol = unfold_opt(opt);
+    MyVector<Tint> eSol = unfold_opt(opt, "Getting eSol");
     T eSquareDist = alpha * alpha * eNorm;
     auto iele=[&]() -> std::vector<MyVector<Tint>> {
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
@@ -104,7 +105,7 @@ template<typename T, typename Tint>
 std::vector<MyVector<Tint>> LORENTZ_SearchInitialVector(MyMatrix<T> const& LorMat, MyVector<T> const& PosVect, int const& TheOption, std::ostream & os) {
   bool OnlyShortest = true;
   T MaxScal = 0;
-  return LORENTZ_FindPositiveVectors(LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
+  return LORENTZ_FindPositiveVectors<T,Tint>(LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
 }
 
 
@@ -299,7 +300,7 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
     throw TerminalException{1};
   }
   for (auto & x : CritSet) {
-    MyVector<Tint> xext = ConcatenateScalerVector(1, x);
+    MyVector<Tint> xext = ConcatenateScalarVector(Tint(1), x);
     MyVector<T> xext_T = UniversalVectorConversion<T,Tint>(xext);
     if (xext_T.dot(eNSPbas) != 0) {
       std::cerr << "eNSPbas should have scalar product 0 with all entries in CritSet\n";
@@ -343,7 +344,7 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
     if (eNormTest <= 0 && MaxScal <= 0) {
       TheUpperBound = TheMidVal;
     } else {
-      std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest);
+      std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors<T,Tint>(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "|ListTotal|=" << ListTotal.size() << "\n";
       if (IsSubset(CritSet, ListTotal) && CritSet.size() > ListTotal.size()) {
@@ -372,14 +373,14 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
 #endif
   while (true) {
     MyVector<Tint> eVect = ListTotal[0];
-    MyVector<Tint> eVert = ConcatenateScalarVector(1, eVect);
+    MyVector<Tint> eVert = ConcatenateScalarVector(Tint(1), eVect);
     std::vector<MyVector<Tint>> ListIsoTest = CritSet;
     ListIsoTest.push_back(eVect);
     T aShift = - (eNSPbas.dot(eVert)) / (eNSPdir.dot(eVert));
     MyVector<Tint> eNSPtest = eNSPbas + aShift * eNSPdir;
     MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
     T MaxScal = ScalarProductQuadForm(LorMat, CritSet[0], eVectTest);
-    std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest);
+    std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors<T,Tint>(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
     if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal << "\n";
@@ -390,8 +391,9 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
   }
 }
 
-template<typename T>
-MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& SpannBasis, std::vector<MyVector<T>> const& TheSet, MyVector<T> const& eNSPbas, std::ostream& os) {
+template<typename T, typename Tint>
+MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& SpannBasis, std::vector<MyVector<Tint>> const& TheSet, MyVector<T> const& eNSPbas, std::ostream& os) {
+  MyVector<T> TheSet0 = UniversalVectorConversion<T,Tint>(TheSet[0]);
   MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
 #ifdef DEBUG_LORENTZIAN_PERFECT
   DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat);
@@ -415,17 +417,18 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& Spann
     }
 #endif
     MyVector<T> tVect = LorMat * RetVect;
-    T eScal = tVect.dot(TheSet[0]);
+    T eScal = tVect.dot(TheSet0);
 #ifdef DEBUG_LORENTZIAN_PERFECT
     for (auto & eVect : TheSet) {
-      T fScal = tVect.dot(eVect);
+      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      T fScal = tVect.dot(eVect_T);
       if (eScal != fScal) {
         std::cerr << "The scalar products are incorrect\n";
         throw TerminalException{1};
       }
     }
 #endif
-    MyVector<T> eNSPdir = ConcatenateScalarVector(-eScal, tVect);
+    MyVector<T> eNSPdir = ConcatenateScalarVector(T(-eScal), tVect);
     std::optional<T> TheUpperBound_opt = GetUpperBound(LorMat, eNSPbas, eNSPdir);
     if (TheUpperBound_opt.has_value()) {
       return eNSPdir;
@@ -477,13 +480,16 @@ template<typename T, typename Tint>
 LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
-  MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat);
-  std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector(LorMat, CentralVect, TheOption, os);
+  MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat, os);
+  std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T,Tint>(LorMat, CentralVect, TheOption, os);
   MyVector<T> LorMat_Central = LorMat * CentralVect;
   T eScal = LorMat_Central.dot(CritSet[0]);
   MyVector<T> eNSPbas = ConcatenateScalarVector(-eScal, LorMat_Central);
   while(true) {
-    int rnk = RankMat(CritSet);
+    int rnk = 0;
+    if (CritSet.size() > 0) {
+      rnk = RankMat(MatrixFromVectorFamily(CritSet));
+    }
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size() << "\n";
 #endif
@@ -502,8 +508,8 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, 
     }
 #endif
     MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
-    MyMatrix<T> eNSPdir = GetOneOutsideRay(LorMat, ListDir, CritSet, eNSPbas, os);
-    ResultFlipping<T,Tint> eRecB = LORENTZ_Kernel_Flipping(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
+    MyMatrix<T> eNSPdir = GetOneOutsideRay<T,Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
+    ResultFlipping<T,Tint> eRecB = LORENTZ_Kernel_Flipping<T,Tint>(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
     CritSet = eRecB.ListTotal;
     eNSPbas = eRecB.eNSPtest;
   }
@@ -561,11 +567,12 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
     }
   };
   MyVector<T> eNSPbas = get_eNSPbas();
-  std::vector<MyVector<Tint>> TheFlip = LORENTZ_Kernel_Flipping(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os).ListTotal;
+  std::vector<MyVector<Tint>> TheFlip = LORENTZ_Kernel_Flipping<T,Tint>(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os).ListTotal;
 #ifdef DEBUG_LORENTZIAN_PERFECT
   LORENTZ_CheckCorrectnessVectorFamily(LorMat, TheFlip);
 #endif
-  return TheFlip;
+  // No return of additional info so far.
+  return {TheFlip, {}, {}};
 }
 
 
@@ -681,14 +688,14 @@ namespace boost::serialization {
 }
 
 template<typename Tint>
-struct Delaunay_AdjO {
+struct PerfLorentzian_AdjO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
 };
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, Delaunay_AdjO<Tint> &eRec,
+  inline void serialize(Archive &ar, PerfLorentzian_AdjO<Tint> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("eInc", eRec.eInc);
     ar &make_nvp("eBigMat", eRec.eBigMat);
