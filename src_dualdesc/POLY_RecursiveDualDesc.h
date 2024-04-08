@@ -2884,7 +2884,7 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
   return result;
 }
 
-std::ostream& get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+std::unique_ptr<std::ofstream> get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
@@ -2895,7 +2895,7 @@ std::ostream& get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist co
   } else {
     *os << "Do not apply UnitBuf\n";
   }
-  return *os;
+  return os;
 }
 
 

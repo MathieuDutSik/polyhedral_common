@@ -790,7 +790,8 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
 
 template<typename T, typename Tint, typename Tgroup>
 void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  std::ostream& os = get_mpi_log_stream(comm, eFull);
+  std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
+  std::ostream& os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
