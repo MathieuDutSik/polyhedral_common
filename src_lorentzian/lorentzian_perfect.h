@@ -801,8 +801,21 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
   std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
-  std::string LorMatFile = BlockDATA.ListStringValues.at("LorMatFle");
+  std::string LorMatFile = BlockDATA.ListStringValues.at("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
+  //
+  std::string TheOption_str = BlockDATA.ListStringValues.at("TheOption");
+  auto get_option=[&]() -> int {
+    if (TheOption_str == "isotropic") {
+      return LORENTZIAN_PERFECT_OPTION_ISOTROP;
+    }
+    if (TheOption_str == "total") {
+      return LORENTZIAN_PERFECT_OPTION_TOTAL;
+    }
+    std::cerr << "Failed to find a matching entry for TheOption\n";
+    throw TerminalException{1};
+  };
+  int TheOption = get_option();
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
@@ -818,6 +831,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   //
   DataPerfectLorentzian<T, Tint, Tgroup> data{n,
                                     LorMat,
+                                    TheOption,
                                     std::move(rddo)};
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
