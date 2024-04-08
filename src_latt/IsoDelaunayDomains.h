@@ -1234,16 +1234,7 @@ void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string co
 
 template<typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  std::ofstream os(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
-    os << std::unitbuf;
-    os << "Apply UnitBuf\n";
-  } else {
-    os << "Do not apply UnitBuf\n";
-  }
+  std::ostream& os = get_mpi_log_stream(comm, eFull);
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
   //

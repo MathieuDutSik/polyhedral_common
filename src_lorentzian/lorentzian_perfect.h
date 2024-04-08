@@ -381,15 +381,7 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
       return {ListTotal, eNSPtest, eVectTest, MaxScal};
     }
   }
-
 }
-
-
-
-
-
-
-
 
 template<typename T>
 MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& SpannBasis, std::vector<MyVector<T>> const& TheSet, MyVector<T> const& eNSPbas, std::ostream& os) {
@@ -754,6 +746,94 @@ struct DataPerfectLorentzianFunc {
     return x_ret;
   };
 };
+
+FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, double> ListDoubleValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, std::vector<std::string>> ListListStringValues1;
+  ListStringValues1["LorMat"] = "unset.gram";
+  ListStringValues1["Option"] = "unset";
+  ListStringValues1["OutFormat"] = "nothing";
+  ListStringValues1["OutFile"] = "unset.out";
+  ListStringValues1["FileDualDescription"] = "unset";
+  ListIntValues1["max_runtime_second"] = 0;
+  ListBoolValues1["ApplyStdUnitbuf"] = false;
+  SingleBlock BlockDATA;
+  BlockDATA.ListIntValues = ListIntValues1;
+  BlockDATA.ListBoolValues = ListBoolValues1;
+  BlockDATA.ListDoubleValues = ListDoubleValues1;
+  BlockDATA.ListStringValues = ListStringValues1;
+  BlockDATA.ListListStringValues = ListListStringValues1;
+  ListBlock["DATA"] = BlockDATA;
+  // STORAGE
+  std::map<std::string, int> ListIntValues2;
+  std::map<std::string, bool> ListBoolValues2;
+  std::map<std::string, double> ListDoubleValues2;
+  std::map<std::string, std::string> ListStringValues2;
+  std::map<std::string, std::vector<std::string>> ListListStringValues2;
+  ListBoolValues2["Saving"] = false;
+  ListStringValues2["Prefix"] = "/irrelevant/";
+  SingleBlock BlockSTORAGE;
+  BlockSTORAGE.ListIntValues = ListIntValues2;
+  BlockSTORAGE.ListBoolValues = ListBoolValues2;
+  BlockSTORAGE.ListDoubleValues = ListDoubleValues2;
+  BlockSTORAGE.ListStringValues = ListStringValues2;
+  BlockSTORAGE.ListListStringValues = ListListStringValues2;
+  ListBlock["STORAGE"] = BlockSTORAGE;
+  // Merging all data
+  return {ListBlock, "undefined"};
+}
+
+template<typename T, typename Tint, typename Tgroup>
+void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  std::ostream& os = get_mpi_log_stream(comm, eFull);
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
+  //
+  bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
+  std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
+  CreateDirectory(STORAGE_Prefix);
+  //
+  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
+  std::string LorMatFile = BlockDATA.ListStringValues.at("LorMatFle");
+  MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
+  //
+  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  //
+  int n = LorMat.rows();
+  int dimEXT = n + 1;
+  using TintGroup = typename Tgroup::Tint;
+  std::string FileDualDesc = BlockDATA.ListStringValues.at("FileDualDescription");
+  PolyHeuristicSerial<TintGroup> AllArr =
+    Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  //
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
+                                    LorMat,
+                                    std::move(rddo)};
+  using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
+  //
+  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: We now have IsFinished=" << pair.first << "\n";
+  os << "DEL_ENUM: We now have ListDel |ListDel|=" << pair.second.size() << "\n";
+#endif
+  //
+  if (pair.first) {
+  }
+}
+
 
 
 // clang-format off

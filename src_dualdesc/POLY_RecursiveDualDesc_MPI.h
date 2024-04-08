@@ -658,9 +658,10 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
+  int dimEXT = EXTred.cols();
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<Tint> AllArr =
-      Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, os);
+      Read_AllStandardHeuristicSerial<Tint>(eFull, dimEXT, os);
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();

@@ -2884,6 +2884,21 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
   return result;
 }
 
+std::ostream& get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::unique_ptr<std::ofstream> os = std::make_unique<std::ofstream>(FileLog);
+  if (ApplyStdUnitbuf(eFull)) {
+    *os << std::unitbuf;
+    *os << "Apply UnitBuf\n";
+  } else {
+    *os << "Do not apply UnitBuf\n";
+  }
+  return *os;
+}
+
+
 template <typename Tgroup>
 Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
@@ -2933,11 +2948,9 @@ void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const& AllArr, std::ostr
 }
 
 
-template <typename T, typename Tint>
-PolyHeuristicSerial<Tint>
-Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
-                                MyMatrix<T> const &EXTred, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
+template <typename Tint>
+void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
+                                 PolyHeuristicSerial<Tint> & AllArr, std::ostream &os) {
   //
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
@@ -3000,13 +3013,42 @@ Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
       BlockDATA.ListBoolValues.at("SimpleExchangeScheme");
   AllArr.SimpleExchangeScheme = SimpleExchangeScheme;
   //
-  AllArr.dimEXT = EXTred.cols();
-  //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   PrintPolyHeuristicSerial(AllArr, os);
 #endif
+}
+
+template <typename Tint>
+PolyHeuristicSerial<Tint>
+Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
+                                int const& dimEXT, std::ostream &os) {
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
+  //
+  AllArr.dimEXT = dimEXT;
+  UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   return AllArr;
 }
+
+
+template <typename Tint>
+PolyHeuristicSerial<Tint>
+Read_AllStandardHeuristicSerial_File(std::string const& eFile,
+                                     int const& dimEXT, std::ostream &os) {
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
+  //
+  AllArr.dimEXT = dimEXT;
+  if (eFile != "unset") {
+    FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
+    NAMELIST_ReadNamelistFile(eFile, eFull);
+    UpdateHeuristicSerial_eFull(eFull, AllArr, os);
+  }
+  return AllArr;
+}
+
+
+
+
+
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
@@ -3028,9 +3070,10 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  int dimEXT = EXTred.cols();
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   PolyHeuristicSerial<Tint> AllArr =
-      Read_AllStandardHeuristicSerial<T, Tint>(eFull, EXTred, std::cerr);
+      Read_AllStandardHeuristicSerial<Tint>(eFull, dimEXT, std::cerr);
   //
   std::map<std::string, Tint> TheMap =
     ComputeInitialMap<Tint,T,Tgroup>(EXTred, GRP, AllArr);
@@ -3060,6 +3103,10 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat,
                std::cerr);
 }
+
+
+
+
 
 template <typename T, typename Tgroup>
 vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, std::ostream& os) {

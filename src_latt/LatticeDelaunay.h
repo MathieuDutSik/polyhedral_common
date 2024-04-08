@@ -218,7 +218,6 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
   int n = EXT.cols() - 1;
   Tint PreIndex = Int_IndexLattice(EXT);
   Tint eIndex = T_abs(PreIndex);
-  MyVector<T> V(n);
   MyMatrix<T> EXT_fullT = UniversalMatrixConversion<T,Tint>(EXT);
   CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(eData.GramMat, EXT_fullT);
   MyMatrix<T> EXT_T(nbVert, n);
@@ -650,16 +649,7 @@ void WriteFamilyDelaunay(boost::mpi::communicator &comm, std::string const& OutF
 
 template<typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  std::ofstream os(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
-    os << std::unitbuf;
-    os << "Apply UnitBuf\n";
-  } else {
-    os << "Do not apply UnitBuf\n";
-  }
+  std::ostream& os = get_mpi_log_stream(comm, eFull);
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
@@ -686,11 +676,15 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
-
+  //
   int n = GramMat.rows();
+  int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+  std::string FileDualDesc = BlockDATA.ListStringValues.at("FileDualDescription");
+  PolyHeuristicSerial<TintGroup> AllArr =
+    Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  //
   CVPSolver<T,Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
   DataLattice<T, Tint, Tgroup> data{n,
