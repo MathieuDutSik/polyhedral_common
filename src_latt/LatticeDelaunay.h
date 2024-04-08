@@ -183,29 +183,6 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
   return eMat_I;
 }
 
-
-template<typename T>
-size_t ComputeHashTwoMap(size_t const& seed, std::map<T, size_t> const& ListDiagNorm, std::map<T, size_t> const& ListOffDiagNorm) {
-  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
-    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
-  };
-  size_t hash = seed;
-  auto update_from_map=[&](std::map<T, size_t> const& map) -> void {
-    for (auto & kv : map) {
-      size_t hash1 = std::hash<T>()(kv.first);
-      size_t hash2 = kv.second;
-      combine_hash(hash, hash1);
-      combine_hash(hash, hash2);
-    }
-  };
-  update_from_map(ListDiagNorm);
-  update_from_map(ListOffDiagNorm);
-  return hash;
-}
-
-
-
-
 template <typename T, typename Tint, typename Tgroup>
 size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
                                 size_t const& seed,

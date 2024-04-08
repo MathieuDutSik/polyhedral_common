@@ -48,6 +48,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     throw TerminalException{1};
   }
 #endif
+  MyVector<Tint> eVect_tint = UniversalVectorConversion<Tint,T>(eVect);
   MyVector<T> eVect_LorMat = LorMat * eVect;
   FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect_LorMat);
   MyVector<Tint> eVect_LorMat_tint = UniversalVectorConversion<Tint,T>(eRec.TheVect);
@@ -72,7 +73,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   while(true) {
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
     Tint alpha = eVal * TheRec.gcd / eNorm;
-    MyVector<Tint> eTrans = eBasSol - alpha * eVect;
+    MyVector<Tint> eTrans = eBasSol - alpha * eVect_tint;
     std::optional<MyVector<Tint>> opt = SolutionMat(Ubasis, eTrans);
     MyVector<Tint> eSol = unfold_opt(opt, "Getting eSol");
     T eSquareDist = alpha * alpha * eNorm;
@@ -336,11 +337,12 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "TheLowerBound=" << TheLowerBound << " TheUpperBound=" << TheUpperBound << " n_iter=" << n_iter << "\n";
 #endif
-    T TheMidVal = GetMidVal(TheLowerBound, TheUpperBound);
+    T TheMidVal = get_mid_val(TheLowerBound, TheUpperBound);
     MyVector<T> eNSPtest = eNSPbas + TheMidVal * eNSPdir;
     MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
     T eNormTest = EvaluationQuadForm<T,T>(LorMat, eVectTest);
-    T MaxScal = ScalarProductQuadForm(LorMat, CritSet[0], eVectTest);
+    MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+    T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
     if (eNormTest <= 0 && MaxScal <= 0) {
       TheUpperBound = TheMidVal;
     } else {
@@ -352,7 +354,7 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
         throw TerminalException{1};
       }
 #endif
-      if (Set(ListTotal) == Set(CritSet)) {
+      if (IsEqualSet(ListTotal, CritSet)) {
         TheLowerBound = TheMidVal;
       } else {
         if (IsSubset(ListTotal, CritSet)) {
@@ -374,12 +376,14 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
   while (true) {
     MyVector<Tint> eVect = ListTotal[0];
     MyVector<Tint> eVert = ConcatenateScalarVector(Tint(1), eVect);
+    MyVector<T> eVert_T = UniversalVectorConversion<T,Tint>(eVert);
     std::vector<MyVector<Tint>> ListIsoTest = CritSet;
     ListIsoTest.push_back(eVect);
-    T aShift = - (eNSPbas.dot(eVert)) / (eNSPdir.dot(eVert));
-    MyVector<Tint> eNSPtest = eNSPbas + aShift * eNSPdir;
+    T aShift = - (eNSPbas.dot(eVert_T)) / (eNSPdir.dot(eVert_T));
+    MyVector<T> eNSPtest = eNSPbas + aShift * eNSPdir;
     MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
-    T MaxScal = ScalarProductQuadForm(LorMat, CritSet[0], eVectTest);
+    MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+    T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
     std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors<T,Tint>(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
     if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -481,10 +485,12 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, 
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat, os);
+  MyVector<T> CentralVect_T = UniversalVectorConversion<T,Tint>(CentralVect);
   std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T,Tint>(LorMat, CentralVect, TheOption, os);
-  MyVector<T> LorMat_Central = LorMat * CentralVect;
-  T eScal = LorMat_Central.dot(CritSet[0]);
-  MyVector<T> eNSPbas = ConcatenateScalarVector(-eScal, LorMat_Central);
+  MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+  MyVector<T> LorMat_Central = LorMat * CentralVect_T;
+  T eScal = LorMat_Central.dot(CritSet0_T);
+  MyVector<T> eNSPbas = ConcatenateScalarVector(T(-eScal), LorMat_Central);
   while(true) {
     int rnk = 0;
     if (CritSet.size() > 0) {
@@ -550,9 +556,10 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   auto get_eNSPdir=[&]() -> MyVector<T> {
     T eScal = TheDir.dot(eIso);
     if (eScal < 0) {
-      return ConcatenateScalarVect(0, -TheDir);
+      MyVector<T> TheDirNeg = - TheDir;
+      return ConcatenateScalarVector(T(0), TheDirNeg);
     } else {
-      return ConcatenateScalarVect(0, TheDir);
+      return ConcatenateScalarVector(T(0), TheDir);
     }
   };
   MyVector<T> eNSPdir = get_eNSPdir();
@@ -576,9 +583,9 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
 }
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalence(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, MyMatrix<Tint> const& eFamEXT1, MyMatrix<Tint> const& eFamEXT2, std::ostream& os) {
-  return LinPolytopeIntegral_Isomorphism_GramMat(eFamEXT1, LorMat1, eFamEXT2, LorMat2, os);
+  return LinPolytopeIntegral_Isomorphism_GramMat<T,Tint,Tgroup>(eFamEXT1, LorMat1, eFamEXT2, LorMat2, os);
 }
 
 
@@ -721,7 +728,7 @@ struct DataPerfectLorentzianFunc {
     return ComputeInvariantPerfectForm(seed, data.LorMat, x.EXT, data.rddo.os);
   }
   std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
-    std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalence(data.LorMat, data.LorMat, x.EXT, y.EXT, data.rddo.os);
+    std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalence<T,Tint,Tgroup>(data.LorMat, data.LorMat, x.EXT, y.EXT, data.rddo.os);
     if (!opt) {
       return {};
     }
@@ -748,7 +755,7 @@ struct DataPerfectLorentzianFunc {
     }
     std::vector<TadjI> ListAdj;
     for (auto &eInc : TheOutput) {
-      LorentzianPerfectEntry<T,Tint> eRecFlip = LORENTZ_DoFlipping(data.LorMat, ListIso, eInc, data.TheOption, data.rddo.os);
+      LorentzianPerfectEntry<T,Tint> eRecFlip = LORENTZ_DoFlipping<T,Tint>(data.LorMat, ListIso, eInc, data.TheOption, data.rddo.os);
       MyMatrix<Tint> EXTflip = LORENTZ_GetEXT(eRecFlip);
       TadjI eAdj{eInc, EXTflip};
       ListAdj.push_back(eAdj);

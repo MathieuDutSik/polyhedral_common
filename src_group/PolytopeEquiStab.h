@@ -708,7 +708,7 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   return {};
 }
 
-template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism_GramMat(const MyMatrix<Tint> &EXT1, const MyMatrix<T> &GramMat1,
                                         const MyMatrix<Tint> &EXT2, const MyMatrix<T> &GramMat2,
