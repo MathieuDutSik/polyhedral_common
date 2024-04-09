@@ -71,9 +71,10 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   std::vector<MyVector<Tint>> TotalListSol;
   Tint eVal = 1;
   while(true) {
-    MyVector<T> eBasSol = eVal * TheRec.V; // A solution of
+    MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
+    MyVector<T> eBasSol_T = UniversalVectorConversion<T,Tint>(eBasSol);
     T alpha = eVal * TheRec.gcd / eNorm;
-    MyVector<T> eTrans = eBasSol - alpha * eVect;
+    MyVector<T> eTrans = eBasSol_T - alpha * eVect;
     std::optional<MyVector<T>> opt = SolutionMat(Ubasis_T, eTrans);
     MyVector<T> eSol = unfold_opt(opt, "Getting eSol");
     T eSquareDist = alpha * alpha * eNorm;
@@ -503,7 +504,7 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, 
 #ifdef DEBUG_LORENTZIAN_PERFECT
       LORENTZ_CheckCorrectnessVectorFamily(LorMat, CritSet);
 #endif
-      return {CritSet, eNSPbas, CentralVect};
+      return {CritSet, eNSPbas, CentralVect_T};
     }
     MyMatrix<T> EXT = GetFullExpanded<T,Tint>(CritSet);
     MyMatrix<T> NSP = NullspaceTrMat(EXT);
