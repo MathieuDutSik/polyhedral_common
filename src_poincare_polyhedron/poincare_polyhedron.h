@@ -273,6 +273,16 @@ public:
     os << "ComputingMatchingVector time=" << time << "\n";
     return MatchVector;
   }
+  std::vector<int> ComputeMatchingVectorCheck(std::ostream& os) const {
+    std::vector<int> V = ComputeMatchingVector(os);
+    for (auto & eVal : V) {
+      if (eVal == -1) {
+        std::cerr << "We have a missing value which is not allowed here\n";
+        throw TerminalException{1};
+      }
+    }
+    return V;
+  }
   void print_statistics(std::ostream &os_out, std::ostream& os) const {
     os_out << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
     os_out << "|ListNeighborCoset|=" << ListNeighborCoset.size()
@@ -776,14 +786,10 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
     }
     return FAC_local;
   };
-  std::vector<int> V = se.ComputeMatchingVector(os);
+  std::vector<int> V = se.ComputeMatchingVectorCheck(os);
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     MyMatrix<T> const &Q = datafac.ListAdj[i_fac].mat;
     int j_fac = V[i_fac];
-    if (j_fac == -1) {
-      std::cerr << "Found a negative value of V\n";
-      throw TerminalException{1};
-    }
     MyMatrix<T> NSP = get_nsp(i_fac);
     MyMatrix<T> FACimg = datafac.FAC * Q;
     MyMatrix<T> FAC_local = get_localfac(i_fac, datafac.FAC, NSP);
@@ -839,13 +845,7 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   MyMatrix<T> EXT =
     DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, os);
   os << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
-  std::vector<int> V = se.ComputeMatchingVector(os);
-  for (auto &eVal : V) {
-    if (eVal == -1) {
-      std::cerr << "We have a missing matching facet problem. Exiting here\n";
-      throw TerminalException{1};
-    }
-  }
+  (void)se.ComputeMatchingVectorCheck(os);
   //
   // Building incidence informations
   //
@@ -867,7 +867,7 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
     vf.push_back(f);
   }
   os << "We have vf time=" << time << "\n";
-  Face f_incidence(n_fac * n_fac);
+  Face f_adjacency(n_fac * n_fac);
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++) {
       Face f(n_ext);
@@ -881,8 +881,8 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
         MyMatrix<T> EXT_red = SelectRow(EXT, f);
         int rnk = RankMat(EXT_red);
         if (rnk == n - 2) {
-          f_incidence[i_fac + n_fac * j_fac] = 1;
-          f_incidence[j_fac + n_fac * i_fac] = 1;
+          f_adjacency[i_fac + n_fac * j_fac] = 1;
+          f_adjacency[j_fac + n_fac * i_fac] = 1;
         }
       }
     }
@@ -890,13 +890,13 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     int n_adj = 0;
     for (int j_fac = 0; j_fac < n_fac; j_fac++) {
-      if (f_incidence[i_fac + n_fac * j_fac] == 1) {
+      if (f_adjacency[i_fac + n_fac * j_fac] == 1) {
         n_adj++;
       }
     }
     os << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
   }
-  os << "We have f_incidence, time=" << time << "\n";
+  os << "We have f_adjacency, time=" << time << "\n";
   //
   // Determining the vertices which are
   //
@@ -1030,7 +1030,6 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   int n_ext = dataext.EXT.rows();
   os << "n_ext=" << n_ext << "\n";
   std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
-
   os << "First part: adjacency structure within the polyhedron\n";
   std::vector<Tfacet> ll_adj;
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1074,13 +1073,9 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   }
   os << "Second part: computing the opposite facets\n";
   MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
-  std::vector<int> V = se.ComputeMatchingVector(os);
+  std::vector<int> V = se.ComputeMatchingVectorCheck(os);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     int j_mat = V[i_mat];
-    if (j_mat == -1) {
-      std::cerr << "Found j_mat = -1 which is forbidden\n";
-      throw TerminalException{1};
-    }
     size_t j_mat_s = j_mat;
     size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
     MyMatrix<T> Q = se.GetElement(se.ListNeighborData[i_mat]).mat;
@@ -1137,21 +1132,6 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
       size_t iPolyOpp = get_iPoly(iFaceOpp, f_map);
       ll_adj[i_mat].l_sing_adj[i_adj].iFaceOpp = iFaceOpp;
       ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
-    }
-  }
-  bool print_ai = false;
-  if (print_ai) {
-    os << "ai: n_mat=" << n_mat << "\n";
-    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      int n_adj = ll_adj[i_mat].l_sing_adj.size();
-      os << "  i_mat=" << i_mat << " |l_sing_adj|=" << n_adj << "\n";
-      for (int i_adj = 0; i_adj < n_adj; i_adj++) {
-        TsingAdj const &singAdj = ll_adj[i_mat].l_sing_adj[i_adj];
-        os << "    i_adj=" << i_adj << " iFaceAdj=" << singAdj.iFaceAdj
-           << " iPolyAdj=" << singAdj.iPolyAdj
-           << " iFaceOpp=" << singAdj.iFaceOpp
-           << " iPolyOpp=" << singAdj.iPolyOpp << "\n";
-      }
     }
   }
   return {dataext.EXT, ll_adj};
