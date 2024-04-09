@@ -639,6 +639,21 @@ public:
   }
 };
 
+namespace boost::serialization {
+  template <class Archive, typename T>
+  inline void serialize(Archive &ar, StepEnum<T> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("x", eRec.x);
+    ar &make_nvp("stabilizerElt", eRec.stabilizerElt);
+    ar &make_nvp("stabilizerElt_set", eRec.stabilizerElt_set);
+    ar &make_nvp("ListNeighborCoset", eRec.ListNeighborCoset);
+    ar &make_nvp("ListNeighborX", eRec.ListNeighborX);
+    ar &make_nvp("ListNeighborData", eRec.ListNeighborData);
+    ar &make_nvp("map", eRec.map);
+    ar &make_nvp("known_redundant", eRec.known_redundant);
+  }
+}
+
 // Find attemps missing elements
 //
 // Inequalities is
