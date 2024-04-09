@@ -8,7 +8,6 @@
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixMod.h"
-#include "MatrixGroupBasic.h"
 #include "PERM_Fct.h"
 #include "Timings.h"
 #include "factorizations.h"

@@ -16,7 +16,7 @@
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "Databank.h"
-#include "MatrixGroupBasic.h"
+#include "PERM_Fct.h"
 #include "basic_datafile.h"
 #include <limits>
 #include <set>
