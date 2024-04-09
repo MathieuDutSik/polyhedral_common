@@ -20,6 +20,22 @@ template <typename T> struct CombElt {
   MyMatrix<double> mat_d;
 };
 
+namespace boost::serialization {
+  template <class Archive>
+  inline void serialize(Archive &ar, TrackGroup &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("ListDI", eRec.ListDI);
+  }
+
+  template <class Archive, typename T>
+  inline void serialize(Archive &ar, CombElt<T> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("tg", eRec.tg);
+    ar &make_nvp("mat", eRec.mat);
+    ar &make_nvp("mat_d", eRec.mat_d);
+  }
+}
+
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   std::vector<int> ListDI = tg1.ListDI;
   size_t len = ListDI.size();

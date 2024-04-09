@@ -198,7 +198,7 @@ template <typename T> struct DataFAC {
 struct RecOption {
   std::string method_adjacent;
   std::string eCommand_DD;
-  std::string FileStepEnum;
+  std::string PrefixSave;
   std::string FileDataPoincare;
   std::string FileO;
   std::string Arithmetic;
@@ -464,7 +464,7 @@ public:
     print_statistics(os, os);
     return DidSomething;
   }
-  StepEnum(MyVector<T> const &_x) {
+  void initial_set(MyVector<T> const &_x) {
     x = _x;
     int n = x.size();
     CombElt<T> IdMat = GenerateIdentity<T>(n);
@@ -1708,7 +1708,7 @@ The number of iteration to expand the initial set of group elements";
 The available methods are linear_programming and dual_description";
   ListStringValues_doc["eCommand_DD"] = "eCommand_DD: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
-  ListStringValues_doc["FileStepEnum"] = "Default: unset\n\
+  ListStringValues_doc["PrefixSave"] = "Default: unset\n\
 The step enum current state";
   ListStringValues_doc["FileDataPoincare"] = "Default: unset\n\
 The input file of the computation";
@@ -1733,7 +1733,7 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string method_adjacent = BlockPROC.ListStringValues.at("method_adjacent");
   std::string eCommand_DD = BlockPROC.ListStringValues.at("eCommand_DD");
-  std::string FileStepEnum = BlockPROC.ListStringValues.at("FileStepEnum");
+  std::string PrefixSave = BlockPROC.ListStringValues.at("PrefixSave");
   std::string FileDataPoincare =
       BlockPROC.ListStringValues.at("FileDataPoincare");
   std::string FileO = BlockPROC.ListStringValues.at("FileO");
@@ -1750,7 +1750,7 @@ RecOption ReadInitialData(FullNamelist const &eFull) {
       BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
   return {method_adjacent,
           eCommand_DD,
-          FileStepEnum,
+          PrefixSave,
           FileDataPoincare,
           FileO,
           Arithmetic,
@@ -1800,20 +1800,28 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   DataPoincare<T> dp =
       ReadDataPoincare<T>(rec_option.FileDataPoincare, rec_option.n_expand);
   os << "We have dp\n";
-  StepEnum<T> se(dp.x);
-  auto f_init = [&]() -> void {
+  auto f_init = [&]() -> StepEnum<T> {
     if (rec_option.Approach == "IncrementallyAdd") {
-      return InsertAndCheckRedundancy(se,
+      StepEnum<T> se;
+      se.initial_set(dp.x);
+      InsertAndCheckRedundancy(se,
           dp.ListGroupElt, rec_option.MethodMissingI,
           rec_option.method_adjacent, rec_option.eCommand_DD, os);
+      return se;
     }
-    if (rec_option.Approach == "FacetAdjacencies") {
-      //      return se.read_step_enum_from_file(rec_option.FileStepEnum);
+    if (rec_option.Approach == "Restart") {
+      std::optional<StepEnum<T>> opt = SingleData_LoadLast<StepEnum<T>>(rec_option.PrefixSave);
+      if (opt) {
+        return *opt;
+      } else {
+        std::cerr << "Failed to find matching entry\n";
+        throw TerminalException{1};
+      }
     }
     std::cerr << "Failed to find a matching entry in compute_step_enum\n";
     throw TerminalException{1};
   };
-  f_init();
+  StepEnum<T> se = f_init();
   return IterativePoincareRefinement(se, rec_option, os);
 }
 
