@@ -120,32 +120,6 @@ DataPoincare<T> ReadDataPoincare(std::string const &FileI,
   return {x, l_elt};
 }
 
-// This is for the single adjacency in the polyhedron
-// * iFaceAdj is the index of the facet in the polyhedron
-//   which is adjacent to it in the ridge.
-// * iPolyAdj is the index in the adjacent iFaceAdj face
-//   in the ridge.
-// * iFaceOpp is the index of the facet in the mapped polyhedron
-// * iPolyAdj is similarly the corresponding index of the ridge
-// * EXTadj is the record of the vertices of the codimension 2 face
-struct TsingAdj {
-  size_t iFaceAdj;
-  size_t iPolyAdj;
-  size_t iFaceOpp;
-  size_t iPolyOpp;
-  Face IncdRidge;
-};
-
-struct Tfacet {
-  Face IncdFacet;
-  std::vector<TsingAdj> l_sing_adj;
-};
-
-template <typename T> struct AdjacencyInfo {
-  MyMatrix<T> EXT;
-  std::vector<Tfacet> ll_adj;
-};
-
 template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
@@ -1003,10 +977,35 @@ GetMissingFacetMatchingElement(StepEnum<T> const& se,
 }
 
 
+// This is for the single adjacency in the polyhedron
+// * iFaceAdj is the index of the facet in the polyhedron
+//   which is adjacent to it in the ridge.
+// * iPolyAdj is the index in the adjacent iFaceAdj face
+//   in the ridge.
+// * iFaceOpp is the index of the facet in the mapped polyhedron
+// * iPolyAdj is similarly the corresponding index of the ridge
+// * EXTadj is the record of the vertices of the codimension 2 face
+struct TsingAdj {
+  size_t iFaceAdj;
+  size_t iPolyAdj;
+  size_t iFaceOpp;
+  size_t iPolyOpp;
+  Face IncdRidge;
+};
+
+struct Tfacet {
+  Face IncdFacet;
+  std::vector<TsingAdj> l_sing_adj;
+};
+
+template <typename T> struct AdjacencyInfo {
+  MyMatrix<T> EXT;
+  std::vector<Tfacet> ll_adj;
+};
 
 // The ComputeAdjacencyInfo gives the corresponding
 // matching between facets and the adjacent domain.
-// That computation makes sense if the
+// That computation makes sense only if the
 // GetMissingFacetMatchingElement functions return
 // no element.
 template<typename T>
@@ -1453,6 +1452,60 @@ GetMissing_TypeI(StepEnum<T> const& se,
   throw TerminalException{1};
 }
 
+
+template<typename T>
+bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt, std::ostream& os) {
+  MyMatrix<T> FACimg = FAC * eElt.mat;
+  MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
+  return IsFullDimensional(FACtot, os);
+}
+
+// Generate the missing neighbors that were discovered
+// by the ridges
+template<typename T>
+std::vector<CombElt<T>> GenerateTypeIIneighbors(StepEnum<T> const& se,
+                                                AdjacencyInfo<T> const &ai, std::ostream& os) {
+  int n = se.x.size();
+  std::vector<CombElt<T>> ListMiss;
+  MyMatrix<T> FAC = se.GetFAC(os);
+  int n_mat = FAC.rows();
+  std::vector<CombElt<T>> ListAdj;
+  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+    ListAdj.push_back(se.GetElement(se.ListNeighborData[i_mat]));
+  }
+  auto GetMissedGenerator = [&](int i_mat,
+                                int i_facet) -> std::optional<CombElt<T>> {
+    CombElt<T> TheMat = GenerateIdentity<T>(n);
+    int i_mat_work = i_mat;
+    int i_facet_work = i_facet;
+    while (true) {
+      TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
+      int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
+      int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
+      i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
+      i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
+      MyVector<T> x_img = TheMat.mat.transpose() * se.x;
+      if (x_img == se.x) {
+        return {};
+      }
+      bool test = TestIntersection(FAC, TheMat, os);
+      if (test) {
+        return TheMat;
+      }
+    }
+  };
+  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+    int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
+    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
+      std::optional<CombElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
+      if (opt) {
+        ListMiss.push_back(*opt);
+      }
+    }
+  }
+  return ListMiss;
+}
+
 template<typename T>
 void InsertAndCheckRedundancy(StepEnum<T> & se,
                               std::vector<CombElt<T>> const &l_elt_pre,
@@ -1527,8 +1580,9 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
         return DidSomething;
       }
       bool test = insert_generator(ListMissB);
-      if (test)
+      if (test) {
         DidSomething = true;
+      }
     }
   };
   auto f_facet_matching = [&]() -> bool {
@@ -1588,57 +1642,6 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
     }
     pos++;
   }
-}
-
-template<typename T>
-bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt, std::ostream& os) {
-  MyMatrix<T> FACimg = FAC * eElt.mat;
-  MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
-  return IsFullDimensional(FACtot, os);
-}
-
-template<typename T>
-std::vector<CombElt<T>> GenerateTypeIIneighbors(StepEnum<T> const& se,
-                                                AdjacencyInfo<T> const &ai, std::ostream& os) {
-  int n = se.x.size();
-  std::vector<CombElt<T>> ListMiss;
-  MyMatrix<T> FAC = se.GetFAC(os);
-  int n_mat = FAC.rows();
-  std::vector<CombElt<T>> ListAdj;
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    ListAdj.push_back(se.GetElement(se.ListNeighborData[i_mat]));
-  }
-  auto GetMissedGenerator = [&](int i_mat,
-                                int i_facet) -> std::optional<CombElt<T>> {
-    CombElt<T> TheMat = GenerateIdentity<T>(n);
-    int i_mat_work = i_mat;
-    int i_facet_work = i_facet;
-    while (true) {
-      TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
-      int iFaceOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iFaceOpp;
-      int iPolyOpp = ai.ll_adj[i_mat_work].l_sing_adj[i_facet_work].iPolyOpp;
-      i_mat_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iFaceAdj;
-      i_facet_work = ai.ll_adj[iFaceOpp].l_sing_adj[iPolyOpp].iPolyAdj;
-      MyVector<T> x_img = TheMat.mat.transpose() * se.x;
-      if (x_img == se.x) {
-        return {};
-      }
-      bool test = TestIntersection(FAC, TheMat, os);
-      if (test) {
-        return TheMat;
-      }
-    }
-  };
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    int n_facet = ai.ll_adj[i_mat].l_sing_adj.size();
-    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
-      std::optional<CombElt<T>> opt = GetMissedGenerator(i_mat, i_facet);
-      if (opt) {
-        ListMiss.push_back(*opt);
-      }
-    }
-  }
-  return ListMiss;
 }
 
 template<typename T>
