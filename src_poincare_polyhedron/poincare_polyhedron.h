@@ -141,12 +141,6 @@ struct Tfacet {
   std::vector<TsingAdj> l_sing_adj;
 };
 
-template <typename T> struct ResultAdjacencyInfo {
-  MyMatrix<T> FAC;
-  MyMatrix<T> EXT;
-  std::unordered_map<Face, size_t> s_facet;
-};
-
 template <typename T> struct AdjacencyInfo {
   MyMatrix<T> EXT;
   std::vector<Tfacet> ll_adj;
@@ -668,10 +662,28 @@ namespace boost::serialization {
   }
 }
 
-// Find attemps missing elements
+// If there is an element g defining a facet then there should be
+// another matching element on the other side. That element has
+// to be g^{-1} if the stabilizer is trivial. But that is not
+// necessarily the case. And of course g^{-1} = g in the Coxeter
+// case.
 //
+// In the process of building the set of group elements that
+// define inequalities, we often find ourself in the situation
+// where an element g defines an irredundant inequality but g^{-1}
+// defines a redundant inequality. That means that g is actually
+// made redundant by elements that are yet to be discovered.
+//
+// The idea is then to find an interior point to the facet
+// and from that we are using the SGE to find the missing
+// inequality.
+//
+// Using the inverse and other strategies do not seem to work well.
+//
+// BELOW is an attempt to find the missing inequality by solving
+// with non-negative coefficients. It failed, but here goes:
 // Inequalities is
-// x.a <= x.aw
+//   x.a <= x.aw
 // Inequality is f_w(x) = x.aw - x.a
 // If there are redundancy for w^(-1) then we can write
 // f_{w^(-1)}(x) = a_1 f_w1(x) + .... + a_N f_wN(x)   with a_j >= 0
@@ -691,16 +703,31 @@ GetMissingInverseElement(StepEnum<T> const& se,
   ShortVectorGroupMemoize<T> svg_mem(svg);
   int n_mat = se.ListNeighborData.size();
   std::vector<CombElt<T>> ListMiss;
+  bool attempt_inverse = false;
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     if (V[i_mat] == -1) {
-      CombElt<T> w = se.GetElement(se.ListNeighborData[i_mat]);
-      CombElt<T> wInv = InverseComb(w);
-      MyVector<T> x_ineq = se.GetIneq(wInv);
-      HumanTime time1;
-      std::optional<MyVector<T>> opt =
-        SolutionMatNonnegative(datafac.FAC, x_ineq, os);
-      os << "|SolutionMatNonnegative|=" << time1 << "\n";
+      auto get_relevant_inverse=[&]() -> std::optional<CombElt<T>> {
+        if (!attempt_inverse) {
+          return {};
+        }
+        CombElt<T> w = se.GetElement(se.ListNeighborData[i_mat]);
+        CombElt<T> wInv = InverseComb(w);
+        MyVector<T> x_ineq = se.GetIneq(wInv);
+        HumanTime time1;
+        std::optional<MyVector<T>> opt =
+          SolutionMatNonnegative(datafac.FAC, x_ineq, os);
+        os << "|SolutionMatNonnegative|=" << time1 << "\n";
+        if (opt) {
+          return {};
+        } else {
+          return wInv;
+        }
+      };
+      std::optional<CombElt<T>> opt = get_relevant_inverse();
       if (opt) {
+        ListMiss.push_back(*opt);
+        os << "wInv actually define a new inequality\n";
+      } else {
         // Finding by nearest group point.
         Face f(n_mat);
         f[i_mat] = 1;
@@ -710,9 +737,6 @@ GetMissingInverseElement(StepEnum<T> const& se,
         T target_scal = eVectInt.dot(se.x);
         svg_mem.ComputeInsertSolution(eVectInt, target_scal);
         os << "Found new elements by Short Group Element\n";
-      } else {
-        ListMiss.push_back(wInv);
-        os << "wInv actually define a new inequality\n";
       }
     }
   }
@@ -724,7 +748,17 @@ GetMissingInverseElement(StepEnum<T> const& se,
   return ListMiss;
 }
 
-// Compute by linear programming the structure.
+// For each element g defining a facet, we have a corresponding
+// element that defines the corresponding facet. That element can
+// be g^{-1} or it can be something else.
+//
+// But it the facet are actually matching, that does not mean
+// that all is fine. The facet could have the same defining inequality
+// but they could not be geometrically the same.
+//
+// If the facet are not matching then we can find offending vertices
+// by linear programming and then with SGE we can find the corresponding
+// missed element.
 template<typename T>
 std::vector<CombElt<T>>
 GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
@@ -815,9 +849,7 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
   return ListMiss;
 }
 
-// The facets can be defined by the same inequality but with opposite signs.
-// In that case, we have to add some new elements inspired by the missing
-// elements.
+// The same as above but using a dual description.
 template<typename T>
 std::vector<CombElt<T>>
 GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
