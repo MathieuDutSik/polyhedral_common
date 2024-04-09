@@ -983,18 +983,32 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   return ListMiss;
 }
 
-// The domain is defined originally as
-// Tr(AX) <= Tr(PAP^T X)
-// which we rewrite
-// a.x <= phi(a).x        0 <= (phi(a) - a).x
-//
-// Matrixwise the scalar product a.x is rewritten as
-// A X^T
-// phi(a) is expressed as AQ
-// 0 <= (AQ - A) X^T
-// The mapping A ----> AQ maps to the adjacent domain.
-// The mapping of the X ----> X c(Q)^T with c(Q) the
-// contragredient representation.
+template<typename T>
+std::vector<CombElt<T>>
+GetMissingFacetMatchingElement(StepEnum<T> const& se,
+                               DataFAC<T> const &datafac,
+                               std::string const& method_adjacent,
+                               std::string const &eCommand_DD,
+                               ShortVectorGroup<T> const &svg,
+                               std::ostream& os) {
+  if (method_adjacent == "linear_programming") {
+    return GetMissingFacetMatchingElement_LP(se, datafac, svg, os);
+  }
+  if (method_adjacent == "dual_description") {
+    return GetMissingFacetMatchingElement_DD(se, datafac, eCommand_DD, svg, os);
+  }
+  std::cerr << "Failed to find a matching for\n";
+  std::cerr << "method_adjacent=" << method_adjacent << "\n";
+  throw TerminalException{1};
+}
+
+
+
+// The ComputeAdjacencyInfo gives the corresponding
+// matching between facets and the adjacent domain.
+// That computation makes sense if the
+// GetMissingFacetMatchingElement functions return
+// no element.
 template<typename T>
 AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
                                       std::string const &eCommand_DD, std::ostream& os) {
@@ -1518,19 +1532,8 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
     }
   };
   auto f_facet_matching = [&]() -> bool {
-    if (method_adjacent == "linear_programming") {
-      std::vector<CombElt<T>> ListMiss =
-        GetMissingFacetMatchingElement_LP(se, datafac, svg, os);
-      return insert_generator(ListMiss);
-    }
-    if (method_adjacent == "dual_description") {
-      std::vector<CombElt<T>> ListMiss =
-        GetMissingFacetMatchingElement_DD(se, datafac, eCommand_DD, svg, os);
-      return insert_generator(ListMiss);
-    }
-    std::cerr << "Failed to find a matching for\n";
-    std::cerr << "method_adjacent=" << method_adjacent << "\n";
-    throw TerminalException{1};
+    std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
+    return insert_generator(ListMiss);
   };
   auto f_coherency_update = [&]() -> bool {
     HumanTime time;
