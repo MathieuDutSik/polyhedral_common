@@ -1410,11 +1410,12 @@ GetMissing_TypeI(StepEnum<T> const& se,
 template<typename T>
 void InsertAndCheckRedundancy(StepEnum<T> & se,
                               std::vector<CombElt<T>> const &l_elt_pre,
-                              std::string const& PrefixSave,
-                              std::string const &MethodMissingI,
-                              std::string const& method_adjacent,
-                              std::string const& eCommand_DD,
+                              RecOption const &rec_option,
                               std::ostream & os) {
+  std::string PrefixSave = rec_option.PrefixSave;
+  std::string MethodMissingI = rec_option.MethodMissingI;
+  std::string method_adjacent = rec_option.method_adjacent;
+  std::string eCommand_DD = rec_option.eCommand_DD;
   std::vector<CombElt<T>> l_elt = l_elt_pre;
   os << "InsertAndCheckRedundancy before std::sort\n";
   std::sort(l_elt.begin(), l_elt.end(),
@@ -1813,16 +1814,15 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
     if (rec_option.Approach == "IncrementallyAdd") {
       StepEnum<T> se;
       se.initial_set(dp.x);
-      InsertAndCheckRedundancy(se, dp.ListGroupElt, rec_option.PrefixSave,
-                               rec_option.MethodMissingI, rec_option.method_adjacent, rec_option.eCommand_DD, os);
       return se;
     }
     if (rec_option.Approach == "Restart") {
-      std::optional<StepEnum<T>> opt = SingleData_LoadLast<StepEnum<T>>(rec_option.PrefixSave);
+      std::string PrefixStepenum = rec_option.PrefixSave + "STEPENUM_";
+      std::optional<StepEnum<T>> opt = SingleData_LoadLast<StepEnum<T>>(PrefixStepenum);
       if (opt) {
         return *opt;
       } else {
-        std::cerr << "Failed to find matching entry\n";
+        std::cerr << "Failed to find a file \n";
         throw TerminalException{1};
       }
     }
@@ -1830,6 +1830,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
     throw TerminalException{1};
   };
   StepEnum<T> se = f_init();
+  InsertAndCheckRedundancy(se, dp.ListGroupElt, rec_option, os);
   return IterativePoincareRefinement(se, rec_option, os);
 }
 
