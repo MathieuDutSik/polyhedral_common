@@ -21,11 +21,6 @@
 // clang-format on
 
 //
-// Second part, the finite group
-//
-
-
-//
 // The common function for paperwork
 //
 
@@ -50,7 +45,7 @@ DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
     }
     pos++;
   }
-  return {EXT, v_red};
+  return {std::move(EXT), std::move(v_red)};
 }
 
 std::unordered_map<Face, size_t>
@@ -258,8 +253,7 @@ public:
   std::vector<std::pair<size_t, size_t>> ListNeighborData;
   std::unordered_map<MyVector<T>, std::pair<size_t, size_t>> map;
   std::unordered_set<CombElt<T>> known_redundant;
-  std::ostream& os;
-  void print_statistics(std::ostream &os_out) const {
+  void print_statistics(std::ostream &os_out, std::ostream& os) const {
     os_out << "|stabilizerElt|=" << stabilizerElt.size() << "\n";
     os_out << "|ListNeighborCoset|=" << ListNeighborCoset.size()
            << " |ListNeighborX|=" << ListNeighborX.size() << "\n";
@@ -276,7 +270,7 @@ public:
       os_out << " [" << kv.first << "," << kv.second << "]";
     }
     os_out << "\n";
-    std::vector<int> V = ComputeMatchingVector();
+    std::vector<int> V = ComputeMatchingVector(os);
     int n_missing = 0;
     for (size_t i_mat = 0; i_mat < V.size(); i_mat++) {
       int val = V[i_mat];
@@ -381,7 +375,7 @@ public:
   bool IsPresentInStabilizer(CombElt<T> const &eElt) const {
     return stabilizerElt_set.count(eElt) == 1;
   }
-  bool InsertStabilizerGenerator(CombElt<T> const &eElt) {
+  bool InsertStabilizerGenerator(CombElt<T> const &eElt, std::ostream & os) {
     if (IsPresentInStabilizer(eElt))
       return false;
     os << "InsertStabilizerGenerator 1 |stabilizerElt|="
@@ -476,10 +470,10 @@ public:
       }
     }
   }
-  bool InsertGenerators(std::vector<CombElt<T>> const &ListGen) {
+  bool InsertGenerators(std::vector<CombElt<T>> const &ListGen, std::ostream& os) {
     bool DidSomething = false;
     auto generator_upgrade = [&](CombElt<T> const &e_elt) -> void {
-      bool test = InsertStabilizerGenerator(e_elt);
+      bool test = InsertStabilizerGenerator(e_elt, os);
       if (test) {
         // Copy needed of the old data then recompute
         std::vector<CombElt<T>> OldListCos = ListNeighborCoset;
@@ -515,10 +509,10 @@ public:
     };
     for (auto &e_elt : ListGen)
       f_insert(e_elt);
-    print_statistics(os);
+    print_statistics(os, os);
     return DidSomething;
   }
-  StepEnum(MyVector<T> const &_x, std::ostream& _os) : os(_os) {
+  StepEnum(MyVector<T> const &_x) {
     x = _x;
     int n = x.size();
     CombElt<T> IdMat = GenerateIdentity<T>(n);
@@ -531,7 +525,7 @@ public:
     MyVector<T> x_diff = x_img - x;
     return x_diff;
   }
-  MyMatrix<T> GetFAC() const {
+  MyMatrix<T> GetFAC(std::ostream& os) const {
     int n = x.size();
     int n_mat = ListNeighborX.size();
     MyMatrix<T> FAC(n_mat, n);
@@ -567,9 +561,9 @@ public:
     }
     return FAC;
   }
-  DataFAC<T> GetDataCone() const {
+  DataFAC<T> GetDataCone(std::ostream& os) const {
     HumanTime time;
-    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> FAC = GetFAC(os);
     int n_mat = FAC.rows();
     int rnk = RankMat(FAC);
     std::optional<MyVector<T>> eVectInt;
@@ -587,9 +581,9 @@ public:
     os << "New DataFAC computed time=" << time << "\n";
     return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
-  int RemoveRedundancy() {
+  int RemoveRedundancy(std::ostream& os) {
     HumanTime time;
-    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> FAC = GetFAC(os);
     int n = x.size();
     int n_mat = FAC.rows();
     int rnk = RankMat(FAC);
@@ -647,14 +641,14 @@ public:
         ListNeighborCosetRed.push_back(ListNeighborCoset[i_coset]);
       }
       ComputeCosets(ListNeighborCosetRed);
-      print_statistics(os);
+      print_statistics(os, os);
     }
     os << "ComputeCosets time=" << time << "\n";
     return n_remove;
   }
   // For a facet of the cone, there should be a matching element in the adjacent
   // facet.
-  std::vector<int> ComputeMatchingVector() const {
+  std::vector<int> ComputeMatchingVector(std::ostream& os) const {
     HumanTime time;
     int n_mat = ListNeighborData.size();
     std::vector<MyMatrix<T>> l_mat;
@@ -673,7 +667,8 @@ public:
     };
     std::vector<int> MatchVector;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-      MatchVector.push_back(get_j_mat(i_mat));
+      int j_mat = get_j_mat(i_mat);
+      MatchVector.push_back(j_mat);
     }
     os << "ComputingMatchingVector time=" << time << "\n";
     return MatchVector;
@@ -693,9 +688,9 @@ public:
   // So maybe inserting the w_i w is a good idea.
   std::vector<CombElt<T>>
   GetMissingInverseElement(DataFAC<T> const &datafac,
-                           ShortVectorGroup<T> const &svg) const {
+                           ShortVectorGroup<T> const &svg, std::ostream& os) const {
     HumanTime time;
-    std::vector<int> V = ComputeMatchingVector();
+    std::vector<int> V = ComputeMatchingVector(os);
     ShortVectorGroupMemoize<T> svg_mem(svg);
     int n_mat = ListNeighborData.size();
     std::vector<CombElt<T>> ListMiss;
@@ -734,7 +729,8 @@ public:
   // Compute by linear programming the structure.
   std::vector<CombElt<T>>
   GetMissingFacetMatchingElement_LP(DataFAC<T> const &datafac,
-                                    ShortVectorGroup<T> const &svg) const {
+                                    ShortVectorGroup<T> const &svg,
+                                    std::ostream& os) const {
     HumanTime time;
     //
     // Preprocessing information
@@ -772,7 +768,7 @@ public:
       }
       return FAC_local;
     };
-    std::vector<int> V = ComputeMatchingVector();
+    std::vector<int> V = ComputeMatchingVector(os);
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyMatrix<T> const &Q = datafac.ListAdj[i_fac].mat;
       int j_fac = V[i_fac];
@@ -824,7 +820,8 @@ public:
   std::vector<CombElt<T>>
   GetMissingFacetMatchingElement_DD(DataFAC<T> const &datafac,
                                     std::string const &eCommand_DD,
-                                    ShortVectorGroup<T> const &svg) const {
+                                    ShortVectorGroup<T> const &svg,
+                                    std::ostream& os) const {
     HumanTime time;
     //
     // Preprocessing information
@@ -833,7 +830,7 @@ public:
     MyMatrix<T> EXT =
         DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, os);
     os << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
-    std::vector<int> V = ComputeMatchingVector();
+    std::vector<int> V = ComputeMatchingVector(os);
     for (auto &eVal : V) {
       if (eVal == -1) {
         std::cerr << "We have a missing matching facet problem. Exiting here\n";
@@ -962,9 +959,9 @@ public:
   // The mapping A ----> AQ maps to the adjacent domain.
   // The mapping of the X ----> X c(Q)^T with c(Q) the
   // contragredient representation.
-  AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand_DD) {
+  AdjacencyInfo<T> ComputeAdjacencyInfo(std::string const &eCommand_DD, std::ostream& os) {
     size_t miss_val = std::numeric_limits<size_t>::max();
-    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> FAC = GetFAC(os);
     int n = x.size();
     int n_mat = ListNeighborData.size();
     int rnk = RankMat(FAC);
@@ -1026,7 +1023,7 @@ public:
     }
     os << "Second part: computing the opposite facets\n";
     MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
-    std::vector<int> V = ComputeMatchingVector();
+    std::vector<int> V = ComputeMatchingVector(os);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       int j_mat = V[i_mat];
       if (j_mat == -1) {
@@ -1060,7 +1057,7 @@ public:
         std::cerr << "EXTcan=\n";
         WriteMatrix(std::cerr, EXTcan);
         std::cerr << "i_mat=" << i_mat << "\n";
-        std::vector<int> V = ComputeMatchingVector();
+        std::vector<int> V = ComputeMatchingVector(os);
         for (int i_mat = 0; i_mat < n_mat; i_mat++) {
           std::cerr << "i_mat=" << i_mat << " j=" << V[i_mat] << "\n";
         }
@@ -1113,7 +1110,8 @@ public:
   //
   std::optional<CombElt<T>> GetMissing_TypeI_Gen2(DataFAC<T> const &datafac,
                                                   CombElt<T> const &TestElt,
-                                                  int const &max_iter) const {
+                                                  int const &max_iter,
+                                                  std::ostream& os) const {
     struct ResultOptim {
       T the_scal;
       MyVector<T> the_x;
@@ -1293,9 +1291,9 @@ public:
   }
   std::optional<CombElt<T>> GetMissing_TypeI_Gen1(DataFAC<T> const &datafac,
                                                   CombElt<T> const &TestElt,
-                                                  int const &max_iter) const {
+                                                  int const &max_iter,
+                                                  std::ostream& os) const {
     std::string strategy = "strategy2";
-    ;
     CombElt<T> WorkElt = TestElt;
     int n_iter = 0;
     os << "Beginning of f_insert\n";
@@ -1380,12 +1378,12 @@ public:
   std::optional<CombElt<T>>
   GetMissing_TypeI(DataFAC<T> const &datafac, CombElt<T> const &TestElt,
                    int const &max_iter,
-                   std::string const &MethodMissingI) const {
+                   std::string const &MethodMissingI, std::ostream& os) const {
     if (MethodMissingI == "Gen1") {
-      return GetMissing_TypeI_Gen1(datafac, TestElt, max_iter);
+      return GetMissing_TypeI_Gen1(datafac, TestElt, max_iter, os);
     }
     if (MethodMissingI == "Gen2") {
-      return GetMissing_TypeI_Gen2(datafac, TestElt, max_iter);
+      return GetMissing_TypeI_Gen2(datafac, TestElt, max_iter, os);
     }
     std::cerr << "Failed to find a matching entry. MethodMissingI="
               << MethodMissingI << "\n";
@@ -1394,7 +1392,8 @@ public:
   void InsertAndCheckRedundancy(std::vector<CombElt<T>> const &l_elt_pre,
                                 std::string const &MethodMissingI,
                                 std::string const& method_adjacent,
-                                std::string const& eCommand_DD) {
+                                std::string const& eCommand_DD,
+                                std::ostream & os) {
     std::vector<CombElt<T>> l_elt = l_elt_pre;
     os << "InsertAndCheckRedundancy before std::sort\n";
     std::sort(l_elt.begin(), l_elt.end(),
@@ -1426,14 +1425,14 @@ public:
     };
     auto insert_generator = [&](std::vector<CombElt<T>> const f_list) -> bool {
       HumanTime time;
-      bool test = InsertGenerators(f_list);
+      bool test = InsertGenerators(f_list, os);
       if (test) {
-        datafac = GetDataCone();
+        datafac = GetDataCone(os);
       }
       if (test && datafac.eVectInt) {
-        int n_remove = RemoveRedundancy();
+        int n_remove = RemoveRedundancy(os);
         if (n_remove > 0) {
-          datafac = GetDataCone();
+          datafac = GetDataCone(os);
         }
       }
       os << "insert_generator, time=" << time << "\n";
@@ -1447,7 +1446,7 @@ public:
       bool DidSomething = false;
       while (true) {
         std::vector<CombElt<T>> ListMiss =
-            GetMissingInverseElement(datafac, svg);
+          GetMissingInverseElement(datafac, svg, os);
         std::vector<CombElt<T>> ListMissB;
         for (auto &eElt : ListMiss) {
           if (ListTried.count(eElt) == 0) {
@@ -1471,12 +1470,12 @@ public:
     auto f_facet_matching = [&]() -> bool {
       if (method_adjacent == "linear_programming") {
         std::vector<CombElt<T>> ListMiss =
-            GetMissingFacetMatchingElement_LP(datafac, svg);
+          GetMissingFacetMatchingElement_LP(datafac, svg, os);
         return insert_generator(ListMiss);
       }
       if (method_adjacent == "dual_description") {
         std::vector<CombElt<T>> ListMiss =
-            GetMissingFacetMatchingElement_DD(datafac, eCommand_DD, svg);
+          GetMissingFacetMatchingElement_DD(datafac, eCommand_DD, svg, os);
         return insert_generator(ListMiss);
       }
       std::cerr << "Failed to find a matching for\n";
@@ -1510,7 +1509,7 @@ public:
         std::vector<CombElt<T>> n_pair;
         for (auto &TestElt : e_pair) {
           std::optional<CombElt<T>> opt =
-              GetMissing_TypeI(datafac, TestElt, 0, MethodMissingI);
+            GetMissing_TypeI(datafac, TestElt, 0, MethodMissingI, os);
           if (opt) {
             CombElt<T> const &uElt1 = *opt;
             CombElt<T> uElt2 = InverseComb(uElt1);
@@ -1537,15 +1536,15 @@ public:
       pos++;
     }
   }
-  bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt) {
+  bool TestIntersection(MyMatrix<T> const &FAC, CombElt<T> const &eElt, std::ostream& os) {
     MyMatrix<T> FACimg = FAC * eElt.mat;
     MyMatrix<T> FACtot = Concatenate(FAC, FACimg);
     return IsFullDimensional(FACtot, os);
   }
-  std::vector<CombElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai) {
+  std::vector<CombElt<T>> GenerateTypeIIneighbors(AdjacencyInfo<T> const &ai, std::ostream& os) {
     int n = x.size();
     std::vector<CombElt<T>> ListMiss;
-    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> FAC = GetFAC(os);
     int n_mat = FAC.rows();
     std::vector<CombElt<T>> ListAdj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1566,7 +1565,7 @@ public:
         if (x_img == x) {
           return {};
         }
-        bool test = TestIntersection(FAC, TheMat);
+        bool test = TestIntersection(FAC, TheMat, os);
         if (test) {
           return TheMat;
         }
@@ -1622,10 +1621,10 @@ public:
     return GRP;
   }
   std::pair<int, std::vector<std::vector<int>>>
-  GetGroupPresentation(AdjacencyInfo<T> const &ai) {
+  GetGroupPresentation(AdjacencyInfo<T> const &ai, std::ostream& os) {
     int n = x.size();
     std::vector<std::vector<int>> ListWord;
-    MyMatrix<T> FAC = GetFAC();
+    MyMatrix<T> FAC = GetFAC(os);
     int n_mat = FAC.rows();
     std::vector<CombElt<T>> ListAdj;
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1665,6 +1664,12 @@ public:
   }
 };
 
+
+
+
+
+
+
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
                                         RecOption const &rec_option,
@@ -1674,9 +1679,9 @@ StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
   bool DidSomething = false;
   auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
     if (ListMiss.size() > 0) {
-      bool test = se.InsertGenerators(ListMiss);
+      bool test = se.InsertGenerators(ListMiss, os);
       if (test) {
-        se.RemoveRedundancy();
+        se.RemoveRedundancy(os);
         DidSomething = true;
       }
     }
@@ -1687,8 +1692,8 @@ StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
     //
     // Iteration Type II
     //
-    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand_DD);
-    std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai);
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(eCommand_DD, os);
+    std::vector<CombElt<T>> ListMissII = se.GenerateTypeIIneighbors(ai, os);
     os << "|ListMissII|=" << ListMissII.size() << "\n";
     insert_block(ListMissII);
     //
@@ -1824,12 +1829,12 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   DataPoincare<T> dp =
       ReadDataPoincare<T>(rec_option.FileDataPoincare, rec_option.n_expand);
   os << "We have dp\n";
-  StepEnum<T> se(dp.x, os);
+  StepEnum<T> se(dp.x);
   auto f_init = [&]() -> void {
     if (rec_option.Approach == "IncrementallyAdd") {
       return se.InsertAndCheckRedundancy(
           dp.ListGroupElt, rec_option.MethodMissingI,
-          rec_option.method_adjacent, rec_option.eCommand_DD);
+          rec_option.method_adjacent, rec_option.eCommand_DD, os);
     }
     if (rec_option.Approach == "FacetAdjacencies") {
       return se.read_step_enum_from_file(rec_option.FileStepEnum);
@@ -1860,10 +1865,10 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
     os << "GRP=" << GRP.GapString() << "\n";
   }
   if (ComputeGroupPresentation) {
-    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand_DD);
+    AdjacencyInfo<T> ai = se.ComputeAdjacencyInfo(rec_option.eCommand_DD, os);
     os << "Writing the group presentation\n";
     std::pair<int, std::vector<std::vector<int>>> ThePres =
-        se.GetGroupPresentation(ai);
+      se.GetGroupPresentation(ai, os);
     PrintGroupPresentation(os, ThePres);
   }
 }
