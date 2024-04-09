@@ -191,6 +191,31 @@ template <typename T> struct DataFAC {
   std::vector<CombElt<T>> ListAdjInv;
 };
 
+namespace boost::serialization {
+  template <class Archive, typename T>
+  inline void serialize(Archive &ar, DataFAC<T> &eRec,
+                        [[maybe_unused]] const unsigned int version) {
+    ar &make_nvp("n_mat", eRec.n_mat);
+    ar &make_nvp("rnk", eRec.rnk);
+    ar &make_nvp("FAC", eRec.FAC);
+    ar &make_nvp("eVectInt", eRec.eVectInt);
+    ar &make_nvp("ListAdjInv", eRec.ListAdjInv);
+  }
+}
+
+template<typename T>
+void write_description_to_file(std::string const &eFile,
+                               DataFAC<T> const &datafac) {
+  std::ofstream osF(eFile);
+  size_t n_mat = datafac.ListAdj.size();
+  osF << n_mat << "\n";
+  for (size_t i_mat = 0; i_mat < n_mat; i_mat++) {
+    WriteTrackGroup(osF, datafac.ListAdj[i_mat].tg);
+    WriteMatrix(osF, datafac.ListAdj[i_mat].mat);
+  }
+  WriteMatrix(osF, datafac.FAC);
+}
+
 //
 // Now the polyhedral stuff
 //
@@ -312,17 +337,6 @@ public:
     } else {
       os_out << "OK: All facets have matching on the other side\n";
     }
-  }
-  void write_description_to_file(std::string const &eFile,
-                                 DataFAC<T> const &datafac) const {
-    std::ofstream osF(eFile);
-    size_t n_mat = datafac.ListAdj.size();
-    osF << n_mat << "\n";
-    for (size_t i_mat = 0; i_mat < n_mat; i_mat++) {
-      WriteTrackGroup(osF, datafac.ListAdj[i_mat].tg);
-      WriteMatrix(osF, datafac.ListAdj[i_mat].mat);
-    }
-    WriteMatrix(osF, datafac.FAC);
   }
   bool IsPresentInStabilizer(CombElt<T> const &eElt) const {
     return stabilizerElt_set.count(eElt) == 1;
@@ -1396,6 +1410,7 @@ GetMissing_TypeI(StepEnum<T> const& se,
 template<typename T>
 void InsertAndCheckRedundancy(StepEnum<T> & se,
                               std::vector<CombElt<T>> const &l_elt_pre,
+                              std::string const& PrefixSave,
                               std::string const &MethodMissingI,
                               std::string const& method_adjacent,
                               std::string const& eCommand_DD,
@@ -1419,15 +1434,11 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
     os << "i_elt=" << i_elt << " norm=" << norm << "\n";
   }
   DataFAC<T> datafac;
-  size_t idx_write = 0;
   auto write_files = [&]() -> void {
-    std::string eFileData = "DATAFAC_" + std::to_string(idx_write) + "_" +
-      std::to_string(datafac.n_mat);
-    se.write_description_to_file(eFileData,datafac);
-    std::string eFileStep = "STEPENUM_" + std::to_string(idx_write) + "_" +
-      std::to_string(datafac.n_mat);
-    //    write_step_enum_to_file(eFileStep);
-    idx_write++;
+    std::string PrefixDatafac = PrefixSave + "DATAFAC_";
+    SingleData_IncrementalWrite(PrefixDatafac, datafac);
+    std::string PrefixStepenum = PrefixSave + "STEPENUM_";
+    SingleData_IncrementalWrite(PrefixStepenum, se);
   };
   auto insert_generator = [&](std::vector<CombElt<T>> const f_list) -> bool {
     HumanTime time;
@@ -1802,9 +1813,8 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
     if (rec_option.Approach == "IncrementallyAdd") {
       StepEnum<T> se;
       se.initial_set(dp.x);
-      InsertAndCheckRedundancy(se,
-          dp.ListGroupElt, rec_option.MethodMissingI,
-          rec_option.method_adjacent, rec_option.eCommand_DD, os);
+      InsertAndCheckRedundancy(se, dp.ListGroupElt, rec_option.PrefixSave,
+                               rec_option.MethodMissingI, rec_option.method_adjacent, rec_option.eCommand_DD, os);
       return se;
     }
     if (rec_option.Approach == "Restart") {
