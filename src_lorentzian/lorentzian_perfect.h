@@ -609,12 +609,8 @@ ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorM
   Tgroup GRPperm = LinPolytopeIntegral_Stabilizer_Method8(eFamEXT_T, GRPisom, os);
   std::vector<MyMatrix<Tint>> ListGen;
   for (auto & eGen : GRPperm.SmallGeneratingSet()) {
-    std::optional<MyMatrix<Tint>> opt = FindTransformationGeneral(eFamEXT, eFamEXT, eGen);
-    if (!opt) {
-      std::cerr << "Failed to find a tramsformation\n";
-      throw TerminalException{1};
-    }
-    ListGen.push_back(*opt);
+    MyMatrix<Tint> eGenMatr = RepresentVertexPermutation(eFamEXT, eFamEXT, eGen);
+    ListGen.push_back(eGenMatr);
   }
   return {ListGen, GRPperm};
 }
