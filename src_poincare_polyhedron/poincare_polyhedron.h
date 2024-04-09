@@ -1112,9 +1112,10 @@ std::optional<CombElt<T>> GetMissing_TypeI_Gen2(StepEnum<T> const& se,
     MyVector<T> the_x;
     std::vector<int> eList;
   };
+  MyVector<T> eVectInt = unfold_opt(datafac.eVectInt, "eVectInt not assigned");
   int n_mat = datafac.FAC.rows();
   auto f_start = [&](MyVector<T> const &start_x) -> ResultOptim {
-    T scal = start_x.dot(*datafac.eVectInt);
+    T scal = start_x.dot(eVectInt);
     return {scal, start_x, {}};
   };
   auto f_get_ineq = [&](ResultOptim const &ro) -> MyVector<T> {
@@ -1133,7 +1134,7 @@ std::optional<CombElt<T>> GetMissing_TypeI_Gen2(StepEnum<T> const& se,
   auto f_increment = [&](ResultOptim const &ro, int i_mat) -> ResultOptim {
     CombElt<T> eAdj = f_get_combelt(i_mat);
     MyVector<T> test_x = eAdj.mat.transpose() * ro.the_x;
-    T test_scal = test_x.dot(*datafac.eVectInt);
+    T test_scal = test_x.dot(eVectInt);
     std::vector<int> eList;
     eList.push_back(i_mat);
     return {std::move(test_scal), std::move(test_x), std::move(eList)};
@@ -1295,9 +1296,10 @@ std::optional<CombElt<T>> GetMissing_TypeI_Gen1(StepEnum<T> const& se,
   CombElt<T> WorkElt = TestElt;
   int n_iter = 0;
   os << "Beginning of f_insert\n";
+  MyVector<T> eVectInt = unfold_opt(datafac.eVectInt, "eVectInt not assigned");
   MyVector<T> curr_x = WorkElt.mat.transpose() * se.x;
-  T curr_scal = curr_x.dot(*datafac.eVectInt);
-  T target_scal = se.x.dot(*datafac.eVectInt);
+  T curr_scal = curr_x.dot(eVectInt);
+  T target_scal = se.x.dot(eVectInt);
   double target_scal_d = UniversalScalarConversion<double, T>(target_scal);
   os << "target_scal=" << target_scal_d << "\n";
   while (true) {
@@ -1339,7 +1341,7 @@ std::optional<CombElt<T>> GetMissing_TypeI_Gen1(StepEnum<T> const& se,
       }
       for (auto &eAdj : datafac.ListAdj) {
         MyVector<T> test_x = eAdj.mat.transpose() * curr_x;
-        T test_scal = test_x.dot(*datafac.eVectInt);
+        T test_scal = test_x.dot(eVectInt);
         if (test_scal < curr_scal) {
           double curr_scal_d =
             UniversalScalarConversion<double, T>(curr_scal);
@@ -1636,10 +1638,6 @@ GetGroupPresentation(StepEnum<T> const& se,
   }
   return {n_mat, ListWord};
 }
-
-
-
-
 
 template <typename T>
 StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
