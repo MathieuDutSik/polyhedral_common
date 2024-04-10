@@ -747,7 +747,6 @@ struct TsingAdj {
   size_t iPolyAdj;
   size_t iFaceOpp;
   size_t iPolyOpp;
-  Face IncdRidge;
 };
 
 struct Tfacet {
@@ -1013,9 +1012,11 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   os << "n_ext=" << n_ext << "\n";
   os << "First part: adjacency structure within the polyhedron\n";
   std::vector<Tfacet> ll_adj;
+  std::vector<std::vector<Face>> ll_ridges;
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     Face const &f1 = dataext.v_red[i_mat];
     std::vector<TsingAdj> l_adj;
+    std::vector<Face> l_ridges;
     for (int j_mat = 0; j_mat < n_mat; j_mat++) {
       if (i_mat != j_mat) {
         Face const &f2 = dataext.v_red[j_mat];
@@ -1027,16 +1028,18 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
         int rnk = RankMat(EXT_red);
         if (rnk == n - 2) {
           size_t j_mat_s = static_cast<size_t>(j_mat);
-          l_adj.push_back({j_mat_s, miss_val, miss_val, miss_val, f});
+          l_adj.push_back({j_mat_s, miss_val, miss_val, miss_val});
+          l_ridges.push_back(f);
         }
       }
     }
     ll_adj.push_back({l_adj});
+    ll_ridges.push_back(l_ridges);
   }
   auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
     size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
     for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
-      Face f2 = ll_adj[iFace].l_sing_adj[i_adjB].IncdRidge;
+      Face f2 = ll_ridges[iFace][i_adjB];
       if (f1 == f2)
         return i_adjB;
     }
@@ -1047,7 +1050,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
     for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
       size_t iFaceAdj = ll_adj[i_mat].l_sing_adj[i_adj].iFaceAdj;
-      Face f1 = ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge;
+      Face f1 = ll_ridges[i_mat][i_adj];
       ll_adj[i_mat].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
     }
   }
@@ -1077,8 +1080,9 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     size_t iFaceOpp = j_mat_s;
     for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
       Face f_map(n_ext);
+      Face const& f = ll_ridges[i_mat][i_adj];
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-        if (ll_adj[i_mat].l_sing_adj[i_adj].IncdRidge[i_ext] == 1) {
+        if (f[i_ext] == 1) {
           size_t idx = map_index[i_ext];
           f_map[idx] = 1;
         }
