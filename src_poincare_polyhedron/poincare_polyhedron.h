@@ -754,6 +754,32 @@ GetMissingInverseElement(StepEnum<T> const& se,
   return ListMiss;
 }
 
+
+// This is for the single adjacency in the polyhedron
+// * iFaceAdj is the index of the facet in the polyhedron
+//   which is adjacent to it in the ridge.
+// * iPolyAdj is the index in the adjacent iFaceAdj face
+//   in the ridge.
+// * iFaceOpp is the index of the facet in the mapped polyhedron
+// * iPolyAdj is similarly the corresponding index of the ridge
+// * EXTadj is the record of the vertices of the codimension 2 face
+struct TsingAdj {
+  size_t iFaceAdj;
+  size_t iPolyAdj;
+  size_t iFaceOpp;
+  size_t iPolyOpp;
+  Face IncdRidge;
+};
+
+struct Tfacet {
+  Face IncdFacet;
+  std::vector<TsingAdj> l_sing_adj;
+};
+
+template <typename T> struct AdjacencyInfo {
+  std::vector<Tfacet> ll_adj;
+};
+
 // For each element g defining a facet, we have a corresponding
 // element that defines the corresponding facet. That element can
 // be g^{-1} or it can be something else.
@@ -983,33 +1009,6 @@ GetMissingFacetMatchingElement(StepEnum<T> const& se,
   throw TerminalException{1};
 }
 
-
-// This is for the single adjacency in the polyhedron
-// * iFaceAdj is the index of the facet in the polyhedron
-//   which is adjacent to it in the ridge.
-// * iPolyAdj is the index in the adjacent iFaceAdj face
-//   in the ridge.
-// * iFaceOpp is the index of the facet in the mapped polyhedron
-// * iPolyAdj is similarly the corresponding index of the ridge
-// * EXTadj is the record of the vertices of the codimension 2 face
-struct TsingAdj {
-  size_t iFaceAdj;
-  size_t iPolyAdj;
-  size_t iFaceOpp;
-  size_t iPolyOpp;
-  Face IncdRidge;
-};
-
-struct Tfacet {
-  Face IncdFacet;
-  std::vector<TsingAdj> l_sing_adj;
-};
-
-template <typename T> struct AdjacencyInfo {
-  MyMatrix<T> EXT;
-  std::vector<Tfacet> ll_adj;
-};
-
 // The ComputeAdjacencyInfo gives the corresponding
 // matching between facets and the adjacent domain.
 // That computation makes sense only if the
@@ -1034,7 +1033,6 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   DataEXT<T> dataext = DirectDataExtComputation(FAC, eCommand_DD, os);
   int n_ext = dataext.EXT.rows();
   os << "n_ext=" << n_ext << "\n";
-  std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
   os << "First part: adjacency structure within the polyhedron\n";
   std::vector<Tfacet> ll_adj;
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -1101,30 +1099,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
         }
       }
     }
-    if (s_facet.find(MapFace) == s_facet.end()) {
-      std::cerr << "EXTimgCan=\n";
-      WriteMatrix(std::cerr, EXTimgCan);
-      std::cerr << "EXTcan=\n";
-      WriteMatrix(std::cerr, EXTcan);
-      std::cerr << "i_mat=" << i_mat << "\n";
-      std::vector<int> V = se.ComputeMatchingVector(os);
-      for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-        std::cerr << "i_mat=" << i_mat << " j=" << V[i_mat] << "\n";
-      }
-      for (auto &kv : s_facet) {
-        std::cerr << "i_facet=" << kv.second
-                  << " facet=" << StringFace(kv.first) << "\n";
-      }
-      std::cerr << "MapFace=" << StringFace(MapFace) << "\n";
-      std::cerr << "Failed to find the MapFace in s_facet\n";
-      throw TerminalException{1};
-    }
-    size_t iFaceOpp = s_facet[MapFace];
-    if (iFaceOpp != j_mat_s) {
-      std::cerr << "Error at i_mat=" << i_mat << "\n";
-      std::cerr << "iFaceOpp=" << iFaceOpp << " j_mat=" << j_mat << "\n";
-      throw TerminalException{1};
-    }
+    size_t iFaceOpp = j_mat_s;
     for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
       Face f_map(n_ext);
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
@@ -1138,7 +1113,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
       ll_adj[i_mat].l_sing_adj[i_adj].iPolyOpp = iPolyOpp;
     }
   }
-  return {dataext.EXT, ll_adj};
+  return {ll_adj};
 }
 
 //
