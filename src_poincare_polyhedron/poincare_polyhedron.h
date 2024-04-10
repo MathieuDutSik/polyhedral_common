@@ -20,14 +20,36 @@
 #include <vector>
 // clang-format on
 
-//
-// The common function for paperwork
-//
-
 template <typename T> struct DataEXT {
   MyMatrix<T> EXT;
+  vectface vf;
   std::vector<Face> v_red;
 };
+
+template<typename T>
+DataEXT<T> DirectDataExtComputation(MyMatrix<T> const& FAC, std::string const& eCommand_DD, std::ostream& os) {
+  int n_fac = FAC.rows();
+  vectface vf(n_fac);
+  std::vector<MyVector<T>> ListVert;
+  auto f_process=[&](std::pair<Face, MyVector<T>> const& pair_face) -> void {
+    vf.push_back(pair_face.first);
+    ListVert.push_back(pair_face.second);
+  };
+  DirectFacetComputationFaceIneq(FAC, eCommand_DD, f_process, os);
+  MyVector<T> EXT = MatrixFromVectorFamily(ListVert);
+  int n_ext = EXT.rows();
+  std::vector<Face> v_red(n_fac, Face(n_ext));
+  size_t pos = 0;
+  for (auto &eInc : vf) {
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+      v_red[i_fac][pos] = eInc[i_fac];
+    }
+    pos++;
+  }
+  return {std::move(EXT), std::move(vf), std::move(v_red)};
+}
+
+
 
 template <typename T>
 DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
@@ -842,43 +864,28 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   // Preprocessing information
   //
   os << "GetMissingFacetMatchingElement_DD, beginning\n";
-  MyMatrix<T> EXT =
-    DirectFacetComputationInequalities(datafac.FAC, eCommand_DD, os);
-  os << "|EXT|=" << EXT.rows() << " / " << EXT.cols() << " time=" << time << "\n";
+  DataEXT<T> dataext = DirectDataExtComputation(datafac.FAC, eCommand_DD, os);
+  os << "|EXT|=" << dataext.EXT.rows() << " / " << dataext.EXT.cols() << " time=" << time << "\n";
   (void)se.ComputeMatchingVectorCheck(os);
   //
   // Building incidence informations
   //
   int n_fac = datafac.FAC.rows();
-  int n_ext = EXT.rows();
-  int n = EXT.cols();
+  int n_ext = dataext.EXT.rows();
+  int n = dataext.EXT.cols();
   os << "n_fac=" << n_fac << " n_ext=" << n_ext << " n=" << n << "\n";
-  vectface vf(n_ext);
-  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
-    Face f(n_ext);
-    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      T scal = 0;
-      for (int i = 0; i < n; i++)
-        scal += EXT(i_ext, i) * datafac.FAC(i_fac, i);
-      if (scal == 0)
-        f[i_ext] = 1;
-    }
-    os << "i_fac=" << i_fac << "  |f|=" << f.count() << "\n";
-    vf.push_back(f);
-  }
-  os << "We have vf time=" << time << "\n";
   Face f_adjacency(n_fac * n_fac);
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++) {
       Face f(n_ext);
-      Face f1 = vf[i_fac];
-      Face f2 = vf[j_fac];
+      Face f1 = dataext.vf[i_fac];
+      Face f2 = dataext.vf[j_fac];
       for (int i_ext = 0; i_ext < n_ext; i_ext++) {
         if (f1[i_ext] && f2[i_ext])
           f[i_ext] = 1;
       }
       if (static_cast<int>(f.count()) >= n - 2) {
-        MyMatrix<T> EXT_red = SelectRow(EXT, f);
+        MyMatrix<T> EXT_red = SelectRow(dataext.EXT, f);
         int rnk = RankMat(EXT_red);
         if (rnk == n - 2) {
           f_adjacency[i_fac + n_fac * j_fac] = 1;
@@ -904,9 +911,9 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     MyMatrix<T> const &Q = datafac.ListAdj[i_fac].mat;
     MyMatrix<T> cQ = Contragredient(Q);
-    MyMatrix<T> EXTimg = EXT * cQ;
+    MyMatrix<T> EXTimg = dataext.EXT * cQ;
     MyMatrix<T> FACimg = datafac.FAC * Q;
-    Face f = vf[i_fac];
+    Face f = dataext.vf[i_fac];
     auto f_set = [&](int i_ext) {
       if (f[i_ext] == 0) {
         // Not in face, so no insertion to do
@@ -919,7 +926,7 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
       for (int i_fac = 0; i_fac < n_fac; i_fac++) {
         T scal = 0;
         for (int i = 0; i < n; i++) {
-          scal += EXT(i_ext, i) * FACimg(i_fac, i);
+          scal += dataext.EXT(i_ext, i) * FACimg(i_fac, i);
         }
         if (scal < 0) {
           f_insert_svg[i_ext] = 1;
@@ -941,7 +948,7 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   for (int i_ext = 0; i_ext < n_ext; i_ext++) {
     if (f_insert_svg[i_ext] == 1) {
       os << "pos=" << pos << " / " << count << "      i_ext=" << i_ext << " / " << n_ext << "\n";
-      MyVector<T> eEXT = GetMatrixRow(EXT, i_ext);
+      MyVector<T> eEXT = GetMatrixRow(dataext.EXT, i_ext);
       T target_scal = eEXT.dot(se.x);
       svg_mem.ComputeInsertSolution(eEXT, target_scal);
       pos++;
@@ -1024,9 +1031,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   os << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows()
      << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n
      << " nk=" << rnk << "\n";
-  vectface vf = DirectFacetComputationIncidence(FAC, eCommand_DD, os);
-  os << "ComputeAdjacencyInfo |vf|=" << vf.size() << "\n";
-  DataEXT<T> dataext = GetTransposedDualDesc(vf, FAC);
+  DataEXT<T> dataext = DirectDataExtComputation(FAC, eCommand_DD, os);
   int n_ext = dataext.EXT.rows();
   os << "n_ext=" << n_ext << "\n";
   std::unordered_map<Face, size_t> s_facet = get_map_face(dataext.v_red);
@@ -1084,7 +1089,6 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     MyMatrix<T> EXTimgCan = SmallestCanonicalization(EXTimg);
     ContainerMatrix<T> Cont(EXTimgCan);
     Face MapFace(n_ext);
-    std::vector<size_t> l_idx(n_ext, 0);
     std::map<int, size_t> map_index;
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
