@@ -70,27 +70,6 @@ DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
   return {std::move(EXT), std::move(v_red)};
 }
 
-std::unordered_map<Face, size_t>
-get_map_face(std::vector<Face> const &l_facet) {
-  size_t n_facet = l_facet.size();
-  std::unordered_map<Face, size_t> s_facet;
-  for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
-    Face const &f = l_facet[i_facet];
-    s_facet[f] = i_facet;
-  }
-  if (l_facet.size() != s_facet.size()) {
-    for (size_t i_facet = 0; i_facet < l_facet.size(); i_facet++) {
-      std::cerr << "i_facet=" << i_facet << " " << StringFace(l_facet[i_facet])
-                << "\n";
-    }
-    std::cerr << "|l_facet|=" << l_facet.size()
-              << " |s_facet|=" << s_facet.size() << "\n";
-    std::cerr << "l_facet contains some duplicate and that is illegal\n";
-    throw TerminalException{1};
-  }
-  return s_facet;
-}
-
 //
 // The elementary data structures for the Poincare stuff
 //
@@ -772,7 +751,6 @@ struct TsingAdj {
 };
 
 struct Tfacet {
-  Face IncdFacet;
   std::vector<TsingAdj> l_sing_adj;
 };
 
@@ -1053,8 +1031,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
         }
       }
     }
-    Face IncdFacet = dataext.v_red[i_mat];
-    ll_adj.push_back({IncdFacet, l_adj});
+    ll_adj.push_back({l_adj});
   }
   auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
     size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
@@ -1086,15 +1063,13 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     MyMatrix<T> EXTimg = dataext.EXT * cQ;
     MyMatrix<T> EXTimgCan = SmallestCanonicalization(EXTimg);
     ContainerMatrix<T> Cont(EXTimgCan);
-    Face MapFace(n_ext);
     std::map<int, size_t> map_index;
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      if (ll_adj[i_mat].IncdFacet[i_ext] == 1) {
+      if (dataext.v_red[i_mat][i_ext] == 1) {
         std::optional<size_t> opt =
           Cont.GetIdx_f([&](int i) -> T { return EXTcan(i_ext, i); });
         if (opt) {
           size_t idx = *opt;
-          MapFace[idx] = 1;
           map_index[i_ext] = idx;
         }
       }
