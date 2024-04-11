@@ -723,16 +723,16 @@ GetMissingInverseElement(StepEnum<T> const& se,
 // This is for the single adjacency in the polyhedron
 // * iFaceAdj is the index of the facet in the polyhedron
 //   which is adjacent to it in the ridge.
-// * iPolyAdj is the index in the adjacent iFaceAdj face
+// * iRidgeAdj is the index in the adjacent iFaceAdj face
 //   in the ridge.
 // * iFaceOpp is the index of the facet in the mapped polyhedron
-// * iPolyAdj is similarly the corresponding index of the ridge
+// * iRidgeAdj is similarly the corresponding index of the ridge
 // * EXTadj is the record of the vertices of the codimension 2 face
 struct TsingAdj {
   size_t iFaceAdj;
-  size_t iPolyAdj;
+  size_t iRidgeAdj;
   size_t iFaceOpp;
-  size_t iPolyOpp;
+  size_t iRidgeOpp;
 };
 
 template <typename T> struct AdjacencyInfo {
@@ -1018,7 +1018,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     ll_adj.push_back(l_adj);
     ll_ridges.push_back(l_ridges);
   }
-  auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
+  auto get_iRidge = [&](size_t iFace, Face const &f1) -> size_t {
     size_t n_adjB = ll_adj[iFace].size();
     for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
       Face const& f2 = ll_ridges[iFace][i_adjB];
@@ -1033,7 +1033,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
       size_t iFaceAdj = ll_adj[i_mat][i_adj].iFaceAdj;
       Face const& f1 = ll_ridges[i_mat][i_adj];
-      ll_adj[i_mat][i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
+      ll_adj[i_mat][i_adj].iRidgeAdj = get_iRidge(iFaceAdj, f1);
     }
   }
   os << "Second part: computing the opposite facets\n";
@@ -1067,9 +1067,9 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
           f_map[idx] = 1;
         }
       }
-      size_t iPolyOpp = get_iPoly(iFaceOpp, f_map);
+      size_t iRidgeOpp = get_iRidge(iFaceOpp, f_map);
       ll_adj[i_mat][i_adj].iFaceOpp = iFaceOpp;
-      ll_adj[i_mat][i_adj].iPolyOpp = iPolyOpp;
+      ll_adj[i_mat][i_adj].iRidgeOpp = iRidgeOpp;
     }
   }
   return {ll_adj};
@@ -1399,9 +1399,9 @@ std::vector<CombElt<T>> GenerateTypeIIneighbors(StepEnum<T> const& se,
     while (true) {
       TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
       int iFaceOpp = ai.ll_adj[i_mat_work][i_facet_work].iFaceOpp;
-      int iPolyOpp = ai.ll_adj[i_mat_work][i_facet_work].iPolyOpp;
-      i_mat_work = ai.ll_adj[iFaceOpp][iPolyOpp].iFaceAdj;
-      i_facet_work = ai.ll_adj[iFaceOpp][iPolyOpp].iPolyAdj;
+      int iRidgeOpp = ai.ll_adj[i_mat_work][i_facet_work].iRidgeOpp;
+      i_mat_work = ai.ll_adj[iFaceOpp][iRidgeOpp].iFaceAdj;
+      i_facet_work = ai.ll_adj[iFaceOpp][iRidgeOpp].iRidgeAdj;
       MyVector<T> x_img = TheMat.mat.transpose() * se.x;
       if (x_img == se.x) {
         return {};
@@ -1583,9 +1583,9 @@ GetGroupPresentation(StepEnum<T> const& se,
       TheWord.push_back(i_mat_work);
       TheMat = ProductComb(TheMat, ListAdj[i_mat_work]);
       int iFaceOpp = ai.ll_adj[i_mat_work][i_facet_work].iFaceOpp;
-      int iPolyOpp = ai.ll_adj[i_mat_work][i_facet_work].iPolyOpp;
-      i_mat_work = ai.ll_adj[iFaceOpp][iPolyOpp].iFaceAdj;
-      i_facet_work = ai.ll_adj[iFaceOpp][iPolyOpp].iPolyAdj;
+      int iRidgeOpp = ai.ll_adj[i_mat_work][i_facet_work].iRidgeOpp;
+      i_mat_work = ai.ll_adj[iFaceOpp][iRidgeOpp].iFaceAdj;
+      i_facet_work = ai.ll_adj[iFaceOpp][iRidgeOpp].iRidgeAdj;
       MyVector<T> x_img = TheMat.mat.transpose() * se.x;
       if (x_img == se.x) {
         ListWord.push_back(TheWord);
@@ -1599,9 +1599,9 @@ GetGroupPresentation(StepEnum<T> const& se,
     ListWord.push_back(TheWord);
   }
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    int n_facet = ai.ll_adj[i_mat].size();
-    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
-      InsertWordRidge(i_mat, i_facet);
+    int n_ridge = ai.ll_adj[i_mat].size();
+    for (int i_ridge = 0; i_ridge < n_ridge; i_ridge++) {
+      InsertWordRidge(i_mat, i_ridge);
     }
   }
   return {n_mat, ListWord};
