@@ -720,6 +720,17 @@ GetMissingInverseElement(StepEnum<T> const& se,
 }
 
 
+int get_index_adjacent(Face const& f_adjacent, int n, int i, int j) {
+  int pos = 0;
+  for (int u=0; u<j; u++) {
+    if (f_adjacent[u + n * i] == 1) {
+      pos++;
+    }
+  }
+  return pos;
+}
+
+
 // This is for the single adjacency in the polyhedron
 // * iFaceAdj is the index of the facet in the polyhedron
 //   which is adjacent to it in the ridge.
@@ -797,6 +808,7 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
   };
   std::vector<int> V = se.ComputeMatchingVectorCheck(os);
   std::vector<std::vector<TsingAdj>> ll_adj;
+  bool isCoherent = true;
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     MyMatrix<T> const &Q = datafac.ListAdj[i_fac].mat;
     int j_fac = V[i_fac];
@@ -812,11 +824,7 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
       SolutionMatNonnegativeComplete<T> SolCompl =
         GetSolutionMatNonnegativeComplete(FAC_local, eVect, os);
       if (!SolCompl.SolNonnegative) {
-        if (!SolCompl.ExtremeRay) {
-          std::cerr << "Failed to have an extreme ray\n";
-          throw TerminalException{1};
-        }
-        MyVector<T> const &eEXTred = *SolCompl.ExtremeRay;
+        MyVector<T> eEXTred = unfold_opt(SolCompl.ExtremeRay, "Failed to find an extreme ray");
         MyVector<T> eEXT = NSP.transpose() * eEXTred;
         T target_scal = eEXT.dot(se.x);
         svg_mem.ComputeInsertSolution(eEXT, target_scal);
@@ -825,6 +833,31 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
     }
     os << "i_fac=" << i_fac << "/" << n_fac << "  n_adj=" << n_adj
        << " n_adj_img=" << n_adj_img << " n_found=" << n_found << "\n";
+    if (n_found > 0) {
+      isCoherent = false;
+    }
+    if (isCoherent) {
+      std::vector<TsingAdj> l_adj;
+      ContainerMatrixPositiveScal<T> Cont(FAC_localImg);
+      int i_adj = 0;
+      for (int u=0; u<n_fac; u++) {
+        if (f_adjacency[u + n_fac * i_fac] == 1 && isCoherent) {
+          size_t iFaceAdj = u;
+          size_t iRidgeAdj = get_index_adjacent(f_adjacency, n_fac, u, i_fac);
+          size_t iFaceOpp = V[i_fac];
+          MyVector<T> eVect = GetMatrixRow(FAC_local, i_adj);
+          std::optional<size_t> opt = Cont.GetIdx_v(eVect);
+          if (opt) {
+            size_t iRidgeOpp = *opt;
+            l_adj.push_back({iFaceAdj, iRidgeAdj, iFaceOpp, iRidgeOpp});
+          } else {
+            isCoherent = false;
+          }
+          i_adj++;
+        }
+      }
+      ll_adj.push_back(l_adj);
+    }
   }
   //
   // Now calling the SGE code
