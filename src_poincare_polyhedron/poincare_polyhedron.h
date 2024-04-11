@@ -125,20 +125,6 @@ template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
 
-template <typename T>
-MyMatrix<T> SmallestCanonicalization(MyMatrix<T> const &M) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<T> Mret(nbRow, nbCol);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<T> V = GetMatrixRow(M, iRow);
-    MyVector<T> Vcan =
-        CanonicalizationSmallestCoefficientVectorPlusCoeff(V).TheVect;
-    AssignMatrixRow(Mret, iRow, Vcan);
-  }
-  return Mret;
-}
-
 template <typename T> MyMatrix<T> AddZeroColumn(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
@@ -1039,7 +1025,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
   auto get_iPoly = [&](size_t iFace, Face const &f1) -> size_t {
     size_t n_adjB = ll_adj[iFace].l_sing_adj.size();
     for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
-      Face f2 = ll_ridges[iFace][i_adjB];
+      Face const& f2 = ll_ridges[iFace][i_adjB];
       if (f1 == f2)
         return i_adjB;
     }
@@ -1050,12 +1036,11 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     size_t n_adj = ll_adj[i_mat].l_sing_adj.size();
     for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
       size_t iFaceAdj = ll_adj[i_mat].l_sing_adj[i_adj].iFaceAdj;
-      Face f1 = ll_ridges[i_mat][i_adj];
+      Face const& f1 = ll_ridges[i_mat][i_adj];
       ll_adj[i_mat].l_sing_adj[i_adj].iPolyAdj = get_iPoly(iFaceAdj, f1);
     }
   }
   os << "Second part: computing the opposite facets\n";
-  MyMatrix<T> EXTcan = SmallestCanonicalization(dataext.EXT);
   std::vector<int> V = se.ComputeMatchingVectorCheck(os);
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     int j_mat = V[i_mat];
@@ -1064,13 +1049,12 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     MyMatrix<T> Q = se.GetElement(se.ListNeighborData[i_mat]).mat;
     MyMatrix<T> cQ = Contragredient(Q);
     MyMatrix<T> EXTimg = dataext.EXT * cQ;
-    MyMatrix<T> EXTimgCan = SmallestCanonicalization(EXTimg);
-    ContainerMatrix<T> Cont(EXTimgCan);
+    ContainerMatrixPositiveScal<T> Cont(EXTimg);
     std::map<int, size_t> map_index;
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       if (dataext.v_red[i_mat][i_ext] == 1) {
         std::optional<size_t> opt =
-          Cont.GetIdx_f([&](int i) -> T { return EXTcan(i_ext, i); });
+          Cont.GetIdx_f([&](int i) -> T { return dataext.EXT(i_ext, i); });
         if (opt) {
           size_t idx = *opt;
           map_index[i_ext] = idx;
