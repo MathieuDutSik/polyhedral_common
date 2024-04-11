@@ -736,6 +736,8 @@ struct TsingAdj {
 };
 
 template <typename T> struct AdjacencyInfo {
+  std::vector<CombElt<T>> ListMiss;
+  Face f_adjacency;
   std::vector<std::vector<TsingAdj>> ll_adj;
 };
 
@@ -751,7 +753,7 @@ template <typename T> struct AdjacencyInfo {
 // by linear programming and then with SGE we can find the corresponding
 // missed element.
 template<typename T>
-std::vector<CombElt<T>>
+AdjacencyInfo<T>
 GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
                                   DataFAC<T> const &datafac,
                                   ShortVectorGroup<T> const &svg,
@@ -764,7 +766,7 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
   int n_fac = datafac.FAC.rows();
   os << "GetMissingFacetMatchingElement_LP, n_fac=" << n_fac << " dim=" << dim << "\n";
   ShortVectorGroupMemoize<T> svg_mem(svg);
-  Face f_adj = ComputeSkeletonClarkson(datafac.FAC, os);
+  Face f_adjacency = ComputeSkeletonClarkson(datafac.FAC, os);
   os << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
   //
   auto get_nsp = [&](int const &i_fac) -> MyMatrix<T> {
@@ -777,14 +779,14 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
                           MyMatrix<T> const &NSP) -> MyMatrix<T> {
     int count = 0;
     for (int j_fac = 0; j_fac < n_fac; j_fac++) {
-      if (f_adj[i_fac + j_fac * n_fac] == 1) {
+      if (f_adjacency[i_fac + j_fac * n_fac] == 1) {
         count++;
       }
     }
     MyMatrix<T> FAC_local(count, dim - 1);
     int pos = 0;
     for (int k_fac = 0; k_fac < n_fac; k_fac++) {
-      if (f_adj[i_fac + k_fac * n_fac] == 1) {
+      if (f_adjacency[i_fac + k_fac * n_fac] == 1) {
         MyVector<T> eFAC = GetMatrixRow(TheFAC, k_fac);
         MyVector<T> eFACred = NSP * eFAC;
         AssignMatrixRow(FAC_local, pos, eFACred);
@@ -794,6 +796,7 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
     return FAC_local;
   };
   std::vector<int> V = se.ComputeMatchingVectorCheck(os);
+  std::vector<std::vector<TsingAdj>> ll_adj;
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
     MyMatrix<T> const &Q = datafac.ListAdj[i_fac].mat;
     int j_fac = V[i_fac];
@@ -833,17 +836,18 @@ GetMissingFacetMatchingElement_LP(StepEnum<T> const& se,
     ListMiss.push_back(InverseComb(eElt));
   }
   os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
-  return ListMiss;
+  return {ListMiss, f_adjacency, ll_adj};
 }
 
 // The same as above but using a dual description.
 template<typename T>
-std::vector<CombElt<T>>
+AdjacencyInfo<T>
 GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
                                   DataFAC<T> const &datafac,
                                   std::string const &eCommand_DD,
                                   ShortVectorGroup<T> const &svg,
                                   std::ostream& os) {
+  size_t miss_val = std::numeric_limits<size_t>::max();
   HumanTime time;
   //
   // Preprocessing information
@@ -860,8 +864,12 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   int n = dataext.EXT.cols();
   os << "n_fac=" << n_fac << " n_ext=" << n_ext << " n=" << n << "\n";
   Face f_adjacency(n_fac * n_fac);
+  std::vector<std::vector<TsingAdj>> ll_adj(n_fac);
+  std::vector<std::vector<Face>> ll_ridges(n_fac);
   for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+    size_t i_fac_s = static_cast<size_t>(i_fac);
     for (int j_fac = i_fac + 1; j_fac < n_fac; j_fac++) {
+      size_t j_fac_s = static_cast<size_t>(j_fac);
       Face f(n_ext);
       Face f1 = dataext.vf[i_fac];
       Face f2 = dataext.vf[j_fac];
@@ -875,18 +883,14 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
         if (rnk == n - 2) {
           f_adjacency[i_fac + n_fac * j_fac] = 1;
           f_adjacency[j_fac + n_fac * i_fac] = 1;
+          // Check that the indices are inceasing.
+          ll_adj[i_fac_s].push_back({j_fac_s, miss_val, miss_val, miss_val});
+          ll_adj[j_fac_s].push_back({i_fac_s, miss_val, miss_val, miss_val});
+          ll_ridges[i_fac_s].push_back(f);
+          ll_ridges[j_fac_s].push_back(f);
         }
       }
     }
-  }
-  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
-    int n_adj = 0;
-    for (int j_fac = 0; j_fac < n_fac; j_fac++) {
-      if (f_adjacency[i_fac + n_fac * j_fac] == 1) {
-        n_adj++;
-      }
-    }
-    os << "i_fac=" << i_fac << " n_adj=" << n_adj << "\n";
   }
   os << "We have f_adjacency, time=" << time << "\n";
   //
@@ -925,6 +929,62 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
   size_t count = f_insert_svg.count();
   os << "We have f_insert_svg |f_insert_svg|=" << count
      << " n_ext=" << n_ext << " time=" << time << "\n";
+  if (count == 0) {
+    auto get_iRidge = [&](size_t iFace, Face const &f1) -> size_t {
+      size_t n_adjB = ll_adj[iFace].size();
+      for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
+        Face const& f2 = ll_ridges[iFace][i_adjB];
+        if (f1 == f2)
+          return i_adjB;
+      }
+      std::cerr << "Failed to find a matching for f1\n";
+      throw TerminalException{1};
+    };
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+      size_t n_adj = ll_adj[i_fac].size();
+      for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
+        size_t iFaceAdj = ll_adj[i_fac][i_adj].iFaceAdj;
+        Face const& f1 = ll_ridges[i_fac][i_adj];
+        ll_adj[i_fac][i_adj].iRidgeAdj = get_iRidge(iFaceAdj, f1);
+      }
+    }
+    os << "Second part: computing the opposite facets\n";
+    std::vector<int> V = se.ComputeMatchingVectorCheck(os);
+    for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+      int j_fac = V[i_fac];
+      size_t j_fac_s = j_fac;
+      size_t n_adj = ll_adj[i_fac].size();
+      MyMatrix<T> Q = se.GetElement(se.ListNeighborData[i_fac]).mat;
+      MyMatrix<T> cQ = Contragredient(Q);
+      MyMatrix<T> EXTimg = dataext.EXT * cQ;
+      ContainerMatrixPositiveScal<T> Cont(EXTimg);
+      std::map<int, size_t> map_index;
+      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
+        if (dataext.v_red[i_fac][i_ext] == 1) {
+          std::optional<size_t> opt =
+            Cont.GetIdx_f([&](int i) -> T { return dataext.EXT(i_ext, i); });
+          if (opt) {
+            size_t idx = *opt;
+            map_index[i_ext] = idx;
+          }
+        }
+      }
+      size_t iFaceOpp = j_fac_s;
+      for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
+        Face f_map(n_ext);
+        Face const& f = ll_ridges[i_fac][i_adj];
+        for (int i_ext = 0; i_ext < n_ext; i_ext++) {
+          if (f[i_ext] == 1) {
+            size_t idx = map_index[i_ext];
+            f_map[idx] = 1;
+          }
+        }
+        size_t iRidgeOpp = get_iRidge(iFaceOpp, f_map);
+        ll_adj[i_fac][i_adj].iFaceOpp = iFaceOpp;
+        ll_adj[i_fac][i_adj].iRidgeOpp = iRidgeOpp;
+      }
+    }
+  }
   //
   // Now calling the SGE code
   //
@@ -946,11 +1006,11 @@ GetMissingFacetMatchingElement_DD(StepEnum<T> const& se,
     ListMiss.push_back(InverseComb(eElt));
   }
   os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
-  return ListMiss;
+  return {ListMiss, f_adjacency, ll_adj};
 }
 
 template<typename T>
-std::vector<CombElt<T>>
+AdjacencyInfo<T>
 GetMissingFacetMatchingElement(StepEnum<T> const& se,
                                DataFAC<T> const &datafac,
                                std::string const& method_adjacent,
@@ -1018,61 +1078,7 @@ AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
     ll_adj.push_back(l_adj);
     ll_ridges.push_back(l_ridges);
   }
-  auto get_iRidge = [&](size_t iFace, Face const &f1) -> size_t {
-    size_t n_adjB = ll_adj[iFace].size();
-    for (size_t i_adjB = 0; i_adjB < n_adjB; i_adjB++) {
-      Face const& f2 = ll_ridges[iFace][i_adjB];
-      if (f1 == f2)
-        return i_adjB;
-    }
-    std::cerr << "Failed to find a matching for f1\n";
-    throw TerminalException{1};
-  };
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    size_t n_adj = ll_adj[i_mat].size();
-    for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
-      size_t iFaceAdj = ll_adj[i_mat][i_adj].iFaceAdj;
-      Face const& f1 = ll_ridges[i_mat][i_adj];
-      ll_adj[i_mat][i_adj].iRidgeAdj = get_iRidge(iFaceAdj, f1);
-    }
-  }
-  os << "Second part: computing the opposite facets\n";
-  std::vector<int> V = se.ComputeMatchingVectorCheck(os);
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    int j_mat = V[i_mat];
-    size_t j_mat_s = j_mat;
-    size_t n_adj = ll_adj[i_mat].size();
-    MyMatrix<T> Q = se.GetElement(se.ListNeighborData[i_mat]).mat;
-    MyMatrix<T> cQ = Contragredient(Q);
-    MyMatrix<T> EXTimg = dataext.EXT * cQ;
-    ContainerMatrixPositiveScal<T> Cont(EXTimg);
-    std::map<int, size_t> map_index;
-    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      if (dataext.v_red[i_mat][i_ext] == 1) {
-        std::optional<size_t> opt =
-          Cont.GetIdx_f([&](int i) -> T { return dataext.EXT(i_ext, i); });
-        if (opt) {
-          size_t idx = *opt;
-          map_index[i_ext] = idx;
-        }
-      }
-    }
-    size_t iFaceOpp = j_mat_s;
-    for (size_t i_adj = 0; i_adj < n_adj; i_adj++) {
-      Face f_map(n_ext);
-      Face const& f = ll_ridges[i_mat][i_adj];
-      for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-        if (f[i_ext] == 1) {
-          size_t idx = map_index[i_ext];
-          f_map[idx] = 1;
-        }
-      }
-      size_t iRidgeOpp = get_iRidge(iFaceOpp, f_map);
-      ll_adj[i_mat][i_adj].iFaceOpp = iFaceOpp;
-      ll_adj[i_mat][i_adj].iRidgeOpp = iRidgeOpp;
-    }
-  }
-  return {ll_adj};
+  return {{}, {}, ll_adj};
 }
 
 //
@@ -1504,8 +1510,8 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
     }
   };
   auto f_facet_matching = [&]() -> bool {
-    std::vector<CombElt<T>> ListMiss = GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
-    return insert_generator(ListMiss);
+    AdjacencyInfo<T> ai = GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
+    return insert_generator(ai.ListMiss);
   };
   auto f_coherency_update = [&]() -> bool {
     HumanTime time;
