@@ -1464,14 +1464,7 @@ std::vector<CombElt<T>> GenerateTypeIIneighbors(StepEnum<T> const& se,
 }
 
 template<typename T>
-void InsertAndCheckRedundancy(StepEnum<T> & se,
-                              std::vector<CombElt<T>> const &l_elt_pre,
-                              RecOption const &rec_option,
-                              std::ostream & os) {
-  std::string PrefixSave = rec_option.PrefixSave;
-  std::string MethodMissingI = rec_option.MethodMissingI;
-  std::string method_adjacent = rec_option.method_adjacent;
-  std::string eCommand_DD = rec_option.eCommand_DD;
+std::vector<CombElt<T>> ReorderElements(std::vector<CombElt<T>> const &l_elt_pre, std::ostream & os) {
   std::vector<CombElt<T>> l_elt = l_elt_pre;
   os << "InsertAndCheckRedundancy before std::sort\n";
   std::sort(l_elt.begin(), l_elt.end(),
@@ -1490,6 +1483,21 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
       UniversalScalarConversion<double, T>(NormCombElt(l_elt[i_elt]));
     os << "i_elt=" << i_elt << " norm=" << norm << "\n";
   }
+  return l_elt;
+}
+
+
+
+template<typename T>
+void InsertAndCheckRedundancy(StepEnum<T> & se,
+                              std::vector<CombElt<T>> const &l_elt,
+                              RecOption const &rec_option,
+                              std::ostream & os) {
+  std::string PrefixSave = rec_option.PrefixSave;
+  std::string MethodMissingI = rec_option.MethodMissingI;
+  std::string method_adjacent = rec_option.method_adjacent;
+  std::string eCommand_DD = rec_option.eCommand_DD;
+
   DataFAC<T> datafac;
   auto write_files = [&]() -> void {
     std::string PrefixDatafac = PrefixSave + "DATAFAC_";
@@ -1825,7 +1833,8 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
     throw TerminalException{1};
   };
   StepEnum<T> se = f_init();
-  InsertAndCheckRedundancy(se, dp.ListGroupElt, rec_option, os);
+  std::vector<CombElt<T>> l_elt = ReorderElements(dp.ListGroupElt, os);
+  InsertAndCheckRedundancy(se, l_elt, rec_option, os);
   return IterativePoincareRefinement(se, rec_option, os);
 }
 
