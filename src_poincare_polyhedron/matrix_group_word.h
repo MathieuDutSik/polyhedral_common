@@ -187,7 +187,8 @@ template <typename T> struct ShortVectorGroup {
   std::vector<CombElt<T>> ListGen;
   ShortVectorGroup(MyVector<T> const &_x,
                    std::vector<CombElt<T>> const &_ListGen)
-      : x(_x), ListGen(_ListGen) {}
+      : x(_x), ListGen(_ListGen) {
+  }
 
   bool IsSolution(MyVector<T> const &v, T const &target_scal,
                   CombElt<T> const &eElt) const {
@@ -198,6 +199,11 @@ template <typename T> struct ShortVectorGroup {
 
   CombElt<T> GetShortVectorNoDuplication(MyVector<T> const &y,
                                          T const &target_scal) const {
+    if (ListGen.size() == 0) {
+      std::cerr << "The number of generators is 0\n";
+      std::cerr << "Therefore calling the function does not make sense 1\n";
+      throw TerminalException{1};
+    }
     HumanTime time;
     std::cerr << "Beginning of GetShortVectorNoDuplication\n";
     std::unordered_set<MyVector<T>> set_done;
@@ -242,6 +248,11 @@ template <typename T> struct ShortVectorGroup {
 
   CombElt<T> GetShortVectorIteration(MyVector<T> const &y,
                                      T const &target_scal) const {
+    if (ListGen.size() == 0) {
+      std::cerr << "The number of generators is 0\n";
+      std::cerr << "Therefore calling the function does not make sense 2\n";
+      throw TerminalException{1};
+    }
     HumanTime time;
     std::cerr << "Beginning of GetShortVectorIteration\n";
     size_t nGen = ListGen.size();

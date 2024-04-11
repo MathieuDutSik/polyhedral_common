@@ -1061,6 +1061,16 @@ GetMissingFacetMatchingElement(StepEnum<T> const& se,
   throw TerminalException{1};
 }
 
+template<typename T>
+AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> const& se, RecOption const& rec_option, std::ostream& os) {
+  DataFAC<T> datafac = se.GetDataCone(os);
+  std::vector<CombElt<T>> l_elt; // empty by design
+  ShortVectorGroup<T> svg(se.x, l_elt); // Only format, should not be used
+  std::string method_adjacent = rec_option.method_adjacent;
+  std::string eCommand_DD = rec_option.eCommand_DD;
+  return GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
+}
+
 //
 // Now the code for advancing the optimization procedure.
 //
@@ -1783,16 +1793,14 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
     Tgroup GRP = se.template GetPermutationGroup<Tgroup>();
     os << "GRP=" << GRP.GapString() << "\n";
   }
-  /*
   if (ComputeGroupPresentation) {
-    AdjacencyInfo<T> ai = ComputeAdjacencyInfo(se, rec_option.eCommand_DD, os);
+    AdjacencyInfo<T> ai = ComputeAdjacencyInfo(se, rec_option, os);
     os << "Writing the group presentation\n";
     std::pair<int, std::vector<std::vector<int>>> ThePres =
       GetGroupPresentation(se, ai, os);
     PrintGroupPresentation(os, ThePres);
   }
-  */
-  
+
 }
 
 // clang-format off
