@@ -1061,59 +1061,6 @@ GetMissingFacetMatchingElement(StepEnum<T> const& se,
   throw TerminalException{1};
 }
 
-// The ComputeAdjacencyInfo gives the corresponding
-// matching between facets and the adjacent domain.
-// That computation makes sense only if the
-// GetMissingFacetMatchingElement functions return
-// no element.
-template<typename T>
-AdjacencyInfo<T> ComputeAdjacencyInfo(StepEnum<T> & se,
-                                      std::string const &eCommand_DD, std::ostream& os) {
-  size_t miss_val = std::numeric_limits<size_t>::max();
-  MyMatrix<T> FAC = se.GetFAC(os);
-  int n = se.x.size();
-  int n_mat = se.ListNeighborData.size();
-  int rnk = RankMat(FAC);
-  if (rnk != n) {
-    std::cerr << "Error in ComputeAdjacencyInfo\n";
-    std::cerr << "n=" << n << " n_mat=" << n_mat << " rnk=" << rnk << "\n";
-    throw TerminalException{1};
-  }
-  os << "ComputeAdjacencyInfo FAC.rows=" << FAC.rows()
-     << " FAC.cols=" << FAC.cols() << " n_mat=" << n_mat << " n=" << n
-     << " nk=" << rnk << "\n";
-  DataEXT<T> dataext = DirectDataExtComputation(FAC, eCommand_DD, os);
-  int n_ext = dataext.EXT.rows();
-  os << "n_ext=" << n_ext << "\n";
-  os << "First part: adjacency structure within the polyhedron\n";
-  std::vector<std::vector<TsingAdj>> ll_adj;
-  std::vector<std::vector<Face>> ll_ridges;
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    Face const &f1 = dataext.v_red[i_mat];
-    std::vector<TsingAdj> l_adj;
-    std::vector<Face> l_ridges;
-    for (int j_mat = 0; j_mat < n_mat; j_mat++) {
-      if (i_mat != j_mat) {
-        Face const &f2 = dataext.v_red[j_mat];
-        Face f(n_ext);
-        for (int i_ext = 0; i_ext < n_ext; i_ext++)
-          if (f1[i_ext] == 1 && f2[i_ext] == 1)
-            f[i_ext] = 1;
-        MyMatrix<T> EXT_red = SelectRow(dataext.EXT, f);
-        int rnk = RankMat(EXT_red);
-        if (rnk == n - 2) {
-          size_t j_mat_s = static_cast<size_t>(j_mat);
-          l_adj.push_back({j_mat_s, miss_val, miss_val, miss_val});
-          l_ridges.push_back(f);
-        }
-      }
-    }
-    ll_adj.push_back(l_adj);
-    ll_ridges.push_back(l_ridges);
-  }
-  return {{}, {}, ll_adj};
-}
-
 //
 // Now the code for advancing the optimization procedure.
 //
@@ -1497,6 +1444,7 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
   std::string MethodMissingI = rec_option.MethodMissingI;
   std::string method_adjacent = rec_option.method_adjacent;
   std::string eCommand_DD = rec_option.eCommand_DD;
+  int n_iter_max = rec_option.n_iter_max;
 
   DataFAC<T> datafac;
   auto write_files = [&]() -> void {
@@ -1550,26 +1498,25 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
       }
     }
   };
-  auto f_facet_matching = [&]() -> bool {
-    AdjacencyInfo<T> ai = GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
-    return insert_generator(ai.ListMiss);
-  };
   auto f_coherency_update = [&]() -> bool {
     HumanTime time;
-    bool DidSomething = false;
     if (datafac.eVectInt) {
-      while (true) {
-        bool result1 = f_inverses_clear();
-        if (result1)
-          DidSomething = true;
-        os << "f_coherency_update, f_inverses_clear : time=" << time << "\n";
-        bool result2 = f_facet_matching();
-        if (result1)
-          DidSomething = true;
-        os << "f_coherency_update, f_facet_matching : time=" << time << "\n";
-        if (!result1 && !result2)
-          return DidSomething;
-      }
+      bool result1 = f_inverses_clear();
+      os << "f_coherency_update, f_inverses_clear : time=" << time << " result1=" << result1 << "\n";
+      if (result1)
+        return true;
+      AdjacencyInfo<T> ai = GetMissingFacetMatchingElement(se, datafac, method_adjacent, eCommand_DD, svg, os);
+      os << "f_coherency_update, We have ai : time=" << time << "\n";
+      bool result2 = insert_generator(ai.ListMiss);
+      os << "f_coherency_update, insert_generator : time=" << time << " result2=" << result2 << "\n";
+      if (result2)
+        return true;
+      std::vector<CombElt<T>> ListMiss = GenerateTypeIIneighbors(se, ai, os);
+      os << "f_coherency_update, ListMiss : time=" << time << "\n";
+      bool result3 = insert_generator(ListMiss);
+      os << "f_coherency_update, insert_generator : time=" << time << " result3=" << result3 << "\n";
+      if (result3)
+        return true;
     }
     return false;
   };
@@ -1595,17 +1542,42 @@ void InsertAndCheckRedundancy(StepEnum<T> & se,
       return e_pair;
     }
   };
-  int pos = 0;
-  for (auto &e_elt : l_elt) {
-    os << "       pos = " << pos << "\n";
-    os << "       |known_redundant| = " << se.known_redundant.size() << "\n";
-    std::vector<CombElt<T>> l_cand = f_get_candidates(e_elt);
-    bool test = insert_generator(l_cand);
-    if (test) {
-      os << "We did something therefore we need to do a coherency update\n";
-      f_coherency_update();
+  size_t pos_elt = 0;
+  size_t n_elt = l_elt.size();
+  auto f_progress_insert=[&]() {
+    while(true) {
+      os << "       pos_elt = " << pos_elt << " / " << n_elt << "\n";
+      if (pos_elt == n_elt) {
+        return false;
+      }
+      CombElt<T> e_elt = l_elt[pos_elt];
+      std::vector<CombElt<T>> l_cand = f_get_candidates(e_elt);
+      bool test = insert_generator(l_cand);
+      if (test) {
+        return true;
+      }
+      pos_elt += 1;
     }
-    pos++;
+  };
+  auto f_global_progress=[&]() -> bool {
+    bool test = f_coherency_update();
+    if (test) {
+      return true;
+    }
+    return f_progress_insert();
+  };
+  int n_iter = 0;
+  while(true) {
+    os << " n_iter=" << n_iter << " / " << n_iter_max << "\n";
+    bool test = f_global_progress();
+    if (!test) {
+      break;
+    }
+    n_iter++;
+    if (n_iter_max > 0 && n_iter > rec_option.n_iter_max) {
+      std::cerr << "Reached the maximum number of iterations for type I\n";
+      throw TerminalException{1};
+    }
   }
 }
 
@@ -1652,51 +1624,6 @@ GetGroupPresentation(StepEnum<T> const& se,
     }
   }
   return {n_mat, ListWord};
-}
-
-template <typename T>
-StepEnum<T> IterativePoincareRefinement(StepEnum<T> se,
-                                        RecOption const &rec_option,
-                                        std::ostream& os) {
-  std::string method_adjacent = rec_option.method_adjacent;
-  std::string eCommand_DD = rec_option.eCommand_DD;
-  bool DidSomething = false;
-  auto insert_block = [&](std::vector<CombElt<T>> const &ListMiss) -> void {
-    if (ListMiss.size() > 0) {
-      bool test = se.InsertGenerators(ListMiss, os);
-      if (test) {
-        se.RemoveRedundancy(os);
-        DidSomething = true;
-      }
-    }
-  };
-  int n_iter = 0;
-  while (true) {
-    DidSomething = false;
-    //
-    // Iteration Type II
-    //
-    AdjacencyInfo<T> ai = ComputeAdjacencyInfo(se, eCommand_DD, os);
-    std::vector<CombElt<T>> ListMissII = GenerateTypeIIneighbors(se, ai, os);
-    os << "|ListMissII|=" << ListMissII.size() << "\n";
-    insert_block(ListMissII);
-    //
-    // Terminating if ok.
-    //
-    if (!DidSomething) {
-      return se;
-    }
-    //
-    // Iteration checks
-    //
-    if (rec_option.n_iter_max > 0) {
-      if (n_iter > rec_option.n_iter_max) {
-        std::cerr << "Reached the maximum number of iterations for type I\n";
-        throw TerminalException{1};
-      }
-    }
-    n_iter++;
-  }
 }
 
 //
@@ -1835,7 +1762,7 @@ StepEnum<T> compute_step_enum(RecOption const &rec_option, std::ostream& os) {
   StepEnum<T> se = f_init();
   std::vector<CombElt<T>> l_elt = ReorderElements(dp.ListGroupElt, os);
   InsertAndCheckRedundancy(se, l_elt, rec_option, os);
-  return IterativePoincareRefinement(se, rec_option, os);
+  return se;
 }
 
 template <typename T, typename Tgroup>
@@ -1856,6 +1783,7 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
     Tgroup GRP = se.template GetPermutationGroup<Tgroup>();
     os << "GRP=" << GRP.GapString() << "\n";
   }
+  /*
   if (ComputeGroupPresentation) {
     AdjacencyInfo<T> ai = ComputeAdjacencyInfo(se, rec_option.eCommand_DD, os);
     os << "Writing the group presentation\n";
@@ -1863,6 +1791,8 @@ void full_process_type(RecOption const &rec_option, std::ostream& os) {
       GetGroupPresentation(se, ai, os);
     PrintGroupPresentation(os, ThePres);
   }
+  */
+  
 }
 
 // clang-format off
