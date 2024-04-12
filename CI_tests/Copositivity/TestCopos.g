@@ -16,13 +16,13 @@ case4:=rec(eMat:=[ [ 3, 4, 3, -3, -2 ], [ 4, 2, 0, 1, -2 ], [ 3, 0, 3, -1, -2 ],
            name:="Dannenberg1", reply:=true);;
 
 case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 100, -60 ], [ 120, -46, -60, 100 ] ],
-           name:="Dannenberg1", reply:=true);;
+           name:="Dannenberg2", reply:=true);;
 
 
 
 
 TestCopositivity:=function(eCase)
-    local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
+    local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U, test;
     n:=Length(eCase.eMat);
     FileIn:="Test.in";
     FileOut:="Test.out";
@@ -49,20 +49,28 @@ TestCopositivity:=function(eCase)
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileOut);
-    return eCase.reply = U.isCopositive;
+    test:=eCase.reply = U.isCopositive;
+    if test=false then
+        Print("We have eCase.reply=", eCase.reply, " but U.isCopositive=", U.isCopositive, "\n");
+        Print("That is inconsistent\n");
+    fi;
+    return test;
 end;
 
 
 ListCase:=[case1, case2, case3, case4, case5];
 
 n_error:=0;
+ListCaseError:=[];
 for eCase in ListCase
 do
     test:=TestCopositivity(eCase);
     if test=false then
         n_error:=n_error + 1;
+        Add(ListCaseError, eCase);
     fi;
 od;
+Print("n_case=", Length(ListCase), " n_error=", n_error, "\n");
 if n_error > 0 then
     # Error case
     GAP_EXIT_CODE(1);

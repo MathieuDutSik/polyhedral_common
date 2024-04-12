@@ -73,6 +73,7 @@ do
         n_error:=n_error + 1;
     fi;
 od;
+Print("n_error=", n_error, "\n");
 if n_error > 0 then
     # Error case
     GAP_EXIT_CODE(1);

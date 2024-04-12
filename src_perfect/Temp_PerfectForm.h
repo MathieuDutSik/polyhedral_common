@@ -11,6 +11,10 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+#define DEBUG_PERFECT_FORM
+#endif
+
 template <typename T, typename Tint> struct NakedPerfect {
   MyMatrix<T> eGram;
   MyMatrix<Tint> SHV;
@@ -78,7 +82,9 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
       nbBlock++;
     }
   }
-  std::cerr << "nbBlock=" << nbBlock << "\n";
+#ifdef DEBUG_PERFECT_FORM
+  std::cerr << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV << " nbMat=" << nbMat << "\n";
+#endif
   MyMatrix<T> PerfDomEXT(nbBlock, nbMat);
   MyMatrix<Tint> SHVred(nbBlock, n);
   for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
