@@ -13,10 +13,10 @@ case3:=rec(eMat:=[ [ 1, -1, 1, 1, -1 ], [ -1, 1, -1, 1, 1 ], [ 1, -1, 1, -1, 1 ]
            name:="Horn_perturb", reply:=false);;
 
 case4:=rec(eMat:=[ [ 3, 4, 3, -3, -2 ], [ 4, 2, 0, 1, -2 ], [ 3, 0, 3, -1, -2 ], [ -3, 1, -1, 5, 3 ], [ -2, -2, -2, 3, 3 ] ],
-           name:="Dannenberg1", reply:=true);;
+           name:="Dannenberg1", reply:=false);;
 
 case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 100, -60 ], [ 120, -46, -60, 100 ] ],
-           name:="Dannenberg2", reply:=true);;
+           name:="Dannenberg2", reply:=false);;
 
 
 
