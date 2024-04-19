@@ -30,7 +30,7 @@ void WriteEquivalence(std::optional<MyMatrix<Tint>> const& opt, std::string cons
 }
 
 template<typename T, typename Tint>
-void process_C(std::string const& FileMatrix1, std::string comnst& FileMatrix2, std::string const& OutFormat, std::string const& FileOut) {
+void process_C(std::string const& FileMatrix1, std::string const& FileMatrix2, std::string const& OutFormat, std::string const& FileOut) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
@@ -38,7 +38,7 @@ void process_C(std::string const& FileMatrix1, std::string comnst& FileMatrix2, 
 
   MyMatrix<T> LorMat1 = ReadMatrixFile<T>(FileMatrix1);
   MyMatrix<T> LorMat2 = ReadMatrixFile<T>(FileMatrix2);
-  std::vector<MyMatrix<Tint>> l_gen = LORENTZ_TestEquivalenceMatrices<T,Tint,Tgroup>(LorMat1, LorMat2, std::cerr);
+  std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices<T,Tint,Tgroup>(LorMat1, LorMat2, std::cerr);
   auto f=[&](std::ostream& os_out) -> void {
     WriteEquivalence(opt, OutFormat, os_out);
   };

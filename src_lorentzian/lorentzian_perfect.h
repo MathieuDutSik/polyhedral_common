@@ -931,9 +931,9 @@ std::vector<MyMatrix<Tint>> LORENTZ_GetGeneratorsAutom(MyMatrix<T> const& LorMat
 
 
 template<typename T>
-size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const& SymMat, size_t seed, std::ostream& os) {
-  let n = SymMat.rows();
-  let det = DeterminantMat<T>(SymMat);
+size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const& SymMat, size_t seed, [[maybe_unused]] std::ostream& os) {
+  int n = SymMat.rows();
+  T det = DeterminantMat<T>(SymMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
@@ -961,24 +961,21 @@ std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const&
   int n = LorMat1.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  using Telt = typename Tgroup::Telt;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
   //
-  LorentzianPerfectEntry<T,Tint> eRec2 = LORENTZ_GetOnePerfect<T,Tint>(data.LorMat2, TheOption, os);
+  LorentzianPerfectEntry<T,Tint> eRec2 = LORENTZ_GetOnePerfect<T,Tint>(LorMat2, TheOption, os);
   MyMatrix<Tint> EXT2 = LORENTZ_GetEXT(eRec2);
   //
-  int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
-
   DataPerfectLorentzian<T, Tint, Tgroup> data{n,
-                                    LorMat,
+                                    LorMat1,
                                     TheOption,
                                     std::move(rddo)};
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
-  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
   std::optional<MyMatrix<Tint>> opt;
   auto f_incorrect=[&](Tobj const& x) -> bool {
     std::optional<MyMatrix<Tint>> opt_res = LORENTZ_TestEquivalence<T,Tint,Tgroup>(LorMat1, LorMat2, x.EXT, EXT2, os);
