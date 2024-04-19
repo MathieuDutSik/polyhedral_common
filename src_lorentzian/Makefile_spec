@@ -15,7 +15,7 @@
 #PROGRAM		= LORENTZ_SingleEdgewalk
 #PROGRAM		= COXDYN_GetFacetOneDomain
 #PROGRAM		= LORENTZ_MPI_PerfectLorentzian
-PROGRAM		= LORENTZ_GetGeneratorStabilizerForm
+PROGRAM		= LORENTZ_PERF_Isomorphism LORENTZ_PERF_Automorphism
 
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

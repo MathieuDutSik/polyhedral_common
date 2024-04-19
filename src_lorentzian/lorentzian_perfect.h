@@ -876,7 +876,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> GetGeneratorsStabilizer(MyMatrix<T> const& LorMat, std::ostream& os) {
+std::vector<MyMatrix<Tint>> LORENTZ_GetGeneratorsAutom(MyMatrix<T> const& LorMat, std::ostream& os) {
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
