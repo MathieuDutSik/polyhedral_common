@@ -14,7 +14,8 @@
 #PROGRAM		= COXDYN_FindExtensionsCoxMat
 #PROGRAM		= LORENTZ_SingleEdgewalk
 #PROGRAM		= COXDYN_GetFacetOneDomain
-PROGRAM		= LORENTZ_MPI_PerfectLorentzian
+#PROGRAM		= LORENTZ_MPI_PerfectLorentzian
+PROGRAM		= LORENTZ_GetGeneratorStabilizerForm
 
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

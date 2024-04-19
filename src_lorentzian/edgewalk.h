@@ -35,16 +35,6 @@
 
 #define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
-template <typename F>
-void print_stderr_stdout_file(std::string const &FileOut, F f) {
-  if (FileOut == "stderr")
-    return f(std::cerr);
-  if (FileOut == "stdout")
-    return f(std::cout);
-  std::ofstream os(FileOut);
-  return f(os);
-}
-
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA

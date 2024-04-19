@@ -877,6 +877,61 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
 
 
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> GetGeneratorsStabilizer(MyMatrix<T> const& LorMat, std::ostream& os) {
+  int n = LorMat.rows();
+  int dimEXT = n + 1;
+  using TintGroup = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(os);
+  AllArr.dimEXT = dimEXT;
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+
+  int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
+
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
+                                    LorMat,
+                                    TheOption,
+                                    std::move(rddo)};
+  using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  //
+  auto f_incorrect=[&]([[maybe_unused]] Tobj const& x) -> bool {
+    return false;
+  };
+  int max_runtime_second = 0;
+  std::optional<std::vector<Tout>> opt = EnumerateAndStore_Serial<Tdata,decltype(f_incorrect)>(data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_obj = unfold_opt(opt, "Enumeration unexpectedly failed");
+
+  std::unordered_set<MyMatrix<Tint>> s_gen;
+  auto f_insert_gen=[&](MyMatrix<Tint> const& M) -> void {
+    if (!IsIdentity(M)) {
+      s_gen.insert(M);
+    }
+  };
+  for (auto & ent : l_obj) {
+    // Generators coming from the equivalences
+    for (auto & eAdj : ent.ListAdj) {
+      f_insert_gen(eAdj.x.eBigMat);
+    }
+    // Generators comoing from the stabilizers
+    for (auto& ePermGen : ent.x.GRP.SmallGeneratingSet()) {
+      MyMatrix<Tint> eMatrGen = RepresentVertexPermutation<Tint,Telt>(ent.x.EXT, ent.x.EXT, ePermGen);
+      f_insert_gen(eMatrGen);
+    }
+  }
+  std::vector<MyMatrix<Tint>> l_gen;
+  for (auto & eGen : s_gen) {
+    l_gen.push_back(eGen);
+  }
+  return l_gen;
+}
+
+
+
 // clang-format off
 #endif  // SRC_LORENTZIAN_PERFECT_FUND_H_
 // clang-format on
