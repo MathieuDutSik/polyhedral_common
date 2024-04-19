@@ -3022,9 +3022,7 @@ template <typename Tint>
 PolyHeuristicSerial<Tint>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
                                 int const& dimEXT, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
-  //
-  AllArr.dimEXT = dimEXT;
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
   UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   return AllArr;
 }
@@ -3034,9 +3032,7 @@ template <typename Tint>
 PolyHeuristicSerial<Tint>
 Read_AllStandardHeuristicSerial_File(std::string const& eFile,
                                      int const& dimEXT, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(os);
-  //
-  AllArr.dimEXT = dimEXT;
+  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
   if (eFile != "unset") {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     NAMELIST_ReadNamelistFile(eFile, eFull);

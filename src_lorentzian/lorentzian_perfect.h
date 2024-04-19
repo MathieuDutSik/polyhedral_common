@@ -875,16 +875,13 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   }
 }
 
-
-
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> GetGeneratorsStabilizer(MyMatrix<T> const& LorMat, std::ostream& os) {
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(os);
-  AllArr.dimEXT = dimEXT;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
   int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
@@ -929,6 +926,82 @@ std::vector<MyMatrix<Tint>> GetGeneratorsStabilizer(MyMatrix<T> const& LorMat, s
   }
   return l_gen;
 }
+
+
+
+
+template<typename T>
+size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const& SymMat, size_t seed, std::ostream& os) {
+  let n = SymMat.rows();
+  let det = DeterminantMat<T>(SymMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
+  };
+  size_t hash_ret = seed;
+  size_t hash_det = std::hash<T>()(det);
+  combine_hash(hash_ret, hash_det);
+  size_t hash_n = n;
+  combine_hash(hash_ret, hash_n);
+  size_t hash_minus = DiagInfo.nbMinus;
+  combine_hash(hash_ret, hash_minus);
+  return hash_ret;
+}
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, std::ostream& os) {
+  size_t seed = 1678;
+  size_t inv1 = INDEF_FORM_Invariant_NonDeg(LorMat1, seed, os);
+  size_t inv2 = INDEF_FORM_Invariant_NonDeg(LorMat2, seed, os);
+  if (inv1 != inv2) {
+    return {};
+  }
+  int n = LorMat1.rows();
+  int dimEXT = n + 1;
+  using TintGroup = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  //
+  LorentzianPerfectEntry<T,Tint> eRec2 = LORENTZ_GetOnePerfect<T,Tint>(data.LorMat2, TheOption, os);
+  MyMatrix<Tint> EXT2 = LORENTZ_GetEXT(eRec2);
+  //
+  int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
+
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
+                                    LorMat,
+                                    TheOption,
+                                    std::move(rddo)};
+  using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  std::optional<MyMatrix<Tint>> opt;
+  auto f_incorrect=[&](Tobj const& x) -> bool {
+    std::optional<MyMatrix<Tint>> opt_res = LORENTZ_TestEquivalence<T,Tint,Tgroup>(LorMat1, LorMat2, x.EXT, EXT2, os);
+    if (!opt_res) {
+      MyMatrix<Tint> const& eBigMat = *opt_res;
+      opt = eBigMat;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T,Tint>(eBigMat);
+      MyMatrix<T> eProd = eBigMat_T * LorMat1 * eBigMat_T.transpose();
+      if (eProd != LorMat2) {
+        std::cerr << "It is not actually an equivalence\n";
+        throw TerminalException{1};
+      }
+#endif
+      return true;;
+    }
+    return false;
+  };
+  int max_runtime_second = 0;
+  (void)EnumerateAndStore_Serial<Tdata,decltype(f_incorrect)>(data_func, f_incorrect, max_runtime_second);
+  return opt;
+}
+
 
 
 

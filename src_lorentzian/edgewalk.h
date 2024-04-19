@@ -1620,6 +1620,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     TheHeuristic<Tint> const &HeuristicTryTerminateDualDescription,
     std::ostream& os) {
   MyMatrix<T> const &G = si.G;
+  int dimEXT = G.rows() + 1;
   using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -1661,7 +1662,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
       MyMatrix<T> ListIneq =
           -UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(LVect)) *
           G;
-      PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
+      PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
       vectface vf = DualDescriptionStandard(ListIneq, GRP, AllArr, os);
       bool AllRaysInside = true;
       for (auto &eFace : vf) {

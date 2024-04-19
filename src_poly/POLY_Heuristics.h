@@ -502,12 +502,12 @@ template <typename T> struct PolyHeuristicSerial {
   std::string OUTfile;
   std::string bank_parallelization_method;
   std::string DD_Prefix;
-  size_t dimEXT;
+  int dimEXT;
   bool DeterministicRuntime;
 };
 
 template <typename T>
-PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
+PolyHeuristicSerial<T> AllStandardHeuristicSerial(int const& dimEXT, std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool DD_Saving = false;
   bool AdvancedTerminationCriterion = false;
@@ -520,7 +520,6 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(std::ostream &os) {
   std::string OUTfile = "unset.out";
   std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
-  size_t dimEXT = std::numeric_limits<size_t>::max();
   bool DeterministicRuntime = true;
   return {StandardHeuristicSplitting<T>(),
           StandardHeuristicBankSave<T>(),

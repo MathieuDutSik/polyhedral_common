@@ -1257,12 +1257,13 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     return eMat;
   };
   std::optional<MyMatrix<T>> CommonGramMat = get_common();
-  //
-  using TintGroup = typename Tgroup::Tint;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(os);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
+  //
+  using TintGroup = typename Tgroup::Tint;
+  int dimEXT = LinSpa.n + 1;
+  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
   DataIsoDelaunayDomains<T,Tint,Tgroup> data{LinSpa,
     std::move(rddo),
