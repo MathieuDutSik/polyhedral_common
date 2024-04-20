@@ -1,7 +1,8 @@
 Read("../common.g");
 Print("Beginning TestReflectivity\n");
 
-GeneratePoincareFundamentalInput:=true;
+GeneratePoincareFundamentalInput:=false;
+GenerateIsotropicTestCases:=true;
 iPoincare:=0;
 
 LORENTZ_GetReflection:=function(LorMat, eRoot)
@@ -66,7 +67,7 @@ end;
 
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom;
+    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
     n:=Length(eRec.LorMat);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
@@ -94,7 +95,7 @@ TestReflectivity:=function(eRec)
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
-        return false;
+        return rec(is_correct:=false);
     fi;
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
@@ -124,25 +125,37 @@ TestReflectivity:=function(eRec)
         fi;
         #
     fi;
-    return eRec.n_simple = U.n_simple;
+    hasIsotropic:=not isCocompact;
+    is_correct:=eRec.n_simple = U.n_simple;
+    return rec(is_correct:=is_correct, hasIsotropic:=hasIsotropic);
 end;
 
 ListRec:=ReadAsFunction("ListReflect")();;
+#ListRec:=ListRec{[1..100]};
+
 
 FullTest:=function()
-    local n_error, iRec, eRec, test;
+    local n_error, iRec, eRec, RecReply, ListIsotropicCases, eIsotropicCase;
     n_error:=0;
     iRec:=0;
+    ListIsotropicCases:=[];
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        test:=TestReflectivity(eRec);
-        if test=false then
+        RecReply:=TestReflectivity(eRec);
+        if RecReply.is_correct=false then
             n_error:=n_error+1;
             return n_error;
         fi;
+        if IsBound(RecReply.hasIsotropic) then
+            eIsotropicCase:=rec(M:=eRec.LorMat, hasIsotropic:=RecReply.hasIsotropic);
+            Add(ListIsotropicCases, eIsotropicCase);
+        fi;
         iRec:=iRec + 1;
     od;
+    if GenerateIsotropicTestCases then
+        SaveDataToFile("IsotropicCases", ListIsotropicCases);
+    fi;
     return n_error;
 end;
 
