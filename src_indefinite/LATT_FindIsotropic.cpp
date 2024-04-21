@@ -10,18 +10,19 @@
 
 template <typename T>
 void process(std::string const &FileI, std::string const &OutFormat,
-             std::ostream &os) {
+             std::ostream &os_out) {
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
   std::cerr << "We have Q\n";
   //
   std::optional<MyVector<T>> opt = FindIsotropic(Q);
   if (OutFormat == "GAP") {
     if (opt) {
-      os << "return rec(has_isotropic:=true, V:=" << StringVectorGAP(*opt)
-         << ");\n";
+      os_out << "return rec(has_isotropic:=true,\n";
+      os_out << "V:=" << StringVectorGAP(*opt) << ");\n";
     } else {
-      os << "return rec(has_isotropic:=false);\n";
+      os_out << "return rec(has_isotropic:=false);\n";
     }
+    return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";
   throw TerminalException{1};

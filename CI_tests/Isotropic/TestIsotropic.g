@@ -46,7 +46,7 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestReflectivity(eRec);
+        RecReply:=TestIsotropic(eRec);
         if RecReply.is_correct=false then
             n_error:=n_error+1;
             return n_error;
