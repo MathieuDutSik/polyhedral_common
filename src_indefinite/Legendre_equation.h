@@ -58,6 +58,10 @@ template <typename T> bool determine_solvability(MyVector<T> const &aReduced) {
   T a = aReduced(0);
   T b = aReduced(1);
   T c = aReduced(2);
+#ifdef DEBUG_LEGENDRE
+  T prod = a * b * c;
+  std::cerr << "LEG: prod=" << prod << "\n";
+#endif
   T a_abs = T_abs(a);
   T b_abs = T_abs(b);
   T c_abs = T_abs(c);
