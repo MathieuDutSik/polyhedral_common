@@ -17,7 +17,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
   std::optional<MyVector<T>> opt = FindIsotropic(Q);
   if (OutFormat == "GAP") {
     if (opt) {
-      os_out << "return rec(has_isotropic:=true,\n";
+      os_out << "return rec(has_isotropic:=true, ";
       os_out << "V:=" << StringVectorGAP(*opt) << ");\n";
     } else {
       os_out << "return rec(has_isotropic:=false);\n";

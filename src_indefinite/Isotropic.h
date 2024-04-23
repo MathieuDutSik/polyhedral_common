@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ISOTROPIC
+#endif
+
 /*
   The method here is inspired by the following
   papers and manuscripts:
@@ -132,6 +136,9 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M) {
   if (n == 3) {
     // Apply first the Legendre theorem
     bool test = ternary_has_isotropic_vector(M);
+#ifdef DEBUG_ISOTROPIC
+    std::cerr << "ternary_has_isotropic_vector test=" << test << "\n";
+#endif
     if (test) {
       return Kernel_FindIsotropic(M);
     } else {

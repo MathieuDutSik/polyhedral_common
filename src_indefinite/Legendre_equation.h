@@ -13,6 +13,10 @@
 #include "Positivity.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LEGENDRE
+#endif
+
 /*
   The ternary equation x M x = 0 for L a 3x3 matrix
   is named the Legendre equation.
@@ -42,7 +46,13 @@ template <typename T> bool determine_solvability(MyVector<T> const &aReduced) {
       n_minus++;
     }
   }
-  if (n_plus == 0 && n_minus == 0) {
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
+#endif
+  if (n_plus == 0 || n_minus == 0) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: Returning false by positivity condition\n";
+#endif
     return false;
   }
   T a = aReduced(0);
@@ -54,16 +64,33 @@ template <typename T> bool determine_solvability(MyVector<T> const &aReduced) {
   T a_cnt = -b * c;
   T b_cnt = -a * c;
   T c_cnt = -a * b;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: a_abs=" << a_abs << " a_cnt=" << a_cnt << "\n";
+  std::cerr << "LEG: b_abs=" << b_abs << " b_cnt=" << b_cnt << "\n";
+  std::cerr << "LEG: c_abs=" << c_abs << " c_cnt=" << c_cnt << "\n";
+#endif
   if (!is_quadratic_residue(a_cnt, a_abs)) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: Returning false by quadratic residue for a\n";
+#endif
     return false;
   }
   if (!is_quadratic_residue(b_cnt, b_abs)) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: Returning false by quadratic residue for b\n";
+#endif
     return false;
   }
   if (!is_quadratic_residue(c_cnt, c_abs)) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: Returning false by quadratic residue for c\n";
+#endif
     return false;
   }
-  return false;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: Returning true as the condition appears to be satisfied\n";
+#endif
+  return true;
 }
 
 /*
@@ -158,10 +185,22 @@ reduction_information(MyVector<T> const &aV) {
 template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
   DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "V1=" << StringVectorGAP(V1) << "\n";
+#endif
   MyVector<T> V2 = RemoveFractionVector(V1);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "V2=" << StringVectorGAP(V2) << "\n";
+#endif
   using Tring = typename underlying_ring<T>::ring_type;
   MyVector<Tring> V3 = UniversalVectorConversion<Tring, T>(V2);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "V3=" << StringVectorGAP(V3) << "\n";
+#endif
   MyVector<Tring> V4 = reduction_information(V3).second;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "V4=" << StringVectorGAP(V4) << "\n";
+#endif
   return determine_solvability(V4);
 }
 
