@@ -67,7 +67,7 @@ end;
 
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, i, j, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
+    local n, FileIn, FileNml, FileOut, output, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
     n:=Length(eRec.LorMat);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
@@ -103,7 +103,7 @@ TestReflectivity:=function(eRec)
     RemoveFile(FileOut);
     ListVertNorm:=List(U.ListVertices, x->x.norm);
     isCocompact:=Maximum(ListVertNorm) < 0;
-    Print("n=", Length(eRec.LorMat), " n_simple=", eRec.n_simple, " isCocompact=", isCocompact, " |GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
+    Print("n=", n, " n_simple=", eRec.n_simple, " isCocompact=", isCocompact, " |GRPmatr|=", Order(U.GrpIsomCoxMatr), "\n");
     if GeneratePoincareFundamentalInput and isCocompact then
         iPoincare:=iPoincare + 1;
         PrefixPoincare:=Concatenation("Poincare_", String(iPoincare), "_-_", String(n), "_", String(U.n_simple));
