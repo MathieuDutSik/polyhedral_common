@@ -15,7 +15,8 @@ SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
 InvGroup: The space of matrices invariant under a group\n   \
 RealQuad: The space corresponding to a real quadratic field\n   \
 ImagQuad: The space corresponding to a real quadratic field\n   \
-Raw: the space given by matrices";
+Raw     : the space given by matrices\n    \
+File    : A file containing the Tspace";
   ListIntValues1_doc["RealImagDim"] = "Default: 0\n\
 The dimension d of the space GL_d(R) for R a number ring";
   ListIntValues1_doc["RealImagSum"] = "Default: 0\n\
@@ -76,21 +77,27 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
     std::vector<T> eV = GetLineVector(eMat);
     ListLineMat.push_back(eV);
   }
-  MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   std::vector<MyMatrix<T>> ListComm = ReadListMatrix<T>(is);
   std::vector<MyMatrix<T>> ListSubspaces = ReadListMatrix<T>(is);
   std::vector<MyMatrix<T>> PtStabGens = ReadListMatrix<T>(is);
+  //
+  MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   return {n, SuperMat, ListMat, ListLineMat, ListMatAsBigMat, ListComm, ListSubspaces, PtStabGens};
 }
 
 template<typename T>
-void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
-  std::ofstream os(eFile);
+void WriteLinSpace(std::ostream& os, LinSpaceMatrix<T> const& LinSpa) {
   WriteMatrix(os, LinSpa.SuperMat);
   WriteListMatrix(os, LinSpa.ListMat);
   WriteListMatrix(os, LinSpa.ListComm);
   WriteListMatrix(os, LinSpa.ListSubspaces);
   WriteListMatrix(os, LinSpa.PtStabGens);
+}
+
+template<typename T>
+void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
+  std::ofstream os(eFile);
+  WriteLinSpace(os, LinSpa);
 }
 
 template<typename T, typename Tint>

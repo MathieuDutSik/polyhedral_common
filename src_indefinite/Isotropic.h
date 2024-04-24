@@ -108,6 +108,9 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
 template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q) {
   int n = Q.rows();
   ResultDetMin<T> res = DeterminantMinimization(Q);
+#ifdef DEBUG_ISOTROPIC
+  std::cerr << "ISOTROP: Before determinant minimization\n";
+#endif
   MyMatrix<T> Pw = res.P;
   MyMatrix<T> Qw = res.Mred;
   while (true) {
