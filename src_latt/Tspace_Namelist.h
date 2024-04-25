@@ -82,7 +82,8 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
   std::vector<MyMatrix<T>> PtStabGens = ReadListMatrix<T>(is);
   //
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
-  return {n, SuperMat, ListMat, ListLineMat, ListMatAsBigMat, ListComm, ListSubspaces, PtStabGens};
+  bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens);
+  return {n, isBravais, SuperMat, ListMat, ListLineMat, ListMatAsBigMat, ListComm, ListSubspaces, PtStabGens};
 }
 
 template<typename T>
@@ -174,6 +175,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     std::cerr << "Failed to find an option for PtGroupMethod that suits\n";
     throw TerminalException{1};
   };
+  auto set_is_bravais=[&]() -> void {
+    LinSpaRet.isBravais = IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens);
+  };
   auto set_supermat=[&]() -> void {
     std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
     if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" && TypeTspace != "InvGroup") {
@@ -223,6 +227,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     set_listcomm();
     set_subspaces();
     set_pt_stab();
+    set_is_bravais();
     return LinSpaRet;
   }
   if (TypeTspace == "InvGroup") {
@@ -239,6 +244,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     set_listcomm();
     set_subspaces();
     set_pt_stab();
+    set_is_bravais();
     return LinSpaRet;
   }
   if (TypeTspace == "Raw") {
@@ -254,6 +260,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     set_listcomm();
     set_subspaces();
     set_pt_stab();
+    set_is_bravais();
     return LinSpaRet;
   }
   if (TypeTspace == "File") {

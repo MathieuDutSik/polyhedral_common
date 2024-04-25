@@ -13,9 +13,8 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_TSPACE_GENERAL
+#define DEBUG_TSPACE_FUNCTIONS
 #endif
-
 
 /*
   By a T-space, we mean a vector space which intersect the cone of positive definite
@@ -93,6 +92,12 @@
   [1]: David Bremner, Mathieu Dutour Sikiric, Dmitrii V. Pasechnik,
   Thomas Rehn and Achill Schuermann, Computing symmetry groups of polyhedra
   LMS J. Comput. Math. 17 (1) (2014) 565–581, doi:10.1112/S1461157014000400
+  -----
+  The question of Bravais space had been forgotten. That could get us some
+  improvement and so we should put it.
+  -----
+  The question of characteristic vector set ought to be considered as we
+  have this in the GAP code.
  */
 
 
@@ -113,6 +118,8 @@
  */
 template <typename T> struct LinSpaceMatrix {
   int n;
+  // Whether it is a Bravais space or not
+  bool isBravais;
   // The positive definite matrix.
   MyMatrix<T> SuperMat;
   // The basis of the T-space
@@ -146,6 +153,72 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const& ListMat) {
   return BigMat;
 }
 
+//
+// We search for the set of matrices satisfying g M g^T = M for all g in ListGen
+//
+template <typename T>
+std::vector<MyMatrix<T>>
+BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
+  std::vector<std::vector<int>> ListCoeff;
+  MyMatrix<int> ListCoeffRev(n,n);
+  int pos = 0;
+  for (int iLin = 0; iLin < n; iLin++) {
+    for (int iCol = 0; iCol <= iLin; iCol++) {
+      ListCoeff.push_back({iLin, iCol});
+      ListCoeffRev(iLin, iCol) = pos;
+      ListCoeffRev(iCol, iLin) = pos;
+      pos++;
+    }
+  }
+  int nbCoeff = pos;
+  auto FuncPos = [&](int const &i, int const &j) -> int {
+    return ListCoeffRev(i, j);
+  };
+  std::vector<MyVector<T>> ListEquations;
+  for (auto &eGen : ListGen)
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j <= i; j++) {
+        MyVector<T> TheEquation = ZeroVector<T>(nbCoeff);
+        TheEquation(FuncPos(i, j)) += 1;
+        for (int k = 0; k < n; k++)
+          for (int l = 0; l < n; l++) {
+            int pos = FuncPos(k, l);
+            TheEquation(pos) += -eGen(i, k) * eGen(j, l);
+          }
+        ListEquations.push_back(TheEquation);
+      }
+  MyMatrix<T> MatEquations = MatrixFromVectorFamily(ListEquations);
+  std::cerr << "Before call to NullspaceTrMat nbGen=" << ListGen.size()
+            << " MatEquations(rows/cols)=" << MatEquations.rows() << " / "
+            << MatEquations.cols() << "\n";
+  MyMatrix<T> NSP = NullspaceTrMat(MatEquations);
+  std::cerr << "After call to NullspaceTrMat NSP.rows=" << NSP.rows()
+            << " cols=" << NSP.cols() << "\n";
+  int dimSpa = NSP.rows();
+  std::vector<MyMatrix<T>> TheBasis(dimSpa);
+  for (int iDim = 0; iDim < dimSpa; iDim++) {
+    MyVector<T> eRow = GetMatrixRow(NSP, iDim);
+    MyMatrix<T> eMat(n, n);
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+        eMat(i, j) = eRow(FuncPos(i, j));
+    TheBasis[iDim] = eMat;
+  }
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  for (auto & eBasis : TheBasis) {
+    for (auto & eGen : ListGen) {
+      MyMatrix<T> eProd = eGen * eBasis * eGen.transpose();
+      if (eProd != eBasis) {
+        std::cerr << "We have eProd <> eBasis, so a linear algebra bug\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
+  return TheBasis;
+}
+
+
 
 template<typename T>
 LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatrix<T>> const& ListMat, std::vector<MyMatrix<T>> const& ListComm) {
@@ -159,7 +232,9 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const& SuperMat, std::vector<MyMatri
   std::vector<MyMatrix<T>> ListSubspaces;
   MyMatrix<T> eGen = -IdentityMat<T>(n);
   std::vector<MyMatrix<T>> PtStab{eGen};
-  return {n, SuperMat, ListMat, ListLineMat, BigMat, ListComm, ListSubspaces, PtStab};
+  // It may be actually a Bravais space, but setting up to false avoids potential problems.
+  bool isBravais = false;
+  return {n, isBravais, SuperMat, ListMat, ListLineMat, BigMat, ListComm, ListSubspaces, PtStab};
 }
 
 template<typename T, typename Tint>
@@ -300,6 +375,29 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const& GramMat, LinSpaceMatrix<T> const&
     }
   }
   return true;
+}
+
+
+
+template<typename T, typename Tint>
+bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const& ListMat, std::vector<MyMatrix<Tint>> const& ListGen) {
+  std::vector<MyMatrix<T>> ListGen_T;
+  for (auto & eGen : ListGen) {
+    MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+    ListGen_T.push_back(eGen_T);
+  }
+  std::vector<MyMatrix<T>> BasisInv = BasisInvariantForm(n, ListGen_T);
+  MyMatrix<T> Big_ListMat = GetListMatAsBigMat(ListMat);
+  MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
+  //
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
+    std::cerr << "The elements of ListMat are not in the invariant space which is not acceptable\n";
+    throw TerminalException{1};
+  }
+#endif
+  //
+  return IsSubspaceContained(Big_BasisInv, Big_ListMat);
 }
 
 
@@ -467,7 +565,7 @@ MyMatrix<T> get_mat_from_shv_perm(Telt const& elt, MyMatrix<T> const& SHV_T, [[m
   std::optional<MyMatrix<T>> opt =
     FindTransformationGeneral(SHV_T, SHV_T, elt);
   MyMatrix<T> Pmat = unfold_opt(opt, "Failed to get transformation");
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(Pmat)) {
     std::cerr << "The matrix TransMat should be integral\n";
     throw TerminalException{1};
@@ -545,7 +643,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
 
   std::vector<std::vector<Tidx>> ListGen =
     GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat, Vdiag, os);
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer |ListGen|=" << ListGen.size() << "\n";
 #endif
   //
@@ -577,7 +675,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     LGenPerm.push_back(ePerm);
   }
   Tgroup FullGRP(LGenPerm, n_row);
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer |FullGRP|=" << FullGRP.size() << "\n";
 #endif
   std::vector<Telt> LGenPermPtWiseStab;
@@ -588,7 +686,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
     LGenGlobStab_perm.push_back(ePerm);
   }
   Tgroup GRPsub(LGenGlobStab_perm, n_row);
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer |GRPsub|=" << GRPsub.size() << "\n";
 #endif
   auto try_upgrade=[&]() -> std::optional<Telt> {
@@ -600,7 +698,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
       if (!eCosReprPerm.isIdentity()) {
         std::optional<MyMatrix<T>> opt = is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
         if (opt) {
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
           os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
 #endif
           return eCosReprPerm;
@@ -615,7 +713,7 @@ std::vector<MyMatrix<T>> LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSp
       // Found another stabilizing element, upgrading the group and retry.
       LGenGlobStab_perm.push_back(*opt);
       GRPsub = Tgroup(LGenGlobStab_perm, n_row);
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
       os << "TSPACE: LINSPA_ComputeStabilizer Now |GRPsub|=" << GRPsub.size() << "\n";
 #endif
     } else {
@@ -658,7 +756,7 @@ std::optional<MyMatrix<Tint>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T>
   std::vector<MyMatrix<T>> ListMat2 = GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::optional<std::vector<Tidx>> opt1 = TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
   if (!opt1) {
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Exiting here at opt1\n";
 #endif
     return {};
@@ -670,7 +768,7 @@ std::optional<MyMatrix<Tint>> LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T>
   Telt eltInv = Inverse(eltEquiv);
   std::optional<MyMatrix<T>> opt2 = FindTransformationGeneral(SHV2_T, SHV1_T, eltInv);
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(OneEquiv)) {
     std::cerr << "The matrix TransMat should be integral\n";
     throw TerminalException{1};
@@ -755,7 +853,7 @@ size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
                                 [[maybe_unused]] std::ostream & os) {
   T eDet = DeterminantMat(eGram);
   int nbVect = SHV.rows();
-#ifdef DEBUG_TSPACE_GENERAL
+#ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: eDet=" << eDet << " nbVect=" << nbVect << "\n";
 #endif
   std::vector<MyVector<T>> ListV;

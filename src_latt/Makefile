@@ -1,11 +1,5 @@
 PROGRAM		= sv_exact LATT_lll CheckPositiveSemiDefinite LATT_canonicalize LATT_canonicalizeMultiple LATT_canonicalizeSymplectic LATT_DiophantApprox LATT_Automorphism LATT_Isomorphism LATT_near LATT_MPI_ComputeDelaunay LATT_MPI_Lattice_IsoDelaunayDomain LATT_GenerateCharacteristicVectorSet TSPACE_FileFormatConversion TSPACE_Stabilizer TSPACE_Equivalence
 #PROGRAM		= CheckPositiveSemiDefinite
-#PROGRAM		= LATT_canonicalize
-#PROGRAM		= LATT_canonicalizeMultiple
-#PROGRAM		= LATT_canonicalizeSymplectic
-#PROGRAM		= sv_exact
-#PROGRAM		= LATT_MPI_ComputeDelaunay
-
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -17,11 +11,11 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0
-#CC		= g++ -std=c++17 -Wall -Wextra -g -O3
+CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 #   APPLE CLANG
-CC              = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+#CC              = g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 #   GCC
-#CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
+#CC             = g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -static-libgcc -static-libstdc++
 
