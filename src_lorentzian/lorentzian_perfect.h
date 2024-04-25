@@ -328,7 +328,9 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
     throw TerminalException{1};
   }
   T TheUpperBound = *TheUpperBound_opt;
+#ifdef DEBUG_LORENTZIAN_PERFECT
   int n_iter = 0;
+#endif
   MyVector<T> eVectBas = LorMatInv * GetReducedVector(eNSPbas);
   MyVector<T> eVectDir = LorMatInv * GetReducedVector(eNSPdir);
   T eNormBas = EvaluationQuadForm<T,T>(LorMat, eVectBas);
@@ -369,7 +371,9 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
         }
       }
     }
+#ifdef DEBUG_LORENTZIAN_PERFECT
     n_iter += 1;
+#endif
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "Going to the second scheme\n";
