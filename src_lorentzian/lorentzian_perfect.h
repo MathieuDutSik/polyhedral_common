@@ -979,7 +979,6 @@ std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const&
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
   std::optional<MyMatrix<Tint>> opt;
   auto f_incorrect=[&](Tobj const& x) -> bool {
     std::optional<MyMatrix<Tint>> opt_res = LORENTZ_TestEquivalence<T,Tint,Tgroup>(LorMat1, LorMat2, x.EXT, EXT2, os);
