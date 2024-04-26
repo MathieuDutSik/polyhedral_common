@@ -47,21 +47,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   return {ListBlock, "undefined"};
 }
 
-template<typename T, typename Tint>
-struct IsoEdgeDomain_MPI_AdjO {
-  int iProc;
-  int iOrb;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename T, typename Tint>
-  inline void serialize(Archive &ar, IsoEdgeDomain_MPI_AdjO<T, Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("iProc", eRec.iProc);
-    ar &make_nvp("iOrb", eRec.iOrb);
-  }
-}
-
 template<typename Tint>
 struct IsoEdgeDomain_AdjI {
   TypeCtypeExch<Tint> ctype_arr;
@@ -85,23 +70,6 @@ namespace boost::serialization {
   }
 }
 
-template<typename T, typename Tint, typename Tgroup>
-struct IsoEdgeDomain_MPI_Entry {
-  TypeCtypeExch<Tint> ctype_arr;
-  StructuralInfo struct_info;
-  std::vector<IsoEdgeDomain_MPI_AdjO<T, Tint>> ListAdj;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename T, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, IsoEdgeDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("ctype_arr", eRec.ctype_arr);
-    ar &make_nvp("struct_info", eRec.struct_info);
-    ar &make_nvp("ListAdj", eRec.ListAdj);
-  }
-}
-
 template<typename Tint>
 struct IsoEdgeDomain_Obj {
   TypeCtypeExch<Tint> ctype_arr;
@@ -109,7 +77,7 @@ struct IsoEdgeDomain_Obj {
 };
 
 template<typename Tint>
-void WriteEntry_Obj(std::ostream& os_out, IsoEdgeDomain_Obj<Tint> const& entry) {
+void WriteEntryGAP(std::ostream& os_out, IsoEdgeDomain_Obj<Tint> const& entry) {
   os_out << "rec(Ctype:=";
   WriteMatrixGAP(os_out, entry.ctype_arr.eMat);
   os_out << ", struct_info:=rec(";
@@ -210,7 +178,7 @@ void WriteFamilyCtypeNumber(boost::mpi::communicator &comm, std::string const& O
       for (size_t i=0; i<len; i++) {
         if (i>0)
           os_out << ",\n";
-        WriteEntry_Obj(os_out, l_ent[i].x);
+        WriteEntryGAP(os_out, l_ent[i].x);
       }
       os_out << "];\n";
     }
