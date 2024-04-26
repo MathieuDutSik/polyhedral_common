@@ -1306,8 +1306,70 @@ std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tda
 }
 
 
-
-
+template<typename Tobj, typename TadjO>
+void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const& l_loc, [[maybe_unused]] std::ostream & os) {
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  int i_proc_out = 0;
+  int i_rank = comm.rank();
+  if (OutFormat == "nothing") {
+    std::cerr << "No output\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      size_t len = l_tot.size();
+      for (size_t i=0; i<len; i++) {
+        if (i>0)
+          os_out << ",\n";
+        WriteEntryGAP(os_out, l_tot[i].x);
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "GAPadj") {
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      size_t len = l_tot.size();
+      for (size_t i=0; i<len; i++) {
+        if (i>0)
+          os_out << ",\n";
+        os_out << "rec(x:=";
+        WriteEntryGAP(os_out, l_tot[i].x);
+        os_out << ", ListAdj:=[";
+        bool IsFirst=true;
+        for (auto &eAdj : l_tot[i].ListAdj) {
+          if (!IsFirst)
+            os_out << ",";
+          IsFirst = false;
+          os_out << "rec(eQuiv:=";
+          WriteEntryGAP(os_out, eAdj.x);
+          os_out << ", iOrb:=" << eAdj.iOrb << ")";
+        }
+        os_out << "])";
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "NumberGAP") {
+    size_t nb_loc = l_loc.size();
+    size_t nb_tot;
+    all_reduce(comm, nb_loc, nb_tot, std::plus<size_t>());
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return rec(nb:=" << nb_tot << ");\n";
+    }
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
+}
 
 
 // clang-format off
