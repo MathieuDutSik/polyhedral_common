@@ -21,7 +21,7 @@
 // #define DEBUG
 // #define TIMINGS
 // #define PRINT_FLIP
-// #define PRINT_TRIPLE
+#define PRINT_TRIPLE
 // #define PRINT_GET_ADJ
 // #define DEBUG_CRITERION_ELIMINATION
 
@@ -495,6 +495,9 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
         Tidx ired = i / 2;
         Tidx jred = j / 2;
         Tidx kred = k / 2;
+#ifdef PRINT_TRIPLE
+        std::cerr << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " " << jred << " " << kred << "\n";
+#endif
         MappingVect[ired * n_edgered + jred] = kred;
         MappingVect[jred * n_edgered + ired] = kred;
         //

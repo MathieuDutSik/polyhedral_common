@@ -1714,7 +1714,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
       break;
   }
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  Tint eHash2 = MD5_hash_T<Tint>(strAssign);
+  size_t eHash2 = MD5_hash_T<size_t>(strAssign);
   os << "POLYEQUISTAB: strAssign=" << strAssign << "\n";
   os << "POLYEQUISTAB: eHash2=" << eHash2 << "\n";
   std::string strWMat;
@@ -1729,8 +1729,8 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   for (auto &eVal : WMatAbs.WMat.GetWeight()) {
     strWMat += " " + std::to_string(eVal);
   }
-  Tint eHash3 = MD5_hash_T<Tint>(strWMat);
-  os << "eHash3=" << eHash3 << "\n";
+  size_t eHash3 = MD5_hash_T<size_t>(strWMat);
+  os << "POLYEQUISTAB: eHash3=" << eHash3 << "\n";
 #endif
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int j_row = CanonicOrd[i_row];
@@ -2264,14 +2264,14 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(
   Tgroup GRP1 =
       GetStabilizerWeightMatrix<Tval, Tgr, Tgroup, Tidx_value>(ep.second, os);
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "|GRP1|=" << GRP1.size() << " RankMat(ep.first)=" << RankMat(ep.first)
+  os << "POLYEQUISTAB: |GRP1|=" << GRP1.size() << " RankMat(ep.first)=" << RankMat(ep.first)
      << " |ep.first|=" << ep.first.rows() << " / " << ep.first.cols() << "\n";
   bool test = CheckStabilizerWeightMatrix(ep.second, GRP1);
-  os << "test=" << test << "\n";
+  os << "POLYEQUISTAB: test=" << test << "\n";
 #endif
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1, os);
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "We have GRPfull\n";
+  os << "POLYEQUISTAB: We have GRPfull\n";
 #endif
   std::vector<MyMatrix<T>> ListGenMat;
   for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
@@ -2279,7 +2279,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(
     ListGenMat.push_back(eMat_T);
   }
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "We have ListGenMat\n";
+  os << "POLYEQUISTAB: We have ListGenMat\n";
 #endif
   return ListGenMat;
 }
@@ -2297,17 +2297,17 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   if (ep.second.GetWeight() != fp.second.GetWeight())
     return {};
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "|ep.first|=" << ep.first.rows() << " / " << ep.first.cols()
+  os << "POLYEQUISTAB: |ep.first|=" << ep.first.rows() << " / " << ep.first.cols()
      << " rnk=" << RankMat(ep.first) << "\n";
-  os << "|fp.first|=" << fp.first.rows() << " / " << fp.first.cols()
+  os << "POLYEQUISTAB: |fp.first|=" << fp.first.rows() << " / " << fp.first.cols()
      << " rnk=" << RankMat(fp.first) << "\n";
-  os << "ep.first=\n";
+  os << "POLYEQUISTAB: ep.first=\n";
   WriteMatrix(os, ep.first);
-  os << "fp.first=\n";
+  os << "POLYEQUISTAB: fp.first=\n";
   WriteMatrix(os, fp.first);
-  os << "ep.second=\n";
+  os << "POLYEQUISTAB: ep.second=\n";
   PrintWeightedMatrix(os, ep.second);
-  os << "fp.second=\n";
+  os << "POLYEQUISTAB: fp.second=\n";
   PrintWeightedMatrix(os, fp.second);
 #endif
 #ifdef TIMINGS_LIN_POLYTOPE_INTEGRAL_WMAT
@@ -2334,14 +2334,14 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   if (!IsoInfo) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-    os << "We failed to find IsoInfo\n";
+    os << "POLYEQUISTAB: We failed to find IsoInfo\n";
 #endif
     return {};
   }
   Telt ePerm(IsoInfo->first);
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "ePerm=" << ePerm << "\n";
-  os << "det(eMat)=" << DeterminantMat(IsoInfo->second)
+  os << "POLYEQUISTAB: ePerm=" << ePerm << "\n";
+  os << "POLYEQUISTAB: det(eMat)=" << DeterminantMat(IsoInfo->second)
      << "  eMat=" << StringMatrixGAP(IsoInfo->second) << "\n";
 #endif
   Tgroup GRP1 =
@@ -2350,10 +2350,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   os << "|GetStabilizerWeightMatrix|=" << time << "\n";
 #endif
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "|GRP1|=" << GRP1.size() << "\n";
+  os << "POLYEQUISTAB: |GRP1|=" << GRP1.size() << "\n";
   for (auto &eGen : GRP1.GeneratorsOfGroup()) {
     MyMatrix<T> eGen_T = FindTransformation(ep.first, ep.first, eGen);
-    os << "det(eGen_T)=" << DeterminantMat(eGen_T)
+    os << "POLYEQUISTAB: det(eGen_T)=" << DeterminantMat(eGen_T)
        << " eGen_T=" << StringMatrixGAP(eGen_T) << "\n";
   }
 #endif
@@ -2364,12 +2364,12 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   if (eRes) {
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-    os << "Found one isomorphism\n";
+    os << "POLYEQUISTAB: Found one isomorphism\n";
 #endif
     return *eRes;
   }
 #ifdef DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
-  os << "eRes is unassigned\n";
+  os << "POLYEQUISTAB: eRes is unassigned\n";
 #endif
   return {};
 }
