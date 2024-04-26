@@ -108,6 +108,21 @@ struct IsoEdgeDomain_Obj {
   StructuralInfo struct_info;
 };
 
+template<typename Tint>
+void WriteEntry_Obj(std::ostream& os_out, IsoEdgeDomain_Obj<Tint> const& entry) {
+  os_out << "rec(Ctype:=";
+  WriteMatrixGAP(os_out, entry.ctype_arr.eMat);
+  os_out << ", struct_info:=rec(";
+  os_out << "nb_triple:=" << entry.struct_info.nb_triple;
+  os_out << ", nb_ineq:=" << entry.struct_info.nb_ineq;
+  os_out << ", nb_ineq_after_crit:=" << entry.struct_info.nb_ineq_after_crit;
+  os_out << ", nb_free:=" << entry.struct_info.nb_free;
+  os_out << ", nb_autom:=" << entry.struct_info.nb_autom;
+  os_out << "))";
+}
+
+
+
 namespace boost::serialization {
   template <class Archive, typename Tint>
   inline void serialize(Archive &ar, IsoEdgeDomain_Obj<Tint> &eRec,
@@ -178,13 +193,36 @@ struct DataCtypeFunc {
 };
 
 template<typename T, typename Tint, typename Tgroup>
-void WriteFamilyIsoEdgeDomain([[maybe_unused]] boost::mpi::communicator &comm, std::string const& OutFormat, [[maybe_unused]] std::string const& OutFile, [[maybe_unused]] std::vector<IsoEdgeDomain_MPI_Entry<T,Tint,Tgroup>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
-  //  int i_rank = comm.rank();
+void WriteFamilyCtypeNumber(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj, typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>> const& ListCtype, [[maybe_unused]] std::ostream & os) {
+  using Tout = DatabaseEntry_Serial<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj, typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>;
+  int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
     return;
   }
   if (OutFormat == "GAP") {
+    int i_proc_out = 0;
+    std::vector<Tout> l_ent = my_mpi_gather(comm, ListCtype, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      size_t len = l_ent.size();
+      for (size_t i=0; i<len; i++) {
+        if (i>0)
+          os_out << ",\n";
+        WriteEntry_Obj(os_out, l_ent[i].x);
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "NumberGAP") {
+    int i_proc_out = 0;
+    std::vector<Tout> l_ent = my_mpi_gather(comm, ListCtype, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return rec(nb:=" << l_ent.size() << ");\n";
+    }
     return;
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
@@ -226,7 +264,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    //    WriteFamilyIsoEdgeDomain(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyCtypeNumber<T,Tint,Tgroup>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
