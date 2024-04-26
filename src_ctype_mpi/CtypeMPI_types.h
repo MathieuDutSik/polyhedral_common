@@ -425,6 +425,8 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
   int n_cols = TheCtype.cols();
 #ifdef PRINT_TRIPLE
   std::cerr << "n_edge=" << n_edge << " n_cols=" << n_cols << "\n";
+  std::cerr << "TEST TheCtype=\n";
+  WriteMatrix(std::cerr, TheCtype);
 #endif
   std::vector<triple<Tidx>> ListTriples;
   std::vector<Tidx> MappingVect(n_edgered * n_edgered, -1);
@@ -471,23 +473,24 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
       return pos;
     return -1;
   };
+  MyVector<T> eDiff(n_cols);
   for (Tidx i = 0; i < n_edge; i++)
     for (Tidx j = i + 1; j < n_edge; j++) {
 #ifdef PRINT_TRIPLE
       std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
                 << "\n";
 #endif
-      MyVector<T> eDiff(n_cols);
       for (Tidx i_col = 0; i_col < n_cols; i_col++)
         eDiff(i_col) = -TheCtype(i, i_col) - TheCtype(j, i_col);
 #ifdef PRINT_TRIPLE
-      std::cerr << "We have eDiff\n";
+      std::cerr << "We have eDiff=" << StringVectorGAP(eDiff) << "\n";
 #endif
       Tidx k = get_position(eDiff, j);
+      Tidx crit = -1;
 #ifdef PRINT_TRIPLE
       std::cerr << "k=" << static_cast<int>(k) << "\n";
 #endif
-      if (k != -1) {
+      if (k != crit) {
         ListTriples.push_back({i, j, k});
         ListTriples.push_back({j, k, i});
         ListTriples.push_back({k, i, j});
@@ -730,6 +733,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
     Tidx i = e_triple.i / 2;
     Tidx j = e_triple.j / 2;
     Tidx k = e_triple.k / 2;
+    Tidx crit = -1;
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
               << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e)
@@ -745,7 +749,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "f=" << static_cast<int>(f) << "\n";
 #endif
-    if (f == -1 || f == j || f == k)
+    if (f == crit || f == j || f == k)
       return false;
     //
     // getting g and testing it
@@ -753,7 +757,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "g=" << static_cast<int>(g) << "\n";
 #endif
-    if (g == -1 || g == f || g == i || g == k)
+    if (g == crit || g == f || g == i || g == k)
       return false;
     //
     // getting h and testing it
@@ -761,7 +765,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
 #ifdef PRINT_GET_ADJ_O
     std::cerr << "h=" << static_cast<int>(h) << "\n";
 #endif
-    if (h == -1 || h == f || h == e || h == j || h == k)
+    if (h == crit || h == f || h == e || h == j || h == k)
       return false;
     //
     // testing presence of {j,f,h}

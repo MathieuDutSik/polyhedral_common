@@ -1713,7 +1713,9 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
     if (nbUndone == 0)
       break;
   }
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
+#ifdef DEBUG_POLYTOPE_EQUI_STAB_REMOVED
+  // We have some crash due to this with the MD5 so, let us
+  // outcomment it now.
   size_t eHash2 = MD5_hash_T<size_t>(strAssign);
   os << "POLYEQUISTAB: strAssign=" << strAssign << "\n";
   os << "POLYEQUISTAB: eHash2=" << eHash2 << "\n";
@@ -1729,6 +1731,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   for (auto &eVal : WMatAbs.WMat.GetWeight()) {
     strWMat += " " + std::to_string(eVal);
   }
+  std::cerr << "strWMat=" << strWMat << "\n";
   size_t eHash3 = MD5_hash_T<size_t>(strWMat);
   os << "POLYEQUISTAB: eHash3=" << eHash3 << "\n";
 #endif
