@@ -342,20 +342,18 @@ void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT, [[
   }
 }
 
+
 template<typename Tvert, typename Tgroup>
-void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
-  using T = typename overlying_field<Tvert>::field_type;
-  using Telt = typename Tgroup::Telt;
-  std::ofstream OUTfs(OutFile);
-  OUTfs << "return [\n";
+void WriteEntryGAP(std::ostream& os_out, DelaunayTesselation<Tvert,Tgroup> const& DT) {
+  os_out << "[";
   size_t n_del = DT.l_dels.size();
   for (size_t i_del=0; i_del<n_del; i_del++) {
     Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
     MyMatrix<Tvert> const& EXT = eDel.EXT;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
     if (i_del > 0)
-      OUTfs << ",";
-    OUTfs << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
+      os_out << ",";
+    os_out << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
     std::vector<Telt> LGen = eDel.GRP.SmallGeneratingSet();
     auto get_gap_string=[&]() -> std::string {
       if (LGen.size() == 0) {
@@ -388,27 +386,37 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
     str_perm += "]";
     str_matr += "]";
     std::string str_phi = "GroupHomomorphismByImagesNC(Group(" + str_perm + "), Group(" + str_matr + "), " + str_perm + ", " + str_matr + ")";
-    OUTfs << "TheStab:=rec(PermutationStabilizer:=" << get_gap_string() << ", PhiPermMat:=" << str_phi << "), ";
-    OUTfs << "Adjacencies:=[";
+    os_out << "TheStab:=rec(PermutationStabilizer:=" << get_gap_string() << ", PhiPermMat:=" << str_phi << "), ";
+    os_out << "Adjacencies:=[";
     IsFirst = true;
     for (auto & eAdj : eDel.ListAdj) {
       if (!IsFirst)
-        OUTfs << ",";
+        os_out << ",";
       IsFirst = false;
-      OUTfs << "rec(iDelaunay:=" << (eAdj.iOrb + 1) << ", ";
-      OUTfs << "eInc:=[";
+      os_out << "rec(iDelaunay:=" << (eAdj.iOrb + 1) << ", ";
+      os_out << "eInc:=[";
       std::vector<int> V = FaceToVector<int>(eAdj.eInc);
       for (size_t u=0; u<V.size(); u++) {
         if (u > 0)
-          OUTfs << ",";
-        OUTfs << (V[u] + 1);
+          os_out << ",";
+        os_out << (V[u] + 1);
       }
-      OUTfs << "],\n";
-      OUTfs << "eBigMat:=" << StringMatrixGAP(eAdj.eBigMat) << ")";
+      os_out << "],\n";
+      os_out << "eBigMat:=" << StringMatrixGAP(eAdj.eBigMat) << ")";
     }
-    OUTfs << "])";
+    os_out << "])";
   }
-  OUTfs << "];\n";
+  os_out << "]";
+}
+
+template<typename Tvert, typename Tgroup>
+void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
+  using T = typename overlying_field<Tvert>::field_type;
+  using Telt = typename Tgroup::Telt;
+  std::ofstream OUTfs(OutFile);
+  OUTfs << "return ";
+  WriteEntryGAP(OUTfs, DT);
+  OUTfs << ";\n";
 }
 
 template<typename T, typename Tint, typename Tgroup>
