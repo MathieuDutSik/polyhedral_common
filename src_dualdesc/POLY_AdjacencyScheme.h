@@ -1054,6 +1054,24 @@ struct AdjO_Serial {
   int iOrb;
 };
 
+template<typename TadjO>
+void WriteEntryGAP(std::ostream& os_out, AdjO_MPI<TadjO> const& adj) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(adj.x);
+  os_out << ", iProc:=" << adj.iProc << ", iOrb:=" << adj.iOrb << ")";
+}
+
+template<typename TadjO>
+void WriteEntryGAP(std::ostream& os_out, AdjO_Serial<TadjO> const& adj) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(adj.x);
+  os_out << ", iOrb:=" << adj.iOrb << ")";
+}
+
+
+
+
+
 
 namespace boost::serialization {
   template <class Archive, typename TadjO>
@@ -1082,6 +1100,39 @@ struct DatabaseEntry_Serial {
   Tobj x;
   std::vector<AdjO_Serial<TadjO>> ListAdj;
 };
+
+template<typename Tobj, typename TadjO>
+void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_MPI<Tobj, TadjO> const& dat_entry) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(os_out, dat_entry.x);
+  os_out << ", ListAdj:=[";
+  bool IsFirst=true;
+  for (auto &eAdj : dat_entry.ListAdj) {
+    if (!IsFirst)
+      os_out << ",";
+    IsFirst = false;
+    WriteEntryGAP(os_out, eAdj);
+  }
+}
+
+template<typename Tobj, typename TadjO>
+void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_Serial<Tobj, TadjO> const& dat_entry) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(os_out, dat_entry.x);
+  os_out << ", ListAdj:=[";
+  bool IsFirst=true;
+  for (auto &eAdj : dat_entry.ListAdj) {
+    if (!IsFirst)
+      os_out << ",";
+    IsFirst = false;
+    WriteEntryGAP(os_out, eAdj);
+  }
+}
+
+
+
+
+
 
 namespace boost::serialization {
   template <class Archive, typename Tobj, typename TadjO>

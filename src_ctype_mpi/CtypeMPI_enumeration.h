@@ -63,6 +63,10 @@ namespace boost::serialization {
 struct IsoEdgeDomain_AdjO {
 };
 
+void WriteEntryGAP(std::ostream& os_out, [[maybe_unused]] IsoEdgeDomain_AdjO const& _x) {
+  os_out << "[]";
+}
+
 namespace boost::serialization {
   template <class Archive>
   inline void serialize([[maybe_unused]] Archive &ar, [[maybe_unused]] IsoEdgeDomain_AdjO &eRec,
@@ -232,7 +236,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyCtypeNumber<T,Tint,Tgroup>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects<Tobj,TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
