@@ -345,12 +345,12 @@ void check_delaunay_tessellation(DelaunayTesselation<Tvert,Tgroup> const& DT, [[
 
 template<typename Tvert, typename Tgroup>
 void WriteEntryGAP(std::ostream& os_out, DelaunayTesselation<Tvert,Tgroup> const& DT) {
+  using Telt = typename Tgroup::Telt;
   os_out << "[";
   size_t n_del = DT.l_dels.size();
   for (size_t i_del=0; i_del<n_del; i_del++) {
     Delaunay_Entry<Tvert,Tgroup> const& eDel = DT.l_dels[i_del];
     MyMatrix<Tvert> const& EXT = eDel.EXT;
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
     if (i_del > 0)
       os_out << ",";
     os_out << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
@@ -379,7 +379,7 @@ void WriteEntryGAP(std::ostream& os_out, DelaunayTesselation<Tvert,Tgroup> const
         str_matr += ",";
       }
       IsFirst = false;
-      MyMatrix<T> M = FindTransformation(EXT_T, EXT_T, eElt);
+      MyMatrix<Tvert> M = RepresentVertexPermutation(EXT, EXT, eElt);
       str_perm += GapStyleString(eElt);
       str_matr += StringMatrixGAP(M);
     }
@@ -411,8 +411,7 @@ void WriteEntryGAP(std::ostream& os_out, DelaunayTesselation<Tvert,Tgroup> const
 
 template<typename Tvert, typename Tgroup>
 void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string const& OutFile) {
-  using T = typename overlying_field<Tvert>::field_type;
-  using Telt = typename Tgroup::Telt;
+  //  using T = typename overlying_field<Tvert>::field_type;
   std::ofstream OUTfs(OutFile);
   OUTfs << "return ";
   WriteEntryGAP(OUTfs, DT);

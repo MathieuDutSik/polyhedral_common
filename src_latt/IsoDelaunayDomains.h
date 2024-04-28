@@ -1014,25 +1014,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   return {ListBlock, "undefined"};
 }
 
-template<typename T, typename Tint>
-struct IsoDelaunayDomain_MPI_AdjO {
-  int iProc;
-  int iOrb;
-  MyVector<T> V;
-  MyMatrix<Tint> eBigMat;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename T, typename Tint>
-  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_AdjO<T, Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("iProc", eRec.iProc);
-    ar &make_nvp("iOrb", eRec.iOrb);
-    ar &make_nvp("V", eRec.V);
-    ar &make_nvp("eBigMat", eRec.eBigMat);
-  }
-}
-
 template<typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain {
   DelaunayTesselation<Tint, Tgroup> DT;
@@ -1075,23 +1056,6 @@ namespace boost::serialization {
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("V", eRec.V);
     ar &make_nvp("eBigMat", eRec.eBigMat);
-  }
-}
-
-template<typename T, typename Tint, typename Tgroup>
-struct IsoDelaunayDomain_MPI_Entry {
-  IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
-  std::vector<FullAdjInfo<T>> ListIneq;
-  std::vector<IsoDelaunayDomain_MPI_AdjO<T, Tint>> ListAdj;
-};
-
-namespace boost::serialization {
-  template <class Archive, typename T, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, IsoDelaunayDomain_MPI_Entry<T, Tint, Tgroup> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("DT_gram", eRec.DT_gram);
-    ar &make_nvp("ListIneq", eRec.ListIneq);
-    ar &make_nvp("ListAdj", eRec.ListAdj);
   }
 }
 
