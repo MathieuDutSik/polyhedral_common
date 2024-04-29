@@ -1361,7 +1361,7 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
     std::cerr << "No output\n";
     return;
   }
-  if (OutFormat == "GAP") {
+  if (OutFormat == "ObjectGAP") {
     std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
     if (i_rank == i_proc_out) {
       std::ofstream os_out(OutFile);
@@ -1376,7 +1376,7 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
     }
     return;
   }
-  if (OutFormat == "GAPadj") {
+  if (OutFormat == "ObjectAdjacencyGAP") {
     std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
     if (i_rank == i_proc_out) {
       std::ofstream os_out(OutFile);
@@ -1386,6 +1386,39 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
         if (i>0)
           os_out << ",\n";
         WriteEntryGAP(os_out, l_tot[i]);
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "AdjacencyGAP") {
+    // It is actually a little suboptimal but until it is a problem,
+    // let us leave it at that.
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      std::set<int> set;
+      size_t len = l_tot.size();
+      os_out << "return [";
+      for (size_t i=0; i<len; i++) {
+        if (i > 0) {
+          os_out << ",\n";
+        }
+        set.clear();
+        for (auto &eAdj : l_tot[i].ListAdj) {
+          int pos = eAdj.iOrb + 1;
+          set.insert(pos);
+        }
+        os_out << "[";
+        bool IsFirst = true;
+        for (auto &eAdj : set) {
+          if (!IsFirst) {
+            os_out << ",";
+          }
+          IsFirst = false;
+          os_out << eAdj;
+        }
+        os_out << "]";
       }
       os_out << "];\n";
     }

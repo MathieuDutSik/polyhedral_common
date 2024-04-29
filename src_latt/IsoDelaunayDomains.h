@@ -1098,7 +1098,7 @@ namespace boost::serialization {
   BUT we should have some invariants coming from the Tspace and right now we have none.
  */
 template<typename T, typename Tint, typename Tgroup>
-size_t ComputeInvariantIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
+size_t ComputeInvariantIsoDelaunayDomain([[maybe_unused]] DataIsoDelaunayDomains<T,Tint,Tgroup> const& eData, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
   using TintGroup = typename Tgroup::Tint;
   std::map<size_t, size_t> map_delaunays;
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
