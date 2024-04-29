@@ -172,6 +172,10 @@ struct AdjInfo {
   int i_adj;
 };
 
+void WriteEntryGAP(std::ostream& os_out, AdjInfo const& eai) {
+  os_out << "rec(iOrb:=" << (eai.iOrb + 1) << ", i_adj:=" << (eai.i_adj+1) << ")";
+}
+
 namespace boost::serialization {
   template <class Archive>
   inline void serialize(Archive &ar, AdjInfo &eRec,
@@ -186,6 +190,21 @@ struct FullAdjInfo {
   MyVector<T> eIneq;
   std::vector<AdjInfo> ListAdjInfo;
 };
+
+template<typename T>
+void WriteEntryGAP(std::ostream& os_out, FullAdjInfo<T> const& ent) {
+  os_out << "rec(eIneq:=" << StringVectorGAP(ent.eIneq) << ", ListAdjInfo:=[";
+  bool IsFirst = true;
+  for (auto & eAdj : ent.ListAdjInfo) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryGAP(os_out, eAdj);
+  }
+  os_out << "])";
+}
+
 
 namespace boost::serialization {
   template <class Archive, typename T>
@@ -1020,6 +1039,13 @@ struct IsoDelaunayDomain {
   MyMatrix<T> GramMat;
 };
 
+template<typename T, typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream& os_out, IsoDelaunayDomain<T,Tint,Tgroup> const& ent) {
+  os_out << "rec(DT:=";
+  WriteEntryGAP(os_out, ent.DT);
+  os_out << ", GramMat:=" << StringMatrixGAP(ent.GramMat) << ")";
+}
+
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, IsoDelaunayDomain<T, Tint, Tgroup> &eRec,
@@ -1049,6 +1075,12 @@ struct IsoDelaunayDomain_AdjO {
   MyVector<T> V;
   MyMatrix<Tint> eBigMat;
 };
+
+template<typename T, typename Tint>
+void WriteEntryGAP(std::ostream& os_out, IsoDelaunayDomain_AdjO<T,Tint> const& ent) {
+  os_out << "rec(V:=" << StringVectorGAP(ent.V) << " eBigMat:=" << StringMatrixGAP(ent.eBigMat) << ")";
+}
+
 
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint>
@@ -1111,6 +1143,23 @@ struct IsoDelaunayDomain_Obj {
   IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
   std::vector<FullAdjInfo<T>> ListIneq;
 };
+
+template<typename T, typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream& os_out, IsoDelaunayDomain_Obj<T,Tint,Tgroup> const& ent) {
+  os_out << "rec(DT_gram:=";
+  WriteEntryGAP(os_out, ent.DT_gram);
+  os_out << ", ListIneq:=[";
+  bool IsFirst = true;
+  for (auto & eFull : ent.ListIneq) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryGAP(os_out, eFull);
+  }
+  os_out << "])";
+}
+
 
 namespace boost::serialization {
   template <class Archive, typename T, typename Tint, typename Tgroup>
@@ -1182,21 +1231,6 @@ struct DataIsoDelaunayDomainsFunc {
 };
 
 template<typename T, typename Tint, typename Tgroup>
-void WriteFamilyIsoDelaunayDomain(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<typename DataIsoDelaunayDomainsFunc<T,Tint,Tgroup>::Tobj, typename DataIsoDelaunayDomainsFunc<T,Tint,Tgroup>::TadjO>> const& ListIDD, [[maybe_unused]] std::ostream & os) {
-  //  int i_rank = comm.rank();
-  if (OutFormat == "nothing") {
-    std::cerr << "No output\n";
-    return;
-  }
-  if (OutFormat == "GAP") {
-    return;
-  }
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
-  throw TerminalException{1};
-}
-
-
-template<typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream& os = *os_ptr;
@@ -1239,7 +1273,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyIsoDelaunayDomain<T, Tint, Tgroup>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects<Tobj,TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
