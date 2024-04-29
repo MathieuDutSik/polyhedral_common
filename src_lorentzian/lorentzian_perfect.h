@@ -676,6 +676,13 @@ struct PerfLorentzian_Obj {
   Tgroup GRP;
 };
 
+template<typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream& os_out, PerfLorentzian_Obj<Tint,Tgroup> const& ent) {
+  os_out << "rec(EXT:=";
+  WriteMatrixGAP(os_out, ent.EXT);
+  os_out << ", GRP:=" << ent.GRP.GapString() << ")";
+}
+
 namespace boost::serialization {
   template <class Archive, typename Tint, typename Tgroup>
   inline void serialize(Archive &ar, PerfLorentzian_Obj<Tint, Tgroup> &eRec,
@@ -705,6 +712,13 @@ struct PerfLorentzian_AdjO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
 };
+
+template<typename Tint>
+void WriteEntryGAP(std::ostream& os_out, PerfLorentzian_AdjO<Tint> const& ent) {
+  os_out << "rec(eInc:=";
+  WriteFaceGAP(os_out, ent.eInc);
+  os_out << ", eBigMat:=" << StringMatrixGAP(ent.eBigMat) << ")";
+}
 
 namespace boost::serialization {
   template <class Archive, typename Tint>
@@ -876,6 +890,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
 #endif
   //
   if (pair.first) {
+    WriteFamilyObjects<Tobj,TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
