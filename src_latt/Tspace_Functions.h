@@ -95,6 +95,10 @@
   -----
   The question of Bravais space had been forgotten. That could get us some
   improvement and so we should put it.
+  The idea is that if a T-space is Bravais, then we can take the equivalence
+  of the inner form and their stabilizer. So, in that case there is no need
+  to check for the stabilization of the T-space. But we need to find the
+  reference.
   -----
   The question of characteristic vector set ought to be considered as we
   have this in the GAP code.
