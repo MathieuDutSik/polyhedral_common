@@ -311,13 +311,30 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
 template<typename T, typename Tvert, typename Tgroup>
 MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT, std::ostream& os) {
   int n = LinSpa.n;
+  int dimSpace = LinSpa.ListMat.size();
   std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tvert,Tgroup>(DT, LinSpa.ListLineMat, os);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
-  for (int u=0; u<n; u++) {
+  for (int u=0; u<dimSpace; u++) {
     RetMat += ThePt(u) * LinSpa.ListMat[u];
   }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
+  int n_row = EXT.rows();
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
+    for (int u=0; u<dimSpace; u++) {
+      RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
+    }
+    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat);
+    if (DiagInfo.nbMinus > 0) {
+      std::cerr << "The ray of the IsoDelaunay domain is not positive semidefinite\n";
+      std::cerr << "This is not allowed\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   return RetMat;
 }
 
