@@ -153,6 +153,27 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
     Ineq(iGram) = val;
     iGram++;
   }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  for (int iVert=0; iVert<=n; iVert++) {
+    for (int u=0; u<n; u++) {
+      TheVertRed(u) = vipc.VertBasis_T(iVert, u+1);
+    }
+    for (int u=0; u<=n; u++) {
+      TheVert_T(u) = vipc.VertBasis_T(iVert, u);
+    }
+    MyVector<T> B = vipc.VertBasisInv_T * TheVert_T;
+    for (auto & eLineMat : ListGram) {
+      T val = EvaluateLineVector(eLineMat, TheVertRed);
+      for (int k=0; k<=n; k++) {
+        val += B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+      }
+      if (val != 0) {
+        std::cerr << "For the vertex, the condition should be void and so we should get 0\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
   return Ineq;
 }
 
