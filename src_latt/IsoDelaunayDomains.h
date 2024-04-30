@@ -91,7 +91,7 @@ size_t ComputeInvariantDelaunayTessellation(DelaunayTesselation<Tvert,Tgroup> co
 
 
 template<typename T, typename Tvert>
-VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& EXT) {
+VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& EXT, [[maybe_unused]] std::ostream& os) {
   int n = EXT.cols() - 1;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT_T);
@@ -115,11 +115,21 @@ VoronoiInequalityPreComput<T> BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const& 
 
 
 template<typename T, typename Tvert>
-MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, MyVector<Tvert> const& TheVert, std::vector<std::vector<T>> const& ListGram) {
+MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, MyVector<Tvert> const& TheVert, std::vector<std::vector<T>> const& ListGram, [[maybe_unused]] std::ostream& os) {
   int n = vipc.n;
   int dimSpace = ListGram.size();
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: VoronoiLinearInequality n=" << n << " dimSpace=" << dimSpace << "\n";
+#endif
   MyVector<T> TheVert_T = UniversalVectorConversion<T,Tvert>(TheVert);
-  MyVector<T> B = vipc.VertBasisInv_T * TheVert_T.transpose();
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: VoronoiLinearInequality |TheVert_T|=" << TheVert_T.size() << "\n";
+  os << "ISO_DEL: VoronoiLinearInequality |Tvipc.VertBasisInv_T}=" << vipc.VertBasisInv_T.rows() << " / " << vipc.VertBasisInv_T.cols() << "\n";
+#endif
+  MyVector<T> B = vipc.VertBasisInv_T * TheVert_T;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: VoronoiLinearInequality We have B\n";
+#endif
   MyVector<T> Ineq(dimSpace);
   MyVector<T> TheVertRed(n);
   for (int u=0; u<n; u++) {
@@ -127,10 +137,19 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
   }
   int iGram = 0;
   for (auto & eLineMat : ListGram) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: VoronoiLinearInequality Before EvaluateLineVector (first)\n";
+#endif
     T val = EvaluateLineVector(eLineMat, TheVertRed);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: VoronoiLinearInequality After EvaluateLineVector (first)\n";
+#endif
     for (int k=0; k<=n; k++) {
       val += B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: VoronoiLinearInequality Summation of the entries\n";
+#endif
     Ineq(iGram) = val;
     iGram++;
   }
@@ -138,13 +157,25 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
 }
 
 template<typename T, typename Tvert>
-bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa) {
+bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa, std::ostream& os) {
   int n_row = EXT.rows();
-  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, before BuildVoronoiIneqPreCompute\n";
+#endif
+  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, we have vipc\n";
+#endif
   for (int i_row=0; i_row<n_row; i_row++) {
     if (vipc.f_basis[i_row] == 0) {
       MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
-      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, Before VoronoiLinearInequality\n";
+#endif
+      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, After VoronoiLinearInequality\n";
+#endif
       if (!IsZeroVector(V)) {
         return true;
       }
@@ -154,14 +185,14 @@ bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const& EXT, LinSpaceMa
 }
 
 template<typename T, typename Tvert>
-bool IsDelaunayAcceptableForGramMat(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const& TestGram) {
+bool IsDelaunayAcceptableForGramMat(MyMatrix<Tvert> const& EXT, LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const& TestGram, std::ostream& os) {
   int n_row = EXT.rows();
   MyVector<T> TestV = LINSPA_GetVectorOfMatrixExpression(LinSpa, TestGram);
-  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT);
+  VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(EXT, os);
   for (int i_row=0; i_row<n_row; i_row++) {
     if (vipc.f_basis[i_row] == 0) {
       MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
-      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat);
+      MyVector<T> V = VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat, os);
       T TheScal = V.dot(TestV);
       if (TheScal < 0) {
         return false;
@@ -223,12 +254,12 @@ namespace boost::serialization {
   Compute the defining inequalities of an iso-Delaunay domain
  */
 template<typename T, typename Tvert, typename Tgroup>
-std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTesselation<Tvert, Tgroup> const& DT, std::vector<std::vector<T>> const& ListGram) {
+std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTesselation<Tvert, Tgroup> const& DT, std::vector<std::vector<T>> const& ListGram, std::ostream& os) {
   std::unordered_map<MyVector<T>,std::vector<AdjInfo>> map;
   int n_del = DT.l_dels.size();
   for (int i_del=0; i_del<n_del; i_del++) {
     int n_adj = DT.l_dels[i_del].ListAdj.size();
-    VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(DT.l_dels[i_del].EXT);
+    VoronoiInequalityPreComput<T> vipc = BuildVoronoiIneqPreCompute<T,Tvert>(DT.l_dels[i_del].EXT, os);
     ContainerMatrix<Tvert> cont(DT.l_dels[i_del].EXT);
     auto get_ineq=[&](int const& i_adj) -> MyVector<T> {
       Delaunay_AdjO<Tvert> adj = DT.l_dels[i_del].ListAdj[i_adj];
@@ -239,7 +270,7 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(DelaunayTessela
         MyVector<Tvert> TheVert = GetMatrixRow(EXTadj, u);
         std::optional<size_t> opt = cont.GetIdx_v(TheVert);
         if (!opt) {
-          return VoronoiLinearInequality(vipc, TheVert, ListGram);
+          return VoronoiLinearInequality(vipc, TheVert, ListGram, os);
         }
       }
       std::cerr << "Failed to find a matching entry\n";
@@ -280,7 +311,7 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
 template<typename T, typename Tvert, typename Tgroup>
 MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT, std::ostream& os) {
   int n = LinSpa.n;
-  std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tvert,Tgroup>(DT, LinSpa.ListLineMat);
+  std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tvert,Tgroup>(DT, LinSpa.ListLineMat, os);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
@@ -306,7 +337,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: Before IsDelaunayPolytopeInducingEqualities\n";
 #endif
-    bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, data.LinSpa);
+    bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, data.LinSpa, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: After IsDelaunayPolytopeInducingEqualities\n";
 #endif
@@ -318,7 +349,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: Before IsDelaunayAcceptableForGramMat\n";
 #endif
-      bool test2 = IsDelaunayAcceptableForGramMat(EXT, data.LinSpa, TestGram);
+      bool test2 = IsDelaunayAcceptableForGramMat(EXT, data.LinSpa, TestGram, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: After IsDelaunayAcceptableForGramMat\n";
 #endif
@@ -1229,16 +1260,17 @@ struct DataIsoDelaunayDomainsFunc {
     return {std::move(x_ret), std::move(ret)};
   }
   std::vector<TadjI> f_adj(Tobj & x_in) {
+    std::ostream& os = data.rddo.os;
     IsoDelaunayDomain<T, Tint, Tgroup> & x = x_in.DT_gram;
-    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, data.LinSpa.ListLineMat);
+    std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, data.LinSpa.ListLineMat, os);
     x_in.ListIneq = ListIneq;
     MyMatrix<T> FAC = GetFACineq(ListIneq);
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, data.rddo.os);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, os);
     std::vector<TadjI> l_adj;
     for (auto & idxIrred : ListIrred) {
       FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
       DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
-      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, data.rddo.os);
+      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
       IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{DTadj, GramMatAdj};
       TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
       l_adj.push_back(eAdj);
