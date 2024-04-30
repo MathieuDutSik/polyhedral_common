@@ -531,12 +531,22 @@ template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & data,
                                                                              Fincorrect f_incorrect,
                                                                              int const& max_runtime_second) {
+  std::ostream& os = data.rddo.os;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: EnumerationDelaunayPolytopes, begin\n";
+#endif
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = std::vector<DatabaseEntry_Serial<Tobj, TadjO>>;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: EnumerationDelaunayPolytopes, before EnumerateAndStore_Serial\n";
+#endif
   std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: EnumerationDelaunayPolytopes, after EnumerateAndStore_Serial\n";
+#endif
   if (opt) {
     DelaunayTesselation<Tint, Tgroup> DT = DelaunayTesselation_From_DatabaseEntries_MPI<T,Tint,Tgroup>(*opt);
     return DT;

@@ -12,6 +12,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ISO_DELAUNAY_DOMAIN
+#endif
+
 template <typename T, typename Tint, typename Tgroup>
 struct DataIsoDelaunayDomains {
   LinSpaceMatrix<T> LinSpa;
@@ -294,15 +298,30 @@ MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesse
 template<typename T, typename Tint, typename Tgroup>
 DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
   std::ostream & os = data.rddo.os;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: GetInitialGenericDelaunayTesselation, beginning\n";
+#endif
   auto f_incorrect=[&](Delaunay_Obj<Tint,Tgroup> const& x) -> bool {
     MyMatrix<Tint> const& EXT = x.EXT;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: Before IsDelaunayPolytopeInducingEqualities\n";
+#endif
     bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, data.LinSpa);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: After IsDelaunayPolytopeInducingEqualities\n";
+#endif
     if (test1) {
       return true;
     }
     if (data.CommonGramMat) {
       MyMatrix<T> const& TestGram = *data.CommonGramMat;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: Before IsDelaunayAcceptableForGramMat\n";
+#endif
       bool test2 = IsDelaunayAcceptableForGramMat(EXT, data.LinSpa, TestGram);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: After IsDelaunayAcceptableForGramMat\n";
+#endif
       if (!test2) {
         return true;
       }
@@ -839,18 +858,18 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   auto check_adj=[&](int iOrb, Delaunay_AdjO<Tvert> const& NewAdj, std::string const& context) -> void {
     MyMatrix<Tvert> const& EXT = l_dels[iOrb].EXT;
-    ContainerMatrix<Tint> cont(EXT);
+    ContainerMatrix<Tvert> cont(EXT);
     Face f_att(EXT.rows());
-    MyMatrix<Tvert> EXTadj = l_dels[NewAdj.iOrb] * NewAdj.eBigMat;
+    MyMatrix<Tvert> EXTadj = l_dels[NewAdj.iOrb].EXT * NewAdj.eBigMat;
     int len = EXTadj.rows();
     for (int iVert=0; iVert<len; iVert++) {
-      MyVector<Tvert> V = GetMatrixRow(EXTadj, u);
+      MyVector<Tvert> V = GetMatrixRow(EXTadj, iVert);
       std::optional<size_t> opt = cont.GetIdx_v(V);
       if (opt) {
         f_att[*opt] = 1;
       }
     }
-    if (f_att != NewAdj.f) {
+    if (f_att != NewAdj.eInc) {
       std::cerr << "Consistency error in context=" << context << "\n";
       throw TerminalException{1};
     }
