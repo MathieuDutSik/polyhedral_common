@@ -1089,7 +1089,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     DT.ptn[i] = NAUTY_INFINITY;
   }
   for (size_t iH = 0; iH < hS; iH++) {
-  size_t pos = iH * nbVert + nbVert - 1;
+    size_t pos = iH * nbVert + nbVert - 1;
     DT.ptn[pos] = 0;
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED

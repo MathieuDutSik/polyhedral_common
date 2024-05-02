@@ -3,6 +3,7 @@
 #define SRC_POLY_POLY_KSKELETTON_H_
 
 // clang-format off
+#include "GRAPH_Bindings.h"
 #include "GRP_GroupFct.h"
 #include "MAT_Matrix.h"
 #include "Namelist.h"
@@ -781,7 +782,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect =
-    TRACES_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
+    GRAPH_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
   os << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time
      << "\n";
   std::vector<Telt> ListGen;

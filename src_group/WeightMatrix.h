@@ -2,17 +2,6 @@
 #ifndef SRC_GROUP_WEIGHTMATRIX_H_
 #define SRC_GROUP_WEIGHTMATRIX_H_
 
-#undef USE_BLISS
-#define USE_TRACES
-
-#ifdef USE_BLISS
-#include "GRAPH_bliss.h"
-#endif
-
-#ifdef USE_TRACES
-#include "GRAPH_traces.h"
-#endif
-
 /*
   Weight matrices are used for equivalence and compuing
   stabilizer.
@@ -32,9 +21,8 @@
   matrix (symmetric or not).
  */
 
-
-
 // clang-format off
+#include "GRAPH_Bindings.h"
 #include "Basic_file.h"
 #include "Basic_string.h"
 #include "Boost_bitset.h"
@@ -1274,12 +1262,7 @@ template <typename Tgr, typename Tidx, typename TidxIn, bool is_symm>
 std::vector<Tidx> GetCanonicalizationVector_Kernel_idxin(size_t const &nbRow,
                                                          Tgr const &eGR,
                                                          std::ostream &os) {
-#ifdef USE_BLISS
-  std::vector<TidxIn> cl = BLISS_GetCanonicalOrdering<Tgr, TidxIn>(eGR);
-#endif
-#ifdef USE_TRACES
-  std::vector<TidxIn> cl = TRACES_GetCanonicalOrdering<Tgr, TidxIn>(eGR, os);
-#endif
+  std::vector<TidxIn> cl = GRAPH_GetCanonicalOrdering<Tgr, TidxIn>(eGR, os);
   return GetCanonicalizationVector_KernelBis<Tidx, TidxIn, is_symm>(nbRow, cl, os);
 }
 
@@ -1333,14 +1316,8 @@ template <typename Tgr, typename Tidx, typename TidxC, bool is_symm>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Kernel_tidxc(size_t const &nbRow, Tgr const &eGR,
                                             std::ostream &os) {
-#ifdef USE_BLISS
   std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      BLISS_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-  std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-    TRACES_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow, os);
-#endif
+    GRAPH_GetCanonicalOrdering_ListGenerators<Tgr, TidxC, Tidx>(eGR, nbRow, os);
   std::vector<Tidx> MapVectRev2 =
     GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first, os);
   return {std::move(MapVectRev2), std::move(ePair.second)};
@@ -1401,14 +1378,8 @@ GetGroupCanonicalizationVector_Kernel(
 
 template<typename Tgr, typename TidxIn>
 std::vector<std::vector<TidxIn>> GetStabilizerWeightMatrix_Kernel_idxin(Tgr const& eGR, size_t nbRow, std::ostream &os) {
-#ifdef USE_BLISS
   std::vector<std::vector<TidxIn>> ListGen =
-      BLISS_GetListGenerators<Tgr, TidxIn>(eGR, nbRow);
-#endif
-#ifdef USE_TRACES
-  std::vector<std::vector<TidxIn>> ListGen =
-    TRACES_GetListGenerators<Tgr, TidxIn>(eGR, nbRow, os);
-#endif
+    GRAPH_GetListGenerators<Tgr, TidxIn>(eGR, nbRow, os);
   return ListGen;
 }
 
@@ -1544,14 +1515,8 @@ std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
     return {};
   unsigned int nof_vertices = nof_vertices1;
   Tidx nbRow = WMat1.rows();
-#ifdef USE_BLISS
-  std::vector<Tidx> cl1 = BLISS_GetCanonicalOrdering<Tgr, Tidx>(eGR1);
-  std::vector<Tidx> cl2 = BLISS_GetCanonicalOrdering<Tgr, Tidx>(eGR2);
-#endif
-#ifdef USE_TRACES
-  std::vector<Tidx> cl1 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR1, os);
-  std::vector<Tidx> cl2 = TRACES_GetCanonicalOrdering<Tgr, Tidx>(eGR2, os);
-#endif
+  std::vector<Tidx> cl1 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR1);
+  std::vector<Tidx> cl2 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR2);
   std::vector<unsigned int> clR2(nof_vertices);
   for (unsigned int i = 0; i < nof_vertices; i++)
     clR2[cl2[i]] = i;
