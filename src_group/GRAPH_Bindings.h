@@ -19,6 +19,77 @@
 #include "GRAPH_traces.h"
 #endif
 
+struct SimplifiedVectexColoredGraph {
+  size_t nbVert;
+  std::vector<int> d;
+  std::vector<size_t> v;
+  std::vector<int> e;
+  std::vector<int> ListBlockSize;
+};
+
+
+#ifdef USE_BLISS
+GraphListAdj GetGRaphListAdj(SimplifiedVectexColoredGraph const& x) {
+  size_t nbVert = d.nbVert;
+  GraphListAdj eGR(nbVert);
+  size_t pos = 0;
+  size_t i_color = 0;
+  for (auto & blk_size : x.ListBlockSize) {
+    size_t blk_size_z = blk_size;
+    for (size_t u=0; u<blk_size_z; u++) {
+      eGR.SetColor(pos, i_color);
+      pos++;
+    }
+    i_color++;
+  }
+  int pos = 0;
+  for (size_t iVert=0; iVert<nbVert; iVert++) {
+    int nbAdj = x.d[iVert];
+    for (int u=0; u<nbAdj; u++) {
+      size_t jVert = x.e[pos];
+      eGR.AddAdjacent(iVert, jVert);
+      pos++;
+    }
+  }
+  return eGR;
+}
+#endif
+
+#ifdef USE_TRACES
+DataTraces GetDataTraces(SimplifiedVectexColoredGraph const& x) {
+  size_t nbVert = x.nbVert;
+  int nbAdjacent = 0;
+  for (size_t i=0; i<nbVert; i++) {
+    nbAdjacent += x.d[i];
+  }
+  DataTraces DT(nbVert, nbAdjacent);
+  int pos = 0;
+  for (size_t i=0; i<nbVert; i++) {
+    int nbAdj = x.d[i];
+    DT.sg1.d[i] = nbAdj;
+    DT.sg1.v[i] = pos;
+    pos += nbAdj;
+  }
+  for (size_t i = 0; i < nbVert; i++) {
+    DT.lab1[i] = i;
+    DT.ptn[i] = NAUTY_INFINITY;
+  }
+  int tot_size = 0;
+  for (auto & blk_size : x.ListBlockSize) {
+    tot_size += blk_size;
+    DT.ptn[tot_size-1] = 0;
+  }
+  for (int i_ent=0; i_ent<nbAdjacent; i_ent++) {
+    DT.sg1.e[i_ent] = x.e[i_ent];
+  }
+  return DT;
+}
+#endif
+
+
+
+
+
 template<typename Tgr, typename TidxC>
 std::vector<TidxC> GRAPH_GetCanonicalOrdering(Tgr const& eGR, [[maybe_unused]] std::ostream& os) {
 #ifdef USE_BLISS
