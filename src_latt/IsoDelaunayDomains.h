@@ -1304,14 +1304,24 @@ struct DataIsoDelaunayDomainsFunc {
     x_in.ListIneq = ListIneq;
     MyMatrix<T> FAC = GetFACineq(ListIneq);
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, os);
+    size_t nbIrred = ListIrred.size();
+    MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
     std::vector<TadjI> l_adj;
-    for (auto & idxIrred : ListIrred) {
-      FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
-      DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
-      MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
-      IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{DTadj, GramMatAdj};
-      TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
-      l_adj.push_back(eAdj);
+    for (size_t i=0; i<nbIrred; i++) {
+      int idxIrred = ListIrred[i];
+      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i);
+      MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
+      for (int u=0; u<dimSpace; u++) {
+        TestMat += TestPt(u) * LinSpa.ListMat[u];
+      }
+      if (IsPositiveDefinite(TestMat)) {
+        FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
+        DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
+        MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+        IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{DTadj, GramMatAdj};
+        TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
+        l_adj.push_back(eAdj);
+      }
     }
     return l_adj;
   }

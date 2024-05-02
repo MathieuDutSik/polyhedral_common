@@ -1434,7 +1434,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 
 
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
+MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
                                   MyMatrix<T> const &Equa,
                                   std::ostream& os) {
   MyMatrix<T> NSP = NullspaceTrMat(Equa);
@@ -1463,7 +1463,7 @@ MyMatrix<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
 }
 
 template <typename T>
-MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std::ostream& os) {
+MyVector<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std::ostream& os) {
   int n_row = FAC.rows();
   int n = FAC.cols();
   int n_f = f.size();
@@ -1486,6 +1486,14 @@ MyMatrix<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std
     }
   }
   return GetSpaceInteriorPoint(FACred, Equa, os);
+}
+
+template<typename T>
+MyVector<T> GetSpaceInteriorPointFacet(MyMatrix<T> const &FAC, int const &iFacet, std::ostream& os) {
+  int nbRow = FAC.rows();
+  Face f(nbRow);
+  f[iFacet] = 1;
+  return GetSpaceInteriorPointFace(FAC, f, os);
 }
 
 template <typename T> struct EmbeddedPolytope {
