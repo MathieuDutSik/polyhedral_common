@@ -145,7 +145,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
     os << "ISO_DEL: VoronoiLinearInequality After EvaluateLineVector (first)\n";
 #endif
     for (int k=0; k<=n; k++) {
-      val += B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+      val -= B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: VoronoiLinearInequality Summation of the entries\n";
@@ -165,7 +165,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const& vipc, M
     for (auto & eLineMat : ListGram) {
       T val = EvaluateLineVector(eLineMat, TheVertRed);
       for (int k=0; k<=n; k++) {
-        val += B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
+        val -= B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
       }
       if (val != 0) {
         std::cerr << "For the vertex, the condition should be void and so we should get 0\n";
@@ -1299,6 +1299,8 @@ struct DataIsoDelaunayDomainsFunc {
   }
   std::vector<TadjI> f_adj(Tobj & x_in) {
     std::ostream& os = data.rddo.os;
+    int n = data.LinSpa.n;
+    int dimSpace = data.LinSpa.ListMat.size();
     IsoDelaunayDomain<T, Tint, Tgroup> & x = x_in.DT_gram;
     std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tint,Tgroup>(x.DT, data.LinSpa.ListLineMat, os);
     x_in.ListIneq = ListIneq;
@@ -1309,10 +1311,10 @@ struct DataIsoDelaunayDomainsFunc {
     std::vector<TadjI> l_adj;
     for (size_t i=0; i<nbIrred; i++) {
       int idxIrred = ListIrred[i];
-      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i);
+      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
       MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
       for (int u=0; u<dimSpace; u++) {
-        TestMat += TestPt(u) * LinSpa.ListMat[u];
+        TestMat += TestPt(u) * data.LinSpa.ListMat[u];
       }
       if (IsPositiveDefinite(TestMat)) {
         FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
