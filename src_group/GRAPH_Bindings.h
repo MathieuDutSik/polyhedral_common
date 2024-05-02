@@ -43,10 +43,10 @@ GRAPH_GetCanonicalOrdering_ListGenerators(Tgr const& eGR, size_t const& nbRow, [
 template<typename Tgr, typename TidxG>
 std::vector<std::vector<TidxG>> GRAPH_GetListGenerators(Tgr const& eGR, size_t const& nbRow, [[maybe_unused]] std::ostream& os) {
 #ifdef USE_BLISS
-  BLISS_GetListGenerators<Tgr, TidxG>(eGR, nbRow);
+  return BLISS_GetListGenerators<Tgr, TidxG>(eGR, nbRow);
 #endif
 #ifdef USE_TRACES
-  TRACES_GetListGenerators<Tgr, TidxG>(eGR, nbRow, os);
+  return TRACES_GetListGenerators<Tgr, TidxG>(eGR, nbRow, os);
 #endif
 }
 
