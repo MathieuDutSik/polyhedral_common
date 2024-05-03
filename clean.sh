@@ -15,3 +15,5 @@ set -e
 (cd src_lorentzian && make clean)
 (cd src_perfect_mpi && make clean)
 (cd src_poincare_polyhedron && make clean)
+(cd src_rankin && make clean)
+(cd src_export_oscar && make clean)
