@@ -12,9 +12,9 @@
 #PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
-PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay
+PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -28,9 +28,11 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= g++ -std=c++11 -Wall -O9 -DDEBUG
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 #   APPLE CLANG
-#CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+#CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize-trap
+#CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -fsanitize-memory-param-retval -fsanitize-thread-atomics
 #   GCC
-CC             = g++-13 -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
+#CC             = g++-13 -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
