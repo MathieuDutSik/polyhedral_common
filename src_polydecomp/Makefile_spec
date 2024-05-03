@@ -1,9 +1,14 @@
-PROGRAM		= DEC_ComputeDecomposition DEC_TestUnionCones DEC_TestIntersectionMethods
+#PROGRAM		= DEC_ComputeDecomposition DEC_TestUnionCones DEC_TestIntersectionMethods
+PROGRAM		= DEC_TestUnionCones
+#PROGRAM		= DEC_TestIntersectionMethods
+#PROGRAM		= DEC_ComputeDecomposition
 
 SRCFILES        = POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS     = $(SRCFILES:.cpp=.o)
 
+#CC		= icpc -std=c++17 -Wall -g -O2
+#CC		= clang++ -Weverything -std=c++17
 #CC		= clang++ -Wall -std=c++17
 #CC		= clang++ -g -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
 #CC		= clang++ -O2 -Weverything -std=c++17 -DDEBUG
