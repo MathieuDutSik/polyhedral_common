@@ -64,6 +64,7 @@
 #endif
 
 // clang-format off
+#include "GRAPH_Bindings.h"
 #include "WeightMatrix.h"
 #include <algorithm>
 #include <limits>
@@ -899,16 +900,15 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
   return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
-
 template <typename T, bool is_symm, typename F1, typename F2>
-DataTraces GetDataTraces(F1 f1, F2 f2,
-                         WeightMatrixVertexSignatures<T> const &WMVS,
-                         std::ostream &os) {
+SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
+                                              WeightMatrixVertexSignatures<T> const &WMVS,
+                                              std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "Beginning of GetDataTraces\n";
+  os << "Beginning of GetSimplifiedVCG\n";
 #endif
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
@@ -1067,7 +1067,8 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   for (size_t iCase = 0; iCase < nbCase; iCase++)
     for (size_t iH = 0; iH < hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
-  DataTraces DT(nbVertTot, nbAdjacent);
+
+  SimplifiedVectexColoredGraph s = GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
   // Now setting up the adjacencies
   int pos = 0;
   std::vector<int> ListShift(nbVertTot);
@@ -1076,24 +1077,16 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
     size_t iH = i / nbVert;
     int iCase = expand.vertex_to_signature[iVert];
     int nbAdj = MatrixAdj(iH, iCase);
-    DT.sg1.d[i] = nbAdj;
-    DT.sg1.v[i] = pos;
+    s.d[i] = nbAdj;
     ListShift[i] = pos;
     pos += nbAdj;
   }
   // Assigning the color stuff
-  for (size_t i = 0; i < nbVertTot; i++) {
-    DT.lab1[i] = i;
-  }
-  for (size_t i = 0; i < nbVertTot; i++) {
-    DT.ptn[i] = NAUTY_INFINITY;
-  }
   for (size_t iH = 0; iH < hS; iH++) {
-    size_t pos = iH * nbVert + nbVert - 1;
-    DT.ptn[pos] = 0;
+    s.ListBlockSize[iH] = nbVert;
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "DT.sg1.d / v / lab1 / ptn set up\n";
+  os << "SimplifiedVCG stuff set up\n";
 #endif
   //
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1101,7 +1094,7 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   std::vector<int> ListDegExpe2(nbVertTot, 0);
 #endif
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
-    DT.sg1.e[ListShift[iVert]] = jVert;
+    s.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     ListDegExpe1[iVert]++;
@@ -1145,11 +1138,11 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   int sum_adj = 0;
   int nb_error = 0;
   for (size_t iVert = 0; iVert < nbVertTot; iVert++) {
-    int deg0 = DT.sg1.d[iVert];
+    int deg0 = s.d[iVert];
     int deg1 = ListDegExpe1[iVert];
     int deg2 = ListDegExpe2[iVert];
     if (deg0 != deg1 || deg0 != deg2 || deg1 != deg2) {
-      std::cerr << "iVert=" << iVert << " deg0=" << DT.sg1.d[iVert]
+      std::cerr << "iVert=" << iVert << " deg0=" << s.d[iVert]
                 << " deg1=" << ListDegExpe1[iVert]
                 << " deg2=" << ListDegExpe2[iVert] << "\n";
       nb_error++;
@@ -1167,9 +1160,9 @@ DataTraces GetDataTraces(F1 f1, F2 f2,
   }
 #endif
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "|GetDataTraces|=" << time << "\n";
+  os << "|GetSimplifiedVCG|=" << time << "\n";
 #endif
-  return DT;
+  return s;
 }
 
 
@@ -1187,41 +1180,41 @@ GetGroupCanonicalization_KnownSignature(
     throw TerminalException{1};
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "Before calling GetDataTraces from GetGroupCanonicalization_KnownSignature\n";
+  os << "Before calling GetSimplifiedVCG from GetGroupCanonicalization_KnownSignature\n";
 #endif
-  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
-  if (DT.n < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+  SimplifiedVectexColoredGraph s = GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+  if (s.nbVert < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
+      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
       GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
-  if (DT.n < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+  if (s.nbVert < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
+      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
       GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
-  if (DT.n < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+  if (s.nbVert < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
+      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
       GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
 #if !defined __APPLE__
-  if (DT.n < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+  if (s.nbVert < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, Tidx>(DT, nbRow, os);
+      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
     std::vector<Tidx> MapVectRev2 =
       GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
                                                          os);
@@ -1246,10 +1239,10 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
     throw TerminalException{1};
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "Before calling GetDataTraces from GetStabilizerWeightMatrix_KnownSignature\n";
+  os << "Before calling GetSimplifiedVCG from GetStabilizerWeightMatrix_KnownSignature\n";
 #endif
-  DataTraces DT = GetDataTraces<T, is_symm, F1, F2>(f1, f2, WMVS, os);
-  return TRACES_GetListGenerators_Arr<Tidx>(DT, nbRow, os);
+  SimplifiedVectexColoredGraph s = GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+  return GRAPH_GetListGenerators_Simp<Tidx>(s, nbRow, os);
 }
 
 /*

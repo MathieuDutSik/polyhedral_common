@@ -21,11 +21,18 @@
 
 struct SimplifiedVectexColoredGraph {
   size_t nbVert;
+  size_t nbAdjacent;
   std::vector<int> d;
-  std::vector<size_t> v;
   std::vector<int> e;
   std::vector<int> ListBlockSize;
 };
+
+SimplifiedVectexColoredGraph GetSimplifiedVertexColoredGraph(size_t nbVert, size_t nbAdjacent, size_t nbBlock) {
+  std::vector<int> d(nbVert);
+  std::vector<int> e(nbAdjacent);
+  std::vector<int> ListBlockSize(nbBlock);
+  return {nbVert, nbAdjacent, std::move(d), std::move(e), std::move(ListBlockSize)};
+}
 
 
 #ifdef USE_BLISS
@@ -58,10 +65,7 @@ GraphListAdj GetGraphListAdj_from_simplified(SimplifiedVectexColoredGraph const&
 #ifdef USE_TRACES
 DataTraces GetDataTraces(SimplifiedVectexColoredGraph const& x) {
   size_t nbVert = x.nbVert;
-  int nbAdjacent = 0;
-  for (size_t i=0; i<nbVert; i++) {
-    nbAdjacent += x.d[i];
-  }
+  int nbAdjacent = x.nbAdjacent;
   DataTraces DT(nbVert, nbAdjacent);
   int pos = 0;
   for (size_t i=0; i<nbVert; i++) {
@@ -100,8 +104,18 @@ GRAPH_GetCanonicalOrdering_ListGenerators_Simp(SimplifiedVectexColoredGraph cons
 #endif
 }
 
-
-
+template<typename TidxG>
+std::vector<std::vector<TidxG>>
+GRAPH_GetListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, std::ostream& os) {
+#ifdef USE_BLISS
+  GraphListAdj eGR = GetGraphListAdj_from_simplified(s);
+  return BLISS_GetListGenerators<GraphListAdj, TidxG>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  DataTraces DT = GetDataTraces(s);
+  return TRACES_GetListGenerators_Arr<TidxG>(DT, nbRow, os);
+#endif
+}
 
 template<typename Tgr, typename TidxC>
 std::vector<TidxC> GRAPH_GetCanonicalOrdering(Tgr const& eGR, [[maybe_unused]] std::ostream& os) {

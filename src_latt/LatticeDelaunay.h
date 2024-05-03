@@ -503,6 +503,9 @@ struct DataLatticeFunc {
     Tobj x_ret{EXT, {} };
     return x_ret;
   };
+  size_t f_complexity(Tobj const& x) {
+    return x.EXT.rows();
+  }
 };
 
 template<typename T, typename Tvert, typename Tgroup>
