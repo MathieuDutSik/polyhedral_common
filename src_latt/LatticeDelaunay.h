@@ -34,22 +34,20 @@ struct DataLattice {
 };
 
 template <typename T, typename Tint, typename Tgroup>
-DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostream& os) {
+DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
   int n = GramMat.rows();
-  int dimEXT = n + 1;
   MyMatrix<T> SHV(0,n);
   CVPSolver<T,Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OUTfile << "\n";
 #endif
-  //  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-  //#ifdef DEBUG_DELAUNAY_ENUMERATION
-  //  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
-  //#endif
-  return {n, GramMat, SHV, solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
+#endif
+  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo)};
 }
 
 

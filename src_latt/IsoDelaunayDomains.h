@@ -403,7 +403,10 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
     if (!test) {
       return {};
     }
-    DataLattice<T,Tint,Tgroup> data_lattice = GetDataLattice<T,Tint,Tgroup>(GramMat, os);
+    using TintGroup = typename Tgroup::Tint;
+    int dimEXT = GramMat.rows() + 1;
+    PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+    DataLattice<T,Tint,Tgroup> data_lattice = GetDataLattice<T,Tint,Tgroup>(GramMat, AllArr, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: After GetInitialGenericDelaunayTesselation data_lattice.rddo.AllArr.OutFile=" << data_lattice.rddo.AllArr.OUTfile << "\n";
 #endif
