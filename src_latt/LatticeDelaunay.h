@@ -45,11 +45,11 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OUTfile << "\n";
 #endif
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
-#endif
-  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo)};
+  //  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+  //#ifdef DEBUG_DELAUNAY_ENUMERATION
+  //  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
+  //#endif
+  return {n, GramMat, SHV, solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
 }
 
 
