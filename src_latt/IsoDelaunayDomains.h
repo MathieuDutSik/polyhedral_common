@@ -404,6 +404,9 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDe
       return {};
     }
     DataLattice<T,Tint,Tgroup> data_lattice = GetDataLattice<T,Tint,Tgroup>(GramMat, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: After GetInitialGenericDelaunayTesselation data_lattice.rddo.AllArr.OutFile=" << data_lattice.rddo.AllArr.OUTfile << "\n";
+#endif
     int max_runtime_second = 0;
     return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(data_lattice, f_incorrect, max_runtime_second);
   };

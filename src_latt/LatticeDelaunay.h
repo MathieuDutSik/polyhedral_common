@@ -42,7 +42,13 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, std::ostre
   CVPSolver<T,Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OUTfile << "\n";
+#endif
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
+#endif
   return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo)};
 }
 
@@ -428,6 +434,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
   Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
+  os << "DEL_ENUM: ComputeGroupAndAdjacencies, OutFile=" << eData.rddo.AllArr.OUTfile << "\n";
 #endif
   vectface TheOutput = DualDescriptionRecord(EXT_T, GRPlatt, eData.rddo);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
@@ -471,6 +478,9 @@ struct DataLatticeFunc {
     return data.rddo.os;
   }
   Tobj f_init() {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    data.rddo.os << "DEL_ENUM: DataLatticeFunc : f_init, OutFile=" << data.rddo.AllArr.OUTfile << "\n";
+#endif
     MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
     Tobj x{std::move(EXT), {} };
     return x;
@@ -538,6 +548,7 @@ std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(Dat
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   std::ostream& os = data.rddo.os;
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, begin\n";
+  os << "DEL_ENUM: EnumerationDelaunayPolytopes, OutFile=" << data.rddo.AllArr.OUTfile << "\n";
 #endif
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};

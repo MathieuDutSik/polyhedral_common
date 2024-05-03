@@ -2923,6 +2923,7 @@ bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, [[maybe_unused]] std::
 
 template<typename Tint>
 void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const& AllArr, std::ostream & os) {
+  os << "REC_DD: PrintPolyHeuristicSerial, beginning\n";
   os << "REC_DD: OUTfile=" << AllArr.OUTfile << "\n";
   os << "REC_DD: OutFormat=" << AllArr.OutFormat << "\n";
   os << "REC_DD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
