@@ -29,7 +29,7 @@ struct SimplifiedVectexColoredGraph {
 
 
 #ifdef USE_BLISS
-GraphListAdj GetGRaphListAdj(SimplifiedVectexColoredGraph const& x) {
+GraphListAdj GetGraphListAdj_from_simplified(SimplifiedVectexColoredGraph const& x) {
   size_t nbVert = d.nbVert;
   GraphListAdj eGR(nbVert);
   size_t pos = 0;
@@ -86,6 +86,19 @@ DataTraces GetDataTraces(SimplifiedVectexColoredGraph const& x) {
 }
 #endif
 
+
+template<typename TidxC, typename TidxG>
+std::pair<std::vector<TidxC>, std::vector<std::vector<TidxG>>>
+GRAPH_GetCanonicalOrdering_ListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, std::ostream& os) {
+#ifdef USE_BLISS
+  GraphListAdj eGR = GetGraphListAdj_from_simplified(s);
+  return BLISS_GetCanonicalOrdering_ListGenerators<GraphListAdj, TidxC, TidxG>(eGR, nbRow);
+#endif
+#ifdef USE_TRACES
+  DataTraces DT = GetDataTraces(s);
+  return TRACES_GetCanonicalOrdering_ListGenerators_Arr<TidxC, TidxG>(DT, nbRow, os);
+#endif
+}
 
 
 
