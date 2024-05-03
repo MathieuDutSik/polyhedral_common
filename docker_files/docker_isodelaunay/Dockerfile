@@ -26,11 +26,11 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
 
 
 # Install classic Ubuntu packages
-RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
+RUN apt-get install -y libgdbm-dev libsnappy-dev pkg-config rlwrap
+RUN apt-get install -y screen software-properties-common sudo unzip zlib1g-dev zsh
 RUN apt-get install -y wget emacs joe
-RUN apt-get install -y g++-11 g++ gcc gfortran clang
-RUN apt-get install -y git cmake
-
+RUN apt-get install -y g++ gcc
+RUN apt-get install -y git cmake make
 
 # GMP
 RUN apt-get install -y libgmp-dev
@@ -49,17 +49,15 @@ RUN mkdir -p /opt
 RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
 ENV EIGEN_PATH /opt/eigen
 
-
-# Threading Building Blocks
-RUN apt-get install -y libtbb-dev
-ENV TBB_INCDIR=/usr/include
-ENV TBB_LINK="-ltbb"
-
-
-# Gnu Scientific library
-RUN apt-get install -y libgsl-dev
-ENV GSL_INCDIR=/usr/include
-ENV GSL_C_LINK="-lgsl -lgslcblas"
+# CDDLIB
+RUN apt-get install -y autoconf autotools-dev libtool
+RUN apt-get install -y texlive-latex-base # needed for the manual to be compiled
+RUN git clone https://github.com/cddlib/cddlib
+RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install
+ENV CDDLIB_PATH /opt/cddlib
+ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
+ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 # cloning polyhedral code
 RUN mkdir -p GIT
@@ -78,6 +76,11 @@ RUN apt-get install -y openmpi-bin libopenmpi-dev
 ENV MPI_INCLUDE_CPP "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
 ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
+# GLPK
+RUN apt-get install -y libglpk-dev
+ENV GLPK_PATH /usr
+ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
+ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common/src_latt && make -f Makefile_spec

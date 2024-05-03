@@ -366,7 +366,7 @@ std::pair<int, MyMatrix<T>> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSp
 
 
 template<typename T, typename Tint, typename Tgroup>
-DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
+DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(DataIsoDelaunayDomains<T,Tint,Tgroup> & data) {
   std::ostream & os = data.rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: GetInitialGenericDelaunayTesselation, beginning\n";
@@ -1191,7 +1191,7 @@ namespace boost::serialization {
   BUT we should have some invariants coming from the Tspace and right now we have none.
  */
 template<typename T, typename Tint, typename Tgroup>
-size_t ComputeInvariantIsoDelaunayDomain([[maybe_unused]] DataIsoDelaunayDomains<T,Tint,Tgroup> const& data, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
+size_t ComputeInvariantIsoDelaunayDomain([[maybe_unused]] DataIsoDelaunayDomains<T,Tint,Tgroup> & data, size_t const& seed, DelaunayTesselation<Tint, Tgroup> const& DT) {
   using TintGroup = typename Tgroup::Tint;
   std::map<size_t, size_t> map_delaunays;
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
@@ -1225,7 +1225,7 @@ size_t ComputeInvariantIsoDelaunayDomain([[maybe_unused]] DataIsoDelaunayDomains
 }
 
 template<typename T, typename Tint, typename Tgroup>
-IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
+IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> & data) {
   DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(data);
   std::pair<int, MyMatrix<T>> pair = GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
   return {std::move(DT), pair.first, std::move(pair.second)};
@@ -1341,6 +1341,18 @@ struct DataIsoDelaunayDomainsFunc {
 
 template<typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  /*
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::ofstream os(FileLog);
+  if (ApplyStdUnitbuf(eFull)) {
+    os << std::unitbuf;
+    os << "Apply UnitBuf\n";
+  } else {
+    os << "Do not apply UnitBuf\n";
+  }
+  */
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream& os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
@@ -1351,10 +1363,10 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  std::cerr << "max_runtime_second=" <<	max_runtime_second << "\n";
+  os << "max_runtime_second=" << max_runtime_second << "\n";
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  os << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   auto get_common=[&]() -> std::optional<MyMatrix<T>> {
     std::string CommonGramMat = BlockDATA.ListStringValues.at("CommonGramMat");
     if (CommonGramMat == "unset") {
@@ -1364,18 +1376,18 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm, FullNameli
     return eMat;
   };
   std::optional<MyMatrix<T>> CommonGramMat = get_common();
-  std::cerr << "We have CommonGramMat\n";
+  os << "We have CommonGramMat\n";
 
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
-  std::cerr << "We have LinSpa\n";
+  os << "We have LinSpa\n";
   //
   using TintGroup = typename Tgroup::Tint;
   int dimEXT = LinSpa.n + 1;
   PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
-  std::cerr << "We have AllArr\n";
+  os << "We have AllArr\n";
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-  std::cerr << "We have rddo\n";
-
+  os << "We have rddo\n";
+  //
   DataIsoDelaunayDomains<T,Tint,Tgroup> data{LinSpa,
     std::move(rddo),
     CommonGramMat};

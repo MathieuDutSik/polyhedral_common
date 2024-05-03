@@ -3149,9 +3149,11 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, Record
   using Tbank = typename RecordDualDescOperation<T, Tgroup>::Tbank;
   using Tidx_value = int32_t;
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
+  std::ostream & os = rddo.os;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  PrintPolyHeuristicSerial(rddo.AllArr, rddo.os);
+  os << "REC_DD: DualDescriptionRecord, beginning\n";
+  PrintPolyHeuristicSerial(rddo.AllArr, os);
 #endif
   //
   std::string DD_Prefix = "totally_irrelevant_second";
@@ -3161,7 +3163,7 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, Record
   std::map<std::string, TintGroup> TheMap =
     ComputeInitialMap<TintGroup,T,Tgroup>(EXTred, GRP, rddo.AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      rddo.TheBank, EXTred, EXTred_int, GRP, TheMap, rddo.AllArr, DD_Prefix, rddo.os);
+      rddo.TheBank, EXTred, EXTred_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
 }
 
 

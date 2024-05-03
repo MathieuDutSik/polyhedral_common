@@ -419,8 +419,9 @@ void WriteGAPformat(DelaunayTesselation<Tvert,Tgroup> const& DT, std::string con
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> & eData, MyMatrix<Tint> const& x, std::ostream& os) {
+std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> & eData, MyMatrix<Tint> const& x) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x);
+  std::ostream& os = eData.rddo.os;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
 #endif
@@ -494,7 +495,7 @@ struct DataLatticeFunc {
     return {x_ret, ret};
   }
   std::vector<TadjI> f_adj(Tobj & x) {
-    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(data, x.EXT, data.rddo.os);
+    std::pair<Tgroup, std::vector<TadjI>> pair = ComputeGroupAndAdjacencies<T,Tint,Tgroup>(data, x.EXT);
     x.GRP = pair.first;
     return pair.second;
   }
