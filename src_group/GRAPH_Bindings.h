@@ -12,6 +12,7 @@
 #endif
 
 #ifdef USE_BLISS
+#include "GRAPH_GraphicalBasic.h"
 #include "GRAPH_bliss.h"
 #endif
 
@@ -36,12 +37,12 @@ SimplifiedVectexColoredGraph GetSimplifiedVertexColoredGraph(size_t nbVert, size
 
 
 #ifdef USE_BLISS
-GraphListAdj GetGraphListAdj_from_simplified(SimplifiedVectexColoredGraph const& x) {
-  size_t nbVert = d.nbVert;
+GraphListAdj GetGraphListAdj_from_simplified(SimplifiedVectexColoredGraph const& s) {
+  size_t nbVert = s.nbVert;
   GraphListAdj eGR(nbVert);
   size_t pos = 0;
   size_t i_color = 0;
-  for (auto & blk_size : x.ListBlockSize) {
+  for (auto & blk_size : s.ListBlockSize) {
     size_t blk_size_z = blk_size;
     for (size_t u=0; u<blk_size_z; u++) {
       eGR.SetColor(pos, i_color);
@@ -49,11 +50,10 @@ GraphListAdj GetGraphListAdj_from_simplified(SimplifiedVectexColoredGraph const&
     }
     i_color++;
   }
-  int pos = 0;
   for (size_t iVert=0; iVert<nbVert; iVert++) {
-    int nbAdj = x.d[iVert];
+    int nbAdj = s.d[iVert];
     for (int u=0; u<nbAdj; u++) {
-      size_t jVert = x.e[pos];
+      size_t jVert = s.e[pos];
       eGR.AddAdjacent(iVert, jVert);
       pos++;
     }
@@ -93,7 +93,7 @@ DataTraces GetDataTraces(SimplifiedVectexColoredGraph const& x) {
 
 template<typename TidxC, typename TidxG>
 std::pair<std::vector<TidxC>, std::vector<std::vector<TidxG>>>
-GRAPH_GetCanonicalOrdering_ListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, std::ostream& os) {
+GRAPH_GetCanonicalOrdering_ListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, [[maybe_unused]] std::ostream& os) {
 #ifdef USE_BLISS
   GraphListAdj eGR = GetGraphListAdj_from_simplified(s);
   return BLISS_GetCanonicalOrdering_ListGenerators<GraphListAdj, TidxC, TidxG>(eGR, nbRow);
@@ -106,7 +106,7 @@ GRAPH_GetCanonicalOrdering_ListGenerators_Simp(SimplifiedVectexColoredGraph cons
 
 template<typename TidxG>
 std::vector<std::vector<TidxG>>
-GRAPH_GetListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, std::ostream& os) {
+GRAPH_GetListGenerators_Simp(SimplifiedVectexColoredGraph const& s, size_t const& nbRow, [[maybe_unused]] std::ostream& os) {
 #ifdef USE_BLISS
   GraphListAdj eGR = GetGraphListAdj_from_simplified(s);
   return BLISS_GetListGenerators<GraphListAdj, TidxG>(eGR, nbRow);
