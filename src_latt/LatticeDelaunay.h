@@ -534,8 +534,8 @@ template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint,Tgroup>> EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> & data,
                                                                              Fincorrect f_incorrect,
                                                                              int const& max_runtime_second) {
-  std::ostream& os = data.rddo.os;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
+  std::ostream& os = data.rddo.os;
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, begin\n";
 #endif
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;

@@ -330,11 +330,12 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const& ListIneq) {
 }
 
 template<typename T, typename Tvert, typename Tgroup>
-MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT, std::ostream& os) {
+std::pair<int, MyMatrix<T>> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesselation<Tvert, Tgroup> const& DT, std::ostream& os) {
   int n = LinSpa.n;
   int dimSpace = LinSpa.ListMat.size();
   std::vector<FullAdjInfo<T>> ListIneq = ComputeDefiningIneqIsoDelaunayDomain<T,Tvert,Tgroup>(DT, LinSpa.ListLineMat, os);
   MyMatrix<T> FAC = GetFACineq(ListIneq);
+  int nbIneq = FAC.rows();
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
   for (int u=0; u<dimSpace; u++) {
@@ -356,7 +357,7 @@ MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa, DelaunayTesse
     }
   }
 #endif
-  return RetMat;
+  return {nbIneq, std::move(RetMat)};
 }
 
 
@@ -1125,6 +1126,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
 template<typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain {
   DelaunayTesselation<Tint, Tgroup> DT;
+  int nbIneq;
   MyMatrix<T> GramMat;
 };
 
@@ -1132,6 +1134,7 @@ template<typename T, typename Tint, typename Tgroup>
 void WriteEntryGAP(std::ostream& os_out, IsoDelaunayDomain<T,Tint,Tgroup> const& ent) {
   os_out << "rec(DT:=";
   WriteEntryGAP(os_out, ent.DT);
+  os_out << ", nbIneq:=" << ent.nbIneq;
   os_out << ", GramMat:=" << StringMatrixGAP(ent.GramMat) << ")";
 }
 
@@ -1140,6 +1143,7 @@ namespace boost::serialization {
   inline void serialize(Archive &ar, IsoDelaunayDomain<T, Tint, Tgroup> &eRec,
                         [[maybe_unused]] const unsigned int version) {
     ar &make_nvp("DT", eRec.DT);
+    ar &make_nvp("nbIneq", eRec.nbIneq);
     ar &make_nvp("GramMat", eRec.GramMat);
   }
 }
@@ -1223,8 +1227,8 @@ size_t ComputeInvariantIsoDelaunayDomain([[maybe_unused]] DataIsoDelaunayDomains
 template<typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain<T, Tint, Tgroup> GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T,Tint,Tgroup> const& data) {
   DelaunayTesselation<Tint, Tgroup> DT = GetInitialGenericDelaunayTesselation(data);
-  MyMatrix<T> GramMat = GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
-  return {DT, GramMat};
+  std::pair<int, MyMatrix<T>> pair = GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
+  return {std::move(DT), pair.first, std::move(pair.second)};
 }
 
 template<typename T, typename Tint, typename Tgroup>
@@ -1319,8 +1323,8 @@ struct DataIsoDelaunayDomainsFunc {
       if (IsPositiveDefinite(TestMat)) {
         FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
         DelaunayTesselation<Tint, Tgroup> DTadj = FlippingLtype<T,Tint,Tgroup>(x.DT, x.GramMat, eRecIneq.ListAdjInfo, data.rddo);
-        MyMatrix<T> GramMatAdj = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
-        IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{DTadj, GramMatAdj};
+        std::pair<int, MyMatrix<T>> pair = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+        IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{std::move(DTadj), pair.first, std::move(pair.second)};
         TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
         l_adj.push_back(eAdj);
       }
@@ -1329,6 +1333,9 @@ struct DataIsoDelaunayDomainsFunc {
   }
   Tobj f_adji_obj(TadjI const& x) {
     return {x.DT_gram, {} };
+  }
+  size_t f_complexity(Tobj const& x) {
+    return x.nbIneq;
   }
 };
 

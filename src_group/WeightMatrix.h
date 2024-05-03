@@ -1515,8 +1515,8 @@ std::optional<std::vector<Tidx>> TestEquivalenceWeightMatrix_norenorm(
     return {};
   unsigned int nof_vertices = nof_vertices1;
   Tidx nbRow = WMat1.rows();
-  std::vector<Tidx> cl1 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR1);
-  std::vector<Tidx> cl2 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR2);
+  std::vector<Tidx> cl1 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR1, os);
+  std::vector<Tidx> cl2 = GRAPH_GetCanonicalOrdering<Tgr, Tidx>(eGR2, os);
   std::vector<unsigned int> clR2(nof_vertices);
   for (unsigned int i = 0; i < nof_vertices; i++)
     clR2[cl2[i]] = i;
