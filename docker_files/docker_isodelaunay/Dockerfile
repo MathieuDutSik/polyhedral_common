@@ -1,4 +1,5 @@
-# This dockerfile allows you to access to functionality of C++ polyhedral
+# This dockerfile allows you to access to functionality of the IsoDelaunay
+# domain for debugging.
 #
 # It is used in the following way:
 # ---Copy this "Dockerfile" to a directory, e.g. "docker".

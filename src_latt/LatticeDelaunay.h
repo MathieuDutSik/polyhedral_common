@@ -35,7 +35,6 @@ struct DataLattice {
 
 template <typename T, typename Tint, typename Tgroup>
 DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, std::ostream& os) {
-  using TintGroup = typename Tgroup::Tint;
   int n = GramMat.rows();
   MyMatrix<T> SHV(0,n);
   CVPSolver<T,Tint> solver(GramMat, os);
@@ -43,11 +42,7 @@ DataLattice<T,Tint,Tgroup> GetDataLattice(MyMatrix<T> const& GramMat, PolyHeuris
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OUTfile << "\n";
 #endif
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: GetDataLattice, rddo.AllArr.OutFile=" << rddo.AllArr.OUTfile << "\n";
-#endif
-  return {n, GramMat, SHV, solver, ShvGraverBasis, std::move(rddo)};
+  return {n, GramMat, SHV, solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
 }
 
 
@@ -432,7 +427,6 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
   Tgroup GRPlatt = Delaunay_Stabilizer<T, Tint, Tgroup>(eData, x, os);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
-  os << "DEL_ENUM: ComputeGroupAndAdjacencies, OutFile=" << eData.rddo.AllArr.OUTfile << "\n";
 #endif
   vectface TheOutput = DualDescriptionRecord(EXT_T, GRPlatt, eData.rddo);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
@@ -691,17 +685,16 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm, FullNamelist const 
   std::string FileDualDesc = BlockDATA.ListStringValues.at("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
     Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
   CVPSolver<T,Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T,Tint>(GramMat);
+  using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   DataLattice<T, Tint, Tgroup> data{n,
                                     GramMat,
                                     SVR,
                                     solver,
                                     ShvGraverBasis,
-                                    std::move(rddo)};
-  using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
+                                    RecordDualDescOperation<T, Tgroup>(AllArr, os)};
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;

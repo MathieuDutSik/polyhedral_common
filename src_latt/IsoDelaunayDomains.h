@@ -447,21 +447,34 @@ template<typename T, typename Tvert, typename Tgroup>
 std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  std::ostream& os = rddo.os;
   int n = InteriorElement.rows();
   std::vector<std::vector<Tidx>> ListPermGenList;
   std::vector<MyMatrix<Tvert>> ListMatGens;
   std::vector<MyVector<Tvert>> ListVertices;
   std::unordered_map<MyVector<Tvert>, size_t> ListVertices_rev;
-  size_t n_vertices = 1;
+  size_t idx_vertices = 1;
   Tgroup PermGRP;
   auto StandardGroupUpdate=[&]() -> void {
     std::vector<Telt> ListGen;
-    Tidx n_act = n_vertices;
+    Tidx n_act = idx_vertices - 1;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: StandardGroupUpdate n_act=" << static_cast<size_t>(n_act) << "\n";
+#endif
     for (auto & eList : ListPermGenList) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: StandardGroupUpdate |eList|=" << eList.size() << "\n";
+#endif
       Telt x(eList);
       ListGen.push_back(x);
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: StandardGroupUpdate Before Tgroup\n";
+#endif
     PermGRP = Tgroup(ListGen, n_act);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: StandardGroupUpdate After Tgroup\n";
+#endif
   };
   StandardGroupUpdate();
   struct TypeOrbitCenter {
@@ -484,11 +497,11 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     if (ListVertices_rev.count(eVert) == 1) {
       return;
     }
-    std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, rddo.os);
+    std::vector<MyVector<Tvert>> O = Orbit_MatrixGroup(ListMatGens, eVert, os);
     for (auto &eV : O) {
       ListVertices.push_back(eV);
-      ListVertices_rev[eV] = n_vertices;
-      n_vertices++;
+      ListVertices_rev[eV] = idx_vertices;
+      idx_vertices++;
     }
     size_t n_gen = ListPermGenList.size();
     for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
@@ -518,7 +531,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     return EXT;
   };
   auto get_v_positions=[&](MyMatrix<Tvert> const& eMat) -> std::optional<std::vector<Tidx>> {
-    size_t len = n_vertices - 1;
+    size_t len = idx_vertices - 1;
     std::vector<Tidx> v_ret(len);
     for (size_t i=0; i<len; i++) {
       MyVector<Tvert> eVimg = eMat.transpose() * ListVertices[i];
@@ -541,7 +554,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
         std::vector<MyMatrix<Tvert>> LGen = ListMatGens;
         LGen.push_back(eMat);
         for (auto & eVert : ListVertices) {
-          for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, rddo.os)) {
+          for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, os)) {
             FuncInsertVertex(eVertB);
           }
         }
@@ -718,7 +731,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
         MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
         MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
         vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
-        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, rddo.os);
+        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
         for (auto & eFace : vf) {
           Face eInc = frame.FlipFace(eFace);
           MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
