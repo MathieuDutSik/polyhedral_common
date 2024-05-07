@@ -485,7 +485,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     MyMatrix<Tvert> eBigMat;
     bool status;
     std::vector<Tidx> Linc;
-    MyVector<Tvert> EXT;
+    MyMatrix<Tvert> EXT;
   };
   struct TypeOrbitCenterMin {
     int iDelaunay;
@@ -556,7 +556,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     std::vector<Tidx> v_ret(len);
     for (size_t i=0; i<len; i++) {
       MyVector<Tvert> eVimg = eMat.transpose() * ListVertices[i];
-      size_t pos = ListVertices_rev.at(eVimg);
+      size_t pos = ListVertices_rev[eVimg];
       if (pos == 0) {
         return {};
       }
