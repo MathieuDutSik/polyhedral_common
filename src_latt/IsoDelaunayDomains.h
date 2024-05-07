@@ -685,27 +685,27 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, after single FuncInsertCenter\n";
 #endif
+  size_t nbCent, nbCentStart = 0;
   while(true) {
-    bool IsFinished = true;
-    size_t nbCent = ListOrbitCenter.size();
-    for (size_t iCent=0; iCent<nbCent; iCent++) {
+    nbCent = ListOrbitCenter.size();
+    if (nbCentStart == nbCent) {
+      break;
+    }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: FRING, first while loop nbCentStart=" << nbCentStart << " nbCent=" << nbCent << "\n";
+#endif
+    for (size_t iCent=nbCentStart; iCent<nbCent; iCent++) {
       TypeOrbitCenter & eEnt = ListOrbitCenter[iCent];
-      if (!eEnt.status) {
-        IsFinished = false;
-        eEnt.status = true;
-        for (auto & eCase : ListInformationsOneFlipping) {
-          if (eEnt.iDelaunay == eCase.iOrb) {
-            MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
-            MyMatrix<Tvert> eBigMatNew = eBigMat * eEnt.eBigMat;
-            TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
-            FuncInsertCenter(TheRec);
-          }
+      for (auto & eCase : ListInformationsOneFlipping) {
+        if (eEnt.iDelaunay == eCase.iOrb) {
+          MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
+          MyMatrix<Tvert> eBigMatNew = eBigMat * eEnt.eBigMat;
+          TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
+          FuncInsertCenter(TheRec);
         }
       }
     }
-    if (IsFinished) {
-      break;
-    }
+    nbCentStart = nbCent;
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, after first big loop\n";
@@ -743,7 +743,6 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     MyVector<T> eFac;
     std::vector<Tidx> Linc;
     Face Linc_face;
-    bool Status; // true: YES, false: NO
   };
   std::vector<RepartEntry<Tvert, Tgroup>> ListOrbitFacet;
   std::vector<RepartEntryProv> ListOrbitFacet_prov;
@@ -751,14 +750,13 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     Face Linc_face = VectorToFace(eRec.Linc, nVert);
     MyVector<T> eFac = FindFacetInequality(TotalListVertices, Linc_face);
     Tgroup TheStab;
-    bool Status = false;
     int8_t Position = -1;
     std::vector<Delaunay_AdjO<Tvert>> ListAdj;
     int iDelaunayOrigin = eRec.iDelaunay;
     MyMatrix<Tvert> const& eBigMat = eRec.eBigMat;
     MyMatrix<Tvert> const& EXT = eRec.EXT;
     RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eBigMat};
-    RepartEntryProv rep{eFac, eRec.Linc, Linc_face, Status};
+    RepartEntryProv rep{eFac, eRec.Linc, Linc_face};
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
   }
@@ -791,13 +789,12 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     if (eFac(n+1) == 0) {
       Position = 0;
     }
-    bool Status = false;
     Tgroup TheStab;
     int iDelaunayOrigin = -1;
     std::vector<Delaunay_AdjO<Tvert>> ListAdj;
     MyMatrix<Tvert> eMatUnused; // That matrix should never be used
     RepartEntry<Tvert, Tgroup> re{EXT, TheStab, Position, iDelaunayOrigin, ListAdj, eMatUnused};
-    RepartEntryProv rep{eFac, Linc, Linc_face, Status};
+    RepartEntryProv rep{eFac, Linc, Linc_face};
     ListOrbitFacet.push_back(re);
     ListOrbitFacet_prov.push_back(rep);
     int iOrb = nOrb;
@@ -809,43 +806,44 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, we have TotalListVertices_int\n";
 #endif
+  size_t nOrbStart = 0;
+  size_t nOrb;
   while(true) {
-    bool IsFinished = true;
-    int nOrb = ListOrbitFacet.size();
-    for (int iOrb=0; iOrb<nOrb; iOrb++) {
-      if (!ListOrbitFacet_prov[iOrb].Status) {
-        Face const& Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
-        Tgroup Stab = PermGRP.Stabilizer_OnSets(Linc_face);
-        Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
-        ListOrbitFacet[iOrb].TheStab = TheStab;
-        std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-        MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
-        MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
-        vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
-        FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
-        for (auto & eFace : vf) {
-          Face eInc = frame.FlipFace(eFace);
-          MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
-          Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
-          size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
-          Face LEV(nVert);
-          for (size_t iInc=0; iInc<nVert; iInc++) {
-            Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
-            if (get_incd_status(jInc, eFac)) {
-              LEV[iInc] = 1;
-            }
-          }
-          eAdj.eInc = LEV;
-          ListAdj.push_back(eAdj);
-        }
-        ListOrbitFacet[iOrb].ListAdj = ListAdj;
-        ListOrbitFacet_prov[iOrb].Status = true;
-        IsFinished = false;
-      }
-    }
-    if (IsFinished) {
+    nOrb = ListOrbitFacet.size();
+    if (nOrbStart == nOrb) {
       break;
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: FRING, second while loop nOrbStart=" << nOrbStart << " nOrb=" << nOrb << "\n";
+#endif
+    for (size_t iOrb=nOrbStart; iOrb<nOrb; iOrb++) {
+      Face const& Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
+      Tgroup Stab = PermGRP.Stabilizer_OnSets(Linc_face);
+      Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
+      ListOrbitFacet[iOrb].TheStab = TheStab;
+      std::vector<Delaunay_AdjO<Tvert>> ListAdj;
+      MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
+      MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
+      vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
+      FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
+      for (auto & eFace : vf) {
+        Face eInc = frame.FlipFace(eFace);
+        MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
+        Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
+        size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
+        Face LEV(nVert);
+        for (size_t iInc=0; iInc<nVert; iInc++) {
+          Tidx jInc = ListOrbitFacet_prov[iOrb].Linc[iInc];
+          if (get_incd_status(jInc, eFac)) {
+            LEV[iInc] = 1;
+          }
+        }
+        eAdj.eInc = LEV;
+        ListAdj.push_back(eAdj);
+      }
+      ListOrbitFacet[iOrb].ListAdj = ListAdj;
+    }
+    nOrbStart = nOrb;
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, we have ListOrbitFacet\n";
