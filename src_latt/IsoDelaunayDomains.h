@@ -856,6 +856,9 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
         os << "ISO_DEL: After FlipFace |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
 #endif
         MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: We have eFac\n";
+#endif
         Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISO_DEL: We have eAdj\n";

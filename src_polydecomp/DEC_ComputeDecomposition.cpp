@@ -98,19 +98,18 @@ int main(int argc, char *argv[]) {
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
           compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones,
-                                                                   G);
+                                                                   G, std::cerr);
 #else
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj;
 #endif
       ListListDomain =
-          Compute_ListListDomain_strategy2<T, Tint, Tgroup, Tidx_value>(
-              ListCones, G, ll_sing_adj, TheLev);
+          Compute_ListListDomain_strategy2<T, Tint, Tgroup, Tidx_value>(ListCones, G, ll_sing_adj, TheLev, std::cerr);
     }
     if (opt == "strategy1_from_low" || opt == "strategy1_from_high") {
       std::cerr << "Matching strategy1\n";
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
           compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones,
-                                                                   G);
+                                                                   G, std::cerr);
       std::cerr << "We have ll_sing_adj\n";
       if (opt == "strategy1_from_high") {
         std::cerr << "Matching strategy1_from_high\n";
@@ -122,17 +121,16 @@ int main(int argc, char *argv[]) {
       if (opt == "strategy1_from_low") {
         std::cerr << "Matching strategy1_from_low\n";
         ListListDomain =
-            Compute_ListListDomain_strategy1<T, Tint, Tgroup, Tidx_value>(
-                ListCones, G, ll_sing_adj, TheLev);
+            Compute_ListListDomain_strategy1<T, Tint, Tgroup, Tidx_value>(ListCones, G, ll_sing_adj, TheLev, std::cerr);
       }
     }
     //
-    auto do_print = [&](std::ostream &os) -> void {
+    auto do_print = [&](std::ostream &os_out) -> void {
       size_t n_lev = ListListDomain.size();
-      os << "Number of levels = " << n_lev << "\n";
+      os_out << "Number of levels = " << n_lev << "\n";
       for (size_t i_lev = 0; i_lev < n_lev; i_lev++) {
         size_t n_orbit = ListListDomain[i_lev].size();
-        os << "Number of orbits at level " << i_lev << " = " << n_orbit << "\n";
+        os_out << "Number of orbits at level " << i_lev << " = " << n_orbit << "\n";
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           const FaceDesc &fd = ListListDomain[i_lev][i_orbit];
           const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd.iCone];
@@ -140,9 +138,9 @@ int main(int argc, char *argv[]) {
               eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), fd.f_fac);
           //
           MyMatrix<Tint> EXT_sel = SelectRow(eC.EXT_i, f_ext);
-          os << "i_orbit=" << i_orbit << " |EXT|=" << EXT_sel.rows()
-             << " iCone=" << fd.iCone << "\n";
-          WriteMatrix(os, EXT_sel);
+          os_out << "i_orbit=" << i_orbit << " |EXT|=" << EXT_sel.rows()
+                 << " iCone=" << fd.iCone << "\n";
+          WriteMatrix(os_out, EXT_sel);
         }
       }
     };
@@ -151,8 +149,8 @@ int main(int argc, char *argv[]) {
       do_print(std::cerr);
     } else {
       std::string FileO = argv[4];
-      std::ofstream os(FileO);
-      do_print(os);
+      std::ofstream os_out(FileO);
+      do_print(os_out);
     }
   } catch (TerminalException const &e) {
     exit(e.eVal);
