@@ -704,13 +704,14 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   size_t nbCent, nbCentStart = 0;
   while(true) {
     nbCent = ListOrbitCenter.size();
-    if (nbCentStart == nbCent) {
-      break;
-    }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: FRING, first while loop nbCentStart=" << nbCentStart << " nbCent=" << nbCent << "\n";
 #endif
+    if (nbCentStart == nbCent) {
+      break;
+    }
     for (size_t iCent=nbCentStart; iCent<nbCent; iCent++) {
+      // Copy is needed since we are inserting so if we used a reference, it might become invalid
       TypeOrbitCenter eEnt = ListOrbitCenter[iCent];
       for (auto & eCase : ListInformationsOneFlipping) {
         if (eEnt.iDelaunay == eCase.iOrb) {
@@ -732,13 +733,13 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, nVert=" << nVert << "\n";
 #endif
-  MyMatrix<T> TotalListVertices(nVert, 2+n);
+  MyMatrix<T> TotalListVertices(nVert, n + 2);
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
   MyVector<T> eV(n);
   for (int iVert=0; iVert<nVert; iVert++) {
     MyVector<Tvert> const& eVert = ListVertices[iVert];
     TotalListVertices(iVert, 0) = 1;
-    for (int iCol=1; iCol<n; iCol++) {
+    for (int iCol=0; iCol<n; iCol++) {
       T val = UniversalScalarConversion<T,Tvert>(eVert(iCol+1));
       TotalListVertices(iVert, iCol+1) = val;
       eV(iCol) = val;
@@ -842,11 +843,23 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
       MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
       vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: Second while |vf|=" << vf.size() << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/" << EXT2.cols() << "\n";
+#endif
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
       for (auto & eFace : vf) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: Before FlipFace\n";
+#endif
         Face eInc = frame.FlipFace(eFace);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: After FlipFace |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
+#endif
         MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
         Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: We have eAdj\n";
+#endif
         size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
         Face LEV(nVert);
         for (size_t iInc=0; iInc<nVert; iInc++) {
@@ -855,6 +868,9 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
             LEV[iInc] = 1;
           }
         }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: We have |LEV|=" << LEV.size() << " / " << LEV.count() << "\n";
+#endif
         eAdj.eInc = LEV;
         ListAdj.push_back(eAdj);
       }

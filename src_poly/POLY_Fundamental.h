@@ -16,7 +16,7 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_FLIP
+#define DEBUG_POLY_FUNDAMENTAL
 #endif
 
 template <typename T>
@@ -167,6 +167,13 @@ MyVector<T> FindFacetInequality(MyMatrix<T> const &TheEXT, Face const &OneInc) {
     if (eScal < 0)
       return -eVect;
   }
+  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+  std::cerr << "|f|=" << OneInc.size() << " / " << OneInc.count() << "\n";
+  std::cerr << "eVect=" << StringVectorGAP(eVect) << "\n";
+  std::cerr << "|NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+  std::cerr << "Rank=" << RankMat(TheEXT) << "\n";
+  std::cerr << "TheEXT=\n";
+  WriteMatrix(std::cerr, TheEXT);
   std::cerr << "FindFacetInequality: Failed to find the defining inequality\n";
   throw TerminalException{1};
 }
@@ -282,7 +289,7 @@ private:
   std::vector<T> ListInvScal;
   Face f_select;
   std::ostream &os;
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
   MyMatrix<T> EXT_debug;
 #endif
 
@@ -296,7 +303,7 @@ public:
         e_incd1(OneInc.count()), nbRow(EXT.rows()), nbCol(EXT.cols()),
         PairIncs(Dynamic_bitset_to_vectorints(OneInc)), ListInvScal(e_incd0),
         f_select(e_incd0), os(_os) {
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     EXT_debug = EXT;
 #endif
     MyVector<T> FacetIneq = FindFacetInequality(EXT, OneInc);
@@ -363,14 +370,14 @@ public:
       isAssigned = true;
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     os << "FLIP: FlippingFramework_Field<T> before check\n";
     FindFacetInequalityCheck(EXT_debug, fret);
 #endif
     return fret;
   }
   Face FlipFace(Face const &sInc) {
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
       throw TerminalException{1};
@@ -419,7 +426,7 @@ private:
   MyMatrix<Tint> EXT_red;
   MyMatrix<Tint> EXT_red_sub;
   SubsetRankOneSolver_Acceleration<T> solver;
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
   MyMatrix<T> EXT_debug;
 #endif
 
@@ -441,7 +448,7 @@ public:
         solver(SubsetRankOneSolver_Acceleration<T>(EXT_red_sub)),
         EXT_face(GetEXT_face(EXT, idx_drop, PairIncs.second)),
         EXT_face_int(GetEXT_face(EXT_int, idx_drop, PairIncs.second)), os(_os) {
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     EXT_debug = EXT;
 #endif
     //
@@ -496,7 +503,7 @@ public:
       isAssigned = true;
     }
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     os << "FLIP: |PairIncs|=" << PairIncs.first.size() << " / "
        << PairIncs.second.size() << "\n";
     os << "FLIP: OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
@@ -511,7 +518,7 @@ public:
     return fret;
   }
   Face FlipFace(Face const &sInc) {
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_POLY_FUNDAMENTAL
     if (OneInc.count() != sInc.size()) {
       std::cerr << "Error in Flip 1\n";
       throw TerminalException{1};
