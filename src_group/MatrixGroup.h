@@ -380,6 +380,9 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
   size_t pos = 0;
   while (true) {
     size_t len = TheOrbit.size();
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP:  OrbitComputation_limit pos=" << pos << " len=" << len << "\n";
+#endif
     if (pos == len)
       break;
     for (size_t i = pos; i < len; i++)

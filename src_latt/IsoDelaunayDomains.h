@@ -472,18 +472,17 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       ListGen.push_back(x);
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: StandardGroupUpdate Before Tgroup\n";
+    os << "ISO_DEL: StandardGroupUpdate Before Tgroup |PermGRP|=" << PermGRP.size() << "\n";
 #endif
     PermGRP = Tgroup(ListGen, n_act);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: StandardGroupUpdate After Tgroup\n";
+    os << "ISO_DEL: StandardGroupUpdate After Tgroup |PermGRP|=" << PermGRP.size() << "\n";
 #endif
   };
   StandardGroupUpdate();
   struct TypeOrbitCenter {
     int iDelaunay;
     MyMatrix<Tvert> eBigMat;
-    bool status;
     std::vector<Tidx> Linc;
     MyMatrix<Tvert> EXT;
   };
@@ -575,12 +574,24 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 #endif
     auto get_test_belong=[&]() -> bool {
       if (opt) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: FRING, opt, case exist\n";
+#endif
         Telt elt(*opt);
         return PermGRP.isin(elt);
       } else {
         std::vector<MyMatrix<Tvert>> LGen = ListMatGens;
         LGen.push_back(eMat);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: FRING, opt, case non-exist\n";
+        std::string eFile = "ListMatGens_" + std::to_string(LGen.size());
+        WriteListMatrixFileGAP(eFile, LGen);
+        os << "ISO_DEL: FRING |ListVertices|=" << ListVertices.size() << "\n";
+#endif
         for (auto & eVert : ListVertices) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: Treating one vertex\n";
+#endif
           for (auto & eVertB : Orbit_MatrixGroup(LGen, eVert, os)) {
             FuncInsertVertex(eVertB);
           }
@@ -670,7 +681,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: FRING, FuncInsertCenter, step 6, D\n";
 #endif
-      TypeOrbitCenter OrbCent{TheRec.iDelaunay, TheRec.eBigMat, false, Linc, LVert};
+      TypeOrbitCenter OrbCent{TheRec.iDelaunay, TheRec.eBigMat, Linc, LVert};
       ListOrbitCenter.push_back(OrbCent);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: FRING, FuncInsertCenter, step 6, E\n";
