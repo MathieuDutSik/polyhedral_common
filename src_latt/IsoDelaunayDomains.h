@@ -448,6 +448,11 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   std::ostream& os = rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FindRepartitionningInfoNextGeneration, begin FRING\n";
+  os << "|ListInformationsOneFlipping|=" << ListInformationsOneFlipping.size() << "\n";
+  for (auto & eEnt : ListInformationsOneFlipping) {
+    int iOrbAdj = ListOrbitDelaunay.l_dels[eEnt.iOrb].ListAdj[eEnt.i_adj].iOrb;
+    os << "ISO_DEL:    iOrb=" << eEnt.iOrb << " i_adj=" << eEnt.i_adj << " iOrbAdj=" << iOrbAdj << "\n";
+  }
 #endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -694,7 +699,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   TypeOrbitCenterMin TheRec{static_cast<int>(eIdx), IdentityMat<Tvert>(n+1)};
   FuncInsertCenter(TheRec);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-  os << "ISO_DEL: FRING, after single FuncInsertCenter\n";
+  os << "ISO_DEL: FRING, after single FuncInsertCenter, before \n";
 #endif
   size_t nbCent, nbCentStart = 0;
   while(true) {
@@ -706,12 +711,13 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     os << "ISO_DEL: FRING, first while loop nbCentStart=" << nbCentStart << " nbCent=" << nbCent << "\n";
 #endif
     for (size_t iCent=nbCentStart; iCent<nbCent; iCent++) {
-      TypeOrbitCenter & eEnt = ListOrbitCenter[iCent];
+      TypeOrbitCenter eEnt = ListOrbitCenter[iCent];
       for (auto & eCase : ListInformationsOneFlipping) {
         if (eEnt.iDelaunay == eCase.iOrb) {
           MyMatrix<Tvert> const& eBigMat = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].eBigMat;
+          int iOrbAdj = ListOrbitDelaunay.l_dels[eCase.iOrb].ListAdj[eCase.i_adj].iOrb;
           MyMatrix<Tvert> eBigMatNew = eBigMat * eEnt.eBigMat;
-          TypeOrbitCenterMin TheRec{eCase.iOrb, std::move(eBigMatNew)};
+          TypeOrbitCenterMin TheRec{iOrbAdj, std::move(eBigMatNew)};
           FuncInsertCenter(TheRec);
         }
       }
