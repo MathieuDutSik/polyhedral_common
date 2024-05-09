@@ -53,14 +53,29 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
                                               MyMatrix<T> const &EXT2,
                                               Telt const &ePerm) {
   static_assert(is_ring_field<T>::value, "RepresentVertexPermutation");
+#ifdef DEBUG_PERM_FCT
+  if (EXT1.rows() != EXT2.rows()) {
+    std::cerr << "EXT1 and EXT2 should be of the same size\n";
+    throw TerminalException{1};
+  }
+#endif
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT1);
   std::vector<int> const &ListRowSelect = eSelect.ListRowSelect;
   MyMatrix<T> M1 = SelectRow(EXT1, ListRowSelect);
   MyMatrix<T> M1inv = Inverse(M1);
   size_t nbRow_s = ListRowSelect.size();
   std::vector<int> ListRowSelectImg(nbRow_s);
-  for (size_t iRow = 0; iRow < nbRow_s; iRow++)
-    ListRowSelectImg[iRow] = ePerm.at(ListRowSelect[iRow]);
+  for (size_t iRow = 0; iRow < nbRow_s; iRow++) {
+    int iRowImg = ePerm.at(ListRowSelect[iRow]);
+#ifdef DEBUG_PERM_FCT
+    if (iRowImg >= EXT2.rows()) {
+      std::cerr << "iRowImg is at a too high index\n";
+      std::cerr << "iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows() << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListRowSelectImg[iRow] = iRowImg;
+  }
   MyMatrix<T> M2 = SelectRow(EXT2, ListRowSelectImg);
   MyMatrix<T> RetMat = M1inv * M2;
 #ifdef SANITY_CHECK_PERM_FCT
