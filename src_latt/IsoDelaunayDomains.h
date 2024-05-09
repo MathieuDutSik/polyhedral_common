@@ -537,24 +537,6 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
     os << "ISO_DEL: FRING, FuncInsertVertex, step 5\n";
 #endif
   };
-  auto get_sub_vertices=[&](Face const& f) -> MyMatrix<Tvert> {
-    int siz = f.count();
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: FRING, get_sub_vertices |f|=" << f.size() << " / " << f.count() << "\n";
-#endif
-    MyMatrix<Tvert> EXT(siz, n+1);
-    int nVert=f.size();
-    int pos = 0;
-    for (int iVert=0; iVert<nVert; iVert++) {
-      if (f[iVert] == 1) {
-        for (int i=0; i<=n; i++) {
-          EXT(pos,i) = ListVertices[iVert](i);
-        }
-        pos++;
-      }
-    }
-    return EXT;
-  };
   auto get_v_positions=[&](MyMatrix<Tvert> const& eMat) -> std::optional<std::vector<Tidx>> {
     size_t len = idx_vertices - 1;
     std::vector<Tidx> v_ret(len);
@@ -876,17 +858,21 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
       ListOrbitFacet[iOrb].TheStab = TheStab;
       std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-      MyMatrix<Tvert> EXT1 = get_sub_vertices(Linc_face);
-      MyMatrix<T> EXT2 = UniversalMatrixConversion<T,Tvert>(EXT1);
+      // The facet could be a barrel one, so we need to take the TotalListVertices.
+      // The DualDescriptionRecord could be improved to avoid the "ColumnReduction".
+      // Then we would have a "DualDescriptionRecord" and a "DualDescriptionRecordFullDim"
+      // and the reduction could be done by using the eFac entry.
+      MyMatrix<T> EXT2 = SelectRow(TotalListVertices, Linc_face);
       vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISO_DEL: Second while |vf|=" << vf.size() << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/" << EXT2.cols() << "\n";
+      os << "ISO_DEL: Second while |vf|=" << vf.size() << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/" << EXT2.cols() << " rnk=" << RankMat(EXT2) << "\n";
       CheckFacetInequality(TotalListVertices, Linc_face, "FuncInsertFace TotalListVertices Linc_face");
+      MyMatrix<T> EXT2red = ColumnReduction(EXT2);
 #endif
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
       for (auto & eFace : vf) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
+        CheckFacetInequality(EXT2red, eFace, "FuncInsertFace EXT2red eFace");
         os << "ISO_DEL: Before FlipFace |EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << " |eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
 #endif
         Face eInc = frame.FlipFace(eFace);

@@ -3145,7 +3145,7 @@ struct RecordDualDescOperation {
 };
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, RecordDualDescOperation<T, Tgroup> & rddo) {
+vectface DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP, RecordDualDescOperation<T, Tgroup> & rddo) {
   using TintGroup = typename Tgroup::Tint;
   using Tbank = typename RecordDualDescOperation<T, Tgroup>::Tbank;
   using Tidx_value = int32_t;
@@ -3153,20 +3153,30 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, Record
   std::ostream & os = rddo.os;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
+  int rnk = RankMat(EXT);
+  if (rnk != EXT.cols()) {
+    std::cerr << "For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
+    std::cerr << "rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+    throw TerminalException{1};
+  }
   os << "REC_DD: DualDescriptionRecord, beginning\n";
   PrintPolyHeuristicSerial(rddo.AllArr, os);
 #endif
   //
   std::string DD_Prefix = "totally_irrelevant_second";
   //
-  MyMatrix<T> EXTred = ColumnReduction(EXT);
-  MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
+  MyMatrix<Text_int> EXT_int = Get_EXT_int(EXT);
   std::map<std::string, TintGroup> TheMap =
-    ComputeInitialMap<TintGroup,T,Tgroup>(EXTred, GRP, rddo.AllArr);
+    ComputeInitialMap<TintGroup,T,Tgroup>(EXT, GRP, rddo.AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
-      rddo.TheBank, EXTred, EXTred_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
+      rddo.TheBank, EXT, EXT_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
 }
 
+template <typename T, typename Tgroup>
+vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, RecordDualDescOperation<T, Tgroup> & rddo) {
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  return DualDescriptionRecordFullDim<T,Tgroup>(EXTred, GRP, rddo);
+}
 
 
 

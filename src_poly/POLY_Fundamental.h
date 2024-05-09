@@ -97,7 +97,7 @@ void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "Error in rank in Facetness\n";
-    std::cerr << "|EXT|=" << nbRow << " n/ " << nbCol << "\n";
+    std::cerr << "|EXT|=" << nbRow << " / " << nbCol << "\n";
     std::cerr << "|eList|=" << eList.size() << " / " << eList.count() << "\n";
     std::cerr << "|NSP|=" << NSP.rows() << " when it should be 1\n";
     std::cerr << "context=" << context << "\n";
