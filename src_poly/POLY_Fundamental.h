@@ -78,11 +78,16 @@ template <typename T> T sqr_estimate_facet_coefficients(MyMatrix<T> const &M) {
 }
 
 template <typename T>
-MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT,
-                                     Face const &eList) {
+void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+  int siz = eList.size();
   int nb = eList.count();
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
+  if (nbRow != siz) {
+    std::cerr << "nbRow=" << nbRow << " siz=" << siz << " which is inconsistent\n";
+    std::cerr << "context=" << context << "\n";
+    throw TerminalException{1};
+  }
   boost::dynamic_bitset<>::size_type aRow = eList.find_first();
   auto f = [&](MyMatrix<T> &M, size_t eRank,
                [[maybe_unused]] size_t iRow) -> void {
@@ -92,9 +97,10 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT,
   MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
   if (NSP.rows() != 1) {
     std::cerr << "Error in rank in Facetness\n";
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << " nb=" << nb
-              << "\n";
+    std::cerr << "|EXT|=" << nbRow << " n/ " << nbCol << "\n";
+    std::cerr << "|eList|=" << eList.size() << " / " << eList.count() << "\n";
     std::cerr << "|NSP|=" << NSP.rows() << " when it should be 1\n";
+    std::cerr << "context=" << context << "\n";
     throw TerminalException{1};
   }
   int nbPlus = 0;
@@ -133,11 +139,10 @@ MyVector<T> FindFacetInequalityCheck(MyMatrix<T> const &EXT,
     std::cerr << "nbMinus=" << nbMinus << " nbPlus=" << nbPlus << "\n";
     std::cerr << "EXT(rows/cols)=" << EXT.rows() << " / " << EXT.cols() << "\n";
     std::cerr << "Rank(EXT)=" << RankMat(EXT) << "\n";
+    std::cerr << "nbError=" << nbError << "\n";
+    std::cerr << "context=" << context << "\n";
     throw TerminalException{1};
   }
-  if (nbPlus > 0)
-    return eVect;
-  return -eVect;
 }
 
 template <typename T>
@@ -372,7 +377,7 @@ public:
     Face fret = get_fret(PairIncs, nbRow, sInc, f_select);
 #ifdef DEBUG_POLY_FUNDAMENTAL
     os << "FLIP: FlippingFramework_Field<T> before check\n";
-    FindFacetInequalityCheck(EXT_debug, fret);
+    CheckFacetInequality(EXT_debug, fret, "InternalFlipFaceIneq 1");
 #endif
     return fret;
   }
@@ -513,7 +518,7 @@ public:
     os << "FLIP: beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den
        << "\n";
     os << "FLIP: FlippingFramework_Accelerate<mpq_class> before check\n";
-    FindFacetInequalityCheck(EXT_debug, fret);
+    CheckFacetInequality(EXT_debug, fret, "InternalFlipFaceIneq 2");
 #endif
     return fret;
   }

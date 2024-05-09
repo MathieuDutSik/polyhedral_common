@@ -296,7 +296,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect, std::ost
       eFace[i_row] = 1;
   }
 #ifdef DEBUG_LINEAR_PROGRAM
-  MyVector<T> eFAC = FindFacetInequalityCheck(EXT, eFace);
+  MyVector<T> eFAC = FindFacetInequality(EXT, eFace);
   T scal = eVect.dot(eFAC);
   if (scal >= 0) {
     std::cerr << "Faied to find a correct solution\n";

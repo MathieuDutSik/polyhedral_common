@@ -752,6 +752,8 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, we have TotalListVertices\n";
+  os << "ISO_DEL: FRING, TotalListVertices=\n";
+  WriteMatrix(os, TotalListVertices);
 #endif
   auto get_incd_status=[&](int iVert, MyVector<T> const& eFac) -> bool {
     T eSum = 0;
@@ -879,14 +881,17 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: Second while |vf|=" << vf.size() << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/" << EXT2.cols() << "\n";
+      CheckFacetInequality(TotalListVertices, Linc_face, "FuncInsertFace TotalListVertices Linc_face");
 #endif
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
       for (auto & eFace : vf) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISO_DEL: Before FlipFace\n";
+        CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
+        os << "ISO_DEL: Before FlipFace |EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << " |eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
 #endif
         Face eInc = frame.FlipFace(eFace);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        CheckFacetInequality(TotalListVertices, eInc, "FuncInsertFace TotalListVertices eInc");
         os << "ISO_DEL: After FlipFace |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
 #endif
         MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
