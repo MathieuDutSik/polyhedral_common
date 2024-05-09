@@ -1122,6 +1122,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
       }
     }
     if (f_att != NewAdj.eInc) {
+      std::cerr << "    |f_att|=" << f_att.size() << " / " << f_att.count() << "\n";
+      std::cerr << "NewAdj.eInc=" << NewAdj.eInc.size() << " / " << NewAdj.eInc.count() << "\n";
+      std::cerr << "f_att should be equal to NewAdj.eInc\n";
       std::cerr << "Consistency error in context=" << context << "\n";
       throw TerminalException{1};
     }
