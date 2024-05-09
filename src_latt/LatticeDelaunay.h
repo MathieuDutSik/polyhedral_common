@@ -428,7 +428,7 @@ std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>> ComputeGroupAndAdjacencies(D
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |GRPlatt|=" << GRPlatt.size() << "\n";
 #endif
-  vectface TheOutput = DualDescriptionRecord(EXT_T, GRPlatt, eData.rddo);
+  vectface TheOutput = DualDescriptionRecordFullDim(EXT_T, GRPlatt, eData.rddo);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |TheOutput|=" << TheOutput.size() << "\n";
 #endif

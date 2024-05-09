@@ -766,7 +766,7 @@ struct DataPerfectLorentzianFunc {
   std::vector<TadjI> f_adj(Tobj & x) {
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x.EXT);
     ResultStabilizer<Tint, Tgroup> res_stab = LORENTZ_ComputeStabilizer<T,Tint,Tgroup>(data.LorMat, x.EXT, data.rddo.os);
-    vectface TheOutput = DualDescriptionRecord(EXT_T, res_stab.GRPperm, data.rddo);
+    vectface TheOutput = DualDescriptionRecordFullDim(EXT_T, res_stab.GRPperm, data.rddo);
     x.GRP = res_stab.GRPperm;
     std::vector<MyVector<Tint>> ListIso;
     for (int i_row=0; i_row<x.EXT.rows(); i_row++) {

@@ -32,6 +32,26 @@ MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
   return TheProv;
 }
 
+template<typename T>
+MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const& TheMat, Face const& eList, int const& idx_drop) {
+  int nbCol = TheMat.cols();
+  int nbRowRed = eList.count();
+  int nbColRed = nbCol - 1;
+  MyMatrix<T> RetMat(nbRowRed, nbColRed);
+  boost::dynamic_bitset<>::size_type jRow = eList.find_first();
+  for (int iRow = 0; iRow < nbRowRed; iRow++) {
+    int pos = 0;
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      if (iCol != idx_drop) {
+        RetMat(iRow, pos) = TheMat(jRow, iCol);
+        pos++;
+      }
+    }
+    jRow = eList.find_next(jRow);
+  }
+  return RetMat;
+}
+
 // Compute an upper bound on the determinant of maximal minor
 // The Hadamard bound is
 // We have det(A)^2 <= Pi_{i=1}^n (sum_j x_{ij}^2)

@@ -858,21 +858,18 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
       Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
       ListOrbitFacet[iOrb].TheStab = TheStab;
       std::vector<Delaunay_AdjO<Tvert>> ListAdj;
-      // The facet could be a barrel one, so we need to take the TotalListVertices.
-      // The DualDescriptionRecord could be improved to avoid the "ColumnReduction".
-      // Then we would have a "DualDescriptionRecord" and a "DualDescriptionRecordFullDim"
-      // and the reduction could be done by using the eFac entry.
-      MyMatrix<T> EXT2 = SelectRow(TotalListVertices, Linc_face);
-      vectface vf = DualDescriptionRecord(EXT2, TheStab, rddo);
+      // Depending on the nature of the facet (low, barrel, top), the idx_drop can very much vary. We cannot set it to 
+      int idx_drop = get_idx_drop(ListOrbitFacet_prov[iOrb].eFac);
+      MyMatrix<T> EXT2 = SelectRowDropColumn(TotalListVertices, Linc_face, idx_drop);
+      vectface vf = DualDescriptionRecordFullDim(EXT2, TheStab, rddo);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: Second while |vf|=" << vf.size() << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/" << EXT2.cols() << " rnk=" << RankMat(EXT2) << "\n";
       CheckFacetInequality(TotalListVertices, Linc_face, "FuncInsertFace TotalListVertices Linc_face");
-      MyMatrix<T> EXT2red = ColumnReduction(EXT2);
 #endif
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int, Linc_face, os);
       for (auto & eFace : vf) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        CheckFacetInequality(EXT2red, eFace, "FuncInsertFace EXT2red eFace");
+        CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
         os << "ISO_DEL: Before FlipFace |EXT2|=" << EXT2.rows() << " / " << EXT2.cols() << " |eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
 #endif
         Face eInc = frame.FlipFace(eFace);
@@ -1162,7 +1159,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           }
           DelaunaySymb dss{Position_new, -1, iInfo, iOrbFound};
           std::optional<int> optN = get_symbol_position(dss);
-          int Pos = unfold_opt(optN, "Failed to find entry for Case2");
+          int Pos = unfold_opt(optN, "Failed to find entry for Case 2");
           MyMatrix<Tvert> BigMat1 = RecMatch.adj.eBigMat * RecMatch.eBigMat * Inverse(BigMat2) * eAdj.eBigMat;
           Delaunay_AdjO<Tvert> NAdj{eAdj.eInc, BigMat1, Pos};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -1213,7 +1210,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           MyMatrix<Tvert> const& TheMat4 = match4.eBigMat;
           DelaunaySymb dss{Position_new, -1, jInfo, TheFoundAdj4.iOrb};
           std::optional<size_t> optN = get_symbol_position(dss);
-          int Pos = unfold_opt(optN, "Failed to find entry for Case3");
+          int Pos = unfold_opt(optN, "Failed to find entry for Case 3");
           MyMatrix<Tvert> BigMat2 = TheFoundAdj4.eBigMat * TheMat4 * BigMat1;
           Delaunay_AdjO<Tvert> NAdj{eAdj.eInc, BigMat2, Pos};
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
