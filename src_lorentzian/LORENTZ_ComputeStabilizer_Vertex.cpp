@@ -49,7 +49,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "|GRP|=" << GRP.size() << "\n";
     //
     std::string OptionNorms = "all";
-    std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, std::cerr);
+    std::vector<T> l_norms =
+        get_initial_list_norms<T, Tint>(G, OptionNorms, std::cerr);
     std::cerr << "We have l_norms\n";
     SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
     std::cerr << "We have si\n";
@@ -59,8 +60,8 @@ int main(int argc, char *argv[]) {
         GetHeuristicIdealStabEquiv<Tint>();
     std::cerr << "We have HeuristicIdealStabEquiv\n";
     FundDomainVertex_FullInfo<T, Tint, Tgroup> vertFull =
-        gen_fund_domain_fund_info<T, Tint, Tgroup>(cusp_bank, si, vert,
-                                                   HeuristicIdealStabEquiv, std::cerr);
+        gen_fund_domain_fund_info<T, Tint, Tgroup>(
+            cusp_bank, si, vert, HeuristicIdealStabEquiv, std::cerr);
     std::cerr << "We have vertFull\n";
     //
     std::cerr << "Before LORENTZ_GetStabilizerGenerator\n";

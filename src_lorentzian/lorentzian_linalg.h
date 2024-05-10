@@ -235,7 +235,8 @@ template <typename T> struct LatticeProjectionFramework {
 
 template <typename T>
 std::vector<size_t>
-GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect, std::ostream& os) {
+GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
+                          std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   int dimSpace = l_vect[0].size();
   if (l_vect.size() < size_t(2 * dimSpace)) {
@@ -297,7 +298,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect, std::ostream& 
 
 template <typename T>
 std::vector<MyVector<T>>
-GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream& os) {
+GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream &os) {
   size_t n_vect = l_vect.size();
   MyMatrix<T> Mvect = MatrixFromVectorFamily(l_vect);
   MyMatrix<T> MvectRed = ColumnReduction(Mvect);

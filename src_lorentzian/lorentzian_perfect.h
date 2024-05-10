@@ -20,9 +20,11 @@
 static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
 static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
-
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMat, MyVector<T> const& eVect, T const& MaxScal, int const& TheOption, bool const& OnlyShortest, std::ostream & os) {
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
+                            T const &MaxScal, int const &TheOption,
+                            bool const &OnlyShortest, std::ostream &os) {
   int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -30,7 +32,8 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     std::cerr << "MaxScal=" << MaxScal << "\n";
     throw TerminalException{1};
   }
-  if (TheOption != LORENTZIAN_PERFECT_OPTION_ISOTROP && TheOption != LORENTZIAN_PERFECT_OPTION_TOTAL) {
+  if (TheOption != LORENTZIAN_PERFECT_OPTION_ISOTROP &&
+      TheOption != LORENTZIAN_PERFECT_OPTION_TOTAL) {
     std::cerr << "TheOption=" << TheOption << "\n";
     throw TerminalException{1};
   }
@@ -48,18 +51,19 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
     throw TerminalException{1};
   }
 #endif
-  MyVector<Tint> eVect_tint = UniversalVectorConversion<Tint,T>(eVect);
+  MyVector<Tint> eVect_tint = UniversalVectorConversion<Tint, T>(eVect);
   MyVector<T> eVect_LorMat = LorMat * eVect;
   FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect_LorMat);
-  MyVector<Tint> eVect_LorMat_tint = UniversalVectorConversion<Tint,T>(eRec.TheVect);
-  MyMatrix<Tint> eVect_LorMat_tint_M(1,n);
-  for (int u=0; u<n; u++) {
-    eVect_LorMat_tint_M(0,u) = eVect_LorMat_tint(u);
+  MyVector<Tint> eVect_LorMat_tint =
+      UniversalVectorConversion<Tint, T>(eRec.TheVect);
+  MyMatrix<Tint> eVect_LorMat_tint_M(1, n);
+  for (int u = 0; u < n; u++) {
+    eVect_LorMat_tint_M(0, u) = eVect_LorMat_tint(u);
   }
   MyMatrix<Tint> Ubasis = NullspaceIntMat(eVect_LorMat_tint_M);
-  MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T,Tint>(Ubasis);
-  MyMatrix<T> GramMat = - Ubasis_T * LorMat * Ubasis_T.transpose();
-  CVPSolver<T,Tint> solver(GramMat, os);
+  MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T, Tint>(Ubasis);
+  MyMatrix<T> GramMat = -Ubasis_T * LorMat * Ubasis_T.transpose();
+  CVPSolver<T, Tint> solver(GramMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   if (!IsPositiveDefinite(GramMat)) {
     std::cerr << "GramMat should be positive definite\n";
@@ -70,22 +74,22 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   GCD_dot<Tint> TheRec = PositivityNormalizeGcdDot(TheRec_pre);
   std::vector<MyVector<Tint>> TotalListSol;
   Tint eVal = 1;
-  while(true) {
+  while (true) {
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
-    MyVector<T> eBasSol_T = UniversalVectorConversion<T,Tint>(eBasSol);
+    MyVector<T> eBasSol_T = UniversalVectorConversion<T, Tint>(eBasSol);
     T alpha = eVal * TheRec.gcd / eNorm;
     MyVector<T> eTrans = eBasSol_T - alpha * eVect;
     std::optional<MyVector<T>> opt = SolutionMat(Ubasis_T, eTrans);
     MyVector<T> eSol = unfold_opt(opt, "Getting eSol");
     T eSquareDist = alpha * alpha * eNorm;
-    auto iele=[&]() -> std::vector<MyVector<Tint>> {
+    auto iele = [&]() -> std::vector<MyVector<Tint>> {
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
         return solver.FixedNormVectors(eSol, eSquareDist);
       } else {
         return solver.AtMostNormVectors(eSol, eSquareDist);
       }
     };
-    for (auto & eSolA : iele()) {
+    for (auto &eSolA : iele()) {
       MyVector<Tint> eSolC = eBasSol + Ubasis.transpose() * eSolA;
       TotalListSol.emplace_back(std::move(eSolC));
     }
@@ -103,16 +107,20 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectors(MyMatrix<T> const& LorMa
   return TotalListSol;
 }
 
-template<typename T, typename Tint>
-std::vector<MyVector<Tint>> LORENTZ_SearchInitialVector(MyMatrix<T> const& LorMat, MyVector<T> const& PosVect, int const& TheOption, std::ostream & os) {
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
+                            MyVector<T> const &PosVect, int const &TheOption,
+                            std::ostream &os) {
   bool OnlyShortest = true;
   T MaxScal = 0;
-  return LORENTZ_FindPositiveVectors<T,Tint>(LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
+  return LORENTZ_FindPositiveVectors<T, Tint>(LorMat, PosVect, MaxScal,
+                                              TheOption, OnlyShortest, os);
 }
 
-
-template<typename T>
-std::vector<MyVector<T>> GetRationalIsotropyVectors(MyMatrix<T> const& LorMat22) {
+template <typename T>
+std::vector<MyVector<T>>
+GetRationalIsotropyVectors(MyMatrix<T> const &LorMat22) {
   // The matrix is written as
   // | a b |
   // | b c |
@@ -124,12 +132,13 @@ std::vector<MyVector<T>> GetRationalIsotropyVectors(MyMatrix<T> const& LorMat22)
   //         = (-b + sqrt(DeltaB)) / a
   // x2 / y2 = (-2 b - sqrt(Delta) ) / (2a)
   //         = (-b - sqrt(DeltaB) ) / a
-  T a = LorMat22(0,0);
-  T b = LorMat22(0,1);
-  T c = LorMat22(1,1);
-  T DeltaB = b*b - a*c;
+  T a = LorMat22(0, 0);
+  T b = LorMat22(0, 1);
+  T c = LorMat22(1, 1);
+  T DeltaB = b * b - a * c;
   if (DeltaB <= 0) {
-    std::cerr << "If the discriminant is negative, then we cannot have signature (1,1)";
+    std::cerr << "If the discriminant is negative, then we cannot have "
+                 "signature (1,1)";
     throw TerminalException{1};
   }
   std::optional<T> opt = UniversalSquareRoot(DeltaB);
@@ -156,27 +165,25 @@ std::vector<MyVector<T>> GetRationalIsotropyVectors(MyMatrix<T> const& LorMat22)
   return {v1, v2};
 }
 
-template<typename T>
-MyVector<T> GetReducedVector(MyVector<T> const& V) {
+template <typename T> MyVector<T> GetReducedVector(MyVector<T> const &V) {
   int n = V.size() - 1;
   MyVector<T> Vret(n);
-  for (int i=0; i<n; i++) {
-    Vret(i) = V(i+1);
+  for (int i = 0; i < n; i++) {
+    Vret(i) = V(i + 1);
   }
   return Vret;
 }
 
-template<typename T>
-MyVector<T> ConcatenateScalarVector(T const& scal, MyVector<T> const& V) {
+template <typename T>
+MyVector<T> ConcatenateScalarVector(T const &scal, MyVector<T> const &V) {
   int n = V.size();
   MyVector<T> Vret(n + 1);
   Vret(0) = scal;
-  for (int i=0; i<n; i++) {
-    Vret(i+1) = V(i);
+  for (int i = 0; i < n; i++) {
+    Vret(i + 1) = V(i);
   }
   return Vret;
 }
-
 
 // We compute an upper bound TheMult on the possible values of x such that
 // eNSP = eNSPbas + x * eNSPdir is admissible as a facet vector
@@ -187,11 +194,14 @@ MyVector<T> ConcatenateScalarVector(T const& scal, MyVector<T> const& V) {
 // the following happens:
 // -- MaxScal = 0 (because eNSP[1] = 0)
 // -- eVect * LorMat * fVect = 0 (because 0 <= val <= 0)
-// -- Thus fVect is in the orthogonal of an isotropic vector and is of norm >= 0.
+// -- Thus fVect is in the orthogonal of an isotropic vector and is of norm >=
+// 0.
 // -- By the geometry this gets us to fVect a multiple of eVect
 // That scenario is not acceptable for finding perfect domain.
-template<typename T>
-std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNSPbas, MyVector<T> const& eNSPdir) {
+template <typename T>
+std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
+                               MyVector<T> const &eNSPbas,
+                               MyVector<T> const &eNSPdir) {
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   T eCstBas = eNSPbas(0);
   T eCstDir = eNSPdir(0);
@@ -214,10 +224,10 @@ std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNS
   // Get raw upper bound
   //
   T iShift = 1;
-  while(true) {
+  while (true) {
     MyVector<T> eV = eBas + iShift * eDir;
     MyVector<T> eVect = LorMatInv * eV;
-    T eNorm = EvaluationQuadForm<T,T>(LorMat, eVect);
+    T eNorm = EvaluationQuadForm<T, T>(LorMat, eVect);
     if (eNorm < 0) {
       ListUpperBound.push_back(iShift);
       break;
@@ -230,9 +240,9 @@ std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNS
   MyVector<T> eVectBas = LorMatInv * eBas;
   MyVector<T> eVectDir = LorMatInv * eDir;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  auto f_norm=[&](T const& val) -> T {
+  auto f_norm = [&](T const &val) -> T {
     MyVector<T> eVect = eVectBas + val * eVectDir;
-    return EvaluationQuadForm<T,T>(LorMat, eVect);
+    return EvaluationQuadForm<T, T>(LorMat, eVect);
   };
 #endif
   std::vector<MyVector<T>> TheBasis{eVectBas, eVectDir};
@@ -241,7 +251,7 @@ std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNS
   std::vector<MyVector<T>> ListIso = GetRationalIsotropyVectors(LorMat22);
   std::optional<T> UpperBound_isotropic;
   std::vector<T> ListUpperBound_Iso;
-  for (auto & eIso : ListIso) {
+  for (auto &eIso : ListIso) {
     if (eIso(0) != 0) {
       T fact = eIso(1) / eIso(0);
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -264,7 +274,8 @@ std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNS
       return {};
     }
   }
-  // Need to see if better upper bounds are possible, but this is a secondary question
+  // Need to see if better upper bounds are possible, but this is a secondary
+  // question
   T BestUpper = VectorMin(ListUpperBound);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   if (f_norm(BestUpper) > 0) {
@@ -275,8 +286,7 @@ std::optional<T> GetUpperBound(MyMatrix<T> const& LorMat, MyVector<T> const& eNS
   return BestUpper;
 }
 
-template<typename T, typename Tint>
-struct ResultFlipping {
+template <typename T, typename Tint> struct ResultFlipping {
   std::vector<MyVector<Tint>> ListTotal;
   MyVector<T> eNSPtest;
   MyVector<T> eVectTest;
@@ -290,29 +300,35 @@ struct ResultFlipping {
 //
 // eNSPbas must be of positive norm. eNSPdir must be of negative norm.
 //
-template<typename T, typename Tint>
-ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& CritSet, MyVector<T> const& eNSPbas, MyVector<T> const& eNSPdir, int const& TheOption, [[maybe_unused]] std::ostream & os) {
+template <typename T, typename Tint>
+ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
+    MyMatrix<T> const &LorMat, std::vector<MyVector<Tint>> const &CritSet,
+    MyVector<T> const &eNSPbas, MyVector<T> const &eNSPdir,
+    int const &TheOption, [[maybe_unused]] std::ostream &os) {
   MyMatrix<T> LorMatInv = Inverse(LorMat);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   std::vector<MyVector<T>> M1{eNSPbas, eNSPdir};
   MyMatrix<T> M2 = MatrixFromVectorFamily(M1);
   if (RankMat(M2) != 2) {
-    std::cerr << "The vector eNSPbas and eNSPdir should be linearly independent\n";
+    std::cerr
+        << "The vector eNSPbas and eNSPdir should be linearly independent\n";
     throw TerminalException{1};
   }
-  for (auto & x : CritSet) {
+  for (auto &x : CritSet) {
     MyVector<Tint> xext = ConcatenateScalarVector(Tint(1), x);
-    MyVector<T> xext_T = UniversalVectorConversion<T,Tint>(xext);
+    MyVector<T> xext_T = UniversalVectorConversion<T, Tint>(xext);
     if (xext_T.dot(eNSPbas) != 0) {
-      std::cerr << "eNSPbas should have scalar product 0 with all entries in CritSet\n";
+      std::cerr << "eNSPbas should have scalar product 0 with all entries in "
+                   "CritSet\n";
       throw TerminalException{1};
     }
     if (xext_T.dot(eNSPdir) != 0) {
-      std::cerr << "eNSPdir should have scalar product 0 with all entries in CritSet\n";
+      std::cerr << "eNSPdir should have scalar product 0 with all entries in "
+                   "CritSet\n";
       throw TerminalException{1};
     }
     if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
-      T norm = EvaluationQuadForm<T,Tint>(LorMat, x);
+      T norm = EvaluationQuadForm<T, Tint>(LorMat, x);
       if (norm != 0) {
         std::cerr << "CritSet contains some non-isotrop vectors\n";
         throw TerminalException{1};
@@ -333,23 +349,25 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
 #endif
   MyVector<T> eVectBas = LorMatInv * GetReducedVector(eNSPbas);
   MyVector<T> eVectDir = LorMatInv * GetReducedVector(eNSPdir);
-  T eNormBas = EvaluationQuadForm<T,T>(LorMat, eVectBas);
-  T eNormDir = EvaluationQuadForm<T,T>(LorMat, eVectDir);
+  T eNormBas = EvaluationQuadForm<T, T>(LorMat, eVectBas);
+  T eNormDir = EvaluationQuadForm<T, T>(LorMat, eVectDir);
   std::vector<MyVector<Tint>> ListTotal;
-  while(true) {
+  while (true) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "TheLowerBound=" << TheLowerBound << " TheUpperBound=" << TheUpperBound << " n_iter=" << n_iter << "\n";
+    os << "TheLowerBound=" << TheLowerBound
+       << " TheUpperBound=" << TheUpperBound << " n_iter=" << n_iter << "\n";
 #endif
     T TheMidVal = get_mid_val(TheLowerBound, TheUpperBound);
     MyVector<T> eNSPtest = eNSPbas + TheMidVal * eNSPdir;
     MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
-    T eNormTest = EvaluationQuadForm<T,T>(LorMat, eVectTest);
-    MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+    T eNormTest = EvaluationQuadForm<T, T>(LorMat, eVectTest);
+    MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
     T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
     if (eNormTest <= 0 && MaxScal <= 0) {
       TheUpperBound = TheMidVal;
     } else {
-      ListTotal = LORENTZ_FindPositiveVectors<T,Tint>(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
+      ListTotal = LORENTZ_FindPositiveVectors<T, Tint>(
+          LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "|ListTotal|=" << ListTotal.size() << "\n";
       if (IsSubset(CritSet, ListTotal) && CritSet.size() > ListTotal.size()) {
@@ -362,7 +380,8 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
       } else {
         if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-          os << "EXIT 1 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal << "\n";
+          os << "EXIT 1 |ListTotal|=" << ListTotal.size()
+             << " MaxScal=" << MaxScal << "\n";
           os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
 #endif
           return {ListTotal, eNSPtest, eVectTest, MaxScal};
@@ -381,18 +400,21 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
   while (true) {
     MyVector<Tint> eVect = ListTotal[0];
     MyVector<Tint> eVert = ConcatenateScalarVector(Tint(1), eVect);
-    MyVector<T> eVert_T = UniversalVectorConversion<T,Tint>(eVert);
+    MyVector<T> eVert_T = UniversalVectorConversion<T, Tint>(eVert);
     std::vector<MyVector<Tint>> ListIsoTest = CritSet;
     ListIsoTest.push_back(eVect);
-    T aShift = - (eNSPbas.dot(eVert_T)) / (eNSPdir.dot(eVert_T));
+    T aShift = -(eNSPbas.dot(eVert_T)) / (eNSPdir.dot(eVert_T));
     MyVector<T> eNSPtest = eNSPbas + aShift * eNSPdir;
     MyVector<T> eVectTest = LorMatInv * GetReducedVector(eNSPtest);
-    MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+    MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
     T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
-    std::vector<MyVector<Tint>> ListTotal = LORENTZ_FindPositiveVectors<T,Tint>(LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
+    std::vector<MyVector<Tint>> ListTotal =
+        LORENTZ_FindPositiveVectors<T, Tint>(LorMat, eVectTest, MaxScal,
+                                             TheOption, OnlyShortest, os);
     if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-      os << "EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal << "\n";
+      os << "EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal
+         << "\n";
       os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
 #endif
       return {ListTotal, eNSPtest, eVectTest, MaxScal};
@@ -400,9 +422,12 @@ ResultFlipping<T,Tint> LORENTZ_Kernel_Flipping(MyMatrix<T> const& LorMat, std::v
   }
 }
 
-template<typename T, typename Tint>
-MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& SpannBasis, std::vector<MyVector<Tint>> const& TheSet, MyVector<T> const& eNSPbas, std::ostream& os) {
-  MyVector<T> TheSet0 = UniversalVectorConversion<T,Tint>(TheSet[0]);
+template <typename T, typename Tint>
+MyVector<T> GetOneOutsideRay(MyMatrix<T> const &LorMat,
+                             MyMatrix<T> const &SpannBasis,
+                             std::vector<MyVector<Tint>> const &TheSet,
+                             MyVector<T> const &eNSPbas, std::ostream &os) {
+  MyVector<T> TheSet0 = UniversalVectorConversion<T, Tint>(TheSet[0]);
   MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
 #ifdef DEBUG_LORENTZIAN_PERFECT
   DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat);
@@ -413,23 +438,25 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& Spann
 #endif
   int n_dim = TheMat.rows();
   MyMatrix<T> ePerturb = IdentityMat<T>(n_dim);
-  while(true) {
-    MyMatrix<T> TheMatPerturb = - ePerturb * TheMat * ePerturb.transpose();
-    MyMatrix<T> uVect = GetIntegralPositiveVector_allmeth<T,T>(TheMatPerturb, os);
+  while (true) {
+    MyMatrix<T> TheMatPerturb = -ePerturb * TheMat * ePerturb.transpose();
+    MyMatrix<T> uVect =
+        GetIntegralPositiveVector_allmeth<T, T>(TheMatPerturb, os);
     MyMatrix<T> SpannMatrixPert = ePerturb * SpannBasis;
     MyVector<T> RetVect = SpannMatrixPert.transpose() * uVect;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    T TheNorm = EvaluationQuadForm<T,T>(LorMat, RetVect);
+    T TheNorm = EvaluationQuadForm<T, T>(LorMat, RetVect);
     if (TheNorm == 0) {
-      std::cerr << "The vector should be outside of the cone and so have negative norm\n";
+      std::cerr << "The vector should be outside of the cone and so have "
+                   "negative norm\n";
       throw TerminalException{1};
     }
 #endif
     MyVector<T> tVect = LorMat * RetVect;
     T eScal = tVect.dot(TheSet0);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    for (auto & eVect : TheSet) {
-      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+    for (auto &eVect : TheSet) {
+      MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       T fScal = tVect.dot(eVect_T);
       if (eScal != fScal) {
         std::cerr << "The scalar products are incorrect\n";
@@ -438,7 +465,8 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& Spann
     }
 #endif
     MyVector<T> eNSPdir = ConcatenateScalarVector(T(-eScal), tVect);
-    std::optional<T> TheUpperBound_opt = GetUpperBound(LorMat, eNSPbas, eNSPdir);
+    std::optional<T> TheUpperBound_opt =
+        GetUpperBound(LorMat, eNSPbas, eNSPdir);
     if (TheUpperBound_opt.has_value()) {
       return eNSPdir;
     }
@@ -446,63 +474,68 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const& LorMat, MyMatrix<T> const& Spann
   }
 }
 
-template<typename T, typename Tint>
-MyMatrix<T> GetFullExpanded(std::vector<MyVector<Tint>> const& CritSet) {
+template <typename T, typename Tint>
+MyMatrix<T> GetFullExpanded(std::vector<MyVector<Tint>> const &CritSet) {
   int dim = CritSet[0].size();
   int n_vect = CritSet.size();
   MyMatrix<T> ListVectExt(n_vect, dim + 1);
-  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+  for (int i_vect = 0; i_vect < n_vect; i_vect++) {
     ListVectExt(i_vect, 0);
-    for (int i=0; i<dim; i++) {
-      ListVectExt(i_vect, i + 1) = UniversalScalarConversion<T,Tint>(CritSet[i_vect](i));
+    for (int i = 0; i < dim; i++) {
+      ListVectExt(i_vect, i + 1) =
+          UniversalScalarConversion<T, Tint>(CritSet[i_vect](i));
     }
   }
   return ListVectExt;
 }
 
-template<typename T, typename Tint>
-void LORENTZ_CheckCorrectnessVectorFamily(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& CritSet) {
+template <typename T, typename Tint>
+void LORENTZ_CheckCorrectnessVectorFamily(
+    MyMatrix<T> const &LorMat, std::vector<MyVector<Tint>> const &CritSet) {
   int n = LorMat.cols();
-  MyMatrix<T> ListVectExt = GetFullExpanded<T,Tint>(CritSet);
+  MyMatrix<T> ListVectExt = GetFullExpanded<T, Tint>(CritSet);
   int rnk = RankMat(ListVectExt);
   if (rnk != n) {
-    std::cerr << "We have rnk=" << rnk << " n=" << n << " they should be equal\n";
+    std::cerr << "We have rnk=" << rnk << " n=" << n
+              << " they should be equal\n";
     throw TerminalException{1};
   }
 }
 
-template<typename T, typename Tint>
-struct LorentzianPerfectEntry {
+template <typename T, typename Tint> struct LorentzianPerfectEntry {
   std::vector<MyVector<Tint>> ListTotal;
   MyVector<T> eNSPtest;
   MyVector<T> eVectTest;
 };
 
-template<typename T, typename Tint>
-MyMatrix<Tint> LORENTZ_GetEXT(LorentzianPerfectEntry<T,Tint> const& eRec) {
+template <typename T, typename Tint>
+MyMatrix<Tint> LORENTZ_GetEXT(LorentzianPerfectEntry<T, Tint> const &eRec) {
   return MatrixFromVectorFamily(eRec.ListTotal);
 }
 
-
-
-template<typename T, typename Tint>
-LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, int const& TheOption, std::ostream& os) {
+template <typename T, typename Tint>
+LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
+                                                      int const &TheOption,
+                                                      std::ostream &os) {
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
-  MyVector<Tint> CentralVect = INDEFINITE_GetShortPositiveVector<T,Tint>(LorMat, os);
-  MyVector<T> CentralVect_T = UniversalVectorConversion<T,Tint>(CentralVect);
-  std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T,Tint>(LorMat, CentralVect_T, TheOption, os);
-  MyVector<T> CritSet0_T = UniversalVectorConversion<T,Tint>(CritSet[0]);
+  MyVector<Tint> CentralVect =
+      INDEFINITE_GetShortPositiveVector<T, Tint>(LorMat, os);
+  MyVector<T> CentralVect_T = UniversalVectorConversion<T, Tint>(CentralVect);
+  std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T, Tint>(
+      LorMat, CentralVect_T, TheOption, os);
+  MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
   MyVector<T> LorMat_Central = LorMat * CentralVect_T;
   T eScal = LorMat_Central.dot(CritSet0_T);
   MyVector<T> eNSPbas = ConcatenateScalarVector(T(-eScal), LorMat_Central);
-  while(true) {
+  while (true) {
     int rnk = 0;
     if (CritSet.size() > 0) {
       rnk = RankMat(MatrixFromVectorFamily(CritSet));
     }
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size() << "\n";
+    os << "LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size()
+       << "\n";
 #endif
     if (rnk == n) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -510,7 +543,7 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, 
 #endif
       return {CritSet, eNSPbas, CentralVect_T};
     }
-    MyMatrix<T> EXT = GetFullExpanded<T,Tint>(CritSet);
+    MyMatrix<T> EXT = GetFullExpanded<T, Tint>(CritSet);
     MyMatrix<T> NSP = NullspaceTrMat(EXT);
 #ifdef DEBUG_LORENTZIAN_PERFECT
     if (NSP.rows() == 0) {
@@ -519,19 +552,24 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const& LorMat, 
     }
 #endif
     MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
-    MyMatrix<T> eNSPdir = GetOneOutsideRay<T,Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
-    ResultFlipping<T,Tint> eRecB = LORENTZ_Kernel_Flipping<T,Tint>(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
+    MyMatrix<T> eNSPdir =
+        GetOneOutsideRay<T, Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
+    ResultFlipping<T, Tint> eRecB = LORENTZ_Kernel_Flipping<T, Tint>(
+        LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
     CritSet = eRecB.ListTotal;
     eNSPbas = eRecB.eNSPtest;
   }
 }
 
-template<typename T, typename Tint>
-LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std::vector<MyVector<Tint>> const& ListIso, Face eInc, int const& TheOption, std::ostream& os) {
+template <typename T, typename Tint>
+LorentzianPerfectEntry<T, Tint>
+LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
+                   std::vector<MyVector<Tint>> const &ListIso, Face eInc,
+                   int const &TheOption, std::ostream &os) {
   size_t n_vect = eInc.size();
-  MyMatrix<T> EXT = GetFullExpanded<T,Tint>(ListIso);
-  auto get_eVert=[&]() -> size_t {
-    for (size_t i_vect=0; i_vect<n_vect; i_vect++) {
+  MyMatrix<T> EXT = GetFullExpanded<T, Tint>(ListIso);
+  auto get_eVert = [&]() -> size_t {
+    for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
       if (eInc[i_vect] == 0) {
         return i_vect;
       }
@@ -541,9 +579,9 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   };
   size_t eVert = get_eVert();
   std::vector<MyVector<T>> ListIsoSel;
-  for (size_t i_vect=0; i_vect<n_vect; i_vect++) {
+  for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
     if (eInc[i_vect] == 1) {
-      MyVector<T> eVect = UniversalVectorConversion<T,Tint>(ListIso[i_vect]);
+      MyVector<T> eVect = UniversalVectorConversion<T, Tint>(ListIso[i_vect]);
       ListIsoSel.push_back(eVect);
     }
   }
@@ -556,11 +594,11 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   }
 #endif
   MyVector<T> TheDir = GetMatrixRow(NSP, 0);
-  MyVector<T> eIso = UniversalVectorConversion<T,Tint>(ListIso[eVert]);
-  auto get_eNSPdir=[&]() -> MyVector<T> {
+  MyVector<T> eIso = UniversalVectorConversion<T, Tint>(ListIso[eVert]);
+  auto get_eNSPdir = [&]() -> MyVector<T> {
     T eScal = TheDir.dot(eIso);
     if (eScal < 0) {
-      MyVector<T> TheDirNeg = - TheDir;
+      MyVector<T> TheDirNeg = -TheDir;
       return ConcatenateScalarVector(T(0), TheDirNeg);
     } else {
       return ConcatenateScalarVector(T(0), TheDir);
@@ -570,7 +608,7 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   MyMatrix<T> NSPb = NullspaceTrMat(EXT);
   MyVector<T> NSPb_0 = GetMatrixRow(NSPb, 0);
   MyVector<T> eVectB = GetReducedVector(NSPb_0);
-  auto get_eNSPbas=[&]() -> MyVector<T> {
+  auto get_eNSPbas = [&]() -> MyVector<T> {
     if (eVectB.dot(eIso) > 0) {
       return NSPb_0;
     } else {
@@ -579,12 +617,15 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   };
   MyVector<T> eNSPbas = get_eNSPbas();
   std::vector<MyVector<Tint>> CritSet;
-  for (size_t i_vect=0; i_vect<n_vect; i_vect++) {
+  for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
     if (eInc[i_vect] == 1) {
       CritSet.push_back(ListIso[i_vect]);
     }
   }
-  std::vector<MyVector<Tint>> TheFlip = LORENTZ_Kernel_Flipping<T,Tint>(LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os).ListTotal;
+  std::vector<MyVector<Tint>> TheFlip =
+      LORENTZ_Kernel_Flipping<T, Tint>(LorMat, CritSet, eNSPbas, eNSPdir,
+                                       TheOption, os)
+          .ListTotal;
 #ifdef DEBUG_LORENTZIAN_PERFECT
   LORENTZ_CheckCorrectnessVectorFamily(LorMat, TheFlip);
 #endif
@@ -592,63 +633,67 @@ LorentzianPerfectEntry<T,Tint> LORENTZ_DoFlipping(MyMatrix<T> const& LorMat, std
   return {TheFlip, {}, {}};
 }
 
-
-template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalence(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, MyMatrix<Tint> const& eFamEXT1, MyMatrix<Tint> const& eFamEXT2, std::ostream& os) {
-  return LinPolytopeIntegral_Isomorphism_GramMat<T,Tint,Tgroup>(eFamEXT1, LorMat1, eFamEXT2, LorMat2, os);
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LORENTZ_TestEquivalence(MyMatrix<T> const &LorMat1, MyMatrix<T> const &LorMat2,
+                        MyMatrix<Tint> const &eFamEXT1,
+                        MyMatrix<Tint> const &eFamEXT2, std::ostream &os) {
+  return LinPolytopeIntegral_Isomorphism_GramMat<T, Tint, Tgroup>(
+      eFamEXT1, LorMat1, eFamEXT2, LorMat2, os);
 }
 
-
-template<typename Tint, typename Tgroup>
-struct ResultStabilizer {
+template <typename Tint, typename Tgroup> struct ResultStabilizer {
   std::vector<MyMatrix<Tint>> ListGen;
   Tgroup GRPperm;
 };
 
-
-template<typename T, typename Tint, typename Tgroup>
-ResultStabilizer<Tint, Tgroup> LORENTZ_ComputeStabilizer(MyMatrix<T> const& LorMat, MyMatrix<Tint> const& eFamEXT, std::ostream& os) {
-  MyMatrix<T> eFamEXT_T = UniversalMatrixConversion<T,Tint>(eFamEXT);
-  Tgroup GRPisom = LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
-  Tgroup GRPperm = LinPolytopeIntegral_Stabilizer_Method8(eFamEXT_T, GRPisom, os);
+template <typename T, typename Tint, typename Tgroup>
+ResultStabilizer<Tint, Tgroup>
+LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
+                          MyMatrix<Tint> const &eFamEXT, std::ostream &os) {
+  MyMatrix<T> eFamEXT_T = UniversalMatrixConversion<T, Tint>(eFamEXT);
+  Tgroup GRPisom =
+      LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
+  Tgroup GRPperm =
+      LinPolytopeIntegral_Stabilizer_Method8(eFamEXT_T, GRPisom, os);
   std::vector<MyMatrix<Tint>> ListGen;
-  for (auto & eGen : GRPperm.SmallGeneratingSet()) {
-    MyMatrix<Tint> eGenMatr = RepresentVertexPermutation(eFamEXT, eFamEXT, eGen);
+  for (auto &eGen : GRPperm.SmallGeneratingSet()) {
+    MyMatrix<Tint> eGenMatr =
+        RepresentVertexPermutation(eFamEXT, eFamEXT, eGen);
     ListGen.push_back(eGenMatr);
   }
   return {ListGen, GRPperm};
 }
 
-
-template<typename T, typename Tint>
-size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const& LorMat,
-                                   MyMatrix<Tint> const& EXT,
-                                   [[maybe_unused]] std::ostream & os) {
+template <typename T, typename Tint>
+size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
+                                   MyMatrix<Tint> const &EXT,
+                                   [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
   int n = LorMat.rows();
   int nbRow = EXT.rows();
-  MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(EXT);
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
   std::map<T, size_t> ListDiagNorm;
   std::map<T, size_t> ListOffDiagNorm;
   MyVector<T> V(n);
-  for (int iRow=0; iRow<nbRow; iRow++) {
-    for (int i=0; i<n; i++) {
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int i = 0; i < n; i++) {
       T sum = 0;
-      for (int j=0; j<n; j++) {
-        sum += LorMat(i,j) * EXT_T(iRow, j);
+      for (int j = 0; j < n; j++) {
+        sum += LorMat(i, j) * EXT_T(iRow, j);
       }
       V(i) = sum;
     }
     T scal = 0;
-    for (int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
       scal += V(i) * EXT_T(iRow, i);
     }
     ListDiagNorm[scal] += 1;
-    for (int jRow=iRow+1; jRow<nbRow; jRow++) {
+    for (int jRow = iRow + 1; jRow < nbRow; jRow++) {
       T scal = 0;
-      for (int i=0; i<n; i++) {
+      for (int i = 0; i < n; i++) {
         scal += V(i) * EXT_T(jRow, i);
       }
       ListOffDiagNorm[scal] += 1;
@@ -666,68 +711,65 @@ struct DataPerfectLorentzian {
   int n;
   MyMatrix<T> LorMat;
   int TheOption;
-  RecordDualDescOperation<T,Tgroup> rddo;
+  RecordDualDescOperation<T, Tgroup> rddo;
 };
 
-
-template<typename Tint, typename Tgroup>
-struct PerfLorentzian_Obj {
+template <typename Tint, typename Tgroup> struct PerfLorentzian_Obj {
   MyMatrix<Tint> EXT;
   Tgroup GRP;
 };
 
-template<typename Tint, typename Tgroup>
-void WriteEntryGAP(std::ostream& os_out, PerfLorentzian_Obj<Tint,Tgroup> const& ent) {
+template <typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream &os_out,
+                   PerfLorentzian_Obj<Tint, Tgroup> const &ent) {
   os_out << "rec(EXT:=";
   WriteMatrixGAP(os_out, ent.EXT);
   os_out << ", GRP:=" << ent.GRP.GapString() << ")";
 }
 
 namespace boost::serialization {
-  template <class Archive, typename Tint, typename Tgroup>
-  inline void serialize(Archive &ar, PerfLorentzian_Obj<Tint, Tgroup> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("EXT", eRec.EXT);
-    ar &make_nvp("GRP", eRec.GRP);
-  }
+template <class Archive, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, PerfLorentzian_Obj<Tint, Tgroup> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("EXT", eRec.EXT);
+  ar &make_nvp("GRP", eRec.GRP);
 }
+} // namespace boost::serialization
 
-template<typename Tint>
-struct PerfLorentzian_AdjI {
+template <typename Tint> struct PerfLorentzian_AdjI {
   Face eInc;
   MyMatrix<Tint> EXT;
 };
 
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, PerfLorentzian_AdjI<Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("eInc", eRec.eInc);
-    ar &make_nvp("EXT", eRec.EXT);
-  }
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, PerfLorentzian_AdjI<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("eInc", eRec.eInc);
+  ar &make_nvp("EXT", eRec.EXT);
 }
+} // namespace boost::serialization
 
-template<typename Tint>
-struct PerfLorentzian_AdjO {
+template <typename Tint> struct PerfLorentzian_AdjO {
   Face eInc;
   MyMatrix<Tint> eBigMat;
 };
 
-template<typename Tint>
-void WriteEntryGAP(std::ostream& os_out, PerfLorentzian_AdjO<Tint> const& ent) {
+template <typename Tint>
+void WriteEntryGAP(std::ostream &os_out, PerfLorentzian_AdjO<Tint> const &ent) {
   os_out << "rec(eInc:=";
   WriteFaceGAP(os_out, ent.eInc);
   os_out << ", eBigMat:=" << StringMatrixGAP(ent.eBigMat) << ")";
 }
 
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, PerfLorentzian_AdjO<Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("eInc", eRec.eInc);
-    ar &make_nvp("eBigMat", eRec.eBigMat);
-  }
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, PerfLorentzian_AdjO<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("eInc", eRec.eInc);
+  ar &make_nvp("eBigMat", eRec.eBigMat);
 }
+} // namespace boost::serialization
 
 template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectLorentzianFunc {
@@ -735,56 +777,61 @@ struct DataPerfectLorentzianFunc {
   using Tobj = PerfLorentzian_Obj<Tint, Tgroup>;
   using TadjI = PerfLorentzian_AdjI<Tint>;
   using TadjO = PerfLorentzian_AdjO<Tint>;
-  std::ostream& get_os() {
-    return data.rddo.os;
-  }
+  std::ostream &get_os() { return data.rddo.os; }
   Tobj f_init() {
-    LorentzianPerfectEntry<T,Tint> eRec = LORENTZ_GetOnePerfect<T,Tint>(data.LorMat, data.TheOption, data.rddo.os);
+    LorentzianPerfectEntry<T, Tint> eRec = LORENTZ_GetOnePerfect<T, Tint>(
+        data.LorMat, data.TheOption, data.rddo.os);
     MyMatrix<Tint> EXT = LORENTZ_GetEXT(eRec);
-    Tobj x{std::move(EXT), {} };
+    Tobj x{std::move(EXT), {}};
     return x;
   }
-  size_t f_hash(size_t const& seed, Tobj const& x) {
+  size_t f_hash(size_t const &seed, Tobj const &x) {
     return ComputeInvariantPerfectForm(seed, data.LorMat, x.EXT, data.rddo.os);
   }
-  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
-    std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalence<T,Tint,Tgroup>(data.LorMat, data.LorMat, x.EXT, y.EXT, data.rddo.os);
+  std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    std::optional<MyMatrix<Tint>> opt =
+        LORENTZ_TestEquivalence<T, Tint, Tgroup>(data.LorMat, data.LorMat,
+                                                 x.EXT, y.EXT, data.rddo.os);
     if (!opt) {
       return {};
     }
-    MyMatrix<Tint> const& eBigMat = *opt;
+    MyMatrix<Tint> const &eBigMat = *opt;
     TadjO ret{y.eInc, eBigMat};
     return ret;
   }
-  std::pair<Tobj,TadjO> f_spann(TadjI const& x) {
+  std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
     MyMatrix<Tint> EXT = x.EXT;
-    Tobj x_ret{EXT, {} };
+    Tobj x_ret{EXT, {}};
     MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.n + 1);
     TadjO ret{x.eInc, eBigMat};
     return {x_ret, ret};
   }
-  std::vector<TadjI> f_adj(Tobj & x) {
-    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(x.EXT);
-    ResultStabilizer<Tint, Tgroup> res_stab = LORENTZ_ComputeStabilizer<T,Tint,Tgroup>(data.LorMat, x.EXT, data.rddo.os);
-    vectface TheOutput = DualDescriptionRecordFullDim(EXT_T, res_stab.GRPperm, data.rddo);
+  std::vector<TadjI> f_adj(Tobj &x) {
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(x.EXT);
+    ResultStabilizer<Tint, Tgroup> res_stab =
+        LORENTZ_ComputeStabilizer<T, Tint, Tgroup>(data.LorMat, x.EXT,
+                                                   data.rddo.os);
+    vectface TheOutput =
+        DualDescriptionRecordFullDim(EXT_T, res_stab.GRPperm, data.rddo);
     x.GRP = res_stab.GRPperm;
     std::vector<MyVector<Tint>> ListIso;
-    for (int i_row=0; i_row<x.EXT.rows(); i_row++) {
+    for (int i_row = 0; i_row < x.EXT.rows(); i_row++) {
       MyVector<Tint> V = GetMatrixRow(x.EXT, i_row);
       ListIso.push_back(V);
     }
     std::vector<TadjI> ListAdj;
     for (auto &eInc : TheOutput) {
-      LorentzianPerfectEntry<T,Tint> eRecFlip = LORENTZ_DoFlipping<T,Tint>(data.LorMat, ListIso, eInc, data.TheOption, data.rddo.os);
+      LorentzianPerfectEntry<T, Tint> eRecFlip = LORENTZ_DoFlipping<T, Tint>(
+          data.LorMat, ListIso, eInc, data.TheOption, data.rddo.os);
       MyMatrix<Tint> EXTflip = LORENTZ_GetEXT(eRecFlip);
       TadjI eAdj{eInc, EXTflip};
       ListAdj.push_back(eAdj);
     }
     return ListAdj;
   }
-  Tobj f_adji_obj(TadjI const& x) {
+  Tobj f_adji_obj(TadjI const &x) {
     MyMatrix<Tint> EXT = x.EXT;
-    Tobj x_ret{EXT, {} };
+    Tobj x_ret{EXT, {}};
     return x_ret;
   };
 };
@@ -832,10 +879,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   return {ListBlock, "undefined"};
 }
 
-template<typename T, typename Tint, typename Tgroup>
-void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+template <typename T, typename Tint, typename Tgroup>
+void ComputePerfectLorentzian(boost::mpi::communicator &comm,
+                              FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
-  std::ostream& os = *os_ptr;
+  std::ostream &os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
@@ -849,7 +897,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
   //
   std::string TheOption_str = BlockDATA.ListStringValues.at("TheOption");
-  auto get_option=[&]() -> int {
+  auto get_option = [&]() -> int {
     if (TheOption_str == "isotropic") {
       return LORENTZIAN_PERFECT_OPTION_ISOTROP;
     }
@@ -868,89 +916,90 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm, FullNamelist const
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  std::string FileDualDesc = BlockDATA.ListStringValues.at("FileDualDescription");
+  std::string FileDualDesc =
+      BlockDATA.ListStringValues.at("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
-    Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
+      Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
-  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
-                                    LorMat,
-                                    TheOption,
-                                    std::move(rddo)};
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n, LorMat, TheOption,
+                                              std::move(rddo)};
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
   //
-  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
+  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
+      comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "PERF_LOR: We now have IsFinished=" << pair.first << "\n";
   os << "PERF_LOR: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {
-    WriteFamilyObjects<Tobj,TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 
-template<typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> LORENTZ_GetGeneratorsAutom(MyMatrix<T> const& LorMat, std::ostream& os) {
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<Tint>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
   int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
 
-  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
-                                    LorMat,
-                                    TheOption,
-                                    std::move(rddo)};
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n, LorMat, TheOption,
+                                              std::move(rddo)};
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
   //
-  auto f_incorrect=[&]([[maybe_unused]] Tobj const& x) -> bool {
+  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
   int max_runtime_second = 0;
-  std::optional<std::vector<Tout>> opt = EnumerateAndStore_Serial<Tdata,decltype(f_incorrect)>(data_func, f_incorrect, max_runtime_second);
+  std::optional<std::vector<Tout>> opt =
+      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+          data_func, f_incorrect, max_runtime_second);
   std::vector<Tout> l_obj = unfold_opt(opt, "Enumeration unexpectedly failed");
 
   std::unordered_set<MyMatrix<Tint>> s_gen;
-  auto f_insert_gen=[&](MyMatrix<Tint> const& M) -> void {
+  auto f_insert_gen = [&](MyMatrix<Tint> const &M) -> void {
     if (!IsIdentity(M)) {
       s_gen.insert(M);
     }
   };
-  for (auto & ent : l_obj) {
+  for (auto &ent : l_obj) {
     // Generators coming from the equivalences
-    for (auto & eAdj : ent.ListAdj) {
+    for (auto &eAdj : ent.ListAdj) {
       f_insert_gen(eAdj.x.eBigMat);
     }
     // Generators comoing from the stabilizers
-    for (auto& ePermGen : ent.x.GRP.SmallGeneratingSet()) {
-      MyMatrix<Tint> eMatrGen = RepresentVertexPermutation<Tint,Telt>(ent.x.EXT, ent.x.EXT, ePermGen);
+    for (auto &ePermGen : ent.x.GRP.SmallGeneratingSet()) {
+      MyMatrix<Tint> eMatrGen = RepresentVertexPermutation<Tint, Telt>(
+          ent.x.EXT, ent.x.EXT, ePermGen);
       f_insert_gen(eMatrGen);
     }
   }
   std::vector<MyMatrix<Tint>> l_gen;
-  for (auto & eGen : s_gen) {
+  for (auto &eGen : s_gen) {
     l_gen.push_back(eGen);
   }
   return l_gen;
 }
 
-
-
-
-template<typename T>
-size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const& SymMat, size_t seed, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
+                                   [[maybe_unused]] std::ostream &os) {
   int n = SymMat.rows();
   T det = DeterminantMat<T>(SymMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
@@ -967,10 +1016,10 @@ size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const& SymMat, size_t seed, [[may
   return hash_ret;
 }
 
-
-
-template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const& LorMat1, MyMatrix<T> const& LorMat2, std::ostream& os) {
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
+                                MyMatrix<T> const &LorMat2, std::ostream &os) {
   size_t seed = 1678;
   size_t inv1 = INDEF_FORM_Invariant_NonDeg(LorMat1, seed, os);
   size_t inv2 = INDEF_FORM_Invariant_NonDeg(LorMat2, seed, os);
@@ -980,45 +1029,46 @@ std::optional<MyMatrix<Tint>> LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const&
   int n = LorMat1.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  PolyHeuristicSerial<TintGroup> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
+  PolyHeuristicSerial<TintGroup> AllArr =
+      AllStandardHeuristicSerial<Tint>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
   //
-  LorentzianPerfectEntry<T,Tint> eRec2 = LORENTZ_GetOnePerfect<T,Tint>(LorMat2, TheOption, os);
+  LorentzianPerfectEntry<T, Tint> eRec2 =
+      LORENTZ_GetOnePerfect<T, Tint>(LorMat2, TheOption, os);
   MyMatrix<Tint> EXT2 = LORENTZ_GetEXT(eRec2);
   //
-  DataPerfectLorentzian<T, Tint, Tgroup> data{n,
-                                    LorMat1,
-                                    TheOption,
-                                    std::move(rddo)};
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n, LorMat1, TheOption,
+                                              std::move(rddo)};
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   std::optional<MyMatrix<Tint>> opt;
-  auto f_incorrect=[&](Tobj const& x) -> bool {
-    std::optional<MyMatrix<Tint>> opt_res = LORENTZ_TestEquivalence<T,Tint,Tgroup>(LorMat1, LorMat2, x.EXT, EXT2, os);
+  auto f_incorrect = [&](Tobj const &x) -> bool {
+    std::optional<MyMatrix<Tint>> opt_res =
+        LORENTZ_TestEquivalence<T, Tint, Tgroup>(LorMat1, LorMat2, x.EXT, EXT2,
+                                                 os);
     if (!opt_res) {
-      MyMatrix<Tint> const& eBigMat = *opt_res;
+      MyMatrix<Tint> const &eBigMat = *opt_res;
       opt = eBigMat;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-      MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T,Tint>(eBigMat);
+      MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tint>(eBigMat);
       MyMatrix<T> eProd = eBigMat_T * LorMat1 * eBigMat_T.transpose();
       if (eProd != LorMat2) {
         std::cerr << "It is not actually an equivalence\n";
         throw TerminalException{1};
       }
 #endif
-      return true;;
+      return true;
+      ;
     }
     return false;
   };
   int max_runtime_second = 0;
-  (void)EnumerateAndStore_Serial<Tdata,decltype(f_incorrect)>(data_func, f_incorrect, max_runtime_second);
+  (void)EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+      data_func, f_incorrect, max_runtime_second);
   return opt;
 }
-
-
-
 
 // clang-format off
 #endif  // SRC_LORENTZIAN_PERFECT_FUND_H_
