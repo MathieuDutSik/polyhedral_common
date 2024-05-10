@@ -98,11 +98,20 @@ template <typename T> T sqr_estimate_facet_coefficients(MyMatrix<T> const &M) {
 }
 
 template <typename T>
-void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+  static_assert(is_ring_field<T>::value,
+                "Requires T to be a field in CheckFacetInequalityKernel");
   int siz = eList.size();
   int nb = eList.count();
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
+  int rnk = RankMat(EXT);
+  if (rnk != nbCol) {
+    std::cerr << "EXT should be of full rank\n";
+    std::cerr << "rnk=" << rnk << " nbCol=" << nbCol << "\n";
+    std::cerr << "context=" << context << "\n";
+    throw TerminalException{1};
+  }
   if (nbRow != siz) {
     std::cerr << "nbRow=" << nbRow << " siz=" << siz << " which is inconsistent\n";
     std::cerr << "context=" << context << "\n";
@@ -163,6 +172,20 @@ void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string
     std::cerr << "context=" << context << "\n";
     throw TerminalException{1};
   }
+}
+
+template <typename T>
+inline typename std::enable_if<is_ring_field<T>::value, void>::type
+CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+  CheckFacetInequalityKernel(EXT, eList, context);
+}
+
+template <typename T>
+inline typename std::enable_if<!is_ring_field<T>::value, void>::type
+CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, T>(EXT);
+  CheckFacetInequalityKernel(EXT_field, eList, context);
 }
 
 template <typename T>

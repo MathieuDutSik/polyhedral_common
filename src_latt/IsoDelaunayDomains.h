@@ -1008,6 +1008,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
   };
   auto get_matching_listinfo=[&](int const& iInfo, int const& iFacet, Face const& eInc) -> MatchedFacet {
     MyMatrix<Tvert> const& EXT = ListInfo[iInfo][iFacet].EXT;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
+#endif
     for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
       std::optional<Telt> opt = ListInfo[iInfo][iFacet].TheStab.RepresentativeAction_OnSets(eAdj.eInc, eInc);
       if (opt) {
@@ -1032,14 +1035,14 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     std::cerr << "ISO_EDGE: FLT: Failed to find a matching entry in get_matching_old_tessel\n";
     throw TerminalException{1};
   };
-  auto get_lower_adjacency=[&](int iInfo, int iFacet) -> Delaunay_AdjO<Tvert> {
+  auto get_lower_adjacency=[&](int const& iInfo, int const& iFacet) -> Delaunay_AdjO<Tvert> {
     for (auto & fAdj : ListInfo[iInfo][iFacet].ListAdj) {
       if (ListInfo[iInfo][fAdj.iOrb].Position == -1) {
         return fAdj;
       }
     }
     std::cerr << "ISO_EDGE: FLT: iInfo=" << iInfo << " iFacet=" << iFacet << "\n";
-    std::cerr << "ISO_EDGE: FLT: Failed to find a lower facet\n";
+    std::cerr << "ISO_EDGE: FLT: Failed to find an entry in get_lower_adjacency\n";
     throw TerminalException{1};
   };
   auto get_face_m_m=[](MyMatrix<Tvert> const& M1, MyMatrix<Tvert> const& M2) -> Face {
@@ -1201,6 +1204,7 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat;
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT, eAdj.eInc, ImageEXT);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: FLT: iInfo=" << iInfo << " iFacet=" << iFacet << " |Linc|=" << Linc.size() << " / " << Linc.count() << "\n";
           os << "ISO_DEL: FLT: Case 2\n";
 #endif
           MatchedFacet RecMatch = get_matching_listinfo(iInfo, iFacet, Linc);
