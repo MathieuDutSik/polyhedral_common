@@ -3159,6 +3159,10 @@ vectface DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
     std::cerr << "rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols() << "\n";
     throw TerminalException{1};
   }
+  if (!IsSymmetryGroupOfPolytope(EXT, GRP)) {
+    std::cerr << "The group GRP is not a symmetry group\n";
+    throw TerminalException{1};
+  }
   os << "REC_DD: DualDescriptionRecord, beginning\n";
   PrintPolyHeuristicSerial(rddo.AllArr, os);
 #endif

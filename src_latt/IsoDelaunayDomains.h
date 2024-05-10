@@ -442,7 +442,15 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
   return OrbitComputation<MyMatrix<Tvert>,MyVector<Tvert>,decltype(f_prod)>(ListGen, eV, f_prod, os);
 }
 
-
+/*
+  The function is named "NextGeneration" since there was a slower version in GAP
+  which was superseded by a newer one and the name is inherited.
+  What the function do is merge Delaunay polytopes and form the repartitioning
+  polytopes by lifting the height.
+  The lower facets correspond to the old Delaunay tessellation, the upper ones
+  to the new one. The lateral ones on the side are named "barrel" and are used
+  when switching groups of 
+ */
 template<typename T, typename Tvert, typename Tgroup>
 std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {
   std::ostream& os = rddo.os;
@@ -910,10 +918,15 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(si
 }
 
 
+/*
+  Effectively do the flipping. Note that the whole computation is combinatorial
+  and all the polyhedral computations are done in the FindRepartitionningInfoNextGeneration
+  code.
+ */
 template<typename T, typename Tvert, typename Tgroup>
 DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, MyMatrix<T> const& InteriorElement, std::vector<AdjInfo> const& ListInformationsOneFlipping, RecordDualDescOperation<T, Tgroup> & rddo) {
-  std::ostream& os = rddo.os;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  std::ostream& os = rddo.os;
   os << "ISO_DEL: FLT: FlippingLtype, begin\n";
 #endif
   using Tgr = GraphListAdj;
