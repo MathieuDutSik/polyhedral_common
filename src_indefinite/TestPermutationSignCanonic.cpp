@@ -23,7 +23,8 @@ int main(int argc, char *argv[]) {
     }
     int nbRow = M.rows();
     //
-    MyMatrix<T> Mcan = CanonicalizationPermutationSigns<T, Tint>(M, std::cerr).Mred;
+    MyMatrix<T> Mcan =
+        CanonicalizationPermutationSigns<T, Tint>(M, std::cerr).Mred;
     for (int iter = 0; iter < 50; iter++) {
       std::cerr << "iter=" << iter << "\n";
       std::vector<int> ePerm = RandomPermutation<int>(nbRow);
@@ -33,7 +34,7 @@ int main(int argc, char *argv[]) {
       }
       MyMatrix<T> Mnew = eP * M * eP.transpose();
       MyMatrix<T> Mnew_can =
-        CanonicalizationPermutationSigns<T, Tint>(Mnew, std::cerr).Mred;
+          CanonicalizationPermutationSigns<T, Tint>(Mnew, std::cerr).Mred;
       if (Mcan != Mnew_can) {
         std::cerr << "The matrices are not equal\n";
         std::cerr << "Mcan=\n";
