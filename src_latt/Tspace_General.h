@@ -8,7 +8,6 @@
 #include "Tspace_Namelist.h"
 // clang-format on
 
-
 // clang-format off
 #endif  // SRC_LATT_TSPACE_GENERAL_H_
 // clang-format on

@@ -6,8 +6,9 @@
 #include "Group.h"
 // clang-format on
 
-template<typename T>
-void write_result(std::optional<MyMatrix<T>> const& opt, std::string const& OutFormat, std::ostream & os) {
+template <typename T>
+void write_result(std::optional<MyMatrix<T>> const &opt,
+                  std::string const &OutFormat, std::ostream &os) {
   if (OutFormat == "simple") {
     if (opt) {
       os << "It is equivalence\n";
@@ -28,7 +29,6 @@ void write_result(std::optional<MyMatrix<T>> const& opt, std::string const& OutF
   throw TerminalException{1};
 }
 
-
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "TSPACE_Equivalence [FileLinSpa] [FileMat1] [FileMat2]\n";
       std::cerr << "or\n";
-      std::cerr << "TSPACE_Equivalence [FileLinSpa] [FileMat1] [FileMat2] [OutFormat] [FileOut]\n";
+      std::cerr << "TSPACE_Equivalence [FileLinSpa] [FileMat1] [FileMat2] "
+                   "[OutFormat] [FileOut]\n";
       return -1;
     }
     std::string FileTspace = argv[1];
@@ -60,7 +61,9 @@ int main(int argc, char *argv[]) {
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
     MyMatrix<T> eMat1 = ReadMatrixFile<T>(FileGram1);
     MyMatrix<T> eMat2 = ReadMatrixFile<T>(FileGram2);
-    std::optional<MyMatrix<Tint>> opt = LINSPA_TestEquivalenceGramMatrix<T,Tint,Tgroup>(LinSpa, eMat1, eMat2, std::cerr);
+    std::optional<MyMatrix<Tint>> opt =
+        LINSPA_TestEquivalenceGramMatrix<T, Tint, Tgroup>(LinSpa, eMat1, eMat2,
+                                                          std::cerr);
     if (FileOut == "stderr") {
       write_result(opt, OutFormat, std::cerr);
     } else {

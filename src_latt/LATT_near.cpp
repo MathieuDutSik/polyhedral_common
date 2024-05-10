@@ -23,7 +23,8 @@ void process(std::string const &choice, std::string const &FileGram,
   int n = GramMat.rows();
   auto get_result = [&]() -> MyMatrix<Tint> {
     if (choice == "nearest") {
-      resultCVP<T, Tint> res = CVPVallentinProgram_exact<T, Tint>(GramMat, eV, std::cerr);
+      resultCVP<T, Tint> res =
+          CVPVallentinProgram_exact<T, Tint>(GramMat, eV, std::cerr);
       return res.ListVect;
     }
     std::optional<std::string> opt_near = get_postfix(choice, "near=");

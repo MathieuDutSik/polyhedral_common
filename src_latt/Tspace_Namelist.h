@@ -66,14 +66,14 @@ FullNamelist NAMELIST_GetOneTSPACE() {
   return {ListBlock, "undefined"};
 }
 
-template<typename T>
-LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
+template <typename T>
+LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile) {
   std::ifstream is(eFile);
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
   int n = SuperMat.rows();
   std::vector<MyMatrix<T>> ListMat = ReadListMatrix<T>(is);
   std::vector<std::vector<T>> ListLineMat;
-  for (auto & eMat : ListMat) {
+  for (auto &eMat : ListMat) {
     std::vector<T> eV = GetLineVector(eMat);
     ListLineMat.push_back(eV);
   }
@@ -83,11 +83,13 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const& eFile) {
   //
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens);
-  return {n, isBravais, SuperMat, ListMat, ListLineMat, ListMatAsBigMat, ListComm, ListSubspaces, PtStabGens};
+  return {n,        isBravais,     SuperMat,
+          ListMat,  ListLineMat,   ListMatAsBigMat,
+          ListComm, ListSubspaces, PtStabGens};
 }
 
-template<typename T>
-void WriteLinSpace(std::ostream& os, LinSpaceMatrix<T> const& LinSpa) {
+template <typename T>
+void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteMatrix(os, LinSpa.SuperMat);
   WriteListMatrix(os, LinSpa.ListMat);
   WriteListMatrix(os, LinSpa.ListComm);
@@ -95,18 +97,19 @@ void WriteLinSpace(std::ostream& os, LinSpaceMatrix<T> const& LinSpa) {
   WriteListMatrix(os, LinSpa.PtStabGens);
 }
 
-template<typename T>
-void WriteLinSpaceFile(std::string const& eFile, LinSpaceMatrix<T> const& LinSpa) {
+template <typename T>
+void WriteLinSpaceFile(std::string const &eFile,
+                       LinSpaceMatrix<T> const &LinSpa) {
   std::ofstream os(eFile);
   WriteLinSpace(os, LinSpa);
 }
 
-template<typename T, typename Tint>
-LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
+template <typename T, typename Tint>
+LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   std::string TypeTspace = Blk.ListStringValues.at("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
-  auto set_paperwork=[&]() -> void {
-    for (auto & eMat : LinSpaRet.ListMat) {
+  auto set_paperwork = [&]() -> void {
+    for (auto &eMat : LinSpaRet.ListMat) {
       std::vector<T> eV = GetLineVector(eMat);
       LinSpaRet.ListLineMat.push_back(eV);
     }
@@ -115,7 +118,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       LinSpaRet.ListMatAsBigMat = GetListMatAsBigMat(LinSpaRet.ListMat);
     }
   };
-  auto set_listcomm=[&]() -> void {
+  auto set_listcomm = [&]() -> void {
     std::string ListComm = Blk.ListStringValues.at("ListComm");
     if (ListComm == "Trivial") {
       LinSpaRet.ListComm.clear();
@@ -138,13 +141,14 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     std::cerr << "Failed to find an option for ListComm that suits\n";
     throw TerminalException{1};
   };
-  auto set_subspaces=[&]() -> void {
-    std::string FileListSubspaces = Blk.ListStringValues.at("FileListSubspaces");
+  auto set_subspaces = [&]() -> void {
+    std::string FileListSubspaces =
+        Blk.ListStringValues.at("FileListSubspaces");
     if (FileListSubspaces != "unset") {
       LinSpaRet.ListSubspaces = ReadListMatrixFile<T>(FileListSubspaces);
     }
   };
-  auto set_pt_stab=[&]() -> void {
+  auto set_pt_stab = [&]() -> void {
     std::string PtGroupMethod = Blk.ListStringValues.at("PtGroupMethod");
     if (PtGroupMethod == "Trivial") {
       MyVector<T> eGen = -IdentityMat<T>(LinSpaRet.n);
@@ -152,9 +156,12 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       return;
     }
     if (PtGroupMethod == "Compute") {
-      std::vector<MyMatrix<Tint>> ListGens = ComputePointStabilizerTspace<T,Tint>(LinSpaRet.SuperMat, LinSpaRet.ListMat, os);
-      for (auto & eGen : ListGens) {
-        LinSpaRet.PtStabGens.push_back(UniversalMatrixConversion<T,Tint>(eGen));
+      std::vector<MyMatrix<Tint>> ListGens =
+          ComputePointStabilizerTspace<T, Tint>(LinSpaRet.SuperMat,
+                                                LinSpaRet.ListMat, os);
+      for (auto &eGen : ListGens) {
+        LinSpaRet.PtStabGens.push_back(
+            UniversalMatrixConversion<T, Tint>(eGen));
       }
       return;
     }
@@ -164,9 +171,11 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
       return;
     }
     if (PtGroupMethod == "File") {
-      std::string FilePtGroupGenerator = Blk.ListStringValues.at("FilePtGroupGenerator");
+      std::string FilePtGroupGenerator =
+          Blk.ListStringValues.at("FilePtGroupGenerator");
       if (FilePtGroupGenerator == "unset") {
-        std::cerr << "The FilePtGroupGenerator has not been set up, or set to unset\n";
+        std::cerr << "The FilePtGroupGenerator has not been set up, or set to "
+                     "unset\n";
         throw TerminalException{1};
       }
       LinSpaRet.PtStabGens = ReadListMatrixFile<T>(FilePtGroupGenerator);
@@ -175,33 +184,39 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
     std::cerr << "Failed to find an option for PtGroupMethod that suits\n";
     throw TerminalException{1};
   };
-  auto set_is_bravais=[&]() -> void {
-    LinSpaRet.isBravais = IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens);
+  auto set_is_bravais = [&]() -> void {
+    LinSpaRet.isBravais =
+        IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens);
   };
-  auto set_supermat=[&]() -> void {
+  auto set_supermat = [&]() -> void {
     std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
-    if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" && TypeTspace != "InvGroup") {
+    if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" &&
+        TypeTspace != "InvGroup") {
       if (SuperMatMethod == "NotNeeded") {
         std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
-        std::cerr << "For NotNeeded, the option needs to be RealQuad, ImagQuad or InvGroup\n";
+        std::cerr << "For NotNeeded, the option needs to be RealQuad, ImagQuad "
+                     "or InvGroup\n";
         throw TerminalException{1};
       }
     } else {
       if (SuperMatMethod != "NotNeeded") {
-        std::cerr << "For the options RealQuad, ImageQuad and InvGroup, the option has to be NotNeeded\n";
+        std::cerr << "For the options RealQuad, ImageQuad and InvGroup, the "
+                     "option has to be NotNeeded\n";
         throw TerminalException{1};
       }
     }
     if (TypeTspace == "InvGroup") {
       MyMatrix<T> eMat = IdentityMat<T>(LinSpaRet.n);
-      LinSpaRet.SuperMat = OrbitBarycenterSymmetricMatrix(eMat, LinSpaRet.ListMat);
+      LinSpaRet.SuperMat =
+          OrbitBarycenterSymmetricMatrix(eMat, LinSpaRet.ListMat);
       return;
     }
     if (SuperMatMethod == "NotNeeded") {
       return;
     }
     if (SuperMatMethod == "Compute") {
-      LinSpaRet.SuperMat = GetOnePositiveDefiniteMatrix<T,Tint>(LinSpaRet.ListMat, os);
+      LinSpaRet.SuperMat =
+          GetOnePositiveDefiniteMatrix<T, Tint>(LinSpaRet.ListMat, os);
       return;
     }
     if (SuperMatMethod == "File") {
@@ -270,8 +285,6 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const& Blk, std::ostream & os) {
   std::cerr << "Failed to find an option for TypeTspace that suits\n";
   throw TerminalException{1};
 }
-
-
 
 // clang-format off
 #endif  // SRC_LATT_TSPACE_NAMELIST_H_

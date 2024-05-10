@@ -47,8 +47,8 @@ int main(int argc, char *argv[]) {
     std::vector<T> Vdiag(n_row, 0);
 
     std::vector<std::vector<Tidx>> ListGen =
-        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(
-            SHV_T, ListMat, Vdiag, std::cerr);
+        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat,
+                                                              Vdiag, std::cerr);
 
     std::vector<MyMatrix<Tint>> ListGenEquiv;
     for (auto &eList : ListGen) {

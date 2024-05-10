@@ -11,11 +11,10 @@
 #define DEBUG_SHVEC_EXACT_POLYTOPE
 #endif
 
-
 template <typename T, typename Tint, typename Finsert>
 int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
                        const MyMatrix<T> &FAC, Finsert f_insert,
-                       std::ostream& os) {
+                       std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_rows = FAC.rows();
   int n_col = FAC.cols();

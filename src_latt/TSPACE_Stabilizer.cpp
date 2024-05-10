@@ -6,8 +6,9 @@
 #include "Group.h"
 // clang-format on
 
-template<typename T>
-void write_group(std::vector<MyMatrix<T>> const& LGen, std::string const& OutFormat, std::ostream & os) {
+template <typename T>
+void write_group(std::vector<MyMatrix<T>> const &LGen,
+                 std::string const &OutFormat, std::ostream &os) {
   if (OutFormat == "count") {
     os << "number of generators=" << LGen.size() << "\n";
     return;
@@ -15,7 +16,7 @@ void write_group(std::vector<MyMatrix<T>> const& LGen, std::string const& OutFor
   if (OutFormat == "GAP") {
     os << "return Group([";
     bool IsFirst = true;
-    for (auto & eGen : LGen) {
+    for (auto &eGen : LGen) {
       if (!IsFirst) {
         os << ",\n";
       }
@@ -28,7 +29,6 @@ void write_group(std::vector<MyMatrix<T>> const& LGen, std::string const& OutFor
   std::cerr << "Failed to find a matching format\n";
   throw TerminalException{1};
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time;
@@ -44,7 +44,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram]\n";
       std::cerr << "or\n";
-      std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram] [OutFormat] [FileOut]\n";
+      std::cerr << "TSPACE_Stabilizer [FileTspace] [FileGram] [OutFormat] "
+                   "[FileOut]\n";
       return -1;
     }
     std::string FileTspace = argv[1];
@@ -58,7 +59,8 @@ int main(int argc, char *argv[]) {
     //
     LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
-    std::vector<MyMatrix<T>> ListGen = LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
+    std::vector<MyMatrix<T>> ListGen =
+        LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
     if (FileOut == "stderr") {
       write_group(ListGen, OutFormat, std::cerr);
     } else {

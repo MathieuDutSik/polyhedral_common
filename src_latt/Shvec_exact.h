@@ -16,8 +16,8 @@
 
 #ifdef DEBUG
 #define DEBUG_SHVEC
-//#define DEBUG_SHVEC_VECTOR
-//#define DEBUG_SHVEC_MATRIX
+// #define DEBUG_SHVEC_VECTOR
+// #define DEBUG_SHVEC_MATRIX
 #endif
 
 #ifdef TIMINGS
@@ -100,9 +100,8 @@ GetReducedShvecRequest(T_shvec_request<T> const &request) {
   MyVector<T> cosetRed = Q_T.transpose() * request.coset;
   std::pair<MyVector<Tint>, MyVector<T>> ePair =
       ReductionMod1vector<T, Tint>(cosetRed);
-  T_shvec_request<T> request_ret{
-      dim,          request.bound,
-      ePair.second, eRec.GramMatRed, request.central};
+  T_shvec_request<T> request_ret{dim, request.bound, ePair.second,
+                                 eRec.GramMatRed, request.central};
   cvp_reduction_info<Tint> cvp_red{ePair.first, eRec.Pmat};
   return {std::move(request_ret), std::move(cvp_red)};
 }
@@ -180,7 +179,7 @@ Tint Infinitesimal_Floor(T const &a, T const &b) {
   long int eD2 = lround(eD1);
   Tint eReturn = eD2;
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = UniversalScalarConversion<T,Tint>(x) - b;
+    T eDiff = UniversalScalarConversion<T, Tint>(x) - b;
     if (eDiff <= 0)
       return true;
     if (eDiff * eDiff <= a)
@@ -222,7 +221,7 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
   long int eD2 = lround(eD1);
   Tint eReturn = eD2;
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = UniversalScalarConversion<T,Tint>(x) - b;
+    T eDiff = UniversalScalarConversion<T, Tint>(x) - b;
     if (eDiff >= 0)
       return true;
     if (eDiff * eDiff <= a)
@@ -302,7 +301,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
       eQuot = Trem(i) / q(i, i);
       eSum = -U(i) - C(i);
       f_set_bound(eQuot, eSum, q, x, i, Upper(i), x(i));
-      x_T(i) = UniversalScalarConversion<T,Tint>(x(i));
+      x_T(i) = UniversalScalarConversion<T, Tint>(x(i));
       needs_new_bound = false;
     } else {
       x(i) += 1;
@@ -387,7 +386,8 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (field case)\n";
 #endif
-  return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(request, bound, f_insert, f_set_bound);
+  return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(
+      request, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
@@ -401,8 +401,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
   //
   Tfield bound_field = UniversalScalarConversion<Tfield, T>(bound);
   T_shvec_request<Tfield> request_field{
-      request.dim,
-      UniversalScalarConversion<Tfield, T>(request.bound),
+      request.dim, UniversalScalarConversion<Tfield, T>(request.bound),
       UniversalVectorConversion<Tfield, T>(request.coset),
       UniversalMatrixConversion<Tfield, T>(request.gram_matrix),
       request.central};
@@ -413,7 +412,8 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
     return f_insert(V, min_T);
   };
   int retVal =
-      computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(request_field, bound_field, f_insert_field, f_set_bound);
+      computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(
+          request_field, bound_field, f_insert_field, f_set_bound);
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (ring case) exit\n";
 #endif
@@ -430,7 +430,8 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
     upper = Infinitesimal_Floor<T, Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<T, Tint>(eQuot, eSum);
   };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, bound, f_insert, f_set_bound);
+  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
+      request, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert>
@@ -445,7 +446,8 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
     upper = Infinitesimal_Floor<Tfield, Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<Tfield, Tint>(eQuot, eSum);
   };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, bound, f_insert, f_set_bound);
+  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(
+      request, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint>
@@ -492,7 +494,7 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
       }
     };
     int result =
-      computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
+        computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
     if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
       break;
     }
@@ -514,7 +516,8 @@ bool get_central(const MyVector<T> &coset, const int &mode) {
 
 template <typename T>
 T_shvec_request<T> initShvecReq(const MyMatrix<T> &gram_matrix,
-                                const MyVector<T> &coset, const T &bound, int mode) {
+                                const MyVector<T> &coset, const T &bound,
+                                int mode) {
   int dim = gram_matrix.rows();
   T_shvec_request<T> request;
   request.dim = dim;
@@ -526,7 +529,8 @@ T_shvec_request<T> initShvecReq(const MyMatrix<T> &gram_matrix,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request, int mode) {
+T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request,
+                                            int mode) {
   if (mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     return computeMinimum<T, Tint>(request);
   }
@@ -653,7 +657,9 @@ void check_shvec_info_request(T_shvec_info<T, Tint> const &info,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request, int mode, [[maybe_unused]] std::ostream & os) {
+T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
+                                     int mode,
+                                     [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_SHVEC
   MicrosecondTime time;
 #endif
@@ -662,7 +668,8 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request, int mode
 #ifdef TIMINGS_SHVEC
   os << "|GetReducedShvecRequest|=" << time << "\n";
 #endif
-  T_shvec_info<T, Tint> info1 = T_computeShvec_Kernel<T, Tint>(ePair.first, mode);
+  T_shvec_info<T, Tint> info1 =
+      T_computeShvec_Kernel<T, Tint>(ePair.first, mode);
 #ifdef TIMINGS_SHVEC
   os << "|T_computeShvec_Kernel|=" << time << "\n";
 #endif
@@ -683,7 +690,8 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request, int mode
 
 template <typename T, typename Tint>
 resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
-                                             MyVector<T> const &eV, std::ostream& os) {
+                                             MyVector<T> const &eV,
+                                             std::ostream &os) {
 #ifdef TIMINGS_SHVEC
   MicrosecondTime time;
 #endif
@@ -722,25 +730,26 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   return {TheNorm, std::move(ListClos)};
 }
 
-template <typename T, typename Tint>
-struct CVPSolver {
+template <typename T, typename Tint> struct CVPSolver {
 private:
   MyMatrix<T> const &GramMat;
   int dim;
   LLLreduction<T, Tint> eRec;
-  std::ostream& os;
+  std::ostream &os;
   MyMatrix<T> Q_T;
   T_shvec_request<T> request;
+
 public:
-  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream& _os) : GramMat(_GramMat), dim(GramMat.rows()), eRec(LLLreducedBasisDual<T, Tint>(GramMat)), os(_os) {
+  CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
+      : GramMat(_GramMat), dim(GramMat.rows()),
+        eRec(LLLreducedBasisDual<T, Tint>(GramMat)), os(_os) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
     T bound_unset = 0;
     MyVector<T> V_unset(dim);
     bool central = false;
-    request = T_shvec_request<T>{
-      dim,          bound_unset,
-      V_unset, eRec.GramMatRed, central};
+    request =
+        T_shvec_request<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
   }
   resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) {
     if (IsIntegralVector(eV)) {
@@ -750,15 +759,16 @@ public:
         ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
       return {TheNorm, ListVect};
     }
-    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+    MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
-      ReductionMod1vector<T, Tint>(cosetRed);
+        ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
-      MyVector<Tint> x = eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
+      MyVector<Tint> x =
+          eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
       for (int i = 0; i < dim; i++) {
         ListClos(iVect, i) = x(i);
       }
@@ -776,7 +786,8 @@ public:
         throw TerminalException{1};
       }
     }
-    resultCVP<T, Tint> res = CVPVallentinProgram_exact<T,Tint>(GramMat, eV, os);
+    resultCVP<T, Tint> res =
+        CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
     if (res.TheNorm != TheNorm || res.ListVect.rows() != ListClos.rows()) {
       std::cerr << "Inconsistecy error between the two methods\n";
       throw TerminalException{1};
@@ -784,10 +795,11 @@ public:
 #endif
     return {TheNorm, std::move(ListClos)};
   }
-  std::vector<MyVector<Tint>> FixedNormVectors(MyVector<T> const &eV, T const& TheNorm) {
-    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+  std::vector<MyVector<Tint>> FixedNormVectors(MyVector<T> const &eV,
+                                               T const &TheNorm) {
+    MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
-      ReductionMod1vector<T, Tint>(cosetRed);
+        ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.central = false;
     request.bound = TheNorm;
@@ -802,9 +814,9 @@ public:
     (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
 #ifdef DEBUG_SHVEC
     MyVector<T> eDiff(dim);
-    for (auto & eVect : ListVect) {
+    for (auto &eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarConversion<T,Tint>(eVect(i));
+        T val = UniversalScalarConversion<T, Tint>(eVect(i));
         eDiff(i) = val - eV(i);
       }
       if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
@@ -815,15 +827,17 @@ public:
 #endif
     return ListVect;
   }
-  std::vector<MyVector<Tint>> AtMostNormVectors(MyVector<T> const &eV, T const& MaxNorm) {
-    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+  std::vector<MyVector<Tint>> AtMostNormVectors(MyVector<T> const &eV,
+                                                T const &MaxNorm) {
+    MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
-      ReductionMod1vector<T, Tint>(cosetRed);
+        ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.central = false;
     request.bound = MaxNorm;
     std::vector<MyVector<Tint>> ListVect;
-    auto f_insert = [&](const MyVector<Tint> &V, [[maybe_unused]] const T &min) -> bool {
+    auto f_insert = [&](const MyVector<Tint> &V,
+                        [[maybe_unused]] const T &min) -> bool {
       MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
       ListVect.push_back(x);
       return true;
@@ -831,9 +845,9 @@ public:
     (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
 #ifdef DEBUG_SHVEC
     MyVector<T> eDiff(dim);
-    for (auto & eVect : ListVect) {
+    for (auto &eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarConversion<T,Tint>(eVect(i));
+        T val = UniversalScalarConversion<T, Tint>(eVect(i));
         eDiff(i) = val - eV(i);
       }
       if (MaxNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
@@ -846,11 +860,9 @@ public:
   }
 };
 
-
-
 template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat,
-                                   T const &MaxNorm, std::ostream& os) {
+MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat, T const &MaxNorm,
+                                   std::ostream &os) {
   int dim = GramMat.rows();
   if (dim == 1) {
     std::vector<MyVector<Tint>> ListVect;
@@ -899,7 +911,8 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
   } else {
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
     MyVector<T> cosetVect = ZeroVector<T>(dim);
-    T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, SpecNorm, mode);
+    T_shvec_request<T> request =
+        initShvecReq(GramMat, cosetVect, SpecNorm, mode);
     request.central = true;
     //
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {

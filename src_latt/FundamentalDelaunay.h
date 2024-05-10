@@ -19,9 +19,9 @@
 #endif
 
 template <typename T, typename Tint>
-resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
-                                       MyVector<T> const &eV,
-                                       std::string const &NameMeth, std::ostream& os) {
+resultCVP<T, Tint>
+CVPVallentinProgram(MyMatrix<T> const &GramMat, MyVector<T> const &eV,
+                    std::string const &NameMeth, std::ostream &os) {
   if (NameMeth == "SVexact")
     return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
   //  if (NameMeth == "SVdouble")
@@ -43,7 +43,7 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
-                                    CVPSolver<T,Tint> & solver,
+                                    CVPSolver<T, Tint> &solver,
                                     std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
@@ -77,7 +77,8 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       for (int i = 0; i <= dim; i++)
         ListIneq(iVect, i) = fVect(i);
     }
-    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
+    LpSolution<T> eSol =
+        CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
     assert(eSol.PrimalDefined);
     MyVector<T> eVect = eSol.DirectSolution;
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
@@ -91,7 +92,8 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
           RetEXT(iVect, 1 + i) = TheCVP.ListVect(iVect, i);
       }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-      os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|=" << RetEXT.rows() << " vertices\n";
+      os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
+         << RetEXT.rows() << " vertices\n";
 #endif
       return RetEXT;
     } else {
@@ -156,12 +158,12 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
     idx++;
   }
   std::optional<MyVector<T>> opt = SolutionMat(ListEquation, ListB);
-  MyVector<T> const& eSol = *opt;
+  MyVector<T> const &eSol = *opt;
   MyVector<T> eCent(1 + n);
   eCent(0) = 1;
   for (int i = 0; i < n; i++)
     eCent(i + 1) = eSol(i);
-  auto get_sqr_dist=[&](int iVert) -> T {
+  auto get_sqr_dist = [&](int iVert) -> T {
     MyVector<T> eW(n);
     for (int i = 0; i < n; i++)
       eW(i) = eSol(i) - EXT(iVert, i + 1);
@@ -181,7 +183,6 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
 #endif
   return {std::move(SquareRadius), std::move(eCent)};
 }
-
 
 // This is for finding cirsumscribing spheres and their radius
 //
@@ -203,45 +204,50 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
 // G[v1] - G[v2] = (2 v1 G - 2 v2 G) (ePt + t eDir)
 // The linear system is then written as
 // C = t D
-template<typename T>
-struct AdjacentDelaunayPointSolver {
+template <typename T> struct AdjacentDelaunayPointSolver {
 private:
   int n;
-  MyMatrix<T> const& GramMat;
-  MyMatrix<T> const& EXT;
-  Face const& eInc;
+  MyMatrix<T> const &GramMat;
+  MyMatrix<T> const &EXT;
+  Face const &eInc;
   std::vector<T> LineGramMat;
   MyVector<T> ePt;
   MyVector<T> eDir;
   MyVector<T> v1;
   T G_v1;
   MyVector<T> two_v1_G;
-  std::ostream& os;
+  std::ostream &os;
+
 public:
-  AdjacentDelaunayPointSolver(MyMatrix<T> const &_GramMat, MyMatrix<T> const &_EXT, Face const &_eInc, std::ostream& _os) : n(_GramMat.rows()), GramMat(_GramMat), EXT(_EXT), eInc(_eInc), LineGramMat(GetLineVector(GramMat)), ePt(GramMat.rows()), eDir(GramMat.rows()), v1(n), os(_os) {
+  AdjacentDelaunayPointSolver(MyMatrix<T> const &_GramMat,
+                              MyMatrix<T> const &_EXT, Face const &_eInc,
+                              std::ostream &_os)
+      : n(_GramMat.rows()), GramMat(_GramMat), EXT(_EXT), eInc(_eInc),
+        LineGramMat(GetLineVector(GramMat)), ePt(GramMat.rows()),
+        eDir(GramMat.rows()), v1(n), os(_os) {
     std::vector<size_t> V;
     size_t n_vert = EXT.rows();
-    for (size_t i=0; i<n_vert; i++) {
+    for (size_t i = 0; i < n_vert; i++) {
       if (eInc[i] == 1) {
         V.push_back(i);
       }
     }
     size_t cnt = V.size();
-    for (int i=0; i<n; i++) {
-      v1(i) = EXT(V[0], i+1);
+    for (int i = 0; i < n; i++) {
+      v1(i) = EXT(V[0], i + 1);
     }
     G_v1 = EvaluateLineVector(LineGramMat, v1);
     two_v1_G = 2 * GramMat * v1;
-    MyMatrix<T> Equa(cnt-1, n+1);
+    MyMatrix<T> Equa(cnt - 1, n + 1);
     MyVector<T> v2(n);
-    for (size_t i_vert=0; i_vert<cnt-1; i_vert++) {
-      for (int i=0; i<n; i++) {
-        v2(i) = EXT(V[i_vert + 1], i+1);
+    for (size_t i_vert = 0; i_vert < cnt - 1; i_vert++) {
+      for (int i = 0; i < n; i++) {
+        v2(i) = EXT(V[i_vert + 1], i + 1);
       }
       T G_v2 = EvaluateLineVector(LineGramMat, v2);
       MyVector<T> two_v2_G = 2 * GramMat * v2;
       Equa(i_vert, 0) = G_v1 - G_v2;
-      for (int i=0; i<n; i++) {
+      for (int i = 0; i < n; i++) {
         Equa(i_vert, i + 1) = two_v2_G(i) - two_v1_G(i);
       }
     }
@@ -252,14 +258,14 @@ public:
       throw TerminalException{1};
     }
 #endif
-    auto get_point_direction=[&]() -> void {
-      for (int pos=0; pos<2; pos++) {
-        if (NSP(pos,0) != 0) {
-          for (int i=0; i<n; i++) {
-            ePt(i) = NSP(pos,i+1) / NSP(pos,0);
+    auto get_point_direction = [&]() -> void {
+      for (int pos = 0; pos < 2; pos++) {
+        if (NSP(pos, 0) != 0) {
+          for (int i = 0; i < n; i++) {
+            ePt(i) = NSP(pos, i + 1) / NSP(pos, 0);
           }
-          for (int i=0; i<n; i++) {
-            eDir(i) = NSP(1-pos, i+1) - ePt(i) * NSP(1-pos,0);
+          for (int i = 0; i < n; i++) {
+            eDir(i) = NSP(1 - pos, i + 1) - ePt(i) * NSP(1 - pos, 0);
           }
           return;
         }
@@ -270,7 +276,7 @@ public:
     get_point_direction();
   }
   // v2 should be a point outside of the plane
-  CP<T> GetCenterRadius(MyVector<T> const& v2) {
+  CP<T> GetCenterRadius(MyVector<T> const &v2) {
     T G_v2 = EvaluateLineVector(LineGramMat, v2);
     MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
     T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
@@ -279,13 +285,13 @@ public:
     MyVector<T> eCent = ePt + t * eDir;
     MyVector<T> delta = eCent - v1;
     T eSqrDist = EvaluateLineVector(LineGramMat, delta);
-    MyVector<T> eCentRet(n+1);
+    MyVector<T> eCentRet(n + 1);
     eCentRet(0) = 1;
-    for (int i=0; i<n; i++)
-      eCentRet(i+1) = eCent(i);
+    for (int i = 0; i < n; i++)
+      eCentRet(i + 1) = eCent(i);
     return {eSqrDist, eCentRet};
   }
-  T GetRadius(MyVector<T> const& v2) {
+  T GetRadius(MyVector<T> const &v2) {
     T G_v2 = EvaluateLineVector(LineGramMat, v2);
     MyVector<T> two_v1_m_v2_G = two_v1_G - 2 * GramMat * v2;
     T C_cst = G_v1 - G_v2 - two_v1_m_v2_G.dot(ePt);
@@ -297,18 +303,17 @@ public:
   }
 };
 
-
-
 template <typename T, typename Tint>
-MyMatrix<Tint>
-FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & solver, MyMatrix<Tint> const& ShvGraverBasis,
-                             MyMatrix<T> const &EXT, Face const &eInc, std::ostream& os) {
+MyMatrix<Tint> FindAdjacentDelaunayPolytope(
+    MyMatrix<T> const &GramMat, CVPSolver<T, Tint> &solver,
+    MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
+    Face const &eInc, std::ostream &os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
   int dim = GramMat.rows();
   MyVector<T> TheFac = FindFacetInequality(EXT, eInc);
-  auto get_iColFind=[&]() -> int {
+  auto get_iColFind = [&]() -> int {
     for (int iCol = 0; iCol < dim; iCol++)
       if (TheFac(1 + iCol) != 0)
         return iCol;
@@ -319,7 +324,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
   T delta = -T_sign(TheFac(1 + iColFind));
   int jRow = eInc.find_first();
   MyVector<T> SelectedVertex(dim);
-  for (int i=0; i<dim; i++)
+  for (int i = 0; i < dim; i++)
     SelectedVertex(i) = EXT(jRow, i + 1);
   SelectedVertex(iColFind) += delta;
   AdjacentDelaunayPointSolver<T> adps(GramMat, EXT, eInc, os);
@@ -335,8 +340,8 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
       bool IsImprovement = false;
       MyVector<T> NewTestVert(dim);
       int n_graver = ShvGraverBasis.rows();
-      for (int i_graver=0; i_graver<n_graver; i_graver++) {
-        for (int i=0; i<dim; i++) {
+      for (int i_graver = 0; i_graver < n_graver; i_graver++) {
+        for (int i = 0; i < dim; i++) {
           NewTestVert(i) = SelectedVertex(i) + ShvGraverBasis(i_graver, i);
         }
         T eScal = TheFac(0);
@@ -359,7 +364,8 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
 #endif
       if (!IsImprovement) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-        os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update << " |ShvGraverBasis|=" << n_graver << "\n";
+        os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update
+           << " |ShvGraverBasis|=" << n_graver << "\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
         os << "|fGraverUpdate|=" << time_graver << "\n";
@@ -369,7 +375,7 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
     }
   };
   fGraverUpdate();
-  auto get_reply=[&]() -> resultCVP<T, Tint> {
+  auto get_reply = [&]() -> resultCVP<T, Tint> {
     while (true) {
       CP<T> eCP = adps.GetCenterRadius(SelectedVertex);
       MyVector<T> eCenter(dim);
@@ -379,7 +385,8 @@ FindAdjacentDelaunayPolytope(MyMatrix<T> const &GramMat, CVPSolver<T,Tint> & sol
       if (reply.TheNorm == eCP.SquareRadius)
         return reply;
       for (int i = 0; i < dim; i++)
-        SelectedVertex(i) = UniversalScalarConversion<T,Tint>(reply.ListVect(0, i));
+        SelectedVertex(i) =
+            UniversalScalarConversion<T, Tint>(reply.ListVect(0, i));
       fGraverUpdate();
     }
   };

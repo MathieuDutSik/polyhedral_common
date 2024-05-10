@@ -6,48 +6,43 @@
 #include "Group.h"
 // clang-format on
 
-
-
-
-template<typename T, typename Tint>
-void process_C(boost::mpi::communicator &comm, FullNamelist const& eFull) {
+template <typename T, typename Tint>
+void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint_grp>;
-  return ComputeDelaunayPolytope<T,Tint,Tgroup>(comm, eFull);
+  return ComputeDelaunayPolytope<T, Tint, Tgroup>(comm, eFull);
 }
 
-
-
-template<typename T>
-void process_B(boost::mpi::communicator &comm, FullNamelist const& eFull) {
-  std::string arithmetic_Tint = GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
+template <typename T>
+void process_B(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  std::string arithmetic_Tint =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
   if (arithmetic_Tint == "gmp_integer") {
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_ComputeDelaunay B: Failed to find a matching type for arithmetic_Tint=" << arithmetic_Tint << "\n";
+  std::cerr << "LATT_MPI_ComputeDelaunay B: Failed to find a matching type for "
+               "arithmetic_Tint="
+            << arithmetic_Tint << "\n";
   std::cerr << "Available types: gmp_integer\n";
   throw TerminalException{1};
 }
 
-
-
-
-
-void process_A(boost::mpi::communicator &comm, FullNamelist const& eFull) {
-  std::string arithmetic_T = GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
+void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  std::string arithmetic_T =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
   if (arithmetic_T == "gmp_rational") {
     using T = mpq_class;
     return process_B<T>(comm, eFull);
   }
-  std::cerr << "LATT_MPI_ComputeDelaunay A: Failed to find a matching type for arithmetic_T=" << arithmetic_T << "\n";
+  std::cerr << "LATT_MPI_ComputeDelaunay A: Failed to find a matching type for "
+               "arithmetic_T="
+            << arithmetic_T << "\n";
   std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   boost::mpi::environment env(boost::mpi::threading::serialized);
