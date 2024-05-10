@@ -381,7 +381,8 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
   while (true) {
     size_t len = TheOrbit.size();
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP:  OrbitComputation_limit pos=" << pos << " len=" << len << "\n";
+    os << "MAT_GRP:  OrbitComputation_limit pos=" << pos << " len=" << len
+       << "\n";
 #endif
     if (pos == len)
       break;
@@ -582,7 +583,8 @@ MatrixIntegral_GeneratePermutationGroup(
     Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
         helper, eMatrGen, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen << "\n";
+    os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen
+       << "\n";
 #endif
     std::vector<Tidx> v(siz);
     for (Tidx i = 0; i < nbRow_tidx; i++)
@@ -685,13 +687,15 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
                           Tgroup const &GRPperm, Thelper const &helper,
                           Face const &eFace, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer (has_determining_ext)\n";
+  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer "
+        "(has_determining_ext)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
+  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
+     << "\n";
 #endif
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
@@ -727,7 +731,8 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   using Tidx = typename Telt::Tidx;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
+  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
+     << "\n";
 #endif
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
@@ -886,7 +891,8 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
                           Thelper const &helper, Face const &eFace,
                           [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer (!has_determining_ext)\n";
+  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer "
+        "(!has_determining_ext)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
@@ -905,7 +911,8 @@ MatrixIntegral_Stabilizer_RightCoset(typename Thelper::Treturn const &eret,
                                      Thelper const &helper, Face const &eFace,
                                      [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer (!has_determining_ext)\n";
+  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer "
+        "(!has_determining_ext)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
@@ -1235,7 +1242,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   T TotSize = 1;
   for (int i = 0; i < n; i++)
     TotSize *= TheMod;
-  os << "MAT_GRP: TheMod=" << TheMod << "  n=" << n << " TotSize=" << TotSize << "\n";
+  os << "MAT_GRP: TheMod=" << TheMod << "  n=" << n << " TotSize=" << TotSize
+     << "\n";
 #endif
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
@@ -1292,7 +1300,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
         bool test = CanTestSolutionIntMat(eCan, eVectG);
         if (!test) {
 #ifdef DEBUG_MATRIX_GROUP
-          os << "MAT_GRP: i=" << i << "  eVect=" << StringVectorGAP(eVect) << "\n";
+          os << "MAT_GRP: i=" << i << "  eVect=" << StringVectorGAP(eVect)
+             << "\n";
 #endif
           return eVect;
         }
@@ -1579,7 +1588,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       bool test = CanTestSolutionIntMat(eCan, eVect);
       if (!test) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP:   i=" << i << " eVect=" << StringVectorGAP(eVect) << "\n";
+        os << "MAT_GRP:   i=" << i << " eVect=" << StringVectorGAP(eVect)
+           << "\n";
         os << "MAT_GRP:   eEquiv=\n";
         WriteMatrix(os, eEquiv);
 #endif
@@ -1671,7 +1681,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
               eret, GRPperm, helper, eFace1, eFace2, os);
       if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: Exit while loop with proof that no equivalence exists\n";
+        os << "MAT_GRP: Exit while loop with proof that no equivalence "
+              "exists\n";
 #endif
         return {};
       }
@@ -1791,8 +1802,8 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   FractionMatrix<T> eRec1 = RemoveFractionMatrixPlusCoeff(InSpace1);
   FractionMatrix<T> eRec2 = RemoveFractionMatrixPlusCoeff(InSpace2);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: eRec1.TheMult=" << eRec1.TheMult << " eRec2.TheMult=" << eRec2.TheMult
-     << "\n";
+  os << "MAT_GRP: eRec1.TheMult=" << eRec1.TheMult
+     << " eRec2.TheMult=" << eRec2.TheMult << "\n";
 #endif
   if (eRec1.TheMult != eRec2.TheMult)
     return {};
@@ -1862,7 +1873,8 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before returning from LinearSpace_Equivalence_Kernel, retuning "
+  os << "MAT_GRP: Before returning from LinearSpace_Equivalence_Kernel, "
+        "retuning "
         "eElt\n";
 #endif
   return eElt;

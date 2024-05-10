@@ -36,7 +36,7 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
       throw TerminalException{1};
     }
     std::vector<MyMatrix<T>> ListGenMatr;
-    for (auto & eGen : GRP.SmallGeneratingSet()) {
+    for (auto &eGen : GRP.SmallGeneratingSet()) {
       MyMatrix<T> eGenMatr = RepresentVertexPermutation(EXT, EXT, eGen);
       ListGenMatr.push_back(eGenMatr);
     }
@@ -108,7 +108,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT]\n";
       std::cerr << "\n";
       std::cerr << "FileEXT   : The list of vectors\n";
-      std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or Oscar)\n";
+      std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or "
+                   "Oscar)\n";
       std::cerr << "FileGRP   : The file for outputting the group\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
@@ -126,8 +127,10 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       std::cerr << "        --- OutFormat ---\n";
       std::cerr << "\n";
-      std::cerr << "GAP            : Output to a GAP readable format (default)\n";
-      std::cerr << "ListMatrixFile : To be used by other software of polyhedral\n";
+      std::cerr
+          << "GAP            : Output to a GAP readable format (default)\n";
+      std::cerr
+          << "ListMatrixFile : To be used by other software of polyhedral\n";
       std::cerr << "Oscar          : Output to a CPP like format\n";
       std::cerr << "\n";
       std::cerr << "        --- FileGRP ---\n";

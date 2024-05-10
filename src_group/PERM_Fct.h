@@ -737,15 +737,13 @@ template <typename T, typename Telt>
 std::optional<MyMatrix<T>> FindTransformationGeneral(MyMatrix<T> const &EXT1,
                                                      MyMatrix<T> const &EXT2,
                                                      Telt const &ePerm) {
-  auto f=[&](int iRow1) -> int {
-    return ePerm.at(iRow1);
-  };
+  auto f = [&](int iRow1) -> int { return ePerm.at(iRow1); };
   return FindTransformationGeneral_f(EXT1, EXT2, f);
 }
 
 template <typename T, typename F>
-MyMatrix<T> FindTransformation_f(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
-                                 F f) {
+MyMatrix<T> FindTransformation_f(MyMatrix<T> const &EXT1,
+                                 MyMatrix<T> const &EXT2, F f) {
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral_f(EXT1, EXT2, f);
   MyMatrix<T> eMatr = unfold_opt(opt, "FindTransformationGeneral fails");
   return eMatr;
@@ -769,22 +767,18 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 }
 
 template <typename T, typename Tidx>
-std::optional<MyMatrix<T>> FindTransformationGeneral_vect(MyMatrix<T> const &EXT1,
-                                                          MyMatrix<T> const &EXT2,
-                                                          std::vector<Tidx> const& v) {
-  auto f=[&](int iRow1) -> int {
-    return v[iRow1];
-  };
+std::optional<MyMatrix<T>>
+FindTransformationGeneral_vect(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
+                               std::vector<Tidx> const &v) {
+  auto f = [&](int iRow1) -> int { return v[iRow1]; };
   return FindTransformationGeneral_f(EXT1, EXT2, f);
 }
 
 template <typename T, typename Tidx>
 MyMatrix<T> FindTransformation_vect(MyMatrix<T> const &EXT1,
                                     MyMatrix<T> const &EXT2,
-                                    std::vector<Tidx> const& v) {
-  auto f=[&](int iRow1) -> int {
-    return v[iRow1];
-  };
+                                    std::vector<Tidx> const &v) {
+  auto f = [&](int iRow1) -> int { return v[iRow1]; };
   return FindTransformation_f(EXT1, EXT2, f);
 }
 

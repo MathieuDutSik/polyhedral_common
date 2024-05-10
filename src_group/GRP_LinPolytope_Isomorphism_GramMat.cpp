@@ -51,8 +51,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     std::optional<std::vector<Tidx>> equiv =
-        LinPolytope_Isomorphism_GramMat<Tint, Tidx>(
-            EXT1, GramMat1, EXT2, GramMat2, std::cerr);
+        LinPolytope_Isomorphism_GramMat<Tint, Tidx>(EXT1, GramMat1, EXT2,
+                                                    GramMat2, std::cerr);
     //
     auto print_info = [&](std::ostream &os) -> void {
       if (OutFormat == "Oscar") {

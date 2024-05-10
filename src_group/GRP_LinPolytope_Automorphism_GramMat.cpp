@@ -23,8 +23,8 @@ void full_process_A(std::string const &eFileEXT, std::string const &eFileGram,
   int nbRow = EXT.rows();
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
-  Tgroup GRP = LinPolytope_Automorphism_GramMat<T, Tgroup>(
-      EXT, GramMat, std::cerr);
+  Tgroup GRP =
+      LinPolytope_Automorphism_GramMat<T, Tgroup>(EXT, GramMat, std::cerr);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
   if (OutFormat == "GAP") {
     os << "return " << GRP.GapString() << ";\n";

@@ -28,11 +28,11 @@ int main(int argc, char *argv[]) {
     std::string eFile = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
     //
-    Tgroup GRP =
-        LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
+    Tgroup GRP = LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
     //
-    for (auto & eGen : GRP.GeneratorsOfGroup()) {
-      std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT, EXT, eGen);
+    for (auto &eGen : GRP.GeneratorsOfGroup()) {
+      std::optional<MyMatrix<T>> opt =
+          FindTransformationGeneral(EXT, EXT, eGen);
       if (!opt) {
         std::cerr << "Failed to find a transformation\n";
         throw TerminalException{1};

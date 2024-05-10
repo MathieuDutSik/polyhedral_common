@@ -22,8 +22,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   std::pair<Tgroup, std::vector<Telt>> pair =
       LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tgroup>(EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup GRPisom =
-      LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
   std::cerr << "|GRPisom|=" << GRPisom.size()
             << " |pair.first|=" << pair.first.size()
             << " |pair.second|=" << pair.second.size() << "\n";

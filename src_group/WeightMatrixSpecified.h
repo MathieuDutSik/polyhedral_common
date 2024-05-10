@@ -25,8 +25,6 @@
   as input: f1, f2, f3, f4, f5.
  */
 
-
-
 // The hash map do not seem to make much difference in the overall
 // performance.
 
@@ -305,8 +303,8 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
 
 template <typename Tidx>
 void PrintVertexPartitionInfo(const VertexPartition<Tidx> &VP,
-                             const std::vector<uint8_t> &status,
-                             std::ostream &os) {
+                              const std::vector<uint8_t> &status,
+                              std::ostream &os) {
   os << "nbRow=" << VP.nbRow << "\n";
   size_t n_block = VP.ListBlocks.size();
   for (size_t i = 0; i < n_block; i++) {
@@ -662,8 +660,10 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
 /*
   See WeightMatrix.h : get_effective_weight_index for underlying logic
  */
-template<typename T, bool is_symm, typename F2>
-inline typename std::enable_if<is_symm, size_t>::type evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const& map, size_t iVert, size_t jVert, F2 f2) {
+template <typename T, bool is_symm, typename F2>
+inline typename std::enable_if<is_symm, size_t>::type
+evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
+            size_t iVert, size_t jVert, F2 f2) {
   if (jVert == nbRow + 1) {
     if (iVert == nbRow)
       return nWei;
@@ -678,8 +678,10 @@ inline typename std::enable_if<is_symm, size_t>::type evaluate_f2(size_t nbRow, 
   }
 }
 
-template<typename T, bool is_symm, typename F2>
-inline typename std::enable_if<!is_symm, size_t>::type evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const& map, size_t iVert, size_t jVert, F2 f2) {
+template <typename T, bool is_symm, typename F2>
+inline typename std::enable_if<!is_symm, size_t>::type
+evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
+            size_t iVert, size_t jVert, F2 f2) {
   size_t iVertRed = iVert % nbRow;
   size_t jVertRed = jVert % nbRow;
   if (jVert == 2 * nbRow) {
@@ -693,23 +695,22 @@ inline typename std::enable_if<!is_symm, size_t>::type evaluate_f2(size_t nbRow,
     }
   }
   if (iVertRed == jVertRed) {
-    // Because iVert < jVert, that case can only occurs if iVert = v1 and jVert = v2 for some v.
-    // Case B
+    // Because iVert < jVert, that case can only occurs if iVert = v1 and jVert
+    // = v2 for some v. Case B
     return nWei;
   }
   if (jVert < nbRow) {
-    // Because iVert < jVert, that case only occurs if iVert = v1, jVert = w1 with v != w
-    // Case A1
+    // Because iVert < jVert, that case only occurs if iVert = v1, jVert = w1
+    // with v != w Case A1
     return nWei + 1;
   }
   if (nbRow <= iVert) {
-    // Because iVert < jVert, that case only occurs if iVert = v2, jVert = w2 with v != w
-    // Case A2
+    // Because iVert < jVert, that case only occurs if iVert = v2, jVert = w2
+    // with v != w Case A2
     return nWei + 2;
   }
-  // From previous check, we are now in the situation where iVert = v1 and jVert = w2
-  // with v != w.
-  // Case E
+  // From previous check, we are now in the situation where iVert = v1 and jVert
+  // = w2 with v != w. Case E
   return map.at(f2(jVertRed));
 }
 
@@ -724,8 +725,11 @@ struct ExpandedSymbolic {
   std::vector<int> vertex_to_signature;
 };
 
-template<typename T, bool is_symm>
-inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nbWeight, WeightMatrixVertexSignatures<T> const &WMVS, [[maybe_unused]] std::ostream& os) {
+template <typename T, bool is_symm>
+inline typename std::enable_if<is_symm, ExpandedSymbolic>::type
+get_expanded_symbolic(size_t nbWeight,
+                      WeightMatrixVertexSignatures<T> const &WMVS,
+                      [[maybe_unused]] std::ostream &os) {
   size_t nbRow = WMVS.nbRow;
   // The old vertices, but there ar now two more vertices being added
   std::vector<std::vector<std::pair<int, int>>> list_signature;
@@ -788,8 +792,10 @@ inline typename std::enable_if<is_symm, ExpandedSymbolic>::type get_expanded_sym
 // *      and WMat.GetValue(iVert, jVert) off the diagonal.
 //
 // The diagonal value is available via WMVS in the first value.
-template<typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS, [[maybe_unused]] std::ostream& os) {
+template <typename T, bool is_symm>
+inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type
+get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
+                      [[maybe_unused]] std::ostream &os) {
   size_t nbRow = WMVS.nbRow;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "nWei=" << nWei << " nbRow=" << nbRow << "\n";
@@ -797,8 +803,10 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
 #endif
   std::vector<std::vector<std::pair<int, int>>> list_signature;
   std::vector<int> vertex_to_signature;
-  auto fUpdate = [](std::vector<std::pair<int,int>> & e_vect, int i_weight, int shift) -> void {
-    // We use a O(n) algorithm since we update only few entries. shift can be negative.
+  auto fUpdate = [](std::vector<std::pair<int, int>> &e_vect, int i_weight,
+                    int shift) -> void {
+    // We use a O(n) algorithm since we update only few entries. shift can be
+    // negative.
     for (auto &e_pair : e_vect) {
       if (e_pair.first == i_weight) {
         e_pair.second += shift;
@@ -809,34 +817,38 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
   };
   size_t n_sign_old = WMVS.ListPossibleSignatures.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  auto f_check=[&](std::vector<std::pair<int,int>> const& e_vect, int the_case) -> void {
+  auto f_check = [&](std::vector<std::pair<int, int>> const &e_vect,
+                     int the_case) -> void {
     size_t sum_vert = 0;
-    for (auto & ent : e_vect) {
+    for (auto &ent : e_vect) {
       sum_vert += ent.second;
     }
     if (sum_vert != 2 * nbRow) {
       std::cerr << "case=" << the_case << "\n";
-      std::cerr << "sum_vert=" << sum_vert << " but should be 2*nbRow=" << (2 * nbRow) << "\n";
+      std::cerr << "sum_vert=" << sum_vert
+                << " but should be 2*nbRow=" << (2 * nbRow) << "\n";
       throw TerminalException{1};
     }
   };
 #endif
-  // The vertices are written first with a block of v1 then a block of v2 and then spec = 2 * nbRow
-  // First block of vertices; updates:
-  // -- Add the weight nWei+1 for nbRow-1 times (the (v1, w1) adjacencies for v != w)
+  // The vertices are written first with a block of v1 then a block of v2 and
+  // then spec = 2 * nbRow First block of vertices; updates:
+  // -- Add the weight nWei+1 for nbRow-1 times (the (v1, w1) adjacencies for v
+  // != w)
   // -- Add the weight nWei for just one time (the (v1,v2) adjacency)
-  // -- Add the diagonal weight just one time (on 
+  // -- Add the diagonal weight just one time (on
   for (auto &esign : WMVS.ListPossibleSignatures) {
     // Our vertex is named V and is of the form v1
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
-    // The off diagonal values of the old matrix. So adjacencies (V = v1, w2) with v <> w.
+    // The off diagonal values of the old matrix. So adjacencies (V = v1, w2)
+    // with v <> w.
     for (size_t u = 0; u < len; u++)
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
     // Adjacency (V = v1, v2) that we missed from the above
     fUpdate(e_vect, nWei, 1);
     // Adjacencies (V = v1, w1) with v  <> w.
-    fUpdate(e_vect, nWei + 1, nbRow-1);
+    fUpdate(e_vect, nWei + 1, nbRow - 1);
     // Adjacency (V, spec = 2*nbRow)
     int diag_val = esign[0]; // The diagonal value
     fUpdate(e_vect, diag_val, 1);
@@ -846,8 +858,10 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
     list_signature.push_back(e_vect);
   }
   // Second block of vertices; updates:
-  // -- Add the value nWei + 2 for nbRow-1 times (the (v2,w2) adjacencies for v != w)
-  // -- Subtract the diagonal value by 1 (the diagonal value is replaced by nWei and not moved)
+  // -- Add the value nWei + 2 for nbRow-1 times (the (v2,w2) adjacencies for v
+  // != w)
+  // -- Subtract the diagonal value by 1 (the diagonal value is replaced by nWei
+  // and not moved)
   // -- Add the value mWei for just one time (the (v1,v2) adjacency)
   // -- Add the value nWei + 1 for two times (PURE GUESS at this point)
   for (auto &esign : WMVS.ListPossibleSignatures) {
@@ -886,11 +900,11 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
 #endif
   list_signature.push_back(f_vect);
   // Now the signatures.
-  for (size_t i_row=0; i_row<nbRow; i_row++) {
+  for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int iCaseOld = WMVS.ListSignatureByVertex[i_row];
     vertex_to_signature.push_back(iCaseOld);
   }
-  for (size_t i_row=0; i_row<nbRow; i_row++) {
+  for (size_t i_row = 0; i_row < nbRow; i_row++) {
     int iCaseOld = WMVS.ListSignatureByVertex[i_row];
     int iCaseNew = iCaseOld + n_sign_old;
     vertex_to_signature.push_back(iCaseNew);
@@ -901,9 +915,9 @@ inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type get_expanded_sy
 }
 
 template <typename T, bool is_symm, typename F1, typename F2>
-SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
-                                              WeightMatrixVertexSignatures<T> const &WMVS,
-                                              std::ostream &os) {
+SimplifiedVectexColoredGraph
+GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
+                 std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
@@ -929,18 +943,19 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
   //
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
-  ExpandedSymbolic expand = get_expanded_symbolic<T,is_symm>(nbWeight, WMVS, os);
+  ExpandedSymbolic expand =
+      get_expanded_symbolic<T, is_symm>(nbWeight, WMVS, os);
   size_t nbCase = expand.list_signature.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "|vertex_to_signature|=" << expand.vertex_to_signature.size() << "\n";
-  for (size_t i=0; i<expand.vertex_to_signature.size(); i++) {
+  for (size_t i = 0; i < expand.vertex_to_signature.size(); i++) {
     os << " " << expand.vertex_to_signature[i];
   }
   os << "\n";
   os << "|List_signature|=" << expand.list_signature.size() << "\n";
-  for (size_t iCase=0; iCase<nbCase; iCase++) {
+  for (size_t iCase = 0; iCase < nbCase; iCase++) {
     os << "iCase=" << iCase << " V =";
-    for (auto & ent : expand.list_signature[iCase]) {
+    for (auto &ent : expand.list_signature[iCase]) {
       os << " (" << ent.first << "," << ent.second << ")";
     }
     os << "\n";
@@ -960,7 +975,8 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
   std::vector<size_t> WeightByMult(nbMult, 0);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     int sizCase = ListNbCase[iCase];
-    std::vector<std::pair<int, int>> const& e_vect = expand.list_signature[iCase];
+    std::vector<std::pair<int, int>> const &e_vect =
+        expand.list_signature[iCase];
     for (auto &e_pair : e_vect) {
       int iWeight = e_pair.first;
       int eMult = e_pair.second;
@@ -968,8 +984,9 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
     }
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  for (size_t iMult=0; iMult<nbMult; iMult++) {
-    os << "iMult=" << iMult << "/" << nbMult << " WeightByMult=" << WeightByMult[iMult] << "\n";
+  for (size_t iMult = 0; iMult < nbMult; iMult++) {
+    os << "iMult=" << iMult << "/" << nbMult
+       << " WeightByMult=" << WeightByMult[iMult] << "\n";
   }
 #endif
   //
@@ -1001,7 +1018,7 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       MatrixAdj(iH, iCase) += nb_adj1;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  auto f_print=[&]() -> void {
+  auto f_print = [&]() -> void {
     os << "hS=" << hS << " nbCase=" << nbCase << " MatrixAdj=\n";
     for (size_t iH = 0; iH < hS; iH++) {
       os << "iH=" << iH << " MatrixAdj =";
@@ -1028,13 +1045,15 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
   //
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
-    std::vector<std::pair<int, int>> const& e_vect = expand.list_signature[iCase];
+    std::vector<std::pair<int, int>> const &e_vect =
+        expand.list_signature[iCase];
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    for (auto & epair : e_vect) {
+    for (auto &epair : e_vect) {
       if (epair.second < 0) {
         os << "iCase=" << iCase << "\n";
         f_print();
-        std::cerr << "A negative multiplicity is inserted which is not allowed\n";
+        std::cerr
+            << "A negative multiplicity is inserted which is not allowed\n";
         throw TerminalException{1};
       }
     }
@@ -1068,7 +1087,8 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
     for (size_t iH = 0; iH < hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
 
-  SimplifiedVectexColoredGraph s = GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
+  SimplifiedVectexColoredGraph s =
+      GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
   // Now setting up the adjacencies
   int pos = 0;
   std::vector<int> ListShift(nbVertTot);
@@ -1111,11 +1131,13 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
       }
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
-      // Both for is_symm = true/false, only the iVert < nbRow needs to be computed.
+      // Both for is_symm = true/false, only the iVert < nbRow needs to be
+      // computed.
       f1(iVert);
     }
     for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
-      size_t val = evaluate_f2<T,is_symm>(nbRow, nbWeight, map, iVert, jVert, f2);
+      size_t val =
+          evaluate_f2<T, is_symm>(nbRow, nbWeight, map, iVert, jVert, f2);
       size_t shift = e_pow * ListIdx[val];
       for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
         if (f_total[shift + i_pow] == 1) {
@@ -1165,7 +1187,6 @@ SimplifiedVectexColoredGraph GetSimplifiedVCG(F1 f1, F2 f2,
   return s;
 }
 
-
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalization_KnownSignature(
@@ -1180,44 +1201,50 @@ GetGroupCanonicalization_KnownSignature(
     throw TerminalException{1};
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "Before calling GetSimplifiedVCG from GetGroupCanonicalization_KnownSignature\n";
+  os << "Before calling GetSimplifiedVCG from "
+        "GetGroupCanonicalization_KnownSignature\n";
 #endif
-  SimplifiedVectexColoredGraph s = GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+  SimplifiedVectexColoredGraph s =
+      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   if (s.nbVert < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     using TidxC = uint8_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
+        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
+                                                                    os);
     std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
-                                                         os);
+        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
+            nbRow, ePair.first, os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
   if (s.nbVert < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
     using TidxC = uint16_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
+        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
+                                                                    os);
     std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
-                                                         os);
+        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
+            nbRow, ePair.first, os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
   if (s.nbVert < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
     using TidxC = uint32_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
+        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
+                                                                    os);
     std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
-                                                         os);
+        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
+            nbRow, ePair.first, os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
 #if !defined __APPLE__
   if (s.nbVert < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     using TidxC = uint64_t;
     std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-      GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
+        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
+                                                                    os);
     std::vector<Tidx> MapVectRev2 =
-      GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first,
-                                                         os);
+        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
+            nbRow, ePair.first, os);
     return {std::move(MapVectRev2), std::move(ePair.second)};
   }
 #endif
@@ -1239,9 +1266,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
     throw TerminalException{1};
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "Before calling GetSimplifiedVCG from GetStabilizerWeightMatrix_KnownSignature\n";
+  os << "Before calling GetSimplifiedVCG from "
+        "GetStabilizerWeightMatrix_KnownSignature\n";
 #endif
-  SimplifiedVectexColoredGraph s = GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+  SimplifiedVectexColoredGraph s =
+      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   return GRAPH_GetListGenerators_Simp<Tidx>(s, nbRow, os);
 }
 
@@ -1408,8 +1437,8 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tidx, bool is_symm,
-          typename F1, typename F2, typename F3, typename F4>
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F3, typename F4>
 std::vector<std::vector<Tidx>>
 GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
                                     std::ostream &os) {
@@ -1430,20 +1459,20 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   os << "Thematrix=\n";
   std::unordered_map<T, size_t> map_T;
   size_t n_val = 0;
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
     f1(iRow);
-    for (size_t iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iCol = 0; iCol < nbRow; iCol++) {
       T val = f2(iCol);
-      size_t & pos = map_T[val];
+      size_t &pos = map_T[val];
       if (pos == 0) {
         n_val++;
         pos = n_val;
       }
     }
   }
-  for (size_t iRow=0; iRow<nbRow; iRow++) {
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
     f1(iRow);
-    for (size_t iCol=0; iCol<nbRow; iCol++) {
+    for (size_t iCol = 0; iCol < nbRow; iCol++) {
       T val = f2(iCol);
       size_t pos = map_T[val] - 1;
       os << " " << pos;
@@ -1454,8 +1483,8 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 #endif
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
-    return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(WMVS_res, f1_res,
-                                                             f2_res, os);
+    return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(
+        WMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1486,8 +1515,8 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   returning the big generators.
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
-template <typename T, typename Tidx, bool is_symm, typename F1, typename F2, typename F3,
-          typename F4, typename F5>
+template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F3, typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
                                          F4 f4, F5 f5, std::ostream &os) {
@@ -1506,7 +1535,8 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
   using Tret3 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
-    return GetGroupCanonicalization_KnownSignature<T, Tidx, is_symm>(WMVS_res, f1_res, f2_res, os);
+    return GetGroupCanonicalization_KnownSignature<T, Tidx, is_symm>(
+        WMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ePair) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
