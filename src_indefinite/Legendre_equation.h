@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_MATRIX_LEGENDRE_EQUATION_H_
-#define SRC_MATRIX_LEGENDRE_EQUATION_H_
+#ifndef SRC_INDEFINITE_LEGENDRE_EQUATION_H_
+#define SRC_INDEFINITE_LEGENDRE_EQUATION_H_
 
 // clang-format off
 #include <stdio.h>
@@ -209,5 +209,5 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
 }
 
 // clang-format off
-#endif  // SRC_MATRIX_MAT_MATRIXFLT_H_
+#endif  // SRC_INDEFINITE_LEGENDRE_EQUATION_H_
 // clang-format on

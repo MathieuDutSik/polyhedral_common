@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_CTYPEMPI_ENUMERATION_H_
-#define SRC_CTYPEMPI_ENUMERATION_H_
+#ifndef SRC_CTYPE_MPI_CTYPEMPI_ENUMERATION_H_
+#define SRC_CTYPE_MPI_CTYPEMPI_ENUMERATION_H_
 
 // clang-format off
 #include "NumberTheory.h"
@@ -250,5 +250,5 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
 }
 
 // clang-format off
-#endif  // SRC_CTYPEMPI_ENUMERATION_H_
+#endif  // SRC_CTYPE_MPI_CTYPEMPI_ENUMERATION_H_
 // clang-format on

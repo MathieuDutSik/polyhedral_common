@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_DUALDESC_POLY_NETCDF_FILE_H_
-#define SRC_DUALDESC_POLY_NETCDF_FILE_H_
+#ifndef SRC_DUALDESC_OLD_POLY_NETCDF_FILE_H_
+#define SRC_DUALDESC_OLD_POLY_NETCDF_FILE_H_
 
 #include "Basic_file.h"
 #include "Boost_bitset.h"
@@ -622,5 +622,5 @@ void Write_EquivDualDesc(EquivariantDualDescription<T, Tgroup> const &eRec,
 }
 
 // clang-format off
-#endif  // SRC_DUALDESC_POLY_NETCDF_FILE_H_
+#endif  // SRC_DUALDESC_OLD_POLY_NETCDF_FILE_H_
 // clang-format on

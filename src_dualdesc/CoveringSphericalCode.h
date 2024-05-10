@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_COVERING_SPHERICAL_H_
-#define SRC_LATT_COVERING_SPHERICAL_H_
+#ifndef SRC_DUALDESC_COVERINGSPHERICALCODE_H_
+#define SRC_DUALDESC_COVERINGSPHERICALCODE_H_
 
 /*
   We want to enumerate the covering radius of
@@ -35,3 +35,8 @@
   determined by the norm equal to 1 for the spherical
   code.
  */
+
+
+// clang-format off
+#endif  // SRC_DUALDESC_COVERINGSPHERICALCODE_H_
+// clang-format on

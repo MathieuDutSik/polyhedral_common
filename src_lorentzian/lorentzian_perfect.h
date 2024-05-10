@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LORENTZIAN_PERFECT_H_
-#define SRC_LORENTZIAN_PERFECT_H_
+#ifndef SRC_LORENTZIAN_LORENTZIAN_PERFECT_H_
+#define SRC_LORENTZIAN_LORENTZIAN_PERFECT_H_
 
 // clang-format off
 #include "boost_serialization.h"
@@ -1071,5 +1071,5 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
 }
 
 // clang-format off
-#endif  // SRC_LORENTZIAN_PERFECT_FUND_H_
+#endif  // SRC_LORENTZIAN_LORENTZIAN_PERFECT_H_
 // clang-format on

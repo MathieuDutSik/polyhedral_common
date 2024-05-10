@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_TEMP_POSITIVITY_H_
-#define SRC_LATT_TEMP_POSITIVITY_H_
+#ifndef SRC_LATT_POSITIVITY_H_
+#define SRC_LATT_POSITIVITY_H_
 
 // clang-format off
 #include "MAT_Matrix.h"
@@ -619,5 +619,5 @@ T EvaluateLineVectorShift(std::vector<T> const &V_mat, MyVector<T> const &V,
 }
 
 // clang-format off
-#endif  // SRC_LATT_TEMP_POSITIVITY_H_
+#endif  // SRC_LATT_POSITIVITY_H_
 // clang-format on

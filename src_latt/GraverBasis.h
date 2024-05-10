@@ -1,6 +1,6 @@
 // Copyright (C) 2024 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_TEMP_GRAVERBASIS_H_
-#define SRC_LATT_TEMP_GRAVERBASIS_H_
+#ifndef SRC_LATT_GRAVERBASIS_H_
+#define SRC_LATT_GRAVERBASIS_H_
 
 // clang-format off
 #include "COMB_Combinatorics_buildset.h"
@@ -52,5 +52,5 @@ std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k) {
 }
 
 // clang-format off
-#endif  // SRC_LATT_TEMP_GRAVERBASIS_H_
+#endif  // SRC_LATT_GRAVERBASIS_H_
 // clang-format on

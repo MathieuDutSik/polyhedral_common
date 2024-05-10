@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
-#define SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
+#ifndef SRC_GROUP_POLYTOPEEQUISTAB_H_
+#define SRC_GROUP_POLYTOPEEQUISTAB_H_
 
 /*
   The code for working with polytope, canonical ordering of
@@ -2388,5 +2388,5 @@ MyMatrix<T> LinPolytopeIntegralWMat_Canonic(
 }
 
 // clang-format off
-#endif  // SRC_GROUP_TEMP_POLYTOPEEQUISTAB_H_
+#endif  // SRC_GROUP_POLYTOPEEQUISTAB_H_
 // clang-format on
