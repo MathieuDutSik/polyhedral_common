@@ -6,7 +6,8 @@
 // clang-format on
 
 template <typename T>
-void compute_rankin_k_min_kernel(int const& k, std::string const &eFile, std::string const& strTol) {
+void compute_rankin_k_min_kernel(int const &k, std::string const &eFile,
+                                 std::string const &strTol) {
   using Tint = int64_t;
   std::ifstream is(eFile);
   MyMatrix<T> A = ReadMatrix<T>(is);
@@ -14,15 +15,14 @@ void compute_rankin_k_min_kernel(int const& k, std::string const &eFile, std::st
   WriteMatrix(std::cerr, A);
   T tol = ParseScalar<T>(strTol);
   std::cerr << "k=" << k << " tol=" << tol << "\n";
-  ResultKRankinMin<T, Tint> result = Rankin_k_minimum<T, Tint>(A, k, tol, std::cerr);
+  ResultKRankinMin<T, Tint> result =
+      Rankin_k_minimum<T, Tint>(A, k, tol, std::cerr);
   std::cerr << "min=" << result.min << "\n";
   std::cerr << "|l_spaces|=" << result.l_spaces.size() << "\n";
 }
 
-void compute_k_min(std::string const &arithmetic,
-                   int const& k,
-                   std::string const &eFile,
-                   std::string const &strTol) {
+void compute_k_min(std::string const &arithmetic, int const &k,
+                   std::string const &eFile, std::string const &strTol) {
   if (arithmetic == "rational") {
     using T = mpq_class;
     return compute_rankin_k_min_kernel<T>(k, eFile, strTol);
