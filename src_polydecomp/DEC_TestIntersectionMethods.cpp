@@ -25,9 +25,11 @@ int main(int argc, char *argv[]) {
     //
     auto f_test = [](MyMatrix<T> const &FACtot) -> bool {
       Face f(4);
-      bool test1 = !SearchPositiveRelationSimple_Direct(FACtot, std::cerr).eTestExist;
+      bool test1 =
+          !SearchPositiveRelationSimple_Direct(FACtot, std::cerr).eTestExist;
       f[0] = test1;
-      bool test2 = !SearchPositiveRelationSimple_DualMethod(FACtot, std::cerr).eTestExist;
+      bool test2 = !SearchPositiveRelationSimple_DualMethod(FACtot, std::cerr)
+                        .eTestExist;
       f[1] = test2;
       bool test3 = IsFullDimensional_V1(FACtot, std::cerr);
       f[2] = test3;

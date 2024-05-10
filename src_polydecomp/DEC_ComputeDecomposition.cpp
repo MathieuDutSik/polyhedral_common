@@ -97,19 +97,20 @@ int main(int argc, char *argv[]) {
       std::cerr << "Matching strategy2_from_high\n";
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
-          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones,
-                                                                   G, std::cerr);
+          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G,
+                                                                   std::cerr);
 #else
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj;
 #endif
       ListListDomain =
-          Compute_ListListDomain_strategy2<T, Tint, Tgroup, Tidx_value>(ListCones, G, ll_sing_adj, TheLev, std::cerr);
+          Compute_ListListDomain_strategy2<T, Tint, Tgroup, Tidx_value>(
+              ListCones, G, ll_sing_adj, TheLev, std::cerr);
     }
     if (opt == "strategy1_from_low" || opt == "strategy1_from_high") {
       std::cerr << "Matching strategy1\n";
       std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
-          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones,
-                                                                   G, std::cerr);
+          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G,
+                                                                   std::cerr);
       std::cerr << "We have ll_sing_adj\n";
       if (opt == "strategy1_from_high") {
         std::cerr << "Matching strategy1_from_high\n";
@@ -121,7 +122,8 @@ int main(int argc, char *argv[]) {
       if (opt == "strategy1_from_low") {
         std::cerr << "Matching strategy1_from_low\n";
         ListListDomain =
-            Compute_ListListDomain_strategy1<T, Tint, Tgroup, Tidx_value>(ListCones, G, ll_sing_adj, TheLev, std::cerr);
+            Compute_ListListDomain_strategy1<T, Tint, Tgroup, Tidx_value>(
+                ListCones, G, ll_sing_adj, TheLev, std::cerr);
       }
     }
     //
@@ -130,7 +132,8 @@ int main(int argc, char *argv[]) {
       os_out << "Number of levels = " << n_lev << "\n";
       for (size_t i_lev = 0; i_lev < n_lev; i_lev++) {
         size_t n_orbit = ListListDomain[i_lev].size();
-        os_out << "Number of orbits at level " << i_lev << " = " << n_orbit << "\n";
+        os_out << "Number of orbits at level " << i_lev << " = " << n_orbit
+               << "\n";
         for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
           const FaceDesc &fd = ListListDomain[i_lev][i_orbit];
           const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd.iCone];

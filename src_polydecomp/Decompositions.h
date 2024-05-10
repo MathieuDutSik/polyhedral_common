@@ -77,10 +77,13 @@ template <typename Tgroup, typename Tint> struct stab_info {
 };
 
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
-stab_info<Tgroup, Tint> f_stab(const Tent<T, Tint, Tidx_value> &eEnt, std::ostream& os) {
+stab_info<Tgroup, Tint> f_stab(const Tent<T, Tint, Tidx_value> &eEnt,
+                               std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphBitset;
-  Tgroup GRP1 = GetStabilizerWeightMatrix<std::vector<Tint>, Tgr, Tgroup, Tidx_value>(eEnt.WMat, os);
+  Tgroup GRP1 =
+      GetStabilizerWeightMatrix<std::vector<Tint>, Tgr, Tgroup, Tidx_value>(
+          eEnt.WMat, os);
   MyMatrix<T> Concat_T =
       UniversalMatrixConversion<T, Tint>(Concatenate(eEnt.M, eEnt.Spann));
   Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(Concat_T, GRP1, os);
@@ -101,7 +104,7 @@ stab_info<Tgroup, Tint> f_stab(const Tent<T, Tint, Tidx_value> &eEnt, std::ostre
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
                                       const Tent<T, Tint, Tidx_value> &fEnt,
-                                      std::ostream& os) {
+                                      std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
@@ -133,8 +136,10 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
   }
   Telt ePerm(IsoInfo->first);
   Tgroup GRP1 =
-      GetStabilizerWeightMatrix<std::vector<Tint>, Tgr, Tgroup, Tidx_value>(eEnt.WMat, os);
-  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(eConcat_T, fConcat_T, GRP1, ePerm, os);
+      GetStabilizerWeightMatrix<std::vector<Tint>, Tgr, Tgroup, Tidx_value>(
+          eEnt.WMat, os);
+  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(
+      eConcat_T, fConcat_T, GRP1, ePerm, os);
   if (eRes)
     return UniversalMatrixConversion<Tint, T>(*eRes);
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
@@ -146,7 +151,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
 Tent<T, Tint, Tidx_value>
 f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-      const MyMatrix<Tint> &G, const FaceDesc &fd, std::ostream& os) {
+      const MyMatrix<Tint> &G, const FaceDesc &fd, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   int nbFac = ListCones[fd.iCone].FAC.rows();
   int nbExt = ListCones[fd.iCone].EXT.rows();
@@ -179,7 +184,8 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   std::vector<MyMatrix<Tint>> ListMat{Qmat, G};
   using Tfield = typename overlying_field<Tint>::field_type;
   WeightMatrix<true, std::vector<Tint>, Tidx_value> WMat =
-      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(Concat, ListMat, Vsubset, os);
+      GetWeightMatrix_ListMat_Vdiag<Tint, Tfield, Tidx, Tidx_value>(
+          Concat, ListMat, Vsubset, os);
   WMat.ReorderingSetWeight();
   return {M, Spann, Qmat, std::move(WMat), fd};
 }
@@ -212,7 +218,7 @@ template <typename T> MyVector<T> GetFirstNonZeroVector(const MyMatrix<T> &M) {
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    MyMatrix<Tint> const &G, std::ostream& os) {
+    MyMatrix<Tint> const &G, std::ostream &os) {
   static_assert(std::is_integral<Tidx_value>::value,
                 "Tidx_value should be integral");
   std::vector<std::vector<sing_adj<Tint>>> adjacency_information;
@@ -246,7 +252,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
       f_fac[i_fac] = 1;
       FaceDesc fd{i_domain, f_fac};
       Tent<T, Tint, Tidx_value> eEnt =
-        f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd, os);
+          f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd, os);
       size_t hash = f_inv<T, Tint, Tgroup, Tidx_value>(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
@@ -278,7 +284,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
   auto get_reverting_transformation = [&](const Tent<T, Tint, Tidx_value> &eEnt)
       -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup, Tint> e_stab_info =
-    f_stab<T, Tint, Tgroup, Tidx_value>(eEnt, os);
+        f_stab<T, Tint, Tgroup, Tidx_value>(eEnt, os);
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "After f_stab call |GRPfull|=" << e_stab_info.GRPfull.size()
               << " |GRPres|=" << e_stab_info.GRPres.size() << "\n";
@@ -304,7 +310,7 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
       if (b_ent.hash == a_ent.hash &&
           (a_ent.i_domain != b_ent.i_domain || a_ent.i_adj != b_ent.i_adj)) {
         std::optional<MyMatrix<Tint>> e_equiv =
-        f_equiv<T, Tint, Tgroup, Tidx_value>(b_ent.eEnt, a_ent.eEnt, os);
+            f_equiv<T, Tint, Tgroup, Tidx_value>(b_ent.eEnt, a_ent.eEnt, os);
         if (e_equiv) {
           return {b_ent.i_domain, a_ent.f_ext, *e_equiv};
         }
@@ -531,7 +537,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
     MyMatrix<Tint> const &G,
     std::vector<std::vector<sing_adj<Tint>>> const &ll_sing_adj, int TheLev,
-    std::ostream& os) {
+    std::ostream &os) {
   static_assert(std::is_integral<Tidx_value>::value,
                 "Tidx_value should be integral");
   std::vector<FaceDesc> ListDomain;
@@ -568,13 +574,13 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
           if (equiv_opt) {
             n_equiv_found++;
             Tent<T, Tint, Tidx_value> ent_A =
-              f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_A, os);
+                f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_A, os);
             const ConeDesc<T, Tint, Tgroup> &eC_B = ListCones[ef_B.iCone];
             Face f_fac = Compute_faceFAC_from_faceEXT(
                 eC_B.extfac_incd, eC_B.FAC.rows(), eC_B.EXT.rows(), ef_B.f_ext);
             FaceDesc fd_B{ef_B.iCone, f_fac};
             Tent<T, Tint, Tidx_value> ent_B =
-              f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_B, os);
+                f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_B, os);
             bool test = false;
             if (f_equiv<T, Tint, Tgroup, Tidx_value>(ent_A, ent_B, os))
               test = true;
@@ -597,7 +603,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       for (auto &eP : NewListCand) {
         if (eP.first == e_inv) {
           std::optional<MyMatrix<Tint>> eEquiv =
-            f_equiv<T, Tint, Tgroup, Tidx_value>(eP.second, eEnt, os);
+              f_equiv<T, Tint, Tgroup, Tidx_value>(eP.second, eEnt, os);
           if (eEquiv)
             return;
         }
@@ -614,7 +620,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     };
     for (auto &eDomain : ListListDomain[i - 1]) {
       Tent<T, Tint, Tidx_value> eEnt =
-        f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, eDomain, os);
+          f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, eDomain, os);
       size_t iCone = eDomain.iCone;
       Tgroup StabFace_fac =
           ListCones[iCone].GRP_fac.Stabilizer_OnSets(eDomain.f_fac);
@@ -625,7 +631,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       for (auto &eFace_fac : ListFace) {
         FaceDesc fdn{iCone, eFace_fac};
         Tent<T, Tint, Tidx_value> fEnt =
-          f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fdn, os);
+            f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fdn, os);
         f_insert(std::move(fEnt));
       }
     }
@@ -653,7 +659,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
     MyMatrix<Tint> const &G,
     const std::vector<std::vector<sing_adj<Tint>>> &ll_sing_adj, int TheLev,
-    std::ostream& os) {
+    std::ostream &os) {
   std::vector<std::vector<FaceDesc>> ListListDomain;
   size_t n_col = G.rows();
   using Tface =
@@ -751,7 +757,7 @@ template <typename T>
 std::optional<ConeSimpDesc<T>>
 TestPolyhedralPartition(bool const &TestPairwiseIntersection,
                         std::vector<ConeSimpDesc<T>> const &l_cone,
-                        std::ostream& os) {
+                        std::ostream &os) {
   size_t n_cone = l_cone.size();
   int dim = l_cone[0].FAC.cols();
   HumanTime time;
