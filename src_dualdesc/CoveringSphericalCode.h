@@ -2,8 +2,6 @@
 #ifndef SRC_LATT_COVERING_SPHERICAL_H_
 #define SRC_LATT_COVERING_SPHERICAL_H_
 
-
-
 /*
   We want to enumerate the covering radius of
   a spherical code.

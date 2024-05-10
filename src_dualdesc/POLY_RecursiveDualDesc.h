@@ -35,7 +35,7 @@
 #endif
 
 #ifdef DEBUG
-//#define DEBUG_CANONICAL_LIMITED
+// #define DEBUG_CANONICAL_LIMITED
 #define DEBUG_RECURSIVE_DUAL_DESC
 #endif
 
@@ -266,8 +266,8 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   os << "Entry " << StringGroup(GRP) << " " << StringFace(f) << "\n";
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "CAN_LIM: Beginning of CanonicalImageDualDesc method_choice=" << method_choice
-     << "\n";
+  os << "CAN_LIM: Beginning of CanonicalImageDualDesc method_choice="
+     << method_choice << "\n";
   WriteGroup(os, GRP);
   os << "f=" << StringFace(f) << "\n";
 #endif
@@ -434,7 +434,8 @@ Face CanonicalImageGeneralDualDesc(
 #endif
       return f_red;
     } catch (...) {
-      std::cerr << "Catching some exception from CanonicalImageInitialTrivLimited\n";
+      std::cerr
+          << "Catching some exception from CanonicalImageInitialTrivLimited\n";
       throw TerminalException{1};
     }
   }
@@ -676,7 +677,8 @@ GetCanonicalInformation(MyMatrix<T> const &EXT,
                         std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
-  std::vector<TintGroup> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
+  std::vector<TintGroup> ListPossOrbSize =
+      ListOrbitFaceOrbitsize.ListPossOrbsize;
   TripleCanonic<T, Tgroup> eTriple =
       CanonicalizationPolytopeTriple<T, Tgroup>(EXT, WMat, os);
   bool NeedRemapOrbit = eTriple.GRP.size() == TheGRPrelevant.size();
@@ -743,7 +745,8 @@ void insert_entry_in_bank(
       ListFaceO.push_back(eFaceImg);
     }
     Tgroup GrpConj = TheGRPrelevant.GroupConjugate(ePerm);
-    std::vector<TintGroup> ListPossOrbSize = ListOrbitFaceOrbitsize.ListPossOrbsize;
+    std::vector<TintGroup> ListPossOrbSize =
+        ListOrbitFaceOrbitsize.ListPossOrbsize;
     bank.InsertEntry(
         std::move(ePair.first),
         {std::move(GrpConj), std::move(ListPossOrbSize), std::move(ListFaceO)});
@@ -1185,8 +1188,8 @@ public:
     if (face_can.size() != static_cast<size_t>(nbRow)) {
       std::cerr << "We have |face_can|=" << face_can.size()
                 << " but nbRow=" << nbRow << "\n";
-      os << "REC_DD: We have |face_can|=" << face_can.size() << " but nbRow=" << nbRow
-         << "\n";
+      os << "REC_DD: We have |face_can|=" << face_can.size()
+         << " but nbRow=" << nbRow << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -1218,8 +1221,9 @@ public:
     foc.FinishWithOrbSizeAssignation(orbSize);
 #ifdef CHECK_INSERT
     Tgroup eStab = GRP.Stabilizer_OnSets(face_can);
-    os << "REC_DD: FuncInsert: Inserting a face of size |face_can|=" << face_can.count()
-       << " |eStab|=" << eStab.size() << " f=" << StringFace(face_can) << "\n";
+    os << "REC_DD: FuncInsert: Inserting a face of size |face_can|="
+       << face_can.count() << " |eStab|=" << eStab.size()
+       << " f=" << StringFace(face_can) << "\n";
 #endif
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
@@ -1251,7 +1255,8 @@ public:
     }
     std::pair<Face, Tint> pair = foc.recConvert.ConvertFace(face_orbsize);
 #ifdef TRACK_DATABASE
-    os << "REC_DD: FuncInsertPair : New orbSize(pair.second)=" << pair.second << "\n";
+    os << "REC_DD: FuncInsertPair : New orbSize(pair.second)=" << pair.second
+       << "\n";
 #endif
 #ifdef CHECK_INSERT
     os << "REC_DD: FuncInsertPair: Inserting a face of size |face_can|="
@@ -1261,7 +1266,8 @@ public:
   }
   void FuncPutOrbitAsDone(size_t const &i_orb) {
 #ifdef TRACK_DATABASE
-    os << "REC_DD: FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+    os << "REC_DD: FuncPutOrbitAsDone : nbRow=" << nbRow << " nbCol=" << nbCol
+       << "\n";
     os << "REC_DD: FuncPutOrbitAsDone : CompleteList_SetUndone\n";
     for (auto &kv : CompleteList_SetUndone) {
       os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size()
@@ -1804,10 +1810,11 @@ public:
   DatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "REC_DD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
-       << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone) << ") facet=("
-       << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone)
-       << "," << bb.foc.nbUndone << ")\n\n";
+    os << "REC_DD: Status : orbit=(" << bb.foc.nbOrbit << ","
+       << bb.foc.nbOrbitDone << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone)
+       << ") facet=(" << bb.foc.TotalNumber << ","
+       << (bb.foc.TotalNumber - bb.foc.nbUndone) << "," << bb.foc.nbUndone
+       << ")\n\n";
 #endif
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
@@ -2098,9 +2105,9 @@ public:
   DataFacet<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     DataFacet<T, Tgroup> data = bb.FuncGetMinimalUndoneOrbit();
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "REC_DD: " << strPresChar << " Considering orbit " << data.SelectedOrbit
-       << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size()
-       << "\n";
+    os << "REC_DD: " << strPresChar << " Considering orbit "
+       << data.SelectedOrbit << " |inc|=" << data.eInc.count()
+       << " |stab|=" << data.Stab.size() << "\n";
 #endif
     return data;
   }
@@ -2117,7 +2124,8 @@ public:
         Face eSetUndone = ComputeIntersectionUndone();
         if (eSetUndone.count() > 0) {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-          os << "REC_DD: Termination by linear programming criterion |eSetUndone|="
+          os << "REC_DD: Termination by linear programming criterion "
+                "|eSetUndone|="
              << eSetUndone.count() << "\n";
 #endif
           return true;
@@ -2165,7 +2173,7 @@ private:
 template <typename Tint, typename T, typename Tgroup>
 std::map<std::string, Tint>
 ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
-                  PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr) {
+                  PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
@@ -2180,7 +2188,8 @@ ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
 }
 
 template <typename Tgroup>
-void CheckTermination(PolyHeuristicSerial<typename Tgroup::Tint> const& AllArr) {
+void CheckTermination(
+    PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr) {
   if (ExitEvent) {
     std::cerr << "Terminating the program by Ctrl-C\n";
     throw TerminalException{1};
@@ -2199,12 +2208,12 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
           typename TbasicBank, typename Finsert, typename Fdd>
 void DUALDESC_AdjacencyDecomposition_and_insert(
     Tbank &TheBank, TbasicBank &bb, DataFacet<T, Tgroup> &df,
-    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, Finsert f_insert,
-    Fdd & f_dd, std::string const &ePrefix, std::ostream &os) {
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr, Finsert f_insert,
+    Fdd &f_dd, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
-    ComputeInitialMap<Tint,T,Tgroup>(df.FF.EXT_face, df.Stab, AllArr);
+      ComputeInitialMap<Tint, T, Tgroup>(df.FF.EXT_face, df.Stab, AllArr);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -2278,10 +2287,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     os << "|DualDesc+flip+insertion|=" << time_complete << "\n";
 #endif
   } else {
-    vectface TheOutput =
-      f_dd(
-            TheBank, df.FF.EXT_face, df.FF.EXT_face_int, df.Stab, TheMap,
-            AllArr, ePrefix, os);
+    vectface TheOutput = f_dd(TheBank, df.FF.EXT_face, df.FF.EXT_face_int,
+                              df.Stab, TheMap, AllArr, ePrefix, os);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "REC_DD: |outputsize|=" << TheOutput.size() << "\n";
 #endif
@@ -2312,13 +2319,15 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
 }
 
 template <typename TbasicBank>
-void vectface_update_method(vectface &vfo, TbasicBank &bb, [[maybe_unused]] std::ostream &os) {
+void vectface_update_method(vectface &vfo, TbasicBank &bb,
+                            [[maybe_unused]] std::ostream &os) {
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  os << "REC_DD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
+  os << "REC_DD: vectface_update_method n_orbit=" << n_orbit
+     << " nbRow=" << nbRow << "\n";
+  os << "REC_DD: vectface_update_method bb.the_method=" << bb.the_method
      << "\n";
-  os << "REC_DD: vectface_update_method bb.the_method=" << bb.the_method << "\n";
 #endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
@@ -2334,10 +2343,10 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value,
 FaceOrbitsizeTableContainer<typename Tgroup::Tint>
 Kernel_DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, TbasicBank &bb,
-    PolyHeuristicSerial<typename Tgroup::Tint> & AllArr,
+    PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix,
-    std::map<std::string, typename Tgroup::Tint> & TheMap,
-    Fdd & f_dd, std::ostream &os) {
+    std::map<std::string, typename Tgroup::Tint> &TheMap, Fdd &f_dd,
+    std::ostream &os) {
   DatabaseOrbits<TbasicBank> RPL(bb, ePrefix, AllArr.DD_Saving,
                                  AllArr.AdvancedTerminationCriterion, os);
   // The choice only really makes sense for the canonic, for repr no choice is
@@ -2454,7 +2463,8 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     std::string NewPrefix =
         ePrefix + "ADM" + std::to_string(SelectedOrbit) + "_";
     DUALDESC_AdjacencyDecomposition_and_insert<Tbank, T, Tgroup, Tidx_value,
-                                               TbasicBank, decltype(f_insert), decltype(f_dd)>(
+                                               TbasicBank, decltype(f_insert),
+                                               decltype(f_dd)>(
         TheBank, bb, df, AllArr, f_insert, f_dd, NewPrefix, os);
     RPL.FuncPutOrbitAsDone(SelectedOrbit);
   }
@@ -2472,15 +2482,19 @@ template <typename Tbank, typename T, typename Tgroup, typename Tidx_value>
 vectface DUALDESC_AdjacencyDecomposition(
     Tbank &TheBank, MyMatrix<T> const &EXT,
     MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int,
-    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> & TheMap,
+    Tgroup const &GRP, std::map<std::string, typename Tgroup::Tint> &TheMap,
     PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
     std::string const &ePrefix, std::ostream &os) {
-  auto f_dd=[](Tbank & TheBank_i, MyMatrix<T> const& EXT_i,
-               MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int_i,
-               Tgroup const& GRP_i, std::map<std::string, typename Tgroup::Tint> & TheMap_i,
-               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr_i,
-               std::string const &ePrefix_i, std::ostream &os_i) -> vectface {
-    return DUALDESC_AdjacencyDecomposition<Tbank,T,Tgroup,Tidx_value>(TheBank_i, EXT_i, EXT_int_i, GRP_i, TheMap_i, AllArr_i, ePrefix_i, os_i);
+  auto f_dd =
+      [](Tbank &TheBank_i, MyMatrix<T> const &EXT_i,
+         MyMatrix<typename SubsetRankOneSolver<T>::Tint> const &EXT_int_i,
+         Tgroup const &GRP_i,
+         std::map<std::string, typename Tgroup::Tint> &TheMap_i,
+         PolyHeuristicSerial<typename Tgroup::Tint> &AllArr_i,
+         std::string const &ePrefix_i, std::ostream &os_i) -> vectface {
+    return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
+        TheBank_i, EXT_i, EXT_int_i, GRP_i, TheMap_i, AllArr_i, ePrefix_i,
+        os_i);
   };
   using Tgr = GraphListAdj;
   using Tint = typename Tgroup::Tint;
@@ -2535,7 +2549,7 @@ vectface DUALDESC_AdjacencyDecomposition(
     Tint GroupSizeComp = TheGRPrelevant.size();
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
-    << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
+       << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
 #endif
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
     std::string ansChosenDatabase =
@@ -2549,7 +2563,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       TbasicBank bb(EXT, EXT_int, TheGRPrelevant, os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-                                                                            TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
+          TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
     if (ansChosenDatabase == "repr") {
       WeightMatrix<true, int, Tidx_value> WMat =
@@ -2572,7 +2586,7 @@ vectface DUALDESC_AdjacencyDecomposition(
                     os);
       return Kernel_DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup,
                                                     Tidx_value, TbasicBank>(
-                                                                            TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
+          TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
     std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
     std::cerr << "Authorized values: canonic, repr\n";
@@ -2860,7 +2874,8 @@ std::string GetNumericalType(FullNamelist const &eFull) {
 }
 
 template <typename T, typename Tidx>
-MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
+MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull,
+                             [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
   IsExistingFileDie(EXTfile);
@@ -2884,10 +2899,12 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
   return result;
 }
 
-std::unique_ptr<std::ofstream> get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+std::unique_ptr<std::ofstream>
+get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::string FileLog =
+      "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::unique_ptr<std::ofstream> os = std::make_unique<std::ofstream>(FileLog);
   if (ApplyStdUnitbuf(eFull)) {
     *os << std::unitbuf;
@@ -2898,9 +2915,9 @@ std::unique_ptr<std::ofstream> get_mpi_log_stream(boost::mpi::communicator &comm
   return os;
 }
 
-
 template <typename Tgroup>
-Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
+Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
+                        [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
   IsExistingFileDie(GRPfile);
@@ -2912,7 +2929,8 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull, [[maybe_unused]] std::ostream
   return GRP;
 }
 
-bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, [[maybe_unused]] std::ostream &os) {
+bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
+                               [[maybe_unused]] std::ostream &os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   bool intercept_ctrl_c = BlockDATA.ListBoolValues.at("InterceptCtrlC");
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -2921,37 +2939,43 @@ bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull, [[maybe_unused]] std::
   return intercept_ctrl_c;
 }
 
-template<typename Tint>
-void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const& AllArr, std::ostream & os) {
+template <typename Tint>
+void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
+                              std::ostream &os) {
   os << "REC_DD: PrintPolyHeuristicSerial, beginning\n";
   os << "REC_DD: OUTfile=" << AllArr.OUTfile << "\n";
   os << "REC_DD: OutFormat=" << AllArr.OutFormat << "\n";
   os << "REC_DD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
   os << "REC_DD: port=" << AllArr.port << "\n";
-  os << "REC_DD: bank_parallelization_method=" << AllArr.bank_parallelization_method << "\n";
+  os << "REC_DD: bank_parallelization_method="
+     << AllArr.bank_parallelization_method << "\n";
   os << "REC_DD: SplittingHeuristicFile\n" << AllArr.Splitting << "\n";
-  os << "REC_DD: AdditionalSymmetryHeuristicFile\n" << AllArr.AdditionalSymmetry << "\n";
-  os << "REC_DD: DualDescriptionThompsonFile\n" << AllArr.DualDescriptionProgram << "\n";
+  os << "REC_DD: AdditionalSymmetryHeuristicFile\n"
+     << AllArr.AdditionalSymmetry << "\n";
+  os << "REC_DD: DualDescriptionThompsonFile\n"
+     << AllArr.DualDescriptionProgram << "\n";
   os << "REC_DD: MethodInitialFacetSetFile\n" << AllArr.InitialFacetSet << "\n";
   os << "REC_DD: BankSaveHeuristicFile\n" << AllArr.BankSave << "\n";
   os << "REC_DD: CheckDatabaseBank\n" << AllArr.CheckDatabaseBank << "\n";
   os << "REC_DD: ChosenDatabase\n" << AllArr.ChosenDatabase << "\n";
   os << "REC_DD: OrbitSplitTechnique\n" << AllArr.OrbitSplitTechnique << "\n";
   os << "REC_DD: CommThreadHeuristicFile\n" << AllArr.CommThread << "\n";
-  os << "REC_DD: ChoiceCanonicalizationFile\n" << AllArr.ChoiceCanonicalization << "\n";
+  os << "REC_DD: ChoiceCanonicalizationFile\n"
+     << AllArr.ChoiceCanonicalization << "\n";
   os << "REC_DD: max_runtime=" << AllArr.max_runtime << "\n";
   os << "REC_DD: DD_Saving=" << AllArr.DD_Saving << "\n";
   os << "REC_DD: DD_Prefix=" << AllArr.DD_Prefix << "\n";
   os << "REC_DD: BANK_Saving=" << AllArr.BANK_Saving << "\n";
   os << "REC_DD: BANK_Prefix=" << AllArr.BANK_Prefix << "\n";
-  os << "REC_DD: AdvancedTerminationCriterion=" << AllArr.AdvancedTerminationCriterion << "\n";
+  os << "REC_DD: AdvancedTerminationCriterion="
+     << AllArr.AdvancedTerminationCriterion << "\n";
   os << "REC_DD: SimpleExchangeScheme=" << AllArr.SimpleExchangeScheme << "\n";
 }
 
-
 template <typename Tint>
 void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
-                                 PolyHeuristicSerial<Tint> & AllArr, std::ostream &os) {
+                                 PolyHeuristicSerial<Tint> &AllArr,
+                                 std::ostream &os) {
   //
   SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
   SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
@@ -2985,14 +3009,16 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   AllArr.bank_parallelization_method = bank_parallelization_method;
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
-  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile", AllArr.AdditionalSymmetry, os);
+  SetHeuristic(eFull, "AdditionalSymmetryHeuristicFile",
+               AllArr.AdditionalSymmetry, os);
   SetThompsonSampling(eFull, "DualDescriptionThompsonFile",
                       AllArr.DualDescriptionProgram, os);
   SetHeuristic(eFull, "MethodInitialFacetSetFile", AllArr.InitialFacetSet, os);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, os);
   SetHeuristic(eFull, "CheckDatabaseBankFile", AllArr.CheckDatabaseBank, os);
   SetHeuristic(eFull, "ChosenDatabaseFile", AllArr.ChosenDatabase, os);
-  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique, os);
+  SetHeuristic(eFull, "OrbitSplitTechniqueFile", AllArr.OrbitSplitTechnique,
+               os);
   SetHeuristic(eFull, "CommThreadHeuristicFile", AllArr.CommThread, os);
   SetHeuristic(eFull, "ChoiceCanonicalizationFile",
                AllArr.ChoiceCanonicalization, os);
@@ -3021,19 +3047,20 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
 
 template <typename Tint>
 PolyHeuristicSerial<Tint>
-Read_AllStandardHeuristicSerial(FullNamelist const &eFull,
-                                int const& dimEXT, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
+Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
+                                std::ostream &os) {
+  PolyHeuristicSerial<Tint> AllArr =
+      AllStandardHeuristicSerial<Tint>(dimEXT, os);
   UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   return AllArr;
 }
 
-
 template <typename Tint>
 PolyHeuristicSerial<Tint>
-Read_AllStandardHeuristicSerial_File(std::string const& eFile,
-                                     int const& dimEXT, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr = AllStandardHeuristicSerial<Tint>(dimEXT, os);
+Read_AllStandardHeuristicSerial_File(std::string const &eFile,
+                                     int const &dimEXT, std::ostream &os) {
+  PolyHeuristicSerial<Tint> AllArr =
+      AllStandardHeuristicSerial<Tint>(dimEXT, os);
   if (eFile != "unset") {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     NAMELIST_ReadNamelistFile(eFile, eFull);
@@ -3041,11 +3068,6 @@ Read_AllStandardHeuristicSerial_File(std::string const& eFile,
   }
   return AllArr;
 }
-
-
-
-
-
 
 template <typename T, typename Tgroup, typename Tidx_value>
 void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
@@ -3073,7 +3095,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial<Tint>(eFull, dimEXT, std::cerr);
   //
   std::map<std::string, Tint> TheMap =
-    ComputeInitialMap<Tint,T,Tgroup>(EXTred, GRP, AllArr);
+      ComputeInitialMap<Tint, T, Tgroup>(EXTred, GRP, AllArr);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
@@ -3101,12 +3123,11 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
                std::cerr);
 }
 
-
-
-
-
 template <typename T, typename Tgroup>
-vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, PolyHeuristicSerial<typename Tgroup::Tint> & AllArr, std::ostream& os) {
+vectface
+DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
+                        PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+                        std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
@@ -3126,37 +3147,41 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, Poly
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
   std::map<std::string, TintGroup> TheMap =
-    ComputeInitialMap<TintGroup,T,Tgroup>(EXTred, GRP, AllArr);
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, os);
 }
 
-template <typename T, typename Tgroup>
-struct RecordDualDescOperation {
+template <typename T, typename Tgroup> struct RecordDualDescOperation {
   using TintGroup = typename Tgroup::Tint;
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
   using Tbank = DataBank<Tkey, Tval>;
-  PolyHeuristicSerial<TintGroup> & AllArr;
-  std::ostream & os;
+  PolyHeuristicSerial<TintGroup> &AllArr;
+  std::ostream &os;
   Tbank TheBank;
-  RecordDualDescOperation(PolyHeuristicSerial<TintGroup> & _AllArr, std::ostream & _os) : AllArr(_AllArr), os(_os), TheBank(false, "/irrelevant", os) {
-  }
+  RecordDualDescOperation(PolyHeuristicSerial<TintGroup> &_AllArr,
+                          std::ostream &_os)
+      : AllArr(_AllArr), os(_os), TheBank(false, "/irrelevant", os) {}
 };
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP, RecordDualDescOperation<T, Tgroup> & rddo) {
+vectface
+DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
+                             RecordDualDescOperation<T, Tgroup> &rddo) {
   using TintGroup = typename Tgroup::Tint;
   using Tbank = typename RecordDualDescOperation<T, Tgroup>::Tbank;
   using Tidx_value = int32_t;
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
-  std::ostream & os = rddo.os;
+  std::ostream &os = rddo.os;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   int rnk = RankMat(EXT);
   if (rnk != EXT.cols()) {
-    std::cerr << "For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
-    std::cerr << "rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+    std::cerr
+        << "For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
+    std::cerr << "rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols()
+              << "\n";
     throw TerminalException{1};
   }
   if (!IsSymmetryGroupOfPolytope(EXT, GRP)) {
@@ -3171,18 +3196,17 @@ vectface DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   //
   MyMatrix<Text_int> EXT_int = Get_EXT_int(EXT);
   std::map<std::string, TintGroup> TheMap =
-    ComputeInitialMap<TintGroup,T,Tgroup>(EXT, GRP, rddo.AllArr);
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       rddo.TheBank, EXT, EXT_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
 }
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP, RecordDualDescOperation<T, Tgroup> & rddo) {
+vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP,
+                               RecordDualDescOperation<T, Tgroup> &rddo) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
-  return DualDescriptionRecordFullDim<T,Tgroup>(EXTred, GRP, rddo);
+  return DualDescriptionRecordFullDim<T, Tgroup>(EXTred, GRP, rddo);
 }
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_H_

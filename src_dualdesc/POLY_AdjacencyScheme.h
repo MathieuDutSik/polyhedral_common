@@ -92,11 +92,12 @@
 
 /*
   Possible extension to the scheme.
-  ---Since in the scheme, we compute everything, if the first entry returned by the
-  f_init is a big monster like the biggest entry in the list, then we are going
-  to spend all the time on that one and the other nodes are not going to do anything.
-  ---This is damaging since there are many well agreed use cases where we want to
-  do a partial enumeration for this and that reason (mostly curiosity).
+  ---Since in the scheme, we compute everything, if the first entry returned by
+  the f_init is a big monster like the biggest entry in the list, then we are
+  going to spend all the time on that one and the other nodes are not going to
+  do anything.
+  ---This is damaging since there are many well agreed use cases where we want
+  to do a partial enumeration for this and that reason (mostly curiosity).
   ---So, there are some realistic scenario where we want to do the enumeration
   from the easiest to the hardest.
 
@@ -106,8 +107,8 @@
   ---The task of having a good initial guess would be incumbent on the asker. A
   good f_init would be needed.
   ---(For example a good f_init could be obtained by an initial random walk).
-  ---Therefore, we would have a std::map<size_t, ....> encoding the unused entries
-  by complexity.
+  ---Therefore, we would have a std::map<size_t, ....> encoding the unused
+  entries by complexity.
   ---Each node should have a value of first undone entry. We should also have
   something global.
   ---If node A and B have level X but B passes to X+1, in order to upgrade the
@@ -118,11 +119,8 @@
   ---
  */
 
-
-template<typename T>
-void append_move(std::vector<T> & v1, std::vector<T> & v2) {
-  v1.insert(v1.end(),
-            std::make_move_iterator(v2.begin()),
+template <typename T> void append_move(std::vector<T> &v1, std::vector<T> &v2) {
+  v1.insert(v1.end(), std::make_move_iterator(v2.begin()),
             std::make_move_iterator(v2.end()));
   v2.clear();
 }
@@ -130,9 +128,7 @@ void append_move(std::vector<T> & v1, std::vector<T> & v2) {
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
 
-
-template<typename TadjI>
-struct entryAdjI {
+template <typename TadjI> struct entryAdjI {
   TadjI x;
   size_t hash_hashmap;
   int i_proc_orig;
@@ -140,30 +136,29 @@ struct entryAdjI {
 };
 
 namespace boost::serialization {
-  template <class Archive, typename TadjI>
-  inline void serialize(Archive &ar, entryAdjI<TadjI> &eRec,
+template <class Archive, typename TadjI>
+inline void serialize(Archive &ar, entryAdjI<TadjI> &eRec,
                       [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("hash_hashmap", eRec.hash_hashmap);
-    ar &make_nvp("i_proc_orig", eRec.i_proc_orig);
-    ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
-  }
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("hash_hashmap", eRec.hash_hashmap);
+  ar &make_nvp("i_proc_orig", eRec.i_proc_orig);
+  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
 }
+} // namespace boost::serialization
 
-template<typename TadjO>
-struct entryAdjO {
+template <typename TadjO> struct entryAdjO {
   TadjO x;
   int i_orb_orig;
 };
 
 namespace boost::serialization {
-  template <class Archive, typename TadjO>
-  inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
-  }
+template <class Archive, typename TadjO>
+inline void serialize(Archive &ar, entryAdjO<TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("i_orb_orig", eRec.i_orb_orig);
 }
+} // namespace boost::serialization
 
 /*
   input clear from preceding discussion.
@@ -212,23 +207,21 @@ namespace boost::serialization {
   * The termination is done by checking the nonce of all the nodes.
   This is a blocking operation on the checker side, so only one
   can do it.
-  * We want to avoid the busy loop of 
+  * We want to avoid the busy loop of
   * When a node has nothing to do, if it is 0.
-  
+
  */
-template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fnext, typename Finsert, typename Fadji_obj,
-          typename Fidx_obj, typename Fsave_status,
-          typename Finit, typename Fadj, typename Fset_adj,
-          typename Fhash,
-          typename Frepr, typename Fspann>
+template <typename Tobj, typename TadjI, typename TadjO, typename Fnext,
+          typename Finsert, typename Fadji_obj, typename Fidx_obj,
+          typename Fsave_status, typename Finit, typename Fadj,
+          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann>
 bool compute_adjacency_mpi(boost::mpi::communicator &comm,
-                           int const &max_time_second,
-                           Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
+                           int const &max_time_second, Fnext f_next,
+                           Finsert f_insert, Fadji_obj f_adji_obj,
                            Fidx_obj f_idx_obj, Fsave_status f_save_status,
                            Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                            Fhash f_hash, Frepr f_repr, Fspann f_spann,
-                           [[maybe_unused]] std::ostream & os) {
+                           [[maybe_unused]] std::ostream &os) {
   SingletonTime start;
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -252,8 +245,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // The entries of AdjI / AdjO
   //
   // The unsent entries by the processors.
-  buffered_T_exchanges<entryAdjI<TadjI>, std::vector<entryAdjI<TadjI>>> buffer_entriesAdjI(comm, n_proc, tag_entriesadji_send);
-  buffered_T_exchanges<entryAdjO<TadjO>, std::vector<entryAdjO<TadjO>>> buffer_entriesAdjO(comm, n_proc, tag_entriesadjo_send);
+  buffered_T_exchanges<entryAdjI<TadjI>, std::vector<entryAdjI<TadjI>>>
+      buffer_entriesAdjI(comm, n_proc, tag_entriesadji_send);
+  buffered_T_exchanges<entryAdjO<TadjO>, std::vector<entryAdjO<TadjO>>>
+      buffer_entriesAdjO(comm, n_proc, tag_entriesadjo_send);
   std::vector<entryAdjI<TadjI>> unproc_entriesAdjI;
   // The mapping from the index to the list of adjacencices.
   std::unordered_map<int, std::pair<size_t, std::vector<TadjO>>> map_adjO;
@@ -267,30 +262,32 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   // We have two ways of terminating a computation.
   // * One is by runtime elapsing. When this is reached, the processes need to
   //   finish the processing of the entries that are being treated.
-  // * Another is by the early_termination. In that case, disorderly exit is fine.
+  // * Another is by the early_termination. In that case, disorderly exit is
+  // fine.
   //   We got something wrong, no point in continuing.
   // They behave in different ways
   bool early_termination = false;
   //
   // The lambda functions
   //
-  auto send_early_termination=[&]() -> void {
+  auto send_early_termination = [&]() -> void {
     early_termination = true;
     int val_final = 0;
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       if (i_proc != i_rank) {
         ur.get_entry() = comm.isend(i_proc, tag_early_termination, val_final);
       }
     }
   };
-  auto process_single_entryAdjI = [&](entryAdjI<TadjI> const &eI) -> std::pair<int,entryAdjO<TadjO>> {
+  auto process_single_entryAdjI =
+      [&](entryAdjI<TadjI> const &eI) -> std::pair<int, entryAdjO<TadjO>> {
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: Beginning of process_single_entryAdjI\n";
 #endif
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
-    auto f_ret=[&](TadjO u) -> std::pair<int,entryAdjO<TadjO>> {
+    auto f_ret = [&](TadjO u) -> std::pair<int, entryAdjO<TadjO>> {
       entryAdjO<TadjO> eA{u, eI.i_orb_orig};
       return {eI.i_proc_orig, eA};
     };
@@ -341,7 +338,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     return f_ret(pair.second);
   };
-  auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
+  auto insert_load = [&](Tobj const &x, bool const &is_treated) -> void {
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
@@ -356,7 +353,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     n_obj++;
   };
-  auto initial_insert=[&](Tobj const& x) -> void {
+  auto initial_insert = [&](Tobj const &x) -> void {
     nonce++;
     size_t hash_partition = f_hash(seed_partition, x);
     int i_proc_belong = static_cast<int>(hash_partition % size_t(n_proc));
@@ -372,23 +369,29 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       insert_load(x, is_treated);
     }
   };
-  auto process_entriesAdjO=[&](std::vector<entryAdjO<TadjO>> & v) -> void {
+  auto process_entriesAdjO = [&](std::vector<entryAdjO<TadjO>> &v) -> void {
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH:process_entriesAdjO : Before |v|=" << v.size() << " |map_adjO|=" << map_adjO.size() << " \n";
-    for (auto & kv : map_adjO) {
-      os << "ADJ_SCH:process_entriesAdjO : Before i_orb=" << kv.first << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size() << "\n";
+    os << "ADJ_SCH:process_entriesAdjO : Before |v|=" << v.size()
+       << " |map_adjO|=" << map_adjO.size() << " \n";
+    for (auto &kv : map_adjO) {
+      os << "ADJ_SCH:process_entriesAdjO : Before i_orb=" << kv.first
+         << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size()
+         << "\n";
     }
 #endif
     for (auto &eEnt : v) {
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH:process_entriesAdjO : After |map_adjO|=" << map_adjO.size() << " \n";
-    for (auto & kv : map_adjO) {
-      os << "ADJ_SCH:process_entriesAdjO : After i_orb=" << kv.first << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size() << "\n";
+    os << "ADJ_SCH:process_entriesAdjO : After |map_adjO|=" << map_adjO.size()
+       << " \n";
+    for (auto &kv : map_adjO) {
+      os << "ADJ_SCH:process_entriesAdjO : After i_orb=" << kv.first
+         << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size()
+         << "\n";
     }
 #endif
     v.clear();
@@ -399,13 +402,15 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   auto get_nonce = [&]() -> size_t {
     if (!buffer_entriesAdjI.is_completely_clear()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: the_nonce=0, because !buffer_entriesAdjI.is_completely_clear()\n";
+      os << "ADJ_SCH: the_nonce=0, because "
+            "!buffer_entriesAdjI.is_completely_clear()\n";
 #endif
       return 0;
     }
     if (!buffer_entriesAdjO.is_completely_clear()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: the_nonce=0, because !buffer_entriesAdjO.is_completely_clear()\n";
+      os << "ADJ_SCH: the_nonce=0, because "
+            "!buffer_entriesAdjO.is_completely_clear()\n";
 #endif
       return 0;
     }
@@ -423,14 +428,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     if (undone.size() > 0 && max_time_second == 0) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: the_nonce=0, because undone.size() > 0 && max_time_second == 0\n";
+      os << "ADJ_SCH: the_nonce=0, because undone.size() > 0 && "
+            "max_time_second == 0\n";
 #endif
       return 0;
     }
-    if (undone.size() > 0 && max_time_second > 0 && si(start) < max_time_second) {
+    if (undone.size() > 0 && max_time_second > 0 &&
+        si(start) < max_time_second) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: max_time_second=" << max_time_second << " si(start)=" << si(start) << " |undone|=" << undone.size() << "\n";
-      os << "ADJ_SCH: the_nonce=0, because max_time_second > 0 && si(start) < max_time_second\n";
+      os << "ADJ_SCH: max_time_second=" << max_time_second
+         << " si(start)=" << si(start) << " |undone|=" << undone.size() << "\n";
+      os << "ADJ_SCH: the_nonce=0, because max_time_second > 0 && si(start) < "
+            "max_time_second\n";
 #endif
       return 0;
     }
@@ -493,7 +502,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (e_tag == tag_early_termination) {
       int val_recv;
       comm.recv(e_src, tag_termination, val_recv);
-      early_termination=true;
+      early_termination = true;
 #ifdef TIMINGS_ADJACENCY_SCHEME
       os << "ADJ_SCH: |process_mpi_status 6|=" << time << "\n";
 #endif
@@ -543,7 +552,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     map_adjO[idx] = {l_adj.size(), {}};
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: process_one_entry_obj : idx=" << idx << " |l_adj|=" << l_adj.size() << "\n";
+    os << "ADJ_SCH: process_one_entry_obj : idx=" << idx
+       << " |l_adj|=" << l_adj.size() << "\n";
 #endif
     nonce++;
     for (auto &x : l_adj) {
@@ -564,7 +574,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
-    std::vector<entryAdjI<TadjI>> & v = buffer_entriesAdjI.l_message[i_rank];
+    std::vector<entryAdjI<TadjI>> &v = buffer_entriesAdjI.l_message[i_rank];
     append_move(unproc_entriesAdjI, v);
     bool test = buffer_entriesAdjI.clear_one_entry(os);
 #ifdef TIMINGS_ADJACENCY_SCHEME
@@ -572,11 +582,11 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     return test;
   };
-  auto flush_entriesAdjO=[&]() -> bool {
+  auto flush_entriesAdjO = [&]() -> bool {
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
-    std::vector<entryAdjO<TadjO>> & v = buffer_entriesAdjO.l_message[i_rank];
+    std::vector<entryAdjO<TadjO>> &v = buffer_entriesAdjO.l_message[i_rank];
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: Call process_entriesAdjO from flush_entriesAdjO\n";
 #endif
@@ -592,8 +602,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     MicrosecondTime time;
 #endif
     bool do_something = false;
-    for (auto & eI : unproc_entriesAdjI) {
-      std::pair<int,entryAdjO<TadjO>> pair = process_single_entryAdjI(eI);
+    for (auto &eI : unproc_entriesAdjI) {
+      std::pair<int, entryAdjO<TadjO>> pair = process_single_entryAdjI(eI);
       buffer_entriesAdjO.insert_entry(pair.first, pair.second);
       do_something = true;
     }
@@ -603,7 +613,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
     return do_something;
   };
-  auto write_set_adj=[&]() -> bool {
+  auto write_set_adj = [&]() -> bool {
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time;
 #endif
@@ -615,21 +625,23 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: |map_adjO|=" << map_adjO.size() << "\n";
 #endif
-    for (auto & kv : map_adjO) {
+    for (auto &kv : map_adjO) {
       int i_orb = kv.first;
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first << " |kv.second.second|=" << kv.second.second.size() << "\n";
+      os << "ADJ_SCH: i_orb=" << i_orb << " kv.second.first=" << kv.second.first
+         << " |kv.second.second|=" << kv.second.second.size() << "\n";
 #endif
       if (kv.second.first == kv.second.second.size()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb << " |l_adj|=" << kv.second.second.size() << "\n";
+        os << "ADJ_SCH: write_set_adj i_orb=" << i_orb
+           << " |l_adj|=" << kv.second.second.size() << "\n";
 #endif
         f_set_adj(i_orb, kv.second.second);
         l_erase.push_back(i_orb);
         do_something = true;
       }
     }
-    for (auto & i_orb : l_erase) {
+    for (auto &i_orb : l_erase) {
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: write_set_adj erasing i_orb=" << i_orb << "\n";
 #endif
@@ -678,19 +690,22 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     return process_one_entry_obj();
   };
 #ifdef DEBUG_ADJACENCY_SCHEME
-  auto print_status = [&](std::ostream& os_out) -> void {
+  auto print_status = [&](std::ostream &os_out) -> void {
     os_out << "ADJ_SCH: status n_obj=" << n_obj << "\n";
     os_out << "ADJ_SCH: status |map_adjO|=" << map_adjO.size() << "\n";
-    for (auto & ent : map_adjO) {
-      os_out << "ADJ_SCH: status index=" << ent.first << " value=(" << ent.second.first << " | " << ent.second.second.size() << ")\n";
+    for (auto &ent : map_adjO) {
+      os_out << "ADJ_SCH: status index=" << ent.first << " value=("
+             << ent.second.first << " | " << ent.second.second.size() << ")\n";
     }
     os_out << "ADJ_SCH: status |undone|=" << undone.size() << "\n";
-    os_out << "ADJ_SCH: |buffer_entriesAdjI|=" << buffer_entriesAdjI.get_unsent_size() << "\n";
-    os_out << "ADJ_SCH: |buffer_entriesAdjO|=" << buffer_entriesAdjO.get_unsent_size() << "\n";
+    os_out << "ADJ_SCH: |buffer_entriesAdjI|="
+           << buffer_entriesAdjI.get_unsent_size() << "\n";
+    os_out << "ADJ_SCH: |buffer_entriesAdjO|="
+           << buffer_entriesAdjO.get_unsent_size() << "\n";
   };
 #endif
   int i_proc_termination = 0;
-  auto f_consider_termination =[&]() -> void {
+  auto f_consider_termination = [&]() -> void {
     int val_send = 42;
     ur.get_entry() = comm.isend(i_proc_termination, tag_no_operation, val_send);
   };
@@ -707,8 +722,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       throw TerminalException{1};
     }
 #endif
-    std::vector<size_t> l_nonce(n_proc-1);
-    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+    std::vector<size_t> l_nonce(n_proc - 1);
+    for (int i_proc = 1; i_proc < n_proc; i_proc++) {
       int val = 0;
       comm.send(i_proc, tag_nonce_ask, val);
       size_t the_nonce;
@@ -719,22 +734,24 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
         return false;
       }
-      l_nonce[i_proc-1] = the_nonce;
+      l_nonce[i_proc - 1] = the_nonce;
     }
-    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 1; i_proc < n_proc; i_proc++) {
       int val = 0;
       comm.send(i_proc, tag_nonce_ask, val);
       size_t the_nonce;
       comm.recv(i_proc, tag_nonce_reply, the_nonce);
-      if (the_nonce != l_nonce[i_proc-1]) {
+      if (the_nonce != l_nonce[i_proc - 1]) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-        os << "ADJ_SCH: exiting at i_proc=" << i_proc << " the_nonce=" << the_nonce << " l_nonce=" << l_nonce[i_proc-1] << "\n";
+        os << "ADJ_SCH: exiting at i_proc=" << i_proc
+           << " the_nonce=" << the_nonce << " l_nonce=" << l_nonce[i_proc - 1]
+           << "\n";
 #endif
         return false;
       }
     }
     // no operation done. Sending the termination notices
-    for (int i_proc=1; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 1; i_proc < n_proc; i_proc++) {
       int val = 0;
       comm.send(i_proc, tag_termination, val);
     }
@@ -746,8 +763,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   while (true) {
     std::optional<std::pair<bool, Tobj>> opt = f_next();
     if (opt) {
-      std::pair<bool, Tobj> const& pair = *opt;
-      Tobj const& x = pair.second;
+      std::pair<bool, Tobj> const &pair = *opt;
+      Tobj const &x = pair.second;
       bool is_treated = pair.first;
       insert_load(x, is_treated);
     } else {
@@ -755,12 +772,14 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   }
 #ifdef DEBUG_ADJACENCY_SCHEME
-  os << "ADJ_SCH: compute_adjacency_mpi, start : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
+  os << "ADJ_SCH: compute_adjacency_mpi, start : n_obj=" << n_obj
+     << " n_undone=" << undone.size() << "\n";
 #endif
   size_t n_orb_max = 0, n_orb_loc = n_obj;
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
 #ifdef DEBUG_ADJACENCY_SCHEME
-  os << "ADJ_SCH: beginning n_orb_max=" << n_orb_max << " n_orb_loc=" << n_orb_loc << "\n";
+  os << "ADJ_SCH: beginning n_orb_max=" << n_orb_max
+     << " n_orb_loc=" << n_orb_loc << "\n";
 #endif
   if (n_orb_max == 0 && i_rank == 0) {
     Tobj x = f_init();
@@ -771,7 +790,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   //
   while (true) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: Start while loop, early_termination=" << early_termination << "\n";
+    os << "ADJ_SCH: Start while loop, early_termination=" << early_termination
+       << "\n";
 #endif
     if (early_termination) {
       break;
@@ -783,7 +803,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: prob is not empty\n";
 #endif
-      boost::mpi::status const& prob = *opt;
+      boost::mpi::status const &prob = *opt;
 #ifdef TIMINGS_ADJACENCY_SCHEME
       MicrosecondTime time_process;
 #endif
@@ -852,7 +872,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
   }
 #ifdef DEBUG_ADJACENCY_SCHEME
-  os << "ADJ_SCH: compute_adjacency_mpi, end : n_obj=" << n_obj << " n_undone=" << undone.size() << "\n";
+  os << "ADJ_SCH: compute_adjacency_mpi, end : n_obj=" << n_obj
+     << " n_undone=" << undone.size() << "\n";
 #endif
   if (early_termination) {
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -864,24 +885,23 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     size_t n_undone_max = 0, n_undone_loc = undone.size();
     all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: compute_adjacency_mpi, n_undone_max=" << n_undone_max << " n_undone_loc=" << n_undone_loc << "\n";
+    os << "ADJ_SCH: compute_adjacency_mpi, n_undone_max=" << n_undone_max
+       << " n_undone_loc=" << n_undone_loc << "\n";
 #endif
     return n_undone_max == 0;
   }
 }
 
-template <typename Tobj, typename TadjI, typename TadjO,
-          typename Fnext, typename Finsert, typename Fadji_obj,
-          typename Fidx_obj, typename Fsave_status,
-          typename Finit, typename Fadj, typename Fset_adj,
-          typename Fhash,
-          typename Frepr, typename Fspann>
-bool compute_adjacency_serial(int const &max_time_second,
-                              Fnext f_next, Finsert f_insert, Fadji_obj f_adji_obj,
+template <typename Tobj, typename TadjI, typename TadjO, typename Fnext,
+          typename Finsert, typename Fadji_obj, typename Fidx_obj,
+          typename Fsave_status, typename Finit, typename Fadj,
+          typename Fset_adj, typename Fhash, typename Frepr, typename Fspann>
+bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
+                              Finsert f_insert, Fadji_obj f_adji_obj,
                               Fidx_obj f_idx_obj, Fsave_status f_save_status,
                               Finit f_init, Fadj f_adj, Fset_adj f_set_adj,
                               Fhash f_hash, Frepr f_repr, Fspann f_spann,
-                              [[maybe_unused]] std::ostream& os) {
+                              [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_ADJACENCY_SCHEME
   os << "ADJ_SCH: Beginning of compute_adjacency_serial\n";
 #endif
@@ -897,12 +917,14 @@ bool compute_adjacency_serial(int const &max_time_second,
     size_t hash = f_hash(seed_hashmap, f_adji_obj(x_adjI));
     std::vector<size_t> &vect = indices_by_hash[hash];
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: process_singleEntry_AdjI hash=" << hash << " |vect|=" << vect.size() << "\n";
+    os << "ADJ_SCH: process_singleEntry_AdjI hash=" << hash
+       << " |vect|=" << vect.size() << "\n";
 #endif
     for (auto &idx : vect) {
       Tobj y = f_idx_obj(idx);
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: process_singleEntry_AdjI Before f_repr idx=" << idx << "\n";
+      os << "ADJ_SCH: process_singleEntry_AdjI Before f_repr idx=" << idx
+         << "\n";
 #endif
       std::optional<TadjO> opt = f_repr(y, x_adjI, idx);
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -922,7 +944,8 @@ bool compute_adjacency_serial(int const &max_time_second,
     vect.push_back(n_obj);
     bool test = f_insert(pair.first);
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: process_singleEntry_AdjI after f_insert test=" << test << "\n";
+    os << "ADJ_SCH: process_singleEntry_AdjI after f_insert test=" << test
+       << "\n";
 #endif
     if (test) {
       early_termination = true;
@@ -933,7 +956,7 @@ bool compute_adjacency_serial(int const &max_time_second,
     n_obj++;
     return pair.second;
   };
-  auto insert_load=[&](Tobj const& x, bool const& is_treated) -> void {
+  auto insert_load = [&](Tobj const &x, bool const &is_treated) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
@@ -947,7 +970,7 @@ bool compute_adjacency_serial(int const &max_time_second,
     undone.pop_back();
     return idx;
   };
-  auto treat_one_entry=[&]() -> void {
+  auto treat_one_entry = [&]() -> void {
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry beginning\n";
 #endif
@@ -972,8 +995,8 @@ bool compute_adjacency_serial(int const &max_time_second,
   while (true) {
     std::optional<std::pair<bool, Tobj>> opt = f_next();
     if (opt) {
-      std::pair<bool, Tobj> const& pair = *opt;
-      Tobj const& x = pair.second;
+      std::pair<bool, Tobj> const &pair = *opt;
+      Tobj const &x = pair.second;
       bool is_treated = pair.first;
       insert_load(x, is_treated);
     } else {
@@ -1016,8 +1039,10 @@ bool compute_adjacency_serial(int const &max_time_second,
   }
 }
 
-template<typename T>
-void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> & l_obj, std::vector<uint8_t> & l_status, std::ostream& os) {
+template <typename T>
+void PartialEnum_FullRead(std::string const &prefix, std::string const &suffix,
+                          bool const &Saving, std::vector<T> &l_obj,
+                          std::vector<uint8_t> &l_status, std::ostream &os) {
   std::string FileNb = prefix + "number_orbit" + suffix;
   std::string FileStatus = prefix + "orbit_status" + suffix;
   std::string FileDatabase = prefix + "database" + suffix;
@@ -1036,15 +1061,19 @@ void PartialEnum_FullRead(std::string const& prefix, std::string const& suffix, 
     os << "ADJ_SCH: reading database l_obj read\n";
 #endif
     if (l_obj.size() != n_orbit) {
-      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit << "\n";
+      std::cerr << "We have n_ent=" << l_obj.size() << " n_orbit=" << n_orbit
+                << "\n";
       std::cerr << "But they should be matching\n";
       throw TerminalException{1};
     }
   }
 }
 
-template<typename T>
-void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix, bool const& Saving, std::vector<T> const& l_obj, std::vector<uint8_t> const& l_status, [[maybe_unused]] std::ostream & os) {
+template <typename T>
+void PartialEnum_FullWrite(std::string const &prefix, std::string const &suffix,
+                           bool const &Saving, std::vector<T> const &l_obj,
+                           std::vector<uint8_t> const &l_status,
+                           [[maybe_unused]] std::ostream &os) {
   std::string FileNb = prefix + "number_orbit" + suffix;
   std::string FileStatus = prefix + "orbit_status" + suffix;
   std::string FileDatabase = prefix + "database" + suffix;
@@ -1068,14 +1097,14 @@ void PartialEnum_FullWrite(std::string const& prefix, std::string const& suffix,
   }
 }
 
-template<typename Tstor, typename Tout, typename F>
-struct NextIterator {
-  std::vector<Tstor> & l_obj;
-  std::vector<uint8_t> & l_status;
+template <typename Tstor, typename Tout, typename F> struct NextIterator {
+  std::vector<Tstor> &l_obj;
+  std::vector<uint8_t> &l_status;
   F f;
   size_t pos_next;
-  NextIterator(std::vector<Tstor> & _l_obj, std::vector<uint8_t> & _l_status, F _f) : l_obj(_l_obj), l_status(_l_status), f(_f), pos_next(0) {
-  }
+  NextIterator(std::vector<Tstor> &_l_obj, std::vector<uint8_t> &_l_status,
+               F _f)
+      : l_obj(_l_obj), l_status(_l_status), f(_f), pos_next(0) {}
   std::optional<std::pair<bool, Tout>> f_next() {
     if (pos_next >= l_obj.size()) {
       return {};
@@ -1089,72 +1118,64 @@ struct NextIterator {
   }
 };
 
-template<typename TadjO>
-struct AdjO_MPI {
+template <typename TadjO> struct AdjO_MPI {
   TadjO x;
   int iProc;
   int iOrb;
 };
 
-template<typename TadjO>
-struct AdjO_Serial {
+template <typename TadjO> struct AdjO_Serial {
   TadjO x;
   int iOrb;
 };
 
-template<typename TadjO>
-void WriteEntryGAP(std::ostream& os_out, AdjO_MPI<TadjO> const& adj) {
+template <typename TadjO>
+void WriteEntryGAP(std::ostream &os_out, AdjO_MPI<TadjO> const &adj) {
   os_out << "rec(x:=";
   WriteEntryGAP(os_out, adj.x);
   os_out << ", iProc:=" << adj.iProc << ", iOrb:=" << adj.iOrb << ")";
 }
 
-template<typename TadjO>
-void WriteEntryGAP(std::ostream& os_out, AdjO_Serial<TadjO> const& adj) {
+template <typename TadjO>
+void WriteEntryGAP(std::ostream &os_out, AdjO_Serial<TadjO> const &adj) {
   os_out << "rec(x:=";
   WriteEntryGAP(os_out, adj.x);
   os_out << ", iOrb:=" << adj.iOrb << ")";
 }
 
-
-
-
-
-
 namespace boost::serialization {
-  template <class Archive, typename TadjO>
-  inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("iProc", eRec.iProc);
-    ar &make_nvp("iOrb", eRec.iOrb);
-  }
-  template <class Archive, typename TadjO>
-  inline void serialize(Archive &ar, AdjO_Serial<TadjO> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("iOrb", eRec.iOrb);
-  }
+template <class Archive, typename TadjO>
+inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("iProc", eRec.iProc);
+  ar &make_nvp("iOrb", eRec.iOrb);
 }
+template <class Archive, typename TadjO>
+inline void serialize(Archive &ar, AdjO_Serial<TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("iOrb", eRec.iOrb);
+}
+} // namespace boost::serialization
 
-template<typename Tobj, typename TadjO>
-struct DatabaseEntry_MPI {
+template <typename Tobj, typename TadjO> struct DatabaseEntry_MPI {
   Tobj x;
   std::vector<AdjO_MPI<TadjO>> ListAdj;
 };
 
-template<typename Tobj, typename TadjO>
-struct DatabaseEntry_Serial {
+template <typename Tobj, typename TadjO> struct DatabaseEntry_Serial {
   Tobj x;
   std::vector<AdjO_Serial<TadjO>> ListAdj;
 };
 
-template<typename Tobj, typename TadjO>
-void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_MPI<Tobj, TadjO> const& dat_entry) {
+template <typename Tobj, typename TadjO>
+void WriteEntryGAP(std::ostream &os_out,
+                   DatabaseEntry_MPI<Tobj, TadjO> const &dat_entry) {
   os_out << "rec(x:=";
   WriteEntryGAP(os_out, dat_entry.x);
   os_out << ", ListAdj:=[";
-  bool IsFirst=true;
+  bool IsFirst = true;
   for (auto &eAdj : dat_entry.ListAdj) {
     if (!IsFirst)
       os_out << ",";
@@ -1163,12 +1184,13 @@ void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_MPI<Tobj, TadjO> const& d
   }
 }
 
-template<typename Tobj, typename TadjO>
-void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_Serial<Tobj, TadjO> const& dat_entry) {
+template <typename Tobj, typename TadjO>
+void WriteEntryGAP(std::ostream &os_out,
+                   DatabaseEntry_Serial<Tobj, TadjO> const &dat_entry) {
   os_out << "rec(x:=";
   WriteEntryGAP(os_out, dat_entry.x);
   os_out << ", ListAdj:=[";
-  bool IsFirst=true;
+  bool IsFirst = true;
   for (auto &eAdj : dat_entry.ListAdj) {
     if (!IsFirst)
       os_out << ",";
@@ -1178,24 +1200,25 @@ void WriteEntryGAP(std::ostream& os_out, DatabaseEntry_Serial<Tobj, TadjO> const
 }
 
 namespace boost::serialization {
-  template <class Archive, typename Tobj, typename TadjO>
-  inline void serialize(Archive &ar, DatabaseEntry_MPI<Tobj,TadjO> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("ListAdj", eRec.ListAdj);
-  }
-  template <class Archive, typename Tobj, typename TadjO>
-  inline void serialize(Archive &ar, DatabaseEntry_Serial<Tobj,TadjO> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("x", eRec.x);
-    ar &make_nvp("ListAdj", eRec.ListAdj);
-  }
+template <class Archive, typename Tobj, typename TadjO>
+inline void serialize(Archive &ar, DatabaseEntry_MPI<Tobj, TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("ListAdj", eRec.ListAdj);
 }
+template <class Archive, typename Tobj, typename TadjO>
+inline void serialize(Archive &ar, DatabaseEntry_Serial<Tobj, TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("ListAdj", eRec.ListAdj);
+}
+} // namespace boost::serialization
 
-template<typename Tobj, typename TadjO>
-std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communicator &comm,
-                                                             std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const& blk,
-                                                             int const& i_proc_out) {
+template <typename Tobj, typename TadjO>
+std::vector<DatabaseEntry_Serial<Tobj, TadjO>>
+my_mpi_gather(boost::mpi::communicator &comm,
+              std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &blk,
+              int const &i_proc_out) {
   int i_rank = comm.rank();
   int n_proc = comm.size();
   using T = typename std::vector<DatabaseEntry_MPI<Tobj, TadjO>>;
@@ -1204,22 +1227,23 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
     std::vector<T> l_blk;
     boost::mpi::gather<T>(comm, blk, l_blk, i_proc_out);
     std::vector<int> l_sizes(n_proc), l_shift(n_proc);
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       l_sizes[i_proc] = l_blk[i_proc].size();
     }
     l_shift[0] = 0;
-    for (int i_proc=1; i_proc<n_proc; i_proc++) {
-      l_shift[i_proc] = l_shift[i_proc-1] + l_sizes[i_proc-1];
+    for (int i_proc = 1; i_proc < n_proc; i_proc++) {
+      l_shift[i_proc] = l_shift[i_proc - 1] + l_sizes[i_proc - 1];
     }
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
-      for (int u=0; u<l_sizes[i_proc]; u++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      for (int u = 0; u < l_sizes[i_proc]; u++) {
         std::vector<AdjO_Serial<TadjO>> ListAdj;
-        for (auto & eAdj : l_blk[i_proc][u].ListAdj) {
+        for (auto &eAdj : l_blk[i_proc][u].ListAdj) {
           int iOrb = eAdj.iOrb + l_shift[eAdj.iProc];
           AdjO_Serial<TadjO> adj{eAdj.x, iOrb};
           ListAdj.emplace_back(std::move(adj));
         }
-        DatabaseEntry_Serial<Tobj, TadjO> entry{l_blk[i_proc][u].x, std::move(ListAdj)};
+        DatabaseEntry_Serial<Tobj, TadjO> entry{l_blk[i_proc][u].x,
+                                                std::move(ListAdj)};
         V.emplace_back(std::move(entry));
       }
     }
@@ -1234,22 +1258,24 @@ std::vector<DatabaseEntry_Serial<Tobj, TadjO>> my_mpi_gather(boost::mpi::communi
   calls.
   It also manages the storage stuff.
  */
-template<typename Tdata>
-std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdata::TadjO>>> EnumerateAndStore_MPI(
-    boost::mpi::communicator &comm, Tdata & data,
-    std::string const& Prefix, bool const& Saving, int const& max_runtime_second) {
+template <typename Tdata>
+std::pair<
+    bool,
+    std::vector<DatabaseEntry_MPI<typename Tdata::Tobj, typename Tdata::TadjO>>>
+EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
+                      std::string const &Prefix, bool const &Saving,
+                      int const &max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
   using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using TadjO_work = AdjO_MPI<TadjO>;
-  std::ostream& os = data.get_os();
-  auto f_init=[&]() -> Tobj {
-    return data.f_init();
-  };
-  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+  std::ostream &os = data.get_os();
+  auto f_init = [&]() -> Tobj { return data.f_init(); };
+  auto f_hash = [&](size_t const &seed, Tobj const &x) -> size_t {
     return data.f_hash(seed, x);
   };
-  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_rank, int const& i_orb) -> std::optional<TadjO_work> {
+  auto f_repr = [&](Tobj const &x, TadjI const &y, int const &i_rank,
+                    int const &i_orb) -> std::optional<TadjO_work> {
     std::optional<TadjO> opt = data.f_repr(x, y);
     if (opt) {
       TadjO_work ret{*opt, i_rank, i_orb};
@@ -1258,33 +1284,32 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
       return {};
     }
   };
-  auto f_spann=[&](TadjI const& x, int i_rank, int i_orb) -> std::pair<Tobj, TadjO_work> {
-    std::pair<Tobj,TadjO> pair = data.f_spann(x);
+  auto f_spann = [&](TadjI const &x, int i_rank,
+                     int i_orb) -> std::pair<Tobj, TadjO_work> {
+    std::pair<Tobj, TadjO> pair = data.f_spann(x);
     TadjO_work xo_work{pair.second, i_rank, i_orb};
     std::pair<Tobj, TadjO_work> pair_ret{pair.first, xo_work};
     return pair_ret;
   };
   std::vector<DatabaseEntry_MPI<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj=[&](int const& i_orb) -> std::vector<TadjI> {
-    Tobj & x = l_obj[i_orb].x;
+  auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
+    Tobj &x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO_work> const& ListAdj) -> void {
+  auto f_set_adj = [&](int const &i_orb,
+                       std::vector<TadjO_work> const &ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
-    return data.f_adji_obj(x);
-  };
-  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
-    return l_obj[idx].x;
-  };
+  auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
+  auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx].x; };
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string str_proc = "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
+  std::string str_proc =
+      "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_rank);
   PartialEnum_FullRead(Prefix, str_proc, Saving, l_obj, l_status, os);
   size_t pos_next = 0;
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
+  auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> {
     if (pos_next >= l_obj.size()) {
       return {};
     } else {
@@ -1295,11 +1320,11 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
       return pair;
     }
   };
-  auto f_insert=[&](Tobj const& x) -> bool {
-    l_obj.push_back({x, {} });
+  auto f_insert = [&](Tobj const &x) -> bool {
+    l_obj.push_back({x, {}});
     return false;
   };
-  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+  auto f_save_status = [&](size_t const &pos, bool const &val) -> void {
     uint8_t val_i = static_cast<uint8_t>(val);
     if (l_status.size() <= pos) {
       l_status.push_back(val_i);
@@ -1307,38 +1332,34 @@ std::pair<bool, std::vector<DatabaseEntry_MPI<typename Tdata::Tobj,typename Tdat
       l_status[pos] = val_i;
     }
   };
-  bool test = compute_adjacency_mpi<Tobj,TadjI,TadjO_work,
-    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_idx_obj), decltype(f_save_status),
-    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
-    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (comm, max_runtime_second,
-     f_next, f_insert, f_adji_obj,
-     f_idx_obj, f_save_status,
-     f_init, f_adj, f_set_adj,
-     f_hash, f_repr, f_spann, os);
+  bool test = compute_adjacency_mpi<
+      Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
+      decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
+      decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
+      decltype(f_repr), decltype(f_spann)>(
+      comm, max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
+      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
   os << "Termination test=" << test << "\n";
   PartialEnum_FullWrite(Prefix, str_proc, Saving, l_obj, l_status, os);
   return {test, std::move(l_obj)};
 }
 
-template<typename Tdata, typename Fincorrect>
-std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tdata::TadjO>>> EnumerateAndStore_Serial(
-        Tdata & data,
-        Fincorrect f_incorrect,
-        int const& max_runtime_second) {
+template <typename Tdata, typename Fincorrect>
+std::optional<std::vector<
+    DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>>
+EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
+                         int const &max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
   using TadjI = typename Tdata::TadjI;
   using TadjO = typename Tdata::TadjO;
   using TadjO_work = AdjO_Serial<TadjO>;
-  std::ostream& os = data.get_os();
-  auto f_init=[&]() -> Tobj {
-    return data.f_init();
-  };
-  auto f_hash=[&](size_t const& seed, Tobj const& x) -> size_t {
+  std::ostream &os = data.get_os();
+  auto f_init = [&]() -> Tobj { return data.f_init(); };
+  auto f_hash = [&](size_t const &seed, Tobj const &x) -> size_t {
     return data.f_hash(seed, x);
   };
-  auto f_repr=[&](Tobj const& x, TadjI const& y, int const& i_orb) -> std::optional<TadjO_work> {
+  auto f_repr = [&](Tobj const &x, TadjI const &y,
+                    int const &i_orb) -> std::optional<TadjO_work> {
     std::optional<TadjO> opt = data.f_repr(x, y);
     if (opt) {
       TadjO_work ret{*opt, i_orb};
@@ -1347,35 +1368,30 @@ std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tda
       return {};
     }
   };
-  auto f_spann=[&](TadjI const& x, int i_orb) -> std::pair<Tobj, TadjO_work> {
-    std::pair<Tobj,TadjO> pair = data.f_spann(x);
+  auto f_spann = [&](TadjI const &x, int i_orb) -> std::pair<Tobj, TadjO_work> {
+    std::pair<Tobj, TadjO> pair = data.f_spann(x);
     TadjO_work xo_work{pair.second, i_orb};
     std::pair<Tobj, TadjO_work> pair_ret{pair.first, xo_work};
     return pair_ret;
   };
   std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
   std::vector<uint8_t> l_status;
-  auto f_adj=[&](int const& i_orb) -> std::vector<TadjI> {
-    Tobj & x = l_obj[i_orb].x;
+  auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
+    Tobj &x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_set_adj=[&](int const& i_orb, std::vector<TadjO_work> const& ListAdj) -> void {
+  auto f_set_adj = [&](int const &i_orb,
+                       std::vector<TadjO_work> const &ListAdj) -> void {
     l_obj[i_orb].ListAdj = ListAdj;
   };
-  auto f_adji_obj=[&](TadjI const& x) -> Tobj {
-    return data.f_adji_obj(x);
-  };
-  auto f_idx_obj=[&](size_t const& idx) -> Tobj {
-    return l_obj[idx].x;
-  };
-  auto f_next=[&]() -> std::optional<std::pair<bool, Tobj>> {
-    return {};
-  };
-  auto f_insert=[&](Tobj const& x) -> bool {
-    l_obj.push_back({x, {} });
+  auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
+  auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx].x; };
+  auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> { return {}; };
+  auto f_insert = [&](Tobj const &x) -> bool {
+    l_obj.push_back({x, {}});
     return f_incorrect(x);
   };
-  auto f_save_status=[&](size_t const& pos, bool const& val) -> void {
+  auto f_save_status = [&](size_t const &pos, bool const &val) -> void {
     uint8_t val_i = static_cast<uint8_t>(val);
     if (l_status.size() <= pos) {
       l_status.push_back(val_i);
@@ -1383,25 +1399,25 @@ std::optional<std::vector<DatabaseEntry_Serial<typename Tdata::Tobj,typename Tda
       l_status[pos] = val_i;
     }
   };
-  bool test = compute_adjacency_serial<Tobj,TadjI,TadjO_work,
-    decltype(f_next),decltype(f_insert),decltype(f_adji_obj),
-    decltype(f_idx_obj), decltype(f_save_status),
-    decltype(f_init),decltype(f_adj),decltype(f_set_adj),
-    decltype(f_hash),decltype(f_repr),decltype(f_spann)>
-    (max_runtime_second,
-     f_next, f_insert, f_adji_obj,
-     f_idx_obj, f_save_status,
-     f_init, f_adj, f_set_adj,
-     f_hash, f_repr, f_spann, os);
+  bool test = compute_adjacency_serial<
+      Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
+      decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
+      decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
+      decltype(f_repr), decltype(f_spann)>(
+      max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
+      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
   if (!test) {
     return {};
   }
   return l_obj;
 }
 
-
-template<typename Tobj, typename TadjO>
-void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const& l_loc, [[maybe_unused]] std::ostream & os) {
+template <typename Tobj, typename TadjO>
+void WriteFamilyObjects(
+    boost::mpi::communicator &comm, std::string const &OutFormat,
+    std::string const &OutFile,
+    std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_loc,
+    [[maybe_unused]] std::ostream &os) {
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
   int i_proc_out = 0;
   int i_rank = comm.rank();
@@ -1415,8 +1431,8 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
       std::ofstream os_out(OutFile);
       os_out << "return [";
       size_t len = l_tot.size();
-      for (size_t i=0; i<len; i++) {
-        if (i>0)
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0)
           os_out << ",\n";
         WriteEntryGAP(os_out, l_tot[i].x);
       }
@@ -1430,8 +1446,8 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
       std::ofstream os_out(OutFile);
       os_out << "return [";
       size_t len = l_tot.size();
-      for (size_t i=0; i<len; i++) {
-        if (i>0)
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0)
           os_out << ",\n";
         WriteEntryGAP(os_out, l_tot[i]);
       }
@@ -1448,7 +1464,7 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
       std::set<int> set;
       size_t len = l_tot.size();
       os_out << "return [";
-      for (size_t i=0; i<len; i++) {
+      for (size_t i = 0; i < len; i++) {
         if (i > 0) {
           os_out << ",\n";
         }
@@ -1482,10 +1498,10 @@ void WriteFamilyObjects(boost::mpi::communicator &comm, std::string const& OutFo
     }
     return;
   }
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+            << "\n";
   throw TerminalException{1};
 }
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_ADJACENCYSCHEME_H_

@@ -14,7 +14,8 @@
 int main(int argc, char *argv[]) {
   try {
     if (argc != 5) {
-      std::cerr << "POLY_ReadPartialEnum [FileGRP] [DatabaseInput] [OutFormat] [OutFile]\n";
+      std::cerr << "POLY_ReadPartialEnum [FileGRP] [DatabaseInput] [OutFormat] "
+                   "[OutFile]\n";
       return -1;
     }
     std::string FileGRP = argv[1];
@@ -53,7 +54,7 @@ int main(int argc, char *argv[]) {
     std::map<size_t, size_t> map_incidence;
     std::map<Tint, size_t> map_stabsize;
     vectface TheOutput(n_act);
-    for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+    for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
       size_t res = i_orbit % 1000;
       if (res == 0) {
         std::cerr << "i_orbit=" << i_orbit << " n_orbit=" << n_orbit << "\n";
@@ -68,11 +69,13 @@ int main(int argc, char *argv[]) {
       map_stabsize[stabSize] += 1;
     }
     std::cerr << "Full data read\n";
-    for (auto & kv : map_incidence) {
-      std::cerr << "incidence " << kv.first << " attained " << kv.second << " times\n";
+    for (auto &kv : map_incidence) {
+      std::cerr << "incidence " << kv.first << " attained " << kv.second
+                << " times\n";
     }
-    for (auto & kv : map_stabsize) {
-      std::cerr << "stbsize " << kv.first << " attained " << kv.second << " times\n";
+    for (auto &kv : map_stabsize) {
+      std::cerr << "stbsize " << kv.first << " attained " << kv.second
+                << " times\n";
     }
     MyMatrix<T> EXT;
     OutputFacets(EXT, GRP, TheOutput, OutFile, OutFormat, std::cerr);

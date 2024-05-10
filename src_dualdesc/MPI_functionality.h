@@ -72,7 +72,8 @@ vectface my_mpi_allgather(boost::mpi::communicator &comm, vectface const &vf) {
 }
 
 vectface merge_initial_samp(boost::mpi::communicator &comm, vectface const &vf,
-                            std::string const &ansSamp, [[maybe_unused]] std::ostream &os) {
+                            std::string const &ansSamp,
+                            [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MPI_FCT
   os << "MPI_FCT: merge_initial_samp, |vf|=" << vf.size() << "\n";
 #endif
@@ -391,7 +392,8 @@ struct empty_message_management {
 
 /* The operations is done via
    comm.isend(dest, tag, val);
-   with val a reference. This means that data has to be preplaced before being sent.
+   with val a reference. This means that data has to be preplaced before being
+   sent.
    ---
    So, we have a number of arrays for sending data by mpi (the l_under_cons).
    And we have a number of pending messages to insert: (the l_messages)
@@ -399,8 +401,8 @@ struct empty_message_management {
    We have tzo kinds of template parameters
    * The T
    * The T_vector.
-   Basically, the T_vector must have a .push_back function available to push entries.
-   Eamplex:
+   Basically, the T_vector must have a .push_back function available to push
+   entries. Eamplex:
    *  T = int, T_vector = std::vector<T>
    * T = Face, T_vector = vectface
  */
@@ -442,7 +444,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
     if (strict) {
 #ifdef DEBUG_MPI_FCT
       size_t nb_undone = rsl.clear_and_get_nb_undone();
-      os << "MPI_FCT: strict - clear_one_entry - nb_undone=" << nb_undone << "\n";
+      os << "MPI_FCT: strict - clear_one_entry - nb_undone=" << nb_undone
+         << "\n";
 #else
       (void)rsl.clear_and_get_nb_undone();
 #endif
@@ -465,8 +468,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
         }
       }
 #ifdef DEBUG_MPI_FCT
-      os << "MPI_FCT: strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
-         << "\n";
+      os << "MPI_FCT: strict: max_siz=" << max_siz
+         << " chosen_iproc=" << chosen_iproc << "\n";
 #endif
       return process(chosen_iproc, chosen_iproc);
     } else {
@@ -486,8 +489,8 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
         }
       }
 #ifdef DEBUG_MPI_FCT
-      os << "MPI_FCT: no_strict: max_siz=" << max_siz << " chosen_iproc=" << chosen_iproc
-         << "\n";
+      os << "MPI_FCT: no_strict: max_siz=" << max_siz
+         << " chosen_iproc=" << chosen_iproc << "\n";
 #endif
       return process(chosen_iproc, idx);
     }
@@ -546,7 +549,8 @@ template <typename Tint> struct database_balinski_info {
       if (ListStatus_Emptyness[i_proc] == 0) {
 #ifdef DEBUG_MPI_FCT
         int val = ListStatus_Emptyness[i_proc];
-        os << "MPI_FCT: Returning false at i_proc=" << i_proc << " val=" << val << "\n";
+        os << "MPI_FCT: Returning false at i_proc=" << i_proc << " val=" << val
+           << "\n";
 #endif
         return false;
       }
@@ -604,12 +608,14 @@ template <typename Tint> struct database_balinski_info {
         int dur_i = std::chrono::duration_cast<std::chrono::seconds>(
                         last_database_update_time - last_update[i_proc])
                         .count();
-        os << "MPI_FCT: i_proc=" << i_proc << " ToBeAnswered=" << ToBeAnswered[i_proc]
-           << " test=" << test << " dur_i=" << dur_i << "\n";
+        os << "MPI_FCT: i_proc=" << i_proc
+           << " ToBeAnswered=" << ToBeAnswered[i_proc] << " test=" << test
+           << " dur_i=" << dur_i << "\n";
 #endif
         if (ToBeAnswered[i_proc] == 1 && test) {
 #ifdef DEBUG_MPI_FCT
-          os << "MPI_FCT: flush: Doing submit_info for i_proc=" << i_proc << "\n";
+          os << "MPI_FCT: flush: Doing submit_info for i_proc=" << i_proc
+             << "\n";
 #endif
           submit_info(i_proc, uoi_local);
         }
@@ -626,7 +632,8 @@ template <typename Tint> struct database_balinski_info {
       if (i_proc != i_rank && ListStatus_Emptyness[i_proc] == 0 &&
           RequestNat[i_proc] == 0) {
 #ifdef DEBUG_MPI_FCT
-        os << "MPI_FCT: submit_request_uoi (Case 0) at i_proc=" << i_proc << "\n";
+        os << "MPI_FCT: submit_request_uoi (Case 0) at i_proc=" << i_proc
+           << "\n";
 #endif
         return submit_request(i_proc);
       }
@@ -646,7 +653,8 @@ template <typename Tint> struct database_balinski_info {
       return;
     if (RequestNat[chosen_idx] == 0) {
 #ifdef DEBUG_MPI_FCT
-      os << "MPI_FCT: submit_request_uoi (Case 1) at chosen_idx=" << chosen_idx << "\n";
+      os << "MPI_FCT: submit_request_uoi (Case 1) at chosen_idx=" << chosen_idx
+         << "\n";
 #endif
       return submit_request(chosen_idx);
     }
@@ -655,23 +663,23 @@ template <typename Tint> struct database_balinski_info {
 
 /*
   We want to handle a potentially unlimited number of pending requests.
-  This forces having a std::list since a std::vector can deallocate and reallocate
-  while being resized. This cannot happen for a std::list.
-  Of course, there is never any deallocation as that would lead to runtime bugs
+  This forces having a std::list since a std::vector can deallocate and
+  reallocate while being resized. This cannot happen for a std::list. Of course,
+  there is never any deallocation as that would lead to runtime bugs
  */
 struct unlimited_request {
   boost::mpi::communicator &comm;
   int n_proc;
   // First is false if not active.
-  using Tpair = std::pair<bool,boost::mpi::request>;
+  using Tpair = std::pair<bool, boost::mpi::request>;
   std::list<std::vector<Tpair>> tot_list;
-  unlimited_request(boost::mpi::communicator &comm) : comm(comm), n_proc(comm.size()) {
-  }
+  unlimited_request(boost::mpi::communicator &comm)
+      : comm(comm), n_proc(comm.size()) {}
   size_t clear_and_get_nb_undone() {
     size_t n_undone = 0;
-    for (auto & eList : tot_list) {
-      for (int i_proc=0; i_proc<n_proc; i_proc++) {
-        Tpair & ePair = eList[i_proc];
+    for (auto &eList : tot_list) {
+      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+        Tpair &ePair = eList[i_proc];
         if (ePair.first) {
           boost::optional<boost::mpi::status> stat = ePair.second.test();
           if (stat) {
@@ -684,14 +692,12 @@ struct unlimited_request {
     }
     return n_undone;
   }
-  bool is_empty() {
-    return clear_and_get_nb_undone() > 0;
-  }
-  boost::mpi::request& get_entry() {
+  bool is_empty() { return clear_and_get_nb_undone() > 0; }
+  boost::mpi::request &get_entry() {
     (void)clear_and_get_nb_undone();
-    for (auto & eList : tot_list) {
-      for (int i_proc=0; i_proc<n_proc; i_proc++) {
-        Tpair & ePair = eList[i_proc];
+    for (auto &eList : tot_list) {
+      for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+        Tpair &ePair = eList[i_proc];
         if (!ePair.first) {
           ePair.first = true;
           return ePair.second;
@@ -700,24 +706,21 @@ struct unlimited_request {
     }
     // That case should be rare indeed (and it is slow)
     std::vector<Tpair> V(n_proc);
-    for (int i_proc=0; i_proc<n_proc; i_proc++) {
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
       V[i_proc].first = false;
     }
     tot_list.push_back(V);
     size_t siz = tot_list.size();
     auto iter = tot_list.begin();
-    for (size_t u=1; u<siz; u++) {
+    for (size_t u = 1; u < siz; u++) {
       iter++;
     }
-    std::vector<Tpair> & eList = *iter;
-    Tpair & ePair = eList[0];
+    std::vector<Tpair> &eList = *iter;
+    Tpair &ePair = eList[0];
     ePair.first = true;
     return ePair.second;
   }
 };
-
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_

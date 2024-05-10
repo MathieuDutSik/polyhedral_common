@@ -13,13 +13,14 @@ int main(int argc, char *argv[]) {
     std::string prefix = argv[1];
     std::string n_proc_str = argv[2];
     size_t n_proc = ParseScalar<int>(n_proc_str);
-    for (size_t i_proc=0; i_proc<n_proc; i_proc++) {
-      std::string file_name = prefix + "_nproc" + std::to_string(n_proc) + "_rank" + std::to_string(i_proc) + ".nb";
+    for (size_t i_proc = 0; i_proc < n_proc; i_proc++) {
+      std::string file_name = prefix + "_nproc" + std::to_string(n_proc) +
+                              "_rank" + std::to_string(i_proc) + ".nb";
       bool overwrite = false;
       FileData<T_unused> fdata(file_name, overwrite);
       std::vector<size_t> l_sizes = fdata.read_all_sizes();
       std::cerr << "i_proc=" << i_proc << " l_sizes =";
-      for (auto & val : l_sizes) {
+      for (auto &val : l_sizes) {
         std::cerr << " " << val;
       }
       std::cerr << "\n";
