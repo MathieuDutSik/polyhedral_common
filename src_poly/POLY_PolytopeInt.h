@@ -11,7 +11,7 @@
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                                 Finsert f_insert, std::ostream& os) {
+                                 Finsert f_insert, std::ostream &os) {
   int nbVert = EXT.rows();
   int n = EXT.cols();
   int dim = n - 1;
@@ -83,18 +83,20 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const &FAC,
                                                  MyMatrix<T> const &EXT,
-                                                 std::ostream& os) {
+                                                 std::ostream &os) {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
     ListPoint.push_back(ePoint);
     return true;
   };
-  Kernel_GetListIntegralPoint<T, Tint, decltype(f_insert)>(FAC, EXT, f_insert, os);
+  Kernel_GetListIntegralPoint<T, Tint, decltype(f_insert)>(FAC, EXT, f_insert,
+                                                           os);
   return ListPoint;
 }
 
 template <typename T, typename Tint, typename Finsert>
-void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert, std::ostream& os) {
+void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert,
+                                    std::ostream &os) {
   //
   // Basic functionality
   //
@@ -235,13 +237,15 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert, st
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC, std::ostream& os) {
+std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC,
+                                                    std::ostream &os) {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
     ListPoint.push_back(ePoint);
     return true;
   };
-  Kernel_GetListIntegralPoint_LP<T, Tint, decltype(f_insert)>(FAC, f_insert, os);
+  Kernel_GetListIntegralPoint_LP<T, Tint, decltype(f_insert)>(FAC, f_insert,
+                                                              os);
   return ListPoint;
 }
 

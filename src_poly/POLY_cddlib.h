@@ -2605,7 +2605,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
       dd_LPmax; /* since the objective is zero, this is not important */
   for (j = 1; j <= M->colsize; j++) {
     lp->A[m - 1][j - 1] = 0; /* set the objective to zero. */
-  }                          /*of j*/
+  } /*of j*/
 
   return lp;
 }
@@ -2672,15 +2672,15 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
     for (j = 1; j <= M->colsize; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
     } /*of j*/
-  }   /*of i*/
+  } /*of i*/
   for (j = 1; j <= d; j++) {
-    lp->A[m - 2][j - 1] = 0;     /* initialize */
-  }                              /*of j*/
+    lp->A[m - 2][j - 1] = 0; /* initialize */
+  } /*of j*/
   lp->A[m - 2][0] = 1;           /* the bounding constraint. */
   lp->A[m - 2][M->colsize] = -1; /* the bounding constraint. */
   for (j = 1; j <= d; j++) {
     lp->A[m - 1][j - 1] = 0; /* initialize */
-  }                          /*of j*/
+  } /*of j*/
   lp->A[m - 1][M->colsize] = 1;
 
   set_free(L);
@@ -4222,7 +4222,7 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
     for (j = 1; j <= M->colsize; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
     } /*of j*/
-  }   /*of i*/
+  } /*of i*/
   lp->A[m - 2][0] = 1;
   lp->A[m - 2][d - 1] = -1;
   /* make the LP bounded.  */
@@ -4277,7 +4277,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
     for (j = 2; j <= d - 1; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
     } /*of j*/
-  }   /*of i*/
+  } /*of i*/
   lp->A[m - 2][0] = 1;
   lp->A[m - 2][d - 1] = -1;
   /* make the LP bounded.  */
@@ -4891,9 +4891,8 @@ _L99:
 }
 
 template <typename T>
-dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M,
-                                      dd_ErrorType *error,
-                                      [[maybe_unused]] std::ostream& os) {
+dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
+                                      [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_CDD
   os << "CDD: dd_RedundantRowsViaShooting, step 1 *error=" << *error << "\n";
 #endif
@@ -5508,7 +5507,7 @@ _L999:
 
 template <typename T>
 void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
-                               dd_rowset *imp_linrows, dd_ErrorType *error)
+                                dd_rowset *imp_linrows, dd_ErrorType *error)
 /* 092 */
 {
   /* Checks whether the matrix M constains any implicit linearity at all.
@@ -8033,7 +8032,7 @@ dd_matrixdata<T> *MyMatrix_PolyFile2MatrixExt(MyMatrix<T> const &TheEXT) {
   for (i = 0; i < m_input; i++) {
     M->matrix[i][0] = 0;
     for (j = 0; j < d_input; j++) {
-      M->matrix[i][j+1] = TheEXT(i, j);
+      M->matrix[i][j + 1] = TheEXT(i, j);
       if (localdebug)
         std::cout << "i=" << i << " j=" << j << " value=" << TheEXT(i, j)
                   << "\n";
@@ -8109,7 +8108,8 @@ void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
 }
 
 template <typename T>
-std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT, std::ostream& os) {
+std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
+                                             std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8140,7 +8140,7 @@ template <typename T>
 std::vector<int>
 RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
                                   std::vector<int> const &BlockBelong,
-                                  [[maybe_unused]] std::ostream& os) {
+                                  [[maybe_unused]] std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8162,9 +8162,10 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   return ListIdx;
 }
 
-
 template <typename T>
-std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const& FAC, [[maybe_unused]] std::ostream& os) {
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(
+    MyMatrix<T> const &FAC, [[maybe_unused]] std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
@@ -8189,7 +8190,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_Dire
 #ifdef DEBUG_CDD
   os << "CDD: |ListV|=" << ListV.size() << "\n";
 #endif
-  auto get_nsp=[&]() -> MyMatrix<T> {
+  auto get_nsp = [&]() -> MyMatrix<T> {
     if (ListV.size() > 0) {
       MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
       return NullspaceTrMat(MatEqua);
@@ -8213,23 +8214,26 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_Dire
   of each other when going to a lower dimensional subspace.
  */
 template <typename T>
-std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(MyMatrix<T> const& FAC, std::ostream& os) {
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
+    MyMatrix<T> const &FAC, std::ostream &os) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
-  dd_matrixdata<T>* M = MyMatrix_PolyFile2MatrixExt(FAC);
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
   int d1 = M->colsize; // We are in the inequality case.
   std::vector<T> cvec(d1);
 #ifdef DEBUG_CDD
   os << "CDD: LPandNullspace, nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
 #endif
-  auto get_linear_entry=[&]() -> std::optional<int> {
+  auto get_linear_entry = [&]() -> std::optional<int> {
     dd_ErrorType err = dd_NoError;
-    for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       long i = iRow + 1;
       bool test = dd_ImplicitLinearity(M, i, cvec.data(), &err);
       if (err != dd_NoError) {
-        std::cerr << "LinearDeterminedByInequalitiesAndIndices_LPandNullspace internal CDD error\n";
+        std::cerr << "LinearDeterminedByInequalitiesAndIndices_LPandNullspace "
+                     "internal CDD error\n";
         throw TerminalException{1};
       }
       if (test) {
@@ -8256,7 +8260,7 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
 #endif
     std::vector<int> l_zeros;
     std::unordered_map<MyVector<T>, std::vector<int>> map;
-    for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       MyVector<T> V = GetMatrixRow(FAC, iRow);
       MyVector<T> ScalV = NSP * V;
 #ifdef DEBUG_CDD
@@ -8281,8 +8285,8 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
     MyMatrix<T> FACred(siz, nbCol - 1);
     std::vector<std::vector<int>> ll_idx(siz);
     int pos = 0;
-    for (auto & kv : map) {
-      for (int u=0; u<nbCol-1; u++) {
+    for (auto &kv : map) {
+      for (int u = 0; u < nbCol - 1; u++) {
         FACred(pos, u) = kv.first(u);
       }
       ll_idx[pos] = kv.second;
@@ -8293,23 +8297,26 @@ std::pair<MyMatrix<T>, Face> KernelLinearDeterminedByInequalitiesAndIndices_LPan
     WriteMatrix(os, FACred);
     os << "CDD: |FACred|=" << FACred.rows() << " / " << FACred.cols() << "\n";
     if (FACred.rows() > 0) {
-      std::pair<MyMatrix<T>, Face> pair_loc = KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, os);
+      std::pair<MyMatrix<T>, Face> pair_loc =
+          KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, os);
       os << "CDD: pair_loc.first=\n";
       WriteMatrix(os, pair_loc.first);
     }
 #endif
-    std::pair<MyMatrix<T>, Face> pairRed = KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred, os);
+    std::pair<MyMatrix<T>, Face> pairRed =
+        KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FACred,
+                                                                      os);
 #ifdef DEBUG_CDD
     os << "CDD: We have pairRed\n";
 #endif
     MyMatrix<T> NSPnew = pairRed.first * NSP;
     Face f(nbRow);
-    for (auto & idx : l_zeros) {
+    for (auto &idx : l_zeros) {
       f[idx] = 1;
     }
-    for (int u=0; u<siz; u++) {
+    for (int u = 0; u < siz; u++) {
       if (pairRed.second[u]) {
-        for (auto & pos : ll_idx[u]) {
+        for (auto &pos : ll_idx[u]) {
           f[pos] = 1;
         }
       }
@@ -8345,8 +8352,8 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
 
 template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
   dd_ErrorType err = dd_NoError;
-  dd_matrixdata<T>* M = MyMatrix_PolyFile2Matrix(TheEXT);
-  dd_polyhedradata<T>* poly = dd_DDMatrix2Poly(M, &err);
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
   if (err != dd_NoError) {
     std::cerr << "DualDescription_incd internal CDD error\n";
     throw TerminalException{1};

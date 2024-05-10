@@ -101,7 +101,8 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin, std::ostream& os) {
+std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
+                                                   std::ostream &os) {
   MyMatrix<T> EXT = ColumnReduction(EXTin);
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
@@ -446,7 +447,7 @@ MyVector<T> SelectColumnVectorAddZero(MyVector<T> const &TheV,
 template <typename T, typename Tgroup>
 std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
                                              const Tgroup &GRP,
-                                             std::ostream& os) {
+                                             std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   size_t n_rows = EXT.rows();

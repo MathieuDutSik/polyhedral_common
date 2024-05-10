@@ -36,10 +36,10 @@ MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
 // We follow here the conventions of SPAN_face_LinearProgramming
 // in Kskeleton.g for the computation.
 template <typename T, typename Tgroup>
-vectface
-SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
-                            MyMatrix<T> const &FAC, Tgroup const &GRP_fac,
-                            std::ostream& os) {
+vectface SPAN_face_LinearProgramming(Face const &face_fac,
+                                     Tgroup const &StabFace_fac,
+                                     MyMatrix<T> const &FAC,
+                                     Tgroup const &GRP_fac, std::ostream &os) {
   int nbRow = FAC.rows();
   size_t n_act_stabface = StabFace_fac.n_act();
   size_t n_act_fullgrp = GRP_fac.n_act();
@@ -143,12 +143,11 @@ SPAN_face_LinearProgramming(Face const &face_fac, Tgroup const &StabFace_fac,
   It could be just 1 more or more.
  */
 template <typename T, typename Tgroup, typename Ffilt>
-vectface SPAN_face_ExtremeRays_F(Face const &face_fac,
-                                 Tgroup const &StabFace_fac,
-                                 int const &RankFace, const Face &extfac_incd,
-                                 MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                                 Ffilt f_filt,
-                                 [[maybe_unused]] std::ostream& os) {
+vectface
+SPAN_face_ExtremeRays_F(Face const &face_fac, Tgroup const &StabFace_fac,
+                        int const &RankFace, const Face &extfac_incd,
+                        MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
+                        Ffilt f_filt, [[maybe_unused]] std::ostream &os) {
   int nbFac = FAC.rows();
   size_t n_act_stabface = StabFace_fac.n_act();
   if (size_t(nbFac) != n_act_stabface) {
@@ -226,7 +225,7 @@ template <typename T, typename Tgroup>
 vectface SPAN_face_ExtremeRays(Face const &face, Tgroup const &StabFace,
                                int const &RankFace, const Face &extfac_incd,
                                MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                               std::ostream& os) {
+                               std::ostream &os) {
   auto f_filt = [&](MyMatrix<T> const &M, int const &RankTarget) -> bool {
     if (M.rows() < RankTarget) {
       // The number of rows cannot match the rank, so reject
@@ -239,10 +238,11 @@ vectface SPAN_face_ExtremeRays(Face const &face, Tgroup const &StabFace,
 }
 
 template <typename T, typename Tgroup>
-vectface SPAN_face_ExtremeRaysNonSimplicial(
-    Face const &face, Tgroup const &StabFace, int const &RankFace,
-    const Face &extfac_incd, MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-    std::ostream& os) {
+vectface
+SPAN_face_ExtremeRaysNonSimplicial(Face const &face, Tgroup const &StabFace,
+                                   int const &RankFace, const Face &extfac_incd,
+                                   MyMatrix<T> const &FAC,
+                                   MyMatrix<T> const &EXT, std::ostream &os) {
   auto f_filt = [&](MyMatrix<T> const &M, int const &RankTarget) -> bool {
     if (M.rows() == RankTarget) {
       // If it were to be a face, it would be a simplicial one.
@@ -264,7 +264,7 @@ std::vector<vectface>
 EnumerationFaces_Fspann_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                int LevSearch, Fspann f_spann, Ffinal f_final,
                                bool const &ComputeTotalNumberFaces,
-                               [[maybe_unused]] std::ostream& os) {
+                               [[maybe_unused]] std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   std::vector<vectface> RetList;
   int n = TheGRP.n_act();
@@ -393,8 +393,7 @@ std::vector<vectface>
 EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                         MyMatrix<T> const &EXT, int LevSearch,
                         std::string const &method_spann, Final f_final,
-                        bool const &ComputeTotalNumberFaces,
-                        std::ostream& os) {
+                        bool const &ComputeTotalNumberFaces, std::ostream &os) {
   if (method_spann == "LinearProgramming") {
     auto f_spann = [&](Face const &face, Tgroup const &StabFace,
                        [[maybe_unused]] int const &RankFace,
@@ -446,13 +445,12 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
 }
 
 template <typename T, typename Tgroup>
-std::vector<vectface> EnumerationFaces(Tgroup const &TheGRP,
-                                       MyMatrix<T> const &FAC,
-                                       MyMatrix<T> const &EXT, int LevSearch,
-                                       std::string const &method_spann,
-                                       std::string const &method_final,
-                                       bool const &ComputeTotalNumberFaces,
-                                       std::ostream& os) {
+std::vector<vectface>
+EnumerationFaces(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
+                 MyMatrix<T> const &EXT, int LevSearch,
+                 std::string const &method_spann,
+                 std::string const &method_final,
+                 bool const &ComputeTotalNumberFaces, std::ostream &os) {
   if (method_final == "all") {
     auto f_final = [&]([[maybe_unused]] int const &level,
                        [[maybe_unused]] vectface const &RetList) -> bool {
@@ -728,7 +726,7 @@ otherwise to the file";
 
 template <typename Tgroup, typename Tgr>
 Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
-                                  Tgroup const &GRPin, std::ostream & os) {
+                                  Tgroup const &GRPin, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   HumanTime time;
@@ -782,9 +780,8 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect =
-    GRAPH_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
-  os << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time
-     << "\n";
+      GRAPH_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
+  os << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time << "\n";
   std::vector<Telt> ListGen;
   for (auto &eList : ListGen_vect) {
     Telt ePerm(eList);
@@ -869,7 +866,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   if (ComputeAutGroup) {
     //    using Tgr = GraphBitset;
     using Tgr = GraphListAdj;
-    Tgroup GRPfull = ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, std::cerr);
+    Tgroup GRPfull =
+        ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, std::cerr);
     std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
     std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
     std::cerr << "FileGroup=" << FileGroup << "\n";

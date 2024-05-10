@@ -11,7 +11,7 @@
 
 template <typename T>
 void process(std::string const &eFile, std::string const &OutFormat,
-             std::ostream &os_out, std::ostream& os) {
+             std::ostream &os_out, std::ostream &os) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
   //
   MyMatrix<T> LinSpace = LinearDeterminedByInequalities(FAC, os);

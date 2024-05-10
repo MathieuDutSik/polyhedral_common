@@ -68,7 +68,7 @@ template <typename T>
 bool TestRealizabilityInequalitiesEqualities(MyMatrix<T> const &ListIneq,
                                              MyMatrix<T> const &ListEqua,
                                              MyVector<T> const &ToBeMinimized,
-                                             std::ostream& os) {
+                                             std::ostream &os) {
   std::optional<MyMatrix<T>> EquivArr = ComputeStandardAffineSubspace(ListEqua);
   if (!EquivArr)
     return false;
@@ -90,7 +90,8 @@ template <typename T> bool IsPolytopal(MyMatrix<T> const &EXT) {
   return true;
 }
 
-template <typename T> MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream& os) {
+template <typename T>
+MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   if (IsPolytopal(EXT))
@@ -181,7 +182,8 @@ template <typename T> MyMatrix<T> SetIsobarycenter(MyMatrix<T> const &EXT) {
   return nMat;
 }
 
-template <typename T> Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream& os) {
+template <typename T>
+Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -216,7 +218,8 @@ template <typename T> Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::
 }
 
 template <typename T>
-vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb, std::ostream& os) {
+vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb,
+                             std::ostream &os) {
   vectface vf(EXT.rows());
   for (size_t i = 0; i < nb; i++) {
     Face f = Kernel_FindSingleVertex(EXT, os);
@@ -226,7 +229,7 @@ vectface Kernel_FindVertices(MyMatrix<T> const &EXT, size_t const &nb, std::ostr
 }
 
 template <typename T>
-vectface FindVertices(MyMatrix<T> const &EXT, int const &nb, std::ostream& os) {
+vectface FindVertices(MyMatrix<T> const &EXT, int const &nb, std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   MyMatrix<T> EXT_B = ColumnReduction(EXT);
   MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
@@ -234,7 +237,8 @@ vectface FindVertices(MyMatrix<T> const &EXT, int const &nb, std::ostream& os) {
   return Kernel_FindVertices(EXT_D, nb, os);
 }
 
-template <typename T> Face FindOneInitialVertex(MyMatrix<T> const &TheEXT, std::ostream& os) {
+template <typename T>
+Face FindOneInitialVertex(MyMatrix<T> const &TheEXT, std::ostream &os) {
   return FindVertices(TheEXT, 1, os)[0];
 }
 
@@ -271,7 +275,8 @@ MyMatrix<T> LP_GetExpressionForLP(MyMatrix<T> const &EXT) {
 }
 
 template <typename T>
-Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect, std::ostream& os) {
+Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                      std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -408,7 +413,8 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
 // I need to finish understanding what is the idea below.
 template <typename T>
 PosRelRes<T>
-SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect, std::ostream& os) {
+SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
+                                        std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
@@ -491,7 +497,7 @@ struct Constraint {
 template <typename T>
 PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
                                     Constraint const &eConstraint,
-                                    std::ostream& os) {
+                                    std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   MyMatrix<T> NSP = NullspaceMat(ListVect);
   int nbVect = ListVect.rows();
@@ -532,7 +538,8 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
   os << "LP: |ListInequalities|=" << ListInequalities.size() << "\n";
 #endif
   MyMatrix<T> MatInequalities = MatrixFromVectorFamily(ListInequalities);
-  LpSolution<T> eSol = CDD_LinearProgramming(MatInequalities, ToBeMinimized, os);
+  LpSolution<T> eSol =
+      CDD_LinearProgramming(MatInequalities, ToBeMinimized, os);
   PosRelRes<T> eResult;
   eResult.has_relation = true;
   eResult.has_internal_vector = false;
@@ -559,7 +566,8 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
 }
 
 template <typename T>
-PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect, std::ostream& os) {
+PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect,
+                                                 std::ostream &os) {
   int nbVect = ListVect.rows();
   std::vector<int> ListStrictlyPositive;
   std::vector<int> ListPositive(nbVect);
@@ -572,7 +580,7 @@ PosRelRes<T> SearchPositiveRelationSimple_Direct(MyMatrix<T> const &ListVect, st
 }
 
 template <typename T>
-bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream& os) {
+bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
   int nbRow = ListVect.rows();
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
@@ -604,8 +612,7 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream& os) {
 template <typename T>
 std::optional<MyVector<T>>
 SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
-                                MyVector<T> const &eVect,
-                                std::ostream& os) {
+                                MyVector<T> const &eVect, std::ostream &os) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> InputListVect(nbVect + 1, nbCol);
@@ -638,9 +645,8 @@ SolutionMatNonnegative_Version1(MyMatrix<T> const &ListVect,
 
 template <typename T>
 std::optional<MyVector<T>>
-SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect,
-                          MyVector<T> const &eVect,
-                          std::ostream& os) {
+SolutionMatNonnegative_LP(MyMatrix<T> const &ListVect, MyVector<T> const &eVect,
+                          std::ostream &os) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> ListIneq(nbVect, nbCol + 1);
@@ -670,8 +676,7 @@ template <typename T> struct SolutionMatNonnegativeComplete {
 template <typename T>
 SolutionMatNonnegativeComplete<T>
 GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
-                                  MyVector<T> const &eVect,
-                                  std::ostream& os) {
+                                  MyVector<T> const &eVect, std::ostream &os) {
   int nbVect = ListVect.rows();
   int nbCol = ListVect.cols();
   MyMatrix<T> ListIneq(nbVect, nbCol + 1);
@@ -728,10 +733,11 @@ GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
 template <typename T>
 std::optional<MyVector<T>>
 SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
-                             MyVector<T> const &eVect, std::ostream& os) {
+                             MyVector<T> const &eVect, std::ostream &os) {
   std::optional<MyVector<T>> opt1 =
-    SolutionMatNonnegative_Version1(ListVect, eVect, os);
-  std::optional<MyVector<T>> opt2 = SolutionMatNonnegative_LP(ListVect, eVect, os);
+      SolutionMatNonnegative_Version1(ListVect, eVect, os);
+  std::optional<MyVector<T>> opt2 =
+      SolutionMatNonnegative_LP(ListVect, eVect, os);
   if (opt1 && !opt2) {
     std::cerr << "opt1 is defined but not opt2, incoherent\n";
     throw TerminalException{1};
@@ -765,7 +771,7 @@ SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
 template <typename T>
 std::optional<MyVector<T>>
 SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
-                                MyVector<T> const &eVect, std::ostream& os) {
+                                MyVector<T> const &eVect, std::ostream &os) {
   auto local_terminate = [&]() -> void {
     std::string FILE_FAC = "DEBUG_Nonnegative_FAC";
     WriteMatrixFile(FILE_FAC, ListVect);
@@ -774,7 +780,7 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
     throw TerminalException{1};
   };
   std::optional<MyVector<T>> opt_LP =
-    SolutionMatNonnegative_LP(ListVect, eVect, os);
+      SolutionMatNonnegative_LP(ListVect, eVect, os);
   if (opt_LP) {
     MyVector<T> const &V = *opt_LP;
     int nbRow = V.size();
@@ -811,7 +817,7 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
     return V;
   }
   std::optional<MyVector<T>> opt_V1 =
-    SolutionMatNonnegative_Version1(ListVect, eVect, os);
+      SolutionMatNonnegative_Version1(ListVect, eVect, os);
   if (opt_V1) {
     std::cerr << "opt_V1 is defined but not opt_LP, incoherent\n";
     local_terminate();
@@ -822,12 +828,13 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
 template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
                                                   MyVector<T> const &eVect,
-                                                  std::ostream& os) {
+                                                  std::ostream &os) {
   //  return SolutionMatNonnegative_Check(ListVect, eVect);
   return SolutionMatNonnegative_FailSafe(ListVect, eVect, os);
 }
 
-template <typename T> Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream& os) {
+template <typename T>
+Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
   MyMatrix<T> FAC = ColumnReduction(FACinp);
   int n_fac = FAC.rows();
   int dim = FAC.cols();
@@ -855,7 +862,8 @@ template <typename T> Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, st
       for (int i = 0; i < dim - 1; i++)
         FAC_local(i_ineq, i + 1) = eFACred(i);
     }
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC_local, os);
+    std::vector<int> ListIrred =
+        cdd::RedundancyReductionClarkson(FAC_local, os);
     for (auto &eIrred : ListIrred) {
       int pos = ListIdx[eIrred];
       f_adj[pos + i_fac * n_fac] = 1;
@@ -866,7 +874,8 @@ template <typename T> Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, st
 
 template <typename T>
 LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
-                                            MyVector<T> const &ToBeMinimized, std::ostream& os) {
+                                            MyVector<T> const &ToBeMinimized,
+                                            std::ostream &os) {
   LpSolution<T> TheLP = GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (TheLP.method == "cdd")
     return TheLP;
@@ -875,14 +884,16 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
   MyVector<T> eVectTest = ToBeMinimized;
   eVectTest(0) -= TheLP.OptimalValue;
   std::optional<MyVector<T>> opt =
-    SolutionMatNonnegative(ListIneq_Incd, eVectTest, os);
+      SolutionMatNonnegative(ListIneq_Incd, eVectTest, os);
   if (!opt)
     return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
   return TheLP;
 }
 
 template <typename T>
-std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC, std::ostream& os) {
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC,
+                                                        std::ostream &os) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC, os);
@@ -902,20 +913,20 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices_DualM
     if (eSelect.NSP.rows() == 0) {
       MyMatrix<T> Spa = MyMatrix<T>(0, nbCol);
       Face f(nbRow);
-      for (int u=0; u<nbRow; u++)
+      for (int u = 0; u < nbRow; u++)
         f[u] = 1;
       return {std::move(Spa), std::move(f)};
     }
     MyMatrix<T> FACproj = FAC * eSelect.NSP.transpose();
     int FACproj_col = FACproj.cols();
-    auto IsZeroLine=[&](int const& iLine) -> bool {
-      for (int u=0; u<FACproj_col; u++)
+    auto IsZeroLine = [&](int const &iLine) -> bool {
+      for (int u = 0; u < FACproj_col; u++)
         if (FACproj(iLine, u) != 0)
           return false;
       return true;
     };
     std::vector<int> ListIdxZ, ListIdxNZ;
-    for (int u=0; u<FACproj.rows(); u++) {
+    for (int u = 0; u < FACproj.rows(); u++) {
       if (IsZeroLine(u)) {
         ListIdxZ.push_back(u);
       } else {
@@ -923,30 +934,31 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices_DualM
       }
     }
     MyMatrix<T> FACprojCor = SelectRow(FACproj, ListIdxNZ);
-    auto f_recursive=[&]() -> std::pair<MyMatrix<T>, Face> {
+    auto f_recursive = [&]() -> std::pair<MyMatrix<T>, Face> {
       if (FACprojCor.rows() == 0) {
         MyMatrix<T> TheSpann = IdentityMat<T>(eSelect.NSP.rows());
         Face f(0);
         return {std::move(TheSpann), f};
       } else {
-        return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FACprojCor, os);
+        return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(
+            FACprojCor, os);
       }
     };
     std::pair<MyMatrix<T>, Face> pair = f_recursive();
     if (pair.first.rows() == 0) {
       MyMatrix<T> Spann = MyMatrix<T>(0, nbCol);
       Face f(nbRow);
-      for (int u=0; u<nbRow; u++) {
+      for (int u = 0; u < nbRow; u++) {
         f[u] = 1;
       }
       return {std::move(Spann), std::move(f)};
     } else {
       MyMatrix<T> TheSpann = pair.first * eSelect.NSP;
       Face f(nbRow);
-      for (auto & eVal : ListIdxZ)
+      for (auto &eVal : ListIdxZ)
         f[eVal] = 1;
       int len = ListIdxNZ.size();
-      for (int u=0; u<len; u++) {
+      for (int u = 0; u < len; u++) {
         f[ListIdxNZ[u]] = pair.second[u];
       }
       return {std::move(TheSpann), std::move(f)};
@@ -954,9 +966,10 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices_DualM
   }
 }
 
-
-template<typename T>
-std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC, std::ostream& os) {
+template <typename T>
+std::pair<MyMatrix<T>, Face>
+KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
+                                               std::ostream &os) {
   int n_row = FAC.rows();
   int n_col = FAC.cols();
   int dim_direct = n_col;
@@ -964,44 +977,59 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
 #ifdef TIMINGS_LINEAR_PROGRAM
   HumanTime time;
   (void)KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time << "\n";
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time
+     << "\n";
   (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time << "\n";
-  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|=" << time << "\n";
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time
+     << "\n";
+  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
+                                                                           os);
+  os << "|KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|="
+     << time << "\n";
 #endif
 #ifdef DEBUG_LINEAR_PROGRAM
-  auto test_equa=[](std::pair<MyMatrix<T>,Face> const& res1, std::pair<MyMatrix<T>,Face> const& res2) -> bool {
+  auto test_equa = [](std::pair<MyMatrix<T>, Face> const &res1,
+                      std::pair<MyMatrix<T>, Face> const &res2) -> bool {
     if (res1.second != res2.second) {
       return false;
     }
     return TestEqualitySpannedSpaces(res1.first, res2.first);
   };
-  auto f_print=[&os](std::string const& origin, std::pair<MyMatrix<T>,Face> const& res) -> void {
+  auto f_print = [&os](std::string const &origin,
+                       std::pair<MyMatrix<T>, Face> const &res) -> void {
     os << "LP: f_print origin=" << origin << "\n";
     os << "LP: Face=" << StringFace(res.second) << "\n";
     os << "LP: Space=\n";
     WriteMatrix(os, res.first);
   };
   os << "LP: Before KernelLinearDeterminedByInequalitiesAndIndices_DualMeth\n";
-  std::pair<MyMatrix<T>,Face> res_dual = KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
-  os << "LP: |res_dual|=" << res_dual.first.rows() << " / " << res_dual.first.cols() << "\n";
+  std::pair<MyMatrix<T>, Face> res_dual =
+      KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
+  os << "LP: |res_dual|=" << res_dual.first.rows() << " / "
+     << res_dual.first.cols() << "\n";
   os << "LP: res_dual.second=" << StringFace(res_dual.second) << "\n";
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
   os << "res_dual.first=\n";
   WriteMatrix(os, res_dual.first);
-  std::pair<MyMatrix<T>,Face> res_dir_lp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
-  os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / " << res_dir_lp.first.cols() << "\n";
+  std::pair<MyMatrix<T>, Face> res_dir_lp =
+      cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+  os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / "
+     << res_dir_lp.first.cols() << "\n";
   os << "LP: res_dir_lp.second=" << StringFace(res_dir_lp.second) << "\n";
   os << "res_dir_lp.first=\n";
   WriteMatrix(os, res_dir_lp.first);
-  os << "Before KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
-  std::pair<MyMatrix<T>,Face> res_dir_lp_nsp = cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
-  os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / " << res_dir_lp_nsp.first.cols() << "\n";
-  os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second) << "\n";
+  os << "Before "
+        "KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
+  std::pair<MyMatrix<T>, Face> res_dir_lp_nsp =
+      cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
+                                                                         os);
+  os << "|res_dir_lp_nsp|=" << res_dir_lp_nsp.first.rows() << " / "
+     << res_dir_lp_nsp.first.cols() << "\n";
+  os << "LP: res_dir_lp_nsp.second=" << StringFace(res_dir_lp_nsp.second)
+     << "\n";
   os << "res_dir_lp_nsp.first=\n";
   WriteMatrix(os, res_dir_lp_nsp.first);
-  auto f_print_all=[&]() -> void {
+  auto f_print_all = [&]() -> void {
     os << "LP: f_print_all. FAC=\n";
     WriteMatrix(os, FAC);
     f_print("res_dual", res_dual);
@@ -1021,8 +1049,8 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
     throw TerminalException{1};
   }
   os << "After test_equa2\n";
-  auto test_correct=[&](std::pair<MyMatrix<T>,Face> const& res) -> void {
-    for (int i_row=0; i_row<n_row; i_row++) {
+  auto test_correct = [&](std::pair<MyMatrix<T>, Face> const &res) -> void {
+    for (int i_row = 0; i_row < n_row; i_row++) {
       if (res.second[i_row] == 1) {
         MyVector<T> eRow = GetMatrixRow(FAC, i_row);
         MyVector<T> Vscal = res.first * eRow;
@@ -1040,24 +1068,25 @@ std::pair<MyMatrix<T>,Face> KernelLinearDeterminedByInequalitiesAndIndices(MyMat
   if (dim_dual < dim_direct) {
     return KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
   } else {
-    return cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC, os);
+    return cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
+        FAC, os);
   }
 }
 
-
-
 /*
-  Return the corresponding subspace and the indices of the inequalities that are matching
-  with equality.
+  Return the corresponding subspace and the indices of the inequalities that are
+  matching with equality.
  */
 template <typename T>
-std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC, std::ostream& os) {
+std::pair<MyMatrix<T>, Face>
+LinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
+                                         std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_row = FAC.rows();
   int n_col = FAC.cols();
   std::vector<int> ListIdxZ;
   std::unordered_map<MyVector<T>, std::vector<int>> map;
-  for (int u=0; u<n_row; u++) {
+  for (int u = 0; u < n_row; u++) {
     MyVector<T> eRow = GetMatrixRow(FAC, u);
     if (IsZeroVector(eRow)) {
       ListIdxZ.push_back(u);
@@ -1068,46 +1097,50 @@ std::pair<MyMatrix<T>,Face> LinearDeterminedByInequalitiesAndIndices(MyMatrix<T>
   }
   int siz = map.size();
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: n_row=" << n_row << " n_col=" << n_col << " siz=" << siz << " |ListIdxZ|=" << ListIdxZ.size() << "\n";
+  os << "LP: n_row=" << n_row << " n_col=" << n_col << " siz=" << siz
+     << " |ListIdxZ|=" << ListIdxZ.size() << "\n";
 #endif
   MyMatrix<T> FACred(siz, n_col);
   std::vector<std::vector<int>> ll_idx;
   int pos = 0;
-  for (auto & kv : map) {
-    for (int u=0; u<n_col; u++) {
+  for (auto &kv : map) {
+    for (int u = 0; u < n_col; u++) {
       FACred(pos, u) = kv.first(u);
     }
     ll_idx.push_back(kv.second);
     pos++;
   }
-  std::pair<MyMatrix<T>,Face> pair = KernelLinearDeterminedByInequalitiesAndIndices(FACred, os);
+  std::pair<MyMatrix<T>, Face> pair =
+      KernelLinearDeterminedByInequalitiesAndIndices(FACred, os);
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: LinearDeterminedByInequalitiesAndIndices pair.second=" << StringFace(pair.second) << "\n";
+  os << "LP: LinearDeterminedByInequalitiesAndIndices pair.second="
+     << StringFace(pair.second) << "\n";
 #endif
   Face f(n_row);
-  for (auto & eVal : ListIdxZ) {
+  for (auto &eVal : ListIdxZ) {
     f[eVal] = 1;
   }
-  for (int pos=0; pos<siz; pos++) {
+  for (int pos = 0; pos < siz; pos++) {
 #ifdef DEBUG_LINEAR_PROGRAM
-    os << "LP: LinearDeterminedByInequalitiesAndIndices pos=" << pos << " |ll_idx|=" << ll_idx[pos].size() << "\n";
+    os << "LP: LinearDeterminedByInequalitiesAndIndices pos=" << pos
+       << " |ll_idx|=" << ll_idx[pos].size() << "\n";
 #endif
     if (pair.second[pos] == 1) {
-      for (auto && idx : ll_idx[pos]) {
+      for (auto &&idx : ll_idx[pos]) {
         f[idx] = 1;
       }
     }
   }
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: LinearDeterminedByInequalitiesAndIndices f=" << StringFace(f) << "\n";
+  os << "LP: LinearDeterminedByInequalitiesAndIndices f=" << StringFace(f)
+     << "\n";
 #endif
   return {std::move(pair.first), std::move(f)};
 }
 
-
-
 template <typename T>
-MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC, std::ostream& os) {
+MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC,
+                                                 std::ostream &os) {
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC, os);
@@ -1138,19 +1171,20 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC, std::os
   }
 }
 
-
-
-template <typename T> bool IsFullDimensional_V1(MyMatrix<T> const &FAC, std::ostream& os) {
+template <typename T>
+bool IsFullDimensional_V1(MyMatrix<T> const &FAC, std::ostream &os) {
   return !TestExistPositiveRelation(FAC, os);
 }
 
 template <typename T>
-MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC, std::ostream& os) {
+MyMatrix<T> LinearDeterminedByInequalities(MyMatrix<T> const &FAC,
+                                           std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   return KernelLinearDeterminedByInequalities(SelectNonZeroRows(FAC), os);
 }
 
-template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostream& os) {
+template <typename T>
+bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostream &os) {
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   MyMatrix<T> FACexp(nbRow, 1 + nbCol);
@@ -1176,7 +1210,8 @@ template <typename T> bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostrea
    No group used here nor any equalities.
  */
 template <typename T>
-MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC, std::ostream& os) {
+MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
+                                        std::ostream &os) {
   int n_rows = FAC.rows();
   int n_cols = FAC.cols();
   MyMatrix<T> ListInequalities = ZeroMatrix<T>(n_rows, n_cols + 1);
@@ -1188,7 +1223,8 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC, std::ostream& os
     for (int i_col = 0; i_col <= n_cols; i_col++)
       ToBeMinimized(i_col) += ListInequalities(i_row, i_col);
   }
-  LpSolution<T> eSol = CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
+  LpSolution<T> eSol =
+      CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
   if (!eSol.PrimalDefined || !eSol.DualDefined) {
     std::cerr << "Failed to find an interior point by linear programming\n";
     std::cerr << "Maybe the cone is actually not full dimensional\n";
@@ -1217,18 +1253,21 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC, std::ostream& os
 //
 // If the code returns true, then the vertex is indeed non-degenerate.
 // If not, then the vertex may or may not be non-degenerate.
-template<typename T>
-bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] MyVector<T> const& ToBeMinimized, LpSolution<T> const& eSol, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+bool TestCriterionNonDegenerate(
+    MyMatrix<T> const &ListIneq,
+    [[maybe_unused]] MyVector<T> const &ToBeMinimized,
+    LpSolution<T> const &eSol, [[maybe_unused]] std::ostream &os) {
   int n_row = ListIneq.rows();
   int n_col = ListIneq.cols();
-  MyVector<T> eSolDual = - eSol.DualSolution;
+  MyVector<T> eSolDual = -eSol.DualSolution;
 #ifdef DEBUG_LINEAR_PROGRAM
   os << "LP: OptimalValue=" << eSol.OptimalValue << "\n";
   os << "LP: eSolDual=" << StringVectorGAP(eSolDual) << "\n";
   MyVector<T> TheSum = ToBeMinimized;
   TheSum(0) -= eSol.OptimalValue;
   os << "LP: 1: TheSum=" << StringVectorGAP(TheSum) << "\n";
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
     TheSum -= eSolDual(i_row) * eRow;
   }
@@ -1238,7 +1277,7 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
     throw TerminalException{1};
   }
   std::vector<MyVector<T>> vect_incd1;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     if (eSolDual(i_row) > 0) {
       MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
       vect_incd1.push_back(eRow);
@@ -1249,7 +1288,7 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
   int rnk_incd = RankMat(MatIncd1);
   os << "LP: rnk_incd=" << rnk_incd << "\n";
   std::vector<MyVector<T>> vect_incd2;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
     T scal = eRow.dot(eSol.DirectSolutionExt);
     if (scal < 0) {
@@ -1266,14 +1305,15 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
   os << "LP: rnk_incd2=" << rnk_incd2 << "\n";
 #endif
   int n_non_zero = 0;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     if (eSolDual(i_row) > 0) {
       n_non_zero += 1;
     }
   }
   int target_dim = n_col - 1;
 #ifdef DEBUG_LINEAR_PROGRAM
-  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col << " target_dim=" << target_dim << " rnk_incd=" << rnk_incd << "\n";
+  os << "LP: n_non_zero=" << n_non_zero << " n_col=" << n_col
+     << " target_dim=" << target_dim << " rnk_incd=" << rnk_incd << "\n";
 #endif
   if (n_non_zero == target_dim) {
     return true;
@@ -1282,26 +1322,28 @@ bool TestCriterionNonDegenerate(MyMatrix<T> const& ListIneq, [[maybe_unused]] My
 }
 
 /*
-  The Interior point obtained by a regular linear program corresponds essentially
-  to just one vertex solution of the linear program.
-  This code gives a solution with is geometrically unique:
+  The Interior point obtained by a regular linear program corresponds
+  essentially to just one vertex solution of the linear program. This code gives
+  a solution with is geometrically unique:
   * If you permute the rows then you get the same point.
-  * If you apply a matrix transformation to the rows of FAC then the interior point is
-  changed by the contragredient action.
-  Note that rescaling each rows by some scalar which varies from row to row will
-  get you a different interior point.
+  * If you apply a matrix transformation to the rows of FAC then the interior
+  point is changed by the contragredient action. Note that rescaling each rows
+  by some scalar which varies from row to row will get you a different interior
+  point.
   ---
-  The whole computation is done with only linear programming though lots of it and
-  does not involve full dual description.
+  The whole computation is done with only linear programming though lots of it
+  and does not involve full dual description.
  */
 template <typename T>
-MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ostream& os) {
+MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
+                                                std::ostream &os) {
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  auto check_return=[&](MyVector<T> const& Vret) -> void {
+  auto check_return = [&](MyVector<T> const &Vret) -> void {
     int len = FAC.rows();
-    for (int i=0; i<len; i++) {
+    for (int i = 0; i < len; i++) {
       MyVector<T> eFAC = GetMatrixRow(FAC, i);
-      os << "i=" << i << " |eFAC|=" << eFAC.size() << " |retV|=" << Vret.size() << "\n";
+      os << "i=" << i << " |eFAC|=" << eFAC.size() << " |retV|=" << Vret.size()
+         << "\n";
       T scal = eFAC.dot(Vret);
       if (scal <= 0) {
         std::cerr << "We should have strictly positive scalar product\n";
@@ -1328,7 +1370,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, CDD_LinearProgramming, before\n";
 #endif
-  LpSolution<T> eSol = CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
+  LpSolution<T> eSol =
+      CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, CDD_LinearProgramming, after\n";
 #endif
@@ -1337,7 +1380,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     std::cerr << "Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
-  bool is_non_degenerate = TestCriterionNonDegenerate(ListInequalities, ToBeMinimized, eSol, os);
+  bool is_non_degenerate =
+      TestCriterionNonDegenerate(ListInequalities, ToBeMinimized, eSol, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, is_non_degenerate=" << is_non_degenerate << "\n";
 #endif
@@ -1345,10 +1389,12 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     MyVector<T> V = eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
-    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 1\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
+       << " case 1\n";
     check_return(V);
 #endif
-    // The happy scenario where the linear programming directly gets us something unique
+    // The happy scenario where the linear programming directly gets us
+    // something unique
     return V;
   }
   // Now computing the kernel of the attained kernel.
@@ -1359,19 +1405,23 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #endif
   MyMatrix<T> ListIneqRed = ListInequalities * NSP.transpose();
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, |ListIneqRed|=" << ListIneqRed.rows() << " / " << ListIneqRed.cols() << "\n";
+  os << "LP: GGUIP, |ListIneqRed|=" << ListIneqRed.rows() << " / "
+     << ListIneqRed.cols() << "\n";
 #endif
-  // Now the subspace built by the matching inequalities. It is of strictly smaller dimension since
-  // otherwise the solution is not optimal.
+  // Now the subspace built by the matching inequalities. It is of strictly
+  // smaller dimension since otherwise the solution is not optimal.
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, before\n";
   os << "LP: ListIneqRed=\n";
   WriteMatrix(os, ListIneqRed);
 #endif
-  std::pair<MyMatrix<T>,Face> pair = LinearDeterminedByInequalitiesAndIndices(ListIneqRed, os);
+  std::pair<MyMatrix<T>, Face> pair =
+      LinearDeterminedByInequalitiesAndIndices(ListIneqRed, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, LinearDeterminedByInequalitiesAndIndices, after\n";
-  os << "LP: pair.second=" << StringFace(pair.second) << " |pair.first|=" << pair.first.rows() << " / " << pair.first.cols() << " RankMat(pair.first)=" << RankMat(pair.first) << "\n";
+  os << "LP: pair.second=" << StringFace(pair.second)
+     << " |pair.first|=" << pair.first.rows() << " / " << pair.first.cols()
+     << " RankMat(pair.first)=" << RankMat(pair.first) << "\n";
   if (pair.first.rows() == 0) {
     std::cerr << "The dimension is 0 which is impossible\n";
     throw TerminalException{1};
@@ -1381,10 +1431,12 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
     MyVector<T> V = eSol.DirectSolution;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
     os << "LP: GGUIP, returns a solution\n";
-    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size() << " case 2\n";
+    os << "LP: GGUIP V=" << StringVectorGAP(V) << " |V|=" << V.size()
+       << " case 2\n";
     check_return(V);
 #endif
-    // The happy scenario where the linear programming directly gets us something unique
+    // The happy scenario where the linear programming directly gets us
+    // something unique
     return V;
   }
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
@@ -1392,7 +1444,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #endif
   std::vector<int> ListIdxNZ;
   int len = ListIneqRed.rows();
-  for (int u=0; u<len; u++) {
+  for (int u = 0; u < len; u++) {
     if (pair.second[u] == 0) {
       ListIdxNZ.push_back(u);
     }
@@ -1400,15 +1452,19 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, |ListIdxNZ|=" << ListIdxNZ.size() << "\n";
 #endif
-  MyMatrix<T> ListIneqRedB = SelectRow(ListIneqRed, ListIdxNZ) * pair.first.transpose();
+  MyMatrix<T> ListIneqRedB =
+      SelectRow(ListIneqRed, ListIdxNZ) * pair.first.transpose();
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, |ListIneqRedB|=" << ListIneqRedB.rows() << " / " << ListIneqRedB.cols() << "\n";
+  os << "LP: GGUIP, |ListIneqRedB|=" << ListIneqRedB.rows() << " / "
+     << ListIneqRedB.cols() << "\n";
   os << "LP: ListIneqRedB=\n";
   WriteMatrix(os, ListIneqRedB);
 #endif
-  MyVector<T> SolSubspaceB = GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
+  MyVector<T> SolSubspaceB =
+      GetGeometricallyUniqueInteriorPoint(ListIneqRedB, os);
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
-  os << "LP: GGUIP, We have SolSubspaceB=" << StringVectorGAP(SolSubspaceB) << "\n";
+  os << "LP: GGUIP, We have SolSubspaceB=" << StringVectorGAP(SolSubspaceB)
+     << "\n";
 #endif
   MyVector<T> SolSubspace = pair.first.transpose() * SolSubspaceB;
   MyVector<T> V = NSP.transpose() * SolSubspace;
@@ -1419,24 +1475,21 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const& FAC, std::ost
   }
 #endif
   MyVector<T> Vret(n_cols);
-  for (int i=0; i<n_cols; i++) {
+  for (int i = 0; i < n_cols; i++) {
     Vret(i) = V(i + 1) / V(0);
   }
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   os << "LP: GGUIP, eSolFinal found\n";
-  os << "LP: GGUIP Vret=" << StringVectorGAP(Vret) << " |V|=" << Vret.size() << " case 3\n";
+  os << "LP: GGUIP Vret=" << StringVectorGAP(Vret) << " |V|=" << Vret.size()
+     << " case 3\n";
   check_return(Vret);
 #endif
   return Vret;
 }
 
-
-
-
 template <typename T>
 MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
-                                  MyMatrix<T> const &Equa,
-                                  std::ostream& os) {
+                                  MyMatrix<T> const &Equa, std::ostream &os) {
   MyMatrix<T> NSP = NullspaceTrMat(Equa);
   MyMatrix<T> FACred = FAC * NSP.transpose();
   MyVector<T> eVectInt = GetSpaceInteriorPoint_Basic(FACred, os);
@@ -1463,7 +1516,8 @@ MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
 }
 
 template <typename T>
-MyVector<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std::ostream& os) {
+MyVector<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f,
+                                      std::ostream &os) {
   int n_row = FAC.rows();
   int n = FAC.cols();
   int n_f = f.size();
@@ -1488,8 +1542,9 @@ MyVector<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f, std
   return GetSpaceInteriorPoint(FACred, Equa, os);
 }
 
-template<typename T>
-MyVector<T> GetSpaceInteriorPointFacet(MyMatrix<T> const &FAC, int const &iFacet, std::ostream& os) {
+template <typename T>
+MyVector<T> GetSpaceInteriorPointFacet(MyMatrix<T> const &FAC,
+                                       int const &iFacet, std::ostream &os) {
   int nbRow = FAC.rows();
   Face f(nbRow);
   f[iFacet] = 1;

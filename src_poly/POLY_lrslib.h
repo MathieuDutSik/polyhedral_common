@@ -625,9 +625,9 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
       } /* end of  for (j=start.... */
       degencount = ndegencount;
       start = nstart;
-    }             /* end of else perform ratio test statement */
+    } /* end of else perform ratio test statement */
     basicindex++; /* increment column of basis inverse to check next */
-  }               /*end of while loop */
+  } /*end of while loop */
   return minratio[start];
 } /* end of ratio */
 
@@ -852,9 +852,9 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
         else
           return globals::L_FALSE;
       } /* end if j < nlinearity */
-    }   /* end of if i <= m .... */
-  }     /* end of for   */
-        /* update linearity array to get rid of redundancies */
+    } /* end of if i <= m .... */
+  } /* end of for   */
+  /* update linearity array to get rid of redundancies */
   i = 0;
   k = 0; /* counters for linearities         */
   while (k < nlinearity) {

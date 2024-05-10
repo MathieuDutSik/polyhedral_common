@@ -15,7 +15,7 @@
 template <typename T, typename Tgroup>
 void process(std::string const &FileEXT, std::string const &FileGRP,
              std::string const &method, std::string const &OutFormat,
-             std::ostream &os_out, std::ostream& os) {
+             std::ostream &os_out, std::ostream &os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   size_t nbRow = EXT.rows();
@@ -127,21 +127,25 @@ int main(int argc, char *argv[]) {
     auto compute_redundancy = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -157,7 +161,8 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out, std::cerr);
+        return process<T, Tgroup>(FileEXT, FileGRP, method, OutFormat, os_out,
+                                  std::cerr);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

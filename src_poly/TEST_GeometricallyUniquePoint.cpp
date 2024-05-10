@@ -5,13 +5,12 @@
 #include "POLY_PolytopeInt.h"
 // clang-format on
 
-template<typename T>
-bool TestMatrixFile(std::string const& FileFAC) {
+template <typename T> bool TestMatrixFile(std::string const &FileFAC) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
   int n_row = FAC.rows();
   int n_col = FAC.cols();
   MyVector<T> eCent = GetGeometricallyUniqueInteriorPoint(FAC, std::cerr);
-  for (int i=0; i<20; i++) {
+  for (int i = 0; i < 20; i++) {
     std::vector<int> ePerm = RandomPermutation<int>(n_row);
     MyMatrix<T> eUnitMod = RandomUnimodularMatrix<T>(n_col);
     MyMatrix<T> eUnitMod_cgr = CongrMap(eUnitMod);
@@ -21,7 +20,8 @@ bool TestMatrixFile(std::string const& FileFAC) {
       int j_row = ePerm[i_row];
       NewFAC.row(i_row) = FACprod.row(j_row);
     }
-    MyVector<T> eCentProd = GetGeometricallyUniqueInteriorPoint(NewFAC, std::cerr);
+    MyVector<T> eCentProd =
+        GetGeometricallyUniqueInteriorPoint(NewFAC, std::cerr);
     MyVector<T> eCentMap = eUnitMod_cgr.transpose() * eCent;
     if (eCentMap != eCentProd) {
       return false;
@@ -29,7 +29,6 @@ bool TestMatrixFile(std::string const& FileFAC) {
   }
   return true;
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time;

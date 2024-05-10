@@ -48,14 +48,14 @@ int main(int argc, char *argv[]) {
       MyMatrix<T> EXT = cdd::DualDescription(FAC);
       HumanTime time;
       MyMatrix<Tint> ListIntPoint1 =
-        ReordListPoint(GetListIntegralPoint<T, Tint>(FAC, EXT, std::cerr));
+          ReordListPoint(GetListIntegralPoint<T, Tint>(FAC, EXT, std::cerr));
       std::cerr << "|GetListIntegralPoint| = " << time << "\n";
     }
     //
     if (opt == "all" || opt == "lp") {
       HumanTime time;
       MyMatrix<Tint> ListIntPoint2 =
-        ReordListPoint(GetListIntegralPoint_LP<T, Tint>(FAC, std::cerr));
+          ReordListPoint(GetListIntegralPoint_LP<T, Tint>(FAC, std::cerr));
       std::cerr << "|GetListIntegralPoint_LP| = " << time << "\n";
     }
     //

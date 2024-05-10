@@ -12,7 +12,7 @@
 template <typename T>
 void process_A(std::string const &eFileI, std::string const &eFileO,
                std::string const &method, std::string const &OutFormat,
-               std::ostream& os) {
+               std::ostream &os) {
   MyMatrix<T> preEXT = ReadMatrixFile<T>(eFileI);
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
   auto get_list_irred = [&]() -> std::vector<int> {
@@ -64,7 +64,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
 
 void process_B(std::string const &eFileI, std::string const &eFileO,
                std::string const &method, std::string const &OutFormat,
-               std::string const &arith, std::ostream& os) {
+               std::string const &arith, std::ostream &os) {
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
     return process_A<T>(eFileI, eFileO, method, OutFormat, os);

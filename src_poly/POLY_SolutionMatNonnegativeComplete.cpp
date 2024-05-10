@@ -13,7 +13,7 @@ void process(std::string const &eFileFAC, std::string const &eFileINEQ,
   MyMatrix<T> ListVect = ReadMatrixFile<T>(eFileFAC);
   MyVector<T> eVect = ReadVectorFile<T>(eFileINEQ);
   SolutionMatNonnegativeComplete<T> eSol =
-    GetSolutionMatNonnegativeComplete(ListVect, eVect, std::cerr);
+      GetSolutionMatNonnegativeComplete(ListVect, eVect, std::cerr);
   if (eSol.ExtremeRay) {
     os << "eEXT=" << StringVector(*eSol.ExtremeRay) << "\n";
   } else {

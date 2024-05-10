@@ -32,8 +32,9 @@ MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
   return TheProv;
 }
 
-template<typename T>
-MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const& TheMat, Face const& eList, int const& idx_drop) {
+template <typename T>
+MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const &TheMat, Face const &eList,
+                                int const &idx_drop) {
   int nbCol = TheMat.cols();
   int nbRowRed = eList.count();
   int nbColRed = nbCol - 1;
@@ -41,7 +42,7 @@ MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const& TheMat, Face const& eList, in
   boost::dynamic_bitset<>::size_type jRow = eList.find_first();
   for (int iRow = 0; iRow < nbRowRed; iRow++) {
     int pos = 0;
-    for (int iCol=0; iCol<nbCol; iCol++) {
+    for (int iCol = 0; iCol < nbCol; iCol++) {
       if (iCol != idx_drop) {
         RetMat(iRow, pos) = TheMat(jRow, iCol);
         pos++;
@@ -98,7 +99,8 @@ template <typename T> T sqr_estimate_facet_coefficients(MyMatrix<T> const &M) {
 }
 
 template <typename T>
-void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList,
+                                std::string const &context) {
   static_assert(is_ring_field<T>::value,
                 "Requires T to be a field in CheckFacetInequalityKernel");
   int siz = eList.size();
@@ -113,7 +115,8 @@ void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList, std::
     throw TerminalException{1};
   }
   if (nbRow != siz) {
-    std::cerr << "nbRow=" << nbRow << " siz=" << siz << " which is inconsistent\n";
+    std::cerr << "nbRow=" << nbRow << " siz=" << siz
+              << " which is inconsistent\n";
     std::cerr << "context=" << context << "\n";
     throw TerminalException{1};
   }
@@ -176,13 +179,15 @@ void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList, std::
 
 template <typename T>
 inline typename std::enable_if<is_ring_field<T>::value, void>::type
-CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
+                     std::string const &context) {
   CheckFacetInequalityKernel(EXT, eList, context);
 }
 
 template <typename T>
 inline typename std::enable_if<!is_ring_field<T>::value, void>::type
-CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList, std::string const& context) {
+CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
+                     std::string const &context) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, T>(EXT);
   CheckFacetInequalityKernel(EXT_field, eList, context);
@@ -555,11 +560,12 @@ public:
     os << "FLIP: |PairIncs|=" << PairIncs.first.size() << " / "
        << PairIncs.second.size() << "\n";
     os << "FLIP: OneInc=" << OneInc.size() << " / " << OneInc.count() << "\n";
-    os << "FLIP: f_select=" << f_select.size() << " / " << f_select.count() << "\n";
-    os << "FLIP: sInc=" << sInc.size() << " / " << sInc.count() << " eSign=" << eSign
+    os << "FLIP: f_select=" << f_select.size() << " / " << f_select.count()
        << "\n";
-    os << "FLIP: beta_max_num=" << beta_max_num << " / beta_max_den=" << beta_max_den
-       << "\n";
+    os << "FLIP: sInc=" << sInc.size() << " / " << sInc.count()
+       << " eSign=" << eSign << "\n";
+    os << "FLIP: beta_max_num=" << beta_max_num
+       << " / beta_max_den=" << beta_max_den << "\n";
     os << "FLIP: FlippingFramework_Accelerate<mpq_class> before check\n";
     CheckFacetInequality(EXT_debug, fret, "InternalFlipFaceIneq 2");
 #endif

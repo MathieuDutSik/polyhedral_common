@@ -619,7 +619,7 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
 template <typename T>
 LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
                                      MyVector<T> const &ToBeMinimized,
-                                     std::ostream& os) {
+                                     std::ostream &os) {
   int dimTot = ToBeMinimized.size();
   MyMatrix<T> ListEqua(0, dimTot);
   GLPKoption eGLPKoption;

@@ -8,7 +8,8 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::ostream &os_out, std::ostream& os) {
+void process(std::string const &eFileI, std::ostream &os_out,
+             std::ostream &os) {
   MyMatrix<T> ListVect = ReadMatrixFile<T>(eFileI);
   PosRelRes<T> prr = SearchPositiveRelationSimple_Direct(ListVect, os);
   if (prr.eTestExist) {

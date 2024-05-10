@@ -22,8 +22,7 @@ template <typename T> struct LpSolutionSimple {
   MyVector<int> ColumnStatus;
 };
 
-template <typename T>
-struct LpSolution {
+template <typename T> struct LpSolution {
   std::string method;
   bool PrimalDefined = false;
   bool DualDefined = false;
@@ -51,7 +50,6 @@ void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "rankDirectSol=" << eSol.rankDirectSol << "\n";
   os << "Answer=" << eSol.Answer << "\n";
 }
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_LINEARPROGRAMMINGFUND_H_

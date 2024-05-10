@@ -55,7 +55,9 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
   std::cerr << "n_ext=" << n_ext << "\n";
   std::cerr << "|V_p|=" << V_p.size() << " |V_m|=" << V_m.size()
             << " |V_z|=" << V_z.size() << "\n";
-  auto check = [&](Face const &f) -> void { CheckFacetInequality(EXT, f, "SmallPolytopes"); };
+  auto check = [&](Face const &f) -> void {
+    CheckFacetInequality(EXT, f, "SmallPolytopes");
+  };
 #endif
   Face f_full(n_ext);
   for (int i = 0; i < n_ext; i++)

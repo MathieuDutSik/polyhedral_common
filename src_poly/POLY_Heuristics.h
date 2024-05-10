@@ -374,10 +374,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   lstr_thompson_prior.push_back(s3);
   lstr_thompson_prior.push_back("/");
   //
-  std::vector<std::string> lstr_key = {
-      "&KEY_COMPRESSION", " ListKey = \"delta\"",
-      " ListDescription = \"superfine\"",
-      "/"};
+  std::vector<std::string> lstr_key = {"&KEY_COMPRESSION",
+                                       " ListKey = \"delta\"",
+                                       " ListDescription = \"superfine\"", "/"};
   //
   std::vector<std::string> lstr_heuristic_prior = {
       "&HEURISTIC_PRIOR", " DefaultPrior = \"noprior:10\"",
@@ -399,8 +398,8 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   // Putting things together
   //
   std::vector<std::string> lstr;
-  for (auto &e_lstr :
-         {lstr_proba, lstr_thompson_prior, lstr_key, lstr_heuristic_prior, lstr_io}) {
+  for (auto &e_lstr : {lstr_proba, lstr_thompson_prior, lstr_key,
+                       lstr_heuristic_prior, lstr_io}) {
     lstr.push_back("");
     for (auto &estr : e_lstr)
       lstr.push_back(estr);
@@ -507,7 +506,8 @@ template <typename T> struct PolyHeuristicSerial {
 };
 
 template <typename T>
-PolyHeuristicSerial<T> AllStandardHeuristicSerial(int const& dimEXT, std::ostream &os) {
+PolyHeuristicSerial<T> AllStandardHeuristicSerial(int const &dimEXT,
+                                                  std::ostream &os) {
   FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
   bool DD_Saving = false;
   bool AdvancedTerminationCriterion = false;
