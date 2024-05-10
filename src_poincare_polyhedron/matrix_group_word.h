@@ -21,20 +21,20 @@ template <typename T> struct CombElt {
 };
 
 namespace boost::serialization {
-  template <class Archive>
-  inline void serialize(Archive &ar, TrackGroup &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("ListDI", eRec.ListDI);
-  }
-
-  template <class Archive, typename T>
-  inline void serialize(Archive &ar, CombElt<T> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("tg", eRec.tg);
-    ar &make_nvp("mat", eRec.mat);
-    ar &make_nvp("mat_d", eRec.mat_d);
-  }
+template <class Archive>
+inline void serialize(Archive &ar, TrackGroup &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("ListDI", eRec.ListDI);
 }
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, CombElt<T> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("tg", eRec.tg);
+  ar &make_nvp("mat", eRec.mat);
+  ar &make_nvp("mat_d", eRec.mat_d);
+}
+} // namespace boost::serialization
 
 TrackGroup ProductTrack(TrackGroup const &tg1, TrackGroup const &tg2) {
   std::vector<int> ListDI = tg1.ListDI;
@@ -149,7 +149,6 @@ template <typename T> T NormCombElt(CombElt<T> const &e_elt) {
   return val;
 }
 
-
 template <typename T>
 std::vector<CombElt<T>>
 InverseSaturation(std::vector<CombElt<T>> const &l_ent) {
@@ -181,14 +180,12 @@ std::vector<CombElt<T>> ListExpansion(std::vector<CombElt<T>> const &l_previous,
   return l_ret;
 }
 
-
 template <typename T> struct ShortVectorGroup {
   MyVector<T> x;
   std::vector<CombElt<T>> ListGen;
   ShortVectorGroup(MyVector<T> const &_x,
                    std::vector<CombElt<T>> const &_ListGen)
-      : x(_x), ListGen(_ListGen) {
-  }
+      : x(_x), ListGen(_ListGen) {}
 
   bool IsSolution(MyVector<T> const &v, T const &target_scal,
                   CombElt<T> const &eElt) const {
@@ -335,20 +332,6 @@ template <typename T> struct ShortVectorGroupMemoize {
 
   std::vector<CombElt<T>> const &GetListMiss() const { return ListMiss; }
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // clang-format off
 #endif  // SRC_POINCARE_POLYHEDRON_POINCARE_POLYHEDRON_H_

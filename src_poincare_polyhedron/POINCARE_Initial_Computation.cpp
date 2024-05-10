@@ -8,23 +8,22 @@
 #include "Permutation.h"
 // clang-format on
 
-
 template <typename Tgroup>
-void Process_rec_option(RecOption const &rec_option, std::ostream& os) {
+void Process_rec_option(RecOption const &rec_option, std::ostream &os) {
   std::string arith = rec_option.Arithmetic;
   if (arith == "rational") {
     using T = mpq_class;
-    return full_process_type<T,Tgroup>(rec_option, os);
+    return full_process_type<T, Tgroup>(rec_option, os);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return full_process_type<T,Tgroup>(rec_option, os);
+    return full_process_type<T, Tgroup>(rec_option, os);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return full_process_type<T,Tgroup>(rec_option, os);
+    return full_process_type<T, Tgroup>(rec_option, os);
   }
   std::optional<std::string> opt_realalgebraic =
       get_postfix(arith, "RealAlgebraic=");
@@ -40,12 +39,11 @@ void Process_rec_option(RecOption const &rec_option, std::ostream& os) {
     int const idx_real_algebraic_field = 1;
     insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
     using T = RealField<idx_real_algebraic_field>;
-    return full_process_type<T,Tgroup>(rec_option, os);
+    return full_process_type<T, Tgroup>(rec_option, os);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time;
