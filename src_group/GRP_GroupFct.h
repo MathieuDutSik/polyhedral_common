@@ -157,11 +157,13 @@ template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   int nbGen = ListGen.size();
   Tidx n = TheGRP.n_act();
-  std::string strOut = std::to_string(int(n)) + " " + std::to_string(nbGen);
+  int n_i = static_cast<int>(n);
+  std::string strOut = std::to_string(n_i) + " " + std::to_string(nbGen);
   for (auto &eGen : ListGen) {
     for (Tidx i = 0; i < n; i++) {
       Tidx eVal = OnPoints(i, eGen);
-      strOut += " " + std::to_string(int(eVal));
+      int eVal_i = static_cast<int>(eVal);
+      strOut += " " + std::to_string(eVal_i);
     }
   }
   return strOut;

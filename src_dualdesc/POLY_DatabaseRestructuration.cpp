@@ -27,8 +27,8 @@ int main(int argc, char *argv[]) {
     int NprocI = ParseScalar<int>(argv[3]);
     std::string DatabaseO = argv[4];
     int NprocO = ParseScalar<int>(argv[5]);
-    bool IgnoreLastI = (bool)ParseScalar<int>(argv[6]);
-    bool IgnoreLastO = (bool)ParseScalar<int>(argv[7]);
+    bool IgnoreLastI = static_cast<bool>(ParseScalar<int>(argv[6]));
+    bool IgnoreLastO = static_cast<bool>(ParseScalar<int>(argv[7]));
     assert(!IgnoreLastI || NprocI > 1);
     assert(!IgnoreLastO || NprocO > 1);
     //

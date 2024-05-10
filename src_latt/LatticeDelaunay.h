@@ -518,7 +518,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
     MyMatrix<Tint> EXT = x.EXT;
     Tobj x_ret{EXT, {}};
     return x_ret;
-  };
+  }
   size_t f_complexity(Tobj const &x) { return x.EXT.rows(); }
 };
 

@@ -119,7 +119,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     return Matrix_Hash(x.ctype_arr.eMat, seed);
-  };
+  }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     if (x.ctype_arr.eMat != y.ctype_arr.eMat) {
       return {};
@@ -162,7 +162,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
     TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
     Tobj x_ret{ctype_arr, {}};
     return x_ret;
-  };
+  }
 };
 
 template <typename T, typename Tint, typename Tgroup>

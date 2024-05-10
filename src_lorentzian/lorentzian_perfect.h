@@ -838,7 +838,7 @@ struct DataPerfectLorentzianFunc {
     MyMatrix<Tint> EXT = x.EXT;
     Tobj x_ret{EXT, {}};
     return x_ret;
-  };
+  }
 };
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
