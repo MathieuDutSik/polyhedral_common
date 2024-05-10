@@ -449,7 +449,7 @@ std::vector<MyVector<Tvert>> Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> cons
   polytopes by lifting the height.
   The lower facets correspond to the old Delaunay tessellation, the upper ones
   to the new one. The lateral ones on the side are named "barrel" and are used
-  when switching groups of 
+  when switching groups of repartitioning polytopes simultaneously.
  */
 template<typename T, typename Tvert, typename Tgroup>
 std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const& ListOrbitDelaunay, std::vector<AdjInfo> const& ListInformationsOneFlipping, MyMatrix<T> const& InteriorElement, RecordDualDescOperation<T, Tgroup> & rddo) {

@@ -19,7 +19,7 @@ template <typename T, typename Tint> struct TestStrictPositivity {
 template <typename T, typename Tint>
 PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const &SHV,
                                                       MyMatrix<T> const &eMat,
-                                                      std::ostream& os) {
+                                                      std::ostream &os) {
   MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
   int dimSymm = eMatVect.size();
   int nbBlock = SHV.rows();
@@ -36,7 +36,7 @@ template <typename T, typename Tint>
 TestStrictPositivity<T, Tint>
 TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
                                MyMatrix<Tint> const &InitialBasis,
-                               std::ostream& os) {
+                               std::ostream &os) {
   if (!IsSymmetricMatrix(eMat)) {
     std::cerr << "The matrix should be symmetric\n";
     throw TerminalException{1};
@@ -60,8 +60,8 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "Case 1 eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
 #endif
-    CopoRes =
-      EnumerateCopositiveShortVector<T, Tint>(eMatI, InitialBasis, CopoReq, os);
+    CopoRes = EnumerateCopositiveShortVector<T, Tint>(eMatI, InitialBasis,
+                                                      CopoReq, os);
     return CopoRes.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
@@ -82,7 +82,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     nbIter++;
 #endif
     Tshortest<T, Tint> RecSHV =
-      T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
+        T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV);
     int nbBlock = eNaked.ListBlock.size();
@@ -105,7 +105,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
               << RankMat(ConeClassical) << " nbIter=" << nbIter << "\n";
 #endif
     PosRelRes<T> eRel =
-      SearchForExistenceStrictPositiveRelation(eNaked.SHVred, eMat, os);
+        SearchForExistenceStrictPositiveRelation(eNaked.SHVred, eMat, os);
 #ifdef STRICT_POSITIVITY
     std::cerr << "We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
 #endif
