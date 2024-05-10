@@ -16,7 +16,7 @@
 
 struct DataCtype {
   int n;
-  std::ostream& os;
+  std::ostream &os;
 };
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
@@ -47,41 +47,39 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   return {ListBlock, "undefined"};
 }
 
-template<typename Tint>
-struct IsoEdgeDomain_AdjI {
+template <typename Tint> struct IsoEdgeDomain_AdjI {
   TypeCtypeExch<Tint> ctype_arr;
 };
 
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, IsoEdgeDomain_AdjI<Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("ctype_arr", eRec.ctype_arr);
-  }
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, IsoEdgeDomain_AdjI<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("ctype_arr", eRec.ctype_arr);
 }
+} // namespace boost::serialization
 
-struct IsoEdgeDomain_AdjO {
-};
+struct IsoEdgeDomain_AdjO {};
 
-void WriteEntryGAP(std::ostream& os_out, [[maybe_unused]] IsoEdgeDomain_AdjO const& _x) {
+void WriteEntryGAP(std::ostream &os_out,
+                   [[maybe_unused]] IsoEdgeDomain_AdjO const &_x) {
   os_out << "[]";
 }
 
 namespace boost::serialization {
-  template <class Archive>
-  inline void serialize([[maybe_unused]] Archive &ar, [[maybe_unused]] IsoEdgeDomain_AdjO &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-  }
-}
+template <class Archive>
+inline void serialize([[maybe_unused]] Archive &ar,
+                      [[maybe_unused]] IsoEdgeDomain_AdjO &eRec,
+                      [[maybe_unused]] const unsigned int version) {}
+} // namespace boost::serialization
 
-template<typename Tint>
-struct IsoEdgeDomain_Obj {
+template <typename Tint> struct IsoEdgeDomain_Obj {
   TypeCtypeExch<Tint> ctype_arr;
   StructuralInfo struct_info;
 };
 
-template<typename Tint>
-void WriteEntryGAP(std::ostream& os_out, IsoEdgeDomain_Obj<Tint> const& entry) {
+template <typename Tint>
+void WriteEntryGAP(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
   os_out << "rec(Ctype:=";
   WriteMatrixGAP(os_out, entry.ctype_arr.eMat);
   os_out << ", struct_info:=rec(";
@@ -93,26 +91,21 @@ void WriteEntryGAP(std::ostream& os_out, IsoEdgeDomain_Obj<Tint> const& entry) {
   os_out << "))";
 }
 
-
-
 namespace boost::serialization {
-  template <class Archive, typename Tint>
-  inline void serialize(Archive &ar, IsoEdgeDomain_Obj<Tint> &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("ctype_arr", eRec.ctype_arr);
-    ar &make_nvp("struct_info", eRec.struct_info);
-  }
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, IsoEdgeDomain_Obj<Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("ctype_arr", eRec.ctype_arr);
+  ar &make_nvp("struct_info", eRec.struct_info);
 }
+} // namespace boost::serialization
 
-template<typename T, typename Tint, typename Tgroup>
-struct DataCtypeFunc {
+template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
   DataCtype data;
   using Tobj = IsoEdgeDomain_Obj<Tint>;
   using TadjI = IsoEdgeDomain_AdjI<Tint>;
   using TadjO = IsoEdgeDomain_AdjO;
-  std::ostream& get_os() {
-    return data.os;
-  }
+  std::ostream &get_os() { return data.os; }
   Tobj f_init() {
     MyMatrix<Tint> M = GetPrincipalDomain<Tint>(data.n);
     MyMatrix<Tint> CanM = LinPolytopeAntipodalIntegral_CanonicForm(M, data.os);
@@ -120,53 +113,66 @@ struct DataCtypeFunc {
     Tobj x{ctype_arr, {}};
     return x;
   }
-  size_t f_hash(size_t const& seed, Tobj const& x) {
+  size_t f_hash(size_t const &seed, Tobj const &x) {
     return Matrix_Hash(x.ctype_arr.eMat, seed);
   };
-  std::optional<TadjO> f_repr(Tobj const& x, TadjI const& y) {
+  std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     if (x.ctype_arr.eMat != y.ctype_arr.eMat) {
       return {};
     }
     TadjO ret{};
     return ret;
   }
-  std::pair<Tobj, TadjO> f_spann(TadjI const& x) {
+  std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
     TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
-    Tobj x_ret{ctype_arr, {} };
+    Tobj x_ret{ctype_arr, {}};
     TadjO ret{};
     return {x_ret, ret};
   }
-  std::vector<TadjI> f_adj(Tobj & x_in) {
+  std::vector<TadjI> f_adj(Tobj &x_in) {
     using Tidx = typename Tgroup::Telt::Tidx;
     TypeCtypeExch<Tint> x = x_in.ctype_arr;
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, data.os);
-    DataCtypeFacet<Tint, Tidx> data_facet = CTYP_GetConeInformation<Tint, Tidx>(x);
+    DataCtypeFacet<Tint, Tidx> data_facet =
+        CTYP_GetConeInformation<Tint, Tidx>(x);
     int nb_triple = data_facet.nb_triple;
     int nb_ineq = data_facet.nb_ineq;
     int nb_ineq_after_crit = data_facet.nb_ineq_after_crit;
-    StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
+    StructuralInfo struct_info{nb_triple, nb_ineq, nb_ineq_after_crit, nb_free,
+                               nb_autom};
     x_in.struct_info = struct_info;
     std::vector<TadjI> ListRet;
     for (auto &e_int : data_facet.ListIrred) {
-      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(data_facet.TheCtype, data_facet.ListInformations[e_int]);
-      MyMatrix<Tint> CanMat = LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, data.os);
+      MyMatrix<Tint> FlipMat = CTYP_TheFlipping(
+          data_facet.TheCtype, data_facet.ListInformations[e_int]);
+      MyMatrix<Tint> CanMat =
+          LinPolytopeAntipodalIntegral_CanonicForm(FlipMat, data.os);
       TypeCtypeExch<Tint> x{std::move(CanMat)};
       TadjI x_adjI{x};
       ListRet.push_back(x_adjI);
     }
     return ListRet;
   }
-  Tobj f_adji_obj(TadjI const& x) {
+  Tobj f_adji_obj(TadjI const &x) {
     TypeCtypeExch<Tint> ctype_arr = x.ctype_arr;
-    Tobj x_ret{ctype_arr, {} };
+    Tobj x_ret{ctype_arr, {}};
     return x_ret;
   };
 };
 
-template<typename T, typename Tint, typename Tgroup>
-void WriteFamilyCtypeNumber(boost::mpi::communicator &comm, std::string const& OutFormat, std::string const& OutFile, std::vector<DatabaseEntry_MPI<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj, typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>> const& ListCtype, [[maybe_unused]] std::ostream & os) {
-  using Tout = DatabaseEntry_Serial<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj, typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>;
+template <typename T, typename Tint, typename Tgroup>
+void WriteFamilyCtypeNumber(
+    boost::mpi::communicator &comm, std::string const &OutFormat,
+    std::string const &OutFile,
+    std::vector<
+        DatabaseEntry_MPI<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj,
+                          typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>> const
+        &ListCtype,
+    [[maybe_unused]] std::ostream &os) {
+  using Tout =
+      DatabaseEntry_Serial<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj,
+                           typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>;
   int i_rank = comm.rank();
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
@@ -179,8 +185,8 @@ void WriteFamilyCtypeNumber(boost::mpi::communicator &comm, std::string const& O
       std::ofstream os_out(OutFile);
       os_out << "return [";
       size_t len = l_ent.size();
-      for (size_t i=0; i<len; i++) {
-        if (i>0)
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0)
           os_out << ",\n";
         WriteEntryGAP(os_out, l_ent[i].x);
       }
@@ -197,18 +203,20 @@ void WriteFamilyCtypeNumber(boost::mpi::communicator &comm, std::string const& O
     }
     return;
   }
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+            << "\n";
   throw TerminalException{1};
 }
 
-
-template<typename T, typename Tint, typename Tgroup>
-void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+template <typename T, typename Tint, typename Tgroup>
+void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
+                                  FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   bool ApplyStdUnitbuf = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
   int i_rank = comm.rank();
   int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::string FileLog =
+      "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::ofstream os(FileLog);
   if (ApplyStdUnitbuf) {
     os << std::unitbuf;
@@ -223,7 +231,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   //
   int n = BlockDATA.ListIntValues.at("n");
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  std::cerr << "max_runtime_second=" <<	max_runtime_second << "\n";
+  std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
@@ -234,9 +242,10 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm, FullNamelist c
   using Tobj = typename DataCtypeFunc<T, Tint, Tgroup>::Tobj;
   using TadjO = typename DataCtypeFunc<T, Tint, Tgroup>::TadjO;
   using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
-  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
+  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
+      comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyObjects<Tobj,TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 

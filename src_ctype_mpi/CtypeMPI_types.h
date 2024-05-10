@@ -499,7 +499,8 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype) {
         Tidx jred = j / 2;
         Tidx kred = k / 2;
 #ifdef PRINT_TRIPLE
-        std::cerr << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " " << jred << " " << kred << "\n";
+        std::cerr << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " "
+                  << jred << " " << kred << "\n";
 #endif
         MappingVect[ired * n_edgered + jred] = kred;
         MappingVect[jred * n_edgered + ired] = kred;
@@ -881,9 +882,13 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr) {
   WriteMatrix(std::cerr, ListInequalitiesIrred);
 #endif
   int nb_triple = PairTriple.first.size();
-  return {std::move(TheCtype), std::move(ListInequalities),
-          std::move(ListInformations), std::move(ListIrred),
-          nb_triple, nb_ineq, nb_ineq_after_crit};
+  return {std::move(TheCtype),
+          std::move(ListInequalities),
+          std::move(ListInformations),
+          std::move(ListIrred),
+          nb_triple,
+          nb_ineq,
+          nb_ineq_after_crit};
 }
 
 template <typename T, typename Tidx>
@@ -905,7 +910,8 @@ MyMatrix<T> CTYP_GetInsideGramMat(DataCtypeFacet<T, Tidx> const &data) {
 }
 
 template <typename T>
-TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG, std::ostream& os) {
+TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
+                                          std::ostream &os) {
   int n = eG.rows();
   int n_elt = 1;
   for (int i = 0; i < n; i++)
@@ -995,16 +1001,16 @@ struct StructuralInfo {
 };
 
 namespace boost::serialization {
-  template <class Archive>
-  inline void serialize(Archive &ar, StructuralInfo &eRec,
-                        [[maybe_unused]] const unsigned int version) {
-    ar &make_nvp("nb_triple", eRec.nb_triple);
-    ar &make_nvp("nb_ineq", eRec.nb_ineq);
-    ar &make_nvp("nb_ineq_after_crit", eRec.nb_ineq_after_crit);
-    ar &make_nvp("nb_free", eRec.nb_free);
-    ar &make_nvp("nb_autom", eRec.nb_autom);
-  }
+template <class Archive>
+inline void serialize(Archive &ar, StructuralInfo &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("nb_triple", eRec.nb_triple);
+  ar &make_nvp("nb_ineq", eRec.nb_ineq);
+  ar &make_nvp("nb_ineq_after_crit", eRec.nb_ineq_after_crit);
+  ar &make_nvp("nb_free", eRec.nb_free);
+  ar &make_nvp("nb_autom", eRec.nb_autom);
 }
+} // namespace boost::serialization
 
 template <typename T>
 int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
@@ -1039,8 +1045,7 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 }
 
 template <typename T, typename Tgroup>
-int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
-                    std::ostream &os) {
+int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
@@ -1091,7 +1096,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   std::cerr << "|GetNumberFreeVectors|=" << time << "\n";
 #endif
 
-  int nb_autom = CTYP_GetNbAutom<T,Tgroup>(TheCtypeArr, os);
+  int nb_autom = CTYP_GetNbAutom<T, Tgroup>(TheCtypeArr, os);
 
 #ifdef TIMINGS
   std::cerr << "|NumberAutomorphism|=" << time << "\n";

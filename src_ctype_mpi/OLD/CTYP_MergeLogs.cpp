@@ -119,7 +119,8 @@ int main(int argc, char *argv[]) {
     Tint MaxCoeff = 0;
     for (auto &ePair : ListInfoMatrices) {
       int eStatus = 0;
-      if ((ePair.second.nbAdjacent == static_cast<int>(ePair.second.ListIAdj.size())) &&
+      if ((ePair.second.nbAdjacent ==
+           static_cast<int>(ePair.second.ListIAdj.size())) &&
           ePair.second.nbAdjacent > 0)
         eStatus = 1;
       os << eStatus << "\n";
