@@ -2,15 +2,6 @@
 #ifndef SRC_POLY_POLY_LINEARPROGRAMMING_H_
 #define SRC_POLY_POLY_LINEARPROGRAMMING_H_
 
-/*
-  Code for computing by using linear programming functionalities.
-
-  The linear programming code is typically not in that place
-  but in another. Typically we use CDD.
-  But there are potential alternatives, for example GLPK or LRS
-  though they do not yet offer the full functionalities as CDD.
- */
-
 // clang-format off
 #include "Basic_file.h"
 #include "Basic_string.h"
@@ -21,7 +12,18 @@
 #include "basic_datafile.h"
 #include <string>
 #include <vector>
+#include <unordered_map>
+#include <utility>
 // clang-format on
+
+/*
+  Code for computing by using linear programming functionalities.
+
+  The linear programming code is typically not in that place
+  but in another. Typically we use CDD.
+  But there are potential alternatives, for example GLPK or LRS
+  though they do not yet offer the full functionalities as CDD.
+ */
 
 #ifdef DEBUG
 #define DEBUG_LINEAR_PROGRAM

@@ -11,6 +11,11 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <memory>
+#include <unordered_set>
+#include <memory>
+#include <unordered_set>
+#include <utility>
 // clang-format on
 
 #ifdef DEBUG

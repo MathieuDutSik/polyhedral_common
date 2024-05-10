@@ -5,6 +5,7 @@
 // clang-format off
 #include "Boost_bitset.h"
 #include "MAT_Matrix.h"
+#include <string>
 // clang-format on
 
 template <typename T> struct LpSolutionSimple {

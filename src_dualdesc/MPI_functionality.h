@@ -11,6 +11,7 @@
 #include <string>
 #include <utility>
 #include <vector>
+#include <list>
 
 /*
   For the vector, simple syntactic sugar

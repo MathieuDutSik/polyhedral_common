@@ -27,6 +27,8 @@
 #include <cassert>
 #include <vector>
 #include <utility>
+#include <unordered_map>
+#include <string>
 // clang-format on
 
 #ifdef DEBUG

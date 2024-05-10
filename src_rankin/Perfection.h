@@ -2,6 +2,10 @@
 #ifndef SRC_RANKIN_PERFECTION_H_
 #define SRC_RANKIN_PERFECTION_H_
 
+// clang-format off
+#include <vector>
+// clang-format on
+
 template <typename T, typename Tint>
 MyMatrix<T> GetProjectorMatrix(MyMatrix<Tint> const &P, MyMatrix<T> const &eG) {
   MyMatrix<T> P_T = UniversalMatrixConversion<T, Tint>(P);

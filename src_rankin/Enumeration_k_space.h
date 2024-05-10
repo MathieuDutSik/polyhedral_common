@@ -2,8 +2,13 @@
 #ifndef SRC_RANKIN_ENUMERATION_K_SPACE_H_
 #define SRC_RANKIN_ENUMERATION_K_SPACE_H_
 
+// clang-format off
 #include "MAT_MatrixInt.h"
 #include "Shvec_exact.h"
+#include <utility>
+#include <unordered_set>
+#include <vector>
+// clang-format on
 
 // Returns the Hermite constant at the n-th power.
 // That is the mmaximum of min(A)^n / det(A)

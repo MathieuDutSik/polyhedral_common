@@ -2,7 +2,10 @@
 #ifndef SRC_RANKIN_APPROXAUTOEQUIV_H_
 #define SRC_RANKIN_APPROXAUTOEQUIV_H_
 
+// clang-format off
 #include "Shvec_exact.h"
+#include <vector>
+// clang-format on
 
 template <typename T, typename Tint>
 WeightMatrix<true, T, uint32_t> GetWeightMatrix(MyMatrix<T> const &eG,

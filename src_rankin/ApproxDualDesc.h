@@ -2,6 +2,11 @@
 #ifndef SRC_RANKIN_APPROXDUALDESC_H_
 #define SRC_RANKIN_APPROXDUALDESC_H_
 
+// clang-format off
+#include <unordwered_set>
+#include <vector>
+// clang-format on
+
 /*
   We want to deal with the dual descriptions computed over the
   double number and we want to reduce them.

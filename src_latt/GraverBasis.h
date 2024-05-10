@@ -5,6 +5,7 @@
 // clang-format off
 #include "COMB_Combinatorics_buildset.h"
 #include "COMB_Combinatorics_elem.h"
+#include <vector>
 // clang-format on
 
 // A Graver basis is a set of vectors that can be used to

@@ -5,6 +5,9 @@
 // clang-format off
 #include "Namelist.h"
 #include "MatrixGroupAverage.h"
+#include <map>
+#include <vector>
+#include <string>
 // clang-format on
 
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {

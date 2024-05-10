@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "MAT_Matrix.h"
+#include <vector>
 // clang-format on
 
 #ifdef DEBUG

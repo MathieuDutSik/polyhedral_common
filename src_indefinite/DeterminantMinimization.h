@@ -9,6 +9,7 @@
 #include <limits>
 #include <utility>
 #include <vector>
+#include <map>
 // clang-format on
 
 template <typename T> struct ResultDetMin {

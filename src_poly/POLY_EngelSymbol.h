@@ -2,6 +2,12 @@
 #ifndef SRC_POLY_POLY_ENGELSYMBOL_H_
 #define SRC_POLY_POLY_ENGELSYMBOL_H_
 
+// clang-format off
+#include <vector>
+#include <utility>
+#include <string>
+// clang-format on
+
 struct EngelPolyhedralSubordination {
   int n;
   std::vector<CollectedResult<int>> TheSub;

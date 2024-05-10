@@ -10,6 +10,8 @@
 #include "SHORT_ShortestConfig.h"
 #include <set>
 #include <vector>
+#include <unordered_map>
+#include <map>
 // clang-format on
 
 #ifdef DEBUG

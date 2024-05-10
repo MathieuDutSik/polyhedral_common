@@ -13,6 +13,8 @@
 #include <map>
 #include <string>
 #include <vector>
+#include <memory>
+#include <utility>
 // clang-format on
 
 #ifdef TIMINGS

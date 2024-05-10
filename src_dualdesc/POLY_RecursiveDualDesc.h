@@ -28,6 +28,7 @@
 #include <utility>
 #include <algorithm>
 #include <vector>
+#include <memory>
 // clang-format on
 
 #ifdef TIMINGS

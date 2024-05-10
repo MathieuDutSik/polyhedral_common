@@ -2,6 +2,10 @@
 #ifndef SRC_LATT_TSPACE_GENERATION_H_
 #define SRC_LATT_TSPACE_GENERATION_H_
 
+// clang-format off
+#include <vector>
+// clang-format on
+
 #ifdef DEBUG
 #define DEBUG_TSPACE_GENERATION
 #endif

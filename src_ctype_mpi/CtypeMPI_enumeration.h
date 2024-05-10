@@ -12,6 +12,10 @@
 #include "sparse-map/include/tsl/sparse_map.h"
 #include <boost/mpi.hpp>
 #include <unordered_map>
+#include <map>
+#include <string>
+#include <utility>
+#include <vector>
 // clang-format on
 
 struct DataCtype {

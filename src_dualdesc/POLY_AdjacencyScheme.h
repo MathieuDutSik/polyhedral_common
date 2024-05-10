@@ -7,6 +7,11 @@
 #include "MPI_functionality.h"
 #include "basic_datafile.h"
 #include "Timings.h"
+#include <unordered_map>
+#include <utility>
+#include <vector>
+#include <set>
+#include <functional>
 // clang-format on
 
 #ifdef DEBUG
