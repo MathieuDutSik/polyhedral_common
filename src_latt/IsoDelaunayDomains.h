@@ -1008,11 +1008,23 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
   };
   auto get_matching_listinfo=[&](int const& iInfo, int const& iFacet, Face const& eInc) -> MatchedFacet {
     MyMatrix<Tvert> const& EXT = ListInfo[iInfo][iFacet].EXT;
+    Tgroup const& TheStab = ListInfo[iInfo][iFacet].TheStab;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: FLT: |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
     CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+    if (!IsSymmetryGroupOfPolytope(EXT_T, TheStab)) {
+      std::cerr << "The group TheStab is not a symmetry group\n";
+      throw TerminalException{1};
+    }
 #endif
     for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
-      std::optional<Telt> opt = ListInfo[iInfo][iFacet].TheStab.RepresentativeAction_OnSets(eAdj.eInc, eInc);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: FLT: |eAdj.eInc|=" << eAdj.eInc.size() << " / " << eAdj.eInc.count() << " |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
+      os << "ISO_DEL: FLT: TheStab, n_act=" << TheStab.n_act() << " order=" << TheStab.size() << "\n";
+      CheckFacetInequality(EXT, eAdj.eInc, "get_matching_listinfo EXT eAdj.eInc");
+#endif
+      std::optional<Telt> opt = TheStab.RepresentativeAction_OnSets(eAdj.eInc, eInc);
       if (opt) {
         MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
         return {eAdj, eBigMat};
@@ -1024,6 +1036,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
   };
   auto get_matching_old_tessel=[&](int const& iDelaunayOld, Face const& eInc) -> MatchedFacet {
     MyMatrix<Tvert> const& EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
+#endif
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
       std::optional<Telt> opt = ListOrbitDelaunay.l_dels[iDelaunayOld].GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
       if (opt) {
