@@ -1119,9 +1119,6 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     int n_facet = ListInfo[iInfo].size();
     for (int iFacet=0; iFacet<n_facet; iFacet++) {
       int8_t Position = ListInfo[iInfo][iFacet].Position;
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "iInfo=" << iInfo << " iFacet=" << iFacet << " Position=" << static_cast<int>(Position) << "\n";
-#endif
       if (Position == 1) {
         DelaunaySymb ds{Position_new, -1, iInfo, iFacet};
         NewListOrbitDelaunay.push_back(ds);
@@ -1136,6 +1133,15 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
     }
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: FLT: |l_dels|=" << l_dels.size() << "\n";
+  for (size_t i_del=0; i_del<l_dels.size(); i_del++) {
+    DelaunaySymb ds = NewListOrbitDelaunay[i_del];
+    int Position = ds.Position;
+    int iDelaunay = ds.iDelaunay;
+    int iInfo = ds.iInfo;
+    int iFacet = ds.iFacet;
+    os << "ISO_DEL: FLT: i_del=" << i_del << " Position=" << Position << " iDelaunay=" << iDelaunay << " iInfo=" << iInfo << " iFacet=" << iFacet << "\n";
+  }
   auto check_adj=[&](int iOrb, Delaunay_AdjO<Tvert> const& NewAdj, std::string const& context) -> void {
     MyMatrix<Tvert> const& EXT = l_dels[iOrb].EXT;
     ContainerMatrix<Tvert> cont(EXT);
@@ -1194,6 +1200,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           MyMatrix<Tvert> const& BigMat2 = eFacet.eBigMat;
           MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT * eAdj.eBigMat;
           Face Linc = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunay].EXT, eAdj.eInc, ImageEXT);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: FLT: Case 2\n";
+#endif
           MatchedFacet RecMatch = get_matching_listinfo(iInfo, iFacet, Linc);
           int iOrbFound = RecMatch.adj.iOrb;
           if (ListInfo[iInfo][iFacet].Position == 0) {
@@ -1239,6 +1248,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           Face LLinc3 = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunayOrigin].EXT, TheFoundAdj2.eInc, ImageEXT);
           int jInfo = vect_iInfo[jDelaunayOrigin];
           int iFacet2 = vect_lower_iFacet[jDelaunayOrigin];
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: FLT: Case 3, step 1\n";
+#endif
           MatchedFacet match3 = get_matching_listinfo(jInfo, iFacet2, LLinc3);
           Delaunay_AdjO<Tvert> const& TheFoundAdj3 = match3.adj;
           MyMatrix<Tvert> const& TheMat3 = match3.eBigMat;
@@ -1251,6 +1263,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
           }
 #endif
           Face LLinc4 = get_face_m_m(LincEXT, EXT7);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: FLT: Case 3, step 2\n";
+#endif
           MatchedFacet match4 = get_matching_listinfo(jInfo, TheFoundAdj3.iOrb, LLinc4);
           Delaunay_AdjO<Tvert> const& TheFoundAdj4 = match4.adj;
           MyMatrix<Tvert> const& TheMat4 = match4.eBigMat;
@@ -1288,6 +1303,9 @@ DelaunayTesselation<Tvert, Tgroup> FlippingLtype(DelaunayTesselation<Tvert, Tgro
             int iFacet2 = vect_lower_iFacet[jDelaunayOld];
             MyMatrix<Tvert> ImageEXT = ListOrbitDelaunay.l_dels[jDelaunayOld].EXT * TheFoundAdj1.eBigMat;
             Face LLinc2 = get_face_msub_m(ListOrbitDelaunay.l_dels[iDelaunayOrigin].EXT, TheFoundAdj1.eInc, ImageEXT);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+            os << "ISO_DEL: FLT: Case 5\n";
+#endif
             MatchedFacet match2 = get_matching_listinfo(jInfo, iFacet2, LLinc2);
             Delaunay_AdjO<Tvert> const& TheFoundAdj2 = match2.adj;
             MyMatrix<Tvert> const& TheMat2 = match2.eBigMat;
