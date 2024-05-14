@@ -47,7 +47,7 @@ directory can be compiled independently of the others:
   * *src_copos*: for copositivity / strict copositivity functionalities.
   * *src_short*: for short vector related computations.
   * *src_latt*: for lattice related computations (canonicalization of positive definite matrices and shortest vector mostly)
-  * *src_ctype_mpi*: for computing C-types. This was done for computing all the C-types in dimension 6.
+  * *src_ctype*: for computing C-types. This was done for computing all the C-types in dimension 6.
   * *src_perfect*: for perfect form related computations.
   * *src_indefinite*: for indefinite form reduction.
   * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
