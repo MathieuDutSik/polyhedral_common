@@ -32,6 +32,14 @@ combination of following two:
   on each one of them the determination of the minimum is easy. By easy we mean that if a cone C is spanned by v_1, ..., v_n such that v_i A v_j >= 0 then the minimum over this cone is easy to determine.
   * On each of the cone, we apply the Fincke-Pohst algorithm suitably adapted for the enumeration.
 
+Programs
+--------
+
+The following programs are available
+ * **CP_ComputeCopositiveMin**: It tests is a matrix is copositive.
+ * **CP_TestCompletePositivity**: We test if a matrix is completely positive.
+ * **CP_CopositiveMin**: Get the list of positive vectors of small norms
+
 References
 ----------
 

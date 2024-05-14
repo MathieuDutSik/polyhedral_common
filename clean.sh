@@ -9,7 +9,7 @@ set -e
 (cd src_sparse_solver && make clean)
 (cd src_spectra && make clean)
 (cd src_copos && make clean)
-(cd src_ctype_mpi && make clean)
+(cd src_ctype && make clean)
 (cd src_perfect && make clean)
 (cd src_indefinite && make clean)
 (cd src_lorentzian && make clean)

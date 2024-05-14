@@ -41,52 +41,16 @@ General organization of the code
 
 The program are in several independent subdirectory. The software of each
 directory can be compiled independently of the others:
-  * *src_copos*: for copositivity / strict copositivity functionalities.
+  * *src_group*: for computting the groups of a polytope.
   * *src_poly*: for polyhedral computations.
+  * *src_dualdesc*: for computing dual description on serial computers.
+  * *src_copos*: for copositivity / strict copositivity functionalities.
   * *src_short*: for short vector related computations.
   * *src_latt*: for lattice related computations (canonicalization of positive definite matrices and shortest vector mostly)
-  * *src_dualdesc*: for computing dual description on serial computers.
   * *src_ctype_mpi*: for computing C-types. This was done for computing all the C-types in dimension 6.
   * *src_perfect*: for perfect form related computations.
   * *src_indefinite*: for indefinite form reduction.
   * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
-
-
-Copositivity
-------------
-
-In *src_copos* there is a number of functionality for working with copositive forms.
-The subprograms are:
- * **CP_ComputeCopositiveMin**: It tests is a matrix is copositive.
- * **CP_TestCompletePositivity**: We test if a matrix is completely positive.
- * **CP_CopositiveMin**: Get the list of positive vectors of small norms
-
-
-Shortest vectors
-----------------
-
-The *src_latt* directory contains the **sv_exact** program for computing the set of
-closest points of a positive definite form. The code is general and has
-two template types:
- * an integer type **Tint** for the integer coefficients.
- * a coefficient type **T** for the coefficient of the Gram matrix.
-
-
-LLL computation
----------------
-
-The *src_latt* directory contains the **LATT_lll** programs for
-computing the LLL reduced form of a positive definite form.
-The code uses **Tint**/**T** template types.
-
-
-Canonical form
---------------
-
-The *src_latt* directory contains the **LATT_canonicalize** for computing
-the canonical form of a positive definite form.
-The code uses **Tint**/**T** template types.
-
 
 Short vector configurations
 ---------------------------
@@ -174,3 +138,12 @@ Therefore, we plan to have interfacing with common Computer Algebra Systems:
 * Oscar which is based on Julia.
 * Sage which is based on Python.
 
+Dependencies
+------------
+
+Following dependencies are needed for compiling the code:
+
+  * Eigen: http://eigen.tuxfamily.org/
+  * Boost: http://www.boost.org/
+  * GNU MultiPrecision Library (GMP): https://gmplib.org/
+  * nauty : https://pallini.di.uniroma1.it/
