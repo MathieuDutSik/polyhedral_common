@@ -38,6 +38,7 @@ void process_entry_type(std::string const& FileCode) {
   MyMatrix<T> CODE = ReadMatrixFile<T>(FileCode);
   int nbEnt = CODE.rows();
   int dim = CODE.cols();
+  std::cerr << "nbEnt=" << nbEnt << " dim=" << dim << "\n";
   std::map<T, size_t> s_norm;
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
     std::map<T, size_t> map;
@@ -56,11 +57,17 @@ void process_entry_type(std::string const& FileCode) {
     }
     std::cerr << "\n";
     //
-    T scal(0);
+    T norm(0);
     for (int i=0; i<dim; i++) {
-      scal += CODE(iEnt, i) * CODE(iEnt, i);
+      norm += CODE(iEnt, i) * CODE(iEnt, i);
     }
-    s_norm[scal] += 1;
+    std::cerr << "iEnt=" << iEnt << " norm=" << norm << "\n";
+    std::cerr << "  eLine =";
+    for (int i=0; i<dim; i++) {
+      std::cerr << " " << CODE(iEnt,i);
+    }
+    std::cerr << "\n";
+    s_norm[norm] += 1;
   }
   std::cerr << "s_norm =";
   for (auto & kv: s_norm) {
