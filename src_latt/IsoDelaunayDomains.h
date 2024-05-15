@@ -125,12 +125,12 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
                                     [[maybe_unused]] std::ostream &os) {
   int n = vipc.n;
   int dimSpace = ListGram.size();
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   os << "ISO_DEL: VoronoiLinearInequality n=" << n << " dimSpace=" << dimSpace
      << "\n";
 #endif
   MyVector<T> TheVert_T = UniversalVectorConversion<T, Tvert>(TheVert);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   os << "ISO_DEL: VoronoiLinearInequality |TheVert_T|=" << TheVert_T.size()
      << "\n";
   os << "ISO_DEL: VoronoiLinearInequality |Tvipc.VertBasisInv_T}="
@@ -138,7 +138,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
      << "\n";
 #endif
   MyVector<T> B = vipc.VertBasisInv_T * TheVert_T;
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   os << "ISO_DEL: VoronoiLinearInequality We have B\n";
 #endif
   MyVector<T> Ineq(dimSpace);
@@ -148,24 +148,24 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
   }
   int iGram = 0;
   for (auto &eLineMat : ListGram) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
     os << "ISO_DEL: VoronoiLinearInequality Before EvaluateLineVector "
           "(first)\n";
 #endif
     T val = EvaluateLineVector(eLineMat, TheVertRed);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
     os << "ISO_DEL: VoronoiLinearInequality After EvaluateLineVector (first)\n";
 #endif
     for (int k = 0; k <= n; k++) {
       val -= B(k) * EvaluateLineVector(eLineMat, vipc.VertBasisRed_T[k]);
     }
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
     os << "ISO_DEL: VoronoiLinearInequality Summation of the entries\n";
 #endif
     Ineq(iGram) = val;
     iGram++;
   }
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   for (int iVert = 0; iVert <= n; iVert++) {
     for (int u = 0; u < n; u++) {
       TheVertRed(u) = vipc.VertBasis_T(iVert, u + 1);
@@ -195,25 +195,25 @@ bool IsDelaunayPolytopeInducingEqualities(MyMatrix<Tvert> const &EXT,
                                           LinSpaceMatrix<T> const &LinSpa,
                                           std::ostream &os) {
   int n_row = EXT.rows();
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, before "
         "BuildVoronoiIneqPreCompute\n";
 #endif
   VoronoiInequalityPreComput<T> vipc =
       BuildVoronoiIneqPreCompute<T, Tvert>(EXT, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
   os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, we have vipc\n";
 #endif
   for (int i_row = 0; i_row < n_row; i_row++) {
     if (vipc.f_basis[i_row] == 0) {
       MyVector<Tvert> TheVert = GetMatrixRow(EXT, i_row);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
       os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, Before "
             "VoronoiLinearInequality\n";
 #endif
       MyVector<T> V =
           VoronoiLinearInequality(vipc, TheVert, LinSpa.ListLineMat, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
       os << "ISO_DEL: IsDelaunayPolytopeInducingEqualities, After "
             "VoronoiLinearInequality\n";
 #endif
