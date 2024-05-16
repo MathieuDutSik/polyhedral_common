@@ -109,7 +109,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
     eFace[nbVert + iSHV] = 0;
   Tgroup PreGRPisom =
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-  Tgroup GRPisom = ReducedGroupAction(PreGRPisom, eFace);
+  Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
   Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   os << "|Delaunay_Stabilizer|=" << time << "\n";

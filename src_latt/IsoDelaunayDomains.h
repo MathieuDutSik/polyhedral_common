@@ -636,9 +636,13 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
 #endif
         for (auto &eVert : ListVertices) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          os << "ISO_DEL: Treating one vertex\n";
+          os << "ISO_DEL: FRING, Treating one vertex\n";
 #endif
-          for (auto &eVertB : Orbit_MatrixGroup(LGen, eVert, os)) {
+          std::vector<MyVector<Tvert>> TheOrb = Orbit_MatrixGroup(LGen, eVert, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          os << "ISO_DEL: FRING, We have TheOrb\n";
+#endif
+          for (auto &eVertB : TheOrb) {
             FuncInsertVertex(eVertB);
           }
         }
@@ -804,6 +808,17 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
   os << "ISO_DEL: FRING, we have TotalListVertices\n";
   os << "ISO_DEL: FRING, TotalListVertices=\n";
   WriteMatrix(os, TotalListVertices);
+  os << "ISO_DEL: FRING, Before testing symmetry for TotalListVertices\n";
+  if (!IsSymmetryGroupOfPolytope(TotalListVertices, PermGRP)) {
+    std::cerr << "ISO_DEL: FRING: PermGRP is not a symmetry group of TotalListVertices\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> TotalListVerticesRed_T = UniversalMatrixConversion<T,Tvert>(TotalListVerticesRed);
+  os << "ISO_DEL: FRING, Before testing symmetry for TotalListVerticesRed_T\n";
+  if (!IsSymmetryGroupOfPolytope(TotalListVerticesRed_T, PermGRP)) {
+    std::cerr << "ISO_DEL: FRING: PermGRP is not a symmetry group of TotalListVertices\n";
+    throw TerminalException{1};
+  }
 #endif
   auto get_incd_status = [&](int iVert, MyVector<T> const &eFac) -> bool {
     T eSum = 0;
@@ -812,6 +827,12 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
     }
     return eSum == 0;
   };
+  // The Linc is not ordered while the Linc_face by virtue of being built as a
+  // Face has an ordered intrinsic to it.
+  // We need this design for the following reason:
+  // * If we reorder the vertices of EXT to match the ListVertices, then the incidence
+  // are broken or need to be recomputed.
+  // * Converting from one ordering to another is not too expensive overall.
   struct RepartEntryProv {
     MyVector<T> eFac;
     std::vector<Tidx> Linc;
@@ -933,19 +954,32 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
 #endif
     for (size_t iOrb = nOrbStart; iOrb < nOrb; iOrb++) {
       Face const &Linc_face = ListOrbitFacet_prov[iOrb].Linc_face;
+      std::vector<Tidx> const& Linc = ListOrbitFacet_prov[iOrb].Linc;
       Tgroup Stab = PermGRP.Stabilizer_OnSets(Linc_face);
-      Tgroup TheStab = ReducedGroupAction(Stab, Linc_face);
-      ListOrbitFacet[iOrb].TheStab = TheStab;
+      Tgroup TheStabFace = ReducedGroupActionFace(Stab, Linc_face);
+      Tgroup TheStabVect = ReducedGroupActionVect(Stab, Linc);
+      ListOrbitFacet[iOrb].TheStab = TheStabVect;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: FRING: iOrb=" << iOrb << "\n";
+      os << "ISO_DEL: FRING: |Linc_face|=" << Linc_face.size() << " / " << Linc_face.count() << "\n";
+      os << "ISO_DEL: FRING: Position=" << static_cast<int>(ListOrbitFacet[iOrb].Position) << "\n";
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(ListOrbitFacet[iOrb].EXT);
+      os << "ISO_DEL: FRING: Before IsSymmetryGroupOfPolytope after computation\n";
+      if (!IsSymmetryGroupOfPolytope(EXT_T, TheStabVect)) {
+        std::cerr << "ISO_DEL: FRING: The initial computation went wrong\n";
+        throw TerminalException{1};
+      }
+#endif
       std::vector<Delaunay_AdjO<Tvert>> ListAdj;
       // Depending on the nature of the facet (low, barrel, top), the idx_drop
       // can very much vary. We cannot set it to
       int idx_drop = get_idx_drop(ListOrbitFacet_prov[iOrb].eFac);
       MyMatrix<T> EXT2 =
-          SelectRowDropColumn(TotalListVertices, Linc_face, idx_drop);
-      vectface vf = DualDescriptionRecordFullDim(EXT2, TheStab, rddo);
+          SelectRowDropColumnFace(TotalListVertices, Linc_face, idx_drop);
+      vectface vf = DualDescriptionRecordFullDim(EXT2, TheStabFace, rddo);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: Second while |vf|=" << vf.size()
-         << " |TheStab|=" << TheStab.size() << " |EXT2|=" << EXT2.rows() << "/"
+         << " |TheStabFace|=" << TheStabFace.size() << " |EXT2|=" << EXT2.rows() << "/"
          << EXT2.cols() << " rnk=" << RankMat(EXT2) << "\n";
       CheckFacetInequality(TotalListVertices, Linc_face,
                            "FuncInsertFace TotalListVertices Linc_face");
@@ -968,11 +1002,11 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
 #endif
         MyVector<T> eFac = FindFacetInequality(TotalListVertices, eInc);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISO_DEL: We have eFac\n";
+        os << "ISO_DEL: FRING, We have eFac\n";
 #endif
         Delaunay_AdjO<Tvert> eAdj = FuncInsertFacet(eFac);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISO_DEL: We have eAdj\n";
+        os << "ISO_DEL: FRING, We have eAdj\n";
 #endif
         size_t nVert = ListOrbitFacet_prov[iOrb].Linc.size();
         Face LEV(nVert);
@@ -983,7 +1017,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
           }
         }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-        os << "ISO_DEL: We have |LEV|=" << LEV.size() << " / " << LEV.count()
+        os << "ISO_DEL: FRING, We have |LEV|=" << LEV.size() << " / " << LEV.count()
            << "\n";
 #endif
         eAdj.eInc = LEV;
@@ -1116,7 +1150,9 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
     MyMatrix<Tvert> const &EXT = ListInfo[iInfo][iFacet].EXT;
     Tgroup const &TheStab = ListInfo[iInfo][iFacet].TheStab;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: FLT: |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+    os << "ISO_DEL: FLT: iInfo=" << iInfo << " iFacet=" << iFacet << " |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
+    os << "ISO_DEL: FLT: Position=" << static_cast<int>(ListInfo[iInfo][iFacet].Position) << "\n";
+    os << "ISO_DEL: FLT: |EXT|=" << EXT.rows() << " / " << EXT.cols() << " rnk=" << RankMat(EXT) << "\n";
     CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
     if (!IsSymmetryGroupOfPolytope(EXT_T, TheStab)) {

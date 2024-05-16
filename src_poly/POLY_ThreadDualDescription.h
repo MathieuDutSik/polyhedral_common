@@ -577,7 +577,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           os << "eEntry=" << eEntry
              << " |TheGRPrelevant|=" << TheGRPrelevant.size()
              << "  |TheStab|=" << TheStab.size() << " |O|=" << OrbSize << "\n";
-          Tgroup GRPred = ReducedGroupAction(TheStab, eListI);
+          Tgroup GRPred = ReducedGroupActionFace(TheStab, eListI);
           CondTempDirectory eDir(AllArr.DD_Saving,
                                  ePrefix + "ADM" + IntToString(eEntry) + "/");
           vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(

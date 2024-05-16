@@ -33,8 +33,8 @@ MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
 }
 
 template <typename T>
-MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const &TheMat, Face const &eList,
-                                int const &idx_drop) {
+MyMatrix<T> SelectRowDropColumnFace(MyMatrix<T> const &TheMat, Face const &eList,
+                                    int const &idx_drop) {
   int nbCol = TheMat.cols();
   int nbRowRed = eList.count();
   int nbColRed = nbCol - 1;
@@ -49,6 +49,26 @@ MyMatrix<T> SelectRowDropColumn(MyMatrix<T> const &TheMat, Face const &eList,
       }
     }
     jRow = eList.find_next(jRow);
+  }
+  return RetMat;
+}
+
+template <typename T, typename Tidx>
+MyMatrix<T> SelectRowDropColumnVector(MyMatrix<T> const &TheMat, std::vector<Tidx> const& eList,
+                                      int const &idx_drop) {
+  int nbCol = TheMat.cols();
+  int nbRowRed = eList.size();
+  int nbColRed = nbCol - 1;
+  MyMatrix<T> RetMat(nbRowRed, nbColRed);
+  for (int iRowRed=0; iRowRed<nbRowRed; iRowRed++) {
+    int iRow = eList[iRowRed];
+    int pos = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      if (iCol != idx_drop) {
+        RetMat(iRowRed, pos) = TheMat(iRow, iCol);
+        pos++;
+      }
+    }
   }
   return RetMat;
 }

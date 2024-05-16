@@ -91,7 +91,7 @@ stab_info<Tgroup, Tint> f_stab(const Tent<T, Tint, Tidx_value> &eEnt,
   std::vector<Telt> LGenRed;
   std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> ListGenMat;
   for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
-    Telt eGenRed = ReduceElementAction(eGen, subset);
+    Telt eGenRed = ReduceElementActionFace(eGen, subset);
     LGenRed.push_back(eGenRed);
     MyMatrix<T> eMat_T = FindTransformation(Concat_T, Concat_T, eGen);
     MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint, T>(eMat_T);

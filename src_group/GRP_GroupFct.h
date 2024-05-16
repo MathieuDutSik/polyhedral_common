@@ -361,12 +361,12 @@ template <typename Tidx> struct ReducingArray {
 };
 
 template <typename Tidx>
-ReducingArray<Tidx> GetReducingArray(Face const &eList) {
+ReducingArray<Tidx> GetReducingArrayFace(Face const &eList) {
   Tidx size = eList.size();
   size_t nb = eList.count();
   Tidx nb_i = nb;
   if (nb_i == 0) {
-    std::cerr << "Call of ReduceElementAction with 0 points\n";
+    std::cerr << "Call of GetReducingArrayFace with 0 points\n";
     throw TerminalException{1};
   }
   std::vector<Tidx> ListPositionRev(size, -1);
@@ -395,17 +395,17 @@ Telt SingleElementReduction(Telt const &eElt,
 }
 
 template <typename Telt>
-Telt ReduceElementAction(Telt const &eElt, Face const &eList) {
+Telt ReduceElementActionFace(Telt const &eElt, Face const &eList) {
   using Tidx = typename Telt::Tidx;
-  ReducingArray<Tidx> ra = GetReducingArray<Tidx>(eList);
+  ReducingArray<Tidx> ra = GetReducingArrayFace<Tidx>(eList);
   return SingleElementReduction(eElt, ra);
 }
 
 template <typename Tgroup>
-Tgroup ReducedGroupAction(Tgroup const &TheGRP, Face const &eList) {
+Tgroup ReducedGroupActionRa(Tgroup const &TheGRP, Face const &eList) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  ReducingArray<Tidx> ra = GetReducingArray<Tidx>(eList);
+  ReducingArray<Tidx> ra = GetReducingArrayFace<Tidx>(eList);
   std::vector<Telt> ListGen;
   for (auto &eGen : TheGRP.GeneratorsOfGroup()) {
     Telt eGenRed = SingleElementReduction(eGen, ra);
@@ -413,6 +413,54 @@ Tgroup ReducedGroupAction(Tgroup const &TheGRP, Face const &eList) {
   }
   return Tgroup(ListGen, ra.nb);
 }
+
+template <typename Tidx>
+ReducingArray<Tidx> GetReducingArrayVect(std::vector<Tidx> const& eList, Tidx const& size) {
+  size_t nb = eList.size();
+  Tidx nb_i = nb;
+  if (nb_i == 0) {
+    std::cerr << "Call of GetReducingArrayVect with 0 points\n";
+    throw TerminalException{1};
+  }
+  std::vector<Tidx> ListPositionRev(size, -1);
+  for (Tidx pos=0; pos<nb_i; pos++) {
+    Tidx val = eList[pos];
+    ListPositionRev[val] = pos;
+  }
+  return {nb, std::move(ListPositionRev), eList};
+}
+
+template <typename Tgroup>
+Tgroup ReducedGroupActionRa(Tgroup const &TheGRP, ReducingArray<typename Tgroup::Telt::Tidx> const& ra) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> ListGen;
+  for (auto &eGen : TheGRP.GeneratorsOfGroup()) {
+    Telt eGenRed = SingleElementReduction(eGen, ra);
+    ListGen.emplace_back(std::move(eGenRed));
+  }
+  return Tgroup(ListGen, ra.nb);
+}
+
+template <typename Tgroup>
+Tgroup ReducedGroupActionFace(Tgroup const &TheGRP, Face const &eList) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  ReducingArray<Tidx> ra = GetReducingArrayFace<Tidx>(eList);
+  return ReducedGroupActionRa<Tgroup>(TheGRP, ra);
+}
+
+template <typename Tgroup>
+Tgroup ReducedGroupActionVect(Tgroup const &TheGRP, std::vector<typename Tgroup::Telt::Tidx> const &eList) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  Tidx size = TheGRP.n_act();
+  ReducingArray<Tidx> ra = GetReducingArrayVect<Tidx>(eList, size);
+  return ReducedGroupActionRa<Tgroup>(TheGRP, ra);
+}
+
+
+
+
+
+
 
 template <typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const &TheGRP,

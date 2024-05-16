@@ -386,12 +386,15 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
 #endif
     if (pos == len)
       break;
-    for (size_t i = pos; i < len; i++)
+    for (size_t i = pos; i < len; i++) {
+      // Doing a copy to avoid memory problem.
+      T2 x = TheOrbit[i];
       for (auto &eGen : ListGen) {
-        T2 u = f_prod(TheOrbit[i], eGen);
+        T2 u = f_prod(x, eGen);
         if (fInsert(u))
           return {};
       }
+    }
     pos = len;
   }
 #ifdef DEBUG_MATRIX_GROUP

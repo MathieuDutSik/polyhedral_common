@@ -980,7 +980,7 @@ Tgroup StabilizerUsingOrbSize_OnSets(
   // Stabilizer_OnSets would anyway short circuit that.
   //
   Tgroup Stab = GRP.Stabilizer_OnSets(f);
-  return ReducedGroupAction(Stab, f);
+  return ReducedGroupActionFace(Stab, f);
 }
 
 template <typename T_inp, typename Tint_inp, typename Tgroup_inp>
