@@ -649,27 +649,39 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
         std::string eFile = "ListMatGens_" + std::to_string(LGen.size());
         WriteListMatrixFileGAP(eFile, LGen);
         os << "ISO_DEL: FRING Before |ListVertices|=" << ListVertices.size() << "\n";
-        size_t pos = 0;
 #endif
-        for (auto &eVert : ListVertices) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          os << "ISO_DEL: FRING, Treating one vertex pos=" << pos << "\n";
-#endif
-          std::vector<MyVector<Tvert>> TheOrb = Orbit_MatrixGroup(LGen, eVert, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          os << "ISO_DEL: FRING, We have pos=" << pos << " |TheOrb|=" << TheOrb.size() << "\n";
-          size_t u = 0;
-          for (auto & fV : TheOrb) {
-            os << "ISO_DEL: FRING, u=" << u << " fV=" << StringVector(fV) << "\n";
-            u += 1;
+        size_t nVert = ListVertices.size();
+        Face f_att(nVert);
+        size_t miss_val = std::numeric_limits<size_t>::max();
+        auto get_idx=[&](MyVector<Tvert> const& eVert) -> size_t {
+          if (ListVertices_rev.count(eVert) == 0) {
+            return miss_val;
           }
-#endif
-          for (auto &eVertB : TheOrb) {
-            FuncInsertVertex(eVertB);
+          size_t u = ListVertices_rev.at(eVert) - 1;
+          if (u >= nVert) {
+            return miss_val;
           }
+          return u;
+        };
+        for (size_t pos=0; pos<nVert; pos++) {
+          if (f_att[pos] == 0) {
+            MyVector<Tvert> const& eVert = ListVertices[pos];
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          pos += 1;
+            os << "ISO_DEL: FRING, Treating one vertex pos=" << pos << "\n";
 #endif
+            std::vector<MyVector<Tvert>> TheOrb = Orbit_MatrixGroup(LGen, eVert, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+            os << "ISO_DEL: FRING, We have pos=" << pos << " |TheOrb|=" << TheOrb.size() << "\n";
+#endif
+            for (auto &eVertB : TheOrb) {
+              size_t idx = get_idx(eVertB);
+              if (idx == miss_val) {
+                FuncInsertVertex(eVertB);
+              } else {
+                f_att[idx] = 1;
+              }
+            }
+          }
         }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISO_DEL: FRING After |ListVertices|=" << ListVertices.size() << "\n";
