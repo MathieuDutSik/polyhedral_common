@@ -135,7 +135,7 @@ jobs:
           pwd
           echo "After compilation of dual desc code"
 
-          cd Exmpl_Bench/CUT_K8_serial
+          cd CI_tests/CUT_K8_serial
           pwd
           echo "We are in test directory"
 
