@@ -89,7 +89,8 @@ void process_entry_type(std::string const& FileCode) {
       EXT(iEnt, i+1) = CODE(iEnt,i);
     }
   }
-  Tgroup GRP = LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
+  MyMatrix<T> GramMat = IdentityMat<T>(dim);
+  Tgroup GRP = LinPolytope_Automorphism_GramMat<T, Tgroup>(CODE, GramMat, std::cerr);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
   //
   vectface vf = DualDescriptionStandard(EXT, GRP);

@@ -456,12 +456,6 @@ Tgroup ReducedGroupActionVect(Tgroup const &TheGRP, std::vector<typename Tgroup:
   return ReducedGroupActionRa<Tgroup>(TheGRP, ra);
 }
 
-
-
-
-
-
-
 template <typename Tgroup>
 Tgroup ConjugateGroup(Tgroup const &TheGRP,
                       typename Tgroup::Telt const &ePerm) {
