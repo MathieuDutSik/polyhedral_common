@@ -110,17 +110,18 @@ static int tag_new_form = 37;
 static int tag_termination = 157;
 
 template <typename T, typename Tint>
-void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
-                     size_t const &n_vect, size_t const &n, int const &pos) {
+void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
+                     size_t const &n_vect, size_t const &n, int const &pos,
+                     std::ostream & os) {
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
 #ifdef ERR_LOG
-  std::cerr << "Before NC_ReadMatrix_T, getvar\n";
+  os << "Before NC_ReadMatrix_T, getvar\n";
 #endif
   varCtype.getVar(start2, count2, V.data());
 #ifdef ERR_LOG
-  std::cerr << "After NC_ReadMatrix_T, getvar\n";
+  os << "After NC_ReadMatrix_T, getvar\n";
 #endif
   int idx = 0;
   for (size_t i_vect = 0; i_vect < n_vect; i_vect++)
@@ -131,23 +132,24 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
 }
 
 template <typename T, typename Tint>
-void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> const &M,
-                      size_t const &n_vect, size_t const &n, int const &pos) {
+void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> const &M,
+                      size_t const &n_vect, size_t const &n, int const &pos,
+                      std::ostream& os) {
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
   int idx = 0;
   for (size_t i_vect = 0; i_vect < n_vect; i_vect++)
     for (size_t i = 0; i < n; i++) {
-      V[idx] = M(i_vect, i);
+      V[idx] = UniversalScalarConversion<T,Tint>(M(i_vect, i));
       idx++;
     }
 #ifdef ERR_LOG
-  std::cerr << "Before NC_WriteMatrix_T, putvar\n";
+  os << "Before NC_WriteMatrix_T, putvar\n";
 #endif
   varCtype.putVar(start2, count2, V.data());
 #ifdef ERR_LOG
-  std::cerr << "After NC_WriteMatrix_T, putvar\n";
+  os << "After NC_WriteMatrix_T, putvar\n";
 #endif
 }
 
@@ -162,11 +164,13 @@ int main(int argc, char *argv[]) {
       std::chrono::system_clock::now();
   size_t irank = irank_i;
   size_t n_pes = n_pes_i;
+  std::string FileLog = "log_" + std::to_string(irank_i) + "_" + std::to_string(n_pes);
+  std::ofstream os(FileLog);
 #ifdef ERR_LOG
-  std::cerr << "irank=" << irank << " n_pes=" << n_pes << "\n";
+  os << "irank=" << irank << " n_pes=" << n_pes << "\n";
 #endif
   //
-  using Tint = int;
+  using Tint = int64_t;
   //
   // The input file
   //
@@ -208,31 +212,31 @@ int main(int argc, char *argv[]) {
   //
   std::string WorkFile = WorkingPrefix + std::to_string(irank) + ".nc";
 #ifdef ERR_LOG
-  std::cerr << "WorkFile=" << WorkFile << "\n";
+  os << "WorkFile=" << WorkFile << "\n";
 #endif
   netCDF::NcFile dataFile(WorkFile, netCDF::NcFile::write);
 #ifdef ERR_LOG
-  std::cerr << "netcdf step 1\n";
+  os << "netcdf step 1\n";
 #endif
   netCDF::NcVar varCtype = dataFile.getVar("Ctype");
 #ifdef ERR_LOG
-  std::cerr << "netcdf step 2\n";
+  os << "netcdf step 2\n";
 #endif
   int n_read = varCtype.getDim(2).getSize();
 #ifdef ERR_LOG
-  std::cerr << "n_read=" << n_read << "\n";
+  os << "n_read=" << n_read << "\n";
 #endif
   if (n_read != n) {
-    std::cerr << "n_read=" << n_read << " n=" << n << "\n";
+    os << "n_read=" << n_read << " n=" << n << "\n";
     return 0;
   }
   netCDF::NcType eType = varCtype.getType();
 #ifdef ERR_LOG
-  std::cerr << "netcdf step 3\n";
+  os << "netcdf step 3\n";
 #endif
   netCDF::NcVar varNbAdj = dataFile.getVar("nb_adjacent");
 #ifdef ERR_LOG
-  std::cerr << "netcdf step 4\n";
+  os << "netcdf step 4\n";
 #endif
   int curr_nb_matrix = varNbAdj.getDim(0).getSize();
   auto NC_GetNbAdjacent = [&](int const &pos) -> int {
@@ -250,24 +254,24 @@ int main(int argc, char *argv[]) {
   auto NC_ReadMatrix = [&](int const &pos) -> TypeCtypeExch<Tint> {
     MyMatrix<Tint> M(n_vect, n);
     if (eType == netCDF::NcType::nc_BYTE)
-      NC_ReadMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, pos);
+      NC_ReadMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, pos, os);
     if (eType == netCDF::NcType::nc_SHORT)
-      NC_ReadMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, pos);
+      NC_ReadMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, pos, os);
     if (eType == netCDF::NcType::nc_INT)
-      NC_ReadMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, pos);
+      NC_ReadMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, pos, os);
     if (eType == netCDF::NcType::nc_INT64)
-      NC_ReadMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, pos);
+      NC_ReadMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, pos, os);
     return {M};
   };
   auto NC_AppendMatrix = [&](MyMatrix<Tint> const &M) -> void {
     if (eType == netCDF::NcType::nc_BYTE)
-      NC_WriteMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+      NC_WriteMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
     if (eType == netCDF::NcType::nc_SHORT)
-      NC_WriteMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+      NC_WriteMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
     if (eType == netCDF::NcType::nc_INT)
-      NC_WriteMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+      NC_WriteMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
     if (eType == netCDF::NcType::nc_INT64)
-      NC_WriteMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix);
+      NC_WriteMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
     NC_WriteNbAdjacent(curr_nb_matrix, 0);
     curr_nb_matrix++;
   };
@@ -283,20 +287,20 @@ int main(int argc, char *argv[]) {
   int nbRequest = 0;
   auto GetFreeIndex = [&]() -> int {
 #ifdef ERR_LOG
-    std::cerr << "Beginning of GetFreeIndex\n";
+    os << "Beginning of GetFreeIndex\n";
 #endif
     for (int u = 0; u < MaxNumberFlyingMessage; u++) {
 #ifdef ERR_LOG
-      std::cerr << "GetFreeIndex u=" << u << "\n";
+      os << "GetFreeIndex u=" << u << "\n";
 #endif
       if (RequestStatus[u] == 0) {
 #ifdef ERR_LOG
-        std::cerr << "GetFreeIndex, returning u=" << u << "\n";
+        os << "GetFreeIndex, returning u=" << u << "\n";
 #endif
         return u;
       }
 #ifdef ERR_LOG
-      std::cerr << "Testing and getting a request\n";
+      os << "Testing and getting a request\n";
 #endif
       int flag;
       MPI_Status status1;
@@ -306,7 +310,7 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
 #ifdef ERR_LOG
-      std::cerr << "flag=" << flag << "\n";
+      os << "flag=" << flag << "\n";
 #endif
       if (flag) {
         // that request has ended. Let's read it.
@@ -317,7 +321,7 @@ int main(int argc, char *argv[]) {
         RequestStatus[u] = 0;
         nbRequest--;
 #ifdef ERR_LOG
-        std::cerr << "GetFreeIndex, clearing u=" << u << " returning it\n";
+        os << "GetFreeIndex, clearing u=" << u << " returning it\n";
 #endif
         return u;
       }
@@ -354,7 +358,7 @@ int main(int argc, char *argv[]) {
 #endif
     size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
 #ifdef ERR_LOG
-    std::cerr << "e_hash=" << e_hash << "\n";
+    os << "e_hash=" << e_hash << "\n";
 #endif
     std::vector<int> &eList = MapIndexByHash[e_hash];
 #ifdef TIMINGS_HASH
@@ -376,7 +380,7 @@ int main(int argc, char *argv[]) {
     NC_AppendMatrix(eCtype.eMat);
     idxMatrixCurrent++;
 #ifdef ERR_LOG
-    std::cerr << "nb_collision=" << GetNbCollision() << "\n";
+    os << "nb_collision=" << GetNbCollision() << "\n";
 #endif
   };
   auto GetUndoneEntry =
@@ -406,17 +410,17 @@ int main(int argc, char *argv[]) {
   auto AreBufferFullEnough = [&]() -> bool {
     size_t nb_unsend = 0;
 #ifdef ERR_LOG
-    std::cerr << "List|ListMatrixUnsent| =";
+    os << "List|ListMatrixUnsent| =";
 #endif
     for (size_t i_pes = 0; i_pes < n_pes; i_pes++) {
       size_t the_siz = ListListMatrixUnsent[i_pes].size();
 #ifdef ERR_LOG
-      std::cerr << " " << the_siz;
+      os << " " << the_siz;
 #endif
       nb_unsend += the_siz;
     }
 #ifdef ERR_LOG
-    std::cerr << " nb_unsend=" << nb_unsend << "\n";
+    os << " nb_unsend=" << nb_unsend << "\n";
 #endif
     return nb_unsend > MaxStoredUnsentMatrices;
   };
@@ -429,8 +433,8 @@ int main(int argc, char *argv[]) {
       if (idx == -1)
         break;
 #ifdef ERR_LOG
-      std::cerr << "Assigning the request idx=" << idx << " to processor "
-                << i_pes << "\n";
+      os << "Assigning the request idx=" << idx << " to processor "
+         << i_pes << "\n";
 #endif
       std::vector<TypeCtypeExch<Tint>> &eList = ListListMatrixUnsent[i_pes];
       char *ptr_o = ListMesg[idx].data();
@@ -439,10 +443,10 @@ int main(int argc, char *argv[]) {
       int pos = eList.size();
       for (size_t i_mat = 0; i_mat < CurrentBufferSize; i_mat++) {
         pos--;
-        PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o);
+        PairExch_to_vectorchar(eList[pos], n_vect, n, ptr_o, os);
         ptr_o += siz_pairexch;
 #ifdef ERR_LOG
-        std::cerr << "Appending matrix Ctype=" << eList[pos] << "\n";
+        os << "Appending matrix Ctype=" << eList[pos] << "\n";
 #endif
         eList.pop_back();
       }
@@ -474,14 +478,14 @@ int main(int argc, char *argv[]) {
   // Reading the initial file in memory
   //
 #ifdef ERR_LOG
-  std::cerr << "Beginning reading WorkFile=" << WorkFile << "\n";
+  os << "Beginning reading WorkFile=" << WorkFile << "\n";
 #endif
   for (int iCurr = 0; iCurr < curr_nb_matrix; iCurr++) {
     TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(iCurr);
     size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
     int nbAdjacent = NC_GetNbAdjacent(iCurr);
 #ifdef ERR_LOG
-    std::cerr << "iCurr=" << iCurr << "\n";
+    os << "iCurr=" << iCurr << "\n";
 #endif
     std::vector<int> &eList = MapIndexByHash[e_hash];
     eList.push_back(idxMatrixCurrent);
@@ -489,9 +493,9 @@ int main(int argc, char *argv[]) {
       ListUndoneIndex.push_back(idxMatrixCurrent);
     idxMatrixCurrent++;
   }
-  std::cerr << "Reading finished : |ListCases|=" << idxMatrixCurrent
-            << " |ListCasesNotDone|=" << ListUndoneIndex.size()
-            << " nb_collision=" << GetNbCollision() << "\n";
+  os << "Reading finished : |ListCases|=" << idxMatrixCurrent
+     << " |ListCasesNotDone|=" << ListUndoneIndex.size()
+     << " nb_collision=" << GetNbCollision() << "\n";
   //
   // The main loop itself.
   //
@@ -509,9 +513,9 @@ int main(int argc, char *argv[]) {
             .count();
     // Now the operations themselves
 #ifdef ERR_LOG
-    std::cerr << "Begin while, we have |ListCases|=" << idxMatrixCurrent
-              << " |ListCasesNotDone|=" << ListUndoneIndex.size()
-              << " elapsed_time=" << elapsed_seconds << "\n";
+    os << "Begin while, we have |ListCases|=" << idxMatrixCurrent
+       << " |ListCasesNotDone|=" << ListUndoneIndex.size()
+       << " elapsed_time=" << elapsed_seconds << "\n";
 #endif
     MPI_Status status1;
     int flag;
@@ -544,13 +548,13 @@ int main(int argc, char *argv[]) {
         std::memcpy((char *)(&nbRecv), ptr_recv, sizeof(int));
         ptr_recv += sizeof(int);
 #ifdef ERR_LOG
-        std::cerr << "Receiving nbRecv=" << nbRecv << " matrices\n";
+        os << "Receiving nbRecv=" << nbRecv << " matrices\n";
 #endif
         for (int iRecv = 0; iRecv < nbRecv; iRecv++) {
           TypeCtypeExch<Tint> eCtype =
-              vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n);
+            vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n, os);
 #ifdef ERR_LOG
-          std::cerr << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
+          os << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
 #endif
           ptr_recv += siz_pairexch;
           fInsert(eCtype);
@@ -579,9 +583,9 @@ int main(int argc, char *argv[]) {
       }
     } else {
 #ifdef ERR_LOG
-      std::cerr << "irank=" << irank
-                << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
-                << "\n";
+      os << "irank=" << irank
+         << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
+         << "\n";
 #endif
       bool DoSomething = false;
       if (!AreBufferFullEnough()) {
@@ -595,7 +599,7 @@ int main(int argc, char *argv[]) {
       }
       // Now finding the adjacent if we indeed do something.
 #ifdef ERR_LOG
-      std::cerr << "DoSomething = " << DoSomething << "\n";
+      os << "DoSomething = " << DoSomething << "\n";
 #endif
       if (DoSomething) {
         boost::optional<std::pair<TypeCtypeExch<Tint>, int>> eReq =
@@ -605,20 +609,20 @@ int main(int argc, char *argv[]) {
           StatusNeighbors[irank] = 0;
           int idxMatrixF = eReq->second;
 #ifdef ERR_LOG
-          std::cerr << "Starting Adjacent Form Method\n";
-          std::cerr << "eReq->first=" << eReq->first << "\n";
+          os << "Starting Adjacent Form Method\n";
+          os << "eReq->first=" << eReq->first << "\n";
           //          WriteMatrix(std::cerr, eReq->first.eMat);
 #endif
           std::vector<TypeCtypeExch<Tint>> ListAdjacentObject =
               CTYP_GetAdjacentCanonicCtypes<Tint>(eReq->first, std::cerr);
 #ifdef ERR_LOG
-          std::cerr << "We have ListAdjacentObject\n";
+          os << "We have ListAdjacentObject\n";
 #endif
           int nbAdjacent = ListAdjacentObject.size();
           NC_WriteNbAdjacent(idxMatrixF, nbAdjacent);
 #ifdef ERR_LOG
-          std::cerr << "Number of Adjacent for idxMatrixF=" << idxMatrixF
-                    << " nbAdjacent=" << nbAdjacent << " END\n";
+          os << "Number of Adjacent for idxMatrixF=" << idxMatrixF
+             << " nbAdjacent=" << nbAdjacent << " END\n";
 #endif
           for (auto &eObj1 : ListAdjacentObject)
             fInsertUnsent(eObj1);
@@ -646,16 +650,16 @@ int main(int argc, char *argv[]) {
     for (size_t i_pes = 0; i_pes < n_pes; i_pes++)
       nb_unsent += ListListMatrixUnsent[i_pes].size();
 #ifdef ERR_LOG
-    std::cerr << "TimeClear=" << TimeClear
-              << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
+    os << "TimeClear=" << TimeClear
+       << " TimeForDeclaringItOver=" << TimeForDeclaringItOver << "\n";
 #endif
     if (TimeClear > TimeForDeclaringItOver && nb_unsent == 0 &&
         CurrentBufferSize == 1 && !TerminationNoticeSent) {
       TerminationNoticeSent = true;
       for (size_t i_pes = 0; i_pes < n_pes; i_pes++) {
 #ifdef ERR_LOG
-        std::cerr << "Before world.isend for termination i_pes=" << i_pes
-                  << "\n";
+        os << "Before world.isend for termination i_pes=" << i_pes
+           << "\n";
 #endif
         if (i_pes == irank) {
           StatusNeighbors[i_pes] = 1;
@@ -687,7 +691,7 @@ int main(int argc, char *argv[]) {
     }
     if (nb_finished == n_pes) {
 #ifdef ERR_LOG
-      std::cerr << "Before the all_reduce operation\n";
+      os << "Before the all_reduce operation\n";
 #endif
       int64_t nbAll = idxMatrixCurrent;
       int64_t nbNotDone = ListUndoneIndex.size();
