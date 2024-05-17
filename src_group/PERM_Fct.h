@@ -54,8 +54,16 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
                                               Telt const &ePerm) {
   static_assert(is_ring_field<T>::value, "RepresentVertexPermutation");
 #ifdef DEBUG_PERM_FCT
-  if (EXT1.rows() != EXT2.rows()) {
+  if (EXT1.rows() != EXT2.rows() || EXT1.cols() != EXT2.cols()) {
     std::cerr << "EXT1 and EXT2 should be of the same size\n";
+    throw TerminalException{1};
+  }
+  if (RankMat(EXT1) != EXT1.cols()) {
+    std::cerr << "EXT1 should be of full rank\n";
+    throw TerminalException{1};
+  }
+  if (RankMat(EXT2) != EXT2.cols()) {
+    std::cerr << "EXT2 should be of full rank\n";
     throw TerminalException{1};
   }
 #endif

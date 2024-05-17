@@ -483,6 +483,13 @@ Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> const &ListGen,
       ListGen, eV, f_prod, os);
 }
 
+template <typename T, typename Tvert, typename Tgroup>
+struct FullRepart {
+  std::vector<RepartEntry<Tvert, Tgroup>> cells;
+  MyVector<T> eIso;
+};
+
+
 /*
   The function is named "NextGeneration" since there was a slower version in GAP
   which was superseded by a newer one and the name is inherited.
@@ -493,7 +500,7 @@ Orbit_MatrixGroup(std::vector<MyMatrix<Tvert>> const &ListGen,
   when switching groups of repartitioning polytopes simultaneously.
  */
 template <typename T, typename Tvert, typename Tgroup>
-std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
+FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
     size_t eIdx, DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
     std::vector<AdjInfo> const &ListInformationsOneFlipping,
     MyMatrix<T> const &InteriorElement,
@@ -791,6 +798,8 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
   MyMatrix<Tvert> TotalListVerticesRed(nVert, n + 1);
   std::vector<T> LineInterior = GetLineVector(InteriorElement);
   MyVector<T> eV(n);
+  MyVector<T> eIso(n+1);
+  eIso(0) = 1;
   for (int iVert = 0; iVert < nVert; iVert++) {
     MyVector<Tvert> const &eVert = ListVertices[iVert];
     TotalListVertices(iVert, 0) = 1;
@@ -798,11 +807,15 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
     for (int iCol = 0; iCol < n; iCol++) {
       TotalListVerticesRed(iVert, iCol + 1) = eVert(iCol + 1);
       T val = UniversalScalarConversion<T, Tvert>(eVert(iCol + 1));
+      eIso(iCol + 1) += val;
       TotalListVertices(iVert, iCol + 1) = val;
       eV(iCol) = val;
     }
     T Height = EvaluateLineVector(LineInterior, eV);
     TotalListVertices(iVert, n + 1) = Height;
+  }
+  for (int iCol = 0; iCol < n; iCol++) {
+    eIso(iCol+1) /= nVert;
   }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, we have TotalListVertices\n";
@@ -1030,7 +1043,7 @@ std::vector<RepartEntry<Tvert, Tgroup>> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "ISO_DEL: FRING, we have ListOrbitFacet\n";
 #endif
-  return ListOrbitFacet;
+  return {ListOrbitFacet, eIso};
 }
 
 /*
@@ -1097,23 +1110,24 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
      << " |ListGroupUnMelt|=" << ListGroupUnMelt.size() << "\n";
 #endif
   std::vector<std::vector<RepartEntry<Tvert, Tgroup>>> ListInfo;
+  std::vector<MyVector<T>> ListIso;
   std::vector<int> vect_iInfo(n_dels, -1);
   std::vector<int> vect_lower_iFacet(n_dels, -1);
   int iInfo = 0;
   for (auto &eConn : ListGroupMelt) {
     size_t eIdx = eConn[0];
-    std::vector<RepartEntry<Tvert, Tgroup>> LORB2 =
+    FullRepart<T,Tvert,Tgroup> fr =
         FindRepartitionningInfoNextGeneration(eIdx, ListOrbitDelaunay,
                                               ListInformationsOneFlipping,
                                               InteriorElement, rddo);
-    int n_facet = LORB2.size();
+    int n_facet = fr.cells.size();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: FLT: iInfo=" << iInfo << " |eConn|=" << eConn.size()
        << " n_facet=" << n_facet << "\n";
     size_t n_zero = 0, n_plus = 0, n_minus = 0;
 #endif
     for (int iFacet = 0; iFacet < n_facet; iFacet++) {
-      RepartEntry<Tvert, Tgroup> const &eFacet = LORB2[iFacet];
+      RepartEntry<Tvert, Tgroup> const &eFacet = fr.cells[iFacet];
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: FLT: iFacet=" << iFacet
          << " Position=" << static_cast<int>(eFacet.Position) << "\n";
@@ -1135,7 +1149,8 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
     os << "ISO_DEL: FLT: n_minus=" << n_minus << " n_zero=" << n_zero
        << " n_plus=" << n_plus << "\n";
 #endif
-    ListInfo.push_back(LORB2);
+    ListInfo.push_back(fr.cells);
+    ListIso.push_back(fr.eIso);
     for (auto &pos : eConn) {
       vect_iInfo[pos] = iInfo;
     }
@@ -1149,17 +1164,53 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
                                    Face const &eInc) -> MatchedFacet {
     MyMatrix<Tvert> const &EXT = ListInfo[iInfo][iFacet].EXT;
     Tgroup const &TheStab = ListInfo[iInfo][iFacet].TheStab;
+    int dim = InteriorElement.rows();
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: FLT: iInfo=" << iInfo << " iFacet=" << iFacet << " |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
     os << "ISO_DEL: FLT: Position=" << static_cast<int>(ListInfo[iInfo][iFacet].Position) << "\n";
     os << "ISO_DEL: FLT: |EXT|=" << EXT.rows() << " / " << EXT.cols() << " rnk=" << RankMat(EXT) << "\n";
-    CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
+    if (RankMat(EXT) == dim + 1) {
+      CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
+    }
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
     if (!IsSymmetryGroupOfPolytope(EXT_T, TheStab)) {
       std::cerr << "The group TheStab is not a symmetry group\n";
       throw TerminalException{1};
     }
+    os << "ISO_DEL: FLT: |TheStab|=" << TheStab.size() << "\n";
+    os << "ISO_DEL: FLT: |ListAdj|=" << ListInfo[iInfo][iFacet].ListAdj.size() << "\n";
 #endif
+    auto get_bigmat=[&](Telt const& ePerm) -> MyMatrix<Tvert> {
+      int8_t Position = ListInfo[iInfo][iFacet].Position;
+      if (Position == 0) {
+        // For barrel case, we need to extend by one point in order to get
+        // a full dimensional set. That point has to be preserved by the
+        // corresponding group and so we take the isobarycenter of the repartitioning
+        // polytope.
+        int nbRow = EXT.rows();
+        MyMatrix<T> EXT_ext(nbRow + 1, dim + 1);
+        for (int iRow=0; iRow<nbRow; iRow++) {
+          EXT_ext(iRow, 0) = 1;
+          for (int i=0; i<dim; i++) {
+            T val = UniversalScalarConversion<T,Tvert>(EXT(iRow, i + 1));
+            EXT_ext(iRow, i+1) = val;
+          }
+        }
+        for (int i=0; i<=dim; i++) {
+          EXT_ext(nbRow, i) = ListIso[iInfo](i);
+        }
+        auto f=[&](int const& u) -> int {
+          if (u == nbRow) {
+            return nbRow;
+          }
+          return ePerm.at(u);
+        };
+        MyMatrix<T> BigMat_T = FindTransformation_f(EXT_ext, EXT_ext, f);
+        return UniversalMatrixConversion<Tvert,T>(BigMat_T);
+      } else {
+        return RepresentVertexPermutation(EXT, EXT, ePerm);
+      }
+    };
     for (auto &eAdj : ListInfo[iInfo][iFacet].ListAdj) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISO_DEL: FLT: |eAdj.eInc|=" << eAdj.eInc.size() << " / "
@@ -1167,13 +1218,15 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
          << eInc.count() << "\n";
       os << "ISO_DEL: FLT: TheStab, n_act=" << TheStab.n_act()
          << " order=" << TheStab.size() << "\n";
-      CheckFacetInequality(EXT, eAdj.eInc,
-                           "get_matching_listinfo EXT eAdj.eInc");
+      if (RankMat(EXT) == dim + 1) {
+        CheckFacetInequality(EXT, eAdj.eInc,
+                             "get_matching_listinfo EXT eAdj.eInc");
+      }
 #endif
       std::optional<Telt> opt =
           TheStab.RepresentativeAction_OnSets(eAdj.eInc, eInc);
       if (opt) {
-        MyMatrix<Tvert> eBigMat = RepresentVertexPermutation(EXT, EXT, *opt);
+        MyMatrix<Tvert> eBigMat = get_bigmat(*opt);
         return {eAdj, eBigMat};
       }
     }
@@ -1466,6 +1519,8 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
             std::cerr << "We fail an important test with the barrel images\n";
             throw TerminalException{1};
           }
+          os << "ISO_DEL: FLT: |EXT7|=" << EXT7.rows() << " / " << EXT7.cols() << " rnk=" << RankMat(EXT7) << "\n";
+          os << "ISO_DEL: FLT: |LincEXT|=" << LincEXT.rows() << " / " << LincEXT.cols() << " rnk=" << RankMat(LincEXT) << "\n";
 #endif
           Face LLinc4 = get_face_m_m(LincEXT, EXT7);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
