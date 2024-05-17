@@ -529,23 +529,23 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
     std::vector<Telt> ListGen;
     Tidx n_act = idx_vertices - 1;
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: StandardGroupUpdate n_act=" << static_cast<size_t>(n_act)
+    os << "ISO_DEL: FRING, StandardGroupUpdate n_act=" << static_cast<size_t>(n_act)
        << "\n";
 #endif
     for (auto &eList : ListPermGenList) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISO_DEL: StandardGroupUpdate |eList|=" << eList.size() << "\n";
+      os << "ISO_DEL: FRING, StandardGroupUpdate |eList|=" << eList.size() << "\n";
 #endif
       Telt x(eList);
       ListGen.push_back(x);
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: StandardGroupUpdate Before Tgroup |PermGRP|="
+    os << "ISO_DEL: FRING, StandardGroupUpdate Before Tgroup |PermGRP|="
        << PermGRP.size() << "\n";
 #endif
     PermGRP = Tgroup(ListGen, n_act);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: StandardGroupUpdate After Tgroup |PermGRP|="
+    os << "ISO_DEL: FRING, StandardGroupUpdate After Tgroup |PermGRP|="
        << PermGRP.size() << "\n";
 #endif
   };
@@ -570,6 +570,9 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
     os << "ISO_DEL: FRING, FuncInsertVertex, step 1\n";
 #endif
     if (ListVertices_rev.count(eVert) == 1) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISO_DEL: FRING, is_present eVert=" << StringVector(eVert) << "\n";
+#endif
       return;
     }
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -606,12 +609,18 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
       [&](MyMatrix<Tvert> const &eMat) -> std::optional<std::vector<Tidx>> {
     size_t len = idx_vertices - 1;
     std::vector<Tidx> v_ret(len);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: FRING, get_v_positions, len=" << len << "\n";
+#endif
     for (size_t i = 0; i < len; i++) {
       MyVector<Tvert> eVimg = eMat.transpose() * ListVertices[i];
-      size_t pos = ListVertices_rev[eVimg];
-      if (pos == 0) {
+      if (ListVertices_rev.count(eVimg) == 0) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: FRING, get_v_positions, i=" << i << " eV=" << StringVector(ListVertices[i]) << " eVimg=" << StringVector(eVimg) << "\n";
+#endif
         return {};
       }
+      size_t pos = ListVertices_rev.at(eVimg);
       Tidx pos_idx = static_cast<Tidx>(pos - 1);
       v_ret[i] = pos_idx;
     }
@@ -639,20 +648,32 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
         os << "ISO_DEL: FRING, opt, case non-exist\n";
         std::string eFile = "ListMatGens_" + std::to_string(LGen.size());
         WriteListMatrixFileGAP(eFile, LGen);
-        os << "ISO_DEL: FRING |ListVertices|=" << ListVertices.size() << "\n";
+        os << "ISO_DEL: FRING Before |ListVertices|=" << ListVertices.size() << "\n";
+        size_t pos = 0;
 #endif
         for (auto &eVert : ListVertices) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          os << "ISO_DEL: FRING, Treating one vertex\n";
+          os << "ISO_DEL: FRING, Treating one vertex pos=" << pos << "\n";
 #endif
           std::vector<MyVector<Tvert>> TheOrb = Orbit_MatrixGroup(LGen, eVert, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-          os << "ISO_DEL: FRING, We have TheOrb\n";
+          os << "ISO_DEL: FRING, We have pos=" << pos << " |TheOrb|=" << TheOrb.size() << "\n";
+          size_t u = 0;
+          for (auto & fV : TheOrb) {
+            os << "ISO_DEL: FRING, u=" << u << " fV=" << StringVector(fV) << "\n";
+            u += 1;
+          }
 #endif
           for (auto &eVertB : TheOrb) {
             FuncInsertVertex(eVertB);
           }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+          pos += 1;
+#endif
         }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISO_DEL: FRING After |ListVertices|=" << ListVertices.size() << "\n";
+#endif
         return false;
       }
     };
@@ -661,7 +682,18 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
     os << "ISO_DEL: FRING, FuncInsertGenerator, step 3, test=" << test << "\n";
 #endif
     if (!test) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      for (size_t pos=0; pos<ListVertices.size(); pos++) {
+        os << "pos=" << pos << " eV=" << StringVector(ListVertices[pos]) << "\n";
+      }
+#endif
       std::optional<std::vector<Tidx>> opt = get_v_positions(eMat);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      if (!opt) {
+        std::cerr << "The get_v_positions returned a null\n";
+        throw TerminalException{1};
+      }
+#endif
       ListPermGenList.push_back(*opt);
       ListMatGens.push_back(eMat);
       StandardGroupUpdate();
@@ -1193,7 +1225,7 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
           EXT_ext(iRow, 0) = 1;
           for (int i=0; i<dim; i++) {
             T val = UniversalScalarConversion<T,Tvert>(EXT(iRow, i + 1));
-            EXT_ext(iRow, i+1) = val;
+            EXT_ext(iRow, i + 1) = val;
           }
         }
         for (int i=0; i<=dim; i++) {
