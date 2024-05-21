@@ -79,6 +79,7 @@ void process_entry_type(std::string const& FileCode) {
     throw TerminalException{1};
   }
   std::map<T, size_t> s_norm;
+  std::vector<T> norm_by_vertex;
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
     std::map<T, size_t> map;
     for (int jEnt=0; jEnt<nbEnt; jEnt++) {
@@ -107,12 +108,23 @@ void process_entry_type(std::string const& FileCode) {
     }
     std::cerr << "\n";
     s_norm[norm] += 1;
+    norm_by_vertex.push_back(norm);
   }
   std::cerr << "s_norm =";
   for (auto & kv: s_norm) {
     std::cerr << " (" << kv.first << "," << kv.second << ")";
   }
   std::cerr << "\n";
+  for (auto & kv: s_norm) {
+    T norm = kv.first;
+    std::cerr << "norm=" << norm << " lv=";
+    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+      if (norm_by_vertex[iEnt] == norm) {
+        std::cerr << " " << iEnt;
+      }
+    }
+    std::cerr << "\n";
+  }
   auto get_main_norm=[&]() -> T {
     for (auto & kv: s_norm) {
       return kv.first;
