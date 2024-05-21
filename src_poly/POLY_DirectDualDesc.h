@@ -84,6 +84,13 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   size_t n_row = EXT.rows();
   size_t n_col = EXT.cols();
   size_t DimEXT = n_col + 1;
+  auto get_type_str = [&]() -> std::string {
+    if (IsIntegralMatrix(EXT)) {
+      return "integer";
+    }
+    return "rational";
+  };
+  std::string type_str = get_type_str();
   std::string rndStr = random_string(20);
   std::string prefix = "/tmp/";
   std::string suffix = "DD_" + std::to_string(n_row) + "_" +
@@ -112,7 +119,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     } else {
       osI << "V-representation\n";
       osI << "begin\n";
-      osI << n_row << " " << DimEXT << " integer\n";
+      osI << n_row << " " << DimEXT << " " << type_str << "\n";
       for (size_t i_row = 0; i_row < n_row; i_row++) {
         osI << "0";
         for (size_t i_col = 0; i_col < n_col; i_col++)
