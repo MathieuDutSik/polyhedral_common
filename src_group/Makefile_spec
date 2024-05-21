@@ -26,7 +26,8 @@
 #PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant
 #PROGRAM		= GRP_LinPolytope_Isomorphism_GramMat GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinPolytope_Invariant
-PROGRAM		= GRP_GroupAverage_Vector GRP_GroupAverage_Matrix
+#PROGRAM		= GRP_GroupAverage_Vector GRP_GroupAverage_Matrix
+PROGRAM		= GRP_LinPolytope_Isomorphism
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
