@@ -33,12 +33,51 @@ size_t get_out(Face const& f) {
 }
 
 
+template<typename T>
+MyMatrix<T> DropZeroColumn(MyMatrix<T> const& M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  std::vector<int> lnz;
+  auto is_nz=[&](int const& iCol) -> bool {
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      if (M(iRow, iCol) != 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (int iCol=0; iCol<nbCol; iCol++) {
+    if (is_nz(iCol)) {
+      lnz.push_back(iCol);
+    }
+  }
+  MyMatrix<T> Mred(nbRow, lnz.size());
+  int pos = 0;
+  for (auto & eCol : lnz) {
+    for (int iRow=0; iRow<nbRow; iRow++) {
+      Mred(iRow, pos) = M(iRow, eCol);
+    }
+    pos += 1;
+  }
+  return Mred;
+}
+
+
+
 template<typename T, typename Tgroup>
 void process_entry_type(std::string const& FileCode) {
-  MyMatrix<T> CODE = ReadMatrixFile<T>(FileCode);
-  int nbEnt = CODE.rows();
+  MyMatrix<T> preCODE = ReadMatrixFile<T>(FileCode);
+  int nbEnt = preCODE.rows();
+  int nbCol = preCODE.cols();
+  std::cerr << "nbEnt=" << nbEnt << " nbCol=" << nbCol << "\n";
+  MyMatrix<T> CODE = DropZeroColumn(preCODE);
   int dim = CODE.cols();
-  std::cerr << "nbEnt=" << nbEnt << " dim=" << dim << "\n";
+  int rnk = RankMat(CODE);
+  std::cerr << "nbEnt=" << nbEnt << " dim=" << dim << " rnk=" << rnk << "\n";
+  if (dim != rnk) {
+    std::cerr << "We have dim != rnk\n";
+    throw TerminalException{1};
+  }
   std::map<T, size_t> s_norm;
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
     std::map<T, size_t> map;
@@ -116,7 +155,7 @@ void process_entry_type(std::string const& FileCode) {
         scal += eRay(i) * CODE(iEnt,i);
       }
       ListScal[iEnt] = scal;
-      std::cerr << "1: iEnt=" << iEnt << " scal=" << scal << " eFace=" << eFace[iEnt] << "\n";
+      //      std::cerr << "1: iEnt=" << iEnt << " scal=" << scal << " eFace=" << eFace[iEnt] << "\n";
     }
     size_t idx_in = get_in(eFace);
     size_t idx_out = get_out(eFace);
@@ -127,10 +166,10 @@ void process_entry_type(std::string const& FileCode) {
       eRay = - eRay;
     }
     T MaxScal = ListScal[idx_in];
-    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-      std::cerr << "2: iEnt=" << iEnt << " scal=" << ListScal[iEnt] << " eFace=" << eFace[iEnt] << "\n";
-    }
-    std::cerr << "MaxScal=" << MaxScal << "\n";
+    //    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+    //      std::cerr << "2: iEnt=" << iEnt << " scal=" << ListScal[iEnt] << " eFace=" << eFace[iEnt] << "\n";
+    //    }
+    //    std::cerr << "MaxScal=" << MaxScal << "\n";
     for (int iEnt=0; iEnt<nbEnt; iEnt++) {
       if (eFace[iEnt] == 1) {
         if (ListScal[iEnt] != MaxScal) {

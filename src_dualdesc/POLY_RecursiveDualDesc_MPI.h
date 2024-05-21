@@ -632,7 +632,7 @@ void Reset_Directories(boost::mpi::communicator &comm,
 template <typename T, typename Tgroup, typename Tidx_value>
 void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
                               FullNamelist const &eFull) {
-  using Tint = typename Tgroup::Tint;
+  using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
@@ -660,8 +660,8 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   int dimEXT = EXTred.cols();
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
-  PolyHeuristicSerial<Tint> AllArr =
-      Read_AllStandardHeuristicSerial<Tint>(eFull, dimEXT, os);
+  PolyHeuristicSerial<TintGroup> AllArr =
+    Read_AllStandardHeuristicSerial<T,TintGroup>(eFull, dimEXT, os);
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();
@@ -683,10 +683,10 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     pos_generator = 1;
   boost::mpi::communicator comm_work = comm.split(pos_generator);
   //
-  using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
+  using TbasicBank = DatabaseCanonic<T, TintGroup, Tgroup>;
   TbasicBank bb(EXTred, EXTred_int, GRP, os);
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(EXTred, GRP, AllArr);
+  std::map<std::string, TintGroup> TheMap =
+      ComputeInitialMap<TintGroup>(EXTred, GRP, AllArr);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {

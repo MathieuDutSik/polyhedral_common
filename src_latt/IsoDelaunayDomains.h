@@ -438,7 +438,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
     using TintGroup = typename Tgroup::Tint;
     int dimEXT = GramMat.rows() + 1;
     PolyHeuristicSerial<TintGroup> AllArr =
-        AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
     DataLattice<T, Tint, Tgroup> data_lattice =
         GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
@@ -1953,7 +1953,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   int dimEXT = LinSpa.n + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   os << "We have AllArr\n";
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   os << "We have rddo\n";

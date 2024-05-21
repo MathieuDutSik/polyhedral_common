@@ -342,6 +342,18 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   return HeuristicFromListString<T>(ListString);
 }
 
+template<typename T>
+inline typename std::enable_if<is_implementation_of_Q<T>::value, bool>::type
+IsPPLpossible() {
+  return IsProgramInPath("ppl_lcdd");
+}
+
+template<typename T>
+inline typename std::enable_if<!is_implementation_of_Q<T>::value, bool>::type
+IsPPLpossible() {
+  return false;
+}
+
 // Description: When choosing the dual description method, it can be hard
 // to decide what is the best technique. Thus, the Thompson sampling
 // can be used for better running of that sort of things.
@@ -350,6 +362,7 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
 //   file by using the program "Convert_Heuristic_to_Thompson_sampling"
 // * The logs are quite important to see what is happening.
 // * It is still an experimental feature.
+template<typename T>
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_proba = {"&PROBABILITY_DISTRIBUTIONS",
                                          " ListName = \"distri1\" ",
@@ -363,7 +376,7 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::string s1 = " ListAnswer = \"cdd\", \"lrs_ring\"";
   std::string s2 = " ListName = \"only_cdd\", \"only_lrs\"";
   std::string s3 = " ListDescription = \"cdd:distri1\", \"lrs_ring:distri1\"";
-  bool test = IsProgramInPath("ppl_lcdd");
+  bool test = IsPPLpossible<T>();
   if (test) {
     s1 += ", \"ppl_ext\"";
     s2 += ", \"only_ppl\"";
@@ -412,9 +425,9 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   return eFull;
 }
 
-template <typename T>
+template <typename TintGroup>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  TheHeuristic<T> &eHeu, std::ostream &os) {
+                  TheHeuristic<TintGroup> &eHeu, std::ostream &os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
@@ -422,7 +435,7 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
     IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
-      eHeu = ReadHeuristic<T>(is);
+      eHeu = ReadHeuristic<TintGroup>(is);
     } catch (TerminalException const &e) {
       std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
                 << "\n";
@@ -431,10 +444,10 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
   }
 }
 
-template <typename T>
+template <typename TintGroup>
 void SetThompsonSampling(FullNamelist const &eFull,
                          std::string const &NamelistEnt,
-                         ThompsonSamplingHeuristic<T> &eTS, std::ostream &os) {
+                         ThompsonSamplingHeuristic<TintGroup> &eTS, std::ostream &os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.ts") {
@@ -443,7 +456,7 @@ void SetThompsonSampling(FullNamelist const &eFull,
     try {
       FullNamelist eFullN = NAMELIST_ThompsonSamplingRuntime();
       NAMELIST_ReadNamelistFile(NamelistEntFile, eFullN);
-      eTS = ThompsonSamplingHeuristic<T>(eFullN, os);
+      eTS = ThompsonSamplingHeuristic<TintGroup>(eFullN, os);
     } catch (TerminalException const &e) {
       std::cerr << "Failed in reading the file NamelistEntFile=" << NamelistEnt
                 << "\n";
@@ -452,43 +465,43 @@ void SetThompsonSampling(FullNamelist const &eFull,
   }
 }
 
-template <typename T> struct PolyHeuristic {
-  TheHeuristic<T> Splitting;
-  TheHeuristic<T> CommThread;
-  TheHeuristic<T> BankSave;
-  TheHeuristic<T> AdditionalSymmetry;
-  TheHeuristic<T> DualDescriptionProgram;
-  TheHeuristic<T> StabEquivFacet;
-  TheHeuristic<T> InitialFacetSet;
-  TheHeuristic<T> ChoiceCanonicalization;
+template <typename TintGroup> struct PolyHeuristic {
+  TheHeuristic<TintGroup> Splitting;
+  TheHeuristic<TintGroup> CommThread;
+  TheHeuristic<TintGroup> BankSave;
+  TheHeuristic<TintGroup> AdditionalSymmetry;
+  TheHeuristic<TintGroup> DualDescriptionProgram;
+  TheHeuristic<TintGroup> StabEquivFacet;
+  TheHeuristic<TintGroup> InitialFacetSet;
+  TheHeuristic<TintGroup> ChoiceCanonicalization;
   bool DD_Saving;
   bool DD_Memory;
 };
 
-template <typename T> PolyHeuristic<T> AllStandardHeuristic() {
-  PolyHeuristic<T> AllArr;
-  AllArr.Splitting = StandardHeuristicSplitting<T>();
-  AllArr.CommThread = StandardHeuristicCommThread<T>();
-  AllArr.BankSave = StandardHeuristicBankSave<T>();
-  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<T>();
-  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<T>();
-  AllArr.StabEquivFacet = StandardHeuristicStabEquiv<T>();
-  AllArr.InitialFacetSet = MethodInitialFacetSet<T>();
-  AllArr.ChoiceCanonicalization = MethodChoiceCanonicalization<T>();
+template <typename TintGroup> PolyHeuristic<TintGroup> AllStandardHeuristic() {
+  PolyHeuristic<TintGroup> AllArr;
+  AllArr.Splitting = StandardHeuristicSplitting<TintGroup>();
+  AllArr.CommThread = StandardHeuristicCommThread<TintGroup>();
+  AllArr.BankSave = StandardHeuristicBankSave<TintGroup>();
+  AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<TintGroup>();
+  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<TintGroup>();
+  AllArr.StabEquivFacet = StandardHeuristicStabEquiv<TintGroup>();
+  AllArr.InitialFacetSet = MethodInitialFacetSet<TintGroup>();
+  AllArr.ChoiceCanonicalization = MethodChoiceCanonicalization<TintGroup>();
   return AllArr;
 }
 
-template <typename T> struct PolyHeuristicSerial {
-  TheHeuristic<T> Splitting;
-  TheHeuristic<T> BankSave;
-  TheHeuristic<T> AdditionalSymmetry;
-  ThompsonSamplingHeuristic<T> DualDescriptionProgram;
-  TheHeuristic<T> InitialFacetSet;
-  TheHeuristic<T> CheckDatabaseBank;
-  TheHeuristic<T> ChosenDatabase;
-  TheHeuristic<T> OrbitSplitTechnique;
-  TheHeuristic<T> CommThread;
-  TheHeuristic<T> ChoiceCanonicalization;
+template <typename TintGroup> struct PolyHeuristicSerial {
+  TheHeuristic<TintGroup> Splitting;
+  TheHeuristic<TintGroup> BankSave;
+  TheHeuristic<TintGroup> AdditionalSymmetry;
+  ThompsonSamplingHeuristic<TintGroup> DualDescriptionProgram;
+  TheHeuristic<TintGroup> InitialFacetSet;
+  TheHeuristic<TintGroup> CheckDatabaseBank;
+  TheHeuristic<TintGroup> ChosenDatabase;
+  TheHeuristic<TintGroup> OrbitSplitTechnique;
+  TheHeuristic<TintGroup> CommThread;
+  TheHeuristic<TintGroup> ChoiceCanonicalization;
   bool DD_Saving;
   bool AdvancedTerminationCriterion;
   bool SimpleExchangeScheme;
@@ -505,10 +518,10 @@ template <typename T> struct PolyHeuristicSerial {
   bool DeterministicRuntime;
 };
 
-template <typename T>
-PolyHeuristicSerial<T> AllStandardHeuristicSerial(int const &dimEXT,
-                                                  std::ostream &os) {
-  FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS();
+template <typename T, typename TintGroup>
+PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
+                                                          std::ostream &os) {
+  FullNamelist eFull = StandardHeuristicDualDescriptionProgram_TS<T>();
   bool DD_Saving = false;
   bool AdvancedTerminationCriterion = false;
   bool SimpleExchangeScheme = false;
@@ -521,16 +534,16 @@ PolyHeuristicSerial<T> AllStandardHeuristicSerial(int const &dimEXT,
   std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
   bool DeterministicRuntime = true;
-  return {StandardHeuristicSplitting<T>(),
-          StandardHeuristicBankSave<T>(),
-          StandardHeuristicAdditionalSymmetry<T>(),
-          ThompsonSamplingHeuristic<T>(eFull, os),
-          MethodInitialFacetSet<T>(),
-          MethodCheckDatabaseBank<T>(),
-          MethodChosenDatabase<T>(),
-          MethodOrbitSplitTechnique<T>(),
-          StandardHeuristicCommThread<T>(),
-          MethodChoiceCanonicalization<T>(),
+  return {StandardHeuristicSplitting<TintGroup>(),
+          StandardHeuristicBankSave<TintGroup>(),
+          StandardHeuristicAdditionalSymmetry<TintGroup>(),
+          ThompsonSamplingHeuristic<TintGroup>(eFull, os),
+          MethodInitialFacetSet<TintGroup>(),
+          MethodCheckDatabaseBank<TintGroup>(),
+          MethodChosenDatabase<TintGroup>(),
+          MethodOrbitSplitTechnique<TintGroup>(),
+          StandardHeuristicCommThread<TintGroup>(),
+          MethodChoiceCanonicalization<TintGroup>(),
           DD_Saving,
           AdvancedTerminationCriterion,
           SimpleExchangeScheme,

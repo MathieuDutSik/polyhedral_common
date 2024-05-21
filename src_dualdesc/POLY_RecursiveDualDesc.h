@@ -3046,22 +3046,22 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
 #endif
 }
 
-template <typename Tint>
-PolyHeuristicSerial<Tint>
+template <typename T, typename TintGroup>
+PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
                                 std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr =
-      AllStandardHeuristicSerial<Tint>(dimEXT, os);
+  PolyHeuristicSerial<TintGroup> AllArr =
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   return AllArr;
 }
 
-template <typename Tint>
-PolyHeuristicSerial<Tint>
+template <typename T, typename TintGroup>
+PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial_File(std::string const &eFile,
                                      int const &dimEXT, std::ostream &os) {
-  PolyHeuristicSerial<Tint> AllArr =
-      AllStandardHeuristicSerial<Tint>(dimEXT, os);
+  PolyHeuristicSerial<TintGroup> AllArr =
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   if (eFile != "unset") {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     NAMELIST_ReadNamelistFile(eFile, eFull);
@@ -3081,7 +3081,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
     std::cerr << "Do not capture the CtrlC event\n";
   }
   //
-  using Tint = typename Tgroup::Tint;
+  using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tkey = MyMatrix<T>;
@@ -3092,11 +3092,11 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXTred.cols();
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
-  PolyHeuristicSerial<Tint> AllArr =
-      Read_AllStandardHeuristicSerial<Tint>(eFull, dimEXT, std::cerr);
+  PolyHeuristicSerial<TintGroup> AllArr =
+    Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, std::cerr);
   //
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint, T, Tgroup>(EXTred, GRP, AllArr);
+  std::map<std::string, TintGroup> TheMap =
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
@@ -3215,7 +3215,7 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXT.cols();
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<TintGroup>(dimEXT, std::cerr);
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   return DualDescriptionRecordFullDim<T, Tgroup>(EXTred, GRP, rddo);
 }

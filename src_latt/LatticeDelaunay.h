@@ -708,7 +708,7 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm,
   std::string FileDualDesc =
       BlockDATA.ListStringValues.at("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
-      Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
+    Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
   //
   CVPSolver<T, Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);

@@ -924,7 +924,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   std::string FileDualDesc =
       BlockDATA.ListStringValues.at("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
-      Read_AllStandardHeuristicSerial_File<TintGroup>(FileDualDesc, dimEXT, os);
+    Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
   DataPerfectLorentzian<T, Tint, Tgroup> data{n, LorMat, TheOption,
@@ -955,7 +955,7 @@ LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
   PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<Tint>(dimEXT, os);
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
 
   int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
@@ -1035,7 +1035,7 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<Tint>(dimEXT, os);
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
   //

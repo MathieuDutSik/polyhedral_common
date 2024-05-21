@@ -1670,7 +1670,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
           -UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(LVect)) *
           G;
       PolyHeuristicSerial<TintGroup> AllArr =
-          AllStandardHeuristicSerial<TintGroup>(dimEXT, os);
+        AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
       vectface vf = DualDescriptionStandard(ListIneq, GRP, AllArr, os);
       bool AllRaysInside = true;
       for (auto &eFace : vf) {
