@@ -1024,7 +1024,7 @@ GetGraphFromWeightedMatrix_color_adj(
         f_adj(bVert, aVert);
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
-#ifdef DEBUG_WEIGHT_MATRIX
+#ifdef DEBUG_WEIGHT_MATRIX_DISABLE
   os << "The original matrix\n";
   for (size_t iVert = 0; iVert < nbRow; iVert++) {
     for (size_t jVert = 0; jVert < nbRow; jVert++) {

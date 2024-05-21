@@ -178,6 +178,19 @@ void process_entry_type(std::string const& FileCode) {
       eRay = - eRay;
     }
     T MaxScal = ListScal[idx_in];
+    std::cerr << "eRay=" << StringVector(eRay) << "\n";
+    std::cerr << "incd=";
+    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+      if (eFace[iEnt] == 1) {
+        std::cerr << " " << iEnt;
+      }
+    }
+    std::cerr << "\n";
+    std::cerr << "ListScal=";
+    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+      std::cerr << " " << ListScal[iEnt];
+    }
+    std::cerr << "\n";
     //    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
     //      std::cerr << "2: iEnt=" << iEnt << " scal=" << ListScal[iEnt] << " eFace=" << eFace[iEnt] << "\n";
     //    }

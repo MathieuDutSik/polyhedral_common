@@ -1344,7 +1344,7 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
       decltype(f_repr), decltype(f_spann)>(
       comm, max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
       f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
-  os << "Termination test=" << test << "\n";
+  os << "ADJ_SCH: Termination test=" << test << "\n";
   PartialEnum_FullWrite(Prefix, str_proc, Saving, l_obj, l_status, os);
   return {test, std::move(l_obj)};
 }
