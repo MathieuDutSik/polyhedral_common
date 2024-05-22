@@ -1,0 +1,17 @@
+&DATA
+ arithmetic_T = "gmp_rational"
+ arithmetic_Tint = "gmp_integer"
+ OutFormat = "NumberGAP"
+ OutFile = "Result"
+ FileDualDescription = "unset"
+ max_runtime_second = 0
+ ApplyStdUnitbuf = T
+ Saving = T
+ Prefix = "./DATA/"
+ CVPmethod = "SVexact"
+/
+
+&TSPACE
+ TypeTspace = "File"
+ FileLinSpa = "TSPACE_LinSpa"
+/

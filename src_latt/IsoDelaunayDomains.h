@@ -646,8 +646,6 @@ FullRepart<T,Tvert,Tgroup> FindRepartitionningInfoNextGeneration(
         LGen.push_back(eMat);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISO_DEL: FRING: opt, case non-exist\n";
-        std::string eFile = "ListMatGens_" + std::to_string(LGen.size());
-        WriteListMatrixFileGAP(eFile, LGen);
         os << "ISO_DEL: FRING: Before |ListVertices|=" << ListVertices.size() << "\n";
 #endif
         size_t nVert = ListVertices.size();
