@@ -1884,7 +1884,8 @@ struct DataIsoDelaunayDomainsFunc {
     x_in.ListIneq = ListIneq;
     // Compute the irredundant ones as well as the l_ineq / map_ineq
     MyMatrix<T> FAC = GetFACineq(ListIneq);
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, os);
+    MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
+    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC_extend, os);
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN

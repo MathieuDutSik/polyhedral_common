@@ -1845,17 +1845,10 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
   int nbRow = M.rows();
-  int nbCol = M.cols();
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eVal = M(iRow, 0);
     if (eVal != 0) {
-      MyMatrix<T> Mret(nbRow, nbCol + 1);
-      for (int jRow = 0; jRow < nbRow; jRow++) {
-        Mret(jRow, 0) = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          Mret(jRow, iCol + 1) = M(jRow, iCol);
-      }
-      return Mret;
+      return AddFirstZeroColumn(M);
     }
   }
   return M;
@@ -1864,17 +1857,10 @@ template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
 template <typename T>
 std::pair<MyMatrix<T>, int> FirstColumnZeroCond(MyMatrix<T> const &M) {
   int nbRow = M.rows();
-  int nbCol = M.cols();
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eVal = M(iRow, 0);
     if (eVal != 0) {
-      MyMatrix<T> Mret(nbRow, nbCol + 1);
-      for (int jRow = 0; jRow < nbRow; jRow++) {
-        Mret(jRow, 0) = 0;
-        for (int iCol = 0; iCol < nbCol; iCol++)
-          Mret(jRow, iCol + 1) = M(jRow, iCol);
-      }
-      return {Mret, 1};
+      return {AddFirstZeroColumn(M), 1};
     }
   }
   return {M, 0};
