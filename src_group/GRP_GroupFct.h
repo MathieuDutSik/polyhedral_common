@@ -584,6 +584,17 @@ vectface DecomposeOrbitPoint_Full(Tgroup const &TheGRP) {
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
 
+template <typename Tgroup>
+std::vector<size_t> DecomposeOrbitPoint_FullRepr(Tgroup const &TheGRP) {
+  vectface vf = DecomposeOrbitPoint_Full(TheGRP);
+  std::vector<size_t> l_idx;
+  for (auto & eFace : vf) {
+    boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
+    l_idx.push_back(aRow);
+  }
+  return l_idx;
+}
+
 template <typename Telt>
 vectface DecomposeOrbitPoint_KernelFull(const size_t &n,
                                         const std::vector<Telt> &LGen) {

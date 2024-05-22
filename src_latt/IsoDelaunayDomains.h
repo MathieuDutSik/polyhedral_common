@@ -1871,20 +1871,57 @@ struct DataIsoDelaunayDomainsFunc {
     return {std::move(x_ret), std::move(ret)};
   }
   std::vector<TadjI> f_adj(Tobj &x_in) {
+    using Telt = typename Tgroup::Telt;
+    using Tidx = typename Telt::Tidx;
     std::ostream &os = data.rddo.os;
     int n = data.LinSpa.n;
     int dimSpace = data.LinSpa.ListMat.size();
     IsoDelaunayDomain<T, Tint, Tgroup> &x = x_in.DT_gram;
+    // compute the inequalities
     std::vector<FullAdjInfo<T>> ListIneq =
         ComputeDefiningIneqIsoDelaunayDomain<T, Tint, Tgroup>(
             x.DT, data.LinSpa.ListLineMat, os);
     x_in.ListIneq = ListIneq;
+    // Compute the irredundant ones as well as the l_ineq / map_ineq
     MyMatrix<T> FAC = GetFACineq(ListIneq);
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FAC, os);
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-    std::vector<TadjI> l_adj;
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols() << " nbIrred=" << nbIrred << "\n";
+#endif
+    std::vector<MyVector<T>> l_ineq;
+    std::unordered_map<MyVector<T>, size_t> map_ineq;
     for (size_t i = 0; i < nbIrred; i++) {
+      MyVector<T> eV = GetMatrixRow(FACred, i);
+      l_ineq.push_back(eV);
+      map_ineq[eV] = i;
+    }
+    // Compute the automorphism group on the central gram and then the facets
+    std::vector<MyMatrix<T>> ListGenTot = LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat, data.rddo.os);
+    std::vector<Telt> ListPermGens;
+    for (auto & eGenTot : ListGenTot) {
+      MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);
+      std::vector<Tidx> l_pos(nbIrred);
+      for (size_t i = 0; i < nbIrred; i++) {
+        MyVector<T> const& eV = l_ineq[i];
+        // There are actually two transpose here:
+        // * One from going from action in the space to action on the dual
+        // * One for going from row to column action
+        MyVector<T> eVimg = MatSpace * eV;
+        size_t pos = map_ineq.at(eVimg);
+        l_pos[i] = pos;
+      }
+      Telt ePermGen(l_pos);
+      ListPermGens.push_back(ePermGen);
+    }
+    Tgroup GRPperm = Tgroup(ListPermGens, nbIrred);
+    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: f_adj: |GRPperm|=" << GRPperm.size() << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
+#endif
+    std::vector<TadjI> l_adj;
+    for (auto & i : l_idx) {
       int idxIrred = ListIrred[i];
       MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
       MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);

@@ -584,6 +584,23 @@ bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
   return true;
 }
 
+template <typename T>
+MyMatrix<T> matrix_in_t_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
+  int dimSpace = LinSpa.ListMat.size();
+  MyMatrix<T> MatSpace(dimSpace, dimSpace);
+  int pos = 0;
+  for (auto &eMatSp : LinSpa.ListMat) {
+    MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
+    MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
+    std::optional<MyVector<T>> opt =
+      SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
+    MyVector<T> eV = unfold_opt(opt, "matrix row");
+    AssignMatrixRow(MatSpace, pos, eV);
+    pos += 1;
+  }
+  return MatSpace;
+}
+
 template <typename T, typename Telt>
 MyMatrix<T> get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
                                   [[maybe_unused]] MyMatrix<T> const &eMat) {
