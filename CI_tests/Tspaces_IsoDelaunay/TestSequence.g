@@ -7,6 +7,8 @@ GetNbIsoDelaunay:=function(FileLinSpa_input)
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
     FileResult:="Result";
+    RemoveFileIfExist(FileLinSpa);
+    RemoveFileIfExist(FileResult);
     TheCommand:=Concatenation("cp ", FileLinSpa_input, " ", FileLinSpa);
     Exec(TheCommand);
     #
@@ -15,8 +17,7 @@ GetNbIsoDelaunay:=function(FileLinSpa_input)
     Exec(TheCommand);
     #
     if IsExistingFile(FileResult)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
+        Error("The output file is not existing. That qualifies as a fail");
     fi;
     U:=ReadAsFunction(FileResult)();
     RemoveFile(FileLinSpa);
@@ -32,6 +33,7 @@ for eFile in ListFile
 do
     FullFile:=Concatenation(DirName, "/", eFile);
     nb:=GetNbIsoDelaunay(FullFile);
+    Print("eFile=", eFile, " nb=", nb, "\n");
     eRec:=rec(eFile:=eFile, nb:=nb);
     Add(ListRec, eRec);
 od;
