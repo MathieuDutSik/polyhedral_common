@@ -59,7 +59,7 @@ Programs:
   * **LATT_canonicalizeSymplectic** Finding the canonical form with the equivalence being a symplectic matrix.
 
 Reference:
-  * Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden, A canonical form for positive definite matrices, Proceedings of the Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers, Berkeley, 2020. [arxiv:2004.14022](https://arxiv.org/abs/2004.14022).
+  * Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden, A canonical form for positive definite matrices, [preprint at arxiv:2004.14022](https://arxiv.org/abs/2004.14022), Proceedings of the Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers, Berkeley, 2020.
 
 T-space of quadratic forms
 --------------------------
@@ -72,9 +72,9 @@ Programs:
   * **TSPACE_FileFormatConversion** Converting format of T-spaces
 
 Reference:
-  * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, preprint at arxiv:0601084, Duke Mathematical Journal 142 (2008) 127--164
-  * Herbert Gangl, Paul Gunnells, Jonathan Hanke, Achill Schürmann, Mathieu Dutour Sikirić, Dan Yasaki, On the cohomology of linear groups over imaginary quadratic fields, preprint at arxiv:1307.1165, Journal of Pure and Applied Algebra 220-7 (2016) 2564--2589
-  * Achill Schuermann, Enumerating perfect forms, arXiv:0901.1587
+  * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, [preprint at arxiv:math/0601084](https://arxiv.org/abs/math/0601084), Duke Mathematical Journal 142 (2008) 127--164
+  * Herbert Gangl, Paul Gunnells, Jonathan Hanke, Achill Schürmann, Mathieu Dutour Sikirić, Dan Yasaki, On the cohomology of linear groups over imaginary quadratic fields, [preprint at arxiv:1307.1165](https://arxiv.orb/abs/1307.1165), Journal of Pure and Applied Algebra 220-7 (2016) 2564--2589
+  * Achill Schuermann, Enumerating perfect forms, [preprint at arXiv:0901.1587](https://arxiv.org/abs/0901.1587)
 
 
 Lattice Delaunay
@@ -98,4 +98,4 @@ Program:
 * **LATT_MPI_Lattice_IsoDelaunayDomain** for running the enumeration by using MPI parallelism.
 
 References:
-  * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, preprint at arxiv:0601084, Duke Mathematical Journal 142 (2008) 127--164
+  * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, [preprint at arxiv:math/0601084](https://arxiv.org/abs/math/0601084), Duke Mathematical Journal 142 (2008) 127--164
