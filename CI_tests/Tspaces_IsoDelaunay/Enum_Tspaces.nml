@@ -13,6 +13,6 @@
 
 &TSPACE
  TypeTspace = "File"
- FileLinSpa = "TSPACE_Coxeter9_5_iO1_bravais_stabilizer"
-! FileLinSpa = "TSPACE_Coxeter9_5_iO1_single_vect"
+! FileLinSpa = "TSPACE_Coxeter9_5_iO1_bravais_stabilizer"
+ FileLinSpa = "TSPACE_Coxeter9_5_iO1_single_vect"
 /

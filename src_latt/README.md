@@ -15,6 +15,9 @@ coefficients.
 The relevant program is:
   * **LATT_lll** This is for computing the LLL of a positive definite quadratic form.
 
+Reference:
+  * [LLL basis reduction algorithm](https://en.wikipedia.org/wiki/Lenstra%E2%80%93Lenstra%E2%80%93Lov%C3%A1sz_lattice_basis_reduction_algorithm)
+
 
 Closest Vector Problems
 -----------------------
@@ -56,7 +59,7 @@ Programs:
   * **LATT_canonicalizeSymplectic** Finding the canonical form with the equivalence being a symplectic matrix.
 
 Reference:
-  * Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden, A canonical form for positive definite matrices, Proceedings of the Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers, Berkeley, 2020.
+  * Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden, A canonical form for positive definite matrices, Proceedings of the Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers, Berkeley, 2020. [arxiv:2004.14022](https://arxiv.org/abs/2004.14022).
 
 T-space of quadratic forms
 --------------------------
@@ -77,16 +80,22 @@ Reference:
 Lattice Delaunay
 ----------------
 
-The enumeration of Delaunay polytopes is an important geometric problem.
+The enumeration of Delaunay polytopes is an important geometric problem for various stuff.
+
+Program:
+  * **LATT_MPI_ComputeDelaunay** for computing the Delaunay polytopes in MPI framework.
 
 References for computing the Delaunay of a lattice:
-  * Mathieu Dutour Sikirić, Achill Schürmann, Frank Vallentin, Complexity and algorithms for computing Voronoi cells of lattices, preprint at arxiv:0804.0036, Mathematics of Computation 78 (2009) 1713--1731
+  * Mathieu Dutour Sikirić, Achill Schürmann, Frank Vallentin, Complexity and algorithms for computing Voronoi cells of lattices, [preprint at arxiv:0804.0036](https://arxiv.org/abs/0804.0036), Mathematics of Computation 78 (2009) 1713--1731
 
 
 Iso-Delaunay domains
 --------------------
 
 For a T-space, we want to enumerate the iso-Delaunay domains inside of it.
+
+Program:
+* **LATT_MPI_Lattice_IsoDelaunayDomain** for running the enumeration by using MPI parallelism.
 
 References:
   * Achill Schürmann, Mathieu Dutour Sikirić, Frank Vallentin, A generalization of Voronoi's reduction theory and its application, preprint at arxiv:0601084, Duke Mathematical Journal 142 (2008) 127--164
