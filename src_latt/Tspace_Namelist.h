@@ -10,6 +10,11 @@
 #include <string>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_TSPACE_NAMELIST
+#endif
+
+
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListBoolValues1_doc;
@@ -234,59 +239,74 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     std::cerr << "Failed to find an option for SuperMatMethod that suits\n";
     throw TerminalException{1};
   };
-  if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
-    int n = Blk.ListIntValues.at("RealImagDim");
-    int eSum = Blk.ListIntValues.at("RealImagSum");
-    int eProd = Blk.ListIntValues.at("RealImagProd");
-    if (TypeTspace == "RealQuad")
-      LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
-    if (TypeTspace == "ImagQuad")
-      LinSpaRet = ComputeImagQuadraticSpace<T>(n, eSum, eProd);
-    set_listcomm();
-    set_subspaces();
-    set_pt_stab();
-    set_is_bravais();
-    return LinSpaRet;
-  }
-  if (TypeTspace == "InvGroup") {
-    std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");
-    std::vector<MyMatrix<T>> LGen = ReadListMatrixFile<T>(FileInvGroup);
-    if (LGen.size() == 0) {
-      std::cerr << "We have 0 matrices\n";
-      throw TerminalException{1};
+  auto get_linspace=[&]() -> LinSpaceMatrix<T> {
+    if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
+      int n = Blk.ListIntValues.at("RealImagDim");
+      int eSum = Blk.ListIntValues.at("RealImagSum");
+      int eProd = Blk.ListIntValues.at("RealImagProd");
+      if (TypeTspace == "RealQuad")
+        LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
+      if (TypeTspace == "ImagQuad")
+        LinSpaRet = ComputeImagQuadraticSpace<T>(n, eSum, eProd);
+      set_listcomm();
+      set_subspaces();
+      set_pt_stab();
+      set_is_bravais();
+      return LinSpaRet;
     }
-    LinSpaRet.n = LGen[0].rows();
-    LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen);
-    set_paperwork();
-    set_supermat();
-    set_listcomm();
-    set_subspaces();
-    set_pt_stab();
-    set_is_bravais();
-    return LinSpaRet;
-  }
-  if (TypeTspace == "Raw") {
-    std::string FileListMat = Blk.ListStringValues.at("FileListMat");
-    LinSpaRet.ListMat = ReadListMatrixFile<T>(FileListMat);
-    if (LinSpaRet.ListMat.size() == 0) {
-      std::cerr << "We have 0 matrices for ListMat\n";
-      throw TerminalException{1};
+    if (TypeTspace == "InvGroup") {
+      std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");
+      std::vector<MyMatrix<T>> LGen = ReadListMatrixFile<T>(FileInvGroup);
+      if (LGen.size() == 0) {
+        std::cerr << "We have 0 matrices\n";
+        throw TerminalException{1};
+      }
+      LinSpaRet.n = LGen[0].rows();
+      LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen);
+      set_paperwork();
+      set_supermat();
+      set_listcomm();
+      set_subspaces();
+      set_pt_stab();
+      set_is_bravais();
+      return LinSpaRet;
     }
-    LinSpaRet.n = LinSpaRet.ListMat[0].rows();
-    set_paperwork();
-    set_supermat();
-    set_listcomm();
-    set_subspaces();
-    set_pt_stab();
-    set_is_bravais();
-    return LinSpaRet;
+    if (TypeTspace == "Raw") {
+      std::string FileListMat = Blk.ListStringValues.at("FileListMat");
+      LinSpaRet.ListMat = ReadListMatrixFile<T>(FileListMat);
+      if (LinSpaRet.ListMat.size() == 0) {
+        std::cerr << "We have 0 matrices for ListMat\n";
+        throw TerminalException{1};
+      }
+      LinSpaRet.n = LinSpaRet.ListMat[0].rows();
+      set_paperwork();
+      set_supermat();
+      set_listcomm();
+      set_subspaces();
+      set_pt_stab();
+      set_is_bravais();
+      return LinSpaRet;
+    }
+    if (TypeTspace == "File") {
+      std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
+      return ReadLinSpaceFile<T>(FileLinSpa);
+    }
+    std::cerr << "Failed to find an option for TypeTspace that suits\n";
+    throw TerminalException{1};
+  };
+  LinSpaceMatrix<T> LinSpa = get_linspace();
+#ifdef DEBUG_TSPACE_NAMELIST
+  for (auto & eGen : LinSpa.PtStabGens) {
+    for (auto & eMat : LinSpa.ListMat) {
+      MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
+      if (eMatImg != eMat) {
+        std::cerr << "eMat should equal to eMatImg\n";
+        throw TerminalException{1};
+      }
+    }
   }
-  if (TypeTspace == "File") {
-    std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
-    return ReadLinSpaceFile<T>(FileLinSpa);
-  }
-  std::cerr << "Failed to find an option for TypeTspace that suits\n";
-  throw TerminalException{1};
+#endif
+  return LinSpa;
 }
 
 // clang-format off
