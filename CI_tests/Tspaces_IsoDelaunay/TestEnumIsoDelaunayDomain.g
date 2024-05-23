@@ -6,11 +6,11 @@ TestEnumeration:=function(eRec)
     #
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
-    FileResult:=
+    FileResult:="Result";
     TheCommand:=Concatenation("cp ", eRec.FileLinSpa, " ", FileLinSpa);
     Exec(TheCommand);
     #
-    eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";
+    eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     #

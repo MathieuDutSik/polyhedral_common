@@ -6,8 +6,8 @@
  FileDualDescription = "unset"
  max_runtime_second = 0
  ApplyStdUnitbuf = T
- Saving = T
- Prefix = "./DATA/"
+ Saving = F
+ Prefix = "/irrelevant/"
  CVPmethod = "SVexact"
 /
 
