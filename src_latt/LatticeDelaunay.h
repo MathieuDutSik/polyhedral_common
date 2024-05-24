@@ -360,6 +360,9 @@ void WriteEntryGAP(std::ostream &os_out,
       os_out << ",";
     os_out << "rec(EXT:=" << StringMatrixGAP(EXT) << ",\n";
     std::vector<Telt> LGen = eDel.GRP.SmallGeneratingSet();
+    if (LGen.size() == 0) {
+      LGen.push_back(eDel.GRP.get_identity());
+    }
     auto get_gap_string = [&]() -> std::string {
       if (LGen.size() == 0) {
         return "Group(())";
