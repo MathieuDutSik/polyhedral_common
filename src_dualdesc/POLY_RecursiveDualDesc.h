@@ -1231,7 +1231,7 @@ public:
   void FuncInsertPair(Face const &face_orbsize) {
 #ifdef TRACK_DATABASE
     if (face_orbsize.size() != delta) {
-      std::cerr << "We have |face_orbsize|=" << face_orbsize.size()
+      std::cerr << "RDD: We have |face_orbsize|=" << face_orbsize.size()
                 << " but delta=" << delta << "\n";
       os << "RDD: We have |face_orbsize|=" << face_orbsize.size()
          << " but delta=" << delta << "\n";
@@ -3071,7 +3071,7 @@ Read_AllStandardHeuristicSerial_File(std::string const &eFile,
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
-void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
+void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream& os) {
   // Setting up the Control C event.
   ExitEvent = false;
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
@@ -3087,23 +3087,23 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull) {
   using Tkey = MyMatrix<T>;
   using Tval = TripleStore<Tgroup>;
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
-  MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, std::cerr);
-  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, std::cerr);
+  MyMatrix<T> EXT = Get_EXT_DualDesc<T, Tidx>(eFull, os);
+  Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXTred.cols();
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   PolyHeuristicSerial<TintGroup> AllArr =
-    Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, std::cerr);
+    Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   //
   std::map<std::string, TintGroup> TheMap =
       ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
-      Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, std::cerr);
+      Tbank TheBank(AllArr.BANK_Saving, AllArr.BANK_Prefix, os);
       return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
           TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, AllArr.DD_Prefix,
-          std::cerr);
+          os);
     }
     if (AllArr.bank_parallelization_method == "bank_asio") {
       using Tbank = DataBankAsioClient<Tkey, Tval>;

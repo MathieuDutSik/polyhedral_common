@@ -27,19 +27,23 @@ end;
 
 DirName:="TSPACES_Bravais";
 ListFile:=ListFileDirectory(DirName);
+nbFile:=Length(ListFile);
+
 
 ListRec:=[];
-for eFile in ListFile
+for iFile in [1..nbFile]
 do
+    eFile:=ListFile[iFile];
+    Print("      ----------\n");
+    Print("iFile=", iFile, " / ", nbFile, "  eFile=", eFile, "\n");
     FullFile:=Concatenation(DirName, "/", eFile);
-    Print("eFile=", eFile, "\n");
     U:=GetRecInfo(FullFile);
     nb:=Length(U);
     ListOrder:=List(U, x->Order(x.GRPperm));
     if Maximum(ListOrder) > 1 then
-        Error("We found what were looking for, a non-trivial GRPperm");
+        Print("We found what were looking for, a non-trivial GRPperm\n");
     fi;
-    Print("eFile=", eFile, " nb=", nb, "\n");
-    eRec:=rec(eFile:=eFile, nb:=nb);
+    Print("eFile=", eFile, " nb=", nb, " ListOrder=", ListOrder, "\n");
+    eRec:=rec(eFile:=eFile, nb:=nb, ListOrder:=ListOrder);
     Add(ListRec, eRec);
 od;

@@ -19,7 +19,7 @@ void Process_eFull(FullNamelist const &eFull) {
   using Tgroup = permutalib::Group<Telt, Tint>;
   //    using Tidx_value = int16_t;
   using Tidx_value = int32_t;
-  MainFunctionSerialDualDesc<T, Tgroup, Tidx_value>(eFull);
+  MainFunctionSerialDualDesc<T, Tgroup, Tidx_value>(eFull, std::cerr);
 }
 
 template <typename T> void Process(FullNamelist const &eFull) {

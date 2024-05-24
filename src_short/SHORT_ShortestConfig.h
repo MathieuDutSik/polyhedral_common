@@ -25,6 +25,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_SHORTEST_CONFIG
+#endif
+
 template <typename Tint>
 MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
   int nbRow = M.rows();
@@ -129,7 +133,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           TheFamilyVect.insert(rVect);
       }
   }
+#ifdef DEBUG_SHORTEST_CONFIG
   std::cerr << "|TheFamilyVect|=" << TheFamilyVect.size() << "\n";
+#endif
   auto GetListIneq = [&]() -> MyMatrix<T> {
     int siz = TheFamilyVect.size();
     MyMatrix<T> RetMat(siz, dimSpa + 1);
@@ -155,7 +161,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     eRes.eCase = 1;
     eRes.reply = false;
     eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
     std::cerr << "RETURN case 1\n";
+#endif
     return eRes;
   }
   MyVector<T> ZerVect =
@@ -172,7 +180,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       eOptimalPrev = eOptimal;
     }
     nbIter++;
+#ifdef DEBUG_SHORTEST_CONFIG
     std::cerr << "nbIter=" << nbIter << "\n";
+#endif
     MyMatrix<T> ListIneq = GetListIneq();
     for (auto &eVect : ListVectTot) {
       auto iter = TheFamilyVect.find(eVect);
@@ -188,7 +198,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.eCase = 2;
         eRes.reply = false;
         eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << "RETURN case 2\n";
+#endif
         return eRes;
       }
     }
@@ -204,7 +216,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     };
     LpSolution<T> eSol = GetLpSolution(SetIneq, ToBeMinimized);
     if (!eSol.PrimalDefined && eSol.DualDefined) {
+#ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "DualDefined but not primal defined\n";
+#endif
       int nbIneqSet = SetIneq.size();
       MyVector<T> SumIneq = ZeroVector<T>(1 + nbIneqSet);
       for (int i = 0; i < nbIneqSet; i++) {
@@ -218,21 +232,29 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.eCase = 3;
         eRes.reply = false;
         eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << "RETURN case 3\n";
+#endif
         return eRes;
       }
       std::cerr << "It seems we have a big problem here. Please correct\n";
       throw TerminalException{1};
     } else if (eSol.PrimalDefined && !eSol.DualDefined) {
+#ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "PrimalDefined but not dual defined\n";
+#endif
       // This is the primal_direction case
       MyVector<Tint> eVect = ListVect[0];
       MyVector<Tint> eVectB = 2 * eVect;
+#ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "Inserting from PrimalDefined but not dual defined eVectB=";
       WriteVectorNoDim(std::cerr, eVectB);
+#endif
       TheFamilyVect.insert(eVectB);
     } else {
-      //      std::cerr << "We have optimal value\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+      std::cerr << "We have optimal value\n";
+#endif
       if (eSol.Answer != "dd_Optimal") {
         std::cerr << "We have a real problem to solve. Please debug\n";
         throw TerminalException{1};
@@ -240,20 +262,26 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       if (nbIter == 1)
         eOptimalPrev = eOptimal;
       eOptimal = eSol.OptimalValue;
+#ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev
                 << "\n";
+#endif
       if (eOptimal > 1) {
         eRes.eCase = 4;
         eRes.reply = false;
         eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << "RETURN case 4\n";
+#endif
         return eRes;
       }
       if (eOptimal >= 1 && NoExtension) {
         eRes.eCase = 5;
         eRes.reply = false;
         eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << "RETURN case 5\n";
+#endif
         return eRes;
       }
       MyVector<T> eVectEmb = eSol.DirectSolution;
@@ -303,12 +331,18 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         throw TerminalException{1};
       }
       bool testPosDef = IsPositiveDefinite(eMatSec);
-      //      std::cerr << "testPosDef=" << testPosDef << "\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+      std::cerr << "testPosDef=" << testPosDef << "\n";
+#endif
       if (testPosDef) {
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << "Before computation of T_ShortestVector\n";
         WriteMatrix(std::cerr, eMatSec);
+#endif
         Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eMatSec, os);
+#ifdef DEBUG_SHORTEST_CONFIG
         std::cerr << " After computation of T_ShortestVector\n";
+#endif
         int nbRow = RecSHV.SHV.rows();
         std::vector<MyVector<Tint>> SHV(nbRow);
         for (int iRow = 0; iRow < nbRow; iRow++) {
@@ -324,7 +358,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           eRes.SHV = RecSHV.SHV;
           eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
           eRes.eMat = eMatSec;
+#ifdef DEBUG_SHORTEST_CONFIG
           std::cerr << "RETURN case 6\n";
+#endif
           return eRes;
         } else {
           std::vector<MyVector<Tint>> SHVdiff;
@@ -341,8 +377,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           }
           if (DiffNew.size() > 0) {
             for (auto &eVect : DiffNew) {
+#ifdef DEBUG_SHORTEST_CONFIG
               std::cerr << "Inserting from DiffNew eVect=";
               WriteVectorNoDim(std::cerr, eVect);
+#endif
               TheFamilyVect.insert(eVect);
             }
           } else {
@@ -353,13 +391,17 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.SHV = RecSHV.SHV;
               eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
               eRes.eMat = eMatSec;
+#ifdef DEBUG_SHORTEST_CONFIG
               std::cerr << "RETURN case 7\n";
+#endif
               return eRes;
             } else {
               eRes.eCase = 8;
               eRes.reply = false;
               eRes.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
               std::cerr << "RETURN case 8\n";
+#endif
               return eRes;
             }
           }
@@ -378,8 +420,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
           }
+#ifdef DEBUG_SHORTEST_CONFIG
           std::cerr << "Inserting from GetShortVectorDegenerate eVect3=";
           WriteVectorNoDim(std::cerr, eVect3);
+#endif
           TheFamilyVect.insert(eVect3);
         } else {
           bool NeedNonZero = true;
@@ -390,8 +434,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
           }
+#ifdef DEBUG_SHORTEST_CONFIG
           std::cerr << "Inserting from GetShortVector eVect=";
           WriteVectorNoDim(std::cerr, eVect);
+#endif
           TheFamilyVect.insert(eVect);
         }
       }
@@ -408,7 +454,9 @@ template <typename T, typename Tint>
 ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M, std::ostream& os) {
   int n = M.cols();
   int nbVect = M.rows();
-  //  std::cerr << "nbVect=" << nbVect << "\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+  std::cerr << "nbVect=" << nbVect << "\n";
+#endif
   MyMatrix<T> Amat = ZeroMatrix<T>(n, n);
   for (int iVect = 0; iVect < nbVect; iVect++) {
     MyVector<Tint> eVect_Tint = GetMatrixRow(M, iVect);
@@ -418,15 +466,10 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M, std::ostream& os
   }
   MyMatrix<T> TheGramMat = Inverse(Amat);
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
-  //  std::cerr << "|SHV|=" << SHV.rows() << "\n";
   MyMatrix<Tint> Mc1 = 2 * M;
-  //      std::cerr << "|Mc1|=" << Mc1.rows() << "\n";*/
   MyMatrix<Tint> Mc2 = -2 * M;
-  /*  std::cerr << "|Mc2|=" << Mc2.rows() << "\n";*/
   MyMatrix<Tint> Mcopy = Concatenate(Mc1, Mc2);
-  //  std::cerr << "|Mcopy|=" << Mcopy.rows() << "\n";
   MyMatrix<Tint> SHVret = Concatenate(SHV, Mcopy);
-  //  std::cerr << "|SHVret|=" << SHVret.rows() << "\n";
   return {std::move(TheGramMat), std::move(SHVret)};
 }
 
@@ -469,7 +512,9 @@ std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat,
                                                       eRec1.SHVdisc, os);
   Tgroup GRP = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-  std::cerr << "|GRP| = " << GRP.size() << "\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << "|GRP| = " << GRP.size() << "\n";
+#endif
   MyMatrix<Tint> Mneg = -M;
   MyMatrix<Tint> Mtot = Concatenate(M, Mneg);
   std::vector<MyMatrix<Tint>> ListMatrGen;
@@ -485,7 +530,9 @@ std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
     MyMatrix<Tint> MatEquiv_i = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
     ListMatrGen.push_back(MatEquiv_i);
   }
+#ifdef DEBUG_SHORTEST_CONFIG
   std::cerr << "Exiting SHORT_GetStabilizer\n";
+#endif
   return ListMatrGen;
 }
 
@@ -569,9 +616,13 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto &eGen : ListMatrGen)
     ListGen_T.push_back(UniversalMatrixConversion<T, Tint>(eGen));
-  std::cerr << "Before BasisInvariantForm\n";
-  std::vector<MyMatrix<T>> ListMat = BasisInvariantForm(n, ListGen_T);
-  std::cerr << " After BasisInvariantForm\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << "Before BasisInvariantForm\n";
+#endif
+  std::vector<MyMatrix<T>> ListMat = BasisInvariantForm(n, ListGen_T, os);
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << " After BasisInvariantForm\n";
+#endif
   int nbVect = M.rows();
   std::vector<MyVector<T>> ListRankOne;
   std::vector<MyVector<Tint>> ListVectWork;
@@ -582,7 +633,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       ListRankOne.push_back(SHORT_GetIneq_Tspace<T, Tint>(StdBasis, eRow));
     }
   };
-  std::cerr << "nbVect=" << nbVect << "\n";
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << "nbVect=" << nbVect << "\n";
+#endif
   for (int iRow = 0; iRow < nbVect; iRow++) {
     MyVector<Tint> eRow = GetMatrixRow(M, iRow);
     FuncInsertVector(eRow);
@@ -605,7 +658,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       RecTest.eCase = 9;
       RecTest.reply = false;
       RecTest.replyCone = false;
+#ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "RETURN case 9\n";
+#endif
       return RecTest;
     }
     RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(
@@ -643,7 +698,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
         FuncInsertVector(eVect);
     }
     int SizAfter = ListVectWork.size();
+#ifdef DEBUG_SHORTEST_CONFIG
     std::cerr << "SizPrev=" << SizPrev << " SizAfter=" << SizAfter << "\n";
+#endif
     if (SizAfter == SizPrev) {
       RecTest.reply = false;
       RecTest.replyCone = false;
@@ -704,7 +761,7 @@ SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream
   SHVshortest<T, Tint> eEnt{eSpann};
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
-  size_t eInvGV = GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, std::cerr);
+  size_t eInvGV = GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
   return {eInvGV};
 }
 
@@ -964,7 +1021,6 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const &n,
   std::vector<std::vector<int>> ListCand = {{1}};
   for (int iDim = 1; iDim < n; iDim++) {
     std::vector<std::vector<int>> NewListCand;
-    //    std::cerr << "iDim=" << iDim << "\n";
     for (auto &eCand : ListCand) {
       int LastVal = eCand[iDim - 1];
       for (int i = LastVal; i <= MaxVal; i++) {
@@ -975,7 +1031,9 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const &n,
       }
     }
     ListCand = NewListCand;
+#ifdef DEBUG_SHORTEST_CONFIG
     std::cerr << "iDim=" << iDim << " |ListCand|=" << ListCand.size() << "\n";
+#endif
   }
   return ListCand;
 }
@@ -989,10 +1047,7 @@ struct PrimeListAllowed {
 template <typename T>
 bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
                             MyMatrix<T> const &M) {
-  //  std::cerr << "Before ListClasses computation\n";
   std::vector<MyVector<int>> ListClasses = ComputeTranslationClasses<T, int>(M);
-  //  std::cerr << "After ListClasses computation |ListClasses|=" <<
-  //  ListClasses.size() << "\n";
   int n = M.rows();
   MyMatrix<T> eInv = Inverse(M);
   auto GetOrder = [&](MyVector<int> const &eV) -> int {
@@ -1021,7 +1076,6 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
   };
   for (auto &eV : ListClasses) {
     int ord = GetOrder(eV);
-    //    std::cerr << "ord=" << ord << "\n";
     for (auto &eCaseP : ListPrime) {
       if (ord == eCaseP.p) {
         auto IsCorrectClass = [&](MyVector<int> const &W) -> bool {
@@ -1095,7 +1149,6 @@ SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV,
   int pos = 0;
   std::vector<int> ListIdx(nbConf, -1);
   for (auto &eSHV : ListSHV) {
-    std::cerr << "pos=" << pos << " / " << nbConf << " siz=" << siz << "\n";
     int idx = FuncInsert(eSHV);
     ListIdx[pos] = idx;
     pos++;

@@ -417,9 +417,6 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
     for (auto &estr : e_lstr)
       lstr.push_back(estr);
   }
-  std::cerr << "lstr=\n";
-  for (auto estr : lstr)
-    std::cerr << estr << "\n";
   FullNamelist eFull = NAMELIST_ThompsonSamplingRuntime();
   NAMELIST_ReadListString(eFull, lstr);
   return eFull;

@@ -161,7 +161,8 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
 //
 template <typename T>
 std::vector<MyMatrix<T>>
-BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
+BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
+                   [[maybe_unused]] std::ostream& os) {
   std::vector<std::vector<int>> ListCoeff;
   MyMatrix<int> ListCoeffRev(n, n);
   int pos = 0;
@@ -191,12 +192,15 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen) {
         ListEquations.push_back(TheEquation);
       }
   MyMatrix<T> MatEquations = MatrixFromVectorFamily(ListEquations);
-  std::cerr << "Before call to NullspaceTrMat nbGen=" << ListGen.size()
-            << " MatEquations(rows/cols)=" << MatEquations.rows() << " / "
-            << MatEquations.cols() << "\n";
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "Before call to NullspaceTrMat nbGen=" << ListGen.size()
+     << " MatEquations(rows/cols)=" << MatEquations.rows() << " / "
+     << MatEquations.cols() << "\n";
+#endif
   MyMatrix<T> NSP = NullspaceTrMat(MatEquations);
-  std::cerr << "After call to NullspaceTrMat NSP.rows=" << NSP.rows()
-            << " cols=" << NSP.cols() << "\n";
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "After call to NullspaceTrMat |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+#endif
   int dimSpa = NSP.rows();
   std::vector<MyMatrix<T>> TheBasis(dimSpa);
   for (int iDim = 0; iDim < dimSpa; iDim++) {
@@ -416,7 +420,7 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
     }
   }
 #endif
-  std::vector<MyMatrix<T>> BasisInv = BasisInvariantForm(n, ListGen_T);
+  std::vector<MyMatrix<T>> BasisInv = BasisInvariantForm(n, ListGen_T, os);
   MyMatrix<T> Big_ListMat = GetListMatAsBigMat(ListMat);
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
