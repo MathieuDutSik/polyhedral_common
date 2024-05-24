@@ -1,11 +1,11 @@
 Read("../common.g");
 Print("Beginning Test enumeration of iso-Delaunay domains\n");
 
-GetNbIsoDelaunay:=function(FileLinSpa_input)
+GetRecInfo:=function(FileLinSpa_input)
     local n, FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
     #
     FileLinSpa:="TSPACE_LinSpa";
-    FileNml:="Enum_Tspaces_CI.nml";
+    FileNml:="Enum_Tspaces_GRPperm.nml";
     FileResult:="Result";
     RemoveFileIfExist(FileLinSpa);
     RemoveFileIfExist(FileResult);
@@ -22,7 +22,7 @@ GetNbIsoDelaunay:=function(FileLinSpa_input)
     U:=ReadAsFunction(FileResult)();
     RemoveFile(FileLinSpa);
     RemoveFile(FileResult);
-    return U.nb;
+    return U;
 end;
 
 DirName:="TSPACES_Bravais";
@@ -33,7 +33,12 @@ for eFile in ListFile
 do
     FullFile:=Concatenation(DirName, "/", eFile);
     Print("eFile=", eFile, "\n");
-    nb:=GetNbIsoDelaunay(FullFile);
+    U:=GetRecInfo(FullFile);
+    nb:=Length(U);
+    ListOrder:=List(U, x->Order(x.GRPperm));
+    if Maximum(ListOrder) > 1 then
+        Error("We found what were looking for, a non-trivial GRPperm");
+    fi;
     Print("eFile=", eFile, " nb=", nb, "\n");
     eRec:=rec(eFile:=eFile, nb:=nb);
     Add(ListRec, eRec);

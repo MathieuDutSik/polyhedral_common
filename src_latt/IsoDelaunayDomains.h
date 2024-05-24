@@ -408,7 +408,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
     bool test1 = IsDelaunayPolytopeInducingEqualities(EXT, data.LinSpa, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISO_DEL: After IsDelaunayPolytopeInducingEqualities\n";
+    os << "ISO_DEL: After IsDelaunayPolytopeInducingEqualities test1=" << test1 << "\n";
 #endif
     if (test1) {
       return true;
@@ -421,7 +421,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
       bool test2 =
           IsDelaunayAcceptableForGramMat(EXT, data.LinSpa, TestGram, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-      os << "ISO_DEL: After IsDelaunayAcceptableForGramMat\n";
+      os << "ISO_DEL: After IsDelaunayAcceptableForGramMat test2=" << test2 << "\n";
 #endif
       if (!test2) {
         return true;

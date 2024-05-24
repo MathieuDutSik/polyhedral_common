@@ -560,17 +560,22 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, before "
         "EnumerateAndStore_Serial\n";
 #endif
-  std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(
-      data_func, f_incorrect, max_runtime_second);
+  std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, after "
         "EnumerateAndStore_Serial\n";
 #endif
   if (opt) {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt match\n";
+#endif
     DelaunayTesselation<Tint, Tgroup> DT =
         DelaunayTesselation_From_DatabaseEntries_MPI<T, Tint, Tgroup>(*opt);
     return DT;
   } else {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt not matching\n";
+#endif
     return {};
   }
 }

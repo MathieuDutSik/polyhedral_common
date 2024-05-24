@@ -422,8 +422,8 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP: IsBRavaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / " << Big_ListMat.cols() << "\n";
-  os << "TSP: IsBRavaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / " << Big_BasisInv.cols() << "\n";
+  os << "TSP: IsBravaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / " << Big_ListMat.cols() << "\n";
+  os << "TSP: IsBravaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / " << Big_BasisInv.cols() << "\n";
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
     std::cerr << "The elements of ListMat are not in the invariant space which "
                  "is not acceptable\n";

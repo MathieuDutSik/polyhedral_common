@@ -1344,7 +1344,9 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
       decltype(f_repr), decltype(f_spann)>(
       comm, max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
       f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
+#ifdef DEBUG_ADJACENCY_SCHEME
   os << "ADJ_SCH: Termination test=" << test << "\n";
+#endif
   PartialEnum_FullWrite(Prefix, str_proc, Saving, l_obj, l_status, os);
   return {test, std::move(l_obj)};
 }
@@ -1394,7 +1396,18 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> { return {}; };
   auto f_insert = [&](Tobj const &x) -> bool {
     l_obj.push_back({x, {}});
-    return f_incorrect(x);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: EnumerateAndStore_Serial: |l_obj|=" << l_obj.size() << "\n";
+#endif
+    bool test = f_incorrect(x);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    size_t n_sum = 0;
+    for (auto & status : l_status) {
+      n_sum += static_cast<size_t>(status);
+    }
+    os << "ADJ_SCH: EnumerateAndStore_Serial: n_sum=" << n_sum << " test=" << test << "\n";
+#endif
+    return test;
   };
   auto f_save_status = [&](size_t const &pos, bool const &val) -> void {
     uint8_t val_i = static_cast<uint8_t>(val);
