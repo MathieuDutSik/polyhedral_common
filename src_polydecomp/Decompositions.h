@@ -165,7 +165,7 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   if (NSP.rows() > 0) {
     MyMatrix<Tint> Gres = -NSP * G * NSP.transpose();
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T, Tint>(Gres);
-    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(Gres_T);
+    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(Gres_T, os);
     Spann = SHV * NSP;
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Gres_T=\n";

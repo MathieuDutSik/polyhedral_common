@@ -405,7 +405,7 @@ template <typename T, typename Tint> struct ShortIso {
 };
 
 template <typename T, typename Tint>
-ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M) {
+ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M, std::ostream& os) {
   int n = M.cols();
   int nbVect = M.rows();
   //  std::cerr << "nbVect=" << nbVect << "\n";
@@ -417,7 +417,7 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M) {
     Amat += pMat;
   }
   MyMatrix<T> TheGramMat = Inverse(Amat);
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
   //  std::cerr << "|SHV|=" << SHV.rows() << "\n";
   MyMatrix<Tint> Mc1 = 2 * M;
   //      std::cerr << "|Mc1|=" << Mc1.rows() << "\n";*/
@@ -436,8 +436,8 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
                                                     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx_value = int16_t;
-  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1);
-  ShortIso<T, Tint> eRec2 = SHORT_GetInformation<T, Tint>(M2);
+  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1, os);
+  ShortIso<T, Tint> eRec2 = SHORT_GetInformation<T, Tint>(M2, os);
   WeightMatrix<true, T, Tidx_value> WMat1 =
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat,
                                                       eRec1.SHVdisc, os);
@@ -464,7 +464,7 @@ std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
   using Telt = typename Tgroup::Telt;
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
-  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M);
+  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
   WeightMatrix<true, T, Tidx_value> WMat =
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat,
                                                       eRec1.SHVdisc, os);
@@ -700,9 +700,9 @@ bool operator<(SHVinvariant<T, Tint> const &x, SHVinvariant<T, Tint> const &y) {
 }
 
 template <typename T, typename Tint>
-SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann) {
+SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream& os) {
   SHVshortest<T, Tint> eEnt{eSpann};
-  ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann);
+  ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
   size_t eInvGV = GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, std::cerr);
   return {eInvGV};
@@ -1069,7 +1069,7 @@ SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV,
   int siz = 0;
   //  SHVinvariant<T,Tint> eInv;
   auto FuncInsert = [&](MyMatrix<Tint> const &eSpann) -> int {
-    SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann);
+    SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann, os);
     auto search = TheMap.find(eInv);
     if (search == TheMap.end()) {
       TheMap[eInv] = {siz};

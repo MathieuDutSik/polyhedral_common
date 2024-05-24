@@ -14,6 +14,14 @@
 #include <map>
 // clang-format on
 
+#ifdef TIMINGS
+#define TIMINGS_INVARIANT_VECTOR_FAMILY
+#endif
+
+#ifdef DEBUG
+#define DEBUG_INVARIANT_VECTOR_FAMILY
+#endif
+
 /*
   We are considering here the enumeration of configurations of vectors for
   positive definite quadratic forms. There are many possible optimization
@@ -31,15 +39,17 @@
 
 template <typename T, typename Tint>
 MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
-                                         T const &norm) {
-#ifdef TIMINGS
-  std::cerr << "Begining of ExtractInvariantVectorFamily\n";
+                                         T const &norm, [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "Begining of ExtractInvariantVectorFamily\n";
+#endif
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
   MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
-#ifdef TIMINGS
-  std::cerr << "|LLL|=" << time << "\n";
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|LLL|=" << time << "\n";
 #endif
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   //
@@ -47,8 +57,8 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat,
   //  WriteMatrix(std::cerr, eMat);
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
   MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
-#ifdef TIMINGS
-  std::cerr << "|T_ShortVector|=" << time << "\n";
+#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
+  os << "|T_ShortVector|=" << time << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
   int nbRow = SHV1_a.rows();
@@ -166,7 +176,8 @@ bool operator>(FundInvariantVectorFamily<Tint> const &x,
 
 template <typename T, typename Tint, typename Fcorrect>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
-                                            Fcorrect f_correct) {
+                                            Fcorrect f_correct,
+                                            std::ostream& os) {
   int n = eMat.rows();
   T incr = GetSmallestIncrement(eMat);
   T MaxNorm = GetMaxNorm<T, Tint>(eMat);
@@ -177,7 +188,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
       std::cerr << "Failed to find a relevant vector configuration\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm<T, Tint>(eMat, norm);
+    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm<T, Tint>(eMat, norm, os);
     SHVret = Concatenate(SHVret, SHV_f);
     if (f_correct(SHVret))
       return SHVret;
@@ -186,7 +197,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat) {
+MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat, std::ostream& os) {
   int n = eMat.rows();
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     if (RankMat(M) == n)
@@ -194,11 +205,11 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat) {
     return false;
   };
   return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(eMat,
-                                                                    f_correct);
+                                                                    f_correct, os);
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
+MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat, std::ostream& os) {
   int n = eMat.rows();
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     if (RankMat(M) < n)
@@ -209,12 +220,11 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat) {
     return false;
   };
   return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(eMat,
-                                                                    f_correct);
+                                                                    f_correct, os);
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
-    MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const &ListMatr) {
+MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const &ListMatr, std::ostream& os) {
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     int n_row = M.rows();
     std::unordered_set<MyVector<Tint>> set;
@@ -233,7 +243,7 @@ MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     return false;
   };
   return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(eMat,
-                                                                    f_correct);
+                                                                    f_correct, os);
 }
 
 template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {

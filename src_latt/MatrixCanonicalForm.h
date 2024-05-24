@@ -20,7 +20,7 @@ template <typename T, typename Tint> struct Canonic_PosDef {
 };
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
+Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat, std::ostream& os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -30,7 +30,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
   std::cerr << "Begining of ComputeCanonicalForm\n";
   MicrosecondTime time;
 #endif
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
 #ifdef TIMINGS
   std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
@@ -139,7 +139,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat) {
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>
-ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
+ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostream& os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -150,7 +150,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat) {
   MicrosecondTime time;
 #endif
   MyMatrix<T> inpMat = ListMat[0];
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
 #ifdef TIMINGS
   std::cerr << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif

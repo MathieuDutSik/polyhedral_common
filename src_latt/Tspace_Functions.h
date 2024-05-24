@@ -249,7 +249,7 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
                              std::ostream &os) {
   using Tidx = uint32_t;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<T> Vdiag(SHV_T.rows(), 0);
   std::vector<std::vector<Tidx>> ListGenPerm =
@@ -363,7 +363,7 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
                             LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
   using Tidx = uint32_t;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row, 0);
@@ -694,7 +694,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   using Tidx = typename Telt::Tidx;
   //  using TintGroup = typename Tgroup::Tint;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV.rows();
   std::vector<T> Vdiag(n_row, 0);
@@ -810,8 +810,8 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   //  using Tfield = T;
-  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1);
-  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2);
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
   if (SHV1_T.rows() != SHV2_T.rows()) {
