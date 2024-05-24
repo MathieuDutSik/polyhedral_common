@@ -385,7 +385,7 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat);
     if (DiagInfo.nbMinus > 0) {
       std::cerr
-          << "The ray of the IsoDelaunay domain is not positive semidefinite\n";
+          << "One ray of the IsoDelaunay domain is not positive semidefinite\n";
       std::cerr << "This is not allowed\n";
       throw TerminalException{1};
     }

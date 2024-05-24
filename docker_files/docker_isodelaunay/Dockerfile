@@ -84,4 +84,4 @@ ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
 ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 # Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common/src_latt && make -f Makefile_spec
+# RUN cd GIT/polyhedral_common/src_latt && make -f Makefile_spec
