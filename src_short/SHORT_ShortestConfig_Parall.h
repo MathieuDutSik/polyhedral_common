@@ -48,7 +48,7 @@ SHORT_SimplicialEnumeration(std::vector<MyMatrix<Tint>> const &ListSHVinp,
                                                  TheMethod, os);
       for (auto &eSpann : ListSpann) {
         SHVshortest<T, Tint> eEnt{eSpann};
-        SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann);
+        SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann, os);
         TheBank.InsertEntry(eEnt, eInv);
       }
     }

@@ -429,6 +429,9 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
     }
     return false;
   };
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  os << "ISO_DEL: GetInitialGenericDelaunayTesselation, we have f_incorrect\n";
+#endif
   auto test_matrix = [&](MyMatrix<T> const &GramMat)
       -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
     bool test = IsSymmetryGroupCorrect<T, Tint>(GramMat, data.LinSpa, os);
@@ -451,8 +454,14 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
         data_lattice, f_incorrect, max_runtime_second);
   };
   while (true) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: Before GetRandomPositiveDefiniteNoNontrialSymm\n";
+#endif
     MyMatrix<T> GramMat =
         GetRandomPositiveDefiniteNoNontrialSymm<T, Tint>(data.LinSpa, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISO_DEL: After GetRandomPositiveDefiniteNoNontrialSymm\n";
+#endif
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix(GramMat);
     if (opt) {
       return *opt;

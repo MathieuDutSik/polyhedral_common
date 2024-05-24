@@ -342,10 +342,9 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T>
-MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa) {
+MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa, int const& N) {
   int n = LinSpa.n;
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
-  int N = 2;
   for (auto &eMat : LinSpa.ListMat) {
     int coef = random() % (2 * N + 1) - N;
     TheMat += coef * eMat;
@@ -444,12 +443,25 @@ template <typename T, typename Tint>
 MyMatrix<T>
 GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const &LinSpa,
                                         std::ostream &os) {
+  int N = 2;
   while (true) {
-    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: Before GetRandomPositiveDefinite\n";
+#endif
+    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: After GetRandomPositiveDefinite\n";
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: TestMat=\n";
+    WriteMatrix(os, TheMat);
+#endif
     bool test = IsSymmetryGroupCorrect<T, Tint>(TheMat, LinSpa, os);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: test=" << test << "\n";
+#endif
     if (test) {
       return TheMat;
     }
+    N += 1;
   }
 }
 

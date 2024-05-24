@@ -12,11 +12,11 @@
 // clang-format on
 
 #ifdef TIMINGS
-#define TIMINGS_DELAUNAY_ENUMERATION
+#define TIMINGS_FUNDAMENTAL_DELAUNAY
 #endif
 
 #ifdef DEBUG
-#define DEBUG_DELAUNAY_ENUMERATION
+#define DEBUG_FUNDAMENTAL_DELAUNAY
 #endif
 
 template <typename T, typename Tint>
@@ -92,7 +92,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         for (int i = 0; i < dim; i++)
           RetEXT(iVect, 1 + i) = TheCVP.ListVect(iVect, i);
       }
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
       os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
          << RetEXT.rows() << " vertices\n";
 #endif
@@ -104,7 +104,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         ListRelevantPoint.push_back(fVect_T);
       }
     }
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "|ListRelevantPoint|=" << ListRelevantPoint.size() << "\n";
 #endif
   }
@@ -253,7 +253,7 @@ public:
       }
     }
     MyMatrix<T> NSP = NullspaceTrMat(Equa);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     if (NSP.rows() != 2) {
       std::cerr << "Error in the computation of the kernel\n";
       throw TerminalException{1};
@@ -309,7 +309,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
     MyMatrix<T> const &GramMat, CVPSolver<T, Tint> &solver,
     MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
     Face const &eInc, std::ostream &os) {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
   MicrosecondTime time;
 #endif
   int dim = GramMat.rows();
@@ -331,10 +331,10 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
   AdjacentDelaunayPointSolver<T> adps(GramMat, EXT, eInc, os);
   T MinRadius = adps.GetRadius(SelectedVertex);
   auto fGraverUpdate = [&]() -> void {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     MicrosecondTime time_graver;
 #endif
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     size_t n_update = 0, n_loop = 0;
 #endif
     while (true) {
@@ -354,21 +354,21 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
             IsImprovement = true;
             SelectedVertex = NewTestVert;
             MinRadius = TheRadius;
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
             n_update++;
 #endif
           }
         }
       }
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
       n_loop++;
 #endif
       if (!IsImprovement) {
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
         os << "DEL_ENUM: n_loop=" << n_loop << " n_update=" << n_update
            << " |ShvGraverBasis|=" << n_graver << "\n";
 #endif
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
         os << "|fGraverUpdate|=" << time_graver << "\n";
 #endif
         break;
@@ -399,7 +399,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
     for (int i = 0; i < dim; i++)
       RetEXT(iVect, i + 1) = reply.ListVect(iVect, i);
   }
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
   os << "|FindAdjacentDelaunayPolytope|=" << time << "\n";
 #endif
   return RetEXT;
