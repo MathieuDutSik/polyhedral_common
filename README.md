@@ -52,39 +52,24 @@ directory can be compiled independently of the others:
   * *src_indefinite*: for indefinite form reduction.
   * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
 
-Short vector configurations
----------------------------
-
-The directory *src_short* contains a set of functions for dealing with
-configuration of vectors that can occur as set of minimum vectors
-of positive definite forms.
-
-
-Sparse solver
--------------
-
-The directory *src_sparse_solver* contains the code for a solver of the
-equations **Ax = b** by finding sparse solution **x** for sparse matrices
-**A** and **b**. The algorithmic method used is Generalized Approximate
-Message Passing.
-
 Compilation options related to debug
 ------------------------------------
 
 There are several environment variables that can be used during runtime.
 * `DEBUG` for making some print statements and making some checks. Those checks have to be fast.
-* `KEY_VALUE` for printing some `KEY(....) VALUE=(....)` that can be used for optimization of the 
+* `KEY_VALUE` for printing some `KEY(....) VALUE=(....)` that can be used for postprocessing of the options and heuristic optimization.
 * `CHECK` for making checks that can be expensive to do.
 * `TIMINGS` for printing some runtime information.
 * `SANITY_CHECK` for doing some checks and stopping if incoherence are detected.
 
-If we want more modular checking, then something like `DEBUG_LINEAR_PROGRAM`
-can be used.
+The options `TIMINGS` and `DEBUG` enable all the timings and debugging statements.
+For a more granular debugging, stuff like `DEBUG_LINEAR_PROGRAM` can be used. See
+the top of the header files.
 
 A printout to `std::cerr` should occur if an error has been identified and the program
 will terminate with a call to `TerminalException`. Other print statement should be
 encapsulated in `std::ostream & os` that should be passed by reference from the initial
-case. So typically for serial output we pass the `std::cerr` while for the parallel runs
+call. So typically for serial output we pass the `std::cerr` while for the parallel runs
 we pass a stream to the output of that process. That way we avoid mixing between
 different sources.
 
