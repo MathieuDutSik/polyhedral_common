@@ -1,7 +1,8 @@
 &DATA
  arithmetic_T = "gmp_rational"
  arithmetic_Tint = "gmp_integer"
- OutFormat = "NumberGAP"
+! OutFormat = "NumberGAP"
+ OutFormat = "ObjectGAP"
  OutFile = "Result"
  FileDualDescription = "unset"
  max_runtime_second = 0

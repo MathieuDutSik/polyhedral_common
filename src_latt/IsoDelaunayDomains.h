@@ -1805,6 +1805,7 @@ template <typename T, typename Tint, typename Tgroup>
 struct IsoDelaunayDomain_Obj {
   IsoDelaunayDomain<T, Tint, Tgroup> DT_gram;
   std::vector<FullAdjInfo<T>> ListIneq;
+  Tgroup GRPperm;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1812,16 +1813,21 @@ void WriteEntryGAP(std::ostream &os_out,
                    IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent) {
   os_out << "rec(DT_gram:=";
   WriteEntryGAP(os_out, ent.DT_gram);
+  //
   os_out << ", ListIneq:=[";
   bool IsFirst = true;
-  for (auto &eFull : ent.ListIneq) {
+  for (auto &eFullAI : ent.ListIneq) {
     if (!IsFirst) {
       os_out << ",";
     }
     IsFirst = false;
-    WriteEntryGAP(os_out, eFull);
+    WriteEntryGAP(os_out, eFullAI);
   }
-  os_out << "])";
+  os_out << "]";
+  //
+  os_out << ", GRPperm:=" << ent.GRPperm.GapString();
+  //
+  os_out << ")";
 }
 
 namespace boost::serialization {
@@ -1830,6 +1836,7 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_Obj<T, Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("DT_gram", eRec.DT_gram);
   ar &make_nvp("ListIneq", eRec.ListIneq);
+  ar &make_nvp("GRPperm", eRec.GRPperm);
 }
 } // namespace boost::serialization
 
@@ -1843,7 +1850,7 @@ struct DataIsoDelaunayDomainsFunc {
   Tobj f_init() {
     IsoDelaunayDomain<T, Tint, Tgroup> IsoDel =
         GetInitialIsoDelaunayDomain(data);
-    Tobj x{IsoDel, {}};
+    Tobj x{IsoDel, {}, {}};
     return x;
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
@@ -1863,7 +1870,7 @@ struct DataIsoDelaunayDomainsFunc {
   }
   std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
     IsoDelaunayDomain<T, Tint, Tgroup> IsoDel = x.DT_gram;
-    Tobj x_ret{IsoDel, {}};
+    Tobj x_ret{IsoDel, {}, {}};
     MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
     TadjO ret{x.V, eBigMat};
     return {std::move(x_ret), std::move(ret)};
@@ -1915,6 +1922,7 @@ struct DataIsoDelaunayDomainsFunc {
       ListPermGens.push_back(ePermGen);
     }
     Tgroup GRPperm = Tgroup(ListPermGens, nbIrred);
+    x_in.GRPperm = GRPperm;
     std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: f_adj: |GRPperm|=" << GRPperm.size() << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
@@ -1942,7 +1950,7 @@ struct DataIsoDelaunayDomainsFunc {
     }
     return l_adj;
   }
-  Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}}; }
+  Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
   size_t f_complexity(Tobj const &x) { return x.nbIneq; }
 };
 
