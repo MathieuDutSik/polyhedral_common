@@ -75,7 +75,7 @@ FullNamelist NAMELIST_GetOneTSPACE() {
 }
 
 template <typename T>
-LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile) {
+LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream& os) {
   std::ifstream is(eFile);
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
   int n = SuperMat.rows();
@@ -90,7 +90,7 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile) {
   std::vector<MyMatrix<T>> PtStabGens = ReadListMatrix<T>(is);
   //
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
-  bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens);
+  bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens, os);
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
           ListComm, ListSubspaces, PtStabGens};
@@ -194,7 +194,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto set_is_bravais = [&]() -> void {
     LinSpaRet.isBravais =
-        IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens);
+      IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens, os);
   };
   auto set_supermat = [&]() -> void {
     std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
@@ -289,7 +289,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     }
     if (TypeTspace == "File") {
       std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
-      return ReadLinSpaceFile<T>(FileLinSpa);
+      return ReadLinSpaceFile<T>(FileLinSpa, os);
     }
     std::cerr << "Failed to find an option for TypeTspace that suits\n";
     throw TerminalException{1};

@@ -395,17 +395,35 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
 
 template <typename T, typename Tint>
 bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
-                    std::vector<MyMatrix<Tint>> const &ListGen) {
+                    std::vector<MyMatrix<Tint>> const &ListGen,
+                    [[maybe_unused]] std::ostream& os) {
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto &eGen : ListGen) {
     MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
     ListGen_T.push_back(eGen_T);
   }
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSP: IsBravaisSpace: |ListGen|=" << ListGen.size() << "\n";
+  os << "TSP: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
+  for (auto & eGen : ListGen) {
+    for (auto & eMat : ListMat) {
+      MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
+      if (eMatImg != eMat) {
+        std::cerr << "TSP: IsBravaisSpace: |eMat|=" << eMat.rows() << " / " << eMat.cols() << "\n";
+        std::cerr << "TSP: IsBravaisSpace: |eGen|=" << eGen.rows() << " / " << eGen.cols() << "\n";
+	std::cerr << "TSP: IsBravaisSpace: eMat should equal to eMatImg\n";
+	throw TerminalException{1};
+      }
+    }
+  }
+#endif
   std::vector<MyMatrix<T>> BasisInv = BasisInvariantForm(n, ListGen_T);
   MyMatrix<T> Big_ListMat = GetListMatAsBigMat(ListMat);
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
 #ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSP: IsBRavaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / " << Big_ListMat.cols() << "\n";
+  os << "TSP: IsBRavaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / " << Big_BasisInv.cols() << "\n";
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
     std::cerr << "The elements of ListMat are not in the invariant space which "
                  "is not acceptable\n";

@@ -32,6 +32,7 @@ ListRec:=[];
 for eFile in ListFile
 do
     FullFile:=Concatenation(DirName, "/", eFile);
+    Print("eFile=", eFile, "\n");
     nb:=GetNbIsoDelaunay(FullFile);
     Print("eFile=", eFile, " nb=", nb, "\n");
     eRec:=rec(eFile:=eFile, nb:=nb);
