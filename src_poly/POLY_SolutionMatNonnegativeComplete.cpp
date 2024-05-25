@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_SkelettonClarkson arith [FileFAC] [FileINEQ]\n";
+      std::cerr << "POLY_SolutionMatNonnegativeComplete arith [FileFAC] [FileINEQ]\n";
       std::cerr << "\n";
       std::cerr << "        --- arith ---\n";
       std::cerr << "\n";

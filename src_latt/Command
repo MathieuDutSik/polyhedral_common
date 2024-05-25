@@ -1,3 +1,0 @@
-Clang-Tidy:
-
-clang-tidy LATT_canonicalize.cpp   -checks=* -- -std=c++11 -I../src_basic -I../src_number -I../src_matrix -I../src_poly -I../src_comb -I../src_graph  -I/home/mathieu/opt/eigen -I/home/mathieu/opt/libshort/include  -I/home/mathieu/opt/libbliss/include -I/home/mathieu/opt/permlib/include  -I.
