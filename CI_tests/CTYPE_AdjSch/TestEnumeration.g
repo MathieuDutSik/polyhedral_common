@@ -22,7 +22,7 @@ TestEnumeration:=function(eRec)
     AppendTo(output, "/\n");
     CloseStream(output);
     #
-    eProg:="../../src_ctype_mpi/CTYP_MPI_AdjScheme";
+    eProg:="../../src_ctype/CTYP_MPI_AdjScheme";
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

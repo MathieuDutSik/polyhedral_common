@@ -118,7 +118,7 @@ jobs:
 
       - name: Test enumeration of Ctypes
         run: |
-          cd src_ctype_mpi && make -f Makefile_MPI_AdjScheme && cd ..
+          cd src_ctype && make -f Makefile_MPI_AdjScheme && cd ..
           pwd
           echo "After compilation of CTYP_MPI_AdjScheme"
 
