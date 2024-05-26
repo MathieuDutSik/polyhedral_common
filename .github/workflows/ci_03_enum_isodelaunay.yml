@@ -122,6 +122,6 @@ jobs:
           pwd
           echo "After compilation of LATT_MPI_Lattice_IsoDelaunayDomain"
 
-          cd CI_tests/
+          cd CI_tests/Tspaces_IsoDelaunay
           ../../gap.sh < TestEnumIsoDelaunayDomain.g
           cd ../..
