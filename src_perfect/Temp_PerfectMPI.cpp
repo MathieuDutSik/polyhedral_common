@@ -8,10 +8,10 @@
 #include "rational.h"
 #include <unordered_map>
 #include "hash_functions.h"
+#include "MatrixCanonicalForm.h"
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
 // clang-format off
-namespace mpi = boost::mpi;
 
 FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI() {
   std::map<std::string, SingleBlock> ListBlock;
@@ -67,7 +67,7 @@ GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
       Flipping_Perfect<T, Tint>(eMat_T, eMatDir, os);
     int incd = ePairAdj.second.SHV.rows() / 2;
     //
-    MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first).Mat;
+    MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
     MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
     MyMatrix<Tint> eMat4 = UniversalMatrixConversion<Tint, T>(eMat3);
     TypePerfectExch<Tint> RecMat{incd, eMat4};

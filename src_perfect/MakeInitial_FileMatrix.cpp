@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       //
       HumanTime time;
       MyMatrix<Tmat> eMatCan_Tmat =
-          ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat).Mat;
+        ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat, std::cerr).Mat;
       std::cerr << "iPerfect=" << iPerfect << " / " << nbPerfect
                 << " elapsed_seconds=" << time << "\n";
 
