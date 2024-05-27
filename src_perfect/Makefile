@@ -1,5 +1,5 @@
 #PROGRAM		= InitialQuadPerfectMatrix
-PROGRAM		= CheckPerfectInput
+PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
 #PROGRAM		= ComputePerfect InitialQuadPerfectMatrix
 
 
