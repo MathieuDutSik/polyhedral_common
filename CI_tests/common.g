@@ -18,6 +18,27 @@ WriteMatrixFile:=function(eFile, EXT)
     CloseStream(output);
 end;
 
+WriteGroupFile:=function(eFile, n, GRP)
+  local ListGen, eGen, i, j;
+  ListGen:=GeneratorsOfGroup(GRP);
+  output:=OutputTextFile(eFile, true);
+  AppendTo(output, n, " ", Length(ListGen), "\n");
+  for eGen in ListGen
+  do
+    for i in [1..n]
+    do
+      j:=OnPoints(i, eGen);
+      if j>n then
+          Error("We have j=", j, " but n=", n);
+      fi;
+      AppendTo(output, " ", j-1);
+    od;
+    AppendTo(output, "\n");
+  od;
+  CloseStream(output);
+end;
+
+
 WriteVector:=function(output, V)
     local eVal;
     AppendTo(output, Length(V), "\n");
