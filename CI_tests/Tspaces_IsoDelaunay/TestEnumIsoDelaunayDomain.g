@@ -26,8 +26,11 @@ TestEnumeration:=function(eRec)
     return rec(is_correct:=is_correct);
 end;
 
-ListRec:=ReadAsFunction("ListCases")();;
-
+ListRec:=[];
+for eFile in ["ListCases_Bravais", "ListCases_Coxeter"]
+do
+    Append(ListRec, ReadAsFunction(eFile)());
+od;
 
 FullTest:=function()
     local n_error, iRec, eRec, RecReply;
