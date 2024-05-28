@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
     MyMatrix<Tint> SHV =
-        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0]);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
 
     MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
     int n_row = SHV_T.rows();

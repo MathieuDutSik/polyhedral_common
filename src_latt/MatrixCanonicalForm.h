@@ -230,7 +230,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostre
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>
-ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
+ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream& os) {
   int n_tot = inpMat.rows();
   if (n_tot % 2 == 1) {
     std::cerr << "The dimension is odd\n";
@@ -243,7 +243,7 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat) {
     SympFormMat(n + i, i) = -1;
   }
   Canonic_PosDef<T, Tint> CanPosDef =
-      ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat});
+    ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat}, os);
   MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
   MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T, Tint>(BasisSymp_Tint);
   MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);

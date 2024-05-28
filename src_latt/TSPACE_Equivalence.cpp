@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[5];
     }
     //
-    LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
+    LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace, std::cerr);
     MyMatrix<T> eMat1 = ReadMatrixFile<T>(FileGram1);
     MyMatrix<T> eMat2 = ReadMatrixFile<T>(FileGram2);
     std::optional<MyMatrix<Tint>> opt =

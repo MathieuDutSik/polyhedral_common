@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
     //
-    LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace);
+    LinSpaceMatrix<T> LinSpa = ReadLinSpaceFile<T>(FileTspace, std::cerr);
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
     std::vector<MyMatrix<T>> ListGen =
         LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);

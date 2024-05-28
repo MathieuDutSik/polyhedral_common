@@ -21,10 +21,10 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
       return FilterByNorm(GramMat, M);
     }
     if (choice == "fullrank") {
-      return ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat);
+      return ExtractInvariantVectorFamilyFullRank<T, Tint>(GramMat, std::cerr);
     }
     if (choice == "spanning") {
-      return ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat);
+      return ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
     throw TerminalException{1};

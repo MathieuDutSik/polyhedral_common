@@ -41,9 +41,9 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat2 = ReadListMatrixFile<T>(FileListMat2);
 
     MyMatrix<Tint> SHV1 =
-        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0]);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], std::cerr);
     MyMatrix<Tint> SHV2 =
-        ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0]);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
 
     MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
     MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
