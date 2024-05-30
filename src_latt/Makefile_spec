@@ -2,7 +2,7 @@
 #PROGRAM		= LATT_cannspanset
 #PROGRAM		= LATT_spanset
 #PROGRAM		= LATT_getMatrixScalProd
-#PROGRAM		= sv_exact
+PROGRAM		= sv_exact
 #PROGRAM		= sv_near
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
@@ -14,7 +14,7 @@
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay
-PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
+#PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
