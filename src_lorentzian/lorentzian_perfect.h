@@ -846,7 +846,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   // DATA
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
@@ -861,14 +860,12 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   SingleBlock BlockDATA;
   BlockDATA.ListIntValues = ListIntValues1;
   BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
   BlockDATA.ListStringValues = ListStringValues1;
   BlockDATA.ListListStringValues = ListListStringValues1;
   ListBlock["DATA"] = BlockDATA;
   // STORAGE
   std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
   std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListBoolValues2["Saving"] = false;
@@ -876,7 +873,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   SingleBlock BlockSTORAGE;
   BlockSTORAGE.ListIntValues = ListIntValues2;
   BlockSTORAGE.ListBoolValues = ListBoolValues2;
-  BlockSTORAGE.ListDoubleValues = ListDoubleValues2;
   BlockSTORAGE.ListStringValues = ListStringValues2;
   BlockSTORAGE.ListListStringValues = ListListStringValues2;
   ListBlock["STORAGE"] = BlockSTORAGE;
