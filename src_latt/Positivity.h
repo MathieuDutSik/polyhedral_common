@@ -9,6 +9,7 @@
 #include "COMB_Vectors.h"
 #include "GraverBasis.h"
 #include "COMB_Combinatorics.h"
+#include "Indefinite_LLL.h"
 #include <vector>
 // clang-format on
 
@@ -487,10 +488,13 @@ struct ApproxIterator {
   }
 };
 
+
+// Use an increment to approximate the vectors.
+// Should be more efficient than the scal method
 template <typename T, typename Tint>
-MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
-                                         T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
-                                         std::ostream &os) {
+MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
+                                            T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                            [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: trying zero vector\n";
 #endif
@@ -573,6 +577,37 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
 #endif
   }
 }
+
+template <typename T, typename Tint>
+MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
+                                         T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                         std::ostream &os) {
+  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T,Tint>(M);
+
+  if (!res.success) {
+    // We found an isotropic vector. We act on it.
+    auto is_ok=[&]() -> bool {
+      if (StrictIneq) {
+        return CritNorm < 0;
+      } else {
+        return CritNorm <= 0;
+      }
+    };
+    if (is_ok()) {
+      MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(res.Xisotrop);
+      return V_i;
+    } else {
+      // LLL failed. Running with the non-reduced one.
+      return GetIntegralVector_allmeth_V2<T,Tint>(M, CritNorm, StrictIneq, NeedNonZero, os);
+    }
+  }
+  MyVector<Tint> V1 = GetIntegralVector_allmeth_V2<T,Tint>(res.Mred, CritNorm, StrictIneq, NeedNonZero, os);
+  MyVector<Tint> V2 = V1 * res.B.transpose();
+  return V2;
+}
+
+
+
 
 
 template <typename T, typename Tint>
