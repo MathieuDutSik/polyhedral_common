@@ -11,8 +11,7 @@ PROGRAM		= TEST_PolytopeIntegralPoints \
 		  POLY_dual_description POLY_dual_description_group \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
-		  POLY_GeometricallyUniqueInteriorPoint TEST_GeometricallyUniquePoint \
-		  VectFamily_Reduction
+		  POLY_GeometricallyUniqueInteriorPoint TEST_GeometricallyUniquePoint
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
@@ -34,7 +33,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_lorentzian -I../permutalib/src -I../src_indefinite
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../permutalib/src
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(LIBSHORT_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) -I$(TBB_INCDIR) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC

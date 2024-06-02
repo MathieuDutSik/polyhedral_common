@@ -1,11 +1,11 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+
 // clang-format off
 #include "NumberTheory.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
 #include "POLY_Fundamental.h"
-#include "LatticeDefinitions.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
