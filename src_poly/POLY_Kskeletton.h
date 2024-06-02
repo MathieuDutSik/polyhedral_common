@@ -4,12 +4,12 @@
 
 // clang-format off
 #include "GRAPH_Bindings.h"
+#include "GRAPH_GraphicalBasic.h"
 #include "GRP_GroupFct.h"
 #include "MAT_Matrix.h"
 #include "Namelist.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_Fundamental.h"
-#include "PolytopeEquiStab.h"
 #include <limits>
 #include <map>
 #include <string>

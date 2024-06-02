@@ -7,7 +7,7 @@
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
 #include "ShortestUniversal.h"
-#include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabInt.h"
 #include <utility>
 #include <string>
 #include <vector>

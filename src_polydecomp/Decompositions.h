@@ -9,7 +9,7 @@
 #include "POLY_Kskeletton.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
-#include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabInt.h"
 #include "Namelist.h"
 #include <string>
 #include <set>

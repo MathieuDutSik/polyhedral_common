@@ -9,7 +9,7 @@
 #include "MAT_Matrix.h"
 #include "POLY_c_cddlib.h"
 #include "POLY_cddlib.h"
-#include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabInt.h"
 #include <cstring>
 #include <functional>
 #include <string>

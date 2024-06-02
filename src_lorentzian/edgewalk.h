@@ -8,7 +8,7 @@
 #include "MatrixCanonicalForm.h"
 #include "Namelist.h"
 #include "POLY_RecursiveDualDesc.h"
-#include "PolytopeEquiStab.h"
+#include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
 #include "Timings.h"
 #include "coxeter_dynkin.h"
