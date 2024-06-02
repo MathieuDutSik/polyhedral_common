@@ -496,7 +496,7 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
                                             T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
                                             [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
-  os << "POS: GetIntegralVector_allmeth: trying zero vector\n";
+  os << "POS: GetIntegralVector_allmeth_V2: trying zero vector\n";
 #endif
   if (!NeedNonZero) {
     auto is_zero_ok=[&]() -> bool {
@@ -513,29 +513,29 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
     }
   }
 #ifdef DEBUG_POSITIVITY
-  os << "POS: GetIntegralVector_allmeth: Beginning\n";
+  os << "POS: GetIntegralVector_allmeth_V2: Beginning\n";
 #endif
   std::vector<ApproxIterator<T, Tint>> l_approx_diag;
   for (auto & eVec : GetPositiveDirections_diag(M)) {
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: diag, eVec=" << StringVectorGAP(eVec) << "\n";
+    os << "POS: GetIntegralVector_allmeth_V2: diag, eVec=" << StringVectorGAP(eVec) << "\n";
 #endif
     ApproxIterator<T, Tint> ai(eVec);
     l_approx_diag.push_back(ai);
   }
 #ifdef DEBUG_POSITIVITY
-  os << "POS: GetIntegralVector_allmeth: |l_approx_diag|=" << l_approx_diag.size() << "\n";
+  os << "POS: GetIntegralVector_allmeth_V2: |l_approx_diag|=" << l_approx_diag.size() << "\n";
 #endif
   std::vector<ApproxIterator<double, Tint>> l_approx_eigen;
   for (auto & eVec : GetPositiveDirections_eigen(M)) {
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: eigen, eVec=" << StringVectorGAP(eVec) << "\n";
+    os << "POS: GetIntegralVector_allmeth_V2: eigen, eVec=" << StringVectorGAP(eVec) << "\n";
 #endif
     ApproxIterator<double, Tint> ai(eVec);
     l_approx_eigen.push_back(ai);
   }
 #ifdef DEBUG_POSITIVITY
-  os << "POS: GetIntegralVector_allmeth: |l_approx_eigen|=" << l_approx_eigen.size() << "\n";
+  os << "POS: GetIntegralVector_allmeth_V2: |l_approx_eigen|=" << l_approx_eigen.size() << "\n";
 #endif
   auto is_vector_correct=[&](MyVector<Tint> const& V) -> bool {
     T eNorm = EvaluationQuadForm<T, Tint>(M, V);
@@ -550,13 +550,13 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
 #endif
   while (true) {
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: beginning of loop, iter=" << iter << "\n";
+    os << "POS: GetIntegralVector_allmeth_V2: beginning of loop, iter=" << iter << "\n";
 #endif
     // First trying the vectors from diagonalization
     for (auto &ai : l_approx_diag) {
       MyVector<Tint> V = ai.increment();
 #ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: diag V=" << StringVectorGAP(V) << "\n";
+      os << "POS: GetIntegralVector_allmeth_V2: diag V=" << StringVectorGAP(V) << "\n";
 #endif
       if (is_vector_correct(V)) {
         return V;
@@ -566,7 +566,7 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
     for (auto &ai : l_approx_eigen) {
       MyVector<Tint> V = ai.increment();
 #ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: eigen V=" << StringVectorGAP(V) << "\n";
+      os << "POS: GetIntegralVector_allmeth_V2: eigen V=" << StringVectorGAP(V) << "\n";
 #endif
       if (is_vector_correct(V)) {
         return V;
@@ -582,9 +582,18 @@ template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
                                          T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
                                          std::ostream &os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: beginning\n";
+#endif
   ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T,Tint>(M);
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: We have res\n";
+#endif
 
   if (!res.success) {
+#ifdef DEBUG_POSITIVITY
+    os << "POS: GetIntegralVector_allmeth: We have an isotropic vector\n";
+#endif
     // We found an isotropic vector. We act on it.
     auto is_ok=[&]() -> bool {
       if (StrictIneq) {
@@ -593,16 +602,42 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
         return CritNorm <= 0;
       }
     };
-    if (is_ok()) {
-      MyVector<Tint> V_i = UniversalVectorConversion<Tint,T>(res.Xisotrop);
-      return V_i;
+    bool test = is_ok();
+#ifdef DEBUG_POSITIVITY
+    os << "POS: GetIntegralVector_allmeth: is_ok=" << test << "\n";
+#endif
+    if (test) {
+#ifdef DEBUG_POSITIVITY
+      os << "POS: GetIntegralVector_allmeth: Xisotrop=" << StringVectorGAP(res.Xisotrop) << "\n";
+#endif
+      MyVector<T> V1 = RemoveFractionVector(res.Xisotrop);
+#ifdef DEBUG_POSITIVITY
+      os << "POS: GetIntegralVector_allmeth: V1=" << StringVectorGAP(V1) << "\n";
+#endif
+      MyVector<Tint> V2 = UniversalVectorConversion<Tint,T>(V1);
+#ifdef DEBUG_POSITIVITY
+      os << "POS: GetIntegralVector_allmeth: V2=" << StringVectorGAP(V2) << "\n";
+#endif
+      return V2;
     } else {
       // LLL failed. Running with the non-reduced one.
+#ifdef DEBUG_POSITIVITY
+      os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for M\n";
+#endif
       return GetIntegralVector_allmeth_V2<T,Tint>(M, CritNorm, StrictIneq, NeedNonZero, os);
     }
   }
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for Mred\n";
+#endif
   MyVector<Tint> V1 = GetIntegralVector_allmeth_V2<T,Tint>(res.Mred, CritNorm, StrictIneq, NeedNonZero, os);
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: We have V1\n";
+#endif
   MyVector<Tint> V2 = V1 * res.B.transpose();
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: We have V2\n";
+#endif
   return V2;
 }
 
