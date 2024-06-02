@@ -9,7 +9,7 @@ name: Lint Code Base Weekly
 on:
   # One time per month
   schedule:
-    - cron: "0 0 10 * *"
+    - cron: "0 0 14 * *"
   # Manually triggered.
   workflow_dispatch:
 jobs:

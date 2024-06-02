@@ -3,7 +3,7 @@ name: CI of Skeleton Computation
 on:
   # One time per month
   schedule:
-    - cron: "0 0 6 * *"
+    - cron: "0 0 7 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
