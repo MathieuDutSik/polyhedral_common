@@ -26,6 +26,7 @@
 #include "COMB_Stor.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
+#include "POLY_Fundamental.h"
 #include <limits>
 #include <string>
 #include <vector>
