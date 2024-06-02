@@ -15,4 +15,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build the Docker image
-      run: docker build -t polyhedralcpp:build-env . --file script_docker/Dockerfile
+      run: docker build -t polyhedralcpp:build-env . --file docker_files/docker_complete/Dockerfile

@@ -57,12 +57,6 @@ ENV TBB_INCDIR=/usr/include
 ENV TBB_LINK="-ltbb"
 
 
-# Gnu Scientific library
-RUN apt-get install -y libgsl-dev
-ENV GSL_INCDIR=/usr/include
-ENV GSL_C_LINK="-lgsl -lgslcblas"
-
-
 # GLPK
 RUN apt-get install -y libglpk-dev
 ENV GLPK_PATH /usr
