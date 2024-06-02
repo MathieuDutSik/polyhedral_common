@@ -10,7 +10,7 @@
 #include "POLY_PolytopeInt.h"
 #include "POLY_RedundancyElimination.h"
 #include "POLY_cddlib.h"
-#include "Temp_ShortVectorUndefinite.h"
+#include "Positivity.h"
 #include "coxeter_dynkin.h"
 #include "fund_domain_vertices.h"
 #include "lorentzian_linalg.h"
@@ -337,7 +337,7 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
 }
 
 template <typename T, typename Tint>
-MyVector<Tint> GetV0_vector(const MyMatrix<T> &G) {
+MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream& os) {
   T CritNorm = 0;
   bool StrictIneq = true;
   bool NeedNonZero = true;
@@ -348,8 +348,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T> &G) {
     Thus v B is a short vector for M
    */
   ResultReduction<T, Tint> ResRed = ComputeReductionIndefinite<T, Tint>(G);
-  MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint, T>(
-      ResRed.Mred, CritNorm, StrictIneq, NeedNonZero);
+  MyVector<Tint> eVect = GetShortIntegralVector<T,Tint>(ResRed.Mred, CritNorm, StrictIneq, NeedNonZero, os);
   MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
   return eVectRet;
 }
@@ -359,7 +358,7 @@ VinbergTot<T, Tint>
 GetVinbergFromG(const MyMatrix<T> &G, std::vector<T> const &root_lengths,
                 std::string const &DualDescProg,
                 bool const &ReflectivityEarlyTermination, std::ostream &os) {
-  MyVector<Tint> v0 = GetV0_vector<T, Tint>(G);
+  MyVector<Tint> v0 = GetV0_vector<T, Tint>(G, os);
 #ifdef DEBUG_VINBERG
   os << "v0=" << StringVectorGAP(v0) << "\n";
 #endif
@@ -1588,7 +1587,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   std::string FileV0 = BlockPROC.ListStringValues.at("FileV0");
   MyVector<Tint> v0;
   if (FileV0 == "compute") {
-    v0 = GetV0_vector<T, Tint>(G);
+    v0 = GetV0_vector<T, Tint>(G, os);
   } else {
     MyVector<Tint> v0 = ReadVectorFile<Tint>(FileV0);
   }

@@ -15,7 +15,6 @@
 #include "POLY_PolytopeInt.h"
 #include "Parallel_Classes_Types.h"
 #include "Positivity.h"
-#include "Temp_ShortVectorUndefinite.h"
 #include "Tspace_General.h"
 #include <algorithm>
 #include <map>
@@ -428,8 +427,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         } else {
           bool NeedNonZero = true;
           bool StrictIneq = true;
-          MyVector<Tint> eVect = GetShortVector_unlimited_float<Tint, T>(
-              eMatSec, CritNorm, StrictIneq, NeedNonZero);
+          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(eMatSec, CritNorm, StrictIneq, NeedNonZero, os);
           if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};

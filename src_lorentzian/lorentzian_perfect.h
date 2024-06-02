@@ -5,6 +5,7 @@
 // clang-format off
 #include "boost_serialization.h"
 #include "FundamentalDelaunay.h"
+#include "PolytopeEquiStabInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "fractions.h"

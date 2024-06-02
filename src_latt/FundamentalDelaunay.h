@@ -3,6 +3,7 @@
 #define SRC_LATT_FUNDAMENTALDELAUNAY_H_
 
 // clang-format off
+#include "POLY_SamplingFacet.h"
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Positivity.h"

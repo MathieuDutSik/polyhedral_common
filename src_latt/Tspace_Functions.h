@@ -336,8 +336,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       } else {
         bool NeedNonZero = true;
         bool StrictIneq = true;
-        return GetShortVector_unlimited_float<Tint, T>(TrySuperMat, CritNorm,
-                                                       StrictIneq, NeedNonZero);
+        return GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm, StrictIneq, NeedNonZero, os);
       }
     };
     MyVector<Tint> V = get_one_vect();
