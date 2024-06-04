@@ -19,7 +19,7 @@ WriteMatrixFile:=function(eFile, EXT)
 end;
 
 WriteGroupFile:=function(eFile, n, GRP)
-  local ListGen, eGen, i, j;
+  local ListGen, output, eGen, i, j;
   ListGen:=GeneratorsOfGroup(GRP);
   output:=OutputTextFile(eFile, true);
   AppendTo(output, n, " ", Length(ListGen), "\n");
