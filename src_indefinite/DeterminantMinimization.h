@@ -229,6 +229,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
       if (d_mult_i == v_mult_i && n > 2 * d_mult_i && !DoSomething) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         os << "DETMIN: Apply Lemma 6\n";
+        os << "DETMIN: Before det=" << DeterminantMat(Qw) << " d_mult_i=" << d_mult_i << "\n";
 #endif
         change_basis();
         MyMatrix<T> U = IdentityMat<T>(n);
@@ -239,9 +240,16 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         Qw = U * Qw * U.transpose() / p;
         DoSomething = true;
         DoSomethingGlobal = true;
-        int dec = n - 2 * d_mult_i;
-        v_mult_i -= dec;
-        v_mult_s -= dec;
+        int dec = 2 * (n - d_mult_i) - n;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec << "\n";
+        os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw) << " det(U)=" << DeterminantMat(U) << "\n";
+#endif
+        v_mult_i += dec;
+        v_mult_s += dec;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        os << "DETMIN: After  v_mult_i=" << v_mult_i << "\n";
+#endif
       }
       // Apply Lemma 7 (joined with Lemma 8)
       if (d_mult_i == v_mult_i && !DoSomething) {
@@ -249,21 +257,47 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         os << "DETMIN: Apply Lemma 7 (or 8)\n";
 #endif
         change_basis();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        os << "DETMIN: After change_basis\n";
+#endif
         MyMatrix<T> Qtilde = get_qtilde();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        os << "DETMIN: After get_qtilde\n";
+        os << "DETMIN: Qtilde=\n";
+        WriteMatrix(os, Qtilde);
+#endif
         std::optional<MyVector<T>> opt = FindIsotropicVectorMod(Qtilde, p);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        os << "DETMIN: After FindIsotropicVectorMod\n";
+#endif
         if (opt) {
           MyVector<T> const &eV = *opt;
-          MyMatrix<T> M(1, n);
-          for (int i = 0; i < n; i++)
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: We have |eV|=" << eV.size() << "\n";
+          os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
+#endif
+          MyMatrix<T> M = ZeroMatrix<T>(1, n);
+          for (int i = 0; i < d_mult_i; i++)
             M(0, i) = eV(i);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: We have M\n";
+#endif
           MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: We have BasisCompl\n";
+#endif
           MyMatrix<T> U = Concatenate(M, BasisCompl);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: We have U\n";
+#endif
           Pw = U * Pw;
           Qw = U * Qw * U.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
           T res = ResInt(Qw(0, 0), p_sqr);
           if (res != 0) {
-            std::cerr << "We do not have tildeQ(0,0) divisible by p^2\n";
+            std::cerr << "We do not have Qtilde(0,0) divisible by p^2\n";
+            std::cerr << "Qw=\n";
+            WriteMatrix(std::cerr, Qw);
             throw TerminalException{1};
           }
 #endif
@@ -277,6 +311,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
           v_mult_s -= 2;
         }
       }
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+      os << "DETMIN: --------------------------------------\n";
+#endif
       if (v_mult_s == 0) {
         list_P_erase.push_back(p_ring);
       }
