@@ -14,7 +14,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
   std::cerr << "We have Q\n";
   //
-  ResultDetMin<T> res = DeterminantMinimization(Q);
+  ResultDetMin<T> res = DeterminantMinimization(Q, std::cerr);
   if (OutFormat == "GAP") {
     os << "return rec(P:=";
     WriteMatrixGAP(os, res.P);
