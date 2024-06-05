@@ -14,7 +14,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
   std::cerr << "We have Q\n";
   //
-  std::optional<MyVector<T>> opt = FindIsotropic(Q);
+  std::optional<MyVector<T>> opt = FindIsotropic(Q, std::cerr);
   if (OutFormat == "GAP") {
     if (opt) {
       os_out << "return rec(has_isotropic:=true, ";

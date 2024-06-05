@@ -105,18 +105,25 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
 /*
   The algorithm is purely
  */
-template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q) {
+template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std::ostream& os) {
   int n = Q.rows();
-  ResultDetMin<T> res = DeterminantMinimization(Q);
 #ifdef DEBUG_ISOTROPIC
-  std::cerr << "ISOTROP: Before determinant minimization\n";
+  os << "ISOTROP: Before determinant minimization\n";
+#endif
+  ResultDetMin<T> res = DeterminantMinimization(Q, os);
+#ifdef DEBUG_ISOTROPIC
+  os << "ISOTROP: After determinant minimization\n";
+  os << "ISOTROP: res.P=\n";
+  WriteMatrix(os, res.P);
+  os << "ISOTROP: res.Mred=\n";
+  WriteMatrix(os, res.Mred);
 #endif
   MyMatrix<T> Pw = res.P;
   MyMatrix<T> Qw = res.Mred;
   while (true) {
-    MyMatrix<T> U = get_random_int_matrix<T>(n);
-    Pw = U * Pw;
-    Qw = U * Qw * U.transpose();
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: Before determinant minimization\n";
+#endif
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw);
     if (opt) {
       MyVector<T> const &eV = *opt;
@@ -124,11 +131,14 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q) {
       MyVector<T> fV = Pw_inv.transpose() * eV;
       return fV;
     }
+    MyMatrix<T> U = get_random_int_matrix<T>(n);
+    Pw = U * Pw;
+    Qw = U * Qw * U.transpose();
   }
 }
 
 template <typename T>
-std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M) {
+std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
   if (n == 1) {
     return FindIsotropicRankOne(M);
@@ -140,10 +150,10 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M) {
     // Apply first the Legendre theorem
     bool test = ternary_has_isotropic_vector(M);
 #ifdef DEBUG_ISOTROPIC
-    std::cerr << "ternary_has_isotropic_vector test=" << test << "\n";
+    os << "ternary_has_isotropic_vector test=" << test << "\n";
 #endif
     if (test) {
-      return Kernel_FindIsotropic(M);
+      return Kernel_FindIsotropic(M, os);
     } else {
       return {};
     }
@@ -152,10 +162,10 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M) {
     // This is the case where we have a missing ingredient
     std::cerr << "The following call might fail because there is no isotropic "
                  "vectors\n";
-    return Kernel_FindIsotropic(M);
+    return Kernel_FindIsotropic(M, os);
   }
   // Now n is greater than 5, so there is an isotropic vector
-  return Kernel_FindIsotropic(M);
+  return Kernel_FindIsotropic(M, os);
 }
 
 // clang-format off

@@ -17,6 +17,10 @@ template <typename T> struct ResultDetMin {
   MyMatrix<T> Mred;
 };
 
+#ifdef DEBUG
+#define DEBUG_DETERMINANT_MINIMIZATION
+#endif
+
 /*
   We apply a numbr of ideas from the preprint
   "Quadratic equations in dimensions 4, 5 and more" (P1)
@@ -34,7 +38,7 @@ template <typename T> struct ResultDetMin {
   are implemented.
  */
 template <typename T>
-ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
+ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] std::ostream& os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   using Tring = typename underlying_ring<T>::ring_type;
   if (!IsIntegralMatrix(Q)) {
@@ -44,6 +48,12 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
   int n = Q.rows();
   T det = DeterminantMat(Q);
   T det_abs = T_abs(det);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: n=" << n << " det_abs=" << det_abs << "\n";
+  os << "DETMIN: Q=\n";
+  WriteMatrix(os, Q);
+  int iter = 0;
+#endif
   Tring det_ai = UniversalScalarConversion<Tring, T>(det_abs);
   std::map<Tring, size_t> map = FactorsIntMap(det_ai);
   MyMatrix<T> Qw = Q;
@@ -56,13 +66,17 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
       T p = UniversalScalarConversion<T, Tring>(p_ring);
       size_t &v_mult_s = kv.second;
       int v_mult_i = v_mult_s;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+      T p_sqr = p * p;
+      os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i << "\n";
+#endif
       ResultNullspaceMod<T> res = NullspaceMatMod(Qw, p);
       int d_mult_i = res.dimNSP;
       auto change_basis = [&]() -> void {
         Pw = res.BasisTot * Pw;
         Qw = res.BasisTot * Qw * res.BasisTot.transpose();
-#ifdef DEBUG_DET_MINIMIZATION
-        for (int i = 0; i < d_multi_i; i++) {
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        for (int i = 0; i < d_mult_i; i++) {
           for (int j = 0; j < n; j++) {
             T res = ResInt(Qw(i, j), p);
             if (res != 0) {
@@ -72,10 +86,10 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
             }
           }
         }
-        int p = n - d_mult_i;
-        MyMatrix<T> U(p, p);
-        for (int i = 0; i < p; i++) {
-          for (int j = 0; j < p; j++) {
+        int p_dim = n - d_mult_i;
+        MyMatrix<T> U(p_dim, p_dim);
+        for (int i = 0; i < p_dim; i++) {
+          for (int j = 0; j < p_dim; j++) {
             U(i, j) = Qw(i + d_mult_i, j + d_mult_i);
           }
         }
@@ -119,10 +133,10 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
         Pw = Hmat * Pw;
         Qw = Hmat * Qw * Hmat.transpose();
         int dimNSPB = resB.dimNSP;
-#ifdef DEBUG_DET_MINIMIZATION
-        for (int i = 0; dimNSPB; i++) {
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        for (int i = 0; i<dimNSPB; i++) {
           for (int j = 0; j < dimNSPB; j++) {
-            T res = ResInt(Qw(i, j), p * p);
+            T res = ResInt(Qw(i, j), p_sqr);
             if (res != 0) {
               std::cerr << "Qw is not divisible by p * p as expected\n";
               throw TerminalException{1};
@@ -135,7 +149,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
           U(i, i) = 1 / p;
         Pw = U * Pw;
         Qw = U * Qw * U.transpose();
-#ifdef DEBUG_DET_MINIMIZATION
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
         if (!IsIntegralMatrix(Qw)) {
           std::cerr << "The matrix Qw is not integral\n";
           throw TerminalException{1};
@@ -175,8 +189,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
           MyMatrix<T> U = Concatenate(M, BasisCompl);
           Pw = U * Pw;
           Qw = U * Qw * U.transpose();
-#ifdef DEBUG_DET_MINIMIZATION
-          T res = ResInt(Qw(0, 0), p * p);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          T res = ResInt(Qw(0, 0), p_sqr);
           if (res != 0) {
             std::cerr << "We do not have tildeQ(0,0) divisible by p^2\n";
             throw TerminalException{1};
@@ -202,6 +216,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q) {
     if (!DoSomethingGlobal) {
       break;
     }
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+    iter += 1;
+#endif
   }
   return {Pw, Qw};
 }
