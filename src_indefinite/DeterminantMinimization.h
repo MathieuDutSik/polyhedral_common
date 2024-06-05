@@ -21,6 +21,23 @@ template <typename T> struct ResultDetMin {
 #define DEBUG_DETERMINANT_MINIMIZATION
 #endif
 
+template <typename T> struct ResultNullspaceMod {
+  int dimNSP;
+  MyMatrix<T> BasisTot;
+};
+
+template<typename T>
+ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod) {
+  int n_row = M.rows();
+  // We avoid a copy by having NullspaceTrMat instead of NullspaceMat, but that does
+  // not matter since M is symmetric here
+  MyMatrix<T> NSP = NullspaceTrMatMod(M, TheMod);
+  int dimNSP = NSP.rows();
+  MyMatrix<T> BasisComp = SubspaceCompletionInt(NSP, n_row);
+  MyMatrix<T> BasisTot = Concatenate(NSP, BasisComp);
+  return {dimNSP, BasisTot};
+}
+
 /*
   We apply a numbr of ideas from the preprint
   "Quadratic equations in dimensions 4, 5 and more" (P1)
@@ -75,7 +92,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
       T p_sqr = p * p;
       os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i << "\n";
 #endif
-      ResultNullspaceMod<T> res = NullspaceMatMod(Qw, p);
+      ResultNullspaceMod<T> res = GetAdjustedBasis(Qw, p);
       int d_mult_i = res.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
       os << "DETMIN: d_mult_i=" << d_mult_i << "\n";
@@ -152,7 +169,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #endif
         change_basis();
         MyMatrix<T> Qtilde = get_qtilde();
-        ResultNullspaceMod<T> resB = NullspaceMatMod(Qtilde, p);
+        ResultNullspaceMod<T> resB = GetAdjustedBasis(Qtilde, p);
         MyMatrix<T> Hmat = IdentityMat<T>(n);
         for (int i = 0; i < d_mult_i; i++) {
           for (int j = 0; j < d_mult_i; j++) {
