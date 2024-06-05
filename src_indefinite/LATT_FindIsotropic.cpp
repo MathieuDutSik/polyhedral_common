@@ -17,8 +17,14 @@ void process(std::string const &FileI, std::string const &OutFormat,
   std::optional<MyVector<T>> opt = FindIsotropic(Q, std::cerr);
   if (OutFormat == "GAP") {
     if (opt) {
+      MyVector<T> const& eV = *opt;
+      T val = EvaluationQuadForm(Q, eV);
+      if (val != 0) {
+        std::cerr << "eV is not an isotropic vector\n";
+        throw TerminalException{1};
+      }
       os_out << "return rec(has_isotropic:=true, ";
-      os_out << "V:=" << StringVectorGAP(*opt) << ");\n";
+      os_out << "V:=" << StringVectorGAP(eV) << ");\n";
     } else {
       os_out << "return rec(has_isotropic:=false);\n";
     }
@@ -84,7 +90,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in IndefiniteLLL\n";
+    std::cerr << "Error in LATT_FindIsotropic\n";
     exit(e.eVal);
   }
   runtime(time1);
