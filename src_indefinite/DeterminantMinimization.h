@@ -83,6 +83,22 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
   while (true) {
     std::vector<Tring> list_P_erase;
     bool DoSomethingGlobal = false;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+    T TheDet = DeterminantMat(Qw);
+    Tring TheDet_abs = UniversalScalarConversion<Tring, T>(T_abs(TheDet));
+    os << "DETMIN: TheDet=" << TheDet << " TheDet_abs=" << TheDet_abs << "\n";
+    Tring eProd(1);
+    for (auto & kv : map) {
+      for (size_t u=0; u<kv.second; u++) {
+        eProd *= kv.first;
+      }
+    }
+    os << "DETMIN: eProd=" << eProd << "\n";
+    if (eProd != TheDet_abs) {
+      std::cerr << "DETMIN: Incoherence of determinant\n";
+      throw TerminalException{1};
+    }
+#endif
     for (auto &kv : map) {
       Tring p_ring = kv.first;
       T p = UniversalScalarConversion<T, Tring>(p_ring);
@@ -95,7 +111,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
       ResultNullspaceMod<T> res = GetAdjustedBasis(Qw, p);
       int d_mult_i = res.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-      os << "DETMIN: d_mult_i=" << d_mult_i << "\n";
+      os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
       os << "DETMIN: BasisTot=\n";
       WriteMatrix(os, res.BasisTot);
 #endif
@@ -146,8 +162,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         Qw = Qw / p;
         DoSomething = true;
         DoSomethingGlobal = true;
-        v_mult_i -= n;
-        v_mult_s -= n;
+        v_mult_i -= 2 * n;
+        v_mult_s -= 2 * n;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         for (int i = 0; i<n; i++) {
           for (int j = 0; j<n; j++) {
@@ -163,6 +179,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #endif
       }
       // Apply Lemma 5
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+      os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
+#endif
       if (d_mult_i < v_mult_i && !DoSomething) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         os << "DETMIN: Apply Lemma 5\n";
@@ -203,8 +222,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #endif
         DoSomething = true;
         DoSomethingGlobal = true;
-        v_mult_i -= dimNSPB;
-        v_mult_s -= dimNSPB;
+        v_mult_i -= 2 * dimNSPB;
+        v_mult_s -= 2 * dimNSPB;
       }
       // Apply Lemma 6
       if (d_mult_i == v_mult_i && n > 2 * d_mult_i && !DoSomething) {
