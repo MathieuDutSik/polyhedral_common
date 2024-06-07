@@ -33,44 +33,80 @@
 
 // Try to find isotropic subspace by using Indefinite LLL
 template <typename T>
-std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe_unused]] std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
-  int n = M.rows();
-  // Compute the LLL reduction.
-  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M);
-  if (!res.success) {
-    return res.Xisotrop;
-  }
-  MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
-  // Compute the product
-  MyMatrix<T> const &Mred = res.Mred;
+  int n = Q.rows();
+  auto get_norm = [&](MyMatrix<T> const &mat) -> T {
+    T sum = 0;
+    for (int i = 0; i < n; i++)
+      for (int j = 0; j < n; j++)
+        sum += T_abs(mat(i, j));
+    return sum;
+  };
+  MyMatrix<T> Pw = IdentityMat<T>(n);
+  MyMatrix<T> Qw = Q;
+  T curr_norm = get_norm(Q);
+  while(true) {
+    // Compute the LLL reduction.
+    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw);
+    if (!res.success) {
+      MyVector<T> V = Pw.transpose() * res.Xisotrop;
 #ifdef DEBUG_ISOTROPIC
-  os << "ISOTROP: GetIsotropIndefiniteLLL Mred=\n";
-  WriteMatrix(os, Mred);
+      os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop in the process\n";
 #endif
-  // Checking first for diagonal zeros.
-  for (int i = 0; i < n; i++) {
-    if (Mred(i, i) == 0) {
-      MyVector<T> eV = ZeroVector<T>(n);
-      eV(i) = 1;
-      MyVector<T> fV = B_T.transpose() * eV;
-      return fV;
+      return V;
     }
-  }
-  // Checking for opposite signs in the diagonal
-  for (int i = 0; i < n; i++) {
-    for (int j = i + 1; j < n; j++) {
-      if (Mred(i, j) == 0 && Mred(i, i) + Mred(j, j) == 0) {
+    // Compute the product
+    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
+    Pw = B_T * Pw;
+    Qw = res.Mred;
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: GetIsotropIndefiniteLLL Qw=\n";
+    WriteMatrix(os, Qw);
+#endif
+    // Checking first for diagonal zeros.
+    for (int i = 0; i < n; i++) {
+      if (Qw(i, i) == 0) {
         MyVector<T> eV = ZeroVector<T>(n);
         eV(i) = 1;
-        eV(j) = 1;
-        MyVector<T> fV = B_T.transpose() * eV;
+        MyVector<T> fV = Pw.transpose() * eV;
+#ifdef DEBUG_ISOTROPIC
+        os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop in the diagonal\n";
+#endif
         return fV;
       }
     }
+    // Checking for opposite signs in the diagonal
+    for (int i = 0; i < n; i++) {
+      for (int j = i + 1; j < n; j++) {
+        if (Qw(i, j) == 0 && Qw(i, i) + Qw(j, j) == 0) {
+          MyVector<T> eV = ZeroVector<T>(n);
+          eV(i) = 1;
+          eV(j) = 1;
+          MyVector<T> fV = Pw.transpose() * eV;
+#ifdef DEBUG_ISOTROPIC
+        os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop as sum of two diagonal terms\n";
+#endif
+          return fV;
+        }
+      }
+    }
+    T norm = get_norm(Qw);
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: GetIsotropIndefiniteLLL norm=" << norm << " curr_norm=" << curr_norm << "\n";
+#endif
+    if (norm > curr_norm) {
+      break;
+    }
+    curr_norm = norm;
+    MyMatrix<T> RandUnit = get_random_int_matrix<T>(n);
+    Pw = RandUnit * Pw;
+    Qw = RandUnit * Qw * RandUnit.transpose();
   }
   return {};
 }
+
+
 
 // For rank 1 this is trivial
 template <typename T>
