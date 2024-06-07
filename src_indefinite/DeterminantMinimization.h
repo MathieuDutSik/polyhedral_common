@@ -31,6 +31,11 @@ ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod, [[
   int n_row = M.rows();
   // We avoid a copy by having NullspaceTrMat instead of NullspaceMat, but that does
   // not matter since M is symmetric here
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: GetAdjustedBasis, before NullspaceTrMatMod p=" << TheMod << "\n";
+  os << "DETMIN: M=\n";
+  WriteMatrix(os, M);
+#endif
   MyMatrix<T> NSP = NullspaceTrMatMod(M, TheMod);
   int dimNSP = NSP.rows();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
