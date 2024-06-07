@@ -33,7 +33,7 @@
 
 // Try to find isotropic subspace by using Indefinite LLL
 template <typename T>
-std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M) {
+std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n = M.rows();
   // Compute the LLL reduction.
@@ -44,6 +44,20 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M) {
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
   // Compute the product
   MyMatrix<T> const &Mred = res.Mred;
+#ifdef DEBUG_ISOTROPIC
+  os << "ISOTROP: GetIsotropIndefiniteLLL Mred=\n";
+  WriteMatrix(os, Mred);
+#endif
+  // Checking first for diagonal zeros.
+  for (int i = 0; i < n; i++) {
+    if (Mred(i, i) == 0) {
+      MyVector<T> eV = ZeroVector<T>(n);
+      eV(i) = 1;
+      MyVector<T> fV = B_T.transpose() * eV;
+      return fV;
+    }
+  }
+  // Checking for opposite signs in the diagonal
   for (int i = 0; i < n; i++) {
     for (int j = i + 1; j < n; j++) {
       if (Mred(i, j) == 0 && Mred(i, i) + Mred(j, j) == 0) {
@@ -116,6 +130,7 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
   WriteMatrix(os, res.P);
   os << "ISOTROP: res.Mred=\n";
   WriteMatrix(os, res.Mred);
+  os << "ISOTROP: det(Mred)=" << DeterminantMat(res.Mred) << "\n";
 #endif
   MyMatrix<T> Pw = res.P;
   MyMatrix<T> Qw = res.Mred;
@@ -123,7 +138,7 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
 #ifdef DEBUG_ISOTROPIC
     os << "ISOTROP: Before GetIsotropIndefiniteLLL\n";
 #endif
-    std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw);
+    std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
 #ifdef DEBUG_ISOTROPIC
     os << "ISOTROP: We have opt\n";
 #endif

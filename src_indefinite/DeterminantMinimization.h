@@ -400,6 +400,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
 #endif
   }
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: EXITING DETERMINANT MINIMIZATION\n";
   check_state();
 #endif
   return {Pw, Qw};
