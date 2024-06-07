@@ -122,13 +122,15 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
   MyMatrix<T> Qw = res.Mred;
   while (true) {
 #ifdef DEBUG_ISOTROPIC
-    os << "ISOTROP: Before determinant minimization\n";
+    os << "ISOTROP: Before GetIsotropIndefiniteLLL\n";
 #endif
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw);
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: We have opt\n";
+#endif
     if (opt) {
       MyVector<T> const &eV = *opt;
-      MyMatrix<T> Pw_inv = Inverse(Pw);
-      MyVector<T> fV = Pw_inv.transpose() * eV;
+      MyVector<T> fV = Pw.transpose() * eV;
       return fV;
     }
     MyMatrix<T> U = get_random_int_matrix<T>(n);

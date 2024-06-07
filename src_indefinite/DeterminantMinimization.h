@@ -38,6 +38,34 @@ ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod) {
   return {dimNSP, BasisTot};
 }
 
+template<typename T>
+bool IsMatrixNonZeroMultiple(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
+  int n_row = M1.rows();
+  int n_col = M1.cols();
+  for (int i=0; i<n_row; i++) {
+    for (int j=0; j<n_col; j++) {
+      if (M1(i, j) != 0) {
+        T scal = M2(i, j) / M1(i,j);
+        if (scal == 0) {
+          return false;
+        }
+        for (int i1=0; i1<n_row; i1++) {
+          for (int j1=0; j1<n_col; j1++) {
+            T val1 = scal * M1(i1,j1);
+            if (val1 != M2(i1,j1)) {
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+    }
+  }
+  // M1 is zero only possibility is if M2 is zero as well
+  return IsZeroMatrix(M2);
+}
+
+
 /*
   We apply a numbr of ideas from the preprint
   "Quadratic equations in dimensions 4, 5 and more" (P1)
@@ -80,6 +108,15 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #endif
   MyMatrix<T> Qw = Q;
   MyMatrix<T> Pw = IdentityMat<T>(n);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  auto check_state=[&]() -> void {
+    MyMatrix<T> ResQ = Pw * Q * Pw.transpose();
+    if (!IsMatrixNonZeroMultiple(ResQ, Qw)) {
+      std::cerr << "The matrix are not scalar multiple\n";
+      throw TerminalException{1};
+    }
+  };
+#endif
   while (true) {
     std::vector<Tring> list_P_erase;
     bool DoSomethingGlobal = false;
@@ -119,6 +156,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         Pw = res.BasisTot * Pw;
         Qw = res.BasisTot * Qw * res.BasisTot.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+        check_state();
         for (int i = 0; i < d_mult_i; i++) {
           for (int j = 0; j < n; j++) {
             T res = ResInt(Qw(i, j), p);
@@ -199,6 +237,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         Qw = Hmat * Qw * Hmat.transpose();
         int dimNSPB = resB.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+        check_state();
         for (int i = 0; i<dimNSPB; i++) {
           for (int j = 0; j < dimNSPB; j++) {
             T res = ResInt(Qw(i, j), p_sqr);
@@ -215,6 +254,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         Pw = U * Pw;
         Qw = U * Qw * U.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+        check_state();
         if (!IsIntegralMatrix(Qw)) {
           std::cerr << "The matrix Qw is not integral\n";
           throw TerminalException{1};
@@ -238,6 +278,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
         }
         Pw = U * Pw;
         Qw = U * Qw * U.transpose() / p;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+        check_state();
+#endif
         DoSomething = true;
         DoSomethingGlobal = true;
         int dec = 2 * (n - d_mult_i) - n;
@@ -275,6 +318,12 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
           os << "DETMIN: We have |eV|=" << eV.size() << "\n";
           os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
+          T val = EvaluationQuadForm(Qtilde, eV);
+          T val_mod = ResInt(val, p);
+          if (val_mod != 0) {
+            std::cerr << "DETMIN: We have val=" << val << " but val_mod=" << val_mod << "\n";
+            throw TerminalException{1};
+          }
 #endif
           MyMatrix<T> M = ZeroMatrix<T>(1, n);
           for (int i = 0; i < d_mult_i; i++)
@@ -293,6 +342,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
           Pw = U * Pw;
           Qw = U * Qw * U.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+          check_state();
           T res = ResInt(Qw(0, 0), p_sqr);
           if (res != 0) {
             std::cerr << "We do not have Qtilde(0,0) divisible by p^2\n";
@@ -328,6 +378,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
     iter += 1;
 #endif
   }
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  check_state();
+#endif
   return {Pw, Qw};
 }
 
