@@ -27,12 +27,33 @@ template <typename T> struct ResultNullspaceMod {
 };
 
 template<typename T>
-ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod) {
+ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod, [[maybe_unused]] std::ostream& os) {
   int n_row = M.rows();
   // We avoid a copy by having NullspaceTrMat instead of NullspaceMat, but that does
   // not matter since M is symmetric here
   MyMatrix<T> NSP = NullspaceTrMatMod(M, TheMod);
   int dimNSP = NSP.rows();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: GetAdjustedBasis, NSP=\n";
+  WriteMatrix(os, NSP);
+#endif
+  if (0 < dimNSP && dimNSP < M.rows()) {
+    MyMatrix<T> Orth = NullspaceTrMat(NSP);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+    os << "DETMIN: GetAdjustedBasis, Orth=\n";
+    WriteMatrix(os, Orth);
+#endif
+    MyMatrix<T> OrthTr = Orth.transpose();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+    os << "DETMIN: GetAdjustedBasis, OrthTr=\n";
+    WriteMatrix(os, OrthTr);
+#endif
+    NSP = NullspaceIntMat(OrthTr);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+    os << "DETMIN: GetAdjustedBasis, Now NSP=\n";
+    WriteMatrix(os, NSP);
+#endif
+  }
   MyMatrix<T> BasisComp = SubspaceCompletionInt(NSP, n_row);
   MyMatrix<T> BasisTot = Concatenate(NSP, BasisComp);
   return {dimNSP, BasisTot};
@@ -83,7 +104,7 @@ bool IsMatrixNonZeroMultiple(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   are implemented.
  */
 template <typename T>
-ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] std::ostream& os) {
+ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   using Tring = typename underlying_ring<T>::ring_type;
   if (!IsIntegralMatrix(Q)) {
@@ -145,7 +166,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
       T p_sqr = p * p;
       os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i << "\n";
 #endif
-      ResultNullspaceMod<T> res = GetAdjustedBasis(Qw, p);
+      ResultNullspaceMod<T> res = GetAdjustedBasis(Qw, p, os);
       int d_mult_i = res.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
       os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
@@ -226,7 +247,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, [[maybe_unused]] s
 #endif
         change_basis();
         MyMatrix<T> Qtilde = get_qtilde();
-        ResultNullspaceMod<T> resB = GetAdjustedBasis(Qtilde, p);
+        ResultNullspaceMod<T> resB = GetAdjustedBasis(Qtilde, p, os);
         MyMatrix<T> Hmat = IdentityMat<T>(n);
         for (int i = 0; i < d_mult_i; i++) {
           for (int j = 0; j < d_mult_i; j++) {

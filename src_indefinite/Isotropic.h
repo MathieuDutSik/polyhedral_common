@@ -42,7 +42,6 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M) {
     return res.Xisotrop;
   }
   MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
-  MyMatrix<T> Binv_T = Inverse(B_T);
   // Compute the product
   MyMatrix<T> const &Mred = res.Mred;
   for (int i = 0; i < n; i++) {
@@ -51,7 +50,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &M) {
         MyVector<T> eV = ZeroVector<T>(n);
         eV(i) = 1;
         eV(j) = 1;
-        MyVector<T> fV = Binv_T.transpose() * eV;
+        MyVector<T> fV = B_T.transpose() * eV;
         return fV;
       }
     }
@@ -130,6 +129,11 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
 #endif
     if (opt) {
       MyVector<T> const &eV = *opt;
+#ifdef DEBUG_ISOTROPIC
+      os << "ISOTROP: Qw=\n";
+      WriteMatrix(os, Qw);
+      os << "ISOTROP: eV=" << StringVector(eV) << "\n";
+#endif
       MyVector<T> fV = Pw.transpose() * eV;
       return fV;
     }
