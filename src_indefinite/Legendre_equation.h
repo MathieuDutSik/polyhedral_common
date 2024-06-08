@@ -68,24 +68,46 @@ template <typename T> bool determine_solvability(MyVector<T> const &aReduced) {
   T a_cnt = -b * c;
   T b_cnt = -a * c;
   T c_cnt = -a * b;
+  //
+  //
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: a_abs=" << a_abs << " a_cnt=" << a_cnt << "\n";
-  std::cerr << "LEG: b_abs=" << b_abs << " b_cnt=" << b_cnt << "\n";
-  std::cerr << "LEG: c_abs=" << c_abs << " c_cnt=" << c_cnt << "\n";
 #endif
-  if (!is_quadratic_residue(a_cnt, a_abs)) {
+  bool test_a = is_quadratic_residue(a_cnt, a_abs);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "QUADTEST: [" << a_cnt << "," << a_abs << "," << test_a << "],\n";
+#endif
+  if (!test_a) {
 #ifdef DEBUG_LEGENDRE
     std::cerr << "LEG: Returning false by quadratic residue for a\n";
 #endif
     return false;
   }
-  if (!is_quadratic_residue(b_cnt, b_abs)) {
+  //
+  //
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: b_abs=" << b_abs << " b_cnt=" << b_cnt << "\n";
+#endif
+  bool test_b = is_quadratic_residue(b_cnt, b_abs);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "QUADTEST: [" << b_cnt << "," << b_abs << "," << test_b << "],\n";
+#endif
+  if (!test_b) {
 #ifdef DEBUG_LEGENDRE
     std::cerr << "LEG: Returning false by quadratic residue for b\n";
 #endif
     return false;
   }
-  if (!is_quadratic_residue(c_cnt, c_abs)) {
+  //
+  //
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: c_abs=" << c_abs << " c_cnt=" << c_cnt << "\n";
+#endif
+  bool test_c = is_quadratic_residue(c_cnt, c_abs);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "QUADTEST: [" << c_cnt << "," << c_abs << "," << test_c << "],\n";
+#endif
+  if (!test_c) {
 #ifdef DEBUG_LEGENDRE
     std::cerr << "LEG: Returning false by quadratic residue for c\n";
 #endif
