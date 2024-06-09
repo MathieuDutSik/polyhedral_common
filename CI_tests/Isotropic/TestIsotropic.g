@@ -37,6 +37,18 @@ TestIsotropic:=function(eRec)
 end;
 
 ListRec:=ReadAsFunction("IsotropicCases")();;
+ListDim3_A:=Filtered(ListRec, x->Length(x.M)=3);
+ListDim3_B:=ListDim3_A{[1..200]};
+ListDim4_A:=Filtered(ListRec, x->Length(x.M)=4);
+ListDim4_B:=Filtered(ListDim4_A, x->x.has_isotropic);
+ListDim5high:=Filtered(ListRec, x->Length(x.M) > 4);
+#ListRec:=Concatenation(ListDim3_B, ListDim4_B, ListDim5high);
+#ListRec:=Concatenation(ListDim3_B, ListDim5high);
+
+
+ListRec:=ListDim3_B;
+
+
 
 
 FullTest:=function()
