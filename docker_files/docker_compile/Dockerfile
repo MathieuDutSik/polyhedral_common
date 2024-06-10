@@ -29,7 +29,7 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
 # Install classic Ubuntu packages
 RUN apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap screen software-properties-common sudo unzip zlib1g-dev zsh
 RUN apt-get install -y wget emacs joe
-RUN apt-get install -y g++-11 g++ gcc gfortran clang
+RUN apt-get install -y g++ gcc gfortran clang
 RUN apt-get install -y git cmake
 
 
@@ -51,23 +51,11 @@ RUN cd /opt && git clone https://gitlab.com/libeigen/eigen.git
 ENV EIGEN_PATH /opt/eigen
 
 
-# Threading Building Blocks
-RUN apt-get install -y libtbb-dev
-ENV TBB_INCDIR=/usr/include
-ENV TBB_LINK="-ltbb"
-
-
 # GLPK
 RUN apt-get install -y libglpk-dev
 ENV GLPK_PATH /usr
 ENV GLPK_INCLUDE "-I$GLPK_PATH/include"
 ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
-
-
-# flint
-RUN apt-get install -y libflint-dev libntl-dev libmpfr-dev
-ENV FLINT_INCDIR /include
-ENV FLINT_LINK -lflint
 
 
 # CDDLIB
@@ -80,21 +68,11 @@ ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
 ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
 ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
-
-# PPL
-RUN wget https://www.bugseng.com/products/ppl/download/ftp/releases/1.2/ppl-1.2.tar.gz
-RUN tar -vxzf ppl-1.2.tar.gz && cd ppl-1.2 && ./configure && make
-
-# Downloading PPL and compiling it
-RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
-RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
-RUN cd /bin && ln -s /ppl-1.2/demos/ppl_lcdd/ppl_lcdd
-
 # downloading netcdf functionality and compiling it
 RUN apt-get install -y libcurl4-openssl-dev m4
 RUN wget https://www.gfd-dennou.org/arch/netcdf/unidata-mirror/netcdf-c-4.8.0.tar.gz
 RUN wget https://fossies.org/linux/misc/netcdf-cxx4-4.3.1.tar.gz
-RUN tar -vxzf netcdf-c-4.8.0.tar.gz && cd netcdf-c-4.8.0 && export LDFLAGS="-L/opt/hdf5-1.12.0/lib -lhdf5_hl -lhdf5 -Wl,-rpath,/opt/hdf5-1.12.0/lib" && export CPPFLAGS="-I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-4.8.0 && make && make install
+RUN tar -vxzf netcdf-c-4.8.0.tar.gz && cd netcdf-c-4.8.0 && export LDFLAGS="-L/opt/hdf5-1.12.0/lib -lhdf5_hl -lhdf5 -Wl,-rpath,/opt/hd# f5-1.12.0/lib" && export CPPFLAGS="-I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-4.8.0 && make && make install
 RUN tar -vxzf netcdf-cxx4-4.3.1.tar.gz && cd netcdf-cxx4-4.3.1 && export LDFLAGS="-L/opt/netcdf-4.8.0/lib -lnetcdf -Wl,-rpath,/opt/netcdf-4.8.0/lib" && export CPPFLAGS="-I/opt/netcdf-4.8.0/include -I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-cxx4-4.3.1 && make && make install
 ENV NETCDF_CXX_PATH /opt/netcdf-cxx4-4.3.1
 ENV NETCDF_C_PATH /opt/netcdf-4.8.0
@@ -102,40 +80,9 @@ ENV NETCDF_CXX_ALLINC "-I$NETCDF_CXX_PATH/include -I$NETCDF_C_PATH/include"
 ENV NETCDF_CXX_LINK "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX_PATH/lib"
 
 
-
-
-# LINBOX
-RUN wget https://raw.githubusercontent.com/linbox-team/linbox/master/linbox-auto-install.sh
-RUN chmod +x linbox-auto-install.sh
-RUN ./linbox-auto-install.sh --enable-openblas=yes
-RUN mkdir /opt/linbox
-RUN mv /tmp/lib /opt/linbox
-RUN mv /tmp/include /opt/linbox
-RUN mv /tmp/bin /opt/linbox
-ENV LINBOX_PATH /opt/linbox
-ENV LINBOX_INCLUDE "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
-ENV LINBOX_LINK "-fopenmp -lntl -lmpfr -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
-
-
 # cloning polyhedral code
 RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
-
-
-# libshort
-ENV LIBSHORT_PATH /opt/libshort
-ENV LIBSHORT_INCDIR "$LIBSHORT_PATH/include"
-ENV LIBSHORT_LINK "-L$LIBSHORT_PATH/lib -lshort -Wl,-rpath,$LIBSHORT_PATH/lib"
-RUN cd GIT/polyhedral_common/ExternalLib/LibShort  && make -f Makefile_lib && make -f Makefile_lib install
-
-
-# bliss
-ENV LIBBLISS_PATH /opt/bliss
-ENV LIBBLISS_INCDIR $LIBBLISS_PATH/include
-ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss && mkdir build
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && make all install
 
 
 # nauty/traces
