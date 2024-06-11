@@ -408,7 +408,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       } else {
         if (RankMat(eMatSec) < n) {
           MyVector<Tint> eVect3 =
-              GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm);
+            GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
           if (PositionVect(ListVectTot, eVect3) != -1)
             eVect3 *= 2;
           if (TheFamilyVect.find(eVect3) != TheFamilyVect.end()) {

@@ -31,11 +31,17 @@ std::vector<MyVector<Tint>>
 LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
                             T const &MaxScal, int const &TheOption,
                             bool const &OnlyShortest, std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: beginning\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors: OnlyShortest=" << OnlyShortest << "\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors: TheOption=" << TheOption << "\n";
+#endif
   int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: eNorm=" << eNorm << "\n";
   if (MaxScal <= 0) {
-    std::cerr << "MaxScal=" << MaxScal << "\n";
+    std::cerr << "MaxScal=" << MaxScal << " but we should have MaxScal > 0\n";
     throw TerminalException{1};
   }
   if (TheOption != LORENTZIAN_PERFECT_OPTION_ISOTROP &&
@@ -44,15 +50,18 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
     throw TerminalException{1};
   }
   if (eNorm <= 0) {
-    std::cerr << "eNorm=" << eNorm << "\n";
-    std::cerr << "Wrong norm of vector, will not work\n";
+    std::cerr << "eNorm=" << eNorm << " but we should have eNorm > 0\n";
     throw TerminalException{1};
   }
   if (!IsIntegralVector(eVect)) {
+    std::cerr << "eVect=\n";
+    WriteVector(std::cerr, eVect);
     std::cerr << "eVect should be integral\n";
     throw TerminalException{1};
   }
   if (!IsIntegralMatrix(LorMat)) {
+    std::cerr << "LorMat=\n";
+    WriteMatrix(std::cerr, LorMat);
     std::cerr << "LorMat should be integral\n";
     throw TerminalException{1};
   }
@@ -120,6 +129,9 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
                             std::ostream &os) {
   bool OnlyShortest = true;
   T MaxScal = 0;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_SearchInitialVector: Before LORENTZ_FindPositiveVectors\n";
+#endif
   return LORENTZ_FindPositiveVectors<T, Tint>(LorMat, PosVect, MaxScal,
                                               TheOption, OnlyShortest, os);
 }
@@ -360,7 +372,7 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
   std::vector<MyVector<Tint>> ListTotal;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "TheLowerBound=" << TheLowerBound
+    os << "LORPERF: TheLowerBound=" << TheLowerBound
        << " TheUpperBound=" << TheUpperBound << " n_iter=" << n_iter << "\n";
 #endif
     T TheMidVal = get_mid_val(TheLowerBound, TheUpperBound);
@@ -375,7 +387,7 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
       ListTotal = LORENTZ_FindPositiveVectors<T, Tint>(
           LorMat, eVectTest, MaxScal, TheOption, OnlyShortest, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-      os << "|ListTotal|=" << ListTotal.size() << "\n";
+      os << "LORPERF: |ListTotal|=" << ListTotal.size() << "\n";
       if (IsSubset(CritSet, ListTotal) && CritSet.size() > ListTotal.size()) {
         std::cerr << "Bug: if included, it should be equal\n";
         throw TerminalException{1};
@@ -386,9 +398,9 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
       } else {
         if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-          os << "EXIT 1 |ListTotal|=" << ListTotal.size()
+          os << "LORPERF: EXIT 1 |ListTotal|=" << ListTotal.size()
              << " MaxScal=" << MaxScal << "\n";
-          os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
+          os << "LORPERF: NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
 #endif
           return {ListTotal, eNSPtest, eVectTest, MaxScal};
         } else {
@@ -401,7 +413,7 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
 #endif
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "Going to the second scheme\n";
+  os << "LORPERF: Going to the second scheme\n";
 #endif
   while (true) {
     MyVector<Tint> eVect = ListTotal[0];
@@ -419,9 +431,9 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
                                              TheOption, OnlyShortest, os);
     if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-      os << "EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal
+      os << "LORPERF: EXIT 2 |ListTotal|=" << ListTotal.size() << " MaxScal=" << MaxScal
          << "\n";
-      os << "  NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
+      os << "LORPERF: NSPtest=" << StringVectorGAP(eNSPtest) << "\n";
 #endif
       return {ListTotal, eNSPtest, eVectTest, MaxScal};
     }
@@ -523,24 +535,36 @@ template <typename T, typename Tint>
 LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
                                                       int const &TheOption,
                                                       std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetOnePerfect: beginning\n";
+#endif
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   MyVector<Tint> CentralVect =
       INDEFINITE_GetShortPositiveVector<T, Tint>(LorMat, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetOnePerfect: We have CentralVect\n";
+#endif
   MyVector<T> CentralVect_T = UniversalVectorConversion<T, Tint>(CentralVect);
   std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T, Tint>(
       LorMat, CentralVect_T, TheOption, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetOnePerfect: We have CritSet\n";
+#endif
   MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
   MyVector<T> LorMat_Central = LorMat * CentralVect_T;
   T eScal = LorMat_Central.dot(CritSet0_T);
   MyVector<T> eNSPbas = ConcatenateScalarVector(T(-eScal), LorMat_Central);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetOnePerfect: Before loop\n";
+#endif
   while (true) {
     int rnk = 0;
     if (CritSet.size() > 0) {
       rnk = RankMat(MatrixFromVectorFamily(CritSet));
     }
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size()
+    os << "LORPERF: LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size()
        << "\n";
 #endif
     if (rnk == n) {
@@ -560,8 +584,14 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
     MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
     MyMatrix<T> eNSPdir =
         GetOneOutsideRay<T, Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_GetOnePerfect: Before LORENTZ_Kernel_Flipping\n";
+#endif
     ResultFlipping<T, Tint> eRecB = LORENTZ_Kernel_Flipping<T, Tint>(
         LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_GetOnePerfect: After LORENTZ_Kernel_Flipping\n";
+#endif
     CritSet = eRecB.ListTotal;
     eNSPbas = eRecB.eNSPtest;
   }
@@ -707,7 +737,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
   }
   size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|ComputeInvariantDelaunay|=" << time << "\n";
+  os << "LORPERF: |ComputeInvariantDelaunay|=" << time << "\n";
 #endif
   return hash;
 }
@@ -942,8 +972,8 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "PERF_LOR: We now have IsFinished=" << pair.first << "\n";
-  os << "PERF_LOR: We now have |ListPerfect|=" << pair.second.size() << "\n";
+  os << "LORPERF: We now have IsFinished=" << pair.first << "\n";
+  os << "LORPERF: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {

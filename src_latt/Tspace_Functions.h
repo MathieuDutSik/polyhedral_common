@@ -332,7 +332,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     auto get_one_vect = [&]() -> MyVector<Tint> {
       T CritNorm = 0;
       if (RankMat(TrySuperMat) < n) {
-        return GetShortVectorDegenerate<T, Tint>(TrySuperMat, CritNorm);
+        return GetShortVectorDegenerate<T, Tint>(TrySuperMat, CritNorm, os);
       } else {
         bool NeedNonZero = true;
         bool StrictIneq = true;

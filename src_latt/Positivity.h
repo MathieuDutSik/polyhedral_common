@@ -611,6 +611,7 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
     bool test = is_ok();
 #ifdef DEBUG_POSITIVITY
     os << "POS: GetIntegralVector_allmeth: is_ok=" << test << "\n";
+    os << "POS: GetIntegralVector_allmeth: CritNorm=" << CritNorm << " StrictIneq=" << StrictIneq << "\n";
 #endif
     if (test) {
 #ifdef DEBUG_POSITIVITY
@@ -657,6 +658,9 @@ MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const &M,
   T CritNorm(0);
   bool StrictIneq = true;
   bool NeedNonZero = true;
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralPositiveVector_allmeth: before GetIntegralVector_allmeth\n";
+#endif
   return GetIntegralVector_allmeth<T,Tint>(M, CritNorm, StrictIneq, NeedNonZero, os);
 }
 
@@ -698,6 +702,7 @@ MyMatrix<Tint> GetRandomMatrixPerturbation(int const &n) {
     int i = rand() % n;
     int j = rand() % n;
     eMat(i, j) = get_rnd_sign();
+    return eMat;
   }
   std::cerr << "Failed to find a matching entry\n";
   throw TerminalException{1};
@@ -706,6 +711,9 @@ MyMatrix<Tint> GetRandomMatrixPerturbation(int const &n) {
 template <typename T, typename Tint>
 MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
                                                  std::ostream &os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: INDEFINITE_GetShortPositiveVector: beginning\n";
+#endif
   int n = M.rows();
   auto L1_norm = [&](MyMatrix<T> const &M) -> T {
     T sum = 0;
@@ -716,7 +724,7 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
     }
     return sum;
   };
-  std::vector<MyVector<Tint>> GraverBasis = GetGraverKbasis<Tint>(n, 2, os);
+  std::vector<MyVector<Tint>> GraverBasis = GetGraverKbasis<Tint>(n, 2,os);
   auto GetAlpha = [&](MyVector<Tint> const &TheVect,
                       MyVector<Tint> const &DirVect) -> int {
     T Norm1 = EvaluationQuadForm<T, Tint>(M, TheVect);
@@ -752,20 +760,33 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
   std::optional<T> CurrNorm;
   std::optional<MyVector<Tint>> CurrVect;
   while (true) {
+#ifdef DEBUG_POSITIVITY
+    os << "POS: INDEFINITE_GetShortPositiveVector: Loop step 1\n";
+#endif
     MyMatrix<T> ePerturb_T = UniversalMatrixConversion<T, Tint>(ePerturb);
     MyMatrix<T> M_Pert = ePerturb_T * M * ePerturb_T.transpose();
     MyVector<Tint> uVect_Pert =
         GetIntegralPositiveVector_allmeth<T, Tint>(M_Pert, os);
+#ifdef DEBUG_POSITIVITY
+    os << "POS: INDEFINITE_GetShortPositiveVector: Loop step 2, we have uVect_Pert\n";
+#endif
     MyVector<Tint> uVect = ePerturb.transpose() * uVect_Pert;
     MyVector<Tint> TheVect = DirectImprovement(uVect);
     T eNorm = EvaluationQuadForm<T, Tint>(M, TheVect);
+#ifdef DEBUG_POSITIVITY
+    os << "POS: INDEFINITE_GetShortPositiveVector: Loop step 3, eNorm=" << eNorm << "\n";
+#endif
     auto is_lower = [&]() -> bool {
       if (CurrNorm) {
         return eNorm < *CurrNorm;
       }
       return true;
     };
-    if (is_lower()) {
+    bool test_low = is_lower();
+#ifdef DEBUG_POSITIVITY
+    os << "POS: INDEFINITE_GetShortPositiveVector: Loop step 4, test_low=" << test_low << "\n";
+#endif
+    if (test_low) {
       n_no_improv = 0;
       CurrVect = TheVect;
       CurrNorm = eNorm;
@@ -773,10 +794,17 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
       n_no_improv += 1;
     }
     if (n_no_improv == 500 || CurrNorm < 10) {
-      return *CurrVect;
+      MyVector<Tint> Vret = *CurrVect;
+#ifdef DEBUG_POSITIVITY
+      os << "POS: INDEFINITE_GetShortPositiveVector: returning Vret=" << StringVector(Vret) << "\n";
+#endif
+      return Vret;
     }
     T norm1 = L1_norm(M_Pert);
     T norm2 = L1_norm(M);
+#ifdef DEBUG_POSITIVITY
+    os << "POS: INDEFINITE_GetShortPositiveVector: Loop step 5, norm1=" << norm1 << " norm2=" << norm2 << "\n";
+#endif
     if (norm1 > 1000 * norm2) {
       ePerturb = IdentityMat<Tint>(n);
     }
@@ -785,7 +813,10 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
 }
 
 template <typename T>
-std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
+std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat, [[maybe_unused]] std::ostream &os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetSetNegativeOrZeroVector: beginning\n";
+#endif
   DiagSymMat<T> eRecDiag = DiagonalizeSymmetricMatrix(SymMat);
   std::vector<MyVector<T>> TheSet;
   int n = SymMat.rows();
@@ -811,7 +842,10 @@ std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat) {
 template <typename T, typename Tint>
 MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
                                        std::vector<MyVector<T>> const &ListVect,
-                                       T const &MaxNorm) {
+                                       T const &MaxNorm, [[maybe_unused]] std::ostream &os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetShortVectorSpecified: beginning\n";
+#endif
   int n = M.rows();
   Tint eMult = 1;
   while (true) {
@@ -831,14 +865,20 @@ MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
 }
 
 template <typename T, typename Tint>
-MyVector<Tint> GetShortVector(MyMatrix<T> const &M, T const &MaxNorm) {
-  std::vector<MyVector<T>> ListNeg = GetSetNegativeOrZeroVector(M);
-  return GetShortVectorSpecified<T, Tint>(M, ListNeg, MaxNorm);
+MyVector<Tint> GetShortVector(MyMatrix<T> const &M, T const &MaxNorm, std::ostream& os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetShortVector: beginning\n";
+#endif
+  std::vector<MyVector<T>> ListNeg = GetSetNegativeOrZeroVector(M, os);
+  return GetShortVectorSpecified<T, Tint>(M, ListNeg, MaxNorm, os);
 }
 
 template <typename T, typename Tint>
 MyVector<Tint> GetShortVectorDegenerate(MyMatrix<T> const &M,
-                                        T const &MaxNorm) {
+                                        T const &MaxNorm, std::ostream& os) {
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetShortVectorDegenerate: beginning\n";
+#endif
   MyMatrix<T> NSP = NullspaceMat(M);
   int nbRow = NSP.rows();
   std::vector<MyVector<T>> ListVect(nbRow);
@@ -847,7 +887,7 @@ MyVector<Tint> GetShortVectorDegenerate(MyMatrix<T> const &M,
     T eMax = eVect.maxCoeff();
     ListVect[i] = eVect / eMax;
   }
-  return GetShortVectorSpecified<T, Tint>(M, ListVect, MaxNorm);
+  return GetShortVectorSpecified<T, Tint>(M, ListVect, MaxNorm, os);
 }
 
 template <typename T> std::vector<T> GetLineVector(MyMatrix<T> const &M) {
