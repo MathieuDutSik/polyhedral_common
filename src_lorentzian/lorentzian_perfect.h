@@ -66,18 +66,47 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
     throw TerminalException{1};
   }
 #endif
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 1\n";
+#endif
   MyVector<Tint> eVect_tint = UniversalVectorConversion<Tint, T>(eVect);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 2\n";
+#endif
   MyVector<T> eVect_LorMat = LorMat * eVect;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 3\n";
+#endif
   FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect_LorMat);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 4\n";
+#endif
   MyVector<Tint> eVect_LorMat_tint =
       UniversalVectorConversion<Tint, T>(eRec.TheVect);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 5\n";
+#endif
   MyMatrix<Tint> eVect_LorMat_tint_M(1, n);
   for (int u = 0; u < n; u++) {
     eVect_LorMat_tint_M(0, u) = eVect_LorMat_tint(u);
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 6\n";
+#endif
   MyMatrix<Tint> Ubasis = NullspaceIntMat(eVect_LorMat_tint_M);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 7\n";
+#endif
   MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T, Tint>(Ubasis);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 8\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors: |Ubasis_T|=" << Ubasis_T.rows() << " / " << Ubasis_T.cols() << "\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors: |LorMat|=" << LorMat.rows() << " / " << LorMat.cols() << "\n";
+#endif
   MyMatrix<T> GramMat = -Ubasis_T * LorMat * Ubasis_T.transpose();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 9\n";
+#endif
   CVPSolver<T, Tint> solver(GramMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   if (!IsPositiveDefinite(GramMat)) {
@@ -86,17 +115,50 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
   }
 #endif
   GCD_dot<Tint> TheRec_pre = ComputeGcdDot(eVect_LorMat_tint);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 10\n";
+#endif
   GCD_dot<Tint> TheRec = PositivityNormalizeGcdDot(TheRec_pre);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 11\n";
+#endif
   std::vector<MyVector<Tint>> TotalListSol;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: step 12\n";
+#endif
   Tint eVal = 1;
   while (true) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << "\n";
+#endif
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 2\n";
+#endif
     MyVector<T> eBasSol_T = UniversalVectorConversion<T, Tint>(eBasSol);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
+#endif
     T alpha = eVal * TheRec.gcd / eNorm;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 4\n";
+#endif
     MyVector<T> eTrans = eBasSol_T - alpha * eVect;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 5\n";
+#endif
     std::optional<MyVector<T>> opt = SolutionMat(Ubasis_T, eTrans);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 6\n";
+#endif
     MyVector<T> eSol = unfold_opt(opt, "Getting eSol");
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7\n";
+#endif
     T eSquareDist = alpha * alpha * eNorm;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8\n";
+#endif
     auto iele = [&]() -> std::vector<MyVector<Tint>> {
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
         return solver.FixedNormVectors(eSol, eSquareDist);
@@ -104,21 +166,37 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
         return solver.AtMostNormVectors(eSol, eSquareDist);
       }
     };
+    std::vector<MyVector<Tint>> LVect = iele();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 9 |LVect|=" << LVect.size() << "\n";
+#endif
     for (auto &eSolA : iele()) {
       MyVector<Tint> eSolC = eBasSol + Ubasis.transpose() * eSolA;
       TotalListSol.emplace_back(std::move(eSolC));
     }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 10\n";
+#endif
     if (OnlyShortest && TotalListSol.size()) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 1 return |TotalListSol|=" << TotalListSol.size() << "\n";
+#endif
       return TotalListSol;
     }
     eVal += 1;
     if (MaxScal > 0) {
       T scal = TheRec.gcd * eVal;
       if (scal > MaxScal) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+        os << "LORPERF: LORENTZ_FindPositiveVectors: doing a break\n";
+#endif
         break;
       }
     }
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 2 return |TotalListSol|=" << TotalListSol.size() << "\n";
+#endif
   return TotalListSol;
 }
 
@@ -128,7 +206,7 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
                             MyVector<T> const &PosVect, int const &TheOption,
                             std::ostream &os) {
   bool OnlyShortest = true;
-  T MaxScal = 0;
+  T MaxScal = EvaluationQuadForm(LorMat, PosVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_SearchInitialVector: Before LORENTZ_FindPositiveVectors\n";
 #endif
