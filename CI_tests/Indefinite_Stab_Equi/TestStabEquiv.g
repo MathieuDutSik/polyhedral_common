@@ -29,7 +29,7 @@ Equi_SingleTest:=function(eRecEqui)
     Exec(TheCommand);
     #
     if IsExistingFile(FileTest)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+        Print("The output file is not existing. That qualifies as a fail for Equi_SingleTest\n");
         return rec(is_correct:=false);
     fi;
     U:=ReadAsFunction(FileTest)();
@@ -71,7 +71,7 @@ Stab_SingleTest:=function(eRecStab)
     Exec(TheCommand);
     #
     if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+        Print("The output file is not existing. That qualifies as a fail for Stab_SingleTest\n");
         return rec(is_correct:=false);
     fi;
     U:=ReadAsFunction(FileOut)();

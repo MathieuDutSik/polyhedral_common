@@ -559,6 +559,9 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
       os << "POS: GetIntegralVector_allmeth_V2: diag V=" << StringVectorGAP(V) << "\n";
 #endif
       if (is_vector_correct(V)) {
+#ifdef DEBUG_POSITIVITY
+        os << "POS: GetIntegralVector_allmeth_V2: returning from diagonolization vector\n";
+#endif
         return V;
       }
     }
@@ -569,6 +572,9 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
       os << "POS: GetIntegralVector_allmeth_V2: eigen V=" << StringVectorGAP(V) << "\n";
 #endif
       if (is_vector_correct(V)) {
+#ifdef DEBUG_POSITIVITY
+        os << "POS: GetIntegralVector_allmeth_V2: returning from eigen vector\n";
+#endif
         return V;
       }
     }
@@ -710,7 +716,7 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
     }
     return sum;
   };
-  std::vector<MyVector<Tint>> GraverBasis = GetGraverKbasis<Tint>(n, 2);
+  std::vector<MyVector<Tint>> GraverBasis = GetGraverKbasis<Tint>(n, 2, os);
   auto GetAlpha = [&](MyVector<Tint> const &TheVect,
                       MyVector<Tint> const &DirVect) -> int {
     T Norm1 = EvaluationQuadForm<T, Tint>(M, TheVect);

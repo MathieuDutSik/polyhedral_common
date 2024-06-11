@@ -8,6 +8,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_GRAVER_BASIS
+#endif
+
 // A Graver basis is a set of vectors that can be used to
 // optimize solution to an optimization problem:
 // * It does not have to be optimal in any way.
@@ -30,25 +34,34 @@ MyMatrix<Tint> GetGraverBasis(MyMatrix<T> const &GramMat) {
 }
 
 template <typename Tint>
-std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k) {
+std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k, [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_GRAVER_BASIS
+  os << "GB: beginning of GetGraverKbasis n=" << n << " k=" << k << "\n";
+#endif
   std::vector<MyVector<Tint>> ListVect;
   for (int u = 1; u <= k; u++) {
     using Tidx = SetCppIterator::Tidx;
     SetCppIterator cont(n, u);
-    MyMatrix<int> LVal = BuildSet(k, 2);
+    MyMatrix<int> LVal = BuildSet(u, 2);
     int npow = LVal.rows();
     for (auto &vect : cont) {
-      MyVector<Tint> V = ZeroVector<Tint>(n);
+#ifdef DEBUG_GRAVER_BASIS
+      os << "GB: |vect|=" << vect.size() << "\n";
+#endif
       for (int ipow = 0; ipow < npow; ipow++) {
-        for (int pos = 0; pos < k; pos++) {
+        MyVector<Tint> V = ZeroVector<Tint>(n);
+        for (int pos = 0; pos < u; pos++) {
           Tidx idx = vect[pos];
           Tint sign = 2 * LVal(ipow, pos) - 1;
           V(idx) = sign;
         }
-        ListVect.push_back(V);
+        ListVect.emplace_back(std::move(V));
       }
     }
   }
+#ifdef DEBUG_GRAVER_BASIS
+  os << "GB: Returning ListVect\n";
+#endif
   return ListVect;
 }
 

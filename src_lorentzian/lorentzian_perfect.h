@@ -785,8 +785,15 @@ struct DataPerfectLorentzianFunc {
   using TadjO = PerfLorentzian_AdjO<Tint>;
   std::ostream &get_os() { return data.rddo.os; }
   Tobj f_init() {
+    std::ostream& os = get_os();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_init, before LORENTZ_GetOnePerfect\n";
+#endif
     LorentzianPerfectEntry<T, Tint> eRec = LORENTZ_GetOnePerfect<T, Tint>(
-        data.LorMat, data.TheOption, data.rddo.os);
+        data.LorMat, data.TheOption, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_init, after LORENTZ_GetOnePerfect\n";
+#endif
     MyMatrix<Tint> EXT = LORENTZ_GetEXT(eRec);
     Tobj x{std::move(EXT), {}};
     return x;
