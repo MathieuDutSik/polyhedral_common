@@ -171,7 +171,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   Tint eVal = 1;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << "\n";
+    T scal_expe = eVal * TheRec.gcd / eRec.TheMult;
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << " scal_expe=" << scal_expe << " MaxScal=" << MaxScal << "\n";
 #endif
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -226,6 +227,10 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
       MyVector<T> eSolC_T = UniversalVectorConversion<T,Tint>(eSolC);
       MyVector<T> eSolA_T = UniversalVectorConversion<T,Tint>(eSolA);
       T scal = eSolC_T.dot(eVect_LorMat);
+      if (scal != scal_expe) {
+        std::cerr << "scal=" << scal << " scal_expe=" << scal_expe << "\n";
+        throw TerminalException{1};
+      }
       if (scal > MaxScal) {
         std::cerr << "scal=" << scal << " MaxScal=" << MaxScal << "\n";
         throw TerminalException{1};
@@ -267,10 +272,10 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     }
     eVal += 1;
     if (MaxScal > 0) {
-      T scal = TheRec.gcd * eVal;
+      T scal = TheRec.gcd * eVal / eRec.TheMult;
       if (scal > MaxScal) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-        os << "LORPERF: LORENTZ_FindPositiveVectors: doing a break\n";
+        os << "LORPERF: LORENTZ_FindPositiveVectors: doing a break scal=" << scal << " MaxScal=" << MaxScal << "\n";
 #endif
         break;
       }
