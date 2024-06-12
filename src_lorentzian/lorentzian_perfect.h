@@ -26,11 +26,14 @@
 static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
 static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
+/*
+  
+ */
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
-LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
-                            T const &MaxScal, int const &TheOption,
-                            bool const &OnlyShortest, std::ostream &os) {
+LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
+                                  T const &MaxScal, int const &TheOption,
+                                  bool const &OnlyShortest, std::ostream &os) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_FindPositiveVectors: beginning\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: OnlyShortest=" << OnlyShortest << "\n";
@@ -181,8 +184,29 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 9 |LVect|=" << LVect.size() << "\n";
 #endif
-    for (auto &eSolA : iele()) {
+    for (auto &eSolA : LVect) {
       MyVector<Tint> eSolC = eBasSol + Ubasis.transpose() * eSolA;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      MyVector<T> eSolC_T = UniversalVectorConversion<T,Tint>(eSolC);
+      T scal = eSolC_T.dot(eVect_LorMat);
+      if (scal > MaxScal) {
+        std::cerr << "scal=" << scal << " MaxScal=" << MaxScal << "\n";
+        throw TerminalException{1};
+      }
+      T norm = EvaluationQuadForm(LorMat, eSolC);
+      if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
+        if (norm != 0) {
+          std::cerr << "norm=" << norm << " but it should be isotrop\n";
+          throw TerminalException{1};
+        }
+      } else {
+        if (norm < 0) {
+          std::cerr << "norm=" << norm << " but it should be of zero or positive norm\n";
+          throw TerminalException{1};
+        }
+      }
+      os << "LORPERF: LORENTZ_FindPositiveVectors: while step 10\n";
+#endif
       TotalListSol.emplace_back(std::move(eSolC));
     }
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -210,6 +234,19 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
 #endif
   return TotalListSol;
 }
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
+                            T const &MaxScal, int const &TheOption,
+                            bool const &OnlyShortest, std::ostream &os) {
+  FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect);
+  MyVector<T> const& eVectNew = eRec.TheVect;
+  T MaxScalNew = MaxScal * eRec.TheMult;
+  return LORENTZ_FindPositiveVectorsKernel<T,Tint>(LorMat, eVectNew, MaxScalNew, TheOption, OnlyShortest, os);
+}
+
+
 
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
