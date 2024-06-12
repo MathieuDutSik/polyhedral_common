@@ -27,7 +27,36 @@ static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
 static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
 /*
-  
+  We search for the solution such that 0 < x * L * eVect <= MaxScal
+  and x * L * x >= 0.
+  with the following constraints:
+    * if OnlyShortest = true, we select the found vector with
+      x * L * eVect being of minimal values.
+    * if TheOption is set to ISOTROP, then we limit ourseleves to the
+      vectors such that x * L * x = 0.
+  --
+  How do we solve that problem.
+  We iterate over the possible scalar products x * L * eVect
+  which we write as
+  x = eSol + z U
+  That gets us
+  norm = x * L * x
+       = (eSol + z U) L (U^T z^T + eSol^T)
+       = eSol L eSol^T + 2 z U L eSol^T + z U L U^T z^T
+          with G = U L U^T
+       = eSol L eSol^T + 2 z U L eSol^T + z G z^T
+          with w = eSol L U^T G^{-1}
+       = eSol L eSol^T + 2 z G w^T + z G z^T
+       = eSol L eSol^T - w G w^T + (z + w) G (z + w)^T
+       = C + (z + w) G (z + w)^T
+          with C = eSol L eSol^T - w G w^T
+
+  The middle point is going to be
+    mid = eVect * beta
+    with mid * L * eVect = eVal * TheRec.gcd
+    That gets us   beta eNorm = eVal * TheRec.gcd
+    beta = eVal TheRec.gcd / eNorm
+    mid * L * mid = beta * beta * eNorm
  */
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
@@ -38,9 +67,11 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   os << "LORPERF: LORENTZ_FindPositiveVectors: beginning\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: OnlyShortest=" << OnlyShortest << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: TheOption=" << TheOption << "\n";
-  os << "LORPERF: LORENTZ_FindPositiveVectors: |LorMat|=" << DeterminantMat(LorMat) << "\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors: det(LorMat)=" << DeterminantMat(LorMat) << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: LorMat=\n";
   WriteMatrix(os, LorMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat);
+  os << "LORPERF: LORENTZ_FindPositiveVectors: nbPlus=" << DiagInfo.nbPlus << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus << "\n";
 #endif
   int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
@@ -107,8 +138,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T, Tint>(Ubasis);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 8\n";
-  os << "LORPERF: LORENTZ_FindPositiveVectors: Ubasis_T=\n";
-  WriteMatrix(os, Ubasis_T);
+  //  os << "LORPERF: LORENTZ_FindPositiveVectors: Ubasis_T=\n";
+  //  WriteMatrix(os, Ubasis_T);
   os << "LORPERF: LORENTZ_FindPositiveVectors: |Ubasis_T|=" << Ubasis_T.rows() << " / " << Ubasis_T.cols() << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: |LorMat|=" << LorMat.rows() << " / " << LorMat.cols() << "\n";
 #endif
@@ -156,8 +187,12 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     T scal1 = eBasSol_T.dot(eVect_LorMat);
     T scal2 = alpha  * eVect.dot(eVect_LorMat);
     os << "LORPERF: LORENTZ_FindPositiveVectors: scal1=" << scal1 << " scal2=" << scal2 << "\n";
+    if (scal1 != scal2) {
+      std::cerr << "We should have scal1 = scal\n";
+      throw TerminalException{1};
+    }
 #endif
-    MyVector<T> eTrans = eBasSol_T - alpha * eVect;
+    MyVector<T> eTrans = alpha * eVect - eBasSol_T;
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 5 eTrans=" << StringVector(eTrans) << "\n";
 #endif
@@ -169,7 +204,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7\n";
 #endif
-    T eSquareDist = alpha * alpha * eNorm;
+    T beta = eVal * TheRec.gcd / eNorm; // a guess
+    T eSquareDist = beta * beta * eNorm;
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8\n";
 #endif
@@ -188,20 +224,31 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
       MyVector<Tint> eSolC = eBasSol + Ubasis.transpose() * eSolA;
 #ifdef DEBUG_LORENTZIAN_PERFECT
       MyVector<T> eSolC_T = UniversalVectorConversion<T,Tint>(eSolC);
+      MyVector<T> eSolA_T = UniversalVectorConversion<T,Tint>(eSolA);
       T scal = eSolC_T.dot(eVect_LorMat);
       if (scal > MaxScal) {
         std::cerr << "scal=" << scal << " MaxScal=" << MaxScal << "\n";
         throw TerminalException{1};
       }
-      T norm = EvaluationQuadForm(LorMat, eSolC);
+      MyVector<T> eDiffA = eSolA_T - eSol;
+      T normA = EvaluationQuadForm(GramMat, eDiffA);
+      T normC = EvaluationQuadForm(LorMat, eSolC);
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
-        if (norm != 0) {
-          std::cerr << "norm=" << norm << " but it should be isotrop\n";
+        if (normA != eSquareDist) {
+          std::cerr << "normA=" << normA << " eSquareDist=" << eSquareDist << " but should be equal\n";
+          throw TerminalException{1};
+        }
+        if (normC != 0) {
+          std::cerr << "normC=" << normC << " but it should be isotrop\n";
           throw TerminalException{1};
         }
       } else {
-        if (norm < 0) {
-          std::cerr << "norm=" << norm << " but it should be of zero or positive norm\n";
+        if (normA > eSquareDist) {
+          std::cerr << "normA=" << normA << " eSquareDist=" << eSquareDist << " but we should have normA <= eSquareDist\n";
+          throw TerminalException{1};
+        }
+        if (normC < 0) {
+          std::cerr << "normC=" << normC << " but it should be of zero or positive norm\n";
           throw TerminalException{1};
         }
       }
