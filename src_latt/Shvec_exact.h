@@ -807,7 +807,7 @@ public:
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
         MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
-        ListVect.push_back(x);
+        ListVect.emplace_back(std::move(x));
       }
       return true;
     };
@@ -839,7 +839,7 @@ public:
     auto f_insert = [&](const MyVector<Tint> &V,
                         [[maybe_unused]] const T &min) -> bool {
       MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
-      ListVect.push_back(x);
+      ListVect.emplace_back(std::move(x));
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
@@ -873,7 +873,7 @@ MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat, T const &MaxNorm,
         break;
       MyVector<Tint> eVect1(1);
       eVect1(0) = idx;
-      ListVect.push_back(eVect1);
+      ListVect.emplace_back(std::move(eVect1));
       idx++;
     }
     return MatrixFromVectorFamily(ListVect);
@@ -901,7 +901,7 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
       if (norm == SpecNorm) {
         MyVector<Tint> V(1);
         V(0) = idx;
-        ListVect.push_back(V);
+        ListVect.emplace_back(std::move(V));
         break;
       }
       if (norm > SpecNorm)
@@ -943,7 +943,7 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
   auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
     if (min == norm) {
       MyVector<Tint> V_x = Pmat.transpose() * V_y;
-      l_vect.push_back(V_x);
+      l_vect.emplace_back(std::move(V_x));
     }
     return true;
   };
@@ -968,7 +968,7 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
   auto f_insert = [&](const MyVector<Tint> &V_y,
                       [[maybe_unused]] const T &min) -> bool {
     MyVector<Tint> V_x = Pmat.transpose() * V_y;
-    l_vect.push_back(V_x);
+    l_vect.emplace_back(std::move(V_x));
     return true;
   };
   (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);

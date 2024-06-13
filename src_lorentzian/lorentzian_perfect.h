@@ -90,7 +90,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     osf << "return rec(LorMat:=" << StringMatrixGAP(LorMat)
         << ", eVect:=" << StringVectorGAP(eVect)
         << ", MaxScal:=" << MaxScal
-        << ", Option:=\"" << GetNatureOption(TheOption) << "\""
+        << ", TheOption:=\"" << GetNatureOption(TheOption) << "\""
         << ", OnlyShortest:=" << GAP_logical(OnlyShortest)
         << ", TotalList:=" << StringMatrixGAP(TotalListB) << ");\n";
   };
@@ -225,12 +225,12 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
 #endif
     MyVector<T> eSol = unfold_opt(opt, "Getting eSol");
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7\n";
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7 eSol=" << StringVector(eSol) << "\n";
 #endif
     T beta = eVal * TheRec.gcd / eNorm; // a guess
     T eSquareDist = beta * beta * eNorm;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8\n";
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8 beta=" << beta << " eSquareDist=" << eSquareDist << " det(GramMat)=" << DeterminantMat(GramMat) << "\n";
 #endif
     auto iele = [&]() -> std::vector<MyVector<Tint>> {
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
@@ -317,6 +317,9 @@ LORENTZ_FindPositiveVectors(MyMatrix<T> const &LorMat, MyVector<T> const &eVect,
                             T const &MaxScal, int const &TheOption,
                             bool const &OnlyShortest, std::ostream &os) {
   FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: eRec.TheMult=" << eRec.TheMult << "\n";
+#endif
   MyVector<T> const& eVectNew = eRec.TheVect;
   T MaxScalNew = MaxScal * eRec.TheMult;
   return LORENTZ_FindPositiveVectorsKernel<T,Tint>(LorMat, eVectNew, MaxScalNew, TheOption, OnlyShortest, os);
