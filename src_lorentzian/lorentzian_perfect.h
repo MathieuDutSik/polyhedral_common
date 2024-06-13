@@ -534,15 +534,19 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
         << "The vector eNSPbas and eNSPdir should be linearly independent\n";
     throw TerminalException{1};
   }
+  os << "LORPERF: Kernel_Flipping: |CritSet|=" << CritSet.size() << "\n";
   for (auto &x : CritSet) {
     MyVector<Tint> xext = ConcatenateScalarVector(Tint(1), x);
     MyVector<T> xext_T = UniversalVectorConversion<T, Tint>(xext);
-    if (xext_T.dot(eNSPbas) != 0) {
+    T scal_bas = xext_T.dot(eNSPbas);
+    T scal_dir = xext_T.dot(eNSPdir);
+    os << "LORPERF: Kernel_Flipping: scal_bas=" << scal_bas << " scal_dir=" << scal_dir << "\n";
+    if (scal_bas != 0) {
       std::cerr << "eNSPbas should have scalar product 0 with all entries in "
                    "CritSet\n";
       throw TerminalException{1};
     }
-    if (xext_T.dot(eNSPdir) != 0) {
+    if (scal_dir != 0) {
       std::cerr << "eNSPdir should have scalar product 0 with all entries in "
                    "CritSet\n";
       throw TerminalException{1};
@@ -809,7 +813,14 @@ LorentzianPerfectEntry<T, Tint>
 LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
                    std::vector<MyVector<Tint>> const &ListIso, Face eInc,
                    int const &TheOption, std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: beginning\n";
+  os << "LORPERF: DoFlipping: |ListIso|=" << ListIso.size() << "\n";
+#endif
   size_t n_vect = eInc.size();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: |eInc|=" << eInc.size() << " / " << eInc.count() << "\n";
+#endif
   MyMatrix<T> EXT = GetFullExpanded<T, Tint>(ListIso);
   auto get_eVert = [&]() -> size_t {
     for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -821,6 +832,9 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
     throw TerminalException{1};
   };
   size_t eVert = get_eVert();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: eVert=" << eVert << "\n";
+#endif
   std::vector<MyVector<T>> ListIsoSel;
   for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
     if (eInc[i_vect] == 1) {
@@ -828,7 +842,13 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
       ListIsoSel.push_back(eVect);
     }
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: |ListIsoSel|=" << ListIsoSel.size() << "\n";
+#endif
   MyMatrix<T> MatrIsoSel = MatrixFromVectorFamily(ListIsoSel);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: |MatrIsoSel|=" << MatrIsoSel.rows() << " / " << MatrIsoSel.cols() << "\n";
+#endif
   MyMatrix<T> NSP = NullspaceTrMat(MatrIsoSel);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   if (NSP.rows() != 1) {
@@ -849,6 +869,9 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
   };
   MyVector<T> eNSPdir = get_eNSPdir();
   MyMatrix<T> NSPb = NullspaceTrMat(EXT);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: |NSPb|=" << NSPb.rows() << " / " << NSPb.cols() << "\n";
+#endif
   MyVector<T> NSPb_0 = GetMatrixRow(NSPb, 0);
   MyVector<T> eVectB = GetReducedVector(NSPb_0);
   auto get_eNSPbas = [&]() -> MyVector<T> {
@@ -865,10 +888,16 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
       CritSet.push_back(ListIso[i_vect]);
     }
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: Before LORENTZ_Kernel_Flipping\n";
+#endif
   std::vector<MyVector<Tint>> TheFlip =
       LORENTZ_Kernel_Flipping<T, Tint>(LorMat, CritSet, eNSPbas, eNSPdir,
                                        TheOption, os)
           .ListTotal;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: DoFlipping: After LORENTZ_Kernel_Flipping |TheFlip|=" << TheFlip.size() << "\n";
+#endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
   LORENTZ_CheckCorrectnessVectorFamily(LorMat, TheFlip);
 #endif
@@ -1033,15 +1062,25 @@ struct DataPerfectLorentzianFunc {
 #endif
     MyMatrix<Tint> EXT = LORENTZ_GetEXT(eRec);
     Tobj x{std::move(EXT), {}};
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_init, returning x\n";
+#endif
     return x;
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     return ComputeInvariantPerfectForm(seed, data.LorMat, x.EXT, data.rddo.os);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+    std::ostream& os = get_os();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_repr: Before LORENTZ_TestEquivalence\n";
+#endif
     std::optional<MyMatrix<Tint>> opt =
         LORENTZ_TestEquivalence<T, Tint, Tgroup>(data.LorMat, data.LorMat,
-                                                 x.EXT, y.EXT, data.rddo.os);
+                                                 x.EXT, y.EXT, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_repr: After LORENTZ_TestEquivalence\n";
+#endif
     if (!opt) {
       return {};
     }
@@ -1057,22 +1096,32 @@ struct DataPerfectLorentzianFunc {
     return {x_ret, ret};
   }
   std::vector<TadjI> f_adj(Tobj &x) {
+    std::ostream& os = get_os();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_adj: beginning\n";
+#endif
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(x.EXT);
     ResultStabilizer<Tint, Tgroup> res_stab =
         LORENTZ_ComputeStabilizer<T, Tint, Tgroup>(data.LorMat, x.EXT,
-                                                   data.rddo.os);
+                                                   os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_adj: |GRPperm|=" << res_stab.GRPperm.size() << "\n";
+#endif
     vectface TheOutput =
         DualDescriptionRecordFullDim(EXT_T, res_stab.GRPperm, data.rddo);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_adj: |TheOutput|=" << TheOutput.size() << "\n";
+#endif
     x.GRP = res_stab.GRPperm;
     std::vector<MyVector<Tint>> ListIso;
     for (int i_row = 0; i_row < x.EXT.rows(); i_row++) {
       MyVector<Tint> V = GetMatrixRow(x.EXT, i_row);
-      ListIso.push_back(V);
+      ListIso.emplace_back(std::move(V));
     }
     std::vector<TadjI> ListAdj;
     for (auto &eInc : TheOutput) {
       LorentzianPerfectEntry<T, Tint> eRecFlip = LORENTZ_DoFlipping<T, Tint>(
-          data.LorMat, ListIso, eInc, data.TheOption, data.rddo.os);
+          data.LorMat, ListIso, eInc, data.TheOption, os);
       MyMatrix<Tint> EXTflip = LORENTZ_GetEXT(eRecFlip);
       TadjI eAdj{eInc, EXTflip};
       ListAdj.push_back(eAdj);
