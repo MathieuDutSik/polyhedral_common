@@ -26,6 +26,17 @@
 static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
 static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
+std::string GetNatureOption(int const& TheOption) {
+  if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
+    return "isotrop";
+  }
+  if (TheOption == LORENTZIAN_PERFECT_OPTION_TOTAL) {
+    return "total";
+  }
+  std::cerr << "GetNatureOption failure with TheOption=" << TheOption << "\n";
+  throw TerminalException{1};
+}
+
 /*
   We search for the solution such that 0 < x * L * eVect <= MaxScal
   and x * L * x >= 0.
@@ -72,6 +83,17 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   WriteMatrix(os, LorMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat);
   os << "LORPERF: LORENTZ_FindPositiveVectors: nbPlus=" << DiagInfo.nbPlus << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus << "\n";
+  auto f_save=[&](std::vector<MyVector<Tint>> const& TotalList) -> void {
+    std::string FileSave = FindAvailableFileFromPrefix("LORENTZ_FindPositiveVectors");
+    MyMatrix<Tint> TotalListB = MatrixFromVectorFamily(TotalList);
+    std::ofstream osf(FileSave);
+    osf << "return rec(LorMat:=" << StringMatrixGAP(LorMat)
+        << ", eVect:=" << StringVectorGAP(eVect)
+        << ", MaxScal:=" << MaxScal
+        << ", Option:=\"" << GetNatureOption(TheOption) << "\""
+        << ", OnlyShortest:=" << GAP_logical(OnlyShortest)
+        << ", TotalList:=" << StringMatrixGAP(TotalListB) << ");\n";
+  };
 #endif
   int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
@@ -267,6 +289,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     if (OnlyShortest && TotalListSol.size()) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 1 return |TotalListSol|=" << TotalListSol.size() << "\n";
+      f_save(TotalListSol);
 #endif
       return TotalListSol;
     }
@@ -283,6 +306,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 2 return |TotalListSol|=" << TotalListSol.size() << "\n";
+  f_save(TotalListSol);
 #endif
   return TotalListSol;
 }
