@@ -137,12 +137,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 3        eVect=" << StringVector(eVect) << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 3 eVect_LorMat=" << StringVector(eVect_LorMat) << "\n";
 #endif
-  FractionVector<T> eRec = RemoveFractionVectorPlusCoeff(eVect_LorMat);
-#ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_FindPositiveVectors: step 4 eRec.TheMult=" << eRec.TheMult << "\n";
-#endif
   MyVector<Tint> eVect_LorMat_tint =
-      UniversalVectorConversion<Tint, T>(eRec.TheVect);
+      UniversalVectorConversion<Tint, T>(eVect_LorMat);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 5 eVect_LorMat_tint=" << StringVector(eVect_LorMat_tint) << "\n";
 #endif
@@ -193,7 +189,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   Tint eVal = 1;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    T scal_expe = eVal * TheRec.gcd / eRec.TheMult;
+    T scal_expe = eVal * TheRec.gcd;
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << " scal_expe=" << scal_expe << " MaxScal=" << MaxScal << "\n";
 #endif
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
@@ -204,7 +200,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
 #endif
-    T alpha = eVal * TheRec.gcd / (eNorm * eRec.TheMult);
+    T alpha = eVal * TheRec.gcd / eNorm;
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 4 alpha=" << alpha << "\n";
     T scal1 = eBasSol_T.dot(eVect_LorMat);
@@ -295,7 +291,7 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     }
     eVal += 1;
     if (MaxScal > 0) {
-      T scal = TheRec.gcd * eVal / eRec.TheMult;
+      T scal = eVal * TheRec.gcd;
       if (scal > MaxScal) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
         os << "LORPERF: LORENTZ_FindPositiveVectors: doing a break scal=" << scal << " MaxScal=" << MaxScal << "\n";
