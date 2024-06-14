@@ -6,6 +6,10 @@
 #include "Group.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LORENTZIAN_PERFECT
+#endif
+
 template <typename Tint>
 void WriteEquivalence(std::optional<MyMatrix<Tint>> const &opt,
                       std::string const &OutFormat, std::ostream &os_out) {
@@ -15,6 +19,7 @@ void WriteEquivalence(std::optional<MyMatrix<Tint>> const &opt,
     } else {
       os_out << "-1\n";
     }
+    return;
   }
   if (OutFormat == "GAP") {
     os_out << "return ";
@@ -26,7 +31,7 @@ void WriteEquivalence(std::optional<MyMatrix<Tint>> const &opt,
     os_out << ";\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "Failed to find a matching entry in WriteEquivalence\n";
   throw TerminalException{1};
 }
 
@@ -40,9 +45,15 @@ void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
 
   MyMatrix<T> LorMat1 = ReadMatrixFile<T>(FileMatrix1);
   MyMatrix<T> LorMat2 = ReadMatrixFile<T>(FileMatrix2);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  std::cerr << "LORPERF: process_C: Before LORENTZ_TestEquivalenceMatrices\n";
+#endif
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(LorMat1, LorMat2,
                                                        std::cerr);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  std::cerr << "LORPERF: process_C: After LORENTZ_TestEquivalenceMatrices\n";
+#endif
   auto f = [&](std::ostream &os_out) -> void {
     WriteEquivalence(opt, OutFormat, os_out);
   };

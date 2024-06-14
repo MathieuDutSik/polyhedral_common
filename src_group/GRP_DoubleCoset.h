@@ -663,7 +663,7 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
       return DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, n, f_terminal, os);
     }
-    std::cerr << "Failed to find a matching entry\n";
+    std::cerr << "Failed to find a matching entry in get_split\n";
     throw TerminalException{1};
   };
   vectface eListSma = get_split();

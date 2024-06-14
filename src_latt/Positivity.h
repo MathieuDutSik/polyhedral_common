@@ -711,7 +711,7 @@ MyMatrix<Tint> GetRandomMatrixPerturbation(int const &n) {
     eMat(i, j) = get_rnd_sign();
     return eMat;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "Failed to find a matching entry in GetRandomMatrixPerturbation choice=" << choice << "\n";
   throw TerminalException{1};
 }
 

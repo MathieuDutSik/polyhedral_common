@@ -1024,20 +1024,32 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #endif
     bool test = f_insert(x);
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: after f_insert\n";
+    os << "ADJ_SCH: after f_insert test=" << test << "\n";
 #endif
     if (test) {
       early_termination = true;
     }
   }
   while (true) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: early_termination=" << early_termination << "\n";
+#endif
     if (early_termination) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: returning false due to early_termination = true\n";
+#endif
       return false;
     }
     if (undone.size() == 0) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: returning true due to |undone| = 0\n";
+#endif
       return true;
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
+#ifdef DEBUG_ADJACENCY_SCHEME
+      os << "ADJ_SCH: returning false due to si(start) > max_time_second > 0\n";
+#endif
       return false;
     }
     treat_one_entry();
@@ -1406,7 +1418,7 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
     for (auto & status : l_status) {
       n_sum += static_cast<size_t>(status);
     }
-    os << "ADJ_SCH: EnumerateAndStore_Serial: n_sum=" << n_sum << " test=" << test << "\n";
+    os << "ADJ_SCH: EnumerateAndStore_Serial: |l_status|=" << l_status.size() << " n_sum=" << n_sum << " test=" << test << "\n";
 #endif
     return test;
   };

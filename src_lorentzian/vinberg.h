@@ -237,7 +237,7 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot, std::ostream &os) {
       }
       return ListIdx1;
     }
-    std::cerr << "Failed to find a matching entry\n";
+    std::cerr << "Failed to find a matching entry in ReduceListRoot\n";
     throw TerminalException{1};
   };
   std::vector<int> ListIdx = get_listidx();
@@ -1085,7 +1085,7 @@ bool is_FundPoly(const VinbergTot<T, Tint> &Vtot,
   if (ChosenMethod == 2)
     return is_FundPoly_LRS(Vtot, ListRoot, os);
   //
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "Failed to find a matching entry in is_FundPoly\n";
   throw TerminalException{1};
 }
 

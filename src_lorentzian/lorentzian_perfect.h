@@ -871,7 +871,7 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
         return i_vect;
       }
     }
-    std::cerr << "Failed to find a matching entry\n";
+    std::cerr << "Failed to find a matching entry in get_eVert\n";
     throw TerminalException{1};
   };
   size_t eVert = get_eVert();
@@ -1426,6 +1426,9 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
   int max_runtime_second = 0;
   (void)EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
       data_func, f_incorrect, max_runtime_second);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: After EnumerateAndStore_Serial function call\n";
+#endif
   return opt;
 }
 

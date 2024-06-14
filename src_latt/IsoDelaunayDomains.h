@@ -321,7 +321,7 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(
           return VoronoiLinearInequality(vipc, TheVert, ListGram, os);
         }
       }
-      std::cerr << "Failed to find a matching entry\n";
+      std::cerr << "Failed to find a matching entry in IsoDelaunay::get_ineq\n";
       throw TerminalException{1};
     };
     for (int i_adj = 0; i_adj < n_adj; i_adj++) {
@@ -467,7 +467,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
       return *opt;
     }
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "Failed to find a matching entry in GetInitialGenericDelaunayTesselation\n";
   throw TerminalException{1};
 }
 
