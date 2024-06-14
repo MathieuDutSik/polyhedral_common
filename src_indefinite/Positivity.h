@@ -4,7 +4,6 @@
 
 // clang-format off
 #include "MAT_Matrix.h"
-#include "MAT_MatrixFLT.h"
 #include "MAT_MatrixInt.h"
 #include "COMB_Vectors.h"
 #include "GraverBasis.h"
