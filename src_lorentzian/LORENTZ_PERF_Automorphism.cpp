@@ -18,7 +18,7 @@ void WriteGenerators(std::vector<MyMatrix<Tint>> const &l_gen,
     os_out << ";\n";
     return;
   }
-  std::cerr << "Failed to find a matching entry\n";
+  std::cerr << "Failed to find a matching entry in WriteGenerators\n";
   throw TerminalException{1};
 }
 
