@@ -1401,6 +1401,7 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
 #endif
     bool test = f_incorrect(x);
 #ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: EnumerateAndStore_Serial: test=" << test << "\n";
     size_t n_sum = 0;
     for (auto & status : l_status) {
       n_sum += static_cast<size_t>(status);

@@ -1125,10 +1125,19 @@ struct DataPerfectLorentzianFunc {
     os << "LORPERF: f_repr: After LORENTZ_TestEquivalence\n";
 #endif
     if (!opt) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: f_repr: returning not isomorphic\n";
+#endif
       return {};
     }
     MyMatrix<Tint> const &eBigMat = *opt;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_repr: |eBigMat|=" << eBigMat.rows() << " / " << eBigMat.cols() << "\n";
+#endif
     TadjO ret{y.eInc, eBigMat};
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_repr: Before returning ret\n";
+#endif
     return ret;
   }
   std::pair<Tobj, TadjO> f_spann(TadjI const &x) {
@@ -1386,11 +1395,20 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
   using Tobj = typename Tdata::Tobj;
   std::optional<MyMatrix<Tint>> opt;
   auto f_incorrect = [&](Tobj const &x) -> bool {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: TestEquivalenceMatrices: Before LORENTZ_TestEquivalence\n";
+#endif
     std::optional<MyMatrix<Tint>> opt_res =
         LORENTZ_TestEquivalence<T, Tint, Tgroup>(LorMat1, LorMat2, x.EXT, EXT2,
                                                  os);
-    if (!opt_res) {
-      MyMatrix<Tint> const &eBigMat = *opt_res;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: TestEquivalenceMatrices: After LORENTZ_TestEquivalence\n";
+#endif
+    if (opt_res) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: TestEquivalenceMatrices: Matching opt_res\n";
+#endif
+      MyMatrix<Tint> eBigMat = Inverse(*opt_res);
       opt = eBigMat;
 #ifdef DEBUG_LORENTZIAN_PERFECT
       MyMatrix<T> eBigMat_T = UniversalMatrixConversion<T, Tint>(eBigMat);
@@ -1399,9 +1417,9 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
         std::cerr << "It is not actually an equivalence\n";
         throw TerminalException{1};
       }
+      os << "We found a matching entry. Exiting the enumeration\n";
 #endif
       return true;
-      ;
     }
     return false;
   };
