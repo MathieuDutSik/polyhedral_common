@@ -551,10 +551,15 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
                    "CritSet\n";
       throw TerminalException{1};
     }
+    T norm = EvaluationQuadForm<T, Tint>(LorMat, x);
     if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
-      T norm = EvaluationQuadForm<T, Tint>(LorMat, x);
       if (norm != 0) {
         std::cerr << "CritSet contains some non-isotrop vectors\n";
+        throw TerminalException{1};
+      }
+    } else {
+      if (norm < 0) {
+        std::cerr << "CritSet contains some a vector of negative norm\n";
         throw TerminalException{1};
       }
     }
@@ -652,13 +657,20 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
 }
 
 template <typename T, typename Tint>
-MyVector<T> GetOneOutsideRay(MyMatrix<T> const &LorMat,
+MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
                              MyMatrix<T> const &SpannBasis,
                              std::vector<MyVector<Tint>> const &TheSet,
                              MyVector<T> const &eNSPbas, std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOneOutsideRay: begin\n";
+#endif
   MyVector<T> TheSet0 = UniversalVectorConversion<T, Tint>(TheSet[0]);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOneOutsideRay: We have TheSet0\n";
+#endif
   MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
 #ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOneOutsideRay: |TheMat|=" << TheMat.rows() << " / " << TheMat.cols() << "\n";
   DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat);
   if (dsm.nbMinus == 0) {
     std::cerr << "We should have a negative in the entry\n";
@@ -667,14 +679,27 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const &LorMat,
 #endif
   int n_dim = TheMat.rows();
   MyMatrix<T> ePerturb = IdentityMat<T>(n_dim);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOneOutsideRay: Before while loop\n";
+#endif
   while (true) {
     MyMatrix<T> TheMatPerturb = -ePerturb * TheMat * ePerturb.transpose();
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have |TheMatPerturb|=" << TheMatPerturb.rows() << " / " << TheMatPerturb.cols() << "\n";
+#endif
     MyMatrix<T> uVect =
         GetIntegralPositiveVector_allmeth<T, T>(TheMatPerturb, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have uVect\n";
+#endif
     MyMatrix<T> SpannMatrixPert = ePerturb * SpannBasis;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have SpannMatrixPert\n";
+#endif
     MyVector<T> RetVect = SpannMatrixPert.transpose() * uVect;
 #ifdef DEBUG_LORENTZIAN_PERFECT
     T TheNorm = EvaluationQuadForm<T, T>(LorMat, RetVect);
+    os << "LORPERF: GetOneOutsideRay: TheNorm=" << TheNorm << "\n";
     if (TheNorm == 0) {
       std::cerr << "The vector should be outside of the cone and so have "
                    "negative norm\n";
@@ -682,8 +707,12 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const &LorMat,
     }
 #endif
     MyVector<T> tVect = LorMat * RetVect;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have tVect\n";
+#endif
     T eScal = tVect.dot(TheSet0);
 #ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have eScal=" << eScal << "\n";
     for (auto &eVect : TheSet) {
       MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       T fScal = tVect.dot(eVect_T);
@@ -694,8 +723,14 @@ MyVector<T> GetOneOutsideRay(MyMatrix<T> const &LorMat,
     }
 #endif
     MyVector<T> eNSPdir = ConcatenateScalarVector(T(-eScal), tVect);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have eNSPdir\n";
+#endif
     std::optional<T> TheUpperBound_opt =
         GetUpperBound(LorMat, eNSPbas, eNSPdir);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: We have TheUpperBound_opt\n";
+#endif
     if (TheUpperBound_opt.has_value()) {
       return eNSPdir;
     }
@@ -709,7 +744,7 @@ MyMatrix<T> GetFullExpanded(std::vector<MyVector<Tint>> const &CritSet) {
   int n_vect = CritSet.size();
   MyMatrix<T> ListVectExt(n_vect, dim + 1);
   for (int i_vect = 0; i_vect < n_vect; i_vect++) {
-    ListVectExt(i_vect, 0);
+    ListVectExt(i_vect, 0) = 1;
     for (int i = 0; i < dim; i++) {
       ListVectExt(i_vect, i + 1) =
           UniversalScalarConversion<T, Tint>(CritSet[i_vect](i));
@@ -747,27 +782,27 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
                                                       int const &TheOption,
                                                       std::ostream &os) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_GetOnePerfect: beginning\n";
+  os << "LORPERF: GetOnePerfect: beginning\n";
 #endif
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   MyVector<Tint> CentralVect =
       INDEFINITE_GetShortPositiveVector<T, Tint>(LorMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_GetOnePerfect: We have CentralVect\n";
+  os << "LORPERF: GetOnePerfect: We have CentralVect\n";
 #endif
   MyVector<T> CentralVect_T = UniversalVectorConversion<T, Tint>(CentralVect);
   std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T, Tint>(
       LorMat, CentralVect_T, TheOption, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_GetOnePerfect: We have CritSet\n";
+  os << "LORPERF: GetOnePerfect: We have CritSet\n";
 #endif
   MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
   MyVector<T> LorMat_Central = LorMat * CentralVect_T;
   T eScal = LorMat_Central.dot(CritSet0_T);
   MyVector<T> eNSPbas = ConcatenateScalarVector(T(-eScal), LorMat_Central);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_GetOnePerfect: Before loop\n";
+  os << "LORPERF: GetOnePerfect: Before loop\n";
 #endif
   while (true) {
     int rnk = 0;
@@ -775,7 +810,9 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
       rnk = RankMat(MatrixFromVectorFamily(CritSet));
     }
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_GetOnePerfect rnk=" << rnk << " |CritSet|=" << CritSet.size()
+    os << "LORPERF: GetOnePerfect n=" << n
+       << " rnk=" << rnk
+       << " |CritSet|=" << CritSet.size()
        << "\n";
 #endif
     if (rnk == n) {
@@ -785,6 +822,9 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
       return {CritSet, eNSPbas, CentralVect_T};
     }
     MyMatrix<T> EXT = GetFullExpanded<T, Tint>(CritSet);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOnePerfect: We have |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+#endif
     MyMatrix<T> NSP = NullspaceTrMat(EXT);
 #ifdef DEBUG_LORENTZIAN_PERFECT
     if (NSP.rows() == 0) {
@@ -793,15 +833,18 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
     }
 #endif
     MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
-    MyMatrix<T> eNSPdir =
-        GetOneOutsideRay<T, Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_GetOnePerfect: Before LORENTZ_Kernel_Flipping\n";
+    os << "LORPERF: GetOnePerfect: We have |ListDir|=" << ListDir.rows() << " / " << ListDir.cols() << "\n";
+#endif
+    MyMatrix<T> eNSPdir =
+        LORENTZ_GetOneOutsideRay<T, Tint>(LorMat, ListDir, CritSet, eNSPbas, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOnePerfect: Before LORENTZ_Kernel_Flipping\n";
 #endif
     ResultFlipping<T, Tint> eRecB = LORENTZ_Kernel_Flipping<T, Tint>(
         LorMat, CritSet, eNSPbas, eNSPdir, TheOption, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: LORENTZ_GetOnePerfect: After LORENTZ_Kernel_Flipping\n";
+    os << "LORPERF: GetOnePerfect: After LORENTZ_Kernel_Flipping\n";
 #endif
     CritSet = eRecB.ListTotal;
     eNSPbas = eRecB.eNSPtest;
@@ -889,7 +932,7 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
     }
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: DoFlipping: Before LORENTZ_Kernel_Flipping\n";
+  os << "LORPERF: DoFlipping: Before LORENTZ_Kernel_Flipping |CritSet|=" << CritSet.size() << "\n";
 #endif
   std::vector<MyVector<Tint>> TheFlip =
       LORENTZ_Kernel_Flipping<T, Tint>(LorMat, CritSet, eNSPbas, eNSPdir,
@@ -1101,6 +1144,9 @@ struct DataPerfectLorentzianFunc {
     os << "LORPERF: f_adj: beginning\n";
 #endif
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(x.EXT);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: f_adj: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
+#endif
     ResultStabilizer<Tint, Tgroup> res_stab =
         LORENTZ_ComputeStabilizer<T, Tint, Tgroup>(data.LorMat, x.EXT,
                                                    os);

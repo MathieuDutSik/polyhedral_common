@@ -641,8 +641,15 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have V1\n";
 #endif
-  MyVector<Tint> V2 = V1 * res.B.transpose();
+  MyVector<Tint> V2 = res.B.transpose() * V1;
 #ifdef DEBUG_POSITIVITY
+  T norm_red = EvaluationQuadForm(res.Mred, V1);
+  T norm = EvaluationQuadForm(M, V2);
+  if (norm_red != norm) {
+    std::cerr << "norm=" << norm << " norm_red=" << norm_red << "\n";
+    std::cerr << "But they should be equal\n";
+    throw TerminalException{1};
+  }
   os << "POS: GetIntegralVector_allmeth: We have V2\n";
 #endif
   return V2;
