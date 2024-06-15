@@ -2,6 +2,14 @@
 #ifndef SRC_INDEFINITE_MODELS_APPROXIMATEMODELS_H_
 #define SRC_INDEFINITE_MODELS_APPROXIMATEMODELS_H_
 
+// clang-format off
+#include "Isotropic.h"
+// clang-format on
+
+#ifdef DEBUG
+#define DEBUG_APPROXIMATE_MODELS
+#endif
+
 
 template<typename T>
 struct ApproximateModel {
@@ -26,6 +34,77 @@ bool INDEF_FORM_IsEven(MyMatrix<T> const& Qmat) {
   return true;
 }
 
+// The Eichler transvection are defined for an even lattice (so integral and even norms of vectors.
+// For such a lattice L* is defined as Q^{-1} Z^n
+// The formula describing them is
+// E_{f,x}(y) = y + (y,x) f - (x,x) / 2 (y,f) f - (y,f) x
+// The Eichler transvection preserve the lattice L because (x,x) / 2 in Z, (y,x) in Z and (y,f) in Z.
+// Also if y in L* since the above is still true, we have that E_{f,x} preserve L* and the image of
+// the transformation in L*/L is the identity.
+//
+// Test of composition property:
+// We have
+// E_{f,y}(z) = z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y
+// E_{f,x}E_{f,y}(z) =
+//   (z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y)
+//   + (z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y, x) f
+//   - (x,x) / 2 (z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y, f) f
+//   - (z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y, f) x
+// = z + (z,y) f - (y,y) / 2 (z,f) f - (z,f) y
+//   + (z - (z,f) y, x) f
+//   - (x,x) / 2 (z,f) f
+//   - (z,f) x
+// = z + (z,x + y) f - (z,f) (x+y) - (y,y)/2 (z,f) f - (x,x)/2 (z,f) f
+//     -(z,f) (y,x) f
+// = z + (z,x + y) f - (z,f) (x+y) - (x+y,x+y)/2 (z,f) f
+template<typename T>
+MyMatrix<T> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector<T> const& f, MyVector<T> const& x) {
+  if (!INDEF_FORM_IsEven(Qmat)) {
+    std::cerr << "The lattice Qmat should be even in order to define the Eichler transvection\n";
+    throw TerminalException{1};
+  }
+  int n = Qmat.rows();
+#ifdef DEBUG_APPROXIMATE_MODELS
+  T fNorm = EvaluationQuadForm(Qmat, f);
+  MyVector<T> eProd = Qmat * x;
+  T scal = f.dot(eProd);
+  if (fNorm != 0 || scal != 0) {
+    std::cerr << "eNorm or scal are inconsistent\n";
+    throw TerminalException{1};
+  }
+#endif
+  T xNorm = EvaluationQuadForm(Qmat, x);
+  MyMatrix<T> RetMat(n,n);
+  for (int u=0; u<n; u++) {
+    MyVector<T> eImg = ZeroVector<T>(n);
+    MyVector<T> y = ZeroVector<T>(n);
+    y(u) = 1;
+    eImg += y;
+    //
+    T scal_yx = ScalarProductQuadForm(Qmat, y, x);
+    eImg += scal_yx * f;
+    T scal_yf = ScalarProductQuadForm(Qmat, y, f);
+    eImg -= (xNorm/2) * scal_yf * f;
+    eImg -= scal_yf * x;
+    AssignMatrixRow(RetMat, u, eImg);
+  }
+  return RetMat;
+}
+
+
+
+template<typename T>
+std::vector<MyMatrix<T>> GeneratorsSL2Z() {
+  MyMatrix<T> eGenS = ZeroMatrix<T>(2,2);
+  eGenS(0,1) = -1;
+  eGenS(1,0) = 1;
+  MyMatrix<T> eGenT = ZeroMatrix<T>(2,2);
+  eGenT(0,0) = 1;
+  eGenT(0,1) = 1;
+  eGenT(1,1) = 1;
+  return {eGenS, eGenT};
+}
+
 
 template<typename T>
 struct InternalEichler {
@@ -47,6 +126,7 @@ struct InternalEichler {
 template<typename T, typename Tgroup>
 ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const& Qmat) {
   int n = Qmat.rows();
+#ifdef DEBUG_APPROXIMATE_MODELS
   std::vector<int> LIdx{1,0,3,2};
   for (int iRow=0; iRow<4; iRow++) {
     int iColCrit = LIdx[iRow];
@@ -76,6 +156,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     std::cerr << "MODIND: The lattice is not even\n";
     throw TerminalException{1};
   }
+#endif
   // ComputeClasses
   std::vector<MyVector<T>> ListClasses = GetTranslationClasses(Gmat);
   std::vector<MyMatrix<T>> GRPstart;
@@ -188,53 +269,48 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     };
     std::vector<MyMatrix<T>> ListGenerators;
     auto FuncInsert=[&](MyMatrix<T> const& TheMat) -> void {
+#ifdef DEBUG_APPROXIMATE_MODELS
       if (!IsIntegralMatrix(TheMat)) {
         std::cerr << "The matrix TheMat is not integral\n";
         throw TerminalException{1};
       }
+      MyMatrix<T> eProd = TheMat * Qmat * TheMat.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "The matrix is not preserving the quadratic form\n";
+        throw TerminalException{1};
+      }
+#endif
+      ListGenerators.push_back(TheMat);
     };
-
-        ListGenerators:=[];
-        FuncInsert:=function(TheMat)
-            if IsIntegralMat(TheMat)=false then
-                Error("
-            fi;
-            if TheMat * Qmat * TransposedMat(TheMat) <> Qmat then
-                Error("The matrix is not preserving the quadratic form");
-            fi;
-            Add(ListGenerators, TheMat);
-        end;
-        for eGen in GeneratorsOfGroup(GRPstart)
-        do
-            FuncInsert(eGen);
-        od;
-        # Generators of SL2(Z)
-        eGenS:=[[0,-1],[1,0]];
-        eGenT:=[[1,1],[0,1]];
-        for eGen in [eGenS, eGenT]
-        do
-            FuncInsert(ExpandGenerator(GetLeftMultiplication(eGen)));
-            FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
-        od;
-        # Now looking at the isotropic vectors, generating the Eichler transvections
-        for i in [1..4]
-        do
-            eVect:=ListWithIdenticalEntries(n,0);
-            eVect[i]:=1;
-            eProd:=eVect * Qmat;
-            BasisOrth:=NullspaceIntMat(TransposedMat([eProd]));
-            for eOrth in BasisOrth
-            do
-                FuncInsert(INDEF_FORM_Eichler_Transvection(Qmat, eVect, eOrth));
-            od;
-        od;
-        return Group(ListGenerators);
-    end;
-    # Notion of divisor
-    # For an element y in a lattice L, define div(y) the integer such that
-    # (L,y) = div(y) Z.
-    # For each v in L* we can find smallest d such that w = dv in L.
-    # And we then have div(w) = d
+    for (auto & eGen : shr_grp->GRPstart) {
+      FuncInsert(eGen);
+    }
+    for (auto & eGen : GeneratorsSL2Z()) {
+      FuncInsert(ExpandGenerator(GetLeftMultiplication(eGen)));
+      FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
+    }
+    // Now looking at the isotropic vectors, generating the Eichler transvections
+    for (int i=0; i<4; i++) {
+      MyVector<T> eVect = ZeroVector<T>(n);
+      eVect(i) = 1;
+      MyVector<T> eProd = Qmat * eVect;
+      MyMatrix<T> eProd_M(1,n);
+      for (int i=0; i<n; i++) {
+        eProd_M(0,i) = eProd(i);
+      }
+      MyMatrix<T> BasisOrth = NullspaceIntMat(eProd_M);
+      for (int i=0; i<BasisOrth.rows(); i++) {
+        MyVector<T> eOrth = GetMatrixRow(BasisOrth, i);
+        FuncInsert(INDEF_FORM_Eichler_Transvection(Qmat, eVect, eOrth));
+      }
+    }
+    return ListGenerators;
+  };
+  // Notion of divisor
+  // For an element y in a lattice L, define div(y) the integer such that
+  // (L,y) = div(y) Z.
+  // For each v in L* we can find smallest d such that w = dv in L.
+  // And we then have div(w) = d
     EnumerateVectorOverDiscriminant:=function(X)
         # For each vector v in M* / M
         # We want (x, v) divided by d.
