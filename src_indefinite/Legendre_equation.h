@@ -35,7 +35,7 @@
   * −ac is a square modulo |b|
   * −ab is a square modulo |c|.
  */
-template <typename T> bool determine_solvability(MyVector<T> const &aReduced) {
+template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduced) {
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i = 0; i < 3; i++) {
@@ -238,7 +238,7 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
 #ifdef DEBUG_LEGENDRE
   std::cerr << "V4=" << StringVectorGAP(V4) << "\n";
 #endif
-  return determine_solvability(V4);
+  return determine_solvability_dim3(V4);
 }
 
 // clang-format off
