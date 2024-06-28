@@ -184,17 +184,18 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
   for (auto & p : primes) {
     bool test = Padic_anisotropy_quaternary(p);
     if (test) {
-      // The Lemma is about anisotropy 
+      // The Lemma is about anisotropy not isotropy
       return false;
     }
   }
   return true;
 }
 
-
-
-
-
+template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  MyVector<Tring> red_diag = get_reduced_diagonal(M);
+  return determine_solvability_dim4(red_diag);
+}
 
 
 // clang-format off

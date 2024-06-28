@@ -225,6 +225,29 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   return Kernel_FindIsotropic(M, os);
 }
 
+template <typename T>
+bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
+  int n = M.rows();
+  if (n == 1) {
+    std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
+    return opt.has_value();
+  }
+  if (n == 2) {
+    std::optional<MyVector<T>> opt = FindIsotropicRankTwo(M);
+    return opt.has_value();
+  }
+  if (n == 3) {
+    // Apply first the Legendre theorem
+    return ternary_has_isotropic_vector(M);
+  }
+  if (n == 4) {
+    // Apply the quaternary stuff
+    return quaternary_has_isotropic_vector(M);
+  }
+  return true;
+}
+
+
 // clang-format off
 #endif  //  SRC_INDEFINITE_ISOTROPIC_H_
 // clang-format on
