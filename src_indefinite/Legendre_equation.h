@@ -35,7 +35,7 @@
   * −ac is a square modulo |b|
   * −ab is a square modulo |c|.
  */
-template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduced) {
+template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduced, [[maybe_unused]] std::ostream& os) {
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i = 0; i < 3; i++) {
@@ -47,11 +47,11 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
     }
   }
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
+  os << "LEG: n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
 #endif
   if (n_plus == 0 || n_minus == 0) {
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: Returning false by positivity condition\n";
+    os << "LEG: Returning false by positivity condition\n";
 #endif
     return false;
   }
@@ -60,7 +60,7 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   T c = aReduced(2);
 #ifdef DEBUG_LEGENDRE
   T prod = a * b * c;
-  std::cerr << "LEG: prod=" << prod << "\n";
+  os << "LEG: prod=" << prod << "\n";
 #endif
   T a_abs = T_abs(a);
   T b_abs = T_abs(b);
@@ -69,9 +69,9 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   T b_cnt = -a * c;
   T c_cnt = -a * b;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: a_abs=" << a_abs << " a_cnt=" << a_cnt << "\n";
-  std::cerr << "LEG: b_abs=" << b_abs << " b_cnt=" << b_cnt << "\n";
-  std::cerr << "LEG: c_abs=" << c_abs << " c_cnt=" << c_cnt << "\n";
+  os << "LEG: a_abs=" << a_abs << " a_cnt=" << a_cnt << "\n";
+  os << "LEG: b_abs=" << b_abs << " b_cnt=" << b_cnt << "\n";
+  os << "LEG: c_abs=" << c_abs << " c_cnt=" << c_cnt << "\n";
 #endif
   //
   // Test early termination by using Jacobi.
@@ -81,22 +81,22 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   bool test_jacobi_b = compute_jacobi_symbol(b_cnt, b_abs);
   bool test_jacobi_c = compute_jacobi_symbol(c_cnt, c_abs);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: test_jacobi, a=" << test_jacobi_a << " b=" << test_jacobi_b << " c=" << test_jacobi_c << "\n";
+  os << "LEG: test_jacobi, a=" << test_jacobi_a << " b=" << test_jacobi_b << " c=" << test_jacobi_c << "\n";
 #endif
   if (!test_jacobi_a || !test_jacobi_b || !test_jacobi_c) {
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: early termination from Jacobi criterion\n";
+    os << "LEG: early termination from Jacobi criterion\n";
 #endif
     return false;
   }
   //
   bool test_a = is_quadratic_residue(a_cnt, a_abs);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "QUADTEST: [" << a_cnt << "," << a_abs << "," << test_a << "],\n";
+  os << "QUADTEST: [" << a_cnt << "," << a_abs << "," << test_a << "],\n";
 #endif
   if (!test_a) {
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: Returning false by quadratic residue for a\n";
+    os << "LEG: Returning false by quadratic residue for a\n";
 #endif
     return false;
   }
@@ -104,11 +104,11 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   //
   bool test_b = is_quadratic_residue(b_cnt, b_abs);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "QUADTEST: [" << b_cnt << "," << b_abs << "," << test_b << "],\n";
+  os << "QUADTEST: [" << b_cnt << "," << b_abs << "," << test_b << "],\n";
 #endif
   if (!test_b) {
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: Returning false by quadratic residue for b\n";
+    os << "LEG: Returning false by quadratic residue for b\n";
 #endif
     return false;
   }
@@ -116,16 +116,16 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   //
   bool test_c = is_quadratic_residue(c_cnt, c_abs);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "QUADTEST: [" << c_cnt << "," << c_abs << "," << test_c << "],\n";
+  os << "QUADTEST: [" << c_cnt << "," << c_abs << "," << test_c << "],\n";
 #endif
   if (!test_c) {
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: Returning false by quadratic residue for c\n";
+    os << "LEG: Returning false by quadratic residue for c\n";
 #endif
     return false;
   }
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: Returning true as the condition appears to be satisfied\n";
+  os << "LEG: Returning true as the condition appears to be satisfied\n";
 #endif
   return true;
 }
@@ -220,34 +220,34 @@ reduction_information(MyVector<T> const &aV) {
 }
 
 template<typename T>
-MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T> const &M) {
+MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
   DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "V1=" << StringVectorGAP(V1) << "\n";
+  os << "V1=" << StringVectorGAP(V1) << "\n";
 #endif
   MyVector<T> V2 = RemoveFractionVector(V1);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "V2=" << StringVectorGAP(V2) << "\n";
+  os << "V2=" << StringVectorGAP(V2) << "\n";
 #endif
   MyVector<Tring> V3 = UniversalVectorConversion<Tring, T>(V2);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "V3=" << StringVectorGAP(V3) << "\n";
+  os << "V3=" << StringVectorGAP(V3) << "\n";
 #endif
   MyVector<Tring> V4 = reduction_information(V3).second;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "V4=" << StringVectorGAP(V4) << "\n";
+  os << "V4=" << StringVectorGAP(V4) << "\n";
 #endif
   return V4;
 }
 
 
 
-template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
+template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  MyVector<Tring> red_diag = get_reduced_diagonal(M);
-  return determine_solvability_dim3(red_diag);
+  MyVector<Tring> red_diag = get_reduced_diagonal(M, os);
+  return determine_solvability_dim3(red_diag, os);
 }
 
 // clang-format off

@@ -1,6 +1,8 @@
 Read("../common.g");
 Print("Beginning TestIsotropic\n");
 
+OnlyTestExistence:=true;
+
 TestIsotropic:=function(eRec)
     local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm;
     n:=Length(eRec.M);
@@ -11,7 +13,11 @@ TestIsotropic:=function(eRec)
     #
     WriteMatrixFile(FileIn, eRec.M);
     #
-    eProg:="../../src_indefinite/LATT_FindIsotropic";
+    if OnlyTestExistence then
+        eProg:="../../src_indefinite/LATT_TestIsotropic";
+    else
+        eProg:="../../src_indefinite/LATT_FindIsotropic";
+    fi;
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
@@ -25,7 +31,7 @@ TestIsotropic:=function(eRec)
         Print("The result of has_isotropic is inconsistent\n");
         return rec(is_correct:=false);
     fi;
-    if U.has_isotropic then
+    if U.has_isotropic and OnlyTestExistence=false then
         V:=U.V;
         eNorm:=V * eRec.M * V;
         if eNorm<>0 then
@@ -46,7 +52,8 @@ ListDim5high:=Filtered(ListRec, x->Length(x.M) > 4);
 #ListRec:=Concatenation(ListDim3_B, ListDim5high);
 
 
-ListRec:=ListDim3_B;
+#ListRec:=ListDim3_B;
+ListRec:=ListDim4_A;
 
 
 

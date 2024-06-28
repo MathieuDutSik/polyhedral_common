@@ -206,7 +206,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   }
   if (n == 3) {
     // Apply first the Legendre theorem
-    bool test = ternary_has_isotropic_vector(M);
+    bool test = ternary_has_isotropic_vector(M, os);
 #ifdef DEBUG_ISOTROPIC
     os << "ternary_has_isotropic_vector test=" << test << "\n";
 #endif
@@ -217,17 +217,23 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     }
   }
   if (n == 4) {
-    // This is the case where we have a missing ingredient
-    std::cerr << "The following call might fail because there is no isotropic "
-                 "vectors\n";
-    return Kernel_FindIsotropic(M, os);
+    // Apply the quaternary test
+    bool test = quaternary_has_isotropic_vector(M, os);
+#ifdef DEBUG_ISOTROPIC
+    os << "quaternary_has_isotropic_vector test=" << test << "\n";
+#endif
+    if (test) {
+      return Kernel_FindIsotropic(M, os);
+    } else {
+      return {};
+    }
   }
   // Now n is greater than 5, so there is an isotropic vector
   return Kernel_FindIsotropic(M, os);
 }
 
 template <typename T>
-bool is_isotropic(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
   if (n == 1) {
     std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
@@ -239,11 +245,11 @@ bool is_isotropic(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   }
   if (n == 3) {
     // Apply first the Legendre theorem
-    return ternary_has_isotropic_vector(M);
+    return ternary_has_isotropic_vector(M, os);
   }
   if (n == 4) {
     // Apply the quaternary stuff
-    return quaternary_has_isotropic_vector(M);
+    return quaternary_has_isotropic_vector(M, os);
   }
   return true;
 }

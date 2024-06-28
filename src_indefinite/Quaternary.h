@@ -98,7 +98,7 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p) {
   find an explicit solution.
  */
 template<typename T>
-bool determine_solvability_dim4(MyVector<T> const& a) {
+bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostream& os) {
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i=0; i<4; i++) {
@@ -110,7 +110,7 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
     }
   }
 #ifdef DEBUG_QUATERNARY
-  std::cerr << "QUAD: n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
+  os << "QUAD: n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
 #endif
   if (n_plus == 0 || n_minus == 0) {
 #ifdef DEBUG_QUATERNARY
@@ -130,6 +130,13 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
       }
     }
   }
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: primes =";
+  for (auto& p : primes) {
+    os << " " << p;
+  }
+  os << "\n";
+#endif
   //
   T a1 = a(0);
   T a2 = a(1);
@@ -179,10 +186,16 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
     };
     int hilbertA = get_hilbert_a12();
     int hilbertB = get_minus_hilbert_a34();
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: hilbertA=" << hilbertA << " hilbertB=" << hilbertB << "\n";
+#endif
     return hilbertA == hilbertB;
   };
   for (auto & p : primes) {
     bool test = Padic_anisotropy_quaternary(p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: p=" << p << " Padic_anisotropy_quaternary=" << test << "\n";
+#endif
     if (test) {
       // The Lemma is about anisotropy not isotropy
       return false;
@@ -191,10 +204,10 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
   return true;
 }
 
-template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M) {
+template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  MyVector<Tring> red_diag = get_reduced_diagonal(M);
-  return determine_solvability_dim4(red_diag);
+  MyVector<Tring> red_diag = get_reduced_diagonal(M, os);
+  return determine_solvability_dim4(red_diag, os);
 }
 
 
