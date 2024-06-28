@@ -219,7 +219,9 @@ reduction_information(MyVector<T> const &aV) {
   return {TransMat, aRet};
 }
 
-template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
+template<typename T>
+MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T> const &M) {
+  using Tring = typename underlying_ring<T>::ring_type;
   DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
 #ifdef DEBUG_LEGENDRE
@@ -229,7 +231,6 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
 #ifdef DEBUG_LEGENDRE
   std::cerr << "V2=" << StringVectorGAP(V2) << "\n";
 #endif
-  using Tring = typename underlying_ring<T>::ring_type;
   MyVector<Tring> V3 = UniversalVectorConversion<Tring, T>(V2);
 #ifdef DEBUG_LEGENDRE
   std::cerr << "V3=" << StringVectorGAP(V3) << "\n";
@@ -238,7 +239,15 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
 #ifdef DEBUG_LEGENDRE
   std::cerr << "V4=" << StringVectorGAP(V4) << "\n";
 #endif
-  return determine_solvability_dim3(V4);
+  return V4;
+}
+
+
+
+template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  MyVector<Tring> red_diag = get_reduced_diagonal(M);
+  return determine_solvability_dim3(red_diag);
 }
 
 // clang-format off

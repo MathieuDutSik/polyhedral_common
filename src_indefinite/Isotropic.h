@@ -5,6 +5,7 @@
 // clang-format off
 #include "DeterminantMinimization.h"
 #include "Legendre_equation.h"
+#include "Quaternary.h"
 #include "Indefinite_LLL.h"
 #include <algorithm>
 #include <limits>
@@ -226,7 +227,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
 }
 
 template <typename T>
-bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
+bool is_isotropic(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   int n = M.rows();
   if (n == 1) {
     std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);

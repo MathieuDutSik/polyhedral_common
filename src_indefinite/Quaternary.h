@@ -33,9 +33,9 @@
  */
 template<typename T>
 bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p) {
-  let two(2);
+  T two(2);
   int miss_val = -1;
-  auto get_idx=[&] -> int {
+  auto get_idx=[&]() -> int {
     for (int i=0; i<3; i++) {
       T res = ResInt(a(i), p);
       if (res == 0) {
@@ -65,7 +65,7 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p) {
       T four(4);
       for (int pos1=0; pos1<3; pos1++) {
         int pos2 = ResInt(pos1+1,3);
-        T sum = a(pos1) + a(pos2]);
+        T sum = a(pos1) + a(pos2);
         T res = ResInt(sum, four);
         if (res == 0) {
           return true;
@@ -136,19 +136,19 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
   T a3 = a(2);
   T a4 = a(3);
   MyVector<T> a12(3);
-  MyVector<T> a12(0) = a1;
-  MyVector<T> a12(1) = a2;
-  MyVector<T> a12(2) = -1;
+  a12(0) = a1;
+  a12(1) = a2;
+  a12(2) = -1;
   MyVector<T> a12_red = reduction_information(a12).second;
   MyVector<T> a34(3);
-  MyVector<T> a34(0) = -a3;
-  MyVector<T> a34(1) = -a4;
-  MyVector<T> a34(2) = -1;
+  a34(0) = -a3;
+  a34(1) = -a4;
+  a34(2) = -1;
   MyVector<T> a34_red = reduction_information(a34).second;
   /*
     This is Lemma 13 of SP.
    */
-  auto Padic_anisotropy_quaternary=[&](p const& val) -> bool {
+  auto Padic_anisotropy_quaternary=[&](T const& p) -> bool {
     T prod12_A = - a1 * a2;
     Padic<T> prod12_B = Padic_from_integer(prod12_A, p);
     Padic<T> prod12_C = Padic_reduce_precision(prod12_B, 3);
@@ -156,7 +156,7 @@ bool determine_solvability_dim4(MyVector<T> const& a) {
     Padic<T> prod34_B = Padic_from_integer(prod34_A, p);
     Padic<T> prod34_C = Padic_reduce_precision(prod34_B, 3);
     Padic<T> prod34inv = Padic_inverse(prod34_C, p);
-    Padic<T> proc12_34inv = Padic_product(prod12_C, prod34inv, p);
+    Padic<T> prod12_34inv = Padic_product(prod12_C, prod34inv, p);
     bool test = Padic_is_square(prod12_34inv, p);
     if (!test) {
       return false;
