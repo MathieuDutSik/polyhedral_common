@@ -140,6 +140,12 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
 template <typename T>
 std::pair<MyMatrix<T>, MyVector<T>>
 reduction_information(MyVector<T> const &aV) {
+#ifdef DEBUG_LEGENDRE
+  if (aV.size() != 3) {
+    std::cerr << "The length should be exactly 3\n";
+    throw TerminalException{1};
+  }
+#endif
   T a = aV(0);
   T b = aV(1);
   T c = aV(2);
@@ -235,19 +241,16 @@ MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T
 #ifdef DEBUG_LEGENDRE
   os << "V3=" << StringVectorGAP(V3) << "\n";
 #endif
-  MyVector<Tring> V4 = reduction_information(V3).second;
-#ifdef DEBUG_LEGENDRE
-  os << "V4=" << StringVectorGAP(V4) << "\n";
-#endif
-  return V4;
+  return V3;
 }
 
 
 
 template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  MyVector<Tring> red_diag = get_reduced_diagonal(M, os);
-  return determine_solvability_dim3(red_diag, os);
+  MyVector<Tring> red_diag_A = get_reduced_diagonal(M, os);
+  MyVector<Tring> red_diag_B = reduction_information(red_diag_A).second;
+  return determine_solvability_dim3(red_diag_B, os);
 }
 
 // clang-format off

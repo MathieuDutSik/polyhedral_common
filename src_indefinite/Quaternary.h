@@ -32,7 +32,10 @@
   We combine Lemma 7 and Lemma 8.
  */
 template<typename T>
-bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p) {
+bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p, [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: Padic_isotropy_ternary, beginning\n";
+#endif
   T two(2);
   int miss_val = -1;
   auto get_idx=[&]() -> int {
@@ -99,6 +102,9 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p) {
  */
 template<typename T>
 bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostream& os) {
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: determine_solvability_dim4, beginning |a|=" << a.size() << "\n";
+#endif
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i=0; i<4; i++) {
@@ -152,24 +158,49 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
   a34(1) = -a4;
   a34(2) = -1;
   MyVector<T> a34_red = reduction_information(a34).second;
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: We have a12_red and a34_red\n";
+#endif
   /*
     This is Lemma 13 of SP.
    */
   auto Padic_anisotropy_quaternary=[&](T const& p) -> bool {
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: p=" << p << "\n";
+#endif
     T prod12_A = - a1 * a2;
-    Padic<T> prod12_B = Padic_from_integer(prod12_A, p);
-    Padic<T> prod12_C = Padic_reduce_precision(prod12_B, 3);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod12_A=" << prod12_A << "\n";
+#endif
+    Padic<T> prod12_B = Padic_from_integer(prod12_A, p, 3);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod12_B=" << Padic_to_string(prod12_B) << "\n";
+#endif
     T prod34_A = - a3 * a4;
-    Padic<T> prod34_B = Padic_from_integer(prod34_A, p);
-    Padic<T> prod34_C = Padic_reduce_precision(prod34_B, 3);
-    Padic<T> prod34inv = Padic_inverse(prod34_C, p);
-    Padic<T> prod12_34inv = Padic_product(prod12_C, prod34inv, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod34_A=" << prod34_A << "\n";
+#endif
+    Padic<T> prod34_B = Padic_from_integer(prod34_A, p, 3);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod34_B=" << Padic_to_string(prod34_B) << "\n";
+#endif
+    Padic<T> prod34inv = Padic_inverse(prod34_B, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod34inv=" << Padic_to_string(prod34inv) << "\n";
+#endif
+    Padic<T> prod12_34inv = Padic_product(prod12_B, prod34inv, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: prod12_34inv=" << Padic_to_string(prod12_34inv) << "\n";
+#endif
     bool test = Padic_is_square(prod12_34inv, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: test=" << test << "\n";
+#endif
     if (!test) {
       return false;
     }
     auto get_hilbert_a12=[&]() -> int {
-      bool test12 = Padic_isotropy_ternary(a12_red, p);
+      bool test12 = Padic_isotropy_ternary(a12_red, p, os);
       if (test12) {
         return 1;
       } else {
@@ -177,7 +208,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
       }
     };
     auto get_minus_hilbert_a34=[&]() -> int {
-      bool test34 = Padic_isotropy_ternary(a34_red, p);
+      bool test34 = Padic_isotropy_ternary(a34_red, p, os);
       if (test34) {
         return -1;
       } else {
@@ -206,7 +237,13 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
 
 template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: quaternary_has_isotropic_vector, beginning\n";
+#endif
   MyVector<Tring> red_diag = get_reduced_diagonal(M, os);
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: quaternary_has_isotropic_vector, we have red_diag\n";
+#endif
   return determine_solvability_dim4(red_diag, os);
 }
 
