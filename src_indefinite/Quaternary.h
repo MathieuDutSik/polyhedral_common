@@ -49,18 +49,37 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p, [[maybe_unused]] s
   };
   if (p != two) {
     int pos = get_idx();
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, pos=" << pos << "\n";
+#endif
     if (pos == miss_val) {
       // Lemma 7
       return true;
     }
     int pos1 = ResInt(pos+1, 3);
     int pos2 = ResInt(pos+2, 3);
-    T coeff1 = a(pos1);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, pos1=" << pos1 << " pos2=" << pos2 << "\n";
+#endif
+    T coeff1 = ResInt(a(pos1), p);
     T coeff2 = a(pos2);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, coeff1=" << coeff1 << " coeff2=" << coeff2 << "\n";
+#endif
     T coeff1_inv = mod_inv(coeff1, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, coeff1_inv=" << coeff1_inv << "\n";
+#endif
     T a = - coeff2 * coeff1_inv;
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, a=" << a << "\n";
+#endif
     // Lemma 8, (i)
-    return is_quadratic_residue(a, p);
+    bool test = is_quadratic_residue(a, p);
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: Padic_isotropy_ternary, test=" << test << "\n";
+#endif
+    return test;
   } else {
     int pos = get_idx();
     if (pos == miss_val) {
@@ -148,25 +167,31 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
   T a2 = a(1);
   T a3 = a(2);
   T a4 = a(3);
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: a =" << a1 << " " << a2 << " " << a3 << " " << a4 << "\n";
+#endif
   MyVector<T> a12(3);
   a12(0) = a1;
   a12(1) = a2;
   a12(2) = -1;
   MyVector<T> a12_red = reduction_information(a12).second;
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: a12_red=" << StringVector(a12_red) << "\n";
+#endif
   MyVector<T> a34(3);
   a34(0) = -a3;
   a34(1) = -a4;
   a34(2) = -1;
   MyVector<T> a34_red = reduction_information(a34).second;
 #ifdef DEBUG_QUATERNARY
-  os << "QUAD: We have a12_red and a34_red\n";
+  os << "QUAD: a34_red=" << StringVector(a34_red) << "\n";
 #endif
   /*
     This is Lemma 13 of SP.
    */
   auto Padic_anisotropy_quaternary=[&](T const& p) -> bool {
 #ifdef DEBUG_QUATERNARY
-    os << "QUAD: p=" << p << "\n";
+    os << "QUAD: ---------------- p=" << p << " -----------------------\n";
 #endif
     T prod12_A = - a1 * a2;
 #ifdef DEBUG_QUATERNARY
@@ -201,6 +226,9 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
     }
     auto get_hilbert_a12=[&]() -> int {
       bool test12 = Padic_isotropy_ternary(a12_red, p, os);
+#ifdef DEBUG_QUATERNARY
+      os << "QUAD: test12=" << test12 << "\n";
+#endif
       if (test12) {
         return 1;
       } else {
@@ -209,6 +237,9 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
     };
     auto get_minus_hilbert_a34=[&]() -> int {
       bool test34 = Padic_isotropy_ternary(a34_red, p, os);
+#ifdef DEBUG_QUATERNARY
+      os << "QUAD: test34=" << test34 << "\n";
+#endif
       if (test34) {
         return -1;
       } else {

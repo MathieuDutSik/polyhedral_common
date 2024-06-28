@@ -76,6 +76,7 @@ FullTest:=function()
 end;
 
 n_error:=FullTest();
+Print("n_error=", n_error, "\n");
 if n_error > 0 then
     # Error case
     GAP_EXIT_CODE(1);
