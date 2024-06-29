@@ -11,7 +11,7 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
+void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
                      size_t const &n_vect, size_t const &n, int const &pos) {
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
@@ -26,15 +26,20 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
 }
 
 int main() {
+  boost::mpi::environment env(boost::mpi::threading::serialized);
+  if (env.thread_level() < boost::mpi::threading::serialized) {
+    env.abort(-1);
+  }
   boost::mpi::communicator world;
   int rank = world.rank();
-  size_t rank_s = static_cast<size_t>(rank);
   int size = world.size();
+  std::cerr << "rank=" << rank << " size=" << size << "\n";
+  size_t rank_s = static_cast<size_t>(rank);
   size_t size_s = static_cast<size_t>(size);
   //
   // Now reading the
   //
-  using Tint = int;
+  using Tint = int64_t;
   std::string eFileI = "ctype_dim6.nc";
   std::string eFileO = "ctype_invariant6.nc";
   if (!IsExistingFile(eFileI)) {
@@ -95,7 +100,11 @@ int main() {
     }
   }
   std::vector<int> loc_nb_adjacent, loc_nb_triple, loc_nb_ineq, loc_nb_ineq_after_crit, loc_nb_free, loc_nb_autom;
+  std::string LogFileO = "LOG_" + std::to_string(rank);
+  std::ofstream log(LogFileO);
+  log << "Beginning\n";
   for (auto & i_ctype : l_idx) {
+    log << "i_ctype=" << i_ctype << "\n";
     TypeCtypeExch<Tint> eType = NC_ReadMatrix(i_ctype);
     int nb_adjacent = NC_GetNbAdjacent(i_ctype);
     loc_nb_adjacent.push_back(nb_adjacent);
@@ -161,7 +170,7 @@ int main() {
   if (rank == 0) {
     netCDF::NcFile dataFileO(eFileO, netCDF::NcFile::replace,
                              netCDF::NcFile::nc4);
-    netCDF::NcDim eDimNbCtype = dataFileO.addDim("number_ctype");
+    netCDF::NcDim eDimNbCtype = dataFileO.addDim("number_ctype", n_ctype);
     netCDF::NcDim eDimN = dataFileO.addDim("n", n);
     netCDF::NcDim eDimNvect = dataFileO.addDim("n_vect", n_vect);
     //

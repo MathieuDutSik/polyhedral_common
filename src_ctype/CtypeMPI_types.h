@@ -19,10 +19,10 @@
 // clang-format off
 
 // #define DEBUG
-#define TIMINGS
-#define PRINT_FLIP
-#define PRINT_TRIPLE
-#define PRINT_GET_ADJ
+//#define TIMINGS
+//#define PRINT_FLIP
+//#define PRINT_TRIPLE
+//#define PRINT_GET_ADJ
 // #define DEBUG_CRITERION_ELIMINATION
 
 // The expression of the vectors is obtained from Section 5 of
