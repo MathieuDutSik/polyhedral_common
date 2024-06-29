@@ -519,7 +519,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype, [[maybe_unused]] std::ostream& o
   return {std::move(ListTriples), std::move(MappingVect)};
 }
 
-template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M, std::ostream& os) {
+template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   int n = M.cols();
   int nbRow = M.rows();
 #ifdef PRINT_EXPRESS
