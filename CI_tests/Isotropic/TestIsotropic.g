@@ -53,7 +53,7 @@ ListDim5high:=Filtered(ListRec, x->Length(x.M) > 4);
 
 
 #ListRec:=ListDim3_B;
-ListRec:=ListDim4_A;
+#ListRec:=ListDim4_A;
 
 
 
