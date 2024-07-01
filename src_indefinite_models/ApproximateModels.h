@@ -16,7 +16,7 @@ struct ApproximateModel {
   std::function<std::vector<MyVector<T>>(void)> GetApproximateGroup;
   std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise;
   std::function<std::vector<MyVector<T>>(T)> GetCoveringOrbitRepresentatives;
-  std::function<MyVector<T>(T)> GetOneOrbitRepresentative;
+  std::function<std::optional<MyVector<T>>(T)> GetOneOrbitRepresentative;
 };
 
 template<typename T>
@@ -109,9 +109,41 @@ std::vector<MyMatrix<T>> GeneratorsSL2Z() {
 template<typename T>
 struct InternalEichler {
   MyMatrix<T> Qmat;
+  MyMatrix<T> Gmat;
   std::vector<MyVector<T>> ListClasses;
   std::vector<MyVector<T>> GRP;
 };
+
+
+template<typename T>
+std::vector<T> GetSquareDivisors(T const& X) {
+  std::map<T, size_t> map = FactorsIntMap(T_abs(X));
+  std::vector<std::vector<T>> ListListProd;
+  for (auto & kv : map) {
+    T const& p = kv.first;
+    size_t mult = QuoInt(kv.second, 2);
+    std::vector<T> ListProd;
+    T val(1);
+    for (size_t u=0; u<=mult; u++) {
+      ListProd.push_back(val);
+      val *= p;
+    }
+    ListListProd.push_back(ListProd);
+  }
+  std::vector<T> ListSquareDiv{ T(1) };
+  for (auto & ListProd : ListListProd) {
+    std::vector<T> V;
+    for (auto & x : ListSquareDiv) {
+      for (auto & y : ListProd) {
+        T z = x * y;
+        V.push_back(z);
+      }
+    }
+    ListSquareDiv = V;
+  }
+  return ListSquareDiv;
+}
+
 
 /*
   Based on paragraph 10 of Eichler book
@@ -157,10 +189,16 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     throw TerminalException{1};
   }
 #endif
+  MyMatrix<T> Gmat(n-4, n-4);
+  for (int i=4; i<n; i++) {
+    for (int j=4; j<n; j++) {
+      Gmat(i-4, j-4) = Qmat(i,j);
+    }
+  }
   // ComputeClasses
   std::vector<MyVector<T>> ListClasses = GetTranslationClasses(Gmat);
   std::vector<MyMatrix<T>> GRPstart;
-  InternalEichler<T> ie{Qmat, ListClasses, GRPstart};
+  InternalEichler<T> ie{Qmat, Gmat, ListClasses, GRPstart};
   std::shared_ptr<InternalEichler<T>> shr_ptr=make_shared<InternalEichler<T>>(ie);
   std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<T>> const& GRPmatr) -> void {
     shr_ptr->GRPstart = GRPmatr;
@@ -306,116 +344,133 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     }
     return ListGenerators;
   };
+
+
   // Notion of divisor
   // For an element y in a lattice L, define div(y) the integer such that
   // (L,y) = div(y) Z.
   // For each v in L* we can find smallest d such that w = dv in L.
   // And we then have div(w) = d
-    EnumerateVectorOverDiscriminant:=function(X)
-        # For each vector v in M* / M
-        # We want (x, v) divided by d.
-        #
-        # We should have e_I.x = d alpha_I
-        # We should have (x,x) = X
-        # For the first coordinates, we can write them as (0 , 0 , d , du)
-        # By changing the value of u, we can shift the value of u which shifts the value
-        # by 2 d^2, + or -.
-        # The lattice is even so the 2 is not a problem.
-        #
-        # So, if we have some X, we want to find u\in Z and v in Z^{n-4} such that X = 2d^2 u + A[v]
-        # with A the Gram matrix of M.
-        # v must actually be of the form v = v0 + d A^{-1} h.
-        # We are only interested on the value modulo 2d^2 of A on those vectors. So, it is a finite problem.
-        # But it is a hard one as the search space might be very large.
-        #
-        if X mod 2 = 1 then
-            return [];
-        fi;
-        Xdiv2 := X / 2;
-        # The two hyperbolic planes are unimodular so for the discriminant, we only need
-        # to consider the Gmat part.
-        Ginv:=Inverse(Gmat);
-        Print("Det(Gmat)=", DeterminantMat(Gmat), "\n");
-        ListSolution:=[];
-        for eClass1 in ListClasses
-        do
-            # The vector eClass1 is defined modulo an element of Gmat Z^n
-            # Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
-            # Thus eClass3 is defined modulo an element of d Z^n
-            # So, we can write v = eClass3 + d w
-            # which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
-            # So, the problem is actually linear.
-            eClass2:=eClass1 * Ginv;
-            DivD_frac:=RemoveFractionPlusCoef(eClass2).TheMult;
-            DivD:=NumeratorRat(DivD_frac);
-            eClass3:=eClass2 * DivD;
-            #
-            X_res1:=Xdiv2 mod DivD;
-            X_res2:=Xdiv2 mod (DivD * DivD);
-            Aclass3_norm:=(eClass3 * Gmat * eClass3) / 2;
-            Aclass3_res1:=Aclass3_norm mod DivD;
-            Aclass3_res2:=Aclass3_norm mod (DivD * DivD);
-            if Aclass3_res1=X_res1 then # if not we cannot find a solution
-                # and so
-                # (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
-                diff:=(X_res2 - Aclass3_res2) / DivD;
-                eProd:=eClass3 * Gmat;
-                eRec:=GcdVector(eProd);
-                if eRec.TheGcd=0 then
-                    quot:=0;
-                else
-                    quot:=diff / eRec.TheGcd;
-                fi;
-                if IsInt(quot) then
-                    w:=quot * eRec.ListCoef;
-                    eClass4:=eClass3 + DivD * w;
-                    Aclass4_norm:=(eClass4 * Gmat * eClass4) / 2;
-                    Aclass4_res2:=Aclass4_norm mod (DivD * DivD);
-                    if Aclass4_res2<>X_res2 then
-                        Error("A bug to resolve");
-                    fi;
-                    u:=(Xdiv2 - Aclass4_norm) / (DivD * DivD);
-                    eSolution:=Concatenation([0,0,DivD, DivD*u], eClass4);
-                    eNorm:=eSolution*Qmat*eSolution;
-                    if eNorm<>X then
-                        Error("A bug to resolve");
-                    fi;
-                    Add(ListSolution, eSolution);
-                fi;
-            fi;
-        od;
-        return ListSolution;
-    end;
-    GetCoveringOrbitRepresentatives:=function(X)
-        local ListDiv, ListSolution, eDiv, eSol;
-        if X = 0 then
-            return EnumerateVectorOverDiscriminant(0);
-        fi;
-        ListDiv:=GetSquareDivisors(X);
-        ListSolution:=[];
-        for eDiv in ListDiv
-        do
-            for eSol in EnumerateVectorOverDiscriminant(X / (eDiv*eDiv))
-            do
-                Add(ListSolution, eDiv * eSol);
-            od;
-        od;
-        return ListSolution;
-    end;
-    GetOneOrbitRepresentative:=function(X)
-        local Xdiv;
-        if X mod 2 = 1 then
-            return fail;
-        fi;
-        Xdiv:=X / 2;
-        return Concatenation([1,Xdiv], ListWithIdenticalEntries(n-2, 0));
-    end;
-    return rec(ApproximateGroup:=GetApproximateGroup(),
-               SetListClassesOrbitwise:=SetListClassesOrbitwise,
-               GetCoveringOrbitRepresentatives:=GetCoveringOrbitRepresentatives,
-               GetOneOrbitRepresentative:=GetOneOrbitRepresentative);
-
-
+  std::function<std::vector<MyVector<T>>(T)> EnumerateVectorOverDiscriminant = [=](T const& X) -> std::vector<MyVector<T>> {
+    // For each vector v in M* / M
+    // We want (x, v) divided by d.
+    //
+    // We should have e_I.x = d alpha_I
+    // We should have (x,x) = X
+    // For the first coordinates, we can write them as (0 , 0 , d , du)
+    // By changing the value of u, we can shift the value of u which shifts the value
+    // by 2 d^2, + or -.
+    // The lattice is even so the 2 is not a problem.
+    //
+    // So, if we have some X, we want to find u\in Z and v in Z^{n-4} such that X = 2d^2 u + A[v]
+    // with A the Gram matrix of M.
+    // v must actually be of the form v = v0 + d A^{-1} h.
+    // We are only interested on the value modulo 2d^2 of A on those vectors. So, it is a finite problem.
+    // But it is a hard one as the search space might be very large.
+    //
+    MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+    MyMatrix<T> const& Gmat = shr_ptr->Gmat;
+    int n = Qmat.rows();
+    T two(2);
+    if (RestInt(X, two) == T(1)) {
+      return {};
+    }
+    T Xdiv2 = X / 2;
+    // The two hyperbolic planes are unimodular so for the discriminant, we only need
+    // to consider the Gmat part.
+    MyMatrix<T> Ginv = Inverse(Gmat);
+    std::vector<MyVector<T>> ListSolution;
+    for (auto & eClass1 : ListClasses) {
+      // The vector eClass1 is defined modulo an element of Gmat Z^n
+      // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
+      // Thus eClass3 is defined modulo an element of d Z^n
+      // So, we can write v = eClass3 + d w
+      // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
+      // So, the problem is actually linear.
+      MyVector<T> eClass2 = Ginv * eClass1;
+      T DivD_frac:=RemoveFractionPlusCoef(eClass2).TheMult;
+      T DivD = NumeratorRat(DivD_frac);
+      T DivD_sqr = DivD * DivD;
+      MyVector<T> eClass3 = DivD * eClass2;
+      T X_res1 = ResInt(Xdiv2, DivD);
+      T X_res2 = ResInt(Xdiv2, DivD_sqr);
+      T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
+      T Aclass3_res1 = ResInt(Aclass3_norm, DidD);
+      T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
+      if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
+        // and so
+        // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
+        T diff = (X_res2 - Aclass3_res2) / DivD;
+        MyVector<T> eProd = Gmat * eClass3;
+        GCD_dot<T> eRec = ComputeGcdDot(eProd);
+        auto iife_quot=[&]() -> T {
+          if (eRec.TheGcd == 0) {
+            return T(0);
+          } else {
+            return diff / eRec.TheGcd;
+          }
+        };
+        T quot = iife_quot();
+        if (IsInteger(quot)) {
+          MyVector<T> quot = quot * eRec.V;
+          MyVector<T> eClass4 = eClass3 + DivD * w;
+          T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
+          T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);
+#ifdef DEBUG_APPROXIMATE_MODELS
+          if (Aclass4_res2 != X_res2) {
+            std::cerr << "A bug to resolve\n";
+            throw TerminalException{1};
+          }
+#endif
+          T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
+          MyVector<T> eSolution = ZeroVector<T>(n);
+          eSolution(2) = DivD;
+          eSolution(3) = DivD * u;
+          for (int u=0; u<n-4; u++) {
+            eSolution(u+4) = eClass4(u);
+          }
+#ifdef DEBUG_APPROXIMATE_MODELS
+          T eNorm = EvaluationQuadForm(Qmat, eSolution);
+          if (eNorm != X) {
+            std::cerr << "eNorm / X is inconsistent\n";
+            throw TerminalException{1};
+          }
+#endif
+          ListSolution.push_back(eSolution);
+        }
+      }
+    }
+    return ListSolution;
+  };
+  std::function<std::vector<MyVector<T>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<T>> {
+    if (X == 0) {
+      return EnumerateVectorOverDiscriminant(0);
+    }
+    std::vector<T> ListDiv = GetSquareDivisors(X);
+    std::vector<MyVector<T>> ListSolution;
+    for (auto & eDiv : ListDiv) {
+      T Xtarget = Z / (eDiv * eDiv);
+      for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget)) {
+        MyVector<X> eV = eDiv * eSol;
+        ListSolution.push_back(eV);
+      }
+    }
+    return ListSolution;
+  };
+  std::function<std::optional<MyVector<T>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<T>> {
+    T two(2);
+    if (RestInt(X, two) == T(1)) {
+      return {};
+    }
+    T Xdiv2 = X / 2;
+    MyMatrix<T> const& Gmat = shr_ptr->Gmat;
+    int n = Qmat.rows();
+    MyVector<T> eSol = ZeroVector<T>(n);
+    eSol(0) = 1;
+    eSol(1) = Xdiv;
+    return eSol;
+  };
+  return {GetApproximateGroup, SetListClassesOrbitwise, GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
 }
 
 
