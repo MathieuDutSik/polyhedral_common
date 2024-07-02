@@ -8,7 +8,8 @@
 #PROGRAM		= CTYP_MPI_EnumerationAdjacencies
 #PROGRAM		= CTYP_CheckAdjacency
 #PROGRAM		= CTYP_MPI_AdjScheme
-PROGRAM		= CTYP_ComputeInvariant_B
+#PROGRAM		= CTYP_ComputeInvariant_B
+PROGRAM		= NC_ComputeAverage
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

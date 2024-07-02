@@ -1,11 +1,4 @@
 PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies CTYP_CheckAdjacency CTYP_SearchMatrix CTYP_LookForNoFreeVector CTYP_MPI_AdjScheme
-#PROGRAM		= CTYP_PrepareInitialFile
-#PROGRAM		= CTYP_MPI_EnumerationAdjacencies
-#PROGRAM		= CTYP_CheckAdjacency
-#PROGRAM		= CTYP_TimingRandomAccess
-#PROGRAM		= CTYP_PrepareInitialFile
-#PROGRAM		= CTYP_MakeInitialFile
-#PROGRAM		= CTYP_CheckCanonical
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
