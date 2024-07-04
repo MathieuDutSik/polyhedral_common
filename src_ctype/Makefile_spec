@@ -9,7 +9,8 @@
 #PROGRAM		= CTYP_CheckAdjacency
 #PROGRAM		= CTYP_MPI_AdjScheme
 #PROGRAM		= CTYP_ComputeInvariant_B
-PROGRAM		= NC_ComputeAverage
+#PROGRAM		= NC_ComputeAverage
+PROGRAM		= CTYP_ComputeHashStat
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
