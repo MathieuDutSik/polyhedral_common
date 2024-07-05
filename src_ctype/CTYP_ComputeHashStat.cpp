@@ -63,10 +63,19 @@ int main(int argc, char *argv[]) {
       return {M};
     };
     std::unordered_map<size_t, size_t> map1;
+    size_t red_print = 1000;
+    size_t pos = 0;
+    size_t n_block = 0;
     for (size_t u=0; u<n_ctype; u++) {
       TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(u);
       size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
       map1[e_hash] += 1;
+      pos += 1;
+      if (pos == red_print) {
+        n_block += 1;
+        std::cerr << "n_block=" << n_block << "\n";
+        pos = 0;
+      }
     }
     std::map<size_t, size_t> map2;
     for (auto & kv1: map1) {
