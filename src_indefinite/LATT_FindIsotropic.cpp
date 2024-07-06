@@ -38,10 +38,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 3 && argc != 5) {
-      std::cerr
-          << "LATT_FindIsotropic arithmetic [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_FindIsotropic arith [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_FindIsotropic arithmetic [FileI]\n";
+      std::cerr << "LATT_FindIsotropic arith [FileI]\n";
+      std::cerr << "\n";
+      std::cerr << "Possibilities for arith: rational\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -65,10 +66,14 @@ int main(int argc, char *argv[]) {
         return process<T>(FileI, OutFormat, os);
       }
       */
+
+      /*
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileI, OutFormat, os);
       }
+      */
+
       /*
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;

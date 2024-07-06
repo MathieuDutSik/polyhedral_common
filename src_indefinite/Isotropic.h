@@ -47,7 +47,14 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
   MyMatrix<T> Pw = IdentityMat<T>(n);
   MyMatrix<T> Qw = Q;
   T curr_norm = get_norm(Q);
+#ifdef DEBUG_ISOTROPIC
+  size_t iter = 0;
+#endif
   while(true) {
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: GetIsotropIndefiniteLLL while loop, iter=" << iter << "\n";
+    iter += 1;
+#endif
     // Compute the LLL reduction.
     ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw);
     if (!res.success) {

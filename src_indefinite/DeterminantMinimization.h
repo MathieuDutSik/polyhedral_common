@@ -42,25 +42,26 @@ ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod, [[
   os << "DETMIN: GetAdjustedBasis, NSP=\n";
   WriteMatrix(os, NSP);
 #endif
-  if (0 < dimNSP && dimNSP < M.rows()) {
-    MyMatrix<T> Orth = NullspaceTrMat(NSP);
+  MyMatrix<T> Orth = NullspaceTrMat(NSP);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-    os << "DETMIN: GetAdjustedBasis, Orth=\n";
-    WriteMatrix(os, Orth);
+  os << "DETMIN: GetAdjustedBasis, Orth=\n";
+  WriteMatrix(os, Orth);
 #endif
-    MyMatrix<T> OrthTr = Orth.transpose();
+  MyMatrix<T> OrthTr = Orth.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-    os << "DETMIN: GetAdjustedBasis, OrthTr=\n";
-    WriteMatrix(os, OrthTr);
+  os << "DETMIN: GetAdjustedBasis, OrthTr=\n";
+  WriteMatrix(os, OrthTr);
 #endif
-    NSP = NullspaceIntMat(OrthTr);
+  MyMatrix<T> NSP_b = NullspaceIntMat(OrthTr);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-    os << "DETMIN: GetAdjustedBasis, Now NSP=\n";
-    WriteMatrix(os, NSP);
+  os << "DETMIN: GetAdjustedBasis, Now NSP_b=\n";
+  WriteMatrix(os, NSP_b);
 #endif
-  }
-  MyMatrix<T> BasisComp = SubspaceCompletionInt(NSP, n_row);
-  MyMatrix<T> BasisTot = Concatenate(NSP, BasisComp);
+  MyMatrix<T> BasisComp = SubspaceCompletionInt(NSP_b, n_row);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: GetAdjustedBasis, After SubspaceCompletionInt\n";
+#endif
+  MyMatrix<T> BasisTot = Concatenate(NSP_b, BasisComp);
   return {dimNSP, BasisTot};
 }
 
@@ -117,9 +118,14 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
     throw TerminalException{1};
   }
   int n = Q.rows();
+  bool is_n_even = true;
+  if (ResInt(n, 2) == 1) {
+    is_n_even = false;
+  }
   T det = DeterminantMat(Q);
   T det_abs = T_abs(det);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
+  os << "DETMIN: is_n_even=" << is_n_even << "\n";
   os << "DETMIN: n=" << n << " det_abs=" << det_abs << "\n";
   os << "DETMIN: Q=\n";
   WriteMatrix(os, Q);
@@ -143,6 +149,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
     }
   };
 #endif
+  std::map<T, size_t> map_lemma6;
   while (true) {
     std::vector<Tring> list_P_erase;
     bool DoSomethingGlobal = false;
@@ -292,7 +299,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         v_mult_s -= 2 * dimNSPB;
       }
       // Apply Lemma 6
-      if (d_mult_i == v_mult_i && n > 2 * d_mult_i && !DoSomething) {
+      size_t & ref = map_lemma6[p];
+      if (d_mult_i == v_mult_i && d_mult_i >= 2 && n > 2 * d_mult_i && !DoSomething && ref == 0) {
+        ref = 1;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         os << "DETMIN: Apply Lemma 6\n";
         os << "DETMIN: Before det=" << DeterminantMat(Qw) << " d_mult_i=" << d_mult_i << "\n";
@@ -340,7 +349,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         os << "DETMIN: After FindIsotropicVectorMod\n";
 #endif
         if (opt) {
-          MyVector<T> const &eV = *opt;
+          MyVector<T> const &eV_pre = *opt;
+          MyVector<T> eV = RemoveFractionVectorPlusCoeff(eV_pre).TheVect;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
           os << "DETMIN: We have |eV|=" << eV.size() << "\n";
           os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
@@ -355,7 +365,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
           for (int i = 0; i < d_mult_i; i++)
             M(0, i) = eV(i);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: We have M\n";
+          os << "DETMIN: We have M, n=" << n << "\n";
+          os << "DETMIN: M=\n";
+          WriteMatrix(os, M);
 #endif
           MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
