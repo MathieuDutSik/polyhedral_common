@@ -113,7 +113,7 @@ struct InternalEichler {
   MyMatrix<T> Qmat;
   MyMatrix<T> Gmat;
   std::vector<MyVector<T>> ListClasses;
-  std::vector<MyVector<T>> GRPstart;
+  std::vector<MyMatrix<T>> GRPstart;
 };
 
 
@@ -121,12 +121,14 @@ template<typename T>
 std::vector<T> GetSquareDivisors(T const& X) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(X));
   std::vector<std::vector<T>> ListListProd;
+  int64_t two(2);
   for (auto & kv : map) {
     T const& p = kv.first;
-    size_t mult = QuoInt(kv.second, 2);
+    int64_t mult = kv.second;
+    int64_t mult_div = QuoInt(mult, two);
     std::vector<T> ListProd;
     T val(1);
-    for (size_t u=0; u<=mult; u++) {
+    for (int64_t u=0; u<=mult_div; u++) {
       ListProd.push_back(val);
       val *= p;
     }
@@ -244,7 +246,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     }
     shr_ptr->ListClasses = ListClasses;
   };
-  std::function<std::vector<MyVector<T>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+  std::function<std::vector<MyMatrix<T>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
@@ -452,7 +454,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     std::vector<T> ListDiv = GetSquareDivisors(X);
     std::vector<MyVector<T>> ListSolution;
     for (auto & eDiv : ListDiv) {
-      T Xtarget = Z / (eDiv * eDiv);
+      T Xtarget = X / (eDiv * eDiv);
       for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget)) {
         MyVector<T> eV = eDiv * eSol;
         ListSolution.push_back(eV);
@@ -466,11 +468,11 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       return {};
     }
     T Xdiv2 = X / 2;
-    MyMatrix<T> const& Gmat = shr_ptr->Gmat;
+    MyMatrix<T> const& Qmat = shr_ptr->Gmat;
     int n = Qmat.rows();
     MyVector<T> eSol = ZeroVector<T>(n);
     eSol(0) = 1;
-    eSol(1) = Xdiv;
+    eSol(1) = Xdiv2;
     return eSol;
   };
   return {GetApproximateGroup, SetListClassesOrbitwise, GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
