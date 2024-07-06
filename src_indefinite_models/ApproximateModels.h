@@ -397,8 +397,8 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
       // So, the problem is actually linear.
       MyVector<T> eClass2 = Ginv * eClass1;
-      T DivD_frac = RemoveFractionVectorPlusCoef(eClass2).TheMult;
-      T DivD = NumeratorRat(DivD_frac);
+      T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
+      T DivD = GetDenominator(DivD_frac);
       T DivD_sqr = DivD * DivD;
       MyVector<T> eClass3 = DivD * eClass2;
       T X_res1 = ResInt(Xdiv2, DivD);
