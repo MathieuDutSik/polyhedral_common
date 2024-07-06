@@ -5,6 +5,7 @@
 // clang-format off
 #include "Isotropic.h"
 #include "GRP_GroupFct.h"
+#include "MAT_MatrixInt.h"
 #include <memory>
 // clang-format on
 
@@ -200,17 +201,20 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     }
   }
   // ComputeClasses
-  std::vector<MyVector<T>> ListClasses = GetTranslationClasses(Gmat);
+  std::vector<MyVector<T>> ListClasses = ComputeTranslationClasses<T,T>(Gmat);
   std::vector<MyMatrix<T>> GRPstart;
   InternalEichler<T> ie{Qmat, Gmat, ListClasses, GRPstart};
   std::shared_ptr<InternalEichler<T>> shr_ptr = std::make_shared<InternalEichler<T>>(ie);
   std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<T>> const& GRPmatr) -> void {
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
-    MyVector<T> ZerV = ZeroVector<T>(4);
+    int n = Qmat.rows();
     std::vector<MyVector<T>> ListClassesExt;
     for (auto & eV : ListClasses) {
-      MyVector<T> NewV = Concatenate(ZerV, eV);
+      MyVector<T> NewV = ZeroVector<T>(n);
+      for (int i=0; i<n-4; i++) {
+        NewV(i+4) = eV(i);
+      }
       ListClassesExt.emplace_back(std::move(NewV));
     }
     auto GetPosition=[&](MyVector<T> const& eVect) -> size_t {
@@ -393,7 +397,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
       // So, the problem is actually linear.
       MyVector<T> eClass2 = Ginv * eClass1;
-      T DivD_frac = RemoveFractionPlusCoef(eClass2).TheMult;
+      T DivD_frac = RemoveFractionVectorPlusCoef(eClass2).TheMult;
       T DivD = NumeratorRat(DivD_frac);
       T DivD_sqr = DivD * DivD;
       MyVector<T> eClass3 = DivD * eClass2;
@@ -409,15 +413,15 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
         MyVector<T> eProd = Gmat * eClass3;
         GCD_dot<T> eRec = ComputeGcdDot(eProd);
         auto iife_quot=[&]() -> T {
-          if (eRec.TheGcd == 0) {
+          if (eRec.gcd == 0) {
             return T(0);
           } else {
-            return diff / eRec.TheGcd;
+            return diff / eRec.gcd;
           }
         };
         T quot = iife_quot();
         if (IsInteger(quot)) {
-          MyVector<T> quot = quot * eRec.V;
+          MyVector<T> w = quot * eRec.V;
           MyVector<T> eClass4 = eClass3 + DivD * w;
           T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
           T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);

@@ -4,7 +4,6 @@
 #include "NumberTheoryGmp.h"
 #include "ApproximateModels.h"
 #include "Group.h"
-#include "Group.h"
 #include "Permutation.h"
 // clang-format on
 
