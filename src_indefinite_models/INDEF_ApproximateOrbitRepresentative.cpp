@@ -3,6 +3,9 @@
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
 #include "ApproximateModels.h"
+#include "Group.h"
+#include "Group.h"
+#include "Permutation.h"
 // clang-format on
 
 template <typename T, typename Tgroup>
@@ -12,14 +15,14 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
   std::cerr << "We have Q\n";
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Xnorm\n";
-  ApproximateModel<T> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(Qmat);
+  ApproximateModel<T> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tgroup>(Qmat);
   std::vector<MyVector<T>> LVect = model.GetCoveringOrbitRepresentatives(Xnorm);
   if (OutFormat == "GAP") {
     if (LVect.size() == 0) {
       os_out << "return rec(LVect:=[]);\n";
     } else {
       MyMatrix<T> MatVect = MatrixFromVectorFamily(LVect);
-      os_out << "return rec(LVect:=" << StringVectorGAP(MatVect) << ");\n";
+      os_out << "return rec(LVect:=" << StringMatrixGAP(MatVect) << ");\n";
     }
     return;
   }
@@ -38,7 +41,7 @@ int main(int argc, char *argv[]) {
     }
     std::string arith = argv[1];
     std::string MatFile = argv[2];
-    std::string Xstr = argv[3];
+    std::string XnormStr = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
     if (argc == 5) {
@@ -53,18 +56,18 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T,Tgroup>(FileI, OutFormat, os);
+        return process<T,Tgroup>(MatFile, XnormStr, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    if (FileO == "stderr") {
+    if (OutFile == "stderr") {
       f(std::cerr);
     } else {
-      if (FileO == "stdout") {
+      if (OutFile == "stdout") {
         f(std::cout);
       } else {
-        std::ofstream os(FileO);
+        std::ofstream os(OutFile);
         f(os);
       }
     }

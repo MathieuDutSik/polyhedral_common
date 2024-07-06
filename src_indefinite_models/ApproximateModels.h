@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "Isotropic.h"
+#include "GRP_GroupFct.h"
+#include <memory>
 // clang-format on
 
 #ifdef DEBUG
@@ -13,7 +15,7 @@
 
 template<typename T>
 struct ApproximateModel {
-  std::function<std::vector<MyVector<T>>(void)> GetApproximateGroup;
+  std::function<std::vector<MyMatrix<T>>(void)> GetApproximateGroup;
   std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise;
   std::function<std::vector<MyVector<T>>(T)> GetCoveringOrbitRepresentatives;
   std::function<std::optional<MyVector<T>>(T)> GetOneOrbitRepresentative;
@@ -111,7 +113,7 @@ struct InternalEichler {
   MyMatrix<T> Qmat;
   MyMatrix<T> Gmat;
   std::vector<MyVector<T>> ListClasses;
-  std::vector<MyVector<T>> GRP;
+  std::vector<MyVector<T>> GRPstart;
 };
 
 
@@ -199,7 +201,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
   std::vector<MyVector<T>> ListClasses = GetTranslationClasses(Gmat);
   std::vector<MyMatrix<T>> GRPstart;
   InternalEichler<T> ie{Qmat, Gmat, ListClasses, GRPstart};
-  std::shared_ptr<InternalEichler<T>> shr_ptr=make_shared<InternalEichler<T>>(ie);
+  std::shared_ptr<InternalEichler<T>> shr_ptr = std::make_shared<InternalEichler<T>>(ie);
   std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<T>> const& GRPmatr) -> void {
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
@@ -232,16 +234,17 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       Telt ePerm(eList);
       ListPermGens.push_back(ePerm);
     }
-    Tgroup GRPperm(ListPermGens);
+    int n_classes = ListClassesExt.size();
+    Tgroup GRPperm(ListPermGens, n_classes);
     std::vector<size_t> ListRepr = DecomposeOrbitPoint_FullRepr<Tgroup>(GRPperm);
     std::vector<MyVector<T>> ListClasses;
     for (auto & iRepr : ListRepr) {
-      MyVector<T> eV = shr_ptr->Listclasses[iRepr];
+      MyVector<T> eV = shr_ptr->ListClasses[iRepr];
       ListClasses.push_back(eV);
     }
     shr_ptr->ListClasses = ListClasses;
   };
-  std::function<std::vector<MyVector<T>>(void)> GetApproximateGroup = [=]() -> std::vector<MyVector<T>> {
+  std::function<std::vector<MyVector<T>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
@@ -320,10 +323,10 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
 #endif
       ListGenerators.push_back(TheMat);
     };
-    for (auto & eGen : shr_grp->GRPstart) {
+    for (auto & eGen : shr_ptr->GRPstart) {
       FuncInsert(eGen);
     }
-    for (auto & eGen : GeneratorsSL2Z()) {
+    for (auto & eGen : GeneratorsSL2Z<T>()) {
       FuncInsert(ExpandGenerator(GetLeftMultiplication(eGen)));
       FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
     }
@@ -372,7 +375,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     MyMatrix<T> const& Gmat = shr_ptr->Gmat;
     int n = Qmat.rows();
     T two(2);
-    if (RestInt(X, two) == T(1)) {
+    if (ResInt(X, two) == T(1)) {
       return {};
     }
     T Xdiv2 = X / 2;
@@ -388,14 +391,14 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
       // So, the problem is actually linear.
       MyVector<T> eClass2 = Ginv * eClass1;
-      T DivD_frac:=RemoveFractionPlusCoef(eClass2).TheMult;
+      T DivD_frac = RemoveFractionPlusCoef(eClass2).TheMult;
       T DivD = NumeratorRat(DivD_frac);
       T DivD_sqr = DivD * DivD;
       MyVector<T> eClass3 = DivD * eClass2;
       T X_res1 = ResInt(Xdiv2, DivD);
       T X_res2 = ResInt(Xdiv2, DivD_sqr);
       T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
-      T Aclass3_res1 = ResInt(Aclass3_norm, DidD);
+      T Aclass3_res1 = ResInt(Aclass3_norm, DivD);
       T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
       if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
         // and so
@@ -451,7 +454,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     for (auto & eDiv : ListDiv) {
       T Xtarget = Z / (eDiv * eDiv);
       for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget)) {
-        MyVector<X> eV = eDiv * eSol;
+        MyVector<T> eV = eDiv * eSol;
         ListSolution.push_back(eV);
       }
     }
@@ -459,7 +462,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
   };
   std::function<std::optional<MyVector<T>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<T>> {
     T two(2);
-    if (RestInt(X, two) == T(1)) {
+    if (ResInt(X, two) == T(1)) {
       return {};
     }
     T Xdiv2 = X / 2;
