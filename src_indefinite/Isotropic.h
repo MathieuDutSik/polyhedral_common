@@ -32,6 +32,44 @@
   ---
  */
 
+template<typename T>
+MyMatrix<T> GetAnMatrix(int const& k, int const& n) {
+  MyMatrix<T> M = IdentityMat<T>(n);
+  for (int i=0; i<k; i++) {
+    M(i,i) = 2;
+  }
+  for (int i=0; i<k-1; i++) {
+    M(i, i+1) = 1;
+    M(i+1, i) = 1;
+  }
+  return M;
+}
+
+template<typename T>
+T random_T(T const& q) {
+  size_t val1 = random();
+  T val2 = UniversalScalarConversion<T,size_t>(val1);
+  return ResInt(val2, q);
+}
+
+template<typename T>
+MyMatrix<T> GetSmithEntry(std::map<T, size_t> const& map, int const& n) {
+  MyMatrix<T> M = IdentityMat<T>(n);
+  for (auto& kv: map) {
+    int pos = random() % n;
+    M(pos,pos) *= kv.first;
+  }
+  for (int i=0; i<n; i++) {
+    for (int j=i+1; j<n; j++) {
+      T val = T_min(M(i,i), M(j,j));
+      M(i,j) = random_T(val);
+    }
+  }
+  return M;
+}
+
+
+
 // Try to find isotropic subspace by using Indefinite LLL
 template <typename T>
 std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe_unused]] std::ostream& os) {
@@ -44,6 +82,14 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
         sum += T_abs(mat(i, j));
     return sum;
   };
+  T det = DeterminantMat(Q);
+  std::map<T, size_t> map = FactorsIntMap(T_abs(det));
+#ifdef DEBUG_ISOTROPIC
+  os << "ISOTROP: GetIsotropIndefiniteLLL det=" << det << "\n";
+  for (auto & kv : map) {
+    os << "kv.first=" << kv.first << " kv.second=" << kv.second << "\n";
+  }
+#endif
   MyMatrix<T> Pw = IdentityMat<T>(n);
   MyMatrix<T> Qw = Q;
   T curr_norm = get_norm(Q);
@@ -107,9 +153,25 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
       break;
     }
     curr_norm = norm;
-    MyMatrix<T> RandUnit = get_random_int_matrix<T>(n);
-    Pw = RandUnit * Pw;
-    Qw = RandUnit * Qw * RandUnit.transpose();
+    auto get_rand_invmat=[&]() -> MyMatrix<T> {
+      int choice = random() % 5;
+#ifdef DEBUG_ISOTROPIC
+      os << "ISOTROP: GetIsotropIndefiniteLLL choice=" << choice << "\n";
+#endif
+      if (choice == 0) {
+        int k = random() % n;
+        return GetAnMatrix<T>(k, n);
+        //        return GetSmithEntry<T>(map, n);
+      } else {
+        return get_random_int_matrix<T>(n);
+      }
+    };
+    MyMatrix<T> RandM = get_rand_invmat();
+    Pw = RandM * Pw;
+    Qw = RandM * Qw * RandM.transpose();
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: GetIsotropIndefiniteLLL det(Pw)=" << DeterminantMat(Pw) << " det(Qw)=" << DeterminantMat(Qw) << "\n";
+#endif
   }
   return {};
 }
