@@ -57,14 +57,21 @@ int main(int argc, char *argv[]) {
         return process<T>(FileI, OutFormat, os);
       }
       */
+
+      /*
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
         return process<T>(FileI, OutFormat, os);
       }
+      */
+
+      /*
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
         return process<T>(FileI, OutFormat, os);
       }
+      */
+
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
