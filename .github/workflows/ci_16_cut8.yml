@@ -63,7 +63,6 @@ jobs:
           sudo apt update
           sudo apt install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
           sudo apt install -y wget
-          sudo apt install -y g++-11
           sudo apt install -y g++ gcc gfortran
           sudo apt install -y cmake
           sudo apt install -y libgmp-dev
@@ -74,7 +73,6 @@ jobs:
           sudo apt install -y libntl-dev libmpfr-dev
           sudo apt install -y openmpi-bin libopenmpi-dev
           sudo apt install -y autoconf autotools-dev libtool
-          sudo apt install -y texlive-latex-base # needed for the manual of cddlib to be compiled
           sudo apt install -y xz-utils
 
       - name: Build test code

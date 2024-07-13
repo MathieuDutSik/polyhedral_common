@@ -56,7 +56,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
           sudo apt-get install -y wget
-          sudo apt-get install -y g++-11
           sudo apt-get install -y g++ gcc gfortran
           sudo apt-get install -y cmake
           sudo apt-get install -y libgmp-dev
