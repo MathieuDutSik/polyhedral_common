@@ -7,7 +7,7 @@ name: CI of Isotropic vector code.
 on:
   # One time per month
   schedule:
-    - cron: "0 0 12 * *"
+    - cron: "0 0 9 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.

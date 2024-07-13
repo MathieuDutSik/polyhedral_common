@@ -120,7 +120,7 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p, [[maybe_unused]] s
   find an explicit solution.
  */
 template<typename T>
-bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostream& os) {
+bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: determine_solvability_dim4, beginning |a|=" << a.size() << "\n";
 #endif
@@ -174,7 +174,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
   a12(0) = a1;
   a12(1) = a2;
   a12(2) = -1;
-  MyVector<T> a12_red = reduction_information(a12).second;
+  MyVector<T> a12_red = reduction_information(a12, os).second;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: a12_red=" << StringVector(a12_red) << "\n";
 #endif
@@ -182,7 +182,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, [[maybe_unused]] std::ostr
   a34(0) = -a3;
   a34(1) = -a4;
   a34(2) = -1;
-  MyVector<T> a34_red = reduction_information(a34).second;
+  MyVector<T> a34_red = reduction_information(a34, os).second;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: a34_red=" << StringVector(a34_red) << "\n";
 #endif
@@ -271,11 +271,12 @@ template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M,
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: quaternary_has_isotropic_vector, beginning\n";
 #endif
-  MyVector<Tring> red_diag = get_reduced_diagonal(M, os);
+  MyVector<T> red_diag = get_reduced_diagonal(M, os).second;
+  MyVector<Tring> red_diagB = UniversalVectorConversion<Tring,T>(red_diag);
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: quaternary_has_isotropic_vector, we have red_diag\n";
 #endif
-  return determine_solvability_dim4(red_diag, os);
+  return determine_solvability_dim4(red_diagB, os);
 }
 
 

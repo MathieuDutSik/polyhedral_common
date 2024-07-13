@@ -139,7 +139,7 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
  */
 template <typename T>
 std::pair<MyMatrix<T>, MyVector<T>>
-reduction_information(MyVector<T> const &aV) {
+reduction_information(MyVector<T> const &aV, std::ostream& os) {
 #ifdef DEBUG_LEGENDRE
   if (aV.size() != 3) {
     std::cerr << "The length should be exactly 3\n";
@@ -149,9 +149,17 @@ reduction_information(MyVector<T> const &aV) {
   T a = aV(0);
   T b = aV(1);
   T c = aV(2);
-  std::map<T, size_t> a_map = FactorsIntMap(T_abs(a));
-  std::map<T, size_t> b_map = FactorsIntMap(T_abs(b));
-  std::map<T, size_t> c_map = FactorsIntMap(T_abs(c));
+  T a_abs = T_abs(a);
+  T b_abs = T_abs(b);
+  T c_abs = T_abs(c);
+  std::vector<T> a_help{b_abs, c_abs};
+  std::vector<T> b_help{a_abs, c_abs};
+  std::vector<T> c_help{a_abs, b_abs};
+
+  
+  std::map<T, size_t> a_map = FactorsIntMap_help(a_abs, a_help);
+  std::map<T, size_t> b_map = FactorsIntMap_help(b_abs, b_help);
+  std::map<T, size_t> c_map = FactorsIntMap_help(c_abs, c_help);
   MyMatrix<T> TransMat = IdentityMat<T>(3);
   //
   // Eliminating the even prime powers.
@@ -219,15 +227,57 @@ reduction_information(MyVector<T> const &aV) {
   TransMat(1, 1) *= ac_prod;
   TransMat(2, 2) *= ab_prod;
   MyVector<T> aRet(3);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: a_prod=" << a_prod << " bc_prod=" << bc_prod << "\n";
+  os << "LEG: b_prod=" << b_prod << " ac_prod=" << ac_prod << "\n";
+  os << "LEG: c_prod=" << c_prod << " ab_prod=" << ab_prod << "\n";
+  os << "LEG: primes=";
+  for (auto & p : primes) {
+    os << " " << p;
+  }
+  os << "\n";
+#endif
   aRet(0) = T_sign(a) * a_prod * bc_prod;
   aRet(1) = T_sign(b) * b_prod * ac_prod;
   aRet(2) = T_sign(c) * c_prod * ab_prod;
+#ifdef DEBUG_LEGENDRE
+  std::map<T, size_t> a_map2 = FactorsIntMap(T_abs(aRet(0)));
+  std::map<T, size_t> b_map2 = FactorsIntMap(T_abs(aRet(1)));
+  std::map<T, size_t> c_map2 = FactorsIntMap(T_abs(aRet(2)));
+  for (auto & kv : a_map2) {
+    T const& p = kv.first;
+    if (b_map2.count(p) == 1) {
+      std::cerr << "p should not be in the b_map2\n";
+    }
+    if (c_map2.count(p) == 1) {
+      std::cerr << "p should not be in the c_map2\n";
+    }
+  }
+  for (auto & kv : b_map2) {
+    T const& p = kv.first;
+    if (a_map2.count(p) == 1) {
+      std::cerr << "p should not be in the a_map2\n";
+    }
+    if (c_map2.count(p) == 1) {
+      std::cerr << "p should not be in the c_map2\n";
+    }
+  }
+  for (auto & kv : c_map2) {
+    T const& p = kv.first;
+    if (a_map2.count(p) == 1) {
+      std::cerr << "p should not be in the a_map2\n";
+    }
+    if (b_map2.count(p) == 1) {
+      std::cerr << "p should not be in the b_map2\n";
+    }
+  }
+#endif
   return {TransMat, aRet};
 }
 
+
 template<typename T>
-MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
-  using Tring = typename underlying_ring<T>::ring_type;
+std::pair<MyMatrix<T>, MyVector<T>> get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
   DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
 #ifdef DEBUG_LEGENDRE
@@ -236,22 +286,51 @@ MyVector<typename underlying_ring<T>::ring_type> get_reduced_diagonal(MyMatrix<T
   MyVector<T> V2 = RemoveFractionVector(V1);
 #ifdef DEBUG_LEGENDRE
   os << "V2=" << StringVectorGAP(V2) << "\n";
+  for (int i=0; i<3; i++) {
+    if (V2(i) == 0) {
+      std::cerr << "LEG: V2(i) should be non-zero\n";
+      throw TerminalException{1};
+    }
+  }
 #endif
-  MyVector<Tring> V3 = UniversalVectorConversion<Tring, T>(V2);
-#ifdef DEBUG_LEGENDRE
-  os << "V3=" << StringVectorGAP(V3) << "\n";
-#endif
-  return V3;
+  return {dsm.Transform, V2};
 }
 
 
 
 template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  MyVector<Tring> red_diag_A = get_reduced_diagonal(M, os);
-  MyVector<Tring> red_diag_B = reduction_information(red_diag_A).second;
+  std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
+  MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
+  MyVector<Tring> red_diag_B = reduction_information(red_diag_A, os).second;
   return determine_solvability_dim3(red_diag_B, os);
 }
+
+/*
+  Map the equation into a Lagrange normal equation.
+template<typename T>
+std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v) {
+}
+*/
+
+
+/*
+  We are looking for a ternary isotropic vector if one exists.
+
+  Now, it goes:
+  -- diagonalize the matrix
+  -- removal of common primes and square factors.
+  -- Express the problem as an equation Z^2 = aX^2 + bY^2
+ */
+template<typename T>
+std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+  std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
+  MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
+  std::pair<MyMatrix<Tring>, MyVector<Tring>> red_diag_B = reduction_information(red_diag_A, os);
+  return {};
+}
+
 
 // clang-format off
 #endif  // SRC_INDEFINITE_LEGENDRE_EQUATION_H_

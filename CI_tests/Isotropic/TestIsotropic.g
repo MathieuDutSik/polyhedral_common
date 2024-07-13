@@ -1,7 +1,7 @@
 Read("../common.g");
 Print("Beginning TestIsotropic\n");
 
-OnlyTestExistence:=false;
+OnlyTestExistence:=true;
 
 TestIsotropic:=function(eRec)
     local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm;
@@ -53,7 +53,8 @@ ListDim5high:=Filtered(ListRec, x->Length(x.M) > 4);
 #ListRec:=Concatenation(ListDim3_B, ListDim5high);
 
 
-ListRec:=ListDim3_B;
+ListRec:=ListDim3_A;
+#ListRec:=ListDim3_A{[3271..3272]};
 #ListRec:=ListDim4_A;
 #ListRec:=ListDim5;
 

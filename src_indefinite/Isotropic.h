@@ -28,8 +28,25 @@
   ---
   The existing implementations that inspired us:
   1) Hecke.jl : src/QuadForm/Quad/Spaces.jl
+    It is known not to be proved correct algorithm.
+    * Function is is_isotropic_with_vector
+    * It depends on _isotropic_subspace
+    * Which uses the Representative(Genus(R,s)) to find a representative
+    * The uses the maximal_even_lattice
+    * Then uses the maximal_isotropic_subspace_unimodular (which rely on heuristics
   2) Pari: src/basemath/qfsolve.c
+    It is a code that is known to have issues as bugs were found.
+  3) The algorithm by "Algorithms for solving rational quadratic forms" Josef Schicho and
+    Jana Pilnikova (P3) seems relatively more sensible. The induction is dimension is a
+    very tall thing. But we could reduce to a 5 dim case by finding the right subspace.
   ---
+  The Indefinite LLL with a few tricks are indeed working mostly fine
+  except when they do not.
+  So, we could have
+  * A very sophisticated algorithm by P3 that
+  * An Indefinite LLL iteration working.
+  Both algorithms could be run in parallel and an early termination of either could
+  finish the enumeration.
  */
 
 template<typename T>
