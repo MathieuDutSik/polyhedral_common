@@ -418,7 +418,7 @@ template<typename T>
 std::pair<T,T> separate_square_factor(T const& val) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(val));
   T sqr(1);
-  T nosqr(1);
+  T nosqr(T_sign(val));
   using Tint = uint32_t;
   Tint two(2);
   for (auto & kv : map) {
@@ -563,8 +563,18 @@ std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& p
   T const& a = pair.first;
   T const& b = pair.second;
   T b_abs = T_abs(b);
+#ifdef DEBUG_LEGENDRE
+  T a_abs = T_abs(a);
+  if (a_abs > b_abs) {
+    std::cerr << "LEG: We should have |a| <= |b|\n";
+    throw TerminalException{1};
+  }
+#endif
   std::optional<T> opt = find_quadratic_residue(a, b);
   T u = unfold_opt(opt, "we expect to get u");
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: descent u=" << u << "\n";
+#endif
   if (2*u >= b_abs) {
     u -= b_abs;
   }
@@ -578,6 +588,17 @@ std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& p
   T bp = pair2.second;
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: descent e=" << e << " bp=" << bp << "\n";
+  T delta = b * bp * e * e + a - u * u;
+  if (delta != 0) {
+    std::cerr << "LEG: quot=" << quot << " e=" << e << " bp=" << bp << "\n";
+    std::cerr << "LEG: u=" << u << " a=" << a << " diff=" << diff << "\n";
+    std::cerr << "LEG: error in the decomposition\n";
+    throw TerminalException{1};
+  }
+  if (T_abs(bp) > b_abs) {
+    std::cerr << "LEG: We should have |bp| <= |b|\n";
+    throw TerminalException{1};
+  }
 #endif
   MyMatrix<T> M = ZeroMatrix<T>(3,3);
   M(0,0) = u;
@@ -647,8 +668,12 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
     MyVector<T> V_work = V;
     for (size_t u=0; u<len; u++) {
       size_t v = len - 1 - u;
+#ifdef DEBUG_LEGENDRE
+      std::cerr << "LEG: Before V_work=" << StringVector(V_work) << "\n";
+#endif
       V_work = ScaledInverse(l_pair[v].first) * V_work;
 #ifdef DEBUG_LEGENDRE
+      std::cerr << "LEG: After V_work=" << StringVector(V_work) << "\n";
       std::cerr << "LEG: l_pair[v].first=\n";
       WriteMatrix(std::cerr, l_pair[v].first);
       auto get_pair=[&]() -> std::pair<T,T> {
@@ -666,6 +691,8 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
       T const& z = V_work(2);
       T diff = z*z - a*x*x - b*y*y;
       if (diff != 0) {
+        std::cerr << "LEG: a=" << a << " b=" << b << " x=" << x << " y=" << y << " z=" << z << "\n";
+        std::cerr << "LEG: diff=" << diff << "\n";
         std::cerr << "Consistency error in the descent\n";
         throw TerminalException{1};
       }
