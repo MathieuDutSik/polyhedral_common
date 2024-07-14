@@ -690,11 +690,11 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   std::cerr << "LEG: pair1.second=\n";
   WriteMatrix(std::cerr, pair1.first);
 #endif
-  MyVector<T> sol4 = pair1.first * sol3;
+  MyVector<T> sol4 = pair1.first.transpose() * sol3;
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: sol4=" << StringVector(sol4) << "\n";
   T sum2 = EvaluationQuadForm(M, sol4);
-  if (sum != 0) {
+  if (sum2 != 0) {
     std::cerr << "LEG: sol4 is not a solution of the equation\n";
     throw TerminalException{1};
   }
