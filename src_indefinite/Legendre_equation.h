@@ -353,10 +353,10 @@ bool is_square_free(T const& a) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(a));
   for (auto &kv : map) {
     if (kv.second >= 2) {
-      return true;
+      return false;
     }
   }
-  return false;
+  return true;
 }
 
 template<typename T>
@@ -391,23 +391,42 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
   T const& a = pair.first;
   T const& b = pair.second;
   if (!is_square_free(a)) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: a=" << a << " is not square free\n";
+#endif
     return false;
   }
   if (!is_square_free(b)) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: b=" << b << " is not square free\n";
+#endif
     return false;
   }
   if (a < 0 && b < 0) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: a and b are negative not allowed\n";
+#endif
     return false;
   }
   T d = GcdPair(a, b);
   T c = - (a / d) * (b / d);
   if (!is_quadratic_residue(a, T_abs(b))) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: a is not a quadratic residue for b\n";
+#endif
     return false;
   }
   if (!is_quadratic_residue(b, T_abs(a))) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: b is not a quadratic residue for a\n";
+#endif
     return false;
   }
   if (!is_quadratic_residue(c, T_abs(d))) {
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: c=" << c << " d=" << d << "\n";
+    std::cerr << "LEG: c is not a quadratic residue for d\n";
+#endif
     return false;
   }
   return true;
@@ -419,6 +438,25 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
   Map the equation into a Lagrange normal equation.
   The equation in standard form is
   Z^2 = a X^2 + b Y^2
+  The original equation is
+  a0 X0^2 + a1 X1^2 + a2 X2^2 = 0
+  Rewritten equation with min_idx give us:
+  aI X_I^2 = - a(I+1) X_(I+1)^2 - a(I+2) X(I+2)^2
+  X_I^2 = - a(I+1) / aI X_(I+1)^2 - a(I+2) / aI X(I+2)^2
+  X(I)   = Z
+  X(I+1) = aI X
+  X(I+2) = aI Y
+  a = - a(I+1) aI
+  b = - a(I+2) aI
+  Z^2 = a X^2 + b Y^2
+  X = X(I+1) / aI
+  Y = X(I+2) / aI
+  Z = X(I)
+    or after rescale
+  X =    X(I+1)
+  Y =    X(I+2)
+  Z = aI X(I)
+    
 */
 template<typename T>
 std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v) {
@@ -431,6 +469,9 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
       min_idx = u;
     }
   }
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: min_idx=" << min_idx << " min_val=" << min_val << "\n";
+#endif
   size_t three(3);
   size_t idxZ = min_idx;
   size_t idxX = min_idx+1;
@@ -441,14 +482,20 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
   if (idxY >= three) {
     idxY -= three;
   }
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: idxX=" << idxX << " idxY=" << idxY << " idxZ=" << idxZ << "\n";
+#endif
   T cVal = v(idxZ);
   T a = -v(idxX) * cVal;
   T b = -v(idxY) * cVal;
   MyMatrix<T> M = ZeroMatrix<T>(3,3);
   // Not sure about the matrix below.
-  M(0,idxX) = cVal;
-  M(1,idxY) = cVal;
-  M(2,idxZ) = 1;
+  M(idxX,0) = cVal;
+  M(idxY,1) = cVal;
+  M(idxZ,2) = 1;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: We have M\n";
+#endif
   std::pair<T,T> pair{a, b};
   return {M, pair};
 }
@@ -518,7 +565,9 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
   std::pair<MyMatrix<T>, std::pair<T, T>> pair3 = get_lagrange_normal(diag);
   std::pair<T, T> work_pair = pair3.second;
 #ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: We have work_pair\n";
   if (!satisfy_descent_condition(work_pair)) {
+    std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second << "\n";
     std::cerr << "LEG: work_pair 1, should satisfy the descent condition\n";
     throw TerminalException{1};
   }
@@ -526,6 +575,10 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
   std::vector<std::pair<MyMatrix<T>, std::pair<T, T>>> l_pair;
   auto get_sol=[&](MyVector<T> const& V) -> MyVector<T> {
     size_t len = l_pair.size();
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: get_sol beginning len=" << len << "\n";
+    std::cerr << "LEG: get_sol V=" << StringVector(V) << "\n";
+#endif
     MyVector<T> V_work = V;
     for (size_t u=0; u<len; u++) {
       size_t v = len - 1 - u;
@@ -543,7 +596,27 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
       }
 #endif
     }
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: pair3.first=\n";
+    WriteMatrix(std::cerr, pair3.first);
+#endif
     V_work = pair3.first * V_work;
+#ifdef DEBUG_LEGENDRE
+    std::cerr << "LEG: V_work=" << StringVector(V_work) << "\n";
+    T sum(0);
+    for (int i=0; i<3; i++) {
+      T const& val = V_work(i);
+      sum += diag(i) * val * val;
+    }
+    if (sum != 0) {
+      std::cerr << "LEG: pair3.first=\n";
+      WriteMatrix(std::cerr, pair3.first);
+      std::cerr << "LEG: diag=" << StringVector(diag) << "\n";
+      std::cerr << "LEG: V_work=" << StringVector(V_work) << "\n";
+      std::cerr << "Consistency error in the lagrange reduction\n";
+      throw TerminalException{1};
+    }
+#endif
     return V_work;
   };
   while(true) {
@@ -591,20 +664,35 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
     return {};
   }
   MyVector<Tring> sol1 = execute_lagrange_descent(lri.aReduced);
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: sol1=" << StringVector(sol1) << "\n";
+#endif
   MyVector<Tring> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: sol2=" << StringVector(sol1) << "\n";
   Tring sum(0);
   for (int i=0; i<3; i++) {
     sum += red_diag_A(i) * sol2(i) * sol2(i);
   }
   if (sum != 0) {
+    std::cerr << "LEG: lri.TransMat=\n";
+    WriteMatrix(std::cerr, lri.TransMat);
+    std::cerr << "LEG: red_diag_A=" << StringVector(red_diag_A) << "\n";
+    std::cerr << "LEG: lri.aReduced=" << StringVector(lri.aReduced) << "\n";
+    std::cerr << "LEG: sol2=" << StringVector(sol2) << "\n";
     std::cerr << "LEG: sol2 is not a solution of the equation\n";
     throw TerminalException{1};
   }
 #endif
   MyVector<T> sol3 = UniversalVectorConversion<T,Tring>(sol2);
-  MyVector<T> sol4 = pair1.second * sol3;
 #ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: sol3=" << StringVector(sol3) << "\n";
+  std::cerr << "LEG: pair1.second=\n";
+  WriteMatrix(std::cerr, pair1.first);
+#endif
+  MyVector<T> sol4 = pair1.first * sol3;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: sol4=" << StringVector(sol4) << "\n";
   T sum2 = EvaluationQuadForm(M, sol4);
   if (sum != 0) {
     std::cerr << "LEG: sol4 is not a solution of the equation\n";
