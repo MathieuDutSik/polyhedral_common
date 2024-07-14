@@ -36,6 +36,36 @@ std::map<T, size_t> product_entry(std::map<T, size_t> const& x, std::map<T, size
   return ret;
 }
 
+template<typename T>
+std::string string_entry(std::map<T, size_t> const& x) {
+  std::stringstream s;
+  bool is_first=true;
+  for (auto & kv : x) {
+    if (!is_first) {
+      s << " ";
+    }
+    is_first=false;
+    s << "(" << kv.first << "," << kv.second << ")";
+  }
+  std::string converted(s.str());
+  return converted;
+}
+
+template<typename T>
+std::string string_set(std::set<T> const& x) {
+  std::stringstream s;
+  bool is_first=true;
+  for (auto & val : x) {
+    if (!is_first) {
+      s << " ";
+    }
+    is_first=false;
+    s << val;
+  }
+  std::string converted(s.str());
+  return converted;
+}
+
 
 template<typename T>
 T evaluate_entry(std::map<T, size_t> const& x) {
@@ -181,6 +211,9 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   T a = aV(0);
   T b = aV(1);
   T c = aV(2);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: aV=" << StringVector(aV) << "\n";
+#endif
   T a_abs = T_abs(a);
   T b_abs = T_abs(b);
   T c_abs = T_abs(c);
@@ -190,6 +223,11 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   std::map<T, size_t> a_map = FactorsIntMap_help(a_abs, a_help);
   std::map<T, size_t> b_map = FactorsIntMap_help(b_abs, b_help);
   std::map<T, size_t> c_map = FactorsIntMap_help(c_abs, c_help);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: a_map=" << string_entry(a_map) << "\n";
+  os << "LEG: b_map=" << string_entry(b_map) << "\n";
+  os << "LEG: c_map=" << string_entry(c_map) << "\n";
+#endif
   MyMatrix<T> TransMat = IdentityMat<T>(3);
   //
   // Eliminating the even prime powers.
@@ -202,15 +240,32 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
       size_t mult = kv.second;
       size_t r = mult % 2;
       size_t q = mult / 2;
+#ifdef DEBUG_LEGENDRE
+      os << "LEG: mult=" << mult << " r=" << r << " q=" << q << "\n";
+#endif
       if (r > 0)
         eset.insert(val);
-      TransMat(idx, idx) *= MyPow(val, q);
+      T expo = MyPow(val, q);
+      if (expo != 1) {
+        for (int u=0; u<3; u++) {
+          if (u != idx) {
+            TransMat(u, u) *= expo;
+          }
+        }
+      }
     }
     return eset;
   };
   std::set<T> a_set = get_set(a_map, 0);
   std::set<T> b_set = get_set(b_map, 1);
   std::set<T> c_set = get_set(c_map, 2);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: TransMat=\n";
+  WriteMatrix(std::cerr, TransMat);
+  os << "LEG: a_set=" << string_set(a_set) << "\n";
+  os << "LEG: b_set=" << string_set(b_set) << "\n";
+  os << "LEG: c_set=" << string_set(c_set) << "\n";
+#endif
   //
   // Now reducing so that no primes is shared
   //
