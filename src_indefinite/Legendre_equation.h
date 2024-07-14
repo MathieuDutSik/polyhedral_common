@@ -64,7 +64,8 @@ struct LegendreReductionInformation {
   * −ac is a square modulo |b|
   * −ab is a square modulo |c|.
  */
-template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduced, [[maybe_unused]] std::ostream& os) {
+template <typename T> bool determine_solvability_dim3(LegendreReductionInformation<T> const& lri, [[maybe_unused]] std::ostream& os) {
+  MyVector<T> const& aReduced = lri.aReduced;
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i = 0; i < 3; i++) {
@@ -154,7 +155,7 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
     return false;
   }
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: Returning true as the condition appears to be satisfied\n";
+  os << "LEG: Returning true as the Legendre condition for solvability are satisfied\n";
 #endif
   return true;
 }
@@ -340,7 +341,7 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, st
   std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
   MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
   LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
-  return determine_solvability_dim3(lri.aReduced, os);
+  return determine_solvability_dim3(lri, os);
 }
 
 
@@ -572,7 +573,7 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   std::pair<MyMatrix<T>, MyVector<T>> pair1 = get_reduced_diagonal(M, os);
   MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair1.second);
   LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
-  bool test = determine_solvability_dim3(lri.aReduced, os);
+  bool test = determine_solvability_dim3(lri, os);
   if (!test) {
     return {};
   }
