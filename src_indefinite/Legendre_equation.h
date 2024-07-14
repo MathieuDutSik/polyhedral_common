@@ -139,7 +139,7 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
  */
 template <typename T>
 std::pair<MyMatrix<T>, MyVector<T>>
-reduction_information(MyVector<T> const &aV, std::ostream& os) {
+reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_LEGENDRE
   if (aV.size() != 3) {
     std::cerr << "The length should be exactly 3\n";
@@ -155,8 +155,6 @@ reduction_information(MyVector<T> const &aV, std::ostream& os) {
   std::vector<T> a_help{b_abs, c_abs};
   std::vector<T> b_help{a_abs, c_abs};
   std::vector<T> c_help{a_abs, b_abs};
-
-  
   std::map<T, size_t> a_map = FactorsIntMap_help(a_abs, a_help);
   std::map<T, size_t> b_map = FactorsIntMap_help(b_abs, b_help);
   std::map<T, size_t> c_map = FactorsIntMap_help(c_abs, c_help);
@@ -306,12 +304,219 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, st
   return determine_solvability_dim3(red_diag_B, os);
 }
 
+
+template<typename T>
+bool is_square_free(T const& a) {
+  std::map<T, size_t> map = FactorsIntMap(T_abs(a));
+  for (auto &kv : map) {
+    if (kv.second >= 2) {
+      return true;
+    }
+  }
+  return false;
+}
+
+template<typename T>
+std::pair<T,T> separate_square_factor(T const& val) {
+  std::map<T, size_t> map = FactorsIntMap(T_abs(val));
+  T sqr(1);
+  T nosqr(1);
+  for (auto & kv : map) {
+    T const& p = kv.first;
+    std::pair<size_t, size_t> pair = ResQuoInt(kv.second, 2);
+    size_t res = pair.first;
+    size_t quot = pair.second;
+    for (size_t u=0; u<res; u++) {
+      nosqr *= p;
+    }
+    for (size_t u=0; u<quot; u++) {
+      sqr *= p;
+    }
+  }
+  return {sqr, nosqr};
+}
+
+
+/*
+  See Definition 1 of Page 4 of P1
+ */
+template<typename T>
+bool satisfy_descent_condition(std::pair<T,T> const& pair) {
+  T const& a = pair.first;
+  T const& b = pair.second;
+  if (!is_square_free(a)) {
+    return false;
+  }
+  if (!is_square_free(b)) {
+    return false;
+  }
+  if (a < 0 && b < 0) {
+    return false;
+  }
+  T d = GcdPair(a, b);
+  T c = - (a / d) * (b / d);
+  if (!is_quadratic_residue(a, T_abs(b))) {
+    return false;
+  }
+  if (!is_quadratic_residue(b, T_abs(a))) {
+    return false;
+  }
+  if (!is_quadratic_residue(c, T_abs(d))) {
+    return false;
+  }
+  return true;
+}
+
+
+
 /*
   Map the equation into a Lagrange normal equation.
+  The equation in standard form is
+  Z^2 = a X^2 + b Y^2
+*/
 template<typename T>
 std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v) {
+  size_t min_idx=0;
+  T min_val = T_abs(v(0));
+  for (size_t u=1; u<3; u++) {
+    T val = T_abs(v(u));
+    if (val < min_val) {
+      min_val = val;
+      min_idx = u;
+    }
+  }
+  size_t three(3);
+  size_t idxZ = min_idx;
+  size_t idxX = ResInt(min_idx+1, three);
+  size_t idxY = ResInt(min_idx+2, three);
+  T cVal = v(idxZ);
+  T a = -v(idxX) * cVal;
+  T b = -v(idxY) * cVal;
+  MyMatrix<T> M = ZeroMatrix<T>(3,3);
+  // Not sure about the matrix below.
+  M(0,idxX) = cVal;
+  M(1,idxY) = cVal;
+  M(2,idxZ) = 1;
+  std::pair<T,T> pair{a, b};
+  return {M, pair};
 }
-*/
+
+/*
+  Lemma 6 operation from P1.
+ */
+template<typename T>
+std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& pair) {
+  T const& a = pair.first;
+  T const& b = pair.second;
+  std::optional<T> opt = find_quadratic_residue(a, b);
+  T u = unfold_opt(opt, "we expect to get u");
+  T diff = u*u - a;
+  T quot = diff / b;
+  std::pair<T,T> pair2 = separate_square_factor(quot);
+  T e = pair2.first;
+  T bp = pair2.second;
+  MyMatrix<T> M = ZeroMatrix<T>(3,3);
+  M(0,0) = u;
+  M(0,2) = 1;
+  M(1,1) = b * e;
+  M(2,0) = a;
+  M(2,2) = u;
+  std::pair<T, T> pair3{a, bp};
+  return {M, pair3};
+}
+
+template<typename T>
+std::pair<MyMatrix<T>, std::pair<T,T>> switch_xy(std::pair<T,T> const& pair) {
+  T const& a = pair.first;
+  T const& b = pair.second;
+  MyMatrix<T> M = ZeroMatrix<T>(3,3);
+  M(0,1) = 1;
+  M(1,0) = 1;
+  M(2,2) = 1;
+  std::pair<T, T> pair2{b, a};
+  return {M, pair2};
+}
+
+/*
+  Equation Z^2 = a X^2 + b Y^2
+  Value a=0 or b=0 would allow early termination but if so, the
+  quadratic form would be degenerate.
+ */
+template<typename T>
+std::optional<MyVector<T>> get_trivial_solution(std::pair<T,T> const& pair) {
+  T const& a = pair.first;
+  T const& b = pair.second;
+  MyVector<T> V = ZeroVector<T>(3);
+  if (a == 1) {
+    V(0) = 1;
+    V(2) = 1;
+    return V;
+  }
+  if (b == 1) {
+    V(1) = 1;
+    V(2) = 1;
+    return V;
+  }
+  return {};
+}
+
+
+template<typename T>
+MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
+  std::pair<MyMatrix<T>, std::pair<T, T>> pair3 = get_lagrange_normal(diag);
+  std::pair<T, T> work_pair = pair3.second;
+#ifdef DEBUG_LEGENDRE
+  if (!satisfy_descent_condition(work_pair)) {
+    std::cerr << "LEG: work_pair 1, should satisfy the descent condition\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<std::pair<MyMatrix<T>, std::pair<T, T>>> l_pair;
+  auto get_sol=[&](MyVector<T> const& V) -> MyVector<T> {
+    size_t len = l_pair.size();
+    MyVector<T> V_work = V;
+    for (size_t u=0; u<len; u++) {
+      size_t v = len - 1 - u;
+      V_work = l_pair[v].first * V_work;
+#ifdef DEBUG_LEGENDRE
+      T const& a = l_pair[v].second.first;
+      T const& b = l_pair[v].second.second;
+      T const& x = V_work(0);
+      T const& y = V_work(1);
+      T const& z = V_work(2);
+      T diff = z*z - a*x*x - b*y*y;
+      if (diff != 0) {
+        std::cerr << "Consistency error in the descent\n";
+        throw TerminalException{1};
+      }
+#endif
+    }
+    V_work = pair3.first * V_work;
+  };
+  while(true) {
+    std::optional<MyVector<T>> opt = get_trivial_solution(work_pair);
+    if (*opt) {
+      MyVector<T> V = *opt;
+      return get_sol(V);
+    }
+    T a_abs = T_abs(work_pair.first);
+    T b_abs = T_abs(work_pair.second);
+    if (a_abs > b_abs) {
+      std::pair<MyMatrix<T>, std::pair<T,T>> pair_xy = switch_xy(work_pair);
+      work_pair = pair_xy.second;
+      l_pair.push_back(pair_xy);
+    }
+    std::pair<MyMatrix<T>, std::pair<T,T>> pair_desc = descent_operation(work_pair);
+    work_pair = pair_desc.second;
+#ifdef DEBUG_LEGENDRE
+    if (!satisfy_descent_condition(work_pair)) {
+      std::cerr << "LEG: work_pair 2, should satisfy the descent condition\n";
+      throw TerminalException{1};
+    }
+#endif
+    l_pair.push_back(pair_desc);
+  }
+}
 
 
 /*
@@ -325,10 +530,35 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
 template<typename T>
 std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-  std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
-  MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
-  std::pair<MyMatrix<Tring>, MyVector<Tring>> red_diag_B = reduction_information(red_diag_A, os);
-  return {};
+  std::pair<MyMatrix<T>, MyVector<T>> pair1 = get_reduced_diagonal(M, os);
+  MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair1.second);
+  std::pair<MyMatrix<Tring>, MyVector<Tring>> pair2 = reduction_information(red_diag_A, os);
+  bool test = determine_solvability_dim3(pair2.second, os);
+  if (!test) {
+    return {};
+  }
+  MyVector<Tring> sol1 = execute_lagrange_descent(pair2.second);
+  MyVector<Tring> sol2 = pair2.first * sol1;
+#ifdef DEBUG_LEGENDRE
+  Tring sum(0);
+  for (int i=0; i<3; i++) {
+    sum += red_diag_A(i) * sol2(i) * sol2(i);
+  }
+  if (sum != 0) {
+    std::cerr << "LEG: sol2 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyVector<T> sol3 = UniversalVectorConversion<T,Tring>(sol2);
+  MyVector<T> sol4 = pair1.second * sol3;
+#ifdef DEBUG_LEGENDRE
+  T sum2 = EvaluationQuadForm(M, sol4);
+  if (sum != 0) {
+    std::cerr << "LEG: sol4 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
+  return sol4;
 }
 
 

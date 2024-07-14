@@ -2,8 +2,8 @@
 #PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= LATT_DetMinimization
 #PROGRAM		= LATT_FindIsotropic
-PROGRAM		= LATT_TestIsotropic
-#PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
+#PROGRAM		= LATT_TestIsotropic
+PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
 #PROGRAM		= LATT_IndefiniteReduction
 #PROGRAM		= LATT_IndefiniteLLL
 
