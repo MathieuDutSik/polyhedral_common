@@ -174,7 +174,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
   a12(0) = a1;
   a12(1) = a2;
   a12(2) = -1;
-  MyVector<T> a12_red = reduction_information(a12, os).second;
+  MyVector<T> a12_red = reduction_information(a12, os).aReduced;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: a12_red=" << StringVector(a12_red) << "\n";
 #endif
@@ -182,7 +182,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
   a34(0) = -a3;
   a34(1) = -a4;
   a34(2) = -1;
-  MyVector<T> a34_red = reduction_information(a34, os).second;
+  MyVector<T> a34_red = reduction_information(a34, os).aReduced;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: a34_red=" << StringVector(a34_red) << "\n";
 #endif

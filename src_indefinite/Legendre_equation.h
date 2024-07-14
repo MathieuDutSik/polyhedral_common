@@ -27,6 +27,35 @@
   Here we just put the test of existence.
  */
 
+template<typename T>
+std::map<T, size_t> product_entry(std::map<T, size_t> const& x, std::map<T, size_t> const& y) {
+  std::map<T, size_t> ret = x;
+  for (auto & kv: y) {
+    ret[kv.first] += kv.second;
+  }
+  return ret;
+}
+
+
+template<typename T>
+T evaluate_entry(std::map<T, size_t> const& x) {
+  T prod(1);
+  for (auto & kv: x) {
+    for (size_t u=0; u<kv.second; u++) {
+      prod *= kv.first;
+    }
+  }
+  return prod;
+}
+
+template<typename T>
+struct LegendreReductionInformation {
+  MyMatrix<T> TransMat;
+  MyVector<T> aReduced;
+  std::vector<std::map<T,size_t>> l_entry;
+};
+
+
 /*
   We apply Corollary 4 of P1 to case of abc is square-free.
   The conditions are:
@@ -138,8 +167,7 @@ template <typename T> bool determine_solvability_dim3(MyVector<T> const &aReduce
   B Diag(aRet) B = u Diag(aV)  for some coefficient u.
  */
 template <typename T>
-std::pair<MyMatrix<T>, MyVector<T>>
-reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) {
+LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_LEGENDRE
   if (aV.size() != 3) {
     std::cerr << "The length should be exactly 3\n";
@@ -198,27 +226,34 @@ reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) 
   T ab_prod(1);
   T ac_prod(1);
   T bc_prod(1);
+  std::map<T, size_t> a_prod_map, b_prod_map, c_prod_map, ab_prod_map, ac_prod_map, bc_prod_map;
   for (auto &p : primes) {
     bool a_in = a_set.count(p) == 1;
     bool b_in = b_set.count(p) == 1;
     bool c_in = c_set.count(p) == 1;
     if (a_in && !b_in && !c_in) {
       a_prod *= p;
+      a_prod_map[p] += 1;
     }
     if (!a_in && b_in && c_in) {
       bc_prod *= p;
+      bc_prod_map[p] += 1;
     }
     if (!a_in && b_in && !c_in) {
       b_prod *= p;
+      b_prod_map[p] += 1;
     }
     if (a_in && !b_in && c_in) {
       ac_prod *= p;
+      ac_prod_map[p] += 1;
     }
     if (!a_in && !b_in && c_in) {
       c_prod *= p;
+      c_prod_map[p] += 1;
     }
     if (a_in && b_in && !c_in) {
       ab_prod *= p;
+      ab_prod_map[p] += 1;
     }
   }
   TransMat(0, 0) *= bc_prod;
@@ -238,6 +273,10 @@ reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) 
   aRet(0) = T_sign(a) * a_prod * bc_prod;
   aRet(1) = T_sign(b) * b_prod * ac_prod;
   aRet(2) = T_sign(c) * c_prod * ab_prod;
+  std::map<T, size_t> a_bc_prod_map = product_entry(a_prod_map, bc_prod_map);
+  std::map<T, size_t> b_ac_prod_map = product_entry(b_prod_map, ac_prod_map);
+  std::map<T, size_t> c_ab_prod_map = product_entry(c_prod_map, ab_prod_map);
+  std::vector<std::map<T, size_t>> l_entry{a_bc_prod_map, b_ac_prod_map, c_ab_prod_map};
 #ifdef DEBUG_LEGENDRE
   std::map<T, size_t> a_map2 = FactorsIntMap(T_abs(aRet(0)));
   std::map<T, size_t> b_map2 = FactorsIntMap(T_abs(aRet(1)));
@@ -270,7 +309,7 @@ reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) 
     }
   }
 #endif
-  return {TransMat, aRet};
+  return {TransMat, aRet, l_entry};
 }
 
 
@@ -300,8 +339,8 @@ template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, st
   using Tring = typename underlying_ring<T>::ring_type;
   std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
   MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
-  MyVector<Tring> red_diag_B = reduction_information(red_diag_A, os).second;
-  return determine_solvability_dim3(red_diag_B, os);
+  LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
+  return determine_solvability_dim3(lri.aReduced, os);
 }
 
 
@@ -532,13 +571,13 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   using Tring = typename underlying_ring<T>::ring_type;
   std::pair<MyMatrix<T>, MyVector<T>> pair1 = get_reduced_diagonal(M, os);
   MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair1.second);
-  std::pair<MyMatrix<Tring>, MyVector<Tring>> pair2 = reduction_information(red_diag_A, os);
-  bool test = determine_solvability_dim3(pair2.second, os);
+  LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
+  bool test = determine_solvability_dim3(lri.aReduced, os);
   if (!test) {
     return {};
   }
-  MyVector<Tring> sol1 = execute_lagrange_descent(pair2.second);
-  MyVector<Tring> sol2 = pair2.first * sol1;
+  MyVector<Tring> sol1 = execute_lagrange_descent(lri.aReduced);
+  MyVector<Tring> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
   Tring sum(0);
   for (int i=0; i<3; i++) {
