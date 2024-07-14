@@ -507,13 +507,23 @@ template<typename T>
 std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& pair) {
   T const& a = pair.first;
   T const& b = pair.second;
+  T b_abs = T_abs(b);
   std::optional<T> opt = find_quadratic_residue(a, b);
   T u = unfold_opt(opt, "we expect to get u");
+  if (2*u >= b_abs) {
+    u -= b_abs;
+  }
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: descent u=" << u << " a=" << a << " b=" << b << "\n";
+#endif
   T diff = u*u - a;
   T quot = diff / b;
   std::pair<T,T> pair2 = separate_square_factor(quot);
   T e = pair2.first;
   T bp = pair2.second;
+#ifdef DEBUG_LEGENDRE
+  std::cerr << "LEG: descent e=" << e << " bp=" << bp << "\n";
+#endif
   MyMatrix<T> M = ZeroMatrix<T>(3,3);
   M(0,0) = u;
   M(0,2) = 1;
@@ -565,7 +575,7 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
   std::pair<MyMatrix<T>, std::pair<T, T>> pair3 = get_lagrange_normal(diag);
   std::pair<T, T> work_pair = pair3.second;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: We have work_pair\n";
+  std::cerr << "LEG: We have work_pair a=" << work_pair.first << " b=" << work_pair.second << "\n";
   if (!satisfy_descent_condition(work_pair)) {
     std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second << "\n";
     std::cerr << "LEG: work_pair 1, should satisfy the descent condition\n";
@@ -582,10 +592,20 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
     MyVector<T> V_work = V;
     for (size_t u=0; u<len; u++) {
       size_t v = len - 1 - u;
-      V_work = l_pair[v].first * V_work;
+      V_work = ScaledInverse(l_pair[v].first) * V_work;
 #ifdef DEBUG_LEGENDRE
-      T const& a = l_pair[v].second.first;
-      T const& b = l_pair[v].second.second;
+      std::cerr << "LEG: l_pair[v].first=\n";
+      WriteMatrix(std::cerr, l_pair[v].first);
+      auto get_pair=[&]() -> std::pair<T,T> {
+        if (v == 0) {
+          return pair3.second;
+        } else {
+          return l_pair[v-1].second;
+        }
+      };
+      std::pair<T, T> epair = get_pair();
+      T const& a = epair.first;
+      T const& b = epair.second;
       T const& x = V_work(0);
       T const& y = V_work(1);
       T const& z = V_work(2);
@@ -666,6 +686,8 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   MyVector<Tring> sol1 = execute_lagrange_descent(lri.aReduced);
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: sol1=" << StringVector(sol1) << "\n";
+  std::cerr << "LEG: lri.TransMat=\n";
+  WriteMatrix(std::cerr, lri.TransMat);
 #endif
   MyVector<Tring> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
