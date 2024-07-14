@@ -1,7 +1,7 @@
 Read("../common.g");
 Print("Beginning TestIsotropic\n");
 
-OnlyTestExistence:=true;
+OnlyTestExistence:=false;
 
 TestIsotropic:=function(eRec)
     local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm;

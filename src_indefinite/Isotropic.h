@@ -291,16 +291,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     return FindIsotropicRankTwo(M);
   }
   if (n == 3) {
-    // Apply first the Legendre theorem
-    bool test = ternary_has_isotropic_vector(M, os);
-#ifdef DEBUG_ISOTROPIC
-    os << "ternary_has_isotropic_vector test=" << test << "\n";
-#endif
-    if (test) {
-      return Kernel_FindIsotropic(M, os);
-    } else {
-      return {};
-    }
+    return TernaryIsotropicVector(M, os);
   }
   if (n == 4) {
     // Apply the quaternary test

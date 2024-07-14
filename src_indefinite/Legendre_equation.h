@@ -95,6 +95,9 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
   T a_abs = T_abs(a);
   T b_abs = T_abs(b);
   T c_abs = T_abs(c);
+  std::map<T, size_t> a_abs_map = lri.l_entry[0];
+  std::map<T, size_t> b_abs_map = lri.l_entry[1];
+  std::map<T, size_t> c_abs_map = lri.l_entry[2];
   T a_cnt = -b * c;
   T b_cnt = -a * c;
   T c_cnt = -a * b;
@@ -120,7 +123,7 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
     return false;
   }
   //
-  bool test_a = is_quadratic_residue(a_cnt, a_abs);
+  bool test_a = is_quadratic_residue_map(a_cnt, a_abs_map);
 #ifdef DEBUG_LEGENDRE
   os << "QUADTEST: [" << a_cnt << "," << a_abs << "," << test_a << "],\n";
 #endif
@@ -132,7 +135,7 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
   }
   //
   //
-  bool test_b = is_quadratic_residue(b_cnt, b_abs);
+  bool test_b = is_quadratic_residue_map(b_cnt, b_abs_map);
 #ifdef DEBUG_LEGENDRE
   os << "QUADTEST: [" << b_cnt << "," << b_abs << "," << test_b << "],\n";
 #endif
@@ -144,7 +147,7 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
   }
   //
   //
-  bool test_c = is_quadratic_residue(c_cnt, c_abs);
+  bool test_c = is_quadratic_residue_map(c_cnt, c_abs_map);
 #ifdef DEBUG_LEGENDRE
   os << "QUADTEST: [" << c_cnt << "," << c_abs << "," << test_c << "],\n";
 #endif
@@ -361,15 +364,18 @@ std::pair<T,T> separate_square_factor(T const& val) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(val));
   T sqr(1);
   T nosqr(1);
+  using Tint = uint32_t;
+  Tint two(2);
   for (auto & kv : map) {
     T const& p = kv.first;
-    std::pair<size_t, size_t> pair = ResQuoInt(kv.second, 2);
-    size_t res = pair.first;
-    size_t quot = pair.second;
-    for (size_t u=0; u<res; u++) {
+    Tint mult = kv.second;
+    std::pair<Tint, Tint> pair = ResQuoInt(mult, two);
+    Tint res = pair.first;
+    Tint quot = pair.second;
+    for (Tint u=0; u<res; u++) {
       nosqr *= p;
     }
-    for (size_t u=0; u<quot; u++) {
+    for (Tint u=0; u<quot; u++) {
       sqr *= p;
     }
   }
@@ -427,8 +433,14 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
   }
   size_t three(3);
   size_t idxZ = min_idx;
-  size_t idxX = ResInt(min_idx+1, three);
-  size_t idxY = ResInt(min_idx+2, three);
+  size_t idxX = min_idx+1;
+  if (idxX >= three) {
+    idxX -= three;
+  }
+  size_t idxY = min_idx+2;
+  if (idxY >= three) {
+    idxY -= three;
+  }
   T cVal = v(idxZ);
   T a = -v(idxX) * cVal;
   T b = -v(idxY) * cVal;
@@ -532,10 +544,11 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
 #endif
     }
     V_work = pair3.first * V_work;
+    return V_work;
   };
   while(true) {
     std::optional<MyVector<T>> opt = get_trivial_solution(work_pair);
-    if (*opt) {
+    if (opt) {
       MyVector<T> V = *opt;
       return get_sol(V);
     }
