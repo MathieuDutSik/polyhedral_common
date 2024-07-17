@@ -294,16 +294,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     return TernaryIsotropicVector(M, os);
   }
   if (n == 4) {
-    // Apply the quaternary test
-    bool test = quaternary_has_isotropic_vector(M, os);
-#ifdef DEBUG_ISOTROPIC
-    os << "quaternary_has_isotropic_vector test=" << test << "\n";
-#endif
-    if (test) {
-      return Kernel_FindIsotropic(M, os);
-    } else {
-      return {};
-    }
+    return QuaternaryIsotropicVector(M, os);
   }
   // Now n is greater than 5, so there is an isotropic vector
   return Kernel_FindIsotropic(M, os);

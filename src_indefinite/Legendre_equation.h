@@ -645,13 +645,15 @@ std::optional<MyVector<T>> get_trivial_solution(std::pair<T,T> const& pair) {
   return {};
 }
 
-
+/*
+  Find the solution to the equation by using the Lagrange method for ternary equations.
+ */
 template<typename T>
-MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
+MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]] std::ostream& os) {
   std::pair<MyMatrix<T>, std::pair<T, T>> pair3 = get_lagrange_normal(diag);
   std::pair<T, T> work_pair = pair3.second;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: We have work_pair a=" << work_pair.first << " b=" << work_pair.second << "\n";
+  os << "LEG: We have work_pair a=" << work_pair.first << " b=" << work_pair.second << "\n";
   if (!satisfy_descent_condition(work_pair)) {
     std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second << "\n";
     std::cerr << "LEG: work_pair 1, should satisfy the descent condition\n";
@@ -662,19 +664,19 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
   auto get_sol=[&](MyVector<T> const& V) -> MyVector<T> {
     size_t len = l_pair.size();
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: get_sol beginning len=" << len << "\n";
-    std::cerr << "LEG: get_sol V=" << StringVector(V) << "\n";
+    os << "LEG: get_sol beginning len=" << len << "\n";
+    os << "LEG: get_sol V=" << StringVector(V) << "\n";
 #endif
     MyVector<T> V_work = V;
     for (size_t u=0; u<len; u++) {
       size_t v = len - 1 - u;
 #ifdef DEBUG_LEGENDRE
-      std::cerr << "LEG: Before V_work=" << StringVector(V_work) << "\n";
+      os << "LEG: Before V_work=" << StringVector(V_work) << "\n";
 #endif
       V_work = ScaledInverse(l_pair[v].first) * V_work;
 #ifdef DEBUG_LEGENDRE
-      std::cerr << "LEG: After V_work=" << StringVector(V_work) << "\n";
-      std::cerr << "LEG: l_pair[v].first=\n";
+      os << "LEG: After V_work=" << StringVector(V_work) << "\n";
+      os << "LEG: l_pair[v].first=\n";
       WriteMatrix(std::cerr, l_pair[v].first);
       auto get_pair=[&]() -> std::pair<T,T> {
         if (v == 0) {
@@ -699,12 +701,12 @@ MyVector<T> execute_lagrange_descent(MyVector<T> const& diag) {
 #endif
     }
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: pair3.first=\n";
-    WriteMatrix(std::cerr, pair3.first);
+    os << "LEG: pair3.first=\n";
+    WriteMatrix(os, pair3.first);
 #endif
     V_work = pair3.first * V_work;
 #ifdef DEBUG_LEGENDRE
-    std::cerr << "LEG: V_work=" << StringVector(V_work) << "\n";
+    os << "LEG: V_work=" << StringVector(V_work) << "\n";
     T sum(0);
     for (int i=0; i<3; i++) {
       T const& val = V_work(i);
@@ -765,7 +767,7 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   if (!test) {
     return {};
   }
-  MyVector<Tring> sol1 = execute_lagrange_descent(lri.aReduced);
+  MyVector<Tring> sol1 = TernaryIsotropicViaLagrange(lri.aReduced, os);
 #ifdef DEBUG_LEGENDRE
   os << "LEG: sol1=" << StringVector(sol1) << "\n";
   os << "LEG: lri.TransMat=\n";

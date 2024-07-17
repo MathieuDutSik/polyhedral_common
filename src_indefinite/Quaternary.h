@@ -270,7 +270,7 @@ bool determine_solvability_dim4(MyVector<T> const& a, std::vector<T> const& prim
 }
 
 template<typename T>
-int hilbert_symbol(T const& a, T const& b, T const& p) {
+int hilbert_symbol(T const& a, T const& b, T const& p, std::ostream& os) {
   MyVector<T> aV(3);
   aV(0) = a;
   aV(1) = b;
@@ -295,8 +295,8 @@ std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes
     auto is_matching_a_b=[&](T const& t, T const& a, T const& b) -> bool {
       // The t should satisfy (t, -a a) = (a, a)
       T prod = -a * b;
-      int val1 = hilbert_symbol(t, prod, p);
-      int val2 = hilbert_symbol(a, b, p);
+      int val1 = hilbert_symbol(t, prod, p, os);
+      int val2 = hilbert_symbol(a, b, p, os);
       return val1 == val2;
     };
     std::vector<T> candidates = Padic_get_residue_classes(p);
@@ -334,7 +334,7 @@ std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes
 
 // The q is defined from section 4.2, item 4.
 template<typename T>
-T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes, std::ostream& os) {
+T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes, [[maybe_unused]] std::ostream& os) {
   // We need a1 x1^2 + a2 x2^2 - t u^2 = 0.
   //
   T a1 = a(0);
@@ -391,20 +391,22 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
   T a2 = a(1);
   T a3 = a(2);
   T a4 = a(3);
+  T ma3 = -a3;
+  T ma4 = -a4;
   T prod_12 = - a1 * a2;
   T prod_34 = - a3 * a4;
   std::vector<int> l_symb12, l_symb34;
   for (auto & p : primes) {
-    int symb12 = hilbert_symbol(a1, a2, p);
-    int symb34 = hilbert_symbol(-a3, -a4, p);
+    int symb12 = hilbert_symbol(a1, a2, p, os);
+    int symb34 = hilbert_symbol(ma3, ma4, p, os);
     l_symb12.push_back(symb12);
     l_symb34.push_back(symb34);
   }
   auto padic_test=[&](T const& t) -> bool {
     for (size_t u=0; u<len; u++) {
       T const& p = primes[u];
-      int symb12 = hilbert_symbol(t, prod_12, p);
-      int symb34 = hilbert_symbol(t, prod_34, p);
+      int symb12 = hilbert_symbol(t, prod_12, p, os);
+      int symb34 = hilbert_symbol(t, prod_34, p, os);
       if (symb12 != l_symb12[u] || symb34 != l_symb34[u]) {
         return false;
       }
@@ -412,11 +414,11 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
     return true;
   };
   auto get_solution=[&](T const& t) -> MyVector<T> {
-    MyMatrix<T> M12 = ZeroMatrix<T>(3,3);
-    M12(0,0) = a1;
-    M12(1,1) = a2;
-    M12(2,2) = -t;
-    std::optional<MyVector<T>> opt12 = TernaryIsotropicVector(M12, os);
+    MyVector<T> a12(3);
+    a12(0) = a1;
+    a12(1) = a2;
+    a12(2) = -t;
+    std::optional<MyVector<T>> opt12 = TernaryIsotropicViaLagrange(a12, os);
     MyVector<T> V12 = unfold_opt(opt12, "opt12 should be solvable");
 #ifdef DEBUG_QUATERNARY
     T sum12 = a1 * V12(0) * V12(0) + a2 *V12(1) * V12(1) - t * V12(2) * V12(2);
@@ -425,11 +427,11 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<T> M34 = ZeroMatrix<T>(3,3);
-    M34(0,0) = a3;
-    M34(1,1) = a4;
-    M34(2,2) = t;
-    std::optional<MyVector<T>> opt34 = TernaryIsotropicVector(M34, os);
+    MyVector<T> a34(3);
+    a34(0) = a3;
+    a34(1) = a4;
+    a34(2) = t;
+    std::optional<MyVector<T>> opt34 = TernaryIsotropicViaLagrange(a34, os);
     MyVector<T> V34 = unfold_opt(opt34, "opt34 should be solvable");
 #ifdef DEBUG_QUATERNARY
     T sum34 = a3 * V34(0) * V34(0) + a4 *V34(1) * V34(1) + t * V34(2) * V34(2);
@@ -463,7 +465,7 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
     if (IsPrime(p0)) {
       T t = p0 * q;
       if (padic_test(t)) {
-        return get_solution();
+        return get_solution(t);
       }
     }
     p0 += 1;
@@ -509,7 +511,7 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
   std::vector<Tring> primes = get_local_primes(a);
   bool test = determine_solvability_dim4(a, primes, os);
   if (!test) {
-    return false;
+    return {};
   }
   MyVector<Tring> sol1 = dim4_compute_solution(a, primes, os);
   MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
