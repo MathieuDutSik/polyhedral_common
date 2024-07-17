@@ -12,7 +12,6 @@ template <typename T>
 void process(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
-  std::cerr << "We have Q\n";
   //
   bool test = is_isotropic(Q, std::cerr);
   if (OutFormat == "GAP") {

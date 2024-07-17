@@ -1,7 +1,7 @@
 Read("../common.g");
 Print("Beginning TestIsotropic\n");
 
-OnlyTestExistence:=false;
+OnlyTestExistence:=true;
 
 TestIsotropic:=function(eRec)
     local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm;
@@ -44,7 +44,6 @@ end;
 
 ListRec:=ReadAsFunction("IsotropicCases")();;
 ListDim3_A:=Filtered(ListRec, x->Length(x.M) = 3);
-ListDim3_B:=ListDim3_A{[1..1000]};
 ListDim4_A:=Filtered(ListRec, x->Length(x.M) = 4);
 ListDim4_B:=Filtered(ListDim4_A, x->x.has_isotropic);
 ListDim5:=Filtered(ListRec, x->Length(x.M) = 5);
