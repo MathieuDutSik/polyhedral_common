@@ -332,6 +332,27 @@ std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes
   return classes;
 }
 
+template<typename T>
+std::vector<int> get_poss_signs(std::vector<T> const& a) {
+  // Quadratic form is sum a_i x_i^2 + t z^2
+  // This returns the possible signs for t
+  size_t len = a.size();
+  size_t n_plus = 0;
+  for (auto & val : a) {
+    if (val > 0) {
+      n_plus += 1;
+    }
+  }
+  if (n_plus == 0) {
+    return {1};
+  }
+  if (n_plus == len) {
+    return {-1};
+  }
+  return {-1, 1};
+}
+
+
 // The q is defined from section 4.2, item 4.
 template<typename T>
 T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes, [[maybe_unused]] std::ostream& os) {
@@ -341,29 +362,10 @@ T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> 
   T a2 = a(1);
   T a3 = a(2);
   T a4 = a(3);
-  auto get_poss_signs=[&](T const& a, T const& b) -> std::vector<int> {
-    // We returns the possible signs of t such that a x^2 + by^2 + t h^2 = 0
-    size_t n_plus = 0;
-    if (a > 0) {
-      n_plus += 1;
-    }
-    if (b > 0) {
-      n_plus += 1;
-    }
-    if (n_plus == 0) {
-      return {1};
-    }
-    if (n_plus == 1) {
-      return {-1,1};
-    }
-    if (n_plus == 2) {
-      return {-1};
-    }
-    std::cerr << "Failed to match\n";
-    throw TerminalException{1};
-  };
-  std::vector<int> set12 = get_poss_signs(-a1, -a2);
-  std::vector<int> set34 = get_poss_signs(a3, a4);
+  std::vector<T> vect12{-a1, -a2};
+  std::vector<T> vect34{a3, a4};
+  std::vector<int> set12 = get_poss_signs(vect12);
+  std::vector<int> set34 = get_poss_signs(vect34);
   std::vector<int> set = IntersectionVect(set12, set34);
 #ifdef DEBUG_QUATERNARY
   if (set.size() == 0) {
@@ -498,6 +500,20 @@ template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M,
 }
 
 template<typename T>
+std::optional<MyVector<T>> QuaternaryIsotropicVectorDiagonal(MyVector<T> const& a, std::ostream& os) {
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: QuaternaryIsotropicVector, we have diag\n";
+#endif
+  std::vector<T> primes = get_local_primes(a);
+  bool test = determine_solvability_dim4(a, primes, os);
+  if (!test) {
+    return {};
+  }
+  return dim4_compute_solution(a, primes, os);
+}
+
+
+template<typename T>
 std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
 #ifdef DEBUG_QUATERNARY
@@ -505,19 +521,15 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
 #endif
   std::pair<MyMatrix<T>,MyVector<T>> pair1 = get_reduced_diagonal(M, os);
   MyVector<Tring> a = UniversalVectorConversion<Tring,T>(pair1.second);
-#ifdef DEBUG_QUATERNARY
-  os << "QUAD: QuaternaryIsotropicVector, we have red_diag\n";
-#endif
-  std::vector<Tring> primes = get_local_primes(a);
-  bool test = determine_solvability_dim4(a, primes, os);
-  if (!test) {
+  std::optional<MyVector<Tring>> opt = QuaternaryIsotropicVectorDiagonal(a, os);
+  if (!opt) {
     return {};
   }
-  MyVector<Tring> sol1 = dim4_compute_solution(a, primes, os);
+  MyVector<Tring> sol1 = *opt;
   MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
   MyVector<T> sol3 = pair1.first.transpose() * sol2;
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: sol3=" << StringVector(sol3) << "\n";
+  os << "QUAD: sol3=" << StringVector(sol3) << "\n";
   T sum3 = EvaluationQuadForm(M, sol3);
   if (sum3 != 0) {
     std::cerr << "LEG: sol3 is not a solution of the equation\n";

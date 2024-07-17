@@ -749,6 +749,40 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
 }
 
 
+template<typename T>
+std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, std::ostream& os) {
+  LegendreReductionInformation<T> lri = reduction_information(a, os);
+  bool test = determine_solvability_dim3(lri, os);
+  if (!test) {
+    return {};
+  }
+  MyVector<T> sol1 = TernaryIsotropicViaLagrange(lri.aReduced, os);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: sol1=" << StringVector(sol1) << "\n";
+  os << "LEG: lri.TransMat=\n";
+  WriteMatrix(os, lri.TransMat);
+#endif
+  MyVector<T> sol2 = lri.TransMat * sol1;
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: sol2=" << StringVector(sol1) << "\n";
+  T sum(0);
+  for (int i=0; i<3; i++) {
+    sum += a(i) * sol2(i) * sol2(i);
+  }
+  if (sum != 0) {
+    std::cerr << "LEG: lri.TransMat=\n";
+    WriteMatrix(std::cerr, lri.TransMat);
+    std::cerr << "LEG: red_diag_A=" << StringVector(red_diag_A) << "\n";
+    std::cerr << "LEG: lri.aReduced=" << StringVector(lri.aReduced) << "\n";
+    std::cerr << "LEG: sol2=" << StringVector(sol2) << "\n";
+    std::cerr << "LEG: sol2 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
+  return sol2;
+}
+
+
 /*
   We are looking for a ternary isotropic vector if one exists.
 
@@ -761,35 +795,12 @@ template<typename T>
 std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
   std::pair<MyMatrix<T>, MyVector<T>> pair1 = get_reduced_diagonal(M, os);
-  MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair1.second);
-  LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
-  bool test = determine_solvability_dim3(lri, os);
-  if (!test) {
+  MyVector<Tring> diag = UniversalVectorConversion<Tring, T>(pair1.second);
+  std::optional<MyVector<Tring>> opt = TernaryIsotropicVectorDiagonal(diag, os);
+  if (!opt) {
     return {};
   }
-  MyVector<Tring> sol1 = TernaryIsotropicViaLagrange(lri.aReduced, os);
-#ifdef DEBUG_LEGENDRE
-  os << "LEG: sol1=" << StringVector(sol1) << "\n";
-  os << "LEG: lri.TransMat=\n";
-  WriteMatrix(os, lri.TransMat);
-#endif
-  MyVector<Tring> sol2 = lri.TransMat * sol1;
-#ifdef DEBUG_LEGENDRE
-  os << "LEG: sol2=" << StringVector(sol1) << "\n";
-  Tring sum(0);
-  for (int i=0; i<3; i++) {
-    sum += red_diag_A(i) * sol2(i) * sol2(i);
-  }
-  if (sum != 0) {
-    std::cerr << "LEG: lri.TransMat=\n";
-    WriteMatrix(std::cerr, lri.TransMat);
-    std::cerr << "LEG: red_diag_A=" << StringVector(red_diag_A) << "\n";
-    std::cerr << "LEG: lri.aReduced=" << StringVector(lri.aReduced) << "\n";
-    std::cerr << "LEG: sol2=" << StringVector(sol2) << "\n";
-    std::cerr << "LEG: sol2 is not a solution of the equation\n";
-    throw TerminalException{1};
-  }
-#endif
+  MyVector<Tring> sol2 = *opt;
   MyVector<T> sol3 = UniversalVectorConversion<T,Tring>(sol2);
 #ifdef DEBUG_LEGENDRE
   os << "LEG: sol3=" << StringVector(sol3) << "\n";
