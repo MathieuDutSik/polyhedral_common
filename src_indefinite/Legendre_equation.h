@@ -767,13 +767,13 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
   }
   MyVector<Tring> sol1 = execute_lagrange_descent(lri.aReduced);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: sol1=" << StringVector(sol1) << "\n";
-  std::cerr << "LEG: lri.TransMat=\n";
-  WriteMatrix(std::cerr, lri.TransMat);
+  os << "LEG: sol1=" << StringVector(sol1) << "\n";
+  os << "LEG: lri.TransMat=\n";
+  WriteMatrix(os, lri.TransMat);
 #endif
   MyVector<Tring> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: sol2=" << StringVector(sol1) << "\n";
+  os << "LEG: sol2=" << StringVector(sol1) << "\n";
   Tring sum(0);
   for (int i=0; i<3; i++) {
     sum += red_diag_A(i) * sol2(i) * sol2(i);
@@ -790,13 +790,13 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
 #endif
   MyVector<T> sol3 = UniversalVectorConversion<T,Tring>(sol2);
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: sol3=" << StringVector(sol3) << "\n";
-  std::cerr << "LEG: pair1.second=\n";
-  WriteMatrix(std::cerr, pair1.first);
+  os << "LEG: sol3=" << StringVector(sol3) << "\n";
+  os << "LEG: pair1.second=\n";
+  WriteMatrix(os, pair1.first);
 #endif
   MyVector<T> sol4 = pair1.first.transpose() * sol3;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: sol4=" << StringVector(sol4) << "\n";
+  os << "LEG: sol4=" << StringVector(sol4) << "\n";
   T sum2 = EvaluationQuadForm(M, sol4);
   if (sum2 != 0) {
     std::cerr << "LEG: sol4 is not a solution of the equation\n";

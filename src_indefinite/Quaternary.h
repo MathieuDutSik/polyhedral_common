@@ -114,13 +114,35 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p, [[maybe_unused]] s
   }
 }
 
+template<typename T>
+std::vector<T> get_local_primes(MyVector<T> const& a) {
+  std::set<T> primes;
+  T two(2);
+  primes.insert(two);
+  for (int i=0; i<4; i++) {
+    std::map<T, size_t> map = FactorsIntMap(T_abs(a(i)));
+    for (auto & kv : map) {
+      if (kv.second > 0) {
+        T const& p = kv.first;
+        primes.insert(p);
+      }
+    }
+  }
+  std::vector<T> v;
+  for (auto & p: primes) {
+    v.push_back(p);
+  }
+  return v;
+}
+
+
 
 /*
   This is the main theorem of SP. We do not go over trying to
   find an explicit solution.
  */
 template<typename T>
-bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
+bool determine_solvability_dim4(MyVector<T> const& a, std::vector<T> const& primes, std::ostream& os) {
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: determine_solvability_dim4, beginning |a|=" << a.size() << "\n";
 #endif
@@ -143,25 +165,6 @@ bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
 #endif
     return false;
   }
-  std::set<T> primes;
-  T two(2);
-  primes.insert(two);
-  for (int i=0; i<4; i++) {
-    std::map<T, size_t> map = FactorsIntMap(T_abs(a(i)));
-    for (auto & kv : map) {
-      if (kv.second > 0) {
-        T const& p = kv.first;
-        primes.insert(p);
-      }
-    }
-  }
-#ifdef DEBUG_QUATERNARY
-  os << "QUAD: primes =";
-  for (auto& p : primes) {
-    os << " " << p;
-  }
-  os << "\n";
-#endif
   //
   T a1 = a(0);
   T a2 = a(1);
@@ -266,6 +269,209 @@ bool determine_solvability_dim4(MyVector<T> const& a, std::ostream& os) {
   return true;
 }
 
+template<typename T>
+int hilbert_symbol(T const& a, T const& b, T const& p) {
+  MyVector<T> aV(3);
+  aV(0) = a;
+  aV(1) = b;
+  aV(2) = -1;
+  MyVector<T> aV_red = reduction_information(aV, os).aReduced;
+  bool test = Padic_isotropy_ternary(aV_red, p, os);
+  if (test) {
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
+template<typename T>
+std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes, std::ostream& os) {
+  std::vector<T> classes;
+  T a1 = a(0);
+  T a2 = a(1);
+  T a3 = a(2);
+  T a4 = a(3);
+  for (auto & p: primes) {
+    auto is_matching_a_b=[&](T const& t, T const& a, T const& b) -> bool {
+      // The t should satisfy (t, -a a) = (a, a)
+      T prod = -a * b;
+      int val1 = hilbert_symbol(t, prod, p);
+      int val2 = hilbert_symbol(a, b, p);
+      return val1 == val2;
+    };
+    std::vector<T> candidates = Padic_get_residue_classes(p);
+#ifdef DEBUG_QUATERNARY
+    size_t n_cond_12 = 0, n_cond_34 = 0;
+#endif
+    std::vector<T> matches;
+    for (auto & t : candidates) {
+      bool test12 = is_matching_a_b(t, a1, a2);
+      bool test34 = is_matching_a_b(t, -a3, -a4);
+#ifdef DEBUG_QUATERNARY
+      if (test12) {
+        n_cond_12 += 1;
+      }
+      if (test34) {
+        n_cond_34 += 1;
+      }
+#endif
+      if (test12 && test34) {
+        matches.push_back(t);
+      }
+#ifdef DEBUG_QUATERNARY
+      os << "QUAD: n_cond_12=" << n_cond_12 << " n_cond_34=" << n_cond_34 << " |matches|=" << matches.size() << "\n";
+      if (matches.size() == 0) {
+        std::cerr << "QUAD: matches should not be empty\n";
+        throw TerminalException{1};
+      }
+#endif
+      T tp = matches[0];
+      classes.push_back(tp);
+    }
+  }
+  return classes;
+}
+
+// The q is defined from section 4.2, item 4.
+template<typename T>
+T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes) {
+  // We need a1 x1^2 + a2 x2^2 - t u^2 = 0.
+  //
+  T a1 = a(0);
+  T a2 = a(1);
+  T a3 = a(2);
+  T a4 = a(3);
+  auto get_poss_signs=[&](T const& a, T const& b) -> std::vector<int> {
+    // We returns the possible signs of t such that a x^2 + by^2 + t h^2 = 0
+    size_t n_plus = 0;
+    if (a > 0) {
+      n_plus += 1;
+    }
+    if (b > 0) {
+      n_plus += 1;
+    }
+    if (n_plus == 0) {
+      return {1};
+    }
+    if (n_plus == 1) {
+      return {-1,1};
+    }
+    if (n_plus == 2) {
+      return {-1};
+    }
+    std::cerr << "Failed to match\n";
+    throw TerminalException{1};
+  };
+  std::vector<int> set12 = get_poss_signs(-a1, -a2);
+  std::vector<int> set34 = get_poss_signs(a3, a4);
+  std::vector<int> set = IntersectionVect(set12, set34);
+#ifdef DEBUG_QUATERNARY
+  if (set.size() == 0) {
+    std::cerr << "set should not be empty\n";
+    throw TerminalException{1};
+  }
+#endif
+  int sign = set[0];
+  T q(sign);
+  for (size_t u=0; u<primes.size(); u++) {
+    T tp = classes[u];
+    T p = primes[u];
+    std::pair<size_t, T> pair = Padic_decompose(tp, p);
+    T expo = MyPow(p, pair.first);
+    q *= expo;
+  }
+  return q;
+}
+
+
+template<typename T>
+MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vector<T> const& primes, T const& q), std::ostream& os {
+  size_t len = primes.size();
+  T a1 = a(0);
+  T a2 = a(1);
+  T a3 = a(2);
+  T a4 = a(3);
+  T prod_12 = - a1 * a2;
+  T prod_34 = - a3 * a4;
+  std::vector<int> l_symb12, l_symb34;
+  for (auto & p : primes) {
+    int symb12 = hilbert_symbol(a1, a2, p);
+    int symb34 = hilbert_symbol(-a3, -a4, p);
+    l_symb12.push_back(symb12);
+    l_symb34.push_back(symb34);
+  }
+  auto padic_test=[&](T const& t) -> bool {
+    for (size_t u=0; u<len; u++) {
+      T const& p = primes[u];
+      int symb12 = hilbert_symbol(t, prod_12, p);
+      int symb34 = hilbert_symbol(t, prod_34, p);
+      if (symb12 != l_symb12[u] || symb34 != l_symb34[u]) {
+        return false;
+      }
+    }
+    return true;
+  };
+  auto get_solution=[&](T const& t) -> MyVector<T> {
+    MyMatrix<T> M12 = ZeroMatrix<T>(3,3);
+    M12(0,0) = a1;
+    M12(1,1) = a2;
+    M12(2,2) = -t;
+    std::optional<MyVector<T>> opt12 = TernaryIsotropicVector(M12, os);
+    MyVector<T> V12 = unfold_opt(opt12, "opt12 should be solvable");
+#ifdef DEBUG_QUATERNARY
+    T sum12 = a1 * V12(0) * V12(0) + a2 *V12(1) * V12(1) - t * V12(2) * V12(2);
+    if (sum12 != 0) {
+      std::cerr << "V12 should be an isotropic vector\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<T> M34 = ZeroMatrix<T>(3,3);
+    M34(0,0) = a3;
+    M34(1,1) = a4;
+    M34(2,2) = t;
+    std::optional<MyVector<T>> opt34 = TernaryIsotropicVector(M34, os);
+    MyVector<T> V34 = unfold_opt(opt34, "opt34 should be solvable");
+#ifdef DEBUG_QUATERNARY
+    T sum34 = a3 * V34(0) * V34(0) + a4 *V34(1) * V34(1) + t * V34(2) * V34(2);
+    if (sum34 != 0) {
+      std::cerr << "V34 should be an isotropic vector\n";
+      throw TerminalException{1};
+    }
+#endif
+    //
+    T val12 = V12(2);
+    T val34 = V34(2);
+    MyVector<T> Vret(4);
+    Vret(0) = V12(0) * val34;
+    Vret(1) = V12(1) * val34;
+    Vret(2) = V34(0) * val12;
+    Vret(3) = V34(1) * val12;
+#ifdef DEBUG_QUATERNARY
+    T sum = 0;
+    for (int u=0; u<4; u++) {
+      sum += a(u) * Vret(u) * Vret(u);
+    }
+    if (sum != 0) {
+      std::cerr << "Vret should be an isotropic vector\n";
+      throw TerminalException{1};
+    }
+#endif
+    return Vret;
+  };
+  T p0(2);
+  while(true) {
+    if (IsPrime(p0)) {
+      T t = p0 * q;
+      if (padic_test(t)) {
+        return get_solution();
+      }
+    }
+    p0 += 1;
+  }
+}
+
+
+
 template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
 #ifdef DEBUG_QUATERNARY
@@ -276,8 +482,30 @@ template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M,
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: quaternary_has_isotropic_vector, we have red_diag\n";
 #endif
-  return determine_solvability_dim4(red_diagB, os);
+  std::vector<Tring> primes = get_local_primes(red_diagB);
+  return determine_solvability_dim4(red_diagB, primes, os);
 }
+
+template<typename T>
+std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: QuaternaryIsotropicVector, beginning\n";
+#endif
+  std::pair<MyMatrix<T>,MyVector<T>> pair1 = get_reduced_diagonal(M, os);
+  MyVector<Tring> red_diagB = UniversalVectorConversion<Tring,T>(pair1.second);
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: QuaternaryIsotropicVector, we have red_diag\n";
+#endif
+  bool test = determine_solvability_dim4(red_diagB, os);
+  if (!test) {
+    return false;
+  }
+  std::vector<Tring> primes = get_local_primes(red_diagB);
+  
+
+}
+
 
 
 // clang-format off
