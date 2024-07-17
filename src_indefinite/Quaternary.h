@@ -334,7 +334,7 @@ std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes
 
 // The q is defined from section 4.2, item 4.
 template<typename T>
-T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes) {
+T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> const& primes, std::ostream& os) {
   // We need a1 x1^2 + a2 x2^2 - t u^2 = 0.
   //
   T a1 = a(0);
@@ -385,7 +385,7 @@ T get_q_val(MyVector<T> const& a, std::vector<T> const& classes, std::vector<T> 
 
 
 template<typename T>
-MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vector<T> const& primes, T const& q), std::ostream& os {
+MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vector<T> const& primes, T const& q, std::ostream& os) {
   size_t len = primes.size();
   T a1 = a(0);
   T a2 = a(1);
@@ -471,6 +471,15 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
 }
 
 
+template<typename T>
+MyVector<T> dim4_compute_solution(MyVector<T> const& a, std::vector<T> const& primes, std::ostream& os) {
+  std::vector<T> classes = get_tp_classes(a, primes, os);
+  T q = get_q_val(a, classes, primes, os);
+  return dim4_pair_legendre_iterate_solution(a, primes, q, os);
+}
+
+
+
 
 template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
@@ -493,17 +502,27 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
   os << "QUAD: QuaternaryIsotropicVector, beginning\n";
 #endif
   std::pair<MyMatrix<T>,MyVector<T>> pair1 = get_reduced_diagonal(M, os);
-  MyVector<Tring> red_diagB = UniversalVectorConversion<Tring,T>(pair1.second);
+  MyVector<Tring> a = UniversalVectorConversion<Tring,T>(pair1.second);
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: QuaternaryIsotropicVector, we have red_diag\n";
 #endif
-  bool test = determine_solvability_dim4(red_diagB, os);
+  std::vector<Tring> primes = get_local_primes(a);
+  bool test = determine_solvability_dim4(a, primes, os);
   if (!test) {
     return false;
   }
-  std::vector<Tring> primes = get_local_primes(red_diagB);
-  
-
+  MyVector<Tring> sol1 = dim4_compute_solution(a, primes, os);
+  MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
+  MyVector<T> sol3 = pair1.first.transpose() * sol2;
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: sol3=" << StringVector(sol3) << "\n";
+  T sum3 = EvaluationQuadForm(M, sol3);
+  if (sum3 != 0) {
+    std::cerr << "LEG: sol3 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
+  return sol3;
 }
 
 
