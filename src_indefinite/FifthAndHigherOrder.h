@@ -38,7 +38,6 @@
  */
 template<typename T>
 MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
-  T t(1);
   // Quadratic form -a1 x1^2 - a2 x2^2 + t z^2 = 0
   std::vector<T> v_tern{-a(0), -a(1)};
   std::vector<int> poss_tern = get_poss_signs(v_tern);
@@ -90,9 +89,9 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
   Compute a basis of the space 
  */
 template<typename T>
-MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q) {
-  int n = M.rows();
-  size_t max_one_sign = 4;
+MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q, std::ostream& os) {
+  int n = Q.rows();
+  int max_one_sign = 4;
   std::vector<MyVector<T>> basis;
   MyMatrix<T> M;
   auto is_linearly_independent=[&](MyVector<T> const& v) -> bool {
@@ -113,7 +112,7 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q) {
     if (!is_linearly_independent(v)) {
       return false;
     }
-    std::vector<T> test_basis = basis;
+    std::vector<MyVector<T>> test_basis = basis;
     test_basis.push_back(v);
     MyMatrix<T> test_M = MatrixFromVectorFamily(test_basis);
     MyMatrix<T> QuadM = test_M * Q * test_M.transpose();
@@ -144,14 +143,14 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q) {
       insert_vector_if_ok(v);
     }
   }
-  auto get_sign_vector=[&](int const& sign) -> Myvector<T> {
+  auto get_sign_vector=[&](int const& sign) -> MyVector<T> {
     MyMatrix<T> ProdM = M * Q;
     MyMatrix<T> NSP = NullspaceTrMat(ProdM);
     MyMatrix<T> QuadQ = sign * NSP * Q * NSP.transpose();
     T CritNorm(0);
     bool StrictIneq = true;
     bool NeedNonZero = true;
-    MyVector<T> v1 = GetIntegralVector_allmeth(QuadM, CritNorm, StrictIneq, NeedNonZero, os);
+    MyVector<T> v1 = GetIntegralVector_allmeth<T,T>(QuadQ, CritNorm, StrictIneq, NeedNonZero, os);
     MyVector<T> v2 = NSP.transpose() * v1;
     return v2;
   };
@@ -173,7 +172,35 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q) {
   }
 }
 
+template<typename T>
+MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+  using Tring = typename underlying_ring<T>::ring_type;
+#ifdef DEBUG_QUATERNARY
+  os << "FIFTH: FifthOrderIsotropicVector, beginning\n";
+#endif
+  std::pair<MyMatrix<T>,MyVector<T>> pair1 = get_reduced_diagonal(M, os);
+  MyVector<Tring> a = UniversalVectorConversion<Tring,T>(pair1.second);
+  MyVector<Tring> sol1 = solve_fifth_equation(a, os);
+  MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
+  return sol2;
+}
 
+
+template<typename T>
+MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostream& os) {
+  auto get_basis=[&]() -> MyMatrix<T> {
+    if (Q.rows() == 5) {
+      return IdentityMat<T>(5);
+    } else {
+      return compute_fifth_basis(Q, os);
+    }
+  };
+  MyMatrix<T> basis = get_basis();
+  MyMatrix<T> Q2 = basis * Q * basis.transpose();
+  MyVector<T> v1 = FifthOrderIsotropicVector(Q2, os);
+  MyVector<T> v2 = basis.transpose() * v1;
+  return v2;
+}
 
 
 

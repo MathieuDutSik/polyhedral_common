@@ -6,6 +6,7 @@
 #include "DeterminantMinimization.h"
 #include "Legendre_equation.h"
 #include "Quaternary.h"
+#include "FifthAndHigherOrder.h"
 #include "Indefinite_LLL.h"
 #include <algorithm>
 #include <limits>
@@ -281,8 +282,31 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
   }
 }
 
+
 template <typename T>
-std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
+std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::ostream& os) {
+  int n = Q.rows();
+  MyMatrix<T> Pw = IdentityMat<T>(n);
+  MyMatrix<T> Qw = Q;
+  int n_iter = 5;
+  for (int iter=0; iter<n_iter; iter++) {
+    std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
+    if (opt) {
+      MyVector<T> const &eV = *opt;
+      MyVector<T> fV = Pw.transpose() * eV;
+      return fV;
+    }
+    MyMatrix<T> U = get_random_int_matrix<T>(n);
+    Pw = U * Pw;
+    Qw = U * Qw * U.transpose();
+  }
+  return {};
+}
+
+
+
+template <typename T>
+std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
   if (n == 1) {
     return FindIsotropicRankOne(M);
@@ -296,8 +320,20 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   if (n == 4) {
     return QuaternaryIsotropicVector(M, os);
   }
-  // Now n is greater than 5, so there is an isotropic vector
-  return Kernel_FindIsotropic(M, os);
+  return FifthAndHigherOrderIsotropicVector(M, os);
+}
+
+template <typename T>
+std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
+  int n = M.rows();
+  if (n <= 2) {
+    return FindIsotropicExact(M, os);
+  }
+  std::optional<MyVector<T>> opt = FindIsotropic_LLL_nfixed(M, os);
+  if (opt) {
+    return *opt;
+  }
+  return FindIsotropicExact(M, os);
 }
 
 template <typename T>

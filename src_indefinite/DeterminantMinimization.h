@@ -118,10 +118,12 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
     throw TerminalException{1};
   }
   int n = Q.rows();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
   bool is_n_even = true;
   if (ResInt(n, 2) == 1) {
     is_n_even = false;
   }
+#endif
   T det = DeterminantMat(Q);
   T det_abs = T_abs(det);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
