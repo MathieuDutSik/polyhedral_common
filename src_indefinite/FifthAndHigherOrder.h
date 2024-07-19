@@ -113,6 +113,9 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
 template<typename T>
 MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q, std::ostream& os) {
   int n = Q.rows();
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: compute_fifth_basis, beginning, n=" << n << "\n";
+#endif
   int max_one_sign = 4;
   std::vector<MyVector<T>> basis;
   MyMatrix<T> M;
@@ -178,6 +181,9 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q, std::ostream& os) {
   };
   while(true) {
     if (M.rows() == 5) {
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+      os << "FIFTH: compute_fifth_basis, returning M\n";
+#endif
       return M;
     }
     MyMatrix<T> QuadM = M * Q * M.transpose();
@@ -231,9 +237,42 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostrea
     }
   };
   MyMatrix<T> basis = get_basis();
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: basis=\n";
+  WriteMatrix(os, basis);
+#endif
   MyMatrix<T> Q2 = basis * Q * basis.transpose();
+  if (RankMat(Q2) < 5) {
+    MyMatrix<T> NSP = NullspaceMat(Q2);
+    MyVector<T> v1 = GetMatrixRow(NSP, 0);
+    MyVector<T> v2 = basis.transpose() * v1;
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+    os << "FIFTH: From NSP, v2=" << StringVector(v2) << "\n";
+    T sum2 = EvaluationQuadForm(Q, v2);
+    if (sum2 != 0) {
+      std::cerr << "FIFTH: v2 is not a solution of the equation\n";
+      throw TerminalException{1};
+    }
+#endif
+    return v2;
+  }
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: Q2=\n";
+  WriteMatrix(os, Q2);
+#endif
   MyVector<T> v1 = FifthOrderIsotropicVector(Q2, os);
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: v1=" << StringVector(v1) << "\n";
+#endif
   MyVector<T> v2 = basis.transpose() * v1;
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: From fifth order v2=" << StringVector(v2) << "\n";
+  T sum2 = EvaluationQuadForm(Q, v2);
+  if (sum2 != 0) {
+    std::cerr << "FIFTH: v2 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
   return v2;
 }
 

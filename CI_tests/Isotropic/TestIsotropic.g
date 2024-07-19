@@ -46,14 +46,15 @@ ListRec:=ReadAsFunction("IsotropicCases")();;
 ListDim3:=Filtered(ListRec, x->Length(x.M) = 3);
 ListDim4:=Filtered(ListRec, x->Length(x.M) = 4);
 ListDim5:=Filtered(ListRec, x->Length(x.M) = 5);
-ListDim5high:=Filtered(ListRec, x->Length(x.M) > 4);
+ListDim5gt:=Filtered(ListRec, x->Length(x.M) > 5);
 #ListRec:=Concatenation(ListDim3_B, ListDim4_B, ListDim5high);
 #ListRec:=Concatenation(ListDim3_B, ListDim5high);
 
 
 #ListRec:=ListDim3;
 #ListRec:=ListDim4;
-ListRec:=ListDim5;
+#ListRec:=ListDim5;
+ListRec:=ListDim5gt;
 #ListRec:=ListDim3_A{[3271..3272]};
 #ListRec:=ListDim4_A;
 #ListRec:=ListDim5;
