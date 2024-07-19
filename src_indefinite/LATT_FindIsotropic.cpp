@@ -19,7 +19,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
       MyVector<T> const& eV = *opt;
       T val = EvaluationQuadForm(Q, eV);
       if (val != 0) {
-        std::cerr << "eV is not an isotropic vector\n";
+        std::cerr << "LATT_FindIsotropic: eV is not an isotropic vector\n";
         throw TerminalException{1};
       }
       os_out << "return rec(has_isotropic:=true, ";

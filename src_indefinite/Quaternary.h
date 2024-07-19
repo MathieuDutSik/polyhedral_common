@@ -115,11 +115,14 @@ bool Padic_isotropy_ternary(MyVector<T> const& a, T const& p, [[maybe_unused]] s
 }
 
 template<typename T>
-std::vector<T> get_local_primes(MyVector<T> const& a) {
+std::vector<T> get_local_primes(MyVector<T> const& a, [[maybe_unused]] std::ostream& os) {
   std::set<T> primes;
   T two(2);
   primes.insert(two);
   for (int i=0; i<4; i++) {
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: get_local_primes i=" << i << " a(i)=" << a(i) << "\n";
+#endif
     std::map<T, size_t> map = FactorsIntMap(T_abs(a(i)));
     for (auto & kv : map) {
       if (kv.second > 0) {
@@ -457,7 +460,7 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
       sum += a(u) * Vret(u) * Vret(u);
     }
     if (sum != 0) {
-      std::cerr << "Vret should be an isotropic vector\n";
+      std::cerr << "QUAD: Vret should be an isotropic vector\n";
       throw TerminalException{1};
     }
 #endif
@@ -499,7 +502,7 @@ template <typename T> bool quaternary_has_isotropic_vector(MyMatrix<T> const &M,
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: quaternary_has_isotropic_vector, we have red_diag\n";
 #endif
-  std::vector<Tring> primes = get_local_primes(red_diagB);
+  std::vector<Tring> primes = get_local_primes(red_diagB, os);
   return determine_solvability_dim4(red_diagB, primes, os);
 }
 
@@ -508,7 +511,7 @@ std::optional<MyVector<T>> QuaternaryIsotropicVectorDiagonal(MyVector<T> const& 
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: QuaternaryIsotropicVector, we have diag\n";
 #endif
-  std::vector<T> primes = get_local_primes(a);
+  std::vector<T> primes = get_local_primes(a, os);
   bool test = determine_solvability_dim4(a, primes, os);
   if (!test) {
     return {};
@@ -532,7 +535,7 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
   MyVector<Tring> sol1 = *opt;
   MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
   MyVector<T> sol3 = pair1.first.transpose() * sol2;
-#ifdef DEBUG_LEGENDRE
+#ifdef DEBUG_QUATERNARY
   os << "QUAD: sol3=" << StringVector(sol3) << "\n";
   T sum3 = EvaluationQuadForm(M, sol3);
   if (sum3 != 0) {

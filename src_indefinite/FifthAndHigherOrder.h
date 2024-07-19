@@ -52,17 +52,24 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
   }
 #endif
   int sign = poss[0];
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: solve_fifth_equation, sign=" << sign << "\n";
+#endif
   T t(sign);
   MyVector<T> a_tern(3);
   a_tern(0) = a(0);
   a_tern(1) = a(1);
   MyVector<T> a_quad(4);
-  a_tern(0) = a(2);
-  a_tern(1) = a(3);
-  a_tern(2) = a(4);
+  a_quad(0) = a(2);
+  a_quad(1) = a(3);
+  a_quad(2) = a(4);
   while(true) {
     a_tern(2) = -t;
     a_quad(3) = t;
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+    os << "FIFTH: solve_fifth_equation, a_tern=" << StringVector(a_tern) << "\n";
+    os << "FIFTH: solve_fifth_equation, a_quad=" << StringVector(a_quad) << "\n";
+#endif
     std::optional<MyVector<T>> opt_tern = TernaryIsotropicVectorDiagonal(a_tern, os);
     if (opt_tern) {
       MyVector<T> iso_tern = *opt_tern;
@@ -78,9 +85,24 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
         for (int u=2; u<5; u++) {
           iso_fifth(u) = iso_quad(u-2) * val_tern;
         }
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+        T sum(0);
+        for (int u=0; u<5; u++) {
+          T val = iso_fifth(u);
+          sum += a(u) * val * val;
+        }
+        os << "FIFTH: Before return sum=" << sum << "\n";
+        if (sum != 0) {
+          std::cerr << "FIFTH: Error, a=" << StringVector(a) << "\n";
+          std::cerr << "FIFTH: Error, t=" << t << "\n";
+          std::cerr << "FIFTH: Error, iso_fifth=" << StringVector(iso_fifth) << "\n";
+          throw TerminalException{1};
+        }
+#endif
         return iso_fifth;
       }
     }
+    t += sign;
   }
 }
 
@@ -175,14 +197,27 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q, std::ostream& os) {
 template<typename T>
 MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
   using Tring = typename underlying_ring<T>::ring_type;
-#ifdef DEBUG_QUATERNARY
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
   os << "FIFTH: FifthOrderIsotropicVector, beginning\n";
+  if (M.rows() != 5) {
+    std::cerr << "FIFTH: M should be a 5x5 matrix\n";
+    throw TerminalException{1};
+  }
 #endif
   std::pair<MyMatrix<T>,MyVector<T>> pair1 = get_reduced_diagonal(M, os);
   MyVector<Tring> a = UniversalVectorConversion<Tring,T>(pair1.second);
   MyVector<Tring> sol1 = solve_fifth_equation(a, os);
   MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
-  return sol2;
+  MyVector<T> sol3 = pair1.first.transpose() * sol2;
+#ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
+  os << "FIFTH: sol3=" << StringVector(sol3) << "\n";
+  T sum3 = EvaluationQuadForm(M, sol3);
+  if (sum3 != 0) {
+    std::cerr << "FIFTH: sol3 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+#endif
+  return sol3;
 }
 
 
