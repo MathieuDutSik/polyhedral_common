@@ -329,10 +329,12 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   if (n <= 2) {
     return FindIsotropicExact(M, os);
   }
+  /*
   std::optional<MyVector<T>> opt = FindIsotropic_LLL_nfixed(M, os);
   if (opt) {
     return *opt;
   }
+  */
   return FindIsotropicExact(M, os);
 }
 

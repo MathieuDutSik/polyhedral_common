@@ -1,9 +1,9 @@
 #PROGRAM		= LATT_IndefiniteLLL LATT_IndefiniteReduction TestPermutationSignCanonic LATT_DetMinimization
 #PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= LATT_DetMinimization
-#PROGRAM		= LATT_FindIsotropic
+PROGRAM		= LATT_FindIsotropic
 #PROGRAM		= LATT_TestIsotropic
-PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
+#PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
 #PROGRAM		= LATT_IndefiniteReduction
 #PROGRAM		= LATT_IndefiniteLLL
 
@@ -17,8 +17,8 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
@@ -28,8 +28,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 #CDEFS           = -DDEBUG
 #CDEFS           = -DDEBUG_DETERMINANT_MINIMIZATION -DDEBUG_ISOTROPIC -DDEBUG_LEGENDRE -DDEBUG_QUATERNARY -DDEBUG_QUADRATIC_RESIDUE -DDEBUG_FACTORIZATION
-#CDEFS           = -DDEBUG_DETERMINANT_MINIMIZATION -DDEBUG_ISOTROPIC -DDEBUG_LEGENDRE -DDEBUG_QUATERNARY
-CDEFS           =
+CDEFS           = -DDEBUG_DETERMINANT_MINIMIZATION -DDEBUG_ISOTROPIC -DDEBUG_LEGENDRE -DDEBUG_QUATERNARY
+#CDEFS           =
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK)

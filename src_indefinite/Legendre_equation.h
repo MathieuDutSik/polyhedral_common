@@ -511,7 +511,6 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
   X =    X(I+1)
   Y =    X(I+2)
   Z = aI X(I)
-    
 */
 template<typename T>
 std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v) {
@@ -525,7 +524,8 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
     }
   }
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: min_idx=" << min_idx << " min_val=" << min_val << "\n";
+  std::cerr << "LEG: get_lagrange_normal, v=" << StringVector(v) << "\n";
+  std::cerr << "LEG: get_lagrange_normal, min_idx=" << min_idx << " min_val=" << min_val << "\n";
 #endif
   size_t three(3);
   size_t idxZ = min_idx;
@@ -538,7 +538,7 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
     idxY -= three;
   }
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: idxX=" << idxX << " idxY=" << idxY << " idxZ=" << idxZ << "\n";
+  std::cerr << "LEG: get_lagrange_normal, idxX=" << idxX << " idxY=" << idxY << " idxZ=" << idxZ << "\n";
 #endif
   T cVal = v(idxZ);
   T a = -v(idxX) * cVal;
@@ -549,7 +549,7 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
   M(idxY,1) = cVal;
   M(idxZ,2) = 1;
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: We have M\n";
+  std::cerr << "LEG: get_lagrange_normal, We have M\n";
 #endif
   std::pair<T,T> pair{a, b};
   return {M, pair};
@@ -751,31 +751,34 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
 
 template<typename T>
 std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, std::ostream& os) {
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: TernaryIsotropicVectorDiagonal a=" << StringVector(a) << "\n";
+#endif
   LegendreReductionInformation<T> lri = reduction_information(a, os);
+#ifdef DEBUG_LEGENDRE
+  os << "LEG: TernaryIsotropicVectorDiagonal aReduced=" << StringVector(lri.aReduced) << "\n";
+#endif
   bool test = determine_solvability_dim3(lri, os);
   if (!test) {
     return {};
   }
   MyVector<T> sol1 = TernaryIsotropicViaLagrange(lri.aReduced, os);
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: sol1=" << StringVector(sol1) << "\n";
-  os << "LEG: lri.TransMat=\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal sol1=" << StringVector(sol1) << "\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal lri.TransMat=\n";
   WriteMatrix(os, lri.TransMat);
 #endif
   MyVector<T> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: sol2=" << StringVector(sol1) << "\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal sol2=" << StringVector(sol1) << "\n";
   T sum(0);
   for (int i=0; i<3; i++) {
     sum += a(i) * sol2(i) * sol2(i);
   }
   if (sum != 0) {
-    std::cerr << "LEG: lri.TransMat=\n";
-    WriteMatrix(std::cerr, lri.TransMat);
-    std::cerr << "LEG: red_diag_A=" << StringVector(red_diag_A) << "\n";
-    std::cerr << "LEG: lri.aReduced=" << StringVector(lri.aReduced) << "\n";
-    std::cerr << "LEG: sol2=" << StringVector(sol2) << "\n";
-    std::cerr << "LEG: sol2 is not a solution of the equation\n";
+    std::cerr << "LEG: Error, a=" << StringVector(a) << "\n";
+    std::cerr << "LEG: Error, sol2=" << StringVector(sol2) << "\n";
+    std::cerr << "LEG: sol2 is not an isotropic vector\n";
     throw TerminalException{1};
   }
 #endif

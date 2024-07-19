@@ -318,16 +318,17 @@ std::vector<T> get_tp_classes(MyVector<T> const& a, std::vector<T> const& primes
       if (test12 && test34) {
         matches.push_back(t);
       }
-#ifdef DEBUG_QUATERNARY
-      os << "QUAD: n_cond_12=" << n_cond_12 << " n_cond_34=" << n_cond_34 << " |matches|=" << matches.size() << "\n";
-      if (matches.size() == 0) {
-        std::cerr << "QUAD: matches should not be empty\n";
-        throw TerminalException{1};
-      }
-#endif
-      T tp = matches[0];
-      classes.push_back(tp);
     }
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: p=" << p << "\n";
+    os << "QUAD: n_cond_12=" << n_cond_12 << " n_cond_34=" << n_cond_34 << " |matches|=" << matches.size() << "\n";
+    if (matches.size() == 0) {
+      std::cerr << "QUAD: matches should not be empty\n";
+      throw TerminalException{1};
+    }
+#endif
+    T tp = matches[0];
+    classes.push_back(tp);
   }
   return classes;
 }
@@ -420,7 +421,7 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
     a12(0) = a1;
     a12(1) = a2;
     a12(2) = -t;
-    std::optional<MyVector<T>> opt12 = TernaryIsotropicViaLagrange(a12, os);
+    std::optional<MyVector<T>> opt12 = TernaryIsotropicVectorDiagonal(a12, os);
     MyVector<T> V12 = unfold_opt(opt12, "opt12 should be solvable");
 #ifdef DEBUG_QUATERNARY
     T sum12 = a1 * V12(0) * V12(0) + a2 *V12(1) * V12(1) - t * V12(2) * V12(2);
@@ -433,7 +434,7 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
     a34(0) = a3;
     a34(1) = a4;
     a34(2) = t;
-    std::optional<MyVector<T>> opt34 = TernaryIsotropicViaLagrange(a34, os);
+    std::optional<MyVector<T>> opt34 = TernaryIsotropicVectorDiagonal(a34, os);
     MyVector<T> V34 = unfold_opt(opt34, "opt34 should be solvable");
 #ifdef DEBUG_QUATERNARY
     T sum34 = a3 * V34(0) * V34(0) + a4 *V34(1) * V34(1) + t * V34(2) * V34(2);
@@ -479,6 +480,9 @@ template<typename T>
 MyVector<T> dim4_compute_solution(MyVector<T> const& a, std::vector<T> const& primes, std::ostream& os) {
   std::vector<T> classes = get_tp_classes(a, primes, os);
   T q = get_q_val(a, classes, primes, os);
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: q=" << q << "\n";
+#endif
   return dim4_pair_legendre_iterate_solution(a, primes, q, os);
 }
 
