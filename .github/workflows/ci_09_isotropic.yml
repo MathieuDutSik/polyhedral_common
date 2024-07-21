@@ -114,9 +114,9 @@ jobs:
 
       - name: Test isotropic code
         run: |
-          cd src_indefinite && make && cd ..
+          cd src_isotropy && make && cd ..
           pwd
-          echo "After compilation of indefinite code"
+          echo "After compilation of isotropy code"
 
           cd CI_tests/Isotropic
           ../../gap.sh < TestIsotropic.g

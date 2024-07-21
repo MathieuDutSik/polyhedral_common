@@ -1,14 +1,13 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "MatrixCanonicalForm.h"
+#include "LaticeStabEquiCan.h"
 #include "Namelist.h"
 #include "PerfectMPI_types.h"
 #include "Temp_PerfectForm_Enum.h"
 #include "rational.h"
 #include <unordered_map>
 #include "hash_functions.h"
-#include "MatrixCanonicalForm.h"
 #include <boost/mpi/communicator.hpp>
 #include <boost/mpi/environment.hpp>
 // clang-format off

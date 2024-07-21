@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "MatrixCanonicalForm.h"
+#include "LaticeStabEquiCan.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

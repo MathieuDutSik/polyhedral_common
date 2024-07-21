@@ -9,7 +9,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_indefinite -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_poly -I../src_dualdesc -I../src_short -I../permutalib/src -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_isotropy -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_poly -I../src_dualdesc -I../src_short -I../permutalib/src -I.
 
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(MPI_INCLUDE_CPP)
 

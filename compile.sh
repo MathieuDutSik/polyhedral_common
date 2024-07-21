@@ -12,7 +12,7 @@ set -e
 (cd src_copos && make clean && make)
 (cd src_ctype && make clean && make)
 (cd src_perfect && make clean && make)
-(cd src_indefinite && make clean && make)
+(cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
 (cd src_spherical_code && make clean && make)
 (cd src_poincare_polyhedron && make clean && make)
