@@ -3,7 +3,7 @@
 #include "NumberTheory.h"
 #include "NumberTheoryRational.h"
 #include "MAT_Matrix.h"
-#include "LaticeStabEquiCan.h"
+#include "LatticeStabEquiCan.h"
 #include "Namelist.h"
 #include "Temp_PerfectForm_Enum.h"
 // clang-format on

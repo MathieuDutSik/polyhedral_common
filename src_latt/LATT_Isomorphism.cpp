@@ -5,7 +5,7 @@
 #else
 # include "NumberTheory.h"
 #endif
-#include "LaticeStabEquiCan.h"
+#include "LatticeStabEquiCan.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

@@ -5,7 +5,7 @@
 // clang-format off
 #include "Heuristic_ThompsonSampling.h"
 #include "LatticeDefinitions.h"
-#include "LaticeStabEquiCan.h"
+#include "LatticeStabEquiCan.h"
 #include "Namelist.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "PolytopeEquiStabInt.h"

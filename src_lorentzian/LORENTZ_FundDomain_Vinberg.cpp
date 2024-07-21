@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "MAT_Matrix.h"
-#include "LaticeStabEquiCan.h"
+#include "LatticeStabEquiCan.h"
 #include "PolytopeEquiStab.h"
 #include "vinberg.h"
 // clang-format on

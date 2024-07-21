@@ -5,7 +5,7 @@
 // clang-format off
 #include "Group.h"
 #include "MAT_Matrix.h"
-#include "LaticeStabEquiCan.h"
+#include "LatticeStabEquiCan.h"
 #include "POLY_Kskeletton.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
