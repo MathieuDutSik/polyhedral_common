@@ -21,14 +21,11 @@ int main(int argc, char *argv[]) {
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS
     using T = boost::multiprecision::mpq_rational;
-    using Tfield = T;
     using Tint = boost::multiprecision::mpz_int;
 #else
     using T = mpq_class;
-    using Tfield = T;
     using Tint = mpz_class;
 #endif
-    using Tidx = uint32_t;
     //
     std::string FileListMat = argv[1];
     std::string OutFormat = "GAP";
@@ -39,39 +36,14 @@ int main(int argc, char *argv[]) {
     }
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
-    MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
 
-    MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-    int n_row = SHV_T.rows();
-    std::vector<T> Vdiag(n_row, 0);
-
-    std::vector<std::vector<Tidx>> ListGen =
-        GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat,
-                                                              Vdiag, std::cerr);
-
-    std::vector<MyMatrix<Tint>> ListGenEquiv;
-    for (auto &eList : ListGen) {
-      std::optional<MyMatrix<T>> opt =
-          FindMatrixTransformationTest(SHV_T, SHV_T, eList);
-      if (!opt) {
-        std::cerr << "Failed to find the matrix\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<T> const &M_T = *opt;
-      if (!IsIntegralMatrix(M_T)) {
-        std::cerr << "Bug: The matrix should be integral\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
-      ListGenEquiv.push_back(M);
-    }
+    std::vector<MyMatrix<Tint>> ListGen = ArithmeticAutomorphismGroupMultiple<T,Tint>(ListMat, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {
         os << "return [";
         bool IsFirst = true;
-        for (auto &eMat : ListGenEquiv) {
+        for (auto &eMat : ListGen) {
           if (!IsFirst)
             os << ",\n";
           IsFirst = false;
@@ -81,8 +53,8 @@ int main(int argc, char *argv[]) {
         return;
       }
       if (OutFormat == "Oscar") {
-        os << ListGenEquiv.size() << "\n";
-        for (auto &eMat : ListGenEquiv) {
+        os << ListGen.size() << "\n";
+        for (auto &eMat : ListGen) {
           WriteMatrix(os, eMat);
         }
         return;

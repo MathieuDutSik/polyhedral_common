@@ -483,6 +483,67 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
 }
 
 
+/*
+  We compute some isometries of the lattice coming from the blocks.
+  The only constraint is that the matrices being returned are isometries.
+  
+ */
+template<typename T>
+std::vector<MyMatrix<T>> GetEasyIsometries(MyMatrix<T> const& Qmat) {
+  std::vector<MyMatrix<T>> ListGenerators;
+  auto f_insert=[&](MyMatrix<T> const& P) -> void {
+#ifdef DEBUG_APPROXIMATE_MODELS
+    if (!IsIntegralMatrix(P)) {
+      std::cerr << "MODEL: The matrix P is not integral\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> prod = P * Qmat * P.transpose();
+    if (prod != Qmat) {
+      std::cerr << "MODEL: P does not preserve the quadratic form\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListGenerators.push_back(P);
+  };
+  size_t n = Qmat.rows();
+  LitGenerators.push_back(IdentityMat<T>(n));
+  //
+  GraphBitset eG(dim);
+  for (size_t i=0; i<n; i++) {
+    for (size_t j=i+1; j<n; j++) {
+      if (Qmat(i, j) != 0) {
+        eG.AddAdjacent(i, j);
+        eG.AddAdjacent(j, i);
+      }
+    }
+  }
+  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  std::vector<MyMatrix<T>> ListQ;
+  for (auto & eConn: LConn) {
+    size_t dim = eConn.size();
+    MyMatrix<T> eQ(dim, dim);
+    for (size_t i=0; i<dim; i++) {
+      for (size_t j=i+1; j<n; j++) {
+        eQ(i,j) = Qmat(eConn[i], eConn[j]);
+      }
+    }
+    ListQ.push_back(eQ);
+  }
+  for (size_t iConn=0; iConn<LConn.size(); iConn++) {
+    MyMatrix<T> const& eQ = ListQ[iConn];
+    if (IsPositivieDefinite(eQ)) {
+      std::vector<size_t> const& eConn = LConn[iConn];
+
+      
+    }
+  }
+
+  return ListGenerators;
+}
+
+
+
+
 
 // clang-format off
 #endif  // SRC_INDEFINITE_MODELS_APPROXIMATEMODELS_H_
