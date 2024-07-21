@@ -488,16 +488,13 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
   The only constraint is that the matrices being returned are isometries.
   
  */
-template<typename T>
-std::vector<MyMatrix<T>> GetEasyIsometries(MyMatrix<T> const& Qmat) {
-  std::vector<MyMatrix<T>> ListGenerators;
+template<typename T, typename Tint>
+std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostream& os) {
+  std::vector<MyMatrix<Tint>> ListGenerators;
   auto f_insert=[&](MyMatrix<T> const& P) -> void {
 #ifdef DEBUG_APPROXIMATE_MODELS
-    if (!IsIntegralMatrix(P)) {
-      std::cerr << "MODEL: The matrix P is not integral\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<T> prod = P * Qmat * P.transpose();
+    MyMatrix<T> P_T = UniversalMatrixConversion<T,Tint>(P);
+    MyMatrix<T> prod = P_T * Qmat * P_T.transpose();
     if (prod != Qmat) {
       std::cerr << "MODEL: P does not preserve the quadratic form\n";
       throw TerminalException{1};
@@ -519,7 +516,9 @@ std::vector<MyMatrix<T>> GetEasyIsometries(MyMatrix<T> const& Qmat) {
   }
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
   std::vector<MyMatrix<T>> ListQ;
-  for (auto & eConn: LConn) {
+  std::vector<size_t> ListPosIdx;
+  for (size_t iConn=0; iConn<LConn.size(); iConn++) {
+    std::vector<size_t> const& eConn = LConn[iConn];
     size_t dim = eConn.size();
     MyMatrix<T> eQ(dim, dim);
     for (size_t i=0; i<dim; i++) {
@@ -528,16 +527,69 @@ std::vector<MyMatrix<T>> GetEasyIsometries(MyMatrix<T> const& Qmat) {
       }
     }
     ListQ.push_back(eQ);
-  }
-  for (size_t iConn=0; iConn<LConn.size(); iConn++) {
-    MyMatrix<T> const& eQ = ListQ[iConn];
     if (IsPositivieDefinite(eQ)) {
-      std::vector<size_t> const& eConn = LConn[iConn];
-
-      
+      ListPosIdx.push_back(iConn);
     }
   }
-
+  for (auto & iConn : ListPosIdx) {
+    MyMatrix<T> const& eQ = ListQ[iConn];
+    std::vector<size_t> const& eConn = LConn[iConn];
+    size_t dim = eConn.size();
+    std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint>(eQ, os);
+    for (auto & eGen : LGen) {
+      MyMatrix<Tint> eBigGen = IdentityMat<T>(n);
+      for (size_t i=0; i<dim; i++) {
+        for (size_t j=0; j<dim; j++) {
+          eBigGen(eConn[i], eConn[j]) = eGen(i,j);
+        }
+      }
+      f_insert(eBigGen);
+    }
+  }
+  /*
+    A = (A1 0)
+        (0 A2)
+    now P A1 P^T = A2
+    ----
+    W = (0 R)
+        (S 0)
+    We have
+    W A W^T = (0 R) (A1 0) (0   S^T)
+              (S 0) (0 A2) (R^T   0)
+            = (0    R A2) (0   S^T)
+              (S A1    0) (R^T   0)
+            = (R A2 R^T    0    )
+              (0        S A1 S^T)
+    S = P
+    R = P^{-1}
+   */
+  size_t nbConnRed = ListPosIdx.size();
+  for (size_t iConnRed=0; iConnRed<nbConnRed; iConnRed++) {
+    size_t iConn = ListPosIdx[iConnRed];
+    MyMatrix<T> const& eQ = ListQ[iConn];
+    std::vector<size_t> const& eConn = Lconn[iConn];
+    for (size_t jConnRed=iConnRed+1; jConnRed<nbConnRed; jConnRed++) {
+      size_t jConn = ListPosIdx[jConnRed];
+      MyMatrix<T> const& fQ = ListQ[jConn];
+      std::vector<size_t> const& fConn = Lconn[jConn];
+      size_t dim = eConn.size();
+      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(eQ, fQ);
+      if (opt) {
+        MyMatrix<Tint> const& P = *opt;
+        MyMatrix<Tint> Pinv = Inverse(P);
+        MyMatrix<Tint> BigP = IdentityMat<T>(n);
+        for (size_t i=0; i<dim; i++) {
+          for (size_t j=0; j<dim; j++) {
+            BigP(eConn[i], eConn[j]) = 0;
+            BigP(fConn[i], fConn[j]) = 0;
+            BigP(eConn[i], fConn[j]) = P(i,j);
+            BigP(fConn[i], iConn[j]) = Pinv(i,j);
+          }
+        }
+        f_insert(BigP);
+      }
+    }
+  }
   return ListGenerators;
 }
 
