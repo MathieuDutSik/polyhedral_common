@@ -65,13 +65,21 @@ MyMatrix<T> DropZeroColumn(MyMatrix<T> const& M) {
 
 
 template<typename T, typename Tgroup>
-void process_entry_type(std::string const& FileCode) {
+void process_entry_type(std::string const& FileCode, std::string const& FileGramMat) {
   MyMatrix<T> preCODE = ReadMatrixFile<T>(FileCode);
   int nbEnt = preCODE.rows();
   int nbCol = preCODE.cols();
   std::cerr << "nbEnt=" << nbEnt << " nbCol=" << nbCol << "\n";
   MyMatrix<T> CODE = DropZeroColumn(preCODE);
   int dim = CODE.cols();
+  auto get_gram_mat=[&]() -> MyMatrix<T> {
+    if (FileGramMat == "identity") {
+      return IdentityMat<T>(dim);
+    } else {
+      return ReadMatrixFile<T>(FileGramMat);
+    }
+  };
+  MyMatrix<T> GramMat = get_gram_mat();
   int rnk = RankMat(CODE);
   std::cerr << "nbEnt=" << nbEnt << " dim=" << dim << " rnk=" << rnk << "\n";
   if (dim != rnk) {
@@ -140,7 +148,6 @@ void process_entry_type(std::string const& FileCode) {
       EXT(iEnt, i+1) = CODE(iEnt,i);
     }
   }
-  MyMatrix<T> GramMat = IdentityMat<T>(dim);
   Tgroup GRP = LinPolytope_Automorphism_GramMat<T, Tgroup>(CODE, GramMat, std::cerr);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
   //
@@ -237,20 +244,20 @@ void process_entry_type(std::string const& FileCode) {
 
 
 template <typename Tgroup>
-void process_entry(std::string const& arith, std::string const& FileCode) {
+void process_entry(std::string const& arith, std::string const& FileCode, std::string const& FileGramMat) {
   if (arith == "rational") {
     using T = mpq_class;
-    return process_entry_type<T, Tgroup>(FileCode);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
   }
   if (arith == "Qsqrt3") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 3>;
-    return process_entry_type<T, Tgroup>(FileCode);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return process_entry_type<T, Tgroup>(FileCode);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
@@ -259,8 +266,8 @@ void process_entry(std::string const& arith, std::string const& FileCode) {
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 3) {
-      std::cerr << "CODE_Analysis [arith] [FileCODE]\n";
+    if (argc != 4) {
+      std::cerr << "CODE_Analysis [arith] [FileCODE] [FileGRAM]\n";
       throw TerminalException{1};
     }
     using Tidx = uint32_t;
@@ -269,7 +276,8 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::string arith = argv[1];
     std::string FileCode = argv[2];
-    process_entry<Tgroup>(arith, FileCode);
+    std::string FileGramMat = argv[3];
+    process_entry<Tgroup>(arith, FileCode, FileGramMat);
     std::cerr << "Normal termination of the program time=" << time << "\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CODE_Analysis time=" << time << "\n";
