@@ -593,6 +593,148 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
   return ListGenerators;
 }
 
+/*
+  Ideally, given an isotropic vector v, and c, we want to find a vector w such that
+  v.w = c and w is isotrop.
+  ----
+  Compute V = v^{perp}. We want to find the vectors in w in V with phi(w) = c for some linear
+  form v. We can work in the quotient W = V / v and the function phi lifts to W.
+  If the initial space has signature (p,q), then the resulting space W has signature (p-1,q-1).
+  
+
+ */
+template<typename T, typename Tint>
+std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& Qmat) {
+  int n = Qmat.rows();
+  std::set<MyVector<Tint>> SetVect;
+  MyMatrix<Tint> ThePerturb = IdentityMat<Tint>(n);
+
+  auto f_insert_vect=[&]() -> MyVector<Tint> {
+    while(true) {
+      MyMatrix<Tint> ePerturb = GetRandomMatrixPerturbation<Tint>(n);
+      ThePerturb = ThePerturb * ePerturb;
+      MyMatrix<T> ThePerturb_T = UniversalMatrixConversion<T,Tint>(ThePerturb);
+      MyMatrix<T> M = ThePerturb_T * Qmat * ThePerturb_T.transpose();
+      std::optional<MyMatrix<Tint>> opt = INDEF_FindIsotropic<T,Tint>(M);
+      MyMatrix<Tint> eVect = unfold_opt(opt, "Failed to find an isotropic vector");
+      MyMatrix<Tint> NewVect = ThePerturb.transpose() * eVect;
+#ifdef DEBUG_APPROXIMATE_MODELS
+      T sum = EvaluationQuadForm<T,Tint>(Qmat, NewVect);
+      if (sum != 0) {
+        std::cerr << "MODEL: P does not preserve the quadratic form\n";
+        throw TerminalException{1};
+      }
+#endif
+      if (SetVect.count(NewVect) == 0) {
+        SetVect.insert(NewVect);
+        return NewVect;
+      }
+    }
+  };
+
+  auto has_non_orthogonal=[&](MyVector<Tint> const& NewVect) -> bool {
+    MyVector<T> NewVect_T = UniversalVectorConversion<T,Tint>(NewVect);
+    MyVector<T> prod = Qmat * NewVect_T;
+    for (auto & eVect : SetVect) {
+      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      T scal = eVect_T.dot(NewVect_T);
+      if (scal != 0) {
+        return true;
+      }
+    }
+    return false;
+  };
+  auto f_get_minimal=[&](MyVector<Tint> const& NewVect) -> std::pair<T, MyVector<Tint>> {
+    T min_scal;
+    bool is_first = true;
+    MyVector<Tint> BestVect;
+    //
+    MyVector<T> NewVect_T = UniversalVectorConversion<T,Tint>(NewVect);
+    MyVector<T> prod = Qmat * NewVect_T;
+    for (auto & eVect : SetVect) {
+      MyVector<Tint> rVect = eVect;
+      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      T scal = eVect_T.dot(NewVect_T);
+      if (scal < 0) {
+        scal = -scal;
+        rVect = - eVect;
+      }
+      if (scal != 0) {
+        if (!is_first) {
+          if (scal < min_scal) {
+            min_scal = scal;
+            BestVect = rVect;
+          }
+        } else {
+          min_scal = scal;
+          BestVect = rVect;
+          is_first = false;
+        }
+      }
+    }
+    return {min_scal, BestVect};
+  };
+
+  // Now iterating
+  bool is_first = true;
+  std::pair<MyVector<Tint>, MyVector<Tint>> pairA;
+  T min_scal;
+  int n_at_level = 0;
+  int max_level = 10;
+  while(true) {
+    MyVector<Tint> NewVect = f_insert_vect();
+    if (has_non_orthogonal(NewVect)) {
+      std::pair<T, MyVector<Tint>> pairB = f_get_minimal(NewVect);
+      if (is_first) {
+        min_scal = pairB.first;
+        pairA = {NewVect, pairB.second};
+        n_at_level = 0;
+        is_first = false;
+      } else {
+        if (pairB.first < min_scal) {
+          min_scal = pairB.first;
+          pairA = {NewVect, pairB.second};
+          n_at_level = 0;
+        } else {
+          if (pairB.first == min_scal) {
+            n_at_level += 1;
+          }
+          if (n_at_level == max_level) {
+            return pairA;
+          }
+        }
+      }
+    }
+  }
+}
+
+template<typename T, typename Tint>
+MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat) {
+  MyMatrix<Tint> Basis1 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat));
+  MyMatrix<T> Basis1_T = UniversalMatrixConversion<T,Tint>(Basis1);
+  MyMatrix<T> prod1 = Basis1_T * Qmat;
+  MyMatrix<T> NSP_T = NullspaceIntTrMat(prod1);
+  MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
+  MyMatrix<T> Qmat2 = NSP_T * Qmat * NSP_T.transpose();
+  MyMatrix<Tint> Basis2 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat2));
+  MyMatrix<Tint> Basis2_NSP = Basis2 * NSP;
+  MyMatrix<Tint> HyperBasis = Concatenation(Basis1, Basis2_NSP);
+  MyMatrix<Tint> prod2 = HyperBasis * Qmat;
+  MyMatrix<T> NSP2_T = NullspaceIntTrMat(prod2);
+  MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint,T>(NSP2_T);
+  MyMatrix<Tint> FullBasis = Concatenation(HyperBasis, NSP2);
+#ifdef DEBUG_APPROXIMATE_MODELS
+  Tint det = DeterminantMat(FullBasis);
+  if (T_abs(det) != 1) {
+    std::cerr << "MODEL: FullBasis should be of determinant 1\n";
+    throw TerminalException{1};
+  }
+#endif
+  return FullBasis;
+}
+
+
+
 
 
 
