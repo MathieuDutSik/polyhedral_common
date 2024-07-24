@@ -14,12 +14,12 @@
 #endif
 
 
-template<typename T>
+template<typename T, typename Tint>
 struct ApproximateModel {
-  std::function<std::vector<MyMatrix<T>>(void)> GetApproximateGroup;
-  std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise;
-  std::function<std::vector<MyVector<T>>(T)> GetCoveringOrbitRepresentatives;
-  std::function<std::optional<MyVector<T>>(T)> GetOneOrbitRepresentative;
+  std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup;
+  std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise;
+  std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives;
+  std::function<std::optional<MyVector<Tint>>(T)> GetOneOrbitRepresentative;
 };
 
 template<typename T>
@@ -60,48 +60,62 @@ bool INDEF_FORM_IsEven(MyMatrix<T> const& Qmat) {
 // = z + (z,x + y) f - (z,f) (x+y) - (y,y)/2 (z,f) f - (x,x)/2 (z,f) f
 //     -(z,f) (y,x) f
 // = z + (z,x + y) f - (z,f) (x+y) - (x+y,x+y)/2 (z,f) f
-template<typename T>
-MyMatrix<T> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector<T> const& f, MyVector<T> const& x) {
+template<typename T, typename Tint>
+MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector<Tint> const& f, MyVector<Tint> const& x) {
   if (!INDEF_FORM_IsEven(Qmat)) {
     std::cerr << "The lattice Qmat should be even in order to define the Eichler transvection\n";
     throw TerminalException{1};
   }
   int n = Qmat.rows();
+  MyVector<T> x_T = UniversalVectorConversion<T,Tint>(x);
+  MyVector<T> f_T = UniversalVectorConversion<T,Tint>(f);
 #ifdef DEBUG_APPROXIMATE_MODELS
   T fNorm = EvaluationQuadForm(Qmat, f);
-  MyVector<T> eProd = Qmat * x;
-  T scal = f.dot(eProd);
+  MyVector<T> eProd = Qmat * x_T;
+  T scal = f_T.dot(eProd);
   if (fNorm != 0 || scal != 0) {
     std::cerr << "eNorm or scal are inconsistent\n";
     throw TerminalException{1};
   }
 #endif
   T xNorm = EvaluationQuadForm(Qmat, x);
-  MyMatrix<T> RetMat(n,n);
+  MyMatrix<Tint> RetMat(n,n);
   for (int u=0; u<n; u++) {
-    MyVector<T> eImg = ZeroVector<T>(n);
-    MyVector<T> y = ZeroVector<T>(n);
+    MyVector<Tint> eImg = ZeroVector<T>(n);
+    MyVector<Tint> y = ZeroVector<T>(n);
     y(u) = 1;
     eImg += y;
     //
-    T scal_yx = ScalarProductQuadForm(Qmat, y, x);
-    eImg += scal_yx * f;
-    T scal_yf = ScalarProductQuadForm(Qmat, y, f);
-    eImg -= (xNorm/2) * scal_yf * f;
-    eImg -= scal_yf * x;
+    T scal1 = ScalarProductQuadForm(Qmat, y, x);
+    Tint scal1_tint = UniversalScalarConversion<Tint,T>(scal1);
+    eImg += scal1_tint * f;
+    T scal2 = ScalarProductQuadForm(Qmat, y, f);
+    T scal3 = (xNorm/2) * scal2;
+    Tint scal2_tint = UniversalScalarConversion<Tint,T>(scal2);
+    Tint scal3_tint = UniversalScalarConversion<Tint,T>(scal3);
+    eImg -= scal3_tint * f;
+    eImg -= scal2_tint * x;
     AssignMatrixRow(RetMat, u, eImg);
   }
+#ifdef DEBUG_APPROXIMATE_MODELS
+  MyMatrix<T> RetMat_T = UniversalMatrixConversion<T,Tint>(RetMat);
+  MyMatrix<T> prod = RetMat_T * Qmat * RetMat_T.transpose();
+  if (prod != Qmat) {
+    std::cerr << "RetMat should prerve the Qmat\n";
+    throw TerminalException{1};
+  }
+#endif
   return RetMat;
 }
 
 
 
-template<typename T>
-std::vector<MyMatrix<T>> GeneratorsSL2Z() {
-  MyMatrix<T> eGenS = ZeroMatrix<T>(2,2);
+template<typename Tint>
+std::vector<MyMatrix<Tint>> GeneratorsSL2Z() {
+  MyMatrix<Tint> eGenS = ZeroMatrix<Tint>(2,2);
   eGenS(0,1) = -1;
   eGenS(1,0) = 1;
-  MyMatrix<T> eGenT = ZeroMatrix<T>(2,2);
+  MyMatrix<Tint> eGenT = ZeroMatrix<Tint>(2,2);
   eGenT(0,0) = 1;
   eGenT(0,1) = 1;
   eGenT(1,1) = 1;
@@ -109,12 +123,12 @@ std::vector<MyMatrix<T>> GeneratorsSL2Z() {
 }
 
 
-template<typename T>
+template<typename T, typename Tint>
 struct InternalEichler {
   MyMatrix<T> Qmat;
   MyMatrix<T> Gmat;
-  std::vector<MyVector<T>> ListClasses;
-  std::vector<MyMatrix<T>> GRPstart;
+  std::vector<MyVector<Tint>> ListClasses;
+  std::vector<MyMatrix<Tint>> GRPstart;
 };
 
 
@@ -160,8 +174,8 @@ std::vector<T> GetSquareDivisors(T const& X) {
   ---James D.G. Indefinite Quadratic Forms of Determinant pm2p
   They also require the same hypothesis of having two hyperplanes.
 */
-template<typename T, typename Tgroup>
-ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const& Qmat) {
+template<typename T, typename Tint, typename Tgroup>
+ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const& Qmat) {
   int n = Qmat.rows();
 #ifdef DEBUG_APPROXIMATE_MODELS
   std::vector<int> LIdx{1,0,3,2};
@@ -201,26 +215,27 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     }
   }
   // ComputeClasses
-  std::vector<MyVector<T>> ListClasses = ComputeTranslationClasses<T,T>(Gmat);
-  std::vector<MyMatrix<T>> GRPstart;
-  InternalEichler<T> ie{Qmat, Gmat, ListClasses, GRPstart};
-  std::shared_ptr<InternalEichler<T>> shr_ptr = std::make_shared<InternalEichler<T>>(ie);
-  std::function<void(std::vector<MyMatrix<T>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<T>> const& GRPmatr) -> void {
+  std::vector<MyVector<Tint>> ListClasses = ComputeTranslationClasses<T,Tint>(Gmat);
+  std::vector<MyMatrix<Tint>> GRPstart;
+  InternalEichler<T,Tint> ie{Qmat, Gmat, ListClasses, GRPstart};
+  std::shared_ptr<InternalEichler<T,Tint>> shr_ptr = std::make_shared<InternalEichler<T>>(ie);
+  std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
-    std::vector<MyVector<T>> ListClassesExt;
+    std::vector<MyVector<Tint>> ListClassesExt;
     for (auto & eV : ListClasses) {
-      MyVector<T> NewV = ZeroVector<T>(n);
+      MyVector<Tint> NewV = ZeroVector<Tint>(n);
       for (int i=0; i<n-4; i++) {
         NewV(i+4) = eV(i);
       }
       ListClassesExt.emplace_back(std::move(NewV));
     }
-    auto GetPosition=[&](MyVector<T> const& eVect) -> size_t {
+    auto GetPosition=[&](MyVector<Tint> const& eVect) -> size_t {
       for (size_t i=0; i<ListClassesExt.size(); i++) {
-        MyVector<T> eDiff = ListClassesExt[i] - eVect;
-        std::optional<MyVector<T>> opt = SolutionIntMat(Qmat, eDiff);
+        MyVector<Tint> eDiff = ListClassesExt[i] - eVect;
+        MyVector<T> eDiff_T = UniversalVectorConversion<T,Tint>(eDiff);
+        std::optional<MyVector<T>> opt = SolutionIntMat(Qmat, eDiff_T);
         if (opt) {
           return i;
         }
@@ -234,7 +249,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     for (auto & eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
       for (auto & eClassExt : ListClassesExt) {
-        MyVector<T> x_eM = eMatrGen.transpose() * eClassExt;
+        MyVector<Tint> x_eM = eMatrGen.transpose() * eClassExt;
         eList.push_back(GetPosition(x_eM));
       }
       Telt ePerm(eList);
@@ -243,21 +258,21 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     int n_classes = ListClassesExt.size();
     Tgroup GRPperm(ListPermGens, n_classes);
     std::vector<size_t> ListRepr = DecomposeOrbitPoint_FullRepr<Tgroup>(GRPperm);
-    std::vector<MyVector<T>> ListClasses;
+    std::vector<MyVector<Tint>> ListClasses;
     for (auto & iRepr : ListRepr) {
-      MyVector<T> eV = shr_ptr->ListClasses[iRepr];
+      MyVector<Tint> eV = shr_ptr->ListClasses[iRepr];
       ListClasses.push_back(eV);
     }
     shr_ptr->ListClasses = ListClasses;
   };
-  std::function<std::vector<MyMatrix<T>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+  std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
     // We formulate it as (1/2) det U(x1,x2,x3,x4)
     // with U(x1,x2,x3,x4) = [ [x1 , -x4] , [x3 , x2] ]
     // If we multiply by a matrix in SL(2,Z) on the left and right
-    auto GetLeftMultiplication = [&](MyMatrix<T> const& P) -> MyMatrix<T> {
+    auto GetLeftMultiplication = [&](MyMatrix<Tint> const& P) -> MyMatrix<Tint> {
       // We compute the product [[a, b],[c,d]] U(x1,x2,x3,x4)
       // This gives us
       // [[a x1 + b x3 , -a x4 + b x2] , [ c x1 + d x3 , -c x4 + d x2]]
@@ -266,11 +281,11 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // Y2 = -c x4 + d x2
       // Y3 =  c x1 + d x3
       // Y4 =  a x4 - b x2
-      T a = P(0,0);
-      T b = P(0,1);
-      T c = P(1,0);
-      T d = P(1,1);
-      MyMatrix<T> RetMat = ZeroMatrix<T>(4,4);
+      Tint a = P(0,0);
+      Tint b = P(0,1);
+      Tint c = P(1,0);
+      Tint d = P(1,1);
+      MyMatrix<Tint> RetMat = ZeroMatrix<Tint>(4,4);
       RetMat(0,0) = a;
       RetMat(0,2) = c;
       RetMat(1,1) = d;
@@ -281,7 +296,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       RetMat(3,3) = a;
       return RetMat;
     };
-    auto GetRightMultiplication = [&](MyMatrix<T> const& P) -> MyMatrix<T> {
+    auto GetRightMultiplication = [&](MyMatrix<Tint> const& P) -> MyMatrix<Tint> {
       // We compute the product [ [x1 , -x4] , [x3 , x2] ]      [[a, b],[c,d]]
       // This gives us
       // [[a x1 - c x4 , b x1 - d x4] , [a x3 + c x2 , b x3 + d x2]]
@@ -290,11 +305,11 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // Y2 = b x3 + d x2
       // Y3 = a x3 + c x2
       // Y4 = -b x1 + d x4
-      T a = P(0,0);
-      T b = P(0,1);
-      T c = P(1,0);
-      T d = P(1,1);
-      MyMatrix<T> RetMat = ZeroMatrix<T>(4,4);
+      Tint a = P(0,0);
+      Tint b = P(0,1);
+      Tint c = P(1,0);
+      Tint d = P(1,1);
+      MyMatrix<Tint> RetMat = ZeroMatrix<Tint>(4,4);
       RetMat(0,0) = a;
       RetMat(0,3) = -b;
       RetMat(1,1) = d;
@@ -305,8 +320,8 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       RetMat(3,3) = d;
       return RetMat;
     };
-    auto ExpandGenerator=[&](MyMatrix<T> const& eGen) -> MyMatrix<T> {
-      MyMatrix<T> BigMat = IdentityMat<T>(n);
+    auto ExpandGenerator=[&](MyMatrix<Tint> const& eGen) -> MyMatrix<Tint> {
+      MyMatrix<Tint> BigMat = IdentityMat<Tint>(n);
       for (int i=0; i<4; i++) {
         for (int j=0; j<4; j++) {
           BigMat(i,j) = eGen(i,j);
@@ -314,14 +329,11 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       }
       return BigMat;
     };
-    std::vector<MyMatrix<T>> ListGenerators;
-    auto FuncInsert=[&](MyMatrix<T> const& TheMat) -> void {
+    std::vector<MyMatrix<Tint>> ListGenerators;
+    auto FuncInsert=[&](MyMatrix<Tint> const& TheMat) -> void {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      if (!IsIntegralMatrix(TheMat)) {
-        std::cerr << "The matrix TheMat is not integral\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<T> eProd = TheMat * Qmat * TheMat.transpose();
+      MyMatrix<T> TheMat_T = UniversalMatrixConversion<T,Tint>(TheMat);
+      MyMatrix<T> eProd = TheMat_T * Qmat * TheMat_T.transpose();
       if (eProd != Qmat) {
         std::cerr << "The matrix is not preserving the quadratic form\n";
         throw TerminalException{1};
@@ -332,35 +344,35 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     for (auto & eGen : shr_ptr->GRPstart) {
       FuncInsert(eGen);
     }
-    for (auto & eGen : GeneratorsSL2Z<T>()) {
+    for (auto & eGen : GeneratorsSL2Z<Tint>()) {
       FuncInsert(ExpandGenerator(GetLeftMultiplication(eGen)));
       FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
     }
     // Now looking at the isotropic vectors, generating the Eichler transvections
     for (int i=0; i<4; i++) {
-      MyVector<T> eVect = ZeroVector<T>(n);
+      MyVector<Tint> eVect = ZeroVector<Tint>(n);
       eVect(i) = 1;
-      MyVector<T> eProd = Qmat * eVect;
+      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      MyVector<T> eProd = Qmat * eVect_T;
       MyMatrix<T> eProd_M(1,n);
       for (int i=0; i<n; i++) {
         eProd_M(0,i) = eProd(i);
       }
       MyMatrix<T> BasisOrth = NullspaceIntMat(eProd_M);
       for (int i=0; i<BasisOrth.rows(); i++) {
-        MyVector<T> eOrth = GetMatrixRow(BasisOrth, i);
+        MyVector<T> eOrth_T = GetMatrixRow(BasisOrth, i);
+        MyVector<Tint> eOrth = UniversalVectorConversion<Tint,T>(eOrth_T);
         FuncInsert(INDEF_FORM_Eichler_Transvection(Qmat, eVect, eOrth));
       }
     }
     return ListGenerators;
   };
-
-
   // Notion of divisor
   // For an element y in a lattice L, define div(y) the integer such that
   // (L,y) = div(y) Z.
   // For each v in L* we can find smallest d such that w = dv in L.
   // And we then have div(w) = d
-  std::function<std::vector<MyVector<T>>(T)> EnumerateVectorOverDiscriminant = [=](T const& X) -> std::vector<MyVector<T>> {
+  std::function<std::vector<MyVector<Tint>>(T)> EnumerateVectorOverDiscriminant = [=](T const& X) -> std::vector<MyVector<Tint>> {
     // For each vector v in M* / M
     // We want (x, v) divided by d.
     //
@@ -388,7 +400,7 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     // The two hyperbolic planes are unimodular so for the discriminant, we only need
     // to consider the Gmat part.
     MyMatrix<T> Ginv = Inverse(Gmat);
-    std::vector<MyVector<T>> ListSolution;
+    std::vector<MyVector<Tint>> ListSolution;
     for (auto & eClass1 : ListClasses) {
       // The vector eClass1 is defined modulo an element of Gmat Z^n
       // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
@@ -396,7 +408,8 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
       // So, we can write v = eClass3 + d w
       // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
       // So, the problem is actually linear.
-      MyVector<T> eClass2 = Ginv * eClass1;
+      MyVector<T> eClass1_T = UniversalVectorConversion<T,Tint>(eClass1);
+      MyVector<T> eClass2 = Ginv * eClass1_T;
       T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
       T DivD = GetDenominator(DivD_frac);
       T DivD_sqr = DivD * DivD;
@@ -432,11 +445,11 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
           }
 #endif
           T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
-          MyVector<T> eSolution = ZeroVector<T>(n);
-          eSolution(2) = DivD;
-          eSolution(3) = DivD * u;
+          MyVector<T> eSolution_T = ZeroVector<T>(n);
+          eSolution_T(2) = DivD;
+          eSolution_T(3) = DivD * u;
           for (int u=0; u<n-4; u++) {
-            eSolution(u+4) = eClass4(u);
+            eSolution_T(u+4) = eClass4(u);
           }
 #ifdef DEBUG_APPROXIMATE_MODELS
           T eNorm = EvaluationQuadForm(Qmat, eSolution);
@@ -445,13 +458,14 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
             throw TerminalException{1};
           }
 #endif
+          MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
           ListSolution.push_back(eSolution);
         }
       }
     }
     return ListSolution;
   };
-  std::function<std::vector<MyVector<T>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<T>> {
+  std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {
     if (X == 0) {
       return EnumerateVectorOverDiscriminant(0);
     }
@@ -460,13 +474,13 @@ ApproximateModel<T> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> c
     for (auto & eDiv : ListDiv) {
       T Xtarget = X / (eDiv * eDiv);
       for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget)) {
-        MyVector<T> eV = eDiv * eSol;
+        MyVector<Tint> eV = eDiv * eSol;
         ListSolution.push_back(eV);
       }
     }
     return ListSolution;
   };
-  std::function<std::optional<MyVector<T>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<T>> {
+  std::function<std::optional<MyVector<Tint>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<Tint>> {
     T two(2);
     if (ResInt(X, two) == T(1)) {
       return {};
@@ -600,8 +614,6 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
   Compute V = v^{perp}. We want to find the vectors in w in V with phi(w) = c for some linear
   form v. We can work in the quotient W = V / v and the function phi lifts to W.
   If the initial space has signature (p,q), then the resulting space W has signature (p-1,q-1).
-  
-
  */
 template<typename T, typename Tint>
 std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& Qmat) {
@@ -733,6 +745,288 @@ MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat) {
   return FullBasis;
 }
 
+
+
+template<typename T, typename Tint>
+struct InternalApproxCaseA {
+  MyMatrix<T> Qmat;
+  MyMatrix<Tint> FullBasis;
+  ApproximateModel<T,Tint> approx;
+};
+
+
+template<typename T, typename Tint>
+struct InternalApproxCaseB {
+  MyMatrix<T> Qmat;
+  MyMatrix<Tint> FullBasis;
+  MyMatrix<T> eEmbed;
+  std::vector<MyMatrix<Tint>> ListCoset;
+  std::vector<MyMatrix<Tint>> ListGenerators;
+};
+
+
+template<typename T>
+MyMatrix<T> GetTwoPlanes() {
+  MyMatrix<T> M = ZeroMatrix<T>(4,4);
+  std::vector<int> V{1,0,3,2};
+  for (int u=0; u<4; u++) {
+    int idxW = V[u];
+    M(u,idxW) = 1;
+  }
+  return M;
+}
+
+template<typename T>
+MyMatrix<T> GetSubBlock11(MyMatrix<T> const& M) {
+  MyMatrix<T> Mret(4,4);
+  for (int i=0; i<4; i++) {
+    for (int j=0; j<4; j++) {
+      Mret(i,j) = M(i,j);
+    }
+  }
+  return Mret;
+}
+
+template<typename T>
+MyMatrix<T> GetSubBlock22(MyMatrix<T> const& M) {
+  int n = M.rows();
+  int dim = n - 4;
+  MyMatrix<T> Mret(dim,dim);
+  for (int i=0; i<dim; i++) {
+    for (int j=0; j<dim; j++) {
+      Mret(i,j) = M(i+4,j+4);
+    }
+  }
+  return Mret;
+}
+
+template<typename T>
+MyMatrix<T> GetSubBlock12(MyMatrix<T> const& M) {
+  int n = M.rows();
+  int dim = n - 4;
+  MyMatrix<T> Mret(4,dim);
+  for (int i=0; i<4; i++) {
+    for (int j=0; j<dim; j++) {
+      Mret(i,j) = M(i,j+4);
+    }
+  }
+  return Mret;
+}
+
+template<typename T>
+MyMatrix<T> GetTwoEmbedding(MyMatrix<T> const& eBlock) {
+  MyMatrix<T> eEmbed = IdentityMat<T>(4);
+  T h1 = eEmbed(0,1);
+  T h2 = eEmbed(2,3);
+  eEmbed(0,0) = h1;
+  eEmbed(2,2) = h2;
+#ifdef DEBUG_APPROXIMATE_MODELS
+  MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
+  MyMatrix<T> eProd = eEmbed * TwoPlanes * eEmbed.transpose();
+  if (ePRod != eBlock) {
+    std::cerr << "eEmbed does not provide an embedding\n";
+    throw TerminalException{1};
+  }
+#endif
+  return eEmbed;
+}
+
+template<typename T>
+MyMatrix<T> AssembleTwoDiagBlock(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
+  int n1 = M1.rows();
+  int n2 = M2.rows();
+  MyMatrix<T> Mret = ZeroMatrix<T>(n1+n2, n1+n2);
+  for (int i=0; i<n1; i++) {
+    for (int j=0; j<n1; j++) {
+      Mret(i,j) = M1(i,j);
+    }
+  }
+  for (int i=0; i<n2; i++) {
+    for (int j=0; j<n2; j++) {
+      Mret(i + n1,j + n1) = M1(i,j);
+    }
+  }
+  return Mret;
+}
+
+
+
+template<typename T, typename Tint>
+ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat) {
+  int n = Qmat.rows();
+  MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis(Qmat);
+  MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+  MyMatrix<T> QmatRed = FullBasis_T * Qmat * FullBasis_T.transpose();
+  MyMatrix<T> Block11 = GetSubBlock11(QmatRed);
+  MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
+
+  if (TwoPlanes == Block11) {
+    InternalApproxCaseA<T,Tint> casea{Qmat, FullBasis, INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint>(QmatRed)};
+    std::shared_ptr<InternalApproxCaseA<T,Tint>> shr_ptr = std::make_shared<InternalApproxCaseA<T,Tint>>(casea);
+    std::vector<MyMatrix<Tint>> GRPeasy = GetEasyIsometries<T,Tint>(QmatRed);
+    shr_ptr->approx.SetListClassesOrbitwise(GRPeasy);
+    std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
+      std::cerr << "That function should not be called\n";
+      throw TerminalException{1};
+    };
+    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+      std::vector<MyMatrix<Tint>> ListGenerators;
+      MyMatrix<Tint> const& FullBasis = shr_ptr->FullBasis
+      MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
+      for (auto & eGen: shr_ptr->approx.GetApproximateGroup()) {
+        MyMatrix<Tint> NewGen = FullBasisInv * eGen * FullBasis;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+        MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
+        MyMatrix<T> prod = NewGen_T * Qmat * NewGen_T.transpose();
+        if (prod != Qmat) {
+          std::cerr << "NewGen is not preserving the matrix Qmat\n";
+          throw TerminalException{1};
+        }
+#endif
+        ListGenerators.push_back(NewGen);
+      }
+      return ListGenerators;
+    };
+    std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {
+      std::vector<MyVector<Tint>> ListSolution;
+      MyMatrix<Tint> const& FullBasis = shr_ptr->FullBasis
+      for (auto & eVect : shr_ptr->approx.GetCoveringOrbitRepresentatives(X)) {
+        MyVector<Tint> xNew = FullBasis.transpose() * eVect;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+        T eNorm = EvaluationQuadForm<T,Tint>(Qmat, xNew);
+        if (eNorm != X) {
+          std::cerr << "xNew is not of the right norm\n";
+          throw TerminalException{1};
+        }
+#endif
+        ListSolution.push_back(xNew);
+      }
+      return ListSolution;
+    };
+    std::function<std::optional<MyVector<Tint>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<Tint>> {
+      MyMatrix<Tint> const& FullBasis = shr_ptr->FullBasis
+      std::optional<MyVector<Tint>> opt = shr_ptr->approx.GetOneOrbitRepresentative(X);
+      if (opt) {
+        MyVector<Tint> const& V = *opt;
+        MyVector<Tint> xNew = FullBasis.transpose() * V;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+        T eNorm = EvaluationQuadForm<T,Tint>(Qmat, xNew);
+        if (eNorm != X) {
+          std::cerr << "xNew is not of the right norm\n";
+          throw TerminalException{1};
+        }
+#endif
+        return xNew;
+      } else {
+        return {};
+      }
+    };
+    return {GetApproximateGroup, SetListClassesOrbitwise, GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
+  }
+  MyMatrix<T> Block12 = GetSubBlock12(QmatRed);
+  if (IsZeroMatrix(Block12)) {
+    MyMatrix<T> eEmbed11 = GetTwoEmbedding(Block11);
+    MyMatrix<T> Block22 = GetSubBlock22(QmatRed);
+    MyMatrix<T> QmatExt = AssembleTwoDiagBlock(TwoPlanes, Block22);
+    MyMaytrix<T> eEmbed = AssembleTwoDiagBlock(eEmbed11, IdentityMat<T>(n-4));
+#ifdef DEBUG_APPROXIMATE_MODELS
+    MyMatrix<T> prod = eEmbed * QmatExt * Embed.transpose();
+    if (prod != QmatRed) {
+      std::cerr << "eEmbed is not an embedding\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<T> eProdEmbed = Inverse(FullBasis) * eEmbed;
+    MyMatrix<T> eProdEmbedInv = Inverse(eProdEmbed);
+    ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint>(QmatExt);
+    RecStab_RightCoset = LinearSpace_Stabilizer_RightCoset(RecApprox.ApproximateGroup, eEmbed);
+    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, RecStab_RightCoset.ListListCoset);
+    std::vector<MyMatrix<Tint>> ListGenerators;
+    for (auto & eGen : RecStab_RightCoset.GRPmatr) {
+      MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+      MyMatrix<T> fGen_T = eProdEmbed * eGen * eProdEmbedInv;
+#ifdef DEBUG_APPROXIMATE_MODELS
+      if (!IsIntegralMatrix(fGen)) {
+        std::cerr << "fGen should be integral\n";
+        throw TerminalException{1};
+      }
+#endif
+      MyMatrix<Tint> fGen = UniversalMatrixConversion<Tint,T>(fGen_T);
+      ListGenerators.push_back(fGen);
+    }
+
+    InternalApproxCaseB<T,Tint> caseb{FullBasis, ListCoset, ListGenerators, approx};
+    std::shared_ptr<InternalApproxCaseB<T,Tint>> shr_ptr = std::make_shared<InternalApproxCaseB<T,Tint>>(caseb);
+
+
+    std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
+      std::cerr << "That function should not be called\n";
+      throw TerminalException{1};
+    }
+    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+      return shr_ptr->ListGenerators;
+    }
+    std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {
+      std::vector<MyVector<Tint>> ListRepr;
+      for (auto & eRepr : shr_ptr->approx.GetCoveringOrbitRepresentatives(X)) {
+        for (auto & eCos : shr_ptr->ListCoset) {
+          MyVector<Tint> fRepr = eCos.transpose() * eRepr;
+          std::optional<MyMatrix<Tint>> opt = SolutionIntMat(shr_ptr->eEmbed, fRepr);
+          if (opt) {
+            MyVector<Tint> const& eSol = *opt;
+            MyVector<Tint> fSol = shr_ptr->FullBasis.transpose() * eSol;
+#ifdef DEBUG_APPROXIMATE_MODELS
+            MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+            T eNorm = EvaluationQuadForm<T,Tint>(Qmat, fSol);
+            if (eNorm != X) {
+              std::cerr << "fSol is not of the right norm\n";
+              throw TerminalException{1};
+            }
+#endif
+            ListRepr.push_back(fSol);
+          }
+        }
+      }
+      return ListRepr;
+    };
+    std::function<std::optional<MyVector<Tint>>(T const&)> GetOneOrbitRepresentative = [=](T const& X) -> std::optional<MyVector<Tint>> {
+      std::optional<MyVector<Tint>> opt = shr_ptr->approx.GetOneOrbitRepresentative(X);
+      if (!opt) {
+        return {};
+      }
+      MyVector<Tint> const& eRepr = *opt;
+      for (auto & eCos : shr_ptr->ListCoset) {
+        MyVector<Tint> fRepr = eCos.transpose() * eRepr;
+        std::optional<MyMatrix<Tint>> optB = SolutionIntMat(shr_ptr->eEmbed, fRepr);
+        if (optB) {
+          MyVector<Tint> const& eSol = *optB;
+          MyVector<Tint> fSol = shr_ptr->FullBasis.transpose() * eSol;
+#ifdef DEBUG_APPROXIMATE_MODELS
+          MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+          T eNorm = EvaluationQuadForm<T,Tint>(Qmat, fSol);
+          if (eNorm != X) {
+            std::cerr << "fSol is not of the right norm\n";
+            throw TerminalException{1};
+          }
+#endif
+          return fSol;
+        }
+      }
+      // We wanted to avoid that but sometimes we cannot
+      std::vector<MyVector<Tint>> ListRepr = GetCoveringOrbitRepresentatives(X);
+      if (ListRepr.size() > 0) {
+        return ListRepr[0];
+      }
+      return {};
+    };
+    return {GetApproximateGroup, SetListClassesOrbitwise, GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
+  }
+  std::cerr << "Failed to find a relevant embedding\n";
+  throw TerminalException{1};
+}
 
 
 
