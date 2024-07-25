@@ -7,22 +7,20 @@
 #include "Permutation.h"
 // clang-format on
 
-template <typename T, typename Tgroup>
+template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   std::cerr << "We have Q\n";
-  T Xnorm = ParseScalar<T>(XnormStr);
-  std::cerr << "We have Xnorm\n";
-  ApproximateModel<T> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tgroup>(Qmat);
-  std::vector<MyVector<T>> LVect = model.GetCoveringOrbitRepresentatives(Xnorm);
+  IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
+  std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
+  if (OutFormat == "CPP") {
+    return WriteListMatrix(os_out, l_gen);
+  }
   if (OutFormat == "GAP") {
-    if (LVect.size() == 0) {
-      os_out << "return rec(LVect:=[]);\n";
-    } else {
-      MyMatrix<T> MatVect = MatrixFromVectorFamily(LVect);
-      os_out << "return rec(LVect:=" << StringMatrixGAP(MatVect) << ");\n";
-    }
+    os_out << "return ";
+    WriteListMatrixGAP(os_out, l_gen);
+    os_out << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";
@@ -32,30 +30,30 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 4 && argc != 6) {
-      std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X]\n";
+    if (argc != 3 && argc != 5) {
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
     std::string MatFile = argv[2];
-    std::string XnormStr = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 6) {
-      OutFormat = argv[4];
-      OutFile = argv[5];
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
     }
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt, Tint>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
+      if (arith == "gmp") {
         using T = mpq_class;
-        return process<T,Tgroup>(MatFile, XnormStr, OutFormat, os);
+        using Tint = mpz_class;
+        return process<T,Tint,Tgroup>(MatFile, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
