@@ -5,6 +5,7 @@
 // clang-format off
 #include "ApproximateModels.h"
 #include "lorentzian_perfect.h"
+#include "MatrixGroup.h"
 // clang-format on
 
 #ifdef DEBUG
@@ -31,11 +32,38 @@ struct InvariantIsotropic {
 };
 
 template<typename T>
+T GetRationalInvariant(std::vector<MyMatrix<T>> const& ListGen) {
+  std::set<T> set_den;
+  for (auto & eGen : ListGen) {
+    if (!IsIntegralMatrix(eGen)) {
+      int n = eGen.rows();
+      for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
+          T eDen = GetDenominator(eGen(i,j));
+          set_den.insert(eDen);
+        }
+      }
+    }
+  }
+  std::set<T> primes;
+  for (auto & eDen : set_den) {
+    std::map<T, size_t> l_primes = FactorsIntMap(eDen);
+    for (auto & kv: l_primes) {
+      primes.insert(kv.first);
+    }
+  }
+  T prod(1);
+  for (auto & p: primes) {
+    prod *= p;
+  }
+  return prod;
+}
+
+template<typename T>
 struct AttackScheme {
   int h;
   MyMatrix<T> mat;
 };
-
 
 template<typename T>
 AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const& Qmat) {
@@ -134,7 +162,55 @@ public:
   }
 };
 
+template<typename T>
+std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const& n) {
+  std::vector<MyMatrix<T>> LGen;
+  for (int i=0; i<n; i++) {
+    MyMatrix<T> TheMat = IdentityMat<T>(n);
+    TheMat(i,i) = -1;
+    LGen.push_back(TheMat);
+  }
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<i; j++) {
+      MyMatrix<T> TheMat = IdentityMat<T>(n);
+      TheMat(i, j) = 1;
+      LGen.push_back(TheMat);
+    }
+  }
+  return LGen;
+}
 
+template<typename T>
+std::vector<MyMatrix<T>> ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const& GRPmatr, int const& p, int const& n) {
+  std::vector<MyMatrix<T>> ListGens;
+  for (auto & eGen : GRPmatr) {
+    MyMatrix<T> NewMat = IdentityMat<T>(n);
+    for (int i=0; i<p; i++) {
+      for (int j=0; j<p; j++) {
+        NewMat(i, j) = eGen(i, j);
+      }
+    }
+    ListGens.push_back(NewMat);
+  }
+  std::vector<MyMatrix<T>> SubNPgroup = GetAutomorphismOfFlag<T>(n-p);
+  for (auto & eGen : SubNPgroup) {
+    MyMatrix<T> NewMat = IdentityMat<T>(n);
+    for (int i=0; i<n-p; i++) {
+      for (int j=0; j<n-p; j++) {
+        NewMat(i+p, j+p) = eGen(i, j);
+      }
+    }
+    ListGens.push_back(NewMat);
+  }
+  for (int i=0; i<p; i++) {
+    for (int idx=p; idx<n; idx++) {
+      MyMatrix<T> NewMat = IdentityMat<T>(n);
+      NewMat(i, idx) = 1;
+      ListGens.push_back(NewMat);
+    }
+  }
+  return ListGens;
+}
 
 
 
@@ -196,8 +272,24 @@ public:
   std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Qmat) {
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat) {
+    if (RankMat(Qmat) != Qmat.rows()) {
+      std::cerr << "Right now the matrix Qmat should be full dimensional\n";
+      throw TerminalExpression{1};
+    }
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec(Qmat, v);
+    std::vector<MyMatrix<Tint>> GRP1 = INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
+    std::vector<MyMatrix<T>> GRP2_T = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    std::vector<MyMatrix<T>> ListMat_T = MatrixIntegral_Stabilizer(GRP2_T);
+    std::vector<MyMatrix<Tint>> ListMat;
+    for (auto & eMat_T : ListMat_T) {
+      MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint,T>(eMat_T);
+      ListMat.push_back(eMat);
+    }
+    return ListMat;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_EquivalenceVector(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyVector<Tint> const& v1, MyVector<Tint> const& v2) {
+
+    
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Q, MyVector<Tint> const& v) {
   }
