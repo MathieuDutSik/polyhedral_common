@@ -22,21 +22,6 @@ struct ApproximateModel {
   std::function<std::optional<MyVector<Tint>>(T)> GetOneOrbitRepresentative;
 };
 
-template<typename T>
-bool INDEF_FORM_IsEven(MyMatrix<T> const& Qmat) {
-  if (!IsIntegralMatrix(Qmat)) {
-    return false;
-  }
-  T two(2);
-  for (int u=0; u<Qmat.rows(); u++) {
-    T res = ResInt(Qmat(u,u), two);
-    if (res != 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
 // The Eichler transvection are defined for an even lattice (so integral and even norms of vectors.
 // For such a lattice L* is defined as Q^{-1} Z^n
 // The formula describing them is

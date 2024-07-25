@@ -60,25 +60,6 @@ T GetRationalInvariant(std::vector<MyMatrix<T>> const& ListGen) {
 }
 
 template<typename T>
-struct AttackScheme {
-  int h;
-  MyMatrix<T> mat;
-};
-
-template<typename T>
-AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const& Qmat) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Qmat);
-  int nbPlus=DiagInfo.nbPlus;
-  int nbMinus=DiagInfo.nbMinus;
-  if (nbMinus < nbPlus) {
-    MyMatrix<T> RetMat = -Qmat;
-    return {nbMinus, RetMat};
-  } else {
-    return {nbPlus, Qmat};
-  }
-}
-
-template<typename T>
 MyMatrix<T> ExpandMatrix(MyMatrix<T> const& M) {
   int n = M.rows();
   MyMatrix<T> TheBigMat = IdentityMat<T>(n+1);
