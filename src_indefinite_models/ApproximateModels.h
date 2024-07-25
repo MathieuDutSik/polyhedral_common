@@ -1028,8 +1028,24 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat)
   throw TerminalException{1};
 }
 
+template<typename T, typename Tint>
+struct FirstNorm {
+  T X;
+  MyVector<Tint> eVect;
+};
 
-
+template<typename T, typename Tint>
+FirstNorm<T,Tint> GetFirstNorm(ApproximateModel<T,Tint> const& approx) {
+  T X = 1;
+  while(true) {
+    std::optional<MyVector<Tint>> opt = approx.GetOneOrbitRepresentative(X);
+    if (opt) {
+      MyVector<Tint> const& V = *opt;
+      return {X, V};
+    }
+    X += 1;
+  }
+}
 
 
 
