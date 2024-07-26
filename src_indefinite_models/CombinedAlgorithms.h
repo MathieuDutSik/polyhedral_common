@@ -196,7 +196,7 @@ std::vector<MyMatrix<T>> ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>>
 
 
 template<typename T, typename Tint, typename Tgroup>
-struct CombinedAlgo {
+struct IndefiniteCombinedAlgo {
 private:
   std::ostream& os;
   std::vector<ResultIsomorphism<T,Tint>> ListResultIsomorphism;
@@ -269,7 +269,9 @@ public:
     return ListMat;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_EquivalenceVector(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyVector<Tint> const& v1, MyVector<Tint> const& v2) {
-
+    if (INDEF_FORM_InvariantVector(Q1, v1) != INDEF_FORM_InvariantVector(Q2, v2)) {
+      return {};
+    }
     
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Q, MyVector<Tint> const& v) {
