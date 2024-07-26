@@ -434,19 +434,30 @@ private:
     MyMatrix<T> EquivRat = TheRec.get_one_transformation();
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    if 
-
-        if TestEqualitySpace(Plane1 * Inverse(EquivRat), Plane2) = false then
-            Error("Plane1 and Plane2 should be mapped");
-        fi;
-        fTest:=function(eTest)
-            return TestEqualitySpace(Plane1*Inverse(eTest), Plane2);
-        end;
-        return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab);
-    end;
-
-
-
+    MyMatrix<T> Plane1_img = Plane1 * EquivRatInv;
+    if (!TestEqualitySpace(Plane1_img, Plane2)) {
+      std::cerr << "Plane1 and Plane2 should be mapped\n";
+      throw TerminalException{1};
+    }
+#endif
+    auto fTest=[&](MyMatrix<Tint> const& eTest) -> bool {
+      MyMatrix<T> eProd = Plane1 * Inverse(eTest);
+      return TestEqualitySpace(eProd, Plane2);
+    };
+    return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab);
+  }
+  template<typename Fstab>
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(MyMatrix<T> comnst& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
+    int n Qmat.rows();
+    if (RankMat(Qmat) != n) {
+      std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
+      throw TerminalException{1};
+    }
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec);
+    std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    return MatrixIntegral_Stabilizer(n, GRP2);
+  }
   
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
