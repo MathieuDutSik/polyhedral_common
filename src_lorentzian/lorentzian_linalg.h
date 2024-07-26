@@ -16,6 +16,10 @@
 #define DEBUG_LORENTZIAN_LINALG
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_LORENTZIAN_LINALG
+#endif
+
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
@@ -342,11 +346,11 @@ GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream &os) {
   which all turn out to be unexpected.
  */
 template <typename T>
-MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
+MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   auto terminate = [&](std::string const &msg) -> void {
     std::cerr << "G1=\n";
     WriteMatrix(std::cerr, G1);
@@ -356,7 +360,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
     WriteMatrix(std::cerr, Subspace1);
     std::cerr << "Subspace2=\n";
     WriteMatrix(std::cerr, Subspace2);
-    std::cerr << "ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg << "\n";
+    std::cerr << "LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg << "\n";
     throw TerminalException{1};
   };
   if (Subspace1.rows() != dim - 1 || Subspace2.rows() != dim - 1) {
@@ -373,7 +377,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   }
 #endif
   MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1, dim);
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   if (Compl1.rows() != 1) {
     terminate("Compl1 should be of dimension 1");
   }
@@ -384,21 +388,21 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyMatrix<T> eProd2 = Subspace2 * G2;
   MyVector<T> Vscal = Subspace1 * G1 * eVect1;
   std::optional<MyVector<T>> opt = SolutionMat(TransposedMat(eProd2), Vscal);
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   if (!opt) {
     terminate("The solutioning failed");
   }
 #endif
   MyVector<T> const &V0 = *opt;
   MyMatrix<T> NSP = NullspaceTrMat(eProd2);
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   if (NSP.rows() != 1) {
     terminate("NSP should be of dimension 1");
   }
 #endif
   MyVector<T> V1 = GetMatrixRow(NSP, 0);
   T eNorm_V1 = V1.dot(G2 * V1);
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   if (eNorm_V1 != 0) {
     terminate(
         "The orthogonal space of Subspace2 should be an isotropic vector");
@@ -409,7 +413,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   // or scal0 = t scal1
   T scal0 = eNorm - V0.dot(G2 * V0);
   T scal1 = 2 * V0.dot(G2 * V1);
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   if (scal1 == 0) {
     terminate("The coefficient scal1 should be non-zero");
   }
@@ -420,7 +424,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   MyMatrix<T> Trans1 = ConcatenateMatVec(Subspace1, eVect1);
   MyMatrix<T> Trans2 = ConcatenateMatVec(Subspace2, eVect2);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
-#ifdef SANITY_CHECK
+#ifdef DEBUG_LORENTZIAN_LINALG
   MyMatrix<T> InvEquiv = Inverse(eEquiv);
   MyMatrix<T> G1_tr = InvEquiv * G1 * InvEquiv.transpose();
   if (G1_tr != G2) {
@@ -438,7 +442,7 @@ MyMatrix<T> ExtendOrthogonalIsotropicIsomorphism_Basis(
   The vector of Subspace1 / Subspace2 are no longer assumed independent
  */
 template <typename T>
-std::optional<MyMatrix<T>> ExtendOrthogonalIsotropicIsomorphism(
+std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
@@ -448,12 +452,252 @@ std::optional<MyMatrix<T>> ExtendOrthogonalIsotropicIsomorphism(
   if (RankMat(Subspace2_red) != dim - 1) {
     return {};
   }
-  MyMatrix<T> eEquiv = ExtendOrthogonalIsotropicIsomorphism_Basis(
+  MyMatrix<T> eEquiv = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
       G1, Subspace1_red, G2, Subspace2_red);
   if (Subspace1 * eEquiv != Subspace2)
     return {};
   return eEquiv;
 }
+
+
+template<typename T>
+struct SolutionSpecial {
+  std::vector<MyMatrix<T>> BasisKernel;
+  MyMatrix<T> eSol_mat;
+};
+
+// Resolution of B = X A + A^T X^T
+// b_{ij} = sum_k x_{ik} a_{kj} + a_{ki} x_{jk}
+SolutiopnSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> const& Bmat) {
+  int dim = Bmat.rows();
+  MyMatrix<T> TheMat = ZeroMatrix<T>(dim*dim, dim*dim);
+  MyMatrix<T> Bvect = ZeroVector<T>(dim*dim, 0);
+  auto f=[&](int i, int j) -> int {
+    return i + dim * j-;
+  };
+  for (int i=0; i<dim; i++) {
+    for (int j=0; j<dim; j++) {
+      int u = f(i,j);
+      Bvect(u) = Bmat(i,j);
+      for (int k=0; k<dim; k++) {
+        // contribudion x_{ik} a_{kj}
+        int v1 = f(i, k);
+        TheMat(v1, u) += Amat(k, j);
+        // contribution a_{ki} x_{jk}
+        int v2 = f(j, k);
+        TheMat(v2, u) += Amat(k, i);
+      }
+    }
+  }
+  auto f_getmat(MyVector<T> const& eVect) -> MyMatrix<T> {
+    MyMatrix<T> eMat(dim, dim);
+    for (int i=0; i<dim; i++) {
+      for (int j=0; j<dim; j++) {
+        eMat(i, j) = eVect(f(i, j));
+      }
+    }
+    return eMat;
+  };
+  std::optional<MyVector<T>> opt = SolutionMat(TheMat, Bvect);
+  MyVector<T> eSol_vect = unfold_opt(opt, "getting eSol_vect");
+  MyMatrix<T> eSol_mat = f_getat(eSol_vect);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  MyMatrix<T> SumMat = eSol_mat * Amat + Amat.transpose() * eSol_mat.transpose();
+  if (Bmat != SumMat) {
+    std::cerr << "Failed to find the correct solution 1\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<MyMatrix<T>> BasisKernel;
+  MyMatrix<T> NSP = NullspaceMat(TheMat);
+  ind dimNSP = NSP.rows();
+  for (int u=0; u<dimNSP; u++) {
+    MyVector<T> eVect = GetMatrixRow(NSP, u);
+    MyMatrix<T> eMat = f_getmat(eVect);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    MyMatrix<T> SumMat2 = eMat * Amat + Amat.transpose() * eMat.transpose();
+    if (!IsZeroMatrix(SumMat2)) {
+      std::cerr << "Failed to find the correct solution 2\n";
+      throw TerminalException{1};
+    }
+#endif
+    BasisBernel.push_back(eMat);
+  }
+  return {BasisKernel, eSol_mat};
+}
+
+
+template<typename T>
+std::vector<MyMatrix<T>> IntegralSpaceSaturation_Matrix(std::vector<MyMatrix<T>> const& ListM, int const& n) {
+  int dim = n * n;
+  int nMat = ListM.size();
+  MyMatrix<T> BigM(nMat, dim);
+  for (int u=0; u<nMat; u++) {
+    MyVector<T> eV = MatrixToVector(ListM[u]);
+    AssignMatrixRow(BigM, u, eV);
+  }
+  MyMatrix<T> BigM_sat = IntegralSpaceSaturation(BigM);
+  std::vector<MyMatrix<T>> RetListM;
+  for (int u=0; u<nMat; u++) {
+    MyVector<T> eV = GetMatrixRow(BigM_sat, u);
+    MyMatrix<T> eM = VectorToMatrix(eV, n);
+    RetListM.push_back(eM);
+  }
+  return RetListM;
+}
+
+
+
+
+template<typename T>
+struct LORENTZ_ExtendOrthogonalIsotropicIsomorphism {
+public:
+  MyMatrix<T> G1;
+  MyMatrix<T> Subspace1;
+  MyMatrix<T> G2;
+  MyMatrix<T> Subspace2;
+  int dim;
+  int rnk;
+  MyMatrix<T> Trans1Inv;
+  MyMatrix<T> ListVectCand2;
+  int denomSol;
+  SolutionSpecial<T> TheRec;
+  std::vector<MyMatrix<T>> ListEquiv_terms1;
+  LORENTZ_ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& _G1, MyMatrix<T> const& _Subspace1, MyMatrix<T> const& _G2, MyMatrix<T> const& _Subspace2) : G1(_G1), Subspace1(_Subspace1), G2(_G2), Subspace2(_Subspace2), dim(G1.rows()), rnk(Subspace1.rows()) {
+#ifdef DEBUG_LORENTZIAN_LINALG
+    if (rnk != RankMat(Subspace1)) {
+      std::cerr << "Inconsistent input: We should have Subspace1 of full rank\n";
+      throw TerminalException{1};
+    }
+#endif
+    int dimSpace = rnk;
+    int dimCompl = dim - dimSpace;
+    // Checking the input
+    MyMatrix<T> eProd1 = Subspace1 * G1;
+    MyMatrix<T> eProd2 = Subspace2 * G2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    MyMatrix<T> NSP1 = NullspaceTrMat(eProd1);
+    MyMatrix<T> ProdMat1 = NSP1 * G1 * NSP1.transpose();
+    if (!IsZeroMatrix(ProdMat1)) {
+      std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> NSP2 = NullspaceTrMat(eProd2);
+    MyMatrix<T> ProdMat2 = NSP2 * G2 * NSP2.transpose();
+    if (!IsZeroMatrix(ProdMat2)) {
+      std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> SMat1 = Subspace1 * G1 * Subspace1.transpose();
+    MyMatrix<T> SMat2 = Subspace2 * G2 * Subspace2.transpose();
+    if (SMat1 != SMat2) {
+      std::cerr << "Inconsistent input: SMat1 should be equal to SMat2\n";
+      throw TerminalException{1};
+    }
+#endif
+    // Now doing the computation side of the job
+    MyMatrix<T> TheCompl1 =SubspaceCompletionRational(Subspace1, dim);
+    MyMatrix<T> Trans1 = Concatenation(Subspace1, TheCompl1);
+    Trans1Inv = Inverse(Trans1);
+    MyMatrix<T> MatScal1 = TheCompl1 * G1 * TheCompl1.transpose();
+    int dimCompl1 = TheCompl1.rows();
+    ListVectCand2 = MyMatrix<T>(dimCompl1, dimSpace);
+    MyMatrix<T> eProd2tr = eProd2.transpose();
+    for (int u=0; u<dimCompl1; u++) {
+      MyVector<T> eVect1 = GetMatrixRow(TheCompl1, u);
+      MyVector<T> Vscal = eProd1 * eVect1;
+      std::optional<MyVector<T>> opt = SolutionMat(eProd2tr, Vscal);
+      MyVector<T> eVectCand2 = unfold_opt(opt, "getting eVectCand2");
+#ifdef DEBUG_LORENTZIAN_LINALG
+      MyVector<T> LScal1 = eProd1 * eVect1;
+      MyVector<T> LScal2 = eProd2 * eVectCand2;
+      if (LScal1 != LScal2) {
+        std::cerr << "Inconsistency for LScal1 = LScal2\n";
+        throw TerminalException{1};
+      }
+#endif
+      AssignMatrixRow(ListVectCand2, u, eVectCand2);
+    }
+    // The solutions are written as
+    // eVect2 = eVectCand2 + c_vect * NSP2
+    // Putting together this gets ListVect2 = TheCompl2 = ListVectCand2 + c_Mat * NSP2
+    // MatScal2 = (ListVectCand2 + c_Mat * NSP2) * G2 * (NSP2^T * c_Mat^T + ListVectCand2^T)
+    //          = ListVectCand2 * G2 * ListVectCand2^T + c_Mat * NSP2 * G2 * ListVectCand2^T + ListVectCand2 * G2 * NSP2^T * c_Mat^T
+    // c_vect is a vector of length dimCompl which gets into
+    // Put all together, this gets us c_Mat a matrix of size (dimCompl, dimCompl)
+    // The equation that we get is thus of the form B = X A + A^T X^T
+    // The equation is underdefined. This is because B is symmetric and so we have n(n+1)/2 equations
+    // for n^2 unknowns.
+    // The space NSP2 is uniquely defined as the set of isotropic vectors in the space. It is defined
+    // as a Kernel.
+    MyMatrix<T> MatScalCand2 = ListVectCand2 * G2 * ListVectCand2.transpose();
+    MyMatrix<T> LambdaMat = NSP2 * G2 * ListVectCand2.transpose();
+    denomSol = GetDenominatorQuotientSolution(LambdaMat);
+    MyMatrix<T> DiffScal = MatScal1 - MatScalCand2;
+    TheRec = SpecialEquationSolving(LambdaMat, DiffScal);
+    for (auto & eMat : TheRec.BasisKernel) {
+      MyMatrix<T> Null_mat = ZeroMatrix<T>(rnk, dim);
+      MyMatrix<T> Prod_mat = eMat * NSP2;
+      MyMatrix<T> Cont_mat = Concatenation(Null_mat, Prod_mat);
+      MyMatrix<T> Ins_mat = Trans1Inv * Cont_mat;
+      ListEquiv_terms1.push_back(Ins_mat);
+    }
+  }
+#ifdef DEBUG_LORENTZIAN_LINALG
+  void check_transformation(MyMatrix<T> const& eEq) {
+    MyMatrix<T> eEqInv = Inverse(eEq);
+    MyMatrix<T> G1_tr = eEqInv * G1 * eEqInv.transpose();
+    if (G1_tr != G2) {
+      std::cerr << "G1 was not mapped to G2\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> Subspace1_img = Subspace1 * eEq;
+    if (Subspace1_img != Subspace2) {
+      std::cerr << "Subspace1 is not mapped to Subspace2\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  MyMatrix<T> get_one_transformation() {
+    auto f_get_equiv(MyVector<T> const& eSol) -> MyMatrix<T> {
+      MyMatrix<T> TheCompl2 = ListVectCand2 + NSP2.transpose() * eSol;
+      MyMatrix<T> Trans2 = Concatenation(Subspace2, TheCompl2);
+      MyMatrix<T> RetMat = Trans1Inv * Trans2;
+      return RetMat;
+    }
+    MyMatrix<T> eEquiv0 = f_get_equiv(TheRec.eSol_mat);
+    // The matrix is expressed as eEquiv0 + alpha1 ListEquiv_terms[1] + ..... + alphaN ListEquiv_terms[N]
+    MyMatrix<T> RetSol = EliminateSuperfluousPrimeDenominators_Matrix(eEquiv0, ListEquiv_terms1);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    check_transformation(RetSol);
+#endif
+    return RetSol;
+  }
+  std::vector<MyMatrix<T>> get_kernel_generating_set(T const& d) {
+#ifdef DEBUG_LORENTZIAN_LINALG
+    if (G1 != G2 || Subspace1 != Subspace2) {
+      std::cerr << "We should have G1=G2 and Subspace1=Subspace2 in order for kernel to make sense\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::vector<MyMatrix<T>> ListEquiv_terms2 = IntegralSpaceSaturation_Matrix(ListEquiv_terms1, dim);
+    std::vector<MyMatrix<T>> ListEquiv_terms3;
+    for (auto & eM : ListEquiv_terms2) {
+      MyMatrix<T> eGen = IdentityMat<T>(dim) + eM / d;
+#ifdef DEBUG_LORENTZIAN_LINALG
+      check_transformation(eGen);
+#endif
+      ListEquiv_terms3.push_back(eGen);
+    }
+    return ListEquiv_terms3;
+  }
+}
+
+
+
+
+
+
 
 /*
   For a dimension N, we want to find all the possible integers k such that there
@@ -607,14 +851,14 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
       std::cerr << "The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time1;
 #endif
     bool test = is_infinite_order(eP, max_finite_order);
     if (!test) {
       is_finite = false;
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time2;
     std::cerr << "Timing |is_finite_order|=" << ms(time1, time2) << "\n";
 #endif
@@ -632,7 +876,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
         }
       }
     }
-#ifdef TIMINGS
+#ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time3;
     std::cerr << "Timing |InvariantSpace|=" << ms(time2, time3) << "\n";
 #endif

@@ -199,9 +199,17 @@ size_t INDEF_FORM_Invariant_IsotropicKplane_Raw(MyMatrix<T> const& Qmat, MyMatri
   return std::hash<T>()(eInv);
 }
 
-
-
-
+template<typename T>
+MyMatrix<T> ExpandMatrix(MyMatrix<T> const& M) {
+  int n = M.rows();
+  MyMatrix<T> TheBigMat = IdentityMat<T>(n+1);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      TheBigMat(i,j) = M(i,j);
+    }
+  }
+  return TheBigMat;
+}
 
 // clang-format off
 #endif  // SRC_INDEFINITE_MODELS_COMBINEDALGORITHMS_H_

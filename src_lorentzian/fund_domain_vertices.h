@@ -451,7 +451,7 @@ MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
   for (auto &eGen : LGen) {
     MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1, eGen);
     std::optional<MyMatrix<T>> opt =
-        ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+        LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2);
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
     if (!opt) {
       std::cerr << "We could not find the isotropy equivalence\n";
@@ -723,7 +723,7 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
     MyVector<T> fV = GetMatrixRow(Subspace2, jRow);
     AssignMatrixRow(Subspace2_img, iRow, fV);
   }
-  return ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2_img);
+  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2_img);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -769,7 +769,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     WriteMatrix(std::cerr, ScalMat2);
 #endif
     std::optional<MyMatrix<T>> opt1 =
-        ExtendOrthogonalIsotropicIsomorphism(G1, Subspace1, G2, Subspace2);
+        LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2);
     if (!opt1) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt1 : Failed at extending equivalence\n";

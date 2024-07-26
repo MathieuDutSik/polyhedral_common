@@ -8,6 +8,13 @@
 #include "MatrixGroup.h"
 // clang-format on
 
+// This is a reimplementation of the GAP code and implements the 
+//
+// The result of the paper were published in
+// Mathieu Dutour Sikirić, Klaus Hulek, Moduli of polarized Enriques surfaces -- computational aspects,
+// Journal of the London Mathematical Society (2023)
+// preprint at https://arxiv.org/abs/2302.01679
+
 #ifdef DEBUG
 #define DEBUG_INDEFINITE_COMBINED_ALGORITHMS
 #endif
@@ -26,51 +33,6 @@ struct ResultStabilizer {
   MyMatrix<T> Q;
   std::vector<MyMatrix<Tint>> ListGens;
 };
-
-template<typename T, typename Tint>
-struct InvariantIsotropic {
-};
-
-template<typename T>
-T GetRationalInvariant(std::vector<MyMatrix<T>> const& ListGen) {
-  std::set<T> set_den;
-  for (auto & eGen : ListGen) {
-    if (!IsIntegralMatrix(eGen)) {
-      int n = eGen.rows();
-      for (int i=0; i<n; i++) {
-        for (int j=0; j<n; j++) {
-          T eDen = GetDenominator(eGen(i,j));
-          set_den.insert(eDen);
-        }
-      }
-    }
-  }
-  std::set<T> primes;
-  for (auto & eDen : set_den) {
-    std::map<T, size_t> l_primes = FactorsIntMap(eDen);
-    for (auto & kv: l_primes) {
-      primes.insert(kv.first);
-    }
-  }
-  T prod(1);
-  for (auto & p: primes) {
-    prod *= p;
-  }
-  return prod;
-}
-
-template<typename T>
-MyMatrix<T> ExpandMatrix(MyMatrix<T> const& M) {
-  int n = M.rows();
-  MyMatrix<T> TheBigMat = IdentityMat<T>(n+1);
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      TheBigMat(i,j) = M(i,j);
-    }
-  }
-  return TheBigMat;
-}
-
 
 template<typename T, typename Tint>
 struct INDEF_FORM_GetVectorStructure {
@@ -142,6 +104,97 @@ public:
     return NewListGen;
   }
 };
+
+
+template<typename T, typename Tint>
+struct INDEF_FORM_GetRec_IsotropicKplane {
+public:
+  MyMatrix<T> Qmat;
+  MyMatrix<Tint> Plane;
+  MyMatrix<T> Plane_T;
+  int dimSpace;
+  int dim;
+  MyMatrix<T> NSP_T;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
+    MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
+    MyMatrix<T> PlaneImg = Plane * RetMat;
+    MyMatrix<T> TransRed(dim, dim);
+    for (int u=0; u<dim; u++) {
+      MyVector<T> eV = GetMatrixRow(PlaneImg, u);
+      std::optional<MyVector<T>> opt = SolutionMat(Plane, eV);
+      MyVector<T> fV = unfold_opt(opt, "Get the vector fV");
+      AssignMatrixRow(TransRed, u, fV);
+    }
+    T eDet = DeterminantMat(TransRed);
+    if (T_abs(eDet) != 1) {
+      std::cerr << "TransRed should have absolute determinant 1\n";
+      throw TerminalException{1};
+    }
+    if (!TestEqualitySpace(PlaneImg, Plane)) {
+      std::cerr << "Plane should be invariant (isotropic case)\n";
+      throw TerminalException{1};
+    }
+    int dimNSP = NSP_T.rows();
+    MyMatrix<T> RetMat_red(dimNSP, dimNSP);
+    for (int u=0; u<dimNSP; u++) {
+      MyVector<T> eV = GetMatrixRow(NSP_T, u);
+      MyVector<T> fV = RetMat.transpose() * eV;
+      std::optional<MyVector<T>> opt = SolutionMat(NSP_T, fV);
+      MyVector<T> gV = unfold_opt(opt, "getting gV");
+      AssignMatrixRow(RetMat_red, u, gV);
+    }
+    if (RetMat_red != eEndoRed_T) {
+      std::cerr << "RetMat_red restricted to the nullspace is not the original eEndoRed\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const& _Qmat, MyMatrix<Tint> const& _Plane) : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()) {
+    Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
+    MyMatrix<T> eProd = Plane * Qmat;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> WitnessIsotropy = Plane_T * Qmat * Plane_T.transpose();
+    if (!IsZeroMatrix(WitnessIsotropy)) {
+      std::cerr << "The matrix Plane does not define a totally isotropic space\n";
+      throw TerminalException{1};
+    }
+#endif
+    NSP_T = NullspaceIntTrMat(eProd);
+    GramMatRed = NSP * Qmat * MSP.transpose();
+  }
+  // We map automorphism group of a sublattice to the full group.
+  // The difficulty os that the rational kernel is of strictly positive Q-rank
+  // if dim(Plane) > 1.
+  std::vector<MyMatrix<T>> MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const& GRPmatr) {
+    MyMatrix<T> const& Subspace1 = NSP_T;
+    std::vector<MyMatrix<T>> ListGenTotal;
+    std::vector<T> ListD{1};
+    for (auto & eEndoRed : GRPmatr) {
+      MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
+      MyMatrix<T> Subspace2 = eEndoRed_T * NSP;
+      LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2);
+      MyMatrix<T> RetMat = TheRec.get_one_transformation();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      check_generator(eEndoRed, RetMat);
+#endif
+      ListGenTotal.push_back(RetMat);
+      T eDen = GetDenominatorMatrix(RetMat);
+      ListD.push_back(eDen);
+    }
+    T TheDen = LCMlist(ListD);
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace1);
+    std::vector<MyMatrix<T>> TheKer = TheRec.get_kernel_generating_set(TheDen);
+    MyMatrix<Tint> eEndoRed = IdentityMat<Tint>(NSP.rows());
+    for (auto & RetMat : TheKer) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      check_generator(eEndoRed, RetMat);
+#endif
+      ListGenTotal.push_back(RetMat);
+    }
+    return ListGenTotal;
+  }
+}
 
 template<typename T>
 std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const& n) {
@@ -244,6 +297,18 @@ private:
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Memoize(MyMatrix<T> const& Qmat) {
   }
 
+  template<typename Fstab>
+  size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
+  eRec:=INDEF_FORM_GetRec_IsotropicKplane(Qmat, Plane);
+    std::vector<MyMatrix<T>> GRP1 = f_stab
+    
+        GRP1:=f_stab(eRec);
+        GRP2:=eRec.MapOrthogonalSublatticeGroup(GRP1);
+        eInvRed:=INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane);
+        return [GetRationalInvariant(GRP2), eInvRed];
+    end;
+
+  
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {

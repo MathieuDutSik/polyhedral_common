@@ -31,6 +31,34 @@
 #define SANITY_CHECK_MATRIX_GROUP
 #endif
 
+template<typename T>
+size_t GetRationalInvariant(std::vector<MyMatrix<T>> const& ListGen) {
+  std::set<T> set_den;
+  for (auto & eGen : ListGen) {
+    if (!IsIntegralMatrix(eGen)) {
+      int n = eGen.rows();
+      for (int i=0; i<n; i++) {
+        for (int j=0; j<n; j++) {
+          T eDen = GetDenominator(eGen(i,j));
+          set_den.insert(eDen);
+        }
+      }
+    }
+  }
+  std::set<T> primes;
+  for (auto & eDen : set_den) {
+    std::map<T, size_t> l_primes = FactorsIntMap(eDen);
+    for (auto & kv: l_primes) {
+      primes.insert(kv.first);
+    }
+  }
+  T prod(1);
+  for (auto & p: primes) {
+    prod *= p;
+  }
+  return std::hash<T>()(proc);
+}
+
 //
 
 template <typename T, typename Telt>
@@ -527,7 +555,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(
     MyVector<T> V = GetMatrixRow(Subspace1, j_row);
     AssignMatrixRow(Subspace2, i_row, V);
   }
-  std::optional<MyMatrix<T>> opt = ExtendOrthogonalIsotropicIsomorphism(
+  std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
       helper.G, Subspace1, helper.G, Subspace2);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt) {
