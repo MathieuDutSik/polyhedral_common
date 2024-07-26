@@ -112,9 +112,15 @@ public:
   MyMatrix<T> Qmat;
   MyMatrix<Tint> Plane;
   MyMatrix<T> Plane_T;
+  MyMatrix<T> Plane_T;
+  MyMatrix<T> PlaneExpr_T;
   int dimSpace;
   int dim;
   MyMatrix<T> NSP_T;
+  MyMatrix<T> GramMatRed;
+  MyMatrix<T> QmatRed;
+  MyMatrix<Tint> FullBasis;
+  MyMatrix<Tint> FullBasisInv;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
@@ -162,6 +168,22 @@ public:
 #endif
     NSP_T = NullspaceIntTrMat(eProd);
     GramMatRed = NSP * Qmat * MSP.transpose();
+    Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
+
+    int dimNSP = eRec.NSP.rows();
+    PlaneExpr_T = MyMatrix<T>(dim, dimNSP);
+    for (int u=0; u<k; u++) {
+      MyMatrix<T> eV = GetMatrixRow(ePlane_T, u);
+      std::optional<MyVector<T>> opt = SolutionIntMat(NSP_T, eV);
+      MyVector<T> fV = unfold_opt(opt, "getting fV");
+      AssignMatrixRow(PlaneExpr_T, u, fV);
+    }
+    int the_dim = eRec.NSP_T.rows();
+    MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
+    int dimCompl = TheCompl.rows();
+    FullBasis = Concatenation(TheCompl, PlaneExpr_T);
+    FullBasisInv = Inverse(FullBasis);
+    QmatRed = TheCompl * eRec.GramMatRed * TheCompl.transpose();
   }
   // We map automorphism group of a sublattice to the full group.
   // The difficulty os that the rational kernel is of strictly positive Q-rank
@@ -297,8 +319,10 @@ private:
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Memoize(MyMatrix<T> const& Qmat) {
   }
 
-  // Specific functions
-  std::vector<MyMatrix<T>> f_stab_plane(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec) {
+  //
+  // Specific functions f_stab_*, f_equiv_*
+  //
+  std::vector<MyMatrix<Tint>> f_stab_plane(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec) {
     return INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
   }
   std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const& ListVect) {
@@ -316,34 +340,19 @@ private:
     }
     return ListSpaces;
   }
-  std::vector<MyMatrix<T>> f_stab_flag(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec) {
-    int k = eRec.Plane.rows();
-    int dimNSP = eRec.NSP.rows();
-    MyMatrix<T> PlaneExpr(k, dimNSP);
-    for (int u=0; u<k; u++) {
-      MyMatrix<T> eV = GetMatrixRow(eRec.Plane_T, u);
-      std::optional<MyVector<T>> opt = SolutionIntMat(eRec.NSP_T, eV);
-      MyVector<T> fV = unfold_opt(opt, "getting fV");
-      AssignMatrixRow(PlaneExpr, u, fV);
-    }
-    int the_dim = eRec.NSP_T.rows();
-    MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr, the_dim);
-    int dimCompl = TheCompl.rows();
-    MyMatrix<T> FullBasis = Concatenation(TheCompl, PlaneExpr);
-    MyMatrix<T> FullBasisInv = Inverse(FullBasis);
-    MyMatrix<T> QmatRed = TheCompl * eRec.GramMatRed * TheCompl.transpose();
-    std::vector<MyMatrix<Tint>> GRPred = INDEF_FORM_AutomorphismGroup(QmatRed);
-    std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup_Triangular(GRPred, dimCompl, the_dim);
-    std::vector<MyMatrix<T>> ListGenTot;
+  std::vector<MyMatrix<Tint>> f_stab_flag(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec) {
+    std::vector<MyMatrix<Tint>> GRPred = INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
+    std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, the_dim);
+    std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
-      MyMatrix<T> eGenB = FullBasisInv * eGen * FullBasis;
+      MyMatrix<T> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eProd = eGenB * eRec.GramMatRed * eGenB.transpose();
       if (eProd != eRec.GramMatRed) {
         std::cerr << "eGenB should preserve eRec.GramMatRed\n";
         throw TerminalException{1};
       }
-      std::vector<MyMatrix<Tint>> ListSpaces = f_get_list_spaces(PlaneExpr);
+      std::vector<MyMatrix<Tint>> ListSpaces = f_get_list_spaces(eRec.PlaneExpr);
       for (auto & eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
         if (!TestEqualitySpace(eSpaceImg, eSpace)) {
@@ -356,20 +365,89 @@ private:
     }
     return ListGenTot;
   }
-  std::optional<MyMatrix<T>> f_equiv_plane(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec1, INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec2) {
+  std::optional<MyMatrix<Tint>> f_equiv_plane(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec1, INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec2) {
     return INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
   }
-  std::optional<MyMatrix<T>> f_equiv_flag(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec1, INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec2) {
-    
+  std::optional<MyMatrix<Tint>> f_equiv_flag(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec1, INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec2) {
+    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence(eRec1.QmatRed, eRec2.QmatRed);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& test = *opt;
+    MyMatrix<Tint> TheEquivTest = IdentityMat<Tint>(the_dim);
+    int p = eRec1.QmatRed1.rows();
+    for (int i=0; i<p; i++) {
+      for (int j=0; j<p; j++) {
+        TheEquivTest(i,j) = test(i,j);
+      }
+    }
+    MyMatrix<Tint> TheEquiv = eRec2.FullBasisInv * TheEquivTest * FullBasis1;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T,Tint>(TheEquiv);
+    MyMatrix<T> eProd = TheEquiv_T * eRec1.GramMatRed * TheEquiv_T.transpose();
+    if (eProd != eRec2.GramMatRed) {
+      std::cerr << "This is not an equivalence\n";
+    }
+    std::vector<MyMatrix<Tint>> ListSpaces1 = f_get_list_spaces(eRec1.PlaneExpr);
+    std::vector<MyMatrix<Tint>> ListSpaces2 = f_get_list_spaces(eRec2.PlaneExpr);
+    MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
+    for (size_t iSpace=0; iSpace<ListSpaces1.size(); iSpace++) {
+      MyMatrix<Tint> eSpace1_img = ListSpaces1[i] * TheEquivInv;
+      MyMatrix<Tint> const& eSpace2 = ListSpaces2[i];
+      if (!TestEqualitySpace(eSpace1_img, eSpace2)) {
+        std::cerr << "The space are not correctly mapped\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return TheEquiv;
   }
+  //
+  // The function using template arguments
+  //
   template<typename Fstab>
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
     std::vector<MyMatrix<T>> GRP1 = f_stab(eRec);
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
-    return MatrixIntegral_Stabilizer(n, GRP2);
+    size_t eInvRed = INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane);
+    size_t GRP_inv = GetRationalInvariant(GRP2);
+    return eInvRed + GRP_inv;
   }
+  template<typename Fequiv, typename Fstab>
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2, Fequiv f_equiv, Fstab f_stab) {
+    if (INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat1, Plane1, f_stab) != INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat2, Plane2, f_stab)) {
+      return {};
+    }
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec1(Qmat1, Plane1);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec2(Qmat2, Plane2);
+    std::optional<MyVector<Tint>> opt = f_equiv(eRec1, eRec2);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& test = *opt;
+    MyMatrix<Tint> Subspace1 = Inverse(test) * eRec2.NSP;
+    MyMatrix<Tint> Subspace2 = eRec1.NSP;
+    MyMatrix<T> Subspace1_T = UniversalMatrixConversion<T,Tint>(Subspace1);
+    MyMatrix<T> Subspace2_T = UniversalMatrixConversion<T,Tint>(Subspace2);
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T,> TheRec(Qmat1, Subspace1, Qmat2, Subspace2);
+    MyMatrix<T> EquivRat = TheRec.get_one_transformation();
+    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    if 
 
+        if TestEqualitySpace(Plane1 * Inverse(EquivRat), Plane2) = false then
+            Error("Plane1 and Plane2 should be mapped");
+        fi;
+        fTest:=function(eTest)
+            return TestEqualitySpace(Plane1*Inverse(eTest), Plane2);
+        end;
+        return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab);
+    end;
+
+
+
+  
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
