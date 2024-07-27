@@ -5,6 +5,7 @@
 // clang-format off
 #include "ApproximateModels.h"
 #include "lorentzian_perfect.h"
+#include "EquiStabMemoization.h"
 #include "MatrixGroup.h"
 // clang-format on
 
@@ -19,20 +20,6 @@
 #define DEBUG_INDEFINITE_COMBINED_ALGORITHMS
 #endif
 
-
-// Used for the memoization process for isomorphism
-template<typename T, typename Tint>
-struct ResultIsomorphism {
-  MyMatrix<T> Q1;
-  MyMatrix<T> Q2;
-  std::optional<MyMatrix<Tint>> result;
-};
-
-template<typename T, typename Tint>
-struct ResultStabilizer {
-  MyMatrix<T> Q;
-  std::vector<MyMatrix<Tint>> ListGens;
-};
 
 template<typename T, typename Tint>
 struct INDEF_FORM_GetVectorStructure {
@@ -316,7 +303,34 @@ private:
     }
     return ListGenerators;
   }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
+    AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
+    AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
+    if (Block1.h == 0) {
+      return INDEF_FORM_TestEquivalence_PosNeg(Qmat1, Qmat2);
+    }
+    if (Block1.h == 1) {
+      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(LorMat1, LorMat2, os);
+    }
+    ApproximateModel<T,Tint> approx1 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat1);
+    FirstNorm<T,Tint> first_norm1 = GetFirstNorm(approx1);
+    T const& X = first_norm1.X;
+    MyVector<Tint> const& v1 = first_norm1.eVect;
+    ApproximateModel<T,Tint> approx2 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat2);
+    std::vector<MyVector<Tint>> ListCand2 = Approx2.GetCoveringOrbitRepresentatives(X);
+    for (auto & v2 : ListCand2) {
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat1, Qmat2, v1, v2);
+      if (opt) {
+        return opt;
+      }
+    }
+    return {};
+  }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Memoize(MyMatrix<T> const& Qmat) {
+
+
+
+    
   }
 
   //
@@ -458,13 +472,25 @@ private:
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
     return MatrixIntegral_Stabilizer(n, GRP2);
   }
-  
-  InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
-  }
-  InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
-  }
 
 public:
+  // Now the specific implementations
+  InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat, Plane, f_stab_plane);
+  }
+  InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat, Plane, f_stab_flag);
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Qmat1, Qmat2, Plane1, Plane2, f_equiv_flag, f_stab_flag);
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Qmat1, Qmat2, Plane1, Plane2, f_equiv_plane, f_stab_plane);
+  }
+
+
+
+  
   std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Qmat) {
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat) {
