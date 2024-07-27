@@ -22,7 +22,8 @@
 //    ---If x is isomorphic to y
 //    ---If the stabilizer of y is known
 //    ---Then the stabilizer of x can be computed.
-// Of course, this is combined with connected components and other iterative algorithms
+// The above examples are miniature examples. In the code, connected components are computed using known
+// isomorphisms.
 //
 // Assumptions:
 // ---The stabilizer is represented by a finite number of equivalence.
@@ -36,26 +37,19 @@
 #define DEBUG_EQUI_STAB_MEMOIZATION
 #endif
 
+teemplate<typename T, typename Tint>
+void IDENTITY_OBJECT(std<MyMatrix<T>> const& x, MyMatrix<Tint> & equiv) {
+  int n = x.rows();
+  equiv = IdentityMat<Tint>(n);
+}
 
 template<typename Tdata, template Tequiv>
 Tequiv IdentityObject(Tdata const& x) {
-
-
-
-
-// Used for the memoization process for isomorphism
-template<typename Tdata, typename Tequiv>
-struct ResultEquivalence {
-  Tdata x1;
-  Tdata x2;
-  std::optional<Tequiv> result;
-};
-
-template<typename Tdata, typename Tequiv>
-struct ResultStabilizer {
-  Tdata x;
-  std::vector<Tequiv> ListGens;
-};
+  stc<Tdata> x_in{x};
+  Tequiv equiv;
+  IDENTITY_OBJECT(x_in, equiv);
+  return equiv;
+}
 
 template<typename Tdata, typename Tequiv>
 struct DatabaseResultEquiStab {
@@ -65,22 +59,22 @@ private:
   std::unordered_map<Tdata, std::vector<Tequiv>> list_stab;
 
 public:
-  void insert_equi(ResultEquivalence<Tdata,Tequiv> const& result_equiv) {
-    if (result_equiv.result) {
-      Tequiv const& res = *result_equiv.result;
-      std::pair<Tdata, Tequiv> pair1{result_equiv.x1, res};
-      list_iso[result_equiv.x2].push_back(pair1);
+  void insert_equi(Tdata const& x1, Tdata const& x2, std::optional<Tequiv> const& result) {
+    if (result) {
+      Tequiv const& res = *result;
+      std::pair<Tdata, Tequiv> pair1{x1, res};
+      list_iso[x2].push_back(pair1);
       //
       Tequiv res_inv = Inverse(res);
-      std::pair<Tdata, Tequiv> pair2{result_equiv.x2, res_inv};
-      list_iso[result_equiv.x1].push_back(pair2);
+      std::pair<Tdata, Tequiv> pair2{x2, res_inv};
+      list_iso[x1].push_back(pair2);
     } else {
-      std::pair<Tdata,Tdata> pair{result_equiv.x1, result_equiv.x2};
+      std::pair<Tdata,Tdata> pair{x1, x2};
       list_non_iso.insert(pair);
     }
   }
-  void insert_stab(ResultStabilizer<Tdata, Tequiv> const& result_stab) {
-    list_stab[result_stab.x] = result_stab.ListGens;
+  void insert_stab(Tdata const& x, std::vector<Tequiv> const& ListGens) {
+    list_stab[x] = ListGens;
   }
   template<typename Tterminate>
   std::vector<std::pair<Tdata,Tequiv>> connected_component(MyMatrix<T> const& x, Fterminate f_terminate) const {
@@ -130,7 +124,6 @@ public:
       }
       return false;
     };
-
     for (auto &pair1 : eList1) {
       for (auto & pair2 : eList2) {
         if (has_noniso_edge(pair1.first, pair2.first)) {
@@ -142,6 +135,7 @@ public:
   }
   std::optional<std::vector<Tequiv>> attempt_stabilizer(Tdata const& x) const {
     if (list_stab.size() == 0) {
+      // No stabilizer computed so no point in computing anything.
       return {};
     }
     std::optional<std::vector<Tequiv>> opt;

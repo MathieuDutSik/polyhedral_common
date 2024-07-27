@@ -9,7 +9,8 @@
 #include "MatrixGroup.h"
 // clang-format on
 
-// This is a reimplementation of the GAP code and implements the 
+// This is a reimplementation of the GAP code and implements the algorithm for indefinite forms.
+// 
 //
 // The result of the paper were published in
 // Mathieu Dutour Sikirić, Klaus Hulek, Moduli of polarized Enriques surfaces -- computational aspects,
