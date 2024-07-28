@@ -18,6 +18,17 @@ WriteMatrixFile:=function(eFile, EXT)
     CloseStream(output);
 end;
 
+WriteListMatrixFile:=function(eFile, ListMat)
+    local output, eMat;
+    output:=OutputTextFile(eFile, true);
+    AppendTo(output, Length(ListMat), "\n");
+    for eMat in ListMat
+    do
+        WriteMatrix(output, eMat);
+    od;
+    CloseStream(output);
+end;
+
 WriteGroupFile:=function(eFile, n, GRP)
   local ListGen, output, eGen, i, j;
   ListGen:=GeneratorsOfGroup(GRP);
@@ -97,4 +108,91 @@ ListFileDirectory:=function(TheDir)
     CloseStream(file);
     RemoveFileIfExist(FileOUT);
     return ListFiles;
+end;
+
+
+
+ClassicalSporadicLattices:=function(TheName)
+  local ListNames, ListGram, len, i;
+  ListNames:=[];
+  ListGram:=[];
+  #
+  # root lattices
+  #
+  Add(ListNames, "E6");
+  Add(ListGram,
+[[2,1,1,0,1,1],[1,4,1,1,1,3],[1,1,2,1,1,1],
+ [0,1,1,2,1,2],[1,1,1,1,2,2],[1,3,1,2,2,4]]);
+  #
+  Add(ListNames, "E7");
+  Add(ListGram,
+[[4,3,2,3,1,1,1],[3,4,3,3,1,1,1],
+[2,3,4,3,2,2,1],[3,3,3,4,2,1,2],[1,1,2,2,2,1,1],
+[1,1,2,1,1,2,0],[1,1,1,2,1,0,2]]);
+  #
+  Add(ListNames, "A2");
+  Add(ListGram,
+[ [ 2, -1 ], [ -1, 2 ] ]);
+  #
+  Add(ListNames, "E8");
+  Add(ListGram, [[2,0,0,0,0,0,1,0],[0,2,-1,0,-1,1,0,1],
+                 [0,-1,2,1,0,0,0,-1],[0,0,1,2,0,0,1,-1],
+                 [0,-1,0,0,2,-1,1,-1],[0,1,0,0,-1,2,0,0],
+                 [1,0,0,1,1,0,2,-1],[0,1,-1,-1,-1,0,-1,2]]);
+  #
+  Add(ListNames, "A4");
+  Add(ListGram, [ [ 2, -1, 0, 0 ], [ -1, 2, -1, 0 ], [ 0, -1, 2, -1 ], [ 0, 0, -1, 2 ] ]);
+  #
+  Add(ListNames, "A5");
+  Add(ListGram, [ [ 2, -1, 0, 0, 0 ], [ -1, 2, -1, 0, 0 ], [ 0, -1, 2, -1, 0 ], [ 0, 0, -1, 2, -1 ], [ 0, 0, 0, -1, 2 ] ]);
+  #
+  Add(ListNames, "A6");
+  Add(ListGram, [ [ 2, -1, 0, 0, 0, 0 ], [ -1, 2, -1, 0, 0, 0 ], [ 0, -1, 2, -1, 0, 0 ], [ 0, 0, -1, 2, -1, 0 ], [ 0, 0, 0, -1, 2, -1 ], [ 0, 0, 0, 0, -1, 2 ] ]);
+  #
+  Add(ListNames, "D4");
+  Add(ListGram, [ [ 2, -1, 0, 0 ], [ -1, 2, -1, -1 ], [ 0, -1, 2, 0 ], [ 0, -1, 0, 2 ] ]);
+  #
+  Add(ListNames, "D5");
+  Add(ListGram,  [ [ 2, -1, 0, 0, 0 ], [ -1, 2, -1, 0, -1 ], [ 0, -1, 2, -1, 0 ], [ 0, 0, -1, 2, 0 ], [ 0, -1, 0, 0, 2 ] ]);
+  #
+  Add(ListNames, "D6");
+  Add(ListGram, [ [ 2, -1, 0, 0, 0, 0 ], [ -1, 2, -1, 0, 0, -1 ], [ 0, -1, 2, -1, 0, 0 ], [ 0, 0, -1, 2, -1, 0 ], [ 0, 0, 0, -1, 2, 0 ],[ 0, -1, 0, 0, 0, 2 ] ]);
+  #
+  len:=Length(ListNames);
+  for i in [1..len]
+  do
+      if ListNames[i] = TheName then
+          return ListGram[i];
+      fi;
+  od;
+  Error("Failed to find the entry in the database");
+end;
+
+
+RandomIntegralUnimodularMatrix:=function(n)
+    local GetRandomTriangular, GRP, ePerm, eMat1, eMat2, i, j, eMat3;
+    GetRandomTriangular:=function()
+        local TheMat, i, j;
+        TheMat:=NullMat(n, n);
+        for i in [1..n]
+        do
+            TheMat[i][i]:=Random([-1,1]);
+            for j in [i+1..n]
+            do
+                TheMat[i][j]:=Random([-2..2]);
+            od;
+        od;
+        return TheMat;
+    end;
+    GRP:=SymmetricGroup(n);
+    ePerm:=Random(GRP);
+    eMat1:=GetRandomTriangular();
+    eMat2:=NullMat(n,n);
+    for i in [1..n]
+    do
+        j:=OnPoints(i, ePerm);
+        eMat2[i][j]:=1;
+    od;
+    eMat3:=TransposedMat(GetRandomTriangular());
+    return eMat1 * eMat2 * eMat3;
 end;

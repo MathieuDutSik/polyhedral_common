@@ -94,7 +94,11 @@ void process(std::string const &ListMatFile) {
       }
     }
   };
-  for (auto & eCase : list_cases) {
+  size_t n_case = list_cases.size();
+  std::vector<size_t> ePerm = RandomPermutation(n_case);
+  for (size_t iCase=0; iCase<n_case; iCase++) {
+    size_t jCase = ePerm[iCase];
+    std::pair<size_t, size_t> eCase = list_cases[jCase];
     size_t iMat = eCase.first;
     size_t jMat = eCase.second;
     if (jMat == miss_val) {

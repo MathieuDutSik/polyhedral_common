@@ -28,6 +28,7 @@
 // Assumptions:
 // ---The stabilizer is represented by a finite number of equivalence.
 // ---The action is (equiv, x1) = x2.
+// ---The composition rule (equi1, (equi2, x)) = (equi1 * equi2, x)
 // ---In terms of template function
 //    ---The composition is represented by the "operator*" function.
 //    ---The inverse is represented by the "Inverse" function

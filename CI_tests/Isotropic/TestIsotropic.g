@@ -14,9 +14,9 @@ TestIsotropic:=function(eRec)
     WriteMatrixFile(FileIn, eRec.M);
     #
     if OnlyTestExistence then
-        eProg:="../../src_indefinite/LATT_TestIsotropic";
+        eProg:="../../src_isotropic/LATT_TestIsotropic";
     else
-        eProg:="../../src_indefinite/LATT_FindIsotropic";
+        eProg:="../../src_isotropic/LATT_FindIsotropic";
     fi;
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
