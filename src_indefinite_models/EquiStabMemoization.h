@@ -1,4 +1,4 @@
-// Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
+// Copyright (C) 2024 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 #define SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 
