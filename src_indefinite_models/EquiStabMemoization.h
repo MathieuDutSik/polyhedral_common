@@ -33,17 +33,23 @@
 //    ---The inverse is represented by the "Inverse" function
 //    ---The identity function is represented by the "IdentityObject" template function
 
+// clang-format off
+#include "MAT_MatrixInt.h"
+#include <unordered_map>
+// clang-format on
+
+
 #ifdef DEBUG
 #define DEBUG_EQUI_STAB_MEMOIZATION
 #endif
 
-teemplate<typename T, typename Tint>
-void IDENTITY_OBJECT(std<MyMatrix<T>> const& x, MyMatrix<Tint> & equiv) {
-  int n = x.rows();
+template<typename T, typename Tint>
+void IDENTITY_OBJECT(stc<MyMatrix<T>> const& x, MyMatrix<Tint> & equiv) {
+  int n = x.val.rows();
   equiv = IdentityMat<Tint>(n);
 }
 
-template<typename Tdata, template Tequiv>
+template<typename Tequiv, typename Tdata>
 Tequiv IdentityObject(Tdata const& x) {
   stc<Tdata> x_in{x};
   Tequiv equiv;
@@ -76,8 +82,8 @@ public:
   void insert_stab(Tdata const& x, std::vector<Tequiv> const& ListGens) {
     list_stab[x] = ListGens;
   }
-  template<typename Tterminate>
-  std::vector<std::pair<Tdata,Tequiv>> connected_component(MyMatrix<T> const& x, Fterminate f_terminate) const {
+  template<typename Fterminate>
+  std::vector<std::pair<Tdata,Tequiv>> connected_component(Tdata const& x, Fterminate f_terminate) const {
     std::vector<std::pair<Tdata,Tequiv>> l_vertices;
     std::set<Tdata> set_vert;
     auto f_insert=[&](std::pair<Tdata,Tequiv> const& pair) -> void {
@@ -87,7 +93,7 @@ public:
       set_vert.insert(pair.first);
       l_vertices.push_back(pair);
     };
-    Tequiv id = IdentityObject<Tequiv,T>(x);
+    Tequiv id = IdentityObject<Tequiv,Tdata>(x);
     std::pair<Tdata,Tequiv> pair{x, id};
     f_insert(pair);
     //
@@ -96,7 +102,8 @@ public:
       size_t pos_end = l_vertices.size();
       for (size_t pos=pos_start; pos<pos_end; pos++) {
         std::pair<Tdata,Tequiv> pair = l_vertices[pos];
-        for (auto & epair : list_iso[pair.first]) {
+        std::vector<std::pair<Tdata, Tequiv>> const& l_pair = list_iso.at(pair.first);
+        for (auto & epair : l_pair) {
           Tequiv new_equiv = epair.second * pair.second;
           std::pair<Tdata,Tequiv> new_pair{epair.first, new_equiv};
           if (f_terminate(new_pair)) {
@@ -144,17 +151,18 @@ public:
       if (iter == list_stab.end()) {
         return false;
       }
-      Tequiv const& eq = pair.second
+      Tequiv const& eq = pair.second;
       Tequiv eq_inv = Inverse(eq);
-      std::vector<Tequiv> l_gens;
-      for (auto& eGen : *iter) {
+      std::vector<Tequiv> New_list_gens;
+      std::vector<Tequiv> const& list_gens = iter->second;
+      for (auto& eGen : list_gens) {
         Tequiv NewGen = eq * eGen * eq_inv;
-        l_gens.push_back(NewGen);
+        New_list_gens.push_back(NewGen);
       }
-      opt = l_gens;
+      opt = New_list_gens;
       return true;
     };
-    (void)connected_component<decltype(f_terminate)>(x);
+    (void)connected_component<decltype(f_terminate)>(x, f_terminate);
     return opt;
   }
   std::optional<std::optional<Tequiv>> attempt_equiv(Tdata const& x, Tdata const& y) const {
@@ -167,7 +175,7 @@ public:
       }
       return false;
     };
-    std::vector<std::pair<Tdata,Tequiv>> l_pair_x = connected_component<decltype(f_terminate_x)>(x);
+    std::vector<std::pair<Tdata,Tequiv>> l_pair_x = connected_component<decltype(f_terminate_x)>(x, f_terminate_x);
     if (opt) {
 #ifdef DEBUG_EQUI_STAB_MEMOIZATION
       if (l_pair_x.size() != 0) {
@@ -177,10 +185,10 @@ public:
 #endif
       return opt;
     }
-    auto f_terminate_y=[&](std::pair<Tdata,Tequiv> const& pair) -> bool {
+    auto f_terminate_y=[&]([[maybe_unused]] std::pair<Tdata,Tequiv> const& pair) -> bool {
       return false;
     };
-    std::vector<std::pair<Tdata,Tequiv>> l_pair_y = connected_component<decltype(f_terminate_y)>(y);
+    std::vector<std::pair<Tdata,Tequiv>> l_pair_y = connected_component<decltype(f_terminate_y)>(y, f_terminate_y);
     bool test = has_noniso_conn_edge(l_pair_x, l_pair_y);
     if (test) {
       std::optional<Tequiv> ret_opt = {};

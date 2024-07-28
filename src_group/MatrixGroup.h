@@ -56,7 +56,7 @@ size_t GetRationalInvariant(std::vector<MyMatrix<T>> const& ListGen) {
   for (auto & p: primes) {
     prod *= p;
   }
-  return std::hash<T>()(proc);
+  return std::hash<T>()(prod);
 }
 
 //
