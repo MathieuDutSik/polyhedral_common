@@ -2,7 +2,6 @@
 #ifndef SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 #define SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 
-
 // This is a simple process for memoizing equivalence and stabilizers
 // in order to get better speed.
 // We keep track of
@@ -33,6 +32,13 @@
 //    ---The composition is represented by the "operator*" function.
 //    ---The inverse is represented by the "Inverse" function
 //    ---The identity function is represented by the "IdentityObject" template function
+//
+// Consequences and examples
+// ---if (equi, x1) = x2
+//    then any matrix g2 satisfying (g2, x2) = x2 give rise
+//    to a matrix g1 = equi^{-1} g2 equi
+// ---The arithmetic group action is our basic one:
+//    (P, A) = P A P^T
 
 // clang-format off
 #include "MAT_MatrixInt.h"
@@ -157,7 +163,7 @@ public:
       std::vector<Tequiv> New_list_gens;
       std::vector<Tequiv> const& list_gens = iter->second;
       for (auto& eGen : list_gens) {
-        Tequiv NewGen = eq * eGen * eq_inv;
+        Tequiv NewGen = eq_inv * eGen * eq;
         New_list_gens.push_back(NewGen);
       }
       opt = New_list_gens;
