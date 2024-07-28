@@ -6,11 +6,14 @@
 #include "Permutation.h"
 #include "EquiStabMemoization.h"
 #include "LatticeStabEquiCan.h"
+#include "COMB_Combinatorics.h"
+#include "GRAPH_GraphicalBasic.h"
 #include <unordered_set>
 // clang-format on
 
 template <typename T, typename Tint>
-void process(std::string const &ListMatFile) {
+void process(std::string const &ListMatFile, std::string const& OutFormat, std::ostream& os_out) {
+  using Tgr = GraphListAdj;
   std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(ListMatFile);
   size_t nMat = ListMat.size();
   //
@@ -20,6 +23,7 @@ void process(std::string const &ListMatFile) {
   size_t miss_val = std::numeric_limits<size_t>::max();
   std::unordered_set<std::pair<size_t, size_t>> set_equiv;
   std::vector<std::pair<size_t, size_t>> list_cases;
+  std::vector<std::pair<size_t, size_t>> l_pair;
   for (size_t iMat=0; iMat<nMat; iMat++) {
     std::pair<size_t, size_t> pair_stab{iMat, miss_val};
     list_cases.push_back(pair_stab);
@@ -30,9 +34,12 @@ void process(std::string const &ListMatFile) {
       list_cases.push_back(pair_equiv);
       if (opt) {
         set_equiv.insert(pair_equiv);
+        l_pair.push_back(pair_equiv);
       }
     }
   }
+  Tgr eGR(l_pair, nMat);
+  std::vector<std::vector<size_t>> vect_cone = ConnectedComponents_set(eGR);
   std::cerr << "Total runtime for direct computation=" << time << "\n";
   //
   // Now the scheme with the enhanced equivalence
@@ -95,7 +102,7 @@ void process(std::string const &ListMatFile) {
     }
   };
   size_t n_case = list_cases.size();
-  std::vector<size_t> ePerm = RandomPermutation(n_case);
+  std::vector<size_t> ePerm = RandomPermutation<size_t>(n_case);
   for (size_t iCase=0; iCase<n_case; iCase++) {
     size_t jCase = ePerm[iCase];
     std::pair<size_t, size_t> eCase = list_cases[jCase];
@@ -108,31 +115,66 @@ void process(std::string const &ListMatFile) {
     }
   }
   std::cerr << "Total runtime for memoized computation=" << time << "\n";
+  //
+  if (OutFormat == "GAP") {
+    os_out << "return [";
+    bool IsFirst = true;
+    for (auto & set : vect_cone) {
+      if (!IsFirst)
+        os_out << ",\n";
+      IsFirst = false;
+      //
+      bool IsFirstB = true;
+      os_out << "[";
+      for (auto & val1 : set) {
+        if (!IsFirstB)
+          os_out << ",";
+        IsFirstB = false;
+        size_t val2 = val1 + 1;
+        os_out << val2;
+      }
+      os_out << "]";
+    }
+    os_out << "];\n";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat\n";
+  throw TerminalException{1};
 }
 
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 3) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile]\n";
+      std::cerr << "or\n";
+      std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile] [OutFormat] [FileOut]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
     std::string ListMatFile = argv[2];
-    //    using Tidx = uint32_t;
-    //    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    //    using Tgroup = permutalib::Group<Telt, Tint>;
+    std::string OutFormat = "GAP";
+    std::string FileOut = "stderr";
     //
-    auto f = [&]() -> void {
+    auto f = [&](std::ostream& os_out) -> void {
       if (arith == "rational") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(ListMatFile);
+        return process<T,Tint>(ListMatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    f();
+    if (FileOut == "stderr") {
+      f(std::cerr);
+    } else {
+      if (FileOut == "stdout") {
+        f(std::cout);
+      } else {
+        std::ofstream os(FileOut);
+        f(os);
+      }
+    }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_FindIsotropic\n";
