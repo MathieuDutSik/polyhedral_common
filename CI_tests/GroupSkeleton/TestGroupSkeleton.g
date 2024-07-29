@@ -72,9 +72,11 @@ end;
 n_error:=FullTest();
 if n_error > 0 then
     # Error case
+    Print("Error case\n");
     GAP_EXIT_CODE(1);
 else
     # No error case
+    Print("Normal case\n");
     GAP_EXIT_CODE(0);
 fi;
 

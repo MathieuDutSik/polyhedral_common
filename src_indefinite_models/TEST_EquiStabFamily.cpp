@@ -160,6 +160,10 @@ int main(int argc, char *argv[]) {
     std::string ListMatFile = argv[2];
     std::string OutFormat = "GAP";
     std::string FileOut = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      FileOut = argv[4];
+    }
     //
     auto f = [&](std::ostream& os_out) -> void {
       if (arith == "rational") {

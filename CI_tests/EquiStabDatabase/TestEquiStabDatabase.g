@@ -17,7 +17,7 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
             NewMat:=Pmat * eMat * TransposedMat(Pmat);
             Add(FullListMat, NewMat);
             pos := pos+1;
-            Add(ListBlock, pos);
+            Add(eBlock, pos);
         od;
         Add(ListBlock, eBlock);
     od;
@@ -38,6 +38,8 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
     fi;
     CompListBlock:=ReadAsFunction(FileOut)();
     if Set(ListBlock) <> CompListBlock then
+        Print("ListBlock=", ListBlock, "\n");
+        Print("CompListBlock=", CompListBlock, "\n");
         Print("The computed sets are not the same\n");
         return false;
     fi;
@@ -51,9 +53,11 @@ n_equiv:=4;
 result:=TestEquiStabDatabase(ListMat, n_equiv);
 if result = false then
     # Error case
+    Print("Error case\n")
     GAP_EXIT_CODE(1);
 else
     # No error case
+    Print("Normal case\n")
     GAP_EXIT_CODE(0);
 fi;
 
