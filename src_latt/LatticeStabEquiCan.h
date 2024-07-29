@@ -270,9 +270,15 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
     ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], std::cerr);
   MyMatrix<Tint> SHV2 =
     ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  os << "SEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
+#endif
 
   if (SHV1.rows() != SHV2.rows())
     return {};
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  os << "SEC: After the test\n";
+#endif
 
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
@@ -280,8 +286,11 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
   int n_rows = SHV1_T.rows();
   std::vector<T> Vdiag1(n_rows, 0);
   std::vector<T> Vdiag2(n_rows, 0);
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  os << "SEC: Before the TestEquivalence_ListMat_Vdiag\n";
+#endif
   std::optional<std::vector<Tidx>> opt =
-    TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
+    TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2, SHV1_T, ListMat1, Vdiag1, os);
 
   if (!opt)
     return {};
@@ -289,7 +298,7 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
     FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!optB) {
-    std::cerr << "We have a matrix bug\n";
+    std::cerr << "SEC: We have a matrix bug\n";
     throw TerminalException{1};
   }
 #endif

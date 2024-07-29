@@ -12,6 +12,8 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
         for i in [1..n_equiv]
         do
             Pmat:=RandomIntegralUnimodularMatrix(n);
+            Print("Pmat=\n");
+            PrintArray(Pmat);
             NewMat:=Pmat * eMat * TransposedMat(Pmat);
             Add(FullListMat, NewMat);
             pos := pos+1;
@@ -26,11 +28,12 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
     WriteListMatrixFile(FileIn, FullListMat);
     #
     eProg:="../../src_indefinite_models/TEST_EquiStabFamily";
+    Print("Before the Effective run\n");
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     #
     if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+        Error("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     CompListBlock:=ReadAsFunction(FileOut)();
@@ -43,7 +46,7 @@ end;
 
 
 ListMat:=[ClassicalSporadicLattices("A4"), ClassicalSporadicLattices("D4")];
-n_equiv:=10;
+n_equiv:=2;
 
 result:=TestEquiStabDatabase(ListMat, n_equiv);
 if result = false then

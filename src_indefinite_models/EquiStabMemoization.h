@@ -73,6 +73,9 @@ private:
 
 public:
   void insert_equi(Tdata const& x1, Tdata const& x2, std::optional<Tequiv> const& result) {
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+    std::cerr << "ESM: insert_equi, beginning\n";
+#endif
     if (result) {
       Tequiv const& res = *result;
       std::pair<Tdata, Tequiv> pair1{x1, res};
@@ -85,9 +88,18 @@ public:
       std::pair<Tdata,Tdata> pair{x1, x2};
       list_non_iso.insert(pair);
     }
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+    std::cerr << "ESM: insert_equi, end\n";
+#endif
   }
   void insert_stab(Tdata const& x, std::vector<Tequiv> const& ListGens) {
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+    std::cerr << "ESM: insert_stab, begin\n";
+#endif
     list_stab[x] = ListGens;
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+    std::cerr << "ESM: insert_stab, end\n";
+#endif
   }
   template<typename Fterminate>
   std::vector<std::pair<Tdata,Tequiv>> connected_component(Tdata const& x, Fterminate f_terminate) const {
@@ -101,15 +113,27 @@ public:
       l_vertices.push_back(pair);
     };
     Tequiv id = IdentityObject<Tequiv,Tdata>(x);
-    std::pair<Tdata,Tequiv> pair{x, id};
-    f_insert(pair);
+    std::pair<Tdata,Tequiv> start_pair{x, id};
+    if (f_terminate(start_pair)) {
+      return {};
+    }
+    f_insert(start_pair);
+    if (list_iso.find(x) == list_iso.end()) {
+      return l_vertices;
+    }
     //
     size_t pos_start = 0;
     while(true) {
       size_t pos_end = l_vertices.size();
       for (size_t pos=pos_start; pos<pos_end; pos++) {
         std::pair<Tdata,Tequiv> pair = l_vertices[pos];
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+        std::cerr << "ESM: connected_components, before list_iso.at\n";
+#endif
         std::vector<std::pair<Tdata, Tequiv>> const& l_pair = list_iso.at(pair.first);
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+        std::cerr << "ESM: connected_components, We have l_pair\n";
+#endif
         for (auto & epair : l_pair) {
           Tequiv new_equiv = epair.second * pair.second;
           std::pair<Tdata,Tequiv> new_pair{epair.first, new_equiv};

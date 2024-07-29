@@ -28,8 +28,11 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
     std::pair<size_t, size_t> pair_stab{iMat, miss_val};
     list_cases.push_back(pair_stab);
     (void)ArithmeticAutomorphismGroup<T,Tint>(ListMat[iMat], std::cerr);
+    std::cerr << "STAB: iMat=" << iMat << "\n";
     for (size_t jMat=iMat+1; jMat<nMat; jMat++) {
+      std::cerr << "EQUI: Before iMat=" << iMat << " jMat=" << jMat << "\n";
       std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(ListMat[iMat], ListMat[jMat], std::cerr);
+      std::cerr << "EQUI: After iMat=" << iMat << " jMat=" << jMat << "\n";
       std::pair<size_t, size_t> pair_equiv{iMat, jMat};
       list_cases.push_back(pair_equiv);
       if (opt) {
@@ -177,7 +180,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_FindIsotropic\n";
+    std::cerr << "Error in TEST_EquiStabFamily\n";
     exit(e.eVal);
   }
   runtime(time1);
