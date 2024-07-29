@@ -67,39 +67,31 @@ Tequiv IdentityObject(Tdata const& x) {
 template<typename Tdata, typename Tequiv>
 struct DatabaseResultEquiStab {
 private:
+  // If an entry (x2, eq) is in list_iso[x1], that is (eq, x1) = x2
   std::unordered_map<Tdata, std::vector<std::pair<Tdata, Tequiv>>> list_iso;
+  // If (x,y) is in list_non_iso then x and y are not isomorphic
   std::unordered_set<std::pair<Tdata,Tdata>> list_non_iso;
+  // If eq is in list_stab[x] then this means that (eq, x) = x
   std::unordered_map<Tdata, std::vector<Tequiv>> list_stab;
 
 public:
   void insert_equi(Tdata const& x1, Tdata const& x2, std::optional<Tequiv> const& result) {
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-    std::cerr << "ESM: insert_equi, beginning\n";
-#endif
     if (result) {
       Tequiv const& res = *result;
-      std::pair<Tdata, Tequiv> pair1{x1, res};
-      list_iso[x2].push_back(pair1);
-      //
       Tequiv res_inv = Inverse(res);
-      std::pair<Tdata, Tequiv> pair2{x2, res_inv};
+      //
+      std::pair<Tdata, Tequiv> pair2{x2, res};
       list_iso[x1].push_back(pair2);
+      //
+      std::pair<Tdata, Tequiv> pair1{x1, res_inv};
+      list_iso[x2].push_back(pair1);
     } else {
       std::pair<Tdata,Tdata> pair{x1, x2};
       list_non_iso.insert(pair);
     }
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-    std::cerr << "ESM: insert_equi, end\n";
-#endif
   }
   void insert_stab(Tdata const& x, std::vector<Tequiv> const& ListGens) {
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-    std::cerr << "ESM: insert_stab, begin\n";
-#endif
     list_stab[x] = ListGens;
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-    std::cerr << "ESM: insert_stab, end\n";
-#endif
   }
   template<typename Fterminate>
   std::vector<std::pair<Tdata,Tequiv>> connected_component(Tdata const& x, Fterminate f_terminate) const {
@@ -119,21 +111,22 @@ public:
     }
     f_insert(start_pair);
     if (list_iso.find(x) == list_iso.end()) {
+      // It is an isolated vertices, so no need to get into the loop.
       return l_vertices;
     }
     //
     size_t pos_start = 0;
     while(true) {
       size_t pos_end = l_vertices.size();
+#ifdef DEBUG_EQUI_STAB_MEMOIZATION
+      std::cerr << "ESM: connected_components, pos_start=" << pos_start << " pos_end=" << pos_end << "\n";
+#endif
       for (size_t pos=pos_start; pos<pos_end; pos++) {
         std::pair<Tdata,Tequiv> pair = l_vertices[pos];
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-        std::cerr << "ESM: connected_components, before list_iso.at\n";
-#endif
+        // pair = (y, eqA) which gets us (eqA, x) = y
+        // epair = (z, eqB) in list_iso[y] means that (eqB, y) = z
+        // Therefore z = (eqB, (eqA, x)) = (eqB * eqA, x)
         std::vector<std::pair<Tdata, Tequiv>> const& l_pair = list_iso.at(pair.first);
-#ifdef DEBUG_EQUI_STAB_MEMOIZATION
-        std::cerr << "ESM: connected_components, We have l_pair\n";
-#endif
         for (auto & epair : l_pair) {
           Tequiv new_equiv = epair.second * pair.second;
           std::pair<Tdata,Tequiv> new_pair{epair.first, new_equiv};
@@ -182,6 +175,9 @@ public:
       if (iter == list_stab.end()) {
         return false;
       }
+      // We have pair = (y, eqA)  with (eqA, x) = y
+      // And we have a set of generator eq s.t. (eqB, y) = y
+      // therefore we have (eqA^{-1} eqB eqA, x) = x
       Tequiv const& eq = pair.second;
       Tequiv eq_inv = Inverse(eq);
       std::vector<Tequiv> New_list_gens;

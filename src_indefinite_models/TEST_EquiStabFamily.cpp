@@ -73,8 +73,10 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
   auto get_equiv_inner=[&](MyMatrix<T> const& eMat1, MyMatrix<T> const& eMat2) -> std::optional<MyMatrix<Tint>> {
     std::optional<std::optional<MyMatrix<Tint>>> opt = database.attempt_equiv(eMat1, eMat2);
     if (opt) {
+      std::cerr << "get_equiv_inner, from database\n";
       return *opt;
     } else {
+      std::cerr << "get_equiv_inner, from direct computation\n";
       std::optional<MyMatrix<Tint>> optB = ArithmeticEquivalence<T,Tint>(eMat1, eMat2, std::cerr);
       database.insert_equi(eMat1, eMat2, optB);
       return optB;

@@ -305,15 +305,15 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
   MyMatrix<T> const &M_T = *optB;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!IsIntegralMatrix(M_T)) {
-    std::cerr << "Bug: The matrix should be integral\n";
-        throw TerminalException{1};
+    std::cerr << "SEC: The matrix should be integral\n";
+    throw TerminalException{1};
   }
   for (size_t i = 0; i < ListMat1.size(); i++) {
     MyMatrix<T> eMat1 = ListMat1[i];
     MyMatrix<T> eMat2 = ListMat2[i];
     MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
     if (eProd != eMat2) {
-      std::cerr << "Inconsistency error in the code\n";
+      std::cerr << "SEC: Inconsistency error in the code\n";
       throw TerminalException{1};
     }
   }

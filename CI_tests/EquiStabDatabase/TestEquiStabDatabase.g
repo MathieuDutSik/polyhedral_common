@@ -46,7 +46,7 @@ end;
 
 
 ListMat:=[ClassicalSporadicLattices("A4"), ClassicalSporadicLattices("D4")];
-n_equiv:=2;
+n_equiv:=4;
 
 result:=TestEquiStabDatabase(ListMat, n_equiv);
 if result = false then
