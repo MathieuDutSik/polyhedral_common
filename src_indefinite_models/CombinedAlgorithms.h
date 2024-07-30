@@ -32,12 +32,13 @@ public:
   MyMatrix<T> Pmat;
   MyMatrix<T> PmatInv;
   MyMatrix<Tint> NSP;
+  MyMatrix<T> NSP_T;
   MyMatrix<T> GramMatRed;
   INDEF_FORM_GetVectorStructure(MyMatrix<T> const& _Qmat, MyVector<Tint> const& _v) : Qmat(_Qmat), v(_v) {
     eNorm = EvaluationQuadForm<T,Tint>(Qmat, v);
-    MyVector<T> v_T = UniversalVectorConversion<T,Tint>(v);
+    v_T = UniversalVectorConversion<T,Tint>(v);
     MyVector<T> eProd = Qmat * v_T;
-    MyMatrix<T> NSP_T = NullspaceIntVect(eProd);
+    NSP_T = NullspaceIntVect(eProd);
     NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
     GramMatRed = NSP_T * Qmat * NSP_T.transpose();
     if (eNorm != 0) {
@@ -551,7 +552,7 @@ public:
   
   std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Qmat) {
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat) {
+  std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat, MyVector<Tint> const& v) {
     if (RankMat(Qmat) != Qmat.rows()) {
       std::cerr << "Right now the matrix Qmat should be full dimensional\n";
       throw TerminalExpression{1};
@@ -563,6 +564,18 @@ public:
     std::vector<MyMatrix<Tint>> ListMat;
     for (auto & eMat_T : ListMat_T) {
       MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint,T>(eMat_T);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "The matrix eMat does not preserves Qmat\n";
+        throw TerminalException{1};
+      }
+      MyVector<Tint> v_eMat = eMat.transpose() * v;
+      if (v_eMat != v) {
+        std::cerr << "The matrix eMat does not preserves v\n";
+        throw TerminalException{1};
+      }
+#endif
       ListMat.push_back(eMat);
     }
     return ListMat;
@@ -571,9 +584,50 @@ public:
     if (INDEF_FORM_InvariantVector(Q1, v1) != INDEF_FORM_InvariantVector(Q2, v2)) {
       return {};
     }
-    
-  }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Q, MyVector<Tint> const& v) {
+    if (RankMat(Q1) != Q1.rows()) {
+      std::cerr << "We need Q1 to be a square matrix\n";
+      throw TerminalException{1};
+    }
+    T eNorm = EvaluationQuadForm<T,Tint>(Qmat1, v1);
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec1(Q1, v1);
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec2(Q2, v2);
+    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& test = *opt;
+    MyMatrix<T> test_T = UniversalMatrixConversion<T,Tint>(test);
+    auto get_equiv_rat=[&]() -> MyMatrix<T> {
+      if (eNorm != 0) {
+        return eRec2.PmatInv * ExpandMatrix(test) * eRec1.Pmat;
+      } else {
+        MyMatrix<T> Subspace1 = Inverse(test) * eRec2.NSP;
+        MyMatrix<T> Subspace2:=eRec1.NSP;
+        MyMatrix<T> EquivRat = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2, Subspace2);
+        MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+        MyVector<T> v1_inv_equivrat = EquivRatInv.transpose() * eRec1.v_T;
+        if (v1_T == eRec2.v_T) {
+          return EquivRat;
+        } else {
+          return -EquivRat;
+        }
+      }
+    };
+    MyMatrix<T> EquivRat = get_equiv_rat();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+    MyVector<Tint> v_EquivRatInv = EquivRatInv.transpose() * v1;
+    if (v_EquivRatInv != v2) {
+      std::cerr << "The vector v1 is not mapped correctly\n";
+      throw TerminalException{1};
+    }
+#endif
+    auto fTest=[&](MyMatrix<Tint> const& eTest) -> bool {
+      MyMatrix<Tint> eTestInv = Inverse(eTest);
+      MyVector<Tint> v_TestInv = eTestInv.transpose() * v1;
+      return v_TestInv = v2;
+    };
+    return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab_plane);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup(MyMatrix<T> const& Q) {
   }
