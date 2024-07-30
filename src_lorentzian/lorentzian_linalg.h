@@ -468,12 +468,13 @@ struct SolutionSpecial {
 
 // Resolution of B = X A + A^T X^T
 // b_{ij} = sum_k x_{ik} a_{kj} + a_{ki} x_{jk}
-SolutiopnSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> const& Bmat) {
+template<typename T>
+SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> const& Bmat) {
   int dim = Bmat.rows();
   MyMatrix<T> TheMat = ZeroMatrix<T>(dim*dim, dim*dim);
   MyMatrix<T> Bvect = ZeroVector<T>(dim*dim, 0);
   auto f=[&](int i, int j) -> int {
-    return i + dim * j-;
+    return i + dim * j;
   };
   for (int i=0; i<dim; i++) {
     for (int j=0; j<dim; j++) {
@@ -489,7 +490,7 @@ SolutiopnSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> 
       }
     }
   }
-  auto f_getmat(MyVector<T> const& eVect) -> MyMatrix<T> {
+  auto f_getmat=[&](MyVector<T> const& eVect) -> MyMatrix<T> {
     MyMatrix<T> eMat(dim, dim);
     for (int i=0; i<dim; i++) {
       for (int j=0; j<dim; j++) {
@@ -510,7 +511,7 @@ SolutiopnSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> 
 #endif
   std::vector<MyMatrix<T>> BasisKernel;
   MyMatrix<T> NSP = NullspaceMat(TheMat);
-  ind dimNSP = NSP.rows();
+  int dimNSP = NSP.rows();
   for (int u=0; u<dimNSP; u++) {
     MyVector<T> eVect = GetMatrixRow(NSP, u);
     MyMatrix<T> eMat = f_getmat(eVect);
@@ -521,7 +522,7 @@ SolutiopnSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> 
       throw TerminalException{1};
     }
 #endif
-    BasisBernel.push_back(eMat);
+    BasisKernel.push_back(eMat);
   }
   return {BasisKernel, eSol_mat};
 }
@@ -563,6 +564,8 @@ public:
   int denomSol;
   SolutionSpecial<T> TheRec;
   std::vector<MyMatrix<T>> ListEquiv_terms1;
+  MyMatrix<T> NSP1;
+  MyMatrix<T> NSP2;
   LORENTZ_ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& _G1, MyMatrix<T> const& _Subspace1, MyMatrix<T> const& _G2, MyMatrix<T> const& _Subspace2) : G1(_G1), Subspace1(_Subspace1), G2(_G2), Subspace2(_Subspace2), dim(G1.rows()), rnk(Subspace1.rows()) {
 #ifdef DEBUG_LORENTZIAN_LINALG
     if (rnk != RankMat(Subspace1)) {
@@ -575,14 +578,14 @@ public:
     // Checking the input
     MyMatrix<T> eProd1 = Subspace1 * G1;
     MyMatrix<T> eProd2 = Subspace2 * G2;
+    NSP1 = NullspaceTrMat(eProd1);
+    NSP2 = NullspaceTrMat(eProd2);
 #ifdef DEBUG_LORENTZIAN_LINALG
-    MyMatrix<T> NSP1 = NullspaceTrMat(eProd1);
     MyMatrix<T> ProdMat1 = NSP1 * G1 * NSP1.transpose();
     if (!IsZeroMatrix(ProdMat1)) {
       std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> NSP2 = NullspaceTrMat(eProd2);
     MyMatrix<T> ProdMat2 = NSP2 * G2 * NSP2.transpose();
     if (!IsZeroMatrix(ProdMat2)) {
       std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
@@ -659,12 +662,12 @@ public:
   }
 #endif
   MyMatrix<T> get_one_transformation() {
-    auto f_get_equiv(MyVector<T> const& eSol) -> MyMatrix<T> {
+    auto f_get_equiv=[&](MyVector<T> const& eSol) -> MyMatrix<T> {
       MyMatrix<T> TheCompl2 = ListVectCand2 + NSP2.transpose() * eSol;
       MyMatrix<T> Trans2 = Concatenation(Subspace2, TheCompl2);
       MyMatrix<T> RetMat = Trans1Inv * Trans2;
       return RetMat;
-    }
+    };
     MyMatrix<T> eEquiv0 = f_get_equiv(TheRec.eSol_mat);
     // The matrix is expressed as eEquiv0 + alpha1 ListEquiv_terms[1] + ..... + alphaN ListEquiv_terms[N]
     MyMatrix<T> RetSol = EliminateSuperfluousPrimeDenominators_Matrix(eEquiv0, ListEquiv_terms1);
@@ -691,7 +694,7 @@ public:
     }
     return ListEquiv_terms3;
   }
-}
+};
 
 
 
