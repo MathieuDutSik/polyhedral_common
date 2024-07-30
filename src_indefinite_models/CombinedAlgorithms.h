@@ -630,8 +630,68 @@ public:
     return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab_plane);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup(MyMatrix<T> const& Q) {
+    int n = Q.rows();
+    MyMatrix<T> NSP_T = NullspaceIntMat(Q);
+    MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
+    MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
+    MyMatrix<Tint> FullBasis = Concatenation(TheCompl, NSP);
+    MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
+    int p = TheCompl.rows();
+    MyMatrix<T> TheCompl_T = UniversalMatrixConversion<T,Tint>(TheCompl);
+    MyMatrix<T> QmatRed = TheCompl_T * Qmat * TheCompl_T.transpose();
+    std::vector<MyMatrix<Tint>> GRPred = INDEF_FORM_AutomorphismGroup_FullDim(QmatRed);
+    std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup(GRPred, p, n);
+    std::vector<MyMatrix<Tint>> ListGenTot;
+    for (auto & eGen : GRPfull) {
+      MyMatrix<Tint> eGenB = FullBasisInv * eGen * FullBasis;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
+      MyMatrix<T> eProd = eGenB_T * Qmat * eGenB_T.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "eGenB should preserve Qmat\n";
+        throw TerminalException{1};
+      }
+#endif
+      ListGenTot.push_back(eGenB);
+    }
+    return ListGenTot;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2) {
+    int n = Qmat1.rows();
+    MyMatrix<T> NSP1_T = NullspaceIntMat(Q1);
+    MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint,T>(NSP1_T);
+    MyMatrix<Tint> TheCompl1 = SubspaceCompletionInt(NSP1, n);
+    MyMatrix<T> TheCompl1_T = UniversalMatrixConversion<T,Tint>(TheCompl1);
+    MyMatrix<Tint> FullBasis1 = Concatenation(TheCompl1, NSP1);
+    MyMatrix<T> QmatRed1 = TheCompl1_T * Q1 * TheCompl1_T.transpose();
+    MyMatrix<T> NSP2_T = NullspaceIntMat(Q2);
+    MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint,T>(NSP2_T);
+    MyMatrix<Tint> TheCompl2 = SubspaceCompletionInt(NSP2, n);
+    MyMatrix<T> TheCompl2_T = UniversalMatrixConversion<T,Tint>(TheCompl2);
+    MyMatrix<Tint> FullBasis2 = Concatenation(TheCompl2, NSP2);
+    MyMatrix<T> QmatRed2 = TheCompl2_T * Q2 * TheCompl2_T.transpose();
+    int p = TheCompl1.rows();
+    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence_FullDim(QmatRed1, QmatRed2);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<Tint> const& test = *opt;
+    MyMatrix<Tint> TheEquivTest = IdentityMat<Tint>(n);
+    for (int i=0; i<p; i++) {
+      for (int j=0; j<p; j++) {
+        TheEquivTest(i,j) = test(i,j);
+      }
+    }
+    MyMatrix<Tint> TheEquiv = Inverse(FullBasis2) * TheEquivTest * FullBasis1;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T,Tint>(TheEquiv);
+    MyMatrix<T> eProd = TheEquiv_T * Q1 * TheEquiv_T.transpose();
+    if (eProd != Q2) {
+      std::cerr << "TheEquiv is not mapping Q1 to Q2\n";
+      throw TerminalException{1};
+    }
+#endif
+    return TheEquiv;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
   }
