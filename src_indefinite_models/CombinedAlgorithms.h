@@ -262,9 +262,7 @@ template<typename T, typename Tint, typename Tgroup>
 struct IndefiniteCombinedAlgo {
 private:
   std::ostream& os;
-  std::vector<ResultIsomorphism<T,Tint>> ListResultIsomorphism;
-  std::vector<ResultStabilizer<T,Tint>> ListResultStabilizer;
-
+  DatabaseResultEquiStab<MyMatrix<T>, MyMatrix<Tint>> database;
 private:
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Kernel(MyMatrix<T> const& Qmat) {
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat);
@@ -327,11 +325,70 @@ private:
     }
     return {};
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Memoize(MyMatrix<T> const& Qmat) {
-
-
-
-    
+  std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_FullDim(MyMatrix<T> const& Qmat) {
+    ResultReduction<T, Tint> ResRed =
+      ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
+    MyMatrix<T> const& QmatRed = ResRed.Mred;
+    MyMatrix<Tint> const& B = ResRed.B;
+    MyMatrix<Tint> Binv = Inverse(B);
+    auto get_stab=[&]() -> std::vector<MyMatrix<Tint>> {
+      std::optional<std::vector<MyMatrix<Tint>>> opt = database.attempt_stabilizer(QmatRed);
+      if (opt) {
+        return *opt;
+      } else {
+        std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_Kernel(QmatRed);
+        database.insert_stab(eMat, ListGen);
+        return ListGen;
+      }
+    };
+    std::vector<MyMatrix<Tint>> LGenFinal;
+    for (auto & eGen : get_stab()) {
+      MyMatrix<Tint> NewGen = Binv * eGen * B;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
+      MyMatrix<T> eProd = NewGen_T * Qmat * NewGen_T.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "The matrix is not an equivalence for Qmat\n";
+        throw TerminalException{1};
+      }
+#endif
+      LGenFinal.push_back(NewGen);
+    }
+    return LGenFinal;
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_FullDim(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
+    ResultReduction<T, Tint> ResRed1 =
+      ComputeReductionIndefinitePermSign<T, Tint>(Qmat1, os);
+    ResultReduction<T, Tint> ResRed2 =
+      ComputeReductionIndefinitePermSign<T, Tint>(Qmat2, os);
+    MyMatrix<T> const& QmatRed1 = ResRed1.Mred;
+    MyMatrix<T> const& QmatRed2 = ResRed2.Mred;
+    auto get_equi=[&]() -> std::optional<MyMatrix<Tint>> {
+      std::optional<std::optional<MyMatrix<Tint>>> opt = database.attempt_equiv(QmatRed1, QmatRed2);
+      if (opt) {
+        return *opt;
+      } else {
+        std::optional<MyMatrix<Tint>> optB = INDEF_FORM_TestEquivalence_Kernel(QmatRed1, QmatRed2);
+        database.insert_equi(eMat1, eMat2, optB);
+        return optB;
+      }
+    };
+    std::optional<MyMatrix<Tint>> opt = get_equi();
+    if (opt) {
+      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> NewEquiv = Inverse(RecRed2.B) * eEquiv * RecRed1.B;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
+      MyMatrix<T> eProd = NewGen_T * Qmat1 * NewGen_T.transpose();
+      if (eProd != Qmat2) {
+        std::cerr << "The matrix is not an equivalence for Qmat1 / Qmat2\n";
+        throw TerminalException{1};
+      }
+#endif
+      return NewEquiv;
+    } else {
+      return {}:
+    }
   }
 
   //
