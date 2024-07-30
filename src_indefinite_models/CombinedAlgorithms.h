@@ -546,11 +546,41 @@ public:
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
     return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Qmat1, Qmat2, Plane1, Plane2, f_equiv_plane, f_stab_plane);
   }
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, f_stab_plane);
+  }
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, f_stab_flag);
+  }
 
-
-
-  
-  std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Qmat) {
+  std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Q, T const& X) {
+    AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
+    if (eBlock.h == 0) {
+      return INDEF_FORM_GetOrbitRepresentative_PosNeg(Q, X);
+    }
+    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Q);
+    std::vector<MyVector<Tint>> ListRepr;
+    auto f_insert=[&](MyVector<Tint> fRepr) -> void {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      T fNorm = EvaluationQuadForm<T,Tint>(Q, fRepr);
+      if (fNorm != X) {
+        std::cerr << "The norm is inconsistent\n";
+        throw TerminalException{1};
+      }
+#endif
+      for (auto & eRepr : ListRepr) {
+        std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Q, Q, eRepr, fRepr);
+        if (opt) {
+          return;
+        }
+      }
+      ListRepr.push_back(fRepr);
+    };
+    std::vector<MyVector<Tint>> ListCand = approx.GetCoveringOrbitRepresentatives(X);
+    for (auto & eCand : ListCand) {
+      f_insert(eCand);
+    }
+    return ListRepr;
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat, MyVector<Tint> const& v) {
     if (RankMat(Qmat) != Qmat.rows()) {
@@ -693,17 +723,9 @@ public:
 #endif
     return TheEquiv;
   }
-  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
-  }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
-  }
   std::vector<MyMatrix<Tint>> INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const& Q) {
-  }
-  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {
-  }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
   }
