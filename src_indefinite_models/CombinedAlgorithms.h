@@ -561,7 +561,65 @@ private:
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
     return MatrixIntegral_Stabilizer(n, GRP2);
   }
+  template<typename Fstab>
+  std::vector<MyMatrix<T>> INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& ePlane, Fstab f_stab) {
+    // We have two groups:
+    // -- The group stabilizing ePlane
+    // -- The group stabilizing ePlane^{perp} and its mapping to the full group.
+    // The group stabilizing ePlane^{perp} can be injected
+    int n = Qmat.rows();
+    if (RankMat(Qmat) != n) {
+      std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
+      throw TerminalException{1};
+    }
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, ePlane);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    for (auto & eGen : GRP1) {
+      MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+      MyMatrix<T> eProd = eGen_T * eRec.GramMatRed * eGen_T.transpose();
+      if (eProd != eRec.GramMatRed) {
+        std::cerr << "GRP1 does not preserve eRec.GramMatRed\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    MyMatrix<T> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    for (auto & eGen : GRP2) {
+      MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "GRP2 does not preserve Qmat\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> ePlane_T = UniversalMatrixConversion<T,Tint>(ePlane);
+      MyMatrix<T> ePlaneImg = ePlane_T * eGen;
+      int k = ePlane.rows();
+      for (int u=0; u<k; u++) {
+        MyVector<T> eLine = GetMatrixRow(ePlaneImg, u);
+        std::optional<MyVector<T>> opt = SolutionIntMat(ePlane_T, eLine);
+        if (!opt) {
+          std::cerr << "ePlane should be left invariant by eGen\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+#endif
+    std::vector<MyMatrix<T>> ListRightCoset = MatrixIntegral_RightCosets(n, GRP2);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    for (auto & eCos : ListRightCoset) {
+      MyMatrix<T> eProd = eCos * Qmat * eCos.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "eCos is not preserving Qmat\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return ListRightCoset;
+  }
 
+
+  
 public:
   // Now the specific implementations
   InvariantIsotropic<T,Tint> INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
@@ -582,8 +640,11 @@ public:
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
     return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, f_stab_flag);
   }
-
   std::vector<MyMatrix<Tint>> INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+
+
+
+    
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const& Q) {
   }
