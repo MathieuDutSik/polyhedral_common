@@ -505,19 +505,49 @@ private:
     MyMatrix<T> Subspace2_T = UniversalMatrixConversion<T,Tint>(Subspace2);
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T,> TheRec(Qmat1, Subspace1, Qmat2, Subspace2);
     MyMatrix<T> EquivRat = TheRec.get_one_transformation();
-    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> eProd = EquivRat * Qmat1 * EquivRat.transpose();
+    if (eProd != Qmat2) {
+      std::cerr << "The matrix EquivRat is not mapping Qmat1 to Qmat2\n";
+      throw TerminalException{1};
+    }
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
     MyMatrix<T> Plane1_img = Plane1 * EquivRatInv;
     if (!TestEqualitySpace(Plane1_img, Plane2)) {
       std::cerr << "Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
 #endif
-    auto fTest=[&](MyMatrix<Tint> const& eTest) -> bool {
-      MyMatrix<T> eProd = Plane1 * Inverse(eTest);
-      return TestEqualitySpace(eProd, Plane2);
-    };
-    return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab);
+    if (IsIntegralMatrix(EquivRat)) {
+      // This is an Ansatz. If the matrix is integral, no more work to be done.
+      MyMatrix<Tint> EquivRat_tint = UniversalMatrixConversion<Tint,T>(EquivRat);
+      return EquivRat_tint;
+    }
+    std::vector<MyMatrix<Tint>> GRP1_A = f_stab(eRec1);
+    std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
+    // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
+    std::optional<MyMatrix<T>> opt = MatrixIntegral_Equivalence_Bis(GRP1_B, EquivRat);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<T> const& TheRet = *opt;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> eProd = TheRet * Qmat1 * TheRet.transpose();
+    if (eProd != Qmat2) {
+      std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+    MyMatrix<T> Plane1_img = Plane1 * EquivRatInv;
+    if (!TestEqualitySpace(Plane1_img, Plane2)) {
+      std::cerr << "Plane1 and Plane2 should be mapped\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<Tint> TheRet_tint = UniversalMatrixConversion<Tint,T>(TheRet);
+    return TheRet_tint;
   }
   template<typename Fstab>
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(MyMatrix<T> comnst& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
@@ -666,12 +696,29 @@ public:
       throw TerminalException{1};
     }
 #endif
-    auto fTest=[&](MyMatrix<Tint> const& eTest) -> bool {
-      MyMatrix<Tint> eTestInv = Inverse(eTest);
-      MyVector<Tint> v_TestInv = eTestInv.transpose() * v1;
-      return v_TestInv = v2;
-    };
-    return Kernel_Equivalence_Qmat(Qmat1, Qmat2, EquivRat, eRec1, fTest, f_stab_plane);
+    std::vector<MyMatrix<Tint>> GRP1_A = INDEF_FORM_AutomorphismGroup(eRec1.GramMatRed);
+    std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
+    // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
+    std::optional<MyMatrix<T>> opt = MatrixIntegral_Equivalence_Bis(GRP1_B, EquivRat);
+    if (!opt) {
+      return {};
+    }
+    MyMatrix<T> const& TheRet = *opt;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> eProd = TheRet * Qmat1 * TheRet.transpose();
+    if (eProd != Qmat2) {
+      std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+    MyVector<Tint> v_EquivRatInv = EquivRatInv.transpose() * v1;
+    if (v_EquivRatInv != v2) {
+      std::cerr << "The vector v1 is not mapped correctly\n";
+      throw TerminalException{1};
+    }
+#endif
+    MyMatrix<Tint> TheRet_tint = UniversalMatrixConversion<Tint,T>(TheRet);
+    return TheRet_tint;
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup(MyMatrix<T> const& Q) {
     int n = Q.rows();
