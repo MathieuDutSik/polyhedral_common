@@ -617,7 +617,110 @@ private:
 #endif
     return ListRightCoset;
   }
-
+  template<typename Fequiv, typename Fcoset, typename Finv>
+  std::vector<MyVector<Tint>> INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, int k, Fequiv f_equiv, Fcoset f_coset, Finv f_inv) {
+    int n = Qmat.rows();
+    T eNorm(0);
+    std::vector<MyMatrix<Tint>> ListOrbit;
+    for (auto & eVect : INDEF_FORM_GetOrbitRepresentative(Qmat, eNorm)) {
+      MyMatrix<Tint> ePlane = MatrixFromVector(eVect);
+      ListOrbit.push_back(ePlane);
+    }
+    for (int iK=2; iK<=k; iK++) {
+      struct PlaneInv {
+        MyMatrix<Tint> ePlane;
+        size_t eInv;
+      };
+      std::vector<PlaneInv> ListRecReprKplane;
+      auto fInsert=[&](fRecReprKplane const& PlaneInv) -> void {
+        for (auto & eRecReprKplane : ListRecReprKplane) {
+          if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
+            std::optional<MyMatrix<Tint>> f_equiv(Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane);
+            if (opt) {
+              return;
+            }
+          }
+        }
+        ListRecReprKplane.push_back(fRecReprKplane);
+      };
+      auto fGetRepresentatives=[&](MyMatrix<Tint> const& ePlane) -> std::vector<PlaneInv> {
+        // Some possible improvement. Use the double cosets
+        // The double coset consists in splitting an orbit x G as
+        // y1 H \cup ..... yN H
+        // Or in other words G = \cup_i Stab(x) y_i H
+        //
+        // In that case
+        // G = group of rational transformation preserving L = S^{perp}
+        //     and acting integrally on it.
+        // Stab(x) = Integral transformations preserving L and some vector x in L.
+        // H = group of integral transformations preserving the big lattice
+        //     and preserving L.
+        //
+        // If G = H the only one entry to treat.
+        // What that mean is that when we go down the chain of subgroup by breaking down
+        // the orbit split. Can this happen in the same way over all the orbits?
+        // The full of the lattice group is G(Qmat) and the full orbit is x G(Qmat)
+        // We want to write the code as
+        MyMatrix<T> ePlane_T = UniversalMatrixConversion<T,Tint>(ePlane);
+        MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
+        MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
+        MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
+        int dimNSP = NSP.rows();
+        MyMatrix<Tint> ePlane_expr(k, dimNSP);
+        for (int u=0; u<k; u++) {
+          MyVector<Tint> eV = GetMatrixRow(ePlane, u);
+          std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
+          MyVector<Tint> eSol = unfold_opt(opt, "eSol should not be fail");
+          AssignMatrixRow(ePlane_expr, u, eSol);
+        }
+        MyMatrix<Tint> ComplBasisInNSP = SubspaceCompletionInt(ePlane_expr, dimNSP);
+        MyMatrix<Tint> NSP_sub = ComplBasisInNSP * NSP;
+        MyMatrix<T> NSP_sub_T = UniversalMatrixConversion<T,Tint>(NSP_sub);
+        MyMatrix<T> Qmatred = NSP_sub_T * Qmat * NSP_sub_T.transpose();
+        std::vector<MyVector<Tint>> ListOrbitF = INDEF_FORM_GetOrbitRepresentative(QmatRed, eNorm);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: |ListOrbitF|=" <<  ListOrbitF.size() << "\n";
+#endif
+        std::vector<MyMatrix<T>> ListRightCosets = f_coset(Qmat, ePlane);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
+#endif
+        std::vector<PlaneInv> ListRecReprRet;
+        for (auto & eVect : ListOrbitF) {
+          MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
+          for (auto & eCos : ListRightCosets) {
+            MyVector<T> eVectC_T = eCos.transpose() * eVectB;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+            if (EvaluationQuadForm(Qmat, eVectC) != 0) {
+              std::cerr << "eVectC is not isotropic\n";
+              throw TerminalException{1};
+            }
+            if (!IsIntegralVector(eVectC_T)) {
+              std::cerr << "eVectC_T should be integral\n";
+              throw TerminalException{1};
+            }
+#endif
+            MyVector<Tint> eVectC = UniversalVectorConversion<Tint,T>(eVectC_T);
+            MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
+            size_t eInv = f_inv(Qmat, ePlaneB);
+            PlaneInv PI{ePlaneB, eInv};
+            ListRecReprRet.push_back(PI);
+          }
+        }
+        return ListRecReprRet;
+      };
+      for (auto & eRepr : ListOrbit) {
+        for (auto & eRecReprExp : fGetRepresentatives(Qmat, eRepr)) {
+          fInsert(eRecReprExp);
+        }
+      }
+      ListOrbit.clear();
+      for (auto & eRec : ListRecReprKplane) {
+        ListOrbit.push_back(eRec.ePlane);
+      }
+    }
+    return ListOrbit;
+  }
 
   
 public:
@@ -640,24 +743,18 @@ public:
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
     return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, f_stab_flag);
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
-
-
-
-    
+  std::vector<MyMatrix<T>> INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Qmat, ePlane, f_stab_plane);
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const& Q) {
+  std::vector<MyMatrix<T>> INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Qmat, ePlane, f_stab_flag);
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+  std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const& Q, int k) {
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k, INDEF_FORM_Equivalence_IsotropicKplane, INDEF_FORM_RightCosets_IsotropicKplane, INDEF_FORM_Invariant_IsotropicKplane);
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKflag(MyMatrix<T> const& Q) {
+  std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKflag(MyMatrix<T> const& Q, int k) {
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k, INDEF_FORM_Equivalence_IsotropicKflag, INDEF_FORM_RightCosets_IsotropicKflag, INDEF_FORM_Invariant_IsotropicKflag);
   }
-
-
-
-
-
-  
   std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Q, T const& X) {
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
     if (eBlock.h == 0) {
