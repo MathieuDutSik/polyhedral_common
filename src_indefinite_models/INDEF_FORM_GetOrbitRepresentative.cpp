@@ -11,15 +11,18 @@ template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
+  T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
-  if (OutFormat == "CPP") {
-    return WriteListMatrix(os_out, l_gen);
+  std::vector<MyVector<Tint>> l_repr = comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
   }
   if (OutFormat == "GAP") {
     os_out << "return ";
-    WriteListMatrixGAP(os_out, l_gen);
+    if (l_repr.size() == 0) {
+      os_out << "[]";
+    } else {
+      WriteMatrixGAP(os_out, MatrixFromVectorFamily(l_repr));
+    }
     os_out << ";\n";
     return;
   }
@@ -30,19 +33,20 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 3 && argc != 5) {
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";
+    if (argc != 4 && argc != 6) {
+      std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] [Xnorm] \n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] [Xnorm] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
     std::string MatFile = argv[2];
+    std::string XnormStr = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      OutFile = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      OutFile = argv[5];
     }
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -53,7 +57,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, OutFormat, os);
+        return process<T,Tint,Tgroup>(MatFile, XnormStr, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

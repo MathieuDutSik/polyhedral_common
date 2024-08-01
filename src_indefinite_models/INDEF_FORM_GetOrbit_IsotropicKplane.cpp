@@ -8,15 +8,23 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
+void process(std::string const &MatFile, std::string const& KStr, std::string choice, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
+  int k = ParseScalar<int>(KStr);
   std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
-  if (OutFormat == "CPP") {
-    return WriteListMatrix(os_out, l_gen);
-  }
+  auto f_get=[&]() -> std::vector<MyMatrix<Tint>> {
+    if (choice == "plane") {
+      return comb.INDEF_FORM_GetOrbit_IsotropicKplane(Qmat, k);
+    }
+    if (choice == "flag") {
+      return comb.INDEF_FORM_GetOrbit_IsotropicKflag(Qmat, k);
+    }
+    std::cerr << "No correct choice\n";
+    throw TerminalException{1};
+  };
+  std::vector<MyMatrix<Tint>> l_planes = f_get();
   if (OutFormat == "GAP") {
     os_out << "return ";
     WriteListMatrixGAP(os_out, l_gen);
@@ -30,19 +38,21 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 3 && argc != 5) {
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";
+    if (argc != 5 && argc != 7) {
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] [k] [choice]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] [k] [choice] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
     std::string MatFile = argv[2];
+    std::string KStr = argv[3];
+    std::string choice = argv[4];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      OutFile = argv[4];
+    if (argc == 7) {
+      OutFormat = argv[5];
+      OutFile = argv[6];
     }
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -53,7 +63,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, OutFormat, os);
+        return process<T,Tint,Tgroup>(MatFile, KStr, choice, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
@@ -70,7 +80,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_AutomorphismGroup\n";
+    std::cerr << "Error in INDEF_FORM_GetOrbit_IsotropicKplane_flag\n";
     exit(e.eVal);
   }
   runtime(time1);

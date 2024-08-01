@@ -8,18 +8,20 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
+void process(std::string const &File1, std::string const&File2, std::string const &OutFormat,
              std::ostream &os_out) {
-  MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
+  MyMatrix<T> Qmat1 = ReadMatrixFile<T>(File1);
+  MyMatrix<T> Qmat2 = ReadMatrixFile<T>(File2);
   std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
-  if (OutFormat == "CPP") {
-    return WriteListMatrix(os_out, l_gen);
-  }
+  std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_TestEquivalence(Qmat1, Qmat2);
   if (OutFormat == "GAP") {
     os_out << "return ";
-    WriteListMatrixGAP(os_out, l_gen);
+    if (opt) {
+      WriteMatrixGAP(os_out, *opt);
+    } else {
+      os_out << "fail";
+    }
     os_out << ";\n";
     return;
   }
@@ -30,19 +32,20 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
 int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
-    if (argc != 3 && argc != 5) {
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";
+    if (argc != 4 && argc != 6) {
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string MatFile = argv[2];
+    std::string File1 = argv[2];
+    std::string File2 = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      OutFile = argv[4];
+    if (argc == 6) {
+      OutFormat = argv[4];
+      OutFile = argv[5];
     }
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -53,7 +56,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, OutFormat, os);
+        return process<T,Tint,Tgroup>(File1, File2, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
@@ -70,7 +73,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_AutomorphismGroup\n";
+    std::cerr << "Error in INDEF_FORM_TestEquivalence\n";
     exit(e.eVal);
   }
   runtime(time1);
