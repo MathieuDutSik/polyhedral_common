@@ -342,17 +342,20 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   int n = TheSpace.rows();
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
   while (true) {
-    bool IsOK = true;
-    for (int i = 0; i < n; i++)
-      if (IsOK) {
+    auto get_is_ok=[&]() -> bool {
+      for (int i = 0; i < n; i++) {
         MyVector<T> eVect = ZeroVector<T>(n);
         eVect(i) = eDiv;
         bool test = CanTestSolutionIntMat(eCan, eVect);
-        if (!test)
-          IsOK = false;
+        if (!test) {
+          return false;
+        }
       }
-    if (IsOK)
+      return true;
+    };
+    if (get_is_ok()) {
       return eDiv;
+    }
 #ifdef SANITY_CHECK
     if (eDiv > TheDet) {
       std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
@@ -924,6 +927,9 @@ MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
   return permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
       eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
 }
+
+
+
 
 // We compute the stabilizer by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
@@ -2040,6 +2046,49 @@ LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
   pair.coset_desc.conjugate(eBasis);
   return {std::move(ListMatrGensB), pair.coset_desc};
 }
+
+template <typename T>
+std::vector<MyMatrix<T>>
+ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
+                               std::vector<MyMatrix<T>> const &LGen) {
+  std::vector<MyMatrix<T>> LGen2;
+  MyMatrix<T> PmatInv = Inverse(Pmat);
+  for (auto &eGen1 : LGen) {
+    MyMatrix<T> eGen2 = PmatInv * eGen1 * Pmat;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(eGen2)) {
+      std::cerr << "The matrix eGen2 should be integral\n";
+      throw TerminalException{1};
+    }
+#endif
+    LGen2.emplace_back(std::move(eGen2));
+  }
+  return LGen2;
+}
+
+
+/*
+  Compute the intersection of G \cap GL_n(Z)
+ */
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(int const& n, std::vector<MyMatrix<T>> const& LGen1, std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+  std::vector<MyMatrix<T>> LGen2 =
+    ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
+  GeneralMatrixGroupHelper<T,Telt> helper{n};
+  std::vector<MyMatrix<T>> LGen3 = LinearSpace_Stabilizer<T, Tgroup,GeneralMatrixGroupHelper<T, Telt>>(LGen2, helper, InvInvariantSpace, os);
+  std::vector<MyMatrix<Tint>> LGen4;
+  for (auto & eGen3 : LGen3) {
+    MyMatrix<T> eGen4_T = InvInvariantSpace * eGen3 * InvariantSpace;
+    MyMatrix<Tint> eGen4 = UniversalMatrixConversion<Tint,T>(eGen4_T);
+    LGen4.push_back(eGen4);
+  }
+  return LGen4;
+}
+
+
 
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(

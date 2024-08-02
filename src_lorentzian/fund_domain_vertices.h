@@ -464,25 +464,6 @@ MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
   return LGen1;
 }
 
-template <typename T>
-std::vector<MyMatrix<T>>
-ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
-                               std::vector<MyMatrix<T>> const &LGen) {
-  std::vector<MyMatrix<T>> LGen2;
-  MyMatrix<T> PmatInv = Inverse(Pmat);
-  for (auto &eGen1 : LGen) {
-    MyMatrix<T> eGen2 = PmatInv * eGen1 * Pmat;
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
-    if (!IsIntegralMatrix(eGen2)) {
-      std::cerr << "The matrix eGen2 should be integral\n";
-      throw TerminalException{1};
-    }
-#endif
-    LGen2.emplace_back(std::move(eGen2));
-  }
-  return LGen2;
-}
-
 template <typename T, typename Tint, typename Tgroup>
 std::vector<typename Tgroup::Telt>
 FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {

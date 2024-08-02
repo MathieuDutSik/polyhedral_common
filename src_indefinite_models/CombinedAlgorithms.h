@@ -769,7 +769,7 @@ private:
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
-    return MatrixIntegral_Stabilizer(n, GRP2);
+    return MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2, os);
   }
   std::vector<MyMatrix<T>> INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& ePlane, int const& choice) {
     // We have two groups:
@@ -996,14 +996,14 @@ public:
       std::cerr << "Right now the matrix Qmat should be full dimensional\n";
       throw TerminalException{1};
     }
+    int n = Qmat.rows();
     INDEF_FORM_GetVectorStructure<T,Tint> eRec(Qmat, v);
     std::vector<MyMatrix<Tint>> GRP1 = INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
     std::vector<MyMatrix<T>> GRP2_T = eRec.MapOrthogonalSublatticeGroup(GRP1);
-    std::vector<MyMatrix<T>> ListMat_T = MatrixIntegral_Stabilizer(GRP2_T);
-    std::vector<MyMatrix<Tint>> ListMat;
-    for (auto & eMat_T : ListMat_T) {
-      MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint,T>(eMat_T);
+    std::vector<MyMatrix<Tint>> ListMat = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2_T, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    for (auto & eMat_T : ListMat_T) {
+      MyMatrix<T> eMat_T = UniversalMatrixConversion<T,Tint>(eMat);
       MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
       if (eProd != Qmat) {
         std::cerr << "The matrix eMat does not preserves Qmat\n";
@@ -1014,9 +1014,8 @@ public:
         std::cerr << "The matrix eMat does not preserves v\n";
         throw TerminalException{1};
       }
-#endif
-      ListMat.push_back(eMat);
     }
+#endif
     return ListMat;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_EquivalenceVector(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyVector<Tint> const& v1, MyVector<Tint> const& v2) {
