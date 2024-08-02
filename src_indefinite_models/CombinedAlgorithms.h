@@ -5,6 +5,7 @@
 // clang-format off
 #include "ApproximateModels.h"
 #include "lorentzian_perfect.h"
+#include "lorentzian_linalg.h"
 #include "EquiStabMemoization.h"
 #include "MatrixGroup.h"
 // clang-format on
@@ -102,10 +103,10 @@ public:
   MyMatrix<T> Qmat;
   MyMatrix<Tint> Plane;
   MyMatrix<T> Plane_T;
-  MyMatrix<T> Plane_T;
   MyMatrix<T> PlaneExpr_T;
   int dimSpace;
   int dim;
+  MyMatrix<Tint> NSP;
   MyMatrix<T> NSP_T;
   MyMatrix<T> GramMatRed;
   MyMatrix<T> QmatRed;
@@ -157,23 +158,23 @@ public:
     }
 #endif
     NSP_T = NullspaceIntTrMat(eProd);
-    GramMatRed = NSP * Qmat * MSP.transpose();
+    NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
+    GramMatRed = NSP_T * Qmat * NSP_T.transpose();
     Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
 
-    int dimNSP = eRec.NSP.rows();
-    PlaneExpr_T = MyMatrix<T>(dim, dimNSP);
-    for (int u=0; u<k; u++) {
-      MyMatrix<T> eV = GetMatrixRow(ePlane_T, u);
+    int the_dim = NSP_T.rows();
+    PlaneExpr_T = MyMatrix<T>(dim, the_dim);
+    for (int u=0; u<dim; u++) {
+      MyMatrix<T> eV = GetMatrixRow(Plane_T, u);
       std::optional<MyVector<T>> opt = SolutionIntMat(NSP_T, eV);
       MyVector<T> fV = unfold_opt(opt, "getting fV");
       AssignMatrixRow(PlaneExpr_T, u, fV);
     }
-    int the_dim = eRec.NSP_T.rows();
     MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
     int dimCompl = TheCompl.rows();
     FullBasis = Concatenation(TheCompl, PlaneExpr_T);
     FullBasisInv = Inverse(FullBasis);
-    QmatRed = TheCompl * eRec.GramMatRed * TheCompl.transpose();
+    QmatRed = TheCompl * GramMatRed * TheCompl.transpose();
   }
   // We map automorphism group of a sublattice to the full group.
   // The difficulty os that the rational kernel is of strictly positive Q-rank
@@ -206,7 +207,7 @@ public:
     }
     return ListGenTotal;
   }
-}
+};
 
 template<typename T>
 std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const& n) {
@@ -286,7 +287,7 @@ private:
 #endif
       ListGenerators.push_back(eGen);
     };
-    ApproxModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat);
+    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat);
     FirstNorm<T,Tint> first_norm = GetFirstNorm(approx);
     T const& X = first_norm.X;
     MyVector<Tint> const& v1 = first_norm.eVect;
@@ -307,18 +308,18 @@ private:
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
-    if (Block1.h == 0) {
+    if (eBlock1.h == 0) {
       return INDEF_FORM_TestEquivalence_PosNeg(Qmat1, Qmat2);
     }
-    if (Block1.h == 1) {
-      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(LorMat1, LorMat2, os);
+    if (eBlock1.h == 1) {
+      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(eBlock1.mat, eBlock2.mat, os);
     }
     ApproximateModel<T,Tint> approx1 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat1);
     FirstNorm<T,Tint> first_norm1 = GetFirstNorm(approx1);
     T const& X = first_norm1.X;
     MyVector<Tint> const& v1 = first_norm1.eVect;
     ApproximateModel<T,Tint> approx2 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat2);
-    std::vector<MyVector<Tint>> ListCand2 = Approx2.GetCoveringOrbitRepresentatives(X);
+    std::vector<MyVector<Tint>> ListCand2 = approx2.GetCoveringOrbitRepresentatives(X);
     for (auto & v2 : ListCand2) {
       std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat1, Qmat2, v1, v2);
       if (opt) {
@@ -338,8 +339,8 @@ private:
       if (opt) {
         return *opt;
       } else {
-        std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_Kernel(QmatRed);
-        database.insert_stab(eMat, ListGen);
+        std::vector<MyMatrix<Tint>> ListGen = INDEF_FORM_AutomorphismGroup_Kernel(QmatRed);
+        database.insert_stab(QmatRed, ListGen);
         return ListGen;
       }
     };
@@ -371,14 +372,14 @@ private:
         return *opt;
       } else {
         std::optional<MyMatrix<Tint>> optB = INDEF_FORM_TestEquivalence_Kernel(QmatRed1, QmatRed2);
-        database.insert_equi(eMat1, eMat2, optB);
+        database.insert_equi(QmatRed1, QmatRed2, optB);
         return optB;
       }
     };
     std::optional<MyMatrix<Tint>> opt = get_equi();
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
-      MyMatrix<Tint> NewEquiv = Inverse(RecRed2.B) * eEquiv * RecRed1.B;
+      MyMatrix<Tint> NewEquiv = Inverse(ResRed2.B) * eEquiv * ResRed1.B;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
       MyMatrix<T> eProd = NewGen_T * Qmat1 * NewGen_T.transpose();
@@ -389,7 +390,7 @@ private:
 #endif
       return NewEquiv;
     } else {
-      return {}:
+      return {};
     }
   }
 
@@ -455,7 +456,7 @@ private:
         TheEquivTest(i,j) = test(i,j);
       }
     }
-    MyMatrix<Tint> TheEquiv = eRec2.FullBasisInv * TheEquivTest * FullBasis1;
+    MyMatrix<Tint> TheEquiv = eRec2.FullBasisInv * TheEquivTest * eRec1.FullBasis;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T,Tint>(TheEquiv);
     MyMatrix<T> eProd = TheEquiv_T * eRec1.GramMatRed * TheEquiv_T.transpose();
@@ -551,8 +552,8 @@ private:
     return TheRet_tint;
   }
   template<typename Fstab>
-  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(MyMatrix<T> comnst& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
-    int n Qmat.rows();
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, Fstab f_stab) {
+    int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
       std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
       throw TerminalException{1};
@@ -633,10 +634,10 @@ private:
         size_t eInv;
       };
       std::vector<PlaneInv> ListRecReprKplane;
-      auto fInsert=[&](fRecReprKplane const& PlaneInv) -> void {
+      auto fInsert=[&](PlaneInv const& fRecReprKplane) -> void {
         for (auto & eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
-            std::optional<MyMatrix<Tint>> f_equiv(Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane);
+            std::optional<MyMatrix<Tint>> opt = f_equiv(Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane);
             if (opt) {
               return;
             }
