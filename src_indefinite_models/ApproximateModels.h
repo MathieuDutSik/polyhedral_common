@@ -949,10 +949,11 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     MyMatrix<T> eProdEmbedInv = Inverse(eProdEmbed);
     ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(QmatExt);
     std::vector<MyMatrix<Tint>> ListGen = approx.GetApproximateGroup();
+    std::vector<MyMatrix<T>> ListGen_T = UniversalStdVectorMatrixConversion<T,Tint>(ListGen);
     int dim_ext = QmatExt.rows();
     GeneralMatrixGroupHelper<T,Telt> helper{dim_ext};
-    Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen, helper, eEmbed_T, os);
-    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.coset_desc);
+    Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen_T, helper, eEmbed_T, os);
+    std::vector<MyMatrix<Tint>> ListCoset = stab_right_coset.coset_desc.template expand<Tint>();
     std::vector<MyMatrix<Tint>> ListGenerators;
     for (auto & eGen_T : stab_right_coset.list_gen) {
       MyMatrix<T> fGen_T = eProdEmbed * eGen_T * eProdEmbedInv;

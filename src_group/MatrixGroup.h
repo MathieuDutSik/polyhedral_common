@@ -283,6 +283,18 @@ template <typename T> struct CosetDescription {
   const_iterator cend() const { return get_end(); }
   const_iterator begin() const { return get_begin(); }
   const_iterator end() const { return get_end(); }
+  template<typename Tout>
+  std::vector<MyMatrix<Tout>> expand() const {
+    std::vector<MyMatrix<Tout>> ListCos;
+    const_iterator iter = get_begin();
+    while (iter != get_end()) {
+      MyMatrix<T> eCos = *iter;
+      MyMatrix<Tout> eCos_out = UniversalMatrixConversion<Tout,T>(eCos);
+      ListCos.push_back(eCos_out);
+      iter++;
+    }
+    return ListCos;
+  }
 };
 
 //
