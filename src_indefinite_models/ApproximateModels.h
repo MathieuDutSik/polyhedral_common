@@ -543,7 +543,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       }
     }
     ListQ.push_back(eQ);
-    if (IsPositivieDefinite(eQ)) {
+    if (IsPositiveDefinite(eQ)) {
       ListPosIdx.push_back(iConn);
     }
   }
@@ -589,7 +589,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       MyMatrix<T> const& fQ = ListQ[jConn];
       std::vector<size_t> const& fConn = LConn[jConn];
       size_t dim = eConn.size();
-      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(eQ, fQ);
+      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(eQ, fQ, os);
       if (opt) {
         MyMatrix<Tint> const& P = *opt;
         MyMatrix<Tint> Pinv = Inverse(P);
@@ -618,7 +618,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
   If the initial space has signature (p,q), then the resulting space W has signature (p-1,q-1).
  */
 template<typename T, typename Tint>
-std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& Qmat) {
+std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& Qmat, std::ostream& os) {
   int n = Qmat.rows();
   std::set<MyVector<Tint>> SetVect;
   MyMatrix<Tint> ThePerturb = IdentityMat<Tint>(n);
@@ -629,9 +629,9 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
       ThePerturb = ThePerturb * ePerturb;
       MyMatrix<T> ThePerturb_T = UniversalMatrixConversion<T,Tint>(ThePerturb);
       MyMatrix<T> M = ThePerturb_T * Qmat * ThePerturb_T.transpose();
-      std::optional<MyMatrix<Tint>> opt = INDEF_FindIsotropic<T,Tint>(M);
-      MyMatrix<Tint> eVect = unfold_opt(opt, "Failed to find an isotropic vector");
-      MyMatrix<Tint> NewVect = ThePerturb.transpose() * eVect;
+      std::optional<MyVector<Tint>> opt = INDEF_FindIsotropic<T,Tint>(M, os);
+      MyVector<Tint> eVect = unfold_opt(opt, "Failed to find an isotropic vector");
+      MyVector<Tint> NewVect = ThePerturb.transpose() * eVect;
 #ifdef DEBUG_APPROXIMATE_MODELS
       T sum = EvaluationQuadForm<T,Tint>(Qmat, NewVect);
       if (sum != 0) {
@@ -723,20 +723,21 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
 }
 
 template<typename T, typename Tint>
-MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat) {
-  MyMatrix<Tint> Basis1 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat));
+MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& os) {
+  MyMatrix<Tint> Basis1 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat, os));
   MyMatrix<T> Basis1_T = UniversalMatrixConversion<T,Tint>(Basis1);
   MyMatrix<T> prod1 = Basis1_T * Qmat;
   MyMatrix<T> NSP_T = NullspaceIntTrMat(prod1);
   MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
   MyMatrix<T> Qmat2 = NSP_T * Qmat * NSP_T.transpose();
-  MyMatrix<Tint> Basis2 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat2));
+  MyMatrix<Tint> Basis2 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat2, os));
   MyMatrix<Tint> Basis2_NSP = Basis2 * NSP;
-  MyMatrix<Tint> HyperBasis = Concatenation(Basis1, Basis2_NSP);
-  MyMatrix<Tint> prod2 = HyperBasis * Qmat;
+  MyMatrix<Tint> HyperBasis = Concatenate(Basis1, Basis2_NSP);
+  MyMatrix<T> HyperBasis_T = UniversalMatrixConversion<T,Tint>(HyperBasis);
+  MyMatrix<T> prod2 = HyperBasis_T * Qmat;
   MyMatrix<T> NSP2_T = NullspaceIntTrMat(prod2);
   MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint,T>(NSP2_T);
-  MyMatrix<Tint> FullBasis = Concatenation(HyperBasis, NSP2);
+  MyMatrix<Tint> FullBasis = Concatenate(HyperBasis, NSP2);
 #ifdef DEBUG_APPROXIMATE_MODELS
   Tint det = DeterminantMat(FullBasis);
   if (T_abs(det) != 1) {
@@ -857,7 +858,7 @@ template<typename T, typename Tint, typename Tgroup>
 ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   int n = Qmat.rows();
-  MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis<T,Tint>(Qmat);
+  MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis<T,Tint>(Qmat, os);
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
   MyMatrix<T> QmatRed = FullBasis_T * Qmat * FullBasis_T.transpose();
   MyMatrix<T> Block11 = GetSubBlock11(QmatRed);
@@ -949,9 +950,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     int dim_ext = QmatExt.rows();
     GeneralMatrixGroupHelper<T,Telt> helper{dim_ext};
     Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen, helper, eEmbed, os);
-    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.ListListCoset);
+    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.coset_desc);
     std::vector<MyMatrix<Tint>> ListGenerators;
-    for (auto & eGen : stab_right_coset.GRPmatr) {
+    for (auto & eGen : stab_right_coset.list_gen) {
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
       MyMatrix<T> fGen_T = eProdEmbed * eGen * eProdEmbedInv;
 #ifdef DEBUG_APPROXIMATE_MODELS

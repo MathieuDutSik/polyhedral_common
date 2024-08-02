@@ -599,7 +599,7 @@ public:
 #endif
     // Now doing the computation side of the job
     MyMatrix<T> TheCompl1 =SubspaceCompletionRational(Subspace1, dim);
-    MyMatrix<T> Trans1 = Concatenation(Subspace1, TheCompl1);
+    MyMatrix<T> Trans1 = Concatenate(Subspace1, TheCompl1);
     Trans1Inv = Inverse(Trans1);
     MyMatrix<T> MatScal1 = TheCompl1 * G1 * TheCompl1.transpose();
     int dimCompl1 = TheCompl1.rows();
@@ -640,7 +640,7 @@ public:
     for (auto & eMat : TheRec.BasisKernel) {
       MyMatrix<T> Null_mat = ZeroMatrix<T>(rnk, dim);
       MyMatrix<T> Prod_mat = eMat * NSP2;
-      MyMatrix<T> Cont_mat = Concatenation(Null_mat, Prod_mat);
+      MyMatrix<T> Cont_mat = Concatenate(Null_mat, Prod_mat);
       MyMatrix<T> Ins_mat = Trans1Inv * Cont_mat;
       ListEquiv_terms1.push_back(Ins_mat);
     }
@@ -663,7 +663,7 @@ public:
   MyMatrix<T> get_one_transformation() {
     auto f_get_equiv=[&](MyVector<T> const& eSol) -> MyMatrix<T> {
       MyMatrix<T> TheCompl2 = ListVectCand2 + NSP2.transpose() * eSol;
-      MyMatrix<T> Trans2 = Concatenation(Subspace2, TheCompl2);
+      MyMatrix<T> Trans2 = Concatenate(Subspace2, TheCompl2);
       MyMatrix<T> RetMat = Trans1Inv * Trans2;
       return RetMat;
     };

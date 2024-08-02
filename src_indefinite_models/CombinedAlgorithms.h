@@ -175,7 +175,7 @@ public:
       AssignMatrixRow(PlaneExpr_T, u, fV);
     }
     MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
-    FullBasis = Concatenation(TheCompl, PlaneExpr_T);
+    FullBasis = Concatenate(TheCompl, PlaneExpr_T);
     FullBasisInv = Inverse(FullBasis);
     QmatRed = TheCompl * GramMatRed * TheCompl.transpose();
   }
@@ -314,6 +314,43 @@ std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T>
   throw TerminalException{1};
 }
 
+template<typename T, typename Tint>
+std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_PosNeg(MyMatrix<T> const& Q, std::ostream & os) {
+  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q);
+  if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
+    MyMatrix<T> Qneg = -Q;
+    return ArithmeticAutomorphismGroup(Qneg, os);
+  }
+  if (DSM.nbMinus == 0 && DSM.nbZero == 0) {
+    return ArithmeticAutomorphismGroup(Q, os);
+  }
+  std::cerr << "Failed to find a matching entry for PosNeg\n";
+  throw TerminalException{1};
+}
+
+template<typename T, typename Tint>
+std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, std::ostream & os) {
+  DiagSymMat<T> DSM1 = DiagonalizeNonDegenerateSymmetricMatrix(Q1);
+  DiagSymMat<T> DSM2 = DiagonalizeNonDegenerateSymmetricMatrix(Q2);
+  if (DSM1.nbPlus != DSM2.nbPlus) {
+    return {};
+  }
+  if (DSM1.nbMinus != DSM2.nbMinus) {
+    return {};
+  }
+  if (DSM1.nbPlus == 0 && DSM1.nbZero == 0) {
+    MyMatrix<T> Qneg1 = -Q1;
+    MyMatrix<T> Qneg2 = -Q2;
+    return ArithmeticEquivalence(Qneg1, Qneg2, os);
+  }
+  if (DSM1.nbMinus == 0 && DSM1.nbZero == 0) {
+    return ArithmeticEquivalence(Q1, Q2, os);
+  }
+  std::cerr << "Failed to find a matching entry for PosNeg\n";
+  throw TerminalException{1};
+}
+
+
 
 
 
@@ -326,7 +363,7 @@ private:
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Kernel(MyMatrix<T> const& Qmat) {
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat);
     if (eBlock.h == 0) {
-      return INDEF_FORM_AutomorphismGroup_PosNeg(Qmat);
+      return INDEF_FORM_AutomorphismGroup_PosNeg<T,Tint>(Qmat, os);
     }
     if (eBlock.h == 1) {
       LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(Qmat, os);
@@ -365,7 +402,7 @@ private:
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
     if (eBlock1.h == 0) {
-      return INDEF_FORM_TestEquivalence_PosNeg(Qmat1, Qmat2);
+      return INDEF_FORM_TestEquivalence_PosNeg<T,Tint>(Qmat1, Qmat2, os);
     }
     if (eBlock1.h == 1) {
       return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(eBlock1.mat, eBlock2.mat, os);
@@ -955,7 +992,7 @@ public:
     MyMatrix<T> NSP_T = NullspaceIntMat(Q);
     MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
     MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
-    MyMatrix<Tint> FullBasis = Concatenation(TheCompl, NSP);
+    MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
     MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
     int p = TheCompl.rows();
     MyMatrix<T> TheCompl_T = UniversalMatrixConversion<T,Tint>(TheCompl);
@@ -983,13 +1020,13 @@ public:
     MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint,T>(NSP1_T);
     MyMatrix<Tint> TheCompl1 = SubspaceCompletionInt(NSP1, n);
     MyMatrix<T> TheCompl1_T = UniversalMatrixConversion<T,Tint>(TheCompl1);
-    MyMatrix<Tint> FullBasis1 = Concatenation(TheCompl1, NSP1);
+    MyMatrix<Tint> FullBasis1 = Concatenate(TheCompl1, NSP1);
     MyMatrix<T> QmatRed1 = TheCompl1_T * Q1 * TheCompl1_T.transpose();
     MyMatrix<T> NSP2_T = NullspaceIntMat(Q2);
     MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint,T>(NSP2_T);
     MyMatrix<Tint> TheCompl2 = SubspaceCompletionInt(NSP2, n);
     MyMatrix<T> TheCompl2_T = UniversalMatrixConversion<T,Tint>(TheCompl2);
-    MyMatrix<Tint> FullBasis2 = Concatenation(TheCompl2, NSP2);
+    MyMatrix<Tint> FullBasis2 = Concatenate(TheCompl2, NSP2);
     MyMatrix<T> QmatRed2 = TheCompl2_T * Q2 * TheCompl2_T.transpose();
     int p = TheCompl1.rows();
     std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence_FullDim(QmatRed1, QmatRed2);
