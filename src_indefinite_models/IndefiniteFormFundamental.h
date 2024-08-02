@@ -128,7 +128,7 @@ namespace std {
 
 
 
-template<typename T>
+template<typename T, typename Tint>
 size_t INDEF_FORM_InvariantVector(MyMatrix<T> const& Qmat, MyVector<Tint> const& v) {
   int eRank = RankMat(Qmat);
   T eNorm = EvaluationQuadForm<T,Tint>(Qmat, v);
@@ -144,7 +144,6 @@ size_t INDEF_FORM_InvariantVector(MyMatrix<T> const& Qmat, MyVector<Tint> const&
   return std::hash<T>()(eInv);
 }
 
-template<typename T>
 struct InvariantIsotropic {
   int k;
   size_t eInv1;

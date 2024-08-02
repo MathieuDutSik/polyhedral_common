@@ -7,6 +7,7 @@
 #include "GRP_GroupFct.h"
 #include "MAT_MatrixInt.h"
 #include "LatticeStabEquiCan.h"
+#include "IndefiniteFormFundamental.h"
 #include "MatrixGroup.h"
 #include <memory>
 // clang-format on
@@ -68,8 +69,8 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector
   T xNorm = EvaluationQuadForm(Qmat, x);
   MyMatrix<Tint> RetMat(n,n);
   for (int u=0; u<n; u++) {
-    MyVector<Tint> eImg = ZeroVector<T>(n);
-    MyVector<Tint> y = ZeroVector<T>(n);
+    MyVector<Tint> eImg = ZeroVector<Tint>(n);
+    MyVector<Tint> y = ZeroVector<Tint>(n);
     y(u) = 1;
     eImg += y;
     //
@@ -265,7 +266,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     shr_ptr->ListClasses = ListClasses;
   };
-  std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+  std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<Tint>> {
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
@@ -372,7 +373,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   // (L,y) = div(y) Z.
   // For each v in L* we can find smallest d such that w = dv in L.
   // And we then have div(w) = d
-  std::function<std::vector<MyVector<Tint>>(T)> EnumerateVectorOverDiscriminant = [=](T const& X) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(T const&)> EnumerateVectorOverDiscriminant = [=](T const& X) -> std::vector<MyVector<Tint>> {
     // For each vector v in M* / M
     // We want (x, v) divided by d.
     //
@@ -465,13 +466,14 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     return ListSolution;
   };
-  std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(T const&)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {
     if (X == 0) {
       return EnumerateVectorOverDiscriminant(0);
     }
     std::vector<T> ListDiv = GetSquareDivisors(X);
-    std::vector<MyVector<T>> ListSolution;
-    for (auto & eDiv : ListDiv) {
+    std::vector<MyVector<Tint>> ListSolution;
+    for (auto & eDiv_T : ListDiv) {
+      Tint eDiv = UniversalScalarConversion<Tint,T>(eDiv_T);
       T Xtarget = X / (eDiv * eDiv);
       for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget)) {
         MyVector<Tint> eV = eDiv * eSol;
@@ -870,7 +872,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       std::cerr << "That function should not be called\n";
       throw TerminalException{1};
     };
-    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<Tint>> {
       std::vector<MyMatrix<Tint>> ListGenerators;
       MyMatrix<Tint> const& FullBasis = shr_ptr->FullBasis;
       MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
@@ -969,7 +971,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       std::cerr << "That function should not be called\n";
       throw TerminalException{1};
     };
-    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<T>> {
+    std::function<std::vector<MyMatrix<Tint>>(void)> GetApproximateGroup = [=]() -> std::vector<MyMatrix<Tint>> {
       return shr_ptr->ListGenerators;
     };
     std::function<std::vector<MyVector<Tint>>(T)> GetCoveringOrbitRepresentatives = [=](T const& X) -> std::vector<MyVector<Tint>> {

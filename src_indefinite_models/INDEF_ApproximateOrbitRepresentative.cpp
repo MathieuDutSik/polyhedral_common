@@ -14,13 +14,13 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
   std::cerr << "We have Q\n";
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Xnorm\n";
-  ApproximateModel<T,Tint> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(Qmat);
-  std::vector<MyVector<T>> LVect = model.GetCoveringOrbitRepresentatives(Xnorm);
+  ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(Qmat);
+  std::vector<MyVector<Tint>> LVect = approx.GetCoveringOrbitRepresentatives(Xnorm);
   if (OutFormat == "GAP") {
     if (LVect.size() == 0) {
       os_out << "return rec(LVect:=[]);\n";
     } else {
-      MyMatrix<T> MatVect = MatrixFromVectorFamily(LVect);
+      MyMatrix<Tint> MatVect = MatrixFromVectorFamily(LVect);
       os_out << "return rec(LVect:=" << StringMatrixGAP(MatVect) << ");\n";
     }
     return;
