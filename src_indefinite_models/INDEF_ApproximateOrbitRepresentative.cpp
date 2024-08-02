@@ -7,14 +7,14 @@
 #include "Permutation.h"
 // clang-format on
 
-template <typename T, typename Tgroup>
+template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   std::cerr << "We have Q\n";
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Xnorm\n";
-  ApproximateModel<T> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tgroup>(Qmat);
+  ApproximateModel<T,Tint> model = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(Qmat);
   std::vector<MyVector<T>> LVect = model.GetCoveringOrbitRepresentatives(Xnorm);
   if (OutFormat == "GAP") {
     if (LVect.size() == 0) {
@@ -49,13 +49,14 @@ int main(int argc, char *argv[]) {
     }
     using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tint = mpz_class;
-    using Tgroup = permutalib::Group<Telt, Tint>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
     auto f = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T,Tgroup>(MatFile, XnormStr, OutFormat, os);
+        using Tint = mpz_class;
+        return process<T,Tint,Tgroup>(MatFile, XnormStr, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

@@ -1534,9 +1534,15 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
   return ListMatr_C;
 }
 
+template<typename T>
+struct Stab_RightCoset {
+  std::vector<MyMatrix<T>> list_gen;
+  CosetDescription<T> coset_desc;
+};
+
+
 template <typename T, typename Tgroup, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>>
-LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
+Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
                                   Thelper const &helper,
                                   MyMatrix<T> const &TheSpace,
                                   std::ostream &os) {
@@ -2006,11 +2012,10 @@ LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
       ComputeFiniteMatrixGroupHelper<T, Telt>(EXTbas);
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
 
-  std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pair =
-      LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGens, helper,
+  Stab_RightCoset<T> pair = LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGens, helper,
                                                    LattToStab, os);
   std::vector<MyMatrix<T>> ListMatrGensB;
-  for (auto &eGen : pair.first) {
+  for (auto &eGen : pair.list_gen) {
     MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!IsIntegralMatrix(NewGen)) {
@@ -2020,8 +2025,8 @@ LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
 #endif
     ListMatrGensB.push_back(NewGen);
   }
-  pair.second.conjugate(eBasis);
-  return {std::move(ListMatrGensB), pair.second};
+  pair.coset_desc.conjugate(eBasis);
+  return {std::move(ListMatrGensB), pair.coset_desc};
 }
 
 template <typename T, typename Tgroup, typename Fcorrect>

@@ -7,6 +7,7 @@
 #include "GRP_GroupFct.h"
 #include "MAT_MatrixInt.h"
 #include "LatticeStabEquiCan.h"
+#include "MatrixGroup.h"
 #include <memory>
 // clang-format on
 
@@ -850,8 +851,9 @@ MyMatrix<T> AssembleTwoDiagBlock(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
 
 
 
-template<typename T, typename Tint>
-ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat) {
+template<typename T, typename Tint, typename Tgroup>
+ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat, std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
   int n = Qmat.rows();
   MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis(Qmat);
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
@@ -941,10 +943,12 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat)
     MyMatrix<T> eProdEmbed = Inverse(FullBasis) * eEmbed;
     MyMatrix<T> eProdEmbedInv = Inverse(eProdEmbed);
     ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint>(QmatExt);
-    RecStab_RightCoset = LinearSpace_Stabilizer_RightCoset(RecApprox.ApproximateGroup, eEmbed);
-    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, RecStab_RightCoset.ListListCoset);
+    std::vector<MyMatrix<Tint>> ListGen = approx.GetApproximateGroup();
+    GeneralMatrixGroupHelper<T,Telt> helper{QmatExt.rows()};
+    Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen, helper, eEmbed, os);
+    std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.ListListCoset);
     std::vector<MyMatrix<Tint>> ListGenerators;
-    for (auto & eGen : RecStab_RightCoset.GRPmatr) {
+    for (auto & eGen : stab_right_coset.GRPmatr) {
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
       MyMatrix<T> fGen_T = eProdEmbed * eGen * eProdEmbedInv;
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -961,7 +965,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat)
     std::shared_ptr<InternalApproxCaseB<T,Tint>> shr_ptr = std::make_shared<InternalApproxCaseB<T,Tint>>(caseb);
 
 
-    std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
+    std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
       std::cerr << "That function should not be called\n";
       throw TerminalException{1};
     };
