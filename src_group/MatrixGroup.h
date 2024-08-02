@@ -2075,6 +2075,12 @@ std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(int const& n, std:
   using Telt = typename Tgroup::Telt;
   MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(InvInvariantSpace)) {
+    std::cerr << "The matrix InvInvariantSpace should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
   std::vector<MyMatrix<T>> LGen2 =
     ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
   GeneralMatrixGroupHelper<T,Telt> helper{n};
@@ -2082,13 +2088,81 @@ std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(int const& n, std:
   std::vector<MyMatrix<Tint>> LGen4;
   for (auto & eGen3 : LGen3) {
     MyMatrix<T> eGen4_T = InvInvariantSpace * eGen3 * InvariantSpace;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(eGen4_T)) {
+      std::cerr << "The matrix eGen4_T should be integral\n";
+      throw TerminalException{1};
+    }
+#endif
     MyMatrix<Tint> eGen4 = UniversalMatrixConversion<Tint,T>(eGen4_T);
     LGen4.push_back(eGen4);
   }
   return LGen4;
 }
 
+// Returns an element g in GRPrat   such that   g * EquivRat   in GL(n,Z)
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> MatrixIntegral_Equivalence_General(std::vector<MyMatrix<T>> const& LGen1, MyMatrix<T> const& EquivRat, std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
+  int n = EquivRat.rows();
+  MyMatrix<T> TheSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> TheSpaceInv = Inverse(TheSpace);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(TheSpaceInv)) {
+    std::cerr << "The matrix InvInvariantSpace should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<MyMatrix<T>> LGen2 =
+    ConjugateListGeneratorsTestInt(TheSpaceInv, LGen1);
+  // We search for g in GRPrat s.t. g * EquivRat in GL_n(Z).
+  // So, we search g in GRPrat s.t. Z^n * g * EquivRat = Z^n
+  // Writing g = TheSpaceInv g_int TheSpace we get
+  // TheSpaceInv g TheSpace EquivRat = Z^n
+  // Or TheSpaceInv g = Inverse(TheSpace * EquivRat)
+  MyMatrix<T> TheSpaceImg = TheSpace * EquivRat;
+  MyMatrix<T> TheSpaceImgInv = Inverse(TheSpaceImg);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(TheSpaceImgInv)) {
+    std::cerr << "The matrix TheSpaceImgInv should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
+  using Thelper = GeneralMatrixGroupHelper<T,Telt>;
+  GeneralMatrixGroupHelper<T,Telt> helper{n};
+  std::optional<MyMatrix<T>> opt =
+      LinearSpace_Equivalence_Kernel<T, Tgroup, Thelper>(
+          LGen2, helper, TheSpaceInv, TheSpaceImgInv, os);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<T> const& eSpaceEquiv = *opt;
+  MyMatrix<T> eMatFinal = TheSpaceInv * eSpaceEquiv * TheSpace;
+  MyMatrix<T> eProd_T = eMatFinal * EquivRat;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(eProd_T)) {
+    std::cerr << "The matrix should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyMatrix<Tint> eProd = UniversalMatrixConversion<Tint,T>(eProd_T);
+  return eProd;
+}
 
+// Find a matrix g in GRPrat such that   EquivRat * g   in   GL(n,Z)
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> MatrixIntegral_Equivalence_Bis_General(std::vector<MyMatrix<T>> const& GRPrat, MyMatrix<T> const& EquivRat, std::ostream& os) {
+  MyMatrix<T> EquivRatInv = Inverse(EquivRat);
+  std::optional<MyMatrix<Tint>> opt = MatrixIntegral_Equivalence_General<T,Tint,Tgroup>(GRPrat, EquivRatInv, os);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<Tint> const& TheSol = *opt;
+  // So we have TheSol = g * Inverse(EquivRat) in GL(n,Z)
+  // Inverse(TheSol) = EquivRat * g in GL(n,Z)
+  MyMatrix<Tint> TheSolInv = Inverse(TheSol);
+  return TheSolInv;
+}
 
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(

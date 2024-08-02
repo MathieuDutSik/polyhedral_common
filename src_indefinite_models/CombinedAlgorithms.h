@@ -739,26 +739,26 @@ private:
     std::vector<MyMatrix<Tint>> GRP1_A = f_stab(eRec1, choice);
     std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
     // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
-    std::optional<MyMatrix<T>> optB = MatrixIntegral_Equivalence_Bis(GRP1_B, EquivRat);
+    std::optional<MyMatrix<Tint>> optB = MatrixIntegral_Equivalence_Bis_General<T,Tint,Tgroup>(GRP1_B, EquivRat, os);
     if (!optB) {
       return {};
     }
-    MyMatrix<T> const& TheRet = *optB;
+    MyMatrix<Tint> const& TheRet = *optB;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> eProd = TheRet * Qmat1 * TheRet.transpose();
+    MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
+    MyMatrix<T> eProd = TheRet_T * Qmat1 * TheRet_T.transpose();
     if (eProd != Qmat2) {
       std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
-    MyMatrix<T> Plane1_img = Plane1 * EquivRatInv;
+    MyMatrix<Tint> EquivRatInv = Inverse(EquivRat);
+    MyMatrix<Tint> Plane1_img = Plane1 * EquivRatInv;
     if (!TestEqualitySpace(Plane1_img, Plane2)) {
       std::cerr << "Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<Tint> TheRet_tint = UniversalMatrixConversion<Tint,T>(TheRet);
-    return TheRet_tint;
+    return TheRet;
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, int const& choice) {
     int n = Qmat.rows();
@@ -1064,13 +1064,14 @@ public:
     std::vector<MyMatrix<Tint>> GRP1_A = INDEF_FORM_AutomorphismGroup(eRec1.GramMatRed);
     std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
     // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
-    std::optional<MyMatrix<T>> optB = MatrixIntegral_Equivalence_Bis(GRP1_B, EquivRat);
+    std::optional<MyMatrix<Tint>> optB = MatrixIntegral_Equivalence_Bis_General<T,Tint,Tgroup>(GRP1_B, EquivRat, os);
     if (!optB) {
       return {};
     }
-    MyMatrix<T> const& TheRet = *optB;
+    MyMatrix<Tint> const& TheRet = *optB;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> eProd = TheRet * Qmat1 * TheRet.transpose();
+    MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
+    MyMatrix<T> eProd = TheRet_T * Qmat1 * TheRet_T.transpose();
     if (eProd != Qmat2) {
       std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
@@ -1082,8 +1083,7 @@ public:
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<Tint> TheRet_tint = UniversalMatrixConversion<Tint,T>(TheRet);
-    return TheRet_tint;
+    return TheRet;
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup(MyMatrix<T> const& Q) {
     int n = Q.rows();
