@@ -574,7 +574,6 @@ public:
     }
 #endif
     int dimSpace = rnk;
-    int dimCompl = dim - dimSpace;
     // Checking the input
     MyMatrix<T> eProd1 = Subspace1 * G1;
     MyMatrix<T> eProd2 = Subspace2 * G2;

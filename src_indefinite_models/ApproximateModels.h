@@ -857,16 +857,16 @@ template<typename T, typename Tint, typename Tgroup>
 ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   int n = Qmat.rows();
-  MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis(Qmat);
+  MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis<T,Tint>(Qmat);
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
   MyMatrix<T> QmatRed = FullBasis_T * Qmat * FullBasis_T.transpose();
   MyMatrix<T> Block11 = GetSubBlock11(QmatRed);
   MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
 
   if (TwoPlanes == Block11) {
-    InternalApproxCaseA<T,Tint> casea{Qmat, FullBasis, INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint>(QmatRed)};
+    InternalApproxCaseA<T,Tint> casea{Qmat, FullBasis, INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(QmatRed)};
     std::shared_ptr<InternalApproxCaseA<T,Tint>> shr_ptr = std::make_shared<InternalApproxCaseA<T,Tint>>(casea);
-    std::vector<MyMatrix<Tint>> GRPeasy = GetEasyIsometries<T,Tint>(QmatRed);
+    std::vector<MyMatrix<Tint>> GRPeasy = GetEasyIsometries<T,Tint>(QmatRed, os);
     shr_ptr->approx.SetListClassesOrbitwise(GRPeasy);
     std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
       std::cerr << "That function should not be called\n";
@@ -942,11 +942,12 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<T> eProdEmbed = Inverse(FullBasis) * eEmbed;
+    MyMatrix<T> eProdEmbed = Inverse(FullBasis_T) * eEmbed;
     MyMatrix<T> eProdEmbedInv = Inverse(eProdEmbed);
-    ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint>(QmatExt);
+    ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(QmatExt);
     std::vector<MyMatrix<Tint>> ListGen = approx.GetApproximateGroup();
-    GeneralMatrixGroupHelper<T,Telt> helper{QmatExt.rows()};
+    int dim_ext = QmatExt.rows();
+    GeneralMatrixGroupHelper<T,Telt> helper{dim_ext};
     Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen, helper, eEmbed, os);
     std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.ListListCoset);
     std::vector<MyMatrix<Tint>> ListGenerators;

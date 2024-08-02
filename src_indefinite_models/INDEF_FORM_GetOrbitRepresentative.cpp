@@ -15,7 +15,6 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
   std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
   std::vector<MyVector<Tint>> l_repr = comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
-  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     if (l_repr.size() == 0) {
