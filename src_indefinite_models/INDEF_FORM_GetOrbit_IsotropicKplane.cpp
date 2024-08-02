@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
-#include "ApproximateModels.h"
+#include "CombinedAlgorithms.h"
 #include "Group.h"
 #include "Permutation.h"
 // clang-format on

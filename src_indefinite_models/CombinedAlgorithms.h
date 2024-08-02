@@ -35,6 +35,7 @@ public:
   MyMatrix<T> NSP_T;
   MyMatrix<T> GramMatRed;
   INDEF_FORM_GetVectorStructure(MyMatrix<T> const& _Qmat, MyVector<Tint> const& _v) : Qmat(_Qmat), v(_v) {
+    int n = Qmat.rows();
     eNorm = EvaluationQuadForm<T,Tint>(Qmat, v);
     v_T = UniversalVectorConversion<T,Tint>(v);
     MyVector<T> eProd = Qmat * v_T;

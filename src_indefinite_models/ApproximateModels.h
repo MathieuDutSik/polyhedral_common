@@ -220,7 +220,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   std::vector<MyMatrix<Tint>> GRPstart;
   InternalEichler<T,Tint> ie{Qmat, Gmat, ListClasses, GRPstart};
   std::shared_ptr<InternalEichler<T,Tint>> shr_ptr = std::make_shared<InternalEichler<T,Tint>>(ie);
-  std::function<void(std::vector<MyMatrix<Tint>>)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
+  std::function<void(std::vector<MyMatrix<Tint>> const&)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr) -> void {
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
@@ -490,7 +490,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     T Xdiv2 = X / 2;
     MyMatrix<T> const& Qmat = shr_ptr->Gmat;
     int n = Qmat.rows();
-    MyVector<T> eSol = ZeroVector<T>(n);
+    MyVector<Tint> eSol = ZeroVector<Tint>(n);
     eSol(0) = 1;
     eSol(1) = Xdiv2;
     return eSol;
