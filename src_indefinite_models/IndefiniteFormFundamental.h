@@ -87,7 +87,7 @@ size_t INDEF_FORM_Invariant(MyMatrix<T> const& Qmat) {
   int nbZero = DiagInfo.nbZero;
   bool IsEven = INDEF_FORM_IsEven(Qmat);
   INDEF_InvariantQ<T> eInv{n, eDet, nbPlus, nbMinus, nbZero, IsEven};
-  return std::hash<T>()(eInv);
+  return std::hash<INDEF_InvariantQ<T>>()(eInv);
 }
 
 
@@ -134,14 +134,14 @@ size_t INDEF_FORM_InvariantVector(MyMatrix<T> const& Qmat, MyVector<Tint> const&
   T eNorm = EvaluationQuadForm<T,Tint>(Qmat, v);
   MyVector<T> v_T = UniversalVectorConversion<T,Tint>(v);
   MyVector<T> eProd = Qmat * v_T;
-  T divisor = RemoveFractionPlusCoef(v_T).TheMult;
-  T index = RemoveFractionPlusCoef(eProd).TheMult;
+  T divisor = RemoveFractionVectorPlusCoeff(v_T).TheMult;
+  T index = RemoveFractionVectorPlusCoeff(eProd).TheMult;
   MyMatrix<T> NSP = NullspaceIntVect(eProd);
   MyMatrix<T> GramRed = NSP * Qmat * NSP.transpose();
   size_t typeInv = INDEF_FORM_Invariant(GramRed);
   //
   INDEF_InvariantQV<T> eInv{eRank, eNorm, index, divisor, typeInv};
-  return std::hash<T>()(eInv);
+  return std::hash<INDEF_InvariantQV<T>>()(eInv);
 }
 
 struct InvariantIsotropic {

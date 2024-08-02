@@ -60,8 +60,8 @@ public:
     }
   }
   MyMatrix<T> MapOrthogonalSublatticeEndomorphism(MyMatrix<Tint> const& eEndoRed) {
+    MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
     if (eNorm != 0) {
-      MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
       MyMatrix<T> TheBigMat = ExpandMatrix(eEndoRed_T);
       MyMatrix<T> RetMat = PmatInv * TheBigMat * Pmat;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -73,9 +73,10 @@ public:
 #endif
       return RetMat;
     } else {
-      MyMatrix<Tint> Subspace1 = eEndoRed * NSP;
-      MyMatrix<Tint> const& Subspace2 = NSP;
-      MyMatrix<T> RetMat = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1, Qmat, Subspace2);
+      MyMatrix<T> Subspace1 = eEndoRed_T * NSP_T;
+      MyMatrix<T> const& Subspace2 = NSP_T;
+      std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1, Qmat, Subspace2);
+      MyMatrix<T> RetMat = unfold_opt(opt, "opt should be something because NSP.rows = RankMat(NSP)");
       MyVector<T> vImg = RetMat.transpose() * v_T;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       if (vImg != v_T && vImg != -v) {
@@ -83,7 +84,7 @@ public:
         throw TerminalException{1};
       }
 #endif
-      if (vImg == v) {
+      if (vImg == v_T) {
         return RetMat;
       } else {
         return -RetMat;
@@ -91,7 +92,7 @@ public:
     }
   }
   std::vector<MyMatrix<T>> MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const& GRPmatr) {
-    std::vector<T> NewListGen;
+    std::vector<MyMatrix<T>> NewListGen;
     for (auto & eGen : GRPmatr) {
       NewListGen.push_back(MapOrthogonalSublatticeEndomorphism(eGen));
     }
@@ -262,6 +263,103 @@ std::vector<MyMatrix<T>> ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>>
   return ListGens;
 }
 
+/*
+  As obtained by GeneratorsOfGroup(GeneralLinearGroup(6,Integers))
+  in GAP.
+ */
+template<typename T>
+std::vector<MyMatrix<T>> GeneralLinearGroup(int const& n) {
+  std::vector<MyMatrix<T>> ListGens;
+  if (n > 1) {
+    MyMatrix<T> mat1 = ZeroMatrix<T>(n,n);
+    for (int i=0; i<n; i++) {
+      int iNext = 0;
+      if (i<n-1) {
+        iNext = i+1;
+      }
+      mat1(i,iNext) = 1;
+    }
+    ListGens.push_back(mat1);
+  }
+  //
+  if (n > 2) {
+    MyMatrix<T> mat2 = ZeroMatrix<T>(n,n);
+    mat2(1,0) = 1;
+    mat2(0,1) = 1;
+    for (int i=2; i<n; i++) {
+      mat2(i,i) = 1;
+    }
+    ListGens.push_back(mat2);
+  }
+  //
+  MyMatrix<T> mat3 = IdentityMat<T>(n);
+  mat3(0,0) = -1;
+  ListGens.push_back(mat3);
+  //
+  if (n > 1) {
+    MyMatrix<T> mat4 = IdentityMat<T>(n);
+    mat4(0,1) = 1;
+    ListGens.push_back(mat4);
+  }
+  //
+  return ListGens;
+}
+
+
+/*
+  Isometry group defined on a p dimensional space for a quadratic form Qp.
+  We extend the quadratic form to dimension n with
+  Qn = | Qp 0 |
+       | 0  0 |
+  If the original matrices satisfy Pp Qp Pp^T = Qp
+  the the extended matrices must satisfy Pn Qn Pn^T = Qn
+  So, in block formulation
+  Pn = | A B |
+       | C D |
+  and so
+  Pn Qn Pn^T = | A B |     | Qp 0 |     | A^T C^T |
+               | C D |  x  | 0  0 |  x  | B^T D^T |
+             = | A Qp 0 |     | A^T C^T |
+               | C Qp 0 |  x  | B^T D^T |
+             = | A Qp A^T  A Qp C^T |
+               | C Qp A^T  C Qp C^T |
+             = | Qp 0 |
+               | 0  0 |
+  And so we get A Qp A^T = Qp , C Qp A^T = 0 , C Qp C^T = 0
+  The equation A Qp A^T forces A to be an isometry of Qp.
+  The equation C Qp A^T forces C to be 0 from which the rest follows.
+*/
+template<typename T>
+std::vector<MyMatrix<T>> ExtendIsometryGroup(std::vector<MyMatrix<T>> const& GRPmatr, int const& p, int const& n) {
+  std::vector<MyMatrix<T>> ListGens;
+  for (auto & eGen : GRPmatr) {
+    MyMatrix<T> NewMat = IdentityMat<T>(n);
+    for (int i=0; i<p; i++) {
+      for (int j=0; j<p; j++) {
+        NewMat(i,j) = eGen(i,j);
+      }
+    }
+    ListGens.push_back(eGen);
+  }
+  if (n > p) {
+    for (auto & eGen : GeneralLinearGroup<T>(n-p)) {
+      MyMatrix<T> NewMat = IdentityMat<T>(n);
+      for (int i=0; i<n-p; i++) {
+        for (int j=0; j<n-p; j++) {
+          NewMat(i+p, j+p) = eGen(i,j);
+        }
+      }
+      ListGens.push_back(NewMat);
+    }
+    for (int i=0; i<p; i++) {
+      MyMatrix<T> NewMat = IdentityMat<T>(n);
+      NewMat(i, p) = 1;
+      ListGens.push_back(NewMat);
+    }
+  }
+  return ListGens;
+}
+
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const& Q, T const& X, std::ostream & os) {
@@ -319,10 +417,10 @@ std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_PosNeg(MyMatrix<T> cons
   DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q);
   if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
     MyMatrix<T> Qneg = -Q;
-    return ArithmeticAutomorphismGroup(Qneg, os);
+    return ArithmeticAutomorphismGroup<T,Tint>(Qneg, os);
   }
   if (DSM.nbMinus == 0 && DSM.nbZero == 0) {
-    return ArithmeticAutomorphismGroup(Q, os);
+    return ArithmeticAutomorphismGroup<T,Tint>(Q, os);
   }
   std::cerr << "Failed to find a matching entry for PosNeg\n";
   throw TerminalException{1};
@@ -341,10 +439,10 @@ std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> cons
   if (DSM1.nbPlus == 0 && DSM1.nbZero == 0) {
     MyMatrix<T> Qneg1 = -Q1;
     MyMatrix<T> Qneg2 = -Q2;
-    return ArithmeticEquivalence(Qneg1, Qneg2, os);
+    return ArithmeticEquivalence<T,Tint>(Qneg1, Qneg2, os);
   }
   if (DSM1.nbMinus == 0 && DSM1.nbZero == 0) {
-    return ArithmeticEquivalence(Q1, Q2, os);
+    return ArithmeticEquivalence<T,Tint>(Q1, Q2, os);
   }
   std::cerr << "Failed to find a matching entry for PosNeg\n";
   throw TerminalException{1};
@@ -387,11 +485,11 @@ private:
     for (auto & eGen : approx.GetApproximateGroup()) {
       f_insert(eGen);
     }
-    for (auto & eGen : approx.INDEF_FORM_StabilizerVector(Qmat, v1)) {
+    for (auto & eGen : INDEF_FORM_StabilizerVector(Qmat, v1)) {
       f_insert(eGen);
     }
     for (auto & v2 : approx.GetCoveringOrbitRepresentatives(X)) {
-      std::optional<MyVector<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat, Qmat, v1, v2);
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat, Qmat, v1, v2);
       if (opt) {
         f_insert(*opt);
       }
@@ -940,11 +1038,12 @@ public:
     MyMatrix<T> test_T = UniversalMatrixConversion<T,Tint>(test);
     auto get_equiv_rat=[&]() -> MyMatrix<T> {
       if (eNorm != 0) {
-        return eRec2.PmatInv * ExpandMatrix(test) * eRec1.Pmat;
+        return eRec2.PmatInv * ExpandMatrix(test_T) * eRec1.Pmat;
       } else {
-        MyMatrix<T> Subspace1 = Inverse(test) * eRec2.NSP;
-        MyMatrix<T> Subspace2 = eRec1.NSP;
-        MyMatrix<T> EquivRat = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2, Subspace2);
+        MyMatrix<T> Subspace1 = Inverse(test_T) * eRec2.NSP_T;
+        MyMatrix<T> Subspace2 = eRec1.NSP_T;
+        std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2, Subspace2);
+        MyMatrix<T> EquivRat = unfold_opt(opt, "failed to find EquivRat");
         MyMatrix<T> EquivRatInv = Inverse(EquivRat);
         MyVector<T> v1_inv_equivrat = EquivRatInv.transpose() * eRec1.v_T;
         if (v1_inv_equivrat == eRec2.v_T) {

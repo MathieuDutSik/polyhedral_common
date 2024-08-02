@@ -507,7 +507,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 template<typename T, typename Tint>
 std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostream& os) {
   std::vector<MyMatrix<Tint>> ListGenerators;
-  auto f_insert=[&](MyMatrix<T> const& P) -> void {
+  auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
 #ifdef DEBUG_APPROXIMATE_MODELS
     MyMatrix<T> P_T = UniversalMatrixConversion<T,Tint>(P);
     MyMatrix<T> prod = P_T * Qmat * P_T.transpose();
@@ -519,7 +519,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
     ListGenerators.push_back(P);
   };
   size_t n = Qmat.rows();
-  ListGenerators.push_back(IdentityMat<T>(n));
+  ListGenerators.push_back(IdentityMat<Tint>(n));
   //
   GraphBitset eG(n);
   for (size_t i=0; i<n; i++) {
@@ -553,7 +553,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
     size_t dim = eConn.size();
     std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint>(eQ, os);
     for (auto & eGen : LGen) {
-      MyMatrix<Tint> eBigGen = IdentityMat<T>(n);
+      MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
       for (size_t i=0; i<dim; i++) {
         for (size_t j=0; j<dim; j++) {
           eBigGen(eConn[i], eConn[j]) = eGen(i,j);
@@ -593,7 +593,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       if (opt) {
         MyMatrix<Tint> const& P = *opt;
         MyMatrix<Tint> Pinv = Inverse(P);
-        MyMatrix<Tint> BigP = IdentityMat<T>(n);
+        MyMatrix<Tint> BigP = IdentityMat<Tint>(n);
         for (size_t i=0; i<dim; i++) {
           for (size_t j=0; j<dim; j++) {
             BigP(eConn[i], eConn[j]) = 0;
@@ -952,9 +952,8 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     Stab_RightCoset<T> stab_right_coset = LinearSpace_Stabilizer_RightCoset<T,Tgroup,GeneralMatrixGroupHelper<T,Telt>>(ListGen, helper, eEmbed, os);
     std::vector<MyMatrix<Tint>> ListCoset = LinearSpace_ExpandListListCoset(n, stab_right_coset.coset_desc);
     std::vector<MyMatrix<Tint>> ListGenerators;
-    for (auto & eGen : stab_right_coset.list_gen) {
-      MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
-      MyMatrix<T> fGen_T = eProdEmbed * eGen * eProdEmbedInv;
+    for (auto & eGen_T : stab_right_coset.list_gen) {
+      MyMatrix<T> fGen_T = eProdEmbed * eGen_T * eProdEmbedInv;
 #ifdef DEBUG_APPROXIMATE_MODELS
       if (!IsIntegralMatrix(fGen)) {
         std::cerr << "fGen should be integral\n";
