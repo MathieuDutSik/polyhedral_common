@@ -114,9 +114,11 @@ public:
   MyMatrix<T> NSP_T;
   MyMatrix<T> GramMatRed;
   MyMatrix<T> QmatRed;
+  MyMatrix<T> FullBasis_T;
   MyMatrix<Tint> FullBasis;
   MyMatrix<Tint> FullBasisInv;
   int the_dim;
+  int dimCompl;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
@@ -154,7 +156,7 @@ public:
 #endif
   INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const& _Qmat, MyMatrix<Tint> const& _Plane) : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()) {
     Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
-    MyMatrix<T> eProd = Plane * Qmat;
+    MyMatrix<T> eProd = Plane_T * Qmat;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> WitnessIsotropy = Plane_T * Qmat * Plane_T.transpose();
     if (!IsZeroMatrix(WitnessIsotropy)) {
@@ -165,18 +167,18 @@ public:
     NSP_T = NullspaceIntTrMat(eProd);
     NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
     GramMatRed = NSP_T * Qmat * NSP_T.transpose();
-    Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
-
     the_dim = NSP_T.rows();
     PlaneExpr_T = MyMatrix<T>(dim, the_dim);
     for (int u=0; u<dim; u++) {
-      MyMatrix<T> eV = GetMatrixRow(Plane_T, u);
+      MyVector<T> eV = GetMatrixRow(Plane_T, u);
       std::optional<MyVector<T>> opt = SolutionIntMat(NSP_T, eV);
       MyVector<T> fV = unfold_opt(opt, "getting fV");
       AssignMatrixRow(PlaneExpr_T, u, fV);
     }
     MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
-    FullBasis = Concatenate(TheCompl, PlaneExpr_T);
+    dimCompl = TheCompl.rows();
+    FullBasis_T = Concatenate(TheCompl, PlaneExpr_T);
+    FullBasis = UniversalMatrixConversion<Tint,T>(FullBasis_T);
     FullBasisInv = Inverse(FullBasis);
     QmatRed = TheCompl * GramMatRed * TheCompl.transpose();
   }
@@ -189,7 +191,7 @@ public:
     std::vector<T> ListD{1};
     for (auto & eEndoRed : GRPmatr) {
       MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
-      MyMatrix<T> Subspace2 = eEndoRed_T * NSP;
+      MyMatrix<T> Subspace2 = eEndoRed_T * NSP_T;
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2);
       MyMatrix<T> RetMat = TheRec.get_one_transformation();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -611,9 +613,10 @@ private:
     std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim);
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
-      MyMatrix<T> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
+      MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eProd = eGenB * eRec.GramMatRed * eGenB.transpose();
+      MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
+      MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
       if (eProd != eRec.GramMatRed) {
         std::cerr << "eGenB should preserve eRec.GramMatRed\n";
         throw TerminalException{1};
@@ -651,7 +654,7 @@ private:
     }
     MyMatrix<Tint> const& test = *opt;
     MyMatrix<Tint> TheEquivTest = IdentityMat<Tint>(eRec2.the_dim);
-    int p = eRec1.QmatRed1.rows();
+    int p = eRec1.QmatRed.rows();
     for (int i=0; i<p; i++) {
       for (int j=0; j<p; j++) {
         TheEquivTest(i,j) = test(i,j);
@@ -688,12 +691,14 @@ private:
     std::cerr << "Failed to have a valid input choice in f_equiv\n";
     throw TerminalException{1};
   }
+
+  
   //
-  // The function using template arguments
+  // The function using choice integer input
   //
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, int const& choice) {
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
-    std::vector<MyMatrix<T>> GRP1 = f_stab(eRec, choice);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
     size_t eInvRed = INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane);
     size_t GRP_inv = GetRationalInvariant(GRP2);
@@ -705,7 +710,7 @@ private:
     }
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec1(Qmat1, Plane1);
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec2(Qmat2, Plane2);
-    std::optional<MyVector<Tint>> opt = f_equiv(eRec1, eRec2, choice);
+    std::optional<MyMatrix<Tint>> opt = f_equiv(eRec1, eRec2, choice);
     if (!opt) {
       return {};
     }
@@ -714,7 +719,7 @@ private:
     MyMatrix<Tint> Subspace2 = eRec1.NSP;
     MyMatrix<T> Subspace1_T = UniversalMatrixConversion<T,Tint>(Subspace1);
     MyMatrix<T> Subspace2_T = UniversalMatrixConversion<T,Tint>(Subspace2);
-    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat1, Subspace1, Qmat2, Subspace2);
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat1, Subspace1_T, Qmat2, Subspace2_T);
     MyMatrix<T> EquivRat = TheRec.get_one_transformation();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eProd = EquivRat * Qmat1 * EquivRat.transpose();
@@ -793,7 +798,7 @@ private:
       }
     }
 #endif
-    MyMatrix<T> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : GRP2) {
       MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
@@ -814,7 +819,7 @@ private:
       }
     }
 #endif
-    std::vector<MyMatrix<T>> ListRightCoset = MatrixIntegral_RightCosets(n, GRP2);
+    std::vector<MyMatrix<T>> ListRightCoset = MatrixIntegral_RightCosets_General<T,Tgroup>(n, GRP2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eCos : ListRightCoset) {
       MyMatrix<T> eProd = eCos * Qmat * eCos.transpose();
@@ -826,7 +831,23 @@ private:
 #endif
     return ListRightCoset;
   }
-  std::vector<MyVector<Tint>> INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, int k, int const& choice) {
+  size_t fiso_inv(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane, int const& choice) {
+    if (choice == INDEFINITE_FORM_PLANE) {
+      return INDEF_FORM_Invariant_IsotropicKplane(Q, Plane);
+    }
+    if (choice == INDEFINITE_FORM_FLAG) {
+      return INDEF_FORM_Invariant_IsotropicKflag(Q, Plane);
+    }
+    std::cerr << "Failed to have a valid input choice in f_inv\n";
+    throw TerminalException{1};
+  }
+  std::vector<MyMatrix<T>> fiso_coset(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane, int const& choice) {
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane, choice);
+  }
+  std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2, int const& choice) {
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Q1, Q2, Plane1, Plane2, choice);
+  }
+  std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, int k, int const& choice) {
     T eNorm(0);
     std::vector<MyMatrix<Tint>> ListOrbit;
     for (auto & eVect : INDEF_FORM_GetOrbitRepresentative(Qmat, eNorm)) {
@@ -838,11 +859,15 @@ private:
         MyMatrix<Tint> ePlane;
         size_t eInv;
       };
+      auto get_planeinv=[&](MyMatrix<Tint> const& Plane) -> PlaneInv {
+        size_t eInv = fiso_inv(Qmat, Plane, choice);
+        return {Plane, eInv};
+      };
       std::vector<PlaneInv> ListRecReprKplane;
       auto fInsert=[&](PlaneInv const& fRecReprKplane) -> void {
         for (auto & eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
-            std::optional<MyMatrix<Tint>> opt = f_equiv(Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane, choice);
+            std::optional<MyMatrix<Tint>> opt = fiso_equiv(Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane, choice);
             if (opt) {
               return;
             }
@@ -850,7 +875,7 @@ private:
         }
         ListRecReprKplane.push_back(fRecReprKplane);
       };
-      auto fGetRepresentatives=[&](MyMatrix<Tint> const& ePlane) -> std::vector<PlaneInv> {
+      auto SpanRepresentatives=[&](MyMatrix<Tint> const& ePlane) {
         // Some possible improvement. Use the double cosets
         // The double coset consists in splitting an orbit x G as
         // y1 H \cup ..... yN H
@@ -888,15 +913,15 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListOrbitF|=" <<  ListOrbitF.size() << "\n";
 #endif
-        std::vector<MyMatrix<T>> ListRightCosets = f_coset(Qmat, ePlane);
+        std::vector<MyMatrix<T>> ListRightCosets = fiso_coset(Qmat, ePlane, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
 #endif
-        std::vector<PlaneInv> ListRecReprRet;
         for (auto & eVect : ListOrbitF) {
           MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
+          MyVector<T> eVectB_T = UniversalVectorConversion<T,Tint>(eVectB);
           for (auto & eCos : ListRightCosets) {
-            MyVector<T> eVectC_T = eCos.transpose() * eVectB;
+            MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
             if (EvaluationQuadForm(Qmat, eVectC) != 0) {
               std::cerr << "eVectC is not isotropic\n";
@@ -909,17 +934,13 @@ private:
 #endif
             MyVector<Tint> eVectC = UniversalVectorConversion<Tint,T>(eVectC_T);
             MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
-            size_t eInv = f_inv(Qmat, ePlaneB, choice);
-            PlaneInv PI{ePlaneB, eInv};
-            ListRecReprRet.push_back(PI);
+            PlaneInv eRecReprKplane = get_planeinv(ePlaneB);
+            fInsert(eRecReprKplane);
           }
         }
-        return ListRecReprRet;
       };
       for (auto & eRepr : ListOrbit) {
-        for (auto & eRecReprExp : fGetRepresentatives(Qmat, eRepr)) {
-          fInsert(eRecReprExp);
-        }
+        SpanRepresentatives(eRepr);
       }
       ListOrbit.clear();
       for (auto & eRec : ListRecReprKplane) {
@@ -932,10 +953,10 @@ public:
   IndefiniteCombinedAlgo(std::ostream& _os) : os(_os) {
   }
   // Now the specific implementations
-  InvariantIsotropic INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+  size_t INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
     return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane, INDEFINITE_FORM_PLANE);
   }
-  InvariantIsotropic INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
+  size_t INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const& Q, MyMatrix<Tint> const& Plane) {
     return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane, INDEFINITE_FORM_FLAG);
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2) {

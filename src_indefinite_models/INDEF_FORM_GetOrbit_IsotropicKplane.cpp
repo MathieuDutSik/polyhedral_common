@@ -27,7 +27,7 @@ void process(std::string const &MatFile, std::string const& KStr, std::string ch
   std::vector<MyMatrix<Tint>> l_planes = f_get();
   if (OutFormat == "GAP") {
     os_out << "return ";
-    WriteListMatrixGAP(os_out, l_gen);
+    WriteListMatrixGAP(os_out, l_planes);
     os_out << ";\n";
     return;
   }

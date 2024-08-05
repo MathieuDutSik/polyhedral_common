@@ -472,7 +472,7 @@ template<typename T>
 SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> const& Bmat) {
   int dim = Bmat.rows();
   MyMatrix<T> TheMat = ZeroMatrix<T>(dim*dim, dim*dim);
-  MyMatrix<T> Bvect = ZeroVector<T>(dim*dim, 0);
+  MyVector<T> Bvect = ZeroVector<T>(dim*dim);
   auto f=[&](int i, int j) -> int {
     return i + dim * j;
   };
@@ -501,7 +501,7 @@ SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const& Amat, MyMatrix<T> c
   };
   std::optional<MyVector<T>> opt = SolutionMat(TheMat, Bvect);
   MyVector<T> eSol_vect = unfold_opt(opt, "getting eSol_vect");
-  MyMatrix<T> eSol_mat = f_getat(eSol_vect);
+  MyMatrix<T> eSol_mat = f_getmat(eSol_vect);
 #ifdef DEBUG_LORENTZIAN_LINALG
   MyMatrix<T> SumMat = eSol_mat * Amat + Amat.transpose() * eSol_mat.transpose();
   if (Bmat != SumMat) {
@@ -561,7 +561,7 @@ public:
   int rnk;
   MyMatrix<T> Trans1Inv;
   MyMatrix<T> ListVectCand2;
-  int denomSol;
+  T denomSol;
   SolutionSpecial<T> TheRec;
   std::vector<MyMatrix<T>> ListEquiv_terms1;
   MyMatrix<T> NSP1;

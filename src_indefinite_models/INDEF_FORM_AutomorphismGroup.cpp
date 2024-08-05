@@ -8,7 +8,7 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
+void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   std::cerr << "We have Q\n";

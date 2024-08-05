@@ -2164,6 +2164,36 @@ std::optional<MyMatrix<Tint>> MatrixIntegral_Equivalence_Bis_General(std::vector
   return TheSolInv;
 }
 
+template<typename T, typename Tgroup>
+std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(int const& n, std::vector<MyMatrix<T>> const& LGen1, std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(InvInvariantSpace)) {
+    std::cerr << "The matrix InvInvariantSpace should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<MyMatrix<T>> LGen2 =
+    ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
+  GeneralMatrixGroupHelper<T,Telt> helper{n};
+  Stab_RightCoset<T> stab_rightcoset = LinearSpace_Stabilizer_RightCoset<T, Tgroup, GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace, os);
+  using Iter = typename CosetDescription<T>::const_iterator;
+  Iter iter = stab_rightcoset.coset_desc.begin();
+  Iter end = stab_rightcoset.coset_desc.end();
+  std::vector<MyMatrix<T>> LCoset2;
+  while (iter != end) {
+    MyMatrix<T> const& eCos1 = *iter;
+    MyMatrix<T> eCos2 = InvInvariantSpace * eCos1 * InvariantSpace;
+    LCoset2.push_back(eCos2);
+    iter++;
+  }
+  return LCoset2;
+}
+
+
+
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,

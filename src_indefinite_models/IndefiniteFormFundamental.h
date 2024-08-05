@@ -175,27 +175,29 @@ size_t INDEF_FORM_Invariant_IsotropicKplane_Raw(MyMatrix<T> const& Qmat, MyMatri
   int k = ePlane.rows();
   MyMatrix<T> ePlane_T = UniversalMatrixConversion<T,Tint>(ePlane);
   MyMatrix<T> eProd = ePlane_T * Qmat;
-  MyMatrix<T> NSP = NullspaceIntTrMat(eProd);
+  MyMatrix<T> NSP_T = NullspaceIntTrMat(eProd);
+  MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
   int dimNSP = NSP.rows();
   MyMatrix<T> ePlaneB(k, dimNSP);
   for (int u=0; u<k; u++) {
-    MyVector<T> eV = GetMatrixRow(ePlane, u);
-    std::optional<MyVector<T>> opt = SolutionIntMat(NSP, eV);
+    MyVector<Tint> eV = GetMatrixRow(ePlane, u);
+    std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
     if (opt) {
-      MyVector<T> const& fV = *opt;
-      AssignMatrixRow(ePlaneB, u, fV);
+      MyVector<Tint> const& fV = *opt;
+      MyVector<T> fV_T = UniversalVectorConversion<T,Tint>(fV);
+      AssignMatrixRow(ePlaneB, u, fV_T);
     } else {
       std::cerr << "eV should belong to the space by the virtue of being isotropic\n";
       throw TerminalException{1};
     }
   }
   MyMatrix<T> ComplBasisInNSP = SubspaceCompletionInt(ePlaneB, dimNSP);
-  MyMatrix<T> NSP_sub = ComplBasisInNSP * NSP;
+  MyMatrix<T> NSP_sub = ComplBasisInNSP * NSP_T;
   MyMatrix<T> QmatRed = NSP_sub * Qmat * NSP_sub.transpose();
   size_t eInv1 = INDEF_FORM_Invariant(Qmat);
   size_t eInv2 = INDEF_FORM_Invariant(QmatRed);
   InvariantIsotropic eInv{k, eInv1, eInv2};
-  return std::hash<T>()(eInv);
+  return std::hash<InvariantIsotropic>()(eInv);
 }
 
 template<typename T>
