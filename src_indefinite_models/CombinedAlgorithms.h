@@ -107,6 +107,7 @@ public:
   MyMatrix<T> Qmat;
   MyMatrix<Tint> Plane;
   MyMatrix<T> Plane_T;
+  MyMatrix<Tint> PlaneExpr;
   MyMatrix<T> PlaneExpr_T;
   int dimSpace;
   int dim;
@@ -122,11 +123,11 @@ public:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
-    MyMatrix<T> PlaneImg = Plane * RetMat;
+    MyMatrix<T> PlaneImg = Plane_T * RetMat;
     MyMatrix<T> TransRed(dim, dim);
     for (int u=0; u<dim; u++) {
       MyVector<T> eV = GetMatrixRow(PlaneImg, u);
-      std::optional<MyVector<T>> opt = SolutionMat(Plane, eV);
+      std::optional<MyVector<T>> opt = SolutionMat(Plane_T, eV);
       MyVector<T> fV = unfold_opt(opt, "Get the vector fV");
       AssignMatrixRow(TransRed, u, fV);
     }
@@ -135,7 +136,7 @@ public:
       std::cerr << "TransRed should have absolute determinant 1\n";
       throw TerminalException{1};
     }
-    if (!TestEqualitySpace(PlaneImg, Plane)) {
+    if (!TestEqualitySpaces(PlaneImg, Plane_T)) {
       std::cerr << "Plane should be invariant (isotropic case)\n";
       throw TerminalException{1};
     }
@@ -175,6 +176,7 @@ public:
       MyVector<T> fV = unfold_opt(opt, "getting fV");
       AssignMatrixRow(PlaneExpr_T, u, fV);
     }
+    PlaneExpr = UniversalMatrixConversion<Tint,T>(PlaneExpr_T);
     MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
     dimCompl = TheCompl.rows();
     FullBasis_T = Concatenate(TheCompl, PlaneExpr_T);
@@ -586,7 +588,6 @@ private:
       return {};
     }
   }
-
   //
   // Specific functions f_stab_*, f_equiv_*
   //
@@ -624,7 +625,7 @@ private:
       std::vector<MyMatrix<Tint>> ListSpaces = f_get_list_spaces(eRec.PlaneExpr);
       for (auto & eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
-        if (!TestEqualitySpace(eSpaceImg, eSpace)) {
+        if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
           std::cerr << "The space eSpace is not correctly preserved\n";
           throw TerminalException{1};
         }
@@ -673,7 +674,7 @@ private:
     for (size_t iSpace=0; iSpace<ListSpaces1.size(); iSpace++) {
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
       MyMatrix<Tint> const& eSpace2 = ListSpaces2[iSpace];
-      if (!TestEqualitySpace(eSpace1_img, eSpace2)) {
+      if (!TestEqualitySpaces(eSpace1_img, eSpace2)) {
         std::cerr << "The space are not correctly mapped\n";
         throw TerminalException{1};
       }
@@ -728,8 +729,10 @@ private:
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
-    MyMatrix<T> Plane1_img = Plane1 * EquivRatInv;
-    if (!TestEqualitySpace(Plane1_img, Plane2)) {
+    MyMatrix<T> Plane1_T = UniversalMatrixConversion<T,Tint>(Plane1);
+    MyMatrix<T> Plane2_T = UniversalMatrixConversion<T,Tint>(Plane2);
+    MyMatrix<T> Plane1_img = Plane1_T * EquivRatInv;
+    if (!TestEqualitySpaces(Plane1_img, Plane2_T)) {
       std::cerr << "Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
@@ -754,9 +757,9 @@ private:
       std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> EquivRatInvB = Inverse(EquivRat);
-    MyMatrix<Tint> Plane1_imgB = Plane1 * EquivRatInvB;
-    if (!TestEqualitySpace(Plane1_imgB, Plane2)) {
+    MyMatrix<Tint> TheRetInv = Inverse(TheRet);
+    MyMatrix<Tint> Plane1_imgB = Plane1 * TheRetInv;
+    if (!TestEqualitySpaces(Plane1_imgB, Plane2)) {
       std::cerr << "Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
