@@ -1,6 +1,6 @@
 #PROGRAM		= INDEF_ApproximateOrbitRepresentative
 #PROGRAM		= TEST_EquiStabFamily
-PROGRAM		= INDEF_ApproximateOrbitRepresentative INDEF_FORM_GetOrbitRepresentative    INDEF_FORM_TestEquivalence INDEF_FORM_AutomorphismGroup INDEF_FORM_GetOrbit_IsotropicKplane
+PROGRAM		= INDEF_ApproximateOrbitRepresentative INDEF_FORM_GetOrbitRepresentative INDEF_FORM_TestEquivalence INDEF_FORM_AutomorphismGroup INDEF_FORM_GetOrbit_IsotropicKplane
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -14,7 +14,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-CDEFS           = -DDEBUG_LATTICE_STAB_EQUI_CAN -DDEBUG_EQUI_STAB_MEMOIZATION
+#CDEFS           = -DDEBUG_LATTICE_STAB_EQUI_CAN -DDEBUG_EQUI_STAB_MEMOIZATION
+CDEFS           = -DDEBUG
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

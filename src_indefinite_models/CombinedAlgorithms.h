@@ -79,7 +79,7 @@ public:
       MyMatrix<T> RetMat = unfold_opt(opt, "opt should be something because NSP.rows = RankMat(NSP)");
       MyVector<T> vImg = RetMat.transpose() * v_T;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      if (vImg != v_T && vImg != -v) {
+      if (vImg != v_T && vImg != -v_T) {
         std::cerr << "RetMat should map v to v or -v\n";
         throw TerminalException{1};
       }
@@ -574,8 +574,8 @@ private:
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> NewEquiv = Inverse(ResRed2.B) * eEquiv * ResRed1.B;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
-      MyMatrix<T> eProd = NewGen_T * Qmat1 * NewGen_T.transpose();
+      MyMatrix<T> NewEquiv_T = UniversalMatrixConversion<T,Tint>(NewEquiv);
+      MyMatrix<T> eProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
       if (eProd != Qmat2) {
         std::cerr << "The matrix is not an equivalence for Qmat1 / Qmat2\n";
         throw TerminalException{1};
@@ -671,8 +671,8 @@ private:
     std::vector<MyMatrix<Tint>> ListSpaces2 = f_get_list_spaces(eRec2.PlaneExpr);
     MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
     for (size_t iSpace=0; iSpace<ListSpaces1.size(); iSpace++) {
-      MyMatrix<Tint> eSpace1_img = ListSpaces1[i] * TheEquivInv;
-      MyMatrix<Tint> const& eSpace2 = ListSpaces2[i];
+      MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
+      MyMatrix<Tint> const& eSpace2 = ListSpaces2[iSpace];
       if (!TestEqualitySpace(eSpace1_img, eSpace2)) {
         std::cerr << "The space are not correctly mapped\n";
         throw TerminalException{1};
@@ -691,8 +691,6 @@ private:
     std::cerr << "Failed to have a valid input choice in f_equiv\n";
     throw TerminalException{1};
   }
-
-  
   //
   // The function using choice integer input
   //
@@ -751,14 +749,14 @@ private:
     MyMatrix<Tint> const& TheRet = *optB;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
-    MyMatrix<T> eProd = TheRet_T * Qmat1 * TheRet_T.transpose();
-    if (eProd != Qmat2) {
+    MyMatrix<T> eProdB = TheRet_T * Qmat1 * TheRet_T.transpose();
+    if (eProdB != Qmat2) {
       std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> EquivRatInv = Inverse(EquivRat);
-    MyMatrix<Tint> Plane1_img = Plane1 * EquivRatInv;
-    if (!TestEqualitySpace(Plane1_img, Plane2)) {
+    MyMatrix<Tint> EquivRatInvB = Inverse(EquivRat);
+    MyMatrix<Tint> Plane1_imgB = Plane1 * EquivRatInvB;
+    if (!TestEqualitySpace(Plane1_imgB, Plane2)) {
       std::cerr << "Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
@@ -923,7 +921,7 @@ private:
           for (auto & eCos : ListRightCosets) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-            if (EvaluationQuadForm(Qmat, eVectC) != 0) {
+            if (EvaluationQuadForm(Qmat, eVectC_T) != 0) {
               std::cerr << "eVectC is not isotropic\n";
               throw TerminalException{1};
             }
@@ -1023,7 +1021,7 @@ public:
     std::vector<MyMatrix<T>> GRP2_T = eRec.MapOrthogonalSublatticeGroup(GRP1);
     std::vector<MyMatrix<Tint>> ListMat = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2_T, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    for (auto & eMat_T : ListMat_T) {
+    for (auto & eMat : ListMat) {
       MyMatrix<T> eMat_T = UniversalMatrixConversion<T,Tint>(eMat);
       MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
       if (eProd != Qmat) {
@@ -1076,8 +1074,10 @@ public:
     MyMatrix<T> EquivRat = get_equiv_rat();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
-    MyVector<Tint> v_EquivRatInv = EquivRatInv.transpose() * v1;
-    if (v_EquivRatInv != v2) {
+    MyVector<T> v1_T = UniversalVectorConversion<T,Tint>(v1);
+    MyVector<T> v2_T = UniversalVectorConversion<T,Tint>(v2);
+    MyVector<T> v_EquivRatInv = EquivRatInv.transpose() * v1_T;
+    if (v_EquivRatInv != v2_T) {
       std::cerr << "The vector v1 is not mapped correctly\n";
       throw TerminalException{1};
     }
@@ -1092,14 +1092,14 @@ public:
     MyMatrix<Tint> const& TheRet = *optB;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
-    MyMatrix<T> eProd = TheRet_T * Qmat1 * TheRet_T.transpose();
-    if (eProd != Qmat2) {
+    MyMatrix<T> eProd = TheRet_T * Q1 * TheRet_T.transpose();
+    if (eProd != Q2) {
       std::cerr << "The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
-    MyMatrix<T> EquivRatInv = Inverse(EquivRat);
-    MyVector<Tint> v_EquivRatInv = EquivRatInv.transpose() * v1;
-    if (v_EquivRatInv != v2) {
+    MyMatrix<Tint> TheRetInv = Inverse(TheRet);
+    MyVector<Tint> v_TheRetInv = TheRetInv.transpose() * v1;
+    if (v_TheRetInv != v2) {
       std::cerr << "The vector v1 is not mapped correctly\n";
       throw TerminalException{1};
     }
@@ -1123,8 +1123,8 @@ public:
       MyMatrix<Tint> eGenB = FullBasisInv * eGen * FullBasis;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
-      MyMatrix<T> eProd = eGenB_T * Qmat * eGenB_T.transpose();
-      if (eProd != Qmat) {
+      MyMatrix<T> eProd = eGenB_T * Q * eGenB_T.transpose();
+      if (eProd != Q) {
         std::cerr << "eGenB should preserve Qmat\n";
         throw TerminalException{1};
       }

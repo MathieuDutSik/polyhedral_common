@@ -453,7 +453,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
             eSolution_T(u+4) = eClass4(u);
           }
 #ifdef DEBUG_APPROXIMATE_MODELS
-          T eNorm = EvaluationQuadForm(Qmat, eSolution);
+          T eNorm = EvaluationQuadForm(Qmat, eSolution_T);
           if (eNorm != X) {
             std::cerr << "eNorm / X is inconsistent\n";
             throw TerminalException{1};
@@ -827,7 +827,7 @@ MyMatrix<T> GetTwoEmbedding(MyMatrix<T> const& eBlock) {
 #ifdef DEBUG_APPROXIMATE_MODELS
   MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
   MyMatrix<T> eProd = eEmbed * TwoPlanes * eEmbed.transpose();
-  if (ePRod != eBlock) {
+  if (eProd != eBlock) {
     std::cerr << "eEmbed does not provide an embedding\n";
     throw TerminalException{1};
   }
@@ -958,7 +958,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     for (auto & eGen_T : stab_right_coset.list_gen) {
       MyMatrix<T> fGen_T = eProdEmbed * eGen_T * eProdEmbedInv;
 #ifdef DEBUG_APPROXIMATE_MODELS
-      if (!IsIntegralMatrix(fGen)) {
+      if (!IsIntegralMatrix(fGen_T)) {
         std::cerr << "fGen should be integral\n";
         throw TerminalException{1};
       }
