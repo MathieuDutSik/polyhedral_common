@@ -1501,9 +1501,14 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
       ListMatr, helper, TheSpace, f_stab, os);
 }
 
+template<typename T>
+struct Stab_RightCoset {
+  std::vector<MyMatrix<T>> list_gen;
+  CosetDescription<T> coset_desc;
+};
+
 template <typename T, typename Tgroup, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>>
-LinearSpace_Stabilizer_RightCoset_Kernel(
+Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
     std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::ostream &os) {
   using Treturn = typename Thelper::Treturn;
@@ -1552,13 +1557,6 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
   return ListMatr_C;
 }
 
-template<typename T>
-struct Stab_RightCoset {
-  std::vector<MyMatrix<T>> list_gen;
-  CosetDescription<T> coset_desc;
-};
-
-
 template <typename T, typename Tgroup, typename Thelper>
 Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> const &ListMatr,
                                   Thelper const &helper,
@@ -1574,18 +1572,18 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> co
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
   MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
   Thelper helper_new = TransformHelper(helper, Pmat_T);
-  std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pairB =
+  Stab_RightCoset<T> pairB =
       LinearSpace_Stabilizer_RightCoset_Kernel<T, Tgroup, Thelper>(
           ListMatrNew, helper_new, TheSpace_C, os);
   std::vector<MyMatrix<T>> ListMatr_C;
-  for (auto &eMatr_B : pairB.first) {
+  for (auto &eMatr_B : pairB.list_gen) {
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
     ListMatr_C.push_back(eMatr_C);
   }
   if (ListMatr_C.size() == 0) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
-  CosetDescription<T> coset = pairB.second;
+  CosetDescription<T> coset = pairB.coset_desc;
   coset.conjugate(Pmat_T);
   return {ListMatr_C, coset};
 }
@@ -2004,8 +2002,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
 }
 
 template <typename T, typename Tgroup>
-std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>>
-LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
+Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
     std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
     std::ostream &os) {
   static_assert(is_ring_field<T>::value,
@@ -2277,16 +2274,16 @@ LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
   }
   using Thelper = FiniteMatrixGroupHelper<T, Telt>;
   Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt>(EXT_T);
-  std::pair<std::vector<MyMatrix<T>>, CosetDescription<T>> pair =
+  Stab_RightCoset<T> pair =
       LinPolytopeIntegral_Automorphism_RightCoset_Subspaces<T, Tgroup>(
           ListMatrGen, EXT_T, os);
   std::vector<Telt> ListPermGens;
-  for (auto &eMatr : pair.first)
+  for (auto &eMatr : pair.list_gen)
     ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
         helper, eMatr, os));
   Tgroup GRPret(ListPermGens, nbVert);
   std::vector<Telt> RightCoset;
-  for (auto eMatr : pair.second) {
+  for (auto eMatr : pair.coset_desc) {
     Telt eRepr =
         GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
     RightCoset.push_back(eRepr);
