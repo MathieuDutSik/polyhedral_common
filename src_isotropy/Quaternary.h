@@ -420,26 +420,45 @@ MyVector<T> dim4_pair_legendre_iterate_solution(MyVector<T> const& a, std::vecto
     return true;
   };
   auto get_solution=[&](T const& t) -> MyVector<T> {
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: t=" << t << "\n";
+#endif
     MyVector<T> a12(3);
     a12(0) = a1;
     a12(1) = a2;
     a12(2) = -t;
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: a12=" << StringVectorGAP(a12) << "\n";
+#endif
     std::optional<MyVector<T>> opt12 = TernaryIsotropicVectorDiagonal(a12, os);
     MyVector<T> V12 = unfold_opt(opt12, "opt12 should be solvable");
 #ifdef DEBUG_QUATERNARY
+    os << "QUAD: V12=" << StringVectorGAP(V12) << "\n";
     T sum12 = a1 * V12(0) * V12(0) + a2 *V12(1) * V12(1) - t * V12(2) * V12(2);
     if (sum12 != 0) {
       std::cerr << "V12 should be an isotropic vector\n";
       throw TerminalException{1};
     }
 #endif
+    // Special case allows early termination of the computation.
+    // If we did not terminate early, we could get a zero vector
+    if (V12(2) == 0) {
+      MyVector<T> Vret = ZeroVector<T>(4);
+      Vret(0) = V12(0);
+      Vret(1) = V12(1);
+      return Vret;
+    }
     MyVector<T> a34(3);
     a34(0) = a3;
     a34(1) = a4;
     a34(2) = t;
+#ifdef DEBUG_QUATERNARY
+    os << "QUAD: a34=" << StringVectorGAP(a34) << "\n";
+#endif
     std::optional<MyVector<T>> opt34 = TernaryIsotropicVectorDiagonal(a34, os);
     MyVector<T> V34 = unfold_opt(opt34, "opt34 should be solvable");
 #ifdef DEBUG_QUATERNARY
+    os << "QUAD: V34=" << StringVectorGAP(V34) << "\n";
     T sum34 = a3 * V34(0) * V34(0) + a4 *V34(1) * V34(1) + t * V34(2) * V34(2);
     if (sum34 != 0) {
       std::cerr << "V34 should be an isotropic vector\n";
@@ -486,7 +505,14 @@ MyVector<T> dim4_compute_solution(MyVector<T> const& a, std::vector<T> const& pr
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: q=" << q << "\n";
 #endif
-  return dim4_pair_legendre_iterate_solution(a, primes, q, os);
+  MyVector<T> V = dim4_pair_legendre_iterate_solution(a, primes, q, os);
+#ifdef DEBUG_QUATERNARY
+  if (IsZeroVector(V)) {
+    std::cerr << "QUAD: We found a zero vector\n";
+    throw TerminalException{1};
+  }
+#endif
+  return V;
 }
 
 
@@ -512,6 +538,13 @@ std::optional<MyVector<T>> QuaternaryIsotropicVectorDiagonal(MyVector<T> const& 
   os << "QUAD: QuaternaryIsotropicVector, we have diag\n";
 #endif
   std::vector<T> primes = get_local_primes(a, os);
+#ifdef DEBUG_QUATERNARY
+  os << "QUAD: primes =";
+  for (auto & p : primes) {
+    os << " " << p;
+  }
+  os << "\n";
+#endif
   bool test = determine_solvability_dim4(a, primes, os);
   if (!test) {
     return {};
@@ -532,14 +565,18 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
   if (!opt) {
     return {};
   }
-  MyVector<Tring> sol1 = *opt;
+  MyVector<Tring> const& sol1 = *opt;
   MyVector<T> sol2 = UniversalVectorConversion<T,Tring>(sol1);
   MyVector<T> sol3 = pair1.first.transpose() * sol2;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: sol3=" << StringVector(sol3) << "\n";
   T sum3 = EvaluationQuadForm(M, sol3);
   if (sum3 != 0) {
-    std::cerr << "LEG: sol3 is not a solution of the equation\n";
+    std::cerr << "QUAD: sol3 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+  if (IsZeroVector(sol3)) {
+    std::cerr << "QUAD: sol3 should be a non-zero vector\n";
     throw TerminalException{1};
   }
 #endif

@@ -99,6 +99,10 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector
 
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const& M, std::ostream& os) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: INDEF_FindIsotropic, M=\n";
+  WriteMatrix(os, M);
+#endif
   std::optional<MyVector<T>> opt = FindIsotropic(M, os);
   if (opt) {
     MyVector<T> const& eV = *opt;

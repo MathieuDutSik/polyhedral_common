@@ -63,6 +63,7 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
   a_quad(0) = a(2);
   a_quad(1) = a(3);
   a_quad(2) = a(4);
+  MyVector<T> iso_fifth = ZeroVector<T>(5);
   while(true) {
     a_tern(2) = -t;
     a_quad(3) = t;
@@ -72,13 +73,19 @@ MyVector<T> solve_fifth_equation(MyVector<T> const& a, std::ostream& os) {
 #endif
     std::optional<MyVector<T>> opt_tern = TernaryIsotropicVectorDiagonal(a_tern, os);
     if (opt_tern) {
-      MyVector<T> iso_tern = *opt_tern;
+      MyVector<T> const& iso_tern = *opt_tern;
+      // If the last entry is zero there then we can terminate early.
+      // Also, continuing could lead us to a zero vector which would be unfortunate
+      T val_tern = iso_tern(2);
+      if (val_tern == 0) {
+        iso_fifth(0) = iso_tern(0);
+        iso_fifth(1) = iso_tern(1);
+        return iso_fifth;
+      }
       std::optional<MyVector<T>> opt_quad = QuaternaryIsotropicVectorDiagonal(a_quad, os);
       if (opt_quad) {
-        MyVector<T> iso_quad = *opt_quad;
-        T val_tern = iso_tern(2);
+        MyVector<T> const& iso_quad = *opt_quad;
         T val_quad = iso_quad(3);
-        MyVector<T> iso_fifth(5);
         for (int u=0; u<2; u++) {
           iso_fifth(u) = iso_tern(u) * val_quad;
         }
@@ -222,6 +229,10 @@ MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
     std::cerr << "FIFTH: sol3 is not a solution of the equation\n";
     throw TerminalException{1};
   }
+  if (IsZeroVector(sol3)) {
+    std::cerr << "FIFTH: sol3 should be non-zero\n";
+    throw TerminalException{1};
+  }
 #endif
   return sol3;
 }
@@ -253,6 +264,10 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostrea
       std::cerr << "FIFTH: v2 is not a solution of the equation\n";
       throw TerminalException{1};
     }
+    if (IsZeroVector(v2)) {
+      std::cerr << "FIFTH: v2 should be non-zero 1\n";
+      throw TerminalException{1};
+    }
 #endif
     return v2;
   }
@@ -270,6 +285,10 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostrea
   T sum2 = EvaluationQuadForm(Q, v2);
   if (sum2 != 0) {
     std::cerr << "FIFTH: v2 is not a solution of the equation\n";
+    throw TerminalException{1};
+  }
+  if (IsZeroVector(v2)) {
+    std::cerr << "FIFTH: v2 should be non-zero 2\n";
     throw TerminalException{1};
   }
 #endif

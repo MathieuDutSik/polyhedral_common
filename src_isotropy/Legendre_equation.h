@@ -818,6 +818,10 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
     std::cerr << "LEG: sol4 is not a solution of the equation\n";
     throw TerminalException{1};
   }
+  if (IsZeroVector(sol4)) {
+    std::cerr << "LEG: sol4 should be a non-zero vector\n";
+    throw TerminalException{1};
+  }
 #endif
   return sol4;
 }

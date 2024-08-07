@@ -214,7 +214,7 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
   T c = M(1, 1);
   // quadratic form q(x,y) = a x^2 + 2 b xy + c y^2
   // equation q(x,y) = 0
-  MyVector<T> V(2);
+  MyVector<T> V = ZeroVector<T>(2);
   // Special case a = 0
   if (a == 0) {
     V(0) = 1;
@@ -234,6 +234,12 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
     T const &sqrt_Delta = *opt;
     V(0) = -b + sqrt_Delta;
     V(1) = a;
+#ifdef DEBUG_ISOTROPIC
+    if (IsZeroVector(V)) {
+      std::cerr << "ISOTROP: V should be non-zero\n";
+      throw TerminalException{1};
+    }
+#endif
     return V;
   }
   return {};
@@ -293,8 +299,10 @@ std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::o
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
     if (opt) {
       MyVector<T> const &eV = *opt;
-      MyVector<T> fV = Pw.transpose() * eV;
-      return fV;
+      if (!IsZeroVector(eV)) {
+        MyVector<T> fV = Pw.transpose() * eV;
+        return fV;
+      }
     }
     MyMatrix<T> U = get_random_int_matrix<T>(n);
     Pw = U * Pw;
