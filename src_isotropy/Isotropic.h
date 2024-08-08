@@ -316,6 +316,14 @@ std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::o
 template <typename T>
 std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
+#ifdef DEBUG_ISOTROPIC
+  int rnk = RankMat(M);
+  if (rnk != n) {
+    std::cerr << "ISOTROP: FindIsotropicExact failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
+    throw TerminalException{1};
+  }
+#endif
   if (n == 1) {
     return FindIsotropicRankOne(M);
   }
@@ -334,6 +342,14 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream
 template <typename T>
 std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
+#ifdef DEBUG_ISOTROPIC
+  int rnk = RankMat(M);
+  if (rnk != n) {
+    std::cerr << "ISOTROP: FindIsotropic failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
+    throw TerminalException{1};
+  }
+#endif
   if (n <= 2) {
     return FindIsotropicExact(M, os);
   }
@@ -349,6 +365,14 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
 template <typename T>
 bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
+#ifdef DEBUG_ISOTROPIC
+  int rnk = RankMat(M);
+  if (rnk != n) {
+    std::cerr << "ISOTROP: is_isotropic failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
+    throw TerminalException{1};
+  }
+#endif
   if (n == 1) {
     std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
     return opt.has_value();
@@ -358,11 +382,9 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
     return opt.has_value();
   }
   if (n == 3) {
-    // Apply first the Legendre theorem
     return ternary_has_isotropic_vector(M, os);
   }
   if (n == 4) {
-    // Apply the quaternary stuff
     return quaternary_has_isotropic_vector(M, os);
   }
   return true;

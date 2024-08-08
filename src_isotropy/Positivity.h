@@ -105,11 +105,17 @@ template <typename T>
 DiagSymMat<T>
 DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  int n = SymMat.rows();
 #ifdef DEBUG_POSITIVITY
   std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
   WriteMatrix(std::cerr, SymMat);
+  int rnk = RankMat(SymMat);
+  if (rnk != n) {
+    std::cerr << "POS: Error in DiagonalizeNonDegenerateSymmetricMatrix\n";
+    std::cerr << "POS: rnk=" << rnk << " n=" << n << "\n";
+    throw TerminalException{1};
+  }
 #endif
-  int n = SymMat.rows();
   if (n == 0) {
     return {{}, {}, 0, 0, 0};
   }
