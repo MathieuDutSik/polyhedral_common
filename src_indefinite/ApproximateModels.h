@@ -233,7 +233,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   std::vector<MyMatrix<Tint>> GRPstart;
   InternalEichler<T,Tint> ie{Qmat, Gmat, ListClasses, GRPstart};
   std::shared_ptr<InternalEichler<T,Tint>> shr_ptr = std::make_shared<InternalEichler<T,Tint>>(ie);
-  std::function<void(std::vector<MyMatrix<Tint>> const&, std::ostream&)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr, std::ostream& os) -> void {
+  std::function<void(std::vector<MyMatrix<Tint>> const&, std::ostream&)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr, [[maybe_unused]] std::ostream& os) -> void {
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
@@ -279,7 +279,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     shr_ptr->ListClasses = ListClasses;
   };
-  std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=](std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+  std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
@@ -386,7 +386,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   // (L,y) = div(y) Z.
   // For each v in L* we can find smallest d such that w = dv in L.
   // And we then have div(w) = d
-  std::function<std::vector<MyVector<Tint>>(T const&, std::ostream&)> EnumerateVectorOverDiscriminant = [=](T const& X,std::ostream& os) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(T const&, std::ostream&)> EnumerateVectorOverDiscriminant = [=](T const& X,[[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
     // For each vector v in M* / M
     // We want (x, v) divided by d.
     //
@@ -479,7 +479,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     return ListSolution;
   };
-  std::function<std::vector<MyVector<Tint>>(T const&,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, std::ostream& os) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(T const&,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
     if (X == 0) {
       return EnumerateVectorOverDiscriminant(0, os);
     }
@@ -495,7 +495,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     return ListSolution;
   };
-  std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, std::ostream& os) -> std::optional<MyVector<Tint>> {
+  std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
     T two(2);
     if (ResInt(X, two) == T(1)) {
       return {};
@@ -933,11 +933,11 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     std::shared_ptr<InternalApproxCaseA<T,Tint>> shr_ptr_a = std::make_shared<InternalApproxCaseA<T,Tint>>(casea);
     std::vector<MyMatrix<Tint>> GRPeasy = GetEasyIsometries<T,Tint>(QmatRed, os);
     shr_ptr_a->approx.SetListClassesOrbitwise(GRPeasy, os);
-    std::function<void(std::vector<MyMatrix<Tint>>,std::ostream&)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr, std::ostream& os) -> void {
+    std::function<void(std::vector<MyMatrix<Tint>>,std::ostream&)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr, [[maybe_unused]] std::ostream& os) -> void {
       std::cerr << "That function should not be called\n";
       throw TerminalException{1};
     };
-    std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=](std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+    std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
       std::vector<MyMatrix<Tint>> ListGenerators;
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
@@ -956,7 +956,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       }
       return ListGenerators;
     };
-    std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, std::ostream& os) -> std::vector<MyVector<Tint>> {
+    std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
       std::vector<MyVector<Tint>> ListSolution;
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       for (auto & eVect : shr_ptr_a->approx.GetCoveringOrbitRepresentatives(X, os)) {
@@ -973,7 +973,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       }
       return ListSolution;
     };
-    std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, std::ostream& os) -> std::optional<MyVector<Tint>> {
+    std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       std::optional<MyVector<Tint>> opt = shr_ptr_a->approx.GetOneOrbitRepresentative(X, os);
       if (opt) {
@@ -1059,19 +1059,19 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
 #endif
 
 
-    std::function<void(std::vector<MyMatrix<Tint>>,std::ostream&)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr, std::ostream& os) -> void {
+    std::function<void(std::vector<MyMatrix<Tint>>,std::ostream&)> SetListClassesOrbitwise = [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const& GRPmatr, [[maybe_unused]] std::ostream& os) -> void {
       std::cerr << "That function should not be called\n";
       throw TerminalException{1};
     };
-    std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=](std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+    std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      std::cerr << "MODEL: Beginning of GetApproximateGroup\n";
+      os << "MODEL: Beginning of GetApproximateGroup\n";
 #endif
       return shr_ptr_b->ListGenerators;
     };
-    std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, std::ostream& os) -> std::vector<MyVector<Tint>> {
+    std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      std::cerr << "MODEL: Beginning of GetCoveringOrbitRepresentatives\n";
+      os << "MODEL: Beginning of GetCoveringOrbitRepresentatives X=" << X << "\n";
 #endif
       std::vector<MyVector<Tint>> ListRepr;
       for (auto & eRepr : shr_ptr_b->approx.GetCoveringOrbitRepresentatives(X, os)) {
@@ -1095,9 +1095,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       }
       return ListRepr;
     };
-    std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, std::ostream& os) -> std::optional<MyVector<Tint>> {
+    std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      std::cerr << "MODEL: Beginning of GetOneOrbitRepresentative\n";
+      os << "MODEL: Beginning of GetOneOrbitRepresentative X=" << X << "\n";
 #endif
       std::optional<MyVector<Tint>> opt = shr_ptr_b->approx.GetOneOrbitRepresentative(X, os);
       if (!opt) {
@@ -1143,6 +1143,9 @@ struct FirstNorm {
 template<typename T, typename Tint>
 FirstNorm<T,Tint> GetFirstNorm(ApproximateModel<T,Tint> const& approx, std::ostream& os) {
   T X = 1;
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: Beginning of GetFirstNorm\n";
+#endif
   while(true) {
     std::optional<MyVector<Tint>> opt = approx.GetOneOrbitRepresentative(X, os);
     if (opt) {
