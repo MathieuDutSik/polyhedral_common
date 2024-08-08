@@ -1476,7 +1476,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: Leaving IsStabilzing: true\n";
+    os << "MAT_GRP: Leaving IsStabilizing: true\n";
 #endif
     return true;
   };
@@ -1518,8 +1518,16 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
     return MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(eret, GRP, helper,
                                                          eFace, os);
   };
-  return LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Before LinearSpace_StabilizerGen_Kernel\n";
+#endif
+  std::vector<MyMatrix<T>> ListGen =
+    LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
       ListMatr, helper, TheSpace, f_stab, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
+#endif
+  return ListGen;
 }
 
 template<typename T>
@@ -1543,9 +1551,15 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
     coset.insert(pair.second);
     return pair.first;
   };
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Before LinearSpace_StabilizerGen_Kernel\n";
+#endif
   std::vector<MyMatrix<T>> ListMatrRet =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           ListMatr, helper, TheSpace, f_stab, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel (return ListMatrRet,coset)\n";
+#endif
   return {ListMatrRet, coset};
 }
 
@@ -1606,6 +1620,9 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(std::vector<MyMatrix<T>> co
   }
   CosetDescription<T> coset = pairB.coset_desc;
   coset.conjugate(Pmat_T);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Returning from LinearSpace_Stabilizer_RightCoset\n";
+#endif
   return {ListMatr_C, coset};
 }
 
@@ -2047,9 +2064,14 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
   FiniteMatrixGroupHelper<T, Telt> helper =
       ComputeFiniteMatrixGroupHelper<T, Telt>(EXTbas);
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
-
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, before LinearSpace_Stabilizer_RightCoset\n";
+#endif
   Stab_RightCoset<T> pair = LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGens, helper,
                                                    LattToStab, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, after LinearSpace_Stabilizer_RightCoset\n";
+#endif
   std::vector<MyMatrix<T>> ListMatrGensB;
   for (auto &eGen : pair.list_gen) {
     MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
@@ -2189,14 +2211,20 @@ std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(int const& n, std::v
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
-    std::cerr << "The matrix InvInvariantSpace should be integral\n";
+    std::cerr << "MAT_GRP: The matrix InvInvariantSpace should be integral\n";
     throw TerminalException{1};
   }
 #endif
   std::vector<MyMatrix<T>> LGen2 =
     ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
   GeneralMatrixGroupHelper<T,Telt> helper{n};
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_RightCosets_General, before LinearSpace_Stabilizer_RightCoset\n";
+#endif
   Stab_RightCoset<T> stab_rightcoset = LinearSpace_Stabilizer_RightCoset<T, Tgroup, GeneralMatrixGroupHelper<T,Telt>>(LGen2, helper, InvInvariantSpace, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_RightCosets_General, after LinearSpace_Stabilizer_RightCoset\n";
+#endif
   using Iter = typename CosetDescription<T>::const_iterator;
   Iter iter = stab_rightcoset.coset_desc.begin();
   Iter end = stab_rightcoset.coset_desc.end();

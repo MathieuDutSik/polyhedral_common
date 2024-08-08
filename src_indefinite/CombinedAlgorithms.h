@@ -483,16 +483,16 @@ private:
       ListGenerators.push_back(eGen);
     };
     ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat, os);
-    FirstNorm<T,Tint> first_norm = GetFirstNorm(approx);
+    FirstNorm<T,Tint> first_norm = GetFirstNorm(approx, os);
     T const& X = first_norm.X;
     MyVector<Tint> const& v1 = first_norm.eVect;
-    for (auto & eGen : approx.GetApproximateGroup()) {
+    for (auto & eGen : approx.GetApproximateGroup(os)) {
       f_insert(eGen);
     }
     for (auto & eGen : INDEF_FORM_StabilizerVector(Qmat, v1)) {
       f_insert(eGen);
     }
-    for (auto & v2 : approx.GetCoveringOrbitRepresentatives(X)) {
+    for (auto & v2 : approx.GetCoveringOrbitRepresentatives(X, os)) {
       std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat, Qmat, v1, v2);
       if (opt) {
         f_insert(*opt);
@@ -510,11 +510,11 @@ private:
       return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(eBlock1.mat, eBlock2.mat, os);
     }
     ApproximateModel<T,Tint> approx1 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat1, os);
-    FirstNorm<T,Tint> first_norm1 = GetFirstNorm(approx1);
+    FirstNorm<T,Tint> first_norm1 = GetFirstNorm(approx1, os);
     T const& X = first_norm1.X;
     MyVector<Tint> const& v1 = first_norm1.eVect;
     ApproximateModel<T,Tint> approx2 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat2, os);
-    std::vector<MyVector<Tint>> ListCand2 = approx2.GetCoveringOrbitRepresentatives(X);
+    std::vector<MyVector<Tint>> ListCand2 = approx2.GetCoveringOrbitRepresentatives(X, os);
     for (auto & v2 : ListCand2) {
       std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat1, Qmat2, v1, v2);
       if (opt) {
@@ -1007,7 +1007,7 @@ public:
       }
       ListRepr.push_back(fRepr);
     };
-    std::vector<MyVector<Tint>> ListCand = approx.GetCoveringOrbitRepresentatives(X);
+    std::vector<MyVector<Tint>> ListCand = approx.GetCoveringOrbitRepresentatives(X, os);
     for (auto & eCand : ListCand) {
       f_insert(eCand);
     }
