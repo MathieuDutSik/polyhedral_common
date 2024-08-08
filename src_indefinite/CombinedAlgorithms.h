@@ -487,12 +487,19 @@ private:
   DatabaseResultEquiStab<MyMatrix<T>, MyMatrix<Tint>> database;
 private:
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_Kernel(MyMatrix<T> const& Qmat) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Beginning of INDEF_FORM_AutomorphismGroup_Kernel with Qmat=\n";
+    WriteMatrix(os, Qmat);
+#endif
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
+#endif
     if (eBlock.h == 0) {
       return INDEF_FORM_AutomorphismGroup_PosNeg<T,Tint>(Qmat, os);
     }
     if (eBlock.h == 1) {
-      LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(Qmat, os);
+      return LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(Qmat, os);
     }
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto f_insert=[&](MyMatrix<Tint> const& eGen) -> void {
@@ -562,6 +569,10 @@ private:
     return {};
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_AutomorphismGroup_FullDim(MyMatrix<T> const& Qmat) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Beginning of INDEF_FORM_AutomorphismGroup_FullDim with Qmat=\n";
+    WriteMatrix(os, Qmat);
+#endif
     ResultReduction<T, Tint> ResRed =
       ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
     MyMatrix<T> const& QmatRed = ResRed.Mred;

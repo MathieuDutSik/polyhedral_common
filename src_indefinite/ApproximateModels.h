@@ -283,8 +283,8 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Beginning of GetApproximateGroup : 1\n";
 #endif
-    MyMatrix<T> Qmat = shr_ptr->Qmat;
-    int n = shr_ptr->Qmat.rows();
+    MyMatrix<T> const& Qmat = shr_ptr->Qmat;
+    int n = Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
     // We formulate it as (1/2) det U(x1,x2,x3,x4)
     // with U(x1,x2,x3,x4) = [ [x1 , -x4] , [x3 , x2] ]
@@ -411,6 +411,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     MyMatrix<T> const& Gmat = shr_ptr->Gmat;
+    std::vector<MyVector<Tint>> const& ListClasses = shr_ptr->ListClasses;
     int n = Qmat.rows();
     T two(2);
     if (ResInt(X, two) == T(1)) {
@@ -422,81 +423,89 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
     // The two hyperbolic planes are unimodular so for the discriminant, we only need
     // to consider the Gmat part.
-    MyMatrix<T> Ginv = Inverse(Gmat);
     std::vector<MyVector<Tint>> ListSolution;
-    for (auto & eClass1 : ListClasses) {
+    if (n > 4) {
+      MyMatrix<T> Ginv = Inverse(Gmat);
+      for (auto & eClass1 : ListClasses) {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: EnumerateVectorOverDiscriminant eClass1=" << StringVectorGAP(eClass1) << "\n";
+        os << "MODEL: EnumerateVectorOverDiscriminant eClass1=" << StringVectorGAP(eClass1) << "\n";
 #endif
-      // The vector eClass1 is defined modulo an element of Gmat Z^n
-      // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
-      // Thus eClass3 is defined modulo an element of d Z^n
-      // So, we can write v = eClass3 + d w
-      // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
-      // So, the problem is actually linear.
-      MyVector<T> eClass1_T = UniversalVectorConversion<T,Tint>(eClass1);
-      MyVector<T> eClass2 = Ginv * eClass1_T;
-      T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
-      T DivD = GetDenominator(DivD_frac);
-      T DivD_sqr = DivD * DivD;
-      MyVector<T> eClass3 = DivD * eClass2;
-      T X_res1 = ResInt(Xdiv2, DivD);
-      T X_res2 = ResInt(Xdiv2, DivD_sqr);
-      T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
-      T Aclass3_res1 = ResInt(Aclass3_norm, DivD);
-      T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
+        // The vector eClass1 is defined modulo an element of Gmat Z^n
+        // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
+        // Thus eClass3 is defined modulo an element of d Z^n
+        // So, we can write v = eClass3 + d w
+        // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
+        // So, the problem is actually linear.
+        MyVector<T> eClass1_T = UniversalVectorConversion<T,Tint>(eClass1);
+        MyVector<T> eClass2 = Ginv * eClass1_T;
+        T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
+        T DivD = GetDenominator(DivD_frac);
+        T DivD_sqr = DivD * DivD;
+        MyVector<T> eClass3 = DivD * eClass2;
+        T X_res1 = ResInt(Xdiv2, DivD);
+        T X_res2 = ResInt(Xdiv2, DivD_sqr);
+        T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
+        T Aclass3_res1 = ResInt(Aclass3_norm, DivD);
+        T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_norm=" << Aclass3_norm << "\n";
+        os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_norm=" << Aclass3_norm << "\n";
 #endif
-      if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
-        // and so
-        // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
-        T diff = (X_res2 - Aclass3_res2) / DivD;
-        MyVector<T> eProd = Gmat * eClass3;
-        GCD_dot<T> eRec = ComputeGcdDot(eProd);
-        auto iife_quot=[&]() -> T {
-          if (eRec.gcd == 0) {
-            return T(0);
-          } else {
-            return diff / eRec.gcd;
+        if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
+          // and so
+          // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
+          T diff = (X_res2 - Aclass3_res2) / DivD;
+          MyVector<T> eProd = Gmat * eClass3;
+          GCD_dot<T> eRec = ComputeGcdDot(eProd);
+          auto iife_quot=[&]() -> T {
+            if (eRec.gcd == 0) {
+              return T(0);
+            } else {
+              return diff / eRec.gcd;
+            }
+          };
+          T quot = iife_quot();
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: EnumerateVectorOverDiscriminant quot=" << quot << "\n";
+#endif
+          if (IsInteger(quot)) {
+            MyVector<T> w = quot * eRec.V;
+            MyVector<T> eClass4 = eClass3 + DivD * w;
+            T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
+            T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);
+#ifdef DEBUG_APPROXIMATE_MODELS
+            if (Aclass4_res2 != X_res2) {
+              std::cerr << "A bug to resolve\n";
+              throw TerminalException{1};
+            }
+#endif
+            T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
+#ifdef DEBUG_APPROXIMATE_MODELS
+            os << "MODEL: EnumerateVectorOverDiscriminant u=" << u << "\n";
+#endif
+            MyVector<T> eSolution_T = ZeroVector<T>(n);
+            eSolution_T(2) = DivD;
+            eSolution_T(3) = DivD * u;
+            for (int u=0; u<n-4; u++) {
+              eSolution_T(u+4) = eClass4(u);
+            }
+#ifdef DEBUG_APPROXIMATE_MODELS
+            T eNorm = EvaluationQuadForm(Qmat, eSolution_T);
+            if (eNorm != X) {
+              std::cerr << "eNorm / X is inconsistent\n";
+              throw TerminalException{1};
+            }
+#endif
+            MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
+            ListSolution.push_back(eSolution);
           }
-        };
-        T quot = iife_quot();
-#ifdef DEBUG_APPROXIMATE_MODELS
-        os << "MODEL: EnumerateVectorOverDiscriminant quot=" << quot << "\n";
-#endif
-        if (IsInteger(quot)) {
-          MyVector<T> w = quot * eRec.V;
-          MyVector<T> eClass4 = eClass3 + DivD * w;
-          T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
-          T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);
-#ifdef DEBUG_APPROXIMATE_MODELS
-          if (Aclass4_res2 != X_res2) {
-            std::cerr << "A bug to resolve\n";
-            throw TerminalException{1};
-          }
-#endif
-          T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
-#ifdef DEBUG_APPROXIMATE_MODELS
-          os << "MODEL: EnumerateVectorOverDiscriminant u=" << u << "\n";
-#endif
-          MyVector<T> eSolution_T = ZeroVector<T>(n);
-          eSolution_T(2) = DivD;
-          eSolution_T(3) = DivD * u;
-          for (int u=0; u<n-4; u++) {
-            eSolution_T(u+4) = eClass4(u);
-          }
-#ifdef DEBUG_APPROXIMATE_MODELS
-          T eNorm = EvaluationQuadForm(Qmat, eSolution_T);
-          if (eNorm != X) {
-            std::cerr << "eNorm / X is inconsistent\n";
-            throw TerminalException{1};
-          }
-#endif
-          MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
-          ListSolution.push_back(eSolution);
         }
       }
+    } else {
+      MyVector<T> eSolution_T = ZeroVector<T>(4);
+      eSolution_T(2) = 1;
+      eSolution_T(3) = Xdiv2;
+      MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
+      ListSolution.push_back(eSolution);
     }
     return ListSolution;
   };
@@ -835,6 +844,10 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
 
 template<typename T, typename Tint>
 MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& os) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: Beginning of GetEichlerHyperplaneBasis Qmat=\n";
+  WriteMatrix(os, Qmat);
+#endif
   MyMatrix<Tint> Basis1 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat, os));
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: GetEichlerHyperplaneBasis, Basis1=\n";
