@@ -403,6 +403,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     // We are only interested on the value modulo 2d^2 of A on those vectors. So, it is a finite problem.
     // But it is a hard one as the search space might be very large.
     //
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Beginning of EnumerateVectorOverDiscriminant X=" << X << "\n";
+#endif
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     MyMatrix<T> const& Gmat = shr_ptr->Gmat;
     int n = Qmat.rows();
@@ -411,11 +414,17 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       return {};
     }
     T Xdiv2 = X / 2;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: EnumerateVectorOverDiscriminant Xdiv2=" << Xdiv2 << "\n";
+#endif
     // The two hyperbolic planes are unimodular so for the discriminant, we only need
     // to consider the Gmat part.
     MyMatrix<T> Ginv = Inverse(Gmat);
     std::vector<MyVector<Tint>> ListSolution;
     for (auto & eClass1 : ListClasses) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: EnumerateVectorOverDiscriminant eClass1=" << StringVectorGAP(eClass1) << "\n";
+#endif
       // The vector eClass1 is defined modulo an element of Gmat Z^n
       // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
       // Thus eClass3 is defined modulo an element of d Z^n
@@ -433,6 +442,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
       T Aclass3_res1 = ResInt(Aclass3_norm, DivD);
       T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_norm=" << Aclass3_norm << "\n";
+#endif
       if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
         // and so
         // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
@@ -447,6 +459,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
           }
         };
         T quot = iife_quot();
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: EnumerateVectorOverDiscriminant quot=" << quot << "\n";
+#endif
         if (IsInteger(quot)) {
           MyVector<T> w = quot * eRec.V;
           MyVector<T> eClass4 = eClass3 + DivD * w;
@@ -459,6 +474,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
           }
 #endif
           T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: EnumerateVectorOverDiscriminant u=" << u << "\n";
+#endif
           MyVector<T> eSolution_T = ZeroVector<T>(n);
           eSolution_T(2) = DivD;
           eSolution_T(3) = DivD * u;
@@ -480,14 +498,29 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     return ListSolution;
   };
   std::function<std::vector<MyVector<Tint>>(T const&,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 1: X=" << X << "\n";
+#endif
     if (X == 0) {
       return EnumerateVectorOverDiscriminant(0, os);
     }
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Before GetSquareDivisor\n";
+#endif
     std::vector<T> ListDiv = GetSquareDivisors(X);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: After GetSquareDivisor\n";
+#endif
     std::vector<MyVector<Tint>> ListSolution;
     for (auto & eDiv_T : ListDiv) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: eDiv_T=" << eDiv_T << "\n";
+#endif
       Tint eDiv = UniversalScalarConversion<Tint,T>(eDiv_T);
-      T Xtarget = X / (eDiv * eDiv);
+      T Xtarget = X / (eDiv_T * eDiv_T);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Xtarget=" << Xtarget << "\n";
+#endif
       for (auto & eSol : EnumerateVectorOverDiscriminant(Xtarget, os)) {
         MyVector<Tint> eV = eDiv * eSol;
         ListSolution.push_back(eV);
@@ -496,13 +529,29 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     return ListSolution;
   };
   std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Beginning of GetOneOrbitRepresentative 1: X=" << X << "\n";
+#endif
     T two(2);
-    if (ResInt(X, two) == T(1)) {
+    T res = ResInt(X, two);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: GetOneOrbitRepresentative res=" << res << "\n";
+#endif
+    if (res == T(1)) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: No solution\n";
+#endif
       return {};
     }
     T Xdiv2 = X / 2;
-    MyMatrix<T> const& Qmat = shr_ptr->Gmat;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Xdiv2=" << Xdiv2 << "\n";
+#endif
+    MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: n=" << n << "\n";
+#endif
     MyVector<Tint> eSol = ZeroVector<Tint>(n);
     eSol(0) = 1;
     eSol(1) = Xdiv2;
@@ -957,6 +1006,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       return ListGenerators;
     };
     std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 2: X=" << X << "\n";
+#endif
       std::vector<MyVector<Tint>> ListSolution;
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       for (auto & eVect : shr_ptr_a->approx.GetCoveringOrbitRepresentatives(X, os)) {
@@ -974,6 +1026,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       return ListSolution;
     };
     std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Beginning of GetOneOrbitRepresentative 2: X=" << X << "\n";
+#endif
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       std::optional<MyVector<Tint>> opt = shr_ptr_a->approx.GetOneOrbitRepresentative(X, os);
       if (opt) {
@@ -1071,7 +1126,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     };
     std::function<std::vector<MyVector<Tint>>(T,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: Beginning of GetCoveringOrbitRepresentatives X=" << X << "\n";
+      os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 3: X=" << X << "\n";
 #endif
       std::vector<MyVector<Tint>> ListRepr;
       for (auto & eRepr : shr_ptr_b->approx.GetCoveringOrbitRepresentatives(X, os)) {
@@ -1097,9 +1152,12 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     };
     std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: Beginning of GetOneOrbitRepresentative X=" << X << "\n";
+      os << "MODEL: Beginning of GetOneOrbitRepresentative 3: X=" << X << "\n";
 #endif
       std::optional<MyVector<Tint>> opt = shr_ptr_b->approx.GetOneOrbitRepresentative(X, os);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: We have opt\n";
+#endif
       if (!opt) {
         return {};
       }
