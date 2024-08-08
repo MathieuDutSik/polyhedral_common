@@ -924,8 +924,15 @@ MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
   os << "MAT_GRP: Beginning of MatrixIntegral_PreImageSubgroup\n";
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  return permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
-      eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Before PreImageSubgroup\n";
+#endif
+  std::vector<MyMatrix<T>> ListGen =
+    permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: After PreImageSubgroup\n";
+#endif
+  return ListGen;
 }
 
 
@@ -946,11 +953,18 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  return permutalib::StabilizerMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Before StabilizerMatrixPermSubset\n";
+#endif
+  std::vector<MyMatrix<T>> ListGen = permutalib::StabilizerMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
       eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: After StabilizerMatrixPermSubset\n";
+#endif
+  return ListGen;
 }
 
-// We compute the stabilizer by applying the Schreier algorithm
+// We compute the stabilizer and right cosets by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<
     !has_determining_ext<Thelper>::value,
@@ -966,9 +980,16 @@ MatrixIntegral_Stabilizer_RightCoset(typename Thelper::Treturn const &eret,
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  return permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>,
-                                                          Tint>(
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Before StabilizerRightCosetMatrixPermSubset\n";
+#endif
+  std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
+    permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>,Tint>(
       eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: After StabilizerRightCosetMatrixPermSubset\n";
+#endif
+  return pair;
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -1921,7 +1942,7 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsEquivalence(eElt)) {
-    std::cer << "Error in LinearSpace_Equivalence_Kernel\n";
+    std::cerr << "Error in LinearSpace_Equivalence_Kernel\n";
     throw TerminalException{1};
   }
 #endif

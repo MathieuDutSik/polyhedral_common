@@ -919,6 +919,10 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
   using Telt = typename Tgroup::Telt;
   int n = Qmat.rows();
   MyMatrix<Tint> FullBasis = GetEichlerHyperplaneBasis<T,Tint>(Qmat, os);
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: INDEF_FORM_GetApproximateModel, FullBasis=\n";
+  WriteMatrix(os, FullBasis);
+#endif
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
   MyMatrix<T> QmatRed = FullBasis_T * Qmat * FullBasis_T.transpose();
   MyMatrix<T> Block11 = GetSubBlock11(QmatRed);
