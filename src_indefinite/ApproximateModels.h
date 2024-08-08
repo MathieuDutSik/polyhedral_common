@@ -99,10 +99,19 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const& Qmat, MyVector
 
 template<typename T, typename Tint>
 std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const& M, std::ostream& os) {
+  int rnk = RankMat(M);
+  int n = M.rows();
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: INDEF_FindIsotropic, M=\n";
   WriteMatrix(os, M);
+  os << "MODEL: rnk=" << rnk << " n=" << n << "\n";
 #endif
+  if (rnk < n) {
+    MyMatrix<T> NSP_T = NullspaceIntMat(M);
+    MyVector<T> eV_T = GetMatrixRow(NSP_T, 0);
+    MyVector<Tint> eV = UniversalVectorConversion<Tint,T>(eV_T);
+    return eV;
+  }
   std::optional<MyVector<T>> opt = FindIsotropic(M, os);
   if (opt) {
     MyVector<T> const& eV = *opt;
@@ -624,10 +633,16 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
 template<typename T, typename Tint>
 std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& Qmat, std::ostream& os) {
   int n = Qmat.rows();
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: Beginning of GetHyperbolicPlane, Qmat=\n";
+  WriteMatrix(os, Qmat);
+#endif
   std::set<MyVector<Tint>> SetVect;
   MyMatrix<Tint> ThePerturb = IdentityMat<Tint>(n);
 
+  int n_iter = 100;
   auto f_insert_vect=[&]() -> MyVector<Tint> {
+    int iter = 0;
     while(true) {
       MyMatrix<Tint> ePerturb = GetRandomMatrixPerturbation<Tint>(n);
       ThePerturb = ThePerturb * ePerturb;
@@ -639,14 +654,16 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
 #ifdef DEBUG_APPROXIMATE_MODELS
       T sum = EvaluationQuadForm<T,Tint>(Qmat, NewVect);
       if (sum != 0) {
-        std::cerr << "MODEL: P does not preserve the quadratic form\n";
+        std::cerr << "MODEL: NewVect is not an isotropic vector\n";
         throw TerminalException{1};
       }
+      os << "MODEL: GetHyperbolicPlane NewVect=" << StringVectorGAP(NewVect) << "\n";
 #endif
-      if (SetVect.count(NewVect) == 0) {
+      if (SetVect.count(NewVect) == 0 || iter == n_iter) {
         SetVect.insert(NewVect);
         return NewVect;
       }
+      iter += 1;
     }
   };
 
@@ -655,8 +672,14 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
     MyVector<T> prod = Qmat * NewVect_T;
     for (auto & eVect : SetVect) {
       MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
-      T scal = eVect_T.dot(NewVect_T);
+      T scal = eVect_T.dot(prod);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: has_non_orthogonal, scal=" << scal << "\n";
+#endif
       if (scal != 0) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: has_non_orthogonal, eVect=" << StringVectorGAP(eVect) << " NewVect=" << StringVectorGAP(NewVect) << "\n";
+#endif
         return true;
       }
     }
@@ -672,7 +695,10 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
     for (auto & eVect : SetVect) {
       MyVector<Tint> rVect = eVect;
       MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
-      T scal = eVect_T.dot(NewVect_T);
+      T scal = eVect_T.dot(prod);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: f_get_minimal, scal=" << scal << "\n";
+#endif
       if (scal < 0) {
         scal = -scal;
         rVect = - eVect;
@@ -690,6 +716,10 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
         }
       }
     }
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: f_get_minimal, min_scal=" << min_scal << "\n";
+    os << "MODEL: f_get_minimal, BestVect=" << StringVectorGAP(BestVect) << " NewVect=" << StringVectorGAP(NewVect) << "\n";
+#endif
     return {min_scal, BestVect};
   };
 
@@ -706,18 +736,35 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
       if (is_first) {
         min_scal = pairB.first;
         pairA = {NewVect, pairB.second};
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: f_get_minimal, first, min_scal=" << min_scal << "\n";
+        os << "MODEL: f_get_minimal, 1: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+#endif
         n_at_level = 0;
         is_first = false;
       } else {
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: f_get_minimal, pairB.first=" << pairB.first << " min_scal=" << min_scal << "\n";
+#endif
         if (pairB.first < min_scal) {
           min_scal = pairB.first;
           pairA = {NewVect, pairB.second};
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: f_get_minimal, now min_scal=" << min_scal << "\n";
+          os << "MODEL: f_get_minimal, 2: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+#endif
           n_at_level = 0;
         } else {
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: f_get_minimal, n_at_level=" << n_at_level << "\n";
+#endif
           if (pairB.first == min_scal) {
             n_at_level += 1;
           }
           if (n_at_level == max_level) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: f_get_minimal, 3: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+#endif
             return pairA;
           }
         }
@@ -729,12 +776,20 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
 template<typename T, typename Tint>
 MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& os) {
   MyMatrix<Tint> Basis1 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat, os));
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis, Basis1=\n";
+  WriteMatrix(os, Basis1);
+#endif
   MyMatrix<T> Basis1_T = UniversalMatrixConversion<T,Tint>(Basis1);
   MyMatrix<T> prod1 = Basis1_T * Qmat;
   MyMatrix<T> NSP_T = NullspaceIntTrMat(prod1);
   MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
   MyMatrix<T> Qmat2 = NSP_T * Qmat * NSP_T.transpose();
   MyMatrix<Tint> Basis2 = MatrixFromPairVector(GetHyperbolicPlane<T,Tint>(Qmat2, os));
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis, Basis2=\n";
+  WriteMatrix(os, Basis2);
+#endif
   MyMatrix<Tint> Basis2_NSP = Basis2 * NSP;
   MyMatrix<Tint> HyperBasis = Concatenate(Basis1, Basis2_NSP);
   MyMatrix<T> HyperBasis_T = UniversalMatrixConversion<T,Tint>(HyperBasis);
