@@ -971,7 +971,7 @@ template<typename T>
 MyMatrix<T> AssembleTwoDiagBlock(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   int n1 = M1.rows();
   int n2 = M2.rows();
-  MyMatrix<T> Mret = ZeroMatrix<T>(n1+n2, n1+n2);
+  MyMatrix<T> Mret = ZeroMatrix<T>(n1 + n2, n1 + n2);
   for (int i=0; i<n1; i++) {
     for (int j=0; j<n1; j++) {
       Mret(i,j) = M1(i,j);
@@ -979,7 +979,7 @@ MyMatrix<T> AssembleTwoDiagBlock(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   }
   for (int i=0; i<n2; i++) {
     for (int j=0; j<n2; j++) {
-      Mret(i + n1,j + n1) = M1(i,j);
+      Mret(i + n1,j + n1) = M2(i,j);
     }
   }
   return Mret;
@@ -998,8 +998,18 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
 #endif
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
   MyMatrix<T> QmatRed = FullBasis_T * Qmat * FullBasis_T.transpose();
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: INDEF_FORM_GetApproximateModel, QmatRed=\n";
+  WriteMatrix(os, QmatRed);
+#endif
   MyMatrix<T> Block11 = GetSubBlock11(QmatRed);
   MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: INDEF_FORM_GetApproximateModel, Block11=\n";
+  WriteMatrix(os, Block11);
+  os << "MODEL: INDEF_FORM_GetApproximateModel, TwoPlanes=\n";
+  WriteMatrix(os, TwoPlanes);
+#endif
 
   if (TwoPlanes == Block11) {
     InternalApproxCaseA<T,Tint> casea{Qmat, FullBasis, INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(QmatRed)};
@@ -1079,12 +1089,28 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
   MyMatrix<T> Block12 = GetSubBlock12(QmatRed);
   if (IsZeroMatrix(Block12)) {
     MyMatrix<T> eEmbed11 = GetTwoEmbedding(Block11);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: INDEF_FORM_GetApproximateModel, eEmbed11=\n";
+    WriteMatrix(os, eEmbed11);
+#endif
     MyMatrix<T> Block22 = GetSubBlock22(QmatRed);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: INDEF_FORM_GetApproximateModel, Block22=\n";
+    WriteMatrix(os, Block22);
+#endif
     MyMatrix<T> QmatExt = AssembleTwoDiagBlock(TwoPlanes, Block22);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: INDEF_FORM_GetApproximateModel, QmatExt=\n";
+    WriteMatrix(os, QmatExt);
+#endif
     MyMatrix<T> eEmbed_T = AssembleTwoDiagBlock(eEmbed11, IdentityMat<T>(n-4));
     MyMatrix<Tint> eEmbed = UniversalMatrixConversion<Tint,T>(eEmbed_T);
 #ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: INDEF_FORM_GetApproximateModel, eEmbed=\n";
+    WriteMatrix(os, eEmbed);
     MyMatrix<T> prod = eEmbed_T * QmatExt * eEmbed_T.transpose();
+    os << "MODEL: INDEF_FORM_GetApproximateModel, prod=\n";
+    WriteMatrix(os, prod);
     if (prod != QmatRed) {
       std::cerr << "eEmbed is not an embedding\n";
       throw TerminalException{1};
