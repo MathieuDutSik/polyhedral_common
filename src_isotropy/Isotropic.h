@@ -199,7 +199,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
 // For rank 1 this is trivial
 template <typename T>
 std::optional<MyVector<T>> FindIsotropicRankOne(MyMatrix<T> const &M) {
-  if (M(0, 0) == 0)
+  if (M(0, 0) != 0)
     return {};
   MyVector<T> V(1);
   V(0) = 1;

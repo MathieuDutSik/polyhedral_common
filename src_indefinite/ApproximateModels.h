@@ -702,14 +702,22 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
       MyMatrix<T> M = ThePerturb_T * Qmat * ThePerturb_T.transpose();
       std::optional<MyVector<Tint>> opt = INDEF_FindIsotropic<T,Tint>(M, os);
       MyVector<Tint> eVect = unfold_opt(opt, "Failed to find an isotropic vector");
-      MyVector<Tint> NewVect = ThePerturb.transpose() * eVect;
 #ifdef DEBUG_APPROXIMATE_MODELS
-      T sum = EvaluationQuadForm<T,Tint>(Qmat, NewVect);
-      if (sum != 0) {
-        std::cerr << "MODEL: NewVect is not an isotropic vector\n";
+      os << "MODEL: GetHyperbolicPlane eVect=" << StringVectorGAP(eVect) << "\n";
+      T sum1 = EvaluationQuadForm<T,Tint>(M, eVect);
+      if (sum1 != 0) {
+        std::cerr << "MODEL: eVect is not an isotropic vector for M\n";
         throw TerminalException{1};
       }
+#endif
+      MyVector<Tint> NewVect = ThePerturb.transpose() * eVect;
+#ifdef DEBUG_APPROXIMATE_MODELS
       os << "MODEL: GetHyperbolicPlane NewVect=" << StringVectorGAP(NewVect) << "\n";
+      T sum2 = EvaluationQuadForm<T,Tint>(Qmat, NewVect);
+      if (sum2 != 0) {
+        std::cerr << "MODEL: NewVect is not an isotropic vector for Qmat\n";
+        throw TerminalException{1};
+      }
 #endif
       if (SetVect.count(NewVect) == 0 || iter == n_iter) {
         SetVect.insert(NewVect);
