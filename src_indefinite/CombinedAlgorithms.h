@@ -38,25 +38,49 @@ public:
   MyMatrix<Tint> NSP;
   MyMatrix<T> NSP_T;
   MyMatrix<T> GramMatRed;
-  INDEF_FORM_GetVectorStructure(MyMatrix<T> const& _Qmat, MyVector<Tint> const& _v) : Qmat(_Qmat), v(_v) {
+  std::ostream& os;
+  INDEF_FORM_GetVectorStructure(MyMatrix<T> const& _Qmat, MyVector<Tint> const& _v, std::ostream& _os) : Qmat(_Qmat), v(_v), os(_os) {
     int n = Qmat.rows();
     eNorm = EvaluationQuadForm<T,Tint>(Qmat, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetVectorStructure n=" << n << " eNorm=" << eNorm << "\n";
+#endif
     v_T = UniversalVectorConversion<T,Tint>(v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetVectorStructure v_T=" << StringVectorGAP(v_T) << "\n";
+#endif
     MyVector<T> eProd = Qmat * v_T;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetVectorStructure eProd=" << StringVectorGAP(eProd) << "\n";
+#endif
     NSP_T = NullspaceIntVect(eProd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetVectorStructure NSP_T=\n";
+    WriteMatrix(os, NSP_T);
+#endif
     NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
     GramMatRed = NSP_T * Qmat * NSP_T.transpose();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetVectorStructure GramMatRed=\n";
+    WriteMatrix(os, GramMatRed);
+#endif
     if (eNorm != 0) {
       Pmat = ZeroMatrix<T>(n,n);
       for (int i=0; i<n-1; i++) {
         for (int j=0; j<n; j++) {
-          Pmat(i, j) = NSP(i, j);
+          Pmat(i, j) = NSP_T(i, j);
         }
       }
       for (int i=0; i<n; i++) {
         Pmat(n-1,i) = v_T(i);
       }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_GetVectorStructure, We have Pmat\n";
+#endif
       PmatInv = Inverse(Pmat);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_GetVectorStructure, We have PmatInv\n";
+#endif
     }
   }
   MyMatrix<T> MapOrthogonalSublatticeEndomorphism(MyMatrix<Tint> const& eEndoRed) {
@@ -486,18 +510,32 @@ private:
     FirstNorm<T,Tint> first_norm = GetFirstNorm(approx, os);
     T const& X = first_norm.X;
     MyVector<Tint> const& v1 = first_norm.eVect;
-    for (auto & eGen : approx.GetApproximateGroup(os)) {
+    std::vector<MyMatrix<Tint>> list_gen1 = approx.GetApproximateGroup(os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: |list_gen1|=" << list_gen1.size() << "\n";
+#endif
+    for (auto & eGen : list_gen1) {
       f_insert(eGen);
     }
-    for (auto & eGen : INDEF_FORM_StabilizerVector(Qmat, v1)) {
+    std::vector<MyMatrix<Tint>> list_gen2 = INDEF_FORM_StabilizerVector(Qmat, v1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: |list_gen2|=" << list_gen2.size() << "\n";
+#endif
+    for (auto & eGen : list_gen2) {
       f_insert(eGen);
     }
     for (auto & v2 : approx.GetCoveringOrbitRepresentatives(X, os)) {
       std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat, Qmat, v1, v2);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: We have opt\n";
+#endif
       if (opt) {
         f_insert(*opt);
       }
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: |ListGenerators|=" << ListGenerators.size() << "\n";
+#endif
     return ListGenerators;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
@@ -1019,9 +1057,21 @@ public:
       throw TerminalException{1};
     }
     int n = Qmat.rows();
-    INDEF_FORM_GetVectorStructure<T,Tint> eRec(Qmat, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Beginning of INDEF_FORM_StabilizerVector\n";
+#endif
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec(Qmat, v, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector, We have eRec\n";
+#endif
     std::vector<MyMatrix<Tint>> GRP1 = INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector, We have GRP1\n";
+#endif
     std::vector<MyMatrix<T>> GRP2_T = eRec.MapOrthogonalSublatticeGroup(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector, We have GRP2_T\n";
+#endif
     std::vector<MyMatrix<Tint>> ListMat = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2_T, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eMat : ListMat) {
@@ -1049,8 +1099,8 @@ public:
       throw TerminalException{1};
     }
     T eNorm = EvaluationQuadForm<T,Tint>(Q1, v1);
-    INDEF_FORM_GetVectorStructure<T,Tint> eRec1(Q1, v1);
-    INDEF_FORM_GetVectorStructure<T,Tint> eRec2(Q2, v2);
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec1(Q1, v1, os);
+    INDEF_FORM_GetVectorStructure<T,Tint> eRec2(Q2, v2, os);
     std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
     if (!opt) {
       return {};

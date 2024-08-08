@@ -280,6 +280,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     shr_ptr->ListClasses = ListClasses;
   };
   std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Beginning of GetApproximateGroup : 1\n";
+#endif
     MyMatrix<T> Qmat = shr_ptr->Qmat;
     int n = shr_ptr->Qmat.rows();
     // The quadratic form 2 x1 x2 + 2 x3 x4
@@ -987,6 +990,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       throw TerminalException{1};
     };
     std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Beginning of GetApproximateGroup : 2\n";
+#endif
       std::vector<MyMatrix<Tint>> ListGenerators;
       MyMatrix<Tint> const& FullBasis = shr_ptr_a->FullBasis;
       MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
@@ -1120,7 +1126,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     };
     std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: Beginning of GetApproximateGroup\n";
+      os << "MODEL: Beginning of GetApproximateGroup : 3\n";
 #endif
       return shr_ptr_b->ListGenerators;
     };
