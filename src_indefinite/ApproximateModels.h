@@ -1103,11 +1103,29 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
       if (!opt) {
         return {};
       }
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Before iteration over |ListCoset|=" << ListCoset.size() << "\n";
+#endif
       MyVector<Tint> const& eRepr = *opt;
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: eRepr=" << StringVectorGAP(eRepr) << "\n";
+#endif
       for (auto & eCos : shr_ptr_b->ListCoset) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: eCos=" << StringMatrixGAP(eCos) << "\n";
+#endif
         MyVector<Tint> fRepr = eCos.transpose() * eRepr;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: fRepr=" << StringVectorGAP(fRepr) << "\n";
+#endif
         std::optional<MyVector<Tint>> optB = SolutionIntMat(shr_ptr_b->eEmbed, fRepr);
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: We have optB\n";
+#endif
         if (optB) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: Find a matching solution\n";
+#endif
           MyVector<Tint> const& eSol = *optB;
           MyVector<Tint> fSol = shr_ptr_b->FullBasis.transpose() * eSol;
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -1122,6 +1140,9 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
         }
       }
       // We wanted to avoid that but sometimes we cannot
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Nothing found, now enumerating the possibilities\n";
+#endif
       std::vector<MyVector<Tint>> ListRepr = GetCoveringOrbitRepresentatives(X, os);
       if (ListRepr.size() > 0) {
         return ListRepr[0];
