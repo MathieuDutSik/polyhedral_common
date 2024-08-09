@@ -40,6 +40,9 @@ template <typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
                                 const MyMatrix<Tint> &EXT2, std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<Tidx> CanonicReord1 =
