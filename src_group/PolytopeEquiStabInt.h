@@ -69,6 +69,9 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
     const MyMatrix<Tint> &EXT1, const MyMatrix<T> &GramMat1,
     const MyMatrix<Tint> &EXT2, const MyMatrix<T> &GramMat2, std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
@@ -79,8 +82,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
       LinPolytope_CanonicOrdering<T, Tidx>(EXT2_T, os);
   //
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
-      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(
-          EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2);
+      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
   if (!IsoInfo)
     return {};
   Telt ePerm(IsoInfo->first);

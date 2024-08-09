@@ -273,6 +273,9 @@ std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>
 IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                             const std::vector<Tidx> &CanonicReord1,
                             const std::vector<Tidx> &CanonicReord2) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
   size_t nbRow = EXT1.rows();
   // Building the combinatorial equivalence
   std::vector<Tidx> ListIdx(nbRow);
@@ -301,12 +304,38 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
                                     const MyMatrix<T> &EXT2,
                                     const MyMatrix<T> &GramMat2,
                                     const std::vector<Tidx> &CanonicReord1,
-                                    const std::vector<Tidx> &CanonicReord2) {
+                                    const std::vector<Tidx> &CanonicReord2,
+                                    std::ostream& os) {
   size_t nbRow = EXT1.rows();
   // Building the combinatorial equivalence
   std::vector<Tidx> ListIdx(nbRow);
-  for (size_t idx = 0; idx < nbRow; idx++)
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: |EXT1|=" << EXT1.rows() << " |EXT2|=" << EXT2.rows() << "\n";
+  os << "PES: |CanonicRedord1|=" << CanonicReord1.size() << " |CanonicReord2|=" << CanonicReord2.size() << "\n";
+  os << "PES: |GramMat1|=" << GramMat1.rows() << " / " << GramMat1.cols() << "\n";
+  os << "PES: |GramMat2|=" << GramMat2.rows() << " / " << GramMat2.cols() << "\n";
+  if (nbRow != CanonicReord1.size()) {
+    std::cerr << "nbRow=" << nbRow << " |CanonicReord1|=" << CanonicReord1.size() << "\n";
+    std::cerr << "CanonicReord1 should be of length nbRow\n";
+    throw TerminalException{1};
+  }
+  if (nbRow != CanonicReord2.size()) {
+    std::cerr << "nbRow=" << nbRow << " |CanonicReord2|=" << CanonicReord2.size() << "\n";
+    std::cerr << "CanonicReord2 should be of length nbRow\n";
+    throw TerminalException{1};
+  }
+#endif
+  for (size_t idx = 0; idx < nbRow; idx++) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    size_t pos = static_cast<size_t>(CanonicReord1[idx]);
+    if (pos >= nbRow) {
+      std::cerr << "pos=" << pos << " nbRow=" << nbRow << "\n";
+      std::cerr << "CanonicReord1 entry is above the tange\n";
+      throw TerminalException{1};
+    }
+#endif
     ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
+  }
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 =
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT1, CanonicReord1);
@@ -518,6 +547,9 @@ template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
           typename F2, typename F3, typename F4, typename F5>
 std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5,
                                 bool is_symm, std::ostream &os) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "f_for_canonic: nbRow=" << nbRow << "\n";
+#endif
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
@@ -648,6 +680,9 @@ template <typename T, typename Tidx>
 std::optional<std::vector<Tidx>>
 LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                         std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
   std::vector<Tidx> CanonicReord1 =
       LinPolytope_CanonicOrdering<T, Tidx>(EXT1, os);
   std::vector<Tidx> CanonicReord2 =
@@ -665,14 +700,37 @@ template <typename T, typename Tidx>
 std::optional<std::vector<Tidx>> LinPolytope_Isomorphism_GramMat(
     const MyMatrix<T> &EXT1, const MyMatrix<T> &GramMat1,
     const MyMatrix<T> &EXT2, const MyMatrix<T> &GramMat2, std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: |EXT1|=" << EXT1.rows() << " |EXT2|=" << EXT2.rows() << "\n";
+#endif
   std::vector<Tidx> CanonicReord1 =
       LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1, GramMat1, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  size_t nbRow1 = EXT1.rows();
+  size_t len1 = CanonicReord1.size();
+  os << "PES: nbRow1=" << nbRow1 << " len1=" << len1 << "\n";
+  if (nbRow1 != len1) {
+    std::cerr << "nbRow1=" << nbRow1 << " len1=" << len1 << "\n";
+    throw TerminalException{1};
+  }
+#endif
   std::vector<Tidx> CanonicReord2 =
       LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2, GramMat2, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  size_t nbRow2 = EXT2.rows();
+  size_t len2 = CanonicReord2.size();
+  os << "PES: nbRow2=" << nbRow2 << " len1=" << len2 << "\n";
+  if (nbRow2 != len2) {
+    std::cerr << "nbRow2=" << nbRow2 << " len2=" << len2 << "\n";
+    throw TerminalException{1};
+  }
+#endif
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(
-          EXT1, GramMat1, EXT2, GramMat2, CanonicReord1, CanonicReord2);
+      IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(EXT1, GramMat1, EXT2, GramMat2, CanonicReord1, CanonicReord2, os);
   if (!IsoInfo)
     return {};
   return IsoInfo->first;
@@ -1156,6 +1214,9 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
     std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
@@ -1240,6 +1301,9 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     std::vector<T> const &Vdiag1, MyMatrix<T> const &EXT2,
     std::vector<MyMatrix<T>> const &ListMat2, std::vector<T> const &Vdiag2,
     std::ostream &os) {
+  if (EXT1.rows() != EXT2.rows()) {
+    return {};
+  }
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: Beginning of TestEquivalence_ListMat_Vdiag nbRow="
      << EXT1.rows() << "\n";
