@@ -4,7 +4,7 @@ Print("Beginning TestIsotropic\n");
 OnlyTestExistence:=false;
 
 TestIsotropic:=function(eRec)
-    local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm;
+    local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm, eNormSqr;
     n:=Length(eRec.M);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
@@ -14,9 +14,9 @@ TestIsotropic:=function(eRec)
     WriteMatrixFile(FileIn, eRec.M);
     #
     if OnlyTestExistence then
-        eProg:="../../src_isotropic/LATT_TestIsotropic";
+        eProg:="../../src_isotropy/LATT_TestIsotropic";
     else
-        eProg:="../../src_isotropic/LATT_FindIsotropic";
+        eProg:="../../src_isotropy/LATT_FindIsotropic";
     fi;
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
@@ -36,6 +36,11 @@ TestIsotropic:=function(eRec)
         eNorm:=V * eRec.M * V;
         if eNorm<>0 then
             Print("The vector is not isotropic\n");
+            return rec(is_correct:=false);
+        fi;
+        eNormSqr:=V * V;
+        if eNormSqr=0 then
+            Print("The vector is zero\n");
             return rec(is_correct:=false);
         fi;
     fi;
