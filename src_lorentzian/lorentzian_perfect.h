@@ -592,7 +592,10 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
     T eNormTest = EvaluationQuadForm<T, T>(LorMat, eVectTest);
     MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
     T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
-    if (eNormTest <= 0 && MaxScal <= 0) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: eNormTest=" << eNormTest << " MaxScal=" << MaxScal << "\n";
+#endif
+    if (eNormTest <= 0 || MaxScal <= 0) {
       TheUpperBound = TheMidVal;
     } else {
       ListTotal = LORENTZ_FindPositiveVectors<T, Tint>(
@@ -600,6 +603,17 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "LORPERF: Kernel_Flipping: |ListTotal|=" << ListTotal.size() << "\n";
       if (IsSubset(CritSet, ListTotal) && CritSet.size() > ListTotal.size()) {
+        std::cerr << "LORPERF: LorMat=" << StringMatrixGAP(LorMat) << "\n";
+        std::cerr << "LORPERF: eVectTest=" << StringVectorGAP(eVectTest) << "\n";
+        std::cerr << "LORPERF: MaxScal=" << MaxScal << " TheOption=" << TheOption << " OnlyShortest=" << OnlyShortest << "\n";
+        std::cerr << "LORPERF: |CritSet|=" << CritSet.size() << "\n";
+        if (CritSet.size() > 0) {
+          WriteMatrix(std::cerr, MatrixFromVectorFamily(CritSet));
+        }
+        std::cerr << "LORPERF: |ListTotal|=" << ListTotal.size() << "\n";
+        if (ListTotal.size() > 0) {
+          WriteMatrix(std::cerr, MatrixFromVectorFamily(ListTotal));
+        }
         std::cerr << "Bug: if included, it should be equal\n";
         throw TerminalException{1};
       }
@@ -627,6 +641,12 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
   os << "LORPERF: Kernel_Flipping: Going to the second scheme\n";
 #endif
   while (true) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    if (ListTotal.size() == 0) {
+      std::cerr << "LORPERF: ListTotal is empty, so that is a bug\n";
+      throw TerminalException{1};
+    }
+#endif
     MyVector<Tint> eVect = ListTotal[0];
     MyVector<Tint> eVert = ConcatenateScalarVector(Tint(1), eVect);
     MyVector<T> eVert_T = UniversalVectorConversion<T, Tint>(eVert);

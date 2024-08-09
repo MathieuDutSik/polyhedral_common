@@ -1729,7 +1729,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       if constexpr (has_determining_ext<Thelper>::value) {
         for (size_t iGen = 0; iGen < ListMatrRet.size(); iGen++) {
           Telt ePerm = eret.ListPermGens[iGen];
-          os << "ePerm=" << ePerm;
+          os << "MAT_GRP: ePerm=" << ePerm;
           MyMatrix<T> eMatr = ListMatrRet[iGen];
           MyMatrix<T> M2 = RepresentPermutationAsMatrix(helper, ePerm, os);
           if (eMatr != M2) {
