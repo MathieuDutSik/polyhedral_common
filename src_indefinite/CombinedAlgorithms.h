@@ -492,14 +492,15 @@ private:
     WriteMatrix(os, Qmat);
 #endif
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat);
+    MyMatrix<T> const& mat = eBlock.mat;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
 #endif
     if (eBlock.h == 0) {
-      return INDEF_FORM_AutomorphismGroup_PosNeg<T,Tint>(Qmat, os);
+      return INDEF_FORM_AutomorphismGroup_PosNeg<T,Tint>(mat, os);
     }
     if (eBlock.h == 1) {
-      return LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(Qmat, os);
+      return LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(mat, os);
     }
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto f_insert=[&](MyMatrix<Tint> const& eGen) -> void {
@@ -513,7 +514,7 @@ private:
 #endif
       ListGenerators.push_back(eGen);
     };
-    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat, os);
+    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(mat, os);
     FirstNorm<T,Tint> first_norm = GetFirstNorm(approx, os);
     T const& X = first_norm.X;
     MyVector<Tint> const& v1 = first_norm.eVect;
@@ -524,7 +525,7 @@ private:
     for (auto & eGen : list_gen1) {
       f_insert(eGen);
     }
-    std::vector<MyMatrix<Tint>> list_gen2 = INDEF_FORM_StabilizerVector(Qmat, v1);
+    std::vector<MyMatrix<Tint>> list_gen2 = INDEF_FORM_StabilizerVector(mat, v1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: |list_gen2|=" << list_gen2.size() << "\n";
 #endif
@@ -532,7 +533,7 @@ private:
       f_insert(eGen);
     }
     for (auto & v2 : approx.GetCoveringOrbitRepresentatives(X, os)) {
-      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat, Qmat, v1, v2);
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(mat, mat, v1, v2);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: We have opt\n";
 #endif
@@ -548,20 +549,25 @@ private:
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
+    if (eBlock1.h != eBlock2.h) {
+      return {};
+    }
+    MyMatrix<T> const& mat1 = eBlock1.mat;
+    MyMatrix<T> const& mat2 = eBlock2.mat;
     if (eBlock1.h == 0) {
-      return INDEF_FORM_TestEquivalence_PosNeg<T,Tint>(Qmat1, Qmat2, os);
+      return INDEF_FORM_TestEquivalence_PosNeg<T,Tint>(mat1, mat2, os);
     }
     if (eBlock1.h == 1) {
-      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(eBlock1.mat, eBlock2.mat, os);
+      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
     }
-    ApproximateModel<T,Tint> approx1 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat1, os);
+    ApproximateModel<T,Tint> approx1 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(mat1, os);
     FirstNorm<T,Tint> first_norm1 = GetFirstNorm(approx1, os);
     T const& X = first_norm1.X;
     MyVector<Tint> const& v1 = first_norm1.eVect;
-    ApproximateModel<T,Tint> approx2 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Qmat2, os);
+    ApproximateModel<T,Tint> approx2 = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(mat2, os);
     std::vector<MyVector<Tint>> ListCand2 = approx2.GetCoveringOrbitRepresentatives(X, os);
     for (auto & v2 : ListCand2) {
-      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Qmat1, Qmat2, v1, v2);
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(mat1, mat2, v1, v2);
       if (opt) {
         return opt;
       }

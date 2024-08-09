@@ -426,6 +426,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     std::vector<MyVector<Tint>> ListSolution;
     if (n > 4) {
       MyMatrix<T> Ginv = Inverse(Gmat);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: EnumerateVectorOverDiscriminant |ListClasses|=" << ListClasses.size() << "\n";
+#endif
       for (auto & eClass1 : ListClasses) {
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: EnumerateVectorOverDiscriminant eClass1=" << StringVectorGAP(eClass1) << "\n";
@@ -438,7 +441,13 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
         // So, the problem is actually linear.
         MyVector<T> eClass1_T = UniversalVectorConversion<T,Tint>(eClass1);
         MyVector<T> eClass2 = Ginv * eClass1_T;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: EnumerateVectorOverDiscriminant eClass2=" << StringVectorGAP(eClass2) << "\n";
+#endif
         T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: EnumerateVectorOverDiscriminant DivD_frac=" << DivD_frac << "\n";
+#endif
         T DivD = GetDenominator(DivD_frac);
         T DivD_sqr = DivD * DivD;
         MyVector<T> eClass3 = DivD * eClass2;
@@ -798,6 +807,8 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
   T min_scal;
   int n_at_level = 0;
   int max_level = 10;
+  int n_no_change = 0;
+  int max_no_change = 20;
   while(true) {
     MyVector<Tint> NewVect = f_insert_vect();
     if (has_non_orthogonal(NewVect)) {
@@ -823,16 +834,25 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
           os << "MODEL: f_get_minimal, 2: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
 #endif
           n_at_level = 0;
+          n_no_change = 0;
         } else {
 #ifdef DEBUG_APPROXIMATE_MODELS
           os << "MODEL: f_get_minimal, n_at_level=" << n_at_level << "\n";
 #endif
           if (pairB.first == min_scal) {
             n_at_level += 1;
+          } else {
+            n_no_change += 1;
+          }
+          if (n_no_change == max_no_change) {
+#ifdef DEBUG_APPROXIMATE_MODELS
+            os << "MODEL: f_get_minimal, 3: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+#endif
+            return pairA;
           }
           if (n_at_level == max_level) {
 #ifdef DEBUG_APPROXIMATE_MODELS
-          os << "MODEL: f_get_minimal, 3: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+            os << "MODEL: f_get_minimal, 4: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
 #endif
             return pairA;
           }
@@ -869,11 +889,22 @@ MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& 
   MyMatrix<T> prod2 = HyperBasis_T * Qmat;
   MyMatrix<T> NSP2_T = NullspaceIntTrMat(prod2);
   MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint,T>(NSP2_T);
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis, NSP2=\n";
+  WriteMatrix(os, NSP2);
+#endif
   MyMatrix<Tint> FullBasis = Concatenate(HyperBasis, NSP2);
 #ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis, FullBasis=\n";
+  WriteMatrix(os, FullBasis);
   Tint det = DeterminantMat(FullBasis);
+  MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+  MyMatrix<T> prod = FullBasis_T * Qmat * FullBasis_T.transpose();
   if (T_abs(det) != 1) {
     std::cerr << "MODEL: FullBasis should be of determinant 1\n";
+    std::cerr << "MODEL: det=" << det << "\n";
+    std::cerr << "MODEL: prod=\n";
+    WriteMatrix(std::cerr, prod);
     throw TerminalException{1};
   }
 #endif
