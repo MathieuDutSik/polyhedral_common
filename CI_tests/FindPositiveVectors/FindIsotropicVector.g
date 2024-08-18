@@ -2,17 +2,16 @@ Read("../common.g");
 Print("Beginning FindIsotropicVector\n");
 
 SingleTest:=function(M, CritNorm, StrictIneq)
-    local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm, eNormSqr;
-    n:=Length(eRec.M);
+    local FileIn, FileOut, eProg, TheCommand, V, eNorm;
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
     RemoveFileIfExist(FileIn);
     RemoveFileIfExist(FileOut);
     #
-    WriteMatrixFile(FileIn, eRec.M);
+    WriteMatrixFile(FileIn, M);
     #
     eProg:="../../src_isotropy/LATT_FindPositiveVector";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " ", CritNorm, " ", StrictIneq, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " ", String(CritNorm), " ", String(StrictIneq), " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -49,7 +48,7 @@ SeveralTest_A:=function(M, CritNorm)
 end;
 
 SeveralTest_B:=function(M)
-    local test;
+    local CritNorm, test;
     for CritNorm in [-1,0,1]
     do
         test:=SeveralTest_A(M, CritNorm);
@@ -79,7 +78,7 @@ end;
 ListM:=ReadAsFunction("IndefiniteForms")();;
 
 FullTest:=function()
-    local iRec, eM;
+    local iRec, eM, reply;
     iRec:=0;
     for eM in ListM
     do

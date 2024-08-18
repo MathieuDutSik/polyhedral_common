@@ -193,15 +193,11 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const &SymMat) {
   for (int i = 0; i < n; i++)
     totSet[i] = i;
   std::vector<int> diffSet = DifferenceVect(totSet, eSet);
-  //  std::cerr << "|eSet|=" << eSet.size() << " |diffSet|=" << diffSet.size()
-  //  << "\n";
   int idx = DimKern;
   for (auto &eCol : diffSet) {
     TransfMat(idx, eCol) = 1;
     idx++;
   }
-  /*  std::cerr << "TransfMat=\n";
-      WriteMatrix(std::cerr, TransfMat);*/
   MyMatrix<T> SymMat2 = TransfMat * SymMat * TransfMat.transpose();
   std::vector<int> gSet;
   for (int i = DimKern; i < n; i++)
@@ -213,16 +209,10 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const &SymMat) {
 template <typename T>
 DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  //  std::cerr << "DiagonalizeSymmetricMatrix\n";
-  //  WriteMatrix(std::cerr, SymMat);
-  //  std::cerr << "DiagonalizeSymmetricMatrix, RankMat(SymMat)=" <<
-  //  RankMat(SymMat) << "\n";
   int n1 = SymMat.rows();
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
   MyMatrix<T> RMat1 = NSP1.Transform;
   MyMatrix<T> SymMat2 = NSP1.NonDegenerate;
-  //  std::cerr << "DiagonalizeSymmetricMatrix, RankMat(SymMat2)=" <<
-  //  RankMat(SymMat2) << "\n";
   DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2);
   int n2 = SymMat2.rows();
   MyMatrix<T> RMat2 = ZeroMatrix<T>(n1, n1);
@@ -421,6 +411,11 @@ MyVector<Tint> GetIntegralVector_allmeth_V1(MyMatrix<T> const &M,
   }
 }
 
+// The ApproxIterator allows to find approximation of a vector by
+// integral vectors.
+// The sequence of approximant is
+// V_app(N) = List(Nint( i V(x))
+// The call to "increment()" will just go from one approximant to the next.
 template<typename T, typename Tint>
 struct ApproxIterator {
   MyVector<Tint> Vapprox;
@@ -563,56 +558,41 @@ template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
                                          T const& CritNorm, bool const& StrictIneq,
                                          std::ostream &os) {
-  
-
-  
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: beginning\n";
+#endif
+  auto is_isotropic_fine=[&]() -> bool {
+    if (StrictIneq) {
+      return CritNorm < 0;
+    } else {
+      return CritNorm <= 0;
+    }
+  };
+  bool test_isotropic_fine = is_isotropic_fine();
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralVector_allmeth: CritNorm=" << CritNorm << " StrictIneq=" << StrictIneq << "\n";
+  os << "POS: GetIntegralVector_allmeth: test_isotropic_fine=" << test_isotropic_fine << "\n";
 #endif
   ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T,Tint>(M);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif
-
-  if (!res.success) {
+  if (test_isotropic_fine && !res.success) {
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: We have an isotropic vector\n";
+    os << "POS: GetIntegralVector_allmeth: Xisotrop=" << StringVectorGAP(res.Xisotrop) << "\n";
 #endif
-    // We found an isotropic vector. We act on it.
-    auto is_ok=[&]() -> bool {
-      if (StrictIneq) {
-        return CritNorm < 0;
-      } else {
-        return CritNorm <= 0;
-      }
-    };
-    bool test = is_ok();
+    MyVector<T> V1 = RemoveFractionVector(res.Xisotrop);
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: is_ok=" << test << "\n";
-    os << "POS: GetIntegralVector_allmeth: CritNorm=" << CritNorm << " StrictIneq=" << StrictIneq << "\n";
+    os << "POS: GetIntegralVector_allmeth: V1=" << StringVectorGAP(V1) << "\n";
 #endif
-    if (test) {
+    MyVector<Tint> V2 = UniversalVectorConversion<Tint,T>(V1);
 #ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: Xisotrop=" << StringVectorGAP(res.Xisotrop) << "\n";
+    os << "POS: GetIntegralVector_allmeth: V2=" << StringVectorGAP(V2) << "\n";
 #endif
-      MyVector<T> V1 = RemoveFractionVector(res.Xisotrop);
-#ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: V1=" << StringVectorGAP(V1) << "\n";
-#endif
-      MyVector<Tint> V2 = UniversalVectorConversion<Tint,T>(V1);
-#ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: V2=" << StringVectorGAP(V2) << "\n";
-#endif
-      return V2;
-    } else {
-      // LLL failed. Running with the non-reduced one.
-#ifdef DEBUG_POSITIVITY
-      os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for M\n";
-#endif
-      return GetIntegralVector_allmeth_V2<T,Tint>(M, CritNorm, StrictIneq, os);
-    }
+    return V2;
   }
 #ifdef DEBUG_POSITIVITY
+  os << "POS: The gambit using isotropic vectors failed, going classically\n";
   os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for Mred\n";
 #endif
   MyVector<Tint> V1 = GetIntegralVector_allmeth_V2<T,Tint>(res.Mred, CritNorm, StrictIneq, os);
