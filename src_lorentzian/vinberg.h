@@ -340,7 +340,6 @@ template <typename T, typename Tint>
 MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream& os) {
   T CritNorm = 0;
   bool StrictIneq = true;
-  bool NeedNonZero = true;
   /*
     ResRed.B is an integral matrix that reduces it
     Mred = B * M * B^T
@@ -348,7 +347,7 @@ MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream& os) {
     Thus v B is a short vector for M
    */
   ResultReduction<T, Tint> ResRed = ComputeReductionIndefinite<T, Tint>(G);
-  MyVector<Tint> eVect = GetShortIntegralVector<T,Tint>(ResRed.Mred, CritNorm, StrictIneq, NeedNonZero, os);
+  MyVector<Tint> eVect = GetShortIntegralVector<T,Tint>(ResRed.Mred, CritNorm, StrictIneq, os);
   MyVector<Tint> eVectRet = ResRed.B.transpose() * eVect;
   return eVectRet;
 }

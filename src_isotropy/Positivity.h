@@ -58,7 +58,7 @@ template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &eMat) {
 }
 
 template <typename T> MyMatrix<T> AnLattice(int const &n) {
-  MyMatrix<T> eMat(n, n);
+  MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
   for (int i = 0; i < n; i++)
     for (int j = 0; j < n; j++)
       eMat(i, j) = 0;
@@ -273,35 +273,23 @@ MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
 template <typename T, typename Tint, typename Ttest>
 std::optional<MyVector<Tint>>
 TestIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect,
-                          int const &scal, MyMatrix<T> const &M,
-                          T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                          MyMatrix<T> const &M,
+                          T const& CritNorm, bool const& StrictIneq,
                           [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   MyVector<Tint> V_ret(n);
   for (auto &eV : ListVect) {
-    bool IsNZ = false;
-    for (int i = 0; i < n; i++) {
-      Ttest val_d = scal * eV(i);
-      Tint val = UniversalNearestScalarInteger<Tint, Ttest>(val_d);
-      V_ret(i) = val;
-      if (val != 0) {
-        IsNZ = true;
+    auto is_ok_vector=[&]() -> bool {
+      T eNorm = EvaluationQuadForm<T, Tint>(M, V_ret);
+      if (StrictIneq) {
+        return eNorm > CritNorm;
+      } else {
+        return eNorm >= CritNorm;
       }
-    }
-    if (IsNZ || !NeedNonZero) {
-      // Can be considered becuase nonzero or the condition NeedNonZero is not enabled.
-      auto is_ok_vector=[&]() -> bool {
-        T eNorm = EvaluationQuadForm<T, Tint>(M, V_ret);
-        if (StrictIneq) {
-          return eNorm > CritNorm;
-        } else {
-          return eNorm >= CritNorm;
-        }
-      };
-      bool test = is_ok_vector();
-      if (test) {
-        return V_ret;
-      }
+    };
+    bool test = is_ok_vector();
+    if (test) {
+      return V_ret;
     }
   }
   return {};
@@ -310,15 +298,15 @@ TestIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect,
 template <typename T, typename Tint, typename Ttest>
 MyVector<Tint>
 GetIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect, MyMatrix<T> const &M,
-                         T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
-                         [[maybe_unused]] std::ostream &os) {
+                         T const& CritNorm, bool const& StrictIneq,
+                         std::ostream &os) {
   int n = M.rows();
   int scal = 1;
   MyVector<Tint> V_ret(n);
   while (true) {
     std::optional<MyVector<Tint>> opt =
         TestIntegralVector_family<T, Tint, Ttest>(ListVect, scal, M,
-                                                  CritNorm, StrictIneq, NeedNonZero,
+                                                  CritNorm, StrictIneq,
                                                   os);
     if (opt) {
       return *opt;
@@ -354,11 +342,11 @@ std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M) {
 
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_diag(MyMatrix<T> const &M,
-                                              T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                              T const& CritNorm, bool const& StrictIneq,
                                               std::ostream &os) {
   std::vector<MyVector<T>> ListVect = GetPositiveDirections_diag(M);
   return GetIntegralVector_family<T, Tint, T>(ListVect, M,
-                                                      CritNorm, StrictIneq, NeedNonZero,
+                                                      CritNorm, StrictIneq,
                                                       os);
 }
 
@@ -385,16 +373,15 @@ GetPositiveDirections_eigen(MyMatrix<T> const &M) {
 
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_eigen(MyMatrix<T> const &M,
-                                               T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
-                                               std::ostream &os) {
+                                       T const& CritNorm, bool const& StrictIneq,
+                                       std::ostream &os) {
   std::vector<MyVector<double>> ListEigVect = GetPositiveDirections_eigen(M);
-  return GetIntegralVector_family<T, Tint, double>(ListEigVect, M, CritNorm, StrictIneq, NeedNonZero, os);
+  return GetIntegralVector_family<T, Tint, double>(ListEigVect, M, CritNorm, StrictIneq, os);
 }
 
 // That code applies several techniques together in order to get a short
 // integral vector V satisfying A[V] >= CritNorm
 // * if StrictIneq is true then we want actually A[V] > CritNorm
-// * if NeedNonZero, we want a nonzero vector
 //
 // * The diagonalization method should work all the time but maybe not get us
 // an optimal vector
@@ -402,7 +389,7 @@ MyVector<Tint> GetIntegralVector_eigen(MyMatrix<T> const &M,
 // should get us a very good vector.
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth_V1(MyMatrix<T> const &M,
-                                            T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                            T const& CritNorm, bool const& StrictIneq,
                                             std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V1: Beginning\n";
@@ -421,12 +408,12 @@ MyVector<Tint> GetIntegralVector_allmeth_V1(MyMatrix<T> const &M,
     os << "POS: GetIntegralVector_allmeth_V1: scal=" << scal << "\n";
 #endif
     std::optional<MyVector<Tint>> opt1 =
-      TestIntegralVector_family<T, Tint, T>(ListVect, scal, M, CritNorm, StrictIneq, NeedNonZero, os);
+      TestIntegralVector_family<T, Tint, T>(ListVect, scal, M, CritNorm, StrictIneq, os);
     if (opt1) {
       return *opt1;
     }
     std::optional<MyVector<Tint>> opt2 =
-        TestIntegralVector_family<T, Tint, double>(ListEigVect, scal, M, CritNorm, StrictIneq, NeedNonZero, os);
+        TestIntegralVector_family<T, Tint, double>(ListEigVect, scal, M, CritNorm, StrictIneq, os);
     if (opt2) {
       return *opt2;
     }
@@ -498,25 +485,8 @@ struct ApproxIterator {
 // Should be more efficient than the scal method
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
-                                            T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                            T const& CritNorm, bool const& StrictIneq,
                                             [[maybe_unused]] std::ostream &os) {
-#ifdef DEBUG_POSITIVITY
-  os << "POS: GetIntegralVector_allmeth_V2: trying zero vector\n";
-#endif
-  if (!NeedNonZero) {
-    auto is_zero_ok=[&]() -> bool {
-      if (StrictIneq) {
-        return CritNorm < 0;
-      } else {
-        return CritNorm <= 0;
-      }
-    };
-    if (is_zero_ok()) {
-      int n = M.rows();
-      MyVector<Tint> Vret = ZeroVector<Tint>(n);
-      return Vret;
-    }
-  }
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V2: Beginning\n";
 #endif
@@ -591,8 +561,11 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
 
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
-                                         T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                         T const& CritNorm, bool const& StrictIneq,
                                          std::ostream &os) {
+  
+
+  
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: beginning\n";
 #endif
@@ -636,13 +609,13 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
 #ifdef DEBUG_POSITIVITY
       os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for M\n";
 #endif
-      return GetIntegralVector_allmeth_V2<T,Tint>(M, CritNorm, StrictIneq, NeedNonZero, os);
+      return GetIntegralVector_allmeth_V2<T,Tint>(M, CritNorm, StrictIneq, os);
     }
   }
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: Before GetIntegralVector_allmeth_V2 for Mred\n";
 #endif
-  MyVector<Tint> V1 = GetIntegralVector_allmeth_V2<T,Tint>(res.Mred, CritNorm, StrictIneq, NeedNonZero, os);
+  MyVector<Tint> V1 = GetIntegralVector_allmeth_V2<T,Tint>(res.Mred, CritNorm, StrictIneq, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have V1\n";
 #endif
@@ -669,17 +642,16 @@ MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const &M,
                                                  std::ostream &os) {
   T CritNorm(0);
   bool StrictIneq = true;
-  bool NeedNonZero = true;
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralPositiveVector_allmeth: before GetIntegralVector_allmeth\n";
 #endif
-  return GetIntegralVector_allmeth<T,Tint>(M, CritNorm, StrictIneq, NeedNonZero, os);
+  return GetIntegralVector_allmeth<T,Tint>(M, CritNorm, StrictIneq, os);
 }
 
 
 template <typename T, typename Tint>
 MyVector<Tint> GetShortIntegralVector(MyMatrix<T> const &M,
-                                      T const& CritNorm, bool const& StrictIneq, bool const& NeedNonZero,
+                                      T const& CritNorm, bool const& StrictIneq,
                                       std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortIntegralVector: beginning\n";
@@ -689,7 +661,7 @@ MyVector<Tint> GetShortIntegralVector(MyMatrix<T> const &M,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortIntegralVector: before GetIntegralVector_allmeth\n";
 #endif
-  return GetIntegralVector_allmeth<T,Tint>(Mwork, CritNormWork, StrictIneq, NeedNonZero, os);
+  return GetIntegralVector_allmeth<T,Tint>(Mwork, CritNormWork, StrictIneq, os);
 }
 
 

@@ -181,8 +181,7 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const& Q, std::ostream& os) {
     MyMatrix<T> QuadQ = sign * NSP * Q * NSP.transpose();
     T CritNorm(0);
     bool StrictIneq = true;
-    bool NeedNonZero = true;
-    MyVector<T> v1 = GetIntegralVector_allmeth<T,T>(QuadQ, CritNorm, StrictIneq, NeedNonZero, os);
+    MyVector<T> v1 = GetIntegralVector_allmeth<T,T>(QuadQ, CritNorm, StrictIneq, os);
     MyVector<T> v2 = NSP.transpose() * v1;
     return v2;
   };

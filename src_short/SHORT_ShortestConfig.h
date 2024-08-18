@@ -425,9 +425,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #endif
           TheFamilyVect.insert(eVect3);
         } else {
-          bool NeedNonZero = true;
           bool StrictIneq = true;
-          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(eMatSec, CritNorm, StrictIneq, NeedNonZero, os);
+          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(eMatSec, CritNorm, StrictIneq, os);
           if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
