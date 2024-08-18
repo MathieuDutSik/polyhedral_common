@@ -44,7 +44,7 @@
   The Indefinite LLL with a few tricks are indeed working mostly fine
   except when they do not.
   So, we could have
-  * A very sophisticated algorithm by P3 that
+  * A very sophisticated algorithm by P3 that decides existence of 
   * An Indefinite LLL iteration working.
   Both algorithms could be run in parallel and an early termination of either could
   finish the enumeration.
@@ -86,11 +86,49 @@ MyMatrix<T> GetSmithEntry(std::map<T, size_t> const& map, int const& n) {
   return M;
 }
 
+template<typename T>
+std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[maybe_unused]] std::ostream& os) {
+  int n = Q.rows();
+  // Checking first for diagonal zeros.
+  for (int i = 0; i < n; i++) {
+    if (Q(i, i) == 0) {
+      MyVector<T> eV = ZeroVector<T>(n);
+      eV(i) = 1;
+#ifdef DEBUG_ISOTROPIC
+      os << "ISOTROP: get_isotropic_easy_method finding isotrop in the diagonal\n";
+#endif
+      return eV;
+    }
+  }
+  // Checking for opposite signs in the diagonal
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      if (Q(i, j) == 0 && Q(i, i) + Q(j, j) == 0) {
+        MyVector<T> eV = ZeroVector<T>(n);
+        eV(i) = 1;
+        eV(j) = 1;
+#ifdef DEBUG_ISOTROPIC
+        os << "ISOTROP: get_isotropic_easy_method finding isotrop as sum of two diagonal terms\n";
+#endif
+        return eV;
+      }
+    }
+  }
+  return {};
+}
+
 
 
 // Try to find isotropic subspace by using Indefinite LLL
+// We iterate by taking random integral matrices and we iterate until
+// we cannot reduce anymore the norm of the matrix.
+//
+// The isotropic vectors can be found using 3 methods:
+// --- The Indefinite LLL that found an entry.
+// --- 0 entry in the diagonal of the reduction.
+// --- Entries (+a, -a) in the diagonal and Q(i,j) = 0 that allow to find an isotropic vector.
 template <typename T>
-std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe_unused]] std::ostream& os) {
+std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n = Q.rows();
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
@@ -100,14 +138,20 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
         sum += T_abs(mat(i, j));
     return sum;
   };
-  T det = DeterminantMat(Q);
-  std::map<T, size_t> map = FactorsIntMap(T_abs(det));
 #ifdef DEBUG_ISOTROPIC
+  T det = DeterminantMat(Q);
   os << "ISOTROP: GetIsotropIndefiniteLLL det=" << det << "\n";
+  std::map<T, size_t> map = FactorsIntMap(T_abs(det));
   for (auto & kv : map) {
     os << "kv.first=" << kv.first << " kv.second=" << kv.second << "\n";
   }
 #endif
+  // Direct try at the beginning.
+  std::optional<MyVector<T>> optA = get_isotropic_easy_method(Q, os);
+  if (optA) {
+    MyVector<T> const& eV = *optA;
+    return eV;
+  }
   MyMatrix<T> Pw = IdentityMat<T>(n);
   MyMatrix<T> Qw = Q;
   T curr_norm = get_norm(Q);
@@ -136,32 +180,11 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
     os << "ISOTROP: GetIsotropIndefiniteLLL Qw=\n";
     WriteMatrix(os, Qw);
 #endif
-    // Checking first for diagonal zeros.
-    for (int i = 0; i < n; i++) {
-      if (Qw(i, i) == 0) {
-        MyVector<T> eV = ZeroVector<T>(n);
-        eV(i) = 1;
-        MyVector<T> fV = Pw.transpose() * eV;
-#ifdef DEBUG_ISOTROPIC
-        os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop in the diagonal\n";
-#endif
-        return fV;
-      }
-    }
-    // Checking for opposite signs in the diagonal
-    for (int i = 0; i < n; i++) {
-      for (int j = i + 1; j < n; j++) {
-        if (Qw(i, j) == 0 && Qw(i, i) + Qw(j, j) == 0) {
-          MyVector<T> eV = ZeroVector<T>(n);
-          eV(i) = 1;
-          eV(j) = 1;
-          MyVector<T> fV = Pw.transpose() * eV;
-#ifdef DEBUG_ISOTROPIC
-        os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop as sum of two diagonal terms\n";
-#endif
-          return fV;
-        }
-      }
+    std::optional<MyVector<T>> optB = get_isotropic_easy_method(Qw, os);
+    if (optB) {
+      MyVector<T> const& eV = *optB;
+      MyVector<T> fV = Pw.transpose() * eV;
+      return fV;
     }
     T norm = get_norm(Qw);
 #ifdef DEBUG_ISOTROPIC
@@ -171,20 +194,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, [[maybe
       break;
     }
     curr_norm = norm;
-    auto get_rand_invmat=[&]() -> MyMatrix<T> {
-      int choice = random() % 5;
-#ifdef DEBUG_ISOTROPIC
-      os << "ISOTROP: GetIsotropIndefiniteLLL choice=" << choice << "\n";
-#endif
-      if (choice == 0) {
-        int k = random() % n;
-        return GetAnMatrix<T>(k, n);
-        //        return GetSmithEntry<T>(map, n);
-      } else {
-        return get_random_int_matrix<T>(n);
-      }
-    };
-    MyMatrix<T> RandM = get_rand_invmat();
+    MyMatrix<T> RandM = get_random_int_matrix<T>(n);
     Pw = RandM * Pw;
     Qw = RandM * Qw * RandM.transpose();
 #ifdef DEBUG_ISOTROPIC
@@ -385,6 +395,7 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
   if (n == 4) {
     return quaternary_has_isotropic_vector(M, os);
   }
+  // By Meyer theorem, for n > 4 there is an isotropic vector
   return true;
 }
 
