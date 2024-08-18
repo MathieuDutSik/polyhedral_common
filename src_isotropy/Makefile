@@ -1,4 +1,4 @@
-PROGRAM		= LATT_IndefiniteLLL LATT_IndefiniteReduction TestPermutationSignCanonic LATT_DetMinimization LATT_FindIsotropic LATT_TestIsotropic
+PROGRAM		= LATT_IndefiniteLLL LATT_IndefiniteReduction TestPermutationSignCanonic LATT_DetMinimization LATT_FindIsotropic LATT_TestIsotropic LATT_FindPositiveVector
 #PROGRAM		= TestPermutationSignCanonic
 #PROGRAM		= IndefiniteLLL
 #PROGRAM		= IndefiniteReduction
