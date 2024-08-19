@@ -21,6 +21,7 @@ SingleTest:=function(M, CritNorm, StrictIneq)
     RemoveFile(FileIn);
     RemoveFile(FileOut);
     eNorm:=V * M * V;
+    Print("V=", V, " eNorm=", eNorm, " StrictIneq=", StrictIneq, " CritNorm=", CritNorm, "\n");
     if StrictIneq then
         if eNorm <= CritNorm then
             Print("1: eNorm=", eNorm, " CritNorm=", CritNorm, " StrictIneq=", StrictIneq, "\n");
@@ -37,14 +38,15 @@ end;
 
 SeveralTest_A:=function(M, CritNorm)
     local test;
-    test:=SingleTest(M, 0, true);
+    test:=SingleTest(M, CritNorm, true);
     if test=false then
         return false;
     fi;
-    test:=SingleTest(M, 0, false);
+    test:=SingleTest(M, CritNorm, false);
     if test=false then
         return false;
     fi;
+    return true;
 end;
 
 SeveralTest_B:=function(M)
@@ -74,8 +76,8 @@ end;
 
 
 
-ListM:=ReadAsFunction("ListM1")();;
-#ListM:=ReadAsFunction("LGramReflect")();;
+#ListM:=ReadAsFunction("ListM1")();;
+ListM:=ReadAsFunction("LGramReflect")();;
 
 GetSqrMat:=function(eV)
     local dim, eM, pos, i, j;

@@ -477,7 +477,13 @@ struct ApproxIterator {
 
 
 // Use an increment to approximate the vectors.
-// Should be more efficient than the scal method
+// It is more efficient than the scaling method.
+//
+// The possible positive directions are obtained from
+// two sources:
+// * The exact diagonalization of the matrix. It should
+//   terminate all the time.
+// * The diagonalization using eigenvectors of the matrix,.
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
                                             T const& CritNorm, bool const& StrictIneq,
@@ -554,6 +560,14 @@ MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
   }
 }
 
+// This is the algorithm for computing a vector V with M[V] >= CritNorm.
+// If StrictIneq = true, then the inequality becomes strict.
+//
+// The algorithm is the following:
+// * If finding an isotropic vector would solve the problem then that
+//   path is taken. That is if we find an isotropic vector, then return
+// * The algorithm is run on the Iterated Indefinite-LLL reduced form.
+// * That algorithm is called in allmeth_V2.
 template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
                                          T const& CritNorm, bool const& StrictIneq,
@@ -573,7 +587,7 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
   os << "POS: GetIntegralVector_allmeth: CritNorm=" << CritNorm << " StrictIneq=" << StrictIneq << "\n";
   os << "POS: GetIntegralVector_allmeth: test_isotropic_fine=" << test_isotropic_fine << "\n";
 #endif
-  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T,Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif
