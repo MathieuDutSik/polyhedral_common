@@ -577,11 +577,12 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif
-  if (test_isotropic_fine && !res.success) {
+  if (test_isotropic_fine && res.Xisotrop) {
+    MyVector<T> const& Xisotrop = *res.Xisotrop;
 #ifdef DEBUG_POSITIVITY
-    os << "POS: GetIntegralVector_allmeth: Xisotrop=" << StringVectorGAP(res.Xisotrop) << "\n";
+    os << "POS: GetIntegralVector_allmeth: Xisotrop=" << StringVectorGAP(Xisotrop) << "\n";
 #endif
-    MyVector<T> V1 = RemoveFractionVector(res.Xisotrop);
+    MyVector<T> V1 = RemoveFractionVector(Xisotrop);
 #ifdef DEBUG_POSITIVITY
     os << "POS: GetIntegralVector_allmeth: V1=" << StringVectorGAP(V1) << "\n";
 #endif

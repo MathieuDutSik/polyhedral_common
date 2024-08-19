@@ -74,15 +74,35 @@ end;
 
 
 
+ListM:=ReadAsFunction("ListM1")();;
+#ListM:=ReadAsFunction("LGramReflect")();;
 
-ListM:=ReadAsFunction("IndefiniteForms")();;
+GetSqrMat:=function(eV)
+    local dim, eM, pos, i, j;
+    dim:=Sqrt(Length(eV));
+    eM:=NullMat(dim, dim);
+    pos:=0;
+    for i in [1..dim]
+    do
+        for j in [1..dim]
+        do
+            pos:=pos+1;
+            eM[i][j]:=eV[pos];
+        od;
+    od;
+    return eM;
+end;
+
+
+
 
 FullTest:=function()
-    local iRec, eM, reply;
+    local iRec, eV, eM, reply;
     iRec:=0;
-    for eM in ListM
+    for eV in ListM
     do
         Print("iRec=", iRec, " / ", Length(ListM), "\n");
+        eM:=GetSqrMat(eV);
         reply:=SeveralTest_C(eM);
         if reply=false then
             return false;

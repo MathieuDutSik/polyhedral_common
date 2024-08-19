@@ -165,8 +165,9 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
 #endif
     // Compute the LLL reduction.
     ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw);
-    if (!res.success) {
-      MyVector<T> V = Pw.transpose() * res.Xisotrop;
+    if (res.Xisotrop) {
+      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      MyVector<T> V = Pw.transpose() * Xisotrop;
 #ifdef DEBUG_ISOTROPIC
       os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop in the process\n";
 #endif
@@ -330,6 +331,7 @@ template <typename T>
 std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
+  os << "ISOTROP: STARTEXACT M=" << StringMatrixGAP(M) << "\n";
   int rnk = RankMat(M);
   if (rnk != n) {
     std::cerr << "ISOTROP: FindIsotropicExact failing with rnk=" << rnk << " n=" << n << "\n";
@@ -354,8 +356,10 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream
 
 template <typename T>
 std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
+  using Tint = typename underlying_ring<T>::ring_type;
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
+  os << "ISOTROP: START M=" << StringMatrixGAP(M) << "\n";
   int rnk = RankMat(M);
   if (rnk != n) {
     std::cerr << "ISOTROP: FindIsotropic failing with rnk=" << rnk << " n=" << n << "\n";
@@ -363,14 +367,31 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     throw TerminalException{1};
   }
 #endif
+  // For low dimension, no point using LLL stuff.
   if (n <= 2) {
     return FindIsotropicExact(M, os);
   }
-  std::optional<MyVector<T>> opt = FindIsotropic_LLL_nfixed(M, os);
-  if (opt) {
-    return *opt;
+  // Trying to solve by using the iterated Indefinite-LLL.
+  std::optional<MyVector<T>> optA = FindIsotropic_LLL_nfixed(M, os);
+  if (optA) {
+    return *optA;
   }
-  return FindIsotropicExact(M, os);
+  // Computing the Indefinite-LLL reduction. Could get you an isotrop vector
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M);
+  if (res.Xisotrop) {
+    MyVector<T> const& eV = *res.Xisotrop;
+    return eV;
+  }
+  // Now calling the exact algorithm on the reduced matrix
+  std::optional<MyVector<T>> optB = FindIsotropicExact(res.Mred, os);
+  if (optB) {
+    MyVector<T> const& eV = *optB;
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
+    MyVector<T> fV = B_T.transpose() * eV;
+    return fV;
+  } else {
+    return {};
+  }
 }
 
 template <typename T>

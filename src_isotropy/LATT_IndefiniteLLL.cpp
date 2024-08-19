@@ -14,23 +14,19 @@ void process(std::string const &FileI, std::string const &OutFormat,
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   std::cerr << "We have M\n";
 
-  ResultIndefiniteLLL<T, Tint> ResLLL = Indefinite_LLL<T, Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M);
   std::cerr << "B_T=\n";
-  WriteMatrix(std::cerr, ResLLL.B);
+  WriteMatrix(std::cerr, res.B);
   std::cerr << "Mred=\n";
-  WriteMatrix(std::cerr, ResLLL.Mred);
+  WriteMatrix(std::cerr, res.Mred);
   if (OutFormat == "GAP") {
-    if (ResLLL.success) {
-      os << "return rec(B:=";
-      WriteMatrixGAP(os, ResLLL.B);
-      os << ", Mred:=";
-      WriteMatrixGAP(os, ResLLL.Mred);
-      os << ");\n";
-    } else {
-      os << "return rec(Xisotrop:=";
-      WriteVectorGAP(os, ResLLL.Xisotrop);
-      os << ");\n";
+    os << "return rec(B:=" << StringMatrixGAP(res.B);
+    os << ", Mred:=" << StringMatrixGAP(res.Mred);
+    if (res.Xisotrop) {
+      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      os << ", Xisotrop:=" << StringVectorGAP(Xisotrop);
     }
+    os << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";

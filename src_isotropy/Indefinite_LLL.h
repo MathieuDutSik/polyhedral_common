@@ -61,7 +61,7 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
     l_inf.push_back(epair);
   }
 #ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
+  std::cerr << "ILLL: det1=" << det1 << " det2=" << det2 << "\n";
 #endif
   return {true, Bstar, Bstar_norms, mu, {}};
 }
@@ -69,10 +69,9 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
 template <typename T, typename Tint> struct ResultIndefiniteLLL {
   // true if we obtained the reduced matrix. false if we found an
   // isotropic vector
-  bool success;
   MyMatrix<Tint> B;
   MyMatrix<T> Mred;
-  MyVector<T> Xisotrop;
+  std::optional<MyVector<T>> Xisotrop;
 };
 
 // Adapted from Denis Simon, Solving Quadratic Equations Using Reduced
@@ -94,17 +93,17 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   int k = 1;
   while (true) {
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "Passing in Indefinite_LLL det=" << det << " k=" << k << "\n";
+    std::cerr << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k << "\n";
 #endif
     ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B);
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << " Bstar_norms =";
+    std::cerr << "ILLL: Bstar_norms =";
     for (auto &eN : ResGS.Bstar_norms)
       std::cerr << " " << eN;
     std::cerr << "\n";
 #endif
     if (!ResGS.success) {
-      return {false, B, get_matrix(), ResGS.Xisotrop};
+      return {B, get_matrix(), ResGS.Xisotrop};
     }
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
@@ -119,10 +118,11 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     T sum2 = c * T_abs(ResGS.Bstar_norms[k - 1]);
     if (sum1 < sum2) {
 #ifdef DEBUG_INDEFINITE_LLL
-      std::cerr << "Swapping k=" << k << " and " << (k - 1) << "\n";
+      std::cerr << "ILLL: Swapping k=" << k << " and " << (k - 1) << "\n";
 #endif
-      for (int i = 0; i < n; i++)
+      for (int i = 0; i < n; i++) {
         std::swap(B(k, i), B(k - 1, i));
+      }
       k = std::max(k - 1, 1);
     } else {
       k++;
@@ -130,13 +130,8 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     if (k >= n)
       break;
   }
-  return {true, B, get_matrix(), {}};
+  return {B, get_matrix(), {}};
 }
-
-template <typename T, typename Tint> struct ResultReduction {
-  MyMatrix<Tint> B;
-  MyMatrix<T> Mred;
-};
 
 template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
   std::vector<int> LPos(n);
@@ -160,21 +155,11 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
 }
 
 template <typename T, typename Tint>
-ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
+ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
 #ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "Beginning of ComputeReductionIndefinite\n";
+  std::cerr << "ILLL: Beginning of ComputeReductionIndefinite\n";
 #endif
   int n = M.rows();
-  ResultIndefiniteLLL<T, Tint> eRes = Indefinite_LLL<T, Tint>(M);
-#ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "We have computed eRes\n";
-#endif
-  bool early_term = false;
-  if (eRes.success && early_term) {
-    return {std::move(eRes.B), std::move(eRes.Mred)};
-  }
-  MyMatrix<Tint> B = eRes.B;
-  MyMatrix<T> Mwork = eRes.Mred;
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
     T sum = 0;
     for (int i = 0; i < n; i++)
@@ -182,33 +167,74 @@ ResultReduction<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
         sum += T_abs(mat(i, j));
     return sum;
   };
+  MyMatrix<Tint> B = IdentityMat<Tint>(n);
+  MyMatrix<T> B_T = IdentityMat<T>(n);
+  MyMatrix<T> Mwork = M;
   T norm_work = get_norm(Mwork);
   size_t iter_no_improv = 0;
   size_t limit_iter = 2 * n;
-  while (true) {
+  while(true) {
+    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Mwork);
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << "ILLL: We have computed res\n";
+#endif
+    // Terminating if we find an isotropic vector
+    if (res.Xisotrop) {
+      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      MyVector<T> V = B_T.transpose() * Xisotrop;
+#ifdef DEBUG_INDEFINITE_LLL
+      T sum = EvaluationQuadForm<T,T>(M, V);
+      if (sum != 0) {
+        std::cerr << "ILLL: V should be an isotropic vector\n";
+        throw TerminalException{1};
+      }
+#endif
+      MyMatrix<Tint> Bret = B * res.B;
+      Mwork = res.Mred;
+#ifdef DEBUG_INDEFINITE_LLL
+      MyMatrix<T> Bret_T = UniversalMatrixConversion<T,Tint>(Bret);
+      MyMatrix<T> prod = Bret_T * M * Bret_T.transpose();
+      if (prod != Mwork) {
+        std::cerr << "ILLL: Bret is not the correct reduction matrix\n";
+        throw TerminalException{1};
+      }
+#endif
+      return {Bret, Mwork, Xisotrop};
+    }
+    // Applying the reduction
+    B = res.B * B;
+    Mwork = res.Mred;
+    T norm = get_norm(res.Mred);
+#ifdef DEBUG_INDEFINITE_LLL
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+    MyMatrix<T> prod = B_T * M * B_T.transpose();
+    if (prod != Mwork) {
+      std::cerr << "ILLL: B is not the correct reduction matrix\n";
+      throw TerminalException{1};
+    }
+#endif
+    // Updating metric
+    if (norm >= norm_work) {
+      iter_no_improv++;
+      if (limit_iter == iter_no_improv) {
+        return {B, Mwork, {}};
+      }
+    } else {
+      iter_no_improv = 0;
+      norm_work = norm;
+    }
+    // Applying the random perturbation and iterating
     MyMatrix<Tint> RandUnit = get_random_int_matrix<Tint>(n);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T, Tint>(RandUnit);
     B = RandUnit * B;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
-    ResultIndefiniteLLL<T, Tint> eRes = Indefinite_LLL<T, Tint>(Mwork);
-    if (eRes.success && early_term) {
-      B = eRes.B * B;
-      Mwork = eRes.Mred;
-      return {std::move(B), std::move(Mwork)};
-    }
-    T norm = get_norm(eRes.Mred);
-    if (norm >= norm_work) {
-      iter_no_improv++;
-      if (limit_iter == iter_no_improv)
-        return {std::move(B), std::move(Mwork)};
-    } else {
-      iter_no_improv = 0;
-      norm_work = norm;
-      B = eRes.B * B;
-      Mwork = eRes.Mred;
-    }
   }
 }
+
+template <typename T, typename Tint> struct ResultReduction {
+  MyMatrix<Tint> B;
+  MyMatrix<T> Mred;
+};
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
@@ -218,9 +244,11 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
   using Tgr = GraphListAdj;
   Tidx n = M.rows();
   MyMatrix<T> Mabs(n, n);
-  for (Tidx i_row = 0; i_row < n; i_row++)
-    for (Tidx i_col = 0; i_col < n; i_col++)
+  for (Tidx i_row = 0; i_row < n; i_row++) {
+    for (Tidx i_col = 0; i_col < n; i_col++) {
       Mabs(i_row, i_col) = T_abs(M(i_row, i_col));
+    }
+  }
   WeightMatrix<true, T, Tidx_value> WMat =
       WeightedMatrixFromMyMatrix<true, T, Tidx_value>(Mabs, os);
   WMat.ReorderingSetWeight();
@@ -242,6 +270,7 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
     Tidx j_row = CanonicOrd[i_row];
     Mtrans1(i_row, j_row) = 1;
   }
+#ifdef DEBUG_INDEFINITE_LLL
   MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T, Tint>(Mtrans1);
   MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
@@ -250,7 +279,7 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
     WriteMatrix(std::cerr, eProd);
     throw TerminalException{1};
   }
-
+#endif
   GraphBitset GR(n);
   for (Tidx i_row = 0; i_row < n; i_row++) {
     for (Tidx i_col = 0; i_col < n; i_col++) {
@@ -271,11 +300,14 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
     Status[0] = 1;
     while (true) {
       size_t n_done = 0;
-      for (size_t i = 0; i < len; i++)
-        if (Status[i] > 0)
+      for (size_t i = 0; i < len; i++) {
+        if (Status[i] > 0) {
           n_done++;
-      if (n_done == len)
+        }
+      }
+      if (n_done == len) {
         break;
+      }
       for (size_t i = 0; i < len; i++) {
         if (Status[i] > 0) {
           size_t iImg = eConn[i];
@@ -306,7 +338,7 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
     MyMatrix<Tint> eP = IdentityMat<Tint>(1);
     return {std::move(eP), M};
   }
-  ResultReduction<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M);
+  ResultIndefiniteLLL<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M);
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
@@ -318,7 +350,8 @@ ResultReduction<T, Tint>
 ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
                                bool const &ApplyReduction) {
   if (ApplyReduction) {
-    return ComputeReductionIndefinite<T, Tint>(M);
+    ResultIndefiniteLLL<T,Tint> res = ComputeReductionIndefinite<T, Tint>(M);
+    return {res.B, res.Mred};
   } else {
     int n = M.rows();
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
