@@ -15,7 +15,7 @@ void process(std::string const &MatFile, std::string const& XnormStr, std::strin
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Xnorm\n";
   ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(Qmat);
-  std::vector<MyVector<Tint>> LVect = approx.GetCoveringOrbitRepresentatives(Xnorm);
+  std::vector<MyVector<Tint>> LVect = approx.GetCoveringOrbitRepresentatives(Xnorm, std::cerr);
   if (OutFormat == "GAP") {
     if (LVect.size() == 0) {
       os_out << "return rec(LVect:=[]);\n";

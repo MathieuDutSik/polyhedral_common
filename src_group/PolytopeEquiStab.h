@@ -305,7 +305,7 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
                                     const MyMatrix<T> &GramMat2,
                                     const std::vector<Tidx> &CanonicReord1,
                                     const std::vector<Tidx> &CanonicReord2,
-                                    std::ostream& os) {
+                                    [[maybe_unused]] std::ostream &os) {
   size_t nbRow = EXT1.rows();
   // Building the combinatorial equivalence
   std::vector<Tidx> ListIdx(nbRow);

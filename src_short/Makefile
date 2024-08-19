@@ -1,7 +1,6 @@
 PROGRAM		= SHORT_LiftConfigurationShortest \
                   SHORT_EnumerateCyclicCases \
                   SHORT_GetShortestVector \
-                  SHORT_GetShortVector \
                   SHORT_CheckPrimeRealizability \
                   SHORT_TestRealizability \
                   SHORT_ReduceVectorFamilyGAP \

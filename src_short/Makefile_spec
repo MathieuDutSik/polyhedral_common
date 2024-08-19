@@ -1,4 +1,4 @@
-PROGRAM		= SHORT_GetShortVector
+PROGRAM		=  SHORT_EnumerateCyclicCases
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
