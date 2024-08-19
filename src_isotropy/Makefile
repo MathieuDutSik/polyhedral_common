@@ -22,7 +22,10 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_poly -I../src_dualdesc -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
-CTOTAL          = $(CLOCAL) $(CFLAGS)
+#CDEFS           = -DDEBUG_DETERMINANT_MINIMIZATION -DDEBUG_ISOTROPIC -DDEBUG_LEGENDRE -DDEBUG_QUATERNARY -DDEBUG_FIFTH_AND_HIGHER_ORDER
+#CDEFS           = -DDEBUG_ISOTROPIC
+CDEFS           =
+CTOTAL          = $(CLOCAL) $(CFLAGS) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK)
 

@@ -190,7 +190,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
 #ifdef DEBUG_ISOTROPIC
     os << "ISOTROP: GetIsotropIndefiniteLLL norm=" << norm << " curr_norm=" << curr_norm << "\n";
 #endif
-    if (norm > curr_norm) {
+    if (norm >= curr_norm) {
       break;
     }
     curr_norm = norm;
@@ -308,6 +308,9 @@ std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::o
   for (int iter=0; iter<n_iter; iter++) {
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
     if (opt) {
+#ifdef DEBUG_ISOTROPIC
+      os << "ISOTROP: RESULT rec(iter:=" << iter << "),\n";
+#endif
       MyVector<T> const &eV = *opt;
       if (!IsZeroVector(eV)) {
         MyVector<T> fV = Pw.transpose() * eV;
