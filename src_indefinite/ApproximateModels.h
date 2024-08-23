@@ -16,6 +16,10 @@
 #define DEBUG_APPROXIMATE_MODELS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_APPROXIMATE_MODELS
+#endif
+
 
 template<typename T, typename Tint>
 struct ApproximateModel {
@@ -630,12 +634,16 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
     size_t dim = eConn.size();
     MyMatrix<T> eQ(dim, dim);
     for (size_t i=0; i<dim; i++) {
-      for (size_t j=i+1; j<n; j++) {
+      for (size_t j=0; j<dim; j++) {
         eQ(i,j) = Qmat(eConn[i], eConn[j]);
       }
     }
     ListQ.push_back(eQ);
-    if (IsPositiveDefinite(eQ)) {
+    bool test = IsPositiveDefinite(eQ);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: iConn=" << iConn << " dim=" << dim << " test=" << test << "\n";
+#endif
+    if (test) {
       ListPosIdx.push_back(iConn);
     }
   }
@@ -968,7 +976,7 @@ EichlerReduction<T,Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std:
   MyMatrix<T> preEmbedInv_T = EmbedSimpInv * FullBasis_T;
   MyMatrix<T> QmatEichler = preEmbedInv_T * Qmat * preEmbedInv_T.transpose();
 #ifdef DEBUG_APPROXIMATE_MODELS
-  if (!is_eichler_canonical(QmatB)) {
+  if (!is_eichler_canonical(QmatEichler)) {
     std::cerr << "The matrix should be reduced according to the Eichler canonical form\n";
     throw TerminalException{1};
   }
@@ -1122,7 +1130,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
   os << "MODEL: We have shr_ptr\n";
 #endif
 
-  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>)> get_vector_representatives=[=](MyVector<Tint> const& eRepr) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>,T)> get_vector_representatives=[=](MyVector<Tint> const& eRepr, T const& X) -> std::vector<MyVector<Tint>> {
     std::vector<MyVector<Tint>> ListV;
     for (auto & eCos : shr_ptr->ListCoset) {
       MyVector<Tint> fRepr = eCos.transpose() * eRepr;
@@ -1158,9 +1166,10 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 3: X=" << X << "\n";
 #endif
+    T Xscal = X * shr_ptr->er.scal;
     std::vector<MyVector<Tint>> ListRepr;
-    for (auto & eRepr : shr_ptr->approx.GetCoveringOrbitRepresentatives(X, os)) {
-      for (auto & fRepr : get_vector_representatives(eRepr)) {
+    for (auto & eRepr : shr_ptr->approx.GetCoveringOrbitRepresentatives(Xscal, os)) {
+      for (auto & fRepr : get_vector_representatives(eRepr, X)) {
         ListRepr.push_back(fRepr);
       }
     }
@@ -1170,7 +1179,8 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Beginning of GetOneOrbitRepresentative 3: X=" << X << "\n";
 #endif
-    std::optional<MyVector<Tint>> opt = shr_ptr->approx.GetOneOrbitRepresentative(X, os);
+    T Xscal = X * shr_ptr->er.scal;
+    std::optional<MyVector<Tint>> opt = shr_ptr->approx.GetOneOrbitRepresentative(Xscal, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: We have opt\n";
 #endif
@@ -1181,7 +1191,7 @@ ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat,
     os << "MODEL: Before iteration over |ListCoset|=" << ListCoset.size() << "\n";
 #endif
     MyVector<Tint> const& eRepr = *opt;
-    std::vector<MyVector<Tint>> ListV = get_vector_representatives(eRepr);
+    std::vector<MyVector<Tint>> ListV = get_vector_representatives(eRepr, X);
     if (ListV.size() > 0) {
       return ListV[0];
     }
