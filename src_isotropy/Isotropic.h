@@ -394,6 +394,13 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
 #endif
   if (res.Xisotrop) {
     MyVector<T> const& eV = *res.Xisotrop;
+#ifdef DEBUG_ISOTROPIC
+    T sum = EvaluationQuadForm<T,T>(M, eV);
+    if (sum != 0) {
+      std::cerr << "ISOTROP: FindIsotropic, eV should be an isotropic vector (by ComputeReductionIndefinite)\n";
+      throw TerminalException{1};
+    }
+#endif
     return eV;
   }
   // Now calling the exact algorithm on the reduced matrix
@@ -405,6 +412,13 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     MyVector<T> const& eV = *optB;
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
     MyVector<T> fV = B_T.transpose() * eV;
+#ifdef DEBUG_ISOTROPIC
+    T sum = EvaluationQuadForm<T,T>(M, fV);
+    if (sum != 0) {
+      std::cerr << "ISOTROP: FindIsotropic, fV should be an isotropic vector (by FindIsotropicExact)\n";
+      throw TerminalException{1};
+    }
+#endif
     return fV;
   } else {
     return {};

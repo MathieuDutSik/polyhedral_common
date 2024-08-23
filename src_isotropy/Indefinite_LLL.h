@@ -211,7 +211,7 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[
 #ifdef TIMINGS_INDEFINITE_LLL
       os << "|ComputeReductionIndefinite(Iso)|=" << time << "\n";
 #endif
-      return {Bret, Mwork, Xisotrop};
+      return {Bret, Mwork, V};
     }
     // Applying the reduction
     B = res.B * B;

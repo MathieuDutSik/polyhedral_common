@@ -114,6 +114,13 @@ std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const& M, std::ost
     MyMatrix<T> NSP_T = NullspaceIntMat(M);
     MyVector<T> eV_T = GetMatrixRow(NSP_T, 0);
     MyVector<Tint> eV = UniversalVectorConversion<Tint,T>(eV_T);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    T sum = EvaluationQuadForm<T,Tint>(M, eV);
+    if (sum != 0) {
+      std::cerr << "MODEL: INDEF_FindIsotropic, error in the isotrop by rank\n";
+      throw TerminalException{1};
+    }
+#endif
     return eV;
   }
   std::optional<MyVector<T>> opt = FindIsotropic(M, os);
@@ -121,6 +128,13 @@ std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const& M, std::ost
     MyVector<T> const& eV = *opt;
     MyVector<T> fV = RemoveFractionVector(eV);
     MyVector<Tint> gV = UniversalVectorConversion<Tint,T>(fV);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    T sum = EvaluationQuadForm<T,Tint>(M, gV);
+    if (sum != 0) {
+      std::cerr << "MODEL: INDEF_FindIsotropic, error in the isotrop by FindIsotropic\n";
+      throw TerminalException{1};
+    }
+#endif
     return gV;
   } else {
     return {};
