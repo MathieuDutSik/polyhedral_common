@@ -19,6 +19,10 @@
 #define DEBUG_QUATERNARY
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_QUATERNARY
+#endif
+
 /*
   We follow here "Algorithms for solving rational quadratic forms"
   by Josef Schicho and Jana Pilnikova
@@ -555,6 +559,9 @@ std::optional<MyVector<T>> QuaternaryIsotropicVectorDiagonal(MyVector<T> const& 
 
 template<typename T>
 std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+#ifdef TIMINGS_QUATERNARY
+  MicrosecondTime time;
+#endif
   using Tring = typename underlying_ring<T>::ring_type;
 #ifdef DEBUG_QUATERNARY
   os << "QUAD: QuaternaryIsotropicVector, beginning\n";
@@ -563,6 +570,9 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
   MyVector<Tring> a = UniversalVectorConversion<Tring,T>(pair1.second);
   std::optional<MyVector<Tring>> opt = QuaternaryIsotropicVectorDiagonal(a, os);
   if (!opt) {
+#ifdef TIMINGS_QUATERNARY
+    os << "|QuaternaryIsotropicVector(None)|=" << time << "\n";
+#endif
     return {};
   }
   MyVector<Tring> const& sol1 = *opt;
@@ -579,6 +589,9 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const& M, std::
     std::cerr << "QUAD: sol3 should be a non-zero vector\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef TIMINGS_QUATERNARY
+  os << "|QuaternaryIsotropicVector(Some)|=" << time << "\n";
 #endif
   return sol3;
 }

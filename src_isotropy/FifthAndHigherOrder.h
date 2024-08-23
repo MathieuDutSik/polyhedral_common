@@ -30,8 +30,9 @@
 #define DEBUG_FIFTH_AND_HIGHER_ORDER
 #endif
 
-
-
+#ifdef TIMINGS
+#define TIMINGS_FIFTH_AND_HIGHER_ORDER
+#endif
 
 /*
   By Meyer theorem, we know that there is one isotropic vector.
@@ -239,6 +240,9 @@ MyVector<T> FifthOrderIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
 
 template<typename T>
 MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostream& os) {
+#ifdef TIMINGS_FIFTH_AND_HIGHER_ORDER
+  MicrosecondTime time;
+#endif
   auto get_basis=[&]() -> MyMatrix<T> {
     if (Q.rows() == 5) {
       return IdentityMat<T>(5);
@@ -268,6 +272,9 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostrea
       throw TerminalException{1};
     }
 #endif
+#ifdef TIMINGS_FIFTH_AND_HIGHER_ORDER
+    os << "|FifthAndHigherOrderIsotropicVector(rank)|=" << time << "\n";
+#endif
     return v2;
   }
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
@@ -290,6 +297,9 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const& Q, std::ostrea
     std::cerr << "FIFTH: v2 should be non-zero 2\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef TIMINGS_FIFTH_AND_HIGHER_ORDER
+  os << "|FifthAndHigherOrderIsotropicVector(fifth)|=" << time << "\n";
 #endif
   return v2;
 }

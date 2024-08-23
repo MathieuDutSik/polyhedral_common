@@ -17,6 +17,10 @@
 #define DEBUG_LEGENDRE
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_LEGENDRE
+#endif
+
 /*
   The ternary equation x M x = 0 for L a 3x3 matrix
   is named the Legendre equation.
@@ -796,11 +800,17 @@ std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, 
  */
 template<typename T>
 std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+#ifdef TIMINGS_LEGENDRE
+  MicrosecondTime time;
+#endif
   using Tring = typename underlying_ring<T>::ring_type;
   std::pair<MyMatrix<T>, MyVector<T>> pair1 = get_reduced_diagonal(M, os);
   MyVector<Tring> diag = UniversalVectorConversion<Tring, T>(pair1.second);
   std::optional<MyVector<Tring>> opt = TernaryIsotropicVectorDiagonal(diag, os);
   if (!opt) {
+#ifdef TIMINGS_LEGENDRE
+    os << "|TernaryIsotropicVector(None)|=" << time << "\n";
+#endif
     return {};
   }
   MyVector<Tring> sol2 = *opt;
@@ -822,6 +832,9 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
     std::cerr << "LEG: sol4 should be a non-zero vector\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef TIMINGS_LEGENDRE
+  os << "|TernaryIsotropicVector(Some)|=" << time << "\n";
 #endif
   return sol4;
 }

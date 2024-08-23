@@ -18,6 +18,10 @@
 #define DEBUG_ISOTROPIC
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_ISOTROPIC
+#endif
+
 /*
   The method here is inspired by the following
   papers and manuscripts:
@@ -305,7 +309,8 @@ std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::o
   int n = Q.rows();
   MyMatrix<T> Pw = IdentityMat<T>(n);
   MyMatrix<T> Qw = Q;
-  int n_iter = 5;
+  // Iterating 2 times seems right from simulation. Little benefit from going farther.
+  int n_iter = 2;
   for (int iter=0; iter<n_iter; iter++) {
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
     if (opt) {
@@ -356,6 +361,9 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream
 
 template <typename T>
 std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
+#ifdef TIMINGS_ISOTROPIC
+  MicrosecondTime time;
+#endif
   using Tint = typename underlying_ring<T>::ring_type;
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
@@ -373,17 +381,26 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   }
   // Trying to solve by using the iterated Indefinite-LLL.
   std::optional<MyVector<T>> optA = FindIsotropic_LLL_nfixed(M, os);
+#ifdef TIMINGS_LEGENDRE
+  os << "|FindIsotropic(optA)|=" << time << "\n";
+#endif
   if (optA) {
     return *optA;
   }
   // Computing the Indefinite-LLL reduction. Could get you an isotrop vector
   ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M);
+#ifdef TIMINGS_LEGENDRE
+  os << "|FindIsotropic(ComputeReductionIndefinite)|=" << time << "\n";
+#endif
   if (res.Xisotrop) {
     MyVector<T> const& eV = *res.Xisotrop;
     return eV;
   }
   // Now calling the exact algorithm on the reduced matrix
   std::optional<MyVector<T>> optB = FindIsotropicExact(res.Mred, os);
+#ifdef TIMINGS_LEGENDRE
+  os << "|FindIsotropic(FindIsotropicExact)|=" << time << "\n";
+#endif
   if (optB) {
     MyVector<T> const& eV = *optB;
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
@@ -396,6 +413,9 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
 
 template <typename T>
 bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
+#ifdef TIMINGS_ISOTROPIC
+  MicrosecondTime time;
+#endif
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
   int rnk = RankMat(M);
@@ -405,22 +425,29 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
     throw TerminalException{1};
   }
 #endif
-  if (n == 1) {
-    std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
-    return opt.has_value();
-  }
-  if (n == 2) {
-    std::optional<MyVector<T>> opt = FindIsotropicRankTwo(M);
-    return opt.has_value();
-  }
-  if (n == 3) {
-    return ternary_has_isotropic_vector(M, os);
-  }
-  if (n == 4) {
-    return quaternary_has_isotropic_vector(M, os);
-  }
-  // By Meyer theorem, for n > 4 there is an isotropic vector
-  return true;
+  auto get_val=[&]() -> bool {
+    if (n == 1) {
+      std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
+      return opt.has_value();
+    }
+    if (n == 2) {
+      std::optional<MyVector<T>> opt = FindIsotropicRankTwo(M);
+      return opt.has_value();
+    }
+    if (n == 3) {
+      return ternary_has_isotropic_vector(M, os);
+    }
+    if (n == 4) {
+      return quaternary_has_isotropic_vector(M, os);
+    }
+    // By Meyer theorem, for n > 4 there is an isotropic vector
+    return true;
+  };
+  bool test = get_val();
+#ifdef TIMINGS_ISOTROPIC
+  os << "|is_isotropic|=" << time << "\n";
+#endif
+  return test;
 }
 
 
