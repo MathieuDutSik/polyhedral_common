@@ -248,6 +248,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   InternalEichler<T,Tint> ie{Qmat, Gmat, ListClasses, GRPstart};
   std::shared_ptr<InternalEichler<T,Tint>> shr_ptr = std::make_shared<InternalEichler<T,Tint>>(ie);
   std::function<void(std::vector<MyMatrix<Tint>> const&, std::ostream&)> SetListClassesOrbitwise = [=](std::vector<MyMatrix<Tint>> const& GRPmatr, [[maybe_unused]] std::ostream& os) -> void {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    MicrosecondTime time;
+#endif
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
@@ -292,8 +295,14 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       ListClasses.push_back(eV);
     }
     shr_ptr->ListClasses = ListClasses;
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    os << "|SetListClassesOrbitwise|=" << time << "\n";
+#endif
   };
   std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Beginning of GetApproximateGroup : 1\n";
 #endif
@@ -396,6 +405,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
         FuncInsert(INDEF_FORM_Eichler_Transvection(Qmat, eVect, eOrth));
       }
     }
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    os << "|GetApproximateGroup|=" << time << "\n";
+#endif
     return ListGenerators;
   };
   // Notion of divisor
@@ -404,6 +416,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
   // For each v in L* we can find smallest d such that w = dv in L.
   // And we then have div(w) = d
   std::function<std::vector<MyVector<Tint>>(T const&, std::ostream&)> EnumerateVectorOverDiscriminant = [=](T const& X,[[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    MicrosecondTime time;
+#endif
     // For each vector v in M* / M
     // We want (x, v) divided by d.
     //
@@ -530,9 +545,15 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
       ListSolution.push_back(eSolution);
     }
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    os << "|EnumerateVectorOverDiscriminant|=" << time << "\n";
+#endif
     return ListSolution;
   };
   std::function<std::vector<MyVector<Tint>>(T const&,std::ostream&)> GetCoveringOrbitRepresentatives = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: Beginning of GetCoveringOrbitRepresentatives 1: X=" << X << "\n";
 #endif
@@ -561,6 +582,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
         ListSolution.push_back(eV);
       }
     }
+#ifdef TIMINGS_APPROXIMATE_MODELS
+    os << "|GetCoveringOrbitRepresentatives|=" << time << "\n";
+#endif
     return ListSolution;
   };
   std::function<std::optional<MyVector<Tint>>(T const&,std::ostream&)> GetOneOrbitRepresentative = [=](T const& X, [[maybe_unused]] std::ostream& os) -> std::optional<MyVector<Tint>> {
@@ -602,6 +626,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
  */
 template<typename T, typename Tint>
 std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostream& os) {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+  MicrosecondTime time;
+#endif
   std::vector<MyMatrix<Tint>> ListGenerators;
   auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -737,6 +764,9 @@ ResultHyperbolicPlane<T,Tint> get_result_hyperbolic_plane(MyMatrix<T> const& M, 
  */
 template<typename T, typename Tint>
 ResultHyperbolicPlane<T,Tint> GetHyperbolicPlane(MyMatrix<T> const& Qmat, std::ostream& os) {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+  MicrosecondTime time;
+#endif
   int n = Qmat.rows();
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: Beginning of GetHyperbolicPlane, Qmat=\n";
@@ -879,15 +909,22 @@ ResultHyperbolicPlane<T,Tint> GetHyperbolicPlane(MyMatrix<T> const& Qmat, std::o
           } else {
             n_no_change += 1;
           }
+          bool terminate = false;
           if (n_no_change == max_no_change) {
 #ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: f_get_minimal, 3: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
 #endif
-            return get_result_hyperbolic_plane(Qmat, pairA);
+            terminate = true;
           }
           if (n_at_level == max_level) {
 #ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: f_get_minimal, 4: pairA=(" << StringVectorGAP(pairA.first) << " / " << StringVectorGAP(pairA.second) << ")\n";
+#endif
+            terminate = true;
+          }
+          if (terminate) {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+            os << "|GetHyperbolicPlane|=" << time << "\n";
 #endif
             return get_result_hyperbolic_plane(Qmat, pairA);
           }
@@ -934,6 +971,9 @@ struct EichlerReduction {
 
 template<typename T, typename Tint>
 EichlerReduction<T,Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& os) {
+#ifdef TIMINGS_APPROXIMATE_MODELS
+  MicrosecondTime time;
+#endif
   int n = Qmat.rows();
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: Beginning of GetEichlerHyperplaneBasis Qmat=\n";
@@ -987,6 +1027,9 @@ EichlerReduction<T,Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std:
   MyMatrix<T> EmbedInv_T = Inverse(Embed_T);
   MyMatrix<Tint> Embed = UniversalMatrixConversion<Tint,T>(Embed_T);
   T scal = frac.TheMult * frac.TheMult;
+#ifdef TIMINGS_APPROXIMATE_MODELS
+  os << "|GetEichlerHyperplaneBasis|=" << time << "\n";
+#endif
   return {Embed, Embed_T, EmbedInv_T, scal, QmatEichler};
 }
 
