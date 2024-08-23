@@ -862,6 +862,31 @@ std::pair<MyVector<Tint>, MyVector<Tint>> GetHyperbolicPlane(MyMatrix<T> const& 
   }
 }
 
+/*
+  What are the strategies for getting decompositions?
+  The objective is to get all of this things working.
+  ---The embedding for Eichler actually gets us an embedding
+  of the lattice for the quadratic form (aU + bU + L) into U + U + L.
+  The index of that lattice into U + U + L is a b.
+  ---What if the hyperbolic planes aU + bU + (aU + bU)^{perp}
+  actually define a sublattice of the lattice K.
+  ---We can probably rescale and that would work for us, though maybe at a cost.
+
+     ----
+
+  The function should return the following:
+  ---A matrix P and a factor C such that
+            P Q P^T = C (U + U + L)
+     and L even integral.
+  ---P does not have to be invertible but it has to be.
+
+  P1 = FullBasis
+  P1 Q P1^T = aU + bU + L
+  Define Embed = (1/a , 1 , 1/b , 1, 1^{n-4})
+  P2 = Embed P1
+  P2 Q P2^T = U + U + L
+
+ */
 template<typename T, typename Tint>
 MyMatrix<Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std::ostream& os) {
 #ifdef DEBUG_APPROXIMATE_MODELS
