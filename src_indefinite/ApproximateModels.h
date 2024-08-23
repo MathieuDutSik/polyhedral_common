@@ -6,6 +6,7 @@
 #include "Isotropic.h"
 #include "GRP_GroupFct.h"
 #include "MAT_MatrixInt.h"
+#include "PositiveNegative.h"
 #include "LatticeStabEquiCan.h"
 #include "IndefiniteFormFundamental.h"
 #include "MatrixGroup.h"
@@ -310,7 +311,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     }
     shr_ptr->ListClasses = ListClasses;
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "|SetListClassesOrbitwise|=" << time << "\n";
+    os << "MODEL: |SetListClassesOrbitwise|=" << time << "\n";
 #endif
   };
   std::function<std::vector<MyMatrix<Tint>>(std::ostream&)> GetApproximateGroup = [=]([[maybe_unused]] std::ostream& os) -> std::vector<MyMatrix<Tint>> {
@@ -420,7 +421,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       }
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "|GetApproximateGroup|=" << time << "\n";
+    os << "MODEL: |GetApproximateGroup|=" << time << "\n";
 #endif
     return ListGenerators;
   };
@@ -501,12 +502,17 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
         T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_norm=" << Aclass3_norm << "\n";
+        os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_res1=" << Aclass3_res1 << " X_res1=" << X_res1 << "\n";
 #endif
         if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
           // and so
           // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
           T diff = (X_res2 - Aclass3_res2) / DivD;
           MyVector<T> eProd = Gmat * eClass3;
+#ifdef DEBUG_APPROXIMATE_MODELS
+          os << "MODEL: EnumerateVectorOverDiscriminant diff=" << diff << "\n";
+          os << "MODEL: EnumerateVectorOverDiscriminant eProd=" << StringVectorGAP(eProd) << "\n";
+#endif
           GCD_dot<T> eRec = ComputeGcdDot(eProd);
           auto iife_quot=[&]() -> T {
             if (eRec.gcd == 0) {
@@ -546,6 +552,8 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
               std::cerr << "eNorm / X is inconsistent\n";
               throw TerminalException{1};
             }
+            os << "MODEL: EnumerateVectorOverDiscriminant DivD=" << DivD << " u=" << u << "\n";
+            os << "MODEL: EnumerateVectorOverDiscriminant eSolution_T=" << StringVectorGAP(eSolution_T) << "\n";
 #endif
             MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
             ListSolution.push_back(eSolution);
@@ -560,7 +568,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       ListSolution.push_back(eSolution);
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "|EnumerateVectorOverDiscriminant|=" << time << "\n";
+    os << "MODEL: |EnumerateVectorOverDiscriminant|=" << time << "\n";
 #endif
     return ListSolution;
   };
@@ -597,7 +605,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       }
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "|GetCoveringOrbitRepresentatives|=" << time << "\n";
+    os << "MODEL: |GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif
     return ListSolution;
   };
@@ -680,9 +688,11 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       }
     }
     ListQ.push_back(eQ);
-    bool test = IsPositiveDefinite(eQ);
+    bool test = INDEF_FORM_IsPosNeg(eQ);
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: iConn=" << iConn << " dim=" << dim << " test=" << test << "\n";
+    os << "MODEL: eQ=\n";
+    WriteMatrix(os, eQ);
 #endif
     if (test) {
       ListPosIdx.push_back(iConn);
@@ -692,7 +702,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
     MyMatrix<T> const& eQ = ListQ[iConn];
     std::vector<size_t> const& eConn = LConn[iConn];
     size_t dim = eConn.size();
-    std::vector<MyMatrix<Tint>> LGen = ArithmeticAutomorphismGroup<T,Tint>(eQ, os);
+    std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_PosNeg<T,Tint>(eQ, os);
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
       for (size_t i=0; i<dim; i++) {
@@ -730,7 +740,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       MyMatrix<T> const& fQ = ListQ[jConn];
       std::vector<size_t> const& fConn = LConn[jConn];
       size_t dim = eConn.size();
-      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(eQ, fQ, os);
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence_PosNeg<T,Tint>(eQ, fQ, os);
       if (opt) {
         MyMatrix<Tint> const& P = *opt;
         MyMatrix<Tint> Pinv = Inverse(P);
@@ -747,6 +757,9 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
       }
     }
   }
+#ifdef TIMINGS_APPROXIMATE_MODELS
+  os << "MODEL: |GetEasyIsometries|=" << time << "\n";
+#endif
   return ListGenerators;
 }
 
@@ -938,7 +951,7 @@ ResultHyperbolicPlane<T,Tint> GetHyperbolicPlane(MyMatrix<T> const& Qmat, std::o
           }
           if (terminate) {
 #ifdef TIMINGS_APPROXIMATE_MODELS
-            os << "|GetHyperbolicPlane|=" << time << "\n";
+            os << "MODEL: |GetHyperbolicPlane|=" << time << "\n";
 #endif
             return get_result_hyperbolic_plane(Qmat, pairA);
           }
@@ -1009,6 +1022,7 @@ EichlerReduction<T,Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std:
   MyMatrix<Tint> const& Basis2 = hyp2.Basis;
   T a2 = hyp2.scal;
 #ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis, a1=" << a1 << " a2=" << a2 << "\n";
   os << "MODEL: GetEichlerHyperplaneBasis, Basis2=\n";
   WriteMatrix(os, Basis2);
 #endif
@@ -1041,8 +1055,17 @@ EichlerReduction<T,Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const& Qmat, std:
   MyMatrix<T> EmbedInv_T = Inverse(Embed_T);
   MyMatrix<Tint> Embed = UniversalMatrixConversion<Tint,T>(Embed_T);
   T scal = frac.TheMult * frac.TheMult;
+#ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: GetEichlerHyperplaneBasis Embed=\n";
+  WriteMatrix(os, Embed);
+  os << "MODEL: GetEichlerHyperplaneBasis scal=" << scal << "\n";
+  os << "MODEL: GetEichlerHyperplaneBasis Qmat=\n";
+  WriteMatrix(os, Qmat);
+  os << "MODEL: GetEichlerHyperplaneBasis QmatEichler=\n";
+  WriteMatrix(os, QmatEichler);
+#endif
 #ifdef TIMINGS_APPROXIMATE_MODELS
-  os << "|GetEichlerHyperplaneBasis|=" << time << "\n";
+  os << "MODEL: |GetEichlerHyperplaneBasis|=" << time << "\n";
 #endif
   return {Embed, Embed_T, EmbedInv_T, scal, QmatEichler};
 }

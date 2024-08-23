@@ -5,8 +5,8 @@ PROGRAM		= INDEF_FORM_AutomorphismGroup
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
@@ -23,7 +23,8 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 #CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_APPROXIMATE_MODELS -DDEBUG_MATRIX_GROUP -DSANITY_CHECK_MATRIX_GROUP -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
 #CDEFS           = -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS -DDEBUG_POLYTOPE_EQUI_STAB -DDEBUG_APPROXIMATE_MODELS
 #CDEFS           = -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS -DDEBUG_POLYTOPE_EQUI_STAB -DDEBUG_APPROXIMATE_MODELS -DTIMINGS
-CDEFS           = -DDEBUG -DTIMINGS
+#CDEFS           = -DDEBUG -DTIMINGS
+CDEFS           = -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS -DDEBUG_POLYTOPE_EQUI_STAB -DDEBUG_APPROXIMATE_MODELS -DTIMINGS
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

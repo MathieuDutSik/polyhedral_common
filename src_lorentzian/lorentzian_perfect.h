@@ -672,12 +672,13 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
     MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
     T MaxScal = ScalarProductQuadForm(LorMat, CritSet0_T, eVectTest);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: Kernel_Flipping: MaxScal=" << MaxScal << "\n";
+    os << "LORPERF: Kernel_Flipping: MaxScal=" << MaxScal << " n_iter=" << n_iter << "\n";
 #endif
     ListTotal = LORENTZ_FindPositiveVectors<T, Tint>(LorMat, eVectTest, MaxScal,
                                                      TheOption, OnlyShortest, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: Kernel_Flipping: |ListTotal|=" << ListTotal.size() << "\n";
+    n_iter += 1;
 #endif
     if (IsSubset(ListTotal, CritSet)) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
