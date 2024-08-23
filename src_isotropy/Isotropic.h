@@ -388,7 +388,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     return *optA;
   }
   // Computing the Indefinite-LLL reduction. Could get you an isotrop vector
-  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M, os);
 #ifdef TIMINGS_LEGENDRE
   os << "|FindIsotropic(ComputeReductionIndefinite)|=" << time << "\n";
 #endif

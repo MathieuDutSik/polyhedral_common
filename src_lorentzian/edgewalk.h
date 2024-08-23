@@ -2021,7 +2021,7 @@ MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
   ResultReduction<T, Tint> ResRed =
-      ComputeReductionIndefinite_opt<T, Tint>(G, ApplyReduction);
+    ComputeReductionIndefinite_opt<T, Tint>(G, ApplyReduction, os);
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */

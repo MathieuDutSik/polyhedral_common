@@ -24,6 +24,14 @@
 #define DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_LORENTZIAN_PERFECT
+#endif
+
+#ifdef GAPDEBUGOUT
+#define GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
+#endif
+
 static const int LORENTZIAN_PERFECT_OPTION_ISOTROP = 23;
 static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
@@ -84,6 +92,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   WriteMatrix(os, LorMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat);
   os << "LORPERF: LORENTZ_FindPositiveVectors: nbPlus=" << DiagInfo.nbPlus << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus << "\n";
+#endif
+#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
   auto f_save=[&](std::vector<MyVector<Tint>> const& TotalList) -> void {
     std::string FileSave = FindAvailableFileFromPrefix("LORENTZ_FindPositiveVectors");
     MyMatrix<Tint> TotalListB = MatrixFromVectorFamily(TotalList);
@@ -286,6 +296,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
     if (OnlyShortest && TotalListSol.size()) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
       os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 1 return |TotalListSol|=" << TotalListSol.size() << "\n";
+#endif
+#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
       f_save(TotalListSol);
 #endif
       return TotalListSol;
@@ -303,6 +315,8 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   }
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 2 return |TotalListSol|=" << TotalListSol.size() << "\n";
+#endif
+#ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
   f_save(TotalListSol);
 #endif
   return TotalListSol;
@@ -876,6 +890,9 @@ LorentzianPerfectEntry<T, Tint>
 LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
                    std::vector<MyVector<Tint>> const &ListIso, Face eInc,
                    int const &TheOption, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: DoFlipping: beginning\n";
   os << "LORPERF: DoFlipping: |ListIso|=" << ListIso.size() << "\n";
@@ -937,14 +954,14 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
 #endif
   MyVector<T> NSPb_0 = GetMatrixRow(NSPb, 0);
   MyVector<T> eVectB = GetReducedVector(NSPb_0);
-  auto get_eNSPbas = [&]() -> MyVector<T> {
+  auto iife_get_eNSPbas = [&]() -> MyVector<T> {
     if (eVectB.dot(eIso) > 0) {
       return NSPb_0;
     } else {
       return -NSPb_0;
     }
   };
-  MyVector<T> eNSPbas = get_eNSPbas();
+  MyVector<T> eNSPbas = iife_get_eNSPbas();
   std::vector<MyVector<Tint>> CritSet;
   for (size_t i_vect = 0; i_vect < n_vect; i_vect++) {
     if (eInc[i_vect] == 1) {
@@ -965,6 +982,9 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
   LORENTZ_CheckCorrectnessVectorFamily(LorMat, TheFlip);
 #endif
   // No return of additional info so far.
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "LORPERF: |LORENTZ_DoFlipping|=" << time << "\n";
+#endif
   return {TheFlip, {}, {}};
 }
 
@@ -986,6 +1006,9 @@ template <typename T, typename Tint, typename Tgroup>
 ResultStabilizer<Tint, Tgroup>
 LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
                           MyMatrix<Tint> const &eFamEXT, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
   MyMatrix<T> eFamEXT_T = UniversalMatrixConversion<T, Tint>(eFamEXT);
   Tgroup GRPisom =
       LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
@@ -997,6 +1020,9 @@ LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
         RepresentVertexPermutation(eFamEXT, eFamEXT, eGen);
     ListGen.push_back(eGenMatr);
   }
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "LORPERF: |LORENTZ_ComputeStabilizer|=" << time << "\n";
+#endif
   return {ListGen, GRPperm};
 }
 
@@ -1004,7 +1030,7 @@ template <typename T, typename Tint>
 size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
                                    MyMatrix<Tint> const &EXT,
                                    [[maybe_unused]] std::ostream &os) {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
 #endif
   int n = LorMat.rows();
@@ -1035,7 +1061,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
     }
   }
   size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
+#ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "LORPERF: |ComputeInvariantDelaunay|=" << time << "\n";
 #endif
   return hash;
@@ -1114,6 +1140,9 @@ struct DataPerfectLorentzianFunc {
   using TadjO = PerfLorentzian_AdjO<Tint>;
   std::ostream &get_os() { return data.rddo.os; }
   Tobj f_init() {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    MicrosecondTime time;
+#endif
     std::ostream& os = get_os();
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: f_init, before LORENTZ_GetOnePerfect\n";
@@ -1128,12 +1157,18 @@ struct DataPerfectLorentzianFunc {
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: f_init, returning x\n";
 #endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    os << "|LorPerfect(f_init)|=" << time << "\n";
+#endif
     return x;
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     return ComputeInvariantPerfectForm(seed, data.LorMat, x.EXT, data.rddo.os);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    MicrosecondTime time;
+#endif
     std::ostream& os = get_os();
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: f_repr: Before LORENTZ_TestEquivalence\n";
@@ -1148,6 +1183,9 @@ struct DataPerfectLorentzianFunc {
 #ifdef DEBUG_LORENTZIAN_PERFECT
       os << "LORPERF: f_repr: returning not isomorphic\n";
 #endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+      os << "|LorPerfect(f_repr,None)|=" << time << "\n";
+#endif
       return {};
     }
     MyMatrix<Tint> const &eBigMat = *opt;
@@ -1157,6 +1195,9 @@ struct DataPerfectLorentzianFunc {
     TadjO ret{y.eInc, eBigMat};
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: f_repr: Before returning ret\n";
+#endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    os << "|LorPerfect(f_repr,Some)|=" << time << "\n";
 #endif
     return ret;
   }
@@ -1168,6 +1209,9 @@ struct DataPerfectLorentzianFunc {
     return {x_ret, ret};
   }
   std::vector<TadjI> f_adj(Tobj &x) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    MicrosecondTime time;
+#endif
     std::ostream& os = get_os();
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: f_adj: beginning\n";
@@ -1201,6 +1245,9 @@ struct DataPerfectLorentzianFunc {
       TadjI eAdj{eInc, EXTflip};
       ListAdj.push_back(eAdj);
     }
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+    os << "|LorPerfect(f_adj)|=" << time << "\n";
+#endif
     return ListAdj;
   }
   Tobj f_adji_obj(TadjI const &x) {
@@ -1315,6 +1362,9 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
@@ -1364,12 +1414,18 @@ LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
   for (auto &eGen : s_gen) {
     l_gen.push_back(eGen);
   }
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "|LORENTZ_GetGeneratorsAutom|=" << time << "\n";
+#endif
   return l_gen;
 }
 
 template <typename T>
 size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
                                    [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
   int n = SymMat.rows();
   T det = DeterminantMat<T>(SymMat);
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
@@ -1383,6 +1439,9 @@ size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
   combine_hash(hash_ret, hash_n);
   size_t hash_minus = DiagInfo.nbMinus;
   combine_hash(hash_ret, hash_minus);
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "|INDEF_FORM_Invariant_NonDeg|=" << time << "\n";
+#endif
   return hash_ret;
 }
 
@@ -1390,6 +1449,9 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
                                 MyMatrix<T> const &LorMat2, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
   size_t seed = 1678;
   size_t inv1 = INDEF_FORM_Invariant_NonDeg(LorMat1, seed, os);
   size_t inv2 = INDEF_FORM_Invariant_NonDeg(LorMat2, seed, os);
@@ -1448,6 +1510,9 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
       data_func, f_incorrect, max_runtime_second);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: After EnumerateAndStore_Serial function call\n";
+#endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "|LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
 #endif
   return opt;
 }

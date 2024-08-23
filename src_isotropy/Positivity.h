@@ -587,7 +587,7 @@ MyVector<Tint> GetIntegralVector_allmeth(MyMatrix<T> const &M,
   os << "POS: GetIntegralVector_allmeth: CritNorm=" << CritNorm << " StrictIneq=" << StrictIneq << "\n";
   os << "POS: GetIntegralVector_allmeth: test_isotropic_fine=" << test_isotropic_fine << "\n";
 #endif
-  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif

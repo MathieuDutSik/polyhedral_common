@@ -15,6 +15,10 @@
 #define DEBUG_INDEFINITE_LLL
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_INDEFINITE_LLL
+#endif
+
 template <typename T> struct ResultGramSchmidt_Indefinite {
   // true means we have a basis. False that we have an isotropic vector
   bool success;
@@ -155,9 +159,12 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
 }
 
 template <typename T, typename Tint>
-ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
+ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+#ifdef TIMINGS_INDEFINITE_LLL
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "ILLL: Beginning of ComputeReductionIndefinite\n";
+  os << "ILLL: Beginning of ComputeReductionIndefinite\n";
 #endif
   int n = M.rows();
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
@@ -176,7 +183,7 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
   while(true) {
     ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Mwork);
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: We have computed res\n";
+    os << "ILLL: We have computed res\n";
 #endif
     // Terminating if we find an isotropic vector
     if (res.Xisotrop) {
@@ -185,11 +192,13 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
 #ifdef DEBUG_INDEFINITE_LLL
       T sum = EvaluationQuadForm<T,T>(M, V);
       if (sum != 0) {
+        std::cerr << "ILLL: Error in ComputeReductionIndefinite, M=\n";
+        WriteMatrix(std::cerr, M);
         std::cerr << "ILLL: V should be an isotropic vector\n";
         throw TerminalException{1};
       }
 #endif
-      MyMatrix<Tint> Bret = B * res.B;
+      MyMatrix<Tint> Bret = res.B * B;
       Mwork = res.Mred;
 #ifdef DEBUG_INDEFINITE_LLL
       MyMatrix<T> Bret_T = UniversalMatrixConversion<T,Tint>(Bret);
@@ -199,14 +208,17 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
         throw TerminalException{1};
       }
 #endif
+#ifdef TIMINGS_INDEFINITE_LLL
+      os << "|ComputeReductionIndefinite(Iso)|=" << time << "\n";
+#endif
       return {Bret, Mwork, Xisotrop};
     }
     // Applying the reduction
     B = res.B * B;
+    B_T = UniversalMatrixConversion<T,Tint>(B);
     Mwork = res.Mred;
     T norm = get_norm(res.Mred);
 #ifdef DEBUG_INDEFINITE_LLL
-    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> prod = B_T * M * B_T.transpose();
     if (prod != Mwork) {
       std::cerr << "ILLL: B is not the correct reduction matrix\n";
@@ -217,6 +229,9 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
     if (norm >= norm_work) {
       iter_no_improv++;
       if (limit_iter == iter_no_improv) {
+#ifdef TIMINGS_INDEFINITE_LLL
+        os << "|ComputeReductionIndefinite(None)|=" << time << "\n";
+#endif
         return {B, Mwork, {}};
       }
     } else {
@@ -227,6 +242,7 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M) {
     MyMatrix<Tint> RandUnit = get_random_int_matrix<Tint>(n);
     MyMatrix<T> RandUnit_T = UniversalMatrixConversion<T, Tint>(RandUnit);
     B = RandUnit * B;
+    B_T = RandUnit_T * B_T;
     Mwork = RandUnit_T * Mwork * RandUnit_T.transpose();
   }
 }
@@ -338,7 +354,7 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
     MyMatrix<Tint> eP = IdentityMat<Tint>(1);
     return {std::move(eP), M};
   }
-  ResultIndefiniteLLL<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M);
+  ResultIndefiniteLLL<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M, os);
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
@@ -348,9 +364,9 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
-                               bool const &ApplyReduction) {
+                               bool const &ApplyReduction, std::ostream& os) {
   if (ApplyReduction) {
-    ResultIndefiniteLLL<T,Tint> res = ComputeReductionIndefinite<T, Tint>(M);
+    ResultIndefiniteLLL<T,Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
     return {res.B, res.Mred};
   } else {
     int n = M.rows();
