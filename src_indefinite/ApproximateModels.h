@@ -269,6 +269,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     shr_ptr->GRPstart = GRPmatr;
     MyMatrix<T> const& Qmat = shr_ptr->Qmat;
     int n = Qmat.rows();
+    int n_classes = ListClasses.size();
     std::vector<MyVector<Tint>> ListClassesExt;
     for (auto & eV : ListClasses) {
       MyVector<Tint> NewV = ZeroVector<Tint>(n);
@@ -277,6 +278,9 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
       }
       ListClassesExt.emplace_back(std::move(NewV));
     }
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: SetListClassesOrbitwise, |ListClassesExt|=" << n_classes << "\n";
+#endif
     auto GetPosition=[&](MyVector<Tint> const& eVect) -> size_t {
       for (size_t i=0; i<ListClassesExt.size(); i++) {
         MyVector<Tint> eDiff = ListClassesExt[i] - eVect;
@@ -292,17 +296,39 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     using Telt = typename Tgroup::Telt;
     using Tidx = typename Telt::Tidx;
     std::vector<Telt> ListPermGens;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: SetListClassesOrbitwise, |GRPmatr|=" << GRPmatr.size() << "\n";
+    std::vector<int> status(n_classes, 0);
+#endif
     for (auto & eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
       for (auto & eClassExt : ListClassesExt) {
         MyVector<Tint> x_eM = eMatrGen.transpose() * eClassExt;
-        eList.push_back(GetPosition(x_eM));
+        Tidx pos = GetPosition(x_eM);
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: SetListClassesOrbitwise, pos=" << static_cast<int>(pos) << "\n";
+        int& val = status[pos];
+        if (val == 1) {
+          std::cerr << "The value has already been attained\n";
+          throw TerminalException{1};
+        }
+        val = 1;
+#endif
+        eList.push_back(pos);
       }
       Telt ePerm(eList);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: SetListClassesOrbitwise, ePerm=" << ePerm << "\n";
+#endif
       ListPermGens.push_back(ePerm);
     }
-    int n_classes = ListClassesExt.size();
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: SetListClassesOrbitwise, we have ListPermGen\n";
+#endif
     Tgroup GRPperm(ListPermGens, n_classes);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: SetListClassesOrbitwise, |GRPperm|=" << GRPperm.size() << "\n";
+#endif
     std::vector<size_t> ListRepr = DecomposeOrbitPoint_FullRepr<Tgroup>(GRPperm);
     std::vector<MyVector<Tint>> ListClasses;
     for (auto & iRepr : ListRepr) {
