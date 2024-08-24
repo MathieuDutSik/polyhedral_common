@@ -10,7 +10,8 @@
 #PROGRAM		= POLY_UpgradeDatabase POLY_SerialDualDesc
 #PROGRAM		= POLY_UpgradeDatabase
 #PROGRAM		= POLY_ReadPartialEnum
-PROGRAM		= Read_MPI_sizes
+#PROGRAM		= Read_MPI_sizes
+PROGRAM		= POLY_EvaluateBalinski
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

@@ -1031,7 +1031,7 @@ public:
     }
     MyMatrix<Tint> const& test = *opt;
     MyMatrix<T> test_T = UniversalMatrixConversion<T,Tint>(test);
-    auto get_equiv_rat=[&]() -> MyMatrix<T> {
+    auto iife_equiv_rat=[&]() -> MyMatrix<T> {
       if (eNorm != 0) {
         return eRec2.PmatInv * ExpandMatrix(test_T) * eRec1.Pmat;
       } else {
@@ -1048,7 +1048,7 @@ public:
         }
       }
     };
-    MyMatrix<T> EquivRat = get_equiv_rat();
+    MyMatrix<T> EquivRat = iife_equiv_rat();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
     MyVector<T> v1_T = UniversalVectorConversion<T,Tint>(v1);

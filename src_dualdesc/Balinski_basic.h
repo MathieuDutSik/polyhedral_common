@@ -92,6 +92,19 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
 }  // namespace boost::serialization
 // clang-format on
 
+template<typename Tgroup>
+vectface GenerateOrbits(vectface const& vf_orbit, Tgroup const& GRP) {
+  using Telt = typename Tgroup::Telt;
+  size_t n = GRP.n_act();
+  std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
+  vectface vf(n);
+  for (auto & eFace : vf_orbit) {
+    vectface vf_orbit = OrbitFace(eFace, LGen);
+    vf.append(vf_orbit);
+  }
+  return vf;
+}
+
 template <typename TbasicBank> vectface ComputeSetUndone(TbasicBank const &bb) {
   vectface vf_undone(bb.nbRow);
   using Tgroup = typename TbasicBank::Tgroup;

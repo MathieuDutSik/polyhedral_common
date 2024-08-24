@@ -2815,19 +2815,31 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
 }
 
 template <typename T, typename Tgroup>
+vectface ReadFacets(std::string const& Format, std::string const& File, int const& n) {
+  if (Format == "GAP") {
+    using Telt = typename Tgroup::Telt;
+    datagap::DataGAP<T, Telt> data = datagap::ParseGAPFile<T,Telt>(File);
+    vectface vf = datagap::ConvertGAPread_ListFace<T,Telt>(data, n);
+    return vf;
+  }
+  std::cerr << "No option has been chosen\n";
+  throw TerminalException{1};
+}
+
+template <typename T, typename Tgroup>
 void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
                   const vectface &TheOutput, const std::string &OutFile,
-                  const std::string &OutFormat, std::ostream &os) {
-  if (OutFormat == "Magma") {
+                  const std::string &Format, std::ostream &os) {
+  if (Format == "Magma") {
     return VectVectInt_Magma_PrintFile(OutFile, TheOutput);
   }
-  if (OutFormat == "GAP") {
+  if (Format == "GAP") {
     return VectVectInt_Gap_PrintFile(OutFile, TheOutput);
   }
-  if (OutFormat == "SetInt") {
+  if (Format == "SetInt") {
     return VectVectInt_SetInt_PrintFile<mpz_class>(OutFile, TheOutput);
   }
-  if (OutFormat == "BankEntry") {
+  if (Format == "BankEntry") {
     size_t n_rows = EXT.rows();
     size_t n_act = GRP.n_act();
     if (n_rows != n_act) {
