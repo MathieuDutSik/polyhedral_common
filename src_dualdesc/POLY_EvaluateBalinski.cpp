@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     size_t n_iter = 0;
     auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
       n_iter++;
-      std::cerr << "  f_recur n_iter=" << n_iter << "\n";
+      std::cerr << "BAL:  f_recur n_iter=" << n_iter << "\n";
       if (n_iter == max_iter)
         return false;
       if (pfr.first > max_depth)
