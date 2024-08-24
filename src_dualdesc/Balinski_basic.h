@@ -10,6 +10,10 @@
 #include <utility>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_BALINSKI
+#endif
+
 template <typename Tint> struct UndoneOrbitInfo {
   size_t nbOrbitDone;
   Tint nbUndone;
@@ -170,7 +174,9 @@ bool EvaluationConnectednessCriterion_Kernel(
   size_t n_rows = FAC.rows();
   size_t n_cols = FAC.cols();
   size_t n_vert = vf_undone.size();
+#ifdef DEBUG_BALINSKI
   os << "  We have EXT\n";
+#endif
   auto rank_vertset = [&](const std::vector<size_t> &elist) -> size_t {
     // Computation of the rank of the set without computing the full set.
     auto f = [&](MyMatrix<T> &M, size_t eRank, size_t iRow) -> void {
@@ -188,9 +194,11 @@ bool EvaluationConnectednessCriterion_Kernel(
     // ---Balinski criterion
     // ---Linear programming check
     // ---Balinski with rank check
+#ifdef DEBUG_BALINSKI
     os << "  evaluate_single_entry pfr.first=" << x.first
        << " |pfr.second|=" << x.second.size() << " / " << x.second.count()
        << "\n";
+#endif
     std::vector<size_t> f_v;
     for (size_t i = 0; i < n_rows; i++)
       if (x.second[i] == 1)
@@ -212,41 +220,49 @@ bool EvaluationConnectednessCriterion_Kernel(
         fint &= e_vert;
       }
     }
+#ifdef DEBUG_BALINSKI
     os << "fint built\n";
-    if (true) {
-      os << "  x=(" << x.first << ",[";
-      bool IsFirst = true;
-      for (auto &eVal : f_v) {
-        if (!IsFirst)
-          os << ",";
-        IsFirst = false;
-        os << eVal;
-      }
-      os << "]) |list_vert|=" << list_vert.size() << " |fint|=" << fint.count()
-         << " |f|=" << f_v.size() << "\n";
+    os << "  x=(" << x.first << ",[";
+    bool IsFirst = true;
+    for (auto &eVal : f_v) {
+      if (!IsFirst)
+        os << ",";
+      IsFirst = false;
+      os << eVal;
     }
+    os << "]) |list_vert|=" << list_vert.size() << " |fint|=" << fint.count()
+       << " |f|=" << f_v.size() << "\n";
+#endif
     if (fint.count() > f_v.size()) {
+#ifdef DEBUG_BALINSKI
       os << "  Exit 1: linear programming check\n";
+#endif
       // This is the linear programming check, See DD 2016.
       return true;
     }
     size_t n_cols_rel = n_cols - x.first;
     if (list_vert.size() <= n_cols_rel - 2) {
+#ifdef DEBUG_BALINSKI
       os << "  Exit 2: pure Balinski case\n";
+#endif
       // This is the pure Balinski case
       return true;
     }
     if (rank_vertset(list_vert) <= n_cols_rel - 2) {
+#ifdef DEBUG_BALINSKI
       os << "  |list_vert|=" << list_vert.size()
          << " |rank_vertset|=" << rank_vertset(list_vert)
          << " n_cols_rel=" << n_cols_rel << "\n";
       os << "  Exit 3: rank computation, a little subtler Balinski "
             "computation\n";
+#endif
       // This is the rank computation. A little advanced Balinski,
       // see the Balinski paper and adapt the proof.
       return true;
     }
+#ifdef DEBUG_BALINSKI
     os << "  Exit 4: nothing works, exiting\n";
+#endif
     return false;
   };
   std::unordered_map<Face, bool> map_face_status;
@@ -276,12 +292,18 @@ bool EvaluationConnectednessCriterion_Kernel(
       if (!f_recur(x))
         return insert_pfr(x, false);
       // Looking at the facets and maybe we can so conclude
-      //      os << "After the f_recur\n";
+#ifdef DEBUG_BALINSKI
+      os << "After the f_recur\n";
+#endif
       Tgroup eStab = GRP.Stabilizer_OnSets(x.second);
-      //      os << "We have |eStab|=" << eStab.size() << "\n";
+#ifdef DEBUG_BALINSKI
+      os << "We have |eStab|=" << eStab.size() << "\n";
+#endif
       vectface vf_span =
           SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP, os);
-      //      os << "We have vf_span\n";
+#ifdef DEBUG_BALINSKI
+      os << "We have |vf_span|=" << vf_span.size() << "\n";
+#endif
       auto get_value = [&]() -> bool {
         Tint siz_false = 0;
         for (auto &eFace : vf_span) {
@@ -313,7 +335,9 @@ bool EvaluationConnectednessCriterion_PreKernel_field(const MyMatrix<T> &FAC,
   size_t n_iter = 0;
   auto f_recur = [&](const std::pair<size_t, Face> &pfr) -> bool {
     n_iter++;
+#ifdef DEBUG_BALINSKI
     os << "  f_recur n_iter=" << n_iter << "\n";
+#endif
     if (n_iter == max_iter)
       return false;
     if (pfr.first > 1)
@@ -332,8 +356,10 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
                                            std::ostream &os) {
   bool test =
       EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
+#ifdef DEBUG_BALINSKI
   os << "EvaluationConnectednessCriterion_PreKernel(field case), test=" << test
      << "\n";
+#endif
   return test;
 }
 
@@ -347,8 +373,10 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
   bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP,
                                                                vf_undone, os);
+#ifdef DEBUG_BALINSKI
   os << "EvaluationConnectednessCriterion_PreKernel(ring case), test=" << test
      << "\n";
+#endif
   return test;
 }
 
@@ -360,9 +388,10 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
   // A better system would have to balance out the cost of
   // doing that check with respect to the dual description itsef.
   Tint max_siz = 1000;
-  //  os << "nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit <<
-  //  "\n"; os << "nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" <<
-  //  bb.foc.TotalNumber << "\n";
+#ifdef DEBUG_BALINSKI
+  os << "nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit << "\n";
+  os << "nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" << bb.foc.TotalNumber << "\n";
+#endif
   if (bb.foc.nbOrbitDone == 0 || bb.foc.nbUndone > max_siz)
     return false;
   // Now explicit building of the set of vertices
