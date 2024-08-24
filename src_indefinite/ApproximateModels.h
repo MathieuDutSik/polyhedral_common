@@ -21,6 +21,22 @@
 #define TIMINGS_APPROXIMATE_MODELS
 #endif
 
+// This is the construction of the model from the Eichler criterion.
+// This is used for the combined algorithms.
+//
+// The reference that we use is
+// Scattone F. On the compactification of moduli spaces for algebraic K3 surfaces
+// Specific references:
+// (1) Section 3.7 (page 41): the construction of the Eichler transvection
+//     That gives us the approximate group.
+// (2) Proposition 3.7.3 should give us the list of possible vectors.
+//     That gives us the covering orbit representatives.
+//
+// Relevant notations (see [S, v]):
+// (1) G_L = L^* / L
+// (2) div(v) is the integer d such that (v, L) = d Z
+// (3) v^* is the class of v / div(v) in G_L
+//
 
 template<typename T, typename Tint>
 struct ApproximateModel {
@@ -786,6 +802,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
 #ifdef TIMINGS_APPROXIMATE_MODELS
   os << "MODEL: |GetEasyIsometries|=" << time << "\n";
 #endif
+  ListGenerators.clear(); // Just for debugging attempt
   return ListGenerators;
 }
 
@@ -1104,92 +1121,6 @@ struct InternalApproxCase {
   std::vector<MyMatrix<Tint>> ListGenerators;
   ApproximateModel<T,Tint> approx;
 };
-
-template<typename T>
-MyMatrix<T> GetTwoPlanes() {
-  MyMatrix<T> M = ZeroMatrix<T>(4,4);
-  std::vector<int> V{1,0,3,2};
-  for (int u=0; u<4; u++) {
-    int idxW = V[u];
-    M(u,idxW) = 1;
-  }
-  return M;
-}
-
-template<typename T>
-MyMatrix<T> GetSubBlock11(MyMatrix<T> const& M) {
-  MyMatrix<T> Mret(4,4);
-  for (int i=0; i<4; i++) {
-    for (int j=0; j<4; j++) {
-      Mret(i,j) = M(i,j);
-    }
-  }
-  return Mret;
-}
-
-template<typename T>
-MyMatrix<T> GetSubBlock22(MyMatrix<T> const& M) {
-  int n = M.rows();
-  int dim = n - 4;
-  MyMatrix<T> Mret(dim,dim);
-  for (int i=0; i<dim; i++) {
-    for (int j=0; j<dim; j++) {
-      Mret(i,j) = M(i+4,j+4);
-    }
-  }
-  return Mret;
-}
-
-template<typename T>
-MyMatrix<T> GetSubBlock12(MyMatrix<T> const& M) {
-  int n = M.rows();
-  int dim = n - 4;
-  MyMatrix<T> Mret(4,dim);
-  for (int i=0; i<4; i++) {
-    for (int j=0; j<dim; j++) {
-      Mret(i,j) = M(i,j+4);
-    }
-  }
-  return Mret;
-}
-
-template<typename T>
-MyMatrix<T> GetTwoEmbedding(MyMatrix<T> const& eBlock) {
-  MyMatrix<T> eEmbed = IdentityMat<T>(4);
-  T h1 = eBlock(0,1);
-  T h2 = eBlock(2,3);
-  eEmbed(0,0) = h1;
-  eEmbed(2,2) = h2;
-#ifdef DEBUG_APPROXIMATE_MODELS
-  MyMatrix<T> TwoPlanes = GetTwoPlanes<T>();
-  MyMatrix<T> eProd = eEmbed * TwoPlanes * eEmbed.transpose();
-  if (eProd != eBlock) {
-    std::cerr << "eEmbed does not provide an embedding\n";
-    throw TerminalException{1};
-  }
-#endif
-  return eEmbed;
-}
-
-template<typename T>
-MyMatrix<T> AssembleTwoDiagBlock(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
-  int n1 = M1.rows();
-  int n2 = M2.rows();
-  MyMatrix<T> Mret = ZeroMatrix<T>(n1 + n2, n1 + n2);
-  for (int i=0; i<n1; i++) {
-    for (int j=0; j<n1; j++) {
-      Mret(i,j) = M1(i,j);
-    }
-  }
-  for (int i=0; i<n2; i++) {
-    for (int j=0; j<n2; j++) {
-      Mret(i + n1,j + n1) = M2(i,j);
-    }
-  }
-  return Mret;
-}
-
-
 
 template<typename T, typename Tint, typename Tgroup>
 ApproximateModel<T,Tint> INDEF_FORM_GetApproximateModel(MyMatrix<T> const& Qmat, std::ostream& os) {
