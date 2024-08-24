@@ -31,12 +31,6 @@
 //     That gives us the approximate group.
 // (2) Proposition 3.7.3 should give us the list of possible vectors.
 //     That gives us the covering orbit representatives.
-//
-// Relevant notations (see [S, v]):
-// (1) G_L = L^* / L
-// (2) div(v) is the integer d such that (v, L) = d Z
-// (3) v^* is the class of v / div(v) in G_L
-//
 
 template<typename T, typename Tint>
 struct ApproximateModel {
@@ -467,6 +461,19 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
     return ListGenerators;
   };
+  // Relevant notations (see [S, v]):
+  // (1) G_L = L^* / L
+  // (2) div(v) is the integer d such that (v, L) = d Z
+  // (3) v^* is the class of v / div(v) in G_L
+  //
+  // The theorem says that among primitive vectors for a fixed norm
+  // we have that v equivalent to w under the resticted isometry group
+  // if and only if v^* = w^*.
+  //
+  // Therefore, the algorithm should proceed in the following way:
+  // (1) Iterating over the elements of G_L
+  // (2) Identifying the Div
+
   // Notion of divisor
   // For an element y in a lattice L, define div(y) the integer such that
   // (L,y) = div(y) Z.
@@ -517,24 +524,26 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
       for (auto & eClass1 : ListClasses) {
 #ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: ----------------------------------------\n";
         os << "MODEL: EnumerateVectorOverDiscriminant eClass1=" << StringVectorGAP(eClass1) << "\n";
 #endif
         // The vector eClass1 is defined modulo an element of Gmat Z^n
         // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
         // Thus eClass3 is defined modulo an element of d Z^n
         // So, we can write v = eClass3 + d w
-        // which gets us A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
+        // which gets us X = A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
         // So, the problem is actually linear.
         MyVector<T> eClass1_T = UniversalVectorConversion<T,Tint>(eClass1);
         MyVector<T> eClass2 = Ginv * eClass1_T;
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: EnumerateVectorOverDiscriminant eClass2=" << StringVectorGAP(eClass2) << "\n";
 #endif
+        // DivD_frac is the fraction such that DivD_frac eClass2 is a primitive vector.
         T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
+        T DivD = GetNumerator(DivD_frac);
 #ifdef DEBUG_APPROXIMATE_MODELS
-        os << "MODEL: EnumerateVectorOverDiscriminant DivD_frac=" << DivD_frac << "\n";
+        os << "MODEL: EnumerateVectorOverDiscriminant DivD_frac=" << DivD_frac << " DivD=" << DivD << "\n";
 #endif
-        T DivD = GetDenominator(DivD_frac);
         T DivD_sqr = DivD * DivD;
         MyVector<T> eClass3 = DivD * eClass2;
         T X_res1 = ResInt(Xdiv2, DivD);
@@ -548,7 +557,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
         if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
           // and so
-          // (X - A[eClass3])/2 = 2d w^T Gmat eClass3 + ....
+          // (X - A[eClass3])/2 = d w^T Gmat eClass3 + ....
           T diff = (X_res2 - Aclass3_res2) / DivD;
           MyVector<T> eProd = Gmat * eClass3;
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -566,6 +575,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
           T quot = iife_quot();
 #ifdef DEBUG_APPROXIMATE_MODELS
           os << "MODEL: EnumerateVectorOverDiscriminant quot=" << quot << "\n";
+          os << "MODEL: EnumerateVectorOverDiscriminant eRec.V=" << StringVectorGAP(eRec.V) << "\n";
 #endif
           if (IsInteger(quot)) {
             MyVector<T> w = quot * eRec.V;
@@ -573,6 +583,8 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
             T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
             T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
+            os << "MODEL: EnumerateVectorOverDiscriminant w=" << StringVectorGAP(w) << "\n";
+            os << "MODEL: EnumerateVectorOverDiscriminant eClass4=" << StringVectorGAP(eClass4) << "\n";
             if (Aclass4_res2 != X_res2) {
               std::cerr << "A bug to resolve\n";
               throw TerminalException{1};
