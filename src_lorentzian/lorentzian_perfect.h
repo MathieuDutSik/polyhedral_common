@@ -196,12 +196,14 @@ LORENTZ_FindPositiveVectorsKernel(MyMatrix<T> const &LorMat, MyVector<T> const &
   std::vector<MyVector<Tint>> TotalListSol;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 12\n";
+  int iter_findpos = 0;
 #endif
   Tint eVal = 1;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     T scal_expe = eVal * TheRec.gcd;
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << " scal_expe=" << scal_expe << " MaxScal=" << MaxScal << "\n";
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal << " scal_expe=" << scal_expe << " MaxScal=" << MaxScal << " iter_findpos=" << iter_findpos << "\n";
+    iter_findpos += 1;
 #endif
     MyVector<Tint> eBasSol = eVal * TheRec.V; // A solution of
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS

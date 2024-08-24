@@ -331,7 +331,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
     for (auto & eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
       std::vector<int> status(n_classes, 0);
 #endif
       for (auto & eClassExt : ListClassesExt) {
@@ -345,7 +345,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
         MyVector<Tint> x_eM = eMatrGen * eClassExt;
         Tidx pos = GetPosition(x_eM);
-#ifdef DEBUG_APPROXIMATE_MODELS
+#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
         os << "MODEL: SetListClassesOrbitwise, pos=" << static_cast<int>(pos) << "\n";
         int& val = status[pos];
         if (val == 1) {
