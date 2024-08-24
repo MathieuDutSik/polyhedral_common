@@ -529,6 +529,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #endif
         // The vector eClass1 is defined modulo an element of Gmat Z^n
         // Thus eClass2 is defined modulo an element of Z^n. This is an elements of L*
+        // Then d = div(v).
         // Thus eClass3 is defined modulo an element of d Z^n
         // So, we can write v = eClass3 + d w
         // which gets us X = A[v] = A[eClass3] + 2d w^T Gmat eClass3 + d^2 A[w]
@@ -538,19 +539,19 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: EnumerateVectorOverDiscriminant eClass2=" << StringVectorGAP(eClass2) << "\n";
 #endif
-        // DivD_frac is the fraction such that DivD_frac eClass2 is a primitive vector.
-        T DivD_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
-        T DivD = GetNumerator(DivD_frac);
+        // DivV_frac is the fraction such that DivV_frac eClass2 is a primitive vector.
+        T DivV_frac = RemoveFractionVectorPlusCoeff(eClass2).TheMult;
+        T DivV = GetNumerator(DivV_frac);
 #ifdef DEBUG_APPROXIMATE_MODELS
-        os << "MODEL: EnumerateVectorOverDiscriminant DivD_frac=" << DivD_frac << " DivD=" << DivD << "\n";
+        os << "MODEL: EnumerateVectorOverDiscriminant DivV_frac=" << DivV_frac << " DivV=" << DivV << "\n";
 #endif
-        T DivD_sqr = DivD * DivD;
-        MyVector<T> eClass3 = DivD * eClass2;
-        T X_res1 = ResInt(Xdiv2, DivD);
-        T X_res2 = ResInt(Xdiv2, DivD_sqr);
+        T DivV_sqr = DivV * DivV;
+        MyVector<T> eClass3 = DivV * eClass2;
+        T X_res1 = ResInt(Xdiv2, DivV);
+        T X_res2 = ResInt(Xdiv2, DivV_sqr);
         T Aclass3_norm = EvaluationQuadForm(Gmat, eClass3) / 2;
-        T Aclass3_res1 = ResInt(Aclass3_norm, DivD);
-        T Aclass3_res2 = ResInt(Aclass3_norm, DivD_sqr);
+        T Aclass3_res1 = ResInt(Aclass3_norm, DivV);
+        T Aclass3_res2 = ResInt(Aclass3_norm, DivV_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_norm=" << Aclass3_norm << "\n";
         os << "MODEL: EnumerateVectorOverDiscriminant Aclass3_res1=" << Aclass3_res1 << " X_res1=" << X_res1 << "\n";
@@ -558,7 +559,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
         if (Aclass3_res1 == X_res1) { // if not we cannot find a solution
           // and so
           // (X - A[eClass3])/2 = d w^T Gmat eClass3 + ....
-          T diff = (X_res2 - Aclass3_res2) / DivD;
+          T diff = (X_res2 - Aclass3_res2) / DivV;
           MyVector<T> eProd = Gmat * eClass3;
 #ifdef DEBUG_APPROXIMATE_MODELS
           os << "MODEL: EnumerateVectorOverDiscriminant diff=" << diff << "\n";
@@ -577,26 +578,27 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
           os << "MODEL: EnumerateVectorOverDiscriminant quot=" << quot << "\n";
           os << "MODEL: EnumerateVectorOverDiscriminant eRec.V=" << StringVectorGAP(eRec.V) << "\n";
 #endif
-          if (IsInteger(quot)) {
+          if (IsInteger(quot)) { // If not then the equation has no solution
             MyVector<T> w = quot * eRec.V;
-            MyVector<T> eClass4 = eClass3 + DivD * w;
+            MyVector<T> eClass4 = eClass3 + DivV * w;
             T Aclass4_norm = EvaluationQuadForm(Gmat, eClass4) / 2;
-            T Aclass4_res2 = ResInt(Aclass4_norm, DivD_sqr);
+            T Aclass4_res2 = ResInt(Aclass4_norm, DivV_sqr);
 #ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: EnumerateVectorOverDiscriminant w=" << StringVectorGAP(w) << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant eClass4=" << StringVectorGAP(eClass4) << "\n";
+            os << "MODEL: EnumerateVectorOverDiscriminant Aclass4_res2=" << Aclass4_res2 << " X_res2=" << X_res2 << "\n";
             if (Aclass4_res2 != X_res2) {
               std::cerr << "A bug to resolve\n";
               throw TerminalException{1};
             }
 #endif
-            T u = (Xdiv2 - Aclass4_norm) / DivD_sqr;
+            T u = (Xdiv2 - Aclass4_norm) / DivV_sqr;
 #ifdef DEBUG_APPROXIMATE_MODELS
             os << "MODEL: EnumerateVectorOverDiscriminant u=" << u << "\n";
 #endif
             MyVector<T> eSolution_T = ZeroVector<T>(n);
-            eSolution_T(2) = DivD;
-            eSolution_T(3) = DivD * u;
+            eSolution_T(2) = DivV;
+            eSolution_T(3) = DivV * u;
             for (int u=0; u<n-4; u++) {
               eSolution_T(u+4) = eClass4(u);
             }
@@ -606,7 +608,7 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
               std::cerr << "eNorm / X is inconsistent\n";
               throw TerminalException{1};
             }
-            os << "MODEL: EnumerateVectorOverDiscriminant DivD=" << DivD << " u=" << u << "\n";
+            os << "MODEL: EnumerateVectorOverDiscriminant DivV=" << DivV << " u=" << u << "\n";
             os << "MODEL: EnumerateVectorOverDiscriminant eSolution_T=" << StringVectorGAP(eSolution_T) << "\n";
 #endif
             MyVector<Tint> eSolution = UniversalVectorConversion<Tint,T>(eSolution_T);
