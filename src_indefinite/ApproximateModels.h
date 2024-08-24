@@ -243,6 +243,26 @@ bool is_eichler_canonical(MyMatrix<T> const& Qmat) {
 
 
 /*
+  Dualities and action of the automorphism group on the disciminant.
+  The Gram matrix G realize a scalar product <x, y> = x G y.
+  ---
+  The dual is L^*.
+  If L is integral (that is G is integral) then L is a subset of L^*.
+  The quotient L^* / L is a finite group has an order of the size det(G).
+  The representatives are v in Z^n quotiented by the relation
+  x equiv y <=> x - y = z G
+  ---
+  The automorphism group acts like
+  P G P^T = G.
+  x P^T - y P^T = z G P^T
+                = z' G with z' = z P^{-1}
+  That would mean that the action is the direct one.
+
+ */
+
+
+
+/*
   Based on paragraph 10 of Eichler book
   Quadratische Formen und orthogonale gruppen
   Also used the Scattone thesis as basis.
@@ -308,12 +328,22 @@ ApproximateModel<T,Tint> INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix
     std::vector<Telt> ListPermGens;
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: SetListClassesOrbitwise, |GRPmatr|=" << GRPmatr.size() << "\n";
-    std::vector<int> status(n_classes, 0);
 #endif
     for (auto & eMatrGen : GRPmatr) {
       std::vector<Tidx> eList;
+#ifdef DEBUG_APPROXIMATE_MODELS
+      std::vector<int> status(n_classes, 0);
+#endif
       for (auto & eClassExt : ListClassesExt) {
-        MyVector<Tint> x_eM = eMatrGen.transpose() * eClassExt;
+#ifdef DEBUG_APPROXIMATE_MODELS
+        MyMatrix<T> eMatrGen_T = UniversalMatrixConversion<T,Tint>(eMatrGen);
+        MyMatrix<T> prod = eMatrGen_T * Qmat * eMatrGen_T.transpose();
+        if (prod != Qmat) {
+          std::cerr << "The Matrix is not preserving the quadratic form\n";
+          throw TerminalException{1};
+        }
+#endif
+        MyVector<Tint> x_eM = eMatrGen * eClassExt;
         Tidx pos = GetPosition(x_eM);
 #ifdef DEBUG_APPROXIMATE_MODELS
         os << "MODEL: SetListClassesOrbitwise, pos=" << static_cast<int>(pos) << "\n";
@@ -816,7 +846,6 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
 #ifdef TIMINGS_APPROXIMATE_MODELS
   os << "MODEL: |GetEasyIsometries|=" << time << "\n";
 #endif
-  ListGenerators.clear(); // Just for debugging attempt
   return ListGenerators;
 }
 
