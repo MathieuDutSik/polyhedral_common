@@ -18,7 +18,6 @@
 #include <vector>
 // clang-format off
 
-// #define DEBUG
 //#define TIMINGS
 //#define PRINT_FLIP
 //#define PRINT_TRIPLE

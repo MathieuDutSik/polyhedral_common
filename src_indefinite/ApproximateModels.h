@@ -796,6 +796,9 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
           eBigGen(eConn[i], eConn[j]) = eGen(i,j);
         }
       }
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: Before f_insert, case 1\n";
+#endif
       f_insert(eBigGen);
     }
   }
@@ -835,10 +838,13 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const& Qmat, std::ostr
           for (size_t j=0; j<dim; j++) {
             BigP(eConn[i], eConn[j]) = 0;
             BigP(fConn[i], fConn[j]) = 0;
-            BigP(eConn[i], fConn[j]) = P(i,j);
-            BigP(fConn[i], eConn[j]) = Pinv(i,j);
+            BigP(eConn[i], fConn[j]) = Pinv(i,j);
+            BigP(fConn[i], eConn[j]) = P(i,j);
           }
         }
+#ifdef DEBUG_APPROXIMATE_MODELS
+        os << "MODEL: Before f_insert, case 2\n";
+#endif
         f_insert(BigP);
       }
     }
