@@ -366,7 +366,7 @@ std::vector<MyMatrix<T>> ExtendIsometryGroup(std::vector<MyMatrix<T>> const& GRP
         NewMat(i,j) = eGen(i,j);
       }
     }
-    ListGens.push_back(eGen);
+    ListGens.push_back(NewMat);
   }
   if (n > p) {
     for (auto & eGen : GeneralLinearGroup<T>(n-p)) {
@@ -489,15 +489,31 @@ private:
     ResultReduction<T, Tint> ResRed =
       ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
     MyMatrix<T> const& QmatRed = ResRed.Mred;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, QmatRed=\n";
+    WriteMatrix(os, QmatRed);
+#endif
     MyMatrix<Tint> const& B = ResRed.B;
     MyMatrix<Tint> Binv = Inverse(B);
     auto get_stab=[&]() -> std::vector<MyMatrix<Tint>> {
       std::optional<std::vector<MyMatrix<Tint>>> opt = database.attempt_stabilizer(QmatRed);
       if (opt) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, successful database call\n";
+#endif
         return *opt;
       } else {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, not in database, recomputing\n";
+#endif
         std::vector<MyMatrix<Tint>> ListGen = INDEF_FORM_AutomorphismGroup_Kernel(QmatRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have ListGen\n";
+#endif
         database.insert_stab(QmatRed, ListGen);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, After database insert\n";
+#endif
         return ListGen;
       }
     };
@@ -514,6 +530,9 @@ private:
 #endif
       LGenFinal.push_back(NewGen);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have LGenFinal\n";
+#endif
     return LGenFinal;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence_FullDim(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2) {
@@ -523,11 +542,23 @@ private:
       ComputeReductionIndefinitePermSign<T, Tint>(Qmat2, os);
     MyMatrix<T> const& QmatRed1 = ResRed1.Mred;
     MyMatrix<T> const& QmatRed2 = ResRed2.Mred;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_TestEquivalence_FullDim, QmatRed1=\n";
+    WriteMatrix(os, QmatRed1);
+    os << "COMB: INDEF_FORM_TestEquivalence_FullDim, QmatRed2=\n";
+    WriteMatrix(os, QmatRed2);
+#endif
     auto get_equi=[&]() -> std::optional<MyMatrix<Tint>> {
       std::optional<std::optional<MyMatrix<Tint>>> opt = database.attempt_equiv(QmatRed1, QmatRed2);
       if (opt) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_TestEquivalence_FullDim, successful database call\n";
+#endif
         return *opt;
       } else {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_TestEquivalence_FullDim, not in database\n";
+#endif
         std::optional<MyMatrix<Tint>> optB = INDEF_FORM_TestEquivalence_Kernel(QmatRed1, QmatRed2);
         database.insert_equi(QmatRed1, QmatRed2, optB);
         return optB;
@@ -970,6 +1001,9 @@ public:
       ListRepr.push_back(fRepr);
     };
     std::vector<MyVector<Tint>> ListCand = approx.GetCoveringOrbitRepresentatives(X, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: GetCoveringOrbitRepresentatives, |ListCand|=" << ListCand.size() << "\n";
+#endif
     for (auto & eCand : ListCand) {
       f_insert(eCand);
     }
@@ -1094,11 +1128,27 @@ public:
     MyMatrix<T> TheCompl_T = UniversalMatrixConversion<T,Tint>(TheCompl);
     MyMatrix<T> QmatRed = TheCompl_T * Q * TheCompl_T.transpose();
     std::vector<MyMatrix<Tint>> GRPred = INDEF_FORM_AutomorphismGroup_FullDim(QmatRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have GRPred p=" << p << " n=" << n << "\n";
+#endif
     std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup(GRPred, p, n);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have GRPfull\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, FullBasisInv=\n";
+    WriteMatrix(os, FullBasisInv);
+    os << "COMB: INDEF_FORM_AutomorphismGroup, FullBasis=\n";
+    WriteMatrix(os, FullBasis);
+#endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_AutomorphismGroup, We have eGen=\n";
+      WriteMatrix(os, eGen);
+#endif
       MyMatrix<Tint> eGenB = FullBasisInv * eGen * FullBasis;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_AutomorphismGroup, We have eGenB=\n";
+      WriteMatrix(os, eGenB);
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * Q * eGenB_T.transpose();
       if (eProd != Q) {
@@ -1108,6 +1158,9 @@ public:
 #endif
       ListGenTot.push_back(eGenB);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, returning ListGenTot\n";
+#endif
     return ListGenTot;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_TestEquivalence(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2) {
