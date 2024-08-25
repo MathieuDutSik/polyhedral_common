@@ -842,6 +842,9 @@ private:
     return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Q1, Q2, Plane1, Plane2, choice);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, int k, int const& choice) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel, beginning\n";
+#endif
     T eNorm(0);
     std::vector<MyMatrix<Tint>> ListOrbit;
     for (auto & eVect : INDEF_FORM_GetOrbitRepresentative(Qmat, eNorm)) {
@@ -887,13 +890,16 @@ private:
         // the orbit split. Can this happen in the same way over all the orbits?
         // The full of the lattice group is G(Qmat) and the full orbit is x G(Qmat)
         // We want to write the code as
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, beginning\n";
+#endif
         MyMatrix<T> ePlane_T = UniversalMatrixConversion<T,Tint>(ePlane);
         MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
         MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
         MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
         int dimNSP = NSP.rows();
-        MyMatrix<Tint> ePlane_expr(k, dimNSP);
-        for (int u=0; u<k; u++) {
+        MyMatrix<Tint> ePlane_expr(k-1, dimNSP);
+        for (int u=0; u<k-1; u++) {
           MyVector<Tint> eV = GetMatrixRow(ePlane, u);
           std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
           MyVector<Tint> eSol = unfold_opt(opt, "eSol should not be fail");
@@ -901,8 +907,16 @@ private:
         }
         MyMatrix<Tint> ComplBasisInNSP = SubspaceCompletionInt(ePlane_expr, dimNSP);
         MyMatrix<Tint> NSP_sub = ComplBasisInNSP * NSP;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, NSP_sub=\n";
+        WriteMatrix(os, NSP_sub);
+#endif
         MyMatrix<T> NSP_sub_T = UniversalMatrixConversion<T,Tint>(NSP_sub);
         MyMatrix<T> QmatRed = NSP_sub_T * Qmat * NSP_sub_T.transpose();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, QmatRed=\n";
+        WriteMatrix(os, QmatRed);
+#endif
         std::vector<MyVector<Tint>> ListOrbitF = INDEF_FORM_GetOrbitRepresentative(QmatRed, eNorm);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListOrbitF|=" <<  ListOrbitF.size() << "\n";
