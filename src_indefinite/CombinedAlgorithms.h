@@ -996,6 +996,9 @@ public:
     if (eBlock.h == 0) {
       return INDEF_FORM_GetOrbitRepresentative_PosNeg<T,Tint,Tgroup>(Q, X, os);
     }
+    if (eBlock.h == 1) {
+      return LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(Q, X, os);
+    }
     ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Q, os);
     std::vector<MyVector<Tint>> ListRepr;
     auto f_insert=[&](MyVector<Tint> fRepr) -> void {

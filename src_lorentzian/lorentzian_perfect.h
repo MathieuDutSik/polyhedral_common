@@ -1423,6 +1423,55 @@ LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
   return l_gen;
 }
 
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyVector<Tint>>
+LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
+  int n = LorMat.rows();
+  int dimEXT = n + 1;
+  using TintGroup = typename Tgroup::Tint;
+  using Telt = typename Tgroup::Telt;
+  PolyHeuristicSerial<TintGroup> AllArr =
+    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
+
+  int TheOption = LORENTZIAN_PERFECT_OPTION_TOTAL;
+
+  DataPerfectLorentzian<T, Tint, Tgroup> data{n, LorMat, TheOption,
+                                              std::move(rddo)};
+  using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
+  Tdata data_func{std::move(data)};
+  using Tobj = typename Tdata::Tobj;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  //
+  auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
+    return false;
+  };
+  int max_runtime_second = 0;
+  std::optional<std::vector<Tout>> opt =
+      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+          data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_obj = unfold_opt(opt, "Enumeration unexpectedly failed");
+  if (X != 0) {
+    std::cerr << "Some code needs to be written for one sign\n";
+    std::cerr << "For the other sign, that seems to require different methods\n";
+    throw TerminalException{1};
+  }
+
+
+  std::vector<MyVector<Tint>> ListVect;
+
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "|LORENTZ_GetOrbitRepresentative|=" << time << "\n";
+#endif
+  return ListVect;
+}
+
+
+
 template <typename T>
 size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
                                    [[maybe_unused]] std::ostream &os) {
@@ -1519,6 +1568,10 @@ LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
 #endif
   return opt;
 }
+
+
+
+
 
 // clang-format off
 #endif  // SRC_LORENTZIAN_LORENTZIAN_PERFECT_H_
