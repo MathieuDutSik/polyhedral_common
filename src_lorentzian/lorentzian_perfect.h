@@ -1432,7 +1432,6 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostre
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  using Telt = typename Tgroup::Telt;
   PolyHeuristicSerial<TintGroup> AllArr =
     AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
@@ -1460,11 +1459,15 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostre
     std::cerr << "For the other sign, that seems to require different methods\n";
     throw TerminalException{1};
   }
+  size_t miss_val = std::numeric_limits<size_t>::max();
   struct SingleDataVector {
     Face f;
     MyVector<Tint> V;
   };
   struct DataVector {
+    std::unordered_map<MyVector<Tint>, size_t> map_vert;
+    std::vector<MyVector<Tint>> l_vert;
+    std::vector<size_t> belonging;
     std::vector<SingleDataVector> l_data;
   };
   std::vector<DataVector> l_orbit;
@@ -1472,9 +1475,22 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostre
   std::vector<size_t> ListSize;
   std::vector<size_t> ListPos;
   std::vector<std::pair<size_t,size_t>> l_pair;
+  std::unordered_map<std::pair<size_t,size_t>, size_t> map_pair;
   size_t iOrbCone = 0;
+  size_t iOrbFull = 0;
   for (auto & eObj : l_obj) {
     vectface vf = DecomposeOrbitPoint_Full(eObj.x.GRP);
+    size_t n_vert = eObj.x.EXT.rows();
+    std::vector<size_t> belonging(n_vert, miss_val);
+    std::unordered_map<MyVector<Tint>, size_t> map_vert;
+    std::vector<MyVector<Tint>> l_vert;
+    std::vector<SingleDataVector> l_data;
+    for (size_t u=0; u<n_vert; u++) {
+      MyVector<Tint> V = GetMatrixRow(eObj.x.EXT, u);
+      map_vert[V] = u + 1;
+      l_vert.push_back(V);
+    }
+    size_t iOrb = 0;
     for (auto & eFace : vf) {
       boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
       MyVector<Tint> V = GetMatrixRow(eObj.x.EXT, aRow);
@@ -1482,32 +1498,77 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostre
       if (sum == 0) {
         SingleDataVector sdv{eFace, V};
         l_data.push_back(sdv);
+        for (auto & pos : FaceToVector<size_t>(eFace)) {
+          belonging[pos] = iOrb;
+        }
       }
     }
     size_t eSize = l_data.size();
     for (size_t u=0; u<eSize; u++) {
       std::pair<size_t,size_t> pair{iOrbCone, u};
       l_pair.push_back(pair);
+      map_pair[pair] = iOrbFull;
+      iOrbFull += 1;
     }
     ListSize.push_back(eSize);
     ListPos.push_back(n_entries);
     n_entries += eSize;
-    DataVector dv{l_data};
+    DataVector dv{map_vert, l_vert, belonging, l_data};
     l_orbit.push_back(dv);
     iOrbCone += 1;
   }
-  using Tgr = GraphListAdj;
+  using Tgr = GraphBitset;
   Tgr eG(n_entries);
-  for (int iOrbCone=0; iOrbCone<l_orbit.size(); iOrbCone++) {
-    for (auto & l_orb[iOrbCone].l_adj) {
-      
+  for (size_t iOrbCone=0; iOrbCone<l_orbit.size(); iOrbCone++) {
+    std::vector<MyVector<Tint>> const& l_vert = l_orbit[iOrbCone].l_vert;
+    size_t n_adj = l_obj[iOrbCone].ListAdj.size();
+    for (size_t i_adj=0; i_adj<n_adj; i_adj++) {
+      auto & eAdj = l_obj[iOrbCone].ListAdj[i_adj];
+      int iOrbConeAdj = eAdj.iOrb;
+      TadjO& adj = eAdj.x;
+      Face const& eInc = adj.eInc;
+      MyMatrix<Tint> const& eBigMat = adj.eBigMat;
+      MyMatrix<Tint> eBigMatInv = Inverse(eBigMat);
+      for (auto & eIdx : FaceToVector<size_t>(eInc)) {
+        size_t iOrb = l_orbit[iOrbCone].belonging[eIdx];
+        if (iOrb != miss_val) {
+          std::pair<size_t,size_t> pair{iOrbCone, iOrb};
+          size_t iOrbFull = map_pair.at(pair);
+          MyVector<Tint> eV = eBigMatInv.transpose() * l_vert[eIdx];
+          size_t pos = l_orbit[iOrbConeAdj].map_vert[eV];
+#ifdef DEBUG_LORENTZIAN_PERFECT
+          if (pos == 0) {
+            std::cerr << "The vector is missing and that is now what we want\n";
+            throw TerminalException{1};
+          }
+#endif
+          size_t uVert = pos - 1;
+          size_t iOrbAdj = l_orbit[iOrbConeAdj].belonging[uVert];
+#ifdef DEBUG_LORENTZIAN_PERFECT
+          if (iOrbAdj != miss_val) {
+            std::cerr << "uVert should belong to an orbit of isotrop vertices\n";
+            throw TerminalException{1};
+          }
+#endif
+          std::pair<size_t, size_t> pairAdj{iOrbConeAdj, iOrbAdj};
+          size_t iOrbFullAdj = map_pair.at(pairAdj);
+          eG.AddAdjacent(iOrbFull, iOrbFullAdj);
+          eG.AddAdjacent(iOrbFullAdj, iOrbFull);
+        }
+      }
     }
   }
-
-  
-
+  std::vector<std::vector<size_t>> ListConn = ConnectedComponents_set(eG);
   std::vector<MyVector<Tint>> ListVect;
-
+  for (auto & eConn : ListConn) {
+    size_t iOrbFull = eConn[0];
+    std::pair<size_t, size_t> pair = l_pair[iOrbFull];
+    size_t iOrbCone = pair.first;
+    size_t iOrb = pair.second;
+    SingleDataVector const& sdv = l_orbit[iOrbCone].l_data[iOrb];
+    MyVector<Tint> const& V = sdv.V;
+    ListVect.push_back(V);
+  }
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORENTZ_GetOrbitRepresentative|=" << time << "\n";
 #endif
