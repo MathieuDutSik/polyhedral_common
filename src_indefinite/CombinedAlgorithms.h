@@ -993,38 +993,49 @@ public:
   }
   std::vector<MyVector<Tint>> INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const& Q, T const& X) {
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
+    auto orbit_decomposition=[&](std::vector<MyVector<Tint>> const& l_vect) -> std::vector<MyVector<Tint>> {
+      std::vector<MyVector<Tint>> ListRepr;
+      auto f_insert=[&](MyVector<Tint> fRepr) -> void {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        T fNorm = EvaluationQuadForm<T,Tint>(Q, fRepr);
+        if (fNorm != X) {
+          std::cerr << "The norm is inconsistent\n";
+          throw TerminalException{1};
+        }
+#endif
+        for (auto & eRepr : ListRepr) {
+          std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Q, Q, eRepr, fRepr);
+          if (opt) {
+            return;
+          }
+        }
+        ListRepr.push_back(fRepr);
+      };
+      for (auto & eVect : l_vect) {
+        f_insert(eVect);
+      }
+      return ListRepr;
+    };
     if (eBlock.h == 0) {
       return INDEF_FORM_GetOrbitRepresentative_PosNeg<T,Tint,Tgroup>(Q, X, os);
     }
     if (eBlock.h == 1) {
-      return LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(Q, X, os);
-    }
-    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Q, os);
-    std::vector<MyVector<Tint>> ListRepr;
-    auto f_insert=[&](MyVector<Tint> fRepr) -> void {
+      std::vector<MyVector<Tint>> ListRepr = LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(Q, X, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      T fNorm = EvaluationQuadForm<T,Tint>(Q, fRepr);
-      if (fNorm != X) {
-        std::cerr << "The norm is inconsistent\n";
+      std::vector<MyVector<Tint>> ListReprRed = orbit_decomposition(ListRepr);
+      if (ListReprRed.size() != ListRepr.size()) {
+        std::cerr << "The ListRepr should hqve been reduced\n";
         throw TerminalException{1};
       }
 #endif
-      for (auto & eRepr : ListRepr) {
-        std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector(Q, Q, eRepr, fRepr);
-        if (opt) {
-          return;
-        }
-      }
-      ListRepr.push_back(fRepr);
-    };
+      return ListRepr;
+    }
+    ApproximateModel<T,Tint> approx = INDEF_FORM_GetApproximateModel<T,Tint,Tgroup>(Q, os);
     std::vector<MyVector<Tint>> ListCand = approx.GetCoveringOrbitRepresentatives(X, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: GetCoveringOrbitRepresentatives, |ListCand|=" << ListCand.size() << "\n";
 #endif
-    for (auto & eCand : ListCand) {
-      f_insert(eCand);
-    }
-    return ListRepr;
+    return orbit_decomposition(ListCand);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_StabilizerVector(MyMatrix<T> const& Qmat, MyVector<Tint> const& v) {
     if (RankMat(Qmat) != Qmat.rows()) {

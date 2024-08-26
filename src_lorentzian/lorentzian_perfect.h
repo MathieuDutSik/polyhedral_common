@@ -1460,7 +1460,51 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const& X, std::ostre
     std::cerr << "For the other sign, that seems to require different methods\n";
     throw TerminalException{1};
   }
+  struct SingleDataVector {
+    Face f;
+    MyVector<Tint> V;
+  };
+  struct DataVector {
+    std::vector<SingleDataVector> l_data;
+  };
+  std::vector<DataVector> l_orbit;
+  size_t n_entries = 0;
+  std::vector<size_t> ListSize;
+  std::vector<size_t> ListPos;
+  std::vector<std::pair<size_t,size_t>> l_pair;
+  size_t iOrbCone = 0;
+  for (auto & eObj : l_obj) {
+    vectface vf = DecomposeOrbitPoint_Full(eObj.x.GRP);
+    for (auto & eFace : vf) {
+      boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
+      MyVector<Tint> V = GetMatrixRow(eObj.x.EXT, aRow);
+      T sum = EvaluationQuadForm(LorMat, V);
+      if (sum == 0) {
+        SingleDataVector sdv{eFace, V};
+        l_data.push_back(sdv);
+      }
+    }
+    size_t eSize = l_data.size();
+    for (size_t u=0; u<eSize; u++) {
+      std::pair<size_t,size_t> pair{iOrbCone, u};
+      l_pair.push_back(pair);
+    }
+    ListSize.push_back(eSize);
+    ListPos.push_back(n_entries);
+    n_entries += eSize;
+    DataVector dv{l_data};
+    l_orbit.push_back(dv);
+    iOrbCone += 1;
+  }
+  using Tgr = GraphListAdj;
+  Tgr eG(n_entries);
+  for (int iOrbCone=0; iOrbCone<l_orbit.size(); iOrbCone++) {
+    for (auto & l_orb[iOrbCone].l_adj) {
+      
+    }
+  }
 
+  
 
   std::vector<MyVector<Tint>> ListVect;
 
