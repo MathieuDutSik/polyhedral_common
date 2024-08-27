@@ -6,6 +6,7 @@ template<typename T>
 struct AttackScheme {
   int h;
   MyMatrix<T> mat;
+  int sign;
 };
 
 template<typename T>
@@ -15,9 +16,9 @@ AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const& Qmat) {
   int nbMinus=DiagInfo.nbMinus;
   if (nbMinus < nbPlus) {
     MyMatrix<T> RetMat = -Qmat;
-    return {nbMinus, RetMat};
+    return {nbMinus, RetMat, -1};
   } else {
-    return {nbPlus, Qmat};
+    return {nbPlus, Qmat, 1};
   }
 }
 

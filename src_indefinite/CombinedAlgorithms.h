@@ -604,7 +604,13 @@ private:
   }
   std::vector<MyMatrix<Tint>> f_stab_flag(INDEF_FORM_GetRec_IsotropicKplane<T,Tint> const& eRec) {
     std::vector<MyMatrix<Tint>> GRPred = INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_flag, We have GRPred\n";
+#endif
     std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_flag, We have GRPfull\n";
+#endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
       MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
@@ -691,9 +697,21 @@ private:
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, int const& choice) {
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP1\n";
+#endif
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP2\n";
+#endif
     size_t eInvRed = INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have eInvRed\n";
+#endif
     size_t GRP_inv = GetRationalInvariant(GRP2);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP_inv\n";
+#endif
     return eInvRed + GRP_inv;
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat1, MyMatrix<T> const& Qmat2, MyMatrix<Tint> const& Plane1, MyMatrix<Tint> const& Plane2, int const& choice) {
@@ -736,7 +754,13 @@ private:
       return EquivRat_tint;
     }
     std::vector<MyMatrix<Tint>> GRP1_A = f_stab(eRec1, choice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Equivalence_IsotropicKstuff_Kernel, We have GRP1_A\n";
+#endif
     std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Equivalence_IsotropicKstuff_Kernel, We have GRP1_B\n";
+#endif
     // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
     std::optional<MyMatrix<Tint>> optB = MatrixIntegral_Equivalence_Bis_General<T,Tint,Tgroup>(GRP1_B, EquivRat, os);
     if (!optB) {
@@ -767,7 +791,13 @@ private:
     }
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel, We have GRP1\n";
+#endif
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel, We have GRP2\n";
+#endif
     return MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2, os);
   }
   std::vector<MyMatrix<T>> INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& ePlane, int const& choice) {
@@ -783,6 +813,7 @@ private:
     INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, ePlane);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
     for (auto & eGen : GRP1) {
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
       MyMatrix<T> eProd = eGen_T * eRec.GramMatRed * eGen_T.transpose();
@@ -794,6 +825,7 @@ private:
 #endif
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP2\n";
     for (auto & eGen : GRP2) {
       MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
       if (eProd != Qmat) {
@@ -1020,7 +1052,9 @@ public:
       return INDEF_FORM_GetOrbitRepresentative_PosNeg<T,Tint,Tgroup>(Q, X, os);
     }
     if (eBlock.h == 1) {
-      std::vector<MyVector<Tint>> ListRepr = LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(Q, X, os);
+      MyMatrix<T> const& mat = eBlock.mat;
+      T Xcall = X * eBlock.sign;
+      std::vector<MyVector<Tint>> ListRepr = LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(mat, Xcall, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       std::vector<MyVector<Tint>> ListReprRed = orbit_decomposition(ListRepr);
       if (ListReprRed.size() != ListRepr.size()) {
@@ -1122,7 +1156,13 @@ public:
     }
 #endif
     std::vector<MyMatrix<Tint>> GRP1_A = INDEF_FORM_AutomorphismGroup(eRec1.GramMatRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_EquivalenceVector, We have GRP1_A\n";
+#endif
     std::vector<MyMatrix<T>> GRP1_B = eRec1.MapOrthogonalSublatticeGroup(GRP1_A);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_EquivalenceVector, We have GRP1_B\n";
+#endif
     // Find a g1 in GRP1_B such that EquivRat * g1 in GL(n,Z)
     std::optional<MyMatrix<Tint>> optB = MatrixIntegral_Equivalence_Bis_General<T,Tint,Tgroup>(GRP1_B, EquivRat, os);
     if (!optB) {
