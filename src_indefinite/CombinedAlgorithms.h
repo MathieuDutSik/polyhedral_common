@@ -98,7 +98,7 @@ public:
     } else {
       MyMatrix<T> Subspace1 = eEndoRed_T * NSP_T;
       MyMatrix<T> const& Subspace2 = NSP_T;
-      std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1, Qmat, Subspace2);
+      std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1, Qmat, Subspace2, os);
       MyMatrix<T> RetMat = unfold_opt(opt, "opt should be something because NSP.rows = RankMat(NSP)");
       MyVector<T> vImg = RetMat.transpose() * v_T;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -143,6 +143,7 @@ public:
   MyMatrix<Tint> FullBasisInv;
   int the_dim;
   int dimCompl;
+  std::ostream& os;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
@@ -178,7 +179,7 @@ public:
     }
   }
 #endif
-  INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const& _Qmat, MyMatrix<Tint> const& _Plane) : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()) {
+  INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const& _Qmat, MyMatrix<Tint> const& _Plane, std::ostream& _os) : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()), os(_os) {
     Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
     MyMatrix<T> eProd = Plane_T * Qmat;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -211,14 +212,31 @@ public:
   // The difficulty os that the rational kernel is of strictly positive Q-rank
   // if dim(Plane) > 1.
   std::vector<MyMatrix<T>> MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const& GRPmatr) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, beginning\n";
+#endif
     MyMatrix<T> const& Subspace1 = NSP_T;
     std::vector<MyMatrix<T>> ListGenTotal;
     std::vector<T> ListD{1};
     for (auto & eEndoRed : GRPmatr) {
       MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: MapOrthogonalSublatticeGroup, eEndoRed_T=\n";
+      WriteMatrix(os, eEndoRed_T);
+#endif
       MyMatrix<T> Subspace2 = eEndoRed_T * NSP_T;
-      LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: MapOrthogonalSublatticeGroup, Subspace2=\n";
+      WriteMatrix(os, Subspace2);
+#endif
+      LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec\n";
+#endif
       MyMatrix<T> RetMat = TheRec.get_one_transformation();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: MapOrthogonalSublatticeGroup, We have RetMat\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       check_generator(eEndoRed, RetMat);
 #endif
@@ -226,9 +244,21 @@ public:
       T eDen = GetDenominatorMatrix(RetMat);
       ListD.push_back(eDen);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, after GRPmatr loop\n";
+#endif
     T TheDen = LCMlist(ListD);
-    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, TheDen=" << TheDen << "\n";
+#endif
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace1, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec\n";
+#endif
     std::vector<MyMatrix<T>> TheKer = TheRec.get_kernel_generating_set(TheDen);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, We have TheKer\n";
+#endif
     MyMatrix<Tint> eEndoRed = IdentityMat<Tint>(NSP.rows());
     for (auto & RetMat : TheKer) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -236,6 +266,9 @@ public:
 #endif
       ListGenTotal.push_back(RetMat);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroup, Before returning ListGenTotal\n";
+#endif
     return ListGenTotal;
   }
 };
@@ -695,7 +728,7 @@ private:
   // The function using choice integer input
   //
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(MyMatrix<T> const& Qmat, MyMatrix<Tint> const& Plane, int const& choice) {
-    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP1\n";
@@ -718,8 +751,8 @@ private:
     if (INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat1, Plane1, choice) != INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat2, Plane2, choice)) {
       return {};
     }
-    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec1(Qmat1, Plane1);
-    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec2(Qmat2, Plane2);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec1(Qmat1, Plane1, os);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec2(Qmat2, Plane2, os);
     std::optional<MyMatrix<Tint>> opt = f_equiv(eRec1, eRec2, choice);
     if (!opt) {
       return {};
@@ -729,7 +762,7 @@ private:
     MyMatrix<Tint> Subspace2 = eRec1.NSP;
     MyMatrix<T> Subspace1_T = UniversalMatrixConversion<T,Tint>(Subspace1);
     MyMatrix<T> Subspace2_T = UniversalMatrixConversion<T,Tint>(Subspace2);
-    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat1, Subspace1_T, Qmat2, Subspace2_T);
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat1, Subspace1_T, Qmat2, Subspace2_T, os);
     MyMatrix<T> EquivRat = TheRec.get_one_transformation();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eProd = EquivRat * Qmat1 * EquivRat.transpose();
@@ -789,7 +822,7 @@ private:
       std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
       throw TerminalException{1};
     }
-    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, Plane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel, We have GRP1\n";
@@ -810,7 +843,7 @@ private:
       std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
       throw TerminalException{1};
     }
-    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, ePlane);
+    INDEF_FORM_GetRec_IsotropicKplane<T,Tint> eRec(Qmat, ePlane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
@@ -1133,7 +1166,7 @@ public:
       } else {
         MyMatrix<T> Subspace1 = Inverse(test_T) * eRec2.NSP_T;
         MyMatrix<T> Subspace2 = eRec1.NSP_T;
-        std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2, Subspace2);
+        std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2, Subspace2, os);
         MyMatrix<T> EquivRat = unfold_opt(opt, "failed to find EquivRat");
         MyMatrix<T> EquivRatInv = Inverse(EquivRat);
         MyVector<T> v1_inv_equivrat = EquivRatInv.transpose() * eRec1.v_T;

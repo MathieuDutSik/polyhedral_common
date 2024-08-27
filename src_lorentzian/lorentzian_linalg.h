@@ -348,7 +348,7 @@ GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream &os) {
 template <typename T>
 MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
-    MyMatrix<T> const &Subspace2) {
+    MyMatrix<T> const &Subspace2, [[maybe_unused]] std::ostream& os) {
   int dim = G1.rows();
 #ifdef DEBUG_LORENTZIAN_LINALG
   auto terminate = [&](std::string const &msg) -> void {
@@ -444,7 +444,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
 template <typename T>
 std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
-    MyMatrix<T> const &Subspace2) {
+    MyMatrix<T> const &Subspace2, std::ostream& os) {
   int dim = G1.rows();
   std::vector<int> ListRowSelect = TMat_SelectRowCol(Subspace1).ListRowSelect;
   MyMatrix<T> Subspace1_red = SelectRow(Subspace1, ListRowSelect);
@@ -452,8 +452,7 @@ std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
   if (RankMat(Subspace2_red) != dim - 1) {
     return {};
   }
-  MyMatrix<T> eEquiv = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
-      G1, Subspace1_red, G2, Subspace2_red);
+  MyMatrix<T> eEquiv = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(G1, Subspace1_red, G2, Subspace2_red, os);
   if (Subspace1 * eEquiv != Subspace2)
     return {};
   return eEquiv;
@@ -566,17 +565,23 @@ public:
   std::vector<MyMatrix<T>> ListEquiv_terms1;
   MyMatrix<T> NSP1;
   MyMatrix<T> NSP2;
-  LORENTZ_ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& _G1, MyMatrix<T> const& _Subspace1, MyMatrix<T> const& _G2, MyMatrix<T> const& _Subspace2) : G1(_G1), Subspace1(_Subspace1), G2(_G2), Subspace2(_Subspace2), dim(G1.rows()), rnk(Subspace1.rows()) {
+  std::ostream& os;
+  LORENTZ_ExtendOrthogonalIsotropicIsomorphism(MyMatrix<T> const& _G1, MyMatrix<T> const& _Subspace1, MyMatrix<T> const& _G2, MyMatrix<T> const& _Subspace2, std::ostream& _os) : G1(_G1), Subspace1(_Subspace1), G2(_G2), Subspace2(_Subspace2), dim(G1.rows()), rnk(Subspace1.rows()), os(_os) {
 #ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, beginning\n";
     if (rnk != RankMat(Subspace1)) {
       std::cerr << "Inconsistent input: We should have Subspace1 of full rank\n";
       throw TerminalException{1};
     }
 #endif
+    int n = G2.rows();
     int dimSpace = rnk;
     // Checking the input
     MyMatrix<T> eProd1 = Subspace1 * G1;
     MyMatrix<T> eProd2 = Subspace2 * G2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have eProd1 / eProd2\n";
+#endif
     NSP1 = NullspaceTrMat(eProd1);
     NSP2 = NullspaceTrMat(eProd2);
 #ifdef DEBUG_LORENTZIAN_LINALG
@@ -598,19 +603,29 @@ public:
     }
 #endif
     // Now doing the computation side of the job
-    MyMatrix<T> TheCompl1 =SubspaceCompletionRational(Subspace1, dim);
+    MyMatrix<T> TheCompl1 = SubspaceCompletionRational(Subspace1, dim);
     MyMatrix<T> Trans1 = Concatenate(Subspace1, TheCompl1);
     Trans1Inv = Inverse(Trans1);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have Trans1Inv\n";
+#endif
     MyMatrix<T> MatScal1 = TheCompl1 * G1 * TheCompl1.transpose();
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have MatScal1\n";
+#endif
     int dimCompl1 = TheCompl1.rows();
-    ListVectCand2 = MyMatrix<T>(dimCompl1, dimSpace);
+    ListVectCand2 = MyMatrix<T>(dimCompl1, n);
     MyMatrix<T> eProd2tr = eProd2.transpose();
     for (int u=0; u<dimCompl1; u++) {
       MyVector<T> eVect1 = GetMatrixRow(TheCompl1, u);
+#ifdef DEBUG_LORENTZIAN_LINALG
+      os << "LORLIN: We have eVect1=" << StringVectorGAP(eVect1) << "\n";
+#endif
       MyVector<T> Vscal = eProd1 * eVect1;
       std::optional<MyVector<T>> opt = SolutionMat(eProd2tr, Vscal);
       MyVector<T> eVectCand2 = unfold_opt(opt, "getting eVectCand2");
 #ifdef DEBUG_LORENTZIAN_LINALG
+      os << "LORLIN: We have eVectCand2=" << StringVectorGAP(eVectCand2) << "\n";
       MyVector<T> LScal1 = eProd1 * eVect1;
       MyVector<T> LScal2 = eProd2 * eVectCand2;
       if (LScal1 != LScal2) {
@@ -620,6 +635,13 @@ public:
 #endif
       AssignMatrixRow(ListVectCand2, u, eVectCand2);
     }
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have ListVectCand2\n";
+    os << "LORLIN: G2=\n";
+    WriteMatrix(os, G2);
+    os << "LORLIN: ListVectCand2=\n";
+    WriteMatrix(os, ListVectCand2);
+#endif
     // The solutions are written as
     // eVect2 = eVectCand2 + c_vect * NSP2
     // Putting together this gets ListVect2 = TheCompl2 = ListVectCand2 + c_Mat * NSP2
@@ -633,10 +655,25 @@ public:
     // The space NSP2 is uniquely defined as the set of isotropic vectors in the space. It is defined
     // as a Kernel.
     MyMatrix<T> MatScalCand2 = ListVectCand2 * G2 * ListVectCand2.transpose();
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have MatScalCand2\n";
+#endif
     MyMatrix<T> LambdaMat = NSP2 * G2 * ListVectCand2.transpose();
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have LambdaMat\n";
+#endif
     denomSol = GetDenominatorQuotientSolution(LambdaMat);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, denomSol=" << denomSol << "\n";
+#endif
     MyMatrix<T> DiffScal = MatScal1 - MatScalCand2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have DiffScal\n";
+#endif
     TheRec = SpecialEquationSolving(LambdaMat, DiffScal);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have TheRec ( SpecialEquationSolving )\n";
+#endif
     for (auto & eMat : TheRec.BasisKernel) {
       MyMatrix<T> Null_mat = ZeroMatrix<T>(rnk, dim);
       MyMatrix<T> Prod_mat = eMat * NSP2;
@@ -644,6 +681,9 @@ public:
       MyMatrix<T> Ins_mat = Trans1Inv * Cont_mat;
       ListEquiv_terms1.push_back(Ins_mat);
     }
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have ListEquiv_terms1\n";
+#endif
   }
 #ifdef DEBUG_LORENTZIAN_LINALG
   void check_transformation(MyMatrix<T> const& eEq) {
