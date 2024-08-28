@@ -356,7 +356,7 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
     if (get_is_ok()) {
       return eDiv;
     }
-#ifdef SANITY_CHECK
+#ifdef SANITY_CHECK_MATRIX_GROUP
     if (eDiv > TheDet) {
       std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
       std::cerr << "TheSpace=\n";
@@ -498,27 +498,12 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value, Telt>::type
 GetPermutationForFiniteMatrixGroup(Thelper const &helper,
                                    MyMatrix<T> const &eMatr,
                                    [[maybe_unused]] std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  //  std::cerr << "Beginning of GetPermutationForFiniteMatrixGroup\n";
-  //  std::cerr << "|ListV|=" << helper.ListV.size() << "\n";
-  //  for (auto & eV : helper.ListV)
-  //    std::cerr << "V=" << StringVectorGAP(eV) << "\n";
-  //  std::cerr << "eMat=" << StringMatrixGAP(eMatr) << "\n";
-  //  MyMatrix<T> eProd = eMatr * helper.G * eMatr.transpose();
-  //  std::cerr << "eProd=" << StringMatrixGAP(eProd) << "\n";
-  os << "MAT_GRP: eMatr=\n";
-  WriteMatrix(os, eMatr);
-#endif
   using Tidx = typename Telt::Tidx;
   Tidx len = helper.EXTfaithful.rows();
   std::vector<Tidx> V(len);
   for (Tidx i = 0; i < len; i++) {
     MyVector<T> const &eV = helper.ListV[i];
     MyVector<T> Vimg = eMatr.transpose() * eV;
-#ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: i=" << i << " V=" << StringVectorGAP(eV)
-       << " Vimg=" << StringVectorGAP(Vimg) << "\n";
-#endif
     V[i] = helper.MapV.at(Vimg);
   }
   return Telt(std::move(V));
@@ -599,7 +584,7 @@ MatrixIntegral_GeneratePermutationGroup(
   using Tidx = typename Telt::Tidx;
   int Osiz = O.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Osiz=" << Osiz << "\n";
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup, Osiz=" << Osiz << "\n";
 #endif
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
@@ -612,11 +597,11 @@ MatrixIntegral_GeneratePermutationGroup(
     return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |SortingPerm|=" << time << "\n";
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup |SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |ePermSinv|=" << time << "\n";
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup |ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
@@ -635,42 +620,24 @@ MatrixIntegral_GeneratePermutationGroup(
     std::vector<Tidx> v(siz);
     for (Tidx i = 0; i < nbRow_tidx; i++)
       v[i] = ePermGen.at(i);
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |v 1|=" << timeB << "\n";
-#endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
     // We keep the more complicate because it shows where most of the runtime
     // is: In computing Oprod.
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ListImage|=" << timeB << "\n";
-#endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |SortingPerm|=" << timeB << "\n";
-#endif
     Telt ePermBinv = ~ePermB;
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ePermBinv|=" << timeB << "\n";
-#endif
     // By the construction and above check we have
     // V1reord[i] = V1[g1.at(i)]
     // V2reord[i] = V2[g2.at(i)]
     // We have V1reord = V2reord which gets us
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ePermGenSelect|=" << timeB << "\n";
-#endif
     for (int iO = 0; iO < Osiz; iO++) {
       int jO = ePermGenSelect.at(iO);
       v[nbRow + iO] = nbRow + jO;
     }
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |v 2|=" << timeB << "\n";
-#endif
     Telt eNewPerm(std::move(v));
 #ifdef SANITY_CHECK_MATRIX_GROUP
     for (int iO = 0; iO < Osiz; iO++) {
@@ -688,13 +655,7 @@ MatrixIntegral_GeneratePermutationGroup(
     }
 #endif
     ListPermGenProv.emplace_back(std::move(eNewPerm));
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |insert|=" << timeB << "\n";
-#endif
   }
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |ListPermGenProv|=" << time << "\n";
-#endif
 #ifdef DEBUG_MATRIX_GROUP
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
   os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
@@ -846,7 +807,7 @@ MatrixIntegral_GeneratePermutationGroup(
   using Tidx = typename Telt::Tidx;
   int Osiz = O.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Osiz=" << Osiz << "\n";
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup, Osiz=" << Osiz << "\n";
 #endif
   int siz = Osiz;
   Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
@@ -856,13 +817,7 @@ MatrixIntegral_GeneratePermutationGroup(
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |SortingPerm|=" << time << "\n";
-#endif
   Telt ePermSinv = ~ePermS;
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |ePermSinv|=" << time << "\n";
-#endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
@@ -874,43 +829,22 @@ MatrixIntegral_GeneratePermutationGroup(
     os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << "\n";
 #endif
     std::vector<Tidx> v(siz);
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |v 1|=" << timeB << "\n";
-#endif
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
     // We keep the more complicate because it shows where most of the runtime
     // is: In computing Oprod.
     for (int iV = 0; iV < Osiz; iV++)
       ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ListImage|=" << timeB << "\n";
-#endif
     Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |SortingPerm|=" << timeB << "\n";
-#endif
     Telt ePermBinv = ~ePermB;
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ePermBinv|=" << timeB << "\n";
-#endif
     // By the construction and above check we have
     // V1reord[i] = V1[g1.at(i)]
     // V2reord[i] = V2[g2.at(i)]
     // We have V1reord = V2reord which gets us
     // V2[i] = V1[g1 * g2^{-1}(i)]
     Telt ePermGenSelect = ePermBinv * ePermS;
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |ePermGenSelect|=" << timeB << "\n";
-#endif
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |insert|=" << timeB << "\n";
-#endif
   }
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "Timing |ListPermGenProv|=" << time << "\n";
-#endif
   return {0, siz, ListMatrGens, std::move(ListPermGenProv)};
 }
 
@@ -1070,7 +1004,9 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
           return {};
       }
     }
+#ifdef DEBUG_MATRIX_GROUP
     os << "pos=" << pos << " len=" << len << "\n";
+#endif
     pos = len;
   }
   std::optional<MyMatrix<T>> opt;
@@ -1124,7 +1060,9 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
           return {};
       }
     }
+#ifdef DEBUG_MATRIX_GROUP
     os << "pos=" << pos << " len=" << len << "\n";
+#endif
     pos = len;
   }
   //
@@ -1174,6 +1112,9 @@ FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
                   [[maybe_unused]] MyMatrix<T> const &TheSpace, T const &TheMod,
                   MyVector<T> const &x, [[maybe_unused]] Thelper const &helper,
                   std::ostream &os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: FindingSmallOrbit (!has_determining_ext), start\n";
+#endif
   // No determining EXT, hard to find clever ideas.
   MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
@@ -1193,14 +1134,19 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyMatrix<T> const &TheSpace, T const &TheMod,
                   MyVector<T> const &a, Thelper const &helper,
                   std::ostream &os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: FindingSmallOrbit (has_determining_ext), start\n";
+#endif
   using Telt = typename Tgroup::Telt;
   int n = TheSpace.rows();
   // The critical number for the computation
   size_t n_limit = 60000;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: FindingSmallOrbit, n_limit=" << n_limit << "\n";
+#endif
   auto test_adequateness =
       [&](MyVector<T> const &x) -> std::optional<std::vector<MyVector<Tmod>>> {
     MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);
-    MyVector<T> x_modT = UniversalVectorConversion<T, Tmod>(x_mod);
     size_t pos = 0;
     auto f_terminate = [&]([[maybe_unused]] MyVector<Tmod> const &a) -> bool {
       pos++;
@@ -1247,7 +1193,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   std::vector<Tgroup> ListGroup = GRP.GetAscendingChain();
   size_t len_group = ListGroup.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: len_group=" << len_group << " |GRP|=" << GRP.size() << "\n";
+  os << "MAT_GRP: FindingSmallOrbit, len_group=" << len_group << " |GRP|=" << GRP.size() << "\n";
 #endif
   auto try_basis = [&](MyMatrix<T> const &TheBasis)
       -> std::optional<std::vector<MyVector<Tmod>>> {
@@ -1256,13 +1202,14 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
       if (!IsStabilized(V)) {
         std::optional<std::vector<MyVector<Tmod>>> opt = test_adequateness(V);
         if (opt) {
+          std::vector<MyVector<Tmod>> const& ListV = *opt;
 #ifdef DEBUG_MATRIX_GROUP
-          os << "MAT_GRP: |*opt|=" << opt->size() << "\n";
+          os << "MAT_GRP: FindingSmallOrbit, |ListV|=" << ListV.size() << "\n";
 #endif
-          return *opt;
+          return ListV;
         }
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: Too large size at i_row=" << i_row << "\n";
+        os << "MAT_GRP: FindingSmallOrbit, Too large size at i_row=" << i_row << "\n";
 #endif
       }
     }
@@ -1272,7 +1219,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     size_t jGroup = len_group - 1 - iGroup;
     Tgroup const &fGRP = ListGroup[jGroup];
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: iGroup=" << iGroup << " |fGRP|=" << fGRP.size() << "\n";
+    os << "MAT_GRP: FindingSmallOrbit, iGroup=" << iGroup << " |fGRP|=" << fGRP.size() << "\n";
 #endif
     std::vector<MyMatrix<T>> LMatr;
     for (auto &eGen : fGRP.GeneratorsOfGroup()) {
@@ -1312,14 +1259,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   T TotSize = 1;
   for (int i = 0; i < n; i++)
     TotSize *= TheMod;
-  os << "MAT_GRP: TheMod=" << TheMod << "  n=" << n << " TotSize=" << TotSize
+  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod << "  n=" << n << " TotSize=" << TotSize
      << "\n";
 #endif
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
   // This is the part of the enumeration where we have problems.
-  // We have too many vectors to consider whih sinks the algorithm.
+  // We have too many vectors to consider which sinks the algorithm.
   // The difficulty of the work is that we have to deal with globally
   // invariant sets of vectors. This is difficult to manipulate in
   // practice.
@@ -1388,18 +1335,24 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |IsStabilizing|=" << time << "\n";
+    os << "MAT_GRP: |IsStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: Exiting the loop\n";
+      os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Exiting the loop\n";
 #endif
       break;
     }
     const MyVector<T> &V = *opt;
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Working with V=" << StringVectorGAP(V) << "\n";
+#endif
     std::optional<std::vector<MyVector<Tmod>>> opt_fso =
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, ListMatrRetMod, TheSpace, TheMod, V, helper, os);
+#ifdef TIMINGS_MATRIX_GROUP
+    os << "MAT_GRP: |FindingSmallOrbit|=" << time << "\n";
+#endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!opt_fso) {
       std::cerr << "Failed to find some entry\n";
@@ -1408,10 +1361,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::vector<MyVector<Tmod>> const &O = *opt_fso;
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: Orbit size |O|=" << O.size() << "\n";
-#endif
-#ifdef TIMINGS_MATRIX_GROUP
-    os << "Timing |OrbitComputation|=" << time << "\n";
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Orbit size |O|=" << O.size() << "\n";
 #endif
     Treturn eret =
         MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
@@ -1420,7 +1370,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     Tgroup GRPwork(eret.ListPermGens, eret.siz);
     Face eFace = GetFace<T, Tmod>(eret.nbRow, O, TheSpaceMod);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: ModStabilizer TheMod=" << TheMod << " |O|=" << O.size()
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod << " |O|=" << O.size()
        << " |GRPwork|=" << GRPwork.size() << " |eFace|=" << eFace.count()
        << "\n";
 #endif
@@ -1429,6 +1379,9 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     ListMatrRetMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
   }
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, return |ListMatrRet|=" << ListMatrRet.size() << "\n";
+#endif
   return ListMatrRet;
 }
 
@@ -1486,7 +1439,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   std::vector<T> eList = FactorsInt(LFact);
   int siz = eList.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LFact=" << LFact << " siz=" << siz << "\n";
+  os << "MAT_GRP: LinearSpace_StabilizerGen_Kernel LFact=" << LFact << " siz=" << siz << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
   for (int i = 1; i <= siz; i++) {
@@ -1709,17 +1662,20 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     std::optional<MyVector<Tmod>> test2 = IsStabilizing(ListMatrRet);
     if (!test1 && !test2) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: eElt and GRPwork are correct. Exiting\n";
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, eElt and GRPwork are correct. Exiting\n";
 #endif
       ResultTestModEquivalence<T> res{ListMatrRet, eElt};
       return res;
     }
     if (test1) {
       MyVector<Tmod> const &V = *test1;
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, Before OrbitComputation 1\n";
+#endif
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: |O|=" << O.size() << "\n";
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size() << "\n";
 #endif
 
       Treturn eret =
@@ -1822,6 +1778,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
           ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
     } else {
       MyVector<Tmod> const &V = *test2;
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, Before OrbitComputation 2\n";
+#endif
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP

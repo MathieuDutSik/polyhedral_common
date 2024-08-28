@@ -634,7 +634,7 @@ public:
 #endif
       AssignMatrixRow(ListVectCand2, u, eVectCand2);
     }
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef DEBUG_LORENTZIAN_LINALG_DISABLE
     os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have ListVectCand2\n";
     os << "LORLIN: G2=\n";
     WriteMatrix(os, G2);
@@ -700,7 +700,7 @@ public:
   }
 #endif
   MyMatrix<T> get_one_transformation() {
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef DEBUG_LORENTZIAN_LINALG_DISABLE
     os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, get_one_transformation beginning\n";
     os << "LORLIN: eSol_mat=\n";
     WriteMatrix(os, TheRec.eSol_mat);
@@ -710,15 +710,7 @@ public:
     WriteMatrix(os, ListVectCand2);
 #endif
     MyMatrix<T> TheCompl2 = ListVectCand2 + TheRec.eSol_mat * NSP2;
-#ifdef DEBUG_LORENTZIAN_LINALG
-    os << "LORLIN: TheCompl2=\n";
-    WriteMatrix(os, TheCompl2);
-#endif
     MyMatrix<T> Trans2 = Concatenate(Subspace2, TheCompl2);
-#ifdef DEBUG_LORENTZIAN_LINALG
-    os << "LORLIN: Trans2=\n";
-    WriteMatrix(os, Trans2);
-#endif
     MyMatrix<T> eEquiv0 = Trans1Inv * Trans2;
 #ifdef DEBUG_LORENTZIAN_LINALG
     os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have eEquiv0\n";

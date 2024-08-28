@@ -21,6 +21,14 @@
 #define DEBUG_INDEFINITE_COMBINED_ALGORITHMS
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+#endif
+
 static const int INDEFINITE_FORM_PLANE = 32;
 static const int INDEFINITE_FORM_FLAG = 92;
 
@@ -87,7 +95,7 @@ public:
     if (eNorm != 0) {
       MyMatrix<T> TheBigMat = ExpandMatrix(eEndoRed_T);
       MyMatrix<T> RetMat = PmatInv * TheBigMat * Pmat;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyVector<T> prodV = RetMat.transpose() * v_T;
       if (prodV != v_T) {
         std::cerr << "RetMat is not preserving the vector v\n";
@@ -101,7 +109,7 @@ public:
       std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1, Qmat, Subspace2, os);
       MyMatrix<T> RetMat = unfold_opt(opt, "opt should be something because NSP.rows = RankMat(NSP)");
       MyVector<T> vImg = RetMat.transpose() * v_T;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       if (vImg != v_T && vImg != -v_T) {
         std::cerr << "RetMat should map v to v or -v\n";
         throw TerminalException{1};
@@ -144,7 +152,7 @@ public:
   int the_dim;
   int dimCompl;
   std::ostream& os;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const& eEndoRed, MyMatrix<T> const& RetMat) {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
     MyMatrix<T> PlaneImg = Plane_T * RetMat;
@@ -182,7 +190,7 @@ public:
   INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const& _Qmat, MyMatrix<Tint> const& _Plane, std::ostream& _os) : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()), os(_os) {
     Plane_T = UniversalMatrixConversion<T,Tint>(Plane);
     MyMatrix<T> eProd = Plane_T * Qmat;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> WitnessIsotropy = Plane_T * Qmat * Plane_T.transpose();
     if (!IsZeroMatrix(WitnessIsotropy)) {
       std::cerr << "The matrix Plane does not define a totally isotropic space\n";
@@ -220,15 +228,7 @@ public:
     std::vector<T> ListD{1};
     for (auto & eEndoRed : GRPmatr) {
       MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T,Tint>(eEndoRed);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: MapOrthogonalSublatticeGroup, eEndoRed_T=\n";
-      WriteMatrix(os, eEndoRed_T);
-#endif
       MyMatrix<T> Subspace2 = eEndoRed_T * NSP_T;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: MapOrthogonalSublatticeGroup, Subspace2=\n";
-      WriteMatrix(os, Subspace2);
-#endif
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 1\n";
@@ -237,7 +237,7 @@ public:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: MapOrthogonalSublatticeGroup, We have RetMat\n";
 #endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       check_generator(eEndoRed, RetMat);
 #endif
       ListGenTotal.push_back(RetMat);
@@ -261,7 +261,7 @@ public:
 #endif
     MyMatrix<Tint> eEndoRed = IdentityMat<Tint>(NSP.rows());
     for (auto & RetMat : TheKer) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       check_generator(eEndoRed, RetMat);
 #endif
       ListGenTotal.push_back(RetMat);
@@ -444,7 +444,7 @@ private:
     }
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto f_insert=[&](MyMatrix<Tint> const& eGen) -> void {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
       MyMatrix<T> prod = eGen_T * Qmat * eGen_T.transpose();
       if (prod != Qmat) {
@@ -553,7 +553,7 @@ private:
     std::vector<MyMatrix<Tint>> LGenFinal;
     for (auto & eGen : get_stab()) {
       MyMatrix<Tint> NewGen = Binv * eGen * B;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> NewGen_T = UniversalMatrixConversion<T,Tint>(NewGen);
       MyMatrix<T> eProd = NewGen_T * Qmat * NewGen_T.transpose();
       if (eProd != Qmat) {
@@ -601,7 +601,7 @@ private:
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> NewEquiv = Inverse(ResRed2.B) * eEquiv * ResRed1.B;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> NewEquiv_T = UniversalMatrixConversion<T,Tint>(NewEquiv);
       MyMatrix<T> eProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
       if (eProd != Qmat2) {
@@ -647,7 +647,7 @@ private:
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
       MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
       if (eProd != eRec.GramMatRed) {
@@ -694,7 +694,7 @@ private:
       }
     }
     MyMatrix<Tint> TheEquiv = eRec2.FullBasisInv * TheEquivTest * eRec1.FullBasis;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T,Tint>(TheEquiv);
     MyMatrix<T> eProd = TheEquiv_T * eRec1.GramMatRed * TheEquiv_T.transpose();
     if (eProd != eRec2.GramMatRed) {
@@ -764,14 +764,14 @@ private:
     MyMatrix<T> Subspace2_T = UniversalMatrixConversion<T,Tint>(Subspace2);
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat1, Subspace1_T, Qmat2, Subspace2_T, os);
     MyMatrix<T> EquivRat = TheRec.get_one_transformation();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eProd = EquivRat * Qmat1 * EquivRat.transpose();
     if (eProd != Qmat2) {
       std::cerr << "The matrix EquivRat is not mapping Qmat1 to Qmat2\n";
       throw TerminalException{1};
     }
 #endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
     MyMatrix<T> Plane1_T = UniversalMatrixConversion<T,Tint>(Plane1);
     MyMatrix<T> Plane2_T = UniversalMatrixConversion<T,Tint>(Plane2);
@@ -800,7 +800,7 @@ private:
       return {};
     }
     MyMatrix<Tint> const& TheRet = *optB;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
     MyMatrix<T> eProdB = TheRet_T * Qmat1 * TheRet_T.transpose();
     if (eProdB != Qmat2) {
@@ -847,6 +847,8 @@ private:
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
+#endif
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : GRP1) {
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
       MyMatrix<T> eProd = eGen_T * eRec.GramMatRed * eGen_T.transpose();
@@ -859,6 +861,8 @@ private:
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP2\n";
+#endif
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : GRP2) {
       MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
       if (eProd != Qmat) {
@@ -879,7 +883,7 @@ private:
     }
 #endif
     std::vector<MyMatrix<T>> ListRightCoset = MatrixIntegral_RightCosets_General<T,Tgroup>(n, GRP2, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eCos : ListRightCoset) {
       MyMatrix<T> eProd = eCos * Qmat * eCos.transpose();
       if (eProd != Qmat) {
@@ -995,7 +999,7 @@ private:
           MyVector<T> eVectB_T = UniversalVectorConversion<T,Tint>(eVectB);
           for (auto & eCos : ListRightCosets) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
             if (EvaluationQuadForm(Qmat, eVectC_T) != 0) {
               std::cerr << "eVectC is not isotropic\n";
               throw TerminalException{1};
@@ -1061,7 +1065,7 @@ public:
     auto orbit_decomposition=[&](std::vector<MyVector<Tint>> const& l_vect) -> std::vector<MyVector<Tint>> {
       std::vector<MyVector<Tint>> ListRepr;
       auto f_insert=[&](MyVector<Tint> fRepr) -> void {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
         T fNorm = EvaluationQuadForm<T,Tint>(Q, fRepr);
         if (fNorm != X) {
           std::cerr << "The norm is inconsistent\n";
@@ -1088,10 +1092,11 @@ public:
       MyMatrix<T> const& mat = eBlock.mat;
       T Xcall = X * eBlock.sign;
       std::vector<MyVector<Tint>> ListRepr = LORENTZ_GetOrbitRepresentative<T,Tint,Tgroup>(mat, Xcall, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       std::vector<MyVector<Tint>> ListReprRed = orbit_decomposition(ListRepr);
       if (ListReprRed.size() != ListRepr.size()) {
-        std::cerr << "The ListRepr should hqve been reduced\n";
+        std::cerr << "|ListRepr|=" << ListRepr.size() << " |ListReprRed|=" << ListReprRed.size() << "\n";
+        std::cerr << "The ListRepr should have been reduced\n";
         throw TerminalException{1};
       }
 #endif
@@ -1126,7 +1131,7 @@ public:
     os << "COMB: INDEF_FORM_StabilizerVector, We have GRP2_T\n";
 #endif
     std::vector<MyMatrix<Tint>> ListMat = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP2_T, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eMat : ListMat) {
       MyMatrix<T> eMat_T = UniversalMatrixConversion<T,Tint>(eMat);
       MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
@@ -1178,7 +1183,7 @@ public:
       }
     };
     MyMatrix<T> EquivRat = iife_equiv_rat();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> EquivRatInv = Inverse(EquivRat);
     MyVector<T> v1_T = UniversalVectorConversion<T,Tint>(v1);
     MyVector<T> v2_T = UniversalVectorConversion<T,Tint>(v2);
@@ -1202,7 +1207,7 @@ public:
       return {};
     }
     MyMatrix<Tint> const& TheRet = *optB;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T,Tint>(TheRet);
     MyMatrix<T> eProd = TheRet_T * Q1 * TheRet_T.transpose();
     if (eProd != Q2) {
@@ -1242,14 +1247,8 @@ public:
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto & eGen : GRPfull) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_AutomorphismGroup, We have eGen=\n";
-      WriteMatrix(os, eGen);
-#endif
       MyMatrix<Tint> eGenB = FullBasisInv * eGen * FullBasis;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_AutomorphismGroup, We have eGenB=\n";
-      WriteMatrix(os, eGenB);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T,Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * Q * eGenB_T.transpose();
       if (eProd != Q) {
@@ -1291,7 +1290,7 @@ public:
       }
     }
     MyMatrix<Tint> TheEquiv = Inverse(FullBasis2) * TheEquivTest * FullBasis1;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T,Tint>(TheEquiv);
     MyMatrix<T> eProd = TheEquiv_T * Q1 * TheEquiv_T.transpose();
     if (eProd != Q2) {
