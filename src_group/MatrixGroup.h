@@ -614,8 +614,7 @@ MatrixIntegral_GeneratePermutationGroup(
     Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
         helper, eMatrGen, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << " ePermGen=" << ePermGen
-       << "\n";
+    os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << "\n";
 #endif
     std::vector<Tidx> v(siz);
     for (Tidx i = 0; i < nbRow_tidx; i++)
@@ -657,6 +656,7 @@ MatrixIntegral_GeneratePermutationGroup(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: We have ListPermGenProv\n";
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
   os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
 #endif
@@ -845,6 +845,9 @@ MatrixIntegral_GeneratePermutationGroup(
     Telt ePermGenSelect = ePermBinv * ePermS;
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
   }
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup (!has_determining_ext) returns\n";
+#endif
   return {0, siz, ListMatrGens, std::move(ListPermGenProv)};
 }
 
@@ -1603,10 +1606,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   os << "------------------------------------------------------\n";
   os << "MAT_GRP: NeedStabilizer=" << NeedStabilizer << "\n";
   os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod << "\n";
-  os << "MAT_GRP: TheSpace1=\n";
-  WriteMatrix(os, TheSpace1);
-  os << "MAT_GRP: TheSpace2=\n";
-  WriteMatrix(os, TheSpace2);
   os << "MAT_GRP: det(TheSpace1)=" << DeterminantMat(TheSpace1)
      << " det(TheSpace2)=" << DeterminantMat(TheSpace2) << "\n";
 #endif
@@ -1634,8 +1633,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP:   i=" << i << " eVect=" << StringVectorGAP(eVect)
            << "\n";
-        os << "MAT_GRP:   eEquiv=\n";
-        WriteMatrix(os, eEquiv);
 #endif
         return ModuloReductionVector<T, Tmod>(eVect, TheMod);
       }
@@ -1682,22 +1679,12 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, ListMatrRetMod, helper, O, TheMod, os);
 #ifdef DEBUG_MATRIX_GROUP
-      if constexpr (has_determining_ext<Thelper>::value) {
-        for (size_t iGen = 0; iGen < ListMatrRet.size(); iGen++) {
-          Telt ePerm = eret.ListPermGens[iGen];
-          os << "MAT_GRP: ePerm=" << ePerm;
-          MyMatrix<T> eMatr = ListMatrRet[iGen];
-          MyMatrix<T> M2 = RepresentPermutationAsMatrix(helper, ePerm, os);
-          if (eMatr != M2) {
-            os << "MAT_GRP: INCORRECT\n";
-          } else {
-            os << "MAT_GRP: correct\n";
-          }
-        }
-      }
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, we have eret 1\n";
 #endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
-
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have GRPperm 1\n";
+#endif
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
 #ifdef DEBUG_MATRIX_GROUP
@@ -1734,7 +1721,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         return {};
       }
       MyMatrix<T> const &M = *opt;
-#ifdef DEBUG_MATRIX_GROUP
+#ifdefSANITY_CHECK_MATRIX_GROUP_DISABLE
       MyMatrix<Tmod> Mmod = ModuloReductionMatrix<T, Tmod>(M, TheMod);
       Treturn fret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
@@ -1744,7 +1731,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         throw TerminalException{1};
       }
       Telt ePerm = fret.ListPermGens[0];
-      os << "ePerm=" << ePerm << "\n";
       if constexpr (has_determining_ext<Thelper>::value) {
         MyMatrix<T> M2 = RepresentPermutationAsMatrix(helper, ePerm, os);
         if (M != M2) {
@@ -1789,7 +1775,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, ListMatrRetMod, helper, O, TheMod, os);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have eret 2\n";
+#endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have GRPperm 2\n";
+#endif
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
@@ -1798,6 +1790,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #endif
       ListMatrRet = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(
           eret, GRPperm, helper, eFace2, os);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have ListMatrRet\n";
+#endif
       ListMatrRetMod =
           ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
     }
@@ -1837,15 +1832,7 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
                 "Requires T to be a field in LinearSpace_Equivalence_Kernel");
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Beginning of LinearSpace_Equivalence_Kernel\n";
-  os << "MAT_GRP: InSpace1=\n";
-  WriteMatrix(os, InSpace1);
-  os << "MAT_GRP: InSpace2=\n";
-  WriteMatrix(os, InSpace2);
   os << "MAT_GRP: |ListMatr|=" << ListMatr.size() << "\n";
-  for (auto &eMatr : ListMatr) {
-    os << "MAT_GRP: eMatr=\n";
-    WriteMatrix(os, eMatr);
-  }
   os << "MAT_GRP: Det(InSpace1)=" << DeterminantMat(InSpace1)
      << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
 #endif
