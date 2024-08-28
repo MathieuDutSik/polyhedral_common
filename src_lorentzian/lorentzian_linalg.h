@@ -575,7 +575,6 @@ public:
     }
 #endif
     int n = G2.rows();
-    int dimSpace = rnk;
     // Checking the input
     MyMatrix<T> eProd1 = Subspace1 * G1;
     MyMatrix<T> eProd2 = Subspace2 * G2;
@@ -701,15 +700,34 @@ public:
   }
 #endif
   MyMatrix<T> get_one_transformation() {
-    auto f_get_equiv=[&](MyVector<T> const& eSol) -> MyMatrix<T> {
-      MyMatrix<T> TheCompl2 = ListVectCand2 + NSP2.transpose() * eSol;
-      MyMatrix<T> Trans2 = Concatenate(Subspace2, TheCompl2);
-      MyMatrix<T> RetMat = Trans1Inv * Trans2;
-      return RetMat;
-    };
-    MyMatrix<T> eEquiv0 = f_get_equiv(TheRec.eSol_mat);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, get_one_transformation beginning\n";
+    os << "LORLIN: eSol_mat=\n";
+    WriteMatrix(os, TheRec.eSol_mat);
+    os << "LORLIN: NSP2=\n";
+    WriteMatrix(os, NSP2);
+    os << "LORLIN: ListVectCand2=\n";
+    WriteMatrix(os, ListVectCand2);
+#endif
+    MyMatrix<T> TheCompl2 = ListVectCand2 + TheRec.eSol_mat * NSP2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: TheCompl2=\n";
+    WriteMatrix(os, TheCompl2);
+#endif
+    MyMatrix<T> Trans2 = Concatenate(Subspace2, TheCompl2);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: Trans2=\n";
+    WriteMatrix(os, Trans2);
+#endif
+    MyMatrix<T> eEquiv0 = Trans1Inv * Trans2;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have eEquiv0\n";
+#endif
     // The matrix is expressed as eEquiv0 + alpha1 ListEquiv_terms[1] + ..... + alphaN ListEquiv_terms[N]
     MyMatrix<T> RetSol = EliminateSuperfluousPrimeDenominators_Matrix(eEquiv0, ListEquiv_terms1);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have RetSol\n";
+#endif
 #ifdef DEBUG_LORENTZIAN_LINALG
     check_transformation(RetSol);
 #endif

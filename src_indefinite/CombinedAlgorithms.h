@@ -231,7 +231,7 @@ public:
 #endif
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec\n";
+      os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 1\n";
 #endif
       MyMatrix<T> RetMat = TheRec.get_one_transformation();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -253,7 +253,7 @@ public:
 #endif
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace1, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec\n";
+    os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 2\n";
 #endif
     std::vector<MyMatrix<T>> TheKer = TheRec.get_kernel_generating_set(TheDen);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
