@@ -1,5 +1,5 @@
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
+PROGRAM		= POLY_SerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
@@ -11,7 +11,7 @@
 #PROGRAM		= POLY_UpgradeDatabase
 #PROGRAM		= POLY_ReadPartialEnum
 #PROGRAM		= Read_MPI_sizes
-PROGRAM		= POLY_EvaluateBalinski
+#PROGRAM		= POLY_EvaluateBalinski
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
@@ -46,9 +46,10 @@ OUTPUTFLAG 	= -o
 #COPTIONS        = -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #COPTIONS        = -DDEBUG -DTIMINGS -DTRACK_DATABASE -DLRS_PRINT_ANALYSIS
 #COPTIONS        = -DDEBUG -DTIMINGS -DKEY_VALUE
-COPTIONS        = -DDEBUG_BALINSKI
+#COPTIONS        = -DDEBUG_BALINSKI
 #COPTIONS        = -DDEBUG_DOUBLE_COSET -DCHECK_INSERT
 #COPTIONS        =
+COPTIONS        = -DDEBUG -DTIMINGS -DSANITY_CHECK
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 

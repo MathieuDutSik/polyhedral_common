@@ -2864,9 +2864,7 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
 template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
-  IsExistingFileDie(EXTfile);
-  std::ifstream EXTfs(EXTfile);
-  return ReadMatrix<T>(EXTfs);
+  return ReadMatrixFile<T>(EXTfile);
 }
 
 std::string GetNumericalType(FullNamelist const &eFull) {
