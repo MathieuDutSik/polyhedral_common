@@ -1827,21 +1827,54 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   bool is_first = true;
   do {
     bool is_finished = false;
-    for (col = 0; col <= P->d; col++)
+    for (col = 0; col <= P->d; col++) {
       if (lrs_getsolution(P, Q, output, col)) {
         if (!is_first) {
           bool test = f(P, Q, col, output);
-          if (!test)
+          if (!test) {
             is_finished = true;
+          }
         }
         is_first = false;
       }
-    if (is_finished)
+    }
+    if (is_finished) {
       break;
+    }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
   delete[] output;
   lrs_free_dic(P, Q);
   lrs_free_dat(Q);
+}
+
+
+template <typename T, typename F>
+void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
+  lrs_dic<T> *P;
+  lrs_dat<T> *Q;
+  int col;
+  initLRS(EXT, P, Q);
+  uint64_t dict_count = 1;
+  do {
+    bool is_finished = false;
+    bool test = f(P, Q);
+    if (!test) {
+      break;
+    }
+  } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
+  lrs_free_dic(P, Q);
+  lrs_free_dat(Q);
+}
+
+template <typename T, typename F>
+T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
+  T total_volume = 0;
+  auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
+    total_volume += P->det;
+    return true;
+  };
+  Kernel_Simplices_cond(EXT, f);
+  return total_volume;
 }
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
