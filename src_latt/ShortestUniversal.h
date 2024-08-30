@@ -4,9 +4,6 @@
 
 // clang-format off
 #include "Shvec_exact.h"
-#ifdef USE_LIBSHORT
-#include "Shvec_double.h"
-#endif
 #include <string>
 // clang-format on
 
@@ -14,33 +11,10 @@ template <typename T, typename Tint>
 resultCVP<T, Tint>
 CVPVallentinProgram_choice(MyMatrix<T> const &GramMat, MyVector<T> const &eV,
                            std::string const &NameMeth, std::ostream &os) {
-  /*
-  bool DoCheck = false;
-  if (DoCheck) {
-    resultCVP<T, Tint> res1 = CVPVallentinProgram_exact<T, Tint>(GramMat, eV,
-  os); resultCVP<T, Tint> res2 = CVP_N23_24A1<T, Tint>(eV); if (res1 != res2) {
-      std::cerr << "res1.TheNorm=" << res1.TheNorm << "\n";
-      std::cerr << "res2.TheNorm=" << res2.TheNorm << "\n";
-      std::cerr << "|res1.ListVect|=" << res1.ListVect.rows()
-                << " |res2.ListVect|=" << res2.ListVect.rows() << "\n";
-      std::cerr << "res1.ListVect=\n";
-      WriteMatrixGAP(std::cerr, res1.ListVect);
-      std::cerr << "res2.ListVect=\n";
-      WriteMatrixGAP(std::cerr, res2.ListVect);
-      std::cerr << "Clear error in the code\n";
-      throw TerminalException{1};
-    }
-    return res1;
-  }
-  */
   //
-  if (NameMeth == "SVexact")
+  if (NameMeth == "SVexact") {
     return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
-    //
-#ifdef USE_LIBSHORT
-  if (NameMeth == "SVdouble")
-    return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
-#endif
+  }
   //
   std::cerr << "No matching method found\n";
   throw TerminalException{1};
