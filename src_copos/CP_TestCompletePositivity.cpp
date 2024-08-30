@@ -13,16 +13,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "CP_TestCompletePositivity [eMat]\n";
       std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat]\n";
       std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat] [OutFile]\n";
-      std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat] [OutFile] "
-                   "[InitialBasis]\n";
-      std::cerr << "CP_TestCompletePositivity [eMat] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
       std::cerr << "OutFormat: classic or GAP. Default value is classic\n";
       std::cerr << "OutFile: if present, output goes to OutFile, otherwise to "
                    "std::cerr\n";
-      std::cerr << "InitialBasis: IdentityMat if absent, otherwise the one in "
-                   "the named file\n";
       std::cerr << "\n";
       std::cerr << "If completely positive, we return an expression of it "
                    "using integral vector\n";
@@ -43,8 +38,6 @@ int main(int argc, char *argv[]) {
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-      if (argc >= 5)
-        InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       TestStrictPositivity<T, Tint> StrictPos =
           TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis,
                                                   std::cerr);

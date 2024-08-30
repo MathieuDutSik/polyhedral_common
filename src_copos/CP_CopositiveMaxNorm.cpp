@@ -13,15 +13,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm]\n";
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat]\n";
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] [OutFile]\n";
-      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] [OutFile] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The symmetric matrix on input\n";
       std::cerr << "MaxNorm: The maximm norm considered\n";
       std::cerr << "OutFormat: classic or GAP. Default is classic\n";
       std::cerr << "OutFile: if assigned output goes to OutFile. Otherwise to "
                    "std::cerr\n";
-      std::cerr << "InitialBasis: By default, identity mat, otherwise, the "
-                   "matrix in the input file\n";
       std::cerr << "\n";
       std::cerr << "It returns the list of integer vectors v in Z^n_{>= 0} "
                    "such that A[v] <= MaxNorm\n";
@@ -46,8 +43,6 @@ int main(int argc, char *argv[]) {
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-      if (argc >= 6)
-        InitialBasis = ReadMatrixFile<Tint>(argv[5]);
       //
       RequestCopositivity<T> CopoReq{MaxNorm, false};
       CopositivityEnumResult<Tint> CopoRes =

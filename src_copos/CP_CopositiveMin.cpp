@@ -12,8 +12,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_CopositiveMin [DATASYMM]\n";
-      std::cerr << "or\n";
-      std::cerr << "CP_CopositiveMin [DATASYMM] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The input data of the strict copositive "
                    "symmetric matrix A\n";
@@ -21,9 +19,6 @@ int main(int argc, char *argv[]) {
                    "Z^n_{>=0}} A[v] "
                    "of A and a list of all v in Z^n_{>= 0} such that A[v] = "
                    "min_{COP}(A) ";
-      std::cerr << "\n";
-      std::cerr << "If InitialBasis is not put in argument, then it is the "
-                   "standard basis {e1, ...., en}\n";
       return -1;
     }
     //
@@ -36,9 +31,6 @@ int main(int argc, char *argv[]) {
     WriteMatrix(std::cerr, eSymmMat);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3) {
-      InitialBasis = ReadMatrixFile<Tint>(argv[2]);
-    }
     //
     Tshortest<T, Tint> eSh =
         CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);

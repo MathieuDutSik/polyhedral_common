@@ -7,21 +7,17 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc < 2) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCopositivity [DATASYMM]\n";
-      std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat]\n";
+      std::cerr << "or\n";
       std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat] [OutFile]\n";
-      std::cerr << "CP_TestCopositivity [DATASYMM] [OutFormat] [OutFile] "
-                   "[InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The input data of the symmetric matrix\n";
       std::cerr << "OutFormat: classic or GAP. Default is classic\n";
       std::cerr << "OutFile: File to the utput. If absent then it goes to "
                    "std::cerr\n";
-      std::cerr << "InitialBasis: If missing, the standard basis, otherwise "
-                   "the basis from the file\n";
       std::cerr << "\n";
       std::cerr
           << "It returns true if the matrix is copositive. If not it returns a "
@@ -39,25 +35,29 @@ int main(int argc, char *argv[]) {
     WriteMatrix(std::cerr, eSymmMat);
     //
     std::string OutFormat = "classic";
-    if (argc >= 3) {
+    std::string OutFile = "stderr";
+    if (argc == 4) {
       OutFormat = argv[2];
+      OutFile = argv[3];
     }
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-      if (argc >= 5)
-        InitialBasis = ReadMatrixFile<Tint>(argv[4]);
       //
       std::pair<SingleTestResult<Tint>, size_t> eResult =
           TestCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
       //
       WriteSingleTestResult(os, OutFormat, eResult);
     };
-    if (argc >= 4) {
-      std::ofstream os(argv[3]);
-      process(os);
-    } else {
+    if (OutFile == "stderr") {
       process(std::cerr);
+    } else {
+      if (OutFile == "stdout") {
+      process(std::cout);
+      } else {
+        std::ofstream os(OutFile);
+        process(os);
+      }
     }
     //
     std::cerr << "Normal completion of the program\n";
