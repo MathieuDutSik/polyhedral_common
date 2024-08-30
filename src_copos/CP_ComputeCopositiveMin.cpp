@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     }
     //
     Tshortest<T, Tint> eSh =
-        T_CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
+        CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
     std::cerr << "eMin=" << eSh.eMin << "\n";
     WriteMatrix(std::cerr, eSh.SHV);
     //

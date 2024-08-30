@@ -76,7 +76,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "Case 2 eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
 #endif
-    return T_CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
+    return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
   };
   RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
@@ -88,7 +88,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     nbIter++;
 #endif
     Tshortest<T, Tint> RecSHV =
-        T_CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
+        CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV);
     int nbBlock = eNaked.ListBlock.size();

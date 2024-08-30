@@ -778,7 +778,7 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
 // ---fSingleTest checks if the cone is adequate for conclusion.
 //    If yes, then the conclusion is returned.
 // ---fInsert checks if the cone is adequate and do the business (insert vector,
-// add nbCone, etc.)
+//       increase nbCone, etc.)
 //    if it is not a boolean is returned and the cone is further subdivided.
 template <typename T, typename Tint, typename Finsert, typename Ftest>
 SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(
@@ -864,9 +864,9 @@ SingleTestResult<Tint> EnumerateCopositiveShortVector_Kernel(
 
 template <typename T, typename Tint>
 Tshortest<T, Tint>
-T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
-                           MyMatrix<Tint> const &InitialBasis,
-                           std::ostream &os) {
+CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
+                         MyMatrix<Tint> const &InitialBasis,
+                         std::ostream &os) {
 #ifdef SANITY_CHECK_COPOSITIVITY
   SingleTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
@@ -888,14 +888,7 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
         EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
                                                        MinNorm);
     for (auto &eVect : TotalList) {
-      T eNorm = 0;
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          T val1 = eVect(i);
-          T val2 = eVect(j);
-          eNorm += eSymmMat(i, j) * val1 * val2;
-        }
-      }
+      T eNorm = EvaluationQuadForm(eSymmMat, eVect);
       if (eNorm > 0) {
         if (eNorm < MinNorm) {
           MinNorm = eNorm;
@@ -919,7 +912,7 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
       eSymmMat, InitialBasis, f_insert, f_test, os);
   if (!eResult.test) {
     std::cerr << "We should not have non-copositivity in "
-                 "T_CopositiveShortestVector\n";
+                 "CopositiveShortestVector\n";
     throw TerminalException{1};
   }
 #endif
@@ -931,6 +924,49 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
     iVect++;
   }
   return {MinNorm, std::move(SHV)};
+}
+
+template <typename T, typename Tint>
+MyMatrix<T> CopositiveShortVector(MyMatrix<T> const &eSymmMat,
+                                  MyMatrix<Tint> const &InitialBasis,
+                                  T const& MaxNorm,
+                                  bool const& OnlyMax,
+                                  std::ostream &os) {
+  int n = eSymmMat.rows();
+  std::unordered_set<MyVector<Tint>> TotalListVect_set;
+  auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
+    bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
+    if (!test) {
+      return false;
+    }
+    std::vector<MyVector<Tint>> TotalList =
+        EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
+                                                       MaxNorm);
+    for (auto &eVect : TotalList) {
+      if (OnlyMax) {
+        T eNorm = EvaluationQuadForm(eSymmMat, eVect);
+        if (eNorm == MaxNorm) {
+          TotalListVect_set.insert(eVect);
+        }
+      } else {
+        TotalListVect_set.insert(eVect);
+      }
+    }
+    return true;
+  };
+  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
+    return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
+  };
+  int nbVect = TotalListVect_set.size();
+  int iVect = 0;
+  MyMatrix<Tint> SHV(nbVect, n);
+  for (auto &eVect : TotalListVect_set) {
+    AssignMatrixRow(SHV, iVect, eVect);
+    iVect++;
+  }
+  return SHV;
 }
 
 template <typename T, typename Tint>
@@ -1059,7 +1095,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(
 
 template <typename T, typename Tint>
 Tshortest<T, Tint>
-T_CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
+CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
                               MyMatrix<Tint> const &InitialBasis,
                               std::ostream &os) {
   int n = eSymmMat.rows();

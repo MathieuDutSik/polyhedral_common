@@ -49,6 +49,10 @@ For applications of the closest vector problem the user is referred to following
   * Dur Miriam, Copositive programming — a survey, Recent Advances in Optimization and its Applications in Engineering, Springer, 2010
   * Fincke, U. and Pohst, M., Improved methods for calculating vectors of short length in a lattice, including a complexity analysis, Mathematics of Computation, 44, 1985, 463--471
 
+This work was used for the following two articles:
+  * Mathieu Dutour Sikirić, Achill Schürmann, Frank Vallentin, A simplex algorithm for rational CP-factorization, preprint at arxiv:1807.01382, Mathematical Programming 187 (2020) 25--45
+  * Mathieu Dutour Sikirić, Achill Schürmann, Frank Vallentin, Rational Factorizations of Completely Positive Matrices, preprint at arxiv:1701.03148, Linear Algebra and its Applications 523 (2017) 46--51
+
 Dependencies
 ------------
 
