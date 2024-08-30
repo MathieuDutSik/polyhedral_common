@@ -1721,7 +1721,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         return {};
       }
       MyMatrix<T> const &M = *opt;
-#ifdefSANITY_CHECK_MATRIX_GROUP_DISABLE
+#ifdef SANITY_CHECK_MATRIX_GROUP_DISABLE
       MyMatrix<Tmod> Mmod = ModuloReductionMatrix<T, Tmod>(M, TheMod);
       Treturn fret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(

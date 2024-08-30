@@ -2,6 +2,7 @@
 #ifndef SRC_COPOS_COPOSITIVITY_H_
 #define SRC_COPOS_COPOSITIVITY_H_
 
+// clang-format off
 #include "LatticeDefinitions.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
@@ -11,6 +12,15 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+// clang-format on
+
+#ifdef DEBUG
+#define DEBUG_COPOSITIVITY
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_COPOSITIVITY
+#endif
 
 template <typename T>
 bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
@@ -49,7 +59,7 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
   T a2 = a / b;
   double a2_doubl = UniversalScalarConversion<double, T>(a2);
   double C2_doubl = UniversalScalarConversion<double, T>(C2);
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (b <= 0 || C <= 0) {
     std::cerr << "b should be strictly positive. b=" << b << "\n";
     std::cerr << "C should be strictly positive. C=" << C << "\n";
@@ -93,7 +103,7 @@ std::vector<MyVector<Tint>>
 EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
                                                MyMatrix<Tint> const &TheBasis,
                                                T const &MaxNorm) {
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef SANITY_CHECK_COPOSITIVITY
   MyMatrix<T> tstTheBasis_T = UniversalMatrixConversion<T, Tint>(TheBasis);
   MyMatrix<T> tstSymmMatB = TheBasis_T * eSymmMat * TheBasis_T.transpose();
   bool test1 = TestCopositivityByPositivityCoeff(tstSymmMatB);
@@ -109,7 +119,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
   MyMatrix<Tint> Pinv_int = UniversalMatrixConversion<Tint, T>(Pinv);
   MyMatrix<Tint> Pinv_cgr = Pinv_int.transpose();
   MyMatrix<T> eSymmMatB = Pinv * eSymmMat * Pinv.transpose();
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
   std::cerr << "eRedBas.Pmat=\n";
   WriteMatrix(std::cerr, eRedBas.Pmat);
   std::cerr << "eSymmMat=\n";
@@ -126,7 +136,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
       UniversalMatrixConversion<T, Tint>(TheBasisReord);
   MyMatrix<T> eSymmMatC =
       TheBasisReord_T * eSymmMatB * TheBasisReord_T.transpose();
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef SANITY_CHECK_COPOSITIVITY
   bool test2 = TestCopositivityByPositivityCoeff(eSymmMatC);
   if (!test2) {
     std::cerr << "Inconsistency in the positivity of coefficients\n";
@@ -138,7 +148,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
   std::vector<T> AII(n);
   for (int i = 0; i < n; i++)
     AII[i] = TheBasisReord(i, i);
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
   std::cerr << "AII=";
   for (int i = 0; i < n; i++)
     std::cerr << " " << AII[i];
@@ -176,7 +186,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
   MyMatrix<T> PartialSum = ZeroMatrix<T>(n + 1, n + 1);
   auto ComputeHXZmaxNorm = [&](int const &nupdt) -> void {
   // First we can compute the ListH just from the X
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
     std::cerr << "ComputeHXZmaxNorm : Before computing ListH, Lambda and X\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
@@ -188,7 +198,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
       T eZ = Z[i];
       Lambda[i] = eZ / AII[i] + ListH[i];
       T eX_q = eNumber + Lambda[i] * AII[i];
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef SANITY_CHECK_COPOSITIVITY
       mpz_class eDen = eX_q.get_den();
       if (eDen > 1) {
         std::cerr << "eDen should be equal to 1\n";
@@ -199,7 +209,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
 #endif
       X(i) = UniversalScalarConversion<Tint, T>(eX_q);
     }
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
     std::cerr << "X=";
     for (int i = 0; i < n; i++)
       std::cerr << " " << X(i);
@@ -220,25 +230,26 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
     std::cerr << "n=" << n << "\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
       std::cerr << "i=" << i << " / " << nupdt << "\n";
 #endif
       T Qii = eSymmMatC(i, i);
       T eNorm = Qii * Lambda[i] * Lambda[i];
       T eW = 0;
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
       std::cerr << "Norm compute step 1\n";
 #endif
       for (int j = i + 1; j < n; j++)
         eW += 2 * eSymmMatC(i, j) * Lambda[j];
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
       std::cerr << "Norm compute step 2\n";
 #endif
       T NextNorm;
-      if (i < n - 1)
+      if (i < n - 1) {
         NextNorm = ListNorm[i + 1];
-      else
+      } else {
         NextNorm = 0;
+      }
       eNorm += eW * Lambda[i] + NextNorm;
       ListNorm[i] = eNorm;
       T eH = ListH[i];
@@ -252,7 +263,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
         Zmax[i] = FindLargest(eVal1, eVal2, C);
       }
     }
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
     std::cerr << "Zmax=";
     for (int i = 0; i < n; i++)
       std::cerr << " " << Zmax[i];
@@ -267,24 +278,24 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
   // The initialization
   //
   ComputeHXZmaxNorm(n);
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
   std::cerr << "After ComputeHXZmaxNorm\n";
 #endif
   //
   // The tree search function
   //
   auto NextInTree = [&]() -> bool {
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
     for (int i = 0; i < n; i++)
       std::cerr << "i=" << i << " Zmax=" << Zmax[i] << "\n";
 #endif
     for (int i = 0; i < n; i++) {
       if (Z[i] < Zmax[i]) {
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
         std::cerr << "Clear update here Z[i]=" << Z[i] << "\n";
 #endif
         Z[i]++;
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
         std::cerr << "i=" << i << " Z[i]=" << Z[i] << "\n";
 #endif
         for (int j = 0; j < i; j++)
@@ -298,13 +309,13 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
   std::vector<MyVector<Tint>> ListVectRet;
   while (true) {
     if (ListNorm[0] <= MaxNorm) {
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
       std::cerr << "Before computing NewX\n";
       std::cerr << "Pinv_int=\n";
       WriteMatrix(std::cerr, Pinv_int);
 #endif
       MyVector<Tint> NewX = Pinv_cgr * X;
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef SANITY_CHECK_COPOSITIVITY
       T eVal = EvaluationQuadForm(eSymmMat, NewX);
       if (eVal != ListNorm[0]) {
         std::cerr << "Norm inconsistency in the code\n";
@@ -319,8 +330,6 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
         }
         throw TerminalException{1};
       }
-      std::cerr << "After computing NewX. NewX=\n";
-      WriteVectorNoDim(std::cerr, NewX);
       if (NewX.minCoeff() < 0) {
         std::cerr << "X=";
         WriteVectorNoDim(std::cerr, X);
@@ -335,7 +344,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
 #endif
       ListVectRet.push_back(NewX);
     }
-#ifdef DEBUG_UNDER_POS_COND
+#ifdef DEBUG_COPOSITIVITY
     std::cerr << "X=[";
     for (int i = 0; i < n; i++)
       std::cerr << " " << X(i);
@@ -1023,7 +1032,7 @@ template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
     RequestCopositivity<T> const &CopoReq, std::ostream &os) {
-#ifdef DEBUG_ENUMERATE_COPOSITIVE
+#ifdef SANITY_CHECK_ENUMERATE_COPOSITIVE
   CopositivityEnumResult<Tint> res1 =
       EnumerateCopositiveShortVector_V1(eSymmMat, InitialBasis, CopoReq, os);
   CopositivityEnumResult<Tint> res2 =

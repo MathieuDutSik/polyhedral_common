@@ -18,8 +18,8 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 
 #COPTIONS        = -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #COPTIONS        = -DTIMINGS
-#COPTIONS        = -DDEBUG
-COPTIONS        =
+COPTIONS        = -DDEBUG
+#COPTIONS        =
 
 
 NOLINKFLAG 	= -c

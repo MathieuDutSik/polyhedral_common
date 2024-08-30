@@ -1,5 +1,4 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-// #define PRINT_SPLIT_CONE
 // clang-format off
 #include "NumberTheory.h"
 #include "Copositivity.h"
@@ -40,8 +39,9 @@ int main(int argc, char *argv[]) {
     WriteMatrix(std::cerr, eSymmMat);
     //
     std::string OutFormat = "classic";
-    if (argc >= 3)
+    if (argc >= 3) {
       OutFormat = argv[2];
+    }
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
