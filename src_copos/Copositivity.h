@@ -98,11 +98,10 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
 // ---(v1, ...., vn) spans a simplicial cone. We have no constraint on det(v1,
 // ..., vn). Just be non-zero
 // ---For all 1<= i,j <= n  we have vi eSymmMat * vj >= 0
-template <typename T, typename Tint>
-std::vector<MyVector<Tint>>
-EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
-                                               MyMatrix<Tint> const &TheBasis,
-                                               T const &MaxNorm) {
+template <typename T, typename Tint, typename F>
+void EnumerateShortVectorInCone_UnderPositivityCond_F(MyMatrix<T> const &eSymmMat,
+                                                      MyMatrix<Tint> const &TheBasis,
+                                                      T const &MaxNorm, F f) {
 #ifdef SANITY_CHECK_COPOSITIVITY
   MyMatrix<T> TheBasis_T = UniversalMatrixConversion<T, Tint>(TheBasis);
   MyMatrix<T> tstSymmMatB = TheBasis_T * eSymmMat * TheBasis_T.transpose();
@@ -306,7 +305,6 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
     }
     return false;
   };
-  std::vector<MyVector<Tint>> ListVectRet;
   while (true) {
     if (ListNorm[0] <= MaxNorm) {
 #ifdef DEBUG_COPOSITIVITY
@@ -342,7 +340,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
         throw TerminalException{1};
       }
 #endif
-      ListVectRet.push_back(NewX);
+      f(NewX, ListNorm[0]);
     }
 #ifdef DEBUG_COPOSITIVITY
     std::cerr << "X=[";
@@ -362,6 +360,18 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
     if (!test)
       break;
   }
+}
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
+                                               MyMatrix<Tint> const &TheBasis,
+                                               T const &MaxNorm) {
+  std::vector<MyVector<Tint>> ListVectRet;
+  auto f=[&](MyVector<Tint> const& V, [[maybe_unused]] T const& norm) -> void {
+    ListVectRet.push_back(V);
+  };
+  EnumerateShortVectorInCone_UnderPositivityCond_F(eSymmMat, TheBasis, MaxNorm, f);
   return ListVectRet;
 }
 
