@@ -25,8 +25,6 @@ jobs:
       EIGEN_PATH: /home/runner/work/opt/eigen
       TBB_INCDIR: /usr/include
       TBB_LINK: "-ltbb"
-      GSL_INCDIR: /usr/include
-      GSL_C_LINK: "-lgsl -lgslcblas"
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
@@ -42,9 +40,6 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
-      LIBSHORT_PATH: /home/runner/opt/libshort
-      LIBSHORT_INCDIR: /home/runner/opt/libshort/include
-      LIBSHORT_LINK: "-L/home/runner/opt/libshort/lib -lshort -Wl,-rpath,/home/runner/opt/libshort/lib"
       MPI_INCLUDE_CPP: "-I/usr/lib/x86_64-linux-gnu/openmpi/include"
       MPI_LINK_CPP: "-lboost_mpi -lboost_serialization -lmpi -lmpi_cxx"
       MPFR_INCDIR: /usr/include
@@ -95,10 +90,6 @@ jobs:
           cd basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH .. && make all install && cd ../../../..
           pwd
           echo "After bliss compilation"
-
-          cd ExternalLib/LibShort && make -f Makefile_lib && make -f Makefile_lib install && cd ../..
-          pwd
-          echo "After libshort compilation"
 
           git clone https://github.com/cddlib/cddlib
           cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
