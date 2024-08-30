@@ -16,13 +16,15 @@ void process(std::string const &eFileI, std::string const& OutFormat, std::ostre
     for (auto & trig : vf) {
       MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
       T det = DeterminantMat(EXTtrig);
+      std::cerr << "det=" << det << "\n";
       sum_det += T_abs(det);
     }
-    int dim = EXT.cols();
+    int dim = EXT.cols() - 1;
     T fact(1);
     for (int u=1; u<=dim; u++) {
       fact *= u;
     }
+    os << "sum_det=" << sum_det << " fact=" << fact << "\n";
     T volume = sum_det / fact;
     os << "volume=" << volume << "\n";
     return;
@@ -83,7 +85,7 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string eFileI = argv[2];
-    std::string OutFormat = "Direct";
+    std::string OutFormat = "NbTrig";
     std::string FileO = "stderr";
     if (argc == 5) {
       OutFormat = argv[3];

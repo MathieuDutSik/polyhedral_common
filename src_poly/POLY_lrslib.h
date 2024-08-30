@@ -1883,7 +1883,7 @@ T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
 
 template <typename T>
 vectface GetTriangulation(MyMatrix<T> const& EXT) {
-  int nbRow = Q->m;
+  int nbRow = EXT.rows();
   vectface vf(nbRow);
   Face trig(nbRow);
   auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
@@ -1891,7 +1891,6 @@ vectface GetTriangulation(MyMatrix<T> const& EXT) {
       trig[iRow] = 0;
     }
     for (int i = 0; i < P->d; i++) {
-      int the_col = P->Col[i];
       int idx1 = P->C[i];
       int idx2 = Q->lastdv;
       int idx = Q->inequality[idx1 - idx2] - 1;
@@ -1903,8 +1902,6 @@ vectface GetTriangulation(MyMatrix<T> const& EXT) {
   Kernel_Simplices_cond(EXT, f);
   return vf;
 }
-
-
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
   int nbRow = M.rows();
