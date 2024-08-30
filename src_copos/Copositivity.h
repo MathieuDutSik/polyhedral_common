@@ -927,49 +927,6 @@ CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> CopositiveShortVector(MyMatrix<T> const &eSymmMat,
-                                  MyMatrix<Tint> const &InitialBasis,
-                                  T const& MaxNorm,
-                                  bool const& OnlyMax,
-                                  std::ostream &os) {
-  int n = eSymmMat.rows();
-  std::unordered_set<MyVector<Tint>> TotalListVect_set;
-  auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
-                      MyMatrix<T> const &eSymmMatB) -> bool {
-    bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
-    if (!test) {
-      return false;
-    }
-    std::vector<MyVector<Tint>> TotalList =
-        EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
-                                                       MaxNorm);
-    for (auto &eVect : TotalList) {
-      if (OnlyMax) {
-        T eNorm = EvaluationQuadForm(eSymmMat, eVect);
-        if (eNorm == MaxNorm) {
-          TotalListVect_set.insert(eVect);
-        }
-      } else {
-        TotalListVect_set.insert(eVect);
-      }
-    }
-    return true;
-  };
-  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
-                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
-    return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
-  };
-  int nbVect = TotalListVect_set.size();
-  int iVect = 0;
-  MyMatrix<Tint> SHV(nbVect, n);
-  for (auto &eVect : TotalListVect_set) {
-    AssignMatrixRow(SHV, iVect, eVect);
-    iVect++;
-  }
-  return SHV;
-}
-
-template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
     RequestCopositivity<T> const &CopoReq, std::ostream &os) {
