@@ -44,10 +44,9 @@ int main(int argc, char *argv[]) {
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
       //
-      RequestCopositivity<T> CopoReq{MaxNorm, false};
       CopositivityEnumResult<Tint> CopoRes =
           EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
-                                                  CopoReq, std::cerr);
+                                                  MaxNorm, std::cerr);
       //
       WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
     };

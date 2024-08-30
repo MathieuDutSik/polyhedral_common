@@ -717,16 +717,11 @@ SingleTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
   return {false, "Zero vector from kernel", std::move(eVect3)};
 }
 
-template <typename T> struct RequestCopositivity {
-  T MaxNorm;
-  bool DoListCone;
-};
-
 template <typename T, typename Tint>
 CopositivityEnumResult<Tint>
 KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
                                  MyMatrix<Tint> const &TheBasis,
-                                 RequestCopositivity<T> const &CopoReq) {
+                                 T const& MaxNorm) {
   std::vector<MyVector<Tint>> TotalList;
   //
   // First clear up with all signs being positive case
@@ -736,7 +731,7 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
   bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
   if (test) {
     TotalList = EnumerateShortVectorInCone_UnderPositivityCond<T, Tint>(
-        eSymmMat, TheBasis, CopoReq.MaxNorm);
+        eSymmMat, TheBasis, MaxNorm);
     return {true, 1, std::move(TotalList), {}};
   }
   //
@@ -754,7 +749,7 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
   std::vector<MyMatrix<Tint>> ListBasisInt;
   for (auto &eBasis : ListBasis) {
     CopositivityEnumResult<Tint> fEnumResult =
-        KernelEnumerateShortVectorInCone(eSymmMat, eBasis, CopoReq);
+        KernelEnumerateShortVectorInCone(eSymmMat, eBasis, MaxNorm);
     nbCone += fEnumResult.nbCone;
     if (!fEnumResult.test)
       return {false, nbCone, {}, fEnumResult.eResult};
@@ -922,14 +917,13 @@ CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
 template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
-    RequestCopositivity<T> const &CopoReq, std::ostream &os) {
+    T const& MaxNorm, std::ostream &os) {
   SingleTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
   if (!kerResult.test) {
     return {false, 0, {}, kerResult};
   }
   int nbCone = 0;
-  std::vector<MyMatrix<Tint>> ListBasis;
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
   auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
                       MyMatrix<T> const &eSymmMatB) -> bool {
@@ -938,9 +932,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
       return false;
     std::vector<MyVector<Tint>> TotalList =
         EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
-                                                       CopoReq.MaxNorm);
-    if (CopoReq.DoListCone)
-      ListBasis.push_back(TheBasis);
+                                                       MaxNorm);
     for (auto &eVect : TotalList)
       TotalListVect_set.insert(eVect);
     nbCone++;
@@ -960,6 +952,48 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
     TotalListVect.push_back(eVect);
   return {true, nbCone, std::move(TotalListVect), eResult};
 }
+
+template<typename Tint>
+struct ResultListCone {
+  bool test;
+  std::vector<MyMatrix<Tint>> ListCone;
+};
+
+template <typename T, typename Tint>
+ResultListCone<Tint> EnumerateListConeCopositive(
+    MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
+    std::ostream &os) {
+  SingleTestResult<Tint> kerResult =
+      SearchByZeroInKernel<T, Tint>(eSymmMat, os);
+  if (!kerResult.test) {
+    return {false, {}};
+  }
+  std::vector<MyMatrix<Tint>> ListCone;
+  auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
+    bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
+    if (!test)
+      return false;
+    ListCone.push_back(TheBasis);
+    return true;
+  };
+  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
+    return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
+  };
+  SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
+      eSymmMat, InitialBasis, f_insert, f_test, os);
+  if (!eResult.test) {
+    return {false, {}};
+  }
+  return {true, std::move(ListCone)};
+}
+
+
+
+
+
+
 
 template <typename T, typename Tint>
 std::pair<SingleTestResult<Tint>, size_t>
@@ -988,9 +1022,9 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
 template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
-    RequestCopositivity<T> const &CopoReq, [[maybe_unused]] std::ostream &os) {
+    T const& MaxNorm, [[maybe_unused]] std::ostream &os) {
   CopositivityEnumResult<Tint> CopoRes =
-      KernelEnumerateShortVectorInCone(eSymmMat, InitialBasis, CopoReq);
+      KernelEnumerateShortVectorInCone(eSymmMat, InitialBasis, MaxNorm);
   std::unordered_set<MyVector<Tint>> TheSet;
   // We have to do something non-clever to remove duplicates
   for (auto &eVect : CopoRes.TotalListVect) {
@@ -1002,7 +1036,6 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(
   }
   return {CopoRes.test,
           CopoRes.nbCone,
-          {},
           std::move(TotalListRed),
           CopoRes.eResult};
 }
@@ -1010,12 +1043,12 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(
 template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
-    RequestCopositivity<T> const &CopoReq, std::ostream &os) {
+    T const& MaxNorm, std::ostream &os) {
 #ifdef SANITY_CHECK_COPOSITIVITY
   CopositivityEnumResult<Tint> res1 =
-      EnumerateCopositiveShortVector_V1(eSymmMat, InitialBasis, CopoReq, os);
+      EnumerateCopositiveShortVector_V1(eSymmMat, InitialBasis, MaxNorm, os);
   CopositivityEnumResult<Tint> res2 =
-      EnumerateCopositiveShortVector_V2(eSymmMat, InitialBasis, CopoReq, os);
+      EnumerateCopositiveShortVector_V2(eSymmMat, InitialBasis, MaxNorm, os);
   if (res1.test != res2.test) {
     std::cerr << "Inconsistency in computing res1.test and res2.test\n";
     throw TerminalException{1};
@@ -1038,7 +1071,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(
   return res1;
 #else
   return EnumerateCopositiveShortVector_V2<T, Tint>(eSymmMat, InitialBasis,
-                                                    CopoReq, os);
+                                                    MaxNorm, os);
 #endif
 }
 
@@ -1049,9 +1082,8 @@ CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
                               std::ostream &os) {
   int n = eSymmMat.rows();
   T MaxNorm = MinimumDiagonal(eSymmMat);
-  RequestCopositivity<T> CopoReq{MaxNorm, false};
   CopositivityEnumResult<Tint> CopoRes =
-      EnumerateCopositiveShortVector(eSymmMat, InitialBasis, CopoReq, os);
+      EnumerateCopositiveShortVector(eSymmMat, InitialBasis, MaxNorm, os);
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (!CopoRes.test) {
     std::cerr << "Inconsistency in result\n";
