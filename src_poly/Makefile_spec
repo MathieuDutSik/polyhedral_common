@@ -5,7 +5,7 @@
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
-PROGRAM		= TEST_GeometricallyUniquePoint
+#PROGRAM		= TEST_GeometricallyUniquePoint
 #PROGRAM		= POLY_ThreadedADM
 #PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_LinearDetermineByInequalities
@@ -24,6 +24,7 @@ PROGRAM		= TEST_GeometricallyUniquePoint
 #PROGRAM		= POLY_SkelettonClarkson
 #PROGRAM		= POLY_SolutionMatNonnegativeComplete
 #PROGRAM		= POLY_SmallPolytope
+PROGRAM		= POLY_lrs_volume
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

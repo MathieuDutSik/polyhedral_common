@@ -10,7 +10,7 @@
 template <typename T>
 void process(std::string const &eFileI) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  T volume = Kernel_VolumePolytope(EXT);
+  T volume = lrs::Kernel_VolumePolytope(EXT);
   std::cerr << "volume=" << volume << "\n";
 }
 

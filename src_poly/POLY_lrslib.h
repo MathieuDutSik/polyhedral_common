@@ -1852,11 +1852,9 @@ template <typename T, typename F>
 void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
-  int col;
   initLRS(EXT, P, Q);
   uint64_t dict_count = 1;
   do {
-    bool is_finished = false;
     bool test = f(P, Q);
     if (!test) {
       break;
@@ -1866,9 +1864,9 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_free_dat(Q);
 }
 
-template <typename T, typename F>
+template <typename T>
 T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
-  T total_volume = 0;
+  T total_volume(0);
   auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
     total_volume += P->det;
     return true;
