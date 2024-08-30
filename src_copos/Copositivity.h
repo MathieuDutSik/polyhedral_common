@@ -877,23 +877,20 @@ CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
     if (!test) {
       return false;
     }
-    std::vector<MyVector<Tint>> TotalList =
-        EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
-                                                       MinNorm);
-    for (auto &eVect : TotalList) {
-      T eNorm = EvaluationQuadForm(eSymmMat, eVect);
-      if (eNorm > 0) {
-        if (eNorm < MinNorm) {
-          MinNorm = eNorm;
+    auto f=[&](MyVector<Tint> const& V, T const& norm) -> void {
+      if (norm > 0) {
+        if (norm < MinNorm) {
+          MinNorm = norm;
           TotalListVect_set.clear();
-          TotalListVect_set.insert(eVect);
+          TotalListVect_set.insert(V);
         } else {
-          if (eNorm == MinNorm) {
-            TotalListVect_set.insert(eVect);
+          if (norm == MinNorm) {
+            TotalListVect_set.insert(V);
           }
         }
       }
-    }
+    };
+    EnumerateShortVectorInCone_UnderPositivityCond_F(eSymmMat, TheBasis, MinNorm, f);
     return true;
   };
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,
@@ -934,11 +931,10 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
     bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
     if (!test)
       return false;
-    std::vector<MyVector<Tint>> TotalList =
-        EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
-                                                       MaxNorm);
-    for (auto &eVect : TotalList)
-      TotalListVect_set.insert(eVect);
+    auto f=[&](MyVector<Tint> const& V, [[maybe_unused]] T const& norm) -> void {
+      TotalListVect_set.insert(V);
+    };
+    EnumerateShortVectorInCone_UnderPositivityCond_F(eSymmMat, TheBasis, MaxNorm, f);
     return true;
   };
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,
