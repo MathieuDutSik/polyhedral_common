@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CP_ComputeCopositiveMin [DATASYMM]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_ComputeCopositiveMin [DATASYMM] [InitialBasois]\n";
+      std::cerr << "CP_ComputeCopositiveMin [DATASYMM] [InitialBasis]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The input data of the strict copositive "
                    "symmetric matrix A\n";
@@ -36,8 +36,9 @@ int main(int argc, char *argv[]) {
     WriteMatrix(std::cerr, eSymmMat);
     //
     MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    if (argc == 3)
+    if (argc == 3) {
       InitialBasis = ReadMatrixFile<Tint>(argv[2]);
+    }
     //
     Tshortest<T, Tint> eSh =
         T_CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);

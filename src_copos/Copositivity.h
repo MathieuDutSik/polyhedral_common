@@ -104,7 +104,7 @@ EnumerateShortVectorInCone_UnderPositivityCond(MyMatrix<T> const &eSymmMat,
                                                MyMatrix<Tint> const &TheBasis,
                                                T const &MaxNorm) {
 #ifdef SANITY_CHECK_COPOSITIVITY
-  MyMatrix<T> tstTheBasis_T = UniversalMatrixConversion<T, Tint>(TheBasis);
+  MyMatrix<T> TheBasis_T = UniversalMatrixConversion<T, Tint>(TheBasis);
   MyMatrix<T> tstSymmMatB = TheBasis_T * eSymmMat * TheBasis_T.transpose();
   bool test1 = TestCopositivityByPositivityCoeff(tstSymmMatB);
   if (!test1) {
@@ -542,6 +542,7 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
     }
   int iFound = PairIJ_found.first;
   int jFound = PairIJ_found.second;
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (iFound == -1) {
     std::cerr << "iFound=" << iFound << " jFound=" << jFound
               << " x=" << PairXY_found.first << " y=" << PairXY_found.second
@@ -554,6 +555,7 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
                  "splitting. Most likely a bug\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef PRINT_SPLIT_CONE
   std::cerr << "iFound=" << iFound << " jFound=" << jFound
             << " PairXY_found=" << PairXY_found.first << " / "
@@ -587,12 +589,14 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
   MyMatrix<T> TheBasis2_T = UniversalMatrixConversion<T, Tint>(TheBasis2);
   MyMatrix<T> eSymmMatB1 = TheBasis1_T * eSymmMat * TheBasis1_T.transpose();
   MyMatrix<T> eSymmMatB2 = TheBasis2_T * eSymmMat * TheBasis2_T.transpose();
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (OptMinimum == 2) {
     if (eSymmMatB1(iFound, jFound) < 0 || eSymmMatB2(iFound, jFound) < 0) {
       std::cerr << "We clearly have a bug in our computation\n";
       throw TerminalException{1};
     }
   }
+#endif
   return {std::move(TheBasis1), std::move(TheBasis2)};
 }
 
@@ -863,23 +867,23 @@ Tshortest<T, Tint>
 T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
                            MyMatrix<Tint> const &InitialBasis,
                            std::ostream &os) {
+#ifdef SANITY_CHECK_COPOSITIVITY
   SingleTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
   if (!kerResult.test) {
     std::cerr << "Inconsistency in the run. A bug to be solved\n";
     throw TerminalException{1};
   }
+#endif
   int n = eSymmMat.rows();
   T MinNorm = MinimumDiagonal(eSymmMat);
-#ifdef PRINT_NBCONE
-  int nbCone = 0;
-#endif
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
   auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
                       MyMatrix<T> const &eSymmMatB) -> bool {
     bool test = TestCopositivityByPositivityCoeff(eSymmMatB);
-    if (!test)
+    if (!test) {
       return false;
+    }
     std::vector<MyVector<Tint>> TotalList =
         EnumerateShortVectorInCone_UnderPositivityCond(eSymmMat, TheBasis,
                                                        MinNorm);
@@ -898,30 +902,27 @@ T_CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
           TotalListVect_set.clear();
           TotalListVect_set.insert(eVect);
         } else {
-          if (eNorm == MinNorm)
+          if (eNorm == MinNorm) {
             TotalListVect_set.insert(eVect);
+          }
         }
       }
     }
-#ifdef PRINT_NBCONE
-    nbCone++;
-#endif
     return true;
   };
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,
                     MyMatrix<T> const &eSymmMatB) -> SingleTestResult<Tint> {
     return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
+#ifdef SANITY_CHECK_COPOSITIVITY
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
-#ifdef PRINT_NBCONE
-  std::cerr << "nbCone=" << nbCone << "\n";
-#endif
   if (!eResult.test) {
     std::cerr << "We should not have non-copositivity in "
                  "T_CopositiveShortestVector\n";
     throw TerminalException{1};
   }
+#endif
   int nbVect = TotalListVect_set.size();
   int iVect = 0;
   MyMatrix<Tint> SHV(nbVect, n);
@@ -1003,23 +1004,16 @@ template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V1(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
     RequestCopositivity<T> const &CopoReq, [[maybe_unused]] std::ostream &os) {
-  int n = eSymmMat.rows();
   CopositivityEnumResult<Tint> CopoRes =
       KernelEnumerateShortVectorInCone(eSymmMat, InitialBasis, CopoReq);
-  std::unordered_set<std::vector<int>> TheSet;
+  std::unordered_set<MyVector<Tint>> TheSet;
   // We have to do something non-clever to remove duplicates
   for (auto &eVect : CopoRes.TotalListVect) {
-    std::vector<int> eVectB(n);
-    for (int i = 0; i < n; i++)
-      eVectB[i] = eVect(i);
-    TheSet.insert(eVectB);
+    TheSet.insert(eVect);
   }
-  std::vector<MyVector<int>> TotalListRed;
+  std::vector<MyVector<Tint>> TotalListRed;
   for (auto &eVect : TheSet) {
-    MyVector<int> eVectB(n);
-    for (int i = 0; i < n; i++)
-      eVectB(i) = eVect[i];
-    TotalListRed.push_back(eVectB);
+    TotalListRed.push_back(eVect);
   }
   return {CopoRes.test,
           CopoRes.nbCone,
@@ -1032,7 +1026,7 @@ template <typename T, typename Tint>
 CopositivityEnumResult<Tint> EnumerateCopositiveShortVector(
     MyMatrix<T> const &eSymmMat, MyMatrix<Tint> const &InitialBasis,
     RequestCopositivity<T> const &CopoReq, std::ostream &os) {
-#ifdef SANITY_CHECK_ENUMERATE_COPOSITIVE
+#ifdef SANITY_CHECK_COPOSITIVITY
   CopositivityEnumResult<Tint> res1 =
       EnumerateCopositiveShortVector_V1(eSymmMat, InitialBasis, CopoReq, os);
   CopositivityEnumResult<Tint> res2 =
@@ -1073,10 +1067,12 @@ T_CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
   RequestCopositivity<T> CopoReq{MaxNorm, false};
   CopositivityEnumResult<Tint> CopoRes =
       EnumerateCopositiveShortVector(eSymmMat, InitialBasis, CopoReq, os);
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (!CopoRes.test) {
     std::cerr << "Inconsistency in result\n";
     throw TerminalException{1};
   }
+#endif
   int nbVect = CopoRes.TotalListVect.size();
   MyMatrix<int> SHV(nbVect, n);
   for (int iVect = 0; iVect < nbVect; iVect++) {
