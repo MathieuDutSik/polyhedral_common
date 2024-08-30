@@ -1866,12 +1866,18 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
 
 template <typename T>
 T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
-  T total_volume(0);
+  T sum_det(0);
   auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
-    total_volume += P->det;
+    sum_det += P->det;
     return true;
   };
   Kernel_Simplices_cond(EXT, f);
+  int dim = EXT.cols() - 1;
+  T fact(1);
+  for (int u=1; u<=dim; u++) {
+    fact *= u;
+  }
+  T total_volume = sum_det / fact;
   return total_volume;
 }
 

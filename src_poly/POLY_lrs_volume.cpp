@@ -51,10 +51,12 @@ int main(int argc, char *argv[]) {
         using T = SafeInt64;
         return process<T>(eFileI);
       }
+      /*
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
         return process<T>(eFileI);
       }
+      */
       if (arith == "integer") {
         using T = mpz_class;
         return process<T>(eFileI);
