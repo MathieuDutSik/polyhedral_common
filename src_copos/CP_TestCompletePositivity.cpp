@@ -7,11 +7,11 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc == 1) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCompletePositivity [eMat]\n";
-      std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat]\n";
+      std::cerr << "or\n";
       std::cerr << "CP_TestCompletePositivity [eMat] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
@@ -27,14 +27,15 @@ int main(int argc, char *argv[]) {
     }
     using T = mpq_class;
     using Tint = mpz_class;
-    //
-    std::cerr << "Reading input\n";
-    //
-    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(argv[1]);
-    //
+    std::string FileI = argv[1];
     std::string OutFormat = "classic";
-    if (argc >= 3)
+    std::string OutFile = "stderr";
+    if (argc == 4) {
       OutFormat = argv[2];
+      OutFile = argv[3];
+    }
+    //
+    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
@@ -43,12 +44,15 @@ int main(int argc, char *argv[]) {
                                                   std::cerr);
       WriteStrictPositivityResult(os, OutFormat, StrictPos);
     };
-    if (argc >= 4) {
-      std::string file = argv[3];
-      std::ofstream os(file);
-      process(os);
-    } else {
+    if (OutFile == "stderr") {
       process(std::cerr);
+    } else {
+      if (OutFile == "stdout") {
+        process(std::cout);
+      } else {
+        std::ofstream os(OutFile);
+        process(os);
+      }
     }
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {

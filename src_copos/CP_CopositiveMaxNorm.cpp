@@ -7,11 +7,11 @@
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc < 3) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm]\n";
-      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat]\n";
+      std::cerr << "or\n";
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The symmetric matrix on input\n";
@@ -28,18 +28,17 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     //
     std::cerr << "Reading input\n";
-    //
-    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(argv[1]);
-    std::cerr << "eSymmMat=\n";
-    WriteMatrix(std::cerr, eSymmMat);
-    //
-    int MaxNorm_i;
-    sscanf(argv[2], "%d", &MaxNorm_i);
-    T MaxNorm = MaxNorm_i;
-    //
+    std::string FileI = argv[1];
+    std::string strMaxNorm = argv[2];
     std::string OutFormat = "classic";
-    if (argc >= 4)
+    std::string OutFile = "stderr";
+    if (argc == 5) {
       OutFormat = argv[3];
+      OutFile = argv[4];
+    }
+    //
+    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
+    T MaxNorm = ParseScalar<T>(strMaxNorm);
     //
     auto process = [&](std::ostream &os) -> void {
       MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
@@ -50,12 +49,15 @@ int main(int argc, char *argv[]) {
       //
       WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
     };
-    if (argc >= 5) {
-      std::string file = argv[4];
-      std::ofstream os(file);
-      process(os);
-    } else {
+    if (OutFile == "stderr") {
       process(std::cerr);
+    } else {
+      if (OutFile == "stdout") {
+        process(std::cout);
+      } else {
+        std::ofstream os(OutFile);
+        process(os);
+      }
     }
     //
     std::cerr << "Normal completion of the program\n";

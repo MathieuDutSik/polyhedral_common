@@ -65,6 +65,9 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 #endif
     std::pair<SingleTestResult<Tint>, size_t> pair =
       TestCopositivity<T,Tint>(eMatI, InitialBasis, os);
+#ifdef DEBUG_STRICT_POSITIVITY
+    std::cerr << "nbCone=" << pair.second << "\n";
+#endif
     return pair.first.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
