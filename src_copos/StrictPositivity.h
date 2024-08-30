@@ -59,15 +59,13 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   //
   std::function<bool(MyMatrix<T>)> IsAdmissible =
       [&](MyMatrix<T> const &eMatI) -> bool {
-    CopositivityEnumResult<Tint> CopoRes;
-    T MaxNorm = 1;
 #ifdef DEBUG_STRICT_POSITIVITY
     std::cerr << "IsAdmissible eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
 #endif
-    CopoRes = EnumerateCopositiveShortVector<T, Tint>(eMatI, InitialBasis,
-                                                      MaxNorm, os);
-    return CopoRes.test;
+    std::pair<SingleTestResult<Tint>, size_t> pair =
+      TestCopositivity<T,Tint>(eMatI, InitialBasis, os);
+    return pair.first.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
       [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
