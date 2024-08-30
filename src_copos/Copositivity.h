@@ -406,7 +406,6 @@ void WriteSingleTestResult(
 template <typename Tint> struct CopositivityEnumResult {
   bool test;
   int nbCone;
-  std::vector<MyMatrix<Tint>> ListBasis;
   std::vector<MyVector<Tint>> TotalListVect;
   SingleTestResult<Tint> eResult;
 };
@@ -738,10 +737,7 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
   if (test) {
     TotalList = EnumerateShortVectorInCone_UnderPositivityCond<T, Tint>(
         eSymmMat, TheBasis, CopoReq.MaxNorm);
-    if (!CopoReq.DoListCone)
-      return {true, 1, {}, std::move(TotalList), {}};
-    else
-      return {true, 1, {TheBasis}, std::move(TotalList), {}};
+    return {true, 1, std::move(TotalList), {}};
   }
   //
   // Second see if the vectors allow to conclude directly.
@@ -749,7 +745,7 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
   SingleTestResult<Tint> eResult =
       SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   if (!eResult.test)
-    return {false, 0, {}, {}, eResult};
+    return {false, 0, {}, eResult};
   //
   // Third, split the domain.
   //
@@ -760,15 +756,12 @@ KernelEnumerateShortVectorInCone(MyMatrix<T> const &eSymmMat,
     CopositivityEnumResult<Tint> fEnumResult =
         KernelEnumerateShortVectorInCone(eSymmMat, eBasis, CopoReq);
     nbCone += fEnumResult.nbCone;
-    if (CopoReq.DoListCone)
-      ListBasisInt.insert(ListBasisInt.end(), fEnumResult.ListBasis.begin(),
-                          fEnumResult.ListBasis.end());
     if (!fEnumResult.test)
-      return {false, nbCone, {}, {}, fEnumResult.eResult};
+      return {false, nbCone, {}, fEnumResult.eResult};
     TotalList.insert(TotalList.end(), fEnumResult.TotalListVect.begin(),
                      fEnumResult.TotalListVect.end());
   }
-  return {true, nbCone, ListBasisInt, std::move(TotalList), {}};
+  return {true, nbCone, std::move(TotalList), {}};
 }
 
 // This is supposed to be a tree version and so faster than
@@ -933,7 +926,7 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
   SingleTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
   if (!kerResult.test) {
-    return {false, 0, {}, {}, kerResult};
+    return {false, 0, {}, kerResult};
   }
   int nbCone = 0;
   std::vector<MyMatrix<Tint>> ListBasis;
@@ -960,13 +953,12 @@ CopositivityEnumResult<Tint> EnumerateCopositiveShortVector_V2(
   SingleTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
   if (!eResult.test) {
-    return {false, 0, {}, {}, eResult};
+    return {false, 0, {}, eResult};
   }
   std::vector<MyVector<Tint>> TotalListVect;
   for (auto &eVect : TotalListVect_set)
     TotalListVect.push_back(eVect);
-  return {true, nbCone, std::move(ListBasis), std::move(TotalListVect),
-          eResult};
+  return {true, nbCone, std::move(TotalListVect), eResult};
 }
 
 template <typename T, typename Tint>
