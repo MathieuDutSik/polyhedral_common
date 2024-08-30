@@ -37,6 +37,10 @@
 #define PRINT_LRS_ANALYSIS
 #endif
 
+#ifdef DEBUG
+#define DEBUG_LRSLIB
+#endif
+
 namespace lrs {
 // some #defines and global variables from the original lrs code
 namespace globals {
@@ -1886,7 +1890,7 @@ vectface GetTriangulation(MyMatrix<T> const& EXT) {
   int nbRow = EXT.rows();
   vectface vf(nbRow);
   Face trig(nbRow);
-  auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
+  auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
     for (int iRow=0; iRow<nbRow; iRow++) {
       trig[iRow] = 0;
     }
@@ -1896,6 +1900,12 @@ vectface GetTriangulation(MyMatrix<T> const& EXT) {
       int idx = Q->inequality[idx1 - idx2] - 1;
       trig[idx] = 1;
     }
+#ifdef DEBUG_LRSLIB
+    // determinants should be equal but they are not
+    MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
+    T det = DeterminantMat(EXTtrig);
+    std::cerr << "det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
+#endif
     vf.push_back(trig);
     return true;
   };
