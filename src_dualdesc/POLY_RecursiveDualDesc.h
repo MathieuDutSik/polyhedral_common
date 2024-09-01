@@ -310,6 +310,9 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
   throw TerminalException{1};
 }
 
+/*
+  The pair Face, OrbSize can be encoded as a single Face.
+ */
 template <typename Torbsize, typename Tgroup> struct DataFaceOrbitSize {
   using TintGroup = typename Tgroup::Tint;
   /* TRICK 3: Knowing the factorization of the order of the group allow us to

@@ -1871,6 +1871,15 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
 template <typename T>
 T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det(0);
+#ifdef DEBUG_LRSLIB
+  int nbRow = EXT.rows();
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    if (EXT(iRow, 0) != 1) {
+      std::cerr << "EXT(iRow,0) should be equal to 1\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   auto f = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
     sum_det += P->det;
     return true;
@@ -1904,12 +1913,17 @@ vectface GetTriangulation(MyMatrix<T> const& EXT) {
     // determinants should be equal but they are not
     MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
     T det = DeterminantMat(EXTtrig);
-    std::cerr << "det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
+    if (T_abs(det) != P->det) {
+      std::cerr << "det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
+      std::cerr << "but their absoluite value should be equal\n";
+      throw TerminalException{1};
+    }
 #endif
     vf.push_back(trig);
     return true;
   };
-  Kernel_Simplices_cond(EXT, f);
+  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
+  Kernel_Simplices_cond(EXText, f);
   return vf;
 }
 
