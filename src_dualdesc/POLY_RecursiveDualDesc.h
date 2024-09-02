@@ -1058,8 +1058,6 @@ public:
     n_act_div8 = (n_act + 7) / 8;
     nbRow = EXT.rows();
     nbCol = EXT.cols();
-    //    os << "DatabaseCanonic constructor |EXT|=" << nbRow << "/" << nbCol <<
-    //    " delta=" << delta << " n_act=" << n_act << "\n";
 #if defined MURMUR_HASH || defined ROBIN_HOOD_HASH
     V_hash = std::vector<uint8_t>(n_act_div8, 0);
 #endif

@@ -19,8 +19,14 @@ void process(std::string const &choice, std::string const &FileGram,
              std::string const &FileVect, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileGram);
-  MyVector<T> eV = ReadVectorFile<T>(FileVect);
   int n = GramMat.rows();
+  auto get_vect=[&]() -> MyVector<T> {
+    if (FileVect == "zero") {
+      return ZeroVector<T>(n);
+    }
+    return ReadVectorFile<T>(FileVect);
+  };
+  MyVector<T> eV = get_vect();
   auto get_result = [&]() -> MyMatrix<Tint> {
     if (choice == "nearest") {
       resultCVP<T, Tint> res =
@@ -33,9 +39,15 @@ void process(std::string const &choice, std::string const &FileGram,
       MyVector<T> fV = -eV;
       std::vector<MyVector<Tint>> ListVect =
           FindAtMostNormVectors<T, Tint>(GramMat, fV, norm);
-      if (ListVect.size() == 0)
-        return ZeroMatrix<Tint>(0, n);
-      return MatrixFromVectorFamily(ListVect);
+      return MatrixFromVectorFamilyDim(n, ListVect);
+    }
+    std::optional<std::string> opt_fixed = get_postfix(choice, "fixed=");
+    if (opt_fixed) {
+      T norm = ParseScalar<T>(*opt_fixed);
+      MyVector<T> fV = -eV;
+      std::vector<MyVector<Tint>> ListVect =
+          FindFixedNormVectors<T, Tint>(GramMat, fV, norm);
+      return MatrixFromVectorFamilyDim(n, ListVect);
     }
     std::cerr << "Failed to find a matching entry for choice=" << choice
               << "\n";
@@ -82,8 +94,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "arith     : the chosen arithmetic (see below)\n";
       std::cerr << "choice    : The choose option (see below)\n";
       std::cerr << "FileGram  : The list of inequalities\n";
-      std::cerr << "FileV     : The vector for which we want the neainequality "
-                   "to be minimized\n";
+      std::cerr << "FileV     : The vector for which we want to\n";
+      std::cerr <<"       compute the distance\n";
       std::cerr << "OutFormat : The format of output, GAP or Oscar\n";
       std::cerr << "FileOut   : The file of output (if present, otherwise "
                    "std::cerr)\n";
@@ -99,8 +111,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "        --- choice ---\n";
       std::cerr << "\n";
       std::cerr << "nearest   : The nearest points to that vector\n";
-      std::cerr
-          << "near=dist : The vector up to distance near from that vector\n";
+      std::cerr << "near=dist : The vector up to distance near from\n";
+      std::cerr << "     that vector\n";
+      std::cerr << "fixed=dist : The vector at an exact distance\n";
+      std::cerr << "     from that vector\n";
+        
       return -1;
     }
     //
