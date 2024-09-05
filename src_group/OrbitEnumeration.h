@@ -9,8 +9,8 @@
 /*
   We are iterating by finding the minimal orbit.
  */
-template<typename Tgroup, typename Faccept, typename Fextensible>
-void SubsetOrbitEnumeration(Tgroup const& GRP, Faccept f_accept, Fextensible f_extensible) {
+template<typename Tgroup, typename Fextensible>
+void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx miss_val = std::numeric_limits<Tidx>::max();
