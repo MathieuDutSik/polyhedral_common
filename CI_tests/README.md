@@ -13,22 +13,37 @@ For reasons of performance, parallelism and expressivity,
 things have moved to C++.. But the GAP inheritance remains
 for the CI tests and checking their correctness.
 
-
 List of CI tests:
+* `CTYPE_AdjSch`: Computation of the Ctypes in dimension 5 with the adjacency scheme.
+* `CUT_K8_serial`: Computation of the dual description of `CUT8` with the 147 orbits obtained.
 * `Canonicalization`: This is for running the canonicalization of Gram
 matrices.
 * `ConeIntersection`: This is checking different methods for computing the
 intersection of polyhedral cones.
 * `Copositivity`: This is for checking the copositivity code.
-* `Reflective`: This is for using the edgewalk algorithm of Allcock for
-building the polyheral cone.
+* `DirectVolumePolytope`: computation of the volume of polytopes.
+* `DoubleCosets`: Computation of double cosets (unfinished).
+* `EnumLatticeDelaunays`: Enumeration of Delaunay polytopes of lattices.
+* `EquiStabDatabase`: Memoization of equivalence and stabilizers.
+* `FindPositiveVectors`: Finding positive vectors of indefinite forms.
+* `GeometricallyUnique`: Finding interior point in polytope defined by facets,
+which is invariant under transformation.
+* `GroupSkeleton`: Computing the automorphism group by using the skeleton.
+* `Indefinite_Stab_Equi`: Finding automorphism group and equivalence of Lorentzian
+matrices.
 * `IntegralAutomorphy`: Computed the integral automorphism group of a
 configuration of vectors.
+* `Isotropic`: Testing existence of isotropic in quadrtaic forms and computing them
+if needed.
+* `RedundantCtype5`: We test 3 methods for reducing by redundancy.
+* `Reflective`: This is for using the edgewalk algorithm of Allcock for
+building the polyheral cone.
 * `SimpleDualDesc`: This is for the code for computing the dual description
 of polyhedral cones.
+* `Tspace_IsoDelaunay`: Computing the IsoDelaunay spaces of T-spaces.
+* `Tspace_StabEquiv`: Computing the stabilizer/equivalence of elements of T-spaces.
 * `WythoffH4`: This is for computing the dual description of the facets of
 the orbit of `x W(H4)` for x a random vector (there are 4 orbits).
-* `Redundant`: We test 3 methods for reducing by redundancy.
 
 More needs to be added:
 * Enumerating integral points in polytopes (the 8-dim perfect Delaunay polytopes
