@@ -11,7 +11,7 @@
 #endif
 
 template<typename Tgroup, typename Tint>
-vectface EnumerateOrbitBasis(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<Tint>> const& ListGen, std::ostream& os) {
+vectface EnumerateOrbitBasis(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<Tint>> const& ListGen, [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx nbVert = SHV.rows();
@@ -22,7 +22,7 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<Tin
     ListVert.push_back(V);
     MapVert[V] = i + 1;
   }
-  size_t dim = SHV.cols();
+  int dim = SHV.cols();
   std::vector<Telt> ListPermGen;
   for (auto & eGen : ListGen) {
     std::vector<Tidx> eList(nbVert);
@@ -45,7 +45,7 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<Tin
   vectface vf(nbVert);
   auto f_extensible=[&](std::vector<Tidx> const& v) -> bool {
     int n_vert = v.size();
-    MyMatrix<T> Mtest(n_vert, dim);
+    MyMatrix<Tint> Mtest(n_vert, dim);
     for (int iRow=0; iRow<n_vert; iRow++) {
       for (int iCol=0; iCol<dim; iCol++) {
         Mtest(iRow, iCol) = SHV(v[iRow], iCol);
@@ -67,8 +67,6 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<Tin
   SubsetOrbitEnumeration(GRP, f_extensible);
   return vf;
 }
-
-
 
 // clang-format off
 #endif  // SRC_LATT_ORBITSVECTORBASIS_H_

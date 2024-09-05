@@ -4,6 +4,8 @@
 #include "Shvec_exact.h"
 #include "LatticeStabEquiCan.h"
 #include "OrbitsVectorBasis.h"
+#include "Permutation.h"
+#include "Group.h"
 // clang-format on
 
 template<typename Tgroup, typename T, typename Tint>
@@ -49,9 +51,15 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     //
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using Tint_grp = mpz_class;
+    using Tgroup = permutalib::Group<Telt, Tint_grp>;
     auto f=[&](std::ostream& os) -> void {
       if (arith == "gmp") {
-        
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return compute_orbit_basis<Tgroup,T,Tint>(FileM, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
       throw TerminalException{1};

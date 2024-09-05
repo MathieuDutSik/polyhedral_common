@@ -8,6 +8,8 @@
 
 /*
   We are iterating by finding the minimal orbit.
+  This relies on the group being relatively small.
+  This is a tree search. 
  */
 template<typename Tgroup, typename Fextensible>
 void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
@@ -59,14 +61,21 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
     for (Tidx u=0; u<nbVert; u++) {
       f3[u] = 0;
     }
-    for (auto & eVert : nbVert) {
+    for (auto & eVert : v) {
       f3[eVert] = 1;
     }
     size_t len = v.size();
+    auto iife_first_element=[&]() -> Tidx {
+      if (len == 0) {
+        return 0;
+      }
+      return v[len-1] + 1;
+    };
+    Tidx first_elt = iife_first_element();
     std::vector<Tidx> w = v;
     w.push_back(miss_val);
     l_extensions.clear();
-    for (Tidx u=0; u<nbVert; u++) {
+    for (Tidx u=first_elt; u<nbVert; u++) {
       w[len] = u;
       if (is_representative_minimal(w)) {
         l_extensions.push_back(w);
@@ -86,6 +95,7 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
           return false;
         }
         level -= 1;
+        // Iterating
       }
     }
   };
@@ -102,7 +112,7 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
       if (!f_extensible(vect)) {
         return GoUpNextInTree();
       }
-      compute_extensions(eRepr);
+      compute_extensions(vect);
       if (l_extensions.size() == 0) {
         return GoUpNextInTree();
       }
