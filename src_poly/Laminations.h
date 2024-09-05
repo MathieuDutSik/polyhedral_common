@@ -9,11 +9,15 @@
 #define DEBUG_LAMINATIONS
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LAMINATIONS
+#endif
+
 
 
 template<typename T, typename F>
 void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
-#ifdef DEBUG_LAMINATIONS
+#ifdef SANITY_CHECK_LAMINATIONS
   if (RankMat(M) != M.cols()) {
     std::cerr << "M should be full dimensional\n";
     throw TerminalException{1};
@@ -22,6 +26,9 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
   int dim = M.cols();
   int nbRow = M.rows();
   SelectionRowCol<T> src = TMat_SelectRowCol(M);
+#ifdef DEBUG_LAMINATIONS
+  std::cerr << "LAM: We have src\n";
+#endif
   MyMatrix<T> Mred(dim, dim);
   for (int iRow=0; iRow<dim; iRow++) {
     int eCol = src.ListRowSelect[iRow];
@@ -29,18 +36,27 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
       Mred(iRow, iCol) = M(eCol, iCol);
     }
   }
+#ifdef DEBUG_LAMINATIONS
+  std::cerr << "LAM: We have Mred\n";
+#endif
   MyMatrix<T> MredInv = Inverse(Mred);
   Face f_select(nbRow);
   for (auto & eVal : src.ListRowSelect) {
     f_select[eVal] = 1;
   }
+#ifdef DEBUG_LAMINATIONS
+  std::cerr << "LAM: We have f_select\n";
+#endif
   std::vector<int> Voth;
   for (int iRow=0; iRow<nbRow; iRow++) {
     if (f_select[iRow] == 0) {
       Voth.push_back(iRow);
     }
   }
-  MyMatrix<T> M2 = MredInv * M;
+  MyMatrix<T> M2 = M * MredInv;
+#ifdef DEBUG_LAMINATIONS
+  std::cerr << "LAM: We have M2\n";
+#endif
   BlockCppIterator bci(dim-1, 2);
   auto is_non_zero=[&](std::vector<int> const& V) -> bool {
     for (auto & val: V) {
@@ -56,14 +72,20 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
     if (!is_non_zero(V)) {
       return false;
     }
-    for (int i=0; i<dim; i++) {
+    for (int i=0; i<dim-1; i++) {
       vect(i+1) = UniversalScalarConversion<T,int>(V[i]);
     }
+#ifdef DEBUG_LAMINATIONS
+    std::cerr << "LAM: We have vect\n";
+#endif
     for (auto & eRow : Voth) {
       T sum(0);
       for (int iCol=0; iCol<dim; iCol++) {
         sum += vect(iCol) * M2(eRow, iCol);
       }
+#ifdef DEBUG_LAMINATIONS
+      std::cerr << "LAM: eRow=" << eRow << " sum=" << sum << "\n";
+#endif
       if (sum != 0 && sum != 1) {
         return false;
       }
@@ -89,6 +111,9 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
         f_ass[iRow] = 1;
       }
     }
+#ifdef DEBUG_LAMINATIONS
+    std::cerr << "LAM: f_ass done\n";
+#endif
   };
   for (auto & eV : bci) {
     if (is_correct(eV)) {
