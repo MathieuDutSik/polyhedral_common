@@ -3,7 +3,7 @@ name: CI of Skeleton Computation
 on:
   # One time per month
   schedule:
-    - cron: "0 0 5 * *"
+    - cron: "0 0 17 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -101,11 +101,11 @@ jobs:
 
       - name: Test geometrically unique point
         run: |
-          cd src_poly && make -f Makefile_lrs_volume && cd ..
+          cd src_poly && make -f Makefile_two_lamination && cd ..
           pwd
-          echo "After compilation of lrs_volume program"
+          echo "After compilation of POLY_TwoLaminations program"
 
           # Running the test
-          cd CI_tests/DirectVolumePolytope
-          ../../gap.sh < TestVolume.g
+          cd CI_tests/Laminations
+          ../../gap.sh < TestLamination.g
           cd ../..
