@@ -1,28 +1,30 @@
-TestVolume:=function(eRec)
+TestLamination:=function(eRec)
     local FileOut, eProg, TheCommand, the_volume;
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
     RemoveFileIfExist(FileOut);
     #
-    eProg:="../../src_poly/POLY_lrs_volume";
-    TheCommand:=Concatenation(eProg, " rational ", eRec.FileIn, " GAP ", FileOut);
+    eProg:="../../src_poly/POLY_TwoLaminations";
+    TheCommand:=Concatenation(eProg, " rational one ", eRec.FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
-    the_volume:=ReadAsFunction(FileOut)();
+    answer:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileOut);
-    if the_volume<>eRec.the_volume then
-        Print("Thevolume is incorrect\n");
+    test1:=answer=fail;
+    test2:=eRec.answer=fail;
+    if test1<>test2 then
+        Print("incoherence of the result\n");
         return false;
     fi;
     return true;
 end;
 
-eRec1:=rec(FileIn:="G6.ext", the_volume:=1/2);
-eRec2:=rec(FileIn:="24cell_poly.ext", the_volume:=8);
-eRec3:=rec(FileIn:="H3.ext", the_volume:=1);
+eRec1:=rec(FileIn:="G6.ext", answer:=fail);
+eRec2:=rec(FileIn:="24cell_poly.ext", answer:=fail);
+eRec3:=rec(FileIn:="H3.ext", answer:=[]);
 ListRec:=[eRec1, eRec2, eRec3];
 
 FullTest:=function()
@@ -31,7 +33,7 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        test:=TestVolume(eRec);
+        test:=TestLamination(eRec);
         if test=false then
             return false;
         fi;
