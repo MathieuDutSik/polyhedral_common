@@ -30,13 +30,13 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
     }
   }
   MyMatrix<T> MredInv = Inverse(Mred);
-  Face f(nbRow);
+  Face f_select(nbRow);
   for (auto & eVal : src.ListRowSelect) {
-    f[eVal] = 1;
+    f_select[eVal] = 1;
   }
   std::vector<int> Voth;
   for (int iRow=0; iRow<nbRow; iRow++) {
-    if (f[iRow] == 0) {
+    if (f_select[iRow] == 0) {
       Voth.push_back(iRow);
     }
   }
@@ -101,7 +101,7 @@ void compute_two_laminations_f(MyMatrix<T> const& M, F f) {
   }
 }
 
-template<typename T, typename F>
+template<typename T>
 vectface compute_all_two_laminations(MyMatrix<T> const& M) {
   int nbRow = M.rows();
   vectface vf(nbRow);
@@ -113,7 +113,7 @@ vectface compute_all_two_laminations(MyMatrix<T> const& M) {
   return vf;
 }
 
-template<typename T, typename F>
+template<typename T>
 std::optional<Face> compute_one_two_laminations(MyMatrix<T> const& M) {
   int nbRow = M.rows();
   vectface vf(nbRow);
