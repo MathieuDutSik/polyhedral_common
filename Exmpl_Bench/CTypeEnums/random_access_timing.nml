@@ -1,5 +1,0 @@
-&DATA
- n = 6,
- TestFile = "WORK_6_0.nc",
- MaxRunTimeSecond = 120,
-/
