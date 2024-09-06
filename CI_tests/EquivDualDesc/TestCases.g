@@ -16,9 +16,10 @@ TestDualDesc:=function(eRec)
 end;
 
 eRec1:=rec(FileIn:="24cell", n_orbit:=1);
-eRec2:=rec(FileIn:="CUT_K7", n_orbit:=11);
-eRec3:=rec(FileIn:="ContactE8", n_orbit:=2);
-ListRec:=[eRec1, eRec2, eRec3];
+eRec2:=rec(FileIn:="ContactE8", n_orbit:=2);
+eRec3:=rec(FileIn:="CUT_K7", n_orbit:=11);
+eRec4:=rec(FileIn:="CUT_K8", n_orbit:=147);
+ListRec:=[eRec1, eRec2, eRec3, eRec4];
 
 FullTest:=function()
     local iRec, eRec, test;

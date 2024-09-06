@@ -124,17 +124,6 @@ jobs:
           pwd
           echo "After compilation of dual desc code"
 
-          cd CI_tests/CUT_K8_serial
+          cd CI_tests/EquivDualDesc && ../../gap.sh < TestCases.g && cd ../..
           pwd
           echo "We are in test directory"
-
-          mkdir -p Saving_Bank Saving_Polyhedral
-          echo "Saving directories created"
-
-          echo $PATH
-          echo "Printing the PATH"
-
-          ../../src_dualdesc/POLY_SerialDualDesc CUT_K8.nml 2>&1
-          echo "Computation has finished"
-
-          ../../gap.sh < TestOutput.g
