@@ -116,3 +116,5 @@ jobs:
           cd CI_tests/RedundancyCtype5 && ../../gap.sh < TestCoherence.g && cd ../..
           echo "After computation of redundancy for C-types"
 
+          cd CI_tests/RedundantEquiv && ../../gap.sh < TestCoherence.g && cd ../..
+          echo "After computation of redundancy using equivariant algorithm"
