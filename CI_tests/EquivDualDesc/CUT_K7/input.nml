@@ -1,7 +1,7 @@
 &DATA
  EXTfile = "CUT_7.ext"
  GRPfile = "CUT_7.grp"
- OUTfile = "CUT_7.orbitFacet"
+ OUTfile = "orbits"
 /
 
 &HEURISTIC
@@ -13,11 +13,11 @@
 /
 
 &METHOD
- Saving = T
+ Saving = F
  Prefix = "./Saving_Polyhedral/"
 /
 
 &BANK
  Prefix = "./Saving_Bank/"
- Saving = T
+ Saving = F
 /

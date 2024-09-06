@@ -25,6 +25,7 @@ intersection of polyhedral cones.
 * `DoubleCosets`: Computation of double cosets (unfinished).
 * `EnumLatticeDelaunays`: Enumeration of Delaunay polytopes of lattices.
 * `EquiStabDatabase`: Memoization of equivalence and stabilizers.
+* `EquivDualDesc`: Equivariant computation of dual description.
 * `FindPositiveVectors`: Finding positive vectors of indefinite forms.
 * `GeometricallyUnique`: Finding interior point in polytope defined by facets,
 which is invariant under transformation.

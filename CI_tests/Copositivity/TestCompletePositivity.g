@@ -33,6 +33,7 @@ case12:=rec(eMat:=[ [ 2, 1, 0, 0, 0, 0, 1 ], [ 1, 2, 1, 0, 0, 0, 0 ], [ 0, 1, 2,
 TestCompletePositivity:=function(eCase)
     local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
     n:=Length(eCase.eMat);
+    
     FileIn:="Test.in";
     FileOut:="Test.out";
     #
