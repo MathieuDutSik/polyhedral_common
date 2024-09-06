@@ -10,12 +10,11 @@ GAP interfacing
 
 The polyhedral work started historically with the GAP code.
 For reasons of performance, parallelism and expressivity,
-things have moved to C++.. But the GAP inheritance remains
+things have moved to C++. But the GAP inheritance remains
 for the CI tests and checking their correctness.
 
 List of CI tests:
 * `CTYPE_AdjSch`: Computation of the Ctypes in dimension 5 with the adjacency scheme.
-* `CUT_K8_serial`: Computation of the dual description of `CUT8` with the 147 orbits obtained.
 * `Canonicalization`: This is for running the canonicalization of Gram
 matrices.
 * `ConeIntersection`: This is checking different methods for computing the
@@ -34,8 +33,9 @@ which is invariant under transformation.
 matrices.
 * `IntegralAutomorphy`: Computed the integral automorphism group of a
 configuration of vectors.
+* `IntegralPoints`: Compute the integral points of some polytope.
 * `Isotropic`: Testing existence of isotropic in quadrtaic forms and computing them
-if needed.
+if proven to exist.
 * `RedundantCtype5`: We test 3 methods for reducing by redundancy.
 * `Reflective`: This is for using the edgewalk algorithm of Allcock for
 building the polyheral cone.
@@ -47,12 +47,8 @@ of polyhedral cones.
 the orbit of `x W(H4)` for x a random vector (there are 4 orbits).
 
 More needs to be added:
-* Enumerating integral points in polytopes (the 8-dim perfect Delaunay polytopes
-are good examples).
 * Computing the orbits of K-dim faces of polytopes (the G6 and G7 are good examples).
 * Running of the various orbit splitting algorithm.
 * Computing automorphism group of polytope with LinPolytope.
-* Computing automorphism group of skeletton of a polytope.
 * Checking for pointedness of cones.
-* The sampling of facets (using the Various CUT polytopes)
 * Short vector enumeration.
