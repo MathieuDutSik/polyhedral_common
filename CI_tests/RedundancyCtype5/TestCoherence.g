@@ -11,7 +11,7 @@ for i in ListIdx
 do
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
-    eProg:="../../src_poly/GRP_LinPolytope_Automorphism";
+    eProg:="../../src_group/GRP_LinPolytope_Automorphism";
     eCommand:=Concatenation(eProg, " rational ", eFile, " GAP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);

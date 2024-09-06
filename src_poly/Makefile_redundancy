@@ -1,5 +1,4 @@
-PROGRAM		= POLY_redundancy POLY_redundancyGroup \
-                  GRP_LinPolytope_Automorphism
+PROGRAM		= POLY_redundancy POLY_redundancyGroup
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
