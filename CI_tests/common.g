@@ -18,6 +18,76 @@ WriteMatrixFile:=function(eFile, EXT)
     CloseStream(output);
 end;
 
+STRING_Split:=function(eStr, ePat)
+  local lenStr, lenPat, lenTest, ListMatch, i, eStrPart, ListStrInter, iVal, eVal, FirstVal, nbMatch, eStrInter;
+  lenStr:=Length(eStr);
+  lenPat:=Length(ePat);
+  ListMatch:=[];
+  lenTest:=lenStr - (lenPat-1);
+  for i in [1..lenTest]
+  do
+    eStrPart:=eStr{[i..i+lenPat-1]};
+    if eStrPart=ePat then
+      Add(ListMatch, i);
+    fi;
+  od;
+  nbMatch:=Length(ListMatch);
+  if nbMatch=0 then
+    return rec(ListStrInter:=[eStr], ListMatch:=[]);
+  fi;
+  Print("nbMatch=", nbMatch, "\n");
+  ListStrInter:=[];
+  for iVal in [1..nbMatch]
+  do
+    eVal:=ListMatch[iVal];
+    if eVal>1 then
+      if iVal>1 then
+        FirstVal:=ListMatch[iVal-1]+lenPat;
+      else
+        FirstVal:=1;
+      fi;
+      eStrInter:=eStr{[FirstVal..eVal-1]};
+      Add(ListStrInter, eStrInter);
+    fi;
+    if iVal=nbMatch then
+      if eVal+lenPat<lenStr then
+        FirstVal:=eVal+lenPat;
+        eStrInter:=eStr{[FirstVal..lenStr]};
+        Add(ListStrInter, eStrInter);
+      fi;
+    fi;
+  od;
+  return rec(ListStrInter:=ListStrInter, ListMatch:=ListMatch);
+end;
+
+ReadMatrixFile:=function(eFile)
+    local file, line, eRec, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
+    file:=InputTextFile(eFile);
+    line:=ReadLine(file);
+    eRec:=SplitString(line, " ");
+    nbRow:=Int(eRec[1]);
+    nbCol:=Int(eRec[2]);
+    TheMat:=[];
+    for iRow in [1..nbRow]
+    do
+        line:=ReadLine(file);
+        eRec:=SplitString(line, " ");
+        eLine:=[];
+        for eStr in eRec.ListStrInter
+        do
+            if Length(eStr) > 0 then
+                val:=Rat(eStr);
+                Add(eLine, val);
+            fi;
+        od;
+        if Length(eLine)<>nbCol then
+            Error("Inconsistent length of vector");
+        fi;
+        Add(TheMat, eLine);
+    od;
+    return TheMat;
+end;
+
 WriteListMatrixFile:=function(eFile, ListMat)
     local output, eMat;
     output:=OutputTextFile(eFile, true);
