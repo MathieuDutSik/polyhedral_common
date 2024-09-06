@@ -1,4 +1,4 @@
-name: CI of Skeleton Computation
+name: CI of direct volume computation
 
 on:
   # One time per month
@@ -99,13 +99,11 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test geometrically unique point
+      - name: Test of direct volume computation
         run: |
           cd src_poly && make -f Makefile_lrs_volume && cd ..
-          pwd
           echo "After compilation of lrs_volume program"
 
           # Running the test
-          cd CI_tests/DirectVolumePolytope
-          ../../gap.sh < TestVolume.g
-          cd ../..
+          cd CI_tests/DirectVolumePolytope && ../../gap.sh < TestVolume.g && cd ../..
+          echo "After running of the program"

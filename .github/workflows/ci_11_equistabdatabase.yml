@@ -1,4 +1,4 @@
-name: Equi-Stab-Database
+name: CI of Equi-Stab memoization system
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: Equi-Stab-Database
 on:
   # One time per month
   schedule:
-    - cron: "0 0 9 * *"
+    - cron: "0 0 11 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -106,9 +106,7 @@ jobs:
       - name: Test equi-stab database code
         run: |
           cd src_latt && make -f Makefile_equistabdatabase && cd ..
-          pwd
           echo "After compilation of equi-stab database code"
 
-          cd CI_tests/EquiStabDatabase
-          ../../gap.sh < TestEquiStabDatabase.g
-          cd ../..
+          cd CI_tests/EquiStabDatabase && ../../gap.sh < TestEquiStabDatabase.g && cd ../..
+          echo "After Stab/Equi tests"

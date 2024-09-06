@@ -1,4 +1,4 @@
-name: CI of finding isotropic vectors of indefinite forms
+name: CI of finding positive vectors of indefinite forms
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -103,12 +103,10 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test isotropic code
+      - name: Test of finding positive vector
         run: |
           cd src_isotropy && make && cd ..
-          pwd
           echo "After compilation of isotropy code"
 
-          cd CI_tests/FindPositiveVectors
-          ../../gap.sh < FindPositiveVector.g
-          cd ../..
+          cd CI_tests/FindPositiveVectors && ../../gap.sh < FindPositiveVector.g && cd ../..
+          echo "After tests of the finding of positive vectors"

@@ -108,9 +108,7 @@ jobs:
       - name: Test enumeration of Lattice Delaunay polytopes
         run: |
           cd src_latt && make -f Makefile_MPI_ComputeDelaunay && cd ..
-          pwd
           echo "After compilation of LATT_MPI_ComputeDelaunay"
 
-          cd CI_tests/EnumLatticeDelaunays
-          ../../gap.sh < TestDelaunay.g
-          cd ../..
+          cd CI_tests/EnumLatticeDelaunays && ../../gap.sh < TestDelaunay.g && cd ../..
+          echo "After the tests"

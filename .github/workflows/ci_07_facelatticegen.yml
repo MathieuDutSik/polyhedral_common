@@ -99,7 +99,7 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test geometrically unique point
+      - name: Test face lattice code
         run: |
           cd src_poly && make -f Makefile_facelatticegen && cd ..
           pwd

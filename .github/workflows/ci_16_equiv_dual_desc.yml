@@ -1,4 +1,4 @@
-name: CI of dual description CUT8
+name: CI of dual description using symmetries
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -118,12 +118,10 @@ jobs:
           mkdir -p /home/runner/.local/bin/
           ln -s $PPL_PATH/bin/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
 
-      - name: Test dual description
+      - name: Test dual description using symmetries
         run: |
           cd src_dualdesc && make -f Makefile_CI && cd ..
-          pwd
           echo "After compilation of dual desc code"
 
           cd CI_tests/EquivDualDesc && ../../gap.sh < TestCases.g && cd ../..
-          pwd
           echo "We are in test directory"

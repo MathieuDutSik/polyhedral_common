@@ -1,4 +1,4 @@
-name: CI of Indefinite Stab Equi software
+name: CI of Lorentzian Stab Equi code
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -103,7 +103,7 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test indefinite stab equi software
+      - name: Test Lorentzian stab/equi software
         run: |
           cd src_lorentzian && make -f Makefile_stab_equi && cd ..
           pwd

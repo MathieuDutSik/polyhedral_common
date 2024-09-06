@@ -105,10 +105,9 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test dual description
+      - name: Test simple dual description
         run: |
           cd src_poly && make -f Makefile_simple_dual_desc && cd ..
-          pwd
           echo "After compilation of Dual description code"
 
           cd CI_tests/SimpleDualDesc

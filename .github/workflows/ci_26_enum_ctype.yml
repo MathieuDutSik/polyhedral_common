@@ -111,6 +111,5 @@ jobs:
           pwd
           echo "After compilation of CTYP_MPI_AdjScheme"
 
-          cd CI_tests/CTYPE_AdjSch
-          ../../gap.sh < TestEnumeration.g
-          cd ../..
+          cd CI_tests/CTYPE_AdjSch && ../../gap.sh < TestEnumeration.g && cd ../..
+          echo "After the Ctype tests"

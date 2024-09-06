@@ -1,4 +1,4 @@
-name: CI of Skeleton Computation
+name: CI of computation of indefinite forms
 
 on:
   # One time per month
@@ -99,13 +99,11 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test geometrically unique point
+      - name: Test of indefinite forms
         run: |
           cd src_indefinite && make && cd ..
-          pwd
           echo "After compilation of indefinite codes"
 
           # Running the test
-          cd CI_tests/IndefiniteComp
-          ../../gap.sh < AllTests.g
-          cd ../..
+          cd CI_tests/IndefiniteComp && ../../gap.sh < AllTests.g && cd ../..
+          echo "After the tests"

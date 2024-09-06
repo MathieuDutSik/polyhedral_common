@@ -3,7 +3,7 @@ name: CI of Sampling facets of polytopes
 on:
   # One time per month
   schedule:
-    - cron: "0 0 19 * *"
+    - cron: "0 0 21 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -99,13 +99,10 @@ jobs:
           pwd
           ln -s gap-4.11.1/bin/gap.sh .
 
-      - name: Test geometrically unique point
+      - name: Test sampling of facets
         run: |
           cd src_poly && make -f Makefile_sampling_facets && cd ..
-          pwd
           echo "After compilation of sampling facets"
 
-          # Running the test
-          cd CI_tests/SamplingFacets
-          ../../gap.sh < TestSampling.g
-          cd ../..
+          cd CI_tests/SamplingFacets && ../../gap.sh < TestSampling.g && cd ../..
+          echo "After the sampling of facets"
