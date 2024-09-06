@@ -117,6 +117,11 @@ ClassicalSporadicLattices:=function(TheName)
   ListNames:=[];
   ListGram:=[];
   #
+  # Hyperbolic plane
+  #
+  Add(ListNames, "U");
+  Add(ListGram, [[0,1],[1,0]]);
+  #
   # root lattices
   #
   Add(ListNames, "E6");
@@ -167,6 +172,63 @@ ClassicalSporadicLattices:=function(TheName)
   od;
   Error("Failed to find the entry in the database");
 end;
+
+GetGramMatrixFromString:=function(eStr)
+    local ListChar, i, IsNumber, scal, eStrRed;
+    ListChar:=[];
+    for i in [0..9]
+    do
+        Add(ListChar, String(i));
+    od;
+    IsNumber:=function(eChar)
+        for fChar in ListChar
+        do
+            if fChar=eChar then
+                return true;
+            fi;
+        od;
+        return false;
+    end;
+    if IsNumber(eStr[1])=false then
+        return ClassicalSporadicLattices(eStr);
+    fi;
+    scal:=Number(eStr[1]);
+    eStrRed:=eStr{[2..Length(eStr)]};
+    return scal * ClassicalSporadicLattices(eStr);
+end;
+
+
+
+GetGramMatrixFromList:=function(eList)
+    local ListGram, entry, dim, GramMat, shift, eGram, locdim, u, v;
+    ListGram:=[];
+    for entry in eList
+    do
+        if IsString(entry) then
+            Add(ListGram, GetGramMatrixFromString(entry));
+        else
+            Add(ListGram, entry);
+        fi;
+    od;
+    dim:=Sum(List(ListGram, Length));
+    GramMat:=NullMat(dim, dim);
+    shift:=0;
+    for eGram in ListGram
+    do
+        locdim:=Length(eGram);
+        for u in [1..locdim]
+        do
+            for v in [1..locdim]
+            do
+                GramMat[shift+u][shift+v]:=eGram[u][v];
+            od;
+        od;
+        shift:=shift+locdim;
+    od;
+    return GramMat;
+end;
+
+
 
 
 RandomIntegralUnimodularMatrix:=function(n)
