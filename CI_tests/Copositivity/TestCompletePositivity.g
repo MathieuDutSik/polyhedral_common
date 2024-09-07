@@ -1,8 +1,9 @@
-
+Read("../common.g");
 Print("Beginning TestCompletePositivity\n");
 
 
-
+# Sponsel, J., Dür, M.: Factorization and cutting planes for completely positive matrices by copositive
+# projection. Math. Program. Ser. A 143, 211–229 (2014)
 case1:=rec(eMat:=[ [ 2, 1, 1, 1, 2 ], [ 1, 2, 2, 1, 1 ], [ 1, 2, 6, 5, 1 ], [ 1, 1, 5, 6, 2 ], [ 2, 1, 1, 2, 3 ] ],
            name:="Sec41_Sponsel_Dur", reply:=true);;
 case2:=rec(eMat:=[ [ 1, 1, 0, 0, 1 ], [ 1, 2, 1, 0, 0 ], [ 0, 1, 3, 1, 0 ], [ 0, 0, 1, 4, 1 ], [ 1, 0, 0, 1, 5 ] ],
@@ -28,26 +29,18 @@ case11:=rec(eMat:=[ [ 2, 0, 0, 1, 1 ], [ 0, 2, 0, 1, 1 ], [ 0, 0, 2, 1, 1 ], [ 1
 case12:=rec(eMat:=[ [ 2, 1, 0, 0, 0, 0, 1 ], [ 1, 2, 1, 0, 0, 0, 0 ], [ 0, 1, 2, 1, 0, 0, 0 ], [ 0, 0, 1, 2, 1, 0, 0 ], [ 0, 0, 0, 1, 2, 1, 0 ], [ 0, 0, 0, 0, 1, 2, 1 ], [ 1, 0, 0, 0, 0, 1, 2 ] ],
             name:="Zhou_Fan_Example5_2", reply:=true);;
 
+# Jarre, F., Schmallowsky, K.: On the computation of C* certificates. J. Global Optim. 45, 281–296 (2009)
+case13:=rec(eMat:=[ [ 3, 0, 0, 1, 1, 1 ], [ 0, 3, 0, 1, 1, 1 ], [ 0, 0, 3, 1, 1, 1 ], [ 1, 1, 1, 3, 0, 0 ], [ 1, 1, 1, 0, 3, 0 ], [ 1, 1, 1, 0, 0, 3 ] ],
+            name:="Jarre_Schmallowsky_3_3", reply:=true);;
 
 
 TestCompletePositivity:=function(eCase)
     local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
     n:=Length(eCase.eMat);
-    
-    FileIn:="Test.in";
-    FileOut:="Test.out";
+    FileIn:=Filename(DirectoryTemporary(), "Test.in");
+    FileOut:=Filename(DirectoryTemporary(), "Test.out");
     #
-    output:=OutputTextFile(FileIn, true);
-    AppendTo(output, n, " ", n, "\n");
-    for i in [1..n]
-    do
-        for j in [1..n]
-        do
-            AppendTo(output, " ", eCase.eMat[i][j]);
-        od;
-        AppendTo(output, "\n");
-    od;
-    CloseStream(output);
+    WriteMatrixFile(FileIn, eCase.eMat);
     #
     eProg:="../../src_copos/CP_TestCompletePositivity";
     TheCommand:=Concatenation(eProg, " ", FileIn, " GAP ", FileOut);
@@ -64,7 +57,7 @@ end;
 
 
 ListCase:=[case1, case2, case3, case4, case5, case6,
-           case7, case8, case9, case10, case11, case12];;
+           case7, case8, case9, case10, case11, case12, case13];;
 
 n_error:=0;
 for eCase in ListCase

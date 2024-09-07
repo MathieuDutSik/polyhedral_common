@@ -1,4 +1,4 @@
-
+Read("../common.g");
 Print("Beginning Test copositivity\n");
 
 
@@ -24,20 +24,10 @@ case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 1
 TestCopositivity:=function(eCase)
     local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U, test;
     n:=Length(eCase.eMat);
-    FileIn:="Test.in";
-    FileOut:="Test.out";
+    FileIn:=Filename(DirectoryTemporary(), "Test.in");
+    FileOut:=Filename(DirectoryTemporary(), "Test.out");
     #
-    output:=OutputTextFile(FileIn, true);
-    AppendTo(output, n, " ", n, "\n");
-    for i in [1..n]
-    do
-        for j in [1..n]
-        do
-            AppendTo(output, " ", eCase.eMat[i][j]);
-        od;
-        AppendTo(output, "\n");
-    od;
-    CloseStream(output);
+    WriteMatrixFile(FileIn, eCase.eMat);
     #
     eProg:="../../src_copos/CP_TestCopositivity";
     TheCommand:=Concatenation(eProg, " ", FileIn, " GAP ", FileOut);
