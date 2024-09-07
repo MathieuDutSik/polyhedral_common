@@ -71,6 +71,8 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
   int nbCol = preCODE.cols();
   std::cerr << "nbEnt=" << nbEnt << " nbCol=" << nbCol << "\n";
   MyMatrix<T> CODE = DropZeroColumn(preCODE);
+  std::cerr << "CODE=\n";
+  WriteMatrix(std::cerr, CODE);
   int dim = CODE.cols();
   auto get_gram_mat=[&]() -> MyMatrix<T> {
     if (FileGramMat == "identity") {
@@ -80,6 +82,9 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
     }
   };
   MyMatrix<T> GramMat = get_gram_mat();
+  std::cerr << "GramMat=\n";
+  WriteMatrix(std::cerr, GramMat);
+  //
   int rnk = RankMat(CODE);
   std::cerr << "nbEnt=" << nbEnt << " dim=" << dim << " rnk=" << rnk << "\n";
   if (dim != rnk) {
@@ -89,13 +94,12 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
   std::map<T, size_t> s_norm;
   std::vector<T> norm_by_vertex;
   for (int iEnt=0; iEnt<nbEnt; iEnt++) {
+    MyVector<T> V1 = GetMatrixRow(CODE, iEnt);
     std::map<T, size_t> map;
     for (int jEnt=0; jEnt<nbEnt; jEnt++) {
       if (iEnt != jEnt) {
-        T scal(0);
-        for (int i=0; i<dim; i++) {
-          scal += CODE(iEnt, i) * CODE(jEnt, i);
-        }
+        MyVector<T> V2 = GetMatrixRow(CODE, jEnt);
+        T scal = ScalarProductQuadForm(GramMat, V1, V2);
         map[scal] += 1;
       }
     }
@@ -105,10 +109,7 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
     }
     std::cerr << "\n";
     //
-    T norm(0);
-    for (int i=0; i<dim; i++) {
-      norm += CODE(iEnt, i) * CODE(iEnt, i);
-    }
+    T norm = ScalarProductQuadForm(GramMat, V1, V1);
     std::cerr << "iEnt=" << iEnt << " norm=" << norm << "\n";
     std::cerr << "  eLine =";
     for (int i=0; i<dim; i++) {
@@ -159,22 +160,17 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
   for (auto & eFace : vf) {
     std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
     MyVector<T> eSol = FindFacetInequality(EXT, eFace);
-    MyVector<T> eRay(dim);
+    MyVector<T> fRay(dim);
     for (int i=0; i<dim; i++) {
-      eRay(i) = eSol(i+1);
+      fRay(i) = eSol(i+1);
     }
-    T normRay(0);
-    for (int i=0; i<dim; i++) {
-      normRay += eRay(i) * eRay(i);
-    }
+    MyVector<T> eRay = Inverse(GramMat) * fRay;
+    T normRay = ScalarProductQuadForm(GramMat, eRay, eRay);
     std::vector<T> ListScal(nbEnt);
     for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-      T scal(0);
-      for (int i=0; i<dim; i++) {
-        scal += eRay(i) * CODE(iEnt,i);
-      }
+      MyVector<T> V = GetMatrixRow(CODE, iEnt);
+      T scal = ScalarProductQuadForm(GramMat, eRay, V);
       ListScal[iEnt] = scal;
-      //      std::cerr << "1: iEnt=" << iEnt << " scal=" << scal << " eFace=" << eFace[iEnt] << "\n";
     }
     size_t idx_in = get_in(eFace);
     size_t idx_out = get_out(eFace);
@@ -198,10 +194,6 @@ void process_entry_type(std::string const& FileCode, std::string const& FileGram
       std::cerr << " " << ListScal[iEnt];
     }
     std::cerr << "\n";
-    //    for (int iEnt=0; iEnt<nbEnt; iEnt++) {
-    //      std::cerr << "2: iEnt=" << iEnt << " scal=" << ListScal[iEnt] << " eFace=" << eFace[iEnt] << "\n";
-    //    }
-    //    std::cerr << "MaxScal=" << MaxScal << "\n";
     for (int iEnt=0; iEnt<nbEnt; iEnt++) {
       if (eFace[iEnt] == 1) {
         if (ListScal[iEnt] != MaxScal) {
