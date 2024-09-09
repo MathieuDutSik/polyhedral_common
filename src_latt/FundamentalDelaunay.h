@@ -72,6 +72,9 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
   };
   MyVector<T> TheRandomDirection = FuncRandomDirection<T>(dim + 1, 10);
   while (true) {
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    MicrosecondTime time;
+#endif
     int nbVect = ListRelevantPoint.size();
     MyMatrix<T> ListIneq(nbVect, dim + 1);
     for (int iVect = 0; iVect < nbVect; iVect++) {
@@ -79,12 +82,21 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       for (int i = 0; i <= dim; i++)
         ListIneq(iVect, i) = fVect(i);
     }
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    os << "|Building ListIneq|=" << time << "\n";
+#endif
     LpSolution<T> eSol =
         CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    os << "|Computing LP eSol|=" << time << "\n";
+#endif
     assert(eSol.PrimalDefined);
     MyVector<T> eVect = eSol.DirectSolution;
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
     resultCVP<T, Tint> TheCVP = solver.SingleSolver(eVect);
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    os << "|Computing TheCVP|=" << time << "\n";
+#endif
     int nbVectTot = TheCVP.ListVect.rows();
     if (TheCVP.TheNorm == TheNorm) {
       MyMatrix<Tint> RetEXT(nbVectTot, dim + 1);
