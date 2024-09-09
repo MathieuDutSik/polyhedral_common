@@ -128,8 +128,9 @@ inline void set_free(set_type set) { delete[] set; }
 inline unsigned long set_blocks(long len) {
   long blocks = 1L;
 
-  if (len > 0)
-    blocks = ((long)len - 1) / SETBITS + 2;
+  if (len > 0) {
+    blocks = (len - 1) / SETBITS + 2;
+  }
   return blocks;
 }
 
@@ -8593,10 +8594,10 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           std::cerr << "Obtained vertex solution is not valid\n";
           std::cerr << "Please debug. Before calling TerminalEnding\n";
           throw TerminalException{1};
-          // TerminalEnding();
         }
-        if (eSum == 0)
+        if (eSum == 0) {
           eFace[iRow] = 1;
+        }
       }
       int nbIncd = eFace.count();
       if (nbIncd == 0) {
