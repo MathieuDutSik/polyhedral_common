@@ -35,6 +35,10 @@
 #define DEBUG_CDD
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_CDD
+#endif
+
 // templatized code of the CDD library
 
 namespace cdd {
@@ -2552,12 +2556,11 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
 }
 
 template <typename T>
-dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M, dd_ErrorType *err) {
+dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M) {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
 
-  *err = dd_NoError;
   linc = set_card(M->linset);
   m = M->rowsize + 1 + linc;
   /* We represent each equation by two inequalities.
@@ -2603,7 +2606,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
   /* We represent each equation by two inequalities.
      This is not the best way but makes the code simple. */
 
-  lp = dd_Matrix2LP(M, err);
+  lp = dd_Matrix2LP(M);
   lp->objective =
       dd_LPmax; /* since the objective is zero, this is not important */
   for (j = 1; j <= M->colsize; j++) {
@@ -4991,7 +4994,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find.
    */
-  dd_lpdata<T> *lp0 = dd_Matrix2LP(M, &err);
+  dd_lpdata<T> *lp0 = dd_Matrix2LP(M);
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err); /* Solve the LP */
@@ -5206,7 +5209,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find.
    */
-  dd_lpdata<T> *lp0 = dd_Matrix2LP(M, &err);
+  dd_lpdata<T> *lp0 = dd_Matrix2LP(M);
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
   dd_LPSolve(lp, solver, &err); /* Solve the LP */
@@ -7000,7 +7003,8 @@ void dd_EvaluateARay1(dd_rowrange i, dd_conedata<T> *cone)
   Ptr = cone->FirstRay;
   PrevPtr = cone->ArtificialRay;
   if (PrevPtr->Next != Ptr) {
-    fprintf(stdout, "Error.  Artificial Ray does not point to FirstRay!!!\n");
+    std::cerr << "Error.  Artificial Ray does not point to FirstRay!!!\n";
+    throw TerminalException{1};
   }
   while (Ptr != nullptr) {
     temp = 0;
@@ -8500,7 +8504,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   d_input = TheEXT.cols();
   for (j = 1; j <= d_input; j++)
     M->rowvec[j - 1] = eVect(j - 1);
-  lp = cdd::dd_Matrix2LP(M, &error);
+  lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
   nbRow = TheEXT.rows();
   nbCol = TheEXT.cols();
@@ -8578,6 +8582,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
         T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++)
           eSum += eVectDirSolExt(iCol) * TheEXT(iRow, iCol);
+#ifdef SANITY_CHECK_CDD
         if (eSum < 0) {
           std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
                     << " eSum=" << eSum << "\n";
@@ -8595,6 +8600,7 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           std::cerr << "Please debug. Before calling TerminalEnding\n";
           throw TerminalException{1};
         }
+#endif
         if (eSum == 0) {
           eFace[iRow] = 1;
         }
@@ -8616,8 +8622,9 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   if (DualDefined) {
     for (j = 1; j < lp->d; j++) {
       idx = lp->nbindex[j + 1];
-      if (idx > 0)
+      if (idx > 0) {
         eVectDualSolution(idx - 1) = lp->dsol[j];
+      }
     }
     eSol.DualDefined = true;
     eSol.DualSolution = eVectDualSolution;
