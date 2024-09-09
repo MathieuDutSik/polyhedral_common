@@ -70,20 +70,20 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     }
     return eIneq;
   };
+  std::vector<MyVector<T>> ListIneq_vect;
+  for (auto & eVect : ListRelevantPoint) {
+    MyVector<T> nVect = DefiningInequality(eVect);
+    ListIneq_vect.push_back(nVect);
+  }
   MyVector<T> TheRandomDirection = FuncRandomDirection<T>(dim + 1, 10);
   while (true) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     MicrosecondTime time;
 #endif
     int nbVect = ListRelevantPoint.size();
-    MyMatrix<T> ListIneq(nbVect, dim + 1);
-    for (int iVect = 0; iVect < nbVect; iVect++) {
-      MyVector<T> fVect = DefiningInequality(ListRelevantPoint[iVect]);
-      for (int i = 0; i <= dim; i++)
-        ListIneq(iVect, i) = fVect(i);
-    }
+    MyMatrix<T> ListIneq = MatrixFromVectorFamily(ListIneq_vect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Building ListIneq|=" << time << "\n";
+    os << "|Building ListIneq|=" << time << " nbVect=" << nbVect << "\n";
 #endif
     LpSolution<T> eSol =
         CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
@@ -115,6 +115,8 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         MyVector<Tint> fVect = GetMatrixRow(TheCVP.ListVect, iVect);
         MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
         ListRelevantPoint.push_back(fVect_T);
+        MyVector<T> nVect = DefiningInequality(fVect_T);
+        ListIneq_vect.push_back(nVect);
       }
     }
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
