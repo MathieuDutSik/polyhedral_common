@@ -35,7 +35,6 @@ template <typename T> struct LpSolution {
   MyVector<T> DirectSolution;
   MyVector<T> DirectSolutionExt;
   Face eFace;
-  int rankDirectSol = -1;
   std::string Answer;
 };
 
@@ -48,7 +47,6 @@ void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "OptimalValue=" << eSol.OptimalValue << "\n";
   os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
   os << "DirectSolutionExt=" << StringVector(eSol.DirectSolutionExt) << "\n";
-  os << "rankDirectSol=" << eSol.rankDirectSol << "\n";
   os << "Answer=" << eSol.Answer << "\n";
 }
 

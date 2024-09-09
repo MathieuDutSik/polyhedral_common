@@ -39,6 +39,10 @@
 #define SANITY_CHECK_CDD
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_CDD
+#endif
+
 // templatized code of the CDD library
 
 namespace cdd {
@@ -8429,6 +8433,9 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
       // The comparison with values makes sense only of the dual program is
       // defined. Otherwise, what we may get is actually a primal_direction and
       // it would just not make sense with negative values for eSum.
+#ifdef TIMINGS_CDD
+      MicrosecondTime time;
+#endif
       for (int iRow = 0; iRow < nbRow; iRow++) {
         T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -8457,25 +8464,8 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           eFace[iRow] = 1;
         }
       }
-#ifdef SANITY_CHECK_CDD_DISABLE
-      size_t n_error = 0;
-      for (int iRow = 0; iRow < nbRow; iRow++) {
-        bool test1 = false;
-        if (eFace[iRow] == 1) {
-          test1 = true;
-        }
-        long elem = iRow + 1;
-        cdd::set_type set = lp->equalityset;
-        bool test2 = cdd::set_member(elem, set);
-        std::cerr << "iRow=" << iRow << " test1=" << test1 << " test2=" << test2 << "\n";
-        if (test1 != test2) {
-          n_error += 1;
-        }
-      }
-      if (n_error > 0) {
-        std::cerr << "n_error=" << n_error << " so inherence to resolve\n";
-        throw TerminalException{1};
-      }
+#ifdef TIMINGS_CDD
+      os << "|eFace|=" << time << "\n";
 #endif
       int nbIncd = eFace.count();
       if (nbIncd == 0) {
@@ -8486,9 +8476,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
       }
     }
     eSol.eFace = eFace;
-    MyMatrix<T> eMatRed = SelectRow(TheEXT, eFace);
-    int rnk = RankMat(eMatRed);
-    eSol.rankDirectSol = rnk;
   }
   MyVector<T> eVectDualSolution = ZeroVector<T>(nbRow);
   if (DualDefined) {
