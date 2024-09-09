@@ -512,27 +512,6 @@ typedef enum {
   dd_DualUnbounded
 } dd_LPStatusType;
 
-template <typename T> struct dd_lpsolution {
-  //  dd_DataFileType filename;
-  dd_LPObjectiveType objective;
-  dd_LPSolverType solver;
-  dd_rowrange m;
-  dd_colrange d;
-
-  dd_LPStatusType LPS; /* the current solution status */
-  T optvalue;          /* optimal value */
-  T *sol;              /* primal solution */
-  T *dsol;             /* dual solution */
-  dd_colindex nbindex; /* current basis represented by nonbasic indices */
-  dd_rowrange re; /* row index as a certificate in the case of inconsistency */
-  dd_colrange
-      se; /* col index as a certificate in the case of dual inconsistency */
-  long pivots[5];
-  /* pivots[0]=setup (to find a basis), pivots[1]=PhaseI or Criss-Cross,
-     pivots[2]=Phase II, pivots[3]=Anticycling, pivots[4]=GMP postopt. */
-  long total_pivots;
-};
-
 template <typename T> struct dd_lpdata {
   //  dd_DataFileType filename;
   dd_LPObjectiveType objective;
@@ -1237,39 +1216,6 @@ dd_conedata<T> *dd_ConeDataLoad(dd_polyhedradata<T> *poly) {
   }
 
   return cone;
-}
-
-template <typename T> dd_lpsolution<T> *dd_CopyLPSolution(dd_lpdata<T> *lp) {
-  dd_lpsolution<T> *lps;
-  dd_colrange j;
-
-  lps = new dd_lpsolution<T>;
-  //  for (i=1; i<=globals::dd_filenamelen; i++)
-  //  lps->filename[i-1]=lp->filename[i-1];
-  lps->objective = lp->objective;
-  lps->solver = lp->solver;
-  lps->m = lp->m;
-  lps->d = lp->d;
-
-  lps->LPS = lp->LPS; /* the current solution status */
-
-  lps->optvalue = lp->optvalue; /* optimal value */
-  dd_AllocateArow(lp->d + 1, &(lps->sol));
-  dd_AllocateArow(lp->d + 1, &(lps->dsol));
-  lps->nbindex = new long[(lp->d) + 1];
-  for (j = 0; j <= lp->d; j++) {
-    lps->sol[j] = lp->sol[j];
-    lps->dsol[j] = lp->dsol[j];
-    lps->nbindex[j] = lp->nbindex[j];
-  }
-  lps->pivots[0] = lp->pivots[0];
-  lps->pivots[1] = lp->pivots[1];
-  lps->pivots[2] = lp->pivots[2];
-  lps->pivots[3] = lp->pivots[3];
-  lps->pivots[4] = lp->pivots[4];
-  lps->total_pivots = lp->total_pivots;
-
-  return lps;
 }
 
 template <typename T>
@@ -2706,16 +2652,6 @@ template <typename T> void dd_FreeLPData(dd_lpdata<T> *lp) {
     delete[] lp->nbindex;
     delete[] lp->given_nbindex;
     delete lp;
-  }
-}
-
-template <typename T> void dd_FreeLPSolution(dd_lpsolution<T> *lps) {
-  if (lps != nullptr) {
-    delete[] lps->nbindex;
-    dd_FreeArow(lps->dsol);
-    dd_FreeArow(lps->sol);
-
-    delete lps;
   }
 }
 
@@ -5464,7 +5400,6 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
 
   dd_colrange j;
   dd_lpdata<T> *lp;
-  //  dd_lpsolution<T> *lps;
   dd_ErrorType err = dd_NoError;
   bool answer = false, localdebug = false;
 
@@ -5790,91 +5725,6 @@ bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
 
   dd_FreeLPData(lp);
   return answer;
-}
-
-template <typename T>
-bool dd_ExistsRestrictedFace2(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
-                              dd_lpsolution<T> **lps, dd_ErrorType *err)
-/* 0.94 */
-{
-  /* This function checkes if there is a point that satifies all the constraints
-  of the matrix M (interpreted as an H-representation) with additional equality
-  contraints specified by R and additional strict inequality constraints
-  specified by S. The set S is supposed to be disjoint from both R and
-  M->linset.   When it is not, the set S will be considered as S\(R U
-  M->linset).
-
-  This function returns a certificate of the answer in terms of the associated
-  LP solutions.
-  */
-  bool answer = false;
-  dd_lpdata<T> *lp = nullptr;
-
-  lp = dd_Matrix2Feasibility2(M, R, S, err);
-
-  if (*err != dd_NoError)
-    return answer;
-
-  /* Solve the LP by cdd LP solver. */
-  dd_LPSolve(lp, dd_DualSimplex, err); /* Solve the LP */
-  if (*err != dd_NoError)
-    return answer;
-  if (lp->LPS == dd_Optimal && lp->optvalue > 0) {
-    answer = true;
-  }
-
-  (*lps) = dd_CopyLPSolution(lp);
-  dd_FreeLPData(lp);
-  return answer;
-}
-
-template <typename T>
-bool dd_FindRelativeInterior(dd_matrixdata<T> *M, dd_rowset *ImL,
-                             dd_rowset *Lbasis, dd_lpsolution<T> **lps,
-                             dd_ErrorType *err)
-/* 0.94 */
-{
-  /* This function computes a point in the relative interior of the H-polyhedron
-  given by M. Even the representation is V-representation, it simply interprete
-  M as H-representation. lps returns the result of solving an LP whose solution
-  is a relative interior point. ImL returns all row indices of M that are
-  implicit linearities, i.e. their inqualities are satisfied by equality by all
-  points in the polyhedron.  Lbasis returns a row basis of the submatrix of M
-  consisting of all linearities and implicit linearities.  This means that the
-  dimension of the polyhedron is M->colsize - set_card(Lbasis) -1.
-  */
-
-  dd_rowset S;
-  dd_colset Tc, Lbasiscols;
-  dd_rowrange i;
-
-  *ImL = dd_ImplicitLinearityRows(M, err);
-
-  if (*err != dd_NoError)
-    return false;
-
-  bool success = false;
-  set_initialize(&S, M->rowsize); /* the empty set */
-  for (i = 1; i <= M->rowsize; i++) {
-    if (!set_member(i, M->linset) && !set_member(i, *ImL)) {
-      set_addelem(S, i); /* all nonlinearity rows go to S  */
-    }
-  }
-  if (dd_ExistsRestrictedFace2(M, *ImL, S, lps, err)) {
-    /* printf("a relative interior point found\n"); */
-    success = true;
-  }
-
-  set_initialize(&Tc, M->colsize); /* empty set */
-  (void)dd_MatrixRank(
-      M, S, Tc, Lbasis,
-      &Lbasiscols); /* the rank of the linearity submatrix of M.  */
-
-  set_free(S);
-  set_free(Tc);
-  set_free(Lbasiscols);
-
-  return success;
 }
 
 template <typename T>
@@ -8387,6 +8237,7 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process) {
 
 // clang-format off
 }  // namespace cdd
+// clang-format on
 
 template <typename T>
 void WriteInputFileCdd(std::string const &FileName, MyMatrix<T> const &ListIneq,
@@ -8580,8 +8431,9 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
       // it would just not make sense with negative values for eSum.
       for (int iRow = 0; iRow < nbRow; iRow++) {
         T eSum(0);
-        for (int iCol = 0; iCol < nbCol; iCol++)
+        for (int iCol = 0; iCol < nbCol; iCol++) {
           eSum += eVectDirSolExt(iCol) * TheEXT(iRow, iCol);
+        }
 #ifdef SANITY_CHECK_CDD
         if (eSum < 0) {
           std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
@@ -8605,6 +8457,26 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
           eFace[iRow] = 1;
         }
       }
+#ifdef SANITY_CHECK_CDD_DISABLE
+      size_t n_error = 0;
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        bool test1 = false;
+        if (eFace[iRow] == 1) {
+          test1 = true;
+        }
+        long elem = iRow + 1;
+        cdd::set_type set = lp->equalityset;
+        bool test2 = cdd::set_member(elem, set);
+        std::cerr << "iRow=" << iRow << " test1=" << test1 << " test2=" << test2 << "\n";
+        if (test1 != test2) {
+          n_error += 1;
+        }
+      }
+      if (n_error > 0) {
+        std::cerr << "n_error=" << n_error << " so inherence to resolve\n";
+        throw TerminalException{1};
+      }
+#endif
       int nbIncd = eFace.count();
       if (nbIncd == 0) {
         std::cerr << "We have nbIncd=" << nbIncd
@@ -8651,5 +8523,6 @@ LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
   return eSol1;
 }
 
+// clang-format off
 #endif  // SRC_POLY_POLY_CDDLIB_H_
 // clang-format on
