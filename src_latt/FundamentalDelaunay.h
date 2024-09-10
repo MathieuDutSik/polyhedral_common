@@ -49,15 +49,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
                                     std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
-  std::vector<MyVector<T>> ListRelevantPoint;
-  for (int i = 0; i < dim; i++) {
-    MyVector<T> V1 = ZeroVector<T>(dim);
-    V1(i) = 1;
-    ListRelevantPoint.push_back(V1);
-    MyVector<T> V2 = ZeroVector<T>(dim);
-    V2(i) = -1;
-    ListRelevantPoint.push_back(V2);
-  }
+  std::vector<MyVector<T>> ListIneq_vect;
   auto DefiningInequality = [&](MyVector<T> const &eVect) -> MyVector<T> {
     MyVector<T> eIneq(1 + dim);
     T eSum = EvaluationQuadForm<T, T>(GramMat, eVect);
@@ -70,17 +62,20 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     }
     return eIneq;
   };
-  std::vector<MyVector<T>> ListIneq_vect;
-  for (auto & eVect : ListRelevantPoint) {
-    MyVector<T> nVect = DefiningInequality(eVect);
-    ListIneq_vect.push_back(nVect);
+  for (int i = 0; i < dim; i++) {
+    MyVector<T> V1 = ZeroVector<T>(dim);
+    V1(i) = 1;
+    ListIneq_vect.push_back(DefiningInequality(V1));
+    MyVector<T> V2 = ZeroVector<T>(dim);
+    V2(i) = -1;
+    ListIneq_vect.push_back(DefiningInequality(V2));
   }
   MyVector<T> TheRandomDirection = FuncRandomDirection<T>(dim + 1, 10);
   while (true) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     MicrosecondTime time;
 #endif
-    int nbVect = ListRelevantPoint.size();
+    int nbVect = ListIneq_vect.size();
     MyMatrix<T> ListIneq = MatrixFromVectorFamily(ListIneq_vect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|Building ListIneq|=" << time << " nbVect=" << nbVect << "\n";
@@ -102,9 +97,13 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       MyMatrix<Tint> RetEXT(nbVectTot, dim + 1);
       for (int iVect = 0; iVect < nbVectTot; iVect++) {
         RetEXT(iVect, 0) = 1;
-        for (int i = 0; i < dim; i++)
+        for (int i = 0; i < dim; i++) {
           RetEXT(iVect, 1 + i) = TheCVP.ListVect(iVect, i);
+        }
       }
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    os << "|Processing TheCVP 1|=" << time << "\n";
+#endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
       os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
          << RetEXT.rows() << " vertices\n";
@@ -114,13 +113,15 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       for (int iVect = 0; iVect < nbVectTot; iVect++) {
         MyVector<Tint> fVect = GetMatrixRow(TheCVP.ListVect, iVect);
         MyVector<T> fVect_T = UniversalVectorConversion<T, Tint>(fVect);
-        ListRelevantPoint.push_back(fVect_T);
         MyVector<T> nVect = DefiningInequality(fVect_T);
         ListIneq_vect.push_back(nVect);
       }
     }
+#ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
+    os << "|Processing TheCVP 2|=" << time << "\n";
+#endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
-    os << "|ListRelevantPoint|=" << ListRelevantPoint.size() << "\n";
+    os << "|ListIneq_vect|=" << ListIneq_vect.size() << "\n";
 #endif
   }
 }

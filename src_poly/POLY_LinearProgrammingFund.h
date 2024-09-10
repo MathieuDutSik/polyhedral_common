@@ -34,7 +34,6 @@ template <typename T> struct LpSolution {
   //
   MyVector<T> DirectSolution;
   MyVector<T> DirectSolutionExt;
-  Face eFace;
   std::string Answer;
 };
 
