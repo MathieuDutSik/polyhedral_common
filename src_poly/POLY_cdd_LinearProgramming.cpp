@@ -25,7 +25,6 @@ void process(std::string const &eFileFAC, std::string const &eFileIneq,
   LpSolution<T> eSol = CDD_LinearProgramming(TheEXT, eVect, std::cerr);
   if (OutFormat == "GAP") {
     os << "return rec(";
-    os << "answer:=\"" << eSol.Answer << "\",\n";
     os << "OptimalValue:=" << eSol.OptimalValue;
     if (eSol.PrimalDefined) {
       os << ",\n primal_solution:=" << StringVectorGAP(eSol.DirectSolution);
@@ -35,14 +34,13 @@ void process(std::string const &eFileFAC, std::string const &eFileIneq,
     }
     if (eSol.PrimalDefined && eSol.DualDefined) {
       os << ", face:=";
-      WriteFaceGAP(os, eSol.eFace);
+      Face eFace = ComputeFaceLpSolution(TheEXT, eSol);
+      WriteFaceGAP(os, eFace);
     }
-    os << ", rankDirectSol:=" << eSol.rankDirectSol << ");\n";
     os << ");\n";
     return;
   }
   if (OutFormat == "Oscar") {
-    os << eSol.Answer << "\n";
     os << eSol.OptimalValue << "\n";
     if (eSol.PrimalDefined) {
       WriteVector(os, eSol.DirectSolution);

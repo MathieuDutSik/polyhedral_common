@@ -516,6 +516,7 @@ typedef enum {
   dd_DualUnbounded
 } dd_LPStatusType;
 
+
 template <typename T> struct dd_lpdata {
   //  dd_DataFileType filename;
   dd_LPObjectiveType objective;
@@ -8329,94 +8330,64 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   MyVector<T> DirectSolutionExt = ReadVector<T>(is);
   eSol.DirectSolutionExt = DirectSolutionExt;
   //
-  std::string eAnswer;
-  is >> eAnswer;
-  eSol.Answer = eAnswer;
-  //
   CleanFile();
   return eSol;
 }
 
-template <typename T>
-LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
-                                    MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  cdd::dd_ErrorType error = cdd::dd_NoError;
-  cdd::dd_matrixdata<T> *M;
-  cdd::dd_LPSolverType solver =
-      cdd::dd_DualSimplex; /* either DualSimplex or CrissCross */
-  cdd::dd_lpdata<T>
-      *lp; /* pointer to LP data structure that is not visible by user. */
+template<typename T>
+std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, cdd::dd_lpdata<T> *lp, [[maybe_unused]] std::ostream& os) {
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
   cdd::dd_colrange j;
-  int d_input;
-  int nbRow, nbCol, idx;
-  std::vector<int> DualSolutionPos;
-  std::vector<T> DualSolutionVal;
-  std::vector<int> DirectSolutionPos;
-  std::vector<T> DirectSolutionVal;
-  M = cdd::MyMatrix_PolyFile2Matrix(TheEXT);
-  M->representation = cdd::dd_Inequality;
-  d_input = TheEXT.cols();
-  for (j = 1; j <= d_input; j++)
-    M->rowvec[j - 1] = eVect(j - 1);
-  lp = cdd::dd_Matrix2LP(M);
-  lp->objective = cdd::dd_LPmin;
-  nbRow = TheEXT.rows();
-  nbCol = TheEXT.cols();
-  dd_LPSolve(lp, solver, &error);
+  int idx;
   bool PrimalDefined = false;
   bool DualDefined = false;
-  std::string eAnswer;
   switch (lp->LPS) {
   case cdd::dd_Optimal:
     // Correspondence in cddlp.c: We have dual_solution, primal_solution and
     // optimal_value
     PrimalDefined = true;
     DualDefined = true;
-    eAnswer = "dd_Optimal";
     break;
   case cdd::dd_Inconsistent:
     // Corrrespondence in cddlp.c: We have dual_direction
     PrimalDefined = false;
     DualDefined = true;
-    eAnswer = "dd_Inconsistent";
     break;
   case cdd::dd_DualInconsistent:
     // Correspondence in cddlp.c: Nothing actually.
     PrimalDefined = true;
     DualDefined = false;
-    eAnswer = "dd_DualInconsistent";
     break;
   case cdd::dd_StrucDualInconsistent:
     // Correspondence in cddlp.c: We have primal_direction
     PrimalDefined = true;
     DualDefined = false;
-    eAnswer = "dd_StructDualInconsistent";
     break;
   case cdd::dd_LPSundecided:
     // Programming of this case is missing. Please work from cdd code
-    std::cerr
-        << "Programming of the case dd_LPSundecided is missing. Please work\n";
-    throw TerminalException{1};
+#ifdef DEBUG_CDD
+    os << "Programming of the case dd_LPSundecided is missing\n";
+#endif
+    return {};
   case cdd::dd_StrucInconsistent:
-    // Programming of this case is missing. Please work from cdd code
-    std::cerr << "Programming of the case dd_StructInconsistent is missing. "
-                 "Please work\n";
-    throw TerminalException{1};
+#ifdef DEBUG_CDD
+    os << "Programming of the case dd_StructInconsistent is missing\n";
+#endif
+    return {};
   case cdd::dd_Unbounded:
-    // Programming of this case is missing. Please work from cdd code
-    std::cerr
-        << "Programming of the case dd_Unbounded is missing. Please work\n";
-    throw TerminalException{1};
+#ifdef DEBUG_CDD
+    os << "Programming of the case dd_Unbounded is missing\n";
+#endif
+    return {};
   case cdd::dd_DualUnbounded:
-    // Programming of this case is missing. Please work from cdd code
-    std::cerr
-        << "Programming of the case dd_Unbounded is missing. Please work\n";
-    throw TerminalException{1};
+#ifdef DEBUG_CDD
+    os << "Programming of the case dd_Unbounded is missing\n";
+#endif
+    return {};
   }
   LpSolution<T> eSol;
   eSol.method = "cdd";
-  eSol.Answer = eAnswer;
   if (PrimalDefined) {
     MyVector<T> eVectDirSol(nbCol - 1);
     MyVector<T> eVectDirSolExt(nbCol);
@@ -8440,11 +8411,53 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
     eSol.DualDefined = true;
     eSol.DualSolution = eVectDualSolution;
   }
-  if (PrimalDefined && DualDefined)
+  if (PrimalDefined && DualDefined) {
     eSol.OptimalValue = lp->optvalue;
-  dd_FreeMatrix(M);
-  dd_FreeLPData(lp);
+  }
   return eSol;
+}
+
+template <typename T>
+LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
+                                    MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  cdd::dd_ErrorType error = cdd::dd_NoError;
+  cdd::dd_matrixdata<T> *M;
+  cdd::dd_LPSolverType solver =
+      cdd::dd_DualSimplex; /* either DualSimplex or CrissCross */
+  cdd::dd_lpdata<T>
+      *lp; /* pointer to LP data structure that is not visible by user. */
+  M = cdd::MyMatrix_PolyFile2Matrix(TheEXT);
+  M->representation = cdd::dd_Inequality;
+  cdd::dd_colrange j;
+  cdd::dd_colrange d_input = TheEXT.cols();
+  for (j = 1; j <= d_input; j++)
+    M->rowvec[j - 1] = eVect(j - 1);
+  lp = cdd::dd_Matrix2LP(M);
+  lp->objective = cdd::dd_LPmin;
+  dd_LPSolve(lp, solver, &error);
+  std::optional<LpSolution<T>> opt = GetLpSolutionFromLpData(TheEXT, lp, os);
+  if (opt) {
+    LpSolution<T> const& eSol = *opt;
+    dd_FreeMatrix(M);
+    dd_FreeLPData(lp);
+    return eSol;
+  } else {
+    throw TerminalException{1};
+  }
+}
+
+template <typename T, typename Tfloat>
+std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &TheEXT, MyVector<T> const &eVect,
+                                                       cdd::dd_lpdata<Tfloat> *lp,
+                                                       [[maybe_unused]] std::ostream& os) {
+  if (lp->LPS != cdd::dd_Optimal) {
+#ifdef DEBUG_CDD
+    os << "CDD: We did not get an optinal solution. Therefore we cannot lift solution\n";
+#endif
+    return {};
+  }
+
 }
 
 template <typename T>

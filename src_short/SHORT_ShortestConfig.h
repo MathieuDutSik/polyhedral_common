@@ -28,6 +28,14 @@
 #define DEBUG_SHORTEST_CONFIG
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_SHORTEST_CONFIG
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SHORTEST_CONFIG
+#endif
+
 template <typename Tint>
 MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
   int nbRow = M.rows();
@@ -254,10 +262,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "We have optimal value\n";
 #endif
-      if (eSol.Answer != "dd_Optimal") {
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
+      if (!eSol.PrimalDefined || !eSol.DualDefined) {
         std::cerr << "We have a real problem to solve. Please debug\n";
         throw TerminalException{1};
       }
+#endif
       if (nbIter == 1)
         eOptimalPrev = eOptimal;
       eOptimal = eSol.OptimalValue;

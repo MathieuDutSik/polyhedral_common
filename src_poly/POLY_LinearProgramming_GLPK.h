@@ -705,7 +705,6 @@ LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   //
   eRes.DirectSolution = TheVertRed;
   eRes.DirectSolutionExt = TheVert;
-  eRes.Answer = "dd_Optimal";
   return eRes;
 }
 
