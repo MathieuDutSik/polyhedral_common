@@ -687,14 +687,13 @@ LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   for (int i = 0; i < nbCol - 1; i++)
     TheVertRed(i) = TheVert(i + 1);
   int nbRow = ListIneq.rows();
-  Face eFace(nbRow);
   for (int iRow = 0; iRow < nbRow; iRow++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, iRow);
     T scal = ScalarProduct(eRow, TheVert);
-    if (scal < 0)
+    if (scal < 0) {
+      // That should not happen. It means that we need to call the exact arithmetic.
       return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-    if (scal == 0)
-      eFace[iRow] = 1;
+    }
   }
   //
   LpSolution<T> eRes;
@@ -706,7 +705,6 @@ LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   //
   eRes.DirectSolution = TheVertRed;
   eRes.DirectSolutionExt = TheVert;
-  eRes.eFace = eFace;
   eRes.Answer = "dd_Optimal";
   return eRes;
 }

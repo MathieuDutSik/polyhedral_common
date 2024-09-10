@@ -8,6 +8,18 @@
 #include <string>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LINEAR_PROGRAMMING_FUND
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_LINEAR_PROGRAMMING_FUND
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LINEAR_PROGRAMMING_FUND
+#endif
+
 template <typename T> struct LpSolutionSimple {
   bool PrimalDefined;
   T OptimalValue;
@@ -47,6 +59,57 @@ void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
   os << "DirectSolutionExt=" << StringVector(eSol.DirectSolutionExt) << "\n";
   os << "Answer=" << eSol.Answer << "\n";
+}
+
+template<typename T>
+Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  Face eFace(nbRow);
+#ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
+  if (!eSol.DualDefined || !eSol.PrimalDefined) {
+    std::cerr << "We should have DualDefined and PrimalDefined for the computation to make sense\n";
+    throw TerminalException{1};
+  }
+#endif
+  // The comparison with values makes sense only of the dual program is
+  // defined. Otherwise, what we may get is actually a primal_direction and
+  // it would just not make sense with negative values for eSum.
+#ifdef TIMINGS_LINEAR_PROGRAMMING_FUND
+  MicrosecondTime time;
+#endif
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    T eSum(0);
+    for (int iCol = 0; iCol < nbCol; iCol++) {
+      eSum += eSol.DirectSolutionExt(iCol) * EXT(iRow, iCol);
+    }
+#ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
+    if (eSum < 0) {
+      std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
+                << " eSum=" << eSum << "\n";
+      std::cerr << "DualDefined=" << eSol.DualDefined
+                << " PrimalDefined=" << eSol.PrimalDefined << "\n";
+      std::cerr << "DirectSolutionExt =";
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        std::cerr << " " << eSol.DirectSolutionExt(iCol);
+      std::cerr << "\n";
+      std::cerr << "EXT=\n";
+      WriteMatrix(std::cerr, EXT);
+      std::cerr << "eVect=\n";
+      WriteVectorNoDim(std::cerr, eVect);
+      std::cerr << "Obtained vertex solution is not valid\n";
+      std::cerr << "Please debug. Before calling TerminalEnding\n";
+      throw TerminalException{1};
+    }
+#endif
+    if (eSum == 0) {
+      eFace[iRow] = 1;
+    }
+  }
+#ifdef TIMINGS_LINEAR_PROGRAMMING_FUND
+  std::cerr << "|eFace|=" << time << "\n";
+#endif
+  return eFace;
 }
 
 // clang-format off

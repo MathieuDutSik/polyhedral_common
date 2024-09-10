@@ -881,7 +881,8 @@ LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
   LpSolution<T> TheLP = GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (TheLP.method == "cdd")
     return TheLP;
-  std::vector<int> ListRowSelect = FaceToVector<int>(TheLP.eFace);
+  Face eFace = ComputeFaceLpSolution(ListIneq, TheLP);
+  std::vector<int> ListRowSelect = FaceToVector<int>(eFace);
   MyMatrix<T> ListIneq_Incd = SelectRow(ListIneq, ListRowSelect);
   MyVector<T> eVectTest = ToBeMinimized;
   eVectTest(0) -= TheLP.OptimalValue;

@@ -8447,58 +8447,6 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   return eSol;
 }
 
-template<typename T>
-Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
-  int nbRow = EXT.rows();
-  Face eFace(nbRow);
-#ifdef SANITY_CHECK_CDD
-  if (!eSol.DualDefined || !eSol.PrimalDefined) {
-    std::cerr << "We should have DualDefined and PrimalDefined for the computation to make sense\n";
-    throw TerminalException{1};
-  }
-#endif
-  // The comparison with values makes sense only of the dual program is
-  // defined. Otherwise, what we may get is actually a primal_direction and
-  // it would just not make sense with negative values for eSum.
-#ifdef TIMINGS_CDD
-  MicrosecondTime time;
-#endif
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    T eSum(0);
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      eSum += eSol.DirectSolutionExt(iCol) * TheEXT(iRow, iCol);
-    }
-#ifdef SANITY_CHECK_CDD
-    if (eSum < 0) {
-      std::cerr << "CDD_LinearProgramming Error iRow=" << iRow
-                << " eSum=" << eSum << "\n";
-      std::cerr << "DualDefined=" << DualDefined
-                << " PrimalDefined=" << PrimalDefined << "\n";
-      std::cerr << "eVectDirSolExt =";
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        std::cerr << " " << eVectDirSolExt(iCol);
-      std::cerr << "\n";
-      std::cerr << "TheEXT=\n";
-      WriteMatrix(std::cerr, TheEXT);
-      std::cerr << "eVect=\n";
-      WriteVectorNoDim(std::cerr, eVect);
-      std::cerr << "Obtained vertex solution is not valid\n";
-      std::cerr << "Please debug. Before calling TerminalEnding\n";
-      throw TerminalException{1};
-    }
-#endif
-    if (eSum == 0) {
-      eFace[iRow] = 1;
-    }
-  }
-#ifdef TIMINGS_CDD
-  os << "|eFace|=" << time << "\n";
-#endif
-  return eFace;
-}
-
-
-
 template <typename T>
 LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
                                               MyVector<T> const &eVect,
