@@ -6041,8 +6041,9 @@ void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
       lp->LPS = lpf->LPS;
       lp->re = lpf->re;
       lp->se = se;
-      for (j = 1; j <= lp->d; j++)
+      for (j = 1; j <= lp->d; j++) {
         lp->nbindex[j] = lpf->nbindex[j];
+      }
     }
     for (i = 1; i <= 5; i++)
       lp->pivots[i - 1] += lpf->pivots[i - 1];
@@ -8389,27 +8390,27 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, cdd
   LpSolution<T> eSol;
   eSol.method = "cdd";
   if (PrimalDefined) {
-    MyVector<T> eVectDirSol(nbCol - 1);
-    MyVector<T> eVectDirSolExt(nbCol);
-    eVectDirSolExt(0) = 1;
+    MyVector<T> DirectSolution(nbCol - 1);
+    MyVector<T> DirectSolutionExt(nbCol);
+    DirectSolutionExt(0) = 1;
     for (j = 1; j < lp->d; j++) {
-      eVectDirSol(j - 1) = lp->sol[j];
-      eVectDirSolExt(j) = lp->sol[j];
+      DirectSolution(j - 1) = lp->sol[j];
+      DirectSolutionExt(j) = lp->sol[j];
     }
     eSol.PrimalDefined = true;
-    eSol.DirectSolution = eVectDirSol;
-    eSol.DirectSolutionExt = eVectDirSolExt;
+    eSol.DirectSolution = DirectSolution;
+    eSol.DirectSolutionExt = DirectSolutionExt;
   }
-  MyVector<T> eVectDualSolution = ZeroVector<T>(nbRow);
+  MyVector<T> DualSolution = ZeroVector<T>(nbRow);
   if (DualDefined) {
     for (j = 1; j < lp->d; j++) {
       idx = lp->nbindex[j + 1];
       if (idx > 0) {
-        eVectDualSolution(idx - 1) = lp->dsol[j];
+        DualSolution(idx - 1) = lp->dsol[j];
       }
     }
     eSol.DualDefined = true;
-    eSol.DualSolution = eVectDualSolution;
+    eSol.DualSolution = DualSolution;
   }
   if (PrimalDefined && DualDefined) {
     eSol.OptimalValue = lp->optvalue;
@@ -8431,8 +8432,9 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
   M->representation = cdd::dd_Inequality;
   cdd::dd_colrange j;
   cdd::dd_colrange d_input = TheEXT.cols();
-  for (j = 1; j <= d_input; j++)
-    M->rowvec[j - 1] = eVect(j - 1);
+  for (j = 0; j < d_input; j++) {
+    M->rowvec[j] = eVect(j);
+  }
   lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
   dd_LPSolve(lp, solver, &error);
@@ -8448,16 +8450,109 @@ LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
 }
 
 template <typename T, typename Tfloat>
-std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &TheEXT, MyVector<T> const &eVect,
+std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
                                                        cdd::dd_lpdata<Tfloat> *lp,
                                                        [[maybe_unused]] std::ostream& os) {
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
   if (lp->LPS != cdd::dd_Optimal) {
 #ifdef DEBUG_CDD
     os << "CDD: We did not get an optinal solution. Therefore we cannot lift solution\n";
 #endif
     return {};
   }
-
+  // Now using the dual solution to find the exact vertex.
+  cdd::dd_colrange i, j;
+  cdd::dd_colrange d = lp->d;
+  MyVector<T> V(d-1);
+  MyMatrix<T> M(d-1,d-1);
+  for (j=1; j<d; j++) {
+    long idx = lp->nbindex[j + 1];
+    V(j-1) = EXT(idx-1, 0);
+    for (i=0; i<d-1; i++) {
+      M(i, j-1) = - EXT(idx-1, i+1);
+    }
+  }
+  std::optional<MyVector<T>> optA = SolutionMat(M, V);
+  if (*optA) {
+#ifdef DEBUG_CDD
+    os << "CDD: Could not find a solution to SolutionMat(M, V)\n";
+#endif
+    return {};
+  }
+  //
+  // Getting the direct solution and testing it.
+  //
+  MyVector<T> const& DirectSolution = *optA;
+  MyVector<T> DirectSolutionExt(nbCol);
+  DirectSolutionExt(0) = 1;
+  for (int i=0; i<nbCol-1; i++) {
+    DirectSolutionExt(i+1) = DirectSolution(i);
+  }
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    T eSum(0);
+    for (int iCol=0; iCol<nbCol; iCol++) {
+      eSum += DirectSolutionExt(iCol) * EXT(iRow, iCol);
+    }
+    if (eSum < 0) {
+#ifdef DEBUG_CDD
+      os << "CDD: Not an interior point at iRow=" << iRow << " eSum=" << eSum << "\n";
+#endif
+      return {};
+    }
+  }
+  T objDirect(0);
+  for (int iCol=0; iCol<nbCol; iCol++) {
+    objDirect += DirectSolutionExt(iCol) * eVect(iCol);
+  }
+  //
+  // Getting the dual solution
+  //
+  MyVector<T> eVectRed(nbCol-1);
+  for (int iCol=0; iCol<nbCol-1; iCol++) {
+    eVectRed(iCol) = eVect(iCol+1);
+  }
+  MyMatrix<T> M2(nbCol-1, nbCol-1);
+  for (j=1; j<d; j++) {
+    long idx = lp->nbindex[j + 1];
+    for (int iCol=0; iCol<nbCol-1; iCol++) {
+      M2(j-1, iCol) = EXT(idx-1, iCol+1);
+    }
+  }
+  std::optional<MyVector<T>> optB = SolutionMat(M2, eVectRed);
+  if (*optB) {
+#ifdef DEBUG_CDD
+    os << "CDD: No solution found for SolutionMat(M2, eVectRed)\n";
+#endif
+    return {};
+  }
+  MyVector<T> const& partDualSolution = *optB;
+  MyVector<T> DualSolution = ZeroVector<T>(nbRow);
+  T objDual = eVect(0);
+  for (j=1; j<d; j++) {
+    long idx = lp->nbindex[j + 1];
+    T scal = - partDualSolution(j-1);
+    DualSolution(idx-1) = scal;
+    objDual += scal * EXT(idx-1,0);
+  }
+  if (objDual != objDirect) {
+#ifdef DEBUG_CDD
+    os << "CDD: objDual=" << objDual << " objDirect=" << objDirect << "\n";
+#endif
+    return {};
+  }
+#ifdef DEBUG_CDD
+  os << "CDD: An apparently valid solution have been found\n";
+#endif
+  LpSolution<T> eSol;
+  eSol.method = "lift";
+  eSol.PrimalDefined = true;
+  eSol.DualDefined = true;
+  eSol.DualSolution = DualSolution;
+  eSol.OptimalValue = objDirect;
+  eSol.DirectSolution = DirectSolution;
+  eSol.DirectSolutionExt = DirectSolutionExt;
+  return eSol;
 }
 
 template <typename T>

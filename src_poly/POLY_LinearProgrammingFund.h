@@ -110,6 +110,35 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
   return eFace;
 }
 
+// If eVect = C + sum_i alpha_i v_i
+// if v_i.x >= 0 and alpha_i >= 0 then 
+template<typename T>
+std::pair<bool, T> CheckDualSolutionGetOptimal(MyMatrix<T> const& EXT, MyVector<T> const& eVect, LpSolution<T> const& eSol) {
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  MyVector<T> V(nbCol-1);
+  T objDual = eVect(0);
+  for (int iCol=0; iCol<nbCol-1; iCol++) {
+    V(iCol) = eVect(iCol+1);
+  }
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    T scal = eSol.DualSolution(iRow);
+    for (int iCol=0; iCol<nbCol-1; iCol++) {
+      V(iCol) += scal * EXT(iRow, iCol+1);
+    }
+    objDual += scal * EXT(iRow, 0);
+  }
+  auto iife_is_corr=[&]() -> bool {
+    for (int iCol=0; iCol<nbCol-1; iCol++) {
+      if (V(iCol) != 0) {
+        return false;
+      }
+    }
+  };
+  bool is_corr = iife_is_corr();
+  return {is_corr, objDual};
+}
+
 // clang-format off
 #endif  // SRC_POLY_POLY_LINEARPROGRAMMINGFUND_H_
 // clang-format on
