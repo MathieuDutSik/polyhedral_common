@@ -8433,7 +8433,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   int nbCol = EXT.cols();
   if (lp->LPS != cdd::dd_Optimal) {
 #ifdef DEBUG_CDD
-    os << "CDD: We did not get an optinal solution. Therefore we cannot lift solution\n";
+    os << "CDD: LIFT ERROR, We did not get an optinal solution. Therefore we cannot lift solution\n";
 #endif
     return {};
   }
@@ -8452,7 +8452,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   std::optional<MyVector<T>> optA = SolutionMat(M, V);
   if (!optA) {
 #ifdef DEBUG_CDD
-    os << "CDD: Could not find a solution to SolutionMat(M, V)\n";
+    os << "CDD: LIFT ERROR, Could not find a solution to SolutionMat(M, V)\n";
 #endif
     return {};
   }
@@ -8472,7 +8472,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
     }
     if (eSum < 0) {
 #ifdef DEBUG_CDD
-      os << "CDD: Not an interior point at iRow=" << iRow << " eSum=" << eSum << "\n";
+      os << "CDD: LIFT ERROR, Not an interior point at iRow=" << iRow << " eSum=" << eSum << "\n";
 #endif
       return {};
     }
@@ -8498,7 +8498,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   std::optional<MyVector<T>> optB = SolutionMat(M2, eVectRed);
   if (!optB) {
 #ifdef DEBUG_CDD
-    os << "CDD: No solution found for SolutionMat(M2, eVectRed)\n";
+    os << "CDD: LIFT ERROR: No solution found for SolutionMat(M2, eVectRed)\n";
 #endif
     return {};
   }
@@ -8509,11 +8509,17 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
     long idx = lp->nbindex[j + 1];
     T scal = - partDualSolution(j-1);
     DualSolution(idx-1) = scal;
+    if (scal > 0) {
+#ifdef DEBUG_CDD
+      os << "CDD: LIFT ERROR, scal=" << scal << "\n";
+#endif
+      return {};
+    }
     objDual += scal * EXT(idx-1,0);
   }
   if (objDual != objDirect) {
 #ifdef DEBUG_CDD
-    os << "CDD: objDual=" << objDual << " objDirect=" << objDirect << "\n";
+    os << "CDD: LIFT ERROR, objDual=" << objDual << " objDirect=" << objDirect << "\n";
 #endif
     return {};
   }
@@ -8572,6 +8578,10 @@ LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
         std::cerr << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
         throw TerminalException{1};
       }
+      os << "DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
+      os << "DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
+      os << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
+      os << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
     } else {
       std::cerr << "We should have been able to lift the solution\n";
       throw TerminalException{1};

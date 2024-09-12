@@ -753,7 +753,7 @@ public:
   }
   resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) {
     if (IsIntegralVector(eV)) {
-      T TheNorm = 0;
+      T TheNorm(0);
       MyMatrix<Tint> ListVect(1, dim);
       for (int i = 0; i < dim; i++)
         ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
@@ -773,14 +773,11 @@ public:
         ListClos(iVect, i) = x(i);
       }
     }
-    MyVector<T> eDiff(dim);
-    for (int i = 0; i < dim; i++)
-      eDiff(i) = ListClos(0, i) - eV(i);
-    T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
+    T TheNorm = info.minimum;
 #ifdef DEBUG_SHVEC_DISABLED
     for (int iVect = 0; iVect < nbVect; iVect++) {
       for (int i = 0; i < dim; i++)
-        eDiff(i) = ListClos(iVect, i) - eV(i);
+        eDiff(i) = ListClos(Viect, i) - eV(i);
       if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
