@@ -88,6 +88,9 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     assert(eSol.PrimalDefined);
     MyVector<T> eVect = eSol.DirectSolution;
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
+    // There has been an attempt to accelerate the computation by stopping
+    // when we found a vector of norm lower than TheNorm. This turn out
+    // badly as the number of iterations grow immensely.
     resultCVP<T, Tint> TheCVP = solver.SingleSolver(eVect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|Computing TheCVP|=" << time << "\n";

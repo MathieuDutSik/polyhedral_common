@@ -793,7 +793,6 @@ public:
   ResultShortest<Tint> ShortestAtDistance(MyVector<T> const& eV, T const& TheNorm) {
     if (IsIntegralVector(eV)) {
       MyVector<Tint> eV_tint = UniversalVectorConversion<Tint,T>(eV);
-      MyMatrix<Tint> M;
       return {{}, eV_tint};
     }
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
