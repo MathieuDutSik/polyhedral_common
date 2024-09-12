@@ -697,7 +697,6 @@ std::optional<LpSolution<T>> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   }
   //
   LpSolution<T> eRes;
-  eRes.method = "glpk";
   eRes.PrimalDefined = true;
   eRes.DualDefined = true;
   //  MyVector<T> DualSolution;

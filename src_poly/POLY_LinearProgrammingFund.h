@@ -36,7 +36,6 @@ template <typename T> struct LpSolutionSimple {
 };
 
 template <typename T> struct LpSolution {
-  std::string method;
   bool PrimalDefined = false;
   bool DualDefined = false;
   //
@@ -50,7 +49,6 @@ template <typename T> struct LpSolution {
 
 template <typename T>
 void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
-  os << "method=" << eSol.method << "\n";
   os << "PrimalDefined=" << eSol.PrimalDefined << "\n";
   os << "DualDefined=" << eSol.DualDefined << "\n";
   os << "DualSolution=" << StringVector(eSol.DualSolution) << "\n";

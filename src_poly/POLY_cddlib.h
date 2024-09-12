@@ -8309,7 +8309,6 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   //
   std::ifstream is(FileCpp);
   LpSolution<T> eSol;
-  eSol.method = "cdd";
   bool PrimalDefined;
   is >> PrimalDefined;
   eSol.PrimalDefined = PrimalDefined;
@@ -8388,7 +8387,6 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, [[m
     return {};
   }
   LpSolution<T> eSol;
-  eSol.method = "cdd";
   if (PrimalDefined) {
     MyVector<T> DirectSolution(nbCol - 1);
     MyVector<T> DirectSolutionExt(nbCol);
@@ -8527,7 +8525,6 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   os << "CDD: An apparently valid solution has been found\n";
 #endif
   LpSolution<T> eSol;
-  eSol.method = "lift";
   eSol.PrimalDefined = true;
   eSol.DualDefined = true;
   eSol.DualSolution = DualSolution;
