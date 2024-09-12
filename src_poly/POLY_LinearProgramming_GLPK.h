@@ -617,9 +617,9 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
 }
 
 template <typename T>
-LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
-                                     MyVector<T> const &ToBeMinimized,
-                                     std::ostream &os) {
+std::optional<LpSolution<T>> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
+                                                    MyVector<T> const &ToBeMinimized,
+                                                    std::ostream &os) {
   int dimTot = ToBeMinimized.size();
   MyMatrix<T> ListEqua(0, dimTot);
   GLPKoption eGLPKoption;
@@ -692,7 +692,7 @@ LpSolution<T> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
     T scal = ScalarProduct(eRow, TheVert);
     if (scal < 0) {
       // That should not happen. It means that we need to call the exact arithmetic.
-      return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+      return {};
     }
   }
   //
