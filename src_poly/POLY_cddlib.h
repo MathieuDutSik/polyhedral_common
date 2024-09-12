@@ -8336,7 +8336,7 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
 }
 
 template<typename T>
-std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, cdd::dd_lpdata<T> *lp, [[maybe_unused]] std::ostream& os) {
+std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, [[maybe_unused]] MyVector<T> const& eVect, cdd::dd_lpdata<T> *lp, [[maybe_unused]] std::ostream& os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   cdd::dd_colrange j;
@@ -8415,38 +8415,14 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, cdd
   if (PrimalDefined && DualDefined) {
     eSol.OptimalValue = lp->optvalue;
   }
-  return eSol;
-}
-
-template <typename T>
-LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &TheEXT,
-                                    MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
-  static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  cdd::dd_ErrorType error = cdd::dd_NoError;
-  cdd::dd_matrixdata<T> *M;
-  cdd::dd_LPSolverType solver =
-      cdd::dd_DualSimplex; /* either DualSimplex or CrissCross */
-  cdd::dd_lpdata<T>
-      *lp; /* pointer to LP data structure that is not visible by user. */
-  M = cdd::MyMatrix_PolyFile2Matrix(TheEXT);
-  M->representation = cdd::dd_Inequality;
-  cdd::dd_colrange j;
-  cdd::dd_colrange d_input = TheEXT.cols();
-  for (j = 0; j < d_input; j++) {
-    M->rowvec[j] = eVect(j);
-  }
-  lp = cdd::dd_Matrix2LP(M);
-  lp->objective = cdd::dd_LPmin;
-  dd_LPSolve(lp, solver, &error);
-  std::optional<LpSolution<T>> opt = GetLpSolutionFromLpData(TheEXT, lp, os);
-  if (opt) {
-    LpSolution<T> const& eSol = *opt;
-    dd_FreeMatrix(M);
-    dd_FreeLPData(lp);
-    return eSol;
-  } else {
+#ifdef SANITY_CHECK_CDD
+  bool test = CheckDualSolutionGetOptimal(EXT, eVect, eSol);
+  if (!test) {
+    std::cerr << "This is not a valid dual solution\n";
     throw TerminalException{1};
   }
+#endif
+  return eSol;
 }
 
 template <typename T, typename Tfloat>
@@ -8474,7 +8450,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
     }
   }
   std::optional<MyVector<T>> optA = SolutionMat(M, V);
-  if (*optA) {
+  if (!optA) {
 #ifdef DEBUG_CDD
     os << "CDD: Could not find a solution to SolutionMat(M, V)\n";
 #endif
@@ -8520,7 +8496,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
     }
   }
   std::optional<MyVector<T>> optB = SolutionMat(M2, eVectRed);
-  if (*optB) {
+  if (!optB) {
 #ifdef DEBUG_CDD
     os << "CDD: No solution found for SolutionMat(M2, eVectRed)\n";
 #endif
@@ -8542,7 +8518,7 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
     return {};
   }
 #ifdef DEBUG_CDD
-  os << "CDD: An apparently valid solution have been found\n";
+  os << "CDD: An apparently valid solution has been found\n";
 #endif
   LpSolution<T> eSol;
   eSol.method = "lift";
@@ -8554,6 +8530,107 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   eSol.DirectSolutionExt = DirectSolutionExt;
   return eSol;
 }
+
+template <typename T>
+LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
+                                             MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  cdd::dd_ErrorType error = cdd::dd_NoError;
+  cdd::dd_matrixdata<T> *M;
+  cdd::dd_LPSolverType solver =
+      cdd::dd_DualSimplex; /* either DualSimplex or CrissCross */
+  cdd::dd_lpdata<T>
+      *lp; /* pointer to LP data structure that is not visible by user. */
+  M = cdd::MyMatrix_PolyFile2Matrix(EXT);
+  M->representation = cdd::dd_Inequality;
+  cdd::dd_colrange j;
+  cdd::dd_colrange d_input = EXT.cols();
+  for (j = 0; j < d_input; j++) {
+    M->rowvec[j] = eVect(j);
+  }
+  lp = cdd::dd_Matrix2LP(M);
+  lp->objective = cdd::dd_LPmin;
+  dd_LPSolve(lp, solver, &error);
+  std::optional<LpSolution<T>> optA = GetLpSolutionFromLpData(EXT, eVect, lp, os);
+  if (optA) {
+    LpSolution<T> const& eSolA = *optA;
+#ifdef DEBUG_CDD
+    std::optional<LpSolution<T>> optB = LiftFloatingPointSolution(EXT, eVect, lp, os);
+    if (optB) {
+      LpSolution<T> const& eSolB = *optB;
+      if (eSolB.OptimalValue != eSolA.OptimalValue) {
+        std::cerr << "We should have the same optimal value\n";
+        throw TerminalException{1};
+      }
+      if (eSolA.DualSolution != eSolB.DualSolution) {
+        std::cerr << "DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
+        std::cerr << "DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
+        throw TerminalException{1};
+      }
+      if (eSolA.DirectSolution != eSolB.DirectSolution) {
+        std::cerr << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
+        std::cerr << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
+        throw TerminalException{1};
+      }
+    } else {
+      std::cerr << "We should have been able to lift the solution\n";
+      throw TerminalException{1};
+    }
+#endif
+    dd_FreeMatrix(M);
+    dd_FreeLPData(lp);
+    return eSolA;
+  } else {
+    throw TerminalException{1};
+  }
+}
+
+template <typename T, typename Tfloat>
+LpSolution<T> CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT,
+                                             MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+  static_assert(is_ring_field<T>::value, "Requires T to be a field");
+  MyMatrix<Tfloat> EXT_float = UniversalMatrixConversion<Tfloat,T>(EXT);
+  cdd::dd_ErrorType error = cdd::dd_NoError;
+  cdd::dd_matrixdata<Tfloat> *M;
+  cdd::dd_LPSolverType solver =
+      cdd::dd_DualSimplex; /* either DualSimplex or CrissCross */
+  cdd::dd_lpdata<Tfloat>
+      *lp; /* pointer to LP data structure that is not visible by user. */
+  M = cdd::MyMatrix_PolyFile2Matrix(EXT_float);
+  M->representation = cdd::dd_Inequality;
+  cdd::dd_colrange j;
+  cdd::dd_colrange d_input = EXT.cols();
+  for (j = 0; j < d_input; j++) {
+    M->rowvec[j] = UniversalScalarConversion<Tfloat,T>(eVect(j));
+  }
+  lp = cdd::dd_Matrix2LP(M);
+  lp->objective = cdd::dd_LPmin;
+  dd_LPSolve(lp, solver, &error);
+  std::optional<LpSolution<T>> optB = LiftFloatingPointSolution<T,Tfloat>(EXT, eVect, lp, os);
+  if (optB) {
+#ifdef DEBUG_CDD
+    os << "CDD: The lifing of floating point solution went nicely\n";
+#endif
+    return *optB;
+  }
+  return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
+}
+
+
+
+
+template <typename T>
+LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT,
+                                    MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+  if (EXT.cols() < 4) {
+    return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
+  }
+  return CDD_LinearProgramming_exact_V2<T,double>(EXT, eVect, os);
+}
+
+
+
+
 
 template <typename T>
 LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
