@@ -93,8 +93,6 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
       std::cerr << "\n";
       std::cerr << "EXT=\n";
       WriteMatrix(std::cerr, EXT);
-      std::cerr << "eVect=\n";
-      WriteVectorNoDim(std::cerr, eVect);
       std::cerr << "Obtained vertex solution is not valid\n";
       std::cerr << "Please debug. Before calling TerminalEnding\n";
       throw TerminalException{1};
