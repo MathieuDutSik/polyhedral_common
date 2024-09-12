@@ -516,7 +516,6 @@ ResultShortest<Tint> computeTestShortest(const T_shvec_request<T> &request) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeTestShortest, begin\n";
 #endif
-  const MyVector<T> &C = request.coset;
   const bool &central = request.central;
   std::vector<MyVector<Tint>> shortest;
   std::optional<MyVector<Tint>> better_vector;
@@ -802,7 +801,7 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.bound = TheNorm;
-    ResultShortest<Tint> res = computeTestShortest(request);
+    ResultShortest<Tint> res = computeTestShortest<T,Tint>(request);
     if (res.better_vector) {
       MyVector<Tint> const& short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
