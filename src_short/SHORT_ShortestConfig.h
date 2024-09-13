@@ -294,7 +294,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         return eRes;
       }
       MyVector<T> eVectEmb = eSol.DirectSolution;
-      MyVector<T> rVect = eSol.DirectSolutionExt;
+      MyVector<T> rVect = GetDirectSolutionExt(eSol);
       MyMatrix<T> eMatSec = GetMatrixFromBasis(TheBasis, eVectEmb);
       //
       // Some checks

@@ -555,8 +555,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(
     MyVector<T> V = GetMatrixRow(Subspace1, j_row);
     AssignMatrixRow(Subspace2, i_row, V);
   }
-  std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
-      helper.G, Subspace1, helper.G, Subspace2);
+  std::optional<MyMatrix<T>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(helper.G, Subspace1, helper.G, Subspace2, os);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!opt) {
     std::cerr << "We should have opt well defined\n";

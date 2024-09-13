@@ -1293,9 +1293,10 @@ bool TestCriterionNonDegenerate(
   int rnk_incd = RankMat(MatIncd1);
   os << "LP: rnk_incd=" << rnk_incd << "\n";
   std::vector<MyVector<T>> vect_incd2;
+  MyVector<T> DirectSolutionExt = GetDirectSolutionExt(eSol);
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
-    T scal = eRow.dot(eSol.DirectSolutionExt);
+    T scal = eRow.dot(DirectSolutionExt);
     if (scal < 0) {
       std::cerr << "The scalar product is negative, which is not allowed\n";
       throw TerminalException{1};

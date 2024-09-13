@@ -1367,20 +1367,6 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   throw TerminalException{1};
 }
 
-template <typename T> std::string StringStdVectorGAP(std::vector<T> const &V) {
-  std::ostringstream os;
-  os << "[";
-  bool IsFirst = true;
-  for (auto &val : V) {
-    if (!IsFirst)
-      os << ",";
-    IsFirst = false;
-    os << val;
-  }
-  os << "]";
-  return os.str();
-}
-
 template <typename T, typename Tint, typename Tgroup, typename Fvertex,
           typename Fisom, typename Fincrease>
 void LORENTZ_RunEdgewalkAlgorithm_Kernel(
@@ -1411,7 +1397,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt =
             LORENTZ_TestEquivalence<T, Tint, Tgroup>(G, vertFull1, G,
-                                                     vertFull2);
+                                                     vertFull2, os);
         if (equiv_opt) {
 #ifdef DEBUG_ENUM_PROCESS
           os << "Find some isomorphism\n";
@@ -1444,8 +1430,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
        << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
 #endif
     std::vector<Telt> LGenIntegral;
-    for (auto &eGen_Mat :
-         LORENTZ_GetStabilizerGenerator<T, Tint, Tgroup>(G, vertFull1)) {
+    std::vector<MyMatrix<T>> LGen = LORENTZ_GetStabilizerGenerator<T, Tint, Tgroup>(G, vertFull1, os);
+    for (auto &eGen_Mat : LGen) {
       bool test = f_isom(UniversalMatrixConversion<Tint, T>(eGen_Mat));
       if (test) {
 #ifdef DEBUG_ENUM_PROCESS
@@ -1756,7 +1742,7 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt =
-          LORENTZ_TestEquivalence(si1.G, vertFull1, G2, vertFull2);
+        LORENTZ_TestEquivalence(si1.G, vertFull1, G2, vertFull2, os);
       if (equiv_opt) {
         answer = UniversalMatrixConversion<Tint, T>(*equiv_opt);
         return true;

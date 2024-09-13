@@ -38,13 +38,9 @@ template <typename T> struct LpSolutionSimple {
 template <typename T> struct LpSolution {
   bool PrimalDefined = false;
   bool DualDefined = false;
-  //
-  MyVector<T> DualSolution;
-  //
   T OptimalValue;
-  //
+  MyVector<T> DualSolution;
   MyVector<T> DirectSolution;
-  MyVector<T> DirectSolutionExt;
 };
 
 template <typename T>
@@ -54,7 +50,6 @@ void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "DualSolution=" << StringVector(eSol.DualSolution) << "\n";
   os << "OptimalValue=" << eSol.OptimalValue << "\n";
   os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
-  os << "DirectSolutionExt=" << StringVector(eSol.DirectSolutionExt) << "\n";
 }
 
 template<typename T>
@@ -75,9 +70,9 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
   MicrosecondTime time;
 #endif
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    T eSum(0);
-    for (int iCol = 0; iCol < nbCol; iCol++) {
-      eSum += eSol.DirectSolutionExt(iCol) * EXT(iRow, iCol);
+    T eSum = EXT(iRow, 0);
+    for (int iCol = 0; iCol < nbCol-1; iCol++) {
+      eSum += eSol.DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
     if (eSum < 0) {
@@ -85,10 +80,7 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
                 << " eSum=" << eSum << "\n";
       std::cerr << "DualDefined=" << eSol.DualDefined
                 << " PrimalDefined=" << eSol.PrimalDefined << "\n";
-      std::cerr << "DirectSolutionExt =";
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        std::cerr << " " << eSol.DirectSolutionExt(iCol);
-      std::cerr << "\n";
+      std::cerr << "DirectSolution =" << StringVector(eSol.DirectSolution) << "\n";
       std::cerr << "EXT=\n";
       WriteMatrix(std::cerr, EXT);
       std::cerr << "Obtained vertex solution is not valid\n";
@@ -133,6 +125,17 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const& EXT, MyVector<T> const& eVec
     return false;
   }
   return true;
+}
+
+template<typename T>
+MyVector<T> GetDirectSolutionExt(LpSolution<T> const& eSol) {
+  int siz = eSol.DirectSolution.size();
+  MyVector<T> V(siz+1);
+  V(0) = 1;
+  for (int i=0; i<siz; i++) {
+    V(i+1) = eSol.DirectSolution(i);
+  }
+  return V;
 }
 
 // clang-format off

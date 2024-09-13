@@ -446,12 +446,12 @@ template <typename T, typename Telt>
 std::vector<MyMatrix<T>>
 MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
                              MyMatrix<T> const &Subspace1,
-                             std::vector<Telt> const &LGen) {
+                             std::vector<Telt> const &LGen, std::ostream& os) {
   std::vector<MyMatrix<T>> LGen1;
   for (auto &eGen : LGen) {
     MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1, eGen);
     std::optional<MyMatrix<T>> opt =
-        LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2);
+      LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2, os);
 #ifdef CHECK_LORENTZIAN_STAB_EQUIV
     if (!opt) {
       std::cerr << "We could not find the isotropy equivalence\n";
@@ -504,7 +504,7 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     MyMatrix<T> const &G,
-    FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull) {
+    FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   MyMatrix<Tint> const &MatRoot = vertFull.vert.MatRoot;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
@@ -518,7 +518,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
                                                 uint16_t>(vertFull.e_pair_char,
-                                                          std::cerr);
+                                                          os);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "|GRP1|=" << vertFull.GRP1.size() << "\n";
@@ -530,7 +530,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     std::vector<Telt> LGen1_D =
         FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1);
     std::vector<MyMatrix<T>> LGen1 =
-        MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
+      MappingPermutationGenerators(G, G, Subspace1, LGen1_D, os);
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(group:=" << StringListGen(LGen1_D) << "),\n";
 #endif
@@ -594,7 +594,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>>
 FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
                         MyMatrix<T> const &Subspace2, MyMatrix<T> const &G2,
-                        Tgroup const &GRP) {
+                        Tgroup const &GRP, std::ostream& os) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "------------------------------------------------------------\n";
   std::cerr << "FindSubspaceEquivalence, begin\n";
@@ -704,7 +704,7 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
     MyVector<T> fV = GetMatrixRow(Subspace2, jRow);
     AssignMatrixRow(Subspace2_img, iRow, fV);
   }
-  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2_img);
+  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2_img, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -712,7 +712,8 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     MyMatrix<T> const &G1,
     FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull1,
     MyMatrix<T> const &G2,
-    FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull2) {
+    FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull2,
+    std::ostream& os) {
   using Telt = typename Tgroup::Telt;
 #ifdef PRINT_DEBUG_STAB_EQUIV_INFO
   std::cerr << "LORENTZ_TestEquivalence, vertFull1.method=" << vertFull1.method
@@ -750,15 +751,14 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     WriteMatrix(std::cerr, ScalMat2);
 #endif
     std::optional<MyMatrix<T>> opt1 =
-        LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2);
+      LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2, Subspace2, os);
     if (!opt1) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt1 : Failed at extending equivalence\n";
 #endif
       return {};
     }
-    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T, Tint, Tgroup>(
-        Subspace1, G1, Subspace2, G2, vertFull1.GRP1);
+    std::optional<MyMatrix<T>> opt2 = FindSubspaceEquivalence<T, Tint, Tgroup>(Subspace1, G1, Subspace2, G2, vertFull1.GRP1, os);
     if (!opt2) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt2 : Failed at extending equivalence\n";
@@ -778,7 +778,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     std::vector<Telt> LGen1_D =
         FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull1.GRP1);
     std::vector<MyMatrix<T>> LGen1 =
-        MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D);
+      MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D, os);
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in
     // GLn(Z)
     MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);

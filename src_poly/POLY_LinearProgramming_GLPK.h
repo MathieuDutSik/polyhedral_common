@@ -677,10 +677,12 @@ std::optional<LpSolution<T>> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
     MyMatrix<T> SEC_ListIneq = ListIneq * TransposedMat(ColumnSpace);
     MyVector<T> SEC_ToBeMinimized = ColumnSpace * ToBeMinimized;
     LpSolution<T> TheLP = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-    if (TheLP.PrimalDefined && TheLP.DualDefined)
-      TheVert = TransposedMat(ColumnSpace) * TheLP.DirectSolutionExt;
-    else
+    if (TheLP.PrimalDefined && TheLP.DualDefined) {
+      MyVector<T> DirectSolutionExt = GetDirectSolutionExt(TheLP);
+      TheVert = TransposedMat(ColumnSpace) * DirectSolutionExt;
+    } else {
       return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    }
   }
   T optimal = ScalarProduct(ToBeMinimized, TheVert);
   MyVector<T> TheVertRed(nbCol - 1);
@@ -703,7 +705,6 @@ std::optional<LpSolution<T>> GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
   eRes.OptimalValue = optimal;
   //
   eRes.DirectSolution = TheVertRed;
-  eRes.DirectSolutionExt = TheVert;
   return eRes;
 }
 

@@ -8327,9 +8327,6 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   MyVector<T> DirectSolution = ReadVector<T>(is);
   eSol.DirectSolution = DirectSolution;
   //
-  MyVector<T> DirectSolutionExt = ReadVector<T>(is);
-  eSol.DirectSolutionExt = DirectSolutionExt;
-  //
   CleanFile();
   return eSol;
 }
@@ -8389,15 +8386,11 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, [[m
   LpSolution<T> eSol;
   if (PrimalDefined) {
     MyVector<T> DirectSolution(nbCol - 1);
-    MyVector<T> DirectSolutionExt(nbCol);
-    DirectSolutionExt(0) = 1;
     for (j = 1; j < lp->d; j++) {
       DirectSolution(j - 1) = lp->sol[j];
-      DirectSolutionExt(j) = lp->sol[j];
     }
     eSol.PrimalDefined = true;
     eSol.DirectSolution = DirectSolution;
-    eSol.DirectSolutionExt = DirectSolutionExt;
   }
   MyVector<T> DualSolution = ZeroVector<T>(nbRow);
   if (DualDefined) {
@@ -8458,15 +8451,10 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   // Getting the direct solution and testing it.
   //
   MyVector<T> const& DirectSolution = *optA;
-  MyVector<T> DirectSolutionExt(nbCol);
-  DirectSolutionExt(0) = 1;
-  for (int i=0; i<nbCol-1; i++) {
-    DirectSolutionExt(i+1) = DirectSolution(i);
-  }
   for (int iRow=0; iRow<nbRow; iRow++) {
-    T eSum(0);
-    for (int iCol=0; iCol<nbCol; iCol++) {
-      eSum += DirectSolutionExt(iCol) * EXT(iRow, iCol);
+    T eSum = EXT(iRow, 0);
+    for (int iCol=0; iCol<nbCol-1; iCol++) {
+      eSum += DirectSolution(iCol) * EXT(iRow, iCol+1);
     }
     if (eSum < 0) {
 #ifdef DEBUG_CDD
@@ -8475,9 +8463,9 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
       return {};
     }
   }
-  T objDirect(0);
-  for (int iCol=0; iCol<nbCol; iCol++) {
-    objDirect += DirectSolutionExt(iCol) * eVect(iCol);
+  T objDirect = eVect(0);
+  for (int iCol=0; iCol<nbCol-1; iCol++) {
+    objDirect += DirectSolution(iCol) * eVect(iCol+1);
   }
   //
   // Getting the dual solution
@@ -8530,7 +8518,6 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   eSol.DualSolution = DualSolution;
   eSol.OptimalValue = objDirect;
   eSol.DirectSolution = DirectSolution;
-  eSol.DirectSolutionExt = DirectSolutionExt;
   return eSol;
 }
 
