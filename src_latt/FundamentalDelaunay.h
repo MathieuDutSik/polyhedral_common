@@ -76,7 +76,6 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     MicrosecondTime time;
 #endif
-    int nbVect = ListIneq_vect.size();
     MyMatrix<T> ListIneq = MatrixFromVectorFamily(ListIneq_vect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|Building ListIneq|=" << time << " nbVect=" << nbVect << "\n";

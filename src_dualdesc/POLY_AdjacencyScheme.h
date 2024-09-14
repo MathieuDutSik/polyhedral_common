@@ -45,8 +45,7 @@
      ---We can do canonicalization stuff if we have a spanning configuration
         of vectors, but no guarantee really.
      ---If we do not have a reasonable spanning family (which is the case
-        for Niemeier) then this does not work. TODO: Have a canonicalization
-        for
+        for Niemeier) then this does not work.
   ---The perfect forms of a T-space.
      ---There is likely no canonicalization for the T-space coming from number
         theory
