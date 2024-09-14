@@ -419,7 +419,8 @@ MyMatrix<T> CTYP_TheFlipping(MyMatrix<T> const &TheCtype,
 
 template <typename T, typename Tidx>
 std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>>
-CTYP_GetListTriple(MyMatrix<T> const &TheCtype, [[maybe_unused]] std::ostream& os) {
+CTYP_GetListTriple(MyMatrix<T> const &TheCtype,
+                   [[maybe_unused]] std::ostream &os) {
   int n_edge = TheCtype.rows();
   int n_edgered = n_edge / 2;
   int n_cols = TheCtype.cols();
@@ -477,8 +478,7 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype, [[maybe_unused]] std::ostream& o
   for (Tidx i = 0; i < n_edge; i++)
     for (Tidx j = i + 1; j < n_edge; j++) {
 #ifdef PRINT_TRIPLE
-      os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
-         << "\n";
+      os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j) << "\n";
 #endif
       for (Tidx i_col = 0; i_col < n_cols; i_col++)
         eDiff(i_col) = -TheCtype(i, i_col) - TheCtype(j, i_col);
@@ -499,8 +499,8 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype, [[maybe_unused]] std::ostream& o
         Tidx jred = j / 2;
         Tidx kred = k / 2;
 #ifdef PRINT_TRIPLE
-        os << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " "
-           << jred << " " << kred << "\n";
+        os << "n_edgered=" << n_edgered << " i/j/kred=" << ired << " " << jred
+           << " " << kred << "\n";
 #endif
         MappingVect[ired * n_edgered + jred] = kred;
         MappingVect[jred * n_edgered + ired] = kred;
@@ -518,7 +518,9 @@ CTYP_GetListTriple(MyMatrix<T> const &TheCtype, [[maybe_unused]] std::ostream& o
   return {std::move(ListTriples), std::move(MappingVect)};
 }
 
-template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M,
+                                  [[maybe_unused]] std::ostream &os) {
   int n = M.cols();
   int nbRow = M.rows();
 #ifdef PRINT_EXPRESS
@@ -539,9 +541,8 @@ template <typename T> MyMatrix<T> ExpressMatrixForCType(MyMatrix<T> const &M, [[
       T res_T = ResInt(M(iRow, i), eTwo);
       int res = UniversalScalarConversion<int, T>(res_T);
 #ifdef PRINT_EXPRESS
-      os << "  i=" << i << " M(iRow,i)=" << M(iRow, i)
-         << " res_T=" << res_T << " res=" << res << " e_pow=" << e_pow
-         << "\n";
+      os << "  i=" << i << " M(iRow,i)=" << M(iRow, i) << " res_T=" << res_T
+         << " res=" << res << " e_pow=" << e_pow << "\n";
 #endif
       pos += res * e_pow;
       e_pow *= 2;
@@ -579,7 +580,7 @@ template <typename T, typename Tidx> struct DataCtypeFacet {
 
 template <typename T, typename Tidx>
 DataCtypeFacet<T, Tidx>
-CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
+CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
@@ -596,7 +597,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
   os << "CTYP_GetConeInformation, step 2\n";
 #endif
   std::pair<std::vector<triple<Tidx>>, std::vector<Tidx>> PairTriple =
-    CTYP_GetListTriple<T, Tidx>(TheCtype, os);
+      CTYP_GetListTriple<T, Tidx>(TheCtype, os);
 
 #ifdef TIMINGS
   os << "|CTYP_GetListTriple|=" << time << "\n";
@@ -671,9 +672,8 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
       os << " " << kv.first(i);
     os << " LSet =";
     for (auto &et : kv.second)
-      os << " {" << static_cast<int>(et.i) << ","
-         << static_cast<int>(et.j) << "," << static_cast<int>(et.k)
-         << "}";
+      os << " {" << static_cast<int>(et.i) << "," << static_cast<int>(et.j)
+         << "," << static_cast<int>(et.k) << "}";
     os << "\n";
     j_ineq++;
   }
@@ -699,9 +699,8 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
   os << "nb_triple_div3=" << nb_triple_div3 << "\n";
   for (int i_triple = 0; i_triple < nb_triple_div3; i_triple++) {
     triple et = PairTriple.first[3 * i_triple];
-    os << "et=" << static_cast<int>(et.i) << " "
-       << static_cast<int>(et.j) << " " << static_cast<int>(et.k)
-       << "\n";
+    os << "et=" << static_cast<int>(et.i) << " " << static_cast<int>(et.j)
+       << " " << static_cast<int>(et.k) << "\n";
   }
 #endif
 
@@ -735,8 +734,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
     Tidx crit = -1;
 #ifdef PRINT_GET_ADJ_O
     os << "i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
-       << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e)
-       << "\n";
+       << " k=" << static_cast<int>(k) << " e=" << static_cast<int>(e) << "\n";
 #endif
     //
     // testing e
@@ -794,13 +792,12 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream& os) {
       Tidx j = e_triple.j;
       Tidx k = e_triple.k;
 #ifdef PRINT_GET_ADJ
-      os << "FOUND i=" << static_cast<int>(i)
-         << " j=" << static_cast<int>(j) << " k=" << static_cast<int>(k)
+      os << "FOUND i=" << static_cast<int>(i) << " j=" << static_cast<int>(j)
+         << " k=" << static_cast<int>(k) << "\n";
+      os << "ENT1 = " << static_cast<int>(j) << " " << static_cast<int>(k)
          << "\n";
-      os << "ENT1 = " << static_cast<int>(j) << " "
-         << static_cast<int>(k) << "\n";
-      os << "ENT2 = " << static_cast<int>(i) << " "
-         << static_cast<int>(j) << "\n";
+      os << "ENT2 = " << static_cast<int>(i) << " " << static_cast<int>(j)
+         << "\n";
 #endif
       ListResultCriterion[j * n_edge + k] = 1;
       ListResultCriterion[i * n_edge + j] = 1;
@@ -954,7 +951,8 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
 #ifdef TIMINGS
   MicrosecondTime time;
 #endif
-  DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
+  DataCtypeFacet<T, Tidx> data =
+      CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
 #ifdef TIMINGS
   os << "|data|=" << time << "\n";
 #endif
@@ -1043,7 +1041,8 @@ int CTYP_GetNumberFreeVectors(TypeCtypeExch<T> const &TheCtypeArr) {
 }
 
 template <typename T, typename Tgroup>
-int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr, [[maybe_unused]] std::ostream &os) {
+int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
+                    [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tint = typename Tgroup::Tint;
@@ -1081,7 +1080,8 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   MicrosecondTime time;
 #endif
 
-  DataCtypeFacet<T, Tidx> data = CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
+  DataCtypeFacet<T, Tidx> data =
+      CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
 #ifdef TIMINGS
   os << "|GetNumberFreeVectors|=" << time << "\n";
 #endif

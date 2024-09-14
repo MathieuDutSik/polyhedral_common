@@ -502,14 +502,10 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
   return info;
 }
 
-
-template<typename Tint>
-struct ResultShortest {
+template <typename Tint> struct ResultShortest {
   std::vector<MyVector<Tint>> shortest;
   std::optional<MyVector<Tint>> better_vector;
 };
-
-
 
 template <typename T, typename Tint>
 ResultShortest<Tint> computeTestShortest(const T_shvec_request<T> &request) {
@@ -532,14 +528,10 @@ ResultShortest<Tint> computeTestShortest(const T_shvec_request<T> &request) {
       return false;
     }
   };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound, f_insert);
+  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
+                                               f_insert);
   return {shortest, better_vector};
 }
-
-
-
-
-
 
 template <typename T>
 bool get_central(const MyVector<T> &coset, const int &mode) {
@@ -790,9 +782,10 @@ public:
     request =
         T_shvec_request<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
   }
-  ResultShortest<Tint> ShortestAtDistance(MyVector<T> const& eV, T const& TheNorm) {
+  ResultShortest<Tint> ShortestAtDistance(MyVector<T> const &eV,
+                                          T const &TheNorm) {
     if (IsIntegralVector(eV)) {
-      MyVector<Tint> eV_tint = UniversalVectorConversion<Tint,T>(eV);
+      MyVector<Tint> eV_tint = UniversalVectorConversion<Tint, T>(eV);
       return {{}, eV_tint};
     }
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
@@ -800,14 +793,14 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.bound = TheNorm;
-    ResultShortest<Tint> res = computeTestShortest<T,Tint>(request);
+    ResultShortest<Tint> res = computeTestShortest<T, Tint>(request);
     if (res.better_vector) {
-      MyVector<Tint> const& short_vec = *res.better_vector;
+      MyVector<Tint> const &short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
 #ifdef DEBUG_SHVEC
       MyVector<T> eDiff(dim);
-      for (int i=0; i<dim; i++) {
-        eDiff(i) = UniversalScalarConversion<T,Tint>(x(i)) - eV(i);
+      for (int i = 0; i < dim; i++) {
+        eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
       }
       if (TheNorm <= EvaluationQuadForm<T, T>(GramMat, eDiff)) {
         std::cerr << "The vector should be shorter\n";
@@ -817,13 +810,13 @@ public:
       return {{}, x};
     }
     std::vector<MyVector<Tint>> shortest;
-    for (auto& short_vec : res.shortest) {
+    for (auto &short_vec : res.shortest) {
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
       shortest.push_back(x);
 #ifdef DEBUG_SHVEC
       MyVector<T> eDiff(dim);
-      for (int i=0; i<dim; i++) {
-        eDiff(i) = UniversalScalarConversion<T,Tint>(x(i)) - eV(i);
+      for (int i = 0; i < dim; i++) {
+        eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
       }
       if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
         std::cerr << "Inconsistecy error in the norms\n";

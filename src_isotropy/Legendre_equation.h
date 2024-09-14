@@ -31,64 +31,59 @@
   Here we just put the test of existence.
  */
 
-template<typename T>
-std::map<T, size_t> product_entry(std::map<T, size_t> const& x, std::map<T, size_t> const& y) {
+template <typename T>
+std::map<T, size_t> product_entry(std::map<T, size_t> const &x,
+                                  std::map<T, size_t> const &y) {
   std::map<T, size_t> ret = x;
-  for (auto & kv: y) {
+  for (auto &kv : y) {
     ret[kv.first] += kv.second;
   }
   return ret;
 }
 
-template<typename T>
-std::string string_entry(std::map<T, size_t> const& x) {
+template <typename T> std::string string_entry(std::map<T, size_t> const &x) {
   std::stringstream s;
-  bool is_first=true;
-  for (auto & kv : x) {
+  bool is_first = true;
+  for (auto &kv : x) {
     if (!is_first) {
       s << " ";
     }
-    is_first=false;
+    is_first = false;
     s << "(" << kv.first << "," << kv.second << ")";
   }
   std::string converted(s.str());
   return converted;
 }
 
-template<typename T>
-std::string string_set(std::set<T> const& x) {
+template <typename T> std::string string_set(std::set<T> const &x) {
   std::stringstream s;
-  bool is_first=true;
-  for (auto & val : x) {
+  bool is_first = true;
+  for (auto &val : x) {
     if (!is_first) {
       s << " ";
     }
-    is_first=false;
+    is_first = false;
     s << val;
   }
   std::string converted(s.str());
   return converted;
 }
 
-
-template<typename T>
-T evaluate_entry(std::map<T, size_t> const& x) {
+template <typename T> T evaluate_entry(std::map<T, size_t> const &x) {
   T prod(1);
-  for (auto & kv: x) {
-    for (size_t u=0; u<kv.second; u++) {
+  for (auto &kv : x) {
+    for (size_t u = 0; u < kv.second; u++) {
       prod *= kv.first;
     }
   }
   return prod;
 }
 
-template<typename T>
-struct LegendreReductionInformation {
+template <typename T> struct LegendreReductionInformation {
   MyMatrix<T> TransMat;
   MyVector<T> aReduced;
-  std::vector<std::map<T,size_t>> l_entry;
+  std::vector<std::map<T, size_t>> l_entry;
 };
-
 
 /*
   We apply Corollary 4 of P1 to case of abc is square-free.
@@ -98,8 +93,10 @@ struct LegendreReductionInformation {
   * −ac is a square modulo |b|
   * −ab is a square modulo |c|.
  */
-template <typename T> bool determine_solvability_dim3(LegendreReductionInformation<T> const& lri, [[maybe_unused]] std::ostream& os) {
-  MyVector<T> const& aReduced = lri.aReduced;
+template <typename T>
+bool determine_solvability_dim3(LegendreReductionInformation<T> const &lri,
+                                [[maybe_unused]] std::ostream &os) {
+  MyVector<T> const &aReduced = lri.aReduced;
   size_t n_plus = 0;
   size_t n_minus = 0;
   for (int i = 0; i < 3; i++) {
@@ -148,7 +145,8 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
   bool test_jacobi_b = compute_jacobi_symbol(b_cnt, b_abs);
   bool test_jacobi_c = compute_jacobi_symbol(c_cnt, c_abs);
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: test_jacobi, a=" << test_jacobi_a << " b=" << test_jacobi_b << " c=" << test_jacobi_c << "\n";
+  os << "LEG: test_jacobi, a=" << test_jacobi_a << " b=" << test_jacobi_b
+     << " c=" << test_jacobi_c << "\n";
 #endif
   if (!test_jacobi_a || !test_jacobi_b || !test_jacobi_c) {
 #ifdef DEBUG_LEGENDRE
@@ -192,7 +190,8 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
     return false;
   }
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: Returning true as the Legendre condition for solvability are satisfied\n";
+  os << "LEG: Returning true as the Legendre condition for solvability are "
+        "satisfied\n";
 #endif
   return true;
 }
@@ -205,7 +204,9 @@ template <typename T> bool determine_solvability_dim3(LegendreReductionInformati
   B Diag(aRet) B = u Diag(aV)  for some coefficient u.
  */
 template <typename T>
-LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[maybe_unused]] std::ostream& os) {
+LegendreReductionInformation<T>
+reduction_information(MyVector<T> const &aV,
+                      [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_LEGENDRE
   if (aV.size() != 3) {
     std::cerr << "The length should be exactly 3\n";
@@ -251,7 +252,7 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
         eset.insert(val);
       T expo = MyPow(val, q);
       if (expo != 1) {
-        for (int u=0; u<3; u++) {
+        for (int u = 0; u < 3; u++) {
           if (u != idx) {
             TransMat(u, u) *= expo;
           }
@@ -289,7 +290,8 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   T ab_prod(1);
   T ac_prod(1);
   T bc_prod(1);
-  std::map<T, size_t> a_prod_map, b_prod_map, c_prod_map, ab_prod_map, ac_prod_map, bc_prod_map;
+  std::map<T, size_t> a_prod_map, b_prod_map, c_prod_map, ab_prod_map,
+      ac_prod_map, bc_prod_map;
   for (auto &p : primes) {
     bool a_in = a_set.count(p) == 1;
     bool b_in = b_set.count(p) == 1;
@@ -328,7 +330,7 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   os << "LEG: b_prod=" << b_prod << " ac_prod=" << ac_prod << "\n";
   os << "LEG: c_prod=" << c_prod << " ab_prod=" << ab_prod << "\n";
   os << "LEG: primes=";
-  for (auto & p : primes) {
+  for (auto &p : primes) {
     os << " " << p;
   }
   os << "\n";
@@ -339,13 +341,14 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   std::map<T, size_t> a_bc_prod_map = product_entry(a_prod_map, bc_prod_map);
   std::map<T, size_t> b_ac_prod_map = product_entry(b_prod_map, ac_prod_map);
   std::map<T, size_t> c_ab_prod_map = product_entry(c_prod_map, ab_prod_map);
-  std::vector<std::map<T, size_t>> l_entry{a_bc_prod_map, b_ac_prod_map, c_ab_prod_map};
+  std::vector<std::map<T, size_t>> l_entry{a_bc_prod_map, b_ac_prod_map,
+                                           c_ab_prod_map};
 #ifdef DEBUG_LEGENDRE
   std::map<T, size_t> a_map2 = FactorsIntMap(T_abs(aRet(0)));
   std::map<T, size_t> b_map2 = FactorsIntMap(T_abs(aRet(1)));
   std::map<T, size_t> c_map2 = FactorsIntMap(T_abs(aRet(2)));
-  for (auto & kv : a_map2) {
-    T const& p = kv.first;
+  for (auto &kv : a_map2) {
+    T const &p = kv.first;
     if (b_map2.count(p) == 1) {
       std::cerr << "p should not be in the b_map2\n";
     }
@@ -353,8 +356,8 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
       std::cerr << "p should not be in the c_map2\n";
     }
   }
-  for (auto & kv : b_map2) {
-    T const& p = kv.first;
+  for (auto &kv : b_map2) {
+    T const &p = kv.first;
     if (a_map2.count(p) == 1) {
       std::cerr << "p should not be in the a_map2\n";
     }
@@ -362,8 +365,8 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
       std::cerr << "p should not be in the c_map2\n";
     }
   }
-  for (auto & kv : c_map2) {
-    T const& p = kv.first;
+  for (auto &kv : c_map2) {
+    T const &p = kv.first;
     if (a_map2.count(p) == 1) {
       std::cerr << "p should not be in the a_map2\n";
     }
@@ -375,9 +378,9 @@ LegendreReductionInformation<T> reduction_information(MyVector<T> const &aV, [[m
   return {TransMat, aRet, l_entry};
 }
 
-
-template<typename T>
-std::pair<MyMatrix<T>, MyVector<T>> get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+std::pair<MyMatrix<T>, MyVector<T>>
+get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
 #ifdef DEBUG_LEGENDRE
@@ -386,7 +389,7 @@ std::pair<MyMatrix<T>, MyVector<T>> get_reduced_diagonal(MyMatrix<T> const &M, [
   MyVector<T> V2 = RemoveFractionVector(V1);
 #ifdef DEBUG_LEGENDRE
   os << "V2=" << StringVectorGAP(V2) << "\n";
-  for (int i=0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     if (V2(i) == 0) {
       std::cerr << "LEG: V2(i) should be non-zero\n";
       throw TerminalException{1};
@@ -396,19 +399,17 @@ std::pair<MyMatrix<T>, MyVector<T>> get_reduced_diagonal(MyMatrix<T> const &M, [
   return {dsm.Transform, V2};
 }
 
-
-
-template <typename T> bool ternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream& os) {
+template <typename T>
+bool ternary_has_isotropic_vector(MyMatrix<T> const &M, std::ostream &os) {
   using Tring = typename underlying_ring<T>::ring_type;
   std::pair<MyMatrix<T>, MyVector<T>> pair = get_reduced_diagonal(M, os);
   MyVector<Tring> red_diag_A = UniversalVectorConversion<Tring, T>(pair.second);
-  LegendreReductionInformation<Tring> lri = reduction_information(red_diag_A, os);
+  LegendreReductionInformation<Tring> lri =
+      reduction_information(red_diag_A, os);
   return determine_solvability_dim3(lri, os);
 }
 
-
-template<typename T>
-bool is_square_free(T const& a) {
+template <typename T> bool is_square_free(T const &a) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(a));
   for (auto &kv : map) {
     if (kv.second >= 2) {
@@ -418,37 +419,35 @@ bool is_square_free(T const& a) {
   return true;
 }
 
-template<typename T>
-std::pair<T,T> separate_square_factor(T const& val) {
+template <typename T> std::pair<T, T> separate_square_factor(T const &val) {
   std::map<T, size_t> map = FactorsIntMap(T_abs(val));
   T sqr(1);
   T nosqr(T_sign(val));
   using Tint = uint32_t;
   Tint two(2);
-  for (auto & kv : map) {
-    T const& p = kv.first;
+  for (auto &kv : map) {
+    T const &p = kv.first;
     Tint mult = kv.second;
     std::pair<Tint, Tint> pair = ResQuoInt(mult, two);
     Tint res = pair.first;
     Tint quot = pair.second;
-    for (Tint u=0; u<res; u++) {
+    for (Tint u = 0; u < res; u++) {
       nosqr *= p;
     }
-    for (Tint u=0; u<quot; u++) {
+    for (Tint u = 0; u < quot; u++) {
       sqr *= p;
     }
   }
   return {sqr, nosqr};
 }
 
-
 /*
   See Definition 1 of Page 4 of P1
  */
-template<typename T>
-bool satisfy_descent_condition(std::pair<T,T> const& pair) {
-  T const& a = pair.first;
-  T const& b = pair.second;
+template <typename T>
+bool satisfy_descent_condition(std::pair<T, T> const &pair) {
+  T const &a = pair.first;
+  T const &b = pair.second;
   if (!is_square_free(a)) {
 #ifdef DEBUG_LEGENDRE
     std::cerr << "LEG: a=" << a << " is not square free\n";
@@ -468,7 +467,7 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
     return false;
   }
   T d = GcdPair(a, b);
-  T c = - (a / d) * (b / d);
+  T c = -(a / d) * (b / d);
   if (!is_quadratic_residue(a, T_abs(b))) {
 #ifdef DEBUG_LEGENDRE
     std::cerr << "LEG: a is not a quadratic residue for b\n";
@@ -490,8 +489,6 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
   }
   return true;
 }
-
-
 
 /*
   Map the equation into a Lagrange normal equation.
@@ -516,11 +513,12 @@ bool satisfy_descent_condition(std::pair<T,T> const& pair) {
   Y =    X(I+2)
   Z = aI X(I)
 */
-template<typename T>
-std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v) {
-  size_t min_idx=0;
+template <typename T>
+std::pair<MyMatrix<T>, std::pair<T, T>>
+get_lagrange_normal(MyVector<T> const &v) {
+  size_t min_idx = 0;
   T min_val = T_abs(v(0));
-  for (size_t u=1; u<3; u++) {
+  for (size_t u = 1; u < 3; u++) {
     T val = T_abs(v(u));
     if (val < min_val) {
       min_val = val;
@@ -529,43 +527,46 @@ std::pair<MyMatrix<T>, std::pair<T, T>> get_lagrange_normal(MyVector<T> const& v
   }
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: get_lagrange_normal, v=" << StringVector(v) << "\n";
-  std::cerr << "LEG: get_lagrange_normal, min_idx=" << min_idx << " min_val=" << min_val << "\n";
+  std::cerr << "LEG: get_lagrange_normal, min_idx=" << min_idx
+            << " min_val=" << min_val << "\n";
 #endif
   size_t three(3);
   size_t idxZ = min_idx;
-  size_t idxX = min_idx+1;
+  size_t idxX = min_idx + 1;
   if (idxX >= three) {
     idxX -= three;
   }
-  size_t idxY = min_idx+2;
+  size_t idxY = min_idx + 2;
   if (idxY >= three) {
     idxY -= three;
   }
 #ifdef DEBUG_LEGENDRE
-  std::cerr << "LEG: get_lagrange_normal, idxX=" << idxX << " idxY=" << idxY << " idxZ=" << idxZ << "\n";
+  std::cerr << "LEG: get_lagrange_normal, idxX=" << idxX << " idxY=" << idxY
+            << " idxZ=" << idxZ << "\n";
 #endif
   T cVal = v(idxZ);
   T a = -v(idxX) * cVal;
   T b = -v(idxY) * cVal;
-  MyMatrix<T> M = ZeroMatrix<T>(3,3);
+  MyMatrix<T> M = ZeroMatrix<T>(3, 3);
   // Not sure about the matrix below.
-  M(idxX,0) = cVal;
-  M(idxY,1) = cVal;
-  M(idxZ,2) = 1;
+  M(idxX, 0) = cVal;
+  M(idxY, 1) = cVal;
+  M(idxZ, 2) = 1;
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: get_lagrange_normal, We have M\n";
 #endif
-  std::pair<T,T> pair{a, b};
+  std::pair<T, T> pair{a, b};
   return {M, pair};
 }
 
 /*
   Lemma 6 operation from P1.
  */
-template<typename T>
-std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& pair) {
-  T const& a = pair.first;
-  T const& b = pair.second;
+template <typename T>
+std::pair<MyMatrix<T>, std::pair<T, T>>
+descent_operation(std::pair<T, T> const &pair) {
+  T const &a = pair.first;
+  T const &b = pair.second;
   T b_abs = T_abs(b);
 #ifdef DEBUG_LEGENDRE
   T a_abs = T_abs(a);
@@ -579,15 +580,15 @@ std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& p
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: descent u=" << u << "\n";
 #endif
-  if (2*u >= b_abs) {
+  if (2 * u >= b_abs) {
     u -= b_abs;
   }
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: descent u=" << u << " a=" << a << " b=" << b << "\n";
 #endif
-  T diff = u*u - a;
+  T diff = u * u - a;
   T quot = diff / b;
-  std::pair<T,T> pair2 = separate_square_factor(quot);
+  std::pair<T, T> pair2 = separate_square_factor(quot);
   T e = pair2.first;
   T bp = pair2.second;
 #ifdef DEBUG_LEGENDRE
@@ -604,24 +605,24 @@ std::pair<MyMatrix<T>, std::pair<T,T>> descent_operation(std::pair<T,T> const& p
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> M = ZeroMatrix<T>(3,3);
-  M(0,0) = u;
-  M(0,2) = 1;
-  M(1,1) = b * e;
-  M(2,0) = a;
-  M(2,2) = u;
+  MyMatrix<T> M = ZeroMatrix<T>(3, 3);
+  M(0, 0) = u;
+  M(0, 2) = 1;
+  M(1, 1) = b * e;
+  M(2, 0) = a;
+  M(2, 2) = u;
   std::pair<T, T> pair3{a, bp};
   return {M, pair3};
 }
 
-template<typename T>
-std::pair<MyMatrix<T>, std::pair<T,T>> switch_xy(std::pair<T,T> const& pair) {
-  T const& a = pair.first;
-  T const& b = pair.second;
-  MyMatrix<T> M = ZeroMatrix<T>(3,3);
-  M(0,1) = 1;
-  M(1,0) = 1;
-  M(2,2) = 1;
+template <typename T>
+std::pair<MyMatrix<T>, std::pair<T, T>> switch_xy(std::pair<T, T> const &pair) {
+  T const &a = pair.first;
+  T const &b = pair.second;
+  MyMatrix<T> M = ZeroMatrix<T>(3, 3);
+  M(0, 1) = 1;
+  M(1, 0) = 1;
+  M(2, 2) = 1;
   std::pair<T, T> pair2{b, a};
   return {M, pair2};
 }
@@ -631,10 +632,10 @@ std::pair<MyMatrix<T>, std::pair<T,T>> switch_xy(std::pair<T,T> const& pair) {
   Value a=0 or b=0 would allow early termination but if so, the
   quadratic form would be degenerate.
  */
-template<typename T>
-std::optional<MyVector<T>> get_trivial_solution(std::pair<T,T> const& pair) {
-  T const& a = pair.first;
-  T const& b = pair.second;
+template <typename T>
+std::optional<MyVector<T>> get_trivial_solution(std::pair<T, T> const &pair) {
+  T const &a = pair.first;
+  T const &b = pair.second;
   MyVector<T> V = ZeroVector<T>(3);
   if (a == 1) {
     V(0) = 1;
@@ -650,29 +651,33 @@ std::optional<MyVector<T>> get_trivial_solution(std::pair<T,T> const& pair) {
 }
 
 /*
-  Find the solution to the equation by using the Lagrange method for ternary equations.
+  Find the solution to the equation by using the Lagrange method for ternary
+  equations.
  */
-template<typename T>
-MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const &diag,
+                                        [[maybe_unused]] std::ostream &os) {
   std::pair<MyMatrix<T>, std::pair<T, T>> pair3 = get_lagrange_normal(diag);
   std::pair<T, T> work_pair = pair3.second;
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: We have work_pair a=" << work_pair.first << " b=" << work_pair.second << "\n";
+  os << "LEG: We have work_pair a=" << work_pair.first
+     << " b=" << work_pair.second << "\n";
   if (!satisfy_descent_condition(work_pair)) {
-    std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second << "\n";
+    std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second
+              << "\n";
     std::cerr << "LEG: work_pair 1, should satisfy the descent condition\n";
     throw TerminalException{1};
   }
 #endif
   std::vector<std::pair<MyMatrix<T>, std::pair<T, T>>> l_pair;
-  auto get_sol=[&](MyVector<T> const& V) -> MyVector<T> {
+  auto get_sol = [&](MyVector<T> const &V) -> MyVector<T> {
     size_t len = l_pair.size();
 #ifdef DEBUG_LEGENDRE
     os << "LEG: get_sol beginning len=" << len << "\n";
     os << "LEG: get_sol V=" << StringVector(V) << "\n";
 #endif
     MyVector<T> V_work = V;
-    for (size_t u=0; u<len; u++) {
+    for (size_t u = 0; u < len; u++) {
       size_t v = len - 1 - u;
 #ifdef DEBUG_LEGENDRE
       os << "LEG: Before V_work=" << StringVector(V_work) << "\n";
@@ -682,22 +687,23 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
       os << "LEG: After V_work=" << StringVector(V_work) << "\n";
       os << "LEG: l_pair[v].first=\n";
       WriteMatrix(std::cerr, l_pair[v].first);
-      auto get_pair=[&]() -> std::pair<T,T> {
+      auto get_pair = [&]() -> std::pair<T, T> {
         if (v == 0) {
           return pair3.second;
         } else {
-          return l_pair[v-1].second;
+          return l_pair[v - 1].second;
         }
       };
       std::pair<T, T> epair = get_pair();
-      T const& a = epair.first;
-      T const& b = epair.second;
-      T const& x = V_work(0);
-      T const& y = V_work(1);
-      T const& z = V_work(2);
-      T diff = z*z - a*x*x - b*y*y;
+      T const &a = epair.first;
+      T const &b = epair.second;
+      T const &x = V_work(0);
+      T const &y = V_work(1);
+      T const &z = V_work(2);
+      T diff = z * z - a * x * x - b * y * y;
       if (diff != 0) {
-        std::cerr << "LEG: a=" << a << " b=" << b << " x=" << x << " y=" << y << " z=" << z << "\n";
+        std::cerr << "LEG: a=" << a << " b=" << b << " x=" << x << " y=" << y
+                  << " z=" << z << "\n";
         std::cerr << "LEG: diff=" << diff << "\n";
         std::cerr << "Consistency error in the descent\n";
         throw TerminalException{1};
@@ -712,8 +718,8 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
 #ifdef DEBUG_LEGENDRE
     os << "LEG: V_work=" << StringVector(V_work) << "\n";
     T sum(0);
-    for (int i=0; i<3; i++) {
-      T const& val = V_work(i);
+    for (int i = 0; i < 3; i++) {
+      T const &val = V_work(i);
       sum += diag(i) * val * val;
     }
     if (sum != 0) {
@@ -727,7 +733,7 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
 #endif
     return V_work;
   };
-  while(true) {
+  while (true) {
     std::optional<MyVector<T>> opt = get_trivial_solution(work_pair);
     if (opt) {
       MyVector<T> V = *opt;
@@ -736,11 +742,12 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
     T a_abs = T_abs(work_pair.first);
     T b_abs = T_abs(work_pair.second);
     if (a_abs > b_abs) {
-      std::pair<MyMatrix<T>, std::pair<T,T>> pair_xy = switch_xy(work_pair);
+      std::pair<MyMatrix<T>, std::pair<T, T>> pair_xy = switch_xy(work_pair);
       work_pair = pair_xy.second;
       l_pair.push_back(pair_xy);
     }
-    std::pair<MyMatrix<T>, std::pair<T,T>> pair_desc = descent_operation(work_pair);
+    std::pair<MyMatrix<T>, std::pair<T, T>> pair_desc =
+        descent_operation(work_pair);
     work_pair = pair_desc.second;
 #ifdef DEBUG_LEGENDRE
     if (!satisfy_descent_condition(work_pair)) {
@@ -752,15 +759,16 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const& diag, [[maybe_unused]
   }
 }
 
-
-template<typename T>
-std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, std::ostream& os) {
+template <typename T>
+std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const &a,
+                                                          std::ostream &os) {
 #ifdef DEBUG_LEGENDRE
   os << "LEG: TernaryIsotropicVectorDiagonal a=" << StringVector(a) << "\n";
 #endif
   LegendreReductionInformation<T> lri = reduction_information(a, os);
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: TernaryIsotropicVectorDiagonal aReduced=" << StringVector(lri.aReduced) << "\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal aReduced="
+     << StringVector(lri.aReduced) << "\n";
 #endif
   bool test = determine_solvability_dim3(lri, os);
   if (!test) {
@@ -768,15 +776,17 @@ std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, 
   }
   MyVector<T> sol1 = TernaryIsotropicViaLagrange(lri.aReduced, os);
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: TernaryIsotropicVectorDiagonal sol1=" << StringVector(sol1) << "\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal sol1=" << StringVector(sol1)
+     << "\n";
   os << "LEG: TernaryIsotropicVectorDiagonal lri.TransMat=\n";
   WriteMatrix(os, lri.TransMat);
 #endif
   MyVector<T> sol2 = lri.TransMat * sol1;
 #ifdef DEBUG_LEGENDRE
-  os << "LEG: TernaryIsotropicVectorDiagonal sol2=" << StringVector(sol1) << "\n";
+  os << "LEG: TernaryIsotropicVectorDiagonal sol2=" << StringVector(sol1)
+     << "\n";
   T sum(0);
-  for (int i=0; i<3; i++) {
+  for (int i = 0; i < 3; i++) {
     sum += a(i) * sol2(i) * sol2(i);
   }
   if (sum != 0) {
@@ -789,7 +799,6 @@ std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, 
   return sol2;
 }
 
-
 /*
   We are looking for a ternary isotropic vector if one exists.
 
@@ -798,8 +807,9 @@ std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const& a, 
   -- removal of common primes and square factors.
   -- Express the problem as an equation Z^2 = aX^2 + bY^2
  */
-template<typename T>
-std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ostream& os) {
+template <typename T>
+std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const &M,
+                                                  std::ostream &os) {
 #ifdef TIMINGS_LEGENDRE
   MicrosecondTime time;
 #endif
@@ -814,7 +824,7 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
     return {};
   }
   MyVector<Tring> sol2 = *opt;
-  MyVector<T> sol3 = UniversalVectorConversion<T,Tring>(sol2);
+  MyVector<T> sol3 = UniversalVectorConversion<T, Tring>(sol2);
 #ifdef DEBUG_LEGENDRE
   os << "LEG: sol3=" << StringVector(sol3) << "\n";
   os << "LEG: pair1.second=\n";
@@ -838,7 +848,6 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const& M, std::ost
 #endif
   return sol4;
 }
-
 
 // clang-format off
 #endif  // SRC_INDEFINITE_LEGENDRE_EQUATION_H_

@@ -32,7 +32,7 @@ int main(int argc, char *argv[]) {
     std::ifstream is(argv[2]);
     MyMatrix<T> eMat = ReadMatrix<T>(is);
     Canonic_PosDef<T, Tint> RetF =
-      ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
+        ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
     //
     if (opt == 1) {
       std::ofstream os(argv[3]);

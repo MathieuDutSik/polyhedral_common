@@ -1396,8 +1396,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           l_orbit_vertices[i];
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt =
-            LORENTZ_TestEquivalence<T, Tint, Tgroup>(G, vertFull1, G,
-                                                     vertFull2, os);
+            LORENTZ_TestEquivalence<T, Tint, Tgroup>(G, vertFull1, G, vertFull2,
+                                                     os);
         if (equiv_opt) {
 #ifdef DEBUG_ENUM_PROCESS
           os << "Find some isomorphism\n";
@@ -1430,7 +1430,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
        << " |l_orbit_vertices|=" << l_orbit_vertices.size() << "\n";
 #endif
     std::vector<Telt> LGenIntegral;
-    std::vector<MyMatrix<T>> LGen = LORENTZ_GetStabilizerGenerator<T, Tint, Tgroup>(G, vertFull1, os);
+    std::vector<MyMatrix<T>> LGen =
+        LORENTZ_GetStabilizerGenerator<T, Tint, Tgroup>(G, vertFull1, os);
     for (auto &eGen_Mat : LGen) {
       bool test = f_isom(UniversalMatrixConversion<Tint, T>(eGen_Mat));
       if (test) {
@@ -1656,7 +1657,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
           -UniversalMatrixConversion<T, Tint>(MatrixFromVectorFamily(LVect)) *
           G;
       PolyHeuristicSerial<TintGroup> AllArr =
-        AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+          AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
       vectface vf = DualDescriptionStandard(ListIneq, GRP, AllArr, os);
       bool AllRaysInside = true;
       for (auto &eFace : vf) {
@@ -1742,7 +1743,7 @@ std::optional<MyMatrix<Tint>> LORENTZ_RunEdgewalkAlgorithm_Isomorphism(
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> const &vertFull1) -> bool {
     if (vertFull1.hash == vertFull2.hash) {
       std::optional<MyMatrix<T>> equiv_opt =
-        LORENTZ_TestEquivalence(si1.G, vertFull1, G2, vertFull2, os);
+          LORENTZ_TestEquivalence(si1.G, vertFull1, G2, vertFull2, os);
       if (equiv_opt) {
         answer = UniversalMatrixConversion<Tint, T>(*equiv_opt);
         return true;
@@ -2007,7 +2008,7 @@ MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
   ResultReduction<T, Tint> ResRed =
-    ComputeReductionIndefinite_opt<T, Tint>(G, ApplyReduction, os);
+      ComputeReductionIndefinite_opt<T, Tint>(G, ApplyReduction, os);
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */

@@ -878,11 +878,12 @@ template <typename T>
 LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
                                             MyVector<T> const &ToBeMinimized,
                                             std::ostream &os) {
-  std::optional<LpSolution<T>> optA = GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
+  std::optional<LpSolution<T>> optA =
+      GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
   if (!optA) {
     return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
   }
-  LpSolution<T> const& eSol = *optA;
+  LpSolution<T> const &eSol = *optA;
   Face eFace = ComputeFaceLpSolution(ListIneq, eSol);
   std::vector<int> ListRowSelect = FaceToVector<int>(eFace);
   MyMatrix<T> ListIneq_Incd = SelectRow(ListIneq, ListRowSelect);

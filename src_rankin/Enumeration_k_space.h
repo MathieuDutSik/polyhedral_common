@@ -96,8 +96,8 @@ GetOrthogonalProjector_dim1(MyMatrix<T> const &TheGramMat,
   MyMatrix<Tint> eVect_M = MatrixFromVector(eVect);
   os << "RNK: GetOrthogonalProjector_dim1, step 3\n";
   MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
-  os << "RNK: GetOrthogonalProjector_dim1, step 4 eVect_T=" << StringVector(eVect_T)
-     << "\n";
+  os << "RNK: GetOrthogonalProjector_dim1, step 4 eVect_T="
+     << StringVector(eVect_T) << "\n";
   MyVector<T> eVect_T_TheGramMat = eVect_T.transpose() * TheGramMat;
   os << "RNK: GetOrthogonalProjector_dim1, step 5 eVect_T_GramMat="
      << StringVector(eVect_T_TheGramMat) << "\n";
@@ -295,8 +295,8 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   if (k == 1) {
     T bound = UpperBoundRankinMinimalDeterminant<T, Tint>(A, 1, os);
     T bound_search = bound * (1 + tol);
-    os << "RNK: k=" << k << " bound=" << bound << " bound_search=" << bound_search
-       << "\n";
+    os << "RNK: k=" << k << " bound=" << bound
+       << " bound_search=" << bound_search << "\n";
     T_shvec_info<T, Tint> SHVmin =
         computeLevel_GramMat<T, Tint>(A, bound_search);
     os << "RNK: |SHVmin.short_vectors|=" << SHVmin.short_vectors.size() << "\n";

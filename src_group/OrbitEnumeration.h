@@ -9,22 +9,22 @@
 /*
   We are iterating by finding the minimal orbit.
   This relies on the group being relatively small.
-  This is a tree search. 
+  This is a tree search.
  */
-template<typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
+template <typename Tgroup, typename Fextensible>
+void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx miss_val = std::numeric_limits<Tidx>::max();
   Tidx nbVert = GRP.n_act();
   std::vector<Telt> l_elt;
-  for (auto & elt : GRP) {
+  for (auto &elt : GRP) {
     l_elt.push_back(elt);
   }
   Face f1(nbVert), f2(nbVert), f3(nbVert);
-  auto compare_f1_f2=[&]() -> bool {
+  auto compare_f1_f2 = [&]() -> bool {
     // returns true if f1 <= f2
-    for (Tidx u=0; u<nbVert; u++) {
+    for (Tidx u = 0; u < nbVert; u++) {
       if (f1[u] == 1 && f2[u] == 0) {
         return true;
       }
@@ -34,14 +34,14 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
     }
     return true;
   };
-  auto is_representative_minimal=[&](std::vector<Tidx> const& V) -> bool {
-    for (Tidx u=0; u<nbVert; u++) {
+  auto is_representative_minimal = [&](std::vector<Tidx> const &V) -> bool {
+    for (Tidx u = 0; u < nbVert; u++) {
       f1[u] = 0;
     }
-    for (auto & val : V) {
+    for (auto &val : V) {
       f1[val] = 1;
     }
-    for (auto & elt : l_elt) {
+    for (auto &elt : l_elt) {
       OnFace_inplace(f2, f1, elt);
       if (!compare_f1_f2()) {
         return false;
@@ -57,33 +57,33 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
   std::vector<Level> ListLevel;
   int level = -1;
   std::vector<std::vector<Tidx>> l_extensions;
-  auto compute_extensions=[&](std::vector<Tidx> const& v) {
-    for (Tidx u=0; u<nbVert; u++) {
+  auto compute_extensions = [&](std::vector<Tidx> const &v) {
+    for (Tidx u = 0; u < nbVert; u++) {
       f3[u] = 0;
     }
-    for (auto & eVert : v) {
+    for (auto &eVert : v) {
       f3[eVert] = 1;
     }
     size_t len = v.size();
-    auto iife_first_element=[&]() -> Tidx {
+    auto iife_first_element = [&]() -> Tidx {
       if (len == 0) {
         return 0;
       }
-      return v[len-1] + 1;
+      return v[len - 1] + 1;
     };
     Tidx first_elt = iife_first_element();
     std::vector<Tidx> w = v;
     w.push_back(miss_val);
     l_extensions.clear();
-    for (Tidx u=first_elt; u<nbVert; u++) {
+    for (Tidx u = first_elt; u < nbVert; u++) {
       w[len] = u;
       if (is_representative_minimal(w)) {
         l_extensions.push_back(w);
       }
     }
   };
-  auto GoUpNextInTree=[&]() -> bool {
-    while(true) {
+  auto GoUpNextInTree = [&]() -> bool {
+    while (true) {
       size_t choice = ListLevel[level].choice;
       size_t len = ListLevel[level].l_extensions.size();
       if (choice + 1 < len) {
@@ -99,7 +99,7 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
       }
     }
   };
-  auto NextInTree=[&]() -> bool {
+  auto NextInTree = [&]() -> bool {
     if (level == -1) {
       // Start from 0
       std::vector<Tidx> v;
@@ -108,7 +108,7 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
       level = 0;
       return true;
     } else {
-      std::vector<Tidx> const& vect = ListLevel[level].vect;
+      std::vector<Tidx> const &vect = ListLevel[level].vect;
       if (!f_extensible(vect)) {
         return GoUpNextInTree();
       }
@@ -126,7 +126,7 @@ void SubsetOrbitEnumeration(Tgroup const& GRP, Fextensible f_extensible) {
       return true;
     }
   };
-  while(true) {
+  while (true) {
     bool test = NextInTree();
     if (!test) {
       break;

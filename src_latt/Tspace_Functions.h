@@ -162,7 +162,7 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
 template <typename T>
 std::vector<MyMatrix<T>>
 BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
-                   [[maybe_unused]] std::ostream& os) {
+                   [[maybe_unused]] std::ostream &os) {
   std::vector<std::vector<int>> ListCoeff;
   MyMatrix<int> ListCoeffRev(n, n);
   int pos = 0;
@@ -199,7 +199,8 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
 #endif
   MyMatrix<T> NSP = NullspaceTrMat(MatEquations);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "After call to NullspaceTrMat |NSP|=" << NSP.rows() << " / " << NSP.cols() << "\n";
+  os << "After call to NullspaceTrMat |NSP|=" << NSP.rows() << " / "
+     << NSP.cols() << "\n";
 #endif
   int dimSpa = NSP.rows();
   std::vector<MyMatrix<T>> TheBasis(dimSpa);
@@ -253,7 +254,8 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
                              std::ostream &os) {
   using Tidx = uint32_t;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat, os);
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<T> Vdiag(SHV_T.rows(), 0);
   std::vector<std::vector<Tidx>> ListGenPerm =
@@ -335,7 +337,8 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
         return GetShortVectorDegenerate<T, Tint>(TrySuperMat, CritNorm, os);
       } else {
         bool StrictIneq = true;
-        return GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm, StrictIneq, os);
+        return GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm,
+                                               StrictIneq, os);
       }
     };
     MyVector<Tint> V = get_one_vect();
@@ -344,7 +347,8 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T>
-MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa, int const& N) {
+MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
+                                      int const &N) {
   int n = LinSpa.n;
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
   for (auto &eMat : LinSpa.ListMat) {
@@ -397,7 +401,7 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint>
 bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
                     std::vector<MyMatrix<Tint>> const &ListGen,
-                    [[maybe_unused]] std::ostream& os) {
+                    [[maybe_unused]] std::ostream &os) {
   std::vector<MyMatrix<T>> ListGen_T;
   for (auto &eGen : ListGen) {
     MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
@@ -406,14 +410,16 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSP: IsBravaisSpace: |ListGen|=" << ListGen.size() << "\n";
   os << "TSP: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
-  for (auto & eGen : ListGen) {
-    for (auto & eMat : ListMat) {
+  for (auto &eGen : ListGen) {
+    for (auto &eMat : ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
       if (eMatImg != eMat) {
-        std::cerr << "TSP: IsBravaisSpace: |eMat|=" << eMat.rows() << " / " << eMat.cols() << "\n";
-        std::cerr << "TSP: IsBravaisSpace: |eGen|=" << eGen.rows() << " / " << eGen.cols() << "\n";
-	std::cerr << "TSP: IsBravaisSpace: eMat should equal to eMatImg\n";
-	throw TerminalException{1};
+        std::cerr << "TSP: IsBravaisSpace: |eMat|=" << eMat.rows() << " / "
+                  << eMat.cols() << "\n";
+        std::cerr << "TSP: IsBravaisSpace: |eGen|=" << eGen.rows() << " / "
+                  << eGen.cols() << "\n";
+        std::cerr << "TSP: IsBravaisSpace: eMat should equal to eMatImg\n";
+        throw TerminalException{1};
       }
     }
   }
@@ -423,8 +429,10 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP: IsBravaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / " << Big_ListMat.cols() << "\n";
-  os << "TSP: IsBravaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / " << Big_BasisInv.cols() << "\n";
+  os << "TSP: IsBravaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / "
+     << Big_ListMat.cols() << "\n";
+  os << "TSP: IsBravaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / "
+     << Big_BasisInv.cols() << "\n";
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
     std::cerr << "The elements of ListMat are not in the invariant space which "
                  "is not acceptable\n";
@@ -448,11 +456,13 @@ GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const &LinSpa,
   int N = 2;
   while (true) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: Before GetRandomPositiveDefinite\n";
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: Before "
+          "GetRandomPositiveDefinite\n";
 #endif
     MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: After GetRandomPositiveDefinite\n";
+    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: After "
+          "GetRandomPositiveDefinite\n";
     os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: TestMat=\n";
     WriteMatrix(os, TheMat);
 #endif
@@ -617,7 +627,8 @@ bool is_stab_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
 }
 
 template <typename T>
-MyMatrix<T> matrix_in_t_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &LinSpa) {
+MyMatrix<T> matrix_in_t_space(MyMatrix<T> const &Pmat,
+                              LinSpaceMatrix<T> const &LinSpa) {
   int dimSpace = LinSpa.ListMat.size();
   MyMatrix<T> MatSpace(dimSpace, dimSpace);
   int pos = 0;
@@ -625,7 +636,7 @@ MyMatrix<T> matrix_in_t_space(MyMatrix<T> const &Pmat, LinSpaceMatrix<T> const &
     MyMatrix<T> eMatSpImg = Pmat * eMatSp * Pmat.transpose();
     MyVector<T> eMatSpImg_V = SymmetricMatrixToVector(eMatSpImg);
     std::optional<MyVector<T>> opt =
-      SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
+        SolutionMat(LinSpa.ListMatAsBigMat, eMatSpImg_V);
     MyVector<T> eV = unfold_opt(opt, "matrix row");
     AssignMatrixRow(MatSpace, pos, eV);
     pos += 1;

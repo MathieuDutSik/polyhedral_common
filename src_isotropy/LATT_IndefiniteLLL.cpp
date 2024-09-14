@@ -23,7 +23,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
     os << "return rec(B:=" << StringMatrixGAP(res.B);
     os << ", Mred:=" << StringMatrixGAP(res.Mred);
     if (res.Xisotrop) {
-      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      MyVector<T> const &Xisotrop = *res.Xisotrop;
       os << ", Xisotrop:=" << StringVectorGAP(Xisotrop);
     }
     os << ");\n";

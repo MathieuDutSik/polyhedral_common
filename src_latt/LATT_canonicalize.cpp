@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
     //
     std::ifstream is(argv[2]);
     MyMatrix<T> eMat = ReadMatrix<T>(is);
-    Canonic_PosDef<T, Tint> RetF = ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+    Canonic_PosDef<T, Tint> RetF =
+        ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (opt == 1) {

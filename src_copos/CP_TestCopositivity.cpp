@@ -53,7 +53,7 @@ int main(int argc, char *argv[]) {
       process(std::cerr);
     } else {
       if (OutFile == "stdout") {
-      process(std::cout);
+        process(std::cout);
       } else {
         std::ofstream os(OutFile);
         process(os);

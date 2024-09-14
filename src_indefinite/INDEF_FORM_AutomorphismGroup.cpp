@@ -12,7 +12,7 @@ void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   std::cerr << "We have Q\n";
-  IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
+  IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
   if (OutFormat == "CPP") {
     return WriteListMatrix(os_out, l_gen);
@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile] [OutFormat] "
+                   "[OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -53,7 +54,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, OutFormat, os);
+        return process<T, Tint, Tgroup>(MatFile, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

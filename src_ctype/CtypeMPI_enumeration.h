@@ -139,7 +139,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
     int nb_free = CTYP_GetNumberFreeVectors(x);
     int nb_autom = CTYP_GetNbAutom<Tint, Tgroup>(x, data.os);
     DataCtypeFacet<Tint, Tidx> data_facet =
-      CTYP_GetConeInformation<Tint, Tidx>(x, data.os);
+        CTYP_GetConeInformation<Tint, Tidx>(x, data.os);
     int nb_triple = data_facet.nb_triple;
     int nb_ineq = data_facet.nb_ineq;
     int nb_ineq_after_crit = data_facet.nb_ineq_after_crit;

@@ -12,7 +12,8 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process(std::string const &ListMatFile, std::string const& OutFormat, std::ostream& os_out) {
+void process(std::string const &ListMatFile, std::string const &OutFormat,
+             std::ostream &os_out) {
   using Tgr = GraphListAdj;
   std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(ListMatFile);
   size_t nMat = ListMat.size();
@@ -24,14 +25,15 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
   std::unordered_set<std::pair<size_t, size_t>> set_equiv;
   std::vector<std::pair<size_t, size_t>> list_cases;
   std::vector<std::pair<size_t, size_t>> l_pair;
-  for (size_t iMat=0; iMat<nMat; iMat++) {
+  for (size_t iMat = 0; iMat < nMat; iMat++) {
     std::pair<size_t, size_t> pair_stab{iMat, miss_val};
     list_cases.push_back(pair_stab);
-    (void)ArithmeticAutomorphismGroup<T,Tint>(ListMat[iMat], std::cerr);
+    (void)ArithmeticAutomorphismGroup<T, Tint>(ListMat[iMat], std::cerr);
     std::cerr << "STAB: iMat=" << iMat << "\n";
-    for (size_t jMat=iMat+1; jMat<nMat; jMat++) {
+    for (size_t jMat = iMat + 1; jMat < nMat; jMat++) {
       std::cerr << "EQUI: Before iMat=" << iMat << " jMat=" << jMat << "\n";
-      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T,Tint>(ListMat[iMat], ListMat[jMat], std::cerr);
+      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T, Tint>(
+          ListMat[iMat], ListMat[jMat], std::cerr);
       std::cerr << "EQUI: After iMat=" << iMat << " jMat=" << jMat << "\n";
       std::pair<size_t, size_t> pair_equiv{iMat, jMat};
       list_cases.push_back(pair_equiv);
@@ -47,22 +49,25 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
   //
   // Now the scheme with the enhanced equivalence
   //
-  DatabaseResultEquiStab<MyMatrix<T>,MyMatrix<Tint>> database;
-  auto get_stab_inner=[&](MyMatrix<T> const& eMat) -> std::vector<MyMatrix<Tint>> {
-    std::optional<std::vector<MyMatrix<Tint>>> opt = database.attempt_stabilizer(eMat);
+  DatabaseResultEquiStab<MyMatrix<T>, MyMatrix<Tint>> database;
+  auto get_stab_inner =
+      [&](MyMatrix<T> const &eMat) -> std::vector<MyMatrix<Tint>> {
+    std::optional<std::vector<MyMatrix<Tint>>> opt =
+        database.attempt_stabilizer(eMat);
     if (opt) {
       return *opt;
     } else {
-      std::vector<MyMatrix<Tint>> ListGen = ArithmeticAutomorphismGroup<T,Tint>(eMat, std::cerr);
+      std::vector<MyMatrix<Tint>> ListGen =
+          ArithmeticAutomorphismGroup<T, Tint>(eMat, std::cerr);
       database.insert_stab(eMat, ListGen);
       return ListGen;
     }
   };
-  auto get_stab=[&](size_t const& xMat) -> void {
+  auto get_stab = [&](size_t const &xMat) -> void {
     MyMatrix<T> eMat = ListMat[xMat];
     std::vector<MyMatrix<Tint>> ListGen = get_stab_inner(eMat);
-    for (auto & eEquiv : ListGen) {
-      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
+    for (auto &eEquiv : ListGen) {
+      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T, Tint>(eEquiv);
       MyMatrix<T> eProd = eEquiv_T * eMat * eEquiv_T.transpose();
       if (eProd != eMat) {
         std::cerr << "The matrix does not belong to the stabilizer\n";
@@ -70,26 +75,30 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
       }
     }
   };
-  auto get_equiv_inner=[&](MyMatrix<T> const& eMat1, MyMatrix<T> const& eMat2) -> std::optional<MyMatrix<Tint>> {
-    std::optional<std::optional<MyMatrix<Tint>>> opt = database.attempt_equiv(eMat1, eMat2);
+  auto get_equiv_inner =
+      [&](MyMatrix<T> const &eMat1,
+          MyMatrix<T> const &eMat2) -> std::optional<MyMatrix<Tint>> {
+    std::optional<std::optional<MyMatrix<Tint>>> opt =
+        database.attempt_equiv(eMat1, eMat2);
     if (opt) {
       std::cerr << "get_equiv_inner, from database\n";
       return *opt;
     } else {
       std::cerr << "get_equiv_inner, from direct computation\n";
-      std::optional<MyMatrix<Tint>> optB = ArithmeticEquivalence<T,Tint>(eMat1, eMat2, std::cerr);
+      std::optional<MyMatrix<Tint>> optB =
+          ArithmeticEquivalence<T, Tint>(eMat1, eMat2, std::cerr);
       database.insert_equi(eMat1, eMat2, optB);
       return optB;
     }
   };
-  auto get_equiv=[&](size_t const& iMat, size_t const& jMat) -> void {
+  auto get_equiv = [&](size_t const &iMat, size_t const &jMat) -> void {
     MyMatrix<T> eMat1 = ListMat[iMat];
     MyMatrix<T> eMat2 = ListMat[jMat];
     std::optional<MyMatrix<Tint>> opt = get_equiv_inner(eMat1, eMat2);
     std::pair<size_t, size_t> pair{iMat, jMat};
     if (opt) {
-      MyMatrix<Tint> const& Eq = *opt;
-      MyMatrix<T> Eq_T = UniversalMatrixConversion<T,Tint>(Eq);
+      MyMatrix<Tint> const &Eq = *opt;
+      MyMatrix<T> Eq_T = UniversalMatrixConversion<T, Tint>(Eq);
       MyMatrix<T> eProd = Eq_T * eMat1 * Eq_T.transpose();
       if (eProd != eMat2) {
         std::cerr << "The matrix is not an equivalene\n";
@@ -108,7 +117,7 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
   };
   size_t n_case = list_cases.size();
   std::vector<size_t> ePerm = RandomPermutation<size_t>(n_case);
-  for (size_t iCase=0; iCase<n_case; iCase++) {
+  for (size_t iCase = 0; iCase < n_case; iCase++) {
     size_t jCase = ePerm[iCase];
     std::pair<size_t, size_t> eCase = list_cases[jCase];
     size_t iMat = eCase.first;
@@ -124,14 +133,14 @@ void process(std::string const &ListMatFile, std::string const& OutFormat, std::
   if (OutFormat == "GAP") {
     os_out << "return [";
     bool IsFirst = true;
-    for (auto & set : vect_cone) {
+    for (auto &set : vect_cone) {
       if (!IsFirst)
         os_out << ",\n";
       IsFirst = false;
       //
       bool IsFirstB = true;
       os_out << "[";
-      for (auto & val1 : set) {
+      for (auto &val1 : set) {
         if (!IsFirstB)
           os_out << ",";
         IsFirstB = false;
@@ -153,7 +162,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile]\n";
       std::cerr << "or\n";
-      std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile] [OutFormat] [FileOut]\n";
+      std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile] [OutFormat] "
+                   "[FileOut]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -165,11 +175,11 @@ int main(int argc, char *argv[]) {
       FileOut = argv[4];
     }
     //
-    auto f = [&](std::ostream& os_out) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       if (arith == "rational") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(ListMatFile, OutFormat, os_out);
+        return process<T, Tint>(ListMatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

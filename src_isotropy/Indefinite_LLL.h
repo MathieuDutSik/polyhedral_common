@@ -97,7 +97,8 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   int k = 1;
   while (true) {
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k << "\n";
+    std::cerr << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k
+              << "\n";
 #endif
     ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B);
 #ifdef DEBUG_INDEFINITE_LLL
@@ -159,7 +160,9 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
 }
 
 template <typename T, typename Tint>
-ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
+ResultIndefiniteLLL<T, Tint>
+ComputeReductionIndefinite(MyMatrix<T> const &M,
+                           [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_INDEFINITE_LLL
   MicrosecondTime time;
 #endif
@@ -180,17 +183,17 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[
   T norm_work = get_norm(Mwork);
   size_t iter_no_improv = 0;
   size_t limit_iter = 2 * n;
-  while(true) {
+  while (true) {
     ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Mwork);
 #ifdef DEBUG_INDEFINITE_LLL
     os << "ILLL: We have computed res\n";
 #endif
     // Terminating if we find an isotropic vector
     if (res.Xisotrop) {
-      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      MyVector<T> const &Xisotrop = *res.Xisotrop;
       MyVector<T> V = B_T.transpose() * Xisotrop;
 #ifdef DEBUG_INDEFINITE_LLL
-      T sum = EvaluationQuadForm<T,T>(M, V);
+      T sum = EvaluationQuadForm<T, T>(M, V);
       if (sum != 0) {
         std::cerr << "ILLL: Error in ComputeReductionIndefinite, M=\n";
         WriteMatrix(std::cerr, M);
@@ -201,7 +204,7 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[
       MyMatrix<Tint> Bret = res.B * B;
       Mwork = res.Mred;
 #ifdef DEBUG_INDEFINITE_LLL
-      MyMatrix<T> Bret_T = UniversalMatrixConversion<T,Tint>(Bret);
+      MyMatrix<T> Bret_T = UniversalMatrixConversion<T, Tint>(Bret);
       MyMatrix<T> prod = Bret_T * M * Bret_T.transpose();
       if (prod != Mwork) {
         std::cerr << "ILLL: Bret is not the correct reduction matrix\n";
@@ -215,7 +218,7 @@ ResultIndefiniteLLL<T, Tint> ComputeReductionIndefinite(MyMatrix<T> const &M, [[
     }
     // Applying the reduction
     B = res.B * B;
-    B_T = UniversalMatrixConversion<T,Tint>(B);
+    B_T = UniversalMatrixConversion<T, Tint>(B);
     Mwork = res.Mred;
     T norm = get_norm(res.Mred);
 #ifdef DEBUG_INDEFINITE_LLL
@@ -354,7 +357,8 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
     MyMatrix<Tint> eP = IdentityMat<Tint>(1);
     return {std::move(eP), M};
   }
-  ResultIndefiniteLLL<T, Tint> RRI_A = ComputeReductionIndefinite<T, Tint>(M, os);
+  ResultIndefiniteLLL<T, Tint> RRI_A =
+      ComputeReductionIndefinite<T, Tint>(M, os);
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
@@ -363,10 +367,11 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-ComputeReductionIndefinite_opt(MyMatrix<T> const &M,
-                               bool const &ApplyReduction, std::ostream& os) {
+ComputeReductionIndefinite_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
+                               std::ostream &os) {
   if (ApplyReduction) {
-    ResultIndefiniteLLL<T,Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
+    ResultIndefiniteLLL<T, Tint> res =
+        ComputeReductionIndefinite<T, Tint>(M, os);
     return {res.B, res.Mred};
   } else {
     int n = M.rows();

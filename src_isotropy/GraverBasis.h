@@ -34,7 +34,8 @@ MyMatrix<Tint> GetGraverBasis(MyMatrix<T> const &GramMat) {
 }
 
 template <typename Tint>
-std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k, [[maybe_unused]] std::ostream& os) {
+std::vector<MyVector<Tint>> GetGraverKbasis(int const &n, int const &k,
+                                            [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_GRAVER_BASIS
   os << "GB: beginning of GetGraverKbasis n=" << n << " k=" << k << "\n";
 #endif

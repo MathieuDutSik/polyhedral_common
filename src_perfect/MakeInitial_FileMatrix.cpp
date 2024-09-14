@@ -36,12 +36,13 @@ int main(int argc, char *argv[]) {
       //
       int eStatus = 0;
       //
-      Tshortest<Tmat, Tint> eRec = T_ShortestVector<Tmat, Tint>(ePerfect_Tmat, std::cerr);
+      Tshortest<Tmat, Tint> eRec =
+          T_ShortestVector<Tmat, Tint>(ePerfect_Tmat, std::cerr);
       int incd = (eRec.SHV.rows()) / 2;
       //
       HumanTime time;
       MyMatrix<Tmat> eMatCan_Tmat =
-        ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat, std::cerr).Mat;
+          ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat, std::cerr).Mat;
       std::cerr << "iPerfect=" << iPerfect << " / " << nbPerfect
                 << " elapsed_seconds=" << time << "\n";
 

@@ -6,8 +6,9 @@
 #include "PolytopeEquiStab.h"
 // clang-format on
 
-template<typename T>
-void process(std::string const& FileExt1, std::string const& FileExt2, std::string const& OutFormat, std::string const& FileO) {
+template <typename T>
+void process(std::string const &FileExt1, std::string const &FileExt2,
+             std::string const &OutFormat, std::string const &FileO) {
   using Tidx = uint32_t;
   MyMatrix<T> EXT1 = ReadMatrixFile<T>(FileExt1);
   MyMatrix<T> EXT2 = ReadMatrixFile<T>(FileExt2);
@@ -16,7 +17,7 @@ void process(std::string const& FileExt1, std::string const& FileExt2, std::stri
   std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::optional<std::vector<Tidx>> equiv =
-    LinPolytope_Isomorphism<T, Tidx>(EXT1, EXT2, std::cerr);
+      LinPolytope_Isomorphism<T, Tidx>(EXT1, EXT2, std::cerr);
   //
   auto print_info = [&](std::ostream &os) -> void {
     if (OutFormat == "Oscar") {
@@ -64,16 +65,15 @@ void process(std::string const& FileExt1, std::string const& FileExt2, std::stri
   }
 }
 
-
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Isomorphism [arith] [EXT1] [EXT2] [OutFormat] "
-                   "[OutEquiv]\n";
+      std::cerr
+          << "GRP_LinPolytope_Isomorphism [arith] [EXT1] [EXT2] [OutFormat] "
+             "[OutEquiv]\n";
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Isomorphism [arith] [EXT1] [EXT2]\n";
       std::cerr << "\n";
@@ -91,7 +91,7 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[4];
       FileO = argv[5];
     }
-    auto f=[&]() -> void {
+    auto f = [&]() -> void {
       if (arith == "rational") {
         using T = mpq_class;
         return process<T>(FileExt1, FileExt2, OutFormat, FileO);

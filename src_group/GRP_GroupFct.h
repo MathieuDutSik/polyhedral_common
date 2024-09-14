@@ -415,7 +415,8 @@ Tgroup ReducedGroupActionRa(Tgroup const &TheGRP, Face const &eList) {
 }
 
 template <typename Tidx>
-ReducingArray<Tidx> GetReducingArrayVect(std::vector<Tidx> const& eList, Tidx const& size) {
+ReducingArray<Tidx> GetReducingArrayVect(std::vector<Tidx> const &eList,
+                                         Tidx const &size) {
   size_t nb = eList.size();
   Tidx nb_i = nb;
   if (nb_i == 0) {
@@ -423,7 +424,7 @@ ReducingArray<Tidx> GetReducingArrayVect(std::vector<Tidx> const& eList, Tidx co
     throw TerminalException{1};
   }
   std::vector<Tidx> ListPositionRev(size, -1);
-  for (Tidx pos=0; pos<nb_i; pos++) {
+  for (Tidx pos = 0; pos < nb_i; pos++) {
     Tidx val = eList[pos];
     ListPositionRev[val] = pos;
   }
@@ -431,7 +432,9 @@ ReducingArray<Tidx> GetReducingArrayVect(std::vector<Tidx> const& eList, Tidx co
 }
 
 template <typename Tgroup>
-Tgroup ReducedGroupActionRa(Tgroup const &TheGRP, ReducingArray<typename Tgroup::Telt::Tidx> const& ra) {
+Tgroup
+ReducedGroupActionRa(Tgroup const &TheGRP,
+                     ReducingArray<typename Tgroup::Telt::Tidx> const &ra) {
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> ListGen;
   for (auto &eGen : TheGRP.GeneratorsOfGroup()) {
@@ -449,7 +452,9 @@ Tgroup ReducedGroupActionFace(Tgroup const &TheGRP, Face const &eList) {
 }
 
 template <typename Tgroup>
-Tgroup ReducedGroupActionVect(Tgroup const &TheGRP, std::vector<typename Tgroup::Telt::Tidx> const &eList) {
+Tgroup
+ReducedGroupActionVect(Tgroup const &TheGRP,
+                       std::vector<typename Tgroup::Telt::Tidx> const &eList) {
   using Tidx = typename Tgroup::Telt::Tidx;
   Tidx size = TheGRP.n_act();
   ReducingArray<Tidx> ra = GetReducingArrayVect<Tidx>(eList, size);
@@ -588,7 +593,7 @@ template <typename Tgroup>
 std::vector<size_t> DecomposeOrbitPoint_FullRepr(Tgroup const &TheGRP) {
   vectface vf = DecomposeOrbitPoint_Full(TheGRP);
   std::vector<size_t> l_idx;
-  for (auto & eFace : vf) {
+  for (auto &eFace : vf) {
     boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
     l_idx.push_back(aRow);
   }

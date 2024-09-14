@@ -563,7 +563,8 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, before "
         "EnumerateAndStore_Serial\n";
 #endif
-  std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect, max_runtime_second);
+  std::optional<Tout> opt = EnumerateAndStore_Serial<Tdata>(
+      data_func, f_incorrect, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, after "
         "EnumerateAndStore_Serial\n";
@@ -716,7 +717,8 @@ void ComputeDelaunayPolytope(boost::mpi::communicator &comm,
   std::string FileDualDesc =
       BlockDATA.ListStringValues.at("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
-    Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
+      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
+                                                         os);
   //
   CVPSolver<T, Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);

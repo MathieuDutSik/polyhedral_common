@@ -516,7 +516,6 @@ typedef enum {
   dd_DualUnbounded
 } dd_LPStatusType;
 
-
 template <typename T> struct dd_lpdata {
   //  dd_DataFileType filename;
   dd_LPObjectiveType objective;
@@ -2506,8 +2505,7 @@ dd_matrixdata<T> *dd_FourierElimination(dd_matrixdata<T> *M,
   return Mnew;
 }
 
-template <typename T>
-dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M) {
+template <typename T> dd_lpdata<T> *dd_Matrix2LP(dd_matrixdata<T> *M) {
   dd_rowrange m, i, irev, linc;
   dd_colrange d, j;
   dd_lpdata<T> *lp;
@@ -8265,8 +8263,10 @@ void WriteInputFileCdd(std::string const &FileName, MyMatrix<T> const &ListIneq,
 }
 
 template <typename T>
-LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
-                                             MyVector<T> const &ToBeMinimized, [[maybe_unused]] std::ostream& os) {
+LpSolution<T>
+CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
+                               MyVector<T> const &ToBeMinimized,
+                               [[maybe_unused]] std::ostream &os) {
   std::cerr << "Begin CDD_LinearProgramming_External\n";
   std::string eStr = random_string(20);
   std::string FileIne = "/tmp/LP_" + eStr + ".ine";
@@ -8331,8 +8331,10 @@ LpSolution<T> CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   return eSol;
 }
 
-template<typename T>
-std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, [[maybe_unused]] MyVector<T> const& eVect, cdd::dd_lpdata<T> *lp, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+std::optional<LpSolution<T>> GetLpSolutionFromLpData(
+    MyMatrix<T> const &EXT, [[maybe_unused]] MyVector<T> const &eVect,
+    cdd::dd_lpdata<T> *lp, [[maybe_unused]] std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   cdd::dd_colrange j;
@@ -8417,27 +8419,29 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(MyMatrix<T> const& EXT, [[m
 }
 
 template <typename T, typename Tfloat>
-std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
-                                                       cdd::dd_lpdata<Tfloat> *lp,
-                                                       [[maybe_unused]] std::ostream& os) {
+std::optional<LpSolution<T>>
+LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                          cdd::dd_lpdata<Tfloat> *lp,
+                          [[maybe_unused]] std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   if (lp->LPS != cdd::dd_Optimal) {
 #ifdef DEBUG_CDD
-    os << "CDD: LIFT ERROR, We did not get an optinal solution. Therefore we cannot lift solution\n";
+    os << "CDD: LIFT ERROR, We did not get an optinal solution. Therefore we "
+          "cannot lift solution\n";
 #endif
     return {};
   }
   // Now using the dual solution to find the exact vertex.
   cdd::dd_colrange i, j;
   cdd::dd_colrange d = lp->d;
-  MyVector<T> V(d-1);
-  MyMatrix<T> M(d-1,d-1);
-  for (j=1; j<d; j++) {
+  MyVector<T> V(d - 1);
+  MyMatrix<T> M(d - 1, d - 1);
+  for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
-    V(j-1) = EXT(idx-1, 0);
-    for (i=0; i<d-1; i++) {
-      M(i, j-1) = - EXT(idx-1, i+1);
+    V(j - 1) = EXT(idx - 1, 0);
+    for (i = 0; i < d - 1; i++) {
+      M(i, j - 1) = -EXT(idx - 1, i + 1);
     }
   }
   std::optional<MyVector<T>> optA = SolutionMat(M, V);
@@ -8450,35 +8454,36 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
   //
   // Getting the direct solution and testing it.
   //
-  MyVector<T> const& DirectSolution = *optA;
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  MyVector<T> const &DirectSolution = *optA;
+  for (int iRow = 0; iRow < nbRow; iRow++) {
     T eSum = EXT(iRow, 0);
-    for (int iCol=0; iCol<nbCol-1; iCol++) {
-      eSum += DirectSolution(iCol) * EXT(iRow, iCol+1);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+      eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
     if (eSum < 0) {
 #ifdef DEBUG_CDD
-      os << "CDD: LIFT ERROR, Not an interior point at iRow=" << iRow << " eSum=" << eSum << "\n";
+      os << "CDD: LIFT ERROR, Not an interior point at iRow=" << iRow
+         << " eSum=" << eSum << "\n";
 #endif
       return {};
     }
   }
   T objDirect = eVect(0);
-  for (int iCol=0; iCol<nbCol-1; iCol++) {
-    objDirect += DirectSolution(iCol) * eVect(iCol+1);
+  for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+    objDirect += DirectSolution(iCol) * eVect(iCol + 1);
   }
   //
   // Getting the dual solution
   //
-  MyVector<T> eVectRed(nbCol-1);
-  for (int iCol=0; iCol<nbCol-1; iCol++) {
-    eVectRed(iCol) = eVect(iCol+1);
+  MyVector<T> eVectRed(nbCol - 1);
+  for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+    eVectRed(iCol) = eVect(iCol + 1);
   }
-  MyMatrix<T> M2(nbCol-1, nbCol-1);
-  for (j=1; j<d; j++) {
+  MyMatrix<T> M2(nbCol - 1, nbCol - 1);
+  for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
-    for (int iCol=0; iCol<nbCol-1; iCol++) {
-      M2(j-1, iCol) = EXT(idx-1, iCol+1);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+      M2(j - 1, iCol) = EXT(idx - 1, iCol + 1);
     }
   }
   std::optional<MyVector<T>> optB = SolutionMat(M2, eVectRed);
@@ -8488,24 +8493,25 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
 #endif
     return {};
   }
-  MyVector<T> const& partDualSolution = *optB;
+  MyVector<T> const &partDualSolution = *optB;
   MyVector<T> DualSolution = ZeroVector<T>(nbRow);
   T objDual = eVect(0);
-  for (j=1; j<d; j++) {
+  for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
-    T scal = - partDualSolution(j-1);
-    DualSolution(idx-1) = scal;
+    T scal = -partDualSolution(j - 1);
+    DualSolution(idx - 1) = scal;
     if (scal > 0) {
 #ifdef DEBUG_CDD
       os << "CDD: LIFT ERROR, scal=" << scal << "\n";
 #endif
       return {};
     }
-    objDual += scal * EXT(idx-1,0);
+    objDual += scal * EXT(idx - 1, 0);
   }
   if (objDual != objDirect) {
 #ifdef DEBUG_CDD
-    os << "CDD: LIFT ERROR, objDual=" << objDual << " objDirect=" << objDirect << "\n";
+    os << "CDD: LIFT ERROR, objDual=" << objDual << " objDirect=" << objDirect
+       << "\n";
 #endif
     return {};
   }
@@ -8522,8 +8528,9 @@ std::optional<LpSolution<T>> LiftFloatingPointSolution(MyMatrix<T> const &EXT, M
 }
 
 template <typename T>
-LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
-                                             MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+LpSolution<T>
+CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                               [[maybe_unused]] std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   cdd::dd_ErrorType error = cdd::dd_NoError;
   cdd::dd_matrixdata<T> *M;
@@ -8541,25 +8548,31 @@ LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
   lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
   dd_LPSolve(lp, solver, &error);
-  std::optional<LpSolution<T>> optA = GetLpSolutionFromLpData(EXT, eVect, lp, os);
+  std::optional<LpSolution<T>> optA =
+      GetLpSolutionFromLpData(EXT, eVect, lp, os);
   if (optA) {
-    LpSolution<T> const& eSolA = *optA;
+    LpSolution<T> const &eSolA = *optA;
 #ifdef DEBUG_CDD
-    std::optional<LpSolution<T>> optB = LiftFloatingPointSolution(EXT, eVect, lp, os);
+    std::optional<LpSolution<T>> optB =
+        LiftFloatingPointSolution(EXT, eVect, lp, os);
     if (optB) {
-      LpSolution<T> const& eSolB = *optB;
+      LpSolution<T> const &eSolB = *optB;
       if (eSolB.OptimalValue != eSolA.OptimalValue) {
         std::cerr << "We should have the same optimal value\n";
         throw TerminalException{1};
       }
       if (eSolA.DualSolution != eSolB.DualSolution) {
-        std::cerr << "DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
-        std::cerr << "DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
+        std::cerr << "DualSolution(A)=" << StringVector(eSolA.DualSolution)
+                  << "\n";
+        std::cerr << "DualSolution(B)=" << StringVector(eSolB.DualSolution)
+                  << "\n";
         throw TerminalException{1};
       }
       if (eSolA.DirectSolution != eSolB.DirectSolution) {
-        std::cerr << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
-        std::cerr << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
+        std::cerr << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
+                  << "\n";
+        std::cerr << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
+                  << "\n";
         throw TerminalException{1};
       }
       os << "DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
@@ -8580,10 +8593,11 @@ LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
 }
 
 template <typename T, typename Tfloat>
-LpSolution<T> CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT,
-                                             MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+LpSolution<T>
+CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                               [[maybe_unused]] std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
-  MyMatrix<Tfloat> EXT_float = UniversalMatrixConversion<Tfloat,T>(EXT);
+  MyMatrix<Tfloat> EXT_float = UniversalMatrixConversion<Tfloat, T>(EXT);
   cdd::dd_ErrorType error = cdd::dd_NoError;
   cdd::dd_matrixdata<Tfloat> *M;
   cdd::dd_LPSolverType solver =
@@ -8595,12 +8609,13 @@ LpSolution<T> CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT,
   cdd::dd_colrange j;
   cdd::dd_colrange d_input = EXT.cols();
   for (j = 0; j < d_input; j++) {
-    M->rowvec[j] = UniversalScalarConversion<Tfloat,T>(eVect(j));
+    M->rowvec[j] = UniversalScalarConversion<Tfloat, T>(eVect(j));
   }
   lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
   dd_LPSolve(lp, solver, &error);
-  std::optional<LpSolution<T>> optB = LiftFloatingPointSolution<T,Tfloat>(EXT, eVect, lp, os);
+  std::optional<LpSolution<T>> optB =
+      LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
   if (optB) {
 #ifdef DEBUG_CDD
     os << "CDD: The lifing of floating point solution went nicely\n";
@@ -8610,26 +8625,20 @@ LpSolution<T> CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT,
   return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
 }
 
-
-
-
 template <typename T>
 LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT,
-                                    MyVector<T> const &eVect, [[maybe_unused]] std::ostream& os) {
+                                    MyVector<T> const &eVect,
+                                    [[maybe_unused]] std::ostream &os) {
   if (EXT.cols() < 4) {
     return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
   }
-  return CDD_LinearProgramming_exact_V2<T,double>(EXT, eVect, os);
+  return CDD_LinearProgramming_exact_V2<T, double>(EXT, eVect, os);
 }
-
-
-
-
 
 template <typename T>
 LpSolution<T> CDD_LinearProgramming_BugSearch(MyMatrix<T> const &TheEXT,
                                               MyVector<T> const &eVect,
-                                              std::ostream& os) {
+                                              std::ostream &os) {
   LpSolution<T> eSol1 = CDD_LinearProgramming(TheEXT, eVect, os);
   LpSolution<T> eSol2 = CDD_LinearProgramming_External(TheEXT, eVect, os);
   if (eSol1.PrimalDefined != eSol2.PrimalDefined ||

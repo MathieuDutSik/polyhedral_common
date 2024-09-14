@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
       ListMatrix.push_back(eMat);
     }
     Canonic_PosDef<T, Tint> RetF =
-      ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
+        ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
     //
     if (opt == 1) {
       std::ofstream os(argv[3]);

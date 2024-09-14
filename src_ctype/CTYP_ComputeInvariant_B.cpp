@@ -80,7 +80,8 @@ int main() {
     varNbAdjI.getVar(start, count, &nbAdjacent);
     return nbAdjacent;
   };
-  std::vector<int> l_nb_adjacent, l_nb_triple, l_nb_ineq, l_nb_ineq_after_crit, l_nb_free, l_nb_autom;
+  std::vector<int> l_nb_adjacent, l_nb_triple, l_nb_ineq, l_nb_ineq_after_crit,
+      l_nb_free, l_nb_autom;
   if (rank == 0) {
     l_nb_adjacent.resize(n_ctype);
     l_nb_triple.resize(n_ctype);
@@ -99,11 +100,12 @@ int main() {
       l_idx.push_back(i_ctype);
     }
   }
-  std::vector<int> loc_nb_adjacent, loc_nb_triple, loc_nb_ineq, loc_nb_ineq_after_crit, loc_nb_free, loc_nb_autom;
+  std::vector<int> loc_nb_adjacent, loc_nb_triple, loc_nb_ineq,
+      loc_nb_ineq_after_crit, loc_nb_free, loc_nb_autom;
   std::string LogFileO = "LOG_" + std::to_string(rank);
   std::ofstream log(LogFileO);
   log << "Beginning\n";
-  for (auto & i_ctype : l_idx) {
+  for (auto &i_ctype : l_idx) {
     log << "i_ctype=" << i_ctype << "\n";
     TypeCtypeExch<Tint> eType = NC_ReadMatrix(i_ctype);
     int nb_adjacent = NC_GetNbAdjacent(i_ctype);
@@ -125,7 +127,7 @@ int main() {
   // Collecting the data
   //
   if (rank == 0) {
-    for (size_t u=0; u<l_idx.size(); u++) {
+    for (size_t u = 0; u < l_idx.size(); u++) {
       size_t i_ctype = l_idx[u];
       l_nb_adjacent[i_ctype] = loc_nb_adjacent[u];
       l_nb_triple[i_ctype] = loc_nb_triple[u];
@@ -134,7 +136,7 @@ int main() {
       l_nb_free[i_ctype] = loc_nb_free[u];
       l_nb_autom[i_ctype] = loc_nb_autom[u];
     }
-    for (int irank=1; irank<size; irank++) {
+    for (int irank = 1; irank < size; irank++) {
       size_t irank_s = static_cast<size_t>(irank);
       world.recv(irank, 10, loc_nb_adjacent);
       world.recv(irank, 11, loc_nb_triple);
@@ -189,8 +191,10 @@ int main() {
     varNbIneqO.putAtt("long_name", "number of inequalities from triples");
     varNbIneqO.putVar(l_nb_ineq.data());
     //
-    netCDF::NcVar varNbIneqAfterCritO = dataFileO.addVar("nb_ineq_after_crit", "int", LDim1);
-    varNbIneqAfterCritO.putAtt("long_name", "number of inequalities after criterion reduction");
+    netCDF::NcVar varNbIneqAfterCritO =
+        dataFileO.addVar("nb_ineq_after_crit", "int", LDim1);
+    varNbIneqAfterCritO.putAtt(
+        "long_name", "number of inequalities after criterion reduction");
     varNbIneqAfterCritO.putVar(l_nb_ineq_after_crit.data());
     //
     netCDF::NcVar varNbFreeO = dataFileO.addVar("nb_free", "int", LDim1);

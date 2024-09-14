@@ -16,7 +16,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
   std::optional<MyVector<T>> opt = FindIsotropic(Q, std::cerr);
   if (OutFormat == "GAP") {
     if (opt) {
-      MyVector<T> const& eV = *opt;
+      MyVector<T> const &eV = *opt;
       T val = EvaluationQuadForm(Q, eV);
       if (val != 0) {
         std::cerr << "LATT_FindIsotropic: eV is not an isotropic vector\n";

@@ -20,7 +20,7 @@ void process(std::string const &choice, std::string const &FileGram,
              std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileGram);
   int n = GramMat.rows();
-  auto get_vect=[&]() -> MyVector<T> {
+  auto get_vect = [&]() -> MyVector<T> {
     if (FileVect == "zero") {
       return ZeroVector<T>(n);
     }
@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "choice    : The choose option (see below)\n";
       std::cerr << "FileGram  : The list of inequalities\n";
       std::cerr << "FileV     : The vector for which we want to\n";
-      std::cerr <<"       compute the distance\n";
+      std::cerr << "       compute the distance\n";
       std::cerr << "OutFormat : The format of output, GAP or Oscar\n";
       std::cerr << "FileOut   : The file of output (if present, otherwise "
                    "std::cerr)\n";
@@ -115,7 +115,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "     that vector\n";
       std::cerr << "fixed=dist : The vector at an exact distance\n";
       std::cerr << "     from that vector\n";
-        
+
       return -1;
     }
     //

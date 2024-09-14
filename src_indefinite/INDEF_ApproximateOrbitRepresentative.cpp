@@ -8,14 +8,16 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
-             std::ostream &os_out) {
+void process(std::string const &MatFile, std::string const &XnormStr,
+             std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   std::cerr << "We have Q\n";
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Xnorm\n";
-  ApproximateModel<T,Tint> approx = INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T,Tint,Tgroup>(Qmat);
-  std::vector<MyVector<Tint>> LVect = approx.GetCoveringOrbitRepresentatives(Xnorm, std::cerr);
+  ApproximateModel<T, Tint> approx =
+      INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T, Tint, Tgroup>(Qmat);
+  std::vector<MyVector<Tint>> LVect =
+      approx.GetCoveringOrbitRepresentatives(Xnorm, std::cerr);
   if (OutFormat == "GAP") {
     if (LVect.size() == 0) {
       os_out << "return rec(LVect:=[]);\n";
@@ -33,9 +35,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 4 && argc != 6) {
-      std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X]\n";
+      std::cerr
+          << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X] "
+                   "[OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -56,7 +60,7 @@ int main(int argc, char *argv[]) {
       if (arith == "rational") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, XnormStr, OutFormat, os);
+        return process<T, Tint, Tgroup>(MatFile, XnormStr, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

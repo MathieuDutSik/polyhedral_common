@@ -12,7 +12,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] [OutFile]\n";
+      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] "
+                   "[OutFile]\n";
       std::cerr << "\n";
       std::cerr << "DATASYMM: The symmetric matrix on input\n";
       std::cerr << "MaxNorm: The maximm norm considered\n";

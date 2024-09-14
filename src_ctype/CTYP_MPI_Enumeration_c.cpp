@@ -112,7 +112,7 @@ static int tag_termination = 157;
 template <typename T, typename Tint>
 void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
                      size_t const &n_vect, size_t const &n, int const &pos,
-                     std::ostream & os) {
+                     std::ostream &os) {
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
@@ -134,14 +134,14 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> &M,
 template <typename T, typename Tint>
 void NC_WriteMatrix_T(netCDF::NcVar &varCtype, MyMatrix<Tint> const &M,
                       size_t const &n_vect, size_t const &n, int const &pos,
-                      std::ostream& os) {
+                      std::ostream &os) {
   std::vector<size_t> start2{size_t(pos), 0, 0};
   std::vector<size_t> count2{1, n_vect, n};
   std::vector<T> V(n_vect * n);
   int idx = 0;
   for (size_t i_vect = 0; i_vect < n_vect; i_vect++)
     for (size_t i = 0; i < n; i++) {
-      V[idx] = UniversalScalarConversion<T,Tint>(M(i_vect, i));
+      V[idx] = UniversalScalarConversion<T, Tint>(M(i_vect, i));
       idx++;
     }
 #ifdef ERR_LOG
@@ -164,7 +164,8 @@ int main(int argc, char *argv[]) {
       std::chrono::system_clock::now();
   size_t irank = irank_i;
   size_t n_pes = n_pes_i;
-  std::string FileLog = "log_" + std::to_string(irank_i) + "_" + std::to_string(n_pes);
+  std::string FileLog =
+      "log_" + std::to_string(irank_i) + "_" + std::to_string(n_pes);
   std::ofstream os(FileLog);
 #ifdef ERR_LOG
   os << "irank=" << irank << " n_pes=" << n_pes << "\n";
@@ -265,13 +266,17 @@ int main(int argc, char *argv[]) {
   };
   auto NC_AppendMatrix = [&](MyMatrix<Tint> const &M) -> void {
     if (eType == netCDF::NcType::nc_BYTE)
-      NC_WriteMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
+      NC_WriteMatrix_T<int8_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix,
+                                     os);
     if (eType == netCDF::NcType::nc_SHORT)
-      NC_WriteMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
+      NC_WriteMatrix_T<int16_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix,
+                                      os);
     if (eType == netCDF::NcType::nc_INT)
-      NC_WriteMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
+      NC_WriteMatrix_T<int32_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix,
+                                      os);
     if (eType == netCDF::NcType::nc_INT64)
-      NC_WriteMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix, os);
+      NC_WriteMatrix_T<int64_t, Tint>(varCtype, M, n_vect, n, curr_nb_matrix,
+                                      os);
     NC_WriteNbAdjacent(curr_nb_matrix, 0);
     curr_nb_matrix++;
   };
@@ -433,8 +438,8 @@ int main(int argc, char *argv[]) {
       if (idx == -1)
         break;
 #ifdef ERR_LOG
-      os << "Assigning the request idx=" << idx << " to processor "
-         << i_pes << "\n";
+      os << "Assigning the request idx=" << idx << " to processor " << i_pes
+         << "\n";
 #endif
       std::vector<TypeCtypeExch<Tint>> &eList = ListListMatrixUnsent[i_pes];
       char *ptr_o = ListMesg[idx].data();
@@ -552,7 +557,7 @@ int main(int argc, char *argv[]) {
 #endif
         for (int iRecv = 0; iRecv < nbRecv; iRecv++) {
           TypeCtypeExch<Tint> eCtype =
-            vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n, os);
+              vectorchar_to_PairExch<Tint>(ptr_recv, n_vect, n, os);
 #ifdef ERR_LOG
           os << "iRecv=" << iRecv << " ctype=" << eCtype << "\n";
 #endif
@@ -584,8 +589,7 @@ int main(int argc, char *argv[]) {
     } else {
 #ifdef ERR_LOG
       os << "irank=" << irank
-         << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices
-         << "\n";
+         << " MaxStoredUnsentMatrices=" << MaxStoredUnsentMatrices << "\n";
 #endif
       bool DoSomething = false;
       if (!AreBufferFullEnough()) {
@@ -658,8 +662,7 @@ int main(int argc, char *argv[]) {
       TerminationNoticeSent = true;
       for (size_t i_pes = 0; i_pes < n_pes; i_pes++) {
 #ifdef ERR_LOG
-        os << "Before world.isend for termination i_pes=" << i_pes
-           << "\n";
+        os << "Before world.isend for termination i_pes=" << i_pes << "\n";
 #endif
         if (i_pes == irank) {
           StatusNeighbors[i_pes] = 1;

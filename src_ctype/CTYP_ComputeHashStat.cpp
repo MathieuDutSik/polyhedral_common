@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     size_t red_print = 1000;
     size_t pos = 0;
     size_t n_block = 0;
-    for (size_t u=0; u<n_ctype; u++) {
+    for (size_t u = 0; u < n_ctype; u++) {
       TypeCtypeExch<Tint> eCtype = NC_ReadMatrix(u);
       size_t e_hash = std::hash<TypeCtypeExch<Tint>>()(eCtype);
       map1[e_hash] += 1;
@@ -78,11 +78,12 @@ int main(int argc, char *argv[]) {
       }
     }
     std::map<size_t, size_t> map2;
-    for (auto & kv1: map1) {
+    for (auto &kv1 : map1) {
       map2[kv1.second] += 1;
     }
-    for (auto & kv2: map2) {
-      std::cerr << "multiplicity=" << kv2.first << " attained " << kv2.second << " times\n";
+    for (auto &kv2 : map2) {
+      std::cerr << "multiplicity=" << kv2.first << " attained " << kv2.second
+                << " times\n";
     }
   } catch (TerminalException const &e) {
     std::cerr << "Something went wrong in the computation, please debug\n";

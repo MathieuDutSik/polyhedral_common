@@ -8,10 +8,10 @@
 #include "MPI_basic.h"
 #include "Timings.h"
 #include <limits>
+#include <list>
 #include <string>
 #include <utility>
 #include <vector>
-#include <list>
 
 /*
   For the vector, simple syntactic sugar

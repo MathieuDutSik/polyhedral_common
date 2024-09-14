@@ -8,7 +8,8 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const& OutFormat, std::ostream& os) {
+void process(std::string const &eFileI, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   T volume = lrs::Kernel_VolumePolytope(EXT);
   if (OutFormat == "Direct") {
@@ -63,7 +64,7 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       FileO = argv[4];
     }
-    auto call_lrs = [&](std::ostream& os) -> void {
+    auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "safe_integer") {
         using T = SafeInt64;
         return process<T>(eFileI, OutFormat, os);

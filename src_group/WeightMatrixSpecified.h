@@ -308,8 +308,9 @@ void PrintVertexPartitionInfo(const VertexPartition<Tidx> &VP,
   os << "WMS: nbRow=" << VP.nbRow << "\n";
   size_t n_block = VP.ListBlocks.size();
   for (size_t i = 0; i < n_block; i++) {
-    os << "WMS:   i=" << i << "/" << n_block << " siz=" << VP.ListBlocks[i].size()
-       << " status=" << int(status[i]) << "\n";
+    os << "WMS:   i=" << i << "/" << n_block
+       << " siz=" << VP.ListBlocks[i].size() << " status=" << int(status[i])
+       << "\n";
   }
 }
 
@@ -382,8 +383,8 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
         bool test2 = RefineSpecificVertexPartition<T, Tidx>(
             VP, jBlock, iBlock, f1, f2, canonically);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-        os << "WMS:   iBlock=" << iBlock << " jBlock=" << jBlock << " test2=" << test2
-           << "\n";
+        os << "WMS:   iBlock=" << iBlock << " jBlock=" << jBlock
+           << " test2=" << test2 << "\n";
 #endif
         if (test2) {
           status[jBlock] = 0;
@@ -522,8 +523,8 @@ void PrintWMVS(WeightMatrixVertexSignatures<T> const &WMVS, std::ostream &os) {
   //
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     SignVertex eCase = WMVS.ListPossibleSignatures[iCase];
-    os << "WMS: iCase=" << iCase << "/" << nbCase << " nb=" << WMVS.ListNbCase[iCase]
-       << " eCase=" << eCase[0];
+    os << "WMS: iCase=" << iCase << "/" << nbCase
+       << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase[0];
     size_t len = eCase.size() / 2;
     os << " LV=";
     for (size_t i = 0; i < len; i++) {
@@ -947,7 +948,8 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
       get_expanded_symbolic<T, is_symm>(nbWeight, WMVS, os);
   size_t nbCase = expand.list_signature.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |vertex_to_signature|=" << expand.vertex_to_signature.size() << "\n";
+  os << "WMS: |vertex_to_signature|=" << expand.vertex_to_signature.size()
+     << "\n";
   for (size_t i = 0; i < expand.vertex_to_signature.size(); i++) {
     os << "WMS:   i=" << i << " sign=" << expand.vertex_to_signature[i] << "\n";
   }
@@ -1489,8 +1491,8 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS: GetStabilizerWeightMatrix_Heuristic : |ListGen|=" << ListGen.size()
-       << "\n";
+    os << "WMS: GetStabilizerWeightMatrix_Heuristic : |ListGen|="
+       << ListGen.size() << "\n";
 #endif
     return ListGen;
   };

@@ -8,12 +8,13 @@
 // clang-format on
 
 template <typename T>
-void process(std::string const &eFileI, std::string const& OutFormat, std::ostream& os) {
+void process(std::string const &eFileI, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   vectface vf = lrs::GetTriangulation(EXT);
   if (OutFormat == "Volume") {
     T sum_det(0);
-    for (auto & trig : vf) {
+    for (auto &trig : vf) {
       MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
       T det = DeterminantMat(EXTtrig);
       std::cerr << "det=" << det << "\n";
@@ -21,7 +22,7 @@ void process(std::string const &eFileI, std::string const& OutFormat, std::ostre
     }
     int dim = EXT.cols() - 1;
     T fact(1);
-    for (int u=1; u<=dim; u++) {
+    for (int u = 1; u <= dim; u++) {
       fact *= u;
     }
     os << "sum_det=" << sum_det << " fact=" << fact << "\n";
@@ -36,7 +37,7 @@ void process(std::string const &eFileI, std::string const& OutFormat, std::ostre
   if (OutFormat == "Trigs") {
     os << "return [";
     bool IsFirst = true;
-    for (auto & trig : vf) {
+    for (auto &trig : vf) {
       if (!IsFirst) {
         os << ",\n";
       }
@@ -57,7 +58,8 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_lrs_triangulation arith [DATAIN] [OutFormat] [FileOut]\n";
+      std::cerr
+          << "POLY_lrs_triangulation arith [DATAIN] [OutFormat] [FileOut]\n";
       std::cerr << "\n";
       std::cerr << "POLY_lrs_triangulation arith [DATAIN]\n";
       std::cerr << "\n";
@@ -91,7 +93,7 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       FileO = argv[4];
     }
-    auto call_lrs = [&](std::ostream& os) -> void {
+    auto call_lrs = [&](std::ostream &os) -> void {
       if (arith == "safe_integer") {
         using T = SafeInt64;
         return process<T>(eFileI, OutFormat, os);

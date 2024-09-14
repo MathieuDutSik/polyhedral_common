@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     int val_min = std::numeric_limits<int>::max();
     size_t sum = 0;
     std::map<int, size_t> map;
-    for (size_t i=0; i<n_ctype; i++) {
+    for (size_t i = 0; i < n_ctype; i++) {
       int val = V[i];
       if (val < val_min) {
         val_min = val;
@@ -56,11 +56,13 @@ int main(int argc, char *argv[]) {
     }
     double sum_d = static_cast<double>(sum);
     double avg = sum_d / n_ctype;
-    std::cerr << "val_min=" << val_min << " val_max=" << val_max << " avg=" << avg << "\n";
+    std::cerr << "val_min=" << val_min << " val_max=" << val_max
+              << " avg=" << avg << "\n";
 
     std::vector<std::string> LStr;
-    for (auto & kv : map) {
-      std::string str = std::to_string(kv.first) + " & " + std::to_string(kv.second);
+    for (auto &kv : map) {
+      std::string str =
+          std::to_string(kv.first) + " & " + std::to_string(kv.second);
       LStr.push_back(str);
     }
     std::string strEmpty = "  &  ";
@@ -71,15 +73,15 @@ int main(int argc, char *argv[]) {
     std::cerr << "nCol_mpq=" << nCol_mpq << "\n";
     mpq_class quot = nEnt / nCol_mpq;
     std::cerr << "quot=" << quot << "\n";
-    mpq_class nRow_mpq = UniversalCeilScalarInteger<mpq_class,mpq_class>(quot);
+    mpq_class nRow_mpq = UniversalCeilScalarInteger<mpq_class, mpq_class>(quot);
     std::cerr << "nRow_mpq=" << nRow_mpq << "\n";
-    int nRow = UniversalScalarConversion<int,mpq_class>(nRow_mpq);
+    int nRow = UniversalScalarConversion<int, mpq_class>(nRow_mpq);
     std::cerr << "nRow=" << nRow << "\n";
     std::vector<std::string> Lines(nRow);
     std::vector<size_t> LEnt(nRow, 0);
     int nTot = nRow * nCol;
     size_t pos = 0;
-    for (int u=0; u<nTot; u++) {
+    for (int u = 0; u < nTot; u++) {
       if (LEnt[pos] > 0) {
         Lines[pos] += strSep;
       }
@@ -94,10 +96,10 @@ int main(int argc, char *argv[]) {
         pos = 0;
       }
     }
-    for (int u=0; u<nRow; u++) {
+    for (int u = 0; u < nRow; u++) {
       std::cerr << Lines[u] << "\\\\\n";
     }
-    
+
   } catch (TerminalException const &e) {
     std::cerr << "Something went wrong in the computation, please debug\n";
     exit(e.eVal);

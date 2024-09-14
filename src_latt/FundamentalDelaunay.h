@@ -105,7 +105,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         }
       }
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Processing TheCVP 1|=" << time << "\n";
+      os << "|Processing TheCVP 1|=" << time << "\n";
 #endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
       os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
@@ -431,25 +431,29 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
                                            std::ostream &os) {
   int target_ext = 2 * GramMat.rows();
   int max_iter = 10;
-  MyMatrix<Tint> EXTret = FindDelaunayPolytope<T,Tint>(GramMat, solver, os);
-  std::vector<std::string> l_method{"lp_cdd", "lp_cdd_min", "sampling", "lrs_limited"};
+  MyMatrix<Tint> EXTret = FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
+  std::vector<std::string> l_method{"lp_cdd", "lp_cdd_min", "sampling",
+                                    "lrs_limited"};
   size_t n_method = l_method.size();
-  for (int iter=0; iter<max_iter; iter++) {
+  for (int iter = 0; iter < max_iter; iter++) {
     size_t i_method = rand() % n_method;
     std::string e_method = l_method[i_method];
-    MyMatrix<T> EXTret_T = UniversalMatrixConversion<T,Tint>(EXTret);
+    MyMatrix<T> EXTret_T = UniversalMatrixConversion<T, Tint>(EXTret);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
-    os << "iter=" << iter << "/" << max_iter << " e_method=" << e_method << " |EXTret|=" << EXTret.rows() << "\n";
+    os << "iter=" << iter << "/" << max_iter << " e_method=" << e_method
+       << " |EXTret|=" << EXTret.rows() << "\n";
 #endif
     vectface vf = DirectComputationInitialFacetSet<T>(EXTret_T, e_method, os);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "  |vf|=" << vf.size() << "\n";
 #endif
-    auto get_adj=[&]() -> MyMatrix<Tint> {
+    auto get_adj = [&]() -> MyMatrix<Tint> {
       MyMatrix<Tint> EXTwork;
-      int n_max = std::numeric_limits<int>::max();;
-      for (auto& eFace : vf) {
-        MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(GramMat, solver, ShvGraverBasis, EXTret_T, eFace, os);
+      int n_max = std::numeric_limits<int>::max();
+      ;
+      for (auto &eFace : vf) {
+        MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
+            GramMat, solver, ShvGraverBasis, EXTret_T, eFace, os);
         int nbRow = EXTadj.rows();
         if (nbRow < n_max) {
           EXTwork = EXTadj;

@@ -33,8 +33,8 @@ MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
 }
 
 template <typename T>
-MyMatrix<T> SelectRowDropColumnFace(MyMatrix<T> const &TheMat, Face const &eList,
-                                    int const &idx_drop) {
+MyMatrix<T> SelectRowDropColumnFace(MyMatrix<T> const &TheMat,
+                                    Face const &eList, int const &idx_drop) {
   int nbCol = TheMat.cols();
   int nbRowRed = eList.count();
   int nbColRed = nbCol - 1;
@@ -54,13 +54,14 @@ MyMatrix<T> SelectRowDropColumnFace(MyMatrix<T> const &TheMat, Face const &eList
 }
 
 template <typename T, typename Tidx>
-MyMatrix<T> SelectRowDropColumnVector(MyMatrix<T> const &TheMat, std::vector<Tidx> const& eList,
+MyMatrix<T> SelectRowDropColumnVector(MyMatrix<T> const &TheMat,
+                                      std::vector<Tidx> const &eList,
                                       int const &idx_drop) {
   int nbCol = TheMat.cols();
   int nbRowRed = eList.size();
   int nbColRed = nbCol - 1;
   MyMatrix<T> RetMat(nbRowRed, nbColRed);
-  for (int iRowRed=0; iRowRed<nbRowRed; iRowRed++) {
+  for (int iRowRed = 0; iRowRed < nbRowRed; iRowRed++) {
     int iRow = eList[iRowRed];
     int pos = 0;
     for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -675,8 +676,7 @@ MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {
   return M;
 }
 
-template<typename T>
-MyMatrix<T> AddFirstZeroColumn(MyMatrix<T> const& M) {
+template <typename T> MyMatrix<T> AddFirstZeroColumn(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   int nbCol = M.cols();
   MyMatrix<T> Mret(nbRow, nbCol + 1);

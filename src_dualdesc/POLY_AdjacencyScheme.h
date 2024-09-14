@@ -1415,10 +1415,11 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: EnumerateAndStore_Serial: test=" << test << "\n";
     size_t n_sum = 0;
-    for (auto & status : l_status) {
+    for (auto &status : l_status) {
       n_sum += static_cast<size_t>(status);
     }
-    os << "ADJ_SCH: EnumerateAndStore_Serial: |l_status|=" << l_status.size() << " n_sum=" << n_sum << " test=" << test << "\n";
+    os << "ADJ_SCH: EnumerateAndStore_Serial: |l_status|=" << l_status.size()
+       << " n_sum=" << n_sum << " test=" << test << "\n";
 #endif
     return test;
   };

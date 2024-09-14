@@ -85,7 +85,8 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
       LinPolytope_CanonicOrdering<T, Tidx>(EXT2_T, os);
   //
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
-      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
+      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(
+          EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
   if (!IsoInfo)
     return {};
   Telt ePerm(IsoInfo->first);
@@ -141,7 +142,8 @@ LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT,
     return *eEquiv;
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time << "\n";
+  os << "PES: |LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time
+     << "\n";
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
@@ -468,10 +470,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   if (ep.second.GetWeight() != fp.second.GetWeight())
     return {};
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |ep.first|=" << ep.first.rows() << " / "
-     << ep.first.cols() << " rnk=" << RankMat(ep.first) << "\n";
-  os << "PES: |fp.first|=" << fp.first.rows() << " / "
-     << fp.first.cols() << " rnk=" << RankMat(fp.first) << "\n";
+  os << "PES: |ep.first|=" << ep.first.rows() << " / " << ep.first.cols()
+     << " rnk=" << RankMat(ep.first) << "\n";
+  os << "PES: |fp.first|=" << fp.first.rows() << " / " << fp.first.cols()
+     << " rnk=" << RankMat(fp.first) << "\n";
   os << "PES: ep.first=\n";
   WriteMatrix(os, ep.first);
   os << "PES: fp.first=\n";

@@ -34,35 +34,18 @@
 //     a group.
 //   --For the fixed norm vectors, it is just the compilation of the
 //     database, so nothing particular.
-// * The function is then 
+// * The function is then
 
-
-
-template<typename T>
-struct EquivariantTriangulation {
+template <typename T> struct EquivariantTriangulation {
   MyMatrix<T> RelVectors;
   vectface vf_trig;
 };
 
-template<typename T>
-struct ExtendibleEquivariantTriangulation {
+template <typename T> struct ExtendibleEquivariantTriangulation {
   std::vector<MyVector<T>> ListVert;
   std::unordered_map<MyVector<T>, size_t> MapVert;
   std::vector<std::vector<size_t>> ListTrig;
 };
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_EQUIVARIANTTRIANGULATION_H_

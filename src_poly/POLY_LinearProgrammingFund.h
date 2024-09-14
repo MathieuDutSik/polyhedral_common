@@ -52,14 +52,15 @@ void PrintLpSolution(LpSolution<T> const &eSol, std::ostream &os) {
   os << "DirectSolution=" << StringVector(eSol.DirectSolution) << "\n";
 }
 
-template<typename T>
-Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
+template <typename T>
+Face ComputeFaceLpSolution(MyMatrix<T> const &EXT, LpSolution<T> const &eSol) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   Face eFace(nbRow);
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
   if (!eSol.DualDefined || !eSol.PrimalDefined) {
-    std::cerr << "We should have DualDefined and PrimalDefined for the computation to make sense\n";
+    std::cerr << "We should have DualDefined and PrimalDefined for the "
+                 "computation to make sense\n";
     throw TerminalException{1};
   }
 #endif
@@ -71,7 +72,7 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
 #endif
   for (int iRow = 0; iRow < nbRow; iRow++) {
     T eSum = EXT(iRow, 0);
-    for (int iCol = 0; iCol < nbCol-1; iCol++) {
+    for (int iCol = 0; iCol < nbCol - 1; iCol++) {
       eSum += eSol.DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
 #ifdef SANITY_CHECK_LINEAR_PROGRAMMING_FUND
@@ -80,7 +81,8 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
                 << " eSum=" << eSum << "\n";
       std::cerr << "DualDefined=" << eSol.DualDefined
                 << " PrimalDefined=" << eSol.PrimalDefined << "\n";
-      std::cerr << "DirectSolution =" << StringVector(eSol.DirectSolution) << "\n";
+      std::cerr << "DirectSolution =" << StringVector(eSol.DirectSolution)
+                << "\n";
       std::cerr << "EXT=\n";
       WriteMatrix(std::cerr, EXT);
       std::cerr << "Obtained vertex solution is not valid\n";
@@ -99,24 +101,26 @@ Face ComputeFaceLpSolution(MyMatrix<T> const& EXT, LpSolution<T> const& eSol) {
 }
 
 // If eVect = C + sum_i alpha_i v_i
-// if v_i.x >= 0 and alpha_i >= 0 then 
-template<typename T>
-bool CheckDualSolutionGetOptimal(MyMatrix<T> const& EXT, MyVector<T> const& eVect, LpSolution<T> const& eSol) {
+// if v_i.x >= 0 and alpha_i >= 0 then
+template <typename T>
+bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
+                                 MyVector<T> const &eVect,
+                                 LpSolution<T> const &eSol) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  MyVector<T> V(nbCol-1);
+  MyVector<T> V(nbCol - 1);
   T objDual = eVect(0);
-  for (int iCol=0; iCol<nbCol-1; iCol++) {
-    V(iCol) = eVect(iCol+1);
+  for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+    V(iCol) = eVect(iCol + 1);
   }
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (int iRow = 0; iRow < nbRow; iRow++) {
     T scal = eSol.DualSolution(iRow);
-    for (int iCol=0; iCol<nbCol-1; iCol++) {
-      V(iCol) += scal * EXT(iRow, iCol+1);
+    for (int iCol = 0; iCol < nbCol - 1; iCol++) {
+      V(iCol) += scal * EXT(iRow, iCol + 1);
     }
     objDual += scal * EXT(iRow, 0);
   }
-  for (int iCol=0; iCol<nbCol-1; iCol++) {
+  for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     if (V(iCol) != 0) {
       return false;
     }
@@ -127,13 +131,13 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const& EXT, MyVector<T> const& eVec
   return true;
 }
 
-template<typename T>
-MyVector<T> GetDirectSolutionExt(LpSolution<T> const& eSol) {
+template <typename T>
+MyVector<T> GetDirectSolutionExt(LpSolution<T> const &eSol) {
   int siz = eSol.DirectSolution.size();
-  MyVector<T> V(siz+1);
+  MyVector<T> V(siz + 1);
   V(0) = 1;
-  for (int i=0; i<siz; i++) {
-    V(i+1) = eSol.DirectSolution(i);
+  for (int i = 0; i < siz; i++) {
+    V(i + 1) = eSol.DirectSolution(i);
   }
   return V;
 }

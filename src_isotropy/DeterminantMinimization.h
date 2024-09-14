@@ -26,13 +26,15 @@ template <typename T> struct ResultNullspaceMod {
   MyMatrix<T> BasisTot;
 };
 
-template<typename T>
-ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const &M, T const &TheMod,
+                                       [[maybe_unused]] std::ostream &os) {
   int n_row = M.rows();
-  // We avoid a copy by having NullspaceTrMat instead of NullspaceMat, but that does
-  // not matter since M is symmetric here
+  // We avoid a copy by having NullspaceTrMat instead of NullspaceMat, but that
+  // does not matter since M is symmetric here
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-  os << "DETMIN: GetAdjustedBasis, before NullspaceTrMatMod p=" << TheMod << "\n";
+  os << "DETMIN: GetAdjustedBasis, before NullspaceTrMatMod p=" << TheMod
+     << "\n";
   os << "DETMIN: M=\n";
   WriteMatrix(os, M);
 #endif
@@ -65,21 +67,21 @@ ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const& M, T const& TheMod, [[
   return {dimNSP, BasisTot};
 }
 
-template<typename T>
-bool IsMatrixNonZeroMultiple(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
+template <typename T>
+bool IsMatrixNonZeroMultiple(MyMatrix<T> const &M1, MyMatrix<T> const &M2) {
   int n_row = M1.rows();
   int n_col = M1.cols();
-  for (int i=0; i<n_row; i++) {
-    for (int j=0; j<n_col; j++) {
+  for (int i = 0; i < n_row; i++) {
+    for (int j = 0; j < n_col; j++) {
       if (M1(i, j) != 0) {
-        T scal = M2(i, j) / M1(i,j);
+        T scal = M2(i, j) / M1(i, j);
         if (scal == 0) {
           return false;
         }
-        for (int i1=0; i1<n_row; i1++) {
-          for (int j1=0; j1<n_col; j1++) {
-            T val1 = scal * M1(i1,j1);
-            if (val1 != M2(i1,j1)) {
+        for (int i1 = 0; i1 < n_row; i1++) {
+          for (int j1 = 0; j1 < n_col; j1++) {
+            T val1 = scal * M1(i1, j1);
+            if (val1 != M2(i1, j1)) {
               return false;
             }
           }
@@ -91,7 +93,6 @@ bool IsMatrixNonZeroMultiple(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   // M1 is zero only possibility is if M2 is zero as well
   return IsZeroMatrix(M2);
 }
-
 
 /*
   We apply a numbr of ideas from the preprint
@@ -110,7 +111,8 @@ bool IsMatrixNonZeroMultiple(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   are implemented.
  */
 template <typename T>
-ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) {
+ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
+                                        std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   using Tring = typename underlying_ring<T>::ring_type;
   if (!IsIntegralMatrix(Q)) {
@@ -136,14 +138,14 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
   Tring det_ai = UniversalScalarConversion<Tring, T>(det_abs);
   std::map<Tring, size_t> map = FactorsIntMap(det_ai);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-  for (auto & kv: map) {
+  for (auto &kv : map) {
     os << "DETMIN: p=" << kv.first << " mult=" << kv.second << "\n";
   }
 #endif
   MyMatrix<T> Qw = Q;
   MyMatrix<T> Pw = IdentityMat<T>(n);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-  auto check_state=[&]() -> void {
+  auto check_state = [&]() -> void {
     MyMatrix<T> ResQ = Pw * Q * Pw.transpose();
     if (!IsMatrixNonZeroMultiple(ResQ, Qw)) {
       std::cerr << "The matrix are not scalar multiple\n";
@@ -160,8 +162,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
     Tring TheDet_abs = UniversalScalarConversion<Tring, T>(T_abs(TheDet));
     os << "DETMIN: TheDet=" << TheDet << " TheDet_abs=" << TheDet_abs << "\n";
     Tring eProd(1);
-    for (auto & kv : map) {
-      for (size_t u=0; u<kv.second; u++) {
+    for (auto &kv : map) {
+      for (size_t u = 0; u < kv.second; u++) {
         eProd *= kv.first;
       }
     }
@@ -178,7 +180,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
       int v_mult_i = v_mult_s;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
       T p_sqr = p * p;
-      os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i << "\n";
+      os << "DETMIN: iter=" << iter << " p=" << p << " mult=" << v_mult_i
+         << "\n";
 #endif
       ResultNullspaceMod<T> res = GetAdjustedBasis(Qw, p, os);
       int d_mult_i = res.dimNSP;
@@ -238,8 +241,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         v_mult_i -= 2 * n;
         v_mult_s -= 2 * n;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        for (int i = 0; i<n; i++) {
-          for (int j = 0; j<n; j++) {
+        for (int i = 0; i < n; i++) {
+          for (int j = 0; j < n; j++) {
             T res = ResInt(Qw(i, j), p);
             if (res != 0) {
               std::cerr << "Qw is not divisible by p as expected\n";
@@ -273,11 +276,12 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         int dimNSPB = resB.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         check_state();
-        for (int i = 0; i<dimNSPB; i++) {
+        for (int i = 0; i < dimNSPB; i++) {
           for (int j = 0; j < dimNSPB; j++) {
             T res = ResInt(Qw(i, j), p_sqr);
             if (res != 0) {
-              std::cerr << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * p as expected\n";
+              std::cerr << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * "
+                           "p as expected\n";
               throw TerminalException{1};
             }
           }
@@ -301,12 +305,14 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         v_mult_s -= 2 * dimNSPB;
       }
       // Apply Lemma 6
-      size_t & ref = map_lemma6[p];
-      if (d_mult_i == v_mult_i && d_mult_i >= 2 && n > 2 * d_mult_i && !DoSomething && ref == 0) {
+      size_t &ref = map_lemma6[p];
+      if (d_mult_i == v_mult_i && d_mult_i >= 2 && n > 2 * d_mult_i &&
+          !DoSomething && ref == 0) {
         ref = 1;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         os << "DETMIN: Apply Lemma 6\n";
-        os << "DETMIN: Before det=" << DeterminantMat(Qw) << " d_mult_i=" << d_mult_i << "\n";
+        os << "DETMIN: Before det=" << DeterminantMat(Qw)
+           << " d_mult_i=" << d_mult_i << "\n";
 #endif
         change_basis();
         MyMatrix<T> U = IdentityMat<T>(n);
@@ -323,7 +329,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
         int dec = 2 * (n - d_mult_i) - n;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
         os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec << "\n";
-        os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw) << " det(U)=" << DeterminantMat(U) << "\n";
+        os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw)
+           << " det(U)=" << DeterminantMat(U) << "\n";
 #endif
         v_mult_i += dec;
         v_mult_s += dec;
@@ -359,7 +366,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q, std::ostream& os) 
           T val = EvaluationQuadForm(Qtilde, eV);
           T val_mod = ResInt(val, p);
           if (val_mod != 0) {
-            std::cerr << "DETMIN: We have val=" << val << " but val_mod=" << val_mod << "\n";
+            std::cerr << "DETMIN: We have val=" << val
+                      << " but val_mod=" << val_mod << "\n";
             throw TerminalException{1};
           }
 #endif

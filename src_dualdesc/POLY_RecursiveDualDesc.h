@@ -301,7 +301,8 @@ Face CanonicalImageDualDesc(int const &method_choice, Tgroup const &GRP,
 #endif
       return f_red;
     } catch (...) {
-      std::cerr << "Catching some exception from CanonicalImageInitialTrivLimited\n";
+      std::cerr
+          << "Catching some exception from CanonicalImageInitialTrivLimited\n";
       throw TerminalException{1};
     }
   }
@@ -404,7 +405,8 @@ Face CanonicalImageGeneralDualDesc(
   os << "RDD: Entry " << StringGroup(GRP) << " " << StringFace(f) << "\n";
 #endif
 #ifdef DEBUG_CANONICAL_LIMITED
-  os << "RDD: CAN_LIM: Beginning of CanonicalImageGeneralDualDesc method_choice="
+  os << "RDD: CAN_LIM: Beginning of CanonicalImageGeneralDualDesc "
+        "method_choice="
      << method_choice << "\n";
   WriteGroup(os, GRP);
   os << "RDD: CAN_LIM: f=" << StringFace(f) << "\n";
@@ -1812,11 +1814,10 @@ public:
   DatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << ","
-       << bb.foc.nbOrbitDone << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone)
-       << ") facet=(" << bb.foc.TotalNumber << ","
-       << (bb.foc.TotalNumber - bb.foc.nbUndone) << "," << bb.foc.nbUndone
-       << ")\n\n";
+    os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
+       << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone) << ") facet=("
+       << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone)
+       << "," << bb.foc.nbUndone << ")\n\n";
 #endif
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
@@ -2107,9 +2108,9 @@ public:
   DataFacet<T, Tgroup> FuncGetMinimalUndoneOrbit() {
     DataFacet<T, Tgroup> data = bb.FuncGetMinimalUndoneOrbit();
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RDD: " << strPresChar << " Considering orbit "
-       << data.SelectedOrbit << " |inc|=" << data.eInc.count()
-       << " |stab|=" << data.Stab.size() << "\n";
+    os << "RDD: " << strPresChar << " Considering orbit " << data.SelectedOrbit
+       << " |inc|=" << data.eInc.count() << " |stab|=" << data.Stab.size()
+       << "\n";
 #endif
     return data;
   }
@@ -2326,10 +2327,9 @@ void vectface_update_method(vectface &vfo, TbasicBank &bb,
   size_t n_orbit = vfo.size();
   int nbRow = bb.nbRow;
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-  os << "RDD: vectface_update_method n_orbit=" << n_orbit
-     << " nbRow=" << nbRow << "\n";
-  os << "RDD: vectface_update_method bb.the_method=" << bb.the_method
+  os << "RDD: vectface_update_method n_orbit=" << n_orbit << " nbRow=" << nbRow
      << "\n";
+  os << "RDD: vectface_update_method bb.the_method=" << bb.the_method << "\n";
 #endif
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face fo = vfo[i_orbit];
@@ -2816,11 +2816,12 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
 }
 
 template <typename T, typename Tgroup>
-vectface ReadFacets(std::string const& Format, std::string const& File, int const& n) {
+vectface ReadFacets(std::string const &Format, std::string const &File,
+                    int const &n) {
   if (Format == "GAP") {
     using Telt = typename Tgroup::Telt;
-    datagap::DataGAP<T, Telt> data = datagap::ParseGAPFile<T,Telt>(File);
-    vectface vf = datagap::ConvertGAPread_ListFace<T,Telt>(data, n);
+    datagap::DataGAP<T, Telt> data = datagap::ParseGAPFile<T, Telt>(File);
+    vectface vf = datagap::ConvertGAPread_ListFace<T, Telt>(data, n);
     return vf;
   }
   std::cerr << "No option has been chosen\n";
@@ -3062,7 +3063,7 @@ PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial(FullNamelist const &eFull, int const &dimEXT,
                                 std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   UpdateHeuristicSerial_eFull(eFull, AllArr, os);
   return AllArr;
 }
@@ -3072,7 +3073,7 @@ PolyHeuristicSerial<TintGroup>
 Read_AllStandardHeuristicSerial_File(std::string const &eFile,
                                      int const &dimEXT, std::ostream &os) {
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   if (eFile != "unset") {
     FullNamelist eFull = NAMELIST_GetStandard_RecursiveDualDescription();
     NAMELIST_ReadNamelistFile(eFile, eFull);
@@ -3082,7 +3083,7 @@ Read_AllStandardHeuristicSerial_File(std::string const &eFile,
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
-void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream& os) {
+void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   // Setting up the Control C event.
   ExitEvent = false;
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
@@ -3104,7 +3105,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream& os) {
   int dimEXT = EXTred.cols();
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   PolyHeuristicSerial<TintGroup> AllArr =
-    Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
+      Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   //
   std::map<std::string, TintGroup> TheMap =
       ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
@@ -3226,13 +3227,10 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXT.cols();
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   return DualDescriptionRecordFullDim<T, Tgroup>(EXTred, GRP, rddo);
 }
-
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_RECURSIVEDUALDESC_H_

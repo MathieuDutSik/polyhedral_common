@@ -1851,7 +1851,6 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_free_dat(Q);
 }
 
-
 template <typename T, typename F>
 void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_dic<T> *P;
@@ -1868,12 +1867,11 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, F const &f) {
   lrs_free_dat(Q);
 }
 
-template <typename T>
-T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
+template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det(0);
 #ifdef DEBUG_LRSLIB
   int nbRow = EXT.rows();
-  for (int iRow=0; iRow<nbRow; iRow++) {
+  for (int iRow = 0; iRow < nbRow; iRow++) {
     if (EXT(iRow, 0) != 1) {
       std::cerr << "EXT(iRow,0) should be equal to 1\n";
       throw TerminalException{1};
@@ -1887,20 +1885,19 @@ T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   Kernel_Simplices_cond(EXT, f);
   int dim = EXT.cols() - 1;
   T fact(1);
-  for (int u=1; u<=dim; u++) {
+  for (int u = 1; u <= dim; u++) {
     fact *= u;
   }
   T total_volume = sum_det / fact;
   return total_volume;
 }
 
-template <typename T>
-vectface GetTriangulation(MyMatrix<T> const& EXT) {
+template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
   vectface vf(nbRow);
   Face trig(nbRow);
   auto f = [&](lrs_dic<T> *P, lrs_dat<T> *Q) -> bool {
-    for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       trig[iRow] = 0;
     }
     for (int i = 0; i < P->d; i++) {

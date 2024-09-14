@@ -28,7 +28,8 @@ template <typename T, typename Tint> struct Canonic_PosDef {
 };
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat, std::ostream& os) {
+Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
+                                             std::ostream &os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -140,7 +141,8 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat, std::ost
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>
-ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostream& os) {
+ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
+                             std::ostream &os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -167,8 +169,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostre
   //
   using Tidx_value = int16_t;
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV,
-                                                           os);
+      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|WMat|=" << time << "\n";
 #endif
@@ -224,22 +225,25 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostre
 }
 
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat, std::ostream& os) {
+std::vector<MyMatrix<Tint>>
+ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
+                                    std::ostream &os) {
   using Tidx = uint32_t;
   MyMatrix<Tint> SHV =
-    ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
 
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, 0);
 
   std::vector<std::vector<Tidx>> ListGen =
-    GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx>(SHV_T, ListMat, Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx>(SHV_T, ListMat, Vdiag,
+                                                       os);
 
   std::vector<MyMatrix<Tint>> ListGenRet;
   for (auto &eList : ListGen) {
     std::optional<MyMatrix<T>> opt =
-      FindMatrixTransformationTest(SHV_T, SHV_T, eList);
+        FindMatrixTransformationTest(SHV_T, SHV_T, eList);
     if (!opt) {
       std::cerr << "Failed to find the matrix\n";
       throw TerminalException{1};
@@ -258,18 +262,22 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple(std::vector<MyMa
 }
 
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream& os) {
+std::vector<MyMatrix<Tint>>
+ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
-  return ArithmeticAutomorphismGroupMultiple<T,Tint>(ListMat, os);
+  return ArithmeticAutomorphismGroupMultiple<T, Tint>(ListMat, os);
 }
 
 template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1, std::vector<MyMatrix<T>> const& ListMat2, std::ostream& os) {
+std::optional<MyMatrix<Tint>>
+ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
+                              std::vector<MyMatrix<T>> const &ListMat2,
+                              std::ostream &os) {
   using Tidx = uint32_t;
   MyMatrix<Tint> SHV1 =
-    ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], std::cerr);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], std::cerr);
   MyMatrix<Tint> SHV2 =
-    ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "SEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
 #endif
@@ -290,12 +298,13 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
   os << "SEC: Before the TestEquivalence_ListMat_Vdiag\n";
 #endif
   std::optional<std::vector<Tidx>> opt =
-    TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2, SHV1_T, ListMat1, Vdiag1, os);
+      TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2,
+                                                SHV1_T, ListMat1, Vdiag1, os);
 
   if (!opt)
     return {};
   std::optional<MyMatrix<T>> optB =
-    FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
+      FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!optB) {
     std::cerr << "SEC: We have a matrix bug\n";
@@ -323,16 +332,17 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple(std::vector<MyMatrix
 }
 
 template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1, MyMatrix<T> const& inpMat2, std::ostream& os) {
+std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1,
+                                                    MyMatrix<T> const &inpMat2,
+                                                    std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat1{inpMat1};
   std::vector<MyMatrix<T>> ListMat2{inpMat2};
-  return ArithmeticEquivalenceMultiple<T,Tint>(ListMat1, ListMat2, os);
+  return ArithmeticEquivalenceMultiple<T, Tint>(ListMat1, ListMat2, os);
 }
-
 
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint>
-ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream& os) {
+ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream &os) {
   int n_tot = inpMat.rows();
   if (n_tot % 2 == 1) {
     std::cerr << "The dimension is odd\n";
@@ -345,7 +355,7 @@ ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream& os) {
     SympFormMat(n + i, i) = -1;
   }
   Canonic_PosDef<T, Tint> CanPosDef =
-    ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat}, os);
+      ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat}, os);
   MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
   MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T, Tint>(BasisSymp_Tint);
   MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);

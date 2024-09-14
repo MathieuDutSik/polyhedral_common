@@ -418,7 +418,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       } else {
         if (RankMat(eMatSec) < n) {
           MyVector<Tint> eVect3 =
-            GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
+              GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
           if (PositionVect(ListVectTot, eVect3) != -1)
             eVect3 *= 2;
           if (TheFamilyVect.find(eVect3) != TheFamilyVect.end()) {
@@ -436,7 +436,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           TheFamilyVect.insert(eVect3);
         } else {
           bool StrictIneq = true;
-          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(eMatSec, CritNorm, StrictIneq, os);
+          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(
+              eMatSec, CritNorm, StrictIneq, os);
           if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
@@ -458,7 +459,8 @@ template <typename T, typename Tint> struct ShortIso {
 };
 
 template <typename T, typename Tint>
-ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M, std::ostream& os) {
+ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
+                                       std::ostream &os) {
   int n = M.cols();
   int nbVect = M.rows();
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -472,7 +474,8 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M, std::ostream& os
     Amat += pMat;
   }
   MyMatrix<T> TheGramMat = Inverse(Amat);
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
   MyMatrix<Tint> Mc1 = 2 * M;
   MyMatrix<Tint> Mc2 = -2 * M;
   MyMatrix<Tint> Mcopy = Concatenate(Mc1, Mc2);
@@ -764,11 +767,13 @@ bool operator<(SHVinvariant<T, Tint> const &x, SHVinvariant<T, Tint> const &y) {
 }
 
 template <typename T, typename Tint>
-SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream& os) {
+SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann,
+                                      std::ostream &os) {
   SHVshortest<T, Tint> eEnt{eSpann};
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
-  size_t eInvGV = GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
+  size_t eInvGV =
+      GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
   return {eInvGV};
 }
 
@@ -847,7 +852,8 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
   }
   MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
   MyMatrix<T> EXT = cdd::DualDescription(FAC);
-  std::vector<MyVector<Tint>> ListPt = GetListIntegralPoint<T, Tint>(FAC, EXT, os);
+  std::vector<MyVector<Tint>> ListPt =
+      GetListIntegralPoint<T, Tint>(FAC, EXT, os);
   //
   // Breaking into orbits
   //

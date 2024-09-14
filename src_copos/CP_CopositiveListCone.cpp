@@ -29,7 +29,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "eSymmMat.rows=" << eSymmMat.rows()
               << " eSymmMat.cols=" << eSymmMat.cols() << "\n";
     MyMatrix<Tint> TheBasis = IdentityMat<Tint>(n);
-    ResultListCone<Tint> res = EnumerateListConeCopositive<T,Tint>(eSymmMat, TheBasis, std::cerr);
+    ResultListCone<Tint> res =
+        EnumerateListConeCopositive<T, Tint>(eSymmMat, TheBasis, std::cerr);
     size_t nbCone = res.ListCone.size();
     std::cerr << "nbCone=" << nbCone << "\n";
     if (res.test == false) {
@@ -38,7 +39,7 @@ int main(int argc, char *argv[]) {
       std::ofstream OUTfs(argv[3]);
       for (size_t iCone = 0; iCone < nbCone; iCone++) {
         OUTfs << "iCone=" << iCone << "/" << nbCone << " Basis\n";
-        MyMatrix<Tint> const& eMat = res.ListCone[iCone];
+        MyMatrix<Tint> const &eMat = res.ListCone[iCone];
         WriteMatrix(OUTfs, eMat);
       }
     }

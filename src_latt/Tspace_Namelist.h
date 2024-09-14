@@ -14,7 +14,6 @@
 #define DEBUG_TSPACE_NAMELIST
 #endif
 
-
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListBoolValues1_doc;
@@ -75,7 +74,7 @@ FullNamelist NAMELIST_GetOneTSPACE() {
 }
 
 template <typename T>
-LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream& os) {
+LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   std::ifstream is(eFile);
   MyMatrix<T> SuperMat = ReadMatrix<T>(is);
   int n = SuperMat.rows();
@@ -193,8 +192,8 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     throw TerminalException{1};
   };
   auto set_is_bravais = [&]() -> void {
-    LinSpaRet.isBravais =
-      IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat, LinSpaRet.PtStabGens, os);
+    LinSpaRet.isBravais = IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat,
+                                         LinSpaRet.PtStabGens, os);
   };
   auto set_supermat = [&]() -> void {
     std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
@@ -239,7 +238,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     std::cerr << "Failed to find an option for SuperMatMethod that suits\n";
     throw TerminalException{1};
   };
-  auto get_linspace=[&]() -> LinSpaceMatrix<T> {
+  auto get_linspace = [&]() -> LinSpaceMatrix<T> {
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
       int n = Blk.ListIntValues.at("RealImagDim");
       int eSum = Blk.ListIntValues.at("RealImagSum");
@@ -298,8 +297,8 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #ifdef DEBUG_TSPACE_NAMELIST
   os << "TSP: ReadTspace: |PsTabbGens|=" << LinSpa.PtStabGens.size() << "\n";
   os << "TSP: ReadTspace: |ListMat|=" << LinSpa.ListMat.size() << "\n";
-  for (auto & eGen : LinSpa.PtStabGens) {
-    for (auto & eMat : LinSpa.ListMat) {
+  for (auto &eGen : LinSpa.PtStabGens) {
+    for (auto &eMat : LinSpa.ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
       if (eMatImg != eMat) {
         std::cerr << "eMat should equal to eMatImg\n";

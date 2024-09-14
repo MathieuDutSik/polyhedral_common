@@ -8,13 +8,14 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &File1, std::string const&File2, std::string const &OutFormat,
-             std::ostream &os_out) {
+void process(std::string const &File1, std::string const &File2,
+             std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Qmat1 = ReadMatrixFile<T>(File1);
   MyMatrix<T> Qmat2 = ReadMatrixFile<T>(File2);
   std::cerr << "We have Q\n";
-  IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_TestEquivalence(Qmat1, Qmat2);
+  IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
+  std::optional<MyMatrix<Tint>> opt =
+      comb.INDEF_FORM_TestEquivalence(Qmat1, Qmat2);
   if (OutFormat == "GAP") {
     os_out << "return ";
     if (opt) {
@@ -35,7 +36,8 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2] "
+                   "[OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -56,7 +58,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(File1, File2, OutFormat, os);
+        return process<T, Tint, Tgroup>(File1, File2, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

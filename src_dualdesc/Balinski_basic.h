@@ -96,13 +96,13 @@ inline void serialize(Archive &ar, UndoneOrbitInfo<Tint> &erec,
 }  // namespace boost::serialization
 // clang-format on
 
-template<typename Tgroup>
-vectface GenerateOrbits(vectface const& vf_orbit, Tgroup const& GRP) {
+template <typename Tgroup>
+vectface GenerateOrbits(vectface const &vf_orbit, Tgroup const &GRP) {
   using Telt = typename Tgroup::Telt;
   size_t n = GRP.n_act();
   std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
   vectface vf(n);
-  for (auto & eFace : vf_orbit) {
+  for (auto &eFace : vf_orbit) {
     vectface vf_orbit = OrbitFace(eFace, LGen);
     vf.append(vf_orbit);
   }
@@ -191,10 +191,10 @@ bool EvaluationConnectednessCriterion_Kernel(
   };
   using pfr = std::pair<size_t, Face>;
   auto evaluate_single_entry = [&](const pfr &x) -> bool {
-    // We test the connectedness using the known criterions:
-    // ---Balinski criterion
-    // ---Linear programming check
-    // ---Balinski with rank check
+  // We test the connectedness using the known criterions:
+  // ---Balinski criterion
+  // ---Linear programming check
+  // ---Balinski with rank check
 #ifdef DEBUG_BALINSKI
     os << "BAL:  evaluate_single_entry pfr.first=" << x.first
        << " |pfr.second|=" << x.second.size() << " / " << x.second.count()
@@ -251,7 +251,8 @@ bool EvaluationConnectednessCriterion_Kernel(
     }
     size_t rnk = rank_vertset(list_vert);
 #ifdef DEBUG_BALINSKI
-    os << "BAL:  |list_vert|=" << list_vert.size() << " |rank_vertset|=" << rnk << " n_cols_rel=" << n_cols_rel << "\n";
+    os << "BAL:  |list_vert|=" << list_vert.size() << " |rank_vertset|=" << rnk
+       << " n_cols_rel=" << n_cols_rel << "\n";
 #endif
     if (rnk <= n_cols_rel - 2) {
 #ifdef DEBUG_BALINSKI
@@ -293,7 +294,7 @@ bool EvaluationConnectednessCriterion_Kernel(
     } else {
       if (!f_recur(x))
         return insert_pfr(x, false);
-      // Looking at the facets and maybe we can so conclude
+        // Looking at the facets and maybe we can so conclude
 #ifdef DEBUG_BALINSKI
       os << "BAL: After the f_recur\n";
 #endif
@@ -301,7 +302,8 @@ bool EvaluationConnectednessCriterion_Kernel(
       vectface vf_span =
           SPAN_face_LinearProgramming(x.second, eStab, FAC, GRP, os);
 #ifdef DEBUG_BALINSKI
-      os << "BAL: We have |eStab|=" << eStab.size() << " |vf_span|=" << vf_span.size() << "\n";
+      os << "BAL: We have |eStab|=" << eStab.size()
+         << " |vf_span|=" << vf_span.size() << "\n";
 #endif
       auto iife_value = [&]() -> bool {
         Tint siz_false = 0;
@@ -359,8 +361,8 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
   bool test =
       EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
 #ifdef DEBUG_BALINSKI
-  os << "BAL: EvaluationConnectednessCriterion_PreKernel(field case), test=" << test
-     << "\n";
+  os << "BAL: EvaluationConnectednessCriterion_PreKernel(field case), test="
+     << test << "\n";
 #endif
   return test;
 }
@@ -376,8 +378,8 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
   bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP,
                                                                vf_undone, os);
 #ifdef DEBUG_BALINSKI
-  os << "BAL: EvaluationConnectednessCriterion_PreKernel(ring case), test=" << test
-     << "\n";
+  os << "BAL: EvaluationConnectednessCriterion_PreKernel(ring case), test="
+     << test << "\n";
 #endif
   return test;
 }
@@ -391,8 +393,10 @@ bool EvaluationConnectednessCriterion_Serial(TbasicBank const &bb,
   // doing that check with respect to the dual description itsef.
   Tint max_siz = 1000;
 #ifdef DEBUG_BALINSKI
-  os << "BAL: nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit << "\n";
-  os << "BAL: nbOrbitDone=" << bb.foc.nbOrbitDone << " TotalNumber=" << bb.foc.TotalNumber << "\n";
+  os << "BAL: nbUndone=" << bb.foc.nbUndone << " nbOrbit=" << bb.foc.nbOrbit
+     << "\n";
+  os << "BAL: nbOrbitDone=" << bb.foc.nbOrbitDone
+     << " TotalNumber=" << bb.foc.TotalNumber << "\n";
 #endif
   if (bb.foc.nbOrbitDone == 0 || bb.foc.nbUndone > max_siz)
     return false;

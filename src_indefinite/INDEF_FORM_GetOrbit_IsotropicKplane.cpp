@@ -8,13 +8,14 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& KStr, std::string choice, std::string const &OutFormat,
+void process(std::string const &MatFile, std::string const &KStr,
+             std::string choice, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   int k = ParseScalar<int>(KStr);
   std::cerr << "We have Q\n";
-  IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  auto f_get=[&]() -> std::vector<MyMatrix<Tint>> {
+  IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
+  auto f_get = [&]() -> std::vector<MyMatrix<Tint>> {
     if (choice == "plane") {
       return comb.INDEF_FORM_GetOrbit_IsotropicKplane(Qmat, k);
     }
@@ -39,9 +40,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] [k] [choice]\n";
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] "
+                   "[k] [choice]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] [k] [choice] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] "
+                   "[k] [choice] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -63,7 +66,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, KStr, choice, OutFormat, os);
+        return process<T, Tint, Tgroup>(MatFile, KStr, choice, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

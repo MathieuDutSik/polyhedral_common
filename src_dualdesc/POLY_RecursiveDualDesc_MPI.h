@@ -661,7 +661,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   int dimEXT = EXTred.cols();
   Tgroup GRP = Get_GRP_DualDesc<Tgroup>(eFull, os);
   PolyHeuristicSerial<TintGroup> AllArr =
-    Read_AllStandardHeuristicSerial<T,TintGroup>(eFull, dimEXT, os);
+      Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   srand(time(NULL) + 12345 * i_rank);
   Reset_Directories(comm, AllArr);
   size_t n_rows = EXTred.rows();

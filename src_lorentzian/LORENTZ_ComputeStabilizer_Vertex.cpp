@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Before LORENTZ_GetStabilizerGenerator\n";
     std::vector<MyMatrix<T>> l_mat =
-      LORENTZ_GetStabilizerGenerator(G, vertFull, std::cerr);
+        LORENTZ_GetStabilizerGenerator(G, vertFull, std::cerr);
     std::cerr << "After LORENTZ_GetStabilizerGenerator\n";
     if (argc == 3) {
       for (size_t i_mat = 0; i_mat < l_mat.size(); i_mat++) {

@@ -8,13 +8,14 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const& XnormStr, std::string const &OutFormat,
-             std::ostream &os_out) {
+void process(std::string const &MatFile, std::string const &XnormStr,
+             std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   T Xnorm = ParseScalar<T>(XnormStr);
   std::cerr << "We have Q\n";
-  IndefiniteCombinedAlgo<T,Tint,Tgroup> comb(std::cerr);
-  std::vector<MyVector<Tint>> l_repr = comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
+  IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
+  std::vector<MyVector<Tint>> l_repr =
+      comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
   if (OutFormat == "GAP") {
     os_out << "return ";
     if (l_repr.size() == 0) {
@@ -33,9 +34,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 4 && argc != 6) {
-      std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] [Xnorm] \n";
+      std::cerr
+          << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] [Xnorm] \n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] [Xnorm] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] "
+                   "[Xnorm] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -56,7 +59,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(MatFile, XnormStr, OutFormat, os);
+        return process<T, Tint, Tgroup>(MatFile, XnormStr, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

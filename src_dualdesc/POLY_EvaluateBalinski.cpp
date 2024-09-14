@@ -8,9 +8,6 @@
 #include "Permutation.h"
 // clang-format on
 
-
-
-
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
@@ -22,7 +19,8 @@ int main(int argc, char *argv[]) {
     if (argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_EvaluateBalinski [FileFAC] [FileGRP] [VFformat] [vf_undone] [max_iter] [max_depth]\n";
+      std::cerr << "POLY_EvaluateBalinski [FileFAC] [FileGRP] [VFformat] "
+                   "[vf_undone] [max_iter] [max_depth]\n";
       std::cerr << "\n";
       return -1;
     }
@@ -36,7 +34,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> FAC = ReadMatrixFile<T>(FileFAC);
     Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
     int n = FAC.rows();
-    vectface vf_undone_orbit = ReadFacets<T,Tgroup>(VFformat, FileUndone, n);
+    vectface vf_undone_orbit = ReadFacets<T, Tgroup>(VFformat, FileUndone, n);
     size_t max_iter = ParseScalar<size_t>(str_max_iter);
     size_t max_depth = ParseScalar<size_t>(str_max_depth);
     //
@@ -52,7 +50,8 @@ int main(int argc, char *argv[]) {
         return false;
       return true;
     };
-    bool test = EvaluationConnectednessCriterion_Kernel(FAC, GRP, EXT_undone, vf_undone, f_recur, std::cerr);
+    bool test = EvaluationConnectednessCriterion_Kernel(
+        FAC, GRP, EXT_undone, vf_undone, f_recur, std::cerr);
     std::cerr << "Obtained result=" << test << "\n";
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {

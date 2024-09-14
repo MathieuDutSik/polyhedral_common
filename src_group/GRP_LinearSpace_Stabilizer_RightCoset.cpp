@@ -51,9 +51,8 @@ int main(int argc, char *argv[]) {
     //
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};
-    Stab_RightCoset<T> pair =
-        LinearSpace_Stabilizer_RightCoset<T, Tgroup>(ListMatrGen, helper, eLatt,
-                                                     std::cerr);
+    Stab_RightCoset<T> pair = LinearSpace_Stabilizer_RightCoset<T, Tgroup>(
+        ListMatrGen, helper, eLatt, std::cerr);
     CosetDescription<T> coset = pair.coset_desc;
     CosetDescription<T>::iterator iter = coset.begin();
     std::vector<MyMatrix<T>> RightCoset;

@@ -38,60 +38,60 @@
     * It depends on _isotropic_subspace
     * Which uses the Representative(Genus(R,s)) to find a representative
     * The uses the maximal_even_lattice
-    * Then uses the maximal_isotropic_subspace_unimodular (which rely on heuristics
-  2) Pari: src/basemath/qfsolve.c
-    It is a code that is known to have issues as bugs were found.
-  3) The algorithm by "Algorithms for solving rational quadratic forms" Josef Schicho and
-    Jana Pilnikova (P3) seems relatively more sensible. The induction is dimension is a
-    very tall thing. But we could reduce to a 5 dim case by finding the right subspace.
+    * Then uses the maximal_isotropic_subspace_unimodular (which rely on
+  heuristics 2) Pari: src/basemath/qfsolve.c It is a code that is known to have
+  issues as bugs were found. 3) The algorithm by "Algorithms for solving
+  rational quadratic forms" Josef Schicho and Jana Pilnikova (P3) seems
+  relatively more sensible. The induction is dimension is a very tall thing. But
+  we could reduce to a 5 dim case by finding the right subspace.
   ---
   The Indefinite LLL with a few tricks are indeed working mostly fine
   except when they do not.
   So, we could have
-  * A very sophisticated algorithm by P3 that decides existence of 
+  * A very sophisticated algorithm by P3 that decides existence of
   * An Indefinite LLL iteration working.
-  Both algorithms could be run in parallel and an early termination of either could
-  finish the enumeration.
+  Both algorithms could be run in parallel and an early termination of either
+  could finish the enumeration.
  */
 
-template<typename T>
-MyMatrix<T> GetAnMatrix(int const& k, int const& n) {
+template <typename T> MyMatrix<T> GetAnMatrix(int const &k, int const &n) {
   MyMatrix<T> M = IdentityMat<T>(n);
-  for (int i=0; i<k; i++) {
-    M(i,i) = 2;
+  for (int i = 0; i < k; i++) {
+    M(i, i) = 2;
   }
-  for (int i=0; i<k-1; i++) {
-    M(i, i+1) = 1;
-    M(i+1, i) = 1;
+  for (int i = 0; i < k - 1; i++) {
+    M(i, i + 1) = 1;
+    M(i + 1, i) = 1;
   }
   return M;
 }
 
-template<typename T>
-T random_T(T const& q) {
+template <typename T> T random_T(T const &q) {
   size_t val1 = random();
-  T val2 = UniversalScalarConversion<T,size_t>(val1);
+  T val2 = UniversalScalarConversion<T, size_t>(val1);
   return ResInt(val2, q);
 }
 
-template<typename T>
-MyMatrix<T> GetSmithEntry(std::map<T, size_t> const& map, int const& n) {
+template <typename T>
+MyMatrix<T> GetSmithEntry(std::map<T, size_t> const &map, int const &n) {
   MyMatrix<T> M = IdentityMat<T>(n);
-  for (auto& kv: map) {
+  for (auto &kv : map) {
     int pos = random() % n;
-    M(pos,pos) *= kv.first;
+    M(pos, pos) *= kv.first;
   }
-  for (int i=0; i<n; i++) {
-    for (int j=i+1; j<n; j++) {
-      T val = T_min(M(i,i), M(j,j));
-      M(i,j) = random_T(val);
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      T val = T_min(M(i, i), M(j, j));
+      M(i, j) = random_T(val);
     }
   }
   return M;
 }
 
-template<typename T>
-std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+std::optional<MyVector<T>>
+get_isotropic_easy_method(MyMatrix<T> const &Q,
+                          [[maybe_unused]] std::ostream &os) {
   int n = Q.rows();
   // Checking first for diagonal zeros.
   for (int i = 0; i < n; i++) {
@@ -99,7 +99,8 @@ std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[may
       MyVector<T> eV = ZeroVector<T>(n);
       eV(i) = 1;
 #ifdef DEBUG_ISOTROPIC
-      os << "ISOTROP: get_isotropic_easy_method finding isotrop in the diagonal\n";
+      os << "ISOTROP: get_isotropic_easy_method finding isotrop in the "
+            "diagonal\n";
 #endif
       return eV;
     }
@@ -112,7 +113,8 @@ std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[may
         eV(i) = 1;
         eV(j) = 1;
 #ifdef DEBUG_ISOTROPIC
-        os << "ISOTROP: get_isotropic_easy_method finding isotrop as sum of two diagonal terms\n";
+        os << "ISOTROP: get_isotropic_easy_method finding isotrop as sum of "
+              "two diagonal terms\n";
 #endif
         return eV;
       }
@@ -121,8 +123,6 @@ std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[may
   return {};
 }
 
-
-
 // Try to find isotropic subspace by using Indefinite LLL
 // We iterate by taking random integral matrices and we iterate until
 // we cannot reduce anymore the norm of the matrix.
@@ -130,9 +130,11 @@ std::optional<MyVector<T>> get_isotropic_easy_method(MyMatrix<T> const& Q, [[may
 // The isotropic vectors can be found using 3 methods:
 // --- The Indefinite LLL that found an entry.
 // --- 0 entry in the diagonal of the reduction.
-// --- Entries (+a, -a) in the diagonal and Q(i,j) = 0 that allow to find an isotropic vector.
+// --- Entries (+a, -a) in the diagonal and Q(i,j) = 0 that allow to find an
+// isotropic vector.
 template <typename T>
-std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::ostream& os) {
+std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q,
+                                                   std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n = Q.rows();
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
@@ -146,14 +148,14 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
   T det = DeterminantMat(Q);
   os << "ISOTROP: GetIsotropIndefiniteLLL det=" << det << "\n";
   std::map<T, size_t> map = FactorsIntMap(T_abs(det));
-  for (auto & kv : map) {
+  for (auto &kv : map) {
     os << "kv.first=" << kv.first << " kv.second=" << kv.second << "\n";
   }
 #endif
   // Direct try at the beginning.
   std::optional<MyVector<T>> optA = get_isotropic_easy_method(Q, os);
   if (optA) {
-    MyVector<T> const& eV = *optA;
+    MyVector<T> const &eV = *optA;
     return eV;
   }
   MyMatrix<T> Pw = IdentityMat<T>(n);
@@ -162,7 +164,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
 #ifdef DEBUG_ISOTROPIC
   size_t iter = 0;
 #endif
-  while(true) {
+  while (true) {
 #ifdef DEBUG_ISOTROPIC
     os << "ISOTROP: GetIsotropIndefiniteLLL while loop, iter=" << iter << "\n";
     iter += 1;
@@ -170,7 +172,7 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
     // Compute the LLL reduction.
     ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw);
     if (res.Xisotrop) {
-      MyVector<T> const& Xisotrop = *res.Xisotrop;
+      MyVector<T> const &Xisotrop = *res.Xisotrop;
       MyVector<T> V = Pw.transpose() * Xisotrop;
 #ifdef DEBUG_ISOTROPIC
       os << "ISOTROP: GetIsotropIndefiniteLLL finding isotrop in the process\n";
@@ -187,13 +189,14 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
 #endif
     std::optional<MyVector<T>> optB = get_isotropic_easy_method(Qw, os);
     if (optB) {
-      MyVector<T> const& eV = *optB;
+      MyVector<T> const &eV = *optB;
       MyVector<T> fV = Pw.transpose() * eV;
       return fV;
     }
     T norm = get_norm(Qw);
 #ifdef DEBUG_ISOTROPIC
-    os << "ISOTROP: GetIsotropIndefiniteLLL norm=" << norm << " curr_norm=" << curr_norm << "\n";
+    os << "ISOTROP: GetIsotropIndefiniteLLL norm=" << norm
+       << " curr_norm=" << curr_norm << "\n";
 #endif
     if (norm >= curr_norm) {
       break;
@@ -203,13 +206,12 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q, std::os
     Pw = RandM * Pw;
     Qw = RandM * Qw * RandM.transpose();
 #ifdef DEBUG_ISOTROPIC
-    os << "ISOTROP: GetIsotropIndefiniteLLL det(Pw)=" << DeterminantMat(Pw) << " det(Qw)=" << DeterminantMat(Qw) << "\n";
+    os << "ISOTROP: GetIsotropIndefiniteLLL det(Pw)=" << DeterminantMat(Pw)
+       << " det(Qw)=" << DeterminantMat(Qw) << "\n";
 #endif
   }
   return {};
 }
-
-
 
 // For rank 1 this is trivial
 template <typename T>
@@ -263,7 +265,8 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
 /*
   The algorithm is purely
  */
-template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std::ostream& os) {
+template <typename T>
+MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std::ostream &os) {
   int n = Q.rows();
 #ifdef DEBUG_ISOTROPIC
   os << "ISOTROP: Before determinant minimization\n";
@@ -303,15 +306,16 @@ template <typename T> MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std
   }
 }
 
-
 template <typename T>
-std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::ostream& os) {
+std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q,
+                                                    std::ostream &os) {
   int n = Q.rows();
   MyMatrix<T> Pw = IdentityMat<T>(n);
   MyMatrix<T> Qw = Q;
-  // Iterating 2 times seems right from simulation. Little benefit from going farther.
+  // Iterating 2 times seems right from simulation. Little benefit from going
+  // farther.
   int n_iter = 2;
-  for (int iter=0; iter<n_iter; iter++) {
+  for (int iter = 0; iter < n_iter; iter++) {
     std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
     if (opt) {
 #ifdef DEBUG_ISOTROPIC
@@ -330,16 +334,16 @@ std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q, std::o
   return {};
 }
 
-
-
 template <typename T>
-std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream& os) {
+std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M,
+                                              std::ostream &os) {
   int n = M.rows();
 #ifdef DEBUG_ISOTROPIC
   os << "ISOTROP: STARTEXACT M=" << StringMatrixGAP(M) << "\n";
   int rnk = RankMat(M);
   if (rnk != n) {
-    std::cerr << "ISOTROP: FindIsotropicExact failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: FindIsotropicExact failing with rnk=" << rnk
+              << " n=" << n << "\n";
     std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
     throw TerminalException{1};
   }
@@ -360,7 +364,8 @@ std::optional<MyVector<T>> FindIsotropicExact(MyMatrix<T> const &M, std::ostream
 }
 
 template <typename T>
-std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os) {
+std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
+                                         std::ostream &os) {
 #ifdef TIMINGS_ISOTROPIC
   MicrosecondTime time;
 #endif
@@ -370,7 +375,8 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   os << "ISOTROP: START M=" << StringMatrixGAP(M) << "\n";
   int rnk = RankMat(M);
   if (rnk != n) {
-    std::cerr << "ISOTROP: FindIsotropic failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: FindIsotropic failing with rnk=" << rnk << " n=" << n
+              << "\n";
     std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
     throw TerminalException{1};
   }
@@ -388,16 +394,17 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
     return *optA;
   }
   // Computing the Indefinite-LLL reduction. Could get you an isotrop vector
-  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T,Tint>(M, os);
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
 #ifdef TIMINGS_LEGENDRE
   os << "|FindIsotropic(ComputeReductionIndefinite)|=" << time << "\n";
 #endif
   if (res.Xisotrop) {
-    MyVector<T> const& eV = *res.Xisotrop;
+    MyVector<T> const &eV = *res.Xisotrop;
 #ifdef DEBUG_ISOTROPIC
-    T sum = EvaluationQuadForm<T,T>(M, eV);
+    T sum = EvaluationQuadForm<T, T>(M, eV);
     if (sum != 0) {
-      std::cerr << "ISOTROP: FindIsotropic, eV should be an isotropic vector (by ComputeReductionIndefinite)\n";
+      std::cerr << "ISOTROP: FindIsotropic, eV should be an isotropic vector "
+                   "(by ComputeReductionIndefinite)\n";
       throw TerminalException{1};
     }
 #endif
@@ -409,13 +416,14 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
   os << "|FindIsotropic(FindIsotropicExact)|=" << time << "\n";
 #endif
   if (optB) {
-    MyVector<T> const& eV = *optB;
-    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
+    MyVector<T> const &eV = *optB;
+    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
     MyVector<T> fV = B_T.transpose() * eV;
 #ifdef DEBUG_ISOTROPIC
-    T sum = EvaluationQuadForm<T,T>(M, fV);
+    T sum = EvaluationQuadForm<T, T>(M, fV);
     if (sum != 0) {
-      std::cerr << "ISOTROP: FindIsotropic, fV should be an isotropic vector (by FindIsotropicExact)\n";
+      std::cerr << "ISOTROP: FindIsotropic, fV should be an isotropic vector "
+                   "(by FindIsotropicExact)\n";
       throw TerminalException{1};
     }
 #endif
@@ -426,7 +434,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M, std::ostream& os)
 }
 
 template <typename T>
-bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
+bool is_isotropic(MyMatrix<T> const &M, std::ostream &os) {
 #ifdef TIMINGS_ISOTROPIC
   MicrosecondTime time;
 #endif
@@ -434,12 +442,13 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
 #ifdef DEBUG_ISOTROPIC
   int rnk = RankMat(M);
   if (rnk != n) {
-    std::cerr << "ISOTROP: is_isotropic failing with rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "ISOTROP: is_isotropic failing with rnk=" << rnk << " n=" << n
+              << "\n";
     std::cerr << "ISOTROP: The matrix should be non-degenerate\n";
     throw TerminalException{1};
   }
 #endif
-  auto get_val=[&]() -> bool {
+  auto get_val = [&]() -> bool {
     if (n == 1) {
       std::optional<MyVector<T>> opt = FindIsotropicRankOne(M);
       return opt.has_value();
@@ -463,7 +472,6 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream& os) {
 #endif
   return test;
 }
-
 
 // clang-format off
 #endif  //  SRC_INDEFINITE_ISOTROPIC_H_

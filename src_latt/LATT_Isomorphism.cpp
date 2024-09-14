@@ -39,7 +39,8 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat1 = ReadListMatrixFile<T>(FileListMat1);
     std::vector<MyMatrix<T>> ListMat2 = ReadListMatrixFile<T>(FileListMat2);
 
-    std::optional<MyMatrix<Tint>> equiv = ArithmeticEquivalenceMultiple<T,Tint>(ListMat1, ListMat2, std::cerr);
+    std::optional<MyMatrix<Tint>> equiv =
+        ArithmeticEquivalenceMultiple<T, Tint>(ListMat1, ListMat2, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {

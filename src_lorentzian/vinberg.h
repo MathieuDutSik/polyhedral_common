@@ -337,10 +337,10 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
 }
 
 template <typename T, typename Tint>
-MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream& os) {
+MyVector<Tint> GetV0_vector(const MyMatrix<T> &G, std::ostream &os) {
   T CritNorm = 0;
   bool StrictIneq = true;
-  return GetShortIntegralVector<T,Tint>(G, CritNorm, StrictIneq, os);
+  return GetShortIntegralVector<T, Tint>(G, CritNorm, StrictIneq, os);
 }
 
 template <typename T, typename Tint>

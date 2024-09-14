@@ -342,13 +342,13 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
   return HeuristicFromListString<T>(ListString);
 }
 
-template<typename T>
+template <typename T>
 inline typename std::enable_if<is_implementation_of_Q<T>::value, bool>::type
 IsPPLpossible() {
   return IsProgramInPath("ppl_lcdd");
 }
 
-template<typename T>
+template <typename T>
 inline typename std::enable_if<!is_implementation_of_Q<T>::value, bool>::type
 IsPPLpossible() {
   return false;
@@ -362,7 +362,7 @@ IsPPLpossible() {
 //   file by using the program "Convert_Heuristic_to_Thompson_sampling"
 // * The logs are quite important to see what is happening.
 // * It is still an experimental feature.
-template<typename T>
+template <typename T>
 FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
   std::vector<std::string> lstr_proba = {"&PROBABILITY_DISTRIBUTIONS",
                                          " ListName = \"distri1\" ",
@@ -444,7 +444,8 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
 template <typename TintGroup>
 void SetThompsonSampling(FullNamelist const &eFull,
                          std::string const &NamelistEnt,
-                         ThompsonSamplingHeuristic<TintGroup> &eTS, std::ostream &os) {
+                         ThompsonSamplingHeuristic<TintGroup> &eTS,
+                         std::ostream &os) {
   SingleBlock BlockHEU = eFull.ListBlock.at("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.ListStringValues.at(NamelistEnt);
   if (NamelistEntFile != "unset.ts") {
@@ -481,7 +482,8 @@ template <typename TintGroup> PolyHeuristic<TintGroup> AllStandardHeuristic() {
   AllArr.CommThread = StandardHeuristicCommThread<TintGroup>();
   AllArr.BankSave = StandardHeuristicBankSave<TintGroup>();
   AllArr.AdditionalSymmetry = StandardHeuristicAdditionalSymmetry<TintGroup>();
-  AllArr.DualDescriptionProgram = StandardHeuristicDualDescriptionProgram<TintGroup>();
+  AllArr.DualDescriptionProgram =
+      StandardHeuristicDualDescriptionProgram<TintGroup>();
   AllArr.StabEquivFacet = StandardHeuristicStabEquiv<TintGroup>();
   AllArr.InitialFacetSet = MethodInitialFacetSet<TintGroup>();
   AllArr.ChoiceCanonicalization = MethodChoiceCanonicalization<TintGroup>();

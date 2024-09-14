@@ -6,7 +6,7 @@
 #include "Positivity.h"
 // clang-format on
 
-bool ParseBoolean(std::string const& strI) {
+bool ParseBoolean(std::string const &strI) {
   if (strI == "T") {
     return true;
   }
@@ -23,15 +23,16 @@ bool ParseBoolean(std::string const& strI) {
   throw TerminalException{1};
 }
 
-
 template <typename T, typename Tint>
-void process(std::string const &FileI, std::string const& strCritNorm, std::string const& strStrictIneq,
-             std::string const &OutFormat, std::ostream &os_out) {
+void process(std::string const &FileI, std::string const &strCritNorm,
+             std::string const &strStrictIneq, std::string const &OutFormat,
+             std::ostream &os_out) {
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   T CritNorm = ParseScalar<T>(strCritNorm);
   bool StrictIneq = ParseBoolean(strStrictIneq);
   //
-  MyVector<Tint> V = GetIntegralVector_allmeth<T,Tint>(M, CritNorm, StrictIneq, std::cerr);
+  MyVector<Tint> V =
+      GetIntegralVector_allmeth<T, Tint>(M, CritNorm, StrictIneq, std::cerr);
   if (OutFormat == "GAP") {
     os_out << "return " << StringVectorGAP(V) << ";\n";
     return;
@@ -44,9 +45,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "LATT_FindPositiveVector arith [FileI] [CritNorm] [StrictIneq] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_FindPositiveVector arith [FileI] [CritNorm] "
+                   "[StrictIneq] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_FindPositiveVector arith [FileI] [CritNorm] [StrictIneq]\n";
+      std::cerr
+          << "LATT_FindPositiveVector arith [FileI] [CritNorm] [StrictIneq]\n";
       std::cerr << "\n";
       std::cerr << "Possibilities for arith: gmp\n";
       throw TerminalException{1};
@@ -66,7 +69,8 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(FileI, strCritNorm, strStrictIneq, OutFormat, os);
+        return process<T, Tint>(FileI, strCritNorm, strStrictIneq, OutFormat,
+                                os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};

@@ -15,8 +15,9 @@ MyMatrix<T> ReordListPoint(const std::vector<MyVector<T>> &ListPoint) {
   return MatrixFromVectorFamily(ListPt);
 }
 
-template<typename T>
-void process(std::string const& opt, std::string const& FileM, std::string const& OutFormat, std::ostream & os) {
+template <typename T>
+void process(std::string const &opt, std::string const &FileM,
+             std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> M = ReadMatrixFile<T>(FileM);
   if (opt == "all") {
     vectface vf = compute_all_two_laminations(M);
@@ -26,7 +27,8 @@ void process(std::string const& opt, std::string const& FileM, std::string const
       os << ";\n";
       return;
     }
-    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+              << "\n";
     throw TerminalException{1};
   }
   if (opt == "one") {
@@ -41,13 +43,13 @@ void process(std::string const& opt, std::string const& FileM, std::string const
       os << ";\n";
       return;
     }
-    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+              << "\n";
     throw TerminalException{1};
   }
   std::cerr << "Failed to find a matching entry for opt=" << opt << "\n";
   throw TerminalException{1};
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -56,7 +58,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM] [OutFormat] [OutFile]\n";
+      std::cerr << "POLY_TwoLaminations [arith] [opt] [FileM] [OutFormat] "
+                   "[OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: rational\n";
       std::cerr << "opt: one or all\n";
@@ -74,12 +77,13 @@ int main(int argc, char *argv[]) {
       OutFile = argv[5];
     }
     //
-    auto f=[&](std::ostream & os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
         process<T>(opt, FileM, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
       throw TerminalException{1};
     };
     if (OutFile == "stderr") {

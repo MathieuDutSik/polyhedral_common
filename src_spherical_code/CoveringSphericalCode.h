@@ -36,7 +36,6 @@
   code.
  */
 
-
 // clang-format off
 #endif  // SRC_DUALDESC_COVERINGSPHERICALCODE_H_
 // clang-format on

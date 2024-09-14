@@ -4,12 +4,14 @@
 #include "LatticeDelaunay.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void process(std::string const& FileM, std::string const& OutFormat, std::ostream& os) {
+template <typename T, typename Tint>
+void process(std::string const &FileM, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileM);
   HumanTime time_total;
   CVPSolver<T, Tint> solver(GramMat, std::cerr);
-  MyMatrix<Tint> EXT = FindDelaunayPolytope<T, Tint>(GramMat, solver, std::cerr);
+  MyMatrix<Tint> EXT =
+      FindDelaunayPolytope<T, Tint>(GramMat, solver, std::cerr);
   std::cerr << "|FindDelaunayPolytope|=" << time_total << "\n";
   if (OutFormat == "GAP") {
     os << "return ";
@@ -40,13 +42,14 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    auto f=[&](std::ostream & os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(FileM, OutFormat, os);
+        return process<T, Tint>(FileM, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
       throw TerminalException{1};
     };
     if (OutFile == "stderr") {

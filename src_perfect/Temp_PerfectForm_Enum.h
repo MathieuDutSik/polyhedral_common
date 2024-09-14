@@ -33,8 +33,7 @@ public:
     return {false, nbOrbit, {-1, {}, eTrivFace}};
   }
   PerfEquivInfo InsertForm(LinSpaceMatrix<T> const &LinSpa,
-                           MyMatrix<T> const &eGram,
-                           std::ostream& os) {
+                           MyMatrix<T> const &eGram, std::ostream &os) {
     std::vector<PerfEquivInfo> eListEquivInfo;
     Face eTrivFace;
     int n = LinSpa.n;
@@ -272,7 +271,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
           SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData, ePERF.Gram, RecSHV);
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
-                             IntToString(eEntry) + "/");
+                                                   IntToString(eEntry) + "/");
       vectface TheOutput = DUALDESC_THR_AdjacencyDecomposition(
           MProc, MyId, TheBank, eNaked.PerfDomEXT, PerfDomGRP, AllArr,
           eDir.str(), 0);
