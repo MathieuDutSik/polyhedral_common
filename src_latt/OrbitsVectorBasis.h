@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "OrbitEnumeration.h"
+#include <unordered_map>
+#include <vector>
 // clang-format on
 
 #ifdef DEBUG

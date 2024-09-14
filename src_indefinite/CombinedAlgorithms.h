@@ -8,6 +8,7 @@
 #include "lorentzian_linalg.h"
 #include "EquiStabMemoization.h"
 #include "MatrixGroup.h"
+#include <vector>
 // clang-format on
 
 // This is a reimplementation of the GAP code and implements the algorithm for

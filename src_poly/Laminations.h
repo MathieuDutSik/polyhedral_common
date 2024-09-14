@@ -2,8 +2,11 @@
 #ifndef SRC_POLY_POLY_LAMINATIONS_H_
 #define SRC_POLY_POLY_LAMINATIONS_H_
 
+// clang-format off
 #include "COMB_Combinatorics.h"
 #include "MAT_Matrix.h"
+#include <vector>
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_LAMINATIONS

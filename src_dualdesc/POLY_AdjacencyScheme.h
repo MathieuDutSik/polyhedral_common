@@ -12,6 +12,7 @@
 #include <vector>
 #include <set>
 #include <functional>
+#include <string>
 // clang-format on
 
 #ifdef DEBUG

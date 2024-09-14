@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "GRP_GroupFct.h"
+#include <limits>
+#include <vector>
 // clang-format on
 
 /*

@@ -17,6 +17,8 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
+#include <set>
+#include <map>
 // clang-format on
 
 #ifdef DEBUG

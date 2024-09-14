@@ -7,9 +7,10 @@
 #include "POLY_LinearProgramming.h"
 #include "ShortestUniversal.h"
 #include "Positivity.h"
+#include <limits>
 #include <string>
-#include <vector>
 #include <utility>
+#include <vector>
 // clang-format on
 
 #ifdef TIMINGS

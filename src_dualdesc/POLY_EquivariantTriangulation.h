@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "POLY_RecursiveDualDesc.h"
+#include <unordered_map>
+#include <vector>
 // clang-format on
 
 // The computation of several things require using triangulations.

@@ -12,6 +12,7 @@
 #include <limits>
 #include <utility>
 #include <vector>
+#include <map>
 // clang-format on
 
 #ifdef DEBUG

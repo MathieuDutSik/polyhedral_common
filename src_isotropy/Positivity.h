@@ -10,6 +10,8 @@
 #include "COMB_Combinatorics.h"
 #include "Indefinite_LLL.h"
 #include <vector>
+#include <unordered_map>
+#include <utility>
 // clang-format on
 
 // This code does the following:

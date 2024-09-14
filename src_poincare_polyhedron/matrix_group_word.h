@@ -2,6 +2,13 @@
 #ifndef SRC_POINCARE_POLYHEDRON_MATRIX_GROUP_WORD_H_
 #define SRC_POINCARE_POLYHEDRON_MATRIX_GROUP_WORD_H_
 
+// clang-format off
+#include <unordered_set>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+// clang-format on
+
 // The data structure for keeping track of the group elements:
 // ---Positive value (so element 0 correspond to 1, X to X+1, ...) are the
 // elements themselves.

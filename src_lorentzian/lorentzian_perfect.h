@@ -9,13 +9,13 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "fractions.h"
+#include <limits>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
-#include <memory>
 #include <unordered_set>
-#include <memory>
-#include <unordered_set>
+#include <unordered_map>
 #include <utility>
 // clang-format on
 

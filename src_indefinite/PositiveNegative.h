@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "LatticeStabEquiCan.h"
+#include <unordered_map>
+#include <vector>
 // clang-format on
 
 // In some contexts, we need to deal with positive-definite or negative-definite

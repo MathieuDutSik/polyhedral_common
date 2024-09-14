@@ -14,6 +14,7 @@
 #include <map>
 #include <memory>
 #include <utility>
+#include <limits>
 // clang-format on
 
 #ifdef DEBUG

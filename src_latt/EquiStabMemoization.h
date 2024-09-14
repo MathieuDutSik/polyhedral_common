@@ -2,6 +2,15 @@
 #ifndef SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 #define SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_
 
+// clang-format off
+#include "MAT_MatrixInt.h"
+#include <unordered_map>
+#include <unordered_set>
+#include <set>
+#include <utility>
+#include <vector>
+// clang-format on
+
 // This is a simple process for memoizing equivalence and stabilizers
 // in order to get better speed.
 // We keep track of
@@ -40,11 +49,6 @@
 //    to a matrix g1 = equi^{-1} g2 equi
 // ---The arithmetic group action is our basic one:
 //    (P, A) = P A P^T
-
-// clang-format off
-#include "MAT_MatrixInt.h"
-#include <unordered_map>
-// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_EQUI_STAB_MEMOIZATION

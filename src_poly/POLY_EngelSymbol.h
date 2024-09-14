@@ -3,9 +3,10 @@
 #define SRC_POLY_POLY_ENGELSYMBOL_H_
 
 // clang-format off
-#include <vector>
-#include <utility>
 #include <string>
+#include <utility>
+#include <unordered_set>
+#include <vector>
 // clang-format on
 
 struct EngelPolyhedralSubordination {

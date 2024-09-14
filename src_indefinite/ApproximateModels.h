@@ -11,6 +11,10 @@
 #include "IndefiniteFormFundamental.h"
 #include "MatrixGroup.h"
 #include <memory>
+#include <map>
+#include <set>
+#include <utility>
+#include <vector>
 // clang-format on
 
 #ifdef DEBUG

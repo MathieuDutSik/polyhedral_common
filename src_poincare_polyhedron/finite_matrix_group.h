@@ -2,6 +2,12 @@
 #ifndef SRC_POINCARE_POLYHEDRON_FINITE_MATRIX_GROUP_H_
 #define SRC_POINCARE_POLYHEDRON_FINITE_MATRIX_GROUP_H_
 
+// clang-format off
+#include <unordered_set>
+#include <unordered_map>
+#include <vector>
+// clang-format on
+
 template <typename T>
 std::vector<CombElt<T>>
 GroupGeneration(std::vector<CombElt<T>> const &input_l_ent) {

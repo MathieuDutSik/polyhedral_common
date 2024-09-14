@@ -3,14 +3,15 @@
 #define SRC_INDEFINITE_LEGENDRE_EQUATION_H_
 
 // clang-format off
+#include "factorizations.h"
+#include "Positivity.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <vector>
 #include <utility>
 #include <map>
 #include <set>
-#include "factorizations.h"
-#include "Positivity.h"
+#include <string>
 // clang-format on
 
 #ifdef DEBUG
