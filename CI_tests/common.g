@@ -183,64 +183,83 @@ end;
 
 
 ClassicalSporadicLattices:=function(TheName)
-  local ListNames, ListGram, len, i;
-  ListNames:=[];
-  ListGram:=[];
-  #
-  # Hyperbolic plane
-  #
-  Add(ListNames, "U");
-  Add(ListGram, [[0,1],[1,0]]);
-  #
-  # root lattices
-  #
-  Add(ListNames, "E6");
-  Add(ListGram,
-[[2,1,1,0,1,1],[1,4,1,1,1,3],[1,1,2,1,1,1],
- [0,1,1,2,1,2],[1,1,1,1,2,2],[1,3,1,2,2,4]]);
-  #
-  Add(ListNames, "E7");
-  Add(ListGram,
-[[4,3,2,3,1,1,1],[3,4,3,3,1,1,1],
-[2,3,4,3,2,2,1],[3,3,3,4,2,1,2],[1,1,2,2,2,1,1],
-[1,1,2,1,1,2,0],[1,1,1,2,1,0,2]]);
-  #
-  Add(ListNames, "A2");
-  Add(ListGram,
-[ [ 2, -1 ], [ -1, 2 ] ]);
-  #
-  Add(ListNames, "E8");
-  Add(ListGram, [[2,0,0,0,0,0,1,0],[0,2,-1,0,-1,1,0,1],
-                 [0,-1,2,1,0,0,0,-1],[0,0,1,2,0,0,1,-1],
-                 [0,-1,0,0,2,-1,1,-1],[0,1,0,0,-1,2,0,0],
-                 [1,0,0,1,1,0,2,-1],[0,1,-1,-1,-1,0,-1,2]]);
-  #
-  Add(ListNames, "A4");
-  Add(ListGram, [ [ 2, -1, 0, 0 ], [ -1, 2, -1, 0 ], [ 0, -1, 2, -1 ], [ 0, 0, -1, 2 ] ]);
-  #
-  Add(ListNames, "A5");
-  Add(ListGram, [ [ 2, -1, 0, 0, 0 ], [ -1, 2, -1, 0, 0 ], [ 0, -1, 2, -1, 0 ], [ 0, 0, -1, 2, -1 ], [ 0, 0, 0, -1, 2 ] ]);
-  #
-  Add(ListNames, "A6");
-  Add(ListGram, [ [ 2, -1, 0, 0, 0, 0 ], [ -1, 2, -1, 0, 0, 0 ], [ 0, -1, 2, -1, 0, 0 ], [ 0, 0, -1, 2, -1, 0 ], [ 0, 0, 0, -1, 2, -1 ], [ 0, 0, 0, 0, -1, 2 ] ]);
-  #
-  Add(ListNames, "D4");
-  Add(ListGram, [ [ 2, -1, 0, 0 ], [ -1, 2, -1, -1 ], [ 0, -1, 2, 0 ], [ 0, -1, 0, 2 ] ]);
-  #
-  Add(ListNames, "D5");
-  Add(ListGram,  [ [ 2, -1, 0, 0, 0 ], [ -1, 2, -1, 0, -1 ], [ 0, -1, 2, -1, 0 ], [ 0, 0, -1, 2, 0 ], [ 0, -1, 0, 0, 2 ] ]);
-  #
-  Add(ListNames, "D6");
-  Add(ListGram, [ [ 2, -1, 0, 0, 0, 0 ], [ -1, 2, -1, 0, 0, -1 ], [ 0, -1, 2, -1, 0, 0 ], [ 0, 0, -1, 2, -1, 0 ], [ 0, 0, 0, -1, 2, 0 ],[ 0, -1, 0, 0, 0, 2 ] ]);
-  #
-  len:=Length(ListNames);
-  for i in [1..len]
-  do
-      if ListNames[i] = TheName then
-          return ListGram[i];
-      fi;
-  od;
-  Error("Failed to find the entry in the database");
+    local TheNameRed, dim, TheMat, ListPair, ePair, ListNames, ListGram, len, i;
+    if TheName[1]='A' then
+        TheNameRed:=TheName{[2..Length(TheName)]};
+        dim:=Int(TheNameRed);
+        if dim<>fail then
+            TheMat:=NullMat(dim,dim);
+            for i in [1..dim]
+            do
+                TheMat[i][i]:=2;
+            od;
+            for i in [1..dim-1]
+            do
+                TheMat[i][i+1]:=-1;
+                TheMat[i+1][i]:=-1;
+            od;
+            return TheMat;
+        fi;
+    fi;
+    if TheName[1]='D' then
+        TheNameRed:=TheName{[2..Length(TheName)]};
+        dim:=Int(TheNameRed);
+        if dim<>fail then
+            TheMat:=NullMat(dim,dim);
+            for i in [1..dim]
+            do
+                TheMat[i][i]:=2;
+            od;
+            ListPair:=[[1,3],[2,3]];
+            for i in [4..dim]
+            do
+                Add(ListPair, [i-1,i]);
+            od;
+            for ePair in ListPair
+            do
+                TheMat[ePair[1]][ePair[2]]:=-1;
+                TheMat[ePair[2]][ePair[1]]:=-1;
+            od;
+            return TheMat;
+        fi;
+    fi;
+    #
+    ListNames:=[];
+    ListGram:=[];
+    #
+    # Hyperbolic plane
+    #
+    Add(ListNames, "U");
+    Add(ListGram, [[0,1],[1,0]]);
+    #
+    # root lattices
+    #
+    Add(ListNames, "E6");
+    Add(ListGram,
+        [[2,1,1,0,1,1],[1,4,1,1,1,3],[1,1,2,1,1,1],
+         [0,1,1,2,1,2],[1,1,1,1,2,2],[1,3,1,2,2,4]]);
+    #
+    Add(ListNames, "E7");
+    Add(ListGram,
+        [[4,3,2,3,1,1,1],[3,4,3,3,1,1,1],
+         [2,3,4,3,2,2,1],[3,3,3,4,2,1,2],[1,1,2,2,2,1,1],
+         [1,1,2,1,1,2,0],[1,1,1,2,1,0,2]]);
+    #
+    Add(ListNames, "E8");
+    Add(ListGram, [[2,0,0,0,0,0,1,0],[0,2,-1,0,-1,1,0,1],
+                   [0,-1,2,1,0,0,0,-1],[0,0,1,2,0,0,1,-1],
+                   [0,-1,0,0,2,-1,1,-1],[0,1,0,0,-1,2,0,0],
+                   [1,0,0,1,1,0,2,-1],[0,1,-1,-1,-1,0,-1,2]]);
+    #
+    len:=Length(ListNames);
+    for i in [1..len]
+    do
+        if ListNames[i] = TheName then
+            return ListGram[i];
+        fi;
+    od;
+    Print("TheName=", TheName, "\n");
+    Error("Failed to find the entry in the database");
 end;
 
 GetGramMatrixFromString:=function(eStr)
@@ -251,6 +270,7 @@ GetGramMatrixFromString:=function(eStr)
         Add(ListChar, String(i));
     od;
     IsNumber:=function(eChar)
+        local fChar;
         for fChar in ListChar
         do
             if fChar=eChar then
