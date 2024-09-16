@@ -12,20 +12,52 @@
 #define DEBUG_ORBITS_VECTOR_BASIS
 #endif
 
+template<typename T>
+bool is_canonical(MyVector<T> const& V) {
+  int n = V.size();
+  for (int i=0; i<n; i++) {
+    T const& val = V(i);
+    if (val != 0) {
+      return val > 0;
+    }
+  }
+  std::cerr << "The vector V is zero\n";
+  throw TerminalException{1};
+}
+
+template<typename T>
+void canonicalize_sign_vector(MyVector<T> & V) {
+  int n = V.size();
+  for (int i=0; i<n; i++) {
+    T const& val = V(i);
+    if (val != 0) {
+      if (val < 0) {
+        for (int j=i; j<i; j++) {
+          V(j) = - V(j);
+        }
+      }
+      return;
+    }
+  }
+}
+
+
 template <typename Tgroup, typename Tint>
 vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
                              std::vector<MyMatrix<Tint>> const &ListGen,
                              [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  Tidx nbVert = SHV.rows();
   std::vector<MyVector<Tint>> ListVert;
   std::unordered_map<MyVector<Tint>, int> MapVert;
   for (int i = 0; i < SHV.rows(); i++) {
     MyVector<Tint> V = GetMatrixRow(SHV, i);
-    ListVert.push_back(V);
-    MapVert[V] = i + 1;
+    if (is_canonical(V)) {
+      ListVert.push_back(V);
+      MapVert[V] = i + 1;
+    }
   }
+  Tidx nbVert = ListVert.size();
   int dim = SHV.cols();
   std::vector<Telt> ListPermGen;
   for (auto &eGen : ListGen) {
@@ -33,6 +65,7 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
     for (Tidx i = 0; i < nbVert; i++) {
       MyVector<Tint> const &V = ListVert[i];
       MyVector<Tint> Vimg = eGen.transpose() * V;
+      canonicalize_sign_vector(Vimg);
       int pos = MapVert[Vimg];
 #ifdef DEBUG_ORBITS_VECTOR_BASIS
       if (pos == 0) {
@@ -51,8 +84,9 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
     int n_vert = v.size();
     MyMatrix<Tint> Mtest(n_vert, dim);
     for (int iRow = 0; iRow < n_vert; iRow++) {
+      int idx = v[iRow];
       for (int iCol = 0; iCol < dim; iCol++) {
-        Mtest(iRow, iCol) = SHV(v[iRow], iCol);
+        Mtest(iRow, iCol) = ListVert[idx](iCol);
       }
     }
     if (RankMat(Mtest) != n_vert) {

@@ -9,12 +9,23 @@
 // clang-format on
 
 /*
+  Algorithm for generating orbits of subsets.
+  ---The minimal algorithm is a tree search that passes through all lexicographically minimal elements.
+  ---The canonical form requires computing the canonical form but we need 
+
+
+  
+ */
+
+
+
+/*
   We are iterating by finding the minimal orbit.
   This relies on the group being relatively small.
   This is a tree search.
  */
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible) {
+void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx miss_val = std::numeric_limits<Tidx>::max();
@@ -135,6 +146,74 @@ void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible) {
     }
   }
 }
+
+template <typename Tgroup, typename Fextensible>
+void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Tidx n = GRP.n_act();
+  {
+    // A limit case that has to be covered.
+    std::vector<Tidx> v_test;
+    if (!f_extensible(v_test)) {
+      return;
+    }
+  }
+  // Generating all the elements
+  std::vector<std::vector<Tidx>> list_prev;
+  bool is_first = true;
+  while(true) {
+    if (is_first) {
+      vectface vf = DecomposeOrbitPoint_Full(GRP);
+      for (auto & eFace : vf) {
+        std::vector<Tidx> v;
+        boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
+        v.push_back(aRow);
+        if (f_extensible(v)) {
+          list_prev.push_back(v);
+        }
+      }
+      is_first = false;
+    } else {
+      std::unordered_set<std::vector<Tidx>> set_new;
+      for (auto & v : list_prev) {
+        Face f_face(n);
+        for (auto & val : v) {
+          f_face[val] = 1;
+        }
+        for (Tidx u=0; u<n; u++) {
+          if (f_face[u] == 0) {
+            Face fins = f_face;
+            fins[u] = 1;
+            Face f2 = GRP.CanonicalImage(fins);
+            std::vector<Tidx> v2 = FaceToVector<Tidx>(f2);
+            set_new.insert(v2);
+          }
+        }
+      }
+      list_prev.clear();
+      for (auto & v : set_new) {
+        if (f_extensible(v)) {
+          list_prev.push_back(v);
+        }
+      }
+    }
+    if (list_prev.size() == 0) {
+      return;
+    }
+  }
+
+}
+
+template <typename Tgroup, typename Fextensible>
+void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible) {
+  if (GRP.size() > 80000) {
+    return SubsetOrbitEnumeration_canform<Tgroup,Fextensible>(GRP, f_extensible);
+  } else {
+    return SubsetOrbitEnumeration_minimal<Tgroup,Fextensible>(GRP, f_extensible);
+  }
+}
+
 
 // clang-format off
 #endif  // SRC_GROUP_GRP_ORBITENUMERATION_H_
