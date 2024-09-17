@@ -8,13 +8,21 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ORBIT_ENUMERATION
+#endif
+
 /*
   Algorithm for generating orbits of subsets.
   ---The minimal algorithm is a tree search that passes through all lexicographically minimal elements.
-  ---The canonical form requires computing the canonical form but we need 
+  ---The canonical form uses the canonical form but does a storing of generated data,
+  and so we do not do an ordered enumeration.
 
-
-  
+  Input:
+  ---GRP: The permutation group acting on the elements.
+  ---f_extensible: This function should be passed just once for each orbit representative:
+     ---It receives a vector as input (and it can anything it wants with it like storing it).
+     ---It returns true if it is extensible to a bigger cell.
  */
 
 
@@ -25,15 +33,21 @@
   This is a tree search.
  */
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible) {
+void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx miss_val = std::numeric_limits<Tidx>::max();
+#ifdef DEBUG_ORBIT_ENUMERATION
+  os << "OE: SubsetOrbitEnumeration_minimal, begin\n";
+#endif
   Tidx nbVert = GRP.n_act();
   std::vector<Telt> l_elt;
   for (auto &elt : GRP) {
     l_elt.push_back(elt);
   }
+#ifdef DEBUG_ORBIT_ENUMERATION
+  os << "OE: |l_elt|=" << l_elt << "\n";
+#endif
   Face f1(nbVert), f2(nbVert), f3(nbVert);
   auto compare_f1_f2 = [&]() -> bool {
     // returns true if f1 <= f2
@@ -57,9 +71,15 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
     for (auto &elt : l_elt) {
       OnFace_inplace(f2, f1, elt);
       if (!compare_f1_f2()) {
+#ifdef DEBUG_ORBIT_ENUMERATION
+        os << "OE: is_representative_minimal, return false\n";
+#endif
         return false;
       }
     }
+#ifdef DEBUG_ORBIT_ENUMERATION
+    os << "OE: is_representative_minimal, return true\n";
+#endif
     return true;
   };
   struct Level {
@@ -78,6 +98,9 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
       f3[eVert] = 1;
     }
     size_t len = v.size();
+#ifdef DEBUG_ORBIT_ENUMERATION
+    os << "OE: len=" << len << " level=" << level << "\n";
+#endif
     auto iife_first_element = [&]() -> Tidx {
       if (len == 0) {
         return 0;
@@ -85,12 +108,25 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
       return v[len - 1] + 1;
     };
     Tidx first_elt = iife_first_element();
+#ifdef DEBUG_ORBIT_ENUMERATION
+    os << "OE: first_elt=" << static_cast<int>(first_elt) << "\n";
+#endif
     std::vector<Tidx> w = v;
     w.push_back(miss_val);
     l_extensions.clear();
     for (Tidx u = first_elt; u < nbVert; u++) {
+#ifdef DEBUG_ORBIT_ENUMERATION
+      os << "OE: u=" << static_cast<int>(u) << "\n";
+#endif
       w[len] = u;
       if (is_representative_minimal(w)) {
+#ifdef DEBUG_ORBIT_ENUMERATION
+        os << "OE: w =";
+        for (auto & val : w) {
+          os << " " << static_cast<int>(val);
+        }
+        os << "\n";
+#endif
         l_extensions.push_back(w);
       }
     }
@@ -113,11 +149,21 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
     }
   };
   auto NextInTree = [&]() -> bool {
+#ifdef DEBUG_ORBIT_ENUMERATION
+    os << "OE: NextInTree, level=" << level << "\n";
+#endif
     if (level == -1) {
       // Start from 0
       std::vector<Tidx> v;
       compute_extensions(v);
-      ListLevel[0] = {l_extensions[0], l_extensions, 0};
+#ifdef DEBUG_ORBIT_ENUMERATION
+      os << "OE: We have 1, |l_extensions|=" << l_extensions.size() << "\n";
+#endif
+      if (ListLevel.size() == 0) {
+        ListLevel.push_back({l_extensions[0], l_extensions, 0});
+      } else {
+        ListLevel[0] = {l_extensions[0], l_extensions, 0};
+      }
       level = 0;
       return true;
     } else {
@@ -126,6 +172,9 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
         return GoUpNextInTree();
       }
       compute_extensions(vect);
+#ifdef DEBUG_ORBIT_ENUMERATION
+      os << "OE: We have 2, |l_extensions|=" << l_extensions.size() << "\n";
+#endif
       if (l_extensions.size() == 0) {
         return GoUpNextInTree();
       }
@@ -148,7 +197,7 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible)
 }
 
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible) {
+void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx n = GRP.n_act();
@@ -206,11 +255,11 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible)
 }
 
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible) {
+void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
   if (GRP.size() > 80000) {
-    return SubsetOrbitEnumeration_canform<Tgroup,Fextensible>(GRP, f_extensible);
+    return SubsetOrbitEnumeration_canform<Tgroup,Fextensible>(GRP, f_extensible, os);
   } else {
-    return SubsetOrbitEnumeration_minimal<Tgroup,Fextensible>(GRP, f_extensible);
+    return SubsetOrbitEnumeration_minimal<Tgroup,Fextensible>(GRP, f_extensible, os);
   }
 }
 

@@ -12,6 +12,14 @@
 #define DEBUG_ORBITS_VECTOR_BASIS
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ORBITS_VECTOR_BASIS
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_ORBITS_VECTOR_BASIS
+#endif
+
 template<typename T>
 bool is_canonical(MyVector<T> const& V) {
   int n = V.size();
@@ -32,7 +40,7 @@ void canonicalize_sign_vector(MyVector<T> & V) {
     T const& val = V(i);
     if (val != 0) {
       if (val < 0) {
-        for (int j=i; j<i; j++) {
+        for (int j=i; j<n; j++) {
           V(j) = - V(j);
         }
       }
@@ -50,11 +58,13 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
   using Tidx = typename Telt::Tidx;
   std::vector<MyVector<Tint>> ListVert;
   std::unordered_map<MyVector<Tint>, int> MapVert;
+  int pos = 0;
   for (int i = 0; i < SHV.rows(); i++) {
     MyVector<Tint> V = GetMatrixRow(SHV, i);
     if (is_canonical(V)) {
       ListVert.push_back(V);
-      MapVert[V] = i + 1;
+      pos += 1;
+      MapVert[V] = pos;
     }
   }
   Tidx nbVert = ListVert.size();
@@ -67,7 +77,7 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
       MyVector<Tint> Vimg = eGen.transpose() * V;
       canonicalize_sign_vector(Vimg);
       int pos = MapVert[Vimg];
-#ifdef DEBUG_ORBITS_VECTOR_BASIS
+#ifdef SANITY_CHECK_ORBITS_VECTOR_BASIS
       if (pos == 0) {
         std::cerr << "pos should be strictly positive\n";
         throw TerminalException{1};
@@ -76,6 +86,9 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
       eList[i] = pos - 1;
     }
     Telt ePermGen(eList);
+#ifdef DEBUG_ORBITS_VECTOR_BASIS
+    os << "ePermGen=" << ePermGen << "\n";
+#endif
     ListPermGen.push_back(ePermGen);
   }
   Tgroup GRP(ListPermGen, nbVert);
@@ -102,7 +115,7 @@ vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,
     }
     return true;
   };
-  SubsetOrbitEnumeration(GRP, f_extensible);
+  SubsetOrbitEnumeration(GRP, f_extensible, os);
   return vf;
 }
 
