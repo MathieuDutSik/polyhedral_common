@@ -1,0 +1,34 @@
+PROGRAM		= LATT_ComputeShortestOrbits
+
+OBJECTS		= $(PROGRAM:%=%.o)
+
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+
+NOLINKFLAG 	= -c
+OUTPUTFLAG 	= -o
+
+CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I../src_short -I../src_isotropy -I.
+COPTIONS        =
+
+
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(MPI_INCLUDE_CPP)
+
+CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(MPI_LINK_CPP) $(GLPK_LINK)
+
+%.o: %.cpp
+	@echo
+	@echo compile $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
+
+all:	$(PROGRAM)
+
+$(PROGRAM): 	$(OBJECTS)
+		@echo
+		@echo link $@
+		$(CC) $(DEBUGFLAG) $@.o $(LIBS) -o $@
+
+clean:;
+	rm -f *.o
+	rm -f $(PROGRAM)
