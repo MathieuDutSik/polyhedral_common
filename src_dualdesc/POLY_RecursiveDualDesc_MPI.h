@@ -145,7 +145,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert_commthread(
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr);
+      ComputeInitialMap<Tint>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   std::string ansCommThread = HeuristicEvaluation(TheMap, AllArr.CommThread);
   bool launch_comm_thread = (ansCommThread == "yes");
@@ -686,7 +686,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
   using TbasicBank = DatabaseCanonic<T, TintGroup, Tgroup>;
   TbasicBank bb(EXTred, EXTred_int, GRP, os);
   std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup>(EXTred, GRP, AllArr);
+      ComputeInitialMap<TintGroup>(EXTred, GRP, AllArr.dimEXT);
   //
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {

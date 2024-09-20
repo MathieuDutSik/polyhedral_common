@@ -2175,13 +2175,12 @@ private:
 
 template <typename Tint, typename T, typename Tgroup>
 std::map<std::string, Tint>
-ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP,
-                  PolyHeuristicSerial<typename Tgroup::Tint> const &AllArr) {
+ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP, int const& dimEXT) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
   int delta = nbRow - nbCol;
-  int level = AllArr.dimEXT - nbCol;
+  int level = dimEXT - nbCol;
   TheMap["groupsize"] = GRP.size();
   TheMap["incidence"] = nbRow;
   TheMap["rank"] = nbCol;
@@ -2216,7 +2215,7 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
   std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint, T, Tgroup>(df.FF.EXT_face, df.Stab, AllArr);
+      ComputeInitialMap<Tint, T, Tgroup>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -3108,7 +3107,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
       Read_AllStandardHeuristicSerial<T, TintGroup>(eFull, dimEXT, os);
   //
   std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   auto get_vectface = [&]() -> vectface {
     if (AllArr.bank_parallelization_method == "serial") {
       using Tbank = DataBank<Tkey, Tval>;
@@ -3160,7 +3159,7 @@ DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
   std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr);
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXTred, GRP, AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       TheBank, EXTred, EXTred_int, GRP, TheMap, AllArr, DD_Prefix, os);
 }
@@ -3209,7 +3208,7 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   //
   MyMatrix<Text_int> EXT_int = Get_EXT_int(EXT);
   std::map<std::string, TintGroup> TheMap =
-      ComputeInitialMap<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr);
+      ComputeInitialMap<TintGroup, T, Tgroup>(EXT, GRP, rddo.AllArr.dimEXT);
   return DUALDESC_AdjacencyDecomposition<Tbank, T, Tgroup, Tidx_value>(
       rddo.TheBank, EXT, EXT_int, GRP, TheMap, rddo.AllArr, DD_Prefix, os);
 }

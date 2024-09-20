@@ -38,16 +38,70 @@
 //     database, so nothing particular.
 // * The function is then
 
-template <typename T> struct EquivariantTriangulation {
-  MyMatrix<T> RelVectors;
-  vectface vf_trig;
+template<typename TintGroup>
+struct PolyHeuristicDecomposition {
+  TheHeuristic<TintGroup> Splitting;
+  TheHeuristic<TintGroup> InitialFacetSet;
 };
 
-template <typename T> struct ExtendibleEquivariantTriangulation {
-  std::vector<MyVector<T>> ListVert;
-  std::unordered_map<MyVector<T>, size_t> MapVert;
-  std::vector<std::vector<size_t>> ListTrig;
+
+
+// The equivalence:
+// * The matrix getting the equivalence.
+// * The f corresponding to the facet.
+// * The corresponding orbit, if i_orbit = miss_val then
+//   the orbit is not already known.
+template<typename T>
+struct DecompositionEquiv {
+  MyMatrix<T> M;
+  Face f;
+  size_t i_orbit;
 };
+
+// A component of the decomposition
+// * The list of vertices.
+// * vf: The triangulation of the object
+// * f: The face corresponding to the EXT.
+// * ListEquiv: The list of transformation mapping to the adjacent domains.
+template<typename T>
+struct ComponentDecomposition {
+  MyMatrix<T> EXT;
+  vectface vf;
+  Face f;
+  std::vector<DecompositionEquiv<T,Tint>> ListEquiv;
+};
+
+template<typename T, typename Tgroup>
+struct FullDecomposition {
+  MyVector<T> EXT;
+  Tgroup GRPperm;
+  std::vector<ComponentDecomposition<T>> l_comp_decomp;
+};
+
+template<typename T, typename Tgroup>
+FullDecomposition<T> get_full_decomposition(MyMatrix<T> const& EXT, Tgroup const& GRP,
+                                            PolyHeuristicDecomposition<typename Tgroup::Tint> const& AllArr) {
+  using TintGroup = typename Tgroup::Tint;
+  std::map<std::string, TintGroup> TheMap = ComputeInitialMap(EXT, GRP, AllArr.dimEXT);
+  std::vector<ComponentDecomposition<T>> l_comp_decomp;
+  std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
+  if (ansSplit != "split") {
+    
+  }
+
+
+  
+  auto f_insert=[&]
+  
+  
+
+
+
+
+  
+}
+
+
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_EQUIVARIANTTRIANGULATION_H_
