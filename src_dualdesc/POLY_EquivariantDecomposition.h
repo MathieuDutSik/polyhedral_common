@@ -291,11 +291,21 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
           DecompositionEquiv<T> de{f, new_equiv};
           ListEquiv.push_back(de);
         }
-        
+        Face f(facet.count() + 1);
+        for (size_t u=0; u<facet.count(); u++) {
+          f[u] = 1;
+        }
+        DecompositionEquiv<T> de{f, {}};
+        ListEquiv.push_back(de);
+        //
+        ComponentDecomposition<T,Tgroup> fcd{EXTcomp, GRPperm, vf_trig, ListEquiv};
+        vec_cd.push_back(fcd);
       }
     }
-
-    
+    n_done = len;
+    if (list_stab2.size() == len) {
+      break;
+    }
   }
 
 
