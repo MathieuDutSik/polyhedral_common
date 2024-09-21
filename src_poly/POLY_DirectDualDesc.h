@@ -279,15 +279,6 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
   size_t shift = GetShift(EXT, eCommand);
   T eScal;
   auto f_insert = [&](std::vector<T> const &LVal) -> void {
-#ifdef USE_ISINCD
-    auto isincd = [&](size_t i_row) -> bool {
-      eScal = 0;
-      for (size_t i = shift; i < DimEXT; i++)
-        eScal += LVal[i] * EXT(i_row, i - shift);
-      return eScal == 0;
-    };
-    vf.InsertFaceRef(isincd);
-#else
     for (size_t i_row = 0; i_row < n_row; i_row++) {
       eScal = 0;
       for (size_t i = shift; i < DimEXT; i++)
@@ -295,7 +286,6 @@ vectface DualDescExternalProgramIncidence(MyMatrix<T> const &EXT,
       f[i_row] = static_cast<bool>(eScal == 0);
     }
     vf.push_back(f);
-#endif
   };
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
   return vf;

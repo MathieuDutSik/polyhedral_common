@@ -35,17 +35,7 @@ void process(std::string const &eFileI, std::string const &OutFormat,
     return;
   }
   if (OutFormat == "Trigs") {
-    os << "return [";
-    bool IsFirst = true;
-    for (auto &trig : vf) {
-      if (!IsFirst) {
-        os << ",\n";
-      }
-      IsFirst = false;
-      std::vector<size_t> eList = FaceToVector<size_t>(trig);
-      os << StringStdVectorGAP(eList);
-    }
-    os << "];\n";
+    os << "return " << StringVectfaceGAP(vf) << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";
