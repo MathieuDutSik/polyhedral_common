@@ -129,7 +129,44 @@ Tgroup group_add_one_vertex(Tgroup const& GRP) {
   return Tgroup(ListGen, n_act + 1);
 }
 
-
+template<typename T, typename Tgroup>
+MyMatrix<T> get_transformation(MyMatrix<T> const& EXTfull, MyMatrix<T> const& EXT, MyVector<T> const& eVect, ComponentDecomposition<T, Tgroup> const& cd_adj, ComponentDecomposition<T, Tgroup> const& cd, Face const& f, MyMatrix<T> const& P) {
+  //
+  // The polytopes and their containers to find the indiced
+  //
+  int nbColFull = EXTfull.cols();
+  ContainerMatrix<T> ContEXT(EXT);
+  MyMatrix<T> cd_adjEXTimg = cd_adj.EXT * P;
+  ContainerMatrix<T> Cont_cd_adjEXTimg(cd_adjEXTimg);
+  MyMatrix<T> cd_EXT = SelectRow(cd.EXT, f);
+  //
+  // Building the corresponding matrices
+  //
+  int siz = f.count();
+  MyMatrix<T> EXTfull1(siz + 1, nbColFull);
+  MyMatrix<T> EXTfull2(siz + 1, nbColFull);
+  for (int i=0; i<siz; i++) {
+    MyVector<T> V1 = GetMatrixRow(cd_EXT, i);
+    std::optional<size_t> opt1 = ContEXT.GetIdx_v(V1);
+    size_t pos1 = unfold_opt(opt1, "cd_EXT should be contained in EXT");
+    MyVector<T> V2 = GetMatrixRow(EXTfull, pos1);
+    AssignMatrixRow(EXTfull1, i, V2);
+    //
+    std::optional<size_t> opt2 = Cont_cd_adjEXTimg.GetIdx_v(V1);
+    size_t pos2 = unfold_opt(opt2, "cd_EXT should be contained in cd_adjEXTimg");
+    MyVector<T> V3 = GetMatrixRow(cd_adj.EXT, pos2);
+    std::optional<size_t> opt3 = ContEXT.GetIdx_v(V3);
+    size_t pos3 = unfold_opt(opt3, "cd_adj.eXT should be contained in EXT");
+    MyVector<T> V4 = GetMatrixRow(EXTfull, pos3);
+    AssignMatrixRow(EXTfull2, i, V4);
+  }
+  AssignMatrixRow(EXTfull1, siz, eVect);
+  AssignMatrixRow(EXTfull2, siz, eVect);
+  //
+  // Finding the relevant transformation
+  //
+  return FindTransformationId(EXTfull2, EXTfull1);
+}
 
 
 template<typename T, typename Tgroup>
@@ -159,7 +196,7 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyMatrix<T> EXT = ColumnReduction(EXT);
-  MyVector<T> eVectRed = Isobarycenter(EXT);
+  MyVector<T> eVect = Isobarycenter(EXT);
   std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
   vectface vf_samp = DirectComputationInitialFacetSet(EXT, ansSamp, os);
   Face f_first = vf_samp[0];
@@ -170,15 +207,35 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   };
   std::map<pairIdx, size_t> map_pair;
   std::vector<pairIdx> vect_pair;
-
-  std::vector<ComponentDecomposition<T,Tgroup>> vect_cd;
+  auto f_insert_pair_idx=[&](size_t const& i_facet, size_t const& i_orbit) -> void {
+    pairIdx pi{i_facet, i_orbit};
+    size_t len = vect_pair.size();
+    map_pair[pi] = len + 1;
+    vect_pair.push_back(pi);
+  };
+  auto get_idx_from_pair=[&](size_t const& i_facet, size_t const& i_orbit) -> size_t {
+    pairIdx pi{i_facet, i_orbit};
+    size_t pos = map_pair[pi];
+    if (pos == 0) {
+      std::cerr << "The entry is actually is missing\n";
+      throw TerminalException{1};
+    }
+    return pos - 1;
+  };
+  //
+  // The returned data
+  //
+  std::vector<ComponentDecomposition<T,Tgroup>> vec_cd;
+  //
+  // The array of data corresponding to the facet
   //
   std::vector<Tgroup> list_stab1;
   std::vector<Tgroup> list_stab2;
-  std::vector<Tgroup> list_EXT2;
+  std::vector<MyMatrix<T>> list_EXT1;
+  std::vector<MyMatrix<T>> list_EXT2;
   vectface vf_facet(nbRow);
-  std::vector<size_t> list_siz_n_comp;
-  std::vector<size_t> list_shift_n_comp;
+  std::vector<size_t> list_siz_n_orbit;
+  std::vector<size_t> list_shift_n_orbit;
   auto f_insert_direct=[&](Face const& f) -> void {
     Tgroup eStab1 = GRP.Stabilizer_OnSets(f);
     Tgroup eStab2 = ReducedGroupActionAddPtFace(eStab1, f);
@@ -186,18 +243,30 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
     MyMatrix<T> EXT2 = ColumnReduction(EXT2);
     list_stab1.push_back(eStab1);
     list_stab2.push_back(eStab2);
+    list_EXT1.push_back(EXT1);
     list_EXT2.push_back(EXT2);
     vf_facet.push_back(f);
   };
+  f_insert_direct(f_first);
+  //
+  // The main iteration.
+  //
   size_t n_done = 0;
   while(true) {
     size_t len = list_stab2.len();
     for (size_t pos=n_done; pos<len; pos++) {
       Face facet = vf_facet[pos];
       Tgroup eStab2 = list_stab2[pos];
+      MyMatrix<T> EXT1 = list_EXT1[pos];
       MyMatrix<T> EXT2 = list_EXT2[pos];
-      std::vector<ComponentDecomposition<T,Tgroup>> vec_cd = get_full_decomposition(EXT2, eStab2, AllArr, os);
-      for (auto & ecd : vec_cd) {
+      std::vector<ComponentDecomposition<T,Tgroup>> local_vec_cd = get_full_decomposition(EXT2, eStab2, AllArr, os);
+      size_t n_orbit = local_vec_cd.size();
+      list_siz_n_orbit.push_back(n_comp);
+      list_shift_n_orbit.push_back(vec_cd.size());
+      for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+        f_insert_pair_idx(pos, i_orbit);
+      }
+      for (auto & ecd : local_vec_cd) {
         vectface vf_trig = vf_add_one_included_vertex(ecd.vf_trig);
         MyMatrix<T> EXTcomp = GetFacetIso(EXT, facet);
         Tgroup GRPperm = group_add_one_vertex(ecd.GRPperm);
@@ -207,13 +276,20 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
           auto iife_equiv=[&]() -> std::optional<std::pair<size_t, MyMatrix<T>>> {
             if (equiv) {
               std::pair<size_t, MyMatrix<T>> const& pair = *equiv;
-
+              size_t const& j_orbit = pair.first;
+              MyMatrix<T> const& P = pair.second;
+              ComponentDecomposition<T,Tgroup> const& cd_adj = local_vec_cd[j_orbit];
+              MyMatrix<T> P_final = get_transformation(EXT1, EXT2, eVect, cd_adj, ecd, equiv.f, P);
+              size_t j_orbit_final = get_idx_from_pair(pos, j_orbit);
+              std::pair<size_t, MyMatrix<T>> pair_final{j_orbit_final, P_final};
+              return pair_final;
             } else {
               return {};
             }
           };
           std::optional<size_t, MyMatrix<T>> new_equiv = iife_equiv();
-          ListEquiv.push_back(new_equiv);
+          DecompositionEquiv<T> de{f, new_equiv};
+          ListEquiv.push_back(de);
         }
         
       }

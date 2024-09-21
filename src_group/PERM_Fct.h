@@ -757,6 +757,19 @@ MyMatrix<T> FindTransformation_f(MyMatrix<T> const &EXT1,
   return eMatr;
 }
 
+template <typename T>
+MyMatrix<T> FindTransformationId(MyMatrix<T> const &EXT1,
+                                 MyMatrix<T> const &EXT2) {
+  auto f=[&](int pos) -> int {
+    return pos;
+  };
+  return FindTransformation_f(EXT1, EXT2, f);
+}
+
+
+
+
+
 template <typename T, typename Telt>
 MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                Telt const &ePerm) {
