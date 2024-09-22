@@ -191,7 +191,16 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   //
   // Decomposition the space
   // We have to deal with:
-  // * The complexity of the different 
+  // * The complexity of the different indices from the subcomponents (hence the pairIdx)
+  // * We decompose the faces into smaller ones. The problem is that we need to have the
+  //   faces matching. And if we have decomposed one side but the opposite is not decomposed
+  //   then we have a problem. Therefore, the decomposition has to use only intrinsic
+  //   information
+  //   - The number of rays.
+  //   - The dimension.
+  //   - The size of the automorphism group.
+  // * The above problem being addressed, we need anyway to compute the mapping from a
+  //   component of a facet to a 
   //
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -251,6 +260,12 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   //
   // The main iteration.
   //
+  struct FacetEntry {
+    Face facet;
+    std::vector<Face> l_face;
+  };
+  std::vector<std::vector<FacetEntry>> ll_facetentry;
+
   size_t n_done = 0;
   while(true) {
     size_t len = list_stab2.len();
@@ -259,13 +274,16 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
       Tgroup eStab2 = list_stab2[pos];
       MyMatrix<T> EXT1 = list_EXT1[pos];
       MyMatrix<T> EXT2 = list_EXT2[pos];
+      ContainerMatrix<T> ContEXT2(EXT2);
       std::vector<ComponentDecomposition<T,Tgroup>> local_vec_cd = get_full_decomposition(EXT2, eStab2, AllArr, os);
       size_t n_orbit = local_vec_cd.size();
+      int nbVect = EXT1.rows();
       list_siz_n_orbit.push_back(n_comp);
       list_shift_n_orbit.push_back(vec_cd.size());
       for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
         f_insert_pair_idx(pos, i_orbit);
       }
+      vectface vf_facet(nbRow);
       for (auto & ecd : local_vec_cd) {
         vectface vf_trig = vf_add_one_included_vertex(ecd.vf_trig);
         MyMatrix<T> EXTcomp = GetFacetIso(EXT, facet);
@@ -284,6 +302,14 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
               std::pair<size_t, MyMatrix<T>> pair_final{j_orbit_final, P_final};
               return pair_final;
             } else {
+              Face new_facet(nbRow);
+              for (auto & val : FaceToVector<size_t>(equiv.f)) {
+                MyVector<T> V1 = GetMatrixRow(ecd.EXT, val);
+                std::optional<size_t> opt1 = ContEXT2.GetIdx_v(V1);
+                size_t pos1 = unfold_opt(opt1, "ecd.EXT should be contained in EXT2");
+                new_facet[pos1] = 1;
+              }
+              vf_facet.push_back(new_facet);
               return {};
             }
           };
@@ -301,6 +327,8 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
         ComponentDecomposition<T,Tgroup> fcd{EXTcomp, GRPperm, vf_trig, ListEquiv};
         vec_cd.push_back(fcd);
       }
+      //
+      for (auto & eFace
     }
     n_done = len;
     if (list_stab2.size() == len) {
