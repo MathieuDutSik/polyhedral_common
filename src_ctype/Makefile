@@ -1,4 +1,4 @@
-PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies CTYP_CheckAdjacency CTYP_SearchMatrix CTYP_LookForNoFreeVector CTYP_MPI_AdjScheme
+PROGRAM		= CTYP_PrepareInitialFile CTYP_MPI_Enumeration_c CTYP_ComputeInvariant CTYP_PrepareAdjacencyFile CTYP_MPI_EnumerationAdjacencies CTYP_CheckAdjacency CTYP_SearchMatrix CTYP_LookForNoFreeVector CTYP_MPI_AdjScheme CTYP_ComputeHashStat CTYP_ComputeInvariant_B
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

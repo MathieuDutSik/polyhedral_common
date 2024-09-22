@@ -12,7 +12,7 @@ PROGRAM		= TEST_PolytopeIntegralPoints \
 		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
 		  POLY_GeometricallyUniqueInteriorPoint TEST_GeometricallyUniquePoint \
-		  POLY_lrs_volume POLY_lrs_triangulation POLY_TwoLaminations
+		  POLY_lrs_volume POLY_lrs_triangulation POLY_TwoLaminations POLY_lrs_triang_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 
