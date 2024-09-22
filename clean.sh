@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+(cd src_group && make clean)
 (cd src_poly && make clean)
 (cd src_poly && make -f Makefile_double_cddlib clean)
 (cd src_polydecomp && make clean)
