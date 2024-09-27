@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<Tint> ListIntPoint1, ListIntPoint2;
     //
     if (opt == "all" || opt == "iter") {
-      MyMatrix<T> EXT = cdd::DualDescription(FAC);
+      MyMatrix<T> EXT = cdd::DualDescription(FAC, std::cerr);
       HumanTime time;
       MyMatrix<Tint> ListIntPoint1 =
           ReordListPoint(GetListIntegralPoint<T, Tint>(FAC, EXT, std::cerr));

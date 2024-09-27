@@ -17,6 +17,10 @@
 #define DEBUG_SAMPLING_FACET
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SAMPLING_FACET
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_SAMPLING_FACET
 #endif
@@ -39,8 +43,10 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   int critlevel = eOption.critlevel;
   int maxnbcall = eOption.maxnbcall;
   int maxnbsize = eOption.maxnbsize;
-  os << "critlevel=" << critlevel << " prog=" << prog
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: critlevel=" << critlevel << " prog=" << prog
      << " maxnbcall=" << maxnbcall << "\n";
+#endif
   auto IsRecursive = [&]() -> bool {
     if (len < critlevel)
       return false;
@@ -59,20 +65,24 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     ListFace.push_back(eFace);
     ListStatus.push_back(0);
   };
-  os << "dim=" << dim << "  len=" << len << "\n";
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: dim=" << dim << "  len=" << len << "\n";
+#endif
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (prog == "lrs")
         return lrs::DualDescription_incd(EXT);
       if (prog == "cdd")
-        return cdd::DualDescription_incd(EXT);
+        return cdd::DualDescription_incd(EXT, os);
       std::cerr << "Failed to find a matching program\n";
       throw TerminalException{1};
     };
     vectface ListIncd = comp_dd();
     for (auto &eFace : ListIncd)
       FuncInsert(eFace);
-    os << "DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
+#ifdef DEBUG_SAMPLING_FACET
+    os << "SAMP: DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
+#endif
     nbCall++;
     return ListFace;
   }
@@ -98,14 +108,18 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
         if (maxnbsize != -1) {
           int siz = ListFace.size();
           if (maxnbsize > siz) {
-            os << "Ending by maxsize criterion\n";
-            os << "siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+#ifdef DEBUG_SAMPLING_FACET
+            os << "SAMP: Ending by maxsize criterion\n";
+            os << "SAMP: siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+#endif
             return ListFace;
           }
         }
         if (maxnbcall != -1) {
           if (nbCall > maxnbcall) {
-            os << "Ending by maxnbcall\n";
+#ifdef DEBUG_SAMPLING_FACET
+            os << "SAMP: Ending by maxnbcall\n";
+#endif
             return ListFace;
           }
         }
@@ -113,7 +127,9 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     if (IsFinished)
       break;
   }
-  os << "RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
+#endif
   return ListFace;
 }
 
@@ -235,7 +251,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     map_incd[eFace.count()] += 1;
   }
 #ifdef DEBUG_SAMPLING_FACET
-  os << "Found incidences =";
+  os << "SAMP: Found incidences =";
   for (auto &kv : map_incd) {
     os << " (" << kv.first << "," << kv.second << ")";
   }
@@ -285,6 +301,9 @@ vectface Kernel_GetFullRankFacetSet(
     vf_ret.push_back(f2);
     return vf_ret;
   }
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: Before Kernel_FindSingleVertex\n";
+#endif
   Face eSet = Kernel_FindSingleVertex(EXT, os);
   // Here we use a trick that the ColumnReduction will select the first column
   // and so will return a matrix that is polytopal
@@ -293,26 +312,34 @@ vectface Kernel_GetFullRankFacetSet(
   std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
   MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
   MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
-  os << "|EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
-     << " rnk=" << RankMat(EXTsel) << "\n";
 #ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: |EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
+     << " rnk=" << RankMat(EXTsel) << "\n";
+#endif
+#ifdef SANITY_CHECK_SAMPLING_FACET
   if (!IsPolytopal(EXTsel)) {
     std::cerr << "The configuration EXTsel is not polytopal\n";
     throw TerminalException{1};
   }
 #endif
   vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
-  os << "We have ListRidge\n";
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: We have ListRidge\n";
+#endif
   FlippingFramework<T> RPLlift(EXT, EXT_int, eSet, os);
-  os << "We have FlippingFramework\n";
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: We have FlippingFramework\n";
+#endif
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
   for (auto &eRidge : ListRidge) {
     Face eFace = RPLlift.FlipFace(eRidge);
     vf_ret.push_back(eFace);
   }
-  os << "We have vf_ret\n";
 #ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: We have vf_ret\n";
+#endif
+#ifdef SANITY_CHECK_SAMPLING_FACET
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
   int pos = 0;
   for (auto &face : vf_ret) {
@@ -337,6 +364,9 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|ColumnReduction|=" << time << "\n";
 #endif
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: Before Polytopization\n";
+#endif
   MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|Polytopization|=" << time << "\n";
@@ -347,6 +377,9 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #endif
   using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: Before Kernel_GetFullRankFacetSet\n";
+#endif
   vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
 #ifdef TIMINGS_SAMPLING_FACET
   os << "|Kernel_GetFullRankFacetSet|=" << time << "\n";

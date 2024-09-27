@@ -513,7 +513,8 @@ typedef enum {
   dd_StrucInconsistent,
   dd_StrucDualInconsistent,
   dd_Unbounded,
-  dd_DualUnbounded
+  dd_DualUnbounded,
+  dd_TooManyIterations
 } dd_LPStatusType;
 
 template <typename T> struct dd_lpdata {
@@ -1945,7 +1946,7 @@ template <typename T> void dd_SetLinearity(dd_matrixdata<T> *M, char *line) {
 }
 
 template <typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err) {
+dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   dd_rowrange i;
   dd_colrange j;
 
@@ -1967,14 +1968,14 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err) {
         poly->homogeneous = false;
     }
   }
-  dd_DoubleDescription(poly, err);
+  dd_DoubleDescription(poly, err, maxiter, os);
   return poly;
 }
 
 template <typename T>
 dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M,
                                        dd_RowOrderType horder,
-                                       dd_ErrorType *err) {
+                                       dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   dd_rowrange i;
   dd_colrange j;
 
@@ -1996,7 +1997,7 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M,
         poly->homogeneous = false;
     }
   }
-  dd_DoubleDescription2(poly, horder, err);
+  dd_DoubleDescription2(poly, horder, err, maxiter, os);
   return poly;
 }
 
@@ -3138,14 +3139,14 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
 
 template <typename T>
 void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
-                        data_temp_simplex<T> *data) {
+                        data_temp_simplex<T> *data, std::ostream& os) {
   switch (lp->objective) {
   case dd_LPmax:
-    dd_CrissCrossMaximize(lp, err, data);
+    dd_CrissCrossMaximize(lp, err, data, os);
     break;
 
   case dd_LPmin:
-    dd_CrissCrossMinimize(lp, err, data);
+    dd_CrissCrossMinimize(lp, err, data, os);
     break;
 
   case dd_LPnone:
@@ -3156,17 +3157,18 @@ void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
-                         data_temp_simplex<T> *data) {
+                         data_temp_simplex<T> *data,
+                         size_t const& maxiter, std::ostream& os) {
   bool localdebug = false;
   if (localdebug)
     std::cout << "Running dd_DualSimplexSolve\n";
   switch (lp->objective) {
   case dd_LPmax:
-    dd_DualSimplexMaximize(lp, err, data);
+    dd_DualSimplexMaximize(lp, err, data, maxiter, os);
     break;
 
   case dd_LPmin:
-    dd_DualSimplexMinimize(lp, err, data);
+    dd_DualSimplexMinimize(lp, err, data, maxiter, os);
     break;
 
   case dd_LPnone:
@@ -3517,12 +3519,13 @@ _L99:
 
 template <typename T>
 void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                            data_temp_simplex<T> *data) {
+                            data_temp_simplex<T> *data,
+                            size_t const& maxiter, [[maybe_unused]] std::ostream& os) {
   dd_colrange j;
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++)
     lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
-  dd_DualSimplexMaximize(lp, err, data);
+  dd_DualSimplexMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (j = 1; j <= lp->d; j++) {
     if (lp->LPS != dd_Inconsistent)
@@ -3533,7 +3536,8 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_DualSimplexMaximize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                            data_temp_simplex<T> *data)
+                            data_temp_simplex<T> *data,
+                            size_t const& maxiter, std::ostream& os)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3545,6 +3549,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   bool localdebug1 = false;
   dd_rowrange i, r;
   dd_colrange j, s;
+  size_t n_iter;
 
   unsigned int rseed = 1;
   // r value assigned designed to create segfault in case it is not set later
@@ -3589,7 +3594,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     data->nbindex_ref_ds[j] = lp->nbindex[j];
 
   if (*err == dd_LPCycling || *err == dd_NumericallyInconsistent) {
-    dd_CrissCrossMaximize(lp, err, data);
+    dd_CrissCrossMaximize(lp, err, data, os);
     return;
   }
 
@@ -3602,7 +3607,18 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   /* Dual Simplex Method */
   stop = false;
+  n_iter = 0;
   do {
+    n_iter += 1;
+#ifdef DEBUG_CDD
+    os << "n_iter=" << n_iter << " maxiter=" << maxiter << "\n";
+#endif
+    if (maxiter != 0) {
+      if (n_iter == maxiter) {
+        lp->LPS = dd_TooManyIterations;
+        break;
+      }
+    }
     chosen = false;
     lp->LPS = dd_LPSundecided;
     phase1 = false;
@@ -3661,6 +3677,12 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
         break;
       case dd_Optimal:
         break;
+      case dd_TooManyIterations:
+#ifdef DEBUG_CDD
+        os << "CDD: We should not pass here\n";
+        throw TerminalException{1};
+#endif
+        break;
       }
       stop = true;
     }
@@ -3670,18 +3692,18 @@ _L99:
   lp->pivots[3] = pivots_pc;
   dd_SetSolutions(lp->m, lp->d, lp->A, lp->B, lp->objrow, lp->rhscol, lp->LPS,
                   lp->optvalue, lp->sol, lp->dsol, lp->posset_extra, lp->re,
-                  lp->se, data->bflag);
+                  lp->se, data->bflag, os);
 }
 
 template <typename T>
 void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data) {
+                           data_temp_simplex<T> *data, std::ostream& os) {
   dd_colrange j;
 
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++)
     lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
-  dd_CrissCrossMaximize(lp, err, data);
+  dd_CrissCrossMaximize(lp, err, data, os);
   lp->optvalue = -lp->optvalue;
   for (j = 1; j <= lp->d; j++) {
     if (lp->LPS != dd_Inconsistent) {
@@ -3694,7 +3716,7 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_CrissCrossMaximize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data)
+                           data_temp_simplex<T> *data, std::ostream& os)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3765,6 +3787,12 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
         break;
       case dd_StrucDualInconsistent:
         break;
+      case dd_TooManyIterations:
+#ifdef DEBUG_CDD
+        std::cerr << "CDD: That case should not match\n";
+        throw TerminalException{1};
+#endif
+        break;
       }
       stop = true;
     }
@@ -3774,7 +3802,7 @@ _L99:
   lp->pivots[1] += pivots1;
   dd_SetSolutions(lp->m, lp->d, lp->A, lp->B, lp->objrow, lp->rhscol, lp->LPS,
                   lp->optvalue, lp->sol, lp->dsol, lp->posset_extra, lp->re,
-                  lp->se, data->bflag);
+                  lp->se, data->bflag, os);
 }
 
 template <typename T>
@@ -3782,7 +3810,7 @@ void dd_SetSolutions(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
                      dd_rowrange objrow, dd_colrange rhscol,
                      dd_LPStatusType LPS, T &optvalue, T *sol, T *dsol,
                      dd_rowset posset, dd_rowrange re, dd_colrange se,
-                     dd_rowindex bflag)
+                     dd_rowindex bflag, [[maybe_unused]] std::ostream& os)
 /*
 Assign the solution vectors to sol,dsol,*optvalue after solving
 the LP.
@@ -3852,6 +3880,13 @@ the LP.
     }
     break;
 
+  case dd_TooManyIterations:
+#ifdef DEBUG_CDD
+    os << "That case should not be met here\n";
+    throw TerminalException{1};
+#endif
+    break;
+
   case dd_StrucDualInconsistent:
     dd_TableauEntry(x, d_size, A, Ts, objrow, se);
     if (x > 0)
@@ -3867,6 +3902,7 @@ the LP.
       std::cout << "SetSolutions: LP is dual inconsistent.\n";
     break;
   }
+
 }
 
 template <typename T>
@@ -3946,7 +3982,8 @@ template <typename T> dd_lpdata<double> *dd_LPgmp2LPf(dd_lpdata<T> *lp) {
 
 template <typename T>
 inline bool dd_LPSolve_data(dd_lpdata<T> *lp, dd_LPSolverType solver,
-                            dd_ErrorType *err, data_temp_simplex<T> *data)
+                            dd_ErrorType *err, data_temp_simplex<T> *data,
+                            size_t const& maxiter, [[maybe_unused]] std::ostream& os)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics
 first and then with the specified arithimetics if it is GMP.
@@ -3962,75 +3999,14 @@ When LP is dual-inconsistent then *se returns the evidence column.
   lp->solver = solver;
 
   // There is a bug when using USE_DOUBLE_FIRST.
-#define DIRECT_LPSOLVE_CALL
-#ifdef DIRECT_LPSOLVE_CALL
   switch (lp->solver) {
   case dd_CrissCross:
-    dd_CrissCrossSolve(lp, err, data);
+    dd_CrissCrossSolve(lp, err, data, os);
     break;
   case dd_DualSimplex:
-    dd_DualSimplexSolve(lp, err, data);
+    dd_DualSimplexSolve(lp, err, data, maxiter, os);
     break;
   }
-#else
-  // Solving the problem first on double precision.
-  dd_lpdata<double> *lpf = dd_LPgmp2LPf(lp);
-  dd_ErrorType errf;
-  bool LPScorrect;
-  bool localdebug = false;
-  data_temp_simplex<double> *dataf =
-      allocate_data_simplex<double>(lp->m, lp->d);
-  switch (lp->solver) {
-  case dd_CrissCross:
-    dd_CrissCrossSolve(lpf, &errf, dataf); /* First, run with double float. */
-    if (errf ==
-        dd_NoError) { /* 094a:  fix for a bug reported by Dima Pasechnik */
-      dd_BasisStatus(lpf, lp, &LPScorrect, data); /* Check the basis. */
-    } else {
-      LPScorrect = false;
-    }
-    if (!LPScorrect) {
-      if (localdebug)
-        printf("BasisStatus: the current basis is NOT verified with GMP. Rerun "
-               "with GMP.\n");
-      dd_CrissCrossSolve(lp, err, data); /* Rerun with GMP if fails. */
-    } else {
-      if (localdebug)
-        printf("BasisStatus: the current basis is verified with GMP. The LP "
-               "Solved.\n");
-    }
-    break;
-  case dd_DualSimplex:
-    dd_DualSimplexSolve(lpf, &errf, dataf); /* First, run with double float. */
-    if (errf ==
-        dd_NoError) { /* 094a:  fix for a bug reported by Dima Pasechnik */
-      dd_BasisStatus(lpf, lp, &LPScorrect, data); /* Check the basis. */
-    } else {
-      LPScorrect = false;
-    }
-    if (!LPScorrect) {
-      if (localdebug)
-        printf("BasisStatus: the current basis is NOT verified with GMP. Rerun "
-               "with GMP.\n");
-      dd_DualSimplexSolve(lp, err, data); /* Rerun with GMP if fails. */
-      if (localdebug) {
-        printf("*total number pivots = %ld (ph0 = %ld, ph1 = %ld, ph2 = %ld, "
-               "ph3 = %ld, ph4 = %ld)\n",
-               lp->total_pivots, lp->pivots[0], lp->pivots[1], lp->pivots[2],
-               lp->pivots[3], lp->pivots[4]);
-        dd_WriteLPResult(std::cout, lpf, errf);
-        dd_WriteLP(std::cout, lp);
-      }
-    } else {
-      if (localdebug)
-        printf("BasisStatus: the current basis is verified with GMP. The LP "
-               "Solved.\n");
-    }
-    break;
-  }
-  dd_FreeLPData(lpf);
-  free_data_simplex(dataf);
-#endif
 
   lp->total_pivots = 0;
   for (i = 0; i <= 4; i++)
@@ -4041,15 +4017,15 @@ When LP is dual-inconsistent then *se returns the evidence column.
 }
 
 template <typename T>
-bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err) {
+bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   data_temp_simplex<T> *data = allocate_data_simplex<T>(lp->m, lp->d);
-  bool test = dd_LPSolve_data(lp, solver, err, data);
+  bool test = dd_LPSolve_data(lp, solver, err, data, maxiter, os);
   free_data_simplex(data);
   return test;
 }
 
 template <typename T>
-bool dd_LPSolve0(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err)
+bool dd_LPSolve0(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, size_t const& maxiter, std::ostream& os)
 /*
 The original version of dd_LPSolve that solves an LP with specified
 arithimetics.
@@ -4067,10 +4043,10 @@ When LP is dual-inconsistent then *se returns the evidence column.
   data_temp_simplex<T> *data = allocate_data_simplex<T>(lp->m, lp->d);
   switch (lp->solver) {
   case dd_CrissCross:
-    dd_CrissCrossSolve(lp, err, data);
+    dd_CrissCrossSolve(lp, err, data, os);
     break;
   case dd_DualSimplex:
-    dd_DualSimplexSolve(lp, err, data);
+    dd_DualSimplexSolve(lp, err, data, maxiter, os);
     break;
   }
   free_data_simplex(data);
@@ -4376,7 +4352,7 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M,
 
 template <typename T>
 bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
-                  dd_ErrorType *error, data_temp_simplex<T> *data) {
+                  dd_ErrorType *error, data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
   /* Checks whether the row itest is redundant for the representation.
      All linearity rows are not checked and considered NONredundant.
      This code works for both H- and V-representations.  A certificate is
@@ -4431,7 +4407,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
     dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
-  dd_LPSolve_data(lp, dd_choiceRedcheckAlgorithm, &err, data);
+  dd_LPSolve_data(lp, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
     goto _L999;
@@ -4458,7 +4434,7 @@ _L99:
 template <typename T>
 bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
                            T *certificate, dd_rowset *redset,
-                           dd_ErrorType *error) {
+                           dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* This uses the same LP construction as dd_Redundant.  But, while it is
      checking the redundancy of itest, it also tries to find some other variable
      that are redundant (i.e. forced to be nonnegative).  This is expensive as
@@ -4490,7 +4466,7 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
 
   lp->redcheck_extensive = true;
 
-  dd_LPSolve0(lp, dd_DualSimplex, &err);
+  dd_LPSolve0(lp, dd_DualSimplex, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
     goto _L999;
@@ -4520,7 +4496,7 @@ _L99:
 }
 
 template <typename T>
-dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error) {
+dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   dd_rowrange i, m;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
@@ -4535,7 +4511,7 @@ dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error) {
   set_initialize(&redset, m);
   data_temp_simplex<T> *data = allocate_data_simplex<T>(get_m_size(M), d);
   for (i = m; i >= 1; i--) {
-    if (dd_Redundant(Mcopy, i, cvec, error, data)) {
+    if (dd_Redundant(Mcopy, i, cvec, error, data, maxiter, os)) {
       if (localdebug)
         printf("dd_RedundantRows: the row %ld is redundant.\n", i);
       set_addelem(redset, i);
@@ -4556,7 +4532,7 @@ _L99:
 
 template <typename T>
 bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
-                               dd_rowindex *newpos, dd_ErrorType *error) {
+                               dd_rowindex *newpos, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* It returns the set of all redundant rows.  This should be called after all
      implicit linearity are recognized with dd_MatrixCanonicalizeLinearity.
   */
@@ -4599,7 +4575,7 @@ bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
   set_initialize(&redset1, M1->rowsize);
   k = 1;
   do {
-    if (dd_RedundantExtensive(M1, k, cvec, &redset1, error)) {
+    if (dd_RedundantExtensive(M1, k, cvec, &redset1, error, maxiter, os)) {
       set_addelem(redset1, k);
       dd_MatrixRowsRemove2(&M1, redset1, &newpos1);
       for (i = 1; i <= m; i++) {
@@ -4667,7 +4643,7 @@ _L99:
 
 template <typename T>
 bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
-                   dd_ErrorType *error) {
+                   dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* Checks whether the row itest is strongly redundant for the representation.
      A row is strongly redundant in H-representation if every point in
      the polyhedron satisfies it with strict inequality.
@@ -4743,7 +4719,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
     dd_CreateLP_H_Redundancy(M, itest, lp);
   }
 
-  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
     goto _L999;
@@ -4775,7 +4751,7 @@ bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
         /* for V-representation, we have to solve another LP */
         dd_FreeLPData(lp);
         lp = dd_CreateLP_V_SRedundancy(M, itest);
-        dd_LPSolve(lp, dd_DualSimplex, &err);
+        dd_LPSolve(lp, dd_DualSimplex, &err, maxiter, os);
         if (localdebug)
           dd_WriteLPResult(std::cout, lp, err);
         if (lp->optvalue > 0) {
@@ -4798,7 +4774,7 @@ _L99:
 }
 
 template <typename T>
-dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error) {
+dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   dd_rowrange i, m;
   dd_colrange d;
   dd_rowset redset;
@@ -4816,7 +4792,7 @@ dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error) {
   dd_AllocateArow(d, &cvec);
   set_initialize(&redset, m);
   for (i = m; i >= 1; i--) {
-    if (dd_SRedundant(Mcopy, i, cvec, error)) {
+    if (dd_SRedundant(Mcopy, i, cvec, error, maxiter, os)) {
       if (localdebug)
         printf("dd_SRedundantRows: the row %ld is strongly redundant.\n", i);
       set_addelem(redset, i);
@@ -4837,7 +4813,7 @@ _L99:
 
 template <typename T>
 dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
-                                      [[maybe_unused]] std::ostream &os) {
+                                      size_t const& maxiter, std::ostream &os) {
 #ifdef DEBUG_CDD
   os << "CDD: dd_RedundantRowsViaShooting, step 1 *error=" << *error << "\n";
 #endif
@@ -4899,7 +4875,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
       std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
       dd_WriteLP(std::cout, lpw);
     }
-    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
+    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
     lpw->A[mi - 2][0] -= T(1);
     if (lpw->optvalue < 0)
       return false;
@@ -4936,7 +4912,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_lpdata<T> *lp0 = dd_Matrix2LP(M);
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
-  dd_LPSolve(lp, solver, &err); /* Solve the LP */
+  dd_LPSolve(lp, solver, &err, maxiter, os);
   if (localdebug) {
     std::cout << "lp->sol=";
     dd_WriteT(std::cout, lp->sol, d);
@@ -5038,7 +5014,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
       std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
-    redset = dd_RedundantRows(M, error);
+    redset = dd_RedundantRows(M, error, maxiter, os);
 #ifdef DEBUG_CDD
     if (*error != dd_NoError) {
       os << "CDD: Error in dd_RedundantRows\n";
@@ -5061,7 +5037,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 template <typename T>
 dd_rowset
 dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
-                                  std::vector<int> const &BlockBelong) {
+                                  std::vector<int> const &BlockBelong, size_t const& maxiter, std::ostream& os) {
   dd_rowrange i, m, ired;
   dd_colrange j, k, d;
   T *shootdir;
@@ -5104,7 +5080,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
       std::cout << "dd_Redundant_loc: lpw->m=" << lpw->m << " lpw=\n";
       dd_WriteLP(std::cout, lpw);
     }
-    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data);
+    dd_LPSolve_data(lpw, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
     lpw->A[mi - 2][0] -= T(1);
     return lpw->optvalue >= 0;
   };
@@ -5151,7 +5127,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_lpdata<T> *lp0 = dd_Matrix2LP(M);
   dd_lpdata<T> *lp = dd_MakeLPforInteriorFinding(lp0);
   dd_FreeLPData(lp0);
-  dd_LPSolve(lp, solver, &err); /* Solve the LP */
+  dd_LPSolve(lp, solver, &err, maxiter, os);
   if (localdebug) {
     std::cout << "lp->sol=";
     dd_WriteT(std::cout, lp->sol, d);
@@ -5271,7 +5247,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
       std::cout << "dd_Positive=F case\n";
     /* No interior point is found.  Apply the standard LP technique.  */
     set_free(redset);
-    redset = dd_RedundantRows(M, error);
+    redset = dd_RedundantRows(M, error, maxiter, os);
   }
   free_data_simplex(data);
 
@@ -5283,7 +5259,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 }
 
 template <typename T>
-dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error) {
+dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* This is to generate the (facet) graph of a polyheron (H) V-represented by M
      using LPs. Since it does not use the representation conversion, it should
      work for a large scale problem.
@@ -5305,8 +5281,8 @@ dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error) {
   for (i = 1; i <= m; i++) {
     if (!set_member(i, M->linset)) {
       set_addelem(Mcopy->linset, i);
-      redset = dd_RedundantRows(
-          Mcopy, error); /* redset should contain all nonadjacent ones */
+      redset = dd_RedundantRows(Mcopy, error, maxiter, os);
+      /* redset should contain all nonadjacent ones */
       set_uni(redset, redset,
               Mcopy->linset); /* all linearity elements should be nonadjacent */
       set_compl(F->set[i - 1], redset); /* set the adjacency list of vertex i */
@@ -5324,7 +5300,7 @@ _L999:
 
 template <typename T>
 dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
-                                      dd_ErrorType *error) {
+                                      dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* This is to generate the weak-adjacency (facet) graph of a polyheron (H)
      V-represented by M using LPs. Since it does not use the representation
      conversion, it should work for a large scale problem.
@@ -5346,8 +5322,8 @@ dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
   for (i = 1; i <= m; i++) {
     if (!set_member(i, M->linset)) {
       set_addelem(Mcopy->linset, i);
-      redset = dd_SRedundantRows(
-          Mcopy, error); /* redset should contain all weakly nonadjacent ones */
+      redset = dd_SRedundantRows(Mcopy, error, maxiter, os);
+      /* redset should contain all weakly nonadjacent ones */
       set_uni(redset, redset,
               Mcopy->linset); /* all linearity elements should be nonadjacent */
       set_compl(F->set[i - 1], redset); /* set the adjacency list of vertex i */
@@ -5365,7 +5341,8 @@ _L999:
 
 template <typename T>
 bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
-                          T *certificate, dd_ErrorType *error)
+                          T *certificate, dd_ErrorType *error,
+                          size_t const& maxiter, std::ostream& os)
 /* 092 */
 {
   /* Checks whether the row itest is implicit linearity for the representation.
@@ -5424,7 +5401,7 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
   }
 
   lp->objective = dd_LPmax; /* the lp->objective is set by CreateLP* to LPmin */
-  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
     goto _L999;
@@ -5451,7 +5428,8 @@ _L999:
 
 template <typename T>
 void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
-                                dd_rowset *imp_linrows, dd_ErrorType *error)
+                                dd_rowset *imp_linrows, dd_ErrorType *error,
+                                size_t const& maxiter, std::ostream& os)
 /* 092 */
 {
   /* Checks whether the matrix M constains any implicit linearity at all.
@@ -5498,7 +5476,7 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
     lp = dd_CreateLP_H_ImplicitLinearity(M);
   }
 
-  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err);
+  dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
     goto _L999;
@@ -5548,7 +5526,7 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
       /* List the implicit linearity rows */
       for (i = m; i >= 1; i--) {
         if (!set_member(i, lp->posset_extra)) {
-          if (dd_ImplicitLinearity(M, i, cvec, error)) {
+          if (dd_ImplicitLinearity(M, i, cvec, error, maxiter, os)) {
             set_addelem(*imp_linrows, i);
             if (localdebug) {
               fprintf(stdout, " row %ld is implicit linearity\n", i);
@@ -5645,8 +5623,7 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
 template <typename T>
 bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
                            dd_rowset *redset, dd_rowindex *newpos,
-                           dd_ErrorType *error) /* 094 */
-{
+                           dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
   /* This is to find a canonical representation of a matrix *M by
      recognizing all implicit linearities and all redundancies.
      All implicit linearities will be returned by *impl_linset and
@@ -5674,7 +5651,7 @@ bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
       revpos[k] = i; /* inverse of *newpos[] */
   }
 
-  success = dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error); /* 094 */
+  success = dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error, maxiter, os);
 
   if (!success)
     goto _L99;
@@ -5700,7 +5677,7 @@ _L99:
 
 template <typename T>
 bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
-                             dd_ErrorType *err)
+                             dd_ErrorType *err, size_t const& maxiter, std::ostream& os)
 /* 0.94 */
 {
   /* This function checkes if there is a point that satifies all the constraints
@@ -5719,7 +5696,7 @@ bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
     return answer;
 
   /* Solve the LP by cdd LP solver. */
-  dd_LPSolve(lp, dd_DualSimplex, err); /* Solve the LP */
+  dd_LPSolve(lp, dd_DualSimplex, err, maxiter, os);
   if (*err != dd_NoError)
     return answer;
   if (lp->LPS == dd_Optimal && lp->optvalue > 0) {
@@ -5845,7 +5822,8 @@ void dd_BasisStatusMaximize(dd_rowrange m_size, dd_colrange d_size, T **A,
                             T &optvalue, T *sol, T *dsol, dd_rowset posset,
                             dd_colindex nbindex, dd_rowrange re, dd_colrange se,
                             dd_colrange *nse, long *pivots, bool *found,
-                            bool *LPScorrect, data_temp_simplex<T> *data)
+                            bool *LPScorrect, data_temp_simplex<T> *data,
+                            std::ostream & os)
 /*  This is just to check whether the status LPS of the basis given by
 nbindex with extra certificates se or re is correct.  It is done
 by recomputing the basis inverse matrix T.  It does not solve the LP
@@ -5952,6 +5930,12 @@ arithmetics.
     break;
   case dd_DualUnbounded:
     break;
+  case dd_TooManyIterations:
+#ifdef DEBUG_CDD
+    os << "It should not pass by this entry\n";
+    throw TerminalException{1};
+#endif
+    break;
 
   case dd_DualInconsistent:
     for (i = 1; i <= m_size; i++) {
@@ -5972,7 +5956,7 @@ arithmetics.
   }
 
   dd_SetSolutions(m_size, d_size, A, Ts, objrow, rhscol, LPS, optvalue, sol,
-                  dsol, posset, re, senew, data->bflag);
+                  dsol, posset, re, senew, data->bflag, os);
   *nse = senew;
 }
 
@@ -5983,14 +5967,15 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
                             T &optvalue, T *sol, T *dsol, dd_rowset posset,
                             dd_colindex nbindex, dd_rowrange re, dd_colrange se,
                             dd_colrange *nse, long *pivots, bool *found,
-                            bool *LPScorrect, data_temp_simplex<T> *data) {
+                            bool *LPScorrect, data_temp_simplex<T> *data,
+                            std::ostream & os) {
   dd_colrange j;
 
   for (j = 1; j <= d_size; j++)
     A[objrow - 1][j - 1] = -A[objrow - 1][j - 1];
   dd_BasisStatusMaximize(m_size, d_size, A, Ts, equalityset, objrow, rhscol,
                          LPS, optvalue, sol, dsol, posset, nbindex, re, se, nse,
-                         pivots, found, LPScorrect, data);
+                         pivots, found, LPScorrect, data, os);
   optvalue = -optvalue;
   for (j = 1; j <= d_size; j++) {
     if (LPS != dd_Inconsistent) {
@@ -6003,7 +5988,7 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
 
 template <typename T>
 void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
-                    data_temp_simplex<T> *data) {
+                    data_temp_simplex<T> *data, std::ostream& os) {
   int i;
   dd_colrange se, j;
   bool basisfound;
@@ -6014,7 +5999,7 @@ void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
                               lp->objrow, lp->rhscol, lpf->LPS, lp->optvalue,
                               lp->sol, lp->dsol, lp->posset_extra, lpf->nbindex,
                               lpf->re, lpf->se, &se, lp->pivots, &basisfound,
-                              LPScorrect, data);
+                              LPScorrect, data, os);
     if (*LPScorrect) {
       /* printf("BasisStatus Check: the current basis is verified with GMP\n");
        */
@@ -6032,7 +6017,7 @@ void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
                               lp->objrow, lp->rhscol, lpf->LPS, lp->optvalue,
                               lp->sol, lp->dsol, lp->posset_extra, lpf->nbindex,
                               lpf->re, lpf->se, &se, lp->pivots, &basisfound,
-                              LPScorrect, data);
+                              LPScorrect, data, os);
     if (*LPScorrect) {
       /* printf("BasisStatus Check: the current basis is verified with GMP\n");
        */
@@ -7734,7 +7719,7 @@ template <typename T> void dd_InitialDataSetup(dd_conedata<T> *cone) {
 }
 
 template <typename T>
-bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
+bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   bool answer = false;
 
   *err = dd_NoError;
@@ -7744,7 +7729,7 @@ bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
     dd_rowset R, S;
     set_initialize(&R, M->rowsize);
     set_initialize(&S, M->rowsize);
-    if (!dd_ExistsRestrictedFace(M, R, S, err)) {
+    if (!dd_ExistsRestrictedFace(M, R, S, err, maxiter, os)) {
       poly->child->CompStatus = dd_AllFound;
       poly->IsEmpty = true;
       poly->n = 0;
@@ -7767,7 +7752,7 @@ bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
 }
 
 template <typename T>
-bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
+bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   dd_conedata<T> *cone = nullptr;
   bool found = false;
 
@@ -7784,7 +7769,7 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
       return found;
     }
     /* Check emptiness of the polyhedron */
-    dd_CheckEmptiness(poly, err);
+    dd_CheckEmptiness(poly, err, maxiter, os);
 
     if (cone->CompStatus != dd_AllFound) {
       dd_FindInitialRays(cone, &found);
@@ -7803,7 +7788,7 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err) {
 
 template <typename T>
 bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
-                           dd_ErrorType *err) {
+                           dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   dd_conedata<T> *cone = nullptr;
   bool found = false;
 
@@ -7821,7 +7806,7 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
       return found;
     }
     // Check emptiness of the polyhedron
-    dd_CheckEmptiness(poly, err);
+    dd_CheckEmptiness(poly, err, maxiter, os);
 
     if (cone->CompStatus != dd_AllFound) {
       dd_FindInitialRays(cone, &found);
@@ -7840,14 +7825,14 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
 
 template <typename T>
 bool dd_DDInputAppend(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
-                      dd_ErrorType *err) {
+                      dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
   /* This is imcomplete.  It simply solves the problem from scratch.  */
 
   if ((*poly)->child != nullptr)
     dd_FreeDDMemory(*poly);
   dd_AppendMatrix2Poly(poly, M);
   (*poly)->representation = dd_Inequality;
-  return dd_DoubleDescription(*poly, err);
+  return dd_DoubleDescription(*poly, err, maxiter, os);
 }
 
 template <typename T>
@@ -7976,7 +7961,8 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
-  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err, os);
+  size_t maxiter = 0;
+  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err, maxiter, os);
 #ifdef DEBUG_CDD
   os << "CDD: RedundancyReductionClarkson err=" << err << "\n";
 #endif
@@ -8007,7 +7993,8 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
-  dd_rowset redset = dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong);
+  size_t maxiter = 0;
+  dd_rowset redset = dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "RedundancyReductionClarksonBlocks internal CDD error\n";
     throw TerminalException{1};
@@ -8082,6 +8069,7 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   int nbCol = FAC.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
+  size_t maxiter = 0;
   int d1 = M->colsize; // We are in the inequality case.
   std::vector<T> cvec(d1);
 #ifdef DEBUG_CDD
@@ -8091,7 +8079,7 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     dd_ErrorType err = dd_NoError;
     for (int iRow = 0; iRow < nbRow; iRow++) {
       long i = iRow + 1;
-      bool test = dd_ImplicitLinearity(M, i, cvec.data(), &err);
+      bool test = dd_ImplicitLinearity(M, i, cvec.data(), &err, maxiter, os);
       if (err != dd_NoError) {
         std::cerr << "LinearDeterminedByInequalitiesAndIndices_LPandNullspace "
                      "internal CDD error\n";
@@ -8196,11 +8184,12 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   }
 }
 
-template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
+  template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   int nbCol = TheEXT.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  size_t maxiter = 0;
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "DualDescription internal CDD error\n";
     throw TerminalException{1};
@@ -8211,10 +8200,11 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT) {
   return TheFAC;
 }
 
-template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
+  template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  size_t maxiter = 0;
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "DualDescription_incd internal CDD error\n";
     throw TerminalException{1};
@@ -8226,10 +8216,11 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T, typename Fprocess>
-void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process) {
+void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process, std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err);
+  size_t maxiter = 0;
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "DualDescriptionFaceIneq internal CDD error\n";
     throw TerminalException{1};
@@ -8384,6 +8375,9 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
     os << "Programming of the case dd_Unbounded is missing\n";
 #endif
     return {};
+  case cdd::dd_TooManyIterations:
+    std::cerr << "CDD: Too many iterations done\n";
+    throw TerminalException{1};
   }
   LpSolution<T> eSol;
   if (PrimalDefined) {
@@ -8530,7 +8524,7 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 template <typename T>
 LpSolution<T>
 CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
-                               [[maybe_unused]] std::ostream &os) {
+                               std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   cdd::dd_ErrorType error = cdd::dd_NoError;
   cdd::dd_matrixdata<T> *M;
@@ -8547,7 +8541,8 @@ CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   }
   lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
-  dd_LPSolve(lp, solver, &error);
+  size_t maxiter = 0;
+  dd_LPSolve(lp, solver, &error, maxiter, os);
   std::optional<LpSolution<T>> optA =
       GetLpSolutionFromLpData(EXT, eVect, lp, os);
   if (optA) {
@@ -8613,7 +8608,17 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   }
   lp = cdd::dd_Matrix2LP(M);
   lp->objective = cdd::dd_LPmin;
-  dd_LPSolve(lp, solver, &error);
+#ifdef DEBUG_CDD
+  os << "CDD: Before dd_LPSolve\n";
+#endif
+  size_t maxiter = 10 * (EXT.rows() + EXT.cols() + 3);
+  dd_LPSolve(lp, solver, &error, maxiter, os);
+  if (lp->LPS == cdd::dd_TooManyIterations) {
+    return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
+  }
+#ifdef DEBUG_CDD
+  os << "CDD: After dd_LPSolve\n";
+#endif
   std::optional<LpSolution<T>> optB =
       LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
   if (optB) {

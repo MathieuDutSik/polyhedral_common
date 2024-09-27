@@ -27,6 +27,7 @@
 
 #ifdef DEBUG
 #define DEBUG_LINEAR_PROGRAM
+#define DEBUG_POLYTOPIZATION
 #define DEBUG_SEARCH_POSITIVE_RELATION
 #define DEBUG_GEOMETRICALLY_UNIQUE
 #endif
@@ -94,6 +95,9 @@ template <typename T> bool IsPolytopal(MyMatrix<T> const &EXT) {
 
 template <typename T>
 MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
+#ifdef DEBUG_POLYTOPIZATION
+  os << "LP: Polytopization, beginning\n";
+#endif
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   if (IsPolytopal(EXT))
@@ -117,7 +121,13 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
     eVect(iCol) = eSum;
   }
   //
+#ifdef DEBUG_POLYTOPIZATION
+  os << "LP: Polytopization, Before CDD_LinearProgramming\n";
+#endif
   LpSolution<T> eSol = CDD_LinearProgramming(nMat, eVect, os);
+#ifdef DEBUG_POLYTOPIZATION
+  os << "LP: Polytopization, After CDD_LinearProgramming\n";
+#endif
   if (!eSol.PrimalDefined) {
     std::cerr << "The optimization resulted in a result whose primal is not "
                  "defined\n";

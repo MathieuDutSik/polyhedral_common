@@ -441,7 +441,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
     eProg = "cdd";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return cdd::DualDescription_incd(EXT);
+      return cdd::DualDescription_incd(EXT, os);
     // If it is a field, then it makes sense to look at the internal ring
     eProg = "lrs_ring";
     ListProg.push_back(eProg);
@@ -518,7 +518,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
     eProg = "cdd";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return cdd::DualDescription(EXT);
+      return cdd::DualDescription(EXT, os);
     // For lrs_ring, we certainly need to have a field for T
     eProg = "lrs_ring";
     ListProg.push_back(eProg);
@@ -592,7 +592,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
     eProg = "cdd";
     ListProg.push_back(eProg);
     if (ansProg == eProg)
-      return cdd::DualDescriptionFaceIneq(EXT, f_process);
+      return cdd::DualDescriptionFaceIneq(EXT, f_process, os);
     // For lrs_ring that computes in a subring, we need T to be a field.
     eProg = "lrs_ring";
     ListProg.push_back(eProg);

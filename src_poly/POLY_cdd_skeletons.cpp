@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
       exit(1);
     }
     //
-    cdd::DDA<T> eDDA = cdd::DualDescriptionAdjacencies(EXT);
+    cdd::DDA<T> eDDA = cdd::DualDescriptionAdjacencies(EXT, std::cerr);
     std::string prefix_out = argv[2];
     //
     std::ofstream os1(prefix_out + "facet");

@@ -50,13 +50,14 @@ template <typename T> struct DDA {
 };
 
 template <typename T>
-DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT) {
+DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_polyhedradata<T> *poly;
   dd_matrixdata<T> *M;
   dd_ErrorType err;
   int nbCol = TheEXT.cols();
   M = MyMatrix_PolyFile2Matrix(TheEXT);
-  poly = dd_DDMatrix2Poly(M, &err);
+  size_t maxiter = 0;
+  poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
 
   MyMatrix<T> TheFAC = FAC_from_poly(poly, nbCol);
   int nbFac = TheFAC.rows();
