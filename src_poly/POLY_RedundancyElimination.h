@@ -26,9 +26,9 @@
 
 // Fairly expensive function. But useful for debugging
 template <typename T>
-std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M) {
+std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream & os) {
   MyMatrix<T> Mred = ColumnReduction(M);
-  MyMatrix<T> EXT = cdd::DualDescription(Mred);
+  MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
   int n_row = Mred.rows();
   int n_vert = EXT.rows();
   int n_col = Mred.cols();
@@ -49,8 +49,8 @@ std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M) {
   return TheSel;
 }
 
-template <typename T> MyMatrix<T> GetNonRedundant_CDD(const MyMatrix<T> &M) {
-  return SelectRow(M, Kernel_GetNonRedundant_CDD(M));
+template <typename T> MyMatrix<T> GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream& os) {
+  return SelectRow(M, Kernel_GetNonRedundant_CDD(M, os));
 }
 
 template <typename T> struct FacetizationInfo {

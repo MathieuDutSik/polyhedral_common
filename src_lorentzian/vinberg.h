@@ -219,14 +219,14 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot, std::ostream &os) {
   int ChosenMethod = 2;
   auto get_listidx = [&]() -> std::vector<int> {
     if (ChosenMethod == 1) {
-      return Kernel_GetNonRedundant_CDD(M_Tfield);
+      return Kernel_GetNonRedundant_CDD(M_Tfield, os);
     }
     if (ChosenMethod == 2) {
       MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
       return cdd::RedundancyReductionClarkson(M2, os);
     }
     if (ChosenMethod == 3) {
-      std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield);
+      std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield, os);
       MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
       std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2, os);
       if (ListIdx1 != ListIdx2) {
