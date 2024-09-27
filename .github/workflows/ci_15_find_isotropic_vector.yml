@@ -1,4 +1,4 @@
-name: CI of finding positive vectors of indefinite forms
+name: CI(15) of finding positive vectors of indefinite forms
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

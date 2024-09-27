@@ -1,4 +1,4 @@
-name: CI of Geometrically unique interior point
+name: CI(06) of Geometrically unique interior point
 
 on:
   # One time per month

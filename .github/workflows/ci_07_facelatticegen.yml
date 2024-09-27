@@ -1,4 +1,4 @@
-name: CI of Skeleton Computation
+name: CI(07) of Skeleton Computation
 
 on:
   # One time per month

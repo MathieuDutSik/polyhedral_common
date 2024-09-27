@@ -1,4 +1,4 @@
-name: CI of direct volume computation
+name: CI(05) of direct volume computation
 
 on:
   # One time per month

@@ -1,4 +1,4 @@
-name: CI of computation of indefinite forms
+name: CI(19) of computation of indefinite forms
 
 on:
   # One time per month

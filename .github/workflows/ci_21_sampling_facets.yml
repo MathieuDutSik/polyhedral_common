@@ -1,4 +1,4 @@
-name: CI of Sampling facets of polytopes
+name: CI(21) of Sampling facets of polytopes
 
 on:
   # One time per month

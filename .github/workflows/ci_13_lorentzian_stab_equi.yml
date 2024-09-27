@@ -1,4 +1,4 @@
-name: CI of Lorentzian Stab Equi code
+name: CI(13) of Lorentzian Stab Equi code
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

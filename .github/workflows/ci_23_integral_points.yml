@@ -1,4 +1,4 @@
-name: CI of Computing integral points in polytope
+name: CI(23) of Computing integral points in polytope
 
 on:
   # One time per month

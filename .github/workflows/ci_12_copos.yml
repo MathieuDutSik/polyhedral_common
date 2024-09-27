@@ -1,4 +1,4 @@
-name: CI of Copositivity code
+name: CI(12) of Copositivity code
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

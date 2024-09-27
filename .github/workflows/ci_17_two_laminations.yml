@@ -1,4 +1,4 @@
-name: CI of computation of two laminations
+name: CI(17) of computation of two laminations
 
 on:
   # One time per month

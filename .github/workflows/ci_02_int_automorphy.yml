@@ -1,4 +1,4 @@
-name: CI of Integral Automorphism groups
+name: CI(02) of Integral Automorphism groups
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

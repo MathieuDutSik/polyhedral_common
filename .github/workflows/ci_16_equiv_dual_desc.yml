@@ -1,4 +1,4 @@
-name: CI of dual description using symmetries
+name: CI(16) of dual description using symmetries
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

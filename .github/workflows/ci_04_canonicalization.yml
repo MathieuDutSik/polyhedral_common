@@ -1,4 +1,4 @@
-name: CI of Matrix canonicalization
+name: CI(04) of Matrix canonicalization
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

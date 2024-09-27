@@ -1,4 +1,4 @@
-name: CI of Ctypes for small dimensions.
+name: CI(26) of Ctypes for small dimensions.
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases

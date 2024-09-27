@@ -1,4 +1,4 @@
-name: CI of Equi-Stab memoization system
+name: CI(11) of Equi-Stab memoization system
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
