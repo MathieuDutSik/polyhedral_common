@@ -9,7 +9,6 @@ PROGRAM		= TEST_PolytopeIntegralPoints \
 		  POLY_IsPointedCone \
 		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
 		  POLY_dual_description POLY_dual_description_group \
-		  POLY_ComputeEngelSymbol \
 		  POLY_GetFullRankFacetSet POLY_sampling_facets \
 		  POLY_GeometricallyUniqueInteriorPoint TEST_GeometricallyUniquePoint \
 		  POLY_lrs_volume POLY_lrs_triangulation POLY_TwoLaminations POLY_lrs_triang_facets
