@@ -34,6 +34,8 @@ include_directories(${CMAKE_SOURCE_DIR}/src_dualdesc)
 include_directories(${CMAKE_SOURCE_DIR}/src_group)
 include_directories(${CMAKE_SOURCE_DIR}/src_indefinite)
 include_directories(${CMAKE_SOURCE_DIR}/src_isotropy)
+include_directories(${CMAKE_SOURCE_DIR}/src_perfect)
+include_directories(${CMAKE_SOURCE_DIR}/src_short)
 include_directories(${CMAKE_SOURCE_DIR}/src_latt)
 include_directories(${CMAKE_SOURCE_DIR}/src_lorentzian)
 include_directories(${CMAKE_SOURCE_DIR}/src_poly)
@@ -43,25 +45,22 @@ include_directories(${CMAKE_SOURCE_DIR}/src)
 include(ExternalProject)
 
 ExternalProject_Add(
-    NautyGitPackage
+    NautyDirectPackage
     PREFIX "${CMAKE_BINARY_DIR}/external"
     URL "https://pallini.di.uniroma1.it/nauty2_8_9.tar.gz"
     CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/nauty/install
     BUILD_IN_SOURCE 1
 )
 
-# Add the source codes.
-#file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
-#file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
-file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
-
 # Add the executable
-add_executable(POLY_SerialDualDesc ${SOURCES})
-#add_executable(CP_TestCopositivity ${SOURCES})
-#add_executable(CP_TestCompletePositivity ${SOURCES})
+add_executable(POLY_SerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
+add_executable(CP_TestCopositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
+add_executable(CP_TestCompletePositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
 
 # Add dependency to your target
-add_dependencies(POLY_SerialDualDesc NautyGitPackage)
+add_dependencies(POLY_SerialDualDesc NautyDirectPackage)
 target_link_libraries(POLY_SerialDualDesc ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+target_link_libraries(CP_TestCopositivity ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+target_link_libraries(CP_TestCompletePositivity ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 
 target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
