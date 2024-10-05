@@ -10,10 +10,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Eigen3 3.3 REQUIRED)
 
 # Find Boost (adjust components if you need specific ones like filesystem, system, etc.)
-find_package(Boost REQUIRED COMPONENTS system filesystem)
+find_package(Boost REQUIRED COMPONENTS serialization mpi)
 
 # Find the GMP library (add REQUIRED to stop if it's not found)
-pkg_check_modules(GMP REQUIRED gmp)
+pkg_check_modules(GMP REQUIRED gmpxx)
+find_library(GMP_LIBRARY NAMES gmp HINTS ${GMP_LIBRARY_DIRS})
+find_library(GMPXX_LIBRARY NAMES gmpxx HINTS ${GMP_LIBRARY_DIRS})
+message(STATUS "GMPXX library names: ${GMPXX_LIBRARY}")
 
 # Add include directories (adjust paths to your actual include locations)
 include_directories(${EIGEN3_INCLUDE_DIR})
@@ -48,19 +51,17 @@ ExternalProject_Add(
 )
 
 # Add the source codes.
-file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
-file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
+#file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
+#file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
 file(GLOB_RECURSE SOURCES ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
 
 # Add the executable
 add_executable(POLY_SerialDualDesc ${SOURCES})
-add_executable(CP_TestCopositivity ${SOURCES})
-add_executable(CP_TestCompletePositivity ${SOURCES})
+#add_executable(CP_TestCopositivity ${SOURCES})
+#add_executable(CP_TestCompletePositivity ${SOURCES})
 
 # Add dependency to your target
 add_dependencies(POLY_SerialDualDesc NautyGitPackage)
-target_link_libraries(POLY_SerialDualDesc ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a
-                                          ${GMP_LIBRARIES})
+target_link_libraries(POLY_SerialDualDesc ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 
-target_include_directories(POLY_SerialDualDesc PRIVATE ${GMP_INCLUDE_DIRS})
-
+target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
