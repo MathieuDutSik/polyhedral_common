@@ -63,6 +63,7 @@ template <typename T> MyMatrix<T> DropZeroColumn(MyMatrix<T> const &M) {
 template <typename T, typename Tgroup>
 void process_entry_type(std::string const &FileCode,
                         std::string const &FileGramMat) {
+  using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> preCODE = ReadMatrixFile<T>(FileCode);
   int nbEnt = preCODE.rows();
   int nbCol = preCODE.cols();
@@ -156,7 +157,9 @@ void process_entry_type(std::string const &FileCode,
   double MaxCovRadius = 0;
   bool IsFirst = true;
   for (auto &eFace : vf) {
-    std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << "\n";
+    Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
+    TintGroup OrbSize = GRP.size() / eStab.size();
+    std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << " |stab|=" << eStab.size() << " |Orb|=" << OrbSize << "\n";
     MyVector<T> eSol = FindFacetInequality(EXT, eFace);
     MyVector<T> fRay(dim);
     for (int i = 0; i < dim; i++) {
