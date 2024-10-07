@@ -153,13 +153,14 @@ void process_entry_type(std::string const &FileCode,
   //
   vectface vf = DualDescriptionStandard(EXT, GRP);
   std::cerr << "|vf|=" << vf.size() << "\n";
-  T MaxCovRadiusSqr = 0;
-  double MaxCovRadius = 0;
+  T MinCosineSqr = 0;
+  double MinCosine = 0;
   bool IsFirst = true;
+  size_t pos = 0;
   for (auto &eFace : vf) {
     Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
     TintGroup OrbSize = GRP.size() / eStab.size();
-    std::cerr << "|eFace|=" << eFace.size() << " / " << eFace.count() << " |stab|=" << eStab.size() << " |Orb|=" << OrbSize << "\n";
+    std::cerr << "pos=" << pos << "  |eFace|=" << eFace.size() << " / " << eFace.count() << " |stab|=" << eStab.size() << " |Orb|=" << OrbSize << "\n";
     MyVector<T> eSol = FindFacetInequality(EXT, eFace);
     MyVector<T> fRay(dim);
     for (int i = 0; i < dim; i++) {
@@ -182,17 +183,24 @@ void process_entry_type(std::string const &FileCode,
       eRay = -eRay;
     }
     T MaxScal = ListScal[idx_in];
-    std::cerr << "eRay=" << StringVector(eRay) << "\n";
-    std::cerr << "incd=";
+    std::cerr << "  eRay=" << StringVector(eRay) << "\n";
+    std::cerr << "  incd=";
     for (int iEnt = 0; iEnt < nbEnt; iEnt++) {
       if (eFace[iEnt] == 1) {
         std::cerr << " " << iEnt;
       }
     }
     std::cerr << "\n";
-    std::cerr << "ListScal=";
-    for (int iEnt = 0; iEnt < nbEnt; iEnt++) {
-      std::cerr << " " << ListScal[iEnt];
+    std::map<T, size_t> map;
+    for (auto & val : ListScal) {
+      map[val] += 1;
+    }
+    std::cerr << "  map(ListScal)=";
+    for (auto & kv : map) {
+      T val = kv.first;
+      size_t mult = kv.second;
+      double val_d = UniversalScalarConversion<double,T>(val);
+      std::cerr << " (" << val << "|" << val_d << "|" << mult << ")";
     }
     std::cerr << "\n";
     for (int iEnt = 0; iEnt < nbEnt; iEnt++) {
@@ -209,26 +217,29 @@ void process_entry_type(std::string const &FileCode,
         }
       }
     }
-    T CovRadiusSqr = MaxScal * MaxScal / (normRay * main_norm);
-    double MaxScal_d = UniversalScalarConversion<double, T>(MaxScal);
+    T CosineSqr = MaxScal * MaxScal / (normRay * main_norm);
+    double Scal_d = UniversalScalarConversion<double, T>(MaxScal);
     double normRay_d = UniversalScalarConversion<double, T>(normRay);
     double main_norm_d = UniversalScalarConversion<double, T>(main_norm);
-    double CovRadius = MaxScal_d / sqrt(normRay_d * main_norm_d);
+    double Cosine = Scal_d / sqrt(normRay_d * main_norm_d);
+    std::cerr << "  Cosine=" << Cosine << " CosineSqr=" << CosineSqr << "\n";
     if (IsFirst) {
-      MaxCovRadiusSqr = CovRadiusSqr;
-      MaxCovRadius = CovRadius;
+      MinCosineSqr = CosineSqr;
+      MinCosine = Cosine;
+      IsFirst = false;
     } else {
-      if (CovRadius < MaxCovRadius) {
-        MaxCovRadius = CovRadius;
+      if (Cosine < MinCosine) {
+        MinCosine = Cosine;
       }
-      if (CovRadiusSqr < MaxCovRadiusSqr) {
-        MaxCovRadiusSqr = CovRadiusSqr;
+      if (CosineSqr < MinCosineSqr) {
+        MinCosineSqr = CosineSqr;
       }
     }
+    pos += 1;
   }
-  std::cerr << "MaxCovRadius=" << MaxCovRadius << "\n";
-  std::cerr << "MaxCovRadiusSqr=" << MaxCovRadiusSqr << "\n";
-  double cov_angle = acos(MaxCovRadius);
+  std::cerr << "MinCosine=" << MinCosine << "\n";
+  std::cerr << "MinCosineSqr=" << MinCosineSqr << "\n";
+  double cov_angle = acos(MinCosine);
   std::cerr << "cov_angle=" << cov_angle << "\n";
 }
 
