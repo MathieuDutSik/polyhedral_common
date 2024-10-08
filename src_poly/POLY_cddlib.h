@@ -3139,14 +3139,14 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
 
 template <typename T>
 void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
-                        data_temp_simplex<T> *data, std::ostream& os) {
+                        data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
   switch (lp->objective) {
   case dd_LPmax:
-    dd_CrissCrossMaximize(lp, err, data, os);
+    dd_CrissCrossMaximize(lp, err, data, maxiter, os);
     break;
 
   case dd_LPmin:
-    dd_CrissCrossMinimize(lp, err, data, os);
+    dd_CrissCrossMinimize(lp, err, data, maxiter, os);
     break;
 
   case dd_LPnone:
@@ -3164,11 +3164,23 @@ void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
     std::cout << "Running dd_DualSimplexSolve\n";
   switch (lp->objective) {
   case dd_LPmax:
+#ifdef DEBUG_CDD
+    os << "CDD: Before dd_DualSimplexMaximize in dd_DualSimplexSolve\n";
+#endif
     dd_DualSimplexMaximize(lp, err, data, maxiter, os);
+#ifdef DEBUG_CDD
+    os << "CDD: After dd_DualSimplexMaximize in dd_DualSimplexSolve\n";
+#endif
     break;
 
   case dd_LPmin:
+#ifdef DEBUG_CDD
+    os << "CDD: Before dd_DualSimplexMinimize in dd_DualSimplexSolve\n";
+#endif
     dd_DualSimplexMinimize(lp, err, data, maxiter, os);
+#ifdef DEBUG_CDD
+    os << "CDD: After dd_DualSimplexMinimize in dd_DualSimplexSolve\n";
+#endif
     break;
 
   case dd_LPnone:
@@ -3552,6 +3564,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   size_t n_iter;
 
   unsigned int rseed = 1;
+#ifdef DEBUG_CDD
+  os << "CDD: Beginning of dd_DualSimplexMaximize with maxiter=" << maxiter << "\n";
+#endif
   // r value assigned designed to create segfault in case it is not set later
   r = -40000;
 
@@ -3563,18 +3578,30 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       maxpivfactor *
       lp->d; /* maximum pivots to be performed before cc pivot is applied. */
   /* Initializing control variables. */
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 1\n";
+#endif
   dd_ComputeRowOrderVector2(lp->m, lp->d, lp->A, data->OrderVector, dd_MinIndex,
                             rseed);
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 2\n";
+#endif
 
   lp->re = 0;
   lp->se = 0;
 
   dd_ResetTableau(lp->m, lp->d, lp->B, lp->nbindex, data->bflag, lp->objrow,
                   lp->rhscol);
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 3\n";
+#endif
 
   dd_FindLPBasis(lp->m, lp->d, lp->A, lp->B, data->OrderVector, lp->equalityset,
                  lp->nbindex, data->bflag, lp->objrow, lp->rhscol, &s, &found,
                  &(lp->LPS), &pivots_p0, data);
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 4\n";
+#endif
   lp->pivots[0] = pivots_p0;
 
   if (!found) {
@@ -3587,16 +3614,28 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_FindDualFeasibleBasis(lp->m, lp->d, lp->A, lp->B, lp->nbindex, data->bflag,
                            lp->objrow, lp->rhscol, lp->lexicopivot, &s, err,
                            &(lp->LPS), &pivots_p1, maxpivots, data);
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 5\n";
+#endif
   lp->pivots[1] = pivots_p1;
 
   /* set the reference basis to be the current feasible basis. */
   for (j = 1; j <= lp->d; j++)
     data->nbindex_ref_ds[j] = lp->nbindex[j];
 
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 6\n";
+#endif
   if (*err == dd_LPCycling || *err == dd_NumericallyInconsistent) {
-    dd_CrissCrossMaximize(lp, err, data, os);
+#ifdef DEBUG_CDD
+    os << "CDD: dd_DualSimplexMaximize, calling dd_CrissCrossMaximize\n";
+#endif
+    dd_CrissCrossMaximize(lp, err, data, maxiter, os);
     return;
   }
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 7\n";
+#endif
 
   if (lp->LPS == dd_DualInconsistent) {
     lp->se = s;
@@ -3604,6 +3643,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     /* No dual feasible basis is found, and thus DualInconsistent.
     Output the evidence column. */
   }
+#ifdef DEBUG_CDD
+  os << "CDD: dd_DualSimplexMaximize, step 8\n";
+#endif
 
   /* Dual Simplex Method */
   stop = false;
@@ -3611,10 +3653,13 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   do {
     n_iter += 1;
 #ifdef DEBUG_CDD
-    os << "n_iter=" << n_iter << " maxiter=" << maxiter << "\n";
+    os << "CDD: n_iter=" << n_iter << "\n";
 #endif
     if (maxiter != 0) {
       if (n_iter == maxiter) {
+#ifdef DEBUG_CDD
+        os << "CDD: Exiting from dd_DualSimplexMaximize at maxiter=" << maxiter << " (too many iterations)\n";
+#endif
         lp->LPS = dd_TooManyIterations;
         break;
       }
@@ -3687,9 +3732,15 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
       stop = true;
     }
   } while (!stop);
+#ifdef DEBUG_CDD
+  os << "CDD: Terminates at maxiter=" << maxiter << "\n";
+#endif
 _L99:
   lp->pivots[2] = pivots_ds;
   lp->pivots[3] = pivots_pc;
+#ifdef DEBUG_CDD
+  os << "CDD: Before dd_SetSolutions in dd_DualSimplexMaximize\n";
+#endif
   dd_SetSolutions(lp->m, lp->d, lp->A, lp->B, lp->objrow, lp->rhscol, lp->LPS,
                   lp->optvalue, lp->sol, lp->dsol, lp->posset_extra, lp->re,
                   lp->se, data->bflag, os);
@@ -3697,13 +3748,13 @@ _L99:
 
 template <typename T>
 void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data, std::ostream& os) {
+                           data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
   dd_colrange j;
 
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++)
     lp->A[lp->objrow - 1][j - 1] = -lp->A[lp->objrow - 1][j - 1];
-  dd_CrissCrossMaximize(lp, err, data, os);
+  dd_CrissCrossMaximize(lp, err, data, maxiter, os);
   lp->optvalue = -lp->optvalue;
   for (j = 1; j <= lp->d; j++) {
     if (lp->LPS != dd_Inconsistent) {
@@ -3716,7 +3767,8 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_CrissCrossMaximize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data, std::ostream& os)
+                           data_temp_simplex<T> *data,
+                           size_t const& maxiter, std::ostream& os)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3728,6 +3780,7 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   dd_rowrange i, r;
   dd_colrange s;
   unsigned int rseed = 1;
+  size_t n_iter;
 
   *err = dd_NoError;
   std::vector<long> nbtemp(lp->d + 1, 0);
@@ -3757,7 +3810,21 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   }
 
   stop = false;
+  n_iter = 0;
   do { /* Criss-Cross Method */
+    n_iter += 1;
+#ifdef DEBUG_CDD
+    os << "CDD: n_iter=" << n_iter << "\n";
+#endif
+    if (maxiter != 0) {
+      if (n_iter == maxiter) {
+#ifdef DEBUG_CDD
+        os << "CDD: Exiting from dd_CrissCrossMaximize at maxiter=" << maxiter << " (too many iterations)\n";
+#endif
+        lp->LPS = dd_TooManyIterations;
+        break;
+      }
+    }
 
     dd_SelectCrissCrossPivot(lp->m, lp->d, lp->A, lp->B, data->bflag,
                              lp->objrow, lp->rhscol, &r, &s, &chosen,
@@ -3800,6 +3867,9 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
 _L99:
   lp->pivots[1] += pivots1;
+#ifdef DEBUG_CDD
+  os << "CDD: Before dd_SetSolutions in dd_CrissCrossMaximize\n";
+#endif
   dd_SetSolutions(lp->m, lp->d, lp->A, lp->B, lp->objrow, lp->rhscol, lp->LPS,
                   lp->optvalue, lp->sol, lp->dsol, lp->posset_extra, lp->re,
                   lp->se, data->bflag, os);
@@ -3820,6 +3890,10 @@ the LP.
   dd_colrange j;
   T x, sw;
   int localdebug = false;
+
+  if (LPS == dd_TooManyIterations) {
+    return;
+  }
 
   if (localdebug)
     std::cout << "SetSolutions:\n";
@@ -3882,7 +3956,7 @@ the LP.
 
   case dd_TooManyIterations:
 #ifdef DEBUG_CDD
-    os << "That case should not be met here\n";
+    os << "CDD: That case should not be met here\n";
     throw TerminalException{1};
 #endif
     break;
@@ -3983,7 +4057,7 @@ template <typename T> dd_lpdata<double> *dd_LPgmp2LPf(dd_lpdata<T> *lp) {
 template <typename T>
 inline bool dd_LPSolve_data(dd_lpdata<T> *lp, dd_LPSolverType solver,
                             dd_ErrorType *err, data_temp_simplex<T> *data,
-                            size_t const& maxiter, [[maybe_unused]] std::ostream& os)
+                            size_t const& maxiter, std::ostream& os)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics
 first and then with the specified arithimetics if it is GMP.
@@ -4001,10 +4075,16 @@ When LP is dual-inconsistent then *se returns the evidence column.
   // There is a bug when using USE_DOUBLE_FIRST.
   switch (lp->solver) {
   case dd_CrissCross:
-    dd_CrissCrossSolve(lp, err, data, os);
+    dd_CrissCrossSolve(lp, err, data, maxiter, os);
     break;
   case dd_DualSimplex:
+#ifdef DEBUG_CDD
+    os << "CDD: Before dd_DualSimplexSolve in dd_LPSolve_data\n";
+#endif
     dd_DualSimplexSolve(lp, err, data, maxiter, os);
+#ifdef DEBUG_CDD
+    os << "CDD: After dd_DualSimplexSolve in dd_LPSolve_data\n";
+#endif
     break;
   }
 
@@ -4018,6 +4098,9 @@ When LP is dual-inconsistent then *se returns the evidence column.
 
 template <typename T>
 bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+#ifdef DEBUG_CDD
+  os << "CDD: dd_LPSolve, maxiter=" << maxiter << "\n";
+#endif
   data_temp_simplex<T> *data = allocate_data_simplex<T>(lp->m, lp->d);
   bool test = dd_LPSolve_data(lp, solver, err, data, maxiter, os);
   free_data_simplex(data);
@@ -4043,10 +4126,16 @@ When LP is dual-inconsistent then *se returns the evidence column.
   data_temp_simplex<T> *data = allocate_data_simplex<T>(lp->m, lp->d);
   switch (lp->solver) {
   case dd_CrissCross:
-    dd_CrissCrossSolve(lp, err, data, os);
+    dd_CrissCrossSolve(lp, err, data, maxiter, os);
     break;
   case dd_DualSimplex:
+#ifdef DEBUG_CDD
+    os << "CDD: Before dd_DualSimplexSolve in dd_LPSolve0\n";
+#endif
     dd_DualSimplexSolve(lp, err, data, maxiter, os);
+#ifdef DEBUG_CDD
+    os << "CDD: After dd_DualSimplexSolve in dd_LPSolve0\n";
+#endif
     break;
   }
   free_data_simplex(data);
@@ -5954,7 +6043,9 @@ arithmetics.
     };
     break;
   }
-
+#ifdef DEBUG_CDD
+  os << "CDD: Before dd_SetSolutions in dd_BasisStatusMaximize\n";
+#endif
   dd_SetSolutions(m_size, d_size, A, Ts, objrow, rhscol, LPS, optvalue, sol,
                   dsol, posset, re, senew, data->bflag, os);
   *nse = senew;
@@ -8613,14 +8704,23 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
   size_t maxiter = 10 * (EXT.rows() + EXT.cols() + 3);
   dd_LPSolve(lp, solver, &error, maxiter, os);
-  if (lp->LPS == cdd::dd_TooManyIterations) {
-    return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
-  }
 #ifdef DEBUG_CDD
   os << "CDD: After dd_LPSolve\n";
 #endif
+  if (lp->LPS == cdd::dd_TooManyIterations) {
+#ifdef DEBUG_CDD
+    os << "CDD: Error is TooManyIterations, calling CDD_LinearProgramming_exact_V1\n";
+#endif
+    return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
+  }
+#ifdef DEBUG_CDD
+  os << "CDD: After dd_LPSolve passed \n";
+#endif
   std::optional<LpSolution<T>> optB =
       LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
+#ifdef DEBUG_CDD
+  os << "CDD: We have optB\n";
+#endif
   if (optB) {
 #ifdef DEBUG_CDD
     os << "CDD: The lifing of floating point solution went nicely\n";
