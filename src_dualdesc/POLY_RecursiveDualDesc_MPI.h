@@ -22,6 +22,49 @@
 #define TIMINGS_RECURSIVE_DUAL_DESC_MPI
 #endif
 
+template <typename Tgroup>
+int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
+                                  vectface const &vf, Tgroup const &GRP,
+                                  std::ostream &os) {
+  int n_proc = comm.size();
+  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
+  int64_t miss_val = std::numeric_limits<int64_t>::max();
+  int64_t upper_limit_local = miss_val;
+  int64_t upper_limit_global = miss_val;
+  int chosen_method = CANONIC_STRATEGY__DEFAULT;
+  int64_t effective_upper_limit = miss_val;
+  std::vector<int64_t> V_runtime;
+  for (auto &method : list_considered) {
+    if (upper_limit_local != miss_val) {
+      // That is a tolerance. If a method gives 5 times worse locally, then that
+      // is enough to discard it.
+      effective_upper_limit = 5 * upper_limit_local;
+    }
+    int64_t runtime_local =
+        time_evaluation_can_method(method, vf, GRP, effective_upper_limit, os);
+    if (runtime_local < upper_limit_local) {
+      upper_limit_local = runtime_local;
+    }
+    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
+    int64_t runtime_global = 0;
+    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
+      if (runtime_global != miss_val) {
+        int64_t runtime = V_runtime[i_proc];
+        if (runtime == miss_val) {
+          runtime_global = miss_val;
+        } else {
+          runtime_global += runtime;
+        }
+      }
+    }
+    if (runtime_global < upper_limit_global) {
+      chosen_method = method;
+      upper_limit_global = runtime_global;
+    }
+  }
+  return chosen_method;
+}
+
 struct message_facet {
   size_t e_hash;
   // vf: List of vectface by the DatabaseBank
@@ -313,7 +356,16 @@ vectface MPI_Kernel_DUALDESC_AdjacencyDecomposition(
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|get_runtime_testcase|=" << time << "\n";
 #endif
-      int method = RPL.bb.evaluate_method_mpi(comm, vf);
+      int method = RPL.bb.evaluate_method_mpi(vf);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
+      os << "|evaluate_method_mpi|=" << time << "\n";
+#endif
+      if (method == STRATEGY_MISS) {
+        method = GetCanonicalizationMethod_MPI(comm, vf, bb.GRP, os);
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
+        os << "|GetCanonicalizationMethod_MPI|=" << time << "\n";
+#endif
+      }
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC_MPI
       os << "|evaluate_method_serial|=" << time << "\n";
 #endif

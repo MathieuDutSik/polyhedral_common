@@ -723,6 +723,22 @@ struct unlimited_request {
   }
 };
 
+std::unique_ptr<std::ofstream>
+get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
+  int i_rank = comm.rank();
+  int n_proc = comm.size();
+  std::string FileLog =
+      "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
+  std::unique_ptr<std::ofstream> os = std::make_unique<std::ofstream>(FileLog);
+  if (ApplyStdUnitbuf(eFull)) {
+    *os << std::unitbuf;
+    *os << "Apply UnitBuf\n";
+  } else {
+    *os << "Do not apply UnitBuf\n";
+  }
+  return os;
+}
+
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 // clang-format on

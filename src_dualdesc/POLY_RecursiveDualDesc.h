@@ -12,7 +12,6 @@
 #include "POLY_SamplingFacet.h"
 #include "PolytopeEquiStab.h"
 #include "Timings.h"
-#include "MPI_basic.h"
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
 #include "Databank.h"
@@ -86,6 +85,9 @@ static const int CANONIC_STRATEGY__INITIAL_TRIV_LIMITED1 = 4;
 // Those constants are for the default strategy
 static const int CANONIC_STRATEGY__DEFAULT = CANONIC_STRATEGY__CANONICAL_IMAGE;
 static const int REPR_STRATEGY__DEFAULT = 0; // More or less irrelevant here
+
+// Constant indicating failure of finding the miss
+static const int STRATEGY_MISS = -1;
 
 // Those constants express the choice for the database
 static const int DATABASE_ACTION__SIMPLE_LOAD = 0;
@@ -613,49 +615,6 @@ int GetCanonicalizationMethod_Serial(vectface const &vf, Tgroup const &GRP,
   return chosen_method;
 }
 
-template <typename Tgroup>
-int GetCanonicalizationMethod_MPI(boost::mpi::communicator &comm,
-                                  vectface const &vf, Tgroup const &GRP,
-                                  std::ostream &os) {
-  int n_proc = comm.size();
-  std::vector<int> list_considered = GetPossibleCanonicalizationMethod(GRP);
-  int64_t miss_val = std::numeric_limits<int64_t>::max();
-  int64_t upper_limit_local = miss_val;
-  int64_t upper_limit_global = miss_val;
-  int chosen_method = CANONIC_STRATEGY__DEFAULT;
-  int64_t effective_upper_limit = miss_val;
-  std::vector<int64_t> V_runtime;
-  for (auto &method : list_considered) {
-    if (upper_limit_local != miss_val) {
-      // That is a tolerance. If a method gives 5 times worse locally, then that
-      // is enough to discard it.
-      effective_upper_limit = 5 * upper_limit_local;
-    }
-    int64_t runtime_local =
-        time_evaluation_can_method(method, vf, GRP, effective_upper_limit, os);
-    if (runtime_local < upper_limit_local) {
-      upper_limit_local = runtime_local;
-    }
-    boost::mpi::all_gather<int64_t>(comm, runtime_local, V_runtime);
-    int64_t runtime_global = 0;
-    for (int i_proc = 0; i_proc < n_proc; i_proc++) {
-      if (runtime_global != miss_val) {
-        int64_t runtime = V_runtime[i_proc];
-        if (runtime == miss_val) {
-          runtime_global = miss_val;
-        } else {
-          runtime_global += runtime;
-        }
-      }
-    }
-    if (runtime_global < upper_limit_global) {
-      chosen_method = method;
-      upper_limit_global = runtime_global;
-    }
-  }
-  return chosen_method;
-}
-
 template <typename T, typename Tgroup>
 int GetCanonicalizationMethodRandom(MyMatrix<T> const &EXT, Tgroup const &GRP,
                                     size_t size, std::ostream &os) {
@@ -1143,9 +1102,8 @@ public:
   int evaluate_method_serial(vectface const &vf) const {
     return GetCanonicalizationMethod_Serial(vf, GRP, os);
   }
-  int evaluate_method_mpi(boost::mpi::communicator &comm,
-                          vectface const &vf) const {
-    return GetCanonicalizationMethod_MPI(comm, vf, GRP, os);
+  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
+    return STRATEGY_MISS;
   }
   Face operation_face(Face const &face) {
     return CanonicalImageGeneralDualDesc(the_method, GRP, foc.recConvert, face,
@@ -1508,8 +1466,7 @@ public:
   int evaluate_method_serial([[maybe_unused]] vectface const &vf) const {
     return REPR_STRATEGY__DEFAULT;
   }
-  int evaluate_method_mpi([[maybe_unused]] boost::mpi::communicator &comm,
-                          [[maybe_unused]] vectface const &vf) const {
+  int evaluate_method_mpi([[maybe_unused]] vectface const &vf) const {
     return REPR_STRATEGY__DEFAULT;
   }
   Face operation_face(Face const &eFlip) { return eFlip; }
@@ -2909,22 +2866,6 @@ bool ApplyStdUnitbuf(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   bool result = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
   return result;
-}
-
-std::unique_ptr<std::ofstream>
-get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string FileLog =
-      "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
-  std::unique_ptr<std::ofstream> os = std::make_unique<std::ofstream>(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
-    *os << std::unitbuf;
-    *os << "Apply UnitBuf\n";
-  } else {
-    *os << "Do not apply UnitBuf\n";
-  }
-  return os;
 }
 
 template <typename Tgroup>
