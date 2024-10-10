@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "lorentzian_perfect.h"
+#include "lorentzian_perfect_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on

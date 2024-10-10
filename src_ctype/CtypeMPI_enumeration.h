@@ -5,7 +5,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "CtypeMPI_types.h"
-#include "POLY_AdjacencyScheme.h"
+#include "POLY_MPI_AdjacencyScheme.h"
 #include "Namelist.h"
 #include "hash_functions.h"
 #include "rational.h"
