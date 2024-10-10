@@ -54,20 +54,38 @@ ExternalProject_Add(
     BUILD_IN_SOURCE 1
 )
 
-# Add the executable
-add_executable(POLY_SerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
-add_executable(CP_TestCopositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
-add_executable(CP_TestCompletePositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
-
 # Grouped the libraries
 set(MY_LIBRARIES_GRP ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 set(MY_LIBRARIES ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 
+# Add the executable
+add_executable(POLY_SerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
+add_executable(CP_TestCopositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
+add_executable(CP_TestCompletePositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
+add_executable(LORENTZ_FundDomain_AllcockEdgewalk ${CMAKE_SOURCE_DIR}/src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk.cpp)
+add_executable(POLY_FaceLatticeGen ${CMAKE_SOURCE_DIR}/src_poly/POLY_FaceLatticeGen.cpp)
+add_executable(INDEF_FORM_AutomorphismGroup ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_AutomorphismGroup.cpp)
+add_executable(INDEF_FORM_TestEquivalence ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_TestEquivalence.cpp)
+add_executable(INDEF_FORM_GetOrbitRepresentative ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbitRepresentative.cpp)
+add_executable(INDEF_FORM_GetOrbit_IsotropicKplane ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane.cpp)
+add_executable(LATT_canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_canonicalize.cpp)
+add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic)
+
+# ---Delaunay polytopes enumeration (Serial)
+# ---Iso-Delaunay spacse (Serial)
 
 # Add dependency to your target
 add_dependencies(POLY_SerialDualDesc NautyDirectPackage)
 target_link_libraries(POLY_SerialDualDesc ${MY_LIBRARIES_GRP})
 target_link_libraries(CP_TestCopositivity ${MY_LIBRARIES})
 target_link_libraries(CP_TestCompletePositivity ${MY_LIBRARIES})
+target_link_libraries(LORENTZ_FundDomain_AllcockEdgewalk ${MY_LIBRARIES_GRP})
+target_link_libraries(POLY_FaceLatticeGen ${MY_LIBRARIES_GRP})
+target_link_libraries(INDEF_FORM_AutomorphismGroup ${MY_LIBRARIES_GRP})
+target_link_libraries(INDEF_FORM_TestEquivalence ${MY_LIBRARIES_GRP})
+target_link_libraries(INDEF_FORM_GetOrbitRepresentative ${MY_LIBRARIES_GRP})
+target_link_libraries(INDEF_FORM_GetOrbit_IsotropicKplane ${MY_LIBRARIES_GRP})
+target_link_libraries(LATT_canonicalize ${MY_LIBRARIES_GRP})
+target_link_libraries(LATT_FindIsotropic ${MY_LIBRARIES})
 
 target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
