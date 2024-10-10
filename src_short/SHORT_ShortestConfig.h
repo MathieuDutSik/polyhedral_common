@@ -11,7 +11,7 @@
 #include "MAT_functions.h"
 #include "MatrixGroup.h"
 #include "POLY_LinearProgramming.h"
-#include "POLY_LinearProgramming_GLPK.h"
+//#include "POLY_LinearProgramming_GLPK.h"
 #include "POLY_PolytopeInt.h"
 #include "Parallel_Classes_Types.h"
 #include "Positivity.h"

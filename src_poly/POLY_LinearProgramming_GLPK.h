@@ -608,9 +608,6 @@ LpSolutionSimple<double> GLPK_LinearProgramming_Kernel_Dense_LIBRARY(
       GetSparseDecompositionDouble(ListEqua, ListIneq);
   MyVector<double> ToBeMinimized_d =
       UniversalVectorConversion<double, T>(ToBeMinimized);
-  //  return GLPK_LinearProgramming_Kernel_Sparse_LIBRARY(RecSpDecomp.Aspmat,
-  //  RecSpDecomp.ListAconst, RecSpDecomp.Bspmat, RecSpDecomp.ListBconst,
-  //  ToBeMinimized_d, eGLPKoption);
   return GLPK_LinearProgramming_Kernel_Sparse_PROC(
       RecSpDecomp.Aspmat, RecSpDecomp.ListAconst, RecSpDecomp.Bspmat,
       RecSpDecomp.ListBconst, ToBeMinimized_d, eGLPKoption);

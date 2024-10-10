@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(Eigen3 3.3 REQUIRED)
 
 # Find Boost (adjust components if you need specific ones like filesystem, system, etc.)
-find_package(Boost REQUIRED COMPONENTS serialization mpi)
+find_package(Boost REQUIRED COMPONENTS serialization)
 
 # Find the GMP library (add REQUIRED to stop if it's not found)
 pkg_check_modules(GMP REQUIRED gmpxx)
@@ -47,7 +47,9 @@ include(ExternalProject)
 ExternalProject_Add(
     NautyDirectPackage
     PREFIX "${CMAKE_BINARY_DIR}/external"
-    URL "https://pallini.di.uniroma1.it/nauty2_8_9.tar.gz"
+    GIT_REPOSITORY https://github.com/MathieuDutSik/nauty
+    GIT_TAG main # or the specific commit, tag, or branch you want to use
+    UPDATE_DISCONNECTED TRUE
     CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/nauty/install
     BUILD_IN_SOURCE 1
 )
@@ -57,10 +59,15 @@ add_executable(POLY_SerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialD
 add_executable(CP_TestCopositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
 add_executable(CP_TestCompletePositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
 
+# Grouped the libraries
+set(MY_LIBRARIES_GRP ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+set(MY_LIBRARIES ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+
+
 # Add dependency to your target
 add_dependencies(POLY_SerialDualDesc NautyDirectPackage)
-target_link_libraries(POLY_SerialDualDesc ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
-target_link_libraries(CP_TestCopositivity ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
-target_link_libraries(CP_TestCompletePositivity ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+target_link_libraries(POLY_SerialDualDesc ${MY_LIBRARIES_GRP})
+target_link_libraries(CP_TestCopositivity ${MY_LIBRARIES})
+target_link_libraries(CP_TestCompletePositivity ${MY_LIBRARIES})
 
 target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
