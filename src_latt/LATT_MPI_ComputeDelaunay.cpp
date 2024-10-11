@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "LatticeDelaunay.h"
+#include "LatticeDelaunay_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -12,7 +12,7 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint_grp>;
-  return ComputeDelaunayPolytope<T, Tint, Tgroup>(comm, eFull);
+  return ComputeDelaunayPolytope_MPI<T, Tint, Tgroup>(comm, eFull);
 }
 
 template <typename T>

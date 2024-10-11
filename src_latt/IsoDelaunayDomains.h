@@ -1995,31 +1995,9 @@ struct DataIsoDelaunayDomainsFunc {
 };
 
 template <typename T, typename Tint, typename Tgroup>
-void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm,
-                                      FullNamelist const &eFull) {
-  /*
-  int i_rank = comm.rank();
-  int n_proc = comm.size();
-  std::string FileLog = "log_" + std::to_string(n_proc) + "_" +
-  std::to_string(i_rank); std::ofstream os(FileLog); if (ApplyStdUnitbuf(eFull))
-  { os << std::unitbuf; os << "Apply UnitBuf\n"; } else { os << "Do not apply
-  UnitBuf\n";
-  }
-  */
-  std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
-  std::ostream &os = *os_ptr;
+DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains(FullNamelist const &eFull, std::ostream& os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
-  //
-  bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
-  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
-  CreateDirectory(STORAGE_Prefix);
-  //
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  os << "max_runtime_second=" << max_runtime_second << "\n";
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  os << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   auto get_common = [&]() -> std::optional<MyMatrix<T>> {
     std::string CommonGramMat = BlockDATA.ListStringValues.at("CommonGramMat");
     if (CommonGramMat == "unset") {
@@ -2044,16 +2022,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm,
   //
   DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
                                                CommonGramMat};
-  using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
-  Tdata data_func{std::move(data)};
-  using Tobj = typename Tdata::Tobj;
-  using TadjO = typename Tdata::TadjO;
-  using Tout = DatabaseEntry_MPI<Tobj, TadjO>;
-  std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
-      comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
-  if (pair.first) {
-    WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
-  }
+  return data;
 }
 
 // clang-format off
