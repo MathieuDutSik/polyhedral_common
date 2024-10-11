@@ -2,16 +2,19 @@
 #ifndef SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 #define SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 
+// clang-format off
 #include "Balinski_basic.h"
 #include "Boost_bitset_kernel.h"
 #include "MAT_Matrix.h"
 #include "MPI_basic.h"
+#include "Namelist.h"
 #include "Timings.h"
 #include <limits>
 #include <list>
 #include <string>
 #include <utility>
 #include <vector>
+// clang-format on
 
 /*
   For the vector, simple syntactic sugar
@@ -723,6 +726,12 @@ struct unlimited_request {
   }
 };
 
+bool ApplyStdUnitbuf(FullNamelist const &eFull) {
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  bool result = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
+  return result;
+}
+
 std::unique_ptr<std::ofstream>
 get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   int i_rank = comm.rank();
@@ -738,6 +747,8 @@ get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   }
   return os;
 }
+
+
 
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_

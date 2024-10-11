@@ -2862,12 +2862,6 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull,
   return EXT;
 }
 
-bool ApplyStdUnitbuf(FullNamelist const &eFull) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  bool result = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
-  return result;
-}
-
 template <typename Tgroup>
 Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
                         [[maybe_unused]] std::ostream &os) {
