@@ -69,7 +69,7 @@ add_executable(INDEF_FORM_TestEquivalence ${CMAKE_SOURCE_DIR}/src_indefinite/IND
 add_executable(INDEF_FORM_GetOrbitRepresentative ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbitRepresentative.cpp)
 add_executable(INDEF_FORM_GetOrbit_IsotropicKplane ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane.cpp)
 add_executable(LATT_canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_canonicalize.cpp)
-add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic)
+add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic.cpp)
 
 # ---Delaunay polytopes enumeration (Serial)
 # ---Iso-Delaunay spacse (Serial)

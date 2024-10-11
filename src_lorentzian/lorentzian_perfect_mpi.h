@@ -67,7 +67,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 #endif
   //
   if (pair.first) {
-    WriteFamilyObjects<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 

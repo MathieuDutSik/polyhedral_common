@@ -2052,7 +2052,7 @@ void ComputeLatticeIsoDelaunayDomains(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyObjects<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
   }
 }
 

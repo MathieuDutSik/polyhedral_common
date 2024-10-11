@@ -16,6 +16,56 @@
 #define TIMINGS_MPI_ADJACENCY_SCHEME
 #endif
 
+template <typename TadjO> struct AdjO_MPI {
+  TadjO x;
+  int iProc;
+  int iOrb;
+};
+
+template <typename TadjO>
+void WriteEntryGAP(std::ostream &os_out, AdjO_MPI<TadjO> const &adj) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(os_out, adj.x);
+  os_out << ", iProc:=" << adj.iProc << ", iOrb:=" << adj.iOrb << ")";
+}
+
+template <typename Tobj, typename TadjO> struct DatabaseEntry_MPI {
+  Tobj x;
+  std::vector<AdjO_MPI<TadjO>> ListAdj;
+};
+
+template <typename Tobj, typename TadjO>
+void WriteEntryGAP(std::ostream &os_out,
+                   DatabaseEntry_MPI<Tobj, TadjO> const &dat_entry) {
+  os_out << "rec(x:=";
+  WriteEntryGAP(os_out, dat_entry.x);
+  os_out << ", ListAdj:=[";
+  bool IsFirst = true;
+  for (auto &eAdj : dat_entry.ListAdj) {
+    if (!IsFirst)
+      os_out << ",";
+    IsFirst = false;
+    WriteEntryGAP(os_out, eAdj);
+  }
+}
+
+
+namespace boost::serialization {
+template <class Archive, typename Tobj, typename TadjO>
+inline void serialize(Archive &ar, DatabaseEntry_MPI<Tobj, TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("ListAdj", eRec.ListAdj);
+}
+template <class Archive, typename TadjO>
+inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("x", eRec.x);
+  ar &make_nvp("iProc", eRec.iProc);
+  ar &make_nvp("iOrb", eRec.iOrb);
+}
+} // namespace boost::serialization
+
 /*
   input clear from preceding discussion.
   The returned boolean is:
@@ -878,6 +928,97 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
 #endif
   PartialEnum_FullWrite(Prefix, str_proc, Saving, l_obj, l_status, os);
   return {test, std::move(l_obj)};
+}
+
+template <typename Tobj, typename TadjO>
+void WriteFamilyObjects_MPI(
+    boost::mpi::communicator &comm, std::string const &OutFormat,
+    std::string const &OutFile,
+    std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_loc,
+    [[maybe_unused]] std::ostream &os) {
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  int i_proc_out = 0;
+  int i_rank = comm.rank();
+  if (OutFormat == "nothing") {
+    std::cerr << "No output\n";
+    return;
+  }
+  if (OutFormat == "ObjectGAP") {
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      size_t len = l_tot.size();
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0)
+          os_out << ",\n";
+        WriteEntryGAP(os_out, l_tot[i].x);
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "ObjectAdjacencyGAP") {
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      size_t len = l_tot.size();
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0)
+          os_out << ",\n";
+        WriteEntryGAP(os_out, l_tot[i]);
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "AdjacencyGAP") {
+    // It is actually a little suboptimal but until it is a problem,
+    // let us leave it at that.
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      std::set<int> set;
+      size_t len = l_tot.size();
+      os_out << "return [";
+      for (size_t i = 0; i < len; i++) {
+        if (i > 0) {
+          os_out << ",\n";
+        }
+        set.clear();
+        for (auto &eAdj : l_tot[i].ListAdj) {
+          int pos = eAdj.iOrb + 1;
+          set.insert(pos);
+        }
+        os_out << "[";
+        bool IsFirst = true;
+        for (auto &eAdj : set) {
+          if (!IsFirst) {
+            os_out << ",";
+          }
+          IsFirst = false;
+          os_out << eAdj;
+        }
+        os_out << "]";
+      }
+      os_out << "];\n";
+    }
+    return;
+  }
+  if (OutFormat == "NumberGAP") {
+    size_t nb_loc = l_loc.size();
+    size_t nb_tot;
+    all_reduce(comm, nb_loc, nb_tot, std::plus<size_t>());
+    if (i_rank == i_proc_out) {
+      std::ofstream os_out(OutFile);
+      os_out << "return rec(nb:=" << nb_tot << ");\n";
+    }
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+            << "\n";
+  throw TerminalException{1};
 }
 
 // clang-format off
