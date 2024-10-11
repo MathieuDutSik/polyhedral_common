@@ -48,7 +48,7 @@ ExternalProject_Add(
     NautyDirectPackage
     PREFIX "${CMAKE_BINARY_DIR}/external"
     GIT_REPOSITORY https://github.com/MathieuDutSik/nauty
-    GIT_TAG main # or the specific commit, tag, or branch you want to use
+    GIT_TAG 2.8.9
     UPDATE_DISCONNECTED TRUE
     CONFIGURE_COMMAND ./configure --prefix=${CMAKE_BINARY_DIR}/external/nauty/install
     BUILD_IN_SOURCE 1
