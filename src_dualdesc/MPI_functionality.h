@@ -748,8 +748,6 @@ get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   return os;
 }
 
-
-
 // clang-format off
 #endif  // SRC_DUALDESC_MPI_FUNCTIONALITY_H_
 // clang-format on

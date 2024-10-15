@@ -29,6 +29,16 @@ void process(std::string const &FileI, std::string const &OutFormat,
     }
     return;
   }
+  if (OutFormat == "Python") {
+    if (opt) {
+      MyVector<T> const &eV = *opt;
+      WriteVector(os_out, eV);
+    } else {
+      MyVector<T> eV = ZeroVector<T>(Q.rows());
+      WriteVector(os_out, eV);
+    }
+    return;
+  }
   std::cerr << "Failed to find a matching OutFormat\n";
   throw TerminalException{1};
 }
