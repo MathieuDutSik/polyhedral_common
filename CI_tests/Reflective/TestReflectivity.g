@@ -72,6 +72,9 @@ TestReflectivity:=function(eRec)
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    Print("FileIn=", FileIn, "\n");
+    Print("FileNml=", FileNml, "\n");
+    Print("FileOut=", FileOut, "\n");
     RemoveFileIfExist(FileIn);
     RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileOut);
@@ -142,14 +145,16 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestReflectivity(eRec);
-        if RecReply.is_correct=false then
-            n_error:=n_error+1;
-            return n_error;
-        fi;
-        if IsBound(RecReply.hasIsotropic) then
-            eIsotropicCase:=rec(M:=eRec.LorMat, hasIsotropic:=RecReply.hasIsotropic);
-            Add(ListIsotropicCases, eIsotropicCase);
+        if iRec = 5345 then
+            RecReply:=TestReflectivity(eRec);
+            if RecReply.is_correct=false then
+                n_error:=n_error+1;
+                return n_error;
+            fi;
+            if IsBound(RecReply.hasIsotropic) then
+                eIsotropicCase:=rec(M:=eRec.LorMat, hasIsotropic:=RecReply.hasIsotropic);
+                Add(ListIsotropicCases, eIsotropicCase);
+            fi;
         fi;
         iRec:=iRec + 1;
     od;

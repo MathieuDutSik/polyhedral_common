@@ -995,7 +995,8 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   (void)KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
   os << "|KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time
      << "\n";
-  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+  size_t maxiter1 = 0; // An abstracting leakage for sure
+  (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, maxiter1, os);
   os << "|KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time
      << "\n";
   (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
@@ -1027,8 +1028,9 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   os << "Before KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
   os << "res_dual.first=\n";
   WriteMatrix(os, res_dual.first);
+  size_t maxiter2 = 0; // An abstracting leakage for sure
   std::pair<MyMatrix<T>, Face> res_dir_lp =
-      cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, os);
+    cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, maxiter2, os);
   os << "|res_dir_lp|=" << res_dir_lp.first.rows() << " / "
      << res_dir_lp.first.cols() << "\n";
   os << "LP: res_dir_lp.second=" << StringFace(res_dir_lp.second) << "\n";

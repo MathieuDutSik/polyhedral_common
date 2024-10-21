@@ -5640,7 +5640,8 @@ _L999:
 
 template <typename T>
 dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
-                                   dd_ErrorType *error) /* 092 */
+                                   dd_ErrorType *error,
+                                   size_t const& maxiter, std::ostream& os)
 {
   dd_colrange d;
   dd_rowset imp_linset;
@@ -5653,7 +5654,7 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
   }
 
   dd_AllocateArow(d, &cvec);
-  dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error);
+  dd_FreeOfImplicitLinearity(M, cvec, &imp_linset, error, maxiter, os);
 
   dd_FreeArow(cvec);
   return imp_linset;
@@ -5662,7 +5663,8 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
 template <typename T>
 bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
                                     dd_rowset *impl_linset, dd_rowindex *newpos,
-                                    dd_ErrorType *error) /* 094 */
+                                    dd_ErrorType *error,
+                                    size_t const& maxiter, std::ostream& os)
 {
   /* This is to recongnize all implicit linearities, and put all linearities at
      the top of the matrix.    All implicit linearities will be returned by
@@ -5673,7 +5675,7 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
   dd_rowrange i, k, m;
   dd_rowindex newpos1;
 
-  linrows = dd_ImplicitLinearityRows(*M, error);
+  linrows = dd_ImplicitLinearityRows(*M, error, maxiter, os);
   if (*error != dd_NoError)
     return false;
 
@@ -8104,13 +8106,13 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
 template <typename T>
 std::pair<MyMatrix<T>, Face>
 KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(
-    MyMatrix<T> const &FAC, [[maybe_unused]] std::ostream &os) {
+    MyMatrix<T> const &FAC, size_t const& maxiter, std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
-  dd_rowset linset = dd_ImplicitLinearityRows(M, &err);
+  dd_rowset linset = dd_ImplicitLinearityRows(M, &err, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "DualDescription_incd internal CDD error\n";
     throw TerminalException{1};
@@ -8237,8 +8239,9 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     WriteMatrix(os, FACred);
     os << "CDD: |FACred|=" << FACred.rows() << " / " << FACred.cols() << "\n";
     if (FACred.rows() > 0) {
+      size_t maxiter = 0;
       std::pair<MyMatrix<T>, Face> pair_loc =
-          KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, os);
+        KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, maxiter, os);
       os << "CDD: pair_loc.first=\n";
       WriteMatrix(os, pair_loc.first);
     }

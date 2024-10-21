@@ -540,7 +540,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
 #ifdef TIMINGS
-  Microsecond time;
+  MicrosecondTime time;
 #endif
   const std::vector<MyVector<Tint>> &l_ui = ad.l_ui;
   const MyVector<Tint> &v_disc = ad.v_disc;
@@ -1142,7 +1142,7 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv, std::ostream &os) {
   MyMatrix<T> const &G = si.G;
 #ifdef TIMINGS
-  Microsecond time;
+  MicrosecondTime time;
 #endif
   //
   // Put the stuff that can help for invariant first
