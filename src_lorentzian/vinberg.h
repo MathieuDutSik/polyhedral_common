@@ -272,6 +272,10 @@ VinbergTot<T, Tint> GetVinbergAux(const MyMatrix<Tint> &G,
   MyMatrix<Tint> M2_tr = M2.transpose();
 #ifdef DEBUG_VINBERG
   os << "Before GetIntegerPoints\n";
+  os << "G=\n";
+  WriteMatrix(os, G);
+  os << "v0=\n";
+  WriteVector(os, v0);
   os << "M2_tr=\n";
   WriteMatrix(os, M2_tr);
 #endif

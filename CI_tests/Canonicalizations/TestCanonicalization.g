@@ -40,7 +40,7 @@ GetCanonicalForm:=function(eMat)
     od;
     CloseStream(output);
     #
-    eProg:="./src_latt/LATT_canonicalize";
+    eProg:="./src_latt/LATT_Canonicalize";
     TheCommand:=Concatenation(eProg, " 2 ", FileIn, " ", FileOut);
     Exec(TheCommand);
     U:=ReadAsFunction(FileOut)();

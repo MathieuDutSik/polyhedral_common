@@ -600,6 +600,8 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
      << " StrictIneq=" << StrictIneq << "\n";
   os << "POS: GetIntegralVector_allmeth: test_isotropic_fine="
      << test_isotropic_fine << "\n";
+  os << "POS: M=\n";
+  WriteMatrix(os, M);
 #endif
   ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
 #ifdef DEBUG_POSITIVITY
@@ -629,6 +631,8 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
   MyVector<Tint> V1 =
       GetIntegralVector_allmeth_V2<T, Tint>(res.Mred, CritNorm, StrictIneq, os);
 #ifdef DEBUG_POSITIVITY
+  os << "POS: res.Mred=\n";
+  WriteMatrix(os, res.Mred);
   os << "POS: GetIntegralVector_allmeth: We have V1\n";
 #endif
   MyVector<Tint> V2 = res.B.transpose() * V1;

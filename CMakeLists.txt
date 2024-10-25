@@ -68,7 +68,7 @@ add_executable(INDEF_FORM_AutomorphismGroup ${CMAKE_SOURCE_DIR}/src_indefinite/I
 add_executable(INDEF_FORM_TestEquivalence ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_TestEquivalence.cpp)
 add_executable(INDEF_FORM_GetOrbitRepresentative ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbitRepresentative.cpp)
 add_executable(INDEF_FORM_GetOrbit_IsotropicKplane ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane.cpp)
-add_executable(LATT_canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_canonicalize.cpp)
+add_executable(LATT_Canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_Canonicalize.cpp)
 add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic.cpp)
 
 # ---Delaunay polytopes enumeration (Serial)
@@ -85,7 +85,7 @@ target_link_libraries(INDEF_FORM_AutomorphismGroup ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_TestEquivalence ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_GetOrbitRepresentative ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_GetOrbit_IsotropicKplane ${MY_LIBRARIES_GRP})
-target_link_libraries(LATT_canonicalize ${MY_LIBRARIES_GRP})
+target_link_libraries(LATT_Canonicalize ${MY_LIBRARIES_GRP})
 target_link_libraries(LATT_FindIsotropic ${MY_LIBRARIES})
 
 target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})

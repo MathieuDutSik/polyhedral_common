@@ -1,4 +1,4 @@
-PROGRAM		= LATT_canonicalize
+PROGRAM		= LATT_Canonicalize
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

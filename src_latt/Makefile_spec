@@ -1,6 +1,4 @@
-#PROGRAM		= LATT_canonicalize
-#PROGRAM		= LATT_cannspanset
-#PROGRAM		= LATT_spanset
+#PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= sv_exact
 #PROGRAM		= sv_near
