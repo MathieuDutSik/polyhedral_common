@@ -4,61 +4,84 @@
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
+template<typename T, typename Tint>
+void ComputeCanonical(std::string const& FileI, std::string const& OutFormat, std::ostream& os) {
+  MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
+  Canonic_PosDef<T, Tint> RetF =
+    ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+  if (OutFormat == "Python") {
+    WriteMatrix(os, RetF.Mat);
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "return ";
+    WriteMatrixGAP(os, RetF.Mat);
+    os << ";\n";
+    return;
+  }
+  if (OutFormat == "GAP_full") {
+    os << "return rec(Basis:=";
+    WriteMatrixGAP(os, RetF.Basis);
+    os << ", SHV:=";
+    WriteMatrixGAP(os, TransposedMat(RetF.SHV));
+    os << ", eG:=";
+    WriteMatrixGAP(os, RetF.Mat);
+    os << ");\n";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry\n";
+  throw TerminalException{1};
+}
+
+
+
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 3 && argc != 4) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_canonicalize opt [GramI]\n";
+      std::cerr << "LATT_Canonicalize [arith] [GramI]\n";
       std::cerr << "    or\n";
-      std::cerr << "LATT_canonicalize opt [GramI] OutFile\n";
+      std::cerr << "LATT_Canonicalize [arith] [GramI] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "If opt=1 then only the matrix is in output.\n";
-      std::cerr << "If opt=2 then the basis, list of vectors and matrix is in "
-                   "GAP formatted output\n";
       std::cerr << "GramI (input) : The gram matrix on input\n";
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
-    //    using T = mpz_class;
-    //    using T=long;
-    using T = mpq_class;
-
-    // using Tint=long;
-    using Tint = mpz_class;
-    //
-    int opt;
-    sscanf(argv[1], "%d", &opt);
-    //
-    std::ifstream is(argv[2]);
-    MyMatrix<T> eMat = ReadMatrix<T>(is);
-    Canonic_PosDef<T, Tint> RetF =
-        ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
-    //
-    auto prt = [&](std::ostream &os) -> void {
-      if (opt == 1) {
-        WriteMatrix(os, RetF.Mat);
-      }
-      if (opt == 2) {
-        os << "return rec(Basis:=";
-        WriteMatrixGAP(os, RetF.Basis);
-        os << ", SHV:=";
-        WriteMatrixGAP(os, TransposedMat(RetF.SHV));
-        os << ", eG:=";
-        WriteMatrixGAP(os, RetF.Mat);
-        os << ");\n";
-      }
-    };
-    if (argc == 3) {
-      prt(std::cerr);
-    } else {
-      std::ofstream os(argv[3]);
-      prt(os);
+    std::string arith = argv[1];
+    std::string FileI = argv[2];
+    std::string OutFormat = "Python";
+    std::string OutFile = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
     }
-    std::cerr << "Normal termination of LATT_canonicalize\n";
+    //
+    auto f=[&](std::ostream& os) -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return ComputeCanonical<T,Tint>(FileI, OutFormat, os);
+      }
+      std::cerr << "Failed to find a matching entry for arith\n";
+      throw TerminalException{1};
+    };
+    //
+    if (OutFile == "stderr") {
+      f(std::cerr);
+    } else {
+      if (OutFile == "stdout") {
+        f(std::cout);
+      } else {
+        std::ofstream os(OutFile);
+        f(os);
+      }
+    }
+    //
+    std::cerr << "Normal termination of LATT_Canonicalize\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of LATT_canonicalize\n";
+    std::cerr << "Raised exception led to premature end of LATT_Canonicalize\n";
     exit(e.eVal);
   }
   runtime(time);
