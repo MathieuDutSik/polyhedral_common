@@ -34,9 +34,9 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 4 && argc != 6) {
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2]\n";
+      std::cerr << "INDEF_FORM_TestEquivalence [arith] [File1] [File2]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [File1] [File2] "
+      std::cerr << "INDEF_FORM_TestEquivalence [arith] [File1] [File2] "
                    "[OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }

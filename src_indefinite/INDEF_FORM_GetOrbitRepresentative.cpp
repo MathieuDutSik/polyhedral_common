@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_AutomorphismGroup\n";
+    std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative\n";
     exit(e.eVal);
   }
   runtime(time1);

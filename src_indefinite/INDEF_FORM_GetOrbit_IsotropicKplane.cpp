@@ -40,10 +40,10 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] "
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane [arith] [MatFile] "
                    "[k] [choice]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane_flag [arith] [MatFile] "
+      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane [arith] [MatFile] "
                    "[k] [choice] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_GetOrbit_IsotropicKplane_flag\n";
+    std::cerr << "Error in INDEF_FORM_GetOrbit_IsotropicKplane\n";
     exit(e.eVal);
   }
   runtime(time1);
