@@ -5,14 +5,45 @@
 #include "Copositivity.h"
 // clang-format on
 
+template<typename T, typename Tint>
+void compute(std::string const& FileI, std::string const& OutFormat, std::ostream& os) {
+  std::cerr << "Reading input\n";
+  MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
+  std::cerr << "eSymmMat=\n";
+  WriteMatrix(std::cerr, eSymmMat);
+
+  MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
+  //
+  Tshortest<T, Tint> eSh =
+    CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
+
+  if (OutFormat == "clear") {
+    os << "eMin=" << eSh.eMin << "\n";
+    WriteMatrix(os, eSh.SHV);
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os << "return rec(eMin:=" << eSh.eMin << ", SHV:=";
+    WriteMatrixGAP(os, eSh.SHV);
+    os << ");\n";
+    return;
+  }
+  std::cerr << "No matching for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
+}
+
+
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 2 && argc != 3) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "CP_CopositiveMin [DATASYMM]\n";
+      std::cerr << "CP_CopositiveMin [arith] [DATASYMM]\n";
+      std::cerr << "    or\n";
+      std::cerr << "CP_CopositiveMin [arith] [DATASYMM] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
+      std::cerr << "arith: The chosen arithmetic\n";
       std::cerr << "DATASYMM: The input data of the strict copositive "
                    "symmetric matrix A\n";
       std::cerr << "Returns the copositive minimum min_{COP}(A) = min_{v in "
@@ -21,21 +52,35 @@ int main(int argc, char *argv[]) {
                    "min_{COP}(A) ";
       return -1;
     }
+    std::string arith = argv[1];
+    std::string FileI = argv[2];
+    std::string OutFormat = "classic";
+    std::string OutFile = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
+    }
     //
-    std::cerr << "Reading input\n";
+    auto f=[&](std::ostream & os) -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return compute<T,Tint>(FileI, OutFormat, os);
+      }
+      std::cerr << "No matching entry for arith=" << arith << "\n";
+      throw TerminalException{1};
+    };
     //
-    using T = mpq_class;
-    using Tint = int;
-    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(argv[1]);
-    std::cerr << "eSymmMat=\n";
-    WriteMatrix(std::cerr, eSymmMat);
-    //
-    MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-    //
-    Tshortest<T, Tint> eSh =
-        CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
-    std::cerr << "eMin=" << eSh.eMin << "\n";
-    WriteMatrix(std::cerr, eSh.SHV);
+    if (OutFile == "stderr") {
+      f(std::cerr);
+    } else {
+      if (OutFile == "stdout") {
+        f(std::cout);
+      } else {
+        std::ofstream os(OutFile);
+        f(os);
+      }
+    }
     //
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {

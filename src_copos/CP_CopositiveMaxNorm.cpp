@@ -4,17 +4,33 @@
 #include "Copositivity.h"
 // clang-format on
 
+template<typename T, typename Tint>
+void compute(std::string const& FileI, std::string const& strMaxNorm, std::string const& OutFormat, std::ostream& os) {
+  MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
+  T MaxNorm = ParseScalar<T>(strMaxNorm);
+  //
+  MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
+  //
+  CopositivityEnumResult<Tint> CopoRes =
+    EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
+                                            MaxNorm, std::cerr);
+  //
+  WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
+}
+
+
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 3 && argc != 5) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm]\n";
+      std::cerr << "CP_CopositiveMaxNorm [arith] [DATASYMM] [MaxNorm]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_CopositiveMaxNorm [DATASYMM] [MaxNorm] [OutFormat] "
+      std::cerr << "CP_CopositiveMaxNorm [arith] [DATASYMM] [MaxNorm] [OutFormat] "
                    "[OutFile]\n";
       std::cerr << "\n";
+      std::cerr << "arith: The arithmetic being used\n";
       std::cerr << "DATASYMM: The symmetric matrix on input\n";
       std::cerr << "MaxNorm: The maximm norm considered\n";
       std::cerr << "OutFormat: classic or GAP. Default is classic\n";
@@ -25,39 +41,36 @@ int main(int argc, char *argv[]) {
                    "such that A[v] <= MaxNorm\n";
       return -1;
     }
-    using T = mpq_class;
-    using Tint = mpz_class;
     //
     std::cerr << "Reading input\n";
-    std::string FileI = argv[1];
-    std::string strMaxNorm = argv[2];
+    std::string arith = argv[1];
+    std::string FileI = argv[2];
+    std::string strMaxNorm = argv[3];
     std::string OutFormat = "classic";
     std::string OutFile = "stderr";
     if (argc == 5) {
-      OutFormat = argv[3];
-      OutFile = argv[4];
+      OutFormat = argv[4];
+      OutFile = argv[5];
     }
     //
-    MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
-    T MaxNorm = ParseScalar<T>(strMaxNorm);
-    //
-    auto process = [&](std::ostream &os) -> void {
-      MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
-      //
-      CopositivityEnumResult<Tint> CopoRes =
-          EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
-                                                  MaxNorm, std::cerr);
-      //
-      WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
+    auto f = [&](std::ostream &os) -> void {
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
+        return compute<T,Tint>(FileI, strMaxNorm, OutFormat, os);
+      }
+      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      throw TerminalException{1};
     };
+    //
     if (OutFile == "stderr") {
-      process(std::cerr);
+      f(std::cerr);
     } else {
       if (OutFile == "stdout") {
-        process(std::cout);
+        f(std::cout);
       } else {
         std::ofstream os(OutFile);
-        process(os);
+        f(os);
       }
     }
     //
