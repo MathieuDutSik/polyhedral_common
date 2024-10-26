@@ -13,10 +13,10 @@ void compute(std::string const& FileI, std::string const& OutFormat, std::ostrea
   //
   MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
   //
-  std::pair<SingleTestResult<Tint>, size_t> eResult =
+  CopositivityTestResult<Tint> eResult =
     TestCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
   //
-  WriteSingleTestResult(os, OutFormat, eResult);
+  WriteCopositivityTestResult(os, OutFormat, eResult);
 }
 
 

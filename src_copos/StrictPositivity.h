@@ -63,12 +63,9 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     std::cerr << "IsAdmissible eMatI=\n";
     WriteMatrix(std::cerr, eMatI);
 #endif
-    std::pair<SingleTestResult<Tint>, size_t> pair =
+    CopositivityTestResult<Tint> result =
         TestCopositivity<T, Tint>(eMatI, InitialBasis, os);
-#ifdef DEBUG_STRICT_POSITIVITY
-    std::cerr << "nbCone=" << pair.second << "\n";
-#endif
-    return pair.first.test;
+    return result.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
       [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
