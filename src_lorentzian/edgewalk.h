@@ -2060,8 +2060,11 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
     std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
     std::cerr << "OptionInitialVertex=" << OptionInitialVertex << "\n";
     std::cerr << "AllowedOptions:\n";
-    std::cerr << "* FileVertex or FileVertexRoots\n";
-    std::cerr << "* vinberg or isotropic_vinberg\n";
+    std::cerr << "* FileVertex: The vertex in a file, the matching roots computed internally\n";
+    std::cerr << "* FileVertexRoots: The vertex and the roots in a file, useful for debugging\n";
+    std::cerr << "* vinberg: initial vertex found by Vinberg algorithm\n";
+    std::cerr << "* isotropic_vinberg: initial vertex an isotropic vector if the form is\n";
+    std::cerr << "  isotropic. If the form is anisotropic, then Vinberg algorithm is used\n";
     throw TerminalException{1};
   };
   MyVector<T> gen = iife_get_vertex();

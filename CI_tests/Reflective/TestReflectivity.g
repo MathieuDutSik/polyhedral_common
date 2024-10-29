@@ -84,7 +84,7 @@ TestReflectivity:=function(eRec)
     output:=OutputTextFile(FileNml, true);
     AppendTo(output, "&PROC\n");
     AppendTo(output, " FileLorMat = \"", FileIn, "\"\n");
-    AppendTo(output, " OptionInitialVertex = \"vinberg\"\n");
+    AppendTo(output, " OptionInitialVertex = \"isotropic_vinberg\"\n");
     AppendTo(output, " OutFormat = \"GAP\"\n");
     AppendTo(output, " FileOut = \"", FileOut, "\"\n");
     AppendTo(output, " OptionNorms = \"all\"\n");
