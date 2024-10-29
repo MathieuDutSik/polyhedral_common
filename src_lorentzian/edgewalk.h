@@ -15,6 +15,7 @@
 #include "fund_domain_vertices.h"
 #include "lorentzian_linalg.h"
 #include "two_dim_lorentzian.h"
+#include "Isotropic.h"
 #include "vinberg.h"
 #include <algorithm>
 #include <limits>
@@ -31,8 +32,6 @@
 #define DEBUG_EDGEWALK
 #define DEBUG_ENUM_PROCESS
 #endif
-
-#define ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
 
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
@@ -2031,17 +2030,6 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
 #ifdef DEBUG_EDGEWALK
   os << "Beginning of get_initial_vertex\n";
 #endif
-  if (OptionInitialVertex == "FileVertex") {
-    if (!IsExistingFile(FileInitialVertex)) {
-      std::cerr << "The file FileInitialVertex=" << FileInitialVertex
-                << " is missing\n";
-      throw TerminalException{1};
-    }
-    std::ifstream is(FileInitialVertex);
-    MyVector<T> gen = ReadVector<T>(is);
-    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, gen, os);
-    return {RemoveFractionVector(gen), MatRoot};
-  }
   if (OptionInitialVertex == "FileVertexRoots") {
     if (!IsExistingFile(FileInitialVertex)) {
       std::cerr << "The file FileInitialVertex=" << FileInitialVertex
@@ -2053,23 +2041,32 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
     MyMatrix<Tint> MatRoot = ReadMatrix<Tint>(is);
     return {RemoveFractionVector(gen), MatRoot};
   }
-#ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
-  if (OptionInitialVertex == "vinberg") {
-    MyVector<T> V = GetOneVertex<T, Tint, Tgroup>(
+  auto iife_get_vertex=[&]() -> MyVector<T> {
+    if (OptionInitialVertex == "FileVertex") {
+      return ReadVectorFile<T>(FileInitialVertex);
+    }
+    if (OptionInitialVertex == "vinberg") {
+      return GetOneVertex<T, Tint, Tgroup>(
         si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, os);
-    MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, V, os);
-    return {RemoveFractionVector(V), MatRoot};
-  }
-#endif
-  std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
-  std::cerr << "OptionInitialVertex=" << OptionInitialVertex
-            << " but allowed values are FileVertex or FileVertexRoots\n";
-#ifdef ALLOW_VINBERG_ALGORITHM_FOR_INITIAL_VERTEX
-  std::cerr << "and vinberg has also been allowed\n";
-#else
-  std::cerr << "option vinberg has not been allowed\n";
-#endif
-  throw TerminalException{1};
+    }
+    if (OptionInitialVertex == "isotropic_vinberg") {
+      std::optional<MyVector<T>> opt = FindIsotropic(si.G, os);
+      if (opt) {
+        return *opt;
+      }
+      return GetOneVertex<T, Tint, Tgroup>(
+        si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, os);
+    }
+    std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
+    std::cerr << "OptionInitialVertex=" << OptionInitialVertex << "\n";
+    std::cerr << "AllowedOptions:\n";
+    std::cerr << "* FileVertex or FileVertexRoots\n";
+    std::cerr << "* vinberg or isotropic_vinberg\n";
+    throw TerminalException{1};
+  };
+  MyVector<T> gen = iife_get_vertex();
+  MyMatrix<Tint> MatRoot = get_simple_cone<T, Tint>(si, gen, os);
+  return {RemoveFractionVector(gen), MatRoot};
 }
 
 #ifdef PRINT_SYMBOL_INFORMATION
