@@ -18,7 +18,7 @@ Access to the source code
 Since this repository uses submodules, the cloning command is
 
 ```sh
-$ git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
+$ git clone https://github.com/MathieuDutSik/polyhedral_common --recursive
 ```
 
 In order to update the submodule the command is
@@ -52,6 +52,7 @@ directory can be compiled independently of the others:
   * *src_indefinite*: for indefinite form reduction.
   * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
 
+
 Compilation options related to debug
 ------------------------------------
 
@@ -72,6 +73,7 @@ encapsulated in `std::ostream & os` that should be passed by reference from the 
 call. So typically for serial output we pass the `std::cerr` while for the parallel runs
 we pass a stream to the output of that process. That way we avoid mixing between
 different sources.
+
 
 Arithmetics
 -----------
@@ -100,6 +102,7 @@ Speed types:
 
 The choice is usually for **mpq_class** which has the least issues.
 
+
 Tests
 -----
 
@@ -113,6 +116,7 @@ should cover as much as possible of the functionality of the code. If the
 test is working like normally, then it should be scheduled in the cron to
 run once per month. We do not want to overflow the credit that we have.
 
+
 Usage
 -----
 
@@ -122,6 +126,7 @@ Therefore, we plan to have interfacing with common Computer Algebra Systems:
 * GAP (Group Algebra Programming) which is an independent system.
 * Oscar which is based on Julia.
 * Sage which is based on Python.
+
 
 Dependencies
 ------------

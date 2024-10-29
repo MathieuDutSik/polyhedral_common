@@ -7,6 +7,7 @@
 #include "lorentzian_perfect.h"
 #include "lorentzian_linalg.h"
 #include "EquiStabMemoization.h"
+#include "IndefApproxCanonical.h"
 #include "MatrixGroup.h"
 #include <vector>
 // clang-format on
