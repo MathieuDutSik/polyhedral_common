@@ -31,6 +31,7 @@ LORENTZ_GetReflection:=function(LorMat, eRoot)
     return TheMat;
 end;
 
+AllAllowed:=true;
 
 WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     local FilePoincare_Data, FilePoincare_Nml, output, eGen;
@@ -145,7 +146,7 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        if iRec = 5345 then
+        if iRec = 5345 or AllAllowed then
             RecReply:=TestReflectivity(eRec);
             if RecReply.is_correct=false then
                 n_error:=n_error+1;
