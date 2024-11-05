@@ -421,13 +421,69 @@ void WriteEntryGAP(std::ostream &os_out,
 }
 
 template <typename Tvert, typename Tgroup>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      DelaunayTesselation<Tvert, Tgroup> const &DT) {
+  using Telt = typename Tgroup::Telt;
+  os_out << "[";
+  size_t n_del = DT.l_dels.size();
+  for (size_t i_del = 0; i_del < n_del; i_del++) {
+    Delaunay_Entry<Tvert, Tgroup> const &eDel = DT.l_dels[i_del];
+    MyMatrix<Tvert> const &EXT = eDel.EXT;
+    int n_vert = EXT.rows();
+    if (i_del > 0)
+      os_out << ",";
+    os_out << "{\"EXT\":" << StringMatrixPYTHON(EXT);
+    std::vector<Telt> LGen = eDel.GRP.SmallGeneratingSet();
+    auto get_gap_string = [&]() -> std::string {
+      std::string str_ret = "[";
+      bool IsFirst = true;
+      for (auto &eElt : LGen) {
+        if (!IsFirst) {
+          str_ret += ",";
+        }
+        IsFirst = false;
+        str_ret += "[";
+        for (int i_vert=0; i_vert<n_vert; i_vert++) {
+          if (i_vert > 0) {
+            str_ret += ",";
+          }
+          str_ret += std::to_string(OnPoints(i_vert, eElt));
+        }
+        str_ret += "]";
+      }
+      str_ret += "])";
+      return str_ret;
+    };
+    os_out << ", \"TheStab\":" << get_gap_string();
+    os_out << ", \"Adjacencies\":[";
+    bool IsFirstAdj = true;
+    for (auto &eAdj : eDel.ListAdj) {
+      if (!IsFirstAdj)
+        os_out << ",";
+      IsFirstAdj = false;
+      os_out << "{\"iDelaunay\":" << eAdj.iOrb << ", \"eInc\":[";
+      std::vector<int> V = FaceToVector<int>(eAdj.eInc);
+      for (size_t u = 0; u < V.size(); u++) {
+        if (u > 0) {
+          os_out << ",";
+        }
+        os_out << V[u];
+      }
+      os_out << "], \"eBigMat\":" << StringMatrixPYTHON(eAdj.eBigMat) << "}";
+    }
+    os_out << "]}";
+  }
+  os_out << "]";
+}
+
+template <typename Tvert, typename Tgroup>
 void WriteGAPformat(DelaunayTesselation<Tvert, Tgroup> const &DT,
                     std::string const &OutFile) {
   //  using T = typename overlying_field<Tvert>::field_type;
-  std::ofstream OUTfs(OutFile);
-  OUTfs << "return ";
-  WriteEntryGAP(OUTfs, DT);
-  OUTfs << ";\n";
+  std::ofstream os_out(OutFile);
+  os_out << "return ";
+  WriteEntryGAP(os_out, DT);
+  os_out << ";\n";
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -542,6 +598,22 @@ DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_Seri
   }
   return {l_dels};
 }
+
+template <typename Tvert, typename Tgroup>
+void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+  if (OutFormat == "GAP") {
+    os_out << "return ";
+    WriteEntryGAP(os_out, DT);
+    os_out << ";\n";
+    return;
+  }
+  if (OutFormat == "PYTHON") {
+    return WriteEntryPYTHON(os_out, DT);
+  }
+  std::cerr << "DEL_ENUM: WriteDelaunayTesselation failed for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
+}
+
 
 template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint, Tgroup>>

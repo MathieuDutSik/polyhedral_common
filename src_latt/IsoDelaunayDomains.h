@@ -2008,7 +2008,7 @@ DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains(FullNamelis
   };
   std::optional<MyMatrix<T>> CommonGramMat = get_common();
   os << "We have CommonGramMat\n";
-
+  //
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
   os << "We have LinSpa\n";
   //
