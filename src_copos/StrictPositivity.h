@@ -231,6 +231,26 @@ void WriteStrictPositivityResult(
     os << ");\n";
     return;
   }
+  if (OutFormat == "PYTHON") {
+    os << "{\"result\":" << PYTHON_logical(StrictPos.result);
+    if (StrictPos.result) {
+      int nbBlock = StrictPos.RealizingFamily.rows();
+      os << ", \"RealizingFamily\":[";
+      for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+        if (iBlock > 0)
+          os << ",";
+        T eVal = StrictPos.ListCoeff(iBlock);
+        MyVector<Tint> V = GetMatrixRow(StrictPos.RealizingFamily, iBlock);
+        os << "{\"val\":" << eVal << ", \"V\":" << StringVectorPYTHON(V) << "}";
+      }
+      os << "]";
+    } else {
+      os << ", \"Certificate\":"
+         << StringMatrixPYTHON(StrictPos.CertificateNonStrictlyPositive);
+    }
+    os << "}\n";
+    return;
+  }
   std::cerr << "WriteStrictPositivityResult: Failed to find a matching entry "
                "for output\n";
   throw TerminalException{1};

@@ -17,6 +17,9 @@ void process(std::string const &MatFile, std::string const &OutFormat,
   if (OutFormat == "CPP") {
     return WriteListMatrix(os_out, l_gen);
   }
+  if (OutFormat == "PYTHON") {
+    return WriteListMatrixPYTHON(os_out, l_gen);
+  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     WriteListMatrixGAP(os_out, l_gen);

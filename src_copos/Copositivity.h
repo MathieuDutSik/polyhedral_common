@@ -407,6 +407,15 @@ void WriteCopositivityTestResult(
     os << ");\n";
     return;
   }
+  if (OutFormat == "PYTHON") {
+    os << "{\"isCopositive\":" << PYTHON_logical(eResult.test);
+    if (!eResult.test) {
+      os << ", \"violation_nature\":\"" << eResult.strNature << "\"";
+      os << ", \"V\":" << StringVectorPYTHON(eResult.eVectResult1);
+    }
+    os << "}\n";
+    return;
+  }
   std::cerr << "WriteCopositivityTestResult: Failed to find a matching entry\n";
   throw TerminalException{1};
 }

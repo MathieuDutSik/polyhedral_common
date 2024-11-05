@@ -16,6 +16,14 @@ void process(std::string const &MatFile, std::string const &XnormStr,
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyVector<Tint>> l_repr =
       comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
+  if (OutFormat == "PYTHON") {
+    if (l_repr.size() == 0) {
+      os_out << "[]";
+    } else {
+      WriteMatrixPYTHON(os_out, MatrixFromVectorFamily(l_repr));
+    }
+    return;
+  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     if (l_repr.size() == 0) {

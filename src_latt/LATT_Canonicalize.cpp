@@ -9,8 +9,12 @@ void ComputeCanonical(std::string const& FileI, std::string const& OutFormat, st
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
   Canonic_PosDef<T, Tint> RetF =
     ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
-  if (OutFormat == "Python") {
+  if (OutFormat == "CPP") {
     WriteMatrix(os, RetF.Mat);
+    return;
+  }
+  if (OutFormat == "PYTHON") {
+    os << "{\"Basis\":" << StringMatrixPYTHON(RetF.Basis) << ", \"SHV\":" << StringMatrixPYTHON(TransposedMat(RetF.SHV)) << ", \"eG\":" << StringMatrixPYTHON(RetF.Mat) << "}\n";
     return;
   }
   if (OutFormat == "GAP") {
@@ -51,7 +55,7 @@ int main(int argc, char *argv[]) {
     }
     std::string arith = argv[1];
     std::string FileI = argv[2];
-    std::string OutFormat = "Python";
+    std::string OutFormat = "CPP";
     std::string OutFile = "stderr";
     if (argc == 5) {
       OutFormat = argv[3];

@@ -16,6 +16,15 @@ void process(std::string const &File1, std::string const &File2,
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::optional<MyMatrix<Tint>> opt =
       comb.INDEF_FORM_TestEquivalence(Qmat1, Qmat2);
+  if (OutFormat == "PYTHON") {
+    if (opt) {
+      WriteMatrixPYTHON(os_out, *opt);
+    } else {
+      os_out << "None";
+    }
+    os_out << "\n";
+    return;
+  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     if (opt) {

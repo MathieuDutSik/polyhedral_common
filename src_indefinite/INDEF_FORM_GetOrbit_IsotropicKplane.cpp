@@ -26,6 +26,9 @@ void process(std::string const &MatFile, std::string const &KStr,
     throw TerminalException{1};
   };
   std::vector<MyMatrix<Tint>> l_planes = f_get();
+  if (OutFormat == "PYTHON") {
+    return WriteListMatrixPYTHON(os_out, l_planes);
+  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     WriteListMatrixGAP(os_out, l_planes);

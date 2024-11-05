@@ -29,14 +29,14 @@ void process(std::string const &FileI, std::string const &OutFormat,
     }
     return;
   }
-  if (OutFormat == "Python") {
+  if (OutFormat == "PYTHON") {
     if (opt) {
       MyVector<T> const &eV = *opt;
-      WriteVector(os_out, eV);
+      WriteVectorPYTHON(os_out, eV);
     } else {
-      MyVector<T> eV = ZeroVector<T>(Q.rows());
-      WriteVector(os_out, eV);
+      os_out << "None";
     }
+    os_out << "\n";
     return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";
@@ -47,11 +47,11 @@ int main(int argc, char *argv[]) {
   SingletonTime time1;
   try {
     if (argc != 3 && argc != 5) {
-      std::cerr << "LATT_FindIsotropic arith [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_FindIsotropic [arith] [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_FindIsotropic arith [FileI]\n";
+      std::cerr << "LATT_FindIsotropic [arith] [FileI]\n";
       std::cerr << "\n";
-      std::cerr << "Possibilities for arith: rational\n";
+      std::cerr << "Possibilities for [arith]: rational\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
