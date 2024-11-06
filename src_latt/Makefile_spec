@@ -15,7 +15,8 @@
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
-PROGRAM		= LATT_SerialComputeDelaunay
+#PROGRAM		= LATT_SerialComputeDelaunay
+PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

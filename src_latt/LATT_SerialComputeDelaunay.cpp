@@ -45,6 +45,10 @@ int main(int argc, char *argv[]) {
     std::string GramFile = argv[2];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
+    }
     //
     auto f=[&](std::ostream & os) -> void {
       if (arith == "gmp") {
@@ -67,7 +71,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_MPI_ComputeDelaunay\n";
+    std::cerr << "Error in LATT_SerialComputeDelaunay\n";
     exit(e.eVal);
   }
   runtime(time);

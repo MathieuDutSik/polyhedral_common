@@ -70,6 +70,11 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << "[]";
 }
 
+void WriteEntryPYTHON(std::ostream &os_out,
+                   [[maybe_unused]] IsoEdgeDomain_AdjO const &_x) {
+  os_out << "{}";
+}
+
 namespace boost::serialization {
 template <class Archive>
 inline void serialize([[maybe_unused]] Archive &ar,
@@ -93,6 +98,19 @@ void WriteEntryGAP(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
   os_out << ", nb_free:=" << entry.struct_info.nb_free;
   os_out << ", nb_autom:=" << entry.struct_info.nb_autom;
   os_out << "))";
+}
+
+template <typename Tint>
+void WriteEntryPYTHON(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
+  os_out << "{\"Ctype\":";
+  WriteMatrixPYTHON(os_out, entry.ctype_arr.eMat);
+  os_out << ", \"struct_info\":={";
+  os_out << "\"nb_triple\":" << entry.struct_info.nb_triple;
+  os_out << ", \"nb_ineq\":" << entry.struct_info.nb_ineq;
+  os_out << ", \"nb_ineq_after_crit\":" << entry.struct_info.nb_ineq_after_crit;
+  os_out << ", \"nb_free\":" << entry.struct_info.nb_free;
+  os_out << ", \"nb_autom\":" << entry.struct_info.nb_autom;
+  os_out << "}}";
 }
 
 namespace boost::serialization {
@@ -249,7 +267,12 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    std::ofstream os_out(OutFile);
+    bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
+    if (!result) {
+      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
+    }
   }
 }
 

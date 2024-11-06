@@ -111,19 +111,17 @@ void WriteLinSpaceFile(std::string const &eFile,
   WriteLinSpace(os, LinSpa);
 }
 
+
+
+
+
+
 template <typename T, typename Tint>
 LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   std::string TypeTspace = Blk.ListStringValues.at("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
   auto set_paperwork = [&]() -> void {
-    for (auto &eMat : LinSpaRet.ListMat) {
-      std::vector<T> eV = GetLineVector(eMat);
-      LinSpaRet.ListLineMat.push_back(eV);
-    }
-    int n_mat = LinSpaRet.ListMat.size();
-    if (n_mat > 0) {
-      LinSpaRet.ListMatAsBigMat = GetListMatAsBigMat(LinSpaRet.ListMat);
-    }
+    reset_paperwork(LinSpaRet);
   };
   auto set_listcomm = [&]() -> void {
     std::string ListComm = Blk.ListStringValues.at("ListComm");
@@ -163,14 +161,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (PtGroupMethod == "Compute") {
-      std::vector<MyMatrix<Tint>> ListGens =
-          ComputePointStabilizerTspace<T, Tint>(LinSpaRet.SuperMat,
-                                                LinSpaRet.ListMat, os);
-      for (auto &eGen : ListGens) {
-        LinSpaRet.PtStabGens.push_back(
-            UniversalMatrixConversion<T, Tint>(eGen));
-      }
-      return;
+      return reset_pt_stab_gens<T,Tint>(LinSpaRet, os);
     }
     if (PtGroupMethod == "InvGroupInit") {
       std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");
@@ -260,7 +251,6 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
         std::cerr << "We have 0 matrices\n";
         throw TerminalException{1};
       }
-      LinSpaRet.n = LGen[0].rows();
       LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen, os);
       set_paperwork();
       set_supermat();
@@ -273,11 +263,6 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     if (TypeTspace == "Raw") {
       std::string FileListMat = Blk.ListStringValues.at("FileListMat");
       LinSpaRet.ListMat = ReadListMatrixFile<T>(FileListMat);
-      if (LinSpaRet.ListMat.size() == 0) {
-        std::cerr << "We have 0 matrices for ListMat\n";
-        throw TerminalException{1};
-      }
-      LinSpaRet.n = LinSpaRet.ListMat[0].rows();
       set_paperwork();
       set_supermat();
       set_listcomm();

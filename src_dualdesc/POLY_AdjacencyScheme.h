@@ -414,6 +414,13 @@ void WriteEntryGAP(std::ostream &os_out, AdjO_Serial<TadjO> const &adj) {
   os_out << ", iOrb:=" << adj.iOrb << ")";
 }
 
+template <typename TadjO>
+void WriteEntryPYTHON(std::ostream &os_out, AdjO_Serial<TadjO> const &adj) {
+  os_out << "{\"x\":";
+  WriteEntryPYTHON(os_out, adj.x);
+  os_out << ", \"iOrb\":" << adj.iOrb << "}";
+}
+
 template <typename Tobj, typename TadjO> struct DatabaseEntry_Serial {
   Tobj x;
   std::vector<AdjO_Serial<TadjO>> ListAdj;
@@ -432,6 +439,23 @@ void WriteEntryGAP(std::ostream &os_out,
     IsFirst = false;
     WriteEntryGAP(os_out, eAdj);
   }
+  os_out << "])";
+}
+
+template <typename Tobj, typename TadjO>
+void WriteEntryPYTHON(std::ostream &os_out,
+                   DatabaseEntry_Serial<Tobj, TadjO> const &dat_entry) {
+  os_out << "{\"x\":";
+  WriteEntryPYTHON(os_out, dat_entry.x);
+  os_out << ", \"ListAdj\":[";
+  bool IsFirst = true;
+  for (auto &eAdj : dat_entry.ListAdj) {
+    if (!IsFirst)
+      os_out << ",";
+    IsFirst = false;
+    WriteEntryPYTHON(os_out, eAdj);
+  }
+  os_out << "]}";
 }
 
 namespace boost::serialization {
@@ -528,6 +552,169 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
     return {};
   }
   return l_obj;
+}
+
+template <typename Tobj, typename TadjO>
+bool WriteFamilyObjects(
+    std::string const &OutFormat,
+    std::ostream& os_out,
+    std::vector<DatabaseEntry_Serial<Tobj, TadjO>> const &l_tot,
+    [[maybe_unused]] std::ostream &os) {
+  if (OutFormat == "ObjectGAP") {
+    os_out << "return [";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",\n";
+      WriteEntryGAP(os_out, l_tot[i].x);
+    }
+    os_out << "];\n";
+    return false;
+  }
+  if (OutFormat == "ObjectPYTHON") {
+    os_out << "[";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",";
+      WriteEntryPYTHON(os_out, l_tot[i].x);
+    }
+    os_out << "]";
+    return false;
+  }
+  if (OutFormat == "ObjectFullAdjacencyGAP") {
+    os_out << "return [";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",\n";
+      WriteEntryGAP(os_out, l_tot[i]);
+    }
+    os_out << "];\n";
+    return false;
+  }
+  if (OutFormat == "ObjectFullAdjacencyPYTHON") {
+    os_out << "[";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",";
+      WriteEntryPYTHON(os_out, l_tot[i]);
+    }
+    os_out << "]";
+    return false;
+  }
+  if (OutFormat == "ObjectReducedAdjacencyGAP") {
+    os_out << "return [";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",\n";
+      os_out << "rec(obj:=";
+      WriteEntryGAP(os_out, l_tot[i]);
+      os_out << ", LAdj:=";
+      std::set<int> set;
+      for (auto &eAdj : l_tot[i].ListAdj) {
+        int pos = eAdj.iOrb + 1;
+        set.insert(pos);
+      }
+      os_out << "[";
+      bool IsFirst = true;
+      for (auto &eAdj : set) {
+        if (!IsFirst) {
+          os_out << ",";
+        }
+        IsFirst = false;
+        os_out << eAdj;
+      }
+      os_out << "])";
+    }
+    os_out << "];\n";
+    return false;
+  }
+  if (OutFormat == "ObjectReducedAdjacencyPYTHON") {
+    os_out << "[";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",";
+      os_out << "{\"obj\":";
+      WriteEntryPYTHON(os_out, l_tot[i]);
+      os_out << ", \"LAdj\":";
+      std::set<int> set;
+      for (auto &eAdj : l_tot[i].ListAdj) {
+        int pos = eAdj.iOrb + 1;
+        set.insert(pos);
+      }
+      os_out << "[";
+      bool IsFirst = true;
+      for (auto &eAdj : set) {
+        if (!IsFirst) {
+          os_out << ",";
+        }
+        IsFirst = false;
+        os_out << eAdj;
+      }
+      os_out << "]}";
+    }
+    os_out << "];";
+    return false;
+  }
+  if (OutFormat == "AdjacencyGAP") {
+    std::set<int> set;
+    size_t len = l_tot.size();
+    os_out << "return [";
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0) {
+        os_out << ",\n";
+      }
+      set.clear();
+      for (auto &eAdj : l_tot[i].ListAdj) {
+        int pos = eAdj.iOrb + 1;
+        set.insert(pos);
+      }
+      os_out << "[";
+      bool IsFirst = true;
+      for (auto &eAdj : set) {
+        if (!IsFirst) {
+          os_out << ",";
+        }
+        IsFirst = false;
+        os_out << eAdj;
+      }
+      os_out << "]";
+    }
+    os_out << "];\n";
+    return false;
+  }
+  if (OutFormat == "AdjacencyPYTHON") {
+    std::set<int> set;
+    size_t len = l_tot.size();
+    os_out << "[";
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0) {
+        os_out << ",";
+      }
+      set.clear();
+      for (auto &eAdj : l_tot[i].ListAdj) {
+        int pos = eAdj.iOrb + 1;
+        set.insert(pos);
+      }
+      os_out << "[";
+      bool IsFirst = true;
+      for (auto &eAdj : set) {
+        if (!IsFirst) {
+          os_out << ",";
+        }
+        IsFirst = false;
+        os_out << eAdj;
+      }
+      os_out << "]";
+    }
+    os_out << "]";
+    return false;
+  }
+  return true;
 }
 
 // clang-format off

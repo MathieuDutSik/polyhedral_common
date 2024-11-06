@@ -67,7 +67,12 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 #endif
   //
   if (pair.first) {
-    WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, OutFile, pair.second, os);
+    std::ofstream os_out(OutFile);
+    bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
+    if (!result) {
+      std::cerr	<< "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+      throw TerminalException{1};
+    }
   }
 }
 

@@ -23,8 +23,12 @@
 
 template <typename T, typename Tint, typename Tgroup>
 struct DataIsoDelaunayDomains {
+  // The Linear space of matrices
   LinSpaceMatrix<T> LinSpa;
+  // The database of dual descriptions.
   RecordDualDescOperation<T, Tgroup> rddo;
+  // The matrices common to all the IsoDelaunay domains if one is chosen
+  // to be common.
   std::optional<MyMatrix<T>> CommonGramMat;
 };
 
@@ -259,6 +263,10 @@ void WriteEntryGAP(std::ostream &os_out, AdjInfo const &eai) {
          << ")";
 }
 
+void WriteEntryPYTHON(std::ostream &os_out, AdjInfo const &eai) {
+  os_out << "{\"iOrb\":" << (eai.iOrb + 1) << ", \"i_adj\":" << (eai.i_adj + 1) << "}";
+}
+
 namespace boost::serialization {
 template <class Archive>
 inline void serialize(Archive &ar, AdjInfo &eRec,
@@ -285,6 +293,20 @@ void WriteEntryGAP(std::ostream &os_out, FullAdjInfo<T> const &ent) {
     WriteEntryGAP(os_out, eAdj);
   }
   os_out << "])";
+}
+
+template <typename T>
+void WriteEntryPYTHON(std::ostream &os_out, FullAdjInfo<T> const &ent) {
+  os_out << "{\"eIneq\":" << StringVectorPYTHON(ent.eIneq) << ", \"ListAdjInfo\":[";
+  bool IsFirst = true;
+  for (auto &eAdj : ent.ListAdjInfo) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryPYTHON(os_out, eAdj);
+  }
+  os_out << "]}";
 }
 
 namespace boost::serialization {
@@ -1736,6 +1758,15 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << ", GramMat:=" << StringMatrixGAP(ent.GramMat) << ")";
 }
 
+template <typename T, typename Tint, typename Tgroup>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IsoDelaunayDomain<T, Tint, Tgroup> const &ent) {
+  os_out << "{\"DT\":";
+  WriteEntryPYTHON(os_out, ent.DT);
+  os_out << ", \"nbIneq\":" << ent.nbIneq;
+  os_out << ", \"GramMat\":" << StringMatrixPYTHON(ent.GramMat) << "}";
+}
+
 namespace boost::serialization {
 template <class Archive, typename T, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, IsoDelaunayDomain<T, Tint, Tgroup> &eRec,
@@ -1772,6 +1803,13 @@ void WriteEntryGAP(std::ostream &os_out,
                    IsoDelaunayDomain_AdjO<T, Tint> const &ent) {
   os_out << "rec(V:=" << StringVectorGAP(ent.V)
          << " eBigMat:=" << StringMatrixGAP(ent.eBigMat) << ")";
+}
+
+template <typename T, typename Tint>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IsoDelaunayDomain_AdjO<T, Tint> const &ent) {
+  os_out << "{\"V\":" << StringVectorPYTHON(ent.V)
+         << " \"eBigMat\":" << StringMatrixPYTHON(ent.eBigMat) << "}";
 }
 
 namespace boost::serialization {
@@ -1863,6 +1901,28 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << ", GRPperm:=" << ent.GRPperm.GapString();
   //
   os_out << ")";
+}
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent) {
+  os_out << "{\"DT_gram\":";
+  WriteEntryPYTHON(os_out, ent.DT_gram);
+  //
+  os_out << ", \"ListIneq\":[";
+  bool IsFirst = true;
+  for (auto &eFullAI : ent.ListIneq) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryPYTHON(os_out, eFullAI);
+  }
+  os_out << "]";
+  //
+  os_out << ", \"GRPperm\":" << ent.GRPperm.PythonString();
+  //
+  os_out << "}";
 }
 
 namespace boost::serialization {
@@ -2024,6 +2084,7 @@ DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains(FullNamelis
                                                CommonGramMat};
   return data;
 }
+
 
 // clang-format off
 #endif  // SRC_LATT_ISODELAUNAYDOMAINS_H_

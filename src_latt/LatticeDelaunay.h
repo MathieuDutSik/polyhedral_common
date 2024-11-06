@@ -739,8 +739,6 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull, std::os
   return data;
 }
 
-
-
 // clang-format off
 #endif  // SRC_LATT_LATTICEDELAUNAY_H_
 // clang-format on

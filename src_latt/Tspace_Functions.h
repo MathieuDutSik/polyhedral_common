@@ -270,6 +270,12 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   return ListGenMatr;
 }
 
+
+/*
+  Find one positive definite matrix in the space assuming that one exists.
+  If one of the matrix of the basis is positive definite then the first one
+  is provided.
+ */
 template <typename T, typename Tint>
 MyMatrix<T>
 GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
@@ -279,6 +285,12 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     std::cerr << "The number of matrices is 0 so we cannot build a positive "
                  "definite matrix\n";
     throw TerminalException{1};
+  }
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyMatrix<T> const& eMat = ListMat[i_mat];
+    if (IsPositiveDefinite(eMat)) {
+      return eMat;
+    }
   }
   int n = ListMat[0].rows();
   std::vector<MyVector<Tint>> ListV;
@@ -988,6 +1000,53 @@ size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
   }
   return hash_ret;
 }
+
+template<typename T>
+void reset_paperwork(LinSpaceMatrix<T> & LinSpa) {
+  LinSpa.ListLineMat.clear();
+  for (auto &eMat : LinSpa.ListMat) {
+    std::vector<T> eV = GetLineVector(eMat);
+    LinSpa.ListLineMat.push_back(eV);
+  }
+  int n_mat = LinSpa.ListMat.size();
+  if (n_mat > 0) {
+    LinSpa.ListMatAsBigMat = GetListMatAsBigMat(LinSpa.ListMat);
+    LinSpa.n = LinSpa.ListMat[0].rows();
+  } else {
+    std::cerr << "We have 0 matrices for ListMat\n";
+    throw TerminalException{1};
+  }
+}
+
+template<typename T, typename Tint>
+void reset_pt_stab_gens(LinSpaceMatrix<T> & LinSpa, std::ostream & os) {
+  std::vector<MyMatrix<Tint>> ListGens =
+    ComputePointStabilizerTspace<T, Tint>(LinSpa.SuperMat,
+                                          LinSpa.ListMat, os);
+  LinSpa.PtStabGens.clear();
+  for (auto &eGen : ListGens) {
+    LinSpa.PtStabGens.push_back(UniversalMatrixConversion<T, Tint>(eGen));
+  }
+}
+
+
+template<typename T, typename Tint>
+LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const& ListMat, std::ostream& os) {
+  LinSpaceMatrix<T> LinSpa;
+  LinSpa.ListMat = ListMat;
+  reset_paperwork(LinSpa);
+  LinSpa.SuperMat =
+    GetOnePositiveDefiniteMatrix<T, Tint>(LinSpa.ListMat, os);
+  // ListComm not set as it cannot be guessed.
+  // ListSubspaces not set 
+  reset_pt_stab_gens<T,Tint>(LinSpa, os);
+  LinSpa.isBravais = IsBravaisSpace(LinSpa.n, LinSpa.ListMat,
+                                    LinSpa.PtStabGens, os);
+  return LinSpa;
+}
+
+
+
 
 // clang-format off
 #endif  // SRC_LATT_TSPACE_FUNCTIONS_H_

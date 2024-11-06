@@ -29,6 +29,13 @@ void WriteEntryGAP(std::ostream &os_out, AdjO_MPI<TadjO> const &adj) {
   os_out << ", iProc:=" << adj.iProc << ", iOrb:=" << adj.iOrb << ")";
 }
 
+template <typename TadjO>
+void WriteEntryPYTHON(std::ostream &os_out, AdjO_MPI<TadjO> const &adj) {
+  os_out << "{\"x\":";
+  WriteEntryPYTHON(os_out, adj.x);
+  os_out << ", \"iProc\":" << adj.iProc << ", \"iOrb\":" << adj.iOrb << "}";
+}
+
 template <typename Tobj, typename TadjO> struct DatabaseEntry_MPI {
   Tobj x;
   std::vector<AdjO_MPI<TadjO>> ListAdj;
@@ -47,8 +54,24 @@ void WriteEntryGAP(std::ostream &os_out,
     IsFirst = false;
     WriteEntryGAP(os_out, eAdj);
   }
+  os_out << "])";
 }
 
+template <typename Tobj, typename TadjO>
+void WriteEntryPYTHON(std::ostream &os_out,
+                      DatabaseEntry_MPI<Tobj, TadjO> const &dat_entry) {
+  os_out << "{\"x\":";
+  WriteEntryPYTHON(os_out, dat_entry.x);
+  os_out << ", \"ListAdj\":[";
+  bool IsFirst = true;
+  for (auto &eAdj : dat_entry.ListAdj) {
+    if (!IsFirst)
+      os_out << ",";
+    IsFirst = false;
+    WriteEntryPYTHON(os_out, eAdj);
+  }
+  os_out << "])";
+}
 
 namespace boost::serialization {
 template <class Archive, typename Tobj, typename TadjO>
@@ -930,81 +953,29 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
   return {test, std::move(l_obj)};
 }
 
+/*
+  Returns true if something else needs to be done forward.
+ */
 template <typename Tobj, typename TadjO>
-void WriteFamilyObjects_MPI(
+bool WriteFamilyObjects_MPI(
     boost::mpi::communicator &comm, std::string const &OutFormat,
-    std::string const &OutFile,
+    std::ostream& os_out,,
     std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_loc,
-    [[maybe_unused]] std::ostream &os) {
+    std::ostream &os) {
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  int i_proc_out = 0;
-  int i_rank = comm.rank();
+  std::vector<std::string> poss{"ObjectGAP", "ObjectPYTHON", "ObjectFullAdjacencyGAP", "ObjectFullAdjacencyPYTHON", "ObjectReducedAdjacencyGAP", "ObjectReducedAdjacencyPYTHON", "AdjacencyGAP", "AdjacencyPYTHON"};
+  if (std::find(poss.begin(), poss.end(), OutFormat) != poss.end()) {
+    int i_proc_out = 0;
+    int i_rank = comm.rank();
+    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    if (i_rank == i_proc_out) {
+      return WriteFamilyObjects(OutFormat, os_out, l_tot, os);
+    }
+    return false;
+  }
   if (OutFormat == "nothing") {
     std::cerr << "No output\n";
-    return;
-  }
-  if (OutFormat == "ObjectGAP") {
-    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
-    if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
-      os_out << "return [";
-      size_t len = l_tot.size();
-      for (size_t i = 0; i < len; i++) {
-        if (i > 0)
-          os_out << ",\n";
-        WriteEntryGAP(os_out, l_tot[i].x);
-      }
-      os_out << "];\n";
-    }
-    return;
-  }
-  if (OutFormat == "ObjectAdjacencyGAP") {
-    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
-    if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
-      os_out << "return [";
-      size_t len = l_tot.size();
-      for (size_t i = 0; i < len; i++) {
-        if (i > 0)
-          os_out << ",\n";
-        WriteEntryGAP(os_out, l_tot[i]);
-      }
-      os_out << "];\n";
-    }
-    return;
-  }
-  if (OutFormat == "AdjacencyGAP") {
-    // It is actually a little suboptimal but until it is a problem,
-    // let us leave it at that.
-    std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
-    if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
-      std::set<int> set;
-      size_t len = l_tot.size();
-      os_out << "return [";
-      for (size_t i = 0; i < len; i++) {
-        if (i > 0) {
-          os_out << ",\n";
-        }
-        set.clear();
-        for (auto &eAdj : l_tot[i].ListAdj) {
-          int pos = eAdj.iOrb + 1;
-          set.insert(pos);
-        }
-        os_out << "[";
-        bool IsFirst = true;
-        for (auto &eAdj : set) {
-          if (!IsFirst) {
-            os_out << ",";
-          }
-          IsFirst = false;
-          os_out << eAdj;
-        }
-        os_out << "]";
-      }
-      os_out << "];\n";
-    }
-    return;
+    return false;
   }
   if (OutFormat == "NumberGAP") {
     size_t nb_loc = l_loc.size();
@@ -1014,11 +985,9 @@ void WriteFamilyObjects_MPI(
       std::ofstream os_out(OutFile);
       os_out << "return rec(nb:=" << nb_tot << ");\n";
     }
-    return;
+    return false;
   }
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
-            << "\n";
-  throw TerminalException{1};
+  return true;
 }
 
 // clang-format off
