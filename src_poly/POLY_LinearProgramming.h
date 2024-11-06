@@ -885,28 +885,6 @@ Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
 }
 
 template <typename T>
-LpSolution<T> GLPK_LinearProgramming_Secure(MyMatrix<T> const &ListIneq,
-                                            MyVector<T> const &ToBeMinimized,
-                                            std::ostream &os) {
-  std::optional<LpSolution<T>> optA =
-      GLPK_LinearProgramming(ListIneq, ToBeMinimized, os);
-  if (!optA) {
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-  }
-  LpSolution<T> const &eSol = *optA;
-  Face eFace = ComputeFaceLpSolution(ListIneq, eSol);
-  std::vector<int> ListRowSelect = FaceToVector<int>(eFace);
-  MyMatrix<T> ListIneq_Incd = SelectRow(ListIneq, ListRowSelect);
-  MyVector<T> eVectTest = ToBeMinimized;
-  eVectTest(0) -= eSol.OptimalValue;
-  std::optional<MyVector<T>> optB =
-      SolutionMatNonnegative(ListIneq_Incd, eVectTest, os);
-  if (!optB)
-    return CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
-  return eSol;
-}
-
-template <typename T>
 std::pair<MyMatrix<T>, Face>
 KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC,
                                                         std::ostream &os) {

@@ -959,14 +959,14 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
 template <typename Tobj, typename TadjO>
 bool WriteFamilyObjects_MPI(
     boost::mpi::communicator &comm, std::string const &OutFormat,
-    std::ostream& os_out,,
+    std::ostream& os_out,
     std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_loc,
     std::ostream &os) {
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
+  int i_proc_out = 0;
+  int i_rank = comm.rank();
   std::vector<std::string> poss{"ObjectGAP", "ObjectPYTHON", "ObjectFullAdjacencyGAP", "ObjectFullAdjacencyPYTHON", "ObjectReducedAdjacencyGAP", "ObjectReducedAdjacencyPYTHON", "AdjacencyGAP", "AdjacencyPYTHON"};
   if (std::find(poss.begin(), poss.end(), OutFormat) != poss.end()) {
-    int i_proc_out = 0;
-    int i_rank = comm.rank();
     std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
     if (i_rank == i_proc_out) {
       return WriteFamilyObjects(OutFormat, os_out, l_tot, os);
@@ -982,7 +982,6 @@ bool WriteFamilyObjects_MPI(
     size_t nb_tot;
     all_reduce(comm, nb_loc, nb_tot, std::plus<size_t>());
     if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
       os_out << "return rec(nb:=" << nb_tot << ");\n";
     }
     return false;

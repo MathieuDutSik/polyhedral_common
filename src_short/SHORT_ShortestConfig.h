@@ -11,7 +11,9 @@
 #include "MAT_functions.h"
 #include "MatrixGroup.h"
 #include "POLY_LinearProgramming.h"
-//#include "POLY_LinearProgramming_GLPK.h"
+#ifdef USE_GLPK
+#include "POLY_LinearProgramming_GLPK.h"
+#endif
 #include "POLY_PolytopeInt.h"
 #include "Parallel_Classes_Types.h"
 #include "Positivity.h"
@@ -216,8 +218,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
                              MyVector<T> const &TheMinimized) -> LpSolution<T> {
       if (TheMethod == "cdd")
         return CDD_LinearProgramming(MatIneq, TheMinimized, os);
+#ifdef USE_GLPK
       if (TheMethod == "glpk_secure")
         return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized, os);
+#endif
       std::cerr << "We have TheMethod = " << TheMethod << "\n";
       throw TerminalException{1};
     };
