@@ -472,7 +472,7 @@ EnumerationFaces(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
                                    f_final, ComputeTotalNumberFaces, os);
   }
-  std::cerr << "We failed to find a matching method_final\n";
+  std::cerr << "We failed to find a matching method_final=" << method_final << "\n";
   throw TerminalException{1};
 }
 
@@ -662,7 +662,16 @@ void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os_o
     return;
   }
   if (OutFormat == "PYTHON") {
-
+    os_out << "[";
+    int len = TheOutput.size();
+    for (int i = 0; i < len; i++) {
+      if (i > 0) {
+        os_out << ",";
+      }
+      VectVectInt_Print_Kernel(os_out, TheOutput[i], 0);
+    }
+    os_out << "]";
+    return;
   }
   if (OutFormat == "NoOutput") {
     return;

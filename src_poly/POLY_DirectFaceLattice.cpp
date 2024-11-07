@@ -24,7 +24,7 @@ void MainFunctionFaceLattice(std::string const& FACfile, std::string const& GRPf
 }
 
 int main(int argc, char *argv[]) {
-  HumanTime time1;
+  HumanTime time;
   try {
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
@@ -95,5 +95,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in POLY_DirectFaceLattice\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

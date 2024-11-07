@@ -2787,17 +2787,17 @@ vectface ReadFacets(std::string const &Format, std::string const &File,
 template <typename T, typename Tgroup>
 void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
                   const vectface &TheOutput, const std::string &OutFile,
-                  const std::string &Format, std::ostream &os) {
-  if (Format == "Magma") {
+                  const std::string &OutFormat, std::ostream &os) {
+  if (OutFormat == "Magma") {
     return VectVectInt_Magma_PrintFile(OutFile, TheOutput);
   }
-  if (Format == "GAP") {
+  if (OutFormat == "GAP") {
     return VectVectInt_Gap_PrintFile(OutFile, TheOutput);
   }
-  if (Format == "SetInt") {
+  if (OutFormat == "SetInt") {
     return VectVectInt_SetInt_PrintFile<mpz_class>(OutFile, TheOutput);
   }
-  if (Format == "BankEntry") {
+  if (OutFormat == "BankEntry") {
     size_t n_rows = EXT.rows();
     size_t n_act = GRP.n_act();
     if (n_rows != n_act) {

@@ -1,5 +1,6 @@
 #PROGRAM		= POLY_CheckCanonicalGAP
-PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_SerialDualDesc
+PROGRAM		= POLY_DirectSerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
