@@ -175,8 +175,9 @@ SPAN_face_ExtremeRays_F(Face const &face_fac, Tgroup const &StabFace_fac,
         return false;
     return true;
   };
-  for (int iExt = 0; iExt < nbExt; iExt++)
+  for (int iExt = 0; iExt < nbExt; iExt++) {
     EXTincd[iExt] = get_stat(iExt);
+  }
   int RankFace_fac = RankFace;
   int RankFace_ext = nbCol - RankFace_fac;
   int RankFaceTarget_ext = RankFace_ext - 1;
@@ -440,7 +441,7 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                           decltype(f_final)>(
         TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces, os);
   }
-  std::cerr << "We failed to find a matching method_spann\n";
+  std::cerr << "We failed to find a matching method_spann=" << method_spann << "\n";
   throw TerminalException{1};
 }
 
@@ -487,48 +488,54 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
   MyMatrix<T> eMatId = IdentityMat<T>(nbCol);
   while (true) {
     int len = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++)
-      if (eVectCand[iRow] == 1)
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      if (eVectCand[iRow] == 1) {
         len++;
+      }
+    }
     MyMatrix<T> TestMat(len, nbCol);
     int jRow = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++)
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       if (eVectCand[iRow] == 1) {
         for (int iCol = 0; iCol < nbCol; iCol++) {
-          T eVal = FAC(iRow, iCol);
-          TestMat(jRow, iCol) = eVal;
+          TestMat(jRow, iCol) = FAC(iRow, iCol);
         }
         jRow++;
       }
+    }
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(TestMat);
-    MyMatrix<T> NSP = eSelect.NSP;
+    MyMatrix<T> const& NSP = eSelect.NSP;
     int nbEqua = NSP.rows();
     std::vector<int> eCand, eCandCompl;
-    for (int kRow = 0; kRow < nbRow; kRow++) {
-      int test = 1;
-      for (int iEqua = 0; iEqua < nbEqua; iEqua++)
-        if (test == 1) {
-          T eSum = 0;
-          for (int iCol = 0; iCol < nbCol; iCol++)
-            eSum += FAC(kRow, iCol) * NSP(iEqua, iCol);
-          if (eSum != 0)
-            test = 0;
+    auto f_test=[&](int const& kRow) -> bool {
+      for (int iEqua = 0; iEqua < nbEqua; iEqua++) {
+        T eSum(0);
+        for (int iCol = 0; iCol < nbCol; iCol++) {
+          eSum += FAC(kRow, iCol) * NSP(iEqua, iCol);
         }
-      if (test == 1)
+        if (eSum != 0) {
+          return false;
+        }
+      }
+      return true;
+    };
+    for (int kRow = 0; kRow < nbRow; kRow++) {
+      if (f_test(kRow)) {
         eCand.push_back(kRow);
-      else
+      } else {
         eCandCompl.push_back(kRow);
+      }
     }
     int nbEltCompl = eCandCompl.size();
-    if (nbEltCompl == 0)
+    if (nbEltCompl == 0) {
       return false;
+    }
     int nbElt = eCand.size();
     MyMatrix<T> ListVectSpann(nbElt, nbCol);
     for (int iElt = 0; iElt < nbElt; iElt++) {
       int iRow = eCand[iElt];
       for (int iCol = 0; iCol < nbCol; iCol++) {
-        T eVal = FAC(iRow, iCol);
-        ListVectSpann(iElt, iCol) = eVal;
+        ListVectSpann(iElt, iCol) = FAC(iRow, iCol);
       }
     }
     MyMatrix<T> BasisSpann = RowReduction(ListVectSpann);
@@ -541,26 +548,26 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
     for (int iElt = 0; iElt < nbEltCompl; iElt++) {
       int iRow = eCandCompl[iElt];
       for (int iCol = 0; iCol < nbCol; iCol++) {
-        T eVal = FAC(iRow, iCol);
-        PreListVectors(iElt, iCol) = eVal;
+        PreListVectors(iElt, iCol) = FAC(iRow, iCol);
       }
     }
     MyMatrix<T> TheTotInv = Inverse(TheTot);
     MyMatrix<T> PreListVectorsB = PreListVectors * TheTotInv;
     MyMatrix<T> ListVectors(nbEltCompl, LPdim);
-    for (int iElt = 0; iElt < nbEltCompl; iElt++)
+    for (int iElt = 0; iElt < nbEltCompl; iElt++) {
       for (int iCol = 0; iCol < LPdim; iCol++) {
         int jCol = iCol + nbRowSpann;
-        T eVal = PreListVectorsB(iElt, jCol);
-        ListVectors(iElt, iCol) = eVal;
+        ListVectors(iElt, iCol) = PreListVectorsB(iElt, jCol);
       }
+    }
     PosRelRes<T> eResult = SearchPositiveRelationSimple_Direct(ListVectors);
     if (eResult.eTestExist) {
       MyVector<T> const &V = *eResult.TheRelat;
       for (int iElt = 0; iElt < nbEltCompl; iElt++) {
-        T eVal = V(iElt);
-        if (eVal > 0)
+        T const& eVal = V(iElt);
+        if (eVal > 0) {
           eVectCand[eCandCompl[iElt]] = 1;
+        }
       }
     } else {
       return true;
@@ -572,8 +579,9 @@ template <typename Tgroup>
 std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const &TheGRP) {
   Face eList;
   int n = TheGRP.n_act();
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     eList[i] = 1;
+  }
   vectface vvO = DecomposeOrbitPoint(TheGRP, eList);
   std::vector<std::vector<int>> RetList;
   for (auto eOrb : vvO) {
@@ -584,72 +592,77 @@ std::vector<std::vector<int>> GetMinimalReprVertices(Tgroup const &TheGRP) {
   return RetList;
 }
 
-void PrintListOrb_GAP(std::ostream &os,
+void PrintListOrb_GAP(std::ostream &os_out,
                       std::vector<std::vector<int>> const &ListOrb) {
-  int nbOrb, iOrb, len, i;
-  std::vector<int> eOrb;
-  os << "return ";
-  os << "rec(ListRepresentent:=[";
-  nbOrb = ListOrb.size();
-  for (iOrb = 0; iOrb < nbOrb; iOrb++) {
-    if (iOrb > 0)
-      os << ",";
-    os << "[";
-    eOrb = ListOrb[iOrb];
-    len = eOrb.size();
-    for (i = 0; i < len; i++) {
-      if (i > 0)
-        os << ",";
-      os << eOrb[i] + 1;
+  os_out << "return ";
+  os_out << "rec(ListRepresentent:=[";
+  size_t nbOrb = ListOrb.size();
+  for (size_t iOrb = 0; iOrb < nbOrb; iOrb++) {
+    if (iOrb > 0) {
+      os_out << ",";
     }
-    os << "]";
+    os_out << "[";
+    std::vector<int> const& eOrb = ListOrb[iOrb];
+    size_t len = eOrb.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0) {
+        os_out << ",";
+      }
+      os_out << eOrb[i] + 1;
+    }
+    os_out << "]";
   }
-  os << "]);\n";
+  os_out << "]);\n";
 }
 
-void PrintListListOrb_IntGAP(std::ostream &os,
+void PrintListListOrb_IntGAP(std::ostream &os_out,
                              std::vector<vectface> const &ListListOrb) {
   int nbLev = ListListOrb.size();
-  os << "return [";
+  os_out << "return [";
   for (int iLev = 0; iLev < nbLev; iLev++) {
-    if (iLev > 0)
-      os << ",\n";
-    os << "rec(ListRepresentent:=[";
+    if (iLev > 0) {
+      os_out << ",\n";
+    }
+    os_out << "rec(ListRepresentent:=[";
     int nbOrb = ListListOrb[iLev].size();
     for (int iOrb = 0; iOrb < nbOrb; iOrb++) {
       if (iOrb > 0)
-        os << ",";
-      os << "[";
+        os_out << ",";
+      os_out << "[";
       Face eOrb = ListListOrb[iLev][iOrb];
       size_t len = eOrb.count();
       boost::dynamic_bitset<>::size_type aRow = eOrb.find_first();
       for (size_t i = 0; i < len; i++) {
         if (i > 0)
-          os << ",";
-        os << aRow + 1;
+          os_out << ",";
+        os_out << aRow + 1;
         aRow = eOrb.find_next(aRow);
       }
-      os << "]";
+      os_out << "]";
     }
-    os << "])";
+    os_out << "])";
   }
-  os << "];\n";
+  os_out << "];\n";
 }
 
-void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os,
+void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os_out,
                       const std::string &OutFormat) {
   if (OutFormat == "GAP") {
-    os << "return ";
-    os << "[";
+    os_out << "return ";
+    os_out << "[";
     int len = TheOutput.size();
     for (int i = 0; i < len; i++) {
-      if (i > 0)
-        os << ",\n";
-      VectVectInt_Gap_Print(os, TheOutput[i]);
+      if (i > 0) {
+        os_out << ",\n";
+      }
+      VectVectInt_Gap_Print(os_out, TheOutput[i]);
     }
-    os << "]";
-    os << ";\n";
+    os_out << "]";
+    os_out << ";\n";
     return;
+  }
+  if (OutFormat == "PYTHON") {
+
   }
   if (OutFormat == "NoOutput") {
     return;
@@ -666,8 +679,8 @@ void OutputFaces(const std::vector<vectface> &TheOutput,
   if (OUTfile == "stdout") {
     return OutputFaces_File(TheOutput, std::cout, OutFormat);
   }
-  std::ofstream os(OUTfile);
-  return OutputFaces_File(TheOutput, os, OutFormat);
+  std::ofstream os_out(OUTfile);
+  return OutputFaces_File(TheOutput, os_out, OutFormat);
 }
 
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
@@ -732,10 +745,10 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   HumanTime time;
   int n = GRPin.n_act();
   size_t tidx_max = std::numeric_limits<Tidx>::max();
-  os << "ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
+  os << "SKEL: ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
      << "\n";
   std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
-  os << "|LGen|=" << LGen.size() << "\n";
+  os << "SKEL: |LGen|=" << LGen.size() << "\n";
   std::vector<vectface> l_vf_tot;
   size_t n_vert_tot = 0;
   for (auto &vf : l_vf) {
@@ -748,14 +761,14 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       MapLenSize[len] += cnt;
       vf_tot.append(vf_orbit);
     }
-    os << "MapLenSize =";
+    os << "SKEL: MapLenSize =";
     for (auto &kv : MapLenSize)
       os << " (" << kv.first << "/" << kv.second << ")";
     os << "\n";
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
-  os << "n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
+  os << "SKEL: n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
   Tgr eGR(n_vert_tot);
   eGR.SetHasColor(true);
   for (int i = 0; i < n; i++) {
@@ -764,7 +777,7 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   int shift = n;
   for (size_t i_level = 1; i_level < l_vf_tot.size(); i_level++) {
     vectface const &vf = l_vf_tot.at(i_level);
-    os << "i_level=" << i_level << " |vf|=" << vf.size() << "\n";
+    os << "SKEL: i_level=" << i_level << " |vf|=" << vf.size() << "\n";
     for (auto &face : vf) {
       for (int i = 0; i < n; i++) {
         if (face[i] == 1) {
@@ -776,34 +789,31 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       shift++;
     }
   }
-  os << "shift=" << shift << " |eGR|=" << time << "\n";
+  os << "SKEL: shift=" << shift << " |eGR|=" << time << "\n";
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect =
       GRAPH_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
-  os << "nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time << "\n";
+  os << "SKEL: nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time << "\n";
   std::vector<Telt> ListGen;
   for (auto &eList : ListGen_vect) {
     Telt ePerm(eList);
     ListGen.emplace_back(std::move(ePerm));
   }
   Tgroup GRPfull(ListGen, n_out);
-  os << "|GRPfull|=" << time << "\n";
+  os << "SKEL: |GRPfull|=" << time << "\n";
   return GRPfull;
 }
 
 template <typename T, typename Tgroup>
-void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
+void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  std::cerr << "Reading PROC\n";
+  os << "SKEL: Reading PROC\n";
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string FACfile = BlockPROC.ListStringValues.at("FACfile");
-  IsExistingFileDie(FACfile);
-  std::cerr << "FACfile=" << FACfile << "\n";
-  std::ifstream FACfs(FACfile);
-  MyMatrix<T> FAC = ReadMatrix<T>(FACfs);
-  std::cerr << "|FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
+  MyMatrix<T> FAC = ReadMatrixFile<T>(FACfile);
+  os << "SKEL: |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
   if (size_t(FAC.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
     std::cerr << "We have |FAC|=" << FAC.rows() << "\n";
     std::cerr << "But <Tidx>::max()="
@@ -816,21 +826,18 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   }
   //
   std::string method_spann = BlockPROC.ListStringValues.at("method_spann");
-  std::cerr << "method_spann=" << method_spann << "\n";
+  os << "SKEL: method_spann=" << method_spann << "\n";
   std::string method_final = BlockPROC.ListStringValues.at("method_final");
-  std::cerr << "method_final=" << method_final << "\n";
+  os << "SKEL: method_final=" << method_final << "\n";
   bool ComputeTotalNumberFaces =
       BlockPROC.ListBoolValues.at("ComputeTotalNumberFaces");
-  std::cerr << "ComputeTotalNumberFaces=" << ComputeTotalNumberFaces << "\n";
+  os << "SKEL: ComputeTotalNumberFaces=" << ComputeTotalNumberFaces << "\n";
   //
   MyMatrix<T> EXT;
   if (method_spann == "ExtremeRays" ||
       method_spann == "ExtremeRaysNonSimplicial") {
     std::string EXTfile = BlockPROC.ListStringValues.at("EXTfile");
-    IsExistingFileDie(EXTfile);
-    std::cerr << "EXTfile=" << EXTfile << "\n";
-    std::ifstream EXTfs(EXTfile);
-    EXT = ReadMatrix<T>(EXTfs);
+    EXT = ReadMatrixFile<T>(EXTfile);
     if (FAC.cols() != EXT.cols()) {
       std::cerr << "The dimension of EXT and FAC should be the same\n";
       throw TerminalException{1};
@@ -838,14 +845,11 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   }
   //
   std::string GRPfile = BlockPROC.ListStringValues.at("GRPfile");
-  IsExistingFileDie(GRPfile);
-  std::cerr << "GRPfile=" << GRPfile << "\n";
-  std::ifstream GRPfs(GRPfile);
-  Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
-  std::cerr << "|GRP|=" << GRP.size() << "\n";
+  Tgroup GRP = ReadGroupFile<Tgroup>(GRPfile);
+  os << "SKEL: |GRP|=" << GRP.size() << "\n";
   //
   int LevSearch = BlockPROC.ListIntValues.at("LevSearch");
-  std::cerr << "LevSearch=" << LevSearch << "\n";
+  os << "SKEL: LevSearch=" << LevSearch << "\n";
   if (LevSearch == -1) {
     int nbCol = FAC.cols();
     LevSearch = nbCol - 2;
@@ -853,11 +857,11 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
   //
   std::string OUTfile = BlockPROC.ListStringValues.at("OUTfile");
   std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
-  std::cerr << "OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
+  os << "SKEL: OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
   //
   std::vector<vectface> TheOutput =
       EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final,
-                       ComputeTotalNumberFaces, std::cerr);
+                       ComputeTotalNumberFaces, os);
   //
   OutputFaces(TheOutput, OUTfile, OutFormat);
   //
@@ -867,12 +871,12 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull) {
     //    using Tgr = GraphBitset;
     using Tgr = GraphListAdj;
     Tgroup GRPfull =
-        ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, std::cerr);
-    std::cerr << "|GRPfull|=" << GRPfull.size() << "\n";
+        ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, os);
+    os << "SKEL: |GRPfull|=" << GRPfull.size() << "\n";
     std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
-    std::cerr << "FileGroup=" << FileGroup << "\n";
+    os << "SKEL: FileGroup=" << FileGroup << "\n";
     std::string OutFormat = BlockGROUP.ListStringValues.at("OutFormat");
-    std::cerr << "OutFormat=" << OutFormat << "\n";
+    os << "SKEL: OutFormat=" << OutFormat << "\n";
     WriteGroupFormat(FileGroup, OutFormat, GRPfull);
   }
 }

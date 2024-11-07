@@ -2,12 +2,11 @@
 #PROGRAM		= VectFamily_Reduction
 #PROGRAM		= VectFamily_ColumnReduction
 #PROGRAM		= POLY_FaceLatticeGen
+PROGRAM		= POLY_DirectFaceLattice
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
 #PROGRAM		= TEST_GeometricallyUniquePoint
-#PROGRAM		= POLY_ThreadedADM
-#PROGRAM		= ComputeDelaunay
 #PROGRAM		= POLY_LinearDetermineByInequalities
 #PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyGroup
@@ -27,7 +26,7 @@
 #PROGRAM		= POLY_lrs_volume
 #PROGRAM		= POLY_lrs_triangulation
 #PROGRAM		= POLY_TwoLaminations
-PROGRAM		= POLY_lrs_triang_facets
+#PROGRAM		= POLY_lrs_triang_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
