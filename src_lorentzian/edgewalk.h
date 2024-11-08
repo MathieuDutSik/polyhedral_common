@@ -2255,8 +2255,9 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
       throw TerminalException{1};
     }
 #endif
+    std::optional<std::string> reason_non_reflective{e.reason};
     ResultEdgewalk<T, Tint> re{
-        {}, {}, LorentzianFinitenessGroupTester<T, Tint>(G), false};
+      {}, {}, EarlyTerminationIfNotReflective, reason_non_reflective};
     print_result_edgewalk(re);
   }
 #ifdef DEBUG_EDGEWALK
