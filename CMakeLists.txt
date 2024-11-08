@@ -77,17 +77,18 @@ add_executable(LATT_SerialLattice_IsoDelaunayDomain ${CMAKE_SOURCE_DIR}/src_latt
 # ---Iso-Delaunay spacse (Serial)
 
 # Add dependency to your target
-add_dependencies(POLY_SerialDualDesc NautyDirectPackage)
-target_link_libraries(POLY_SerialDualDesc ${MY_LIBRARIES_GRP})
+target_link_libraries(POLY_DirectSerialDualDesc ${MY_LIBRARIES_GRP})
 target_link_libraries(CP_TestCopositivity ${MY_LIBRARIES})
 target_link_libraries(CP_TestCompletePositivity ${MY_LIBRARIES})
-target_link_libraries(LORENTZ_FundDomain_AllcockEdgewalk ${MY_LIBRARIES_GRP})
-target_link_libraries(POLY_FaceLatticeGen ${MY_LIBRARIES_GRP})
+target_link_libraries(LORENTZ_ReflectiveEdgewalk ${MY_LIBRARIES_GRP})
+target_link_libraries(POLY_DirectFaceLattice ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_AutomorphismGroup ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_TestEquivalence ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_GetOrbitRepresentative ${MY_LIBRARIES_GRP})
 target_link_libraries(INDEF_FORM_GetOrbit_IsotropicKplane ${MY_LIBRARIES_GRP})
 target_link_libraries(LATT_Canonicalize ${MY_LIBRARIES_GRP})
 target_link_libraries(LATT_FindIsotropic ${MY_LIBRARIES})
+target_link_libraries(LATT_SerialComputeDelaunay ${MY_LIBRARIES_GRP})
+target_link_libraries(LATT_SerialLattice_IsoDelaunayDomain ${MY_LIBRARIES_GRP})
 
-target_include_directories(POLY_SerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
+target_include_directories(POLY_DirectSerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
