@@ -59,17 +59,19 @@ set(MY_LIBRARIES_GRP ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a $
 set(MY_LIBRARIES ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 
 # Add the executable
-add_executable(POLY_SerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_SerialDualDesc.cpp)
+add_executable(POLY_DirectSerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_DirectSerialDualDesc.cpp)
 add_executable(CP_TestCopositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCopositivity.cpp)
 add_executable(CP_TestCompletePositivity ${CMAKE_SOURCE_DIR}/src_copos/CP_TestCompletePositivity.cpp)
-add_executable(LORENTZ_FundDomain_AllcockEdgewalk ${CMAKE_SOURCE_DIR}/src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk.cpp)
-add_executable(POLY_FaceLatticeGen ${CMAKE_SOURCE_DIR}/src_poly/POLY_FaceLatticeGen.cpp)
+add_executable(LORENTZ_ReflectiveEdgewalk ${CMAKE_SOURCE_DIR}/src_lorentzian/LORENTZ_ReflectiveEdgewalk.cpp)
+add_executable(POLY_DirectFaceLattice ${CMAKE_SOURCE_DIR}/src_poly/POLY_DirectFaceLattice.cpp)
 add_executable(INDEF_FORM_AutomorphismGroup ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_AutomorphismGroup.cpp)
 add_executable(INDEF_FORM_TestEquivalence ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_TestEquivalence.cpp)
 add_executable(INDEF_FORM_GetOrbitRepresentative ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbitRepresentative.cpp)
 add_executable(INDEF_FORM_GetOrbit_IsotropicKplane ${CMAKE_SOURCE_DIR}/src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane.cpp)
 add_executable(LATT_Canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_Canonicalize.cpp)
 add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic.cpp)
+add_executable(LATT_SerialComputeDelaunay ${CMAKE_SOURCE_DIR}/src_latt/LATT_SerialComputeDelaunay.cpp)
+add_executable(LATT_SerialLattice_IsoDelaunayDomain ${CMAKE_SOURCE_DIR}/src_latt/LATT_SerialLattice_IsoDelaunayDomain.cpp)
 
 # ---Delaunay polytopes enumeration (Serial)
 # ---Iso-Delaunay spacse (Serial)
