@@ -668,7 +668,7 @@ void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os_o
       if (i > 0) {
         os_out << ",";
       }
-      VectVectInt_Print_Kernel(os_out, TheOutput[i], 0);
+      VectVectInt_Python_Print(os_out, TheOutput[i]);
     }
     os_out << "]";
     return;

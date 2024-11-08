@@ -13,37 +13,14 @@
 
 template <typename T>
 void process(std::string const &eFileI, std::string const &ansSamp,
-             std::string const &OutFormat, std::ostream &os) {
+             std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   std::vector<int> eList = ColumnReductionSet(EXT);
   MyMatrix<T> EXTred = SelectColumn(EXT, eList);
   int nbCol = EXT.cols();
   int dim = eList.size();
   vectface vf = DirectComputationInitialFacetSet(EXTred, ansSamp, std::cerr);
-  if (OutFormat == "GAP") {
-    os << "return ";
-    VectVectInt_Gap_Print(os, vf);
-    os << ";\n";
-    return;
-  }
-  if (OutFormat == "Oscar") {
-    MyMatrix<int> M = VectfaceAsMatrix(vf);
-    WriteMatrix(os, M);
-    return;
-  }
-  if (OutFormat == "FacetInequalities") {
-    int n_facet = vf.size();
-    MyMatrix<T> M = ZeroMatrix<T>(n_facet, nbCol);
-    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
-      Face f = vf[i_facet];
-      MyVector<T> eIneq = FindFacetInequality(EXTred, f);
-      for (int i = 0; i < dim; i++) {
-        M(i_facet, eList[i]) = eIneq(i);
-      }
-    }
-    WriteMatrix(os, M);
-    return;
-  }
+  OutputFacets_stream(EXT,, vf, os_out, OutFormat, os);
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
             << "\n";
   throw TerminalException{1};

@@ -2784,20 +2784,69 @@ vectface ReadFacets(std::string const &Format, std::string const &File,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tgroup>
-void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
-                  const vectface &TheOutput, const std::string &OutFile,
-                  const std::string &OutFormat, std::ostream &os) {
+template <typename T>
+void OutputFacets_stream(const MyMatrix<T> &EXT,
+                         const vectface &TheOutput, std::ostream& os_out,
+                         const std::string &OutFormat, std::ostream &os) {
   if (OutFormat == "Magma") {
-    return VectVectInt_Magma_PrintFile(OutFile, TheOutput);
+    os_out << "return ";
+    VectVectInt_Magma_Print(os_out, TheOutput);
+    os_out << ";\n";
+    return;
   }
   if (OutFormat == "GAP") {
-    return VectVectInt_Gap_PrintFile(OutFile, TheOutput);
+    os_out << "return ";
+    VectVectInt_Gap_Print(os_out, TheOutput);
+    os_out << ";\n";
+    return;
+  }
+  if (OutFormat == "Oscar") {
+    MyMatrix<int> M = VectfaceAsMatrix(TheOutput);
+    WriteMatrix(os_out, M);
+    return;
+  }
+  if (OutFormat == "PYTHON") {
+    return VectVectInt_Python_Print(os_out, TheOutput);
+  }
+  if (OutFormat == "FacetInequalities") {
+    std::vector<int> eList = ColumnReductionSet(EXT);
+    MyMatrix<T> EXTred = SelectColumn(EXT, eList);
+    int nbCol = EXT.cols();
+    int dim = eList.size();
+    int n_facet = TheOutput.size();
+    MyMatrix<T> M = ZeroMatrix<T>(n_facet, nbCol);
+    for (int i_facet = 0; i_facet < n_facet; i_facet++) {
+      Face f = TheOutput[i_facet];
+      MyVector<T> eIneq = FindFacetInequality(EXTred, f);
+      for (int i = 0; i < dim; i++) {
+        M(i_facet, eList[i]) = eIneq(i);
+      }
+    }
+    WriteMatrix(os_out, M);
+    return;
   }
   if (OutFormat == "SetInt") {
-    return VectVectInt_SetInt_PrintFile<mpz_class>(OutFile, TheOutput);
+    os_out << TheOutput.size() << "\n";
+    using Tnumber = mpz_class;
+    for (const Face &f : TheOutput) {
+      Tnumber res = getsetasint<Tnumber>(f);
+      os << res << "\n";
+    }
+    return;
   }
+  std::cerr << "No option has been chosen\n";
+  throw TerminalException{1};
+}
+
+template <typename T, typename Tgroup>
+void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
+                       const vectface &TheOutput, std::string const& OutFile,
+                       const std::string &OutFormat, std::ostream &os) {
   if (OutFormat == "BankEntry") {
+    if (OutFile == "stderr" || OutFile == "stdout") {
+      std::cerr << "For BankEntry, we do not allow writing to stderr / stdout\n";
+      throw TerminalException{1};
+    }
     size_t n_rows = EXT.rows();
     size_t n_act = GRP.n_act();
     if (n_rows != n_act) {
@@ -2814,10 +2863,21 @@ void OutputFacets(const MyMatrix<T> &EXT, Tgroup const &GRP,
     std::pair<MyMatrix<T>, TripleStore<Tgroup>> eP =
         GetCanonicalInformation(EXT, WMat, GRP, fotc, os);
     Write_BankEntry(OutFile, eP.first, eP.second);
+    return;
   }
-  std::cerr << "No option has been chosen\n";
-  throw TerminalException{1};
+  if (OutFile == "stderr") {
+    OutputFacets_stream(EXT, TheOutput, std::cerr, OutFormat, os);
+  } else {
+    if (OutFile == "stdout") {
+      OutputFacets_stream(EXT, TheOutput, std::cout, OutFormat, os);
+    } else {
+      std::ofstream os_out(OutFile);
+      OutputFacets_stream(EXT, TheOutput, os_out, OutFormat, os);
+    }
+  }
 }
+
+
 
 template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
@@ -3066,8 +3126,8 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat,
-               std::cerr);
+  OutputFacets_file(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat,
+                    std::cerr);
 }
 
 template <typename T, typename Tgroup>

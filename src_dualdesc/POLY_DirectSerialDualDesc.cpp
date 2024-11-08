@@ -23,8 +23,8 @@ void Process_EXT(MyMatrix<T> const& EXT, std::string const& GRPfile, std::string
   PolyHeuristicSerial<TintGroup> AllArr =
     AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   vectface TheOutput = DualDescriptionStandard(EXTred, GRP, AllArr, std::cerr);
-  OutputFacets(EXTred, GRP, TheOutput, OutFile,
-               OutFormat, std::cerr);
+  OutputFacets_file(EXTred, GRP, TheOutput, OutFile,
+                    OutFormat, std::cerr);
 }
 
 template <typename T>
