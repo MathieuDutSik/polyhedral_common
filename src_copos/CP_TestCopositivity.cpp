@@ -5,7 +5,7 @@
 // clang-format on
 
 template<typename T, typename Tint>
-void compute(std::string const& FileI, std::string const& OutFormat, std::ostream& os) {
+void compute(std::string const& FileI, std::string const& OutFormat, std::ostream& os_out) {
   std::cerr << "Reading input\n";
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   std::cerr << "eSymmMat=\n";
@@ -16,7 +16,7 @@ void compute(std::string const& FileI, std::string const& OutFormat, std::ostrea
   CopositivityTestResult<Tint> eResult =
     TestCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
   //
-  WriteCopositivityTestResult(os, OutFormat, eResult);
+  WriteCopositivityTestResult(os_out, OutFormat, eResult);
 }
 
 
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     std::string FileI = argv[2];
     std::string OutFormat = "classic";
     std::string OutFile = "stderr";
-    if (argc == 4) {
+    if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }

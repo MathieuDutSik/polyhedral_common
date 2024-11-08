@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     std::string FileI = argv[2];
     std::string OutFormat = "classic";
     std::string OutFile = "stderr";
-    if (argc == 4) {
+    if (argc == 5) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }

@@ -1357,7 +1357,7 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     return;
   }
   if (OutFormat == "PYTHON") {
-    os_out << "[\"LorMat\":";
+    os_out << "{\"LorMat\":";
     WriteMatrixPYTHON(os_out, G);
     os_out << ", \"l_norms\":";
     WriteStdVectorPYTHON(os_out, l_norms);
@@ -1395,7 +1395,7 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
       os_out << "]";
       os_out << ", \"n_simple\":" << n_simple;
     }
-    os_out << "]";
+    os_out << "}";
     return;
   }
   std::cerr << "Failed to find a matching entry in PrintResultEdgewalk\n";

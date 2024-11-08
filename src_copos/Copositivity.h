@@ -385,38 +385,38 @@ template <typename Tint> struct CopositivityTestResult {
 
 template <typename Tint>
 void WriteCopositivityTestResult(
-    std::ostream &os, std::string const &OutFormat,
+    std::ostream &os_out, std::string const &OutFormat,
     CopositivityTestResult<Tint> const &eResult) {
   if (OutFormat == "classic") {
     if (eResult.test) {
-      os << "The matrix is indeed copositive\n";
+      os_out << "The matrix is indeed copositive\n";
     } else {
-      os << "The matrix is not copositive\n";
-      os << "Nature of violation=" << eResult.strNature << "\n";
-      os << "V=";
-      WriteVectorNoDim(os, eResult.eVectResult1);
+      os_out << "The matrix is not copositive\n";
+      os_out << "Nature of violation=" << eResult.strNature << "\n";
+      os_out << "V=";
+      WriteVectorNoDim(os_out, eResult.eVectResult1);
     }
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(isCopositive:=" << GAP_logical(eResult.test);
+    os_out << "return rec(isCopositive:=" << GAP_logical(eResult.test);
     if (!eResult.test) {
-      os << ", violation_nature:=\"" << eResult.strNature << "\"";
-      os << ", V:=" << StringVectorGAP(eResult.eVectResult1);
+      os_out << ", violation_nature:=\"" << eResult.strNature << "\"";
+      os_out << ", V:=" << StringVectorGAP(eResult.eVectResult1);
     }
-    os << ");\n";
+    os_out << ");\n";
     return;
   }
   if (OutFormat == "PYTHON") {
-    os << "{\"isCopositive\":" << PYTHON_logical(eResult.test);
+    os_out << "{\"isCopositive\":" << PYTHON_logical(eResult.test);
     if (!eResult.test) {
-      os << ", \"violation_nature\":\"" << eResult.strNature << "\"";
-      os << ", \"V\":" << StringVectorPYTHON(eResult.eVectResult1);
+      os_out << ", \"violation_nature\":\"" << eResult.strNature << "\"";
+      os_out << ", \"V\":" << StringVectorPYTHON(eResult.eVectResult1);
     }
-    os << "}\n";
+    os_out << "}\n";
     return;
   }
-  std::cerr << "WriteCopositivityTestResult: Failed to find a matching entry\n";
+  std::cerr << "WriteCopositivityTestResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};
 }
 
@@ -476,7 +476,7 @@ void WriteCopositivityEnumResult(std::ostream &os, std::string const &OutFormat,
     os << ");\n";
     return;
   }
-  std::cerr << "WriteCopositivityEnumResult: Failed to find a matching entry\n";
+  std::cerr << "WriteCopositivityEnumResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};
 }
 

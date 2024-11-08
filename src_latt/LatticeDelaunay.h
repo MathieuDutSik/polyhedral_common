@@ -451,7 +451,7 @@ void WriteEntryPYTHON(std::ostream &os_out,
         }
         str_ret += "]";
       }
-      str_ret += "])";
+      str_ret += "]";
       return str_ret;
     };
     os_out << ", \"TheStab\":" << get_gap_string();
