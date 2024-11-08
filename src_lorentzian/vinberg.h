@@ -177,7 +177,9 @@ std::vector<T> get_initial_list_norms(MyMatrix<T> const &G,
 // The fundamental data type
 //
 
-struct NonReflectivityException {};
+struct NonReflectivityException {
+  std::string reason;
+};
 
 template <typename T, typename Tint> struct VinbergTot {
   std::string DualDescProg;

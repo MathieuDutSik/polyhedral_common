@@ -8,7 +8,8 @@
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_FundDomain_Vinberg
 #PROGRAM		= LATT_GetIntegralMatricesPossibleOrders
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk LORENTZ_ComputeStabilizer_Vertex
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+PROGRAM		= LORENTZ_ReflectiveEdgewalk
 #PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= LORENTZ_ComputeRoots_Vertex

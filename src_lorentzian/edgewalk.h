@@ -1186,8 +1186,8 @@ FundDomainVertex_FullInfo<T, Tint, Tgroup> gen_fund_domain_fund_info(
 template <typename T, typename Tint> struct ResultEdgewalk {
   std::vector<MyMatrix<Tint>> l_gen_isom_cox;
   std::vector<FundDomainVertex<T, Tint>> l_orbit_vertices;
-  LorentzianFinitenessGroupTester<T, Tint> group_tester;
-  std::optional<bool> is_reflective;
+  bool EarlyTerminationIfNotReflective;
+  std::optional<std::string> reason_non_reflective;
 };
 
 template <typename Tint, typename Titer_root, typename Titer_isom>
@@ -1276,21 +1276,33 @@ template <typename T, typename Tint>
 void PrintResultEdgewalk(MyMatrix<T> const &G,
                          ResultEdgewalk<T, Tint> const &re,
                          std::ostream &os_out, const std::string &OutFormat,
-                         bool const &ComputeAllSimpleRoots, std::ostream &os) {
+                         bool const &ComputeAllSimpleRoots, [[maybe_unused]] std::ostream& os) {
   std::vector<T> l_norms = get_list_norms(G, re);
   size_t n_orbit_vertices = re.l_orbit_vertices.size();
+  auto f_compute_root=[&]() -> bool {
+    if (!ComputeAllSimpleRoots) {
+      return false;
+    }
+    if (re.reason_non_reflective) {
+      return false;
+    }
+    if (!re.EarlyTerminationIfNotReflective) {
+      // No early termination enabled, so no check, so do as asked
+      // and if infinite loops, the user is responsible
+      return ComputeAllSimpleRoots;
+    }
+    return true;
+  };
+  bool do_compute_root = f_compute_root();
 #ifdef DEBUG_EDGEWALK
   os << "We write G\n";
   os << "We write l_norms\n";
-  if (re.is_reflective) {
-    bool val = *re.is_reflective;
-    if (val) {
-      os << "lattice found to be reflective\n";
+  if (re.EarlyTerminationIfNotReflective) {
+    if (re.reason_non_reflective) {
+      os << "reason of non-reflectivity=" << *re.reason_non_reflective << "\n";
     } else {
-      os << "lattice found NOT to be reflective\n";
+      os << "It is actually reflective\n";
     }
-  } else {
-    os << "No reflectivity computation\n";
   }
   os << "We have |l_gen_isom_cox|=" << re.l_gen_isom_cox.size() << "\n";
   os << "We have |l_orbit_vertices|=" << n_orbit_vertices << "\n";
@@ -1309,22 +1321,13 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     } else {
       os_out << "Group([IdentityMat(" << G.rows() << ")])";
     }
-    if (re.is_reflective) {
-      bool val = *re.is_reflective;
-      if (val) {
-        os_out << ", is_reflective:=true";
-      } else {
+    if (re.EarlyTerminationIfNotReflective) {
+      if (re.reason_non_reflective) {
         os_out << ", is_reflective:=false";
+      } else {
+        os_out << ", is_reflective:=true";
       }
     }
-    os_out << ", group_tester:=rec(InvariantBasis:=";
-    WriteMatrixGAP(os_out, re.group_tester.get_invariant_basis());
-    os_out << ", max_finite_order:=" << re.group_tester.get_max_finite_order();
-    DiagSymMat<T> DiagInfo = re.group_tester.get_diag_info();
-    os_out << ", nbZero:=" << DiagInfo.nbZero;
-    os_out << ", nbPlus:=" << DiagInfo.nbPlus;
-    os_out << ", nbMinus:=" << DiagInfo.nbMinus;
-    os_out << ", is_finite:=" << re.group_tester.get_finiteness_status() << ")";
     os_out << ", ListVertices:=[";
     bool IsFirst = true;
     for (size_t i = 0; i < n_orbit_vertices; i++) {
@@ -1335,14 +1338,12 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
       WriteFundDomainVertex(G, evert, os_out, OutFormat);
     }
     os_out << "], n_orbit_vertices:=" << n_orbit_vertices;
-    if (ComputeAllSimpleRoots) {
+    if (do_compute_root) {
       std::vector<MyVector<Tint>> l_simple_root = compute_full_root_orbit(re);
       size_t n_simple = l_simple_root.size();
       MyMatrix<Tint> Mat_simple_root = MatrixFromVectorFamily(l_simple_root);
       MyMatrix<T> Mat_simple_root_T =
           UniversalMatrixConversion<T, Tint>(Mat_simple_root);
-      MyVector<T> eCent =
-          GetGeometricallyUniqueInteriorPoint(Mat_simple_root_T, os);
       os_out << ", ListSimpleRoots:=[";
       for (size_t i = 0; i < n_simple; i++) {
         if (i > 0)
@@ -1350,14 +1351,51 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
         os_out << StringVectorGAP(l_simple_root[i]);
       }
       os_out << "]";
-      os_out << ", CentVect:=" << StringVectorGAP(eCent);
       os_out << ", n_simple:=" << n_simple;
     }
     os_out << ");\n";
     return;
   }
-  if (OutFormat == "TXT") {
-    os_out << "List of found generators of Isom / Cox\n";
+  if (OutFormat == "PYTHON") {
+    os_out << "[\"LorMat\":";
+    WriteMatrixPYTHON(os_out, G);
+    os_out << ", \"l_norms\":";
+    WriteStdVectorPYTHON(os_out, l_norms);
+    os_out << ", \"GrpIsomCoxMatr\":";
+    WriteVectorMatrixPYTHON(os_out, re.l_gen_isom_cox);
+    if (re.EarlyTerminationIfNotReflective) {
+      if (re.reason_non_reflective) {
+        os_out << ", \"is_reflective\":False";
+      } else {
+        os_out << ", \"is_reflective\":True";
+      }
+    }
+    os_out << ", \"ListVertices\":[";
+    bool IsFirst = true;
+    for (size_t i = 0; i < n_orbit_vertices; i++) {
+      if (!IsFirst)
+        os_out << ",";
+      IsFirst = false;
+      const FundDomainVertex<T, Tint> &evert = re.l_orbit_vertices[i];
+      WriteFundDomainVertex(G, evert, os_out, OutFormat);
+    }
+    os_out << "], \"n_orbit_vertices\":" << n_orbit_vertices;
+    if (do_compute_root) {
+      std::vector<MyVector<Tint>> l_simple_root = compute_full_root_orbit(re);
+      size_t n_simple = l_simple_root.size();
+      MyMatrix<Tint> Mat_simple_root = MatrixFromVectorFamily(l_simple_root);
+      MyMatrix<T> Mat_simple_root_T =
+          UniversalMatrixConversion<T, Tint>(Mat_simple_root);
+      os_out << ", \"ListSimpleRoots\":[";
+      for (size_t i = 0; i < n_simple; i++) {
+        if (i > 0)
+          os_out << ",";
+        os_out << StringVectorPYTHON(l_simple_root[i]);
+      }
+      os_out << "]";
+      os_out << ", \"n_simple\":" << n_simple;
+    }
+    os_out << "]";
     return;
   }
   std::cerr << "Failed to find a matching entry in PrintResultEdgewalk\n";
@@ -1608,7 +1646,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 template <typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     SublattInfos<T> const &si, FundDomainVertex<T, Tint> const &eVert,
-    bool EarlyTerminationIfNotReflective,
+    bool const& EarlyTerminationIfNotReflective,
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv,
     TheHeuristic<Tint> const &HeuristicTryTerminateDualDescription,
     std::ostream &os) {
@@ -1623,12 +1661,9 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   std::unordered_set<MyVector<Tint>> s_simple_roots;
 
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
-  std::optional<bool> is_reflective;
+  std::optional<std::string> reason_non_reflective;
   LorentzianFinitenessGroupTester<T, Tint> group_tester =
       LorentzianFinitenessGroupTester<T, Tint>(G);
-  if (EarlyTerminationIfNotReflective) {
-    is_reflective = true;
-  }
   int nonew_nbdone = 0;
   size_t n_simple_roots = 0;
   auto f_try_terminate = [&]() -> bool {
@@ -1704,10 +1739,10 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(isom:=" << StringMatrixGAP(eP) << "),\n";
 #endif
-    group_tester.GeneratorUpdate(eP);
-    if (is_reflective) {
+    if (EarlyTerminationIfNotReflective) {
+      group_tester.GeneratorUpdate(eP);
       if (!group_tester.get_finiteness_status()) {
-        is_reflective = false;
+        reason_non_reflective = "Not reflective by the finiteness test";
         return true;
       }
     }
@@ -1722,7 +1757,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   for (auto &e_gen : s_gen_isom_cox)
     l_gen_isom_cox.push_back(e_gen);
   return {std::move(l_gen_isom_cox), std::move(l_orbit_vertices_ret),
-          group_tester, is_reflective};
+          EarlyTerminationIfNotReflective, reason_non_reflective};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1821,8 +1856,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
   MyMatrix<T> const &G = si.G;
   T norm = V.dot(G * V);
 #ifdef DEBUG_EDGEWALK
-  os << "------------------------------ get_simple_cone "
-        "--------------------------\n";
+  os << "--------- get_simple_cone --------------------\n";
   os << "G=\n";
   WriteMatrixGAP(os, G);
   os << "\n";
@@ -1918,7 +1952,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
     if (list_vect.size() == 0) {
       std::cerr << "The list of vectors is empty. Cannot be reflective. In any "
                    "case, we cannot continue\n";
-      throw NonReflectivityException{};
+      std::string reason = "list of roots is empty";
+      throw NonReflectivityException{reason};
     }
     int rnk = RankMat(MatrixFromVectorFamily(list_vect));
 #ifdef DEBUG_EDGEWALK
@@ -1928,7 +1963,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
     if (rnk < G.rows() - 2) {
       std::cerr << "The list of roots is not of correct rank. Cannot be "
                    "reflective. In any case, we cannot continue\n";
-      throw NonReflectivityException{};
+      std::string reason = "the rank of the roots is too low";
+      throw NonReflectivityException{reason};
     }
     auto get_one_root = [&](MyVector<T> const &e_vect) -> MyVector<Tint> {
       size_t len = list_vect.size();
@@ -2101,6 +2137,52 @@ void PrintVertexInformation(MyMatrix<T> const &G,
   WriteMatrix(os, eVert.MatRoot);
 }
 #endif
+
+template <typename T, typename Tint, typename Tgroup>
+ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostream& os) {
+  std::optional<std::string> opt = ReasonNonLorentzian(G);
+  bool EarlyTerminationIfNotReflective = true;
+  if (opt) {
+    return {{}, {}, EarlyTerminationIfNotReflective, opt};
+  }
+  std::string OptionNorms = "all";
+  std::string DualDescProg = "lrs_iterate";
+  bool ApplyReduction = true;
+  std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
+  SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+  //
+  TheHeuristic<Tint> HeuristicIdealStabEquiv =
+      GetHeuristicIdealStabEquiv<Tint>();
+  TheHeuristic<Tint> HeuristicTryTerminateDualDescription =
+      GetHeuristicTryTerminateDualDescription<Tint>();
+  std::string OptionInitialVertex = "isotropic_vinberg";
+  std::string FileInitialVertex = "/irrelevant";
+  try {
+    FundDomainVertex<T, Tint> eVert = get_initial_vertex<T, Tint, Tgroup>(
+        si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
+        OptionInitialVertex, FileInitialVertex, os);
+    //
+    ResultEdgewalk<T, Tint> re = LORENTZ_RunEdgewalkAlgorithm<T, Tint, Tgroup>(
+        si, eVert, EarlyTerminationIfNotReflective, HeuristicIdealStabEquiv,
+        HeuristicTryTerminateDualDescription, os);
+    return re;
+  } catch (NonReflectivityException const &e) {
+#ifdef DEBUG_EDGEWALK
+    if (!EarlyTerminationIfNotReflective) {
+      std::cerr << "The program cannot go forward. Since we have "
+                   "EarlyTerminationIfNotReflective = F\n";
+      std::cerr << "this is actually a runtime error\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::optional<std::string> opt{e.reason};
+    ResultEdgewalk<T, Tint> re{{}, {}, EarlyTerminationIfNotReflective, opt};
+    return re;
+  }
+}
+
+
+
 
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {

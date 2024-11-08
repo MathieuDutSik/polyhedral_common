@@ -65,6 +65,14 @@ void WriteFundDomainVertex(MyMatrix<T> const &G,
     os << ")";
     return;
   }
+  if (OutFormat == "PYTHON") {
+    os << "[\"gen\":";
+    WriteVectorPYTHON(os, gen_nf);
+    os << ", \"norm\":" << norm << ", \"l_roots\":";
+    WriteMatrixPYTHON(os, Mroot);
+    os << "]";
+    return;
+  }
   if (OutFormat == "TXT") {
     os << "gen=";
     WriteVectorNoDim(os, gen_nf);

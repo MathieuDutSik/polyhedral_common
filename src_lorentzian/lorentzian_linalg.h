@@ -20,19 +20,31 @@
 #define TIMINGS_LORENTZIAN_LINALG
 #endif
 
+template<typename T>
+std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
+  if (DiagInfo.nbZero != 0) {
+    std::string reason_non_lorentzian = "matrix has non-zero kernel";
+    return reason_non_lorentzian;
+  }
+  int nbMinus = DiagInfo.nbMinus;
+  int nbPlus = DiagInfo.nbPlus;
+  if (nbMinus != 1) {
+    std::string reason_non_lorentzian = "Signature is (" + std::to_string(nbMinus) + "," + std::to_string(nbPlus) + ") but it should be (1,n)";
+    return reason_non_lorentzian;
+  }
+  return {};
+}
+
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
 template <typename T> void TestLorentzianity(MyMatrix<T> const &G) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
-  if (DiagInfo.nbZero != 0 || DiagInfo.nbMinus != 1) {
+  std::optional<std::string> opt = ReasonNonLorentzian(G);
+  if (opt) {
     std::cerr << "G=\n";
     WriteMatrix(std::cerr, G);
-    std::cerr << "We have nbZero=" << DiagInfo.nbZero
-              << " nbPlus=" << DiagInfo.nbPlus
-              << " nbMinus=" << DiagInfo.nbMinus << "\n";
-    std::cerr
-        << "In the hyperbolic geometry we should have nbZero=0 and nbMinus=1\n";
+    std::cerr << "Reason for non-lorentzianity=" << *opt << "\n";
     throw TerminalException{1};
   }
 }
