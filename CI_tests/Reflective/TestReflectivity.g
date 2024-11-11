@@ -34,7 +34,7 @@ end;
 AllAllowed:=true;
 
 WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
-    local FilePoincare_Data, FilePoincare_Nml, output, eGen;
+    local FilePoincare_Data, FilePoincare_Nml, output, strOut, eGen;
     FilePoincare_Data:=Concatenation(PrefixPoincare, ".data");
     FilePoincare_Nml:=Concatenation(PrefixPoincare, ".nml");
     output:=OutputTextFile(FilePoincare_Data, true);
@@ -46,21 +46,23 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     od;
     CloseStream(output);
     #
+    strOut:="&PROC\n";
+    strOut:=Concatenation(strOut, " method_adjacent = \"linear_programming\"\n");
+    strOut:=Concatenation(strOut, " eCommand_DD = \"glrs\"\n");
+    strOut:=Concatenation(strOut, " MethodMissingI = \"Gen2\"\n");
+    strOut:=Concatenation(strOut, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
+    strOut:=Concatenation(strOut, " FileO = \"output.test\"\n");
+    strOut:=Concatenation(strOut, " FileStepEnum = \"unset\"\n");
+    strOut:=Concatenation(strOut, " Approach = \"IncrementallyAdd\"\n");
+    strOut:=Concatenation(strOut, " n_iter_max = 1\n");
+    strOut:=Concatenation(strOut, " n_expand = 0\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
+    strOut:=Concatenation(strOut, " ComputeStabilizerPermutation = T\n");
+    strOut:=Concatenation(strOut, " ComputeGroupPresentation = T\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
     output:=OutputTextFile(FilePoincare_Nml, true);
-    AppendTo(output, "&PROC\n");
-    AppendTo(output, " method_adjacent = \"linear_programming\"\n");
-    AppendTo(output, " eCommand_DD = \"glrs\"\n");
-    AppendTo(output, " MethodMissingI = \"Gen2\"\n");
-    AppendTo(output, " FileDataPoincare = \"", FilePoincare_Data, "\"\n");
-    AppendTo(output, " FileO = \"output.test\"\n");
-    AppendTo(output, " FileStepEnum = \"unset\"\n");
-    AppendTo(output, " Approach = \"IncrementallyAdd\"\n");
-    AppendTo(output, " n_iter_max = 1\n");
-    AppendTo(output, " n_expand = 0\n");
-    AppendTo(output, " Arithmetic = \"rational\"\n");
-    AppendTo(output, " ComputeStabilizerPermutation = T\n");
-    AppendTo(output, " ComputeGroupPresentation = T\n");
-    AppendTo(output, "/\n");
+    WriteAll(output, strOut);
     CloseStream(output);
 end;
 
@@ -68,7 +70,7 @@ end;
 
 
 TestReflectivity:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
+    local n, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
     n:=Length(eRec.LorMat);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileNml:=Filename(DirectoryTemporary(), "Test.nml");
@@ -82,16 +84,18 @@ TestReflectivity:=function(eRec)
     #
     WriteMatrixFile(FileIn, eRec.LorMat);
     #
+    strOut:="&PROC\n";
+    strOut:=Concatenation(strOut, " FileLorMat = \"", FileIn, "\"\n");
+    strOut:=Concatenation(strOut, " OptionInitialVertex = \"isotropic_vinberg\"\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " FileOut = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " OptionNorms = \"all\"\n");
+    strOut:=Concatenation(strOut, " EarlyTerminationIfNotReflective = T\n");
+    strOut:=Concatenation(strOut, " ComputeAllSimpleRoots = T\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
     output:=OutputTextFile(FileNml, true);
-    AppendTo(output, "&PROC\n");
-    AppendTo(output, " FileLorMat = \"", FileIn, "\"\n");
-    AppendTo(output, " OptionInitialVertex = \"isotropic_vinberg\"\n");
-    AppendTo(output, " OutFormat = \"GAP\"\n");
-    AppendTo(output, " FileOut = \"", FileOut, "\"\n");
-    AppendTo(output, " OptionNorms = \"all\"\n");
-    AppendTo(output, " EarlyTerminationIfNotReflective = T\n");
-    AppendTo(output, " ComputeAllSimpleRoots = T\n");
-    AppendTo(output, "/\n");
+    WriteAll(output, strOut);
     CloseStream(output);
     #
     eProg:="../../src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk";

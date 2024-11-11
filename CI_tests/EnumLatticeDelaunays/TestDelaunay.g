@@ -13,21 +13,23 @@ TestEnumeration:=function(eRec)
     #
     WriteMatrixFile(FileIn, eRec.eG);
     #
+    strOut:="&DATA\n";
+    strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
+    strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
+    strOut:=Concatenation(strOut, " GRAMfile = \"", FileIn, "\"\n");
+    strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&STORAGE\n");
+    strOut:=Concatenation(strOut, " Saving = F\n");
+    strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
     output:=OutputTextFile(FileNml, true);
-    AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
-    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
-    AppendTo(output, " GRAMfile = \"", FileIn, "\"\n");
-    AppendTo(output, " SVRfile = \"unset.svr\"\n");
-    AppendTo(output, " OutFormat = \"GAP\"\n");
-    AppendTo(output, " OutFile = \"", FileOut, "\"\n");
-    AppendTo(output, " max_runtime_second = 10800\n");
-    AppendTo(output, "/\n");
-    AppendTo(output, "\n");
-    AppendTo(output, "&STORAGE\n");
-    AppendTo(output, " Saving = F\n");
-    AppendTo(output, " Prefix = \"DATA/\"\n");
-    AppendTo(output, "/\n");
+    WriteAll(output, strOut);
     CloseStream(output);
     #
     eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";

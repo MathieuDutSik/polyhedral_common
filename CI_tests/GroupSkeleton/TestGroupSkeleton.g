@@ -1,7 +1,7 @@
 Read("../common.g");
 
 TestGroupSkeleton:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
+    local n, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
     nbRow:=Length(eRec.FAC);
     dim:=Length(eRec.FAC[1]);
     FileInputNml:=Filename(DirectoryTemporary(), "TestInput.nml");
@@ -11,24 +11,26 @@ TestGroupSkeleton:=function(eRec)
     RemoveFileIfExist(FileGrpOut);
     RemoveFileIfExist(FileResultOut);
     #
+    strOut:="&PROC\n";
+    strOut:=Concatenation(strOut, " FACfile = \"", eRec.FileExt, "\"\n");
+    strOut:=Concatenation(strOut, " EXTfile = \"unset.ext\"\n");
+    strOut:=Concatenation(strOut, " GRPfile = \"", eRec.FileGrp, "\"\n");
+    strOut:=Concatenation(strOut, " OUTfile =\"", FileResultOut, "\"\n");
+    strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
+    strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
+    strOut:=Concatenation(strOut, " method_final = \"all\"\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
+    strOut:=Concatenation(strOut, " LevSearch = ", eRec.LevSearch, "\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&GROUP\n");
+    strOut:=Concatenation(strOut, " ComputeAutGroup = T\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"CPP\"\n");
+    strOut:=Concatenation(strOut, " GileGroup = \"", FileGrpOut, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
     output:=OutputTextFile(FileNml, true);
-    AppendTo(output, "&PROC\n");
-    AppendTo(output, " FACfile = \"", eRec.FileExt, "\"\n");
-    AppendTo(output, " EXTfile = \"unset.ext\"\n");
-    AppendTo(output, " GRPfile = \"", eRec.FileGrp, "\"\n");
-    AppendTo(output, " OUTfile =\"", FileResultOut, "\"\n");
-    AppendTo(output, " ComputeTotalNumberFaces = T\n");
-    AppendTo(output, " method_spann = \"LinearProgramming\"\n");
-    AppendTo(output, " method_final = \"all\"\n");
-    AppendTo(output, " Arithmetic = \"rational\"\n");
-    AppendTo(output, " LevSearch = ", eRec.LevSearch, "\n");
-    AppendTo(output, "/\n");
-    AppendTo(output, "\n");
-    AppendTo(output, "&GROUP\n");
-    AppendTo(output, " ComputeAutGroup = T\n");
-    AppendTo(output, " OutFormat = \"CPP\"\n");
-    AppendTo(output, " GileGroup = \"", FileGrpOut, "\"\n");
-    AppendTo(output, "/\n");
+    WriteAll(output, strOut);
     CloseStream(output);
     #
     eProg:="../../src_poly/POLY_FaceLatticeGen";
