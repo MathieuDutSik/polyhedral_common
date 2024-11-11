@@ -27,7 +27,7 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
     RemoveFileIfExist(FileOut);
     WriteListMatrixFile(FileIn, FullListMat);
     #
-    eProg:="../../src_indefinite_models/TEST_EquiStabFamily";
+    eProg:="../../src_latt/TEST_EquiStabFamily";
     Print("Before the Effective run\n");
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
@@ -51,13 +51,12 @@ ListMat:=[ClassicalSporadicLattices("A4"), ClassicalSporadicLattices("D4")];
 n_equiv:=4;
 
 result:=TestEquiStabDatabase(ListMat, n_equiv);
+CI_Decision_Reset();
 if result = false then
     # Error case
-    Print("Error case\n")
-    GAP_EXIT_CODE(1);
+    Print("Error case\n");
 else
     # No error case
-    Print("Normal case\n")
-    GAP_EXIT_CODE(0);
+    Print("Normal case\n");
+    CI_Write_Ok();
 fi;
-

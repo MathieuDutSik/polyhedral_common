@@ -113,4 +113,8 @@ jobs:
 
           cd CI_tests/Tspaces_IsoDelaunay
           ../../gap.sh < TestEnumIsoDelaunayDomain.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "Error: file not found!" >&2
+            exit 1
+          fi
           cd ../..

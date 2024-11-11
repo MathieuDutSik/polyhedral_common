@@ -1,9 +1,8 @@
 Read("../common.g");
+Print("Doing the computation of skeleton and groups\n");
 
 TestGroupSkeleton:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, GRPmatr, ListVertNorm, isCocompact, PrefixPoincare, FilePoincare_Data, FilePoincare_Nml, ThePt, eRoot, eGen, ListGen, PrefixPoincareTot, ListGenTot, ListGenIsom, hasIsotropic, is_correct;
-    nbRow:=Length(eRec.FAC);
-    dim:=Length(eRec.FAC[1]);
+    local FileInputNml, FileGrpOut, FileResultOut, strOut, output, eProg, TheCommand, GRPout;
     FileInputNml:=Filename(DirectoryTemporary(), "TestInput.nml");
     FileGrpOut:=Filename(DirectoryTemporary(), "TestGrp.out");
     FileResultOut:=Filename(DirectoryTemporary(), "TestResult.out");
@@ -20,7 +19,7 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
     strOut:=Concatenation(strOut, " method_final = \"all\"\n");
     strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
-    strOut:=Concatenation(strOut, " LevSearch = ", eRec.LevSearch, "\n");
+    strOut:=Concatenation(strOut, " LevSearch = ", String(eRec.LevSearch), "\n");
     strOut:=Concatenation(strOut, "/\n");
     strOut:=Concatenation(strOut, "\n");
     strOut:=Concatenation(strOut, "&GROUP\n");
@@ -29,12 +28,12 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, " GileGroup = \"", FileGrpOut, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    output:=OutputTextFile(FileNml, true);
+    output:=OutputTextFile(FileInputNml, true);
     WriteAll(output, strOut);
     CloseStream(output);
     #
     eProg:="../../src_poly/POLY_FaceLatticeGen";
-    TheCommand:=Concatenation(eProg, " ", FileNml);
+    TheCommand:=Concatenation(eProg, " ", FileInputNml);
     Exec(TheCommand);
     if IsExistingFile(FileGrpOut)=false or IsExistingFile(FileResultOut) then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -72,13 +71,13 @@ FullTest:=function()
 end;
 
 n_error:=FullTest();
+CI_Decision_Reset();
 if n_error > 0 then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;
 

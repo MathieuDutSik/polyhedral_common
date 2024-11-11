@@ -1,6 +1,7 @@
 Read("../common.g");
 Print("Beginning TestDelaunayEnumeration\n");
 
+
 TestEnumeration:=function(eRec)
     local n, FileIn, FileNml, FileOut, output, eProg, TheCommand, U, is_correct;
     n:=Length(eRec.eG);
@@ -59,8 +60,10 @@ FullTest:=function()
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
         RecReply:=TestEnumeration(eRec);
+        Print("RecReply=", RecReply, "\n");
         if RecReply.is_correct=false then
             n_error:=n_error+1;
+            Print("1: n_error=", n_error, "\n");
             return n_error;
         fi;
         iRec:=iRec + 1;
@@ -69,13 +72,19 @@ FullTest:=function()
 end;
 
 n_error:=FullTest();
+Print("2: n_error=", n_error, "\n");
+for i in [1..10]
+do
+    Print("Loop i=", i, "\n");
+od;
+
+CI_Decision_Reset();
 if n_error > 0 then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;
 

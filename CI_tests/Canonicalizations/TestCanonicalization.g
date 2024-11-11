@@ -40,8 +40,8 @@ GetCanonicalForm:=function(eMat)
     od;
     CloseStream(output);
     #
-    eProg:="./src_latt/LATT_Canonicalize";
-    TheCommand:=Concatenation(eProg, " 2 ", FileIn, " ", FileOut);
+    eProg:="../../src_latt/LATT_Canonicalize";
+    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP_full ", FileOut);
     Exec(TheCommand);
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);

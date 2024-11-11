@@ -108,4 +108,9 @@ jobs:
           # Running the test
           cd CI_tests/GroupSkeleton
           ../../gap.sh < TestGroupSkeleton.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "Error: file not found!" >&2
+            exit 1
+          fi
           cd ../..
+          echo "After all the test face lattice code"

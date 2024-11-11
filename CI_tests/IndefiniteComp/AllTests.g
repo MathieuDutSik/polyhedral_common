@@ -26,11 +26,11 @@ TestStab:=function(eList)
     return true;
 end;
 
-TestEquiv:=function(eRec)
+TestEquiv:=function(eList)
     local eProg, eGram1, eP, eGram2, FileM1, FileM2, FileOut, TheCommand, U;
     eProg:="../../src_indefinite/INDEF_FORM_TestEquivalence";
     eGram1:=GetGramMatrixFromList(eList);
-    eP:=RandomIntegralUnimodularMatrix(Length(eGram));
+    eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
     eGram2:=eP * eGram1 * TransposedMat(eP);
     FileM1:=Filename(DirectoryTemporary(), "Mat1.in");
     FileM2:=Filename(DirectoryTemporary(), "Mat2.in");
@@ -61,7 +61,7 @@ GetNrOrbitRepresentative:=function(eGram, Xnorm)
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbitRepresentative";
     FileM:=Filename(DirectoryTemporary(), "Mat.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    WriteMatrixFile(FileM2, eGram);
+    WriteMatrixFile(FileM, eGram);
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
@@ -77,7 +77,7 @@ end;
 TestOrbitRepresentative:=function(eList)
     local eGram1, eP, eGram2, Xnorm, res1, res2, nr_orbit1, nr_orbit2;
     eGram1:=GetGramMatrixFromList(eList);
-    eP:=RandomIntegralUnimodularMatrix(Length(eGram));
+    eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
     eGram2:=eP * eGram1 * TransposedMat(eP);
     for Xnorm in [0, 2]
     do
@@ -105,7 +105,7 @@ GetNrOrbitIsotropic:=function(eGram, kDim, choice)
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane";
     FileM:=Filename(DirectoryTemporary(), "Mat.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    WriteMatrixFile(FileM2, eGram);
+    WriteMatrixFile(FileM, eGram);
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
@@ -119,10 +119,11 @@ GetNrOrbitIsotropic:=function(eGram, kDim, choice)
 end;
 
 TestOrbitIsotropic:=function(eList, k)
-    local eGram1, eP, eGram2, choice, res1, res2, nr_orbit1, nr_orbit2;
+    local eGram1, eP, eGram2, Xnorm, choice, res1, res2, nr_orbit1, nr_orbit2;
     eGram1:=GetGramMatrixFromList(eList);
-    eP:=RandomIntegralUnimodularMatrix(Length(eGram));
+    eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
     eGram2:=eP * eGram1 * TransposedMat(eP);
+    Xnorm:=2;
     for choice in ["plane", "flag"]
     do
         res1:=GetNrOrbitIsotropic(eGram1, Xnorm);

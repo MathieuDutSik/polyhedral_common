@@ -109,4 +109,8 @@ jobs:
           cd CI_tests/GeometricallyUnique
           tar -vxzf AllExamples.tar.gz
           ../../gap.sh < ProcessEntries.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code should have created the file" >&2
+            exit 1
+          fi
           cd ../..

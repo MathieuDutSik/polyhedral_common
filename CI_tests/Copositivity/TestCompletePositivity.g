@@ -43,7 +43,7 @@ TestCompletePositivity:=function(eCase)
     WriteMatrixFile(FileIn, eCase.eMat);
     #
     eProg:="../../src_copos/CP_TestCompletePositivity";
-    TheCommand:=Concatenation(eProg, " ", FileIn, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");

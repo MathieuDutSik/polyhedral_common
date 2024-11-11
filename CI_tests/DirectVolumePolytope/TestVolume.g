@@ -1,7 +1,6 @@
 TestVolume:=function(eRec)
     local FileOut, eProg, TheCommand, the_volume;
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileOut);
     #
     eProg:="../../src_poly/POLY_lrs_volume";
     TheCommand:=Concatenation(eProg, " rational ", eRec.FileIn, " GAP ", FileOut);
@@ -11,7 +10,6 @@ TestVolume:=function(eRec)
         return false;
     fi;
     the_volume:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
     RemoveFile(FileOut);
     if the_volume<>eRec.the_volume then
         Print("Thevolume is incorrect\n");

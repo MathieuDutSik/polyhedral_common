@@ -23,12 +23,12 @@ do
     iFile:=iFile + 1;
     Print("iFile=", iFile, " n_error=", n_error, "\n");
 od;
+CI_Decision_Reset();
 if n_error > 0 then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;

@@ -123,5 +123,10 @@ jobs:
           cd src_dualdesc && make -f Makefile_CI && cd ..
           echo "After compilation of dual desc code"
 
-          cd CI_tests/EquivDualDesc && ../../gap.sh < TestCases.g && cd ../..
+          cd CI_tests/EquivDualDesc && ../../gap.sh < TestCases.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "gap test code has not finished correctly" >&2
+            exit 1
+          fi
+          cd ../..
           echo "We are in test directory"

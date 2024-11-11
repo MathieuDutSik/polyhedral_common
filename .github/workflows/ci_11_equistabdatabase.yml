@@ -108,5 +108,10 @@ jobs:
           cd src_latt && make -f Makefile_equistabdatabase && cd ..
           echo "After compilation of equi-stab database code"
 
-          cd CI_tests/EquiStabDatabase && ../../gap.sh < TestEquiStabDatabase.g && cd ../..
+          cd CI_tests/EquiStabDatabase && ../../gap.sh < TestEquiStabDatabase.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "Error: file not found!" >&2
+            exit 1
+          fi
+          cd ../..
           echo "After Stab/Equi tests"

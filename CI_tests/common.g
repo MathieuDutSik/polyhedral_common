@@ -1,3 +1,20 @@
+CI_Decision_Reset:=function()
+    local FileName;
+    FileName:="CI_CONCLUSION";
+    if IsExistingFile(FileName) then
+        RemoveFile(FileName);
+    fi;
+end;
+
+CI_Write_Ok:=function()
+    local FileName, TheCommand;
+    FileName:="CI_CONCLUSION";
+    TheCommand:=Concatenation("touch ", FileName);
+    Exec(TheCommand);
+end;
+
+
+
 WriteMatrix:=function(output, EXT)
     local eEXT, eVal;
     AppendTo(output, Length(EXT), " ", Length(EXT[1]), "\n");

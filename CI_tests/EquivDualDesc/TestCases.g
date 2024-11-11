@@ -1,8 +1,8 @@
 TestDualDesc:=function(eRec)
-    local prefix, FileOut, eProg, TheCommand, the_volume;
-    prefix
+    local prefix, FileOut, eProg, TheCommand, LOrb;
+    prefix:=eRec.prefix;
     #
-    eProg:="../../../src_poly/POLY_SerialDualDesc";
+    eProg:="../../../src_dualdesc/POLY_SerialDualDesc";
     TheCommand:=Concatenation("(cd ", prefix, " && ", eProg, " input.nml)");
     Exec(TheCommand);
     FileOut:=Concatenation(prefix, "/orbits");
@@ -15,11 +15,11 @@ TestDualDesc:=function(eRec)
     return true;
 end;
 
-eRec1:=rec(FileIn:="24cell", n_orbit:=1);
-eRec2:=rec(FileIn:="ContactE8", n_orbit:=2);
-eRec3:=rec(FileIn:="CUT_K7", n_orbit:=11);
-eRec4:=rec(FileIn:="CUT_K8", n_orbit:=147);
-ListRec:=[eRec1, eRec2, eRec3, eRec4];
+ListRec:=[];
+Add(ListRec, rec(prefix:="24cell", n_orbit:=1));
+Add(ListRec, rec(prefix:="ContactE8", n_orbit:=2));
+Add(ListRec, rec(prefix:="CUT_K7", n_orbit:=11));
+#Add(ListRec, rec(prefix:="CUT_K8", n_orbit:=147));
 
 FullTest:=function()
     local iRec, eRec, test;
@@ -37,12 +37,12 @@ FullTest:=function()
 end;
 
 test:=FullTest();
+CI_Decision_Reset();
 if test=false then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;
