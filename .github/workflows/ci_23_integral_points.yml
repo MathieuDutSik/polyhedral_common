@@ -106,4 +106,10 @@ jobs:
           echo "After compilation of relevant code"
 
           # Running the test
-          cd CI_tests/IntegralPoints && ../../gap.sh < TestIntegralPoint.g && cd ../..
+          cd CI_tests/IntegralPoints && ../../gap.sh < TestIntegralPoint.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "The integral points computation has failed"

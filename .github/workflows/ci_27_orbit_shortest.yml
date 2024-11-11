@@ -109,5 +109,10 @@ jobs:
           pwd
           echo "After compilation of enumeration of orbits of shortest vectors"
 
-          cd CI_tests/OrbitShortestVector && ../../gap.sh < TestOrbitVector.g && cd ../..
+          cd CI_tests/OrbitShortestVector && ../../gap.sh < TestOrbitVector.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
           echo "After test of the shortest basis enumeration code"

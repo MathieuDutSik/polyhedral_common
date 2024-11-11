@@ -115,4 +115,9 @@ jobs:
           tar -vxzf TestCasesEqui.tar.gz
           tar -vxzf TestCasesStab.tar.gz
           ../../gap.sh < TestStabEquiv.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
           cd ../..
+          echo "After all the tests"

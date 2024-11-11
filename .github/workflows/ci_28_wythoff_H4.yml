@@ -110,5 +110,10 @@ jobs:
           cd src_dualdesc && make -f Makefile_CI && cd ..
           echo "After compilation of Dual description code"
 
-          cd CI_tests/WythoffH4 && ../../gap.sh < TestWythoff.g && cd ../..
-          echo "After the tests"
+          cd CI_tests/WythoffH4 && ../../gap.sh < TestWythoff.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the test of Wythoff dual description"

@@ -69,12 +69,14 @@ do
         fi;
     fi;
 od;
+Print("n_error=", n_error, "\n");
+
+CI_Decision_Reset();
 if n_error > 0 then
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;
 
 

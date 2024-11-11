@@ -73,10 +73,6 @@ end;
 
 n_error:=FullTest();
 Print("2: n_error=", n_error, "\n");
-for i in [1..10]
-do
-    Print("Loop i=", i, "\n");
-od;
 
 CI_Decision_Reset();
 if n_error > 0 then

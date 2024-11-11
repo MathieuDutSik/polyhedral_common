@@ -1,7 +1,6 @@
 TestIntegralPoint:=function(FileEXT)
     local FileOut, eProg, TheCommand, the_volume;
     FileFAC:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileFAC);
     #
     eProg1:="../../src_poly/POLY_dual_description";
     command:="cdd";
@@ -53,13 +52,14 @@ FullTest:=function()
 end;
 
 test:=FullTest();
+
+CI_Decision_Reset();
 if test=false then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;
 

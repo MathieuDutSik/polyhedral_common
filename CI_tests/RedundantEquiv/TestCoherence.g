@@ -49,12 +49,14 @@ FullTest:=function()
 end;
 
 test:=FullTest();
+Print("test=", test, "\n");
+
+CI_Decision_Reset();
 if test=false then
     # Error case
     Print("Error case\n");
-    GAP_EXIT_CODE(1);
 else
     # No error case
     Print("Normal case\n");
-    GAP_EXIT_CODE(0);
+    CI_Write_Ok();
 fi;

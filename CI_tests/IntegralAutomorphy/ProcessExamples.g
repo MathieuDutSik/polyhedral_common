@@ -9,10 +9,8 @@ od;
 
 TestCase_Automorphy:=function(EXT)
     local FileI, FileO, arith, OutFormat, eProg, TheCommand, TheGRP;
-    FileI:="Test.in";
-    FileO:="Test.out";
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
+    FileI:=Filename(DirectoryTemporary(), "Test.in");
+    FileO:=Filename(DirectoryTemporary(), "Test.out");
     WriteMatrixFile(FileI, EXT);
     arith:="rational";
     OutFormat:="GAP";
@@ -26,10 +24,8 @@ end;
 
 TestCase_Automorphy_RightCoset:=function(EXT)
     local FileI, FileO, arith, OutFormat, eProg, TheCommand, TheGRP;
-    FileI:="Test.in";
-    FileO:="Test.out";
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
+    FileI:=Filename(DirectoryTemporary(), "Test.in");
+    FileO:=Filename(DirectoryTemporary(), "Test.out");
     WriteMatrixFile(FileI, EXT);
     arith:="rational";
     OutFormat:="GAP";
@@ -41,8 +37,7 @@ TestCase_Automorphy_RightCoset:=function(EXT)
     Print("|TheGRP|=", Order(TheGRP), "\n");
 end;
 
-
-
+#
 
 for eFile in ListFiles
 do

@@ -112,4 +112,9 @@ jobs:
 
           cd CI_tests/SimpleDualDesc
           ../../gap.sh < TestSimpleDualDesc.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
           cd ../..
+          echo "After the tests of simple dual description"

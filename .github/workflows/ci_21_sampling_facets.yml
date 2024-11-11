@@ -104,5 +104,10 @@ jobs:
           cd src_poly && make -f Makefile_sampling_facets && cd ..
           echo "After compilation of sampling facets"
 
-          cd CI_tests/SamplingFacets && ../../gap.sh < TestSampling.g && cd ../..
+          cd CI_tests/SamplingFacets && ../../gap.sh < TestSampling.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
           echo "After the sampling of facets"
