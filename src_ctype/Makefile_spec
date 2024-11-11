@@ -7,10 +7,10 @@
 #PROGRAM		= CTYP_MPI_Enumeration_c CTYP_PrepareInitialFile CTYP_ComputeMaxCoefficients CTYP_ComputeInvariant
 #PROGRAM		= CTYP_MPI_EnumerationAdjacencies
 #PROGRAM		= CTYP_CheckAdjacency
-#PROGRAM		= CTYP_MPI_AdjScheme
+PROGRAM		= CTYP_MPI_AdjScheme
 #PROGRAM		= CTYP_ComputeInvariant_B
 #PROGRAM		= NC_ComputeAverage
-PROGRAM		= CTYP_ComputeHashStat
+#PROGRAM		= CTYP_ComputeHashStat
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

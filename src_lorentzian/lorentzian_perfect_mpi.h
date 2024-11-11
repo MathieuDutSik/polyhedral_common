@@ -20,7 +20,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
+  std::cerr << "LORPERFMPI: max_runtime_second=" << max_runtime_second << "\n";
   std::string LorMatFile = BlockDATA.ListStringValues.at("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
   //
@@ -32,14 +32,14 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
     if (TheOption_str == "total") {
       return LORENTZIAN_PERFECT_OPTION_TOTAL;
     }
-    std::cerr << "Failed to find a matching entry for TheOption\n";
+    std::cerr << "Failed to find a matching entry for TheOption=" << TheOption << " allowed: total, isotropic\n";
     throw TerminalException{1};
   };
   int TheOption = get_option();
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  std::cerr << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   //
   int n = LorMat.rows();
   int dimEXT = n + 1;
@@ -62,15 +62,15 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "LORPERF: We now have IsFinished=" << pair.first << "\n";
-  os << "LORPERF: We now have |ListPerfect|=" << pair.second.size() << "\n";
+  os << "LORPERFMPI: We now have IsFinished=" << pair.first << "\n";
+  os << "LORPERFMPI: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {
     std::ofstream os_out(OutFile);
     bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
-    if (!result) {
-      std::cerr	<< "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    if (result) {
+      std::cerr	<< "LORPERFMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};
     }
   }

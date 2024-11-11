@@ -184,53 +184,6 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
 };
 
 template <typename T, typename Tint, typename Tgroup>
-void WriteFamilyCtypeNumber(
-    boost::mpi::communicator &comm, std::string const &OutFormat,
-    std::string const &OutFile,
-    std::vector<
-        DatabaseEntry_MPI<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj,
-                          typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>> const
-        &ListCtype,
-    [[maybe_unused]] std::ostream &os) {
-  using Tout =
-      DatabaseEntry_Serial<typename DataCtypeFunc<T, Tint, Tgroup>::Tobj,
-                           typename DataCtypeFunc<T, Tint, Tgroup>::TadjO>;
-  int i_rank = comm.rank();
-  if (OutFormat == "nothing") {
-    std::cerr << "No output\n";
-    return;
-  }
-  if (OutFormat == "GAP") {
-    int i_proc_out = 0;
-    std::vector<Tout> l_ent = my_mpi_gather(comm, ListCtype, i_proc_out);
-    if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
-      os_out << "return [";
-      size_t len = l_ent.size();
-      for (size_t i = 0; i < len; i++) {
-        if (i > 0)
-          os_out << ",\n";
-        WriteEntryGAP(os_out, l_ent[i].x);
-      }
-      os_out << "];\n";
-    }
-    return;
-  }
-  if (OutFormat == "NumberGAP") {
-    int i_proc_out = 0;
-    std::vector<Tout> l_ent = my_mpi_gather(comm, ListCtype, i_proc_out);
-    if (i_rank == i_proc_out) {
-      std::ofstream os_out(OutFile);
-      os_out << "return rec(nb:=" << l_ent.size() << ");\n";
-    }
-    return;
-  }
-  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
-            << "\n";
-  throw TerminalException{1};
-}
-
-template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
                                   FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
@@ -269,8 +222,8 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   if (pair.first) {
     std::ofstream os_out(OutFile);
     bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
-    if (!result) {
-      std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    if (result) {
+      std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};
     }
   }

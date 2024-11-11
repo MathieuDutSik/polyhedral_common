@@ -10,15 +10,15 @@ TestEnumeration:=function(eRec)
     #
     output:=OutputTextFile(FileNml, true);
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T = \"gmp_rational\"n");
-    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"n");
-    AppendTo(output, " OutFormat = \"NumberGAP\"n");
-    AppendTo(output, " OutFile = \"", FileOut, "\"n");
-    AppendTo(output, " n = ", eRec.n, "n");
+    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
+    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " OutFormat = \"NumberGAP\"\n");
+    AppendTo(output, " OutFile = \"", FileOut, "\"\n");
+    AppendTo(output, " n = ", eRec.n, "\n");
     AppendTo(output, " max_runtime_second = 0\n");
     AppendTo(output, " ApplyStdUnitbuf = T\n");
     AppendTo(output, " Saving = F\n");
-    AppendTo(output, " Prefix = \"DATA/\"");
+    AppendTo(output, " Prefix = \"DATA/\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -32,14 +32,14 @@ TestEnumeration:=function(eRec)
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileNml);
     RemoveFile(FileOut);
-    is_correct:=eRec.n_types = Length(U.nb);
+    is_correct:=eRec.n_types = U.nb;
     return rec(is_correct:=is_correct);
 end;
 
 ListRec:=[rec(n:=2, n_types:=1),
           rec(n:=3, n_types:=1),
           rec(n:=4, n_types:=3),
-          rec(n:=5, n_types:=76)
+          rec(n:=5, n_types:=77)
          ];
 
 FullTest:=function()

@@ -19,10 +19,10 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  os << "max_runtime_second=" << max_runtime_second << "\n";
+  os << "ISODELMPI: max_runtime_second=" << max_runtime_second << "\n";
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  os << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  os << "ISODELMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, os);
 
@@ -36,8 +36,8 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   if (pair.first) {
     std::ofstream os_out(OutFile);
     bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
-    if (!result) {
-      std::cerr	<< "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    if (result) {
+      std::cerr	<< "ISODELMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};
     }
   }
