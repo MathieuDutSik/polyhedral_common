@@ -291,28 +291,29 @@ ClassicalSporadicLattices:=function(TheName)
 end;
 
 GetGramMatrixFromString:=function(eStr)
-    local ListChar, i, IsNumber, scal, eStrRed;
+    local ListChar, ListVal, i, GetNumber, eChar, scal, eStrRed;
     ListChar:=[];
+    ListVal:=[];
     for i in [0..9]
     do
         Add(ListChar, String(i));
+        Add(ListVal, i);
     od;
-    IsNumber:=function(eChar)
-        local fChar;
-        for fChar in ListChar
-        do
-            if fChar=eChar then
-                return true;
-            fi;
-        od;
-        return false;
+    GetNumber:=function(eChar)
+        local pos;
+        pos:=Position(ListChar, eChar);
+        if pos=fail then
+            return fail;
+        fi;
+        return ListVal[pos];
     end;
-    if IsNumber(eStr[1])=false then
+    eChar:=eStr{[1]};
+    scal:=GetNumber(eChar);
+    if scal=fail then
         return ClassicalSporadicLattices(eStr);
     fi;
-    scal:=Number(eStr[1]);
     eStrRed:=eStr{[2..Length(eStr)]};
-    return scal * ClassicalSporadicLattices(eStr);
+    return scal * ClassicalSporadicLattices(eStrRed);
 end;
 
 

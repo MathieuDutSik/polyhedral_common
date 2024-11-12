@@ -3,14 +3,11 @@ Print("Beginning TestDelaunayEnumeration\n");
 
 
 TestEnumeration:=function(eRec)
-    local n, FileIn, FileNml, FileOut, output, eProg, TheCommand, U, is_correct;
+    local n, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, is_correct;
     n:=Length(eRec.eG);
     FileIn:=Filename(DirectoryTemporary(), "DelaunayEnum.in");
     FileNml:=Filename(DirectoryTemporary(), "DelaunayEnum.nml");
     FileOut:=Filename(DirectoryTemporary(), "DelaunayEnum.out");
-    RemoveFileIfExist(FileIn);
-    RemoveFileIfExist(FileNml);
-    RemoveFileIfExist(FileOut);
     #
     WriteMatrixFile(FileIn, eRec.eG);
     #
