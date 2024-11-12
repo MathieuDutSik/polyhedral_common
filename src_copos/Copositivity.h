@@ -869,7 +869,7 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   CopositivityTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
   if (!kerResult.test) {
-    std::cerr << "Inconsistency in the run. A bug to be solved\n";
+    std::cerr << "The matrix should not have any non-trivial kernel. Inconsistency in the run. A bug to be solved\n";
     throw TerminalException{1};
   }
 #endif
@@ -903,9 +903,9 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
                     MyMatrix<T> const &eSymmMatB) -> CopositivityTestResult<Tint> {
     return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
-#ifdef SANITY_CHECK_COPOSITIVITY
   CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
+#ifdef SANITY_CHECK_COPOSITIVITY
   if (!eResult.test) {
     std::cerr << "We should not have non-copositivity in "
                  "CopositiveShortestVector\n";

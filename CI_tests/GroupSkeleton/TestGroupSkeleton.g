@@ -25,12 +25,15 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, "&GROUP\n");
     strOut:=Concatenation(strOut, " ComputeAutGroup = T\n");
     strOut:=Concatenation(strOut, " OutFormat = \"CPP\"\n");
-    strOut:=Concatenation(strOut, " GileGroup = \"", FileGrpOut, "\"\n");
+    strOut:=Concatenation(strOut, " FileGroup = \"", FileGrpOut, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
     output:=OutputTextFile(FileInputNml, true);
     WriteAll(output, strOut);
     CloseStream(output);
+    #
+    TheCommand:=Concatenation("cat ", FileInputNml);
+    Exec(TheCommand);
     #
     eProg:="../../src_poly/POLY_FaceLatticeGen";
     TheCommand:=Concatenation(eProg, " ", FileInputNml);
