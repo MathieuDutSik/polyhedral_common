@@ -9,7 +9,7 @@
 
 template <typename Tint>
 void process_A(std::string const &FileExt, std::string const &OutFormat,
-               std::ostream &os) {
+               std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
@@ -22,7 +22,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   std::pair<Tgroup, std::vector<Telt>> pair =
       LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tgroup>(EXT, std::cerr);
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, std::cerr);
   std::cerr << "|GRPisom|=" << GRPisom.size()
             << " |pair.first|=" << pair.first.size()
             << " |pair.second|=" << pair.second.size() << "\n";
@@ -59,19 +59,19 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
     return strGAPmatr;
   };
   if (OutFormat == "GAP") {
-    os << "return " << GRP.GapString() << ";\n";
+    os_out << "return " << GRP.GapString() << ";\n";
     return;
   }
   if (OutFormat == "RecGAP") {
     std::string strGAPgroup =
         "Group(" + get_as_string(GRP.GeneratorsOfGroup()) + ")";
     std::string strCoset = get_as_string(pair.second);
-    os << "return rec(GAPperm:=" << GRP.GapString()
-       << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
+    os_out << "return rec(GAPperm:=" << GRP.GapString()
+           << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
     return;
   }
   if (OutFormat == "Oscar") {
-    WriteGroup(os, GRP);
+    WriteGroup(os_out, GRP);
     return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";

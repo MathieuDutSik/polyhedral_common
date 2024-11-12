@@ -8,14 +8,14 @@
 #PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= TEST_WeightMatrixLimited
-PROGRAM		= GRP_ListMat_Vdiag_EXT_Invariant
+#PROGRAM		= GRP_ListMat_Vdiag_EXT_Invariant
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Automorphism
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Isomorphism GRP_ListMat_Vdiag_EXT_Automorphism GRP_ListMat_Vdiag_EXT_Invariant
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
 #PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_LinearSpace_Stabilizer_RightCoset
-#PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
+PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_RuntimeOrbitSplitting
@@ -55,7 +55,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../src_isotropy -I../permutalib/src -I.
 #CDEFS           = -DEIGEN_NO_DEBUG -DTIMINGS -DDEBUG_SPECIFIC
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC -DDEBUG -DDEBUG_MATRIX_GROUP -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DTIMINGS -DPERMUTALIB_BLOCKING_SANITY_CHECK

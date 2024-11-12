@@ -1,4 +1,5 @@
 Read("../common.g");
+CI_Decision_Reset();
 
 ListFiles:=[];
 for n in [5..7]
@@ -8,14 +9,12 @@ do
 od;
 
 TestCase_Automorphy:=function(EXT)
-    local FileI, FileO, arith, OutFormat, eProg, TheCommand, TheGRP;
+    local FileI, FileO, arith, eProg, TheCommand, TheGRP;
     FileI:=Filename(DirectoryTemporary(), "Test.in");
     FileO:=Filename(DirectoryTemporary(), "Test.out");
     WriteMatrixFile(FileI, EXT);
-    arith:="rational";
-    OutFormat:="GAP";
     eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism";
-    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", OutFormat, " ", FileO);
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     TheGRP:=ReadAsFunction(FileO)();
@@ -27,10 +26,8 @@ TestCase_Automorphy_RightCoset:=function(EXT)
     FileI:=Filename(DirectoryTemporary(), "Test.in");
     FileO:=Filename(DirectoryTemporary(), "Test.out");
     WriteMatrixFile(FileI, EXT);
-    arith:="rational";
-    OutFormat:="GAP";
     eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism_RightCoset";
-    TheCommand:=Concatenation(eProg, " ", arith, " ", FileI, " ", OutFormat, " ", FileO);
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     TheGRP:=ReadAsFunction(FileO)();
@@ -49,3 +46,5 @@ do
         TestCase_Automorphy_RightCoset(EXT);
     od;
 od;
+
+CI_Write_Ok();
