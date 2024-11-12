@@ -9,6 +9,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_POLYTOPE_INT
+#endif
+
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
                                  Finsert f_insert, std::ostream &os) {
@@ -51,10 +55,12 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
     ListSize[iDim] = UniversalScalarConversion<int, Tint>(eSiz);
     eProd *= eSiz;
   }
+#ifdef DEBUG_POLYTOPE_INT
   os << "ListBound =";
   for (int iDim = 0; iDim < dim; iDim++)
     os << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
   os << " dim=" << dim << " eProd=" << eProd << "\n";
+#endif
   int nbFac = FAC.rows();
   auto IsCorrect = [&](MyVector<Tint> const &eVect) -> bool {
     for (int iFac = 0; iFac < nbFac; iFac++) {
@@ -182,10 +188,12 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert,
   size_t crit_siz = 10000;
   MyVector<Tint> ePoint(dim);
   set_bound(ePoint, 0);
-  std::cerr << "ListBound =";
+#ifdef DEBUG_POLYTOPE_INT
+  os << "ListBound =";
   for (size_t iDim = 0; iDim < dim; iDim++)
-    std::cerr << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
-  std::cerr << "\n";
+    os << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
+  os << "\n";
+#endif
   size_t pos = 0;
   //
   // While loop for iterating

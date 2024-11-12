@@ -33,7 +33,7 @@ TestIntegralPoint:=function(FileEXT)
     return true;
 end;
 
-ListFile:=["ER35.ext", "G6.ext"];
+ListFile:=["ER35.ext", "G6.txt"];
 for i in [1..27]
 do
     eFile:=Concatenation("Perfect8_", String(i));

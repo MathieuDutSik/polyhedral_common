@@ -1,3 +1,4 @@
+Read("../common.g");
 Print("Beginning TestWythoff\n");
 
 TestFCT:=function()
