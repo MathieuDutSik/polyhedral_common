@@ -78,7 +78,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
 #endif
     MyMatrix<T> ListIneq = MatrixFromVectorFamily(ListIneq_vect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Building ListIneq|=" << time << " nbVect=" << nbVect << "\n";
+    os << "|Building ListIneq|=" << time << " nbVect=" << ListIneq.rows() << "\n";
 #endif
     LpSolution<T> eSol =
         CDD_LinearProgramming(ListIneq, TheRandomDirection, os);

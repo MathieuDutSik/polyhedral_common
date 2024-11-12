@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "rational") {
         using T = mpq_class;
-        process<T>(opt, FileM, OutFormat, os);
+        return process<T>(opt, FileM, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith
                 << "\n";

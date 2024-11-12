@@ -1,7 +1,9 @@
+Read("../common.g");
+Print("Beginning TestLamination\n");
+
 TestLamination:=function(eRec)
-    local FileOut, eProg, TheCommand, the_volume;
+    local FileOut, eProg, TheCommand, answer, test1, test2;
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileOut);
     #
     eProg:="../../src_poly/POLY_TwoLaminations";
     TheCommand:=Concatenation(eProg, " rational one ", eRec.FileIn, " GAP ", FileOut);
@@ -11,7 +13,6 @@ TestLamination:=function(eRec)
         return false;
     fi;
     answer:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
     RemoveFile(FileOut);
     test1:=answer=fail;
     test2:=eRec.answer=fail;
@@ -22,10 +23,10 @@ TestLamination:=function(eRec)
     return true;
 end;
 
-eRec1:=rec(FileIn:="G6.ext", answer:=fail);
-eRec2:=rec(FileIn:="24cell_poly.ext", answer:=fail);
-eRec3:=rec(FileIn:="H3.ext", answer:=[]);
-ListRec:=[eRec1, eRec2, eRec3];
+ListRec:=[];
+Add(ListRec, rec(FileIn:="G6.ext", answer:=fail));
+Add(ListRec, rec(FileIn:="24cell_poly.ext", answer:=fail));
+Add(ListRec, rec(FileIn:="H3.ext", answer:=[]));
 
 FullTest:=function()
     local iRec, eRec, test;
@@ -43,6 +44,8 @@ FullTest:=function()
 end;
 
 test:=FullTest();
+Print("test=", test, "\n");
+
 CI_Decision_Reset();
 if test=false then
     # Error case

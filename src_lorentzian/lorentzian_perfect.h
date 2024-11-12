@@ -469,12 +469,19 @@ MyVector<T> ConcatenateScalarVector(T const &scal, MyVector<T> const &V) {
 template <typename T>
 std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
                                MyVector<T> const &eNSPbas,
-                               MyVector<T> const &eNSPdir) {
+                               MyVector<T> const &eNSPdir,
+                               [[maybe_unused]] std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 1\n";
+#endif
   MyMatrix<T> LorMatInv = Inverse(LorMat);
   T eCstBas = eNSPbas(0);
   T eCstDir = eNSPdir(0);
   MyVector<T> eBas = GetReducedVector(eNSPbas);
   MyVector<T> eDir = GetReducedVector(eNSPdir);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 2\n";
+#endif
   // For an acceptable vector w of length n+1 in return we must have w[0] < 0.
   // Since we have w = u + TheMult * v we have a potential upper bound
   // on TheMult, but only if v[0] > 0
@@ -490,10 +497,21 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
 #endif
     ListUpperBound.push_back(*UpperBound_constant);
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 3\n";
+#endif
   //
   // Get raw upper bound
   //
   T iShift = 1;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  MyVector<T> eBas_V = LorMatInv * eBas;
+  MyVector<T> eDir_V = LorMatInv * eDir;
+  T normBas = EvaluationQuadForm<T, T>(LorMat, eBas_V);
+  T normDir = EvaluationQuadForm<T, T>(LorMat, eDir_V);
+  T scalBasDir = ScalarProductQuadForm(LorMat, eBas_V, eDir_V);
+  os << "LORPERF: GetUpperBound, normBas=" << normBas << " normDir=" << normDir << " scalBasDir=" << scalBasDir << "\n";
+#endif
   while (true) {
     MyVector<T> eV = eBas + iShift * eDir;
     MyVector<T> eVect = LorMatInv * eV;
@@ -504,6 +522,9 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
     }
     iShift *= 2;
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 4\n";
+#endif
   //
   // More subttle upper bound coming from isotropy computation
   //
@@ -535,15 +556,24 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
       }
     }
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 5\n";
+#endif
   if (ListUpperBound_Iso.size() > 0) {
     UpperBound_isotropic = VectorMin(ListUpperBound_Iso);
     ListUpperBound.push_back(*UpperBound_isotropic);
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 6\n";
+#endif
   if (UpperBound_constant.has_value() && UpperBound_isotropic.has_value()) {
     if (*UpperBound_constant == *UpperBound_isotropic) {
       return {};
     }
   }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetUpperBound, step 7\n";
+#endif
   // Need to see if better upper bounds are possible, but this is a secondary
   // question
   T BestUpper = VectorMin(ListUpperBound);
@@ -574,8 +604,14 @@ template <typename T, typename Tint>
 ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
     MyMatrix<T> const &LorMat, std::vector<MyVector<Tint>> const &CritSet,
     MyVector<T> const &eNSPbas, MyVector<T> const &eNSPdir,
-    int const &TheOption, [[maybe_unused]] std::ostream &os) {
+    int const &TheOption, std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: Beginning of LORENTZ_Kernel_Flipping\n";
+#endif
   MyMatrix<T> LorMatInv = Inverse(LorMat);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: We have LorMatInv\n";
+#endif
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
   std::vector<MyVector<T>> M1{eNSPbas, eNSPdir};
   MyMatrix<T> M2 = MatrixFromVectorFamily(M1);
@@ -617,12 +653,15 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
 #endif
   bool OnlyShortest = true;
   T TheLowerBound = 0;
-  std::optional<T> TheUpperBound_opt = GetUpperBound(LorMat, eNSPbas, eNSPdir);
+  std::optional<T> TheUpperBound_opt = GetUpperBound(LorMat, eNSPbas, eNSPdir, os);
   if (!TheUpperBound_opt) {
     std::cerr << "We have TheUpperBound that is none and that is a problem\n";
     throw TerminalException{1};
   }
   T TheUpperBound = *TheUpperBound_opt;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: TheUpperBound=" << TheUpperBound << "\n";
+#endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
   int n_iter = 0;
 #endif
@@ -805,7 +844,7 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
     os << "LORPERF: GetOneOutsideRay: We have eNSPdir\n";
 #endif
     std::optional<T> TheUpperBound_opt =
-        GetUpperBound(LorMat, eNSPbas, eNSPdir);
+      GetUpperBound(LorMat, eNSPbas, eNSPdir, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
     os << "LORPERF: GetOneOutsideRay: We have TheUpperBound_opt\n";
 #endif
