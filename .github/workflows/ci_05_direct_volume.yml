@@ -105,5 +105,10 @@ jobs:
           echo "After compilation of lrs_volume program"
 
           # Running the test
-          cd CI_tests/DirectVolumePolytope && ../../gap.sh < TestVolume.g && cd ../..
+          cd CI_tests/DirectVolumePolytope && ../../gap.sh < TestVolume.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
           echo "After running of the program"

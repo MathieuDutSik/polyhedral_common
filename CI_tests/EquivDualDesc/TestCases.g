@@ -1,3 +1,6 @@
+Read("../common.g");
+Print("Beginning TestCases\n");
+
 TestDualDesc:=function(eRec)
     local prefix, FileOut, eProg, TheCommand, LOrb;
     prefix:=eRec.prefix;
@@ -39,10 +42,8 @@ end;
 test:=FullTest();
 CI_Decision_Reset();
 if test=false then
-    # Error case
     Print("Error case\n");
 else
-    # No error case
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
