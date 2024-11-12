@@ -77,20 +77,30 @@ STRING_Split:=function(eStr, ePat)
   return rec(ListStrInter:=ListStrInter, ListMatch:=ListMatch);
 end;
 
-ReadMatrixFile:=function(eFile)
-    local file, line, eRec, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
-    file:=InputTextFile(eFile);
+ReadLineRed:=function(file)
+    local line, n_char, lineRed;
     line:=ReadLine(file);
-    eRec:=SplitString(line, " ");
-    nbRow:=Int(eRec[1]);
-    nbCol:=Int(eRec[2]);
+    n_char:=Length(line) - 1;
+    lineRed:=line{[1..n_char]};
+    return lineRed;
+end;
+
+
+
+ReadMatrixFile:=function(eFile)
+    local file, line, LStr, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
+    file:=InputTextFile(eFile);
+    line:=ReadLineRed(file);
+    LStr:=SplitString(line, " ");
+    nbRow:=Int(LStr[1]);
+    nbCol:=Int(LStr[2]);
     TheMat:=[];
     for iRow in [1..nbRow]
     do
-        line:=ReadLine(file);
-        eRec:=SplitString(line, " ");
+        line:=ReadLineRed(file);
+        LStr:=SplitString(line, " ");
         eLine:=[];
-        for eStr in eRec.ListStrInter
+        for eStr in LStr
         do
             if Length(eStr) > 0 then
                 val:=Rat(eStr);
@@ -98,6 +108,7 @@ ReadMatrixFile:=function(eFile)
             fi;
         od;
         if Length(eLine)<>nbCol then
+            Print("|eLine|=", Length(eLine), " nbCol=", nbCol, "\n");
             Error("Inconsistent length of vector");
         fi;
         Add(TheMat, eLine);
