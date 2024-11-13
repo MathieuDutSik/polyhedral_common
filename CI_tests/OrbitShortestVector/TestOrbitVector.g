@@ -6,9 +6,6 @@ TestOrbitShortest:=function(eRec)
     GramMat:=GetGramMatrixFromString(eRec.name);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileIn);
-    RemoveFileIfExist(FileOut);
-    #
     WriteMatrixFile(FileIn, GramMat);
     #
     eProg:="../../src_latt/LATT_ComputeShortestOrbits";
@@ -21,18 +18,17 @@ TestOrbitShortest:=function(eRec)
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileOut);
+    Print("|U.vf|=", Length(U.vf), " n_orbit=", eRec.n_orbit, "\n");
     if Length(U.vf)<>eRec.n_orbit then
         Print("The number of orbits is incorrect\n");
-        Print("|U.vf|=", Length(U.vf), " n_orbit=", eRec.n_orbit, "\n");
         return false;
     fi;
     return true;
 end;
 
-
-eRec1:=rec(name:="A2", n_orbit:=1);
-eRec2:=rec(name:="A3", n_orbit:=1);
-ListRec:=[eRec1, eRec2];
+ListRec:=[];
+Add(ListRec, rec(name:="A2", n_orbit:=1));
+Add(ListRec, rec(name:="A3", n_orbit:=2));
 
 FullTest:=function()
     local iRec, eRec, test;
@@ -54,10 +50,8 @@ Print("result=", result, "\n");
 
 CI_Decision_Reset();
 if result = false then
-    # Error case
     Print("Error case\n");
 else
-    # No error case
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
