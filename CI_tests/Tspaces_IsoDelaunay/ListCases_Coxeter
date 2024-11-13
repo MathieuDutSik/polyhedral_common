@@ -1,4 +1,4 @@
 return [
-rec(FileLinSpa:="TSPACE_Coxeter9_5_iO1_single_vect", n_domain:=22),
-rec(FileLinSpa:="TSPACE_Coxeter9_5_iO1_bravais_stabilizer", n_domain:=210)
+rec(eFile:="TSPACE_Coxeter9_5_iO1_single_vect", nb:=22),
+rec(eFile:="TSPACE_Coxeter9_5_iO1_bravais_stabilizer", nb:=210)
 ];

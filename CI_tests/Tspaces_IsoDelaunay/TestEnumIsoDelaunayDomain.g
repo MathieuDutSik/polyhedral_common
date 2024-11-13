@@ -28,9 +28,16 @@ TestEnumeration:=function(eRec)
 end;
 
 ListRec:=[];
-for eFile in ["ListCases_Bravais", "ListCases_Coxeter"]
+for eData in [rec(prefix:="TSPACES_Bravais", FileS:="ListCases_Bravais"),
+              rec(prefix:="TSPACES_Coxeter", FileS:="ListCases_Coxeter")]
 do
-    Append(ListRec, ReadAsFunction(eFile)());
+    Lst:=ReadAsFunction(eData.FileS)();
+    for elst in Lst
+    do
+        eFile:=Concatenation(eData.prefix, "/", elst.eFile);
+        eRec:=rec(eFile:=eFile, nb:=elst.nb);
+        Add(ListRec, eRec);
+    od;
 od;
 
 FullTest:=function()
