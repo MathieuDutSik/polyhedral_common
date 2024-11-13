@@ -17,9 +17,6 @@ Equi_SingleTest:=function(eRecEqui)
     FileMat1:=Filename(DirTemp, "Indef_Equi.mat1");
     FileMat2:=Filename(DirTemp, "Indef_Equi.mat2");
     FileTest:=Filename(DirTemp, "Indef_Equi.test");
-    RemoveFileIfExist(FileMat1);
-    RemoveFileIfExist(FileMat2);
-    RemoveFileIfExist(FileTest);
     #
     WriteMatrixFile(FileMat1, mat1);
     WriteMatrixFile(FileMat2, mat2);
@@ -33,9 +30,9 @@ Equi_SingleTest:=function(eRecEqui)
         return rec(is_correct:=false);
     fi;
     U:=ReadAsFunction(FileTest)();
-    RemoveFileIfExist(FileMat1);
-    RemoveFileIfExist(FileMat2);
-    RemoveFileIfExist(FileTest);
+    RemoveFile(FileMat1);
+    RemoveFile(FileMat2);
+    RemoveFile(FileTest);
     if U=fail then
         if test<>fail then
             Print("Different equivalence conclusions\n");

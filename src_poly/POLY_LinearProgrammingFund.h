@@ -106,7 +106,7 @@ template <typename T>
 bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
                                  MyVector<T> const &eVect,
                                  LpSolution<T> const &eSol,
-                                 std::ostream& os) {
+                                 [[maybe_unused]] std::ostream& os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyVector<T> V(nbCol - 1);

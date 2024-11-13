@@ -7,7 +7,8 @@ TestEnumeration:=function(eRec)
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
     FileResult:="Result";
-    TheCommand:=Concatenation("cp ", eRec.FileLinSpa, " ", FileLinSpa);
+    Print("eRec=", eRec, "\n");
+    TheCommand:=Concatenation("cp ", eRec.eFile, " ", FileLinSpa);
     Exec(TheCommand);
     #
     eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
@@ -18,7 +19,7 @@ TestEnumeration:=function(eRec)
         Print("The output file is not existing. That qualifies as a fail\n");
         return rec(is_correct:=false);
     fi;
-    U:=ReadAsFunction(FileOut)();
+    U:=ReadAsFunction(FileResult)();
     RemoveFile(FileLinSpa);
     RemoveFile(FileResult);
     is_correct:=eRec.n_domain = U.nb;
@@ -54,10 +55,8 @@ Print("n_error=", n_error, "\n");
 
 CI_Decision_Reset();
 if n_error > 0 then
-    # Error case
     Print("Error case\n");
 else
-    # No error case
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
