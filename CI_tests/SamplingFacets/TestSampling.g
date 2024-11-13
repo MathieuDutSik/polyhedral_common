@@ -51,7 +51,7 @@ eRec3:=rec(FileIn:="Example_03_CUT_K55.ext", l_command:=Lcommand1);
 eRec4:=rec(FileIn:="Example_04_CUT_K144.ext", l_command:=Lcommand1);
 eRec5:=rec(FileIn:="Example_05_MET_K144.ext", l_command:=Lcommand1);
 eRec6:=rec(FileIn:="Example_06_Perfect_E7.ext", l_command:=Lcommand2);
-eRec7:=rec(FileIn:="Example_07_CUT7.ext", l_command:=Lcommand3);
+eRec7:=rec(FileIn:="Example_07_CUT7.ext", l_command:=Lcommand2);
 eRec8:=rec(FileIn:="Example_08_MET7.ext", l_command:=Lcommand3);
 eRec9:=rec(FileIn:="Example_09_CUT8.ext", l_command:=Lcommand2);
 ListRec:=[eRec1, eRec2, eRec3, eRec4, eRec5, eRec6, eRec7, eRec8, eRec9];

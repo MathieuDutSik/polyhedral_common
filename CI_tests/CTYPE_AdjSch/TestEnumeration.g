@@ -44,7 +44,7 @@ end;
 ListRec:=[rec(n:=2, n_types:=1),
           rec(n:=3, n_types:=1),
           rec(n:=4, n_types:=3),
-          rec(n:=5, n_types:=77)
+          rec(n:=5, n_types:=76)
          ];
 
 FullTest:=function()

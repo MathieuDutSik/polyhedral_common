@@ -110,5 +110,10 @@ jobs:
           echo "After compilation of lattice code"
 
           # Running the test
-          cd CI_tests/Canonicalizations && ../../gap.sh < TestCanonicalization.g && cd ../..
+          cd CI_tests/Canonicalizations && ../../gap.sh < TestCanonicalization.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
           echo "After canonicalization stuff"
