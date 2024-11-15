@@ -42,7 +42,7 @@ void process(std::string const &FileI, std::string const &strCritNorm,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
       std::cerr << "LATT_FindPositiveVector arith [FileI] [CritNorm] "
@@ -90,5 +90,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in LATT_FindIsotropic\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

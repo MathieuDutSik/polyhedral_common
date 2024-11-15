@@ -39,7 +39,7 @@ void process(std::string const &MatFile, std::string const &XnormStr,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 4 && argc != 6) {
       std::cerr
@@ -87,5 +87,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

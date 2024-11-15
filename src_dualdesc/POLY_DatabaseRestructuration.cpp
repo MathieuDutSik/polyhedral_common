@@ -10,7 +10,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 8) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -130,5 +130,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Something went wrong in the computation, please debug\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

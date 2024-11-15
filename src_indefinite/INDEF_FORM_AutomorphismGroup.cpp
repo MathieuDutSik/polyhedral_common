@@ -31,7 +31,7 @@ void process(std::string const &MatFile, std::string const &OutFormat,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time;
+  HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [MatFile]\n";

@@ -56,7 +56,7 @@ void AppendSingleCtype_T(MyMatrix<Tinput> const &M, int const &NbAdj,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     using Tint = int;
     FullNamelist eFull = NAMELIST_InitialPreparation();
@@ -305,5 +305,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in CTYP_PrepareInitialFile\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

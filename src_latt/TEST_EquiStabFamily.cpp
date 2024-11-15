@@ -157,7 +157,7 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
       std::cerr << "TEST_EquiStabFamily [arith] [ListMatFile]\n";
@@ -199,5 +199,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in TEST_EquiStabFamily\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

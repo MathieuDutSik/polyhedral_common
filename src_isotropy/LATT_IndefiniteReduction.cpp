@@ -9,7 +9,7 @@
 // clang-format on
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 4 && argc != 2) {
       std::cerr << "LATT_IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
@@ -89,5 +89,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in IndefiniteReduction\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

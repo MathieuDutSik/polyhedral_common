@@ -22,7 +22,7 @@ void NC_ReadMatrix_T(netCDF::NcVar &varCtype, MyMatrix<int> &M,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     using Tint = int;
     std::string Prefix = argv[1];
@@ -76,5 +76,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in CTYP_ComputeMaxCoefficients\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

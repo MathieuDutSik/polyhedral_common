@@ -40,7 +40,7 @@ void process(std::string const &File1, std::string const &File2,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 4 && argc != 6) {
       std::cerr << "INDEF_FORM_TestEquivalence [arith] [File1] [File2]\n";
@@ -87,5 +87,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in INDEF_FORM_TestEquivalence\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }

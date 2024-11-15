@@ -40,7 +40,7 @@ void process(std::string const &MatFile, std::string const &KStr,
 }
 
 int main(int argc, char *argv[]) {
-  SingletonTime time1;
+  HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
       std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane [arith] [MatFile] "
@@ -89,5 +89,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in INDEF_FORM_GetOrbit_IsotropicKplane\n";
     exit(e.eVal);
   }
-  runtime(time1);
+  runtime(time);
 }
