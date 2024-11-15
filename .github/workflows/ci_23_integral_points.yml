@@ -16,8 +16,6 @@ jobs:
       BOOST_INCDIR: "/usr/include"
       BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
       EIGEN_PATH: /home/runner/work/opt/eigen
-      TBB_INCDIR: /usr/include
-      TBB_LINK: "-ltbb"
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
       FLINT_INCDIR: "/include"
@@ -52,7 +50,7 @@ jobs:
           sudo apt-get install -y cmake
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-          sudo apt-get install -y libtbb-dev libgsl-dev libglpk-dev libflint-dev
+          sudo apt-get install -y libglpk-dev libflint-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt-get install -y libntl-dev libmpfr-dev
