@@ -26,9 +26,10 @@ TestEnumeration:=function(eRec)
     strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    output:=OutputTextFile(FileNml, true);
-    WriteAll(output, strOut);
-    CloseStream(output);
+    WriteStringFile(FileNml, strOut);
+    #
+    TheCommand:=Concatenation("cat ", FileNml);
+    Exec(TheCommand);
     #
     eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);

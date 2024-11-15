@@ -60,7 +60,7 @@ template <typename T> struct FacetizationInfo {
 
 template <typename T>
 FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
-                                     MyMatrix<T> const &BoundingFac, std::ostream &os) {
+                                     MyMatrix<T> const &BoundingFac, [[maybe_unused]] std::ostream &os) {
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
@@ -471,14 +471,18 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
     // Selecting the relevant rows to test against
     //
     Face select(n_rows);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
     size_t sel_siz = 0;
+#endif
     for (size_t j_orbit = 0; j_orbit < n_orbit; j_orbit++) {
       if (i_orbit != j_orbit && status_orbit[j_orbit] == 1) {
         Face sing_orbit = vf[j_orbit];
         boost::dynamic_bitset<>::size_type i_row = sing_orbit.find_first();
         while (i_row != boost::dynamic_bitset<>::npos) {
           select[i_row] = 1;
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
           sel_siz++;
+#endif
           i_row = sing_orbit.find_next(i_row);
         }
       }

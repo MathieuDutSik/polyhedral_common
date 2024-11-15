@@ -28,9 +28,7 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, " FileGroup = \"", FileGrpOut, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    output:=OutputTextFile(FileInputNml, true);
-    WriteAll(output, strOut);
-    CloseStream(output);
+    WriteStringFile(FileInputNml, strOut);
     #
     TheCommand:=Concatenation("cat ", FileInputNml);
     Exec(TheCommand);

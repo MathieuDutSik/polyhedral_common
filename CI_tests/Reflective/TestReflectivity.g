@@ -61,9 +61,7 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     strOut:=Concatenation(strOut, " ComputeGroupPresentation = T\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    output:=OutputTextFile(FilePoincare_Nml, true);
-    WriteAll(output, strOut);
-    CloseStream(output);
+    WriteStringFile(FilePoincare_Nml, strOut);
 end;
 
 
@@ -94,9 +92,7 @@ TestReflectivity:=function(eRec)
     strOut:=Concatenation(strOut, " ComputeAllSimpleRoots = T\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    output:=OutputTextFile(FileNml, true);
-    WriteAll(output, strOut);
-    CloseStream(output);
+    WriteStringFile(FileNml, strOut);
     #
     eProg:="../../src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk";
     TheCommand:=Concatenation(eProg, " ", FileNml);

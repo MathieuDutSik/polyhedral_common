@@ -13,6 +13,12 @@ CI_Write_Ok:=function()
     Exec(TheCommand);
 end;
 
+WriteStringFile:=function(eFile, strOut)
+    local output;
+    output:=OutputTextFile(eFile, true);
+    WriteAll(output, strOut);
+    CloseStream(output);
+end;
 
 
 WriteMatrix:=function(output, EXT)
