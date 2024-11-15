@@ -24,7 +24,7 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, "\n");
     strOut:=Concatenation(strOut, "&GROUP\n");
     strOut:=Concatenation(strOut, " ComputeAutGroup = T\n");
-    strOut:=Concatenation(strOut, " OutFormat = \"CPP\"\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
     strOut:=Concatenation(strOut, " FileGroup = \"", FileGrpOut, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
@@ -38,8 +38,12 @@ TestGroupSkeleton:=function(eRec)
     eProg:="../../src_poly/POLY_FaceLatticeGen";
     TheCommand:=Concatenation(eProg, " ", FileInputNml);
     Exec(TheCommand);
-    if IsExistingFile(FileGrpOut)=false or IsExistingFile(FileResultOut) then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    if IsExistingFile(FileGrpOut)=false then
+        Print("The Group output file is not existing. That qualifies as a fail\n");
+        return rec(is_correct:=false);
+    fi;
+    if IsExistingFile(FileResultOut)=false then
+        Print("The Result output file is not existing. That qualifies as a fail\n");
         return rec(is_correct:=false);
     fi;
     GRPout:=ReadAsFunction(FileGrpOut)();

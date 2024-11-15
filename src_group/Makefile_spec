@@ -15,7 +15,8 @@
 #PROGRAM		= GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer
 #PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_LinearSpace_Stabilizer_RightCoset
-PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
+#PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
+PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset GRP_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_RuntimeOrbitSplitting
@@ -48,7 +49,6 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-
 #   GCC
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
-#CC		= g++-11 -std=c++17 -Wall -O3 -g -fsanitize=address -fsanitize=bounds -fsanitize=return -fsanitize=null
 #CC		= g++ -std=c++17 -Wall -g -O3 -static-libgcc -static-libstdc++
 #CC		= g++ -std=c++17 -Wall -g -O2 -fsanitize=address -fsanitize=undefined -fstack-protector-all
 
