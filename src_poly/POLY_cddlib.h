@@ -8508,6 +8508,26 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
   return eSol;
 }
 
+template<typename T>
+bool is_lifting_possible(cdd::dd_lpdata<T> *lp) {
+  if (lp->LPS != cdd::dd_Optimal) {
+    // If we do not have an optimal solution, then we cannot have a configuration
+    // of inequalities that get us the optimal vertex.
+    return false;
+  }
+  cdd::dd_colrange j, d = lp->d;
+  for (j = 1; j < d; j++) {
+    long idx = lp->nbindex[j + 1];
+    if (idx <= 0) {
+      // A negative index means that we do not have a full configuration of vectors
+      // and so the solution of the linear system strategy will not work.
+      return false;
+    }
+  }
+  return true;
+}
+
+
 template <typename T, typename Tfloat>
 std::optional<LpSolution<T>>
 LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
@@ -8527,14 +8547,29 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   cdd::dd_colrange d = lp->d;
   MyVector<T> V(d - 1);
   MyMatrix<T> M(d - 1, d - 1);
+#ifdef DEBUG_CDD
+  os << "CDD: Definition of V and M (step 1)\n";
+#endif
   for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
+#ifdef DEBUG_CDD
+    os << "CDD: j=" << static_cast<int>(j) << "/" << static_cast<int>(d) << " idx=" << static_cast<int>(idx) << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+#endif
     V(j - 1) = EXT(idx - 1, 0);
     for (i = 0; i < d - 1; i++) {
       M(i, j - 1) = -EXT(idx - 1, i + 1);
     }
+#ifdef DEBUG_CDD
+    os << "CDD: After V and M sets\n";
+#endif
   }
+#ifdef DEBUG_CDD
+  os << "CDD: Definition of V and M (step 2)\n";
+#endif
   std::optional<MyVector<T>> optA = SolutionMat(M, V);
+#ifdef DEBUG_CDD
+  os << "CDD: We have optA\n";
+#endif
   if (!optA) {
 #ifdef DEBUG_CDD
     os << "CDD: LIFT ERROR, Could not find a solution to SolutionMat(M, V)\n";
@@ -8550,6 +8585,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
       eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
+#ifdef DEBUG_CDD
+  os << "CDD: We have eSum\n";
+#endif
     if (eSum < 0) {
 #ifdef DEBUG_CDD
       os << "CDD: LIFT ERROR, Not an interior point at iRow=" << iRow
@@ -8562,6 +8600,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     objDirect += DirectSolution(iCol) * eVect(iCol + 1);
   }
+#ifdef DEBUG_CDD
+  os << "CDD: We have objDirect\n";
+#endif
   //
   // Getting the dual solution
   //
@@ -8569,6 +8610,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     eVectRed(iCol) = eVect(iCol + 1);
   }
+#ifdef DEBUG_CDD
+  os << "CDD: We have eVectRed\n";
+#endif
   MyMatrix<T> M2(nbCol - 1, nbCol - 1);
   for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
@@ -8576,7 +8620,13 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       M2(j - 1, iCol) = EXT(idx - 1, iCol + 1);
     }
   }
+#ifdef DEBUG_CDD
+  os << "CDD: We have M2\n";
+#endif
   std::optional<MyVector<T>> optB = SolutionMat(M2, eVectRed);
+#ifdef DEBUG_CDD
+  os << "CDD: We have optB\n";
+#endif
   if (!optB) {
 #ifdef DEBUG_CDD
     os << "CDD: LIFT ERROR: No solution found for SolutionMat(M2, eVectRed)\n";
@@ -8598,6 +8648,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     }
     objDual += scal * EXT(idx - 1, 0);
   }
+#ifdef DEBUG_CDD
+  os << "CDD: We have objDual\n";
+#endif
   if (objDual != objDirect) {
 #ifdef DEBUG_CDD
     os << "CDD: LIFT ERROR, objDual=" << objDual << " objDirect=" << objDirect
@@ -8644,7 +8697,7 @@ CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   if (optA) {
     LpSolution<T> const &eSolA = *optA;
 #ifdef DEBUG_CDD
-    if (lp->LPS == cdd::dd_Optimal) {
+    if (is_lifting_possible(lp)) {
       std::optional<LpSolution<T>> optB =
         LiftFloatingPointSolution(EXT, eVect, lp, os);
       if (optB) {
@@ -8723,16 +8776,21 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #ifdef DEBUG_CDD
   os << "CDD: After dd_LPSolve passed \n";
 #endif
-  std::optional<LpSolution<T>> optB =
+  if (is_lifting_possible(lp)) {
+#ifdef DEBUG_CDD
+    os << "CDD: is_lifting_possible = true\n";
+#endif
+    std::optional<LpSolution<T>> optB =
       LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
 #ifdef DEBUG_CDD
-  os << "CDD: We have optB\n";
+    os << "CDD: We have optB\n";
 #endif
-  if (optB) {
+    if (optB) {
 #ifdef DEBUG_CDD
-    os << "CDD: The lifing of floating point solution went nicely\n";
+      os << "CDD: The lifing of floating point solution went nicely\n";
 #endif
-    return *optB;
+      return *optB;
+    }
   }
   return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
 }

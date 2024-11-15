@@ -1,14 +1,14 @@
 #PROGRAM		= POLY_IsPointedCone
 #PROGRAM		= VectFamily_Reduction
 #PROGRAM		= VectFamily_ColumnReduction
-PROGRAM		= POLY_FaceLatticeGen
+#PROGRAM		= POLY_FaceLatticeGen
 #PROGRAM		= POLY_DirectFaceLattice
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
 #PROGRAM		= TEST_GeometricallyUniquePoint
 #PROGRAM		= POLY_LinearDetermineByInequalities
-#PROGRAM		= POLY_redundancy
+PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyGroup
 #PROGRAM		= POLY_redundancyGroup GRP_LinPolytope_Automorphism
 #PROGRAM		= POLY_IntegralPoints
