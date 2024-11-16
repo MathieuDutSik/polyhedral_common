@@ -86,9 +86,13 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+#ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+#endif
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+#ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second << "\n";
+#endif
   //
   std::string FileDualDesc =
       BlockDATA.ListStringValues.at("FileDualDescription");

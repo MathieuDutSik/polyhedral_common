@@ -28,8 +28,8 @@ TestEnumeration:=function(eRec)
     #
     WriteStringFile(FileNml, strOut);
     #
-    TheCommand:=Concatenation("cat ", FileNml);
-    Exec(TheCommand);
+#    TheCommand:=Concatenation("cat ", FileNml);
+#    Exec(TheCommand);
     #
     eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);
@@ -43,7 +43,7 @@ TestEnumeration:=function(eRec)
     RemoveFile(FileNml);
     RemoveFile(FileOut);
     is_correct:=eRec.n_del = Length(U);
-    Print("n=", n, " n_del=", eRec.n_del, " is_correct=", is_correct, "\n");
+    Print("n=", n, " n_del=", eRec.n_del, " name=", eRec.name, " is_correct=", is_correct, "\n");
     return rec(is_correct:=is_correct);
 end;
 

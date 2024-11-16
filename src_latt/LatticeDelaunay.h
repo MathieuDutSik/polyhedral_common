@@ -717,11 +717,15 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
     return ZeroMatrix<T>(0, n);
   };
   MyMatrix<T> SVR = get_SVR();
+#ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |SVR|=" << SVR.rows() << "\n";
+#endif
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+#ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+#endif
   //
   int n = GramMat.rows();
   int dimEXT = n + 1;
