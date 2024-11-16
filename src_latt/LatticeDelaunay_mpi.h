@@ -71,9 +71,13 @@ void WriteFamilyDelaunay_Mpi(
 template <typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
                              FullNamelist const &eFull) {
+  using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
+  MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
+  int dimEXT = GramMat.rows() + 1;
   SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
   //
   bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
@@ -82,11 +86,16 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
-  std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
-
-  DataLattice<T, Tint, Tgroup> data = get_data_lattice<T,Tint,Tgroup>(eFull, os);
+  std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second << "\n";
+  //
+  std::string FileDualDesc =
+      BlockDATA.ListStringValues.at("FileDualDescription");
+  PolyHeuristicSerial<TintGroup> AllArr =
+      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
+                                                         os);
+  DataLattice<T, Tint, Tgroup> data = get_data_lattice<T,Tint,Tgroup>(eFull, AllArr, os);
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

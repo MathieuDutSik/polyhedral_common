@@ -472,7 +472,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISO_DEL: After GetInitialGenericDelaunayTesselation "
           "data_lattice.rddo.AllArr.OutFile="
-       << data_lattice.rddo.AllArr.OUTfile << "\n";
+       << data_lattice.rddo.AllArr.OutFile << "\n";
 #endif
     int max_runtime_second = 0;
     return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(

@@ -2952,7 +2952,7 @@ template <typename Tint>
 void PrintPolyHeuristicSerial(PolyHeuristicSerial<Tint> const &AllArr,
                               std::ostream &os) {
   os << "RDD: PrintPolyHeuristicSerial, beginning\n";
-  os << "RDD: OUTfile=" << AllArr.OUTfile << "\n";
+  os << "RDD: OutFile=" << AllArr.OutFile << "\n";
   os << "RDD: OutFormat=" << AllArr.OutFormat << "\n";
   os << "RDD: DeterministicRuntime=" << AllArr.DeterministicRuntime << "\n";
   os << "RDD: port=" << AllArr.port << "\n";
@@ -2996,8 +2996,8 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
   AllArr.BANK_Prefix = BANK_Prefix;
   //
-  std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
-  AllArr.OUTfile = OUTfile;
+  std::string OutFile = BlockDATA.ListStringValues.at("OUTfile");
+  AllArr.OutFile = OutFile;
   //
   bool DeterministicRuntime =
       BlockDATA.ListBoolValues.at("DeterministicRuntime");
@@ -3128,7 +3128,7 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   vectface TheOutput = get_vectface();
   std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
   //
-  OutputFacets_file(EXT, GRP, TheOutput, AllArr.OUTfile, AllArr.OutFormat,
+  OutputFacets_file(EXT, GRP, TheOutput, AllArr.OutFile, AllArr.OutFormat,
                     std::cerr);
 }
 

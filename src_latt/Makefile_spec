@@ -12,6 +12,7 @@
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
 PROGRAM		= LATT_MPI_ComputeDelaunay
+#PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
@@ -59,7 +60,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        = -DDEBUG_DELAUNAY_ENUMERATION -DDEBUG_ADJACENCY_SCHEME
 #COPTIONS        = -DDEBUG_ADJACENCY_SCHEME
 #COPTIONS        = -DDEBUG_ADJACENCY_SCHEME -DDEBUG_RECURSIVE_DUAL_DESC -DTIMINGS_RECURSIVE_DUAL_DESC
-COPTIONS        =
+#COPTIONS        =
+COPTIONS        = -DDEBUG -DSANITY_CHECK -DTIMINGS
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)

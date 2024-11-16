@@ -34,23 +34,6 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   RecordDualDescOperation<T, Tgroup> rddo;
 };
 
-template <typename T, typename Tint, typename Tgroup>
-DataLattice<T, Tint, Tgroup>
-GetDataLattice(MyMatrix<T> const &GramMat,
-               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
-               std::ostream &os) {
-  int n = GramMat.rows();
-  MyMatrix<T> SHV(0, n);
-  CVPSolver<T, Tint> solver(GramMat, os);
-  MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OUTfile << "\n";
-#endif
-  return {
-      n,      GramMat,        SHV,
-      solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
-}
-
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
 GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
@@ -112,7 +95,7 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
   Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
   Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|Delaunay_Stabilizer|=" << time << "\n";
+  os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
 #endif
   return GRPlatt;
 }
@@ -149,7 +132,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 1 with false\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
 #endif
     return {};
   }
@@ -161,7 +144,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
 #endif
     return MatEquiv_I;
   }
@@ -177,7 +160,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 3 with false\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
 #endif
     return {};
   }
@@ -186,7 +169,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
   os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 4 with true\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|Delaunay_TestEquivalence|=" << time << "\n";
+  os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
 #endif
   return eMat_I;
 }
@@ -237,7 +220,7 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
   }
   size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|ComputeInvariantDelaunay|=" << time << "\n";
+  os << "|DEL_ENUM: ComputeInvariantDelaunay|=" << time << "\n";
 #endif
   return hash;
 }
@@ -539,7 +522,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   Tobj f_init() {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     data.rddo.os << "DEL_ENUM: DataLatticeFunc : f_init, OutFile="
-                 << data.rddo.AllArr.OUTfile << "\n";
+                 << data.rddo.AllArr.OutFile << "\n";
 #endif
     MyMatrix<Tint> EXT =
         FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
@@ -624,7 +607,7 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   std::ostream &os = data.rddo.os;
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, begin\n";
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, OutFile="
-     << data.rddo.AllArr.OUTfile << "\n";
+     << data.rddo.AllArr.OutFile << "\n";
 #endif
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
@@ -700,9 +683,27 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull, std::ostream& os) {
+DataLattice<T, Tint, Tgroup>
+GetDataLattice(MyMatrix<T> const &GramMat,
+               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+               std::ostream &os) {
+  int n = GramMat.rows();
+  MyMatrix<T> SHV(0, n);
+  CVPSolver<T, Tint> solver(GramMat, os);
+  MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OutFile << "\n";
+#endif
+  return {
+      n,      GramMat,        SHV,
+      solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+}
+
+template <typename T, typename Tint, typename Tgroup>
+DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
+                                              PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+                                              std::ostream& os) {
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
 
   std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
@@ -716,20 +717,14 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull, std::os
     return ZeroMatrix<T>(0, n);
   };
   MyMatrix<T> SVR = get_SVR();
-  os << "|SVR|=" << SVR.rows() << "\n";
+  os << "DEL_ENUM: |SVR|=" << SVR.rows() << "\n";
   //
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
-  os << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  os << "DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   //
   int n = GramMat.rows();
   int dimEXT = n + 1;
-  using TintGroup = typename Tgroup::Tint;
-  std::string FileDualDesc =
-      BlockDATA.ListStringValues.at("FileDualDescription");
-  PolyHeuristicSerial<TintGroup> AllArr =
-      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
-                                                         os);
   //
   CVPSolver<T, Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);

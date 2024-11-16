@@ -789,7 +789,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
     os << "We have vf_tot |vf_tot|=" << vf_tot.size() << " / " << vf_tot.get_n()
        << " i_proc_ret=" << i_proc_ret << "\n";
     if (i_rank == i_proc_ret)
-      OutputFacets_file(EXT, GRP, vf_tot, AllArr.OUTfile, AllArr.OutFormat, os);
+      OutputFacets_file(EXT, GRP, vf_tot, AllArr.OutFile, AllArr.OutFormat, os);
     os << "We have done our output\n";
   } catch (RuntimeException const &e) {
     msg_term_bank();

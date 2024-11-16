@@ -510,7 +510,7 @@ template <typename TintGroup> struct PolyHeuristicSerial {
   bool BANK_Saving;
   std::string BANK_Prefix;
   std::string OutFormat;
-  std::string OUTfile;
+  std::string OutFile;
   std::string bank_parallelization_method;
   std::string DD_Prefix;
   int dimEXT;
@@ -529,7 +529,7 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
   bool BANK_Saving = false;
   std::string BANK_Prefix = "/unset/";
   std::string OutFormat = "GAP";
-  std::string OUTfile = "unset.out";
+  std::string OutFile = "unset.out";
   std::string bank_parallelization_method = "serial";
   std::string DD_Prefix = "/irrelevant/";
   bool DeterministicRuntime = true;
@@ -552,7 +552,7 @@ PolyHeuristicSerial<TintGroup> AllStandardHeuristicSerial(int const &dimEXT,
           BANK_Saving,
           BANK_Prefix,
           OutFormat,
-          OUTfile,
+          OutFile,
           bank_parallelization_method,
           DD_Prefix,
           dimEXT,
