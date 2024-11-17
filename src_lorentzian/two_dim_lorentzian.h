@@ -663,6 +663,80 @@ EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
   return l_sol;
 }
 
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>>
+TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
+  auto get_list_vect=[&]() -> std::vector<MyVector<Tint>> {
+    if (M == 0) {
+      std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors_reduced(F);
+      std::vector<MyVector<Tint>> LIso_final;
+      for (auto & eIso : LIso) {
+        MyVector<Tint> eIso1_int = UniversalVectorConversion<Tint,T>(eIso);
+        MyVector<Tint> eIso2_int = - eIso1_int;
+        LIso_final.push_back(eIso1_int);
+        LIso_final.push_back(eIso2_int);
+      }
+      return LIso_final;
+    }
+    return EnumerateVectorFixedNorm_Factorization<T,Tint>(F, M);
+  };
+  std::vector<MyVector<Tint>> ListVect = get_list_vect();
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "TWODIMLOR: |ListVect|=" << ListVect.size() << "\n";
+#endif
+  std::unordered_set<MyVector<Tint>> SetVect;
+  for (auto & eV : ListVect) {
+    SetVect.insert(eV);
+  }
+  // In reality it is the full set, but we do not want to use that fact
+  std::vector<MyMatrix<Tint>> ListGen = TwoDimIsotropic_AutomGenerator<T,Tint>(F);
+  auto get_orbit=[&](MyVector<Tint> const& v) -> std::vector<MyVector<Tint>> {
+    std::vector<MyVector<Tint>> TheOrb;
+    std::unordered_set<MyVector<Tint>> set;
+    auto f_insert=[&](MyVector<Tint> const& w) -> void {
+      TheOrb.push_back(w);
+      set.insert(w);
+    };
+    f_insert(v);
+    size_t pos_start = 0;
+    while(true) {
+      size_t pos_end = TheOrb.size();
+      for (size_t pos=pos_start; pos<pos_end; pos++) {
+        for (auto & eGen : ListGen) {
+          MyVector<Tint> ImgV = eGen.transpose() * TheOrb[pos];
+          if (set.count(ImgV) == 0) {
+            f_insert(ImgV);
+          }
+        }
+      }
+      pos_start = pos_end;
+      if (pos_start == TheOrb.size()) {
+        break;
+      }
+    }
+    return TheOrb;
+  };
+  std::vector<MyVector<Tint>> ListRepr;
+  while(true) {
+    auto iter = SetVect.begin();
+    if (iter == SetVect.end()) {
+      break;
+    }
+    MyVector<Tint> eV = *iter;
+    ListRepr.push_back(eV);
+    std::vector<MyVector<Tint>> eOrb = get_orbit(eV);
+    for (auto & fV : eOrb) {
+      SetVect.erase(fV);
+    }
+  }
+#ifdef DEBUG_TWO_DIM_LORENTZIAN
+  std::cerr << "TWODIMLOR: |ListRep|=" << ListRepr.size() << "\n";
+#endif
+  return ListRepr;
+}
+
+
+
 /*
   We are happy for the purpose of this code to have only an upper bound of the
   minimum

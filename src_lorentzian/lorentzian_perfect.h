@@ -1490,7 +1490,7 @@ LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyVector<Tint>>
-LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
+LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
                                std::ostream &os) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
@@ -1716,6 +1716,23 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
   os << "|LORPERF: LORENTZ_GetOrbitRepresentative|=" << time << "\n";
 #endif
   return ListVect;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyVector<Tint>>
+LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
+                               std::ostream &os) {
+  int dim = LorMat.rows();
+  if (has_isotropic_factorization(LorMat)) {
+    if (dim == 1) {
+      std::cerr << "We need to write down the code for this case\n";
+      throw TerminalException{1};
+    }
+    if (dim == 2) {
+      return TwoDimIsotropic_OrbitRepresentative<T,Tint>(LorMat, X);
+    }
+  }
+  return LORENTZ_GetOrbitRepresentative_Kernel<T,Tint,Tgroup>(LorMat, X, os);
 }
 
 template <typename T>
