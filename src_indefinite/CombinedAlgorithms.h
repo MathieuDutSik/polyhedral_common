@@ -554,6 +554,20 @@ private:
           "Qmat=\n";
     WriteMatrix(os, Qmat);
 #endif
+    int dim = Qmat.rows();
+    if (dim == 0) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: dimension 0, producing 0 generator\n";
+#endif
+      return {};
+    }
+    if (dim == 1) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: dimension 1, producing 1 generator\n";
+#endif
+      MyMatrix<Tint> eGen = - IdentityMat<Tint>(dim);
+      return {eGen};
+    }
     ResultReduction<T, Tint> ResRed =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
     MyMatrix<T> const &QmatRed = ResRed.Mred;
@@ -611,6 +625,31 @@ private:
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence_FullDim(MyMatrix<T> const &Qmat1,
                                      MyMatrix<T> const &Qmat2) {
+    if (Qmat1.rows() != Qmat2.rows()) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, different dimensions\n";
+#endif
+      return {};
+    }
+    int dim = Qmat1.rows();
+    if (dim == 0) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, 0 dimensional, all isomorphic\n";
+#endif
+      MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
+      return eGen;
+    }
+    if (dim == 1) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, 1 dimensional, trivial to resolve\n";
+#endif
+      if (Qmat1(0,0) == Qmat2(0,0)) {
+        MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
+        return eGen;
+      } else {
+        return {};
+      }
+    }
     ResultReduction<T, Tint> ResRed1 =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat1, os);
     ResultReduction<T, Tint> ResRed2 =

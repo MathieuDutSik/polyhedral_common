@@ -202,13 +202,20 @@ template <typename T, typename Tint>
 ResultIndefiniteLLL<T, Tint>
 ComputeReductionIndefinite(MyMatrix<T> const &M,
                            [[maybe_unused]] std::ostream &os) {
+  int n = M.rows();
+  if (n == 0) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(0);
+    MyMatrix<T> Mred = M;
+    MyVector<T> Xisotrop = MyVector<T>(0);
+    std::optional<MyVector<T>> opt = {Xisotrop};
+    return {B, Mred, opt};
+  }
 #ifdef TIMINGS_INDEFINITE_LLL
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_INDEFINITE_LLL
   os << "ILLL: Beginning of ComputeReductionIndefinite\n";
 #endif
-  int n = M.rows();
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
     T sum = 0;
     for (int i = 0; i < n; i++)

@@ -16,6 +16,11 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
   using Tidx = uint16_t;
   using Tgr = GraphListAdj;
   Tidx n = M.rows();
+  if (n <= 1) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(n);
+    MyMatrix<T> Mred = M;
+    return {B, Mred};
+  }
   MyMatrix<T> Mabs(n, n);
   for (Tidx i_row = 0; i_row < n; i_row++) {
     for (Tidx i_col = 0; i_col < n; i_col++) {
