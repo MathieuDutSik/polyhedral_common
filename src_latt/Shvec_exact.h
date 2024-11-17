@@ -10,8 +10,8 @@
 #include <vector>
 // clang-format on
 
-#ifdef CHECK
-#define CHECK_SHVEC
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SHVEC
 #endif
 
 #ifdef DEBUG
@@ -121,7 +121,7 @@ ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
 // We return floor(sqrt(A) + epsilon + B)
 template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Floor_V1\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -140,7 +140,7 @@ template <typename T> int Infinitesimal_Floor_V1(T const &a, T const &b) {
 
 template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
   double epsilon = 0.000000001;
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Ceil_V1\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -164,7 +164,7 @@ template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
 // And so to (n-b)^2 <= a
 template <typename T, typename Tint>
 Tint Infinitesimal_Floor(T const &a, T const &b) {
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Floor\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -206,7 +206,7 @@ Tint Infinitesimal_Floor(T const &a, T const &b) {
 // And so to (n-b)^2 <= a (and opposite for n-1)
 template <typename T, typename Tint>
 Tint Infinitesimal_Ceil(T const &a, T const &b) {
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   if (a < 0) {
     std::cerr << "Error in Infinitesimal_Ceil\n";
     std::cerr << "calling with a<0 which gives NAN with sqrt\n";
@@ -254,7 +254,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   MyVector<T> U(dim);
   MyVector<Tint> x(dim);
   MyVector<T> x_T(dim);
-#if defined CHECK_SHVEC || defined DEBUG_SHVEC
+#if defined SANITY_CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
 #endif
 #ifdef DEBUG_SHVEC
@@ -325,7 +325,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
         }
         hVal = x_T(0) + C(0) + U(0);
         eNorm = bound - Trem(0) + q(0, 0) * hVal * hVal;
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
         T norm = 0;
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
@@ -704,7 +704,7 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
 #ifdef TIMINGS_SHVEC
   os << "|T_computeShvec_Kernel|=" << time << "\n";
 #endif
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   std::cerr << "Case 1\n";
   check_shvec_info_request(info1, ePair.first);
 #endif
@@ -712,7 +712,7 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
 #ifdef TIMINGS_SHVEC
   os << "|ApplyReductionToShvecInfo|=" << time << "\n";
 #endif
-#ifdef CHECK_SHVEC
+#ifdef SANITY_CHECK_SHVEC
   std::cerr << "Case 2\n";
   check_shvec_info_request(info2, request);
 #endif

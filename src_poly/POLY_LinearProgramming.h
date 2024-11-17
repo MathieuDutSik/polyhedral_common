@@ -32,6 +32,10 @@
 #define DEBUG_GEOMETRICALLY_UNIQUE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SEARCH_POSITIVE_RELATION
+#endif
+
 template <typename T>
 std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const &NSP) {
   int TheDim = NSP.rows();
@@ -597,7 +601,7 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
   int dim_dual = nbCol;
-#ifdef CHECK_SEARCH_POSITIVE_RELATION
+#ifdef SANITY_CHECK_SEARCH_POSITIVE_RELATION
   // Relatively expensive checks to do
   PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect, os);
   PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect, os);

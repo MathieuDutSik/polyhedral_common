@@ -10,6 +10,17 @@
 #include <utility>
 #include <vector>
 
+#ifdef DEBUG
+#define DEBUG_QMAT
+#define DEBUG_GET_CANONICALIZED_RECORD
+#define DEBUG_LORENTZIAN_STAB_EQUIV
+#endif
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LORENTZIAN_STAB_EQUIV
+#endif
+
+
 template <typename T, typename Tint> struct FundDomainVertex {
   MyVector<T> gen;
   MyMatrix<Tint> MatRoot;
@@ -412,7 +423,7 @@ std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have opt\n";
 #endif
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+#ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
   if (!opt) {
     std::cerr << "opt should have been assigned\n";
     throw TerminalException{1};
@@ -461,7 +472,7 @@ MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
     std::optional<MyMatrix<T>> opt =
         LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2,
                                                           Subspace2, os);
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+#ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
     if (!opt) {
       std::cerr << "We could not find the isotropy equivalence\n";
       throw TerminalException{1};
@@ -566,7 +577,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
             LGen2, helper, InvInvariantSpace, std::cerr);
       }
     };
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+#ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
     std::vector<MyVector<Tint>> ListV;
     std::unordered_set<MyVector<Tint>> SetV;
     for (int i = 0; i < MatRoot.rows(); i++) {
@@ -578,7 +589,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     std::vector<MyMatrix<T>> LGen4;
     for (auto &eGen3 : get_gen3()) {
       MyMatrix<T> eGen4 = InvInvariantSpace * eGen3 * InvariantSpace;
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+#ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
       if (!IsIntegralMatrix(eGen4)) {
         std::cerr << "The matrix eGen4 should be integral\n";
         throw TerminalException{1};
@@ -839,7 +850,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     MyMatrix<T> const &eSpaceEquiv = *opt3;
     MyMatrix<T> eMatFinal = InvariantSpaceInv * eSpaceEquiv * InvariantSpace;
     MyMatrix<T> eProd = eMatFinal * EquivRat;
-#ifdef CHECK_LORENTZIAN_STAB_EQUIV
+#ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
     if (!IsIntegralMatrix(eProd)) {
       std::cerr << "eProd should be integral\n";
       throw TerminalException{1};

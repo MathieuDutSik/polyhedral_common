@@ -19,9 +19,13 @@
   --- The values M(i,i) are not used.
  */
 
-// #define DEBUG_COXETER_DYNKIN_COMBINATORICS
+#ifdef DEBUG
+#define DEBUG_COXETER_DYNKIN_COMBINATORICS
+#endif
 
-// #define CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_EFFICIENT_ENUMERATION
+#endif
 
 struct DiagramSelector {
   bool OnlySimplyLaced;
@@ -712,7 +716,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   }
   std::vector<std::vector<size_t>> LConn = GetIrreducibleComponents(M);
   std::vector<MyVector<T>> ListExtensions;
-#ifdef CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
   std::set<MyVector<T>> SetExtensions;
 #endif
   T val_comm = 2;
@@ -997,7 +1001,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   for (size_t i = 0; i < n_vert; i++)
     V_basic(i) = val_comm;
   auto test_vector_and_insert = [&](const MyVector<T> &V) -> void {
-#ifdef CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
     MyMatrix<T> Mtest(n_vert + 1, n_vert + 1);
     for (size_t i = 0; i < n_vert; i++)
       for (size_t j = 0; j < n_vert; j++)
@@ -1188,7 +1192,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   // Considering the case of 2 edges
   //
   auto f_pair = [&](size_t const &v1, size_t const &v2) -> void {
-#ifdef CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
     if (v1 == v2) {
       std::cerr << "We should have v1 != v2\n";
       throw TerminalException{1};
@@ -1522,7 +1526,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
   // Considering the case of 3 edges.
   //
   auto f_triple = [&](size_t w1, size_t w2, size_t w3) -> void {
-#ifdef CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
     if (w1 == w2 || w1 == w3 || w2 == w3) {
       std::cerr << "We should have w1, w2, w3 all different\n";
       throw TerminalException{1};
@@ -2164,7 +2168,7 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
   int dim = G.rows();
   int n_root = l_root.size();
   std::vector<MyVector<T>> l_vect = FindDiagramExtensions_Efficient(CoxMat, DS);
-#ifdef CHECK_EFFICIENT_ENUMERATION
+#ifdef SANITY_CHECK_EFFICIENT_ENUMERATION
   std::vector<MyVector<T>> l_vect_B = FindDiagramExtensions(CoxMat, DS);
   if (l_vect.size() != l_vect_B.size()) {
     std::cerr << "The two enumeration codes return different results\n";

@@ -37,6 +37,7 @@
 #ifdef DEBUG
 // #define DEBUG_CANONICAL_LIMITED
 #define DEBUG_RECURSIVE_DUAL_DESC
+#define DEBUG_INSERT
 #endif
 
 // #define MURMUR_HASH
@@ -1181,7 +1182,7 @@ public:
     os << "RDD: FuncInsert : New orbSize=" << orbSize << "\n";
 #endif
     foc.FinishWithOrbSizeAssignation(orbSize);
-#ifdef CHECK_INSERT
+#ifdef DEBUG_INSERT
     Tgroup eStab = GRP.Stabilizer_OnSets(face_can);
     os << "RDD: FuncInsert: Inserting a face of size |face_can|="
        << face_can.count() << " |eStab|=" << eStab.size()
@@ -1220,7 +1221,7 @@ public:
     os << "RDD: FuncInsertPair : New orbSize(pair.second)=" << pair.second
        << "\n";
 #endif
-#ifdef CHECK_INSERT
+#ifdef DEBUG_INSERT
     os << "RDD: FuncInsertPair: Inserting a face of size |face_can|="
        << pair.first.count() << " |O|=" << pair.second << "\n";
 #endif

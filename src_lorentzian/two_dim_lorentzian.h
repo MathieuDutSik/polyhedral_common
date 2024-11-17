@@ -25,8 +25,13 @@
 
  */
 
-// #define CHECK_TWO_DIM_LORENTZIAN
-// #define DEBUG_TWO_DIM_LORENTZIAN
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_TWO_DIM_LORENTZIAN
+#endif
+
+#ifdef DEBUG
+#define DEBUG_TWO_DIM_LORENTZIAN
+#endif
 
 template <typename T, typename Tint>
 T eval_quad(const MyMatrix<T> &G, const MyVector<Tint> &v) {
@@ -52,51 +57,51 @@ Promised(const MyMatrix<T> &G, const T &M, const MyVector<Tint> &r,
          const MyVector<Tint> &l) {
   MyVector<Tint> m = r + l;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "Promised G=" << G(0, 0) << "," << G(1, 0) << "," << G(1, 1)
+  std::cerr << "TWODIMLOR: Promised G=" << G(0, 0) << "," << G(1, 0) << "," << G(1, 1)
             << " M=" << M << "\n";
 #endif
-#ifdef CHECK_TWO_DIM_LORENTZIAN
+#ifdef SANITY_CHECK_TWO_DIM_LORENTZIAN
   T norm_rr = eval_quad(G, r);
   if (norm_rr <= 0) {
-    std::cerr << "norm_rr=" << norm_rr << "\n";
-    std::cerr << "The vector r must be of positive norm\n";
+    std::cerr << "TWODIMLOR: norm_rr=" << norm_rr << "\n";
+    std::cerr << "TWODIMLOR: The vector r must be of positive norm\n";
     throw TerminalException{1};
   }
   Tint det = det_two(r, l);
   if (det != 1) {
-    std::cerr << "det=" << det << "\n";
-    std::cerr << "The configuration of vectors should satisfy det(r,l) = 1\n";
+    std::cerr << "TWODIMLOR: det=" << det << "\n";
+    std::cerr << "TWODIMLOR: The configuration of vectors should satisfy det(r,l) = 1\n";
     throw TerminalException{1};
   }
   T norm_ll = eval_quad(G, l);
   if (norm_ll > M) {
-    std::cerr << "norm_ll=" << norm_ll << " M=" << M << "\n";
-    std::cerr << "l must not lie in the interior of the norm M hyperbola in S, "
+    std::cerr << "TWODIMLOR: norm_ll=" << norm_ll << " M=" << M << "\n";
+    std::cerr << "TWODIMLOR: l must not lie in the interior of the norm M hyperbola in S, "
                  "that is its norm must not go above M\n";
     throw TerminalException{1};
   }
 #endif
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l)
+  std::cerr << "TWODIMLOR: Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l)
             << " det=" << det_two(r, l) << "\n";
 #endif
   T norm_mm = eval_quad(G, m);
   T scal_mr = eval_scal(G, m, r);
   if (norm_mm <= M || scal_mr < 0) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Promised : Branching at Go Right norm_mm=" << norm_mm
+    std::cerr << "TWODIMLOR: Promised : Branching at Go Right norm_mm=" << norm_mm
               << " scal_mr=" << scal_mr << "\n";
 #endif
     return Promised(G, M, r, m);
   }
   if (eval_quad(G, l) >= 0 && eval_scal(G, r, l) > 0) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Promised : Exiting at the Done\n";
+    std::cerr << "TWODIMLOR: Promised : Exiting at the Done\n";
 #endif
     return {l, -r};
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "Promised : Exiting at the Go Left\n";
+  std::cerr << "TWODIMLOR: Promised : Exiting at the Go Left\n";
 #endif
   return Promised(G, M, m, l);
 }
@@ -133,7 +138,7 @@ MyVector<Tint> Canonical(const MyMatrix<T> &G, const T &M,
   T scal3 = eval_quad(G, l);
   T e_ent = scal1 * scal1 - scal2 * (scal3 - M);
   if (e_ent < 0) {
-    std::cerr << "We cannot compute square root of a negative number\n";
+    std::cerr << "TWODIMLOR: We cannot compute square root of a negative number\n";
     throw TerminalException{1};
   }
   Tint low_sqrt_tint = LowerSquareRoot<T, Tint>(e_ent);
@@ -153,14 +158,14 @@ Shorter(const MyMatrix<T> &G, MyVector<Tint> r, MyVector<Tint> l) {
   T M = eval_quad(G, r);
   std::vector<T> char_ent1 = get_char_mat(r, l);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "Shorter M=" << M << "\n";
+  std::cerr << "TWODIMLOR: Shorter M=" << M << "\n";
 #endif
   T scal_rr;
   while (true) {
     // Step 2
     scal_rr = eval_quad(G, r);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Shorter : Step 2, scal_rr=" << scal_rr << "\n";
+    std::cerr << "TWODIMLOR: Shorter : Step 2, scal_rr=" << scal_rr << "\n";
 #endif
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair =
         Promised(G, scal_rr, r, l);
@@ -168,13 +173,13 @@ Shorter(const MyMatrix<T> &G, MyVector<Tint> r, MyVector<Tint> l) {
     l = e_pair.second;
     // Step 3
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Shorter : Step 3\n";
+    std::cerr << "TWODIMLOR: Shorter : Step 3\n";
 #endif
     scal_rr = eval_quad(G, r);
     l = Canonical(G, scal_rr, r, l);
     // Step 4
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Shorter : Step 4\n";
+    std::cerr << "TWODIMLOR: Shorter : Step 4\n";
 #endif
     if (scal_rr < M) {
       std::pair<MyVector<Tint>, MyVector<Tint>> pair{r, l};
@@ -182,11 +187,11 @@ Shorter(const MyMatrix<T> &G, MyVector<Tint> r, MyVector<Tint> l) {
     }
     // Step 5
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Shorter : Step 5\n";
+    std::cerr << "TWODIMLOR: Shorter : Step 5\n";
 #endif
     std::vector<T> char_ent2 = get_char_mat(r, l);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Shorter : char_ent2=" << char_ent2
+    std::cerr << "TWODIMLOR: Shorter : char_ent2=" << char_ent2
               << " char_ent1=" << char_ent1 << "\n";
 #endif
     if (char_ent1 == char_ent2)
@@ -200,7 +205,7 @@ NotPromised(const MyMatrix<T> &G, const T &M, MyVector<Tint> r,
             MyVector<Tint> l) {
   T scal_rr = eval_quad(G, r);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "NotPromised : scal_rr=" << scal_rr << " M=" << M << "\n";
+  std::cerr << "TWODIMLOR: NotPromised : scal_rr=" << scal_rr << " M=" << M << "\n";
 #endif
   if (scal_rr <= M) {
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, M, r, l);
@@ -211,7 +216,7 @@ NotPromised(const MyMatrix<T> &G, const T &M, MyVector<Tint> r,
     return pair;
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "NotPromised : Before infinite loop\n";
+  std::cerr << "TWODIMLOR: NotPromised : Before infinite loop\n";
 #endif
   while (true) {
     std::optional<std::pair<MyVector<Tint>, MyVector<Tint>>> opt_pair =
@@ -237,7 +242,7 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
   if (!pair_opt)
     return {};
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "We pass the NotPromised stage\n";
+  std::cerr << "TWODIMLOR: We pass the NotPromised stage\n";
 #endif
   auto get_char_mat = [&](const MyVector<Tint> &v1,
                           const MyVector<Tint> &v2) -> std::vector<T> {
@@ -246,14 +251,14 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
   MyVector<Tint> r1 = pair_opt->first;
   MyVector<Tint> l1 = pair_opt->second;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "Anisotropic r1=" << StringVectorGAP(r1) << " / "
+  std::cerr << "TWODIMLOR: Anisotropic r1=" << StringVectorGAP(r1) << " / "
             << StringVectorGAP(l1) << "\n";
 #endif
   std::vector<MyVector<Tint>> list_r{r1};
   MyVector<Tint> r = r1;
   MyVector<Tint> l = l1;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "First : Anisotropic r=" << StringVectorGAP(r) << " / "
+  std::cerr << "TWODIMLOR: First : Anisotropic r=" << StringVectorGAP(r) << " / "
             << StringVectorGAP(l) << "\n";
 #endif
   std::vector<T> A_vect = get_char_mat(r, l);
@@ -261,19 +266,19 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
     std::pair<MyVector<Tint>, MyVector<Tint>> pair = Promised(G, M, r, l);
     r = pair.first;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Finding |r|=" << eval_quad(G, r) << "\n";
+    std::cerr << "TWODIMLOR: Finding |r|=" << eval_quad(G, r) << "\n";
 #endif
     l = pair.second;
     l = Canonical(G, M, r, l);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "Now : Anisotropic r=" << StringVectorGAP(r) << " / "
+    std::cerr << "TWODIMLOR: Now : Anisotropic r=" << StringVectorGAP(r) << " / "
               << StringVectorGAP(l) << "\n";
-    std::cerr << "After canonical\n";
+    std::cerr << "TWODIMLOR: After canonical\n";
 #endif
     if (A_vect == get_char_mat(r, l)) {
       // Concluding step
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-      std::cerr << "Exiting case\n";
+      std::cerr << "TWODIMLOR: Exiting case\n";
 #endif
       MyMatrix<Tint> M1_Tint = MatrixFromVectorFamily<Tint>({r1, l1});
       MyMatrix<T> M1_T = UniversalMatrixConversion<T, Tint>(M1_Tint);
@@ -284,7 +289,7 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
       std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>> pair{gMat_Tint,
                                                                   list_r};
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-      std::cerr << "Before returning pair\n";
+      std::cerr << "TWODIMLOR: Before returning pair\n";
 #endif
       return pair;
     }
@@ -353,7 +358,7 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T> &G) {
 template <typename T>
 std::optional<MyMatrix<T>> GetIsotropicFactorization(MyMatrix<T> const &G) {
   if (G.rows() != 2 || G.cols() != 2) {
-    std::cerr << "The matrix is not square of order 2\n";
+    std::cerr << "TWODIMLOR: The matrix is not square of order 2\n";
     throw TerminalException{1};
   }
   T a = G(0, 0);
@@ -407,7 +412,7 @@ template <typename T>
 std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
   if (!opt) {
-    std::cerr << "We fail to find an isotropic factorization\n";
+    std::cerr << "TWODIMLOR: We fail to find an isotropic factorization\n";
     throw TerminalException{1};
   }
   MyMatrix<T> const &Factor = *opt;
@@ -431,7 +436,7 @@ template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "EnumerateVectorFixedNorm_Factorization M=" << M << " F=\n";
+  std::cerr << "TWODIMLOR: EnumerateVectorFixedNorm_Factorization M=" << M << " F=\n";
   WriteMatrix(std::cerr, F);
 #endif
   MyVector<T> v1(2);
@@ -446,7 +451,7 @@ EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
   //
   T M_scal = M * Fr1.TheMult * Fr2.TheMult;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "M_scal=" << M_scal << "\n";
+  std::cerr << "TWODIMLOR: M_scal=" << M_scal << "\n";
 #endif
   if (!IsInteger(M_scal))
     return {};
@@ -456,39 +461,39 @@ EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
   A(1, 0) = Fr2.TheVect(0);
   A(1, 1) = Fr2.TheVect(1);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "EnumerateVectorFixedNorm_Factorization A=\n";
+  std::cerr << "TWODIMLOR: EnumerateVectorFixedNorm_Factorization A=\n";
   WriteMatrix(std::cerr, A);
 #endif
   MyMatrix<T> Ainv = Inverse(A);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "EnumerateVectorFixedNorm_Factorization Ainv=\n";
+  std::cerr << "TWODIMLOR: EnumerateVectorFixedNorm_Factorization Ainv=\n";
   WriteMatrix(std::cerr, Ainv);
 #endif
   MyVector<T> v(2);
   std::vector<MyVector<Tint>> l_sol;
   std::vector<T> list_div = GetAllFactors(T_abs(M_scal));
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "|list_div|=" << list_div.size() << "\n";
+  std::cerr << "TWODIMLOR: |list_div|=" << list_div.size() << "\n";
 #endif
   for (auto &e_div : list_div) {
     v(0) = e_div;
     v(1) = M_scal / e_div;
     MyVector<T> e_sol = Ainv * v;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "v=" << StringVectorGAP(v)
+    std::cerr << "TWODIMLOR: v=" << StringVectorGAP(v)
               << "  e_sol=" << StringVectorGAP(e_sol) << "\n";
 #endif
     if (IsIntegralVector(e_sol)) {
       MyVector<Tint> e_sol_i = UniversalVectorConversion<Tint, T>(e_sol);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-      std::cerr << "  e_sol_i=" << StringVectorGAP(e_sol_i) << "\n";
+      std::cerr << "TWODIMLOR:   e_sol_i=" << StringVectorGAP(e_sol_i) << "\n";
 #endif
       l_sol.push_back(e_sol_i);
       l_sol.push_back(-e_sol_i);
     }
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "|l_sol|=" << l_sol.size() << "\n";
+  std::cerr << "TWODIMLOR: |l_sol|=" << l_sol.size() << "\n";
 #endif
   return l_sol;
 }
@@ -549,7 +554,7 @@ AnisotropicComplete(const MyMatrix<T> &G, const T &M) {
   MyVector<Tint> l_A = GetTwoComplement(r);
   MyVector<Tint> l_B = Canonical(G, M, r, l_A);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
+  std::cerr << "TWODIMLOR: r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
 #endif
   return Anisotropic(G, M, r, l_B);
 }
@@ -588,7 +593,7 @@ get_first_next_vector_isotropic(MyMatrix<T> const &G, MyVector<Tint> const &r0,
     }
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "n_match=" << n_match << "\n";
+  std::cerr << "TWODIMLOR: n_match=" << n_match << "\n";
 #endif
   return e_sol;
 }
@@ -598,7 +603,7 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(
     MyMatrix<T> const &G, MyVector<Tint> const &r0, T const &SearchNorm) {
   T M = eval_quad(G, r0);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "M=" << M << " SearchNorm=" << SearchNorm
+  std::cerr << "TWODIMLOR: M=" << M << " SearchNorm=" << SearchNorm
             << " r0=" << StringVectorGAP(r0) << " G=\n";
   WriteMatrix(std::cerr, G);
 #endif
@@ -607,25 +612,25 @@ std::optional<MyVector<Tint>> get_first_next_vector_anisotropic(
   std::optional<std::pair<MyMatrix<Tint>, std::vector<MyVector<Tint>>>> opt =
       Anisotropic(G, M, r0, l_B);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "We have opt\n";
+  std::cerr << "TWODIMLOR: We have opt\n";
 #endif
   if (!opt)
     return {};
   std::vector<MyVector<Tint>> const &l_vect = opt->second;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "|l_vect|=" << l_vect.size() << "\n";
+  std::cerr << "TWODIMLOR: |l_vect|=" << l_vect.size() << "\n";
 #endif
   for (auto &e_v : l_vect) {
     T norm = eval_quad(G, e_v);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "norm=" << norm << " SearchNorm=" << SearchNorm
+    std::cerr << "TWODIMLOR: norm=" << norm << " SearchNorm=" << SearchNorm
               << " e_v=" << StringVectorGAP(e_v) << "\n";
 #endif
     if (norm == SearchNorm)
       return e_v;
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "returning missing\n";
+  std::cerr << "TWODIMLOR: returning missing\n";
 #endif
   return {};
 }
@@ -635,13 +640,13 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
                                                     MyVector<Tint> const &r0,
                                                     T const &SearchNorm) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "SearchNorm=" << SearchNorm << "\n";
+  std::cerr << "TWODIMLOR: SearchNorm=" << SearchNorm << "\n";
 #endif
   if (SearchNorm <= 0)
     return {};
   T lower_bnd = GetLowerBoundMinimum(G);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "lower_bnd=" << lower_bnd << "\n";
+  std::cerr << "TWODIMLOR: lower_bnd=" << lower_bnd << "\n";
 #endif
   if (SearchNorm < lower_bnd) {
     // no solution possible
@@ -650,12 +655,12 @@ std::optional<MyVector<Tint>> get_first_next_vector(MyMatrix<T> const &G,
   std::optional<MyMatrix<T>> opt = GetIsotropicFactorization(G);
   if (opt) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "get_first_next_vector : isotropic\n";
+    std::cerr << "TWODIMLOR: get_first_next_vector : isotropic\n";
 #endif
     return get_first_next_vector_isotropic(G, r0, SearchNorm, *opt);
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "get_first_next_vector : anisotropic\n";
+  std::cerr << "TWODIMLOR: get_first_next_vector : anisotropic\n";
 #endif
   return get_first_next_vector_anisotropic(G, r0, SearchNorm);
 }
