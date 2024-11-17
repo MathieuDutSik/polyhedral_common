@@ -340,6 +340,29 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T> &G) {
   }
 }
 
+template <typename T>
+bool has_isotropic_factorization(MyMatrix<T> const &G) {
+  if (G.rows() == 1) {
+    return true;
+  }
+  if (G.rows() > 2) {
+    return false;
+  }
+  T a = G(0, 0);
+  T b = G(1, 0);
+  T c = G(1, 1);
+  T Delta = b * b - a * c;
+  std::optional<T> opt_root = UniversalSquareRoot(Delta);
+  if (opt_root) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+
+
 /*
   The matrix is written as
   | a b |
@@ -426,6 +449,148 @@ std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
   }
   return LVect;
 }
+
+template <typename T>
+std::vector<MyVector<T>> GetBasisIsotropicVectors_reduced(MyMatrix<T> const &G) {
+  std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors(G);
+  std::vector<MyVector<T>> LIsoRed;
+  for (auto & eIso : LIso) {
+    MyVector<T> eIso2 = RemoveFractionVector(eIso);
+    LIsoRed.push_back(eIso2);
+  }
+  return LIsoRed;
+}
+
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>> OneDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
+  if (G.rows() != 1) {
+    std::cerr << "TWODIMLOR: The matrix should be 1 dimensional\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<Tint> eGen = - IdentityMat<Tint>(1);
+  return {eGen};
+}
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>> TwoDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
+  std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors_reduced(G);
+  MyMatrix<T> Mstart = MatrixFromVectorFamily(LIso);
+  MyMatrix<T> Mstart_inv = Inverse(Mstart);
+  MyMatrix<T> Mend(2,2);
+  std::vector<MyMatrix<Tint>> LGen;
+  auto f_insert=[&](MyMatrix<T> const& eGen) -> void {
+    if (!IsIntegralMatrix(eGen)) {
+      return;
+    }
+    MyMatrix<T> prod = eGen * G * eGen.transpose();
+    if (prod != G) {
+      return;
+    }
+    MyMatrix<Tint> eGen_i = UniversalMatrixConversion<Tint,T>(eGen);
+    LGen.push_back(eGen_i);
+  };
+  MyMatrix<int> Mchoice = BuildSet(3, 2);
+  int n_choice = Mchoice.rows();
+  for (int i_choice=0; i_choice<n_choice; i_choice++) {
+    int idx1 = 0;
+    int idx2 = 1;
+    if (Mchoice(i_choice, 0) == 1) {
+      idx1 = 1;
+      idx2 = 0;
+    }
+    int sign1 = 2*Mchoice(i_choice,1) - 1;
+    int sign2 = 2*Mchoice(i_choice,2) - 1;
+    //
+    for (int i=0; i<2; i++) {
+      Mend(0, i) = sign1 * LIso[idx1](i);
+      Mend(1, i) = sign2 * LIso[idx2](i);
+    }
+    MyMatrix<T> eGen = Mstart_inv * Mend;
+    f_insert(eGen);
+  }
+  if (LGen.size() < 2) {
+    std::cerr << "TWODIMLOR: We should have at least two generators\n";
+    throw TerminalException{1};
+  }
+  return LGen;
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>> OneDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1, MyMatrix<T> const& LorMat2) {
+  if (LorMat1.rows() != 1) {
+    std::cerr << "The matrix LorMat1 should be 1 dimensional\n";
+    throw TerminalException{1};
+  }
+  if (LorMat1(0,0) != LorMat2(0,0)) {
+    return {};
+  }
+  MyMatrix<Tint> IdMat = IdentityMat<Tint>(1);
+  return IdMat;
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>> TwoDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1, MyMatrix<T> const& LorMat2) {
+  if (LorMat1.rows() != LorMat2.rows()) {
+    return {};
+  }
+  if (!has_isotropic_factorization(LorMat2)) {
+    return {};
+  }
+  if (LorMat1.rows() != 2 || !has_isotropic_factorization(LorMat1)) {
+    std::cerr << "The matrix LorMat1 should be a 2 dimensional with an isotropic factorization\n";
+    throw TerminalException{1};
+  }
+  std::vector<MyVector<T>> LIso1 = GetBasisIsotropicVectors_reduced(LorMat1);
+  std::vector<MyVector<T>> LIso2 = GetBasisIsotropicVectors_reduced(LorMat2);
+  MyMatrix<T> MatIso1 = MatrixFromVectorFamily(LIso1);
+  MyMatrix<T> MatIso1_inv = Inverse(MatIso1);
+  MyMatrix<T> MatIso2 = MatrixFromVectorFamily(LIso2);
+  MyMatrix<T> Mend(2,2);
+  if (T_abs(DeterminantMat(MatIso1)) != T_abs(DeterminantMat(MatIso2))) {
+    return {};
+  }
+  // Looking for a matrix P that x1 P = x2 for x1 / x2 isotropic vectors of LorMat1 / LorMat2.
+  // Then we will have P M2 P^T = M1
+  auto is_correct=[&](MyMatrix<T> const& eGen) -> bool {
+    if (!IsIntegralMatrix(eGen)) {
+      return false;
+    }
+    MyMatrix<T> prod = eGen * LorMat2 * eGen.transpose();
+    if (prod != LorMat1) {
+      return false;
+    }
+    return true;
+  };
+  MyMatrix<int> Mchoice = BuildSet(3, 2);
+  int n_choice = Mchoice.rows();
+  for (int i_choice=0; i_choice<n_choice; i_choice++) {
+    int idx1 = 0;
+    int idx2 = 1;
+    if (Mchoice(i_choice, 0) == 1) {
+      idx1 = 1;
+      idx2 = 0;
+    }
+    int sign1 = 2*Mchoice(i_choice,1) - 1;
+    int sign2 = 2*Mchoice(i_choice,2) - 1;
+    //
+    for (int i=0; i<2; i++) {
+      Mend(0, i) = sign1 * LIso2[idx1](i);
+      Mend(1, i) = sign2 * LIso2[idx2](i);
+    }
+    MyMatrix<T> eGen = MatIso1_inv * Mend;
+    if (is_correct(eGen)) {
+      MyMatrix<T> eGen_inv = Inverse(eGen);
+      MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(eGen_inv);
+      return P;
+    }
+  }
+  return {};
+}
+
+
+
+
 
 /*
   F is the factorization with each row representing one term of the

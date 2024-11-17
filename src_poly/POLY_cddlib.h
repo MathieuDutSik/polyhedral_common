@@ -56,7 +56,7 @@ const bool dd_choiceLexicoPivotQ =
 typedef unsigned char set_card_lut_t;
 
 template <typename T> void dd_WriteT(std::ostream &os, T *a, int d) {
-  os << "dd_WriteT a=";
+  os << "CDD: dd_WriteT a=";
   for (int i = 0; i < d; i++)
     os << "  " << a[i];
   os << "\n";
@@ -6023,7 +6023,7 @@ arithmetics.
     break;
   case dd_TooManyIterations:
 #ifdef DEBUG_CDD
-    os << "It should not pass by this entry\n";
+    os << "CDD: It should not pass by this entry\n";
     throw TerminalException{1};
 #endif
     break;
@@ -8270,7 +8270,7 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     return {std::move(NSPnew), std::move(f)};
   } else {
 #ifdef DEBUG_CDD
-    os << "None case\n";
+    os << "CDD: None case\n";
 #endif
     MyMatrix<T> Spa = IdentityMat<T>(nbCol);
     Face f(nbRow);
@@ -8703,29 +8703,29 @@ CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       if (optB) {
         LpSolution<T> const &eSolB = *optB;
         if (eSolB.OptimalValue != eSolA.OptimalValue) {
-          std::cerr << "We should have the same optimal value\n";
+          std::cerr << "CDD: We should have the same optimal value\n";
           throw TerminalException{1};
         }
         if (eSolA.DualSolution != eSolB.DualSolution) {
-          std::cerr << "DualSolution(A)=" << StringVector(eSolA.DualSolution)
+          std::cerr << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution)
                     << "\n";
-          std::cerr << "DualSolution(B)=" << StringVector(eSolB.DualSolution)
+          std::cerr << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution)
                     << "\n";
           throw TerminalException{1};
         }
         if (eSolA.DirectSolution != eSolB.DirectSolution) {
-          std::cerr << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
+          std::cerr << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
                     << "\n";
-          std::cerr << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
+          std::cerr << "CDD_ DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
                     << "\n";
           throw TerminalException{1};
         }
-        os << "DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
-        os << "DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
-        os << "DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
-        os << "DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
+        os << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
+        os << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
+        os << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
+        os << "CDD: DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
       } else {
-        std::cerr << "We should have been able to lift the solution\n";
+        std::cerr << "CDD: We should have been able to lift the solution\n";
         throw TerminalException{1};
       }
     }
