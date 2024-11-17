@@ -82,6 +82,27 @@ template <typename T, typename Tint> struct ResultIndefiniteLLL {
 template <typename T, typename Tint>
 ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   int n = M.rows();
+  if (n == 0) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(0);
+    MyMatrix<T> Mred = M;
+    MyVector<T> Xisotrop = MyVector<T>(0);
+    std::optional<MyVector<T>> opt{Xisotrop};
+    return {B, Mred, opt};
+  }
+  if (n == 1) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(1);
+    MyMatrix<T> Mred = M;
+    auto get_iso=[&]() -> std::optional<MyVector<T>> {
+      if (M(0,0) == 0) {
+        MyVector<T> Xisotrop = MyVector<T>(1);
+        Xisotrop(0) = 1;
+        return Xisotrop;
+      } else {
+        return {};
+      }
+    };
+    return {B, Mred, get_iso()};
+  }
   // The c constant of the LLL algorithm
   T c = T(7) / T(8);
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
@@ -98,6 +119,10 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
 #ifdef DEBUG_INDEFINITE_LLL
     std::cerr << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k
               << "\n";
+    std::cerr << "ILLL: M=\n";
+    WriteMatrix(std::cerr, M);
+    std::cerr << "ILLL: B=\n";
+    WriteMatrix(std::cerr, B);
 #endif
     ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B);
 #ifdef DEBUG_INDEFINITE_LLL
@@ -107,8 +132,14 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     std::cerr << "\n";
 #endif
     if (!ResGS.success) {
+#ifdef DEBUG_INDEFINITE_LLL
+      std::cerr << "ILLL: Returning from Indefinite_LLL 1\n";
+#endif
       return {B, get_matrix(), ResGS.Xisotrop};
     }
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << "ILLL: After the RecGS.success test\n";
+#endif
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
         T val = ResGS.mu(i, j);
@@ -116,10 +147,16 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
         B.row(i) -= q * B.row(j);
       }
     }
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << "ILLL: After the i/j loop\n";
+#endif
     T mu = ResGS.mu(k, k - 1);
     T sum1_pre = ResGS.Bstar_norms[k] + mu * mu * ResGS.Bstar_norms[k - 1];
     T sum1 = T_abs(sum1_pre);
     T sum2 = c * T_abs(ResGS.Bstar_norms[k - 1]);
+#ifdef DEBUG_INDEFINITE_LLL
+    std::cerr << "ILLL: sum1=" << sum1 << " sum2=" << sum2 << "\n";
+#endif
     if (sum1 < sum2) {
 #ifdef DEBUG_INDEFINITE_LLL
       std::cerr << "ILLL: Swapping k=" << k << " and " << (k - 1) << "\n";
@@ -134,6 +171,9 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     if (k >= n)
       break;
   }
+#ifdef DEBUG_INDEFINITE_LLL
+  std::cerr << "ILLL: Returning from Indefinite_LLL 2\n";
+#endif
   return {B, get_matrix(), {}};
 }
 
