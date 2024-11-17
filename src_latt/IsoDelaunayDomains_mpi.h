@@ -7,25 +7,43 @@
 #include "POLY_MPI_AdjacencyScheme.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ISO_DELAUNAY_DOMAINS_MPI
+#endif
+
+
 template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
                                           FullNamelist const &eFull) {
+  using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
+  int dimEXT = LinSpa.n + 1;
   //
   bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
   std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+#ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: max_runtime_second=" << max_runtime_second << "\n";
+#endif
   std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
   std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+#ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
-
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, os);
-
+#endif
+  //
+  std::string FileDualDesc =
+      BlockDATA.ListStringValues.at("FileDualDescription");
+  PolyHeuristicSerial<TintGroup> AllArr =
+      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
+                                                         os);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, AllArr, os);
+  //
   using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

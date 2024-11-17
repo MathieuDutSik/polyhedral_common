@@ -728,7 +728,6 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
 #endif
   //
   int n = GramMat.rows();
-  int dimEXT = n + 1;
   //
   CVPSolver<T, Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);

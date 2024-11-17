@@ -2,7 +2,7 @@ Read("../common.g");
 Print("Beginning Test enumeration of iso-Delaunay domains\n");
 
 TestEnumeration:=function(eRec)
-    local n, FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
+    local FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
     #
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
@@ -22,8 +22,8 @@ TestEnumeration:=function(eRec)
     U:=ReadAsFunction(FileResult)();
     RemoveFile(FileLinSpa);
     RemoveFile(FileResult);
-    is_correct:=eRec.n_domain = U.nb;
-    Print("n=", n, " n_domain=", eRec.n_domain, " is_correct=", is_correct, "\n");
+    is_correct:=eRec.nb = U.nb;
+    Print("eRec.nb=", eRec.nb, " U.nb=", U.nb, " is_correct=", is_correct, "\n");
     return rec(is_correct:=is_correct);
 end;
 
