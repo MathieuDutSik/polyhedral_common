@@ -75,7 +75,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
                                                MyVector<Tint> const &f,
                                                MyVector<Tint> const &x) {
   if (!INDEF_FORM_IsEven(Qmat)) {
-    std::cerr << "The lattice Qmat should be even in order to define the "
+    std::cerr << "MODEL: The lattice Qmat should be even in order to define the "
                  "Eichler transvection\n";
     throw TerminalException{1};
   }
@@ -87,7 +87,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
   MyVector<T> eProd = Qmat * x_T;
   T scal = f_T.dot(eProd);
   if (fNorm != 0 || scal != 0) {
-    std::cerr << "eNorm or scal are inconsistent\n";
+    std::cerr << "MODEL: eNorm or scal are inconsistent\n";
     throw TerminalException{1};
   }
 #endif
@@ -114,7 +114,7 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
   MyMatrix<T> RetMat_T = UniversalMatrixConversion<T, Tint>(RetMat);
   MyMatrix<T> prod = RetMat_T * Qmat * RetMat_T.transpose();
   if (prod != Qmat) {
-    std::cerr << "RetMat should prerve the Qmat\n";
+    std::cerr << "MODEL: RetMat should prerve the Qmat\n";
     throw TerminalException{1};
   }
 #endif
@@ -278,7 +278,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
   int n = Qmat.rows();
 #ifdef DEBUG_APPROXIMATE_MODELS
   if (!is_eichler_canonical(Qmat)) {
-    std::cerr << "The matrix should be Eichler canonical form\n";
+    std::cerr << "MODEL: The matrix should be Eichler canonical form\n";
     throw TerminalException{1};
   }
 #endif
@@ -326,7 +326,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
           return i;
         }
       }
-      std::cerr << "Failed to find a matching coset in GetPosition\n";
+      std::cerr << "MODEL: Failed to find a matching coset in GetPosition\n";
       throw TerminalException{1};
     };
     using Telt = typename Tgroup::Telt;
@@ -346,7 +346,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
         MyMatrix<T> eMatrGen_T = UniversalMatrixConversion<T, Tint>(eMatrGen);
         MyMatrix<T> prod = eMatrGen_T * Qmat * eMatrGen_T.transpose();
         if (prod != Qmat) {
-          std::cerr << "The Matrix is not preserving the quadratic form\n";
+          std::cerr << "MODEL: The Matrix is not preserving the quadratic form\n";
           throw TerminalException{1};
         }
 #endif
@@ -357,7 +357,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
            << "\n";
         int &val = status[pos];
         if (val == 1) {
-          std::cerr << "The value has already been attained\n";
+          std::cerr << "MODEL: The value has already been attained\n";
           throw TerminalException{1};
         }
         val = 1;
@@ -470,7 +470,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       MyMatrix<T> TheMat_T = UniversalMatrixConversion<T, Tint>(TheMat);
       MyMatrix<T> eProd = TheMat_T * Qmat * TheMat_T.transpose();
       if (eProd != Qmat) {
-        std::cerr << "The matrix is not preserving the quadratic form\n";
+        std::cerr << "MODEL: The matrix is not preserving the quadratic form\n";
         throw TerminalException{1};
       }
 #endif
@@ -646,7 +646,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
             os << "MODEL: EnumerateVectorOverDiscriminant Aclass4_res2="
                << Aclass4_res2 << " X_res2=" << X_res2 << "\n";
             if (Aclass4_res2 != X_res2) {
-              std::cerr << "A bug to resolve\n";
+              std::cerr << "MODEL: A bug to resolve\n";
               throw TerminalException{1};
             }
 #endif
@@ -663,7 +663,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
 #ifdef DEBUG_APPROXIMATE_MODELS
             T eNorm = EvaluationQuadForm(Qmat, eSolution_T);
             if (eNorm != X) {
-              std::cerr << "eNorm / X is inconsistent\n";
+              std::cerr << "MODEL: eNorm / X is inconsistent\n";
               throw TerminalException{1};
             }
             os << "MODEL: EnumerateVectorOverDiscriminant DivV=" << DivV
@@ -1194,7 +1194,7 @@ EichlerReduction<T, Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const &Qmat,
   MyMatrix<T> QmatEichler = preEmbedInv_T * Qmat * preEmbedInv_T.transpose();
 #ifdef DEBUG_APPROXIMATE_MODELS
   if (!is_eichler_canonical(QmatEichler)) {
-    std::cerr << "The matrix should be reduced according to the Eichler "
+    std::cerr << "MODEL: The matrix should be reduced according to the Eichler "
                  "canonical form\n";
     throw TerminalException{1};
   }
@@ -1265,7 +1265,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
     os << "MODEL: fGen_T=\n";
     WriteMatrix(os, fGen_T);
     if (!IsIntegralMatrix(fGen_T)) {
-      std::cerr << "fGen should be integral\n";
+      std::cerr << "MODEL: fGen should be integral\n";
       throw TerminalException{1};
     }
 #endif
@@ -1288,7 +1288,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   std::function<std::vector<MyVector<Tint>>(MyVector<Tint>, T)>
       get_vector_representatives =
           [=](MyVector<Tint> const &eRepr,
-              T const &X) -> std::vector<MyVector<Tint>> {
+              [[maybe_unused]] T const &X) -> std::vector<MyVector<Tint>> {
     std::vector<MyVector<Tint>> ListV;
     for (auto &eCos : shr_ptr->ListCoset) {
       MyVector<Tint> fRepr = eCos.transpose() * eRepr;
@@ -1300,7 +1300,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
         MyMatrix<T> const &Qmat = shr_ptr->Qmat;
         T eNorm = EvaluationQuadForm<T, Tint>(Qmat, eSol);
         if (eNorm != X) {
-          std::cerr << "fSol is not of the right norm\n";
+          std::cerr << "MODEL: fSol is not of the right norm\n";
           throw TerminalException{1};
         }
 #endif
@@ -1314,7 +1314,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
       SetListClassesOrbitwise =
           [=]([[maybe_unused]] std::vector<MyMatrix<Tint>> const &GRPmatr,
               [[maybe_unused]] std::ostream &os) -> void {
-    std::cerr << "That function should not be called\n";
+    std::cerr << "MODEL: That function should not be called\n";
     throw TerminalException{1};
   };
   std::function<std::vector<MyMatrix<Tint>>(std::ostream &)>

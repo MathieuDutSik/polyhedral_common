@@ -2218,6 +2218,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
           DirectFacetOrbitComputation(df.FF.EXT_face, df.Stab, ansProg, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
       os << "|TheOutput|=" << time_step << "\n";
+#endif
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "Number of facets being generated=" << TheOutput.size() << "\n";
 #endif
       AllArr.DualDescriptionProgram.pop(os);
@@ -2329,11 +2331,11 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
     auto f_recompute = [&](int const &method) -> void {
       size_t n_orbit = RPL.preload_nb_orbit();
-#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "n_orbit=" << n_orbit << " |n_orbit|=" << time << "\n";
 #endif
       vectface vfo = RPL.ReadDatabase(n_orbit);
-#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "delta=" << bb.delta << " nbRow=" << bb.nbRow << "\n";
       os << "|vfo|=" << vfo.size() << " / " << vfo.get_n()
          << " |ReadDatabase|=" << time << "\n";
@@ -2344,24 +2346,28 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
       vectface_update_method(vfo, bb, os);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
-      os << "bb.the_method=" << bb.the_method << " |method update|=" << time
-         << "\n";
+      os << "|method update|=" << time << "\n";
+#endif
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "bb.the_method=" << bb.the_method << "\n";
 #endif
       RPL.DirectAppendDatabase(std::move(vfo));
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+      os << "|vfo|=" << vfo.size() << " / " << vfo.get_n() << "\n";
+#endif
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
-      os << "|vfo|=" << vfo.size() << " / " << vfo.get_n()
-         << " |DirectAppendDatabase|=" << time << "\n";
+      os << "|DirectAppendDatabase|=" << time << "\n";
 #endif
     };
     if (action == DATABASE_ACTION__SIMPLE_LOAD) {
-#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "Before RPL.LoadDatabase()\n";
 #endif
       return RPL.LoadDatabase();
     }
     if (action == DATABASE_ACTION__RECOMPUTE_AND_SHUFFLE) {
       int method = bb.convert_string_method(ansChoiceCanonic);
-#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       os << "Before f_recompute, method=" << method
          << " ansChoiceCanonic=" << ansChoiceCanonic << "\n";
 #endif
@@ -2374,7 +2380,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
 #endif
       int method = RPL.bb.evaluate_method_serial(vf);
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
-      os << "method=" << method << " |evaluate_method_serial|=" << time << "\n";
+      os << "|evaluate_method_serial|=" << time << "\n";
 #endif
       if (method == bb.the_method) {
         return RPL.LoadDatabase();
@@ -2410,8 +2416,10 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     MicrosecondTime time;
 #endif
     bool test_final = RPL.GetTerminationStatus();
-#ifdef TIMINGS_RECURSIVE_DUAL_DESC
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     os << "test_final=" << test_final << "\n";
+#endif
+#ifdef TIMINGS_RECURSIVE_DUAL_DESC
     os << "|GetTerminationStatus|=" << time << "\n";
 #endif
     if (test_final)

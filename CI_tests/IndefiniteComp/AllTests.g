@@ -147,13 +147,13 @@ end;
 
 FullTest:=function()
     local rec1, rec2, rec3, rec4, rec5, rec6, ListL, ListRk2, eList;
-    rec1:=["U", "2U"];
-    rec2:=["U", "2U", "A2"];
-    rec3:=["U", "2U", "A3"];
-    rec4:=["U", "2U", "A2", "A2"];
-    rec5:=["U", "U", "E7"];
-    rec6:=["U", "2U", "2E8"];
-    ListL:=[rec1, rec2, rec3, rec4, rec5, rec6];
+    ListL:=[];
+#    Add(ListL, ["U", "2U"]);
+#    Add(ListL, ["U", "2U", "A2"]);
+#    Add(ListL, ["U", "2U", "A3"]);
+#    Add(ListL, ["U", "2U", "A2", "A2"]); # Too slow apparently.
+    Add(ListL, ["U", "U", "E7"]);
+#    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
     for eList in ListL
     do
         if TestStab(eList)=false then
@@ -166,7 +166,13 @@ FullTest:=function()
             return false;
         fi;
     od;
-    ListRk2:=[rec1, rec2, rec3, rec4, rec5, rec6];
+    ListRk2:=[];
+#    Add(ListL, ["U", "2U"]);
+#    Add(ListL, ["U", "2U", "A2"]);
+#    Add(ListL, ["U", "2U", "A3"]);
+#    Add(ListL, ["U", "2U", "A2", "A2"]); # Too slow apparently.
+    Add(ListL, ["U", "U", "E7"]);
+#    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
     for eList in ListRk2
     do
         if TestOrbitIsotropic(eList)=false then

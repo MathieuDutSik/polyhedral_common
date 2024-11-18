@@ -133,7 +133,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT,
 #endif
   MyMatrix<Tint> Qmat = GetQmatrix(EXT, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetQmatrix|=" << time << "\n";
+  os << "|PES: GetQmatrix|=" << time << "\n";
 #endif
 
   std::optional<MyMatrix<Tint>> eEquiv =
@@ -142,25 +142,25 @@ LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT,
     return *eEquiv;
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time
+  os << "|PES: LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick|=" << time
      << "\n";
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
       GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetWeightMatrixAntipodal|=" << time << "\n";
+  os << "|PES: GetWeightMatrixAntipodal|=" << time << "\n";
 #endif
 
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |ReorderingSetWeight|=" << time << "\n";
+  os << "|PES: ReorderingSetWeight|=" << time << "\n";
 #endif
 
   std::vector<int> CanonicOrd =
       GetCanonicalizationVector_Kernel<Tint, GraphBitset, int>(WMat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|PES: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
 
   MyMatrix<Tint> EXTreord(n_rows, n_cols);
@@ -185,17 +185,17 @@ LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT,
     }
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |EXTreord 2|=" << time << "\n";
+  os << "|PES: EXTreord 2|=" << time << "\n";
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |ComputeColHermiteNormalForm 2|=" << time << "\n";
+  os << "|PES: ComputeColHermiteNormalForm 2|=" << time << "\n";
 #endif
 
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |SignRenormalizationMatrix|=" << time << "\n";
+  os << "|PES: SignRenormalizationMatrix|=" << time << "\n";
 #endif
   return RedMat;
 }
@@ -238,7 +238,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
   WeightMatrixAbs<Tint, Tidx_value> WMatAbs =
       GetSimpleWeightMatrixAntipodal_AbsTrick<Tint, Tidx_value>(EXT, Qmat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
+  os << "|PES: GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
 #endif
 
   using Tidx = uint32_t;
@@ -246,7 +246,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
       GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(
           WMatAbs.WMat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
+  os << "|PES: GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -376,7 +376,7 @@ LinPolytopeAntipodalIntegral_Automorphism_Tidx_value(MyMatrix<Tint> const &EXT,
 #endif
   MyMatrix<Tint> Qmat = GetQmatrix(EXT, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetQmatrix|=" << time << "\n";
+  os << "|PES: GetQmatrix|=" << time << "\n";
 #endif
 
   std::optional<std::vector<std::vector<unsigned int>>> eEquiv =
@@ -385,19 +385,19 @@ LinPolytopeAntipodalIntegral_Automorphism_Tidx_value(MyMatrix<Tint> const &EXT,
     return *eEquiv;
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |LinPolytopeAntipodalIntegral_Automorphism|=" << time << "\n";
+  os << "|PES: LinPolytopeAntipodalIntegral_Automorphism|=" << time << "\n";
 #endif
 
   WeightMatrix<true, Tint, Tidx_value> WMat =
       GetWeightMatrixAntipodal<Tint, Tidx_value>(EXT, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetWeightMatrixAntipodal|=" << time << "\n";
+  os << "|PES: GetWeightMatrixAntipodal|=" << time << "\n";
 #endif
 
   std::vector<std::vector<Tidx>> ListGen =
       GetStabilizerWeightMatrix_Kernel<Tint, Tgr, Tidx, Tidx_value>(WMat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
+  os << "|PES: GetStabilizerWeightMatrix_Kernel|=" << time << "\n";
 #endif
   return ListGen;
 }
@@ -496,14 +496,14 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
           fp.second, os)
           .first;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|PES: GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(
           ep.first, fp.first, eCanonicReord, fCanonicReord);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |IsomorphismFromCanonicReord|=" << time << "\n";
+  os << "|PES: IsomorphismFromCanonicReord|=" << time << "\n";
 #endif
   if (!IsoInfo) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT
@@ -520,7 +520,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   Tgroup GRP1 =
       GetStabilizerWeightMatrix<Tval, Tgr, Tgroup, Tidx_value>(ep.second, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "PES: |GetStabilizerWeightMatrix|=" << time << "\n";
+  os << "|PES: GetStabilizerWeightMatrix|=" << time << "\n";
 #endif
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT
   os << "PES: |GRP1|=" << GRP1.size() << "\n";
@@ -533,7 +533,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
   std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(
       ep.first, fp.first, GRP1, ePerm, os);
 #ifdef TIMINGS
-  os << "PES: |LinPolytopeIntegral_Isomorphism_Method8|=" << time << "\n";
+  os << "|PES: LinPolytopeIntegral_Isomorphism_Method8|=" << time << "\n";
 #endif
   if (eRes) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT

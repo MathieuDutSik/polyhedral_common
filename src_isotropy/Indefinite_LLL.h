@@ -137,9 +137,6 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
 #endif
       return {B, get_matrix(), ResGS.Xisotrop};
     }
-#ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: After the RecGS.success test\n";
-#endif
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
         T val = ResGS.mu(i, j);
@@ -147,9 +144,6 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
         B.row(i) -= q * B.row(j);
       }
     }
-#ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: After the i/j loop\n";
-#endif
     T mu = ResGS.mu(k, k - 1);
     T sum1_pre = ResGS.Bstar_norms[k] + mu * mu * ResGS.Bstar_norms[k - 1];
     T sum1 = T_abs(sum1_pre);

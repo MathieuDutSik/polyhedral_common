@@ -167,22 +167,22 @@ GetQmatrix(MyMatrix<T> const &TheEXT, [[maybe_unused]] std::ostream &os) {
 
   MyMatrix<Tfield> TheEXT_F = UniversalMatrixConversion<Tfield, T>(TheEXT);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |UniversalMatrixConversion1|=" << time << "\n";
+  os << "|PES: UniversalMatrixConversion1|=" << time << "\n";
 #endif
 
   MyMatrix<Tfield> Q_F = Kernel_GetQmatrix(TheEXT_F);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |Kernel_GetQmatrix|=" << time << "\n";
+  os << "|PES: Kernel_GetQmatrix|=" << time << "\n";
 #endif
 
   MyMatrix<Tfield> Q_F_red = RemoveFractionMatrix(Q_F);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |RemoveFractionMatrix|=" << time << "\n";
+  os << "|PES: RemoveFractionMatrix|=" << time << "\n";
 #endif
 
   MyMatrix<T> RetMat = UniversalMatrixConversion<T, Tfield>(Q_F_red);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |UniversalMatrixConversion2|=" << time << "\n";
+  os << "|PES: UniversalMatrixConversion2|=" << time << "\n";
 #endif
   return RetMat;
 }
@@ -503,14 +503,14 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
   Treturn ListGen =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |LinPolytope_Aut : FCT_EXT_Qinput|=" << time << "\n";
+  os << "|PES: LinPolytope_Aut : FCT_EXT_Qinput|=" << time << "\n";
 #endif
   std::vector<Telt> LGen;
   for (auto &eList : ListGen) {
     LGen.push_back(Telt(eList));
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |LinPolytope_Aut : LGen|=" << time << "\n";
+  os << "|PES: LinPolytope_Aut : LGen|=" << time << "\n";
 #endif
   return Tgroup(LGen, nbRow);
 }
@@ -601,7 +601,7 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
   std::vector<Tidx> CanonicOrd =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |FCT_EXT_Qinput|=" << time << "\n";
+  os << "|PES: FCT_EXT_Qinput|=" << time << "\n";
 #endif
   return CanonicOrd;
 }
@@ -654,12 +654,12 @@ MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const &EXT,
     EXTreord.row(i_row) = EXT.row(j_row);
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |CanonicOrdering + EXTreord|=" << time << "\n";
+  os << "|PES: CanonicOrdering + EXTreord|=" << time << "\n";
 #endif
 
   MyMatrix<T> RedMat = CanonicalizeOrderedMatrix(EXTreord);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |CanonicalizeOrderedMatrix|=" << time << "\n";
+  os << "|PES: CanonicalizeOrderedMatrix|=" << time << "\n";
 #endif
   return RedMat;
 }
@@ -1057,18 +1057,18 @@ size_t GetInvariant_ListMat_Vdiag_Tidx_value(
 #endif
   WeightMatrix<true, std::vector<T>, Tidx_value> WMat = get_wmat();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |get_wmat|=" << time << "\n";
+  os << "|PES: get_wmat|=" << time << "\n";
 #endif
 
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |ReorderingSetWeight|=" << time << "\n";
+  os << "|PES: ReorderingSetWeight|=" << time << "\n";
 #endif
 
   size_t e_hash =
       std::hash<WeightMatrix<true, std::vector<T>, Tidx_value>>()(WMat);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |hash|=" << time << "\n";
+  os << "|PES: hash|=" << time << "\n";
 #endif
   return e_hash;
 }
@@ -1123,7 +1123,7 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
   Treturn ListGen = FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
       EXT, ListMat, Vdiag, f, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
+  os << "|PES: GetListGenAutomorphism_ListMat_Vdiag|=" << time << "\n";
 #endif
   return ListGen;
 }
@@ -1182,7 +1182,7 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
       FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
                                                                Vdiag, f, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |Canonicalization_ListMat_Vdiag|=" << time << "\n";
+  os << "|PES: Canonicalization_ListMat_Vdiag|=" << time << "\n";
 #endif
   return CanonicReord;
 }
@@ -1424,7 +1424,7 @@ WeightMatrixAbs<T, Tidx_value> GetSimpleWeightMatrixAntipodal_AbsTrick(
   os << "PES: After positionZero=" << positionZero << "\n";
 #endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
+  os << "|PES: GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
 #endif
   return {positionZero, std::move(ArrSigns), std::move(WMat)};
 }
@@ -1485,7 +1485,7 @@ GetSimpleWeightMatrixAntipodal(MyMatrix<T> const &TheEXT,
     }
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetSimpleWeightMatrixAntipodal|=" << time << "\n";
+  os << "|PES: GetSimpleWeightMatrixAntipodal|=" << time << "\n";
 #endif
   bool weight_ordered = false;
   return WeightMatrix<true, T, Tidx_value>(INP_nbRow, INP_TheMat,
@@ -1569,7 +1569,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   WeightMatrixAbs<Tint, Tidx_value> WMatAbs =
       GetSimpleWeightMatrixAntipodal_AbsTrick<Tint, Tidx_value>(EXT, Qmat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
+  os << "|PES: GetSimpleWeightMatrixAntipodal_AbsTrick|=" << time << "\n";
 #endif
 
   using Tidx = uint32_t;
@@ -1577,7 +1577,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
       GetGroupCanonicalizationVector_Kernel<Tint, Tgr, Tidx, Tidx_value>(
           WMatAbs.WMat, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|PES: GetGroupCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
 
   // We check if the Generating vector eGen can be mapped from the absolute
@@ -1645,7 +1645,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   //
   std::vector<Tidx> const &CanonicOrd = ePair.first;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |GetCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|PES: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
 
   size_t n_cols = EXT.cols();
@@ -1722,16 +1722,16 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   os << "\n";
 #endif
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |EXTreord|=" << time << "\n";
+  os << "|PES: EXTreord|=" << time << "\n";
 #endif
 
   MyMatrix<Tint> RedMat = ComputeColHermiteNormalForm_second(EXTreord);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |ComputeColHermiteNormalForm|=" << time << "\n";
+  os << "|PES: ComputeColHermiteNormalForm|=" << time << "\n";
 #endif
   SignRenormalizationMatrix(RedMat);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "PES: |SignRenormalizationMatrix|=" << time << "\n";
+  os << "|PES: SignRenormalizationMatrix|=" << time << "\n";
 #endif
   return RedMat;
 }
