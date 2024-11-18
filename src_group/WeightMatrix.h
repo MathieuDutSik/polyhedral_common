@@ -175,14 +175,14 @@ public:
       }
     }
     if (ValueMap.size() > size_t(std::numeric_limits<Tidx_value>::max() - 1)) {
-      std::cerr << "We have |ValueMap|=" << ValueMap.size() << "\n";
-      std::cerr << "std::numeric_limits<Tidx_value>::max()="
+      std::cerr << "WEIGHT: We have |ValueMap|=" << ValueMap.size() << "\n";
+      std::cerr << "WEIGHT: std::numeric_limits<Tidx_value>::max()="
                 << size_t(std::numeric_limits<Tidx_value>::max()) << "\n";
-      std::cerr << "We also need some space for the missing values\n";
+      std::cerr << "WEIGHT: We also need some space for the missing values\n";
       throw TerminalException{1};
     }
 #ifdef TIMINGS_WEIGHT_MATRIX
-    os << "Timing |WeightMatrix(nbRow,f)|=" << time << "\n";
+    os << "|WEIGHT: WeightMatrix(nbRow,f)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
@@ -212,15 +212,15 @@ public:
       }
     }
     if (ValueMap.size() > size_t(std::numeric_limits<Tidx_value>::max() - 1)) {
-      std::cerr << "We have |ValueMap|=" << ValueMap.size() << "\n";
-      std::cerr << "std::numeric_limits<Tidx_value>::max()="
+      std::cerr << "WEIGHT: We have |ValueMap|=" << ValueMap.size() << "\n";
+      std::cerr << "WEIGHT: std::numeric_limits<Tidx_value>::max()="
                 << size_t(std::numeric_limits<Tidx_value>::max()) << "\n";
-      std::cerr << "nbRow=" << nbRow << "\n";
-      std::cerr << "We also need some space for the missing values\n";
+      std::cerr << "WEIGHT: nbRow=" << nbRow << "\n";
+      std::cerr << "WEIGHT: We also need some space for the missing values\n";
       throw TerminalException{1};
     }
 #ifdef TIMINGS_WEIGHT_MATRIX
-    os << "Timing |WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
+    os << "|WEIGHT: WeightMatrix(nbRow,f1,f2)|=" << time << "\n";
 #endif
     weight_ordered = false;
   }
@@ -642,10 +642,10 @@ GetInvariantWeightMatrix(
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrix(
-    std::ostream &os, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
+    std::ostream &os_out, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
   size_t siz = WMat.GetWeightSize();
   size_t nbRow = WMat.rows();
-  os << "nbRow=" << nbRow << "  Weights=[";
+  os_out << "nbRow=" << nbRow << "  Weights=[";
   std::vector<int> ListValues(siz, 0);
   for (size_t iRow = 0; iRow < nbRow; iRow++)
     for (size_t iCol = 0; iCol < nbRow; iCol++) {
@@ -655,54 +655,54 @@ void PrintWeightedMatrix(
   std::vector<T> const &ListWeight = WMat.GetWeight();
   for (size_t i = 0; i < siz; i++) {
     if (i > 0)
-      os << ", ";
-    os << "(" << ListWeight[i] << "," << ListValues[i] << ")";
+      os_out << ", ";
+    os_out << "(" << ListWeight[i] << "," << ListValues[i] << ")";
   }
-  os << "]\n";
+  os_out << "]\n";
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     for (size_t iCol = 0; iCol < nbRow; iCol++) {
       Tidx_value eVal = WMat.GetValue(iRow, iCol);
-      os << " " << eVal;
+      os_out << " " << eVal;
     }
-    os << "\n";
+    os_out << "\n";
   }
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrixGAP(
-    std::ostream &os, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
+    std::ostream &os_out, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
   std::vector<T> const &ListWeight = WMat.GetWeight();
   size_t nbRow = WMat.rows();
-  os << "[";
+  os_out << "[";
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     if (iRow > 0)
-      os << ",\n";
-    os << "[";
+      os_out << ",\n";
+    os_out << "[";
     for (size_t iCol = 0; iCol < nbRow; iCol++) {
       Tidx_value eVal = WMat.GetValue(iRow, iCol);
       T eWei = ListWeight[eVal];
       if (iCol > 0)
-        os << ", ";
-      os << eWei;
+        os_out << ", ";
+      os_out << eWei;
     }
-    os << "]";
+    os_out << "]";
   }
-  os << "]";
+  os_out << "]";
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrixNoWeight(
-    std::ostream &os, WeightMatrix<is_symmetric, T, Tidx_value> &WMat) {
+    std::ostream &os_out, WeightMatrix<is_symmetric, T, Tidx_value> &WMat) {
   size_t siz = WMat.GetWeightSize();
-  os << "nbWeight=" << siz << "\n";
+  os_out << "nbWeight=" << siz << "\n";
   size_t nbRow = WMat.rows();
-  os << "nbRow=" << WMat.rows() << "\n";
+  os_out << "nbRow=" << WMat.rows() << "\n";
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     for (size_t iCol = 0; iCol < nbRow; iCol++) {
       Tidx_value eVal = WMat.GetValue(iRow, iCol);
-      os << " " << eVal;
+      os_out << " " << eVal;
     }
-    os << "\n";
+    os_out << "\n";
   }
 }
 

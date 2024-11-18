@@ -82,11 +82,18 @@ std::string GetNatureOption(int const &TheOption) {
     That gets us   beta eNorm = eVal * TheRec.gcd
     beta = eVal TheRec.gcd / eNorm
     mid * L * mid = beta * beta * eNorm
+    -------------------------------------------------
+    The problem we have to solve is to enumerate the point x s.t.
+    x.v <= C
+    Q[x] >= 0 for 
  */
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
     MyMatrix<T> const &LorMat, MyVector<T> const &eVect, T const &MaxScal,
     int const &TheOption, bool const &OnlyShortest, std::ostream &os) {
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: beginning\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: OnlyShortest=" << OnlyShortest
@@ -329,6 +336,12 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
       f_save(TotalListSol);
 #endif
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: LORENTZ_FindPositiveVectors 1, eVal=" << eVal << "\n";
+#endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+      os << "|LORPERF: LORENTZ_FindPositiveVectors 1|=" << time << "\n";
+#endif
       return TotalListSol;
     }
     eVal += 1;
@@ -349,6 +362,12 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #endif
 #ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
   f_save(TotalListSol);
+#endif
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_FindPositiveVectors 2, eVal=" << eVal << "\n";
+#endif
+#ifdef TIMINGS_LORENTZIAN_PERFECT
+  os << "|LORPERF: LORENTZ_FindPositiveVectors 2|=" << time << "\n";
 #endif
   return TotalListSol;
 }
@@ -1265,7 +1284,7 @@ struct DataPerfectLorentzianFunc {
     os << "LORPERF: f_init, returning x\n";
 #endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-    os << "|LorPerfect(f_init)|=" << time << "\n";
+    os << "|LORPERF: LorPerfect(f_init)|=" << time << "\n";
 #endif
     return x;
   }
@@ -1291,7 +1310,7 @@ struct DataPerfectLorentzianFunc {
       os << "LORPERF: f_repr: returning not isomorphic\n";
 #endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-      os << "|LorPerfect(f_repr,None)|=" << time << "\n";
+      os << "|LORPERF: LorPerfect(f_repr,None)|=" << time << "\n";
 #endif
       return {};
     }
@@ -1313,7 +1332,7 @@ struct DataPerfectLorentzianFunc {
     os << "LORPERF: f_repr: Before returning ret\n";
 #endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-    os << "|LorPerfect(f_repr,Some)|=" << time << "\n";
+    os << "|LORPERF: LorPerfect(f_repr,Some)|=" << time << "\n";
 #endif
     return ret;
   }
@@ -1362,7 +1381,7 @@ struct DataPerfectLorentzianFunc {
       ListAdj.push_back(eAdj);
     }
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-    os << "|LorPerfect(f_adj)|=" << time << "\n";
+    os << "|LORPERF: LorPerfect(f_adj)|=" << time << "\n";
 #endif
     return ListAdj;
   }

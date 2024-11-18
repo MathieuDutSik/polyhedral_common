@@ -644,7 +644,7 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
     std::cerr << "But they should be equal\n";
     throw TerminalException{1};
   }
-  os << "POS: GetIntegralVector_allmeth: We have V2\n";
+  os << "POS: GetIntegralVector_allmeth: We have V2=" << StringVectorGAP(V2) << "\n";
 #endif
   return V2;
 }
@@ -658,7 +658,11 @@ MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const &M,
   os << "POS: GetIntegralPositiveVector_allmeth: before "
         "GetIntegralVector_allmeth\n";
 #endif
-  return GetIntegralVector_allmeth<T, Tint>(M, CritNorm, StrictIneq, os);
+  MyVector<Tint> V = GetIntegralVector_allmeth<T, Tint>(M, CritNorm, StrictIneq, os);
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetIntegralPositiveVector_allmeth: We have V\n";
+#endif
+  return V;
 }
 
 template <typename T, typename Tint>
@@ -673,8 +677,11 @@ MyVector<Tint> GetShortIntegralVector(MyMatrix<T> const &M, T const &CritNorm,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortIntegralVector: before GetIntegralVector_allmeth\n";
 #endif
-  return GetIntegralVector_allmeth<T, Tint>(Mwork, CritNormWork, StrictIneq,
-                                            os);
+  MyVector<Tint> V = GetIntegralVector_allmeth<T, Tint>(Mwork, CritNormWork, StrictIneq, os);
+#ifdef DEBUG_POSITIVITY
+  os << "POS: GetShortIntegralVector: We have V\n";
+#endif
+  return V;
 }
 
 template <typename Tint>
