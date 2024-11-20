@@ -214,6 +214,16 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 12\n";
   int iter_findpos = 0;
 #endif
+  T alpha_basic = TheRec.gcd / eNorm;
+  T const& beta_basic = alpha_basic;
+  MyVector<Tint> const& eBasSol_basic = TheRec.V;
+  MyVector<T> eBasSol_T_basic = UniversalVectorConversion<T, Tint>(eBasSol_basic);
+  T scal1_basic = eBasSol_T_basic.dot(eVect_LorMat);
+  T scal2_basic = alpha_basic * eVect.dot(eVect_LorMat);
+  MyVector<T> eTrans_basic = alpha_basic * eVect - eBasSol_T_basic;
+  std::optional<MyVector<T>> opt_basic = SolutionMat(Ubasis_T, eTrans_basic);
+  MyVector<T> eSol_basic = unfold_opt(opt_basic, "Getting eSol_basic");
+  T eSquareDist_basic = beta_basic * beta_basic * eNorm;
   Tint eVal = 1;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
@@ -231,38 +241,31 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
 #endif
-    T alpha = eVal * TheRec.gcd / eNorm;
+    T alpha = eVal * alpha_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 4 alpha=" << alpha
        << "\n";
-    T scal1 = eBasSol_T.dot(eVect_LorMat);
-    T scal2 = alpha * eVect.dot(eVect_LorMat);
+    T scal1 = eVal * scal1_basic;
+    T scal2 = eVal * scal2_basic;
     os << "LORPERF: LORENTZ_FindPositiveVectors: scal1=" << scal1
        << " scal2=" << scal2 << "\n";
     if (scal1 != scal2) {
       std::cerr << "LORPERF: We should have scal1 = scal\n";
       throw TerminalException{1};
     }
-#endif
-    MyVector<T> eTrans = alpha * eVect - eBasSol_T;
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
+    MyVector<T> eTrans = eVal * eTrans_basic;
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 5 eTrans="
        << StringVector(eTrans) << "\n";
 #endif
-    std::optional<MyVector<T>> opt = SolutionMat(Ubasis_T, eTrans);
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 6\n";
-#endif
-    MyVector<T> eSol = unfold_opt(opt, "Getting eSol");
+    MyVector<T> eSol = eVal * eSol_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7 eSol="
        << StringVector(eSol) << "\n";
 #endif
-    T beta = eVal * TheRec.gcd / eNorm; // a guess
-    T eSquareDist = beta * beta * eNorm;
+    T beta = eVal * alpha_basic;
+    T eSquareDist = eVal * eVal * eSquareDist_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8 beta=" << beta
-       << " eSquareDist=" << eSquareDist
+    os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8 eSquareDist=" << eSquareDist
        << " det(GramMat)=" << DeterminantMat(GramMat) << "\n";
 #endif
     auto iife_iele = [&]() -> std::vector<MyVector<Tint>> {
@@ -324,16 +327,11 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
        << TotalListSol.size() << "\n";
 #endif
     if (OnlyShortest && TotalListSol.size()) {
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-      os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 1 return "
-            "|TotalListSol|="
-         << TotalListSol.size() << "\n";
-#endif
 #ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
       f_save(TotalListSol);
 #endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
-      os << "LORPERF: LORENTZ_FindPositiveVectors 1, eVal=" << eVal << "\n";
+      os << "LORPERF: LORENTZ_FindPositiveVectors 1, eVal=" << eVal << " |TotalListSol|=" << TotalListSol.size() << "\n";
 #endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
       os << "|LORPERF: LORENTZ_FindPositiveVectors 1|=" << time << "\n";
@@ -352,15 +350,11 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
       }
     }
   }
-#ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-  os << "LORPERF: LORENTZ_FindPositiveVectors: EXIT 2 return |TotalListSol|="
-     << TotalListSol.size() << "\n";
-#endif
 #ifdef GAPDEBUGOUT_LORENTZIAN_FIND_POSITIVE_VECTORS
   f_save(TotalListSol);
 #endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_FindPositiveVectors 2, eVal=" << eVal << "\n";
+  os << "LORPERF: LORENTZ_FindPositiveVectors 2, eVal=" << eVal << " |TotalListSol|=" << TotalListSol.size() << "\n";
 #endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORPERF: LORENTZ_FindPositiveVectors 2|=" << time << "\n";
