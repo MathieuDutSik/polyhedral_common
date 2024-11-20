@@ -817,13 +817,14 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
   int n_dim = TheMat.rows();
   MyMatrix<T> ePerturb = IdentityMat<T>(n_dim);
 #ifdef DEBUG_LORENTZIAN_PERFECT
+  size_t iter = 0;
   os << "LORPERF: GetOneOutsideRay: Before while loop\n";
 #endif
   while (true) {
     MyMatrix<T> TheMatPerturb = -ePerturb * TheMat * ePerturb.transpose();
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: GetOneOutsideRay: We have |TheMatPerturb|="
-       << TheMatPerturb.rows() << " / " << TheMatPerturb.cols() << "\n";
+    iter += 1;
+    os << "LORPERF: GetOneOutsideRay: iter=" << iter << "\n";
 #endif
     MyMatrix<T> uVect =
         GetIntegralPositiveVector_allmeth<T, T>(TheMatPerturb, os);
@@ -846,10 +847,11 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
 #endif
     MyVector<T> tVect = LorMat * RetVect;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: GetOneOutsideRay: We have tVect\n";
+    os << "LORPERF: GetOneOutsideRay: tVect=" << tVect << "\n";
 #endif
     T eScal = tVect.dot(TheSet0);
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+    os << "LORPERF: GetOneOutsideRay: scal=" << scal << "\n";
     for (auto &eVect : TheSet) {
       MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       T fScal = tVect.dot(eVect_T);
@@ -870,6 +872,9 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
     os << "LORPERF: GetOneOutsideRay: We have TheUpperBound_opt\n";
 #endif
     if (TheUpperBound_opt.has_value()) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: GetOneOutsideRay: iter=" << iter << " eNSPdir=" << StringVector(eNSPdir) << "\n";
+#endif
       return eNSPdir;
     }
     ePerturb = ePerturb * GetRandomMatrixPerturbation<T>(n_dim);
@@ -962,7 +967,7 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
     os << "LORPERF: GetOnePerfect: We have |EXT|=" << EXT.rows() << " / "
        << EXT.cols() << "\n";
 #endif
-    MyMatrix<T> NSP = NullspaceTrMat(EXT);
+    MyMatrix<T> NSP = NullspaceIntTrMat(EXT);
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
     if (NSP.rows() == 0) {
       std::cerr << "LORPERF: NSP should be non-empty\n";
@@ -971,8 +976,9 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
 #endif
     MyMatrix<T> ListDir = DropColumn(NSP, 0) * LorMatInv;
 #ifdef DEBUG_LORENTZIAN_PERFECT
-    os << "LORPERF: GetOnePerfect: We have |ListDir|=" << ListDir.rows()
-       << " / " << ListDir.cols() << "\n";
+    os << "LORPERF: GetOnePerfect: |ListDir|=" << ListDir.rows() << " / " << ListDir.cols() << "\n";
+    os << "LORPERF: GetOnePerfect: ListDir=\n";
+    WriteMatrix(std::cerr, ListDir);
 #endif
     MyMatrix<T> eNSPdir = LORENTZ_GetOneOutsideRay<T, Tint>(
         LorMat, ListDir, CritSet, eNSPbas, os);
