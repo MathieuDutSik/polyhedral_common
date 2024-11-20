@@ -33,20 +33,22 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
   //
   // Computing the Z-basis on which the computation relies.
   //
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  os << "LSEC: Begining of ComputeCanonicalForm\n";
+#endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "Begining of ComputeCanonicalForm\n";
   MicrosecondTime time;
 #endif
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "nbRow=" << nbRow << " n=" << n << "\n";
+  os << "LSEC: nbRow=" << nbRow << " n=" << n << "\n";
   if (!CheckCentralSymmetry(SHV)) {
-    std::cerr << "The set of vector does not respect the central symmetry "
+    std::cerr << "LSEC: The set of vector does not respect the central symmetry "
                  "condition\n";
     throw TerminalException{1};
   }
@@ -58,19 +60,19 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
   WeightMatrix<true, T, Tidx_value> WMat =
       T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|WMat|=" << time << "\n";
+  os << "|LSEC: WMat|=" << time << "\n";
 #endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "Original WMat=\n";
+  os << "LSEC: Original WMat=\n";
   PrintWeightedMatrix(os, WMat);
 #endif
   WMat.ReorderingSetWeight();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "Weight reordering WMat=\n";
+  os << "LSEC: Weight reordering WMat=\n";
   PrintWeightedMatrix(os, WMat);
 #endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ReorderingSetWeight|=" << time << "\n";
+  os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
@@ -78,13 +80,13 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
   std::vector<int> CanonicOrd =
       GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat, os);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "CanonicOrd=";
+  os << "LSEC: CanonicOrd=";
   for (auto &eV : CanonicOrd)
     os << " " << eV;
   os << "\n";
 #endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CNA
-  os << "|GetCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   //
   // Building the canonical basis
@@ -96,10 +98,10 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|SHVcan|=" << time << "\n";
+  os << "|LSEC: SHVcan|=" << time << "\n";
 #endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "SHVred=\n";
+  os << "LSEC: SHVred=\n";
   std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pair_calc =
       ComputeRowHermiteNormalForm(SHVcan_Tint);
   MyMatrix<Tint> PrtMat = pair_calc.second;
@@ -107,7 +109,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
       Inverse(pair_calc.first) * pair_calc.second - SHVcan_Tint;
   WriteMatrix(os, PrtMat);
   if (!IsZeroMatrix(eDiff)) {
-    std::cerr << "The matrix eDiff should be zero\n";
+    std::cerr << "LSEC: The matrix eDiff should be zero\n";
     throw TerminalException{1};
   }
 #endif
@@ -115,20 +117,20 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
       ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ReductionMatrix|=" << time << "\n";
+  os << "|LSEC: ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
   if (eDet_abs != 1) {
-    std::cerr << "The matrix should be of determinant 1\n";
+    std::cerr << "LSEC: The matrix should be of determinant 1\n";
     throw TerminalException{1};
   }
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * BasisCan_T.transpose();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|Matrix products|=" << time << "\n";
+  os << "|LSEC: Matrix products|=" << time << "\n";
 #endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   WeightMatrix<true, T, Tidx_value> WMat_B =
@@ -146,20 +148,22 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   //
   // Computing the Z-basis on which the computation relies.
   //
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  os << "LSEC: Begining of ComputeCanonicalForm\n";
+#endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "Begining of ComputeCanonicalForm\n";
   MicrosecondTime time;
 #endif
   MyMatrix<T> inpMat = ListMat[0];
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!CheckCentralSymmetry(SHV)) {
-    std::cerr << "The set of vector does not respect the central symmetry "
+    std::cerr << "LSEC: The set of vector does not respect the central symmetry "
                  "condition\n";
     throw TerminalException{1};
   }
@@ -171,11 +175,11 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
       T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|WMat|=" << time << "\n";
+  os << "|LSEC: WMat|=" << time << "\n";
 #endif
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ReorderingSetWeight|=" << time << "\n";
+  os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
 #endif
   //
   // Computing the canonicalization of the scalar product matrix
@@ -188,7 +192,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   std::vector<int> CanonicOrd =
       GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|GetCanonicalizationVector_Kernel|=" << time << "\n";
+  os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
   //
   // Building the canonical basis
@@ -200,26 +204,26 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
     AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
   }
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|SHVcan|=" << time << "\n";
+  os << "|LSEC: SHVcan|=" << time << "\n";
 #endif
   MyMatrix<Tint> BasisCan_Tint_pre =
       ComputeRowHermiteNormalForm(SHVcan_Tint).first;
   MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|ReductionMatrix|=" << time << "\n";
+  os << "|LSEC: ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   T eDet = DeterminantMat(BasisCan_T);
   T eDet_abs = T_abs(eDet);
   if (eDet_abs != 1) {
-    std::cerr << "The matrix should be of determinant 1\n";
+    std::cerr << "LSEC: The matrix should be of determinant 1\n";
     throw TerminalException{1};
   }
 #endif
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|Matrix products|=" << time << "\n";
+  os << "|LSEC: Matrix products|=" << time << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
@@ -245,13 +249,13 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
     std::optional<MyMatrix<T>> opt =
         FindMatrixTransformationTest(SHV_T, SHV_T, eList);
     if (!opt) {
-      std::cerr << "Failed to find the matrix\n";
+      std::cerr << "LSEC: Failed to find the matrix\n";
       throw TerminalException{1};
     }
     MyMatrix<T> const &M_T = *opt;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
     if (!IsIntegralMatrix(M_T)) {
-      std::cerr << "Bug: The matrix should be integral\n";
+      std::cerr << "LSEC: Bug: The matrix should be integral\n";
       throw TerminalException{1};
     }
 #endif
@@ -279,13 +283,13 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
   MyMatrix<Tint> SHV2 =
       ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "SEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
+  os << "LSEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
 #endif
 
   if (SHV1.rows() != SHV2.rows())
     return {};
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "SEC: After the test\n";
+  os << "LSEC: After the test\n";
 #endif
 
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
@@ -295,7 +299,7 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
   std::vector<T> Vdiag1(n_rows, 0);
   std::vector<T> Vdiag2(n_rows, 0);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "SEC: Before the TestEquivalence_ListMat_Vdiag\n";
+  os << "LSEC: Before the TestEquivalence_ListMat_Vdiag\n";
 #endif
   std::optional<std::vector<Tidx>> opt =
       TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2,
@@ -307,14 +311,14 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
       FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!optB) {
-    std::cerr << "SEC: We have a matrix bug\n";
+    std::cerr << "LSEC: We have a matrix bug\n";
     throw TerminalException{1};
   }
 #endif
   MyMatrix<T> const &M_T = *optB;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!IsIntegralMatrix(M_T)) {
-    std::cerr << "SEC: The matrix should be integral\n";
+    std::cerr << "LSEC: The matrix should be integral\n";
     throw TerminalException{1};
   }
   for (size_t i = 0; i < ListMat1.size(); i++) {
@@ -322,7 +326,7 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
     MyMatrix<T> eMat2 = ListMat2[i];
     MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
     if (eProd != eMat2) {
-      std::cerr << "SEC: Inconsistency error in the code\n";
+      std::cerr << "LSEC: Inconsistency error in the code\n";
       throw TerminalException{1};
     }
   }
@@ -345,7 +349,7 @@ Canonic_PosDef<T, Tint>
 ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream &os) {
   int n_tot = inpMat.rows();
   if (n_tot % 2 == 1) {
-    std::cerr << "The dimension is odd\n";
+    std::cerr << "LSEC: The dimension is odd\n";
     throw TerminalException{1};
   }
   int n = n_tot / 2;

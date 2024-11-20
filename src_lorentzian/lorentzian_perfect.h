@@ -85,7 +85,7 @@ std::string GetNatureOption(int const &TheOption) {
     -------------------------------------------------
     The problem we have to solve is to enumerate the point x s.t.
     x.v <= C
-    Q[x] >= 0 for 
+    Q[x] >= 0 for Q a form of signature (1,n).
  */
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
@@ -121,7 +121,6 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
         << ", TotalList:=" << StringMatrixGAP(TotalListB) << ");\n";
   };
 #endif
-  int n = LorMat.rows();
   T eNorm = EvaluationQuadForm(LorMat, eVect);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: eNorm=" << eNorm << "\n";
@@ -173,18 +172,15 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 5 eVect_LorMat_tint="
      << StringVector(eVect_LorMat_tint) << "\n";
 #endif
-  MyMatrix<Tint> eVect_LorMat_tint_M(n, 1);
-  for (int u = 0; u < n; u++) {
-    eVect_LorMat_tint_M(u, 0) = eVect_LorMat_tint(u);
-  }
+  MyMatrix<T> UbasisPre_T = NullspaceIntVect(eVect_LorMat);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 6\n";
 #endif
-  MyMatrix<Tint> Ubasis = NullspaceIntMat(eVect_LorMat_tint_M);
+  MyMatrix<T> Ubasis_T = LLLbasisReduction<T, Tint>(UbasisPre_T).LattRed;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 7\n";
 #endif
-  MyMatrix<T> Ubasis_T = UniversalMatrixConversion<T, Tint>(Ubasis);
+  MyMatrix<Tint> Ubasis = UniversalMatrixConversion<Tint, T>(Ubasis_T);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 8\n";
 #endif
@@ -537,6 +533,9 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
     T eNorm = EvaluationQuadForm<T, T>(LorMat, eVect);
     if (eNorm < 0) {
       ListUpperBound.push_back(iShift);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: UpperBound iShift=" << iShift << "\n";
+#endif
       break;
     }
     iShift *= 2;
@@ -559,7 +558,8 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
   MyMatrix<T> TheBasis_mat = MatrixFromVectorFamily(TheBasis);
   MyMatrix<T> LorMat22 = TheBasis_mat * LorMat * TheBasis_mat.transpose();
   std::vector<MyVector<T>> ListIso = GetRationalIsotropyVectors(LorMat22);
-  std::optional<T> UpperBound_isotropic;
+  std::optional<T> UpperBound_isotropic_opt;
+  T UpperBound_isotropic;
   std::vector<T> ListUpperBound_Iso;
   for (auto &eIso : ListIso) {
     if (eIso(0) != 0) {
@@ -571,6 +571,9 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
       }
 #endif
       if (fact > 0) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+        os << "LORPERF: UpperBound fact=" << fact << "\n";
+#endif
         ListUpperBound_Iso.push_back(fact);
       }
     }
@@ -579,14 +582,18 @@ std::optional<T> GetUpperBound(MyMatrix<T> const &LorMat,
   os << "LORPERF: GetUpperBound, step 5\n";
 #endif
   if (ListUpperBound_Iso.size() > 0) {
-    UpperBound_isotropic = VectorMin(ListUpperBound_Iso);
-    ListUpperBound.push_back(*UpperBound_isotropic);
+    UpperBound_isotropic_opt = VectorMin(ListUpperBound_Iso);
+    UpperBound_isotropic = *UpperBound_isotropic_opt;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: UpperBound UpperBound_isotropic=" << UpperBound_isotropic << "\n";
+#endif
+    ListUpperBound.push_back(UpperBound_isotropic);
   }
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: GetUpperBound, step 6\n";
 #endif
-  if (UpperBound_constant.has_value() && UpperBound_isotropic.has_value()) {
-    if (*UpperBound_constant == *UpperBound_isotropic) {
+  if (UpperBound_constant.has_value() && UpperBound_isotropic_opt.has_value()) {
+    if (*UpperBound_constant == *UpperBound_isotropic_opt) {
       return {};
     }
   }
@@ -629,7 +636,8 @@ ResultFlipping<T, Tint> LORENTZ_Kernel_Flipping(
 #endif
   MyMatrix<T> LorMatInv = Inverse(LorMat);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: We have LorMatInv\n";
+  os << "LORPERF: We have LorMatInv. LorMat=\n";
+  WriteMatrix(os, LorMat);
 #endif
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
   std::vector<MyVector<T>> M1{eNSPbas, eNSPdir};

@@ -279,7 +279,7 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const &Q,
     }
 #endif
 #ifdef TIMINGS_FIFTH_AND_HIGHER_ORDER
-    os << "|FifthAndHigherOrderIsotropicVector(rank)|=" << time << "\n";
+    os << "|FIFTH: FifthAndHigherOrderIsotropicVector(rank)|=" << time << "\n";
 #endif
     return v2;
   }
@@ -305,7 +305,7 @@ MyVector<T> FifthAndHigherOrderIsotropicVector(MyMatrix<T> const &Q,
   }
 #endif
 #ifdef TIMINGS_FIFTH_AND_HIGHER_ORDER
-  os << "|FifthAndHigherOrderIsotropicVector(fifth)|=" << time << "\n";
+  os << "|FIFTH: FifthAndHigherOrderIsotropicVector(fifth)|=" << time << "\n";
 #endif
   return v2;
 }

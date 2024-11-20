@@ -252,7 +252,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
       }
 #endif
 #ifdef TIMINGS_INDEFINITE_LLL
-      os << "ILLL: |ComputeReductionIndefinite(Iso)|=" << time << "\n";
+      os << "|ILLL: ComputeReductionIndefinite(Iso)|=" << time << "\n";
 #endif
       return {Bret, Mwork, V};
     }
@@ -273,7 +273,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
       iter_no_improv++;
       if (limit_iter == iter_no_improv) {
 #ifdef TIMINGS_INDEFINITE_LLL
-        os << "ILLL: |ComputeReductionIndefinite(None)|=" << time << "\n";
+        os << "|ILLL: ComputeReductionIndefinite(None)|=" << time << "\n";
 #endif
         return {B, Mwork, {}};
       }

@@ -387,7 +387,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     }
     shr_ptr->ListClasses = ListClasses;
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "MODEL: |SetListClassesOrbitwise|=" << time << "\n";
+    os << "|MODEL: SetListClassesOrbitwise|=" << time << "\n";
 #endif
   };
   std::function<std::vector<MyMatrix<Tint>>(std::ostream &)>
@@ -502,7 +502,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       }
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "MODEL: |GetApproximateGroup|=" << time << "\n";
+    os << "|MODEL: GetApproximateGroup|=" << time << "\n";
 #endif
     return ListGenerators;
   };
@@ -686,7 +686,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       ListSolution.push_back(eSolution);
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "MODEL: |EnumerateVectorOverDiscriminant|=" << time << "\n";
+    os << "|MODEL: EnumerateVectorOverDiscriminant|=" << time << "\n";
 #endif
     return ListSolution;
   };
@@ -727,7 +727,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       }
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-    os << "MODEL: |GetCoveringOrbitRepresentatives|=" << time << "\n";
+    os << "|MODEL: GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif
     return ListSolution;
   };
@@ -893,7 +893,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
     }
   }
 #ifdef TIMINGS_APPROXIMATE_MODELS
-  os << "MODEL: |GetEasyIsometries|=" << time << "\n";
+  os << "|MODEL: GetEasyIsometries|=" << time << "\n";
 #endif
   return ListGenerators;
 }
@@ -1101,7 +1101,7 @@ ResultHyperbolicPlane<T, Tint> GetHyperbolicPlane(MyMatrix<T> const &Qmat,
           }
           if (terminate) {
 #ifdef TIMINGS_APPROXIMATE_MODELS
-            os << "MODEL: |GetHyperbolicPlane|=" << time << "\n";
+            os << "|MODEL: GetHyperbolicPlane|=" << time << "\n";
 #endif
             return get_result_hyperbolic_plane(Qmat, pairA);
           }
@@ -1215,7 +1215,7 @@ EichlerReduction<T, Tint> GetEichlerHyperplaneBasis(MyMatrix<T> const &Qmat,
   WriteMatrix(os, QmatEichler);
 #endif
 #ifdef TIMINGS_APPROXIMATE_MODELS
-  os << "MODEL: |GetEichlerHyperplaneBasis|=" << time << "\n";
+  os << "|MODEL: GetEichlerHyperplaneBasis|=" << time << "\n";
 #endif
   return {Embed, Embed_T, EmbedInv_T, scal, QmatEichler};
 }

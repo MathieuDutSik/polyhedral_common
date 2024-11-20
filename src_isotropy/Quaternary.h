@@ -576,7 +576,7 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const &M,
   std::optional<MyVector<Tring>> opt = QuaternaryIsotropicVectorDiagonal(a, os);
   if (!opt) {
 #ifdef TIMINGS_QUATERNARY
-    os << "|QuaternaryIsotropicVector(None)|=" << time << "\n";
+    os << "|QUAD: QuaternaryIsotropicVector(None)|=" << time << "\n";
 #endif
     return {};
   }
@@ -596,7 +596,7 @@ std::optional<MyVector<T>> QuaternaryIsotropicVector(MyMatrix<T> const &M,
   }
 #endif
 #ifdef TIMINGS_QUATERNARY
-  os << "|QuaternaryIsotropicVector(Some)|=" << time << "\n";
+  os << "|QUAD: QuaternaryIsotropicVector(Some)|=" << time << "\n";
 #endif
   return sol3;
 }

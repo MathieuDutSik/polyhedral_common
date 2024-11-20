@@ -820,7 +820,7 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const &M,
   std::optional<MyVector<Tring>> opt = TernaryIsotropicVectorDiagonal(diag, os);
   if (!opt) {
 #ifdef TIMINGS_LEGENDRE
-    os << "|TernaryIsotropicVector(None)|=" << time << "\n";
+    os << "|LEG: TernaryIsotropicVector(None)|=" << time << "\n";
 #endif
     return {};
   }
@@ -845,7 +845,7 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const &M,
   }
 #endif
 #ifdef TIMINGS_LEGENDRE
-  os << "|TernaryIsotropicVector(Some)|=" << time << "\n";
+  os << "|LEG: TernaryIsotropicVector(Some)|=" << time << "\n";
 #endif
   return sol4;
 }
