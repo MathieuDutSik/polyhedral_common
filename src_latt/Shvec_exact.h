@@ -697,12 +697,12 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
   std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>> ePair =
       GetReducedShvecRequest<T, Tint>(request);
 #ifdef TIMINGS_SHVEC
-  os << "|GetReducedShvecRequest|=" << time << "\n";
+  os << "|SHVEC: GetReducedShvecRequest|=" << time << "\n";
 #endif
   T_shvec_info<T, Tint> info1 =
       T_computeShvec_Kernel<T, Tint>(ePair.first, mode);
 #ifdef TIMINGS_SHVEC
-  os << "|T_computeShvec_Kernel|=" << time << "\n";
+  os << "|SHVEC: T_computeShvec_Kernel|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_SHVEC
   std::cerr << "Case 1\n";
@@ -710,7 +710,7 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
 #endif
   T_shvec_info<T, Tint> info2 = ApplyReductionToShvecInfo(info1, ePair.second);
 #ifdef TIMINGS_SHVEC
-  os << "|ApplyReductionToShvecInfo|=" << time << "\n";
+  os << "|SHVEC: ApplyReductionToShvecInfo|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_SHVEC
   std::cerr << "Case 2\n";
@@ -740,11 +740,11 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
   T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
 #ifdef TIMINGS_SHVEC
-  os << "|initShvecReq|=" << time << "\n";
+  os << "|SHVEC: initShvecReq|=" << time << "\n";
 #endif
   T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, mode, os);
 #ifdef TIMINGS_SHVEC
-  os << "|T_computeShvec|=" << time << "\n";
+  os << "|SHVEC: T_computeShvec|=" << time << "\n";
 #endif
   int nbVect = info.short_vectors.size();
   MyMatrix<Tint> ListClos(nbVect, dim);
@@ -756,7 +756,7 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
     eDiff(i) = ListClos(0, i) - eV(i);
   T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
 #ifdef TIMINGS_SHVEC
-  os << "|paperwork|=" << time << "\n";
+  os << "|SHVEC: paperwork|=" << time << "\n";
 #endif
   return {TheNorm, std::move(ListClos)};
 }

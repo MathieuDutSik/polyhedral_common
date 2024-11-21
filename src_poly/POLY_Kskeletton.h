@@ -18,6 +18,15 @@
 #include <unordered_set>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_POLY_KSKELETTON
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_POLY_KSKELETTON
+#endif
+
+
 template <typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
   int nbCol = eMat.cols();
@@ -754,10 +763,14 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   HumanTime time;
   int n = GRPin.n_act();
   size_t tidx_max = std::numeric_limits<Tidx>::max();
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
      << "\n";
+#endif
   std::vector<Telt> LGen = GRPin.GeneratorsOfGroup();
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |LGen|=" << LGen.size() << "\n";
+#endif
   std::vector<vectface> l_vf_tot;
   size_t n_vert_tot = 0;
   for (auto &vf : l_vf) {
@@ -770,14 +783,21 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       MapLenSize[len] += cnt;
       vf_tot.append(vf_orbit);
     }
+#ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: MapLenSize =";
     for (auto &kv : MapLenSize)
       os << " (" << kv.first << "/" << kv.second << ")";
     os << "\n";
+#endif
     n_vert_tot += vf_tot.size();
     l_vf_tot.emplace_back(std::move(vf_tot));
   }
-  os << "SKEL: n_vert_tot=" << n_vert_tot << " |l_vf_tot|=" << time << "\n";
+#ifdef DEBUG_POLY_KSKELETTON
+  os << "SKEL: n_vert_tot=" << n_vert_tot << "\n";
+#endif
+#ifdef TIMINGS_POLY_KSKELETTON
+  os << "|SKEL: l_vf_tot|=" << time << "\n";
+#endif
   Tgr eGR(n_vert_tot);
   eGR.SetHasColor(true);
   for (int i = 0; i < n; i++) {
@@ -786,7 +806,9 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   int shift = n;
   for (size_t i_level = 1; i_level < l_vf_tot.size(); i_level++) {
     vectface const &vf = l_vf_tot.at(i_level);
+#ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: i_level=" << i_level << " |vf|=" << vf.size() << "\n";
+#endif
     for (auto &face : vf) {
       for (int i = 0; i < n; i++) {
         if (face[i] == 1) {
@@ -798,19 +820,31 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
       shift++;
     }
   }
-  os << "SKEL: shift=" << shift << " |eGR|=" << time << "\n";
+#ifdef DEBUG_POLY_KSKELETTON
+  os << "SKEL: shift=" << shift << "\n";
+#endif
+#ifdef TIMINGS_POLY_KSKELETTON
+  os << "|SKEL: eGR|=" << time << "\n";
+#endif
   int n_out = n;
   //  int n_out = n_vert_tot;
   std::vector<std::vector<Tidx>> ListGen_vect =
       GRAPH_GetListGenerators<Tgr, Tidx>(eGR, n_out, os);
-  os << "SKEL: nbGen=" << ListGen_vect.size() << " |ListGen_vect|=" << time << "\n";
+#ifdef DEBUG_POLY_KSKELETTON
+  os << "SKEL: nbGen=" << ListGen_vect.size() << "\n";
+#endif
+#ifdef TIMINGS_POLY_KSKELETTON
+  os << "|SKEL: ListGen_vect|=" << time << "\n";
+#endif
   std::vector<Telt> ListGen;
   for (auto &eList : ListGen_vect) {
     Telt ePerm(eList);
     ListGen.emplace_back(std::move(ePerm));
   }
   Tgroup GRPfull(ListGen, n_out);
-  os << "SKEL: |GRPfull|=" << time << "\n";
+#ifdef TIMINGS_POLY_KSKELETTON
+  os << "|SKEL: GRPfull|=" << time << "\n";
+#endif
   return GRPfull;
 }
 
@@ -818,14 +852,18 @@ template <typename T, typename Tgroup>
 void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: Reading PROC\n";
+#endif
   SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
   std::string FACfile = BlockPROC.ListStringValues.at("FACfile");
   MyMatrix<T> FAC = ReadMatrixFile<T>(FACfile);
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
+#endif
   if (size_t(FAC.rows()) > size_t(std::numeric_limits<Tidx>::max())) {
-    std::cerr << "We have |FAC|=" << FAC.rows() << "\n";
-    std::cerr << "But <Tidx>::max()="
+    std::cerr << "SKEL: We have |FAC|=" << FAC.rows() << "\n";
+    std::cerr << "SKEL: But <Tidx>::max()="
               << size_t(std::numeric_limits<Tidx>::max()) << "\n";
     throw TerminalException{1};
   }
@@ -835,12 +873,14 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   }
   //
   std::string method_spann = BlockPROC.ListStringValues.at("method_spann");
-  os << "SKEL: method_spann=" << method_spann << "\n";
   std::string method_final = BlockPROC.ListStringValues.at("method_final");
-  os << "SKEL: method_final=" << method_final << "\n";
   bool ComputeTotalNumberFaces =
       BlockPROC.ListBoolValues.at("ComputeTotalNumberFaces");
+#ifdef DEBUG_POLY_KSKELETTON
+  os << "SKEL: method_final=" << method_final << "\n";
+  os << "SKEL: method_spann=" << method_spann << "\n";
   os << "SKEL: ComputeTotalNumberFaces=" << ComputeTotalNumberFaces << "\n";
+#endif
   //
   MyMatrix<T> EXT;
   if (method_spann == "ExtremeRays" ||
@@ -855,10 +895,14 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   //
   std::string GRPfile = BlockPROC.ListStringValues.at("GRPfile");
   Tgroup GRP = ReadGroupFile<Tgroup>(GRPfile);
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |GRP|=" << GRP.size() << "\n";
+#endif
   //
   int LevSearch = BlockPROC.ListIntValues.at("LevSearch");
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: LevSearch=" << LevSearch << "\n";
+#endif
   if (LevSearch == -1) {
     int nbCol = FAC.cols();
     LevSearch = nbCol - 2;
@@ -866,7 +910,9 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   //
   std::string OUTfile = BlockPROC.ListStringValues.at("OUTfile");
   std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
+#ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
+#endif
   //
   std::vector<vectface> TheOutput =
       EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final,
@@ -881,11 +927,15 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
     using Tgr = GraphListAdj;
     Tgroup GRPfull =
         ComputeGroupFromOrbitFaces<Tgroup, Tgr>(TheOutput, GRP, os);
+#ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: |GRPfull|=" << GRPfull.size() << "\n";
+#endif
     std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
-    os << "SKEL: FileGroup=" << FileGroup << "\n";
     std::string OutFormat = BlockGROUP.ListStringValues.at("OutFormat");
+#ifdef DEBUG_POLY_KSKELETTON
+    os << "SKEL: FileGroup=" << FileGroup << "\n";
     os << "SKEL: OutFormat=" << OutFormat << "\n";
+#endif
     WriteGroupFormat(FileGroup, OutFormat, GRPfull);
   }
 }

@@ -130,10 +130,10 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     }
   }
 #ifdef TIMINGS_DUAL_DESC
-  os << "|FileWriting|=" << time << "\n";
+  os << "|DDD: FileWriting|=" << time << "\n";
 #endif
 #ifdef DEBUG_DUAL_DESC
-  os << "FileO=" << FileO << " created\n";
+  os << "DDD: FileO=" << FileO << " created\n";
 #endif
   //
   // Now calling the external program
@@ -145,14 +145,14 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     order = eCommand + " " + FileI + " > " + FileO + " 2> " + FileE;
   }
 #ifdef DEBUG_DUAL_DESC
-  os << "order=" << order << "\n";
+  os << "DDD: order=" << order << "\n";
 #endif
   int iret1 = system(order.c_str());
 #ifdef TIMINGS_DUAL_DESC
-  os << "|glrs/ppl/cdd|=" << time << "\n";
+  os << "|DDD: glrs/ppl/cdd|=" << time << "\n";
 #endif
 #ifdef DEBUG_DUAL_DESC
-  os << "External program terminated\n";
+  os << "DDD: External program terminated\n";
 #endif
   if (iret1 != 0) {
     std::cerr << "The program has not terminated correctly\n";
@@ -196,7 +196,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     size_t iLineLimit = 0;
     while (std::getline(is, line)) {
 #ifdef DEBUG_DUAL_DESC
-      os << "iLine=" << iLine << " line=" << line << "\n";
+      os << "DDD: iLine=" << iLine << " line=" << line << "\n";
 #endif
       if (has_n_facet) {
         if (iLine < iLineLimit) {
@@ -250,10 +250,10 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     }
   }
 #ifdef TIMINGS_DUAL_DESC
-  os << "|FileRead|=" << time << "\n";
+  os << "|DDD: FileRead|=" << time << "\n";
 #endif
 #ifdef DEBUG_DUAL_DESC
-  os << "FileI = " << FileI << "    FileO = " << FileO << "\n";
+  os << "DDD: FileI = " << FileI << "    FileO = " << FileO << "\n";
 #endif
   if (n_insert == 0) {
     std::cerr << "We inserted zero entries\n";
@@ -667,9 +667,11 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   MicrosecondTime time_total;
 #endif
   vectface ListIncd = DirectFacetComputationIncidence(EXT, ansProg, os);
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: |ListIncd|=" << ListIncd.size() << "\n";
+#endif
 #ifdef TIMINGS_DUAL_DESC
-  os << "|DualDescription|=" << time << " |ListIncd|=" << ListIncd.size()
-     << "\n";
+  os << "|DDD: DualDescription|=" << time << "\n";
 #endif
   if (ListIncd.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
@@ -680,7 +682,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols()
+  os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols()
      << "_" << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
      << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
 #endif
@@ -703,10 +705,10 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   };
   DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
 #ifdef TIMINGS_DUAL_DESC
-  os << "|DualDescription|=" << time << "\n";
+  os << "|DDD: DualDescription|=" << time << "\n";
 #endif
 #ifdef DEBUG_DUAL_DESC
-  os << "Found  |ListIncd|=" << ListReturn.size() << "\n";
+  os << "DDD: Found  |ListIncd|=" << ListReturn.size() << "\n";
 #endif
   if (ListReturn.size() == 0) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
@@ -718,10 +720,10 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   std::vector<std::pair<Face, MyVector<T>>> TheOutput =
       OrbitSplittingMap(ListReturn, GRP);
 #ifdef TIMINGS_DUAL_DESC
-  os << "|OrbitSplittingMap|=" << time << "\n";
+  os << "|DDD: OrbitSplittingMap|=" << time << "\n";
 #endif
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_"
+  os << "DDD: KEY=(DirectFacetIneqOrbitComputation_" << EXT.rows() << "_"
      << EXT.cols() << "_" << GRP.size() << "_" << ansProg << "_"
      << ListReturn.size() << "_" << TheOutput.size() << ") VALUE=("
      << time_total << ")\n";

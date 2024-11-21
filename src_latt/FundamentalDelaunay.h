@@ -78,12 +78,15 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
 #endif
     MyMatrix<T> ListIneq = MatrixFromVectorFamily(ListIneq_vect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Building ListIneq|=" << time << " nbVect=" << ListIneq.rows() << "\n";
+    os << "|DEL: Building ListIneq|=" << time << "\n";
+#endif
+#ifdef DEBUG_FUNDAMENTAL_DELAUNAY
+    os << "DEL: nbVect=" << ListIneq.rows() << "\n";
 #endif
     LpSolution<T> eSol =
         CDD_LinearProgramming(ListIneq, TheRandomDirection, os);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Computing LP eSol|=" << time << "\n";
+    os << "|DEL: Computing LP eSol|=" << time << "\n";
 #endif
     assert(eSol.PrimalDefined);
     MyVector<T> eVect = eSol.DirectSolution;
@@ -93,7 +96,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     // badly as the number of iterations grow immensely.
     resultCVP<T, Tint> TheCVP = solver.SingleSolver(eVect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Computing TheCVP|=" << time << "\n";
+    os << "|DEL: Computing TheCVP|=" << time << "\n";
 #endif
     int nbVectTot = TheCVP.ListVect.rows();
     if (TheCVP.TheNorm == TheNorm) {
@@ -105,7 +108,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
         }
       }
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-      os << "|Processing TheCVP 1|=" << time << "\n";
+      os << "|DEL: Processing TheCVP 1|=" << time << "\n";
 #endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
       os << "DEL_ENUM: f_init, Creation of a Delaunay with |V|="
@@ -121,7 +124,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
       }
     }
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-    os << "|Processing TheCVP 2|=" << time << "\n";
+    os << "|DEL: Processing TheCVP 2|=" << time << "\n";
 #endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "|ListIneq_vect|=" << ListIneq_vect.size() << "\n";
@@ -388,7 +391,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
            << " |ShvGraverBasis|=" << n_graver << "\n";
 #endif
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-        os << "|fGraverUpdate|=" << time_graver << "\n";
+        os << "|DEL: fGraverUpdate|=" << time_graver << "\n";
 #endif
         break;
       }
@@ -419,7 +422,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
       RetEXT(iVect, i + 1) = reply.ListVect(iVect, i);
   }
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
-  os << "|FindAdjacentDelaunayPolytope|=" << time << "\n";
+  os << "|DEL: FindAdjacentDelaunayPolytope|=" << time << "\n";
 #endif
   return RetEXT;
 }
