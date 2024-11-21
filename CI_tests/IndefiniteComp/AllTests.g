@@ -118,7 +118,7 @@ GetNrOrbitIsotropic:=function(eGram, kDim, choice)
     return rec(is_correct:=true, nr_orbit:=Length(U));
 end;
 
-TestOrbitIsotropic:=function(eList, k)
+TestOrbitIsotropic:=function(eList, kDim)
     local eGram1, eP, eGram2, Xnorm, choice, res1, res2, nr_orbit1, nr_orbit2;
     eGram1:=GetGramMatrixFromList(eList);
     eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
@@ -126,13 +126,13 @@ TestOrbitIsotropic:=function(eList, k)
     Xnorm:=2;
     for choice in ["plane", "flag"]
     do
-        res1:=GetNrOrbitIsotropic(eGram1, Xnorm);
+        res1:=GetNrOrbitIsotropic(eGram1, kDim, choice);
         if res1.is_correct=false then
             return false;
         fi;
         nr_orbit1:=res1.nr_orbit;
         #
-        res2:=GetNrOrbitIsotropic(eGram2, Xnorm);
+        res2:=GetNrOrbitIsotropic(eGram2, kDim, choice);
         if res2.is_correct=false then
             return false;
         fi;
@@ -146,16 +146,18 @@ TestOrbitIsotropic:=function(eList, k)
 end;
 
 FullTest:=function()
-    local rec1, rec2, rec3, rec4, rec5, rec6, ListL, ListRk2, eList;
-    ListL:=[];
-    Add(ListL, ["U", "2U"]);
-    Add(ListL, ["U", "2U", "A2"]);
-    Add(ListL, ["U", "2U", "A3"]);
-    Add(ListL, ["U", "2U", "A2", "A2"]);
-    Add(ListL, ["U", "U", "E7"]);
-    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
-    for eList in ListL
+    local eRec, ListRec, eList, k;
+    ListRec:=[];
+    Add(ListRec, rec(eList:=["U", "2U"], k:=2));
+    Add(ListRec, rec(eList:=["U", "2U", "A2"], k:=2));
+    Add(ListRec, rec(eList:=["U", "2U", "A3"], k:=2));
+    Add(ListRec, rec(eList:=["U", "2U", "A2", "A2"], k:=2));
+    Add(ListRec, rec(eList:=["U", "U", "E7"], k:=2));
+    Add(ListRec, rec(eList:=["U", "2U", "2E8"], k:=2)); # Enriques, should work as we did in the paper
+    for eRec in ListRec
     do
+        eList:=eRec.eList;
+        k:=eRec.k;
         if TestStab(eList)=false then
             return false;
         fi;
@@ -165,17 +167,7 @@ FullTest:=function()
         if TestOrbitRepresentative(eList)=false then
             return false;
         fi;
-    od;
-    ListRk2:=[];
-#    Add(ListL, ["U", "2U"]);
-#    Add(ListL, ["U", "2U", "A2"]);
-#    Add(ListL, ["U", "2U", "A3"]);
-#    Add(ListL, ["U", "2U", "A2", "A2"]); # Too slow apparently.
-    Add(ListL, ["U", "U", "E7"]);
-#    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
-    for eList in ListRk2
-    do
-        if TestOrbitIsotropic(eList)=false then
+        if TestOrbitIsotropic(eList, k)=false then
             return false;
         fi;
     od;
