@@ -244,6 +244,18 @@ template <typename T> bool is_eichler_canonical(MyMatrix<T> const &Qmat) {
   return true;
 }
 
+template<typename T>
+MyVector<T> VectorModulo1(MyVector<T> const& V) {
+  int n = V.size();
+  MyVector<T> Vret(n);
+  for (int u=0; u<n; u++) {
+    T floor = UniversalFloorScalarInteger<T,T>(V(u));
+    Vret(u) = V(u) - floor;
+  }
+  return Vret;
+}
+
+
 /*
   Dualities and action of the automorphism group on the disciminant.
   The Gram matrix G realize a scalar product <x, y> = x G y.
@@ -317,17 +329,26 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     os << "MODEL: SetListClassesOrbitwise, |ListClassesExt|=" << n_classes
        << "\n";
 #endif
-    auto GetPosition = [&](MyVector<Tint> const &eVect) -> size_t {
-      for (size_t i = 0; i < ListClassesExt.size(); i++) {
-        MyVector<Tint> eDiff = ListClassesExt[i] - eVect;
-        MyVector<T> eDiff_T = UniversalVectorConversion<T, Tint>(eDiff);
-        std::optional<MyVector<T>> opt = SolutionIntMat(Qmat, eDiff_T);
-        if (opt) {
-          return i;
-        }
+    std::vector<MyVector<T>> ListClassesRed;
+    std::unordered_map<MyVector<T>, size_t> MapClassesRed;
+    MyMatrix<T> QmatInv = Inverse(Qmat);
+    for (size_t i = 0; i < ListClassesExt.size(); i++) {
+      MyVector<T> eClass_T = UniversalVectorConversion<T,Tint>(ListClassesExt[i]);
+      MyVector<T> Qinv_eClass_T = QmatInv * eClass_T;
+      MyVector<T> redV = VectorModulo1<T>(Qinv_eClass_T);
+      ListClassesRed.push_back(redV);
+      MapClassesRed[redV] = i + 1;
+    }
+    auto GetPositionNextGen = [&](MyVector<Tint> const &eVect) -> size_t {
+      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      MyVector<T> Qinv_eVect_T = QmatInv * eVect_T;
+      MyVector<T> redV = VectorModulo1<T>(Qinv_eVect_T);
+      size_t pos = MapClassesRed[redV];
+      if (pos == 0) {
+        std::cerr << "MODEL: No classes found, not good\n";
+        throw TerminalException{1};
       }
-      std::cerr << "MODEL: Failed to find a matching coset in GetPosition\n";
-      throw TerminalException{1};
+      return pos - 1;
     };
     using Telt = typename Tgroup::Telt;
     using Tidx = typename Telt::Tidx;
@@ -340,6 +361,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       std::vector<Tidx> eList;
 #ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
       std::vector<int> status(n_classes, 0);
+      size_t i_class = 0;
 #endif
       for (auto &eClassExt : ListClassesExt) {
 #ifdef DEBUG_APPROXIMATE_MODELS
@@ -351,10 +373,11 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
         }
 #endif
         MyVector<Tint> x_eM = eMatrGen * eClassExt;
-        Tidx pos = GetPosition(x_eM);
+        Tidx pos = GetPositionNextGen(x_eM);
 #ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-        os << "MODEL: SetListClassesOrbitwise, pos=" << static_cast<int>(pos)
+        os << "MODEL: SetListClassesOrbitwise, i_class=" << i_class << " pos=" << static_cast<int>(pos)
            << "\n";
+        i_class += 1;
         int &val = status[pos];
         if (val == 1) {
           std::cerr << "MODEL: The value has already been attained\n";
