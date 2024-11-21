@@ -42,9 +42,9 @@ std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G) {
 template <typename T> void TestLorentzianity(MyMatrix<T> const &G) {
   std::optional<std::string> opt = ReasonNonLorentzian(G);
   if (opt) {
-    std::cerr << "G=\n";
+    std::cerr << "LORLIN: G=\n";
     WriteMatrix(std::cerr, G);
-    std::cerr << "Reason for non-lorentzianity=" << *opt << "\n";
+    std::cerr << "LORLIN: Reason for non-lorentzianity=" << *opt << "\n";
     throw TerminalException{1};
   }
 }
@@ -150,7 +150,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   MyMatrix<T> IntBasis = IntersectionLattice_VectorSpace(Latt, eIndep);
   std::optional<MyVector<T>> opt_u = SolutionMat(IntBasis, u);
   if (!opt_u) {
-    std::cerr << "We failed to find a solution for u\n";
+    std::cerr << "LORLIN: We failed to find a solution for u\n";
     throw TerminalException{1};
   }
   const MyVector<T> &sol_u = *opt_u;
@@ -158,7 +158,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   T u2 = sol_u(1);
   std::optional<MyVector<T>> opt_k = SolutionMat(IntBasis, k);
   if (!opt_k) {
-    std::cerr << "We failed to find a solution for k\n";
+    std::cerr << "LORLIN: We failed to find a solution for k\n";
     throw TerminalException{1};
   }
   const MyVector<T> &sol_k = *opt_k;
@@ -171,7 +171,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   T k1_norm = ep.Pmat(0, 0) * k1 + ep.Pmat(1, 0) * k2;
   T k2_norm = ep.Pmat(0, 1) * k1 + ep.Pmat(1, 1) * k2;
   if (k2_norm != 0) {
-    std::cerr << "We should have k2_norm = 0. Likely a bug here\n";
+    std::cerr << "LORLIN: We should have k2_norm = 0. Likely a bug here\n";
     throw TerminalException{1};
   }
   if (!IsInteger(u2_norm)) {
@@ -194,7 +194,7 @@ std::optional<MyVector<T>> ResolveLattEquation(MyMatrix<T> const &Latt,
   }
   T c = c0 + h * cS;
   if (c <= 0) {
-    std::cerr << "We should have c>0\n";
+    std::cerr << "LORLIN: We should have c>0\n";
     throw TerminalException{1};
   }
   return u + c * k;
@@ -213,8 +213,8 @@ MyMatrix<T> Get_Pplane(MyMatrix<T> const &G,
   }
   MyMatrix<T> Pplane = NullspaceTrMat(EquaPplane);
   if (Pplane.rows() != 2) {
-    std::cerr << "The dimension should be exactly 2\n";
-    std::cerr << "We have |Pplane|=" << Pplane.rows() << "\n";
+    std::cerr << "LORLIN: The dimension should be exactly 2\n";
+    std::cerr << "LORLIN: We have |Pplane|=" << Pplane.rows() << "\n";
     throw TerminalException{1};
   }
   return Pplane;
@@ -256,9 +256,9 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   using Tfield = typename overlying_field<T>::field_type;
   int dimSpace = l_vect[0].size();
   if (l_vect.size() < size_t(2 * dimSpace)) {
-    std::cerr << "Number of roots should be at least 2 * dimspace = "
+    std::cerr << "LORLIN: Number of roots should be at least 2 * dimspace = "
               << (2 * dimSpace) << "\n";
-    std::cerr << "while |l_vect|=" << l_vect.size() << "\n";
+    std::cerr << "LORLIN: while |l_vect|=" << l_vect.size() << "\n";
     throw TerminalException{1};
   }
   auto is_corr = [&](MyVector<T> const &w) -> bool {
@@ -277,7 +277,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
       for (int i = 0; i < dimSpace; i++)
         w(i) = random() % tot_spr - spr;
 #ifdef DEBUG_LORENTZIAN_LINALG
-      os << "get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
+      os << "LORLIN: get_random_vect. Trying w=" << StringVectorGAP(w) << "\n";
 #endif
       if (is_corr(w))
         return w;
@@ -285,7 +285,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   };
   MyVector<T> selVect = get_random_vect();
 #ifdef DEBUG_LORENTZIAN_LINALG
-  os << "Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
+  os << "LORLIN: Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
 #endif
   int n_vect = l_vect.size() / 2;
   MyMatrix<Tfield> EXT(n_vect, 1 + dimSpace);
@@ -364,15 +364,15 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   int dim = G1.rows();
 #ifdef DEBUG_LORENTZIAN_LINALG
   auto terminate = [&](std::string const &msg) -> void {
-    std::cerr << "G1=\n";
+    std::cerr << "LORLIN: G1=\n";
     WriteMatrix(std::cerr, G1);
-    std::cerr << "G2=\n";
+    std::cerr << "LORLIN: G2=\n";
     WriteMatrix(std::cerr, G2);
-    std::cerr << "Subspace1=\n";
+    std::cerr << "LORLIN: Subspace1=\n";
     WriteMatrix(std::cerr, Subspace1);
-    std::cerr << "Subspace2=\n";
+    std::cerr << "LORLIN: Subspace2=\n";
     WriteMatrix(std::cerr, Subspace2);
-    std::cerr << "LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg
+    std::cerr << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg
               << "\n";
     throw TerminalException{1};
   };
@@ -382,9 +382,9 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   MyMatrix<T> S1_G1_S1t = Subspace1 * G1 * Subspace1.transpose();
   MyMatrix<T> S2_G2_S2t = Subspace2 * G2 * Subspace2.transpose();
   if (S1_G1_S1t != S2_G2_S2t) {
-    std::cerr << "S1_G1_S1t=\n";
+    std::cerr << "LORLIN: S1_G1_S1t=\n";
     WriteMatrix(std::cerr, S1_G1_S1t);
-    std::cerr << "S2_G2_S2t=\n";
+    std::cerr << "LORLIN: S2_G2_S2t=\n";
     WriteMatrix(std::cerr, S2_G2_S2t);
     terminate("The S1 / G1 / S2 / G2 are not coherent on input");
   }
@@ -516,7 +516,7 @@ SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const &Amat,
   MyMatrix<T> SumMat =
       eSol_mat * Amat + Amat.transpose() * eSol_mat.transpose();
   if (Bmat != SumMat) {
-    std::cerr << "Failed to find the correct solution 1\n";
+    std::cerr << "LORLIN: Failed to find the correct solution 1\n";
     throw TerminalException{1};
   }
 #endif
@@ -529,7 +529,7 @@ SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const &Amat,
 #ifdef DEBUG_LORENTZIAN_LINALG
     MyMatrix<T> SumMat2 = eMat * Amat + Amat.transpose() * eMat.transpose();
     if (!IsZeroMatrix(SumMat2)) {
-      std::cerr << "Failed to find the correct solution 2\n";
+      std::cerr << "LORLIN: Failed to find the correct solution 2\n";
       throw TerminalException{1};
     }
 #endif
@@ -603,18 +603,18 @@ public:
 #ifdef DEBUG_LORENTZIAN_LINALG
     MyMatrix<T> ProdMat1 = NSP1 * G1 * NSP1.transpose();
     if (!IsZeroMatrix(ProdMat1)) {
-      std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
+      std::cerr << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
       throw TerminalException{1};
     }
     MyMatrix<T> ProdMat2 = NSP2 * G2 * NSP2.transpose();
     if (!IsZeroMatrix(ProdMat2)) {
-      std::cerr << "Inconsistent input: ProdMat1 should be equal to zero\n";
+      std::cerr << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
       throw TerminalException{1};
     }
     MyMatrix<T> SMat1 = Subspace1 * G1 * Subspace1.transpose();
     MyMatrix<T> SMat2 = Subspace2 * G2 * Subspace2.transpose();
     if (SMat1 != SMat2) {
-      std::cerr << "Inconsistent input: SMat1 should be equal to SMat2\n";
+      std::cerr << "LORLIN: Inconsistent input: SMat1 should be equal to SMat2\n";
       throw TerminalException{1};
     }
 #endif
@@ -648,7 +648,7 @@ public:
       MyVector<T> LScal1 = eProd1 * eVect1;
       MyVector<T> LScal2 = eProd2 * eVectCand2;
       if (LScal1 != LScal2) {
-        std::cerr << "Inconsistency for LScal1 = LScal2\n";
+        std::cerr << "LORLIN: Inconsistency for LScal1 = LScal2\n";
         throw TerminalException{1};
       }
 #endif
@@ -718,12 +718,12 @@ public:
     MyMatrix<T> eEqInv = Inverse(eEq);
     MyMatrix<T> G1_tr = eEqInv * G1 * eEqInv.transpose();
     if (G1_tr != G2) {
-      std::cerr << "G1 was not mapped to G2\n";
+      std::cerr << "LORLIN: G1 was not mapped to G2\n";
       throw TerminalException{1};
     }
     MyMatrix<T> Subspace1_img = Subspace1 * eEq;
     if (Subspace1_img != Subspace2) {
-      std::cerr << "Subspace1 is not mapped to Subspace2\n";
+      std::cerr << "LORLIN: Subspace1 is not mapped to Subspace2\n";
       throw TerminalException{1};
     }
   }
@@ -762,7 +762,7 @@ public:
   std::vector<MyMatrix<T>> get_kernel_generating_set(T const &d) {
 #ifdef DEBUG_LORENTZIAN_LINALG
     if (G1 != G2 || Subspace1 != Subspace2) {
-      std::cerr << "We should have G1=G2 and Subspace1=Subspace2 in order for "
+      std::cerr << "LORLIN: We should have G1=G2 and Subspace1=Subspace2 in order for "
                    "kernel to make sense\n";
       throw TerminalException{1};
     }
@@ -809,7 +809,7 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   for (T val = 2; val <= N + 1; val++) {
     bool test = is_prime(val);
 #ifdef DEBUG_LORENTZIAN_LINALG
-    std::cerr << "val=" << val << " test=" << test << "\n";
+    std::cerr << "LORLIN: val=" << val << " test=" << test << "\n";
 #endif
     if (test)
       ListPrime.push_back(val);
@@ -859,7 +859,7 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
     VectSiz.push_back(len);
   }
 #ifdef DEBUG_LORENTZIAN_LINALG
-  std::cerr << "n_case=" << n_case << "\n";
+  std::cerr << "LORLIN: n_case=" << n_case << "\n";
 #endif
   std::vector<T> l_order;
   for (auto &V : BlockIterationMultiple(VectSiz)) {
@@ -899,7 +899,7 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
     // We go a little bit over the needed range
     if (is_identity(ThePow)) {
 #ifdef DEBUG_LORENTZIAN_LINALG
-      std::cerr << "is_infinite_order expo=" << expo << "\n";
+      std::cerr << "LORLIN: is_infinite_order expo=" << expo << "\n";
 #endif
       return true;
     }
@@ -924,13 +924,13 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     MyMatrix<T> eP_T = UniversalMatrixConversion<T, Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
-      std::cerr << "G=";
+      std::cerr << "LORLIN: G=";
       WriteMatrix(std::cerr, G);
-      std::cerr << "eP_T=";
+      std::cerr << "LORLIN: eP_T=";
       WriteMatrix(std::cerr, eP_T);
-      std::cerr << "G_img=";
+      std::cerr << "LORLIN: G_img=";
       WriteMatrix(std::cerr, G_img);
-      std::cerr << "The matrix eP should leave the quadratic form invariant\n";
+      std::cerr << "LORLIN: The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
 #ifdef TIMINGS_LORENTZIAN_LINALG
@@ -942,7 +942,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     }
 #ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time2;
-    std::cerr << "Timing |is_finite_order|=" << ms(time1, time2) << "\n";
+    std::cerr << "|LORLIN: is_finite_order|=" << ms(time1, time2) << "\n";
 #endif
     MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
     if (!IsZeroMatrix(eDiff)) {
@@ -960,7 +960,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     }
 #ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time3;
-    std::cerr << "Timing |InvariantSpace|=" << ms(time2, time3) << "\n";
+    std::cerr << "|LORLIN: InvariantSpace|=" << ms(time2, time3) << "\n";
 #endif
   }
   DiagSymMat<T> get_diag_info() const {

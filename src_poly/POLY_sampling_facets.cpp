@@ -17,10 +17,8 @@ void process(std::string const &eFileI, std::string const &ansSamp,
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   std::vector<int> eList = ColumnReductionSet(EXT);
   MyMatrix<T> EXTred = SelectColumn(EXT, eList);
-  int nbCol = EXT.cols();
-  int dim = eList.size();
   vectface vf = DirectComputationInitialFacetSet(EXTred, ansSamp, std::cerr);
-  OutputFacets_stream(EXT,, vf, os_out, OutFormat, os);
+  OutputFacets_stream(EXT, vf, os_out, OutFormat, os_out);
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
             << "\n";
   throw TerminalException{1};

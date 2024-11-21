@@ -600,13 +600,11 @@ MatrixIntegral_GeneratePermutationGroup(
     return VectorMod(eVect, TheMod_mod);
   };
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup |SortingPerm|="
-     << time << "\n";
+  os << "|MAT_GRP: SortingPerm|=" << time << "\n";
 #endif
   Telt ePermSinv = ~ePermS;
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup |ePermSinv|=" << time
-     << "\n";
+  os << "|MAT_GRP: ePermSinv|=" << time << "\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
@@ -1014,7 +1012,7 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "pos=" << pos << " len=" << len << "\n";
+    os << "MAT_GRP: pos=" << pos << " len=" << len << "\n";
 #endif
     pos = len;
   }
@@ -1070,7 +1068,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "pos=" << pos << " len=" << len << "\n";
+    os << "MAT_GRP: pos=" << pos << " len=" << len << "\n";
 #endif
     pos = len;
   }
@@ -1347,7 +1345,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "MAT_GRP: |IsStabilizing|=" << time << "\n";
+    os << "|MAT_GRP: IsStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -1364,7 +1362,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, ListMatrRetMod, TheSpace, TheMod, V, helper, os);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "MAT_GRP: |FindingSmallOrbit|=" << time << "\n";
+    os << "|MAT_GRP: FindingSmallOrbit|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!opt_fso) {
@@ -1469,7 +1467,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsStabilizing(ListMatrRet)) {
-    std::cerr << "Error in LinearSpace_Stabilizer_Kernel\n";
+    std::cerr << "MAT_GRP: Error in LinearSpace_Stabilizer_Kernel\n";
     throw TerminalException{1};
   }
 #endif

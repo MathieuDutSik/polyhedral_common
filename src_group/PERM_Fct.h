@@ -55,15 +55,15 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
   static_assert(is_ring_field<T>::value, "RepresentVertexPermutation");
 #ifdef DEBUG_PERM_FCT
   if (EXT1.rows() != EXT2.rows() || EXT1.cols() != EXT2.cols()) {
-    std::cerr << "EXT1 and EXT2 should be of the same size\n";
+    std::cerr << "PERM: EXT1 and EXT2 should be of the same size\n";
     throw TerminalException{1};
   }
   if (RankMat(EXT1) != EXT1.cols()) {
-    std::cerr << "EXT1 should be of full rank\n";
+    std::cerr << "PERM: EXT1 should be of full rank\n";
     throw TerminalException{1};
   }
   if (RankMat(EXT2) != EXT2.cols()) {
-    std::cerr << "EXT2 should be of full rank\n";
+    std::cerr << "PERM: EXT2 should be of full rank\n";
     throw TerminalException{1};
   }
 #endif
@@ -77,8 +77,8 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
     int iRowImg = ePerm.at(ListRowSelect[iRow]);
 #ifdef DEBUG_PERM_FCT
     if (iRowImg >= EXT2.rows()) {
-      std::cerr << "iRowImg is at a too high index\n";
-      std::cerr << "iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows() << "\n";
+      std::cerr << "PERM: iRowImg is at a too high index\n";
+      std::cerr << "PERM: iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows() << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -98,20 +98,20 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
     }
   }
   if (!TestEqualityMatrix(EXT1_img, EXT2_perm)) {
-    std::cerr << "The matrices are not equal\n";
-    std::cerr << "EXT1=\n";
+    std::cerr << "PERM: The matrices are not equal\n";
+    std::cerr << "PERM: EXT1=\n";
     WriteMatrix(std::cerr, EXT1);
-    std::cerr << "EXT2=\n";
+    std::cerr << "PERM: EXT2=\n";
     WriteMatrix(std::cerr, EXT2);
-    std::cerr << "EXT1_img=\n";
+    std::cerr << "PERM: EXT1_img=\n";
     WriteMatrix(std::cerr, EXT1_img);
-    std::cerr << "EXT2_perm=\n";
+    std::cerr << "PERM: EXT2_perm=\n";
     WriteMatrix(std::cerr, EXT2_perm);
     throw TerminalException{1};
   }
   if (RankMat(RetMat) != nbCol) {
-    std::cerr << "RetMat should be of full rank\n";
-    std::cerr << "RetMat=\n";
+    std::cerr << "PERM: RetMat should be of full rank\n";
+    std::cerr << "PERM: RetMat=\n";
     WriteMatrix(std::cerr, RetMat);
     throw TerminalException{1};
   }
@@ -185,16 +185,16 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
       TMat_SelectRowCol_Kernel<Tfield>(nbRow, nbCol, f);
   if (eSelect.TheRank != nbCol) {
 #ifdef DEBUG_PERM_FCT
-    std::cerr << "FindMatrixTransformationTest_Generic, exit false 1\n";
+    std::cerr << "PERM: FindMatrixTransformationTest_Generic, exit false 1\n";
 #endif
     return {};
   }
 #ifdef DEBUG_PERM_FCT
-  std::cerr << "ListRowSelect =";
+  std::cerr << "PERM: ListRowSelect =";
   for (auto &eVal : eSelect.ListRowSelect)
     std::cerr << " " << eVal;
   std::cerr << "\n";
-  std::cerr << "Img(ListRowSelect) =";
+  std::cerr << "PERM: Img(ListRowSelect) =";
   for (auto &eVal : eSelect.ListRowSelect)
     std::cerr << " " << eList[eVal];
   std::cerr << "\n";
@@ -216,58 +216,58 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
 #ifdef DEBUG_PERM_FCT
-  std::cerr << "M1_field=\n";
+  std::cerr << "PERM: M1_field=\n";
   WriteMatrix(std::cerr, M1_field);
-  std::cerr << "M1inv_field=\n";
+  std::cerr << "PERM: M1inv_field=\n";
   WriteMatrix(std::cerr, M1inv_field);
-  std::cerr << "M2_field=\n";
+  std::cerr << "PERM: M2_field=\n";
   WriteMatrix(std::cerr, M2_field);
-  std::cerr << "EqMat=\n";
+  std::cerr << "PERM: EqMat=\n";
   WriteMatrix(std::cerr, EqMat);
 #endif
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     size_t iRowImg = eList[iRow];
 #ifdef DEBUG_PERM_FCT
-    std::cerr << "iRow=" << iRow << " iRowImg=" << iRowImg << "\n";
+    std::cerr << "PERM: iRow=" << iRow << " iRowImg=" << iRowImg << "\n";
 #endif
     // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
     const MyVector<T> &V2 = f2(iRowImg);
 #ifdef DEBUG_PERM_FCT_NOW_OK
-    std::cerr << "V1      =";
+    std::cerr << "PERM: V1      =";
     WriteVectorNoDim(std::cerr, V1);
-    std::cerr << "V2      =";
+    std::cerr << "PERM: V2      =";
     WriteVectorNoDim(std::cerr, V2);
     //
     MyVector<Tfield> V1_T = UniversalVectorConversion<Tfield, T>(V1);
-    std::cerr << "V1_T    =";
+    std::cerr << "PERM: V1_T    =";
     WriteVectorNoDim(std::cerr, V1_T);
     //
     MyVector<Tfield> V2_T = UniversalVectorConversion<Tfield, T>(V2);
-    std::cerr << "V2_T    =";
+    std::cerr << "PERM: V2_T    =";
     WriteVectorNoDim(std::cerr, V2_T);
     //
     MyVector<Tfield> V1_img = EqMat.transpose() * V1_T;
-    std::cerr << "V1_img  =";
+    std::cerr << "PERM: V1_img  =";
     WriteVectorNoDim(std::cerr, V1_img);
     //
     MyVector<Tfield> V1_expr = M1inv_field.transpose() * V1_T;
-    std::cerr << "V1_expr =";
+    std::cerr << "PERM: V1_expr =";
     WriteVectorNoDim(std::cerr, V1_expr);
     //
     MyVector<Tfield> V1_imgB = M2_field.transpose() * V1_expr;
-    std::cerr << "V1_imgB =";
+    std::cerr << "PERM: V1_imgB =";
     WriteVectorNoDim(std::cerr, V1_imgB);
     //
     MyVector<Tfield> V1_imgC =
         M2_field.transpose() * M1inv_field.transpose() * V1_T;
-    std::cerr << "V1_imgC =";
+    std::cerr << "PERM: V1_imgC =";
     WriteVectorNoDim(std::cerr, V1_imgC);
     //
     MyMatrix<Tfield> eProd = M1inv_field * M2_field;
     MyVector<Tfield> V1_imgD = eProd.transpose() * V1_T;
-    std::cerr << "V1_imgD =";
+    std::cerr << "PERM: V1_imgD =";
     WriteVectorNoDim(std::cerr, V1_imgD);
 #endif
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
@@ -279,16 +279,16 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
       }
       if (eSum != 0) {
 #ifdef DEBUG_PERM_FCT
-        std::cerr << "eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
+        std::cerr << "PERM: eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
                   << "\n";
-        std::cerr << "FindMatrixTransformationTest_Generic, exit false 2\n";
+        std::cerr << "PERM: FindMatrixTransformationTest_Generic, exit false 2\n";
 #endif
         return {};
       }
     }
   }
 #ifdef DEBUG_PERM_FCT
-  std::cerr << "FindMatrixTransformationTest_Generic, exit true\n";
+  std::cerr << "PERM: FindMatrixTransformationTest_Generic, exit true\n";
 #endif
   return EqMat;
 }
@@ -328,11 +328,11 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
 #endif
   size_t nbCol = EXT.cols();
 #ifdef DEBUG_PERM_FCT
-  std::cerr << "Vsubset =";
+  std::cerr << "PERM: Vsubset =";
   for (auto &eVal : Vsubset)
     std::cerr << " " << int(eVal);
   std::cerr << "\n";
-  std::cerr << "Vin =";
+  std::cerr << "PERM: Vin =";
   for (auto &eVal : Vin)
     std::cerr << " " << int(eVal);
   std::cerr << "\n";
@@ -347,7 +347,7 @@ FindMatrixTransformationTest_Subset(const MyMatrix<T> &EXT,
       FindMatrixTransformationTest_Generic<T, Tfield, Tidx>(Vsubset.size(),
                                                             nbCol, g1, g1, Vin);
 #ifdef TIMINGS_PERM_FCT
-  std::cerr << "|FindMatrixTransformationTest_Subset|=" << time << "\n";
+  std::cerr << "|PERM: FindMatrixTransformationTest_Subset|=" << time << "\n";
 #endif
   return test1;
 }
@@ -369,7 +369,7 @@ bool IsSubsetFullRank(const MyMatrix<T> &EXT,
   SelectionRowCol<Tfield> TheSol =
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
 #ifdef TIMINGS_PERM_FCT
-  std::cerr << "|IsSubsetFullRank|=" << time << "\n";
+  std::cerr << "|PERM: IsSubsetFullRank|=" << time << "\n";
 #endif
   return TheSol.TheRank == nbCol;
 }
@@ -387,17 +387,17 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   size_t P_rows = P.rows();
   size_t P_cols = P.cols();
   if (P_rows != P_cols) {
-    std::cerr << "P should be rectangular\n";
+    std::cerr << "PERM: P should be rectangular\n";
     throw TerminalException{1};
   }
   if (P_cols != n_cols) {
-    std::cerr << "P size does not match EXT1 size\n";
+    std::cerr << "PERM: P size does not match EXT1 size\n";
     throw TerminalException{1};
   }
   size_t n_rows2 = EXT2.rows();
   size_t n_cols2 = EXT2.cols();
   if (n_rows != n_rows2 || n_cols != n_cols2) {
-    std::cerr << "EXT1 and EXT2 do not have the same size\n";
+    std::cerr << "PERM: EXT1 and EXT2 do not have the same size\n";
     throw TerminalException{1};
   }
 #endif
@@ -417,7 +417,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!opt) {
 #ifdef TIMINGS_PERM_FCT
-        std::cerr << "ESC1 |RepresentVertexPermutationTest|=" << time << "\n";
+        std::cerr << "|PERM: RepresentVertexPermutationTest 1|=" << time << "\n";
 #endif
         // We fail because the image is not integral.
         return {};
@@ -427,7 +427,7 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     std::optional<size_t> opt = Cont.GetIdx_v(VectorContain);
     if (!opt) {
 #ifdef TIMINGS_PERM_FCT
-      std::cerr << "ESC2 |RepresentVertexPermutationTest|=" << time << "\n";
+      std::cerr << "|PERM: RepresentVertexPermutationTest 2|=" << time << "\n";
 #endif
       // We fail because the image does not belong to EXT2
       return {};
@@ -442,12 +442,12 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
     if (f[i_row] == 0)
       n_error++;
   if (n_error > 0) {
-    std::cerr << "We found several errors. n_error=" << n_error << "\n";
+    std::cerr << "PERM: We found several errors. n_error=" << n_error << "\n";
     throw TerminalException{1};
   }
 #endif
 #ifdef TIMINGS_PERM_FCT
-  std::cerr << "|RepresentVertexPermutationTest|=" << time << "\n";
+  std::cerr << "|PERM: RepresentVertexPermutationTest 3|=" << time << "\n";
 #endif
   return V;
 }
@@ -559,7 +559,7 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
   };
   std::vector<Tidx> ListIdx = get_listidx();
 #ifdef TIMINGS_PERM_FCT
-  std::cerr << "|ExtendPartialCanonicalization|=" << time << "\n";
+  std::cerr << "|PERM: ExtendPartialCanonicalization|=" << time << "\n";
 #endif
   return ListIdx;
 }
@@ -633,34 +633,34 @@ Telt GetPermutationOnVectors(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2) {
   for (size_t iVect = 0; iVect < nbVect; iVect++) {
     size_t jVect = ePermRet.at(iVect);
     if (EXTrow2[jVect] != EXTrow1[iVect]) {
-      std::cerr << "iVect=" << iVect << " jVect=" << jVect << "\n";
-      std::cerr << "Id:";
+      std::cerr << "PERM: iVect=" << iVect << " jVect=" << jVect << "\n";
+      std::cerr << "PERM: Id:";
       for (size_t k = 0; k < nbVect; k++)
         std::cerr << " " << k;
       std::cerr << "\n";
-      std::cerr << " p:";
+      std::cerr << "PERM: p:";
       for (size_t k = 0; k < nbVect; k++)
         std::cerr << " " << ePermRet.at(k);
       std::cerr << "\n";
 
-      std::cerr << "perm1:";
+      std::cerr << "PERM: perm1:";
       for (size_t k = 0; k < nbVect; k++)
         std::cerr << " " << ePerm1.at(k);
       std::cerr << "\n";
-      std::cerr << "perm2:";
+      std::cerr << "PERM: perm2:";
       for (size_t k = 0; k < nbVect; k++)
         std::cerr << " " << ePerm2.at(k);
       std::cerr << "\n";
 
-      std::cerr << "EXTrow1[iVect]=";
+      std::cerr << "PERM: EXTrow1[iVect]=";
       WriteVectorNoDim(std::cerr, EXTrow1[iVect]);
-      std::cerr << "EXTrow2[jVect]=";
+      std::cerr << "PERM: EXTrow2[jVect]=";
       WriteVectorNoDim(std::cerr, EXTrow2[jVect]);
-      std::cerr << "EXTrow1=\n";
+      std::cerr << "PERM: EXTrow1=\n";
       WriteMatrix(std::cerr, EXT1);
-      std::cerr << "EXTrow2=\n";
+      std::cerr << "PERM: EXTrow2=\n";
       WriteMatrix(std::cerr, EXT2);
-      std::cerr << "Error in GetPermutationOnVectors\n";
+      std::cerr << "PERM: Error in GetPermutationOnVectors\n";
       throw TerminalException{1};
     }
   }
@@ -777,13 +777,13 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   size_t sizPerm = ePerm.size();
   size_t sizEXT = EXT1.rows();
   if (sizPerm < sizEXT) {
-    std::cerr << "sizPerm=" << sizPerm << " sizEXT=" << sizEXT << "\n";
-    std::cerr << "ePerm should be of the same size as EXT1\n";
+    std::cerr << "PERM: sizPerm=" << sizPerm << " sizEXT=" << sizEXT << "\n";
+    std::cerr << "PERM: ePerm should be of the same size as EXT1\n";
     throw TerminalException{1};
   }
 #endif
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT1, EXT2, ePerm);
-  MyMatrix<T> eMatr = unfold_opt(opt, "FindTransformationGeneral fails");
+  MyMatrix<T> eMatr = unfold_opt(opt, "PERM: FindTransformationGeneral fails");
   return eMatr;
 }
 

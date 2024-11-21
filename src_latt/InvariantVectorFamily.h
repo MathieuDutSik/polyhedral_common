@@ -41,7 +41,7 @@ template <typename T, typename Tint>
 MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
                                          [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
-  os << "Begining of ExtractInvariantVectorFamily\n";
+  os << "IVF: Begining of ExtractInvariantVectorFamily\n";
 #endif
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
@@ -49,7 +49,7 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
   MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  os << "|LLL|=" << time << "\n";
+  os << "|IVF: LLL|=" << time << "\n";
 #endif
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   //
@@ -58,7 +58,7 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
   MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  os << "|T_ShortVector|=" << time << "\n";
+  os << "|IVF: T_ShortVector|=" << time << "\n";
 #endif
   MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
   int nbRow = SHV1_a.rows();

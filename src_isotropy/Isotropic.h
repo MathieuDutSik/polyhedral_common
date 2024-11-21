@@ -389,7 +389,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
   // Trying to solve by using the iterated Indefinite-LLL.
   std::optional<MyVector<T>> optA = FindIsotropic_LLL_nfixed(M, os);
 #ifdef TIMINGS_LEGENDRE
-  os << "|FindIsotropic(optA)|=" << time << "\n";
+  os << "|ISOTROP: FindIsotropic(optA)|=" << time << "\n";
 #endif
   if (optA) {
     return *optA;
@@ -397,7 +397,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
   // Computing the Indefinite-LLL reduction. Could get you an isotrop vector
   ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
 #ifdef TIMINGS_LEGENDRE
-  os << "|FindIsotropic(ComputeReductionIndefinite)|=" << time << "\n";
+  os << "|ISOTROP: FindIsotropic(ComputeReductionIndefinite)|=" << time << "\n";
 #endif
   if (res.Xisotrop) {
     MyVector<T> const &eV = *res.Xisotrop;
@@ -414,7 +414,7 @@ std::optional<MyVector<T>> FindIsotropic(MyMatrix<T> const &M,
   // Now calling the exact algorithm on the reduced matrix
   std::optional<MyVector<T>> optB = FindIsotropicExact(res.Mred, os);
 #ifdef TIMINGS_LEGENDRE
-  os << "|FindIsotropic(FindIsotropicExact)|=" << time << "\n";
+  os << "|ISOTROP: FindIsotropic(FindIsotropicExact)|=" << time << "\n";
 #endif
   if (optB) {
     MyVector<T> const &eV = *optB;
@@ -469,7 +469,7 @@ bool is_isotropic(MyMatrix<T> const &M, std::ostream &os) {
   };
   bool test = get_val();
 #ifdef TIMINGS_ISOTROPIC
-  os << "|is_isotropic|=" << time << "\n";
+  os << "|ISOTROP: is_isotropic|=" << time << "\n";
 #endif
   return test;
 }

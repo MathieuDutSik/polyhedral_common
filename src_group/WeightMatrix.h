@@ -1025,14 +1025,14 @@ GetGraphFromWeightedMatrix_color_adj(
       }
   Face f_total = GetAllBinaryExpressionsByWeight(e_pow, nbMult);
 #ifdef DEBUG_WEIGHT_MATRIX_DISABLE
-  os << "The original matrix\n";
+  os << "WEIGHT: The original matrix\n";
   for (size_t iVert = 0; iVert < nbRow; iVert++) {
     for (size_t jVert = 0; jVert < nbRow; jVert++) {
       os << " " << WMat.GetValue(iVert, jVert);
     }
     os << "\n";
   }
-  os << "The mapped matrix\n";
+  os << "WEIGHT: The mapped matrix\n";
   auto get_effective_weight_index_gen = [&](size_t iVert,
                                             size_t jVert) -> size_t {
     if (iVert == jVert) {
@@ -1184,7 +1184,7 @@ inline
   GetGraphFromWeightedMatrix_color_adj<T, Tidx_value, use_pairs, is_symm>(
       WMat, f_color, f_adj, os);
 #ifdef TIMINGS_WEIGHT_MATRIX
-  os << "Timing |GetGraphFromWeightedMatrix|=" << time << "\n";
+  os << "|WEIGHT: GetGraphFromWeightedMatrix|=" << time << "\n";
 #endif
   return eGR;
 }

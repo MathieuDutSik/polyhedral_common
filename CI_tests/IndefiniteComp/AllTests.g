@@ -148,12 +148,12 @@ end;
 FullTest:=function()
     local rec1, rec2, rec3, rec4, rec5, rec6, ListL, ListRk2, eList;
     ListL:=[];
-#    Add(ListL, ["U", "2U"]);
-#    Add(ListL, ["U", "2U", "A2"]);
-#    Add(ListL, ["U", "2U", "A3"]);
-#    Add(ListL, ["U", "2U", "A2", "A2"]); # Too slow apparently.
+    Add(ListL, ["U", "2U"]);
+    Add(ListL, ["U", "2U", "A2"]);
+    Add(ListL, ["U", "2U", "A3"]);
+    Add(ListL, ["U", "2U", "A2", "A2"]);
     Add(ListL, ["U", "U", "E7"]);
-#    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
+    Add(ListL, ["U", "2U", "2E8"]); # Enriques, should work as we did in the paper
     for eList in ListL
     do
         if TestStab(eList)=false then

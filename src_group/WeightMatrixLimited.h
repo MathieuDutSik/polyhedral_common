@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_WEIGHT_MATRIX_LIMITED
+#endif
+
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
 public:
   static const bool is_symmetric = is_symmetric_impl;
@@ -44,8 +48,10 @@ private:
                           const std::vector<size_t> &list_idx,
                           const size_t &n_weight) const {
     size_t len = list_idx.size();
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
     std::cerr << "compute_shift_size n_weight=" << n_weight << " len=" << len
               << "\n";
+#endif
     list_sizes.resize(n_weight);
     list_shift.resize(n_weight + 1);
     for (size_t i = 0; i < n_weight; i++)
@@ -76,8 +82,10 @@ private:
     for (size_t u = 0; u < len; u++) {
       size_t i = list_selected[u].first;
       size_t j = list_selected[u].second;
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
       std::cerr << "u=" << u << " i=" << i << " j=" << j
                 << " n_weight=" << n_weight << "\n";
+#endif
       if constexpr (is_symmetric) {
         mat_select_pair[i + n_weight * j] = u;
         mat_select_pair[j + n_weight * i] = u;
@@ -85,6 +93,7 @@ private:
         mat_select_pair[i + n_weight * j] = u;
       }
     }
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
     std::cerr << "mat_select_pair=\n";
     for (size_t i = 0; i < n_weight; i++) {
       for (size_t j = 0; j < n_weight; j++) {
@@ -92,6 +101,7 @@ private:
       }
       std::cerr << "\n";
     }
+#endif
   }
   std::pair<size_t, std::vector<Tpair>> get_list_selected(size_t max_offdiag) {
     std::map<size_t, std::vector<Tpair>> map_pair;
@@ -137,10 +147,11 @@ private:
   void compute_list_revdiag_elements() {
     list_revdiag_elements.resize(nbRow);
     size_t n_weight = list_diag_weight.size();
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
     std::cerr << "|list_diag_shift|=" << list_diag_shift.size()
               << " |list_diag_sizes|=" << list_diag_sizes.size() << "\n";
+#endif
     for (size_t i_w = 0; i_w < n_weight; i_w++) {
-      std::cerr << "i_w=" << i_w << "\n";
       size_t shift = list_diag_shift[i_w];
       size_t siz = list_diag_sizes[i_w];
       for (size_t u = 0; u < siz; u++) {
@@ -149,6 +160,7 @@ private:
       }
     }
   }
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
   void print_variables() const {
     std::cerr << "list_diag_sizes =";
     for (auto &val : list_diag_sizes)
@@ -167,7 +179,7 @@ private:
     //
     std::cerr << "|list_offdiag_idx|=" << list_offdiag_idx.size() << "\n";
   }
-
+#endif
 public:
   template <typename F1, typename F2>
   WeightMatrixLimited(size_t const &_nbRow, F1 f1, F2 f2, size_t max_offdiag,
@@ -275,7 +287,9 @@ public:
     compute_shift_size(list_offdiag_sizes, list_offdiag_shifts,
                        list_offdiag_elements, list_offdiag_idx,
                        n_offdiag_weight);
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
     print_variables();
+#endif
   }
   template <typename Tgroup>
   WeightMatrixLimited(const Tgroup &GRP, const size_t &max_offdiag,
@@ -403,7 +417,9 @@ public:
     compute_shift_size(list_offdiag_sizes, list_offdiag_shifts,
                        list_offdiag_elements, list_offdiag_idx,
                        list_offdiag_weight.size());
+#ifdef DEBUG_WEIGHT_MATRIX_LIMITED
     print_variables();
+#endif
   }
   size_t get_hash(const Face &f) const {
     std::pair<int, std::vector<size_t>> pair = get_smallest_set(f);
@@ -439,7 +455,6 @@ public:
               pos_B = j * (j - 1) / 2 + i - 1;
             }
           } else {
-            std::cerr << "Using the wrong formula\n";
             // false
             pos_B = i + siz2 * j;
           }

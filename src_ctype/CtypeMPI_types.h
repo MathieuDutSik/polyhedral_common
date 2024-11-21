@@ -591,7 +591,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
   int n_edge = TheCtype.rows();
 
 #ifdef TIMINGS
-  os << "|ExpressMatrixForCType|=" << time << "\n";
+  os << "|CTYP: ExpressMatrixForCType|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   os << "CTYP_GetConeInformation, step 2\n";
@@ -600,7 +600,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
       CTYP_GetListTriple<T, Tidx>(TheCtype, os);
 
 #ifdef TIMINGS
-  os << "|CTYP_GetListTriple|=" << time << "\n";
+  os << "|CTYP: GetListTriple|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   os << "CTYP_GetConeInformation, step 3\n";
@@ -705,7 +705,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #endif
 
 #ifdef TIMINGS
-  os << "|Insert inequalities|=" << time << "\n";
+  os << "|CTYP: Insert inequalities|=" << time << "\n";
 #endif
   int n_edgered = n_edge / 2;
 #ifdef PRINT_GET_ADJ
@@ -836,7 +836,7 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #endif
 
 #ifdef TIMINGS
-  os << "|Criterion Ineq Drop|=" << time << "\n";
+  os << "|CTYP: Criterion Ineq Drop|=" << time << "\n";
 #endif
 #ifdef PRINT_GET_ADJ
   os << "CTYP_GetConeInformation, step 4\n";
@@ -858,12 +858,12 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #endif
 
 #ifdef TIMINGS
-  os << "|ListInformations|=" << time << "\n";
+  os << "|CTYP: ListInformations|=" << time << "\n";
 #endif
   std::vector<int> ListIrred =
       cbased_cdd::RedundancyReductionClarkson(ListInequalities);
 #ifdef TIMINGS
-  os << "|RedundancyReductionClarkson|=" << time << "\n";
+  os << "|CTYP: RedundancyReductionClarkson|=" << time << "\n";
 #endif
 
 #ifdef PRINT_GET_ADJ
@@ -954,7 +954,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
   DataCtypeFacet<T, Tidx> data =
       CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
 #ifdef TIMINGS
-  os << "|data|=" << time << "\n";
+  os << "|CTYP: data|=" << time << "\n";
 #endif
   std::vector<TypeCtypeExch<T>> ListCtype;
   for (auto &e_int : data.ListIrred) {
@@ -973,7 +973,7 @@ CTYP_Kernel_GetAdjacentCanonicCtypes(TypeCtypeExch<T> const &TheCtypeArr,
 #endif
 
 #ifdef TIMINGS
-  os << "|Flip + Canonic|=" << time << "\n";
+  os << "|CTYP: Flip + Canonic|=" << time << "\n";
 #endif
   return ListCtype;
 }
@@ -1055,7 +1055,7 @@ int CTYP_GetNbAutom(TypeCtypeExch<T> const &TheCtypeArr,
   std::vector<std::vector<unsigned int>> ListGen =
       LinPolytopeAntipodalIntegral_Automorphism(TheCtypeArr.eMat, os);
 #ifdef TIMINGS
-  os << "|LinPolytopeAntipodal_Automorphism|=" << time << "\n";
+  os << "|CTYP: LinPolytopeAntipodal_Automorphism|=" << time << "\n";
 #endif
 
   std::vector<Tidx> v(n_edge);
@@ -1083,7 +1083,7 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
   DataCtypeFacet<T, Tidx> data =
       CTYP_GetConeInformation<T, Tidx>(TheCtypeArr, os);
 #ifdef TIMINGS
-  os << "|GetNumberFreeVectors|=" << time << "\n";
+  os << "|CTYP: GetNumberFreeVectors|=" << time << "\n";
 #endif
   int nb_triple = data.nb_triple;
   int nb_ineq = data.nb_ineq;
@@ -1091,13 +1091,13 @@ StructuralInfo CTYP_GetStructuralInfo(TypeCtypeExch<T> const &TheCtypeArr,
 
   int nb_free = CTYP_GetNumberFreeVectors(TheCtypeArr);
 #ifdef TIMINGS
-  os << "|GetNumberFreeVectors|=" << time << "\n";
+  os << "|CTYP: GetNumberFreeVectors|=" << time << "\n";
 #endif
 
   int nb_autom = CTYP_GetNbAutom<T, Tgroup>(TheCtypeArr, os);
 
 #ifdef TIMINGS
-  os << "|NumberAutomorphism|=" << time << "\n";
+  os << "|CTYP: NumberAutomorphism|=" << time << "\n";
 #endif
   return {nb_triple, nb_ineq, nb_ineq_after_crit, nb_free, nb_autom};
 }

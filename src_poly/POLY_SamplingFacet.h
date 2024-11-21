@@ -5,7 +5,7 @@
 // clang-format off
 #include "POLY_LinearProgramming.h"
 #include "POLY_Fundamental.h"
-#include "POLY_lrslib.h"
+#include "POLY_DirectDualDesc.h"
 #include <map>
 #include <limits>
 #include <string>
@@ -74,7 +74,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
         return lrs::DualDescription_incd(EXT);
       if (prog == "cdd")
         return cdd::DualDescription_incd(EXT, os);
-      std::cerr << "Failed to find a matching program\n";
+      std::cerr << "SAMP: Failed to find a matching program\n";
       throw TerminalException{1};
     };
     vectface ListIncd = comp_dd();
@@ -156,8 +156,8 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     }
   }
   if (prog != "lrs" && prog != "cdd") {
-    std::cerr << "We have prog=" << prog << "\n";
-    std::cerr << "but the only allowed input formats are lrs and cdd\n";
+    std::cerr << "SAMP: We have prog=" << prog << "\n";
+    std::cerr << "SAMP: but the only allowed input formats are lrs and cdd\n";
     throw TerminalException{1};
   }
   recSamplingOption eOption;
@@ -190,7 +190,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   };
   auto get_face = [&]() -> Face {
     if (ListStr.size() != 2) {
-      std::cerr << "We should have exactly two entries\n";
+      std::cerr << "SAMP: We should have exactly two entries\n";
       throw TerminalException{1};
     }
     Face f(n_rows);
@@ -237,13 +237,13 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
       vf.push_back(f);
       return vf;
     }
-    std::cerr << "No right program found\n";
-    std::cerr << "Let us die\n";
+    std::cerr << "SAMP: No right program found\n";
+    std::cerr << "SAMP: Let us die\n";
     throw TerminalException{1};
   };
   vectface ListIncd = compute_samp();
   if (ListIncd.size() == 0) {
-    std::cerr << "We found 0 facet and that is not good\n";
+    std::cerr << "SAMP: We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }
   std::map<size_t, size_t> map_incd;
@@ -258,7 +258,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   os << "\n";
 #endif
 #ifdef TIMINGS_SAMPLING_FACET
-  os << "|DirectComputationInitialFacetSet|=" << time << "\n";
+  os << "|SAMP: DirectComputationInitialFacetSet|=" << time << "\n";
 #endif
   return ListIncd;
 }
@@ -289,8 +289,8 @@ vectface Kernel_GetFullRankFacetSet(
   size_t n_rows = EXT.rows();
   if (dim == 2) {
     if (n_rows != 2) {
-      std::cerr
-          << "In dimension 2, the cone should have exactly two extreme rays\n";
+      std::cerr << "SAMP: In dimension 2, the cone should have exactly\n";
+      std::cerr << "SAMP: two extreme rays\n";
       throw TerminalException{1};
     }
     vectface vf_ret(2);
@@ -318,7 +318,7 @@ vectface Kernel_GetFullRankFacetSet(
 #endif
 #ifdef SANITY_CHECK_SAMPLING_FACET
   if (!IsPolytopal(EXTsel)) {
-    std::cerr << "The configuration EXTsel is not polytopal\n";
+    std::cerr << "SAMP: The configuration EXTsel is not polytopal\n";
     throw TerminalException{1};
   }
 #endif
@@ -348,7 +348,7 @@ vectface Kernel_GetFullRankFacetSet(
     pos++;
   }
   if (RankMat(FACsamp) != static_cast<int>(dim)) {
-    std::cerr << "Failed to find a ful rank vector configuration\n";
+    std::cerr << "SAMP: Failed to find a ful rank vector configuration\n";
     throw TerminalException{1};
   }
 #endif
@@ -362,18 +362,18 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #endif
   MyMatrix<T> EXT_B = ColumnReduction(EXT);
 #ifdef TIMINGS_SAMPLING_FACET
-  os << "|ColumnReduction|=" << time << "\n";
+  os << "|SAMP: ColumnReduction|=" << time << "\n";
 #endif
 #ifdef DEBUG_SAMPLING_FACET
   os << "SAMP: Before Polytopization\n";
 #endif
   MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
 #ifdef TIMINGS_SAMPLING_FACET
-  os << "|Polytopization|=" << time << "\n";
+  os << "|SAMP: Polytopization|=" << time << "\n";
 #endif
   MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
 #ifdef TIMINGS_SAMPLING_FACET
-  os << "|SetIsobarycenter|=" << time << "\n";
+  os << "|SAMP: SetIsobarycenter|=" << time << "\n";
 #endif
   using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
@@ -382,7 +382,7 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #endif
   vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
 #ifdef TIMINGS_SAMPLING_FACET
-  os << "|Kernel_GetFullRankFacetSet|=" << time << "\n";
+  os << "|SAMP: Kernel_GetFullRankFacetSet|=" << time << "\n";
 #endif
   return vf;
 }

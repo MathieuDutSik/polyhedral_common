@@ -216,7 +216,7 @@ OrbitBarycenterSymmetricMatrix(MyMatrix<T> const &M,
   for (auto &eGen : LGen) {
     MyMatrix<T> Mimg = eGen * M_bary * eGen.transpose();
     if (Mimg != M_bary) {
-      std::cerr << "Failed to find an invariant matrix. Clear bug\n";
+      std::cerr << "GA: Failed to find an invariant matrix. Clear bug\n";
       throw TerminalException{1};
     }
   }
