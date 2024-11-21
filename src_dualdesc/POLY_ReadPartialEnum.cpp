@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
                 << " times\n";
     }
     MyMatrix<T> EXT;
-    OutputFacets(EXT, GRP, TheOutput, OutFile, OutFormat, std::cerr);
+    OutputFacets_file(EXT, GRP, TheOutput, OutFile, OutFormat, std::cerr);
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
     std::cerr << "Something went wrong\n";

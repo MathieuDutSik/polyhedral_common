@@ -32,7 +32,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
     if (TheOption_str == "total") {
       return LORENTZIAN_PERFECT_OPTION_TOTAL;
     }
-    std::cerr << "Failed to find a matching entry for TheOption=" << TheOption << " allowed: total, isotropic\n";
+    std::cerr << "Failed to find a matching entry for TheOption_str=" << TheOption_str << " allowed: total, isotropic\n";
     throw TerminalException{1};
   };
   int TheOption = get_option();

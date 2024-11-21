@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-#(cd src_group && make clean && make)
+(cd src_group && make clean && make)
 (cd src_poly && make clean && make)
 (cd src_poly && make -f Makefile_double_cddlib clean && make -f Makefile_double_cddlib)
 (cd src_polydecomp && make clean && make)
@@ -11,7 +11,6 @@ set -e
 (cd src_spectra && make clean && make)
 (cd src_copos && make clean && make)
 (cd src_ctype && make clean && make)
-(cd src_perfect && make clean && make)
 (cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
 (cd src_spherical_code && make clean && make)
