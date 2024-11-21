@@ -28,7 +28,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_lorentzian -I../src_poly -I../permutalib/src -I.
 #CDEFS           = -DDEBUG
 CDEFS           =
 

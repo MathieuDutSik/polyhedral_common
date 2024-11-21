@@ -6,7 +6,7 @@ TestSampling:=function(FileIn, command)
     Print("Running FileIn=", FileIn, " with command=", command, "\n");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
     #
-    eProg:="../../src_poly/POLY_sampling_facets";
+    eProg:="../../src_dualdesc/POLY_sampling_facets";
     TheCommand:=Concatenation(eProg, " rational ", command, " ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

@@ -9,6 +9,7 @@
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
 #include "POLY_SamplingFacet.h"
+#include "POLY_RecursiveDualDesc.h"
 // clang-format on
 
 template <typename T>
