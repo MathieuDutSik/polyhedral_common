@@ -762,8 +762,8 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
   using Tidx = typename Telt::Tidx;
   HumanTime time;
   int n = GRPin.n_act();
-  size_t tidx_max = std::numeric_limits<Tidx>::max();
 #ifdef DEBUG_POLY_KSKELETTON
+  size_t tidx_max = std::numeric_limits<Tidx>::max();
   os << "SKEL: ComputeGroupFromOrbitFaces n=" << n << " tidx_max=" << tidx_max
      << "\n";
 #endif

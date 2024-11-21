@@ -325,7 +325,7 @@ LinPolytopeAntipodalIntegral_Automorphism_AbsTrick_Tidx_value(
   if (!IsCorrectListGen())
     return {};
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
-  os << "Check Generators|=" << time << "\n";
+  os << "|PES: Check Generators|=" << time << "\n";
 #endif
   //
   std::vector<unsigned int> AntipodalGen(2 * nbRow, 0);

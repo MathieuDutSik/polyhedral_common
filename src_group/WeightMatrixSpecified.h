@@ -331,7 +331,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
   VertexPartition<Tidx> VP =
       ComputeInitialVertexPartition<T, Tidx>(nbRow, f1, f2, canonically, os);
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |ComputeInitialVertexPartition|=" << time << "\n";
+  os << "|WMS: ComputeInitialVertexPartition|=" << time << "\n";
 #endif
   std::vector<uint8_t> status(VP.ListBlocks.size(), 0);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -410,7 +410,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
 #endif
     bool test = DoRefinement(iBlock);
 #ifdef TIMINGS
-    os << "WMS: |DoRefinement|=" << time << "\n";
+    os << "|WMS: DoRefinement|=" << time << "\n";
 #endif
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: After Dorefinement\n";
@@ -504,7 +504,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
     return false;
   });
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |GetOrdering_ListIdx|=" << time << "\n";
+  os << "|WMS: GetOrdering_ListIdx|=" << time << "\n";
 #endif
   return ListIdx;
 }
@@ -609,7 +609,7 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
     ListNbCase[iCase]++;
   }
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |ComputeVertexSignature|=" << time << "\n";
+  os << "|WMS: ComputeVertexSignature|=" << time << "\n";
 #endif
   return {nbRow,
           nbWeight,
@@ -654,7 +654,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
   }
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |RenormalizeWMVS|=" << time << "\n";
+  os << "|WMS: RenormalizeWMVS|=" << time << "\n";
 #endif
 }
 
@@ -1184,7 +1184,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   }
 #endif
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |GetSimplifiedVCG|=" << time << "\n";
+  os << "|WMS: GetSimplifiedVCG|=" << time << "\n";
 #endif
   return s;
 }
@@ -1310,7 +1310,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   VertexPartition<Tidx> VP = ComputeVertexPartition<T, Tidx>(
       nbRow, f1, f2, canonically, max_globiter, os);
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: |ComputeVertexPartition|=" << time << "\n";
+  os << "|WMS: ComputeVertexPartition|=" << time << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
   std::vector<int> ListIdx = GetOrdering_ListIdx(VP);

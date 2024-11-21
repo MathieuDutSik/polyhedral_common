@@ -975,15 +975,15 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
 #ifdef TIMINGS_LINEAR_PROGRAM
   HumanTime time;
   (void)KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(FAC, os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time
+  os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_DualMeth|=" << time
      << "\n";
   size_t maxiter1 = 0; // An abstracting leakage for sure
   (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FAC, maxiter1, os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time
+  os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_DirectLP|=" << time
      << "\n";
   (void)cdd::KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(FAC,
                                                                            os);
-  os << "|KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|="
+  os << "|LP: KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace|="
      << time << "\n";
 #endif
 #ifdef DEBUG_LINEAR_PROGRAM

@@ -1,4 +1,4 @@
-PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc POLY_ReadPartialEnum Read_MPI_sizes POLY_UpgradeDatabase POLY_EvaluateBalinski
+PROGRAM		= POLY_CheckCanonicalGAP POLY_SerialDualDesc POLY_MPI_DualDesc POLY_RunTheBank POLY_DatabaseRestructuration POLY_FindNeededBalinski POLY_EvaluateDualDesc POLY_ReadPartialEnum Read_MPI_sizes POLY_UpgradeDatabase POLY_EvaluateBalinski POLY_sampling_facets
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
