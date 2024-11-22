@@ -4,6 +4,8 @@
 
 // clang-format off
 #include "MAT_Matrix.h"
+#include "GRAPH_BitsetType.h"
+#include "GRAPH_GraphicalBasic.h"
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -41,7 +43,7 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
   std::vector<T> Bstar_norms;
 #ifdef DEBUG_INDEFINITE_LLL
   T det1 = DeterminantMat(M);
-  T det2 = 1;
+  T det2(1);
 #endif
   for (int i = 0; i < n; i++) {
     MyVector<T> Bistar = UniversalVectorConversion<T, Tint>(GetMatrixRow(B, i));
@@ -310,12 +312,216 @@ template <typename T, typename Tint> struct ResultReduction {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+LLLIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   bool look_for_isotropic = false;
   ResultIndefiniteLLL<T, Tint> res =
     ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
   return {std::move(res.B), std::move(res.Mred)};
 }
+
+template<typename T>
+std::vector<std::vector<size_t>> MatrixConnectedComponents(MyMatrix<T> const& M) {
+  size_t n = M.rows();
+  GraphBitset eG(n);
+  for (size_t i = 0; i < n; i++) {
+    for (size_t j = i + 1; j < n; j++) {
+      if (M(i, j) != 0) {
+        eG.AddAdjacent(i, j);
+        eG.AddAdjacent(j, i);
+      }
+    }
+  }
+  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  return LConn;
+}
+
+
+template<typename T, typename Tint>
+ResultReduction<T, Tint>
+SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
+  int n = M.rows();
+  struct ResSearch {
+    int i;
+    int j;
+    int c;
+  };
+  // Apply the transformation
+  // tilde(M) = (Id + c U_ij) M (Id + c U_ji)
+  //          = (M + c Row(M,j) at row i) ( Id + c U_ji)
+  //          = M + c Row(M,j) at row i + c Col(M,j) at col i
+  auto eval=[&](ResSearch const& x) -> T {
+    int i = x.i;
+    int j = x.j;
+    int c = x.c;
+    //
+    T delta_off = 0;
+    for (int k=0; k<n; k++) {
+      if (k != i) {
+        T val1 = T_abs( M(i,k) );
+        T val2 = T_abs( T(M(i,k) + c * M(j,k)) );
+        delta_off += val1 - val2;
+      }
+    }
+    T val1 = T_abs( M(i,i) );
+    T val2 = T_abs( T(M(i,i) + 2 * c * M(j,i)) );
+    T delta_diag = val1 - val2;
+    T delta = 2 * delta_off + delta_diag;
+    return delta;
+  };
+  auto f_search=[&]() -> std::optional<ResSearch> {
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        for (int pre_sign=0; pre_sign<2; pre_sign++) {
+          int sign = -1 + 2 * pre_sign;
+          ResSearch x{i, j, sign};
+          if (eval(x) > 0) {
+            return x;
+          }
+        }
+      }
+    }
+    return {};
+  };
+#ifdef DEBUG_INDEFINITE_LLL
+  auto l1_norm=[&](MyMatrix<T> const& U) -> T {
+    T sum = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        sum += T_abs(U(i,j));
+      }
+    }
+    return sum;
+  };
+#endif
+  MyMatrix<Tint> B = IdentityMat<Tint>(n);
+  MyMatrix<T> Mwork = M;
+  auto update=[&](ResSearch const& x) -> void {
+    int i = x.i;
+    int j = x.j;
+    int c = x.c;
+    B.row(i) += c * B.row(j);
+    Mwork.row(i) += c * Mwork.row(j);
+    Mwork.col(i) += c * Mwork.col(j);
+  };
+#ifdef DEBUG_INDEFINITE_LLL
+  auto f_compute=[&](ResSearch const& x) -> std::pair<MyMatrix<Tint>, MyMatrix<T>> {
+    int i = x.i;
+    int j = x.j;
+    int c = x.c;
+    MyMatrix<Tint> eUnit = IdentityMat<Tint>(n);
+    eUnit(i,j) = c;
+    MyMatrix<Tint> Btest = eUnit * B;
+    MyMatrix<T> BT_test = UniversalMatrixConversion<T,Tint>(Btest);
+    MyMatrix<T> Mwork_test = BT_test * M * BT_test.transpose();
+    return {Btest, Mwork_test};
+  };
+#endif
+  //
+  while(true) {
+    std::optional<ResSearch> opt = f_search();
+    if (opt) {
+      ResSearch const& x = *opt;
+#ifdef DEBUG_INDEFINITE_LLL
+      T norm_prev = l1_norm(Mwork);
+      std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = f_compute(x);
+#endif
+      update(x);
+#ifdef DEBUG_INDEFINITE_LLL
+      T norm_next = l1_norm(Mwork);
+      T delta = eval(x);
+      if (norm_prev - delta != norm_next) {
+        std::cerr << "L1-Norm inconsistency\n";
+        throw TerminalException{1};
+      }
+      if (pair.first != B) {
+        std::cerr << "B inconsistency\n";
+        throw TerminalException{1};
+      }
+      if (pair.second != Mwork) {
+        std::cerr << "Mwork inconsistency\n";
+        throw TerminalException{1};
+      }
+#endif
+    } else {
+      return {std::move(B), std::move(Mwork)};
+    }
+  }
+}
+
+template<typename T, typename Tint>
+ResultReduction<T, Tint>
+BlockSimpleIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+  int n = M.rows();
+  MyMatrix<Tint> B = ZeroMatrix<Tint>(n, n);
+  MyMatrix<T> Mret = ZeroMatrix<T>(n, n);
+  std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(M);
+  for (auto & eConn : LConn) {
+    int len = eConn.size();
+    MyMatrix<T> M_conn(len, len);
+    for (int i=0; i<len; i++) {
+      for (int j=0; j<len; j++) {
+        size_t i_big = eConn[i];
+        size_t j_big = eConn[j];
+        M_conn(i, j) = M(i_big, j_big);
+      }
+    }
+    ResultReduction<T, Tint> res = SimpleIndefiniteReduction<T,Tint>(M_conn, os);
+    for (int i=0; i<len; i++) {
+      for (int j=0; j<len; j++) {
+        size_t i_big = eConn[i];
+        size_t j_big = eConn[j];
+        B(i_big, j_big) = res.B(i,j);
+        Mret(i_big, j_big) = res.Mred(i,j);
+      }
+    }
+  }
+  return {std::move(B), std::move(Mret)};
+}
+
+template <typename T, typename Tint>
+ResultReduction<T, Tint>
+IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+  int n = M.rows();
+  MyMatrix<Tint> B = IdentityMat<Tint>(n);
+  MyMatrix<T> Mwork = M;
+  auto f_norm=[&](MyMatrix<T> const& U) -> T {
+    T sum = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        sum += T_abs(U(i,j));
+      }
+    }
+    return sum;
+  };
+  T norm_work = f_norm(M);
+  while(true) {
+    // Applying the LLL first
+    bool did_something = false;
+    ResultReduction<T, Tint> res1 = LLLIndefiniteReduction<T,Tint>(Mwork, os);
+    T norm1 = f_norm(res1.Mred);
+    if (norm1 < norm_work) {
+      did_something = true;
+      B = res1.B * B;
+      Mwork = res1.Mred;
+      norm_work = norm1;
+    }
+    // Applying the BlockSimple second
+    ResultReduction<T, Tint> res2 = BlockSimpleIndefiniteReduction<T,Tint>(Mwork, os);
+    T norm2 = f_norm(res2.Mred);
+    if (norm2 < norm_work) {
+      did_something = true;
+      B = res2.B * B;
+      Mwork = res2.Mred;
+      norm_work = norm2;
+    }
+    // If did nothing then exit. Necessarily we will reach that stage at some point
+    if (!did_something) {
+      return {std::move(B), std::move(Mwork)};
+    }
+  }
+}
+
+
 
 
 template <typename T, typename Tint>

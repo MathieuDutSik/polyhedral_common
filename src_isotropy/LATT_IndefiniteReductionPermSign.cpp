@@ -12,9 +12,9 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 4 && argc != 2) {
-      std::cerr << "LATT_IndefiniteReduction [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_IndefiniteReductionPermSign [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_IndefiniteReduction [FileI]\n";
+      std::cerr << "LATT_IndefiniteReductionPermSign [FileI]\n";
       std::cerr << "or\n";
       std::cerr << "FileI     : The input file\n";
       std::cerr << "OutFormat : Possible values, GAP and Oscar\n";
@@ -45,28 +45,29 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have M\n";
     //
     auto print_result = [&](std::ostream &os) -> void {
-      ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(M, std::cerr);
-      MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
+      ResultReduction<T, Tint> ResRed =
+          ComputeReductionIndefinitePermSign<T, Tint>(M, std::cerr);
+      MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       if (T_abs(DeterminantMat(B_T)) != 1) {
         std::cerr << "B_T should have determinant 1 or -1\n";
         throw TerminalException{1};
       }
-      if (M_Control != res.Mred) {
+      if (M_Control != ResRed.Mred) {
         std::cerr << "M_Control is not what it should be\n";
         throw TerminalException{1};
       }
       if (OutFormat == "GAP") {
         os << "return rec(B:=";
-        WriteMatrixGAP(os, res.B);
+        WriteMatrixGAP(os, ResRed.B);
         os << ", Mred:=";
-        WriteMatrixGAP(os, res.Mred);
+        WriteMatrixGAP(os, ResRed.Mred);
         os << ");\n";
         return;
       }
       if (OutFormat == "Oscar") {
-        WriteMatrix(os, res.B);
-        WriteMatrix(os, res.Mred);
+        WriteMatrix(os, ResRed.B);
+        WriteMatrix(os, ResRed.Mred);
         return;
       }
       std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat

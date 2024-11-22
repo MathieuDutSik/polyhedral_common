@@ -815,16 +815,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
   size_t n = Qmat.rows();
   ListGenerators.push_back(IdentityMat<Tint>(n));
   //
-  GraphBitset eG(n);
-  for (size_t i = 0; i < n; i++) {
-    for (size_t j = i + 1; j < n; j++) {
-      if (Qmat(i, j) != 0) {
-        eG.AddAdjacent(i, j);
-        eG.AddAdjacent(j, i);
-      }
-    }
-  }
-  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(Qmat);
   std::vector<MyMatrix<T>> ListQ;
   std::vector<size_t> ListPosIdx;
   for (size_t iConn = 0; iConn < LConn.size(); iConn++) {

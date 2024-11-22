@@ -603,16 +603,31 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
   os << "POS: M=\n";
   WriteMatrix(os, M);
 #endif
-  bool look_for_isotropic = false;
+  //
+  // No nicer way to proceed right now. We have two scenarios to handle.
+  //
+  std::optional<MyVector<T>> res_Xisotrop;
+  MyMatrix<Tint> res_B;
+  MyMatrix<T> res_Mred;
   if (test_isotropic_fine) {
-    look_for_isotropic = true;
+    bool look_for_isotropic = true;
+    ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
+    res_Xisotrop = res.Xisotrop;
+    res_B = res.B;
+    res_Mred = res.Mred;
+  } else {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(M, os);
+    res_B = res.B;
+    res_Mred = res.Mred;
   }
-  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
+  //
+  // Now doing the work.
+  //
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif
-  if (test_isotropic_fine && res.Xisotrop) {
-    MyVector<T> const &Xisotrop = *res.Xisotrop;
+  if (test_isotropic_fine && res_Xisotrop) {
+    MyVector<T> const &Xisotrop = *res_Xisotrop;
 #ifdef DEBUG_POSITIVITY
     os << "POS: GetIntegralVector_allmeth: Xisotrop="
        << StringVectorGAP(Xisotrop) << "\n";
@@ -633,15 +648,15 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
         "for Mred\n";
 #endif
   MyVector<Tint> V1 =
-      GetIntegralVector_allmeth_V2<T, Tint>(res.Mred, CritNorm, StrictIneq, os);
+      GetIntegralVector_allmeth_V2<T, Tint>(res_Mred, CritNorm, StrictIneq, os);
 #ifdef DEBUG_POSITIVITY
-  os << "POS: res.Mred=\n";
-  WriteMatrix(os, res.Mred);
+  os << "POS: res_Mred=\n";
+  WriteMatrix(os, res_Mred);
   os << "POS: GetIntegralVector_allmeth: We have V1\n";
 #endif
-  MyVector<Tint> V2 = res.B.transpose() * V1;
+  MyVector<Tint> V2 = res_B.transpose() * V1;
 #ifdef DEBUG_POSITIVITY
-  T norm_red = EvaluationQuadForm(res.Mred, V1);
+  T norm_red = EvaluationQuadForm(res_Mred, V1);
   T norm = EvaluationQuadForm(M, V2);
   if (norm_red != norm) {
     std::cerr << "norm=" << norm << " norm_red=" << norm_red << "\n";
