@@ -310,13 +310,20 @@ template <typename T, typename Tint> struct ResultReduction {
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-ComputeReductionIndefinite_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
-                               std::ostream &os) {
+IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+  bool look_for_isotropic = false;
+  ResultIndefiniteLLL<T, Tint> res =
+    ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
+  return {std::move(res.B), std::move(res.Mred)};
+}
+
+
+template <typename T, typename Tint>
+ResultReduction<T, Tint>
+IndefiniteReduction_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
+                        std::ostream &os) {
   if (ApplyReduction) {
-    bool look_for_isotropic = false;
-    ResultIndefiniteLLL<T, Tint> res =
-      ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
-    return {res.B, res.Mred};
+    return IndefiniteReduction<T,Tint>(M, os);
   } else {
     int n = M.rows();
     MyMatrix<Tint> B = IdentityMat<Tint>(n);

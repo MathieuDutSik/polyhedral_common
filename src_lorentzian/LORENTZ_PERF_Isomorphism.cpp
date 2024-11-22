@@ -51,6 +51,15 @@ void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
   std::optional<MyMatrix<Tint>> opt =
       LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(LorMat1, LorMat2,
                                                        std::cerr);
+  if (opt) {
+    MyMatrix<Tint> const& eEquiv = *opt;
+    MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
+    MyMatrix<T> prod = eEquiv_T * LorMat1 * eEquiv_T.transpose();
+    if (prod != LorMat2) {
+      std::cerr << "eEquiv is not an equivalence\n";
+      throw TerminalException{1};
+    }
+  }
 #ifdef DEBUG_LORENTZIAN_PERFECT
   std::cerr << "LORPERF: process_C: After LORENTZ_TestEquivalenceMatrices\n";
 #endif

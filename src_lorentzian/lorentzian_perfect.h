@@ -1443,7 +1443,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
-LORENTZ_GetGeneratorsAutom_Kernel(MyMatrix<T> const &LorMat, std::ostream &os) {
+LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat, std::ostream &os) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
 #endif
@@ -1501,6 +1501,27 @@ LORENTZ_GetGeneratorsAutom_Kernel(MyMatrix<T> const &LorMat, std::ostream &os) {
 #endif
   return l_gen;
 }
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+LORENTZ_GetGeneratorsAutom_Kernel(MyMatrix<T> const &LorMat, std::ostream &os) {
+  ResultReduction<T, Tint> res =
+    IndefiniteReduction<T,Tint>(LorMat, os);
+  // We have res.B * LorMat * res.B^T = res.Mred
+  std::vector<MyMatrix<Tint>> ListGen =
+    LORENTZ_GetGeneratorsAutom_Reduced<T,Tint,Tgroup>(res.Mred, os);
+  MyMatrix<Tint> Binv = Inverse(res.B);
+  //
+  std::vector<MyMatrix<Tint>> ListGenRet;
+  for (auto & eGen : ListGen) {
+    MyMatrix<Tint> eGenRet = Binv * eGen * res.B;
+    ListGenRet.push_back(eGenRet);
+  }
+  return ListGenRet;
+}
+
+
+
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
@@ -1791,8 +1812,8 @@ size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
-                                       MyMatrix<T> const &LorMat2, std::ostream &os) {
+LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
+                                        MyMatrix<T> const &LorMat2, std::ostream &os) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
 #endif
@@ -1859,6 +1880,27 @@ LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
   os << "|LORPERF: LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
 #endif
   return opt;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
+                                       MyMatrix<T> const &LorMat2, std::ostream &os) {
+  ResultReduction<T, Tint> res1 =
+    IndefiniteReduction<T,Tint>(LorMat1, os);
+  ResultReduction<T, Tint> res2 =
+    IndefiniteReduction<T,Tint>(LorMat2, os);
+  // We have res1.B * LorMat1 * res1.B^T = res1.Mred
+  //     and res2.B * LorMat2 * res2.B^T = res2.Mred
+  std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices_Reduced<T,Tint,Tgroup>(res1.Mred, res2.Mred, os);
+  if (opt) {
+    MyMatrix<Tint> const& eEquiv = *opt;
+    // eEquiv * res1.Mred * eEquiv^T = res2.Mred
+    MyMatrix<Tint> B2_inv = Inverse(res2.B);
+    MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+    return eEquivRet;
+  }
+  return {};
 }
 
 template <typename T, typename Tint, typename Tgroup>
