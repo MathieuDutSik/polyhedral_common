@@ -926,6 +926,8 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
                                                       std::ostream &os) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: GetOnePerfect: beginning\n";
+  os << "LORPERF: LorMat=\n";
+  WriteMatrix(os, LorMat);
 #endif
   int n = LorMat.rows();
   MyMatrix<T> LorMatInv = Inverse(LorMat);

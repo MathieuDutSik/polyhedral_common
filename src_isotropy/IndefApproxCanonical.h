@@ -116,8 +116,9 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
     MyMatrix<Tint> eP = IdentityMat<Tint>(1);
     return {std::move(eP), M};
   }
+  bool look_for_isotropic = false;
   ResultIndefiniteLLL<T, Tint> RRI_A =
-      ComputeReductionIndefinite<T, Tint>(M, os);
+    ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;

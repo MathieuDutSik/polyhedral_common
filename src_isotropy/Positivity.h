@@ -603,7 +603,11 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
   os << "POS: M=\n";
   WriteMatrix(os, M);
 #endif
-  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, os);
+  bool look_for_isotropic = false;
+  if (test_isotropic_fine) {
+    look_for_isotropic = true;
+  }
+  ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth: We have res\n";
 #endif

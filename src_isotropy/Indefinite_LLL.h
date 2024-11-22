@@ -133,7 +133,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
 #endif
     if (!ResGS.success) {
 #ifdef DEBUG_INDEFINITE_LLL
-      std::cerr << "ILLL: Returning from Indefinite_LLL 1\n";
+      std::cerr << "ILLL: Returning from Indefinite_LLL (!ResGS.success)\n";
 #endif
       return {B, get_matrix(), ResGS.Xisotrop};
     }
@@ -162,8 +162,9 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     } else {
       k++;
     }
-    if (k >= n)
+    if (k >= n) {
       break;
+    }
   }
 #ifdef DEBUG_INDEFINITE_LLL
   std::cerr << "ILLL: Returning from Indefinite_LLL 2\n";
@@ -171,6 +172,9 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   return {B, get_matrix(), {}};
 }
 
+/*
+  Permute the columns randomly and change the signs randomly.
+ */
 template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
   std::vector<int> LPos(n);
   for (int i = 0; i < n; i++)
@@ -192,9 +196,18 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
   return Unit;
 }
 
+/*
+  Compute a reduced form of the quadratic form by a
+  pack of heuristics.
+  --
+  The goal can be to ultimately find an isotropic vector
+  in which case the option "look_for_isotropic" has to
+  be selected.
+ */
 template <typename T, typename Tint>
 ResultIndefiniteLLL<T, Tint>
 ComputeReductionIndefinite(MyMatrix<T> const &M,
+                           bool const& look_for_isotropic,
                            [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   if (n == 0) {
@@ -229,7 +242,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
     os << "ILLL: We have computed res\n";
 #endif
     // Terminating if we find an isotropic vector
-    if (res.Xisotrop) {
+    if (res.Xisotrop && look_for_isotropic) {
       MyVector<T> const &Xisotrop = *res.Xisotrop;
       MyVector<T> V = B_T.transpose() * Xisotrop;
 #ifdef DEBUG_INDEFINITE_LLL
@@ -300,8 +313,9 @@ ResultReduction<T, Tint>
 ComputeReductionIndefinite_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
                                std::ostream &os) {
   if (ApplyReduction) {
+    bool look_for_isotropic = false;
     ResultIndefiniteLLL<T, Tint> res =
-        ComputeReductionIndefinite<T, Tint>(M, os);
+      ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
     return {res.B, res.Mred};
   } else {
     int n = M.rows();
