@@ -1364,6 +1364,9 @@ public:
   }
   std::vector<MyVector<Tint>>
   INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const &Q, T const &X) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
     auto orbit_decomposition = [&](std::vector<MyVector<Tint>> const &l_vect)
         -> std::vector<MyVector<Tint>> {
@@ -1391,8 +1394,11 @@ public:
       return ListRepr;
     };
     if (eBlock.h == 0) {
-      return INDEF_FORM_GetOrbitRepresentative_PosNeg<T, Tint, Tgroup>(Q, X,
-                                                                       os);
+      std::vector<MyVector<Tint>> LRepr = INDEF_FORM_GetOrbitRepresentative_PosNeg<T, Tint, Tgroup>(Q, X, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: INDEF_FORM_GetOrbitRepresentative_PosNeg|=" << time << "\n";
+#endif
+      return LRepr;
     }
     if (eBlock.h == 1) {
       MyMatrix<T> const &mat = eBlock.mat;
@@ -1408,17 +1414,30 @@ public:
         throw TerminalException{1};
       }
 #endif
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: LORENTZ_GetOrbitRepresentative|=" << time << "\n";
+#endif
       return ListRepr;
     }
     ApproximateModel<T, Tint> approx =
         INDEF_FORM_GetApproximateModel<T, Tint, Tgroup>(Q, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: INDEF_FORM_GetApproximateModel|=" << time << "\n";
+#endif
     std::vector<MyVector<Tint>> ListCand =
         approx.GetCoveringOrbitRepresentatives(X, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: approx.GetCoveringOrbitRepresentatives|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: GetCoveringOrbitRepresentatives, |ListCand|="
        << ListCand.size() << "\n";
 #endif
-    return orbit_decomposition(ListCand);
+    std::vector<MyVector<Tint>> ListRepr = orbit_decomposition(ListCand);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: orbit_decomposition|=" << time << "\n";
+#endif
+    return ListRepr;
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_StabilizerVector(MyMatrix<T> const &Qmat,

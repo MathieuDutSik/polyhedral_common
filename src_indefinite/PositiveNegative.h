@@ -8,6 +8,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_POSITIVE_NEGATIVE_FORMS
+#endif
+
 // In some contexts, we need to deal with positive-definite or negative-definite
 // matrices.
 
@@ -20,6 +24,9 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
   auto get_orbit_representatives =
       [&](MyMatrix<T> const &Qin) -> std::vector<MyVector<Tint>> {
     MyMatrix<Tint> SHV = EnumerateVectorsFixedNorm<T, Tint>(Qin, X, os);
+#ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
+    os << "POSNEG: |SHV|=" << SHV.rows() << "\n";
+#endif
     size_t len = SHV.rows();
     std::vector<MyVector<Tint>> ListVect;
     std::unordered_map<MyVector<Tint>, size_t> MapVect;
@@ -30,6 +37,9 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
     }
     std::vector<MyMatrix<Tint>> LGen =
         ArithmeticAutomorphismGroup<T, Tint>(Qin, os);
+#ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
+    os << "POSNEG: |LGen|=" << LGen.size() << "\n";
+#endif
     std::vector<Telt> ListPerm;
     for (auto &eGen : LGen) {
       std::vector<Tidx> eList(len);
@@ -47,7 +57,13 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
       ListPerm.push_back(ePerm);
     }
     Tgroup eG(ListPerm, len);
+#ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
+    os << "POSNEG: |eG|=" << eG.size() << "\n";
+#endif
     std::vector<size_t> LPos = DecomposeOrbitPoint_FullRepr(eG);
+#ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
+    os << "POSNEG: |LPos|=" << LPos.size() << "\n";
+#endif
     std::vector<MyVector<Tint>> ListSol;
     for (auto &ePos : LPos) {
       ListSol.push_back(ListVect[ePos]);
