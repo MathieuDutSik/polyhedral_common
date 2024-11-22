@@ -894,11 +894,21 @@ private:
   std::optional<MyMatrix<Tint>>
   f_equiv_plane(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
                 INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2) {
-    return INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
+    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: f_equiv_plane|=" << time << "\n";
+#endif
+    return opt;
   }
   std::optional<MyMatrix<Tint>>
   f_equiv_flag(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
                INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     std::optional<MyMatrix<Tint>> opt =
         INDEF_FORM_TestEquivalence(eRec1.QmatRed, eRec2.QmatRed);
     if (!opt) {
@@ -933,6 +943,9 @@ private:
         throw TerminalException{1};
       }
     }
+#endif
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: f_equiv_flag|=" << time << "\n";
 #endif
     return TheEquiv;
   }
