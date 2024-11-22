@@ -113,9 +113,15 @@ public:
     } else {
       MyMatrix<T> Subspace1 = eEndoRed_T * NSP_T;
       MyMatrix<T> const &Subspace2 = NSP_T;
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      MicrosecondTime time;
+#endif
       std::optional<MyMatrix<T>> opt =
           LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
               Qmat, Subspace1, Qmat, Subspace2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1|=" << time << "\n";
+#endif
       MyMatrix<T> RetMat = unfold_opt(
           opt, "opt should be something because NSP.rows = RankMat(NSP)");
       MyVector<T> vImg = RetMat.transpose() * v_T;
@@ -237,6 +243,9 @@ public:
   // if dim(Plane) > 1.
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: MapOrthogonalSublatticeGroup, beginning\n";
 #endif
@@ -246,12 +255,21 @@ public:
     for (auto &eEndoRed : GRPmatr) {
       MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T, Tint>(eEndoRed);
       MyMatrix<T> Subspace2 = eEndoRed_T * NSP_T;
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      MicrosecondTime time_loc;
+#endif
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(
           Qmat, Subspace1, Qmat, Subspace2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism|=" << time_loc << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 1\n";
 #endif
       MyMatrix<T> RetMat = TheRec.get_one_transformation();
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: get_one_transformation|=" << time_loc << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: MapOrthogonalSublatticeGroup, We have RetMat\n";
 #endif
@@ -260,8 +278,14 @@ public:
 #endif
       ListGenTotal.push_back(RetMat);
       T eDen = GetDenominatorMatrix(RetMat);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: GetDenominatorMatrix|=" << time_loc << "\n";
+#endif
       ListD.push_back(eDen);
     }
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: ListD / ListGenTotal|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: MapOrthogonalSublatticeGroup, after GRPmatr loop\n";
 #endif
@@ -275,6 +299,9 @@ public:
     os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 2\n";
 #endif
     std::vector<MyMatrix<T>> TheKer = TheRec.get_kernel_generating_set(TheDen);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: get_kernel_generating_set|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: MapOrthogonalSublatticeGroup, We have TheKer\n";
 #endif
@@ -451,6 +478,9 @@ private:
 private:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup_Kernel(MyMatrix<T> const &Qmat) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: Beginning of INDEF_FORM_AutomorphismGroup_Kernel with Qmat=\n";
     WriteMatrix(os, Qmat);
@@ -461,10 +491,18 @@ private:
     os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
 #endif
     if (eBlock.h == 0) {
-      return INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint>(mat, os);
+      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint>(mat, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: INDEF_FORM_AutomorphismGroup_PosNeg|=" << time << "\n";
+#endif
+      return LGen;
     }
     if (eBlock.h == 1) {
-      return LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(mat, os);
+      std::vector<MyMatrix<Tint>> LGen = LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(mat, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: LORENTZ_GetGeneratorsAutom|=" << time << "\n";
+#endif
+      return LGen;
     }
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto f_insert = [&](MyMatrix<Tint> const &eGen) -> void {
@@ -480,10 +518,19 @@ private:
     };
     ApproximateModel<T, Tint> approx =
         INDEF_FORM_GetApproximateModel<T, Tint, Tgroup>(mat, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: approx|=" << time << "\n";
+#endif
     FirstNorm<T, Tint> first_norm = GetFirstNorm(approx, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: first_norm|=" << time << "\n";
+#endif
     T const &X = first_norm.X;
     MyVector<Tint> const &v1 = first_norm.eVect;
     std::vector<MyMatrix<Tint>> list_gen1 = approx.GetApproximateGroup(os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: GetApproximateGroup|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: |list_gen1|=" << list_gen1.size() << "\n";
 #endif
@@ -492,15 +539,25 @@ private:
     }
     std::vector<MyMatrix<Tint>> list_gen2 =
         INDEF_FORM_StabilizerVector(mat, v1);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: INDEF_FORM_StabilizerVector|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: |list_gen2|=" << list_gen2.size() << "\n";
 #endif
     for (auto &eGen : list_gen2) {
       f_insert(eGen);
     }
-    for (auto &v2 : approx.GetCoveringOrbitRepresentatives(X, os)) {
+    std::vector<MyVector<Tint>> the_cover = approx.GetCoveringOrbitRepresentatives(X, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: GetCoveringOrbitRepresentatives|=" << time << "\n";
+#endif
+    for (auto &v2 : the_cover) {
       std::optional<MyMatrix<Tint>> opt =
           INDEF_FORM_EquivalenceVector(mat, mat, v1, v2);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: INDEF_FORM_EquivalenceVector|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: We have opt\n";
 #endif
@@ -516,6 +573,9 @@ private:
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence_Kernel(MyMatrix<T> const &Qmat1,
                                     MyMatrix<T> const &Qmat2) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
     if (eBlock1.h != eBlock2.h) {
@@ -524,23 +584,46 @@ private:
     MyMatrix<T> const &mat1 = eBlock1.mat;
     MyMatrix<T> const &mat2 = eBlock2.mat;
     if (eBlock1.h == 0) {
-      return INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(mat1, mat2, os);
+      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(mat1, mat2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: INDEF_FORM_TestEquivalence_PosNeg|=" << time << "\n";
+#endif
+      return opt;
     }
     if (eBlock1.h == 1) {
-      return LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
+      std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
+#endif
+      return opt;
     }
     ApproximateModel<T, Tint> approx1 =
         INDEF_FORM_GetApproximateModel<T, Tint, Tgroup>(mat1, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: INDEF_FORM_GetApproximateModel, approx1|=" << time << "\n";
+#endif
     FirstNorm<T, Tint> first_norm1 = GetFirstNorm(approx1, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: GetFirstNorm|=" << time << "\n";
+#endif
     T const &X = first_norm1.X;
     MyVector<Tint> const &v1 = first_norm1.eVect;
     ApproximateModel<T, Tint> approx2 =
         INDEF_FORM_GetApproximateModel<T, Tint, Tgroup>(mat2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: INDEF_FORM_GetApproximateModel, approx2|=" << time << "\n";
+#endif
     std::vector<MyVector<Tint>> ListCand2 =
         approx2.GetCoveringOrbitRepresentatives(X, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: GetCoveringOrbitRepresentatives|=" << time << "\n";
+#endif
     for (auto &v2 : ListCand2) {
       std::optional<MyMatrix<Tint>> opt =
           INDEF_FORM_EquivalenceVector(mat1, mat2, v1, v2);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: INDEF_FORM_EquivalenceVector|=" << time << "\n";
+#endif
       if (opt) {
         return opt;
       }
@@ -549,6 +632,9 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup_FullDim(MyMatrix<T> const &Qmat) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: Beginning of INDEF_FORM_AutomorphismGroup_FullDim with "
           "Qmat=\n";
@@ -570,6 +656,9 @@ private:
     }
     ResultReduction<T, Tint> ResRed =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: ComputeReductionIndefinitePermSign(ResRed)|=" << time << "\n";
+#endif
     MyMatrix<T> const &QmatRed = ResRed.Mred;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, QmatRed=\n";
@@ -580,6 +669,9 @@ private:
     auto get_stab = [&]() -> std::vector<MyMatrix<Tint>> {
       std::optional<std::vector<MyMatrix<Tint>>> opt =
           database.attempt_stabilizer(QmatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: database.attempt_stabilizer|=" << time << "\n";
+#endif
       if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, successful database "
@@ -593,6 +685,9 @@ private:
 #endif
         std::vector<MyMatrix<Tint>> ListGen =
             INDEF_FORM_AutomorphismGroup_Kernel(QmatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+        os << "|COMB: INDEF_FORM_AutomorphismGroup_Kernel|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have ListGen\n";
 #endif
@@ -625,6 +720,9 @@ private:
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence_FullDim(MyMatrix<T> const &Qmat1,
                                      MyMatrix<T> const &Qmat2) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     if (Qmat1.rows() != Qmat2.rows()) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, different dimensions\n";
@@ -652,8 +750,14 @@ private:
     }
     ResultReduction<T, Tint> ResRed1 =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat1, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: ComputeReductionIndefinitePermSign(Qmat1)|=" << time << "\n";
+#endif
     ResultReduction<T, Tint> ResRed2 =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat2, os);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: ComputeReductionIndefinitePermSign(Qmat2)|=" << time << "\n";
+#endif
     MyMatrix<T> const &QmatRed1 = ResRed1.Mred;
     MyMatrix<T> const &QmatRed2 = ResRed2.Mred;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -665,6 +769,9 @@ private:
     auto get_equi = [&]() -> std::optional<MyMatrix<Tint>> {
       std::optional<std::optional<MyMatrix<Tint>>> opt =
           database.attempt_equiv(QmatRed1, QmatRed2);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+      os << "|COMB: database.attempt_equiv|=" << time << "\n";
+#endif
       if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: INDEF_FORM_TestEquivalence_FullDim, successful database "
@@ -677,6 +784,9 @@ private:
 #endif
         std::optional<MyMatrix<Tint>> optB =
             INDEF_FORM_TestEquivalence_Kernel(QmatRed1, QmatRed2);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+        os << "|COMB: INDEF_FORM_TestEquivalence_Kernel|=" << time << "\n";
+#endif
         database.insert_equi(QmatRed1, QmatRed2, optB);
         return optB;
       }
@@ -703,7 +813,14 @@ private:
   //
   std::vector<MyMatrix<Tint>>
   f_stab_plane(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec) {
-    return INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
+    std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: f_stab_plane|=" << time << "\n";
+#endif
+    return LGen;
   }
   std::vector<MyMatrix<Tint>>
   f_get_list_spaces(MyMatrix<Tint> const &ListVect) {
@@ -723,6 +840,9 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   f_stab_flag(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec) {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -755,6 +875,9 @@ private:
 #endif
       ListGenTot.push_back(eGenB);
     }
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: f_stab_flag|=" << time << "\n";
+#endif
     return ListGenTot;
   }
   std::vector<MyMatrix<Tint>>
