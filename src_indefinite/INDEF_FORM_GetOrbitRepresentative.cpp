@@ -16,6 +16,13 @@ void process(std::string const &MatFile, std::string const &XnormStr,
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyVector<Tint>> l_repr =
       comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
+  for (auto & e_repr: l_repr) {
+    T norm = EvaluationQuadForm(Qmat, e_repr);
+    if (norm != Xnorm) {
+      std::cerr << "Wrong norm. norm=" << norm << " Xnorm=" << Xnorm << "\n";
+      throw TerminalException{1};
+    }
+  }
   if (OutFormat == "PYTHON") {
     if (l_repr.size() == 0) {
       os_out << "[]";

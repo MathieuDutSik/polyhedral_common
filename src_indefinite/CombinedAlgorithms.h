@@ -843,6 +843,9 @@ private:
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_flag, start\n";
+#endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -965,9 +968,15 @@ private:
   //
   // The function using choice integer input
   //
-  size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(
+  size_t INDEF_FORM_Invariant_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, start\n";
+#endif
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have eRec\n";
+#endif
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP1\n";
@@ -988,12 +997,19 @@ private:
 #endif
     return eInvRed + GRP_inv;
   }
-  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
+  size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    MyMatrix<Tint> Binv = Inverse(res.B);
+    MyMatrix<Tint> PlaneRed = Plane * Binv;
+    return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(res.Mred, PlaneRed, choice);
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2,
       int const &choice) {
-    if (INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat1, Plane1, choice) !=
-        INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Qmat2, Plane2, choice)) {
+    if (INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat1, Plane1, choice) !=
+        INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat2, Plane2, choice)) {
       return {};
     }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec1(Qmat1, Plane1, os);
@@ -1069,7 +1085,28 @@ private:
 #endif
     return TheRet;
   }
-  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
+      MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
+      MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2,
+      int const &choice) {
+    ResultReduction<T, Tint> res1 = IndefiniteReduction<T,Tint>(Qmat1, os);
+    MyMatrix<Tint> B1_inv = Inverse(res1.B);
+    MyMatrix<Tint> Plane1_red = Plane1 * B1_inv;
+    //
+    ResultReduction<T, Tint> res2 = IndefiniteReduction<T,Tint>(Qmat2, os);
+    MyMatrix<Tint> B2_inv = Inverse(res2.B);
+    MyMatrix<Tint> Plane2_red = Plane2 * B2_inv;
+    //
+    std::optional<MyMatrix<Tint>> opt =
+      INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(res1.Mred, res2.Mred, Plane1_red, Plane2_red, choice);
+    if (opt) {
+      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+      return eEquivRet;
+    }
+    return {};
+  }
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
@@ -1088,10 +1125,25 @@ private:
 #endif
     return MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
   }
+  std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    MyMatrix<Tint> B_inv = Inverse(res.B);
+    MyMatrix<Tint> Plane_red = Plane * B_inv;
+    //
+    std::vector<MyMatrix<Tint>> LGen =
+      INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(res.Mred, Plane_red, choice);
+    std::vector<MyMatrix<Tint>> LGenRet;
+    for (auto & eGen : LGen) {
+      MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
+      LGenRet.push_back(eGenRet);
+    }
+    return LGenRet;
+  }
   std::vector<MyMatrix<T>>
-  INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat,
-                                                MyMatrix<Tint> const &ePlane,
-                                                int const &choice) {
+  INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat,
+                                                 MyMatrix<Tint> const &ePlane,
+                                                 int const &choice) {
     // We have two groups:
     // -- The group stabilizing ePlane
     // -- The group stabilizing ePlane^{perp} and its mapping to the full group.
@@ -1154,32 +1206,43 @@ private:
 #endif
     return ListRightCoset;
   }
+  std::vector<MyMatrix<T>>
+  INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat,
+                                                MyMatrix<Tint> const &ePlane,
+                                                int const &choice) {
+    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    MyMatrix<Tint> Binv = Inverse(res.B);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
+    MyMatrix<T> B_Tinv = Inverse(B_T);
+    //
+    MyMatrix<Tint> ePlaneRed = ePlane * Binv;
+    std::vector<MyMatrix<T>> LCos =
+      INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(res.Mred, ePlaneRed, choice);
+    std::vector<MyMatrix<T>> LCosRet;
+    for (auto & eCos : LCos) {
+      MyMatrix<T> eCosRet = B_Tinv * eCos * B_T;
+      LCosRet.push_back(eCosRet);
+    }
+    return LCosRet;
+  }
   size_t fiso_inv(MyMatrix<T> const &Q, MyMatrix<Tint> const &Plane,
                   int const &choice) {
-    if (choice == INDEFINITE_FORM_PLANE) {
-      return INDEF_FORM_Invariant_IsotropicKplane(Q, Plane);
-    }
-    if (choice == INDEFINITE_FORM_FLAG) {
-      return INDEF_FORM_Invariant_IsotropicKflag(Q, Plane);
-    }
-    std::cerr << "Failed to have a valid input choice in f_inv\n";
-    throw TerminalException{1};
+    return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Q, Plane, choice);
   }
   std::vector<MyMatrix<T>> fiso_coset(MyMatrix<T> const &Q,
                                       MyMatrix<Tint> const &Plane,
                                       int const &choice) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane, choice);
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Q, Plane, choice);
   }
-  std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const &Q1,
-                                           MyMatrix<T> const &Q2,
+  std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const &Plane1,
                                            MyMatrix<Tint> const &Plane2,
                                            int const &choice) {
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Q1, Q2, Plane1, Plane2,
-                                                         choice);
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Q, Q, Plane1, Plane2,
+                                                          choice);
   }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
+  INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat, int k,
                                              int const &choice) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel, beginning\n";
@@ -1204,7 +1267,7 @@ private:
         for (auto &eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
-                fiso_equiv(Qmat, Qmat, eRecReprKplane.ePlane,
+                fiso_equiv(Qmat, eRecReprKplane.ePlane,
                            fRecReprKplane.ePlane, choice);
             if (opt) {
               return;
@@ -1276,18 +1339,24 @@ private:
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
             if (EvaluationQuadForm(Qmat, eVectC_T) != 0) {
-              std::cerr << "eVectC is not isotropic\n";
+              std::cerr << "COMB: eVectC is not isotropic\n";
               throw TerminalException{1};
             }
             if (!IsIntegralVector(eVectC_T)) {
-              std::cerr << "eVectC_T should be integral\n";
+              std::cerr << "COMB: eVectC_T should be integral\n";
               throw TerminalException{1};
             }
 #endif
             MyVector<Tint> eVectC =
                 UniversalVectorConversion<Tint, T>(eVectC_T);
             MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+            os << "COMB: Before get_planeinv\n";
+#endif
             PlaneInv eRecReprKplane = get_planeinv(ePlaneB);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+            os << "COMB: After get_planeinv\n";
+#endif
             fInsert(eRecReprKplane);
           }
         }
@@ -1302,68 +1371,22 @@ private:
     }
     return ListOrbit;
   }
-
-public:
-  IndefiniteCombinedAlgo(std::ostream &_os) : os(_os) {}
-  // Now the specific implementations
-  size_t INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const &Q,
-                                              MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
-                                                       INDEFINITE_FORM_PLANE);
-  }
-  size_t INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const &Q,
-                                             MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
-                                                       INDEFINITE_FORM_FLAG);
-  }
-  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(
-      MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
-      MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_PLANE);
-  }
-  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(
-      MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
-      MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_FLAG);
-  }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const &Q,
-                                        MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
-                                                        INDEFINITE_FORM_PLANE);
-  }
-  std::vector<MyMatrix<Tint>>
-  INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const &Q,
-                                       MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
-                                                        INDEFINITE_FORM_FLAG);
-  }
-  std::vector<MyMatrix<T>>
-  INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const &Q,
-                                         MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
-                                                         INDEFINITE_FORM_PLANE);
-  }
-  std::vector<MyMatrix<T>>
-  INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const &Q,
-                                        MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
-                                                         INDEFINITE_FORM_FLAG);
-  }
-  std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const &Q, int k) {
-    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
-                                                      INDEFINITE_FORM_PLANE);
-  }
-  std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKflag(MyMatrix<T> const &Q, int k) {
-    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
-                                                      INDEFINITE_FORM_FLAG);
+  INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
+                                             int const &choice) {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    //
+    std::vector<MyMatrix<Tint>> LOrb =
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, choice);
+    std::vector<MyMatrix<Tint>> LOrbRet;
+    for (auto & eOrb : LOrb) {
+      MyMatrix<Tint> eOrbRet = eOrb * res.B;
+      LOrbRet.push_back(eOrbRet);
+    }
+    return LOrbRet;
   }
   std::vector<MyVector<Tint>>
-  INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const &Q, T const &X) {
+  INDEF_FORM_GetOrbitRepresentative_Reduced(MyMatrix<T> const &Q, T const &X) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -1440,28 +1463,28 @@ public:
     return ListRepr;
   }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_StabilizerVector(MyMatrix<T> const &Qmat,
-                              MyVector<Tint> const &v) {
+  INDEF_FORM_StabilizerVector_Reduced(MyMatrix<T> const &Qmat,
+                                      MyVector<Tint> const &v) {
     if (RankMat(Qmat) != Qmat.rows()) {
       std::cerr << "Right now the matrix Qmat should be full dimensional\n";
       throw TerminalException{1};
     }
     int n = Qmat.rows();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: Beginning of INDEF_FORM_StabilizerVector\n";
+    os << "COMB: Beginning of INDEF_FORM_StabilizerVector_Reduced\n";
 #endif
     INDEF_FORM_GetVectorStructure<T, Tint> eRec(Qmat, v, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_StabilizerVector, We have eRec\n";
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have eRec\n";
 #endif
     std::vector<MyMatrix<Tint>> GRP1 =
         INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_StabilizerVector, We have GRP1\n";
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have GRP1\n";
 #endif
     std::vector<MyMatrix<T>> GRP2_T = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_StabilizerVector, We have GRP2_T\n";
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have GRP2_T\n";
 #endif
     std::vector<MyMatrix<Tint>> ListMat =
         MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2_T, os);
@@ -1483,9 +1506,9 @@ public:
     return ListMat;
   }
   std::optional<MyMatrix<Tint>>
-  INDEF_FORM_EquivalenceVector(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
-                               MyVector<Tint> const &v1,
-                               MyVector<Tint> const &v2) {
+  INDEF_FORM_EquivalenceVector_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
+                                       MyVector<Tint> const &v1,
+                                       MyVector<Tint> const &v2) {
     if (INDEF_FORM_InvariantVector(Q1, v1) !=
         INDEF_FORM_InvariantVector(Q2, v2)) {
       return {};
@@ -1570,7 +1593,7 @@ public:
     return TheRet;
   }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_AutomorphismGroup(MyMatrix<T> const &Q) {
+  INDEF_FORM_AutomorphismGroup_Reduced(MyMatrix<T> const &Q) {
     int n = Q.rows();
     MyMatrix<T> NSP_T = NullspaceIntMat(Q);
     MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
@@ -1583,16 +1606,12 @@ public:
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup_FullDim(QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, We have GRPred p=" << p
+    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, We have GRPred p=" << p
        << " n=" << n << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPfull = ExtendIsometryGroup(GRPred, p, n);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, We have GRPfull\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup, FullBasisInv=\n";
-    WriteMatrix(os, FullBasisInv);
-    os << "COMB: INDEF_FORM_AutomorphismGroup, FullBasis=\n";
-    WriteMatrix(os, FullBasis);
+    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, We have GRPfull\n";
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto &eGen : GRPfull) {
@@ -1608,12 +1627,12 @@ public:
       ListGenTot.push_back(eGenB);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, returning ListGenTot\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, returning ListGenTot\n";
 #endif
     return ListGenTot;
   }
   std::optional<MyMatrix<Tint>>
-  INDEF_FORM_TestEquivalence(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
+  INDEF_FORM_TestEquivalence_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
     int n = Q1.rows();
     MyMatrix<T> NSP1_T = NullspaceIntMat(Q1);
     MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint, T>(NSP1_T);
@@ -1651,6 +1670,176 @@ public:
 #endif
     return TheEquiv;
   }
+
+
+public:
+  IndefiniteCombinedAlgo(std::ostream &_os) : os(_os) {}
+  // Now the specific implementations
+  size_t INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const &Q,
+                                              MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
+                                                       INDEFINITE_FORM_PLANE);
+  }
+  size_t INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const &Q,
+                                             MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
+                                                       INDEFINITE_FORM_FLAG);
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(
+      MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
+      MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
+        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_PLANE);
+  }
+  std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(
+      MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
+      MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
+        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_FLAG);
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const &Q,
+                                        MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
+                                                        INDEFINITE_FORM_PLANE);
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const &Q,
+                                       MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
+                                                        INDEFINITE_FORM_FLAG);
+  }
+  std::vector<MyMatrix<T>>
+  INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const &Q,
+                                         MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
+                                                         INDEFINITE_FORM_PLANE);
+  }
+  std::vector<MyMatrix<T>>
+  INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const &Q,
+                                        MyMatrix<Tint> const &Plane) {
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
+                                                         INDEFINITE_FORM_FLAG);
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const &Q, int k) {
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
+                                                      INDEFINITE_FORM_PLANE);
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_GetOrbit_IsotropicKflag(MyMatrix<T> const &Q, int k) {
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
+                                                      INDEFINITE_FORM_FLAG);
+  }
+  std::vector<MyVector<Tint>>
+  INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const &Q, T const &X) {
+    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+    std::vector<MyVector<Tint>> LRepr =
+      INDEF_FORM_GetOrbitRepresentative_Reduced(res.Mred, X);
+    std::vector<MyVector<Tint>> LReprRet;
+    for (auto & eRepr : LRepr) {
+      MyVector<Tint> eReprRet = res.B.transpose() * eRepr;
+      LReprRet.push_back(eReprRet);
+    }
+    return LReprRet;
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_StabilizerVector(MyMatrix<T> const &Q,
+                              MyVector<Tint> const &v) {
+    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+    MyMatrix<Tint> Binv = Inverse(res.B);
+    //
+    MyVector<Tint> vRed = Binv.transpose() * v;
+    std::vector<MyMatrix<Tint>> LGen =
+      INDEF_FORM_StabilizerVector_Reduced(res.Mred, vRed);
+    std::vector<MyMatrix<Tint>> LGenRet;
+    for (auto & eGen : LGen) {
+      MyMatrix<Tint> eGenRet = Binv * eGen * res.B;
+      LGenRet.push_back(eGenRet);
+    }
+    return LGenRet;
+  }
+  std::optional<MyMatrix<Tint>>
+  INDEF_FORM_EquivalenceVector(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
+                               MyVector<Tint> const &v1,
+                               MyVector<Tint> const &v2) {
+    ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
+    MyMatrix<Tint> B1_inv = Inverse(res1.B);
+    ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
+    MyMatrix<Tint> B2_inv = Inverse(res1.B);
+    //
+    MyVector<Tint> v1_red = B1_inv.transpose() * v1;
+    MyVector<Tint> v2_red = B2_inv.transpose() * v2;
+    std::optional<MyMatrix<Tint>> opt =
+      INDEF_FORM_EquivalenceVector_Reduced(res1.Mred, res2.Mred, v1_red, v2_red);
+    if (opt) {
+      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+      return eEquivRet;
+    }
+    return {};
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_AutomorphismGroup(MyMatrix<T> const &Q) {
+    if (Q.rows() == 0) {
+      MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
+      return {eGen};
+    }
+    if (Q.rows() == 1) {
+      MyMatrix<Tint> eGen = - IdentityMat<Tint>(1);
+      return {eGen};
+    }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, start |Q|=" << Q.rows() << "\n";
+#endif
+    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have res\n";
+#endif
+    MyMatrix<Tint> B_inv = Inverse(res.B);
+    //
+    std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_Reduced(res.Mred);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have LGen\n";
+#endif
+    std::vector<MyMatrix<Tint>> LGenRet;
+    for (auto & eGen : LGen) {
+      MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
+      LGenRet.push_back(eGenRet);
+    }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have LGenRet\n";
+#endif
+    return LGenRet;
+  }
+  std::optional<MyMatrix<Tint>>
+  INDEF_FORM_TestEquivalence(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
+    if (Q1.rows() == 0) {
+      MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
+      return eGen;
+    }
+    if (Q1.rows() == 1) {
+      if (Q1(0,0) != Q2(0,0)) {
+        return {};
+      }
+      MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
+      return eGen;
+    }
+    ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
+    ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
+    MyMatrix<Tint> B2_inv = Inverse(res2.B);
+    //
+    std::optional<MyMatrix<Tint>> opt =
+      INDEF_FORM_TestEquivalence_Reduced(res1.Mred, res2.Mred);
+    if (opt) {
+      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+      return eEquivRet;
+    }
+    return {};
+  }
+
+
 };
 
 // clang-format off

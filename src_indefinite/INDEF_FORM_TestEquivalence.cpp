@@ -10,12 +10,20 @@
 template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &File1, std::string const &File2,
              std::string const &OutFormat, std::ostream &os_out) {
-  MyMatrix<T> Qmat1 = ReadMatrixFile<T>(File1);
-  MyMatrix<T> Qmat2 = ReadMatrixFile<T>(File2);
-  std::cerr << "We have Q\n";
+  MyMatrix<T> Q1 = ReadMatrixFile<T>(File1);
+  MyMatrix<T> Q2 = ReadMatrixFile<T>(File2);
+  std::cerr << "We have Q1 / Q2\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
-  std::optional<MyMatrix<Tint>> opt =
-      comb.INDEF_FORM_TestEquivalence(Qmat1, Qmat2);
+  std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_TestEquivalence(Q1, Q2);
+  if (opt) {
+    MyMatrix<Tint> const& eEquiv = *opt;
+    MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
+    MyMatrix<T> prod = eEquiv_T * Q1 * eEquiv_T.transpose();
+    if (prod != Q2) {
+      std::cerr << "Q1 is not mapped to Q2\n";
+      throw TerminalException{1};
+    }
+  }
   if (OutFormat == "PYTHON") {
     if (opt) {
       WriteMatrixPYTHON(os_out, *opt);

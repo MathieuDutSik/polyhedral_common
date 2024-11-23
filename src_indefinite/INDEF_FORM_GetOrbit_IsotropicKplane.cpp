@@ -26,6 +26,14 @@ void process(std::string const &MatFile, std::string const &KStr,
     throw TerminalException{1};
   };
   std::vector<MyMatrix<Tint>> l_planes = f_get();
+  for (auto & e_plane : l_planes) {
+    MyMatrix<T> e_plane_T = UniversalMatrixConversion<T,Tint>(e_plane);
+    MyMatrix<T> prod = e_plane_T * Qmat * e_plane_T.transpose();
+    if (!IsZeroMatrix(prod)) {
+      std::cerr << "The plane is not an isotropic plane\n";
+      throw TerminalException{1};
+    }
+  }
   if (OutFormat == "PYTHON") {
     return WriteListMatrixPYTHON(os_out, l_planes);
   }

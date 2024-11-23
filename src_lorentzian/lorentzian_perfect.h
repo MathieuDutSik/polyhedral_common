@@ -851,7 +851,7 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
 #endif
     T eScal = tVect.dot(TheSet0);
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-    os << "LORPERF: GetOneOutsideRay: scal=" << scal << "\n";
+    os << "LORPERF: GetOneOutsideRay: eScal=" << eScal << "\n";
     for (auto &eVect : TheSet) {
       MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       T fScal = tVect.dot(eVect_T);

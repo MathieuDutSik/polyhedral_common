@@ -14,6 +14,14 @@ void process(std::string const &MatFile, std::string const &OutFormat,
   std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
+  for (auto & e_gen : l_gen) {
+    MyMatrix<T> e_gen_T = UniversalMatrixConversion<T,Tint>(e_gen);
+    MyMatrix<T> prod = e_gen_T * Qmat * e_gen_T.transpose();
+    if (prod != Qmat) {
+      std::cerr << "The matrix is not preserving the space\n";
+      throw TerminalException{1};
+    }
+  }
   if (OutFormat == "CPP") {
     return WriteListMatrix(os_out, l_gen);
   }
