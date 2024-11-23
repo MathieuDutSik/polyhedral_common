@@ -340,6 +340,17 @@ template<typename T, typename Tint>
 ResultReduction<T, Tint>
 SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
+#ifdef DEBUG_INDEFINITE_LLL
+  auto l1_norm=[&](MyMatrix<T> const& U) -> T {
+    T sum = 0;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        sum += T_abs(U(i,j));
+      }
+    }
+    return sum;
+  };
+#endif
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
 #ifdef DEBUG_INDEFINITE_LLL
@@ -347,6 +358,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   os << "ILLL: n=" << n << "\n";
   os << "ILLL: M=\n";
   WriteMatrix(os, M);
+  os << "ILLL: L1(M)=" << l1_norm(M) << "\n";
 #endif
   struct ResSearch {
     int i;
@@ -356,29 +368,35 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   // Apply the transformation
   // tilde(M) = (Id + c U_ij) M (Id + c U_ji)
   //          = (M + c Row(M,j) at row i) ( Id + c U_ji)
-  //          = M + c Row(M,j) at row i + c Col(M,j) at col i
+  //          = M + c Row(M,j) at row i + c Col(M,j) at col i + c^2 
   auto eval=[&](ResSearch const& x) -> T {
     int i = x.i;
     int j = x.j;
     int c = x.c;
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: eval: i=" << i << " j=" << j << " c=" << c << "\n";
+#endif
     //
     T delta_off = 0;
     for (int k=0; k<n; k++) {
       if (k != i) {
         T val1 = T_abs( Mwork(i,k) );
         T val2 = T_abs( T(Mwork(i,k) + c * Mwork(j,k)) );
+#ifdef DEBUG_INDEFINITE_LLL
+        os << "ILLL: eval, off: k=" << k << " val1=" << val1 << " val2=" << val2 << "\n";
+#endif
         delta_off += val1 - val2;
       }
     }
     T val1 = T_abs( Mwork(i,i) );
-    T val2 = T_abs( T(Mwork(i,i) + 2 * c * Mwork(j,i) + c * c * M(j,j)) );
+    T val2 = T_abs( T(Mwork(i,i) + 2 * c * Mwork(j,i) + c * c * Mwork(j,j)) );
 #ifdef DEBUG_INDEFINITE_LLL
-    os << "ILLL: diag, val1=" << val1 << " val2=" << val2 << " Mwork(i,i)=" << Mwork(i,i) << " i=" << i << "\n";
+    os << "ILLL: eval, diag, val1=" << val1 << " val2=" << val2 << "\n";
 #endif
     T delta_diag = val1 - val2;
     T delta = 2 * delta_off + delta_diag;
 #ifdef DEBUG_INDEFINITE_LLL
-    os << "ILLL: i=" << i << " j=" << j << " c=" << c << " delta_off=" << delta_off << " delta_diag=" << delta_diag << " delta=" << delta << "\n";
+    os << "ILLL: eval, summary, delta_off=" << delta_off << " delta_diag=" << delta_diag << " delta=" << delta << "\n";
 #endif
     return delta;
   };
@@ -398,17 +416,6 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     }
     return {};
   };
-#ifdef DEBUG_INDEFINITE_LLL
-  auto l1_norm=[&](MyMatrix<T> const& U) -> T {
-    T sum = 0;
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        sum += T_abs(U(i,j));
-      }
-    }
-    return sum;
-  };
-#endif
   auto update=[&](ResSearch const& x) -> void {
     int i = x.i;
     int j = x.j;
@@ -429,6 +436,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     MyMatrix<T> Mwork_test = BT_test * M * BT_test.transpose();
     return {Btest, Mwork_test};
   };
+  size_t n_oper = 0;
 #endif
   //
   while(true) {
@@ -436,7 +444,8 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     if (opt) {
       ResSearch const& x = *opt;
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "---------------------\n";
+      n_oper += 1;
+      os << "------------ " << n_oper << " --------------------\n";
       os << "ILLL: i=" << x.i << " j=" << x.j << " c=" << x.c << "\n";
       T norm_prev = l1_norm(Mwork);
       os << "ILLL: Mwork=\n";
@@ -470,6 +479,12 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       }
       if (pair.second != Mwork) {
         std::cerr << "Mwork inconsistency\n";
+        num_error += 1;
+      }
+      MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+      MyMatrix<T> prod = B_T * M * B_T.transpose();
+      if (prod != Mwork) {
+        std::cerr << "B / Mwork inconsistency\n";
         num_error += 1;
       }
       if (num_error > 0) {
