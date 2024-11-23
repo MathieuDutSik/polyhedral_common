@@ -340,6 +340,14 @@ template<typename T, typename Tint>
 ResultReduction<T, Tint>
 SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
+  MyMatrix<Tint> B = IdentityMat<Tint>(n);
+  MyMatrix<T> Mwork = M;
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "=======================================================\n";
+  os << "ILLL: n=" << n << "\n";
+  os << "ILLL: M=\n";
+  WriteMatrix(os, M);
+#endif
   struct ResSearch {
     int i;
     int j;
@@ -357,25 +365,33 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     T delta_off = 0;
     for (int k=0; k<n; k++) {
       if (k != i) {
-        T val1 = T_abs( M(i,k) );
-        T val2 = T_abs( T(M(i,k) + c * M(j,k)) );
+        T val1 = T_abs( Mwork(i,k) );
+        T val2 = T_abs( T(Mwork(i,k) + c * Mwork(j,k)) );
         delta_off += val1 - val2;
       }
     }
-    T val1 = T_abs( M(i,i) );
-    T val2 = T_abs( T(M(i,i) + 2 * c * M(j,i)) );
+    T val1 = T_abs( Mwork(i,i) );
+    T val2 = T_abs( T(Mwork(i,i) + 2 * c * Mwork(j,i) + c * c * M(j,j)) );
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: diag, val1=" << val1 << " val2=" << val2 << " Mwork(i,i)=" << Mwork(i,i) << " i=" << i << "\n";
+#endif
     T delta_diag = val1 - val2;
     T delta = 2 * delta_off + delta_diag;
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: i=" << i << " j=" << j << " c=" << c << " delta_off=" << delta_off << " delta_diag=" << delta_diag << " delta=" << delta << "\n";
+#endif
     return delta;
   };
   auto f_search=[&]() -> std::optional<ResSearch> {
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
-        for (int pre_sign=0; pre_sign<2; pre_sign++) {
-          int sign = -1 + 2 * pre_sign;
-          ResSearch x{i, j, sign};
-          if (eval(x) > 0) {
-            return x;
+        if (i != j) {
+          for (int pre_sign=0; pre_sign<2; pre_sign++) {
+            int sign = -1 + 2 * pre_sign;
+            ResSearch x{i, j, sign};
+            if (eval(x) > 0) {
+              return x;
+            }
           }
         }
       }
@@ -393,8 +409,6 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     return sum;
   };
 #endif
-  MyMatrix<Tint> B = IdentityMat<Tint>(n);
-  MyMatrix<T> Mwork = M;
   auto update=[&](ResSearch const& x) -> void {
     int i = x.i;
     int j = x.j;
@@ -422,23 +436,44 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     if (opt) {
       ResSearch const& x = *opt;
 #ifdef DEBUG_INDEFINITE_LLL
+      os << "---------------------\n";
+      os << "ILLL: i=" << x.i << " j=" << x.j << " c=" << x.c << "\n";
       T norm_prev = l1_norm(Mwork);
+      os << "ILLL: Mwork=\n";
+      WriteMatrix(os, Mwork);
       std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = f_compute(x);
+      os << "ILLL: pair.first(B)=\n";
+      WriteMatrix(os, pair.first);
+      os << "ILLL: pair.second(M)=\n";
+      WriteMatrix(os, pair.second);
+      os << "ILLL: Mwork=\n";
+      WriteMatrix(os, Mwork);
+      os << "ILLL: L1(Mwork)=" << l1_norm(Mwork) << " L1(pair.second)=" << l1_norm(pair.second) << "\n";
+      T delta = eval(x);
 #endif
       update(x);
 #ifdef DEBUG_INDEFINITE_LLL
       T norm_next = l1_norm(Mwork);
-      T delta = eval(x);
+      size_t num_error = 0;
       if (norm_prev - delta != norm_next) {
+        std::cerr << "ILLL: norm_prev=" << norm_prev << " delta=" << delta << " norm_next=" << norm_next << "\n";
+        std::cerr << "ILLL: B=\n";
+        WriteMatrix(std::cerr, B);
+        std::cerr << "ILLL: Mwork=\n";
+        WriteMatrix(std::cerr, Mwork);
         std::cerr << "L1-Norm inconsistency\n";
-        throw TerminalException{1};
+        num_error += 1;
       }
       if (pair.first != B) {
         std::cerr << "B inconsistency\n";
-        throw TerminalException{1};
+        num_error += 1;
       }
       if (pair.second != Mwork) {
         std::cerr << "Mwork inconsistency\n";
+        num_error += 1;
+      }
+      if (num_error > 0) {
+        std::cerr << "ILLL: num_error=" << num_error << "\n";
         throw TerminalException{1};
       }
 #endif
