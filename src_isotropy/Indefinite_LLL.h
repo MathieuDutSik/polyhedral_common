@@ -530,12 +530,12 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   };
   T norm_work = f_norm(M);
   while(true) {
+    size_t n_operation = 0;
     // Applying the LLL first
-    bool did_something = false;
     ResultReduction<T, Tint> res1 = LLLIndefiniteReduction<T,Tint>(Mwork, os);
     T norm1 = f_norm(res1.Mred);
     if (norm1 < norm_work) {
-      did_something = true;
+      n_operation += 1;
       B = res1.B * B;
       Mwork = res1.Mred;
       norm_work = norm1;
@@ -544,13 +544,13 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     ResultReduction<T, Tint> res2 = BlockSimpleIndefiniteReduction<T,Tint>(Mwork, os);
     T norm2 = f_norm(res2.Mred);
     if (norm2 < norm_work) {
-      did_something = true;
+      n_operation += 1;
       B = res2.B * B;
       Mwork = res2.Mred;
       norm_work = norm2;
     }
     // If did nothing then exit. Necessarily we will reach that stage at some point
-    if (!did_something) {
+    if (n_operation < 2) {
       return {std::move(B), std::move(Mwork)};
     }
   }
