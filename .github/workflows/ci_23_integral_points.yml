@@ -99,7 +99,7 @@ jobs:
 
       - name: Test integral points
         run: |
-          cd src_poly && make -f Makefile_sampling_facets && cd ..
+          cd src_poly && make -f Makefile_integral_point && cd ..
           pwd
           echo "After compilation of relevant code"
 

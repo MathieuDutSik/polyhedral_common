@@ -6,7 +6,7 @@ PROGRAM		= TEST_PolytopeIntegralPoints \
 		  POLY_FaceLatticeGen VectFamily_ColumnReduction \
 		  POLY_lrs POLY_SmallPolytope \
 		  POLY_LinearDetermineByInequalities \
-		  POLY_IsPointedCone \
+		  POLY_IsPointedCone POLY_DirectFaceLattice \
 		  POLY_SolutionMatNonnegative POLY_cdd_LinearProgramming \
 		  POLY_dual_description POLY_dual_description_group \
 		  POLY_GetFullRankFacetSet  \
