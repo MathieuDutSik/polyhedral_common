@@ -578,6 +578,9 @@ private:
 #endif
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_TestEquivalence_Kernel, eBlock1.h=" << eBlock1.h << " eBlock2.h=" << eBlock2.h << "\n";
+#endif
     if (eBlock1.h != eBlock2.h) {
       return {};
     }
@@ -617,6 +620,9 @@ private:
         approx2.GetCoveringOrbitRepresentatives(X, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: GetCoveringOrbitRepresentatives|=" << time << "\n";
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_TestEquivalence_Kernel |ListCand2|=" << ListCand2.size() << "\n";
 #endif
     for (auto &v2 : ListCand2) {
       std::optional<MyMatrix<Tint>> opt =
@@ -725,21 +731,21 @@ private:
 #endif
     if (Qmat1.rows() != Qmat2.rows()) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, different dimensions\n";
+      os << "COMB: INDEF_FORM_TestEquivalance_FullDim, different dimensions\n";
 #endif
       return {};
     }
     int dim = Qmat1.rows();
     if (dim == 0) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, 0 dimensional, all isomorphic\n";
+      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 0 dimensional, all isomorphic\n";
 #endif
       MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
       return eGen;
     }
     if (dim == 1) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, 1 dimensional, trivial to resolve\n";
+      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 1 dimensional, trivial to resolve\n";
 #endif
       if (Qmat1(0,0) == Qmat2(0,0)) {
         MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
@@ -748,18 +754,18 @@ private:
         return {};
       }
     }
-    ResultReduction<T, Tint> ResRed1 =
+    ResultReduction<T, Tint> res1 =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat1, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ComputeReductionIndefinitePermSign(Qmat1)|=" << time << "\n";
 #endif
-    ResultReduction<T, Tint> ResRed2 =
+    ResultReduction<T, Tint> res2 =
         ComputeReductionIndefinitePermSign<T, Tint>(Qmat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ComputeReductionIndefinitePermSign(Qmat2)|=" << time << "\n";
 #endif
-    MyMatrix<T> const &QmatRed1 = ResRed1.Mred;
-    MyMatrix<T> const &QmatRed2 = ResRed2.Mred;
+    MyMatrix<T> const &QmatRed1 = res1.Mred;
+    MyMatrix<T> const &QmatRed2 = res2.Mred;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_TestEquivalence_FullDim, QmatRed1=\n";
     WriteMatrix(os, QmatRed1);
@@ -794,12 +800,20 @@ private:
     std::optional<MyMatrix<Tint>> opt = get_equi();
     if (opt) {
       MyMatrix<Tint> const &eEquiv = *opt;
-      MyMatrix<Tint> NewEquiv = Inverse(ResRed2.B) * eEquiv * ResRed1.B;
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T, Tint>(eEquiv);
+      MyMatrix<T> eProd = eEquiv_T * QmatRed1 * eEquiv_T.transpose();
+      if (eProd != QmatRed2) {
+        std::cerr << "The matrix eEquiv is not an equivalence for QmatRed1 / QmatRed2\n";
+        throw TerminalException{1};
+      }
+#endif
+      MyMatrix<Tint> NewEquiv = Inverse(res2.B) * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> NewEquiv_T = UniversalMatrixConversion<T, Tint>(NewEquiv);
-      MyMatrix<T> eProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
-      if (eProd != Qmat2) {
-        std::cerr << "The matrix is not an equivalence for Qmat1 / Qmat2\n";
+      MyMatrix<T> NewProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
+      if (NewProd != Qmat2) {
+        std::cerr << "The matrix NewEquiv is not an equivalence for Qmat1 / Qmat2\n";
         throw TerminalException{1};
       }
 #endif
@@ -1766,7 +1780,7 @@ public:
     ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
     MyMatrix<Tint> B1_inv = Inverse(res1.B);
     ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
-    MyMatrix<Tint> B2_inv = Inverse(res1.B);
+    MyMatrix<Tint> B2_inv = Inverse(res2.B);
     //
     MyVector<Tint> v1_red = B1_inv.transpose() * v1;
     MyVector<Tint> v2_red = B2_inv.transpose() * v2;
@@ -1775,6 +1789,20 @@ public:
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
+      MyMatrix<T> prod = eEquiv_T * res1.Mred * eEquiv_T.transpose();
+      if (prod != res2.Mred) {
+        std::cerr << "COMB: eEquiv is not an equivalence for res1.Mred / res2.Mred\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> eEquivRet_T = UniversalMatrixConversion<T,Tint>(eEquivRet);
+      MyMatrix<T> prodRet = eEquivRet_T * Q1 * eEquivRet_T.transpose();
+      if (prodRet != Q2) {
+        std::cerr << "COMB: eEquivRet is not an equivalence for Q1 / Q2\n";
+        throw TerminalException{1};
+      }
+#endif
       return eEquivRet;
     }
     return {};

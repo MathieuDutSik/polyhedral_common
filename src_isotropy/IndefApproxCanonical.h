@@ -9,6 +9,10 @@
 #include "WeightMatrix.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_INDEX_APPROX_CANONICAL
+#endif
+
 template <typename T, typename Tint>
 ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
                                                           std::ostream &os) {
@@ -122,6 +126,14 @@ ComputeReductionIndefinitePermSign(MyMatrix<T> const &M, std::ostream &os) {
   ResultReduction<T, Tint> RRI_B =
       CanonicalizationPermutationSigns<T, Tint>(RRI_A.Mred, os);
   MyMatrix<Tint> eP = RRI_B.B * RRI_A.B;
+#ifdef DEBUG_INDEX_APPROX_CANONICAL
+  MyMatrix<T> eP_T = UniversalMatrixConversion<T,Tint>(eP);
+  MyMatrix<T> prod = eP_T * M * eP_T.transpose();
+  if (prod != RRI_B.Mred) {
+    std::cerr << "IAC: We do not really have a reduction\n";
+    throw TerminalException{1};
+  }
+#endif
   return {std::move(eP), std::move(RRI_B.Mred)};
 }
 
