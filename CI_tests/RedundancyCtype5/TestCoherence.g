@@ -1,3 +1,5 @@
+Read("../common.g");
+Print("Beginning TestCoherencen");
 
 DoTest2_Clarkson:=true;
 DoTest3_Equivariant:=true;

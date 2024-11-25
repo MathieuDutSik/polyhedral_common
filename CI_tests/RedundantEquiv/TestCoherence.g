@@ -1,3 +1,6 @@
+Read("../common.g");
+Print("Beginning TestCoherence\n");
+
 TestRedundancy:=function(eRec)
     local eFileGRP, eFileIrred, eProg, eCommand, fProg, fCommand, U;
     eFileGRP:=Filename(DirectoryTemporary(), "Test.grp");

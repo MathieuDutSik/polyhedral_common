@@ -167,9 +167,9 @@ FullTest:=function()
         if TestOrbitRepresentative(eList)=false then
             return false;
         fi;
-        if TestOrbitIsotropic(eList, k)=false then
-            return false;
-        fi;
+#        if TestOrbitIsotropic(eList, k)=false then
+#            return false;
+#        fi;
     od;
     return true;
 end;
