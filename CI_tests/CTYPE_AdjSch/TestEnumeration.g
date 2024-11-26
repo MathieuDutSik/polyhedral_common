@@ -53,15 +53,19 @@ FullTest:=function()
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
         RecReply:=TestEnumeration(eRec);
+        Print("RecReply=", RecReply, "\n");
         if RecReply.is_correct=false then
             n_error:=n_error+1;
         fi;
         iRec:=iRec + 1;
     od;
+    Print("FullTest: n_error=", n_error, "\n");
     return n_error;
 end;
 
 n_error:=FullTest();
+Print("Final: n_error=", n_error, "\n");
+
 CI_Decision_Reset();
 if n_error > 0 then
     Print("Error case\n");
@@ -69,4 +73,5 @@ else
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
+QUIT_GAP(0);
 

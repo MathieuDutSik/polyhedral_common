@@ -109,7 +109,7 @@ jobs:
           pwd
           echo "After compilation of CTYP_MPI_AdjScheme"
 
-          cd CI_tests/CTYPE_AdjSch && ../../gap.sh < TestEnumeration.g
+          cd CI_tests/CTYPE_AdjSch && ../../gap.sh TestEnumeration.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
