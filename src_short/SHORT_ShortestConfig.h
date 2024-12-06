@@ -649,35 +649,12 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   }
 }
 
-template <typename T, typename Tint> struct SHVshortest {
-  MyMatrix<Tint> SHV;
-};
-
-template <typename T, typename Tint>
-std::istream &operator>>(std::istream &is, SHVshortest<T, Tint> &obj) {
-  MyMatrix<Tint> M;
-  M = ReadMatrix<Tint>(is);
-  obj = {M};
-  return is;
-}
-
-template <typename T, typename Tint>
-std::ostream &operator<<(std::ostream &os, SHVshortest<T, Tint> const &obj) {
-  WriteMatrix(os, obj.SHV);
-  return os;
-}
-
 template <typename T, typename Tint>
 size_t SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream &os) {
-  SHVshortest<T, Tint> eEnt{eSpann};
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
   return GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
 }
-
-template <typename T, typename Tint> struct equiv_info<SHVshortest<T, Tint>> {
-  typedef MyMatrix<Tint> equiv_type;
-};
 
 template <typename Tint>
 Tint SHORT_GetMaximumDeterminant(MyMatrix<Tint> const &M) {
