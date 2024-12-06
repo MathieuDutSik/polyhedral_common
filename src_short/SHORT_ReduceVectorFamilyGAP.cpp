@@ -22,32 +22,29 @@ int main(int argc, char *argv[]) {
     }
     using T = mpq_class;
     using Tint = int;
-    using Tidx = uint16_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt, mpz_class>;
     //
     std::string FileIn = argv[1];
     std::vector<MyMatrix<Tint>> ListSHV =
         ReadListConfigurationShortestVector<Tint>(FileIn);
-    std::pair<std::vector<MyMatrix<Tint>>, std::vector<Tint>> RecRet =
-        SHORT_ReduceByIsomorphism<T, Tint, Tgroup>(ListSHV, std::cerr);
+    std::unordered_set<MyMatrix<Tint>> set;
+    for (auto & SHV : ListSHV) {
+      MyMatrix<Tint> SHV_can = SHORT_Canonicalize<T,Tint>(SHV, std::cerr);
+      set.insert(SHV_can);
+    }
+    std::vector<MyMatrix<Tint>> v;
+    for (auto & fSHV : set) {
+      v.push_back(fSHV);
+    }
     //
     std::string FileOut = argv[2];
     std::ofstream os(FileOut);
     os << "return rec(ListReduced:=[";
     bool IsFirst = true;
-    for (auto &eSHV : RecRet.first) {
+    for (auto &eSHV : v) {
       if (!IsFirst)
         os << ",\n";
       IsFirst = false;
       WriteMatrixGAP(os, eSHV);
-    }
-    os << "],\nVectPos:=[";
-    int nbConfTot = RecRet.second.size();
-    for (int iConf = 0; iConf < nbConfTot; iConf++) {
-      if (iConf > 0)
-        os << ",";
-      os << RecRet.second[iConf];
     }
     os << "]);\n";
     std::cerr << "Normal termination of the program\n";

@@ -3,6 +3,7 @@
 #define SRC_SHORT_SHORT_SHORTESTCONFIG_H_
 
 // clang-format off
+#include "SHORT_ShortestConfigStabEquiCanInv.h"
 #include "ShortestUniversal.h"
 #include "COMB_Combinatorics.h"
 #include "InvariantVectorFamily.h"
@@ -50,11 +51,13 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
       if (iColFound == -1)
         if (eRow(iCol) != 0)
           iColFound = iCol;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
     if (iColFound == -1) {
       std::cerr << "Bug in SHORT_CleanAntipodality\n";
       std::cerr << "The vector is 0 which is not allowed\n";
       throw TerminalException{1};
     }
+#endif
     if (eRow(iColFound) < 0)
       eRow = -eRow;
     setVect.insert(eRow);
@@ -182,10 +185,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   T eOptimal, eOptimalPrev;
   while (true) {
     if (nbIter > 2) {
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (eOptimalPrev > eOptimal) {
         std::cerr << "Optimal values should be increasing\n";
         throw TerminalException{1};
       }
+#endif
       eOptimalPrev = eOptimal;
     }
     nbIter++;
@@ -193,6 +198,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::cerr << "nbIter=" << nbIter << "\n";
 #endif
     MyMatrix<T> ListIneq = GetListIneq();
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
     for (auto &eVect : ListVectTot) {
       auto iter = TheFamilyVect.find(eVect);
       if (iter != TheFamilyVect.end()) {
@@ -200,6 +206,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         throw TerminalException{1};
       }
     }
+#endif
     int sizFamVect = TheFamilyVect.size();
     for (int i = 0; i < sizFamVect; i++) {
       MyVector<T> rVect = GetMatrixRow(ListIneq, i);
@@ -303,6 +310,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       //
       // Some checks
       //
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
       int idx = 0;
       for (auto &eVect : TheFamilyVect) {
         MyVector<T> eRow = GetMatrixRow(ListIneq, idx);
@@ -321,6 +329,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         }
         idx++;
       }
+#endif
       bool IsFirst = true;
       T singleNorm;
       for (auto &eVect : ListVect) {
@@ -335,14 +344,16 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           }
         }
       }
-      T eOne = 1;
+      T eOne(1);
       T CritNorm = std::min(eOne, singleNorm);
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (CritNorm != eOptimal) {
         std::cerr << "CritNorm=" << CritNorm << " eOptimal=" << eOptimal
                   << "\n";
         std::cerr << "The value of eOptimal has not been well set\n";
         throw TerminalException{1};
       }
+#endif
       bool testPosDef = IsPositiveDefinite(eMatSec);
 #ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "testPosDef=" << testPosDef << "\n";
@@ -425,6 +436,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
           if (PositionVect(ListVectTot, eVect3) != -1)
             eVect3 *= 2;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (TheFamilyVect.find(eVect3) != TheFamilyVect.end()) {
             std::cerr << "eMatSec=\n";
             WriteMatrix(std::cerr, eMatSec);
@@ -433,6 +445,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
           }
+#endif
 #ifdef DEBUG_SHORTEST_CONFIG
           std::cerr << "Inserting from GetShortVectorDegenerate eVect3=";
           WriteVectorNoDim(std::cerr, eVect3);
@@ -442,10 +455,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           bool StrictIneq = true;
           MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(
               eMatSec, CritNorm, StrictIneq, os);
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
             std::cerr << "We have a clear error here\n";
             throw TerminalException{1};
           }
+#endif
 #ifdef DEBUG_SHORTEST_CONFIG
           std::cerr << "Inserting from GetShortVector eVect=";
           WriteVectorNoDim(std::cerr, eVect);
@@ -457,98 +472,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   }
 }
 
-template <typename T, typename Tint> struct ShortIso {
-  MyMatrix<T> GramMat;
-  MyMatrix<Tint> SHVdisc;
-};
-
-template <typename T, typename Tint>
-ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
-                                       std::ostream &os) {
-  int n = M.cols();
-  int nbVect = M.rows();
-#ifdef DEBUG_SHORTEST_CONFIG
-  std::cerr << "nbVect=" << nbVect << "\n";
-#endif
-  MyMatrix<T> Amat = ZeroMatrix<T>(n, n);
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    MyVector<Tint> eVect_Tint = GetMatrixRow(M, iVect);
-    MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect_Tint);
-    MyMatrix<T> pMat = RankOneMatrix(eVect_T);
-    Amat += pMat;
-  }
-  MyMatrix<T> TheGramMat = Inverse(Amat);
-  MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
-  MyMatrix<Tint> Mc1 = 2 * M;
-  MyMatrix<Tint> Mc2 = -2 * M;
-  MyMatrix<Tint> Mcopy = Concatenate(Mc1, Mc2);
-  MyMatrix<Tint> SHVret = Concatenate(SHV, Mcopy);
-  return {std::move(TheGramMat), std::move(SHVret)};
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
-                                                    MyMatrix<Tint> const &M2,
-                                                    std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx_value = int16_t;
-  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1, os);
-  ShortIso<T, Tint> eRec2 = SHORT_GetInformation<T, Tint>(M2, os);
-  WeightMatrix<true, T, Tidx_value> WMat1 =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat,
-                                                      eRec1.SHVdisc, os);
-  WeightMatrix<true, T, Tidx_value> WMat2 =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec2.GramMat,
-                                                      eRec2.SHVdisc, os);
-  std::optional<Telt> eResEquiv =
-      TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2, os);
-  if (!eResEquiv)
-    return {};
-  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(eRec1.SHVdisc);
-  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(eRec2.SHVdisc);
-  MyMatrix<T> MatEquiv_T = FindTransformation(SHV1_T, SHV2_T, *eResEquiv);
-  if (!IsIntegralMatrix(MatEquiv_T)) {
-    std::cerr << "Error, the matrix is not integral\n";
-    throw TerminalException{1};
-  }
-  return UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
-                                                std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tgr = GraphListAdj;
-  using Tidx_value = int16_t;
-  ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
-  WeightMatrix<true, T, Tidx_value> WMat =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(eRec1.GramMat,
-                                                      eRec1.SHVdisc, os);
-  Tgroup GRP = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-#ifdef DEBUG_SHORTEST_CONFIG
-  os << "|GRP| = " << GRP.size() << "\n";
-#endif
-  MyMatrix<Tint> Mneg = -M;
-  MyMatrix<Tint> Mtot = Concatenate(M, Mneg);
-  std::vector<MyMatrix<Tint>> ListMatrGen;
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(eRec1.SHVdisc);
-  std::vector<Telt> LGen = GRP.GeneratorsOfGroup();
-  for (auto const &eGen : LGen) {
-    MyMatrix<T> MatEquiv_T = FindTransformation(SHV_T, SHV_T, eGen);
-    if (!IsIntegralMatrix(MatEquiv_T)) {
-      std::cerr << "Problem in SHORT_GetStabilizer\n";
-      std::cerr << "Error, the matrix is not integral\n";
-      throw TerminalException{1};
-    }
-    MyMatrix<Tint> MatEquiv_i = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
-    ListMatrGen.push_back(MatEquiv_i);
-  }
-#ifdef DEBUG_SHORTEST_CONFIG
-  std::cerr << "Exiting SHORT_GetStabilizer\n";
-#endif
-  return ListMatrGen;
-}
 
 template <typename T>
 int GetPositionAntipodal(std::vector<MyVector<T>> const &ListVect,
@@ -570,6 +493,7 @@ int KissingNumberUpperBound(int const &n) {
   if (n <= 16) {
     return ListVal[n];
   }
+  std::cerr << "The dimension is too large for use to give the kissing number\n";
   throw TerminalException{1};
 }
 
@@ -597,10 +521,12 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV) {
   MyMatrix<Tint> TheTrans = res.Pmat;
   MyMatrix<Tint> Pmat = TransposedMat(TheTrans);
   MyMatrix<Tint> eSHVred = eSHV * Pmat;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
   if (!TestEqualityMatrix(GetGram(eSHVred), TheRemainder)) {
     std::cerr << "Matrix error somewhere\n";
     throw TerminalException{1};
   }
+#endif
   return {std::move(eSHVred), std::move(Pmat)};
 }
 
@@ -741,53 +667,16 @@ std::ostream &operator<<(std::ostream &os, SHVshortest<T, Tint> const &obj) {
   return os;
 }
 
-template <typename T, typename Tint> struct SHVinvariant {
-  size_t eInv;
-};
-
 template <typename T, typename Tint>
-std::istream &operator>>(std::istream &is, SHVinvariant<T, Tint> &obj) {
-  SHVinvariant<T, Tint> eInv;
-  is >> eInv;
-  obj = {eInv};
-  return is;
-}
-
-template <typename T, typename Tint>
-std::ostream &operator<<(std::ostream &os, SHVinvariant<T, Tint> const &obj) {
-  os << obj.eInv;
-  return os;
-}
-
-template <typename T, typename Tint>
-bool operator==(SHVinvariant<T, Tint> const &x,
-                SHVinvariant<T, Tint> const &y) {
-  return x.eInv == y.eInv;
-}
-
-template <typename T, typename Tint>
-bool operator<(SHVinvariant<T, Tint> const &x, SHVinvariant<T, Tint> const &y) {
-  return x.eInv < y.eInv;
-}
-
-template <typename T, typename Tint>
-SHVinvariant<T, Tint> SHORT_Invariant(MyMatrix<Tint> const &eSpann,
-                                      std::ostream &os) {
+size_t SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream &os) {
   SHVshortest<T, Tint> eEnt{eSpann};
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
-  size_t eInvGV =
-      GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
-  return {eInvGV};
+  return GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
 }
 
 template <typename T, typename Tint> struct equiv_info<SHVshortest<T, Tint>> {
   typedef MyMatrix<Tint> equiv_type;
-};
-
-template <typename T, typename Tint>
-struct invariant_info<SHVshortest<T, Tint>> {
-  typedef SHVinvariant<T, Tint> invariant_type;
 };
 
 template <typename Tint>
@@ -1111,14 +1000,16 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
         };
         MyVector<int> Vtest(n);
         for (int i = 0; i < n; i++) {
-          T sum = 0;
+          T sum(0);
           for (int j = 0; j < n; j++)
             sum += eV(j) * eInv(j, i);
           sum *= ord;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (!IsInteger(sum)) {
             std::cerr << "The sum should be integral\n";
             throw TerminalException{1};
           }
+#endif
           int sum_i = UniversalScalarConversion<int, T>(sum);
           Vtest(i) = sum_i;
         }
@@ -1129,48 +1020,6 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
     }
   }
   return true;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::pair<std::vector<MyMatrix<Tint>>, std::vector<int>>
-SHORT_ReduceByIsomorphism(std::vector<MyMatrix<Tint>> const &ListSHV,
-                          std::ostream &os) {
-  std::map<SHVinvariant<T, Tint>, std::vector<int>> TheMap;
-  std::vector<MyMatrix<Tint>> ListRet;
-  int siz = 0;
-  //  SHVinvariant<T,Tint> eInv;
-  auto FuncInsert = [&](MyMatrix<Tint> const &eSpann) -> int {
-    SHVinvariant<T, Tint> eInv = SHORT_Invariant<T, Tint>(eSpann, os);
-    auto search = TheMap.find(eInv);
-    if (search == TheMap.end()) {
-      TheMap[eInv] = {siz};
-      ListRet.push_back(eSpann);
-      int pos = siz;
-      siz++;
-      return pos;
-    }
-    for (auto &iSpann : TheMap[eInv]) {
-      MyMatrix<Tint> fSpann = ListRet[iSpann];
-      std::optional<MyMatrix<Tint>> RecTest =
-          SHORT_TestEquivalence<T, Tint, Tgroup>(eSpann, fSpann, os);
-      if (RecTest)
-        return iSpann;
-    }
-    TheMap[eInv].push_back(siz);
-    ListRet.push_back(eSpann);
-    int pos = siz;
-    siz++;
-    return pos;
-  };
-  int nbConf = ListSHV.size();
-  int pos = 0;
-  std::vector<int> ListIdx(nbConf, -1);
-  for (auto &eSHV : ListSHV) {
-    int idx = FuncInsert(eSHV);
-    ListIdx[pos] = idx;
-    pos++;
-  }
-  return {std::move(ListRet), std::move(ListIdx)};
 }
 
 // clang-format off

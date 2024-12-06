@@ -28,20 +28,15 @@ template <typename T, typename Tint> struct Canonic_PosDef {
 };
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
-                                             std::ostream &os) {
-  //
-  // Computing the Z-basis on which the computation relies.
-  //
+Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
+                                                   MyMatrix<Tint> const& SHV,
+                                                   std::ostream &os) {
+  using Tgr = GraphListAdj;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: Begining of ComputeCanonicalForm\n";
 #endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
-#endif
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   int nbRow = SHV.rows();
   int n = SHV.cols();
@@ -77,8 +72,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
   //
   // Computing the canonicalization of the scalar product matrix
   //
-  std::vector<int> CanonicOrd =
-      GetCanonicalizationVector_Kernel<T, GraphBitset, int>(WMat, os);
+  std::vector<int> CanonicOrd = GetCanonicalizationVector_Kernel<T, Tgr, int>(WMat, os);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: CanonicOrd=";
   for (auto &eV : CanonicOrd)
@@ -139,6 +133,22 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
   WMat_B.ReorderingSetWeight();
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
+}
+
+template <typename T, typename Tint>
+Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
+                                             std::ostream &os) {
+  //
+  // Computing the Z-basis on which the computation relies.
+  //
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
+#endif
+  return ComputeCanonicalForm_inner(inpMat, SHV, os);
 }
 
 template <typename T, typename Tint>
@@ -230,12 +240,10 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
 
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>>
-ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
-                                    std::ostream &os) {
+ArithmeticAutomorphismGroupMultiple_inner(std::vector<MyMatrix<T>> const &ListMat,
+                                          MyMatrix<Tint> const& SHV,
+                                          std::ostream &os) {
   using Tidx = uint32_t;
-  MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], std::cerr);
-
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, 0);
@@ -267,6 +275,30 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>>
+ArithmeticAutomorphismGroup_inner(MyMatrix<T> const &inpMat,
+                                  MyMatrix<Tint> const& SHV,
+                                  std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat{inpMat};
+  return ArithmeticAutomorphismGroupMultiple_inner(ListMat, SHV, os);
+}
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>>
+ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
+                                    std::ostream &os) {
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
+#endif
+  return ArithmeticAutomorphismGroupMultiple_inner(ListMat, SHV, os);
+}
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>>
 ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
   return ArithmeticAutomorphismGroupMultiple<T, Tint>(ListMat, os);
@@ -274,14 +306,15 @@ ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
 
 template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>>
-ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
-                              std::vector<MyMatrix<T>> const &ListMat2,
-                              std::ostream &os) {
+ArithmeticEquivalenceMultiple_inner(std::vector<MyMatrix<T>> const &ListMat1,
+                                    MyMatrix<Tint> const& SHV1,
+                                    std::vector<MyMatrix<T>> const &ListMat2,
+                                    MyMatrix<Tint> const& SHV2,
+                                    std::ostream &os) {
   using Tidx = uint32_t;
-  MyMatrix<Tint> SHV1 =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], std::cerr);
-  MyMatrix<Tint> SHV2 =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], std::cerr);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
 #endif
@@ -294,6 +327,9 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
 
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: SHV1_T / SHV2_T|=" << time << "\n";
+#endif
 
   int n_rows = SHV1_T.rows();
   std::vector<T> Vdiag1(n_rows, 0);
@@ -304,11 +340,17 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
   std::optional<std::vector<Tidx>> opt =
       TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2,
                                                 SHV1_T, ListMat1, Vdiag1, os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: TestEquivalence_ListMat_Vdiag|=" << time << "\n";
+#endif
 
   if (!opt)
     return {};
   std::optional<MyMatrix<T>> optB =
       FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: FindMatrixTransformationTest|=" << time << "\n";
+#endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   if (!optB) {
     std::cerr << "LSEC: We have a matrix bug\n";
@@ -332,8 +374,45 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
   }
 #endif
   MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ArithmeticEquivalenceMultiple_inner, M|=" << time << "\n";
+#endif
   return M;
 }
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>>
+ArithmeticEquivalence_inner(MyMatrix<T> const &inpMat1,
+                            MyMatrix<Tint> const& SHV1,
+                            MyMatrix<T> const &inpMat2,
+                            MyMatrix<Tint> const& SHV2,
+                            std::ostream &os) {
+  std::vector<MyMatrix<T>> ListMat1{inpMat1};
+  std::vector<MyMatrix<T>> ListMat2{inpMat2};
+  return ArithmeticEquivalenceMultiple_inner(ListMat1, SHV1, ListMat2, SHV2, os);
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<Tint>>
+ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
+                              std::vector<MyMatrix<T>> const &ListMat2,
+                              std::ostream &os) {
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> SHV1 =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis1|=" << time << "\n";
+#endif
+  MyMatrix<Tint> SHV2 =
+      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], os);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: ExtractInvariantVectorFamilyZbasis2|=" << time << "\n";
+#endif
+  return ArithmeticEquivalenceMultiple_inner(ListMat1, SHV1, ListMat2, SHV2, os);
+}
+
 
 template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1,
