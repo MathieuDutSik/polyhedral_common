@@ -1188,6 +1188,16 @@ public:
        << face_can.count() << " |eStab|=" << eStab.size()
        << " f=" << StringFace(face_can) << "\n";
 #endif
+#ifdef CREATE_SAMPLE_ENTRY_DATABASE
+    Tgroup eStabB = GRP.Stabilizer_OnSets(face_can);
+    Tint ord1 = GRP.size();
+    Tint ord2 = eStabB.size();
+    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" + std::to_string(ord2);
+    std::string fFile = FindAvailableFileFromPrefix(eFile);
+    std::ofstream os(fFile);
+    WriteGroup(os, eStabB);
+    WriteGroup(os, GRP);
+#endif
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
@@ -1224,6 +1234,16 @@ public:
 #ifdef DEBUG_INSERT
     os << "RDD: FuncInsertPair: Inserting a face of size |face_can|="
        << pair.first.count() << " |O|=" << pair.second << "\n";
+#endif
+#ifdef CREATE_SAMPLE_ENTRY_DATABASE
+    Tgroup eStabB = GRP.Stabilizer_OnSets(pair.first);
+    Tint ord1 = GRP.size();
+    Tint ord2 = eStabB.size();
+    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" + std::to_string(ord2);
+    std::string fFile = FindAvailableFileFromPrefix(eFile);
+    std::ofstream os(fFile);
+    WriteGroup(os, eStabB);
+    WriteGroup(os, GRP);
 #endif
     InsertEntryDatabase(pair, false, foc.nbOrbit);
   }

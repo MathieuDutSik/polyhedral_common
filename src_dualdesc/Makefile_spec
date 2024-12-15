@@ -1,6 +1,6 @@
 #PROGRAM		= POLY_CheckCanonicalGAP
-#PROGRAM		= POLY_SerialDualDesc
-PROGRAM		= POLY_DirectSerialDualDesc
+PROGRAM		= POLY_SerialDualDesc
+#PROGRAM		= POLY_DirectSerialDualDesc
 #PROGRAM		= POLY_FindNeededBalinski
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc
 #PROGRAM		= POLY_MPI_DualDesc POLY_SerialDualDesc POLY_RunTheBank
@@ -50,7 +50,7 @@ OUTPUTFLAG 	= -o
 #COPTIONS        = -DDEBUG_BALINSKI
 #COPTIONS        = -DDEBUG_DOUBLE_COSET -DCHECK_INSERT
 #COPTIONS        =
-COPTIONS        = -DDEBUG -DTIMINGS -DSANITY_CHECK
+COPTIONS        = -DDEBUG -DTIMINGS -DSANITY_CHECK -DCREATE_SAMPLE_ENTRY_DATABASE
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
