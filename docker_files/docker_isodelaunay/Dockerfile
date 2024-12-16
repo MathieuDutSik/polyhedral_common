@@ -13,7 +13,7 @@
 #
 # Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
 
-FROM ubuntu:23.10
+FROM ubuntu:24.04
 
 # Dockerfile maintainer (original author: Mathieu Dutour Sikiric)
 LABEL maintainer="mathieu.dutour@gmail.com"

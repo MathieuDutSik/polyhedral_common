@@ -1192,7 +1192,7 @@ public:
     Tgroup eStabB = GRP.Stabilizer_OnSets(face_can);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" + std::to_string(ord2);
+    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" + std::to_string(ord2) + "_-_";
     std::string fFile = FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
@@ -1239,7 +1239,7 @@ public:
     Tgroup eStabB = GRP.Stabilizer_OnSets(pair.first);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" + std::to_string(ord2);
+    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" + std::to_string(ord2) + "_-_";
     std::string fFile = FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
