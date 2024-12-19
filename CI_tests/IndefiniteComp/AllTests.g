@@ -20,6 +20,7 @@ TestStab:=function(eList)
     for eP in U
     do
         if eP * eGram * TransposedMat(eP) <> eGram then
+            Print("TestEquiv: Failed at U * eGram * TransposedMat(U) <> eGram\n");
             return false;
         fi;
     od;
@@ -48,9 +49,11 @@ TestEquiv:=function(eList)
     RemoveFile(FileM2);
     RemoveFile(FileOut);
     if U = fail then
+        Print("TestEquiv: Failed at U = fail\n");
         return false;
     fi;
     if U * eGram1 * TransposedMat(U) <> eGram2 then
+        Print("TestEquiv: Failed at U * eGram1 * TransposedMat(U) <> eGram2\n");
         return false;
     fi;
     return true;
@@ -83,17 +86,20 @@ TestOrbitRepresentative:=function(eList)
     do
         res1:=GetNrOrbitRepresentative(eGram1, Xnorm);
         if res1.is_correct=false then
+            Print("TestOrbitRepresentative: Failed at res1.is_correct\n");
             return false;
         fi;
         nr_orbit1:=res1.nr_orbit;
         #
         res2:=GetNrOrbitRepresentative(eGram2, Xnorm);
         if res2.is_correct=false then
+            Print("TestOrbitRepresentative: Failed at res2.is_correct\n");
             return false;
         fi;
         nr_orbit2:=res2.nr_orbit;
         #
         if nr_orbit1<>nr_orbit2 then
+            Print("TestOrbitRepresentative: Failed at nr_orbi1<>nr_orbit2\n");
             return false;
         fi;
     od;
@@ -128,17 +134,20 @@ TestOrbitIsotropic:=function(eList, kDim)
     do
         res1:=GetNrOrbitIsotropic(eGram1, kDim, choice);
         if res1.is_correct=false then
+            Print("TestOrbitIsotropic: Failed at res1.is_correct\n");
             return false;
         fi;
         nr_orbit1:=res1.nr_orbit;
         #
         res2:=GetNrOrbitIsotropic(eGram2, kDim, choice);
         if res2.is_correct=false then
+            Print("TestOrbitIsotropic: Failed at res2.is_correct\n");
             return false;
         fi;
         nr_orbit2:=res2.nr_orbit;
         #
         if nr_orbit1<>nr_orbit2 then
+            Print("TestOrbitIsotropic: Failed at nr_orbit1<>nr_orbit2\n");
             return false;
         fi;
     od;
@@ -156,15 +165,19 @@ FullTest:=function()
     Add(ListRec, rec(eList:=["U", "2U", "2E8"], k:=2)); # Enriques, should work as we did in the paper
     for eRec in ListRec
     do
+        Print("Working with eRec=", eRec, "\n");
         eList:=eRec.eList;
         k:=eRec.k;
         if TestStab(eList)=false then
+            Print("Failed the TestStab\n");
             return false;
         fi;
         if TestEquiv(eList)=false then
+            Print("Failed the TestEquiv\n");
             return false;
         fi;
         if TestOrbitRepresentative(eList)=false then
+            Print("Failed the TestOrbitRepresentative\n");
             return false;
         fi;
 #        if TestOrbitIsotropic(eList, k)=false then
