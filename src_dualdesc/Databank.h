@@ -10,6 +10,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_DATABANK
+#endif
+
 size_t get_matching_power(size_t const &val) {
   size_t pow = 1;
   size_t pos = 0;
@@ -77,9 +81,11 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
     Face eFace = ff.getface(i_orbit);
     ListFace.push_back(eFace);
   }
+#endif DEBUG_DATABANK
   std::cerr << "Read_BankEntry returning for Prefix=" << Prefix
             << " |EXT|=" << EXT.rows() << "/" << EXT.cols()
             << " |ListFace|=" << ListFace.size() << "\n";
+#endif
   Tval eVal{std::move(GRP), std::move(ListPossOrbsize), std::move(ListFace)};
   return {std::move(EXT), std::move(eVal)};
 }
@@ -126,7 +132,9 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
       std::string eFileBank = Prefix + ".ext";
       if (!IsExistingFile(eFileBank))
         break;
+#endif DEBUG_DATABANK
       os << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
+#endif
       std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
       ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first),
                                                  std::move(PairKV.second)));
@@ -159,20 +167,26 @@ public:
     // We have to face the situation that what we are trying to insert is
     // already present This can happen because of badly aligned heuristics
     if (ListEnt.count(eKey) > 0) {
+#endif DEBUG_DATABANK
       os << "Exiting because the key is already present\n";
+#endif
       return;
     }
     if (Saving) {
       size_t n_orbit = ListEnt.size();
       std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+#endif DEBUG_DATABANK
       os << "Insert entry to file Prefix=" << Prefix << "\n";
+#endif
       Write_BankEntry(Prefix, eKey, eVal);
     }
     ListEnt.emplace(
         std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
   }
   const Tval &GetDualDesc(const Tkey &eKey) const {
+#endif DEBUG_DATABANK
     os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
+#endif
     typename std::unordered_map<Tkey, Tval>::const_iterator iter =
         ListEnt.find(eKey);
     if (iter == ListEnt.end()) {
@@ -266,18 +280,24 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
     boost::asio::ip::tcp::socket socket = acceptor.accept();
     TripleNKV<Tkey, Tval> eTriple = read_data<TripleNKV<Tkey, Tval>>(socket);
     if (eTriple.nature == 'e') {
+#endif DEBUG_DATABANK
       os << "Terminating the Databank process\n";
+#endif
       break;
     }
     if (eTriple.nature == 'i') {
       if (ListEnt.count(eTriple.eKey) > 0) {
+#endif DEBUG_DATABANK
         os << "The entry is already present\n";
+#endif
       } else {
         if (Saving) {
           size_t n_orbit = ListEnt.size();
           std::string Prefix =
               SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+#endif DEBUG_DATABANK
           os << "Insert entry to file Prefix=" << Prefix << "\n";
+#endif
           Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
         }
         ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(eTriple.eKey),
@@ -285,7 +305,9 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
       }
     }
     if (eTriple.nature == 'g') {
+#endif DEBUG_DATABANK
       os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
+#endif
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =
           ListEnt.find(eTriple.eKey);
       if (iter == ListEnt.end()) {
@@ -295,7 +317,9 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
         send_data<Tval>(socket, iter->second);
       }
     }
+#endif DEBUG_DATABANK
     os << "---------- " << n_iter << " -----------------------\n";
+#endif
     n_iter++;
   }
 }

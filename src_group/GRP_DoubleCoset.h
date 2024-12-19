@@ -16,7 +16,7 @@
 // clang-format on
 
 #ifdef TIMINGS
-#define TIMINGS_GROUP
+#define TIMINGS_DOUBLE_COSET
 #endif
 
 #ifdef DEBUG
@@ -194,13 +194,7 @@ vectface DoubleCosetDescription_Canonic(
       DoubleCosetInsertEntry_first(eFaceImg);
     }
   }
-  //  os << "DoubleCosetDescription_Canonic SizeGen=" << SizeGen << "
-  //  TotalSize=" << TotalSize << "\n"; os << "DoubleCosetDescription_Canonic
-  //  |SetFace|=" << SetFace.size() << "\n";
   vectface ListListSet = get_list_list_set();
-  //  os << "DoubleCosetDescription_Canonic |ListListSet|=" <<
-  //  ListListSet.size()
-  //     << " n=" << ListListSet.get_n() << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
 #ifdef DEBUG_DOUBLE_COSET
@@ -222,7 +216,7 @@ vectface DoubleCosetDescription_Canonic(
       }
     }
   }
-  os << "Likely not reachable stage\n";
+  std::cerr << "Likely not reachable stage\n";
   throw TerminalException{1};
 }
 
@@ -284,8 +278,6 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
     }
   }
   vectface ListListSet = get_list_list_set();
-  //  os << "After Iteration loop SizeGen=" << SizeGen << " TotalSize=" <<
-  //  TotalSize << "\n";
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
     Face eFace = ListListSet.pop();
@@ -301,7 +293,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
       }
     }
   }
-  os << "Likely not reachable stage\n";
+  std::cerr << "Likely not reachable stage\n";
   throw TerminalException{1};
 }
 
@@ -606,12 +598,14 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                    std::string const &method_split,
                                    Fterminal f_terminal, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
-#ifdef TIMINGS_GROUP
+#ifdef TIMINGS_DOUBLE_COSET
   MicrosecondTime time;
 #endif
+#ifdef DEBUG_DOUBLE_COSET
   os << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
      << " |vf|=" << ListFaceOrbitsize.size() << " method_split=" << method_split
-     << std::endl;
+     << "\n";
+#endif
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
@@ -667,10 +661,11 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     throw TerminalException{1};
   };
   vectface eListSma = get_split();
-#ifdef TIMINGS_GROUP
-  os << "OrbitSplitting elapsed_microseconds=" << time
-     << " |eListBig|=" << ListFaceOrbitsize.size()
-     << " |eListSma|=" << eListSma.size() << std::endl;
+#ifdef DEBUG_DOUBLE_COSET
+  os << "DCOS: |eListBig|=" << ListFaceOrbitsize.size() << " |eListSma|=" << eListSma.size() << "\n";
+#endif
+#ifdef TIMINGS_DOUBLE_COSET
+  os << "|DCOS: OrbitSplittingListOrbitKernel_spec|=" << time << "\n";
 #endif
   return eListSma;
 }
@@ -717,12 +712,16 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
         int64_t duration = time.const_eval_int64();
         if (iter == n_iter) {
           the_time = duration;
+#ifdef DEBUG_DOUBLE_COSET
           os << "Finished the n_iter=" << n_iter << "\n";
+#endif
           return true;
         }
         if (duration > smallest_time) {
+#ifdef DEBUG_DOUBLE_COSET
           os << "duration already larger, no need to continue for method="
              << the_method << "\n";
+#endif
           return true;
         }
         return false;
@@ -756,11 +755,13 @@ vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 template <typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
-                                std::ostream &os3, std::ostream &os_err) {
+                                std::ostream &os3, [[maybe_unused]] std::ostream &os_err) {
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
+#ifdef DEBUG_DOUBLE_COSET
   os_err << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
          << "\n";
+#endif
   size_t nb_orbit_big = eListBig.size();
   Tint nb_orbit_sma;
   size_t pos = 0;
@@ -769,15 +770,17 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     pos++;
     Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet = DoubleCosetDescription_Canonic<Tgroup>(
-        BigGens, SmaGRP, eSet, TotalSize, std::cerr);
+        BigGens, SmaGRP, eSet, TotalSize, os_err);
     Tint orb_siz = ListListSet.size();
     nb_orbit_sma += orb_siz;
     for (auto &eFace : ListListSet) {
       Tint res = getsetasint<Tint>(eFace);
       os3 << res << "\n";
     }
+#ifdef DEBUG_DOUBLE_COSET
     os_err << "iInc=" << pos << " / " << nb_orbit_big
            << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz << "\n";
+#endif
   }
   os2 << nb_orbit_sma << "\n";
 }
