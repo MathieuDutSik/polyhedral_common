@@ -11,9 +11,7 @@ template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &MatFile, std::string const &XnormStr,
              std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
-  std::cerr << "We have Q\n";
   T Xnorm = ParseScalar<T>(XnormStr);
-  std::cerr << "We have Xnorm\n";
   ApproximateModel<T, Tint> approx =
       INDEF_FORM_EichlerCriterion_TwoHyperplanesEven<T, Tint, Tgroup>(Qmat);
   std::vector<MyVector<Tint>> LVect =

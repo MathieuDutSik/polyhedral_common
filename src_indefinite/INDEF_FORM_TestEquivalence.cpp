@@ -12,7 +12,6 @@ void process(std::string const &File1, std::string const &File2,
              std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Q1 = ReadMatrixFile<T>(File1);
   MyMatrix<T> Q2 = ReadMatrixFile<T>(File2);
-  std::cerr << "We have Q1 / Q2\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_TestEquivalence(Q1, Q2);
   if (opt) {

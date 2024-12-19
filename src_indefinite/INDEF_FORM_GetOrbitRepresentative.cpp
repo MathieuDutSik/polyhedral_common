@@ -12,7 +12,6 @@ void process(std::string const &MatFile, std::string const &XnormStr,
              std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   T Xnorm = ParseScalar<T>(XnormStr);
-  std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyVector<Tint>> l_repr =
       comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);

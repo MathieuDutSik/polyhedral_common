@@ -13,7 +13,6 @@ void process(std::string const &MatFile, std::string const &KStr,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   int k = ParseScalar<int>(KStr);
-  std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   auto f_get = [&]() -> std::vector<MyMatrix<Tint>> {
     if (choice == "plane") {

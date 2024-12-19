@@ -11,7 +11,6 @@ template <typename T, typename Tint, typename Tgroup>
 void process(std::string const &MatFile, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
-  std::cerr << "We have Q\n";
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
   for (auto & e_gen : l_gen) {
