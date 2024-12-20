@@ -229,7 +229,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
       std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
 #ifdef TIMINGS_MPI_ADJACENCY_SCHEME
-      os << "MPI_ADJ_SCH: |f_repr|=" << time_f_repr << "\n";
+      os << "|MPI_ADJ_SCH: f_repr|=" << time_f_repr << "\n";
 #endif
       if (opt) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME

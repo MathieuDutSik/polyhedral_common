@@ -1104,7 +1104,7 @@ LORENTZ_DoFlipping(MyMatrix<T> const &LorMat,
 #endif
   // No return of additional info so far.
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-  os << "LORPERF: |LORENTZ_DoFlipping|=" << time << "\n";
+  os << "|LORPERF: LORENTZ_DoFlipping|=" << time << "\n";
 #endif
   return {TheFlip, {}, {}};
 }
@@ -1142,7 +1142,7 @@ LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
     ListGen.push_back(eGenMatr);
   }
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-  os << "LORPERF: |LORENTZ_ComputeStabilizer|=" << time << "\n";
+  os << "|LORPERF: LORENTZ_ComputeStabilizer|=" << time << "\n";
 #endif
   return {ListGen, GRPperm};
 }

@@ -235,8 +235,8 @@ template <typename T> struct ShortVectorGroup {
             for (auto &pos : eList) {
               RetElt = ProductComb(RetElt, ListGen[pos]);
             }
-            std::cerr << "Exiting GetShortVectorNoDuplication after n_cons="
-                      << n_cons << " time=" << time << "\n";
+            std::cerr << "MGW: GetShortVectorNoDuplication n_cons=" << n_cons << "\n";
+            std::cerr << "|MGW: GetShortVectorNoDuplication|=" << time << "\n";
             return RetElt;
           }
           n_cons++;
@@ -302,8 +302,8 @@ template <typename T> struct ShortVectorGroup {
           for (auto &pos : eList) {
             RetElt = ProductComb(RetElt, ListGen[pos]);
           }
-          std::cerr << "Exiting GetShortVectorIteration after n_cons=" << n_cons
-                    << " time=" << time << "\n";
+          std::cerr << "MGW: Exiting GetShortVectorIteration n_cons=" << n_cons << "\n";
+          std::cerr << "|MGW: GetShortVectorIteration|=" << time << "\n";
           return RetElt;
         }
         n_cons++;

@@ -28,6 +28,10 @@
 #define DEBUG_VINBERG
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_VINBERG
+#endif
+
 // Compute the solutions of G [x - eV] = a
 template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
@@ -614,7 +618,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   if (!data.is_feasible) {
     return {};
   }
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   MicrosecondTime time;
 #endif
   auto fct_CVP = [&]() -> void {
@@ -731,9 +735,11 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     fct_CVP();
   }
   //
-#ifdef TIMINGS
-  os << "|list_root|=" << list_root.size() << " |FindRoot_filter|=" << time
-     << "\n";
+#ifdef DEBUG_VINBERG
+  os << "VIN: |list_root|=" << list_root.size() << "\n";
+#endif
+#ifdef TIMINGS_VINBERG
+  os << "|VIN: FindRoot_filter|=" << time << "\n";
 #endif
   return list_root;
 }
@@ -868,7 +874,7 @@ std::optional<MyVector<Tint>>
 GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot,
                      std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   MicrosecondTime time;
 #endif
   size_t n_root = ListRoot.size();
@@ -880,7 +886,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   std::optional<MyVector<Tint>> opt;
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   size_t n_iter = 0;
 #endif
 #ifdef DEBUG_VINBERG
@@ -894,7 +900,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
                  [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
@@ -915,7 +921,7 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
         DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
@@ -928,10 +934,12 @@ GetOneInteriorVertex(const VinbergTot<T, Tint> &Vtot,
     };
     look_for_vector();
   }
-#ifdef TIMINGS
+#ifdef DEBUG_VINBERG
   bool test = opt.has_value();
-  os << "has found vertex=" << test << " n_iter=" << n_iter
-     << " |GetOneInteriorVertex|=" << time << "\n";
+  os << "VIN: has found vertex=" << test << " n_iter=" << n_iter << "\n";
+#endif
+#ifdef TIMINGS_VINBERG
+  os << "|VIN: GetOneInteriorVertex|=" << time << "\n";
 #endif
   return opt;
 }
@@ -940,7 +948,7 @@ template <typename T, typename Tint>
 bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
                      const std::vector<MyVector<Tint>> &ListRoot,
                      std::ostream &os) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   MicrosecondTime time;
 #endif
   size_t n_root = ListRoot.size();
@@ -952,7 +960,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
       FAC(i_root, i_col) = e_gv(i_col);
   }
   bool IsFiniteCovolume = true;
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   size_t n_iter = 0;
 #endif
   std::unordered_map<T, int> map;
@@ -964,7 +972,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
                  [[maybe_unused]] lrs::lrs_dat<Tint> *Q,
                  [[maybe_unused]] int const &col, Tint *out) -> bool {
       if (!IsFirst) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
         for (size_t i_col = 0; i_col < n_col; i_col++)
@@ -986,7 +994,7 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
         DirectFacetComputationIncidence(FAC_T, Vtot.DualDescProg, os);
     auto look_for_vector = [&]() -> void {
       for (auto &eFace : ListIncd) {
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
         n_iter++;
 #endif
         MyVector<T> V = FindFacetInequality(FAC_T, eFace);
@@ -1000,12 +1008,12 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
     };
     look_for_vector();
   }
-#ifdef TIMINGS
-  os << "IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
-     << " |is_FundPoly_LRS|=" << time << "\n";
+#ifdef TIMINGS_VINBERG
+  os << "|VIN: is_FundPoly_LRS|=" << time << "\n";
 #endif
 #ifdef DEBUG_VINBERG
-  os << "norm multiplicities =";
+  os << "VIN: IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter << "\n";
+  os << "VIN: norm multiplicities =";
   for (auto &kv : map)
     os << " [" << kv.first << "," << kv.second << "]";
   os << "\n";
@@ -1042,12 +1050,12 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
 #ifdef DEBUG_VINBERG
   os << "eCommand=" << eCommand << "\n";
 #endif
-#ifdef TIMINGS
+#ifdef TIMINGS_VINBERG
   MicrosecondTime time;
 #endif
   int iret = system(eCommand.c_str());
-#ifdef TIMINGS
-  os << "|system|=" << time << "\n";
+#ifdef TIMINGS_VINBERG
+  os << "|VIN: system|=" << time << "\n";
 #endif
   if (iret == -1) {
     printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
@@ -1066,9 +1074,11 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
       if (LStr1[1] == answer)
         IsFiniteCovolume = true;
   }
-#ifdef TIMINGS
-  os << "is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume
-     << "  |coxiter|=" << time << "\n";
+#ifdef DEBUG_VINBERG
+  os << "VIN: is_FundPoly IsFiniteCovolume=" << IsFiniteCovolume << "\n";
+#endif
+#ifdef TIMINGS_VINBERG
+  os << "|VIN: coxiter|=" << time << "\n";
 #endif
   return IsFiniteCovolume;
 }

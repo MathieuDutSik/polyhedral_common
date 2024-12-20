@@ -257,7 +257,7 @@ public:
       int j_mat = get_j_mat(i_mat);
       MatchVector.push_back(j_mat);
     }
-    os << "ComputingMatchingVector time=" << time << "\n";
+    os << "|PP: ComputingMatchingVector|=" << time << "\n";
     return MatchVector;
   }
   std::vector<int> ComputeMatchingVectorCheck(std::ostream &os) const {
@@ -511,7 +511,7 @@ public:
       ListAdj.push_back(uElt);
       ListAdjInv.push_back(uEltInv);
     }
-    os << "New DataFAC computed time=" << time << "\n";
+    os << "|PP: GetDataCone|=" << time << "\n";
     return {n_mat, rnk, FAC, eVectInt, ListAdj, ListAdjInv};
   }
   int RemoveRedundancy(std::ostream &os) {
@@ -533,8 +533,8 @@ public:
     //
     os << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
     std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp, os);
-    os << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat
-       << " time=" << time << "\n";
+    os << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat << "\n";
+    os << "|PP: RedundancyReductionClarkson|=" << time << "\n";
     //
     // Paperwork
     //
@@ -569,7 +569,8 @@ public:
       }
     }
     os << "RemoveRedundancy : |l_keep|=" << l_keep.size()
-       << " n_remove=" << n_remove << " time=" << time << "\n";
+       << " n_remove=" << n_remove << "\n";
+    os << "|PP: l_keep|=" << time << "\n";
     if (n_remove > 0) {
       std::vector<CombElt<T>> ListNeighborCosetRed;
       for (auto &i_coset : l_keep) {
@@ -578,7 +579,7 @@ public:
       ComputeCosets(ListNeighborCosetRed);
       print_statistics(os, os);
     }
-    os << "ComputeCosets time=" << time << "\n";
+    os << "|PP: ComputeCosets|=" << time << "\n";
     return n_remove;
   }
   template <typename Tgroup> Tgroup GetPermutationGroup() const {
@@ -689,7 +690,7 @@ GetMissingInverseElement(StepEnum<T> const &se, DataFAC<T> const &datafac,
         HumanTime time1;
         std::optional<MyVector<T>> opt =
             SolutionMatNonnegative(datafac.FAC, x_ineq, os);
-        os << "|SolutionMatNonnegative|=" << time1 << "\n";
+        os << "|PP: SolutionMatNonnegative|=" << time1 << "\n";
         if (opt) {
           return {};
         } else {
@@ -706,7 +707,7 @@ GetMissingInverseElement(StepEnum<T> const &se, DataFAC<T> const &datafac,
         f[i_mat] = 1;
         HumanTime time2;
         MyVector<T> eVectInt = GetSpaceInteriorPointFace(datafac.FAC, f, os);
-        os << "|GetSpaceInteriorPointFace|=" << time2 << "\n";
+        os << "|PP: GetSpaceInteriorPointFace|=" << time2 << "\n";
         T target_scal = eVectInt.dot(se.x);
         svg_mem.ComputeInsertSolution(eVectInt, target_scal);
         os << "Found new elements by Short Group Element\n";
@@ -717,7 +718,7 @@ GetMissingInverseElement(StepEnum<T> const &se, DataFAC<T> const &datafac,
     ListMiss.push_back(eElt);
     ListMiss.push_back(InverseComb(eElt));
   }
-  os << "GetMissingInverseElement time=" << time << "\n";
+  os << "|PP: GetMissingInverseElement|=" << time << "\n";
   return ListMiss;
 }
 
@@ -777,7 +778,8 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_LP(
      << "\n";
   ShortVectorGroupMemoize<T> svg_mem(svg);
   Face f_adjacency = ComputeSkeletonClarkson(datafac.FAC, os);
-  os << "We have f_adj, n_fac=" << n_fac << " time=" << time << "\n";
+  os << "We have f_adj, n_fac=" << n_fac << "\n";
+  os << "|PP: ComputeSkeletonClarkson|=" << time << "\n";
   //
   auto get_nsp = [&](int const &i_fac) -> MyMatrix<T> {
     MyMatrix<T> Equa(dim, 1);
@@ -862,13 +864,14 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_LP(
   //
   // Now calling the SGE code
   //
-  os << "We have computed svg_mem, time=" << time << "\n";
+  os << "|PP: svg_mem|=" << time << "\n";
   std::vector<CombElt<T>> ListMiss;
   for (auto &eElt : svg_mem.GetListMiss()) {
     ListMiss.push_back(eElt);
     ListMiss.push_back(InverseComb(eElt));
   }
-  os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
+  os << "PP: |ListMiss|=" << ListMiss.size() << "\n";
+  os << "|PP: ListMiss|=" << time << "\n";
   return {ListMiss, f_adjacency, ll_adj};
 }
 
@@ -885,8 +888,8 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
   //
   os << "GetMissingFacetMatchingElement_DD, beginning\n";
   DataEXT<T> dataext = DirectDataExtComputation(datafac.FAC, eCommand_DD, os);
-  os << "|EXT|=" << dataext.EXT.rows() << " / " << dataext.EXT.cols()
-     << " time=" << time << "\n";
+  os << "|EXT|=" << dataext.EXT.rows() << " / " << dataext.EXT.cols() << "\n";
+  os << "|PP: DirectDataExtComputation|=" << time << "\n";
   (void)se.ComputeMatchingVectorCheck(os);
   //
   // Building incidence informations
@@ -924,7 +927,7 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
       }
     }
   }
-  os << "We have f_adjacency, time=" << time << "\n";
+  os << "|PP: f_adjacency|=" << time << "\n";
   //
   // Determining the vertices which are
   //
@@ -959,8 +962,8 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
       f_set(i_ext);
   }
   size_t count = f_insert_svg.count();
-  os << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext
-     << " time=" << time << "\n";
+  os << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext << "\n";
+  os << "|PP: f_insert_svg|=" << time << "\n";
   if (count == 0) {
     auto get_iRidge = [&](size_t iFace, Face const &f1) -> size_t {
       size_t n_adjB = ll_adj[iFace].size();
@@ -1032,13 +1035,14 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
       pos++;
     }
   }
-  os << "We have computed svg_mem, time=" << time << "\n";
+  os << "|PP: svg_mem|=" << time << "\n";
   std::vector<CombElt<T>> ListMiss;
   for (auto &eElt : svg_mem.GetListMiss()) {
     ListMiss.push_back(eElt);
     ListMiss.push_back(InverseComb(eElt));
   }
-  os << "Returning |ListMiss|=" << ListMiss.size() << " time=" << time << "\n";
+  os << "PP: Returning |ListMiss|=" << ListMiss.size() << "\n";
+  os << "|PP: ListMiss|=" << time << "\n";
   return {ListMiss, f_adjacency, ll_adj};
 }
 
@@ -1471,7 +1475,7 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
         datafac = se.GetDataCone(os);
       }
     }
-    os << "insert_generator, time=" << time << "\n";
+    os << "|PP: insert_generator|=" << time << "\n";
     write_files();
     return test;
   };
@@ -1490,11 +1494,12 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
           ListTried.insert(eElt);
         }
       }
-      os << "|ListMiss|=" << ListMiss.size()
+      os << "PP: |ListMiss|=" << ListMiss.size()
          << " |ListMissB|=" << ListMissB.size()
-         << " |ListTried|=" << ListTried.size() << " time=" << time << "\n";
+         << " |ListTried|=" << ListTried.size() << "\n";
+      os << "|PP: ListMiss/ListMisB/ListTried|=" << time << "\n";
       if (ListMissB.size() == 0) {
-        os << "Exiting the f_inverses_clear loop time=" << time << "\n";
+        os << "|PP: f_inverses_clear|=" << time << "\n";
         return DidSomething;
       }
       bool test = insert_generator(ListMissB);
@@ -1507,23 +1512,23 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
     HumanTime time;
     if (datafac.eVectInt) {
       bool result1 = f_inverses_clear();
-      os << "f_coherency_update, f_inverses_clear : time=" << time
-         << " result1=" << result1 << "\n";
+      os << "|PP: f_coherency_update/f_inverses_clear|=" << time << "\n";
+      os << "PP: result1=" << result1 << "\n";
       if (result1)
         return true;
       AdjacencyInfo<T> ai = GetMissingFacetMatchingElement(
           se, datafac, method_adjacent, eCommand_DD, svg, os);
-      os << "f_coherency_update, We have ai : time=" << time << "\n";
+      os << "|PP: ai|=" << time << "\n";
       bool result2 = insert_generator(ai.ListMiss);
-      os << "f_coherency_update, insert_generator : time=" << time
-         << " result2=" << result2 << "\n";
+      os << "|PP: insert_generator|=" << time << "\n";
+      os << "f_coherency_update, insert_generator : result2=" << result2 << "\n";
       if (result2)
         return true;
       std::vector<CombElt<T>> ListMiss = GenerateTypeIIneighbors(se, ai, os);
-      os << "f_coherency_update, ListMiss : time=" << time << "\n";
+      os << "|PP: GenerateTypeIIneighbors|=" << time << "\n";
       bool result3 = insert_generator(ListMiss);
-      os << "f_coherency_update, insert_generator : time=" << time
-         << " result3=" << result3 << "\n";
+      os << "|PP: insert_generator|=" << time << "\n";
+      os << "PP: f_coherency_update, insert_generator : result3=" << result3 << "\n";
       if (result3)
         return true;
     }
