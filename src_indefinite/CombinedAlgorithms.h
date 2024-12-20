@@ -610,7 +610,14 @@ private:
     os << "|COMB: GetFirstNorm|=" << time << "\n";
 #endif
     T const &X = first_norm1.X;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: first_norm1.X=" << first_norm1.X << "\n";
+#endif
     MyVector<Tint> const &v1 = first_norm1.eVect;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: mat2=\n";
+    WriteMatrix(os, mat2);
+#endif
     ApproximateModel<T, Tint> approx2 =
         INDEF_FORM_GetApproximateModel<T, Tint, Tgroup>(mat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
@@ -1661,6 +1668,12 @@ private:
     MyMatrix<Tint> FullBasis2 = Concatenate(TheCompl2, NSP2);
     MyMatrix<T> QmatRed2 = TheCompl2_T * Q2 * TheCompl2_T.transpose();
     int p = TheCompl1.rows();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "QmatRed1=\n";
+    WriteMatrix(os, QmatRed1);
+    os << "QmatRed2=\n";
+    WriteMatrix(os, QmatRed2);
+#endif
     std::optional<MyMatrix<Tint>> opt =
         INDEF_FORM_TestEquivalence_FullDim(QmatRed1, QmatRed2);
     if (!opt) {
@@ -1853,8 +1866,20 @@ public:
       MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
       return eGen;
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "Q1=\n";
+    WriteMatrix(os, Q1);
+    os << "Q2=\n";
+    WriteMatrix(os, Q2);
+#endif
     ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
     ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "res1.Mred=\n";
+    WriteMatrix(os, res1.Mred);
+    os << "res2.Mred=\n";
+    WriteMatrix(os, res2.Mred);
+#endif
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
     //
     std::optional<MyMatrix<Tint>> opt =
@@ -1864,6 +1889,9 @@ public:
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
       return eEquivRet;
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "Finally returning non-equivalence conclusion\n";
+#endif
     return {};
   }
 

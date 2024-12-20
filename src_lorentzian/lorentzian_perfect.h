@@ -1183,7 +1183,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
   }
   size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
 #ifdef TIMINGS_LORENTZIAN_PERFECT
-  os << "LORPERF: |ComputeInvariantDelaunay|=" << time << "\n";
+  os << "|LORPERF: ComputeInvariantPerfectForm|=" << time << "\n";
 #endif
   return hash;
 }

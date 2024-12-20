@@ -81,7 +81,7 @@ std::pair<Tkey, Tval> Read_BankEntry(std::string const &Prefix) {
     Face eFace = ff.getface(i_orbit);
     ListFace.push_back(eFace);
   }
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
   std::cerr << "Read_BankEntry returning for Prefix=" << Prefix
             << " |EXT|=" << EXT.rows() << "/" << EXT.cols()
             << " |ListFace|=" << ListFace.size() << "\n";
@@ -124,7 +124,7 @@ void Write_BankEntry(const std::string &Prefix, const MyMatrix<T> &EXT,
 template <typename Tkey, typename Tval>
 void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
                                bool const &Saving, std::string SavingPrefix,
-                               std::ostream &os) {
+                               [[maybe_unused]] std::ostream &os) {
   if (Saving) {
     size_t iOrbit = 0;
     while (true) {
@@ -132,7 +132,7 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
       std::string eFileBank = Prefix + ".ext";
       if (!IsExistingFile(eFileBank))
         break;
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
       os << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
 #endif
       std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
@@ -167,7 +167,7 @@ public:
     // We have to face the situation that what we are trying to insert is
     // already present This can happen because of badly aligned heuristics
     if (ListEnt.count(eKey) > 0) {
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
       os << "Exiting because the key is already present\n";
 #endif
       return;
@@ -175,7 +175,7 @@ public:
     if (Saving) {
       size_t n_orbit = ListEnt.size();
       std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
       os << "Insert entry to file Prefix=" << Prefix << "\n";
 #endif
       Write_BankEntry(Prefix, eKey, eVal);
@@ -184,7 +184,7 @@ public:
         std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
   }
   const Tval &GetDualDesc(const Tkey &eKey) const {
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
     os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
 #endif
     typename std::unordered_map<Tkey, Tval>::const_iterator iter =
@@ -275,19 +275,21 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
   boost::asio::io_service io_service;
   boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
   boost::asio::ip::tcp::acceptor acceptor(io_service, endpoint);
+#ifdef DEBUG_DATABANK
   size_t n_iter = 0;
+#endif
   while (true) {
     boost::asio::ip::tcp::socket socket = acceptor.accept();
     TripleNKV<Tkey, Tval> eTriple = read_data<TripleNKV<Tkey, Tval>>(socket);
     if (eTriple.nature == 'e') {
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
       os << "Terminating the Databank process\n";
 #endif
       break;
     }
     if (eTriple.nature == 'i') {
       if (ListEnt.count(eTriple.eKey) > 0) {
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
         os << "The entry is already present\n";
 #endif
       } else {
@@ -295,7 +297,7 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
           size_t n_orbit = ListEnt.size();
           std::string Prefix =
               SavingPrefix + "DualDesc" + std::to_string(n_orbit);
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
           os << "Insert entry to file Prefix=" << Prefix << "\n";
 #endif
           Write_BankEntry(Prefix, eTriple.eKey, eTriple.eVal);
@@ -305,7 +307,7 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
       }
     }
     if (eTriple.nature == 'g') {
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
       os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
 #endif
       typename std::unordered_map<Tkey, Tval>::const_iterator iter =
@@ -317,10 +319,10 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
         send_data<Tval>(socket, iter->second);
       }
     }
-#endif DEBUG_DATABANK
+#ifdef DEBUG_DATABANK
     os << "---------- " << n_iter << " -----------------------\n";
-#endif
     n_iter++;
+#endif
   }
 }
 

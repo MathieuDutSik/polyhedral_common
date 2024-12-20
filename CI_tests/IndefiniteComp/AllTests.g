@@ -49,6 +49,10 @@ TestEquiv:=function(eList)
     RemoveFile(FileM2);
     RemoveFile(FileOut);
     if U = fail then
+        Print("eGram1=\n");
+        PrintArray(eGram1);
+        Print("eGram2=\n");
+        PrintArray(eGram2);
         Print("TestEquiv: Failed at U = fail\n");
         return false;
     fi;

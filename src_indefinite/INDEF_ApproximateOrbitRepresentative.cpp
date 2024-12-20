@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
     auto f = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
+      if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
         return process<T, Tint, Tgroup>(MatFile, XnormStr, OutFormat, os);
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_FindIsotropic\n";
+    std::cerr << "Error in INDEF_ApproximateOrbitRepresentative\n";
     exit(e.eVal);
   }
   runtime(time);

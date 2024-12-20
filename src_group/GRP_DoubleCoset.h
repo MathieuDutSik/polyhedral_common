@@ -141,7 +141,7 @@ template <typename Tgroup>
 vectface DoubleCosetDescription_Canonic(
     std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
     Face const &eList, typename Tgroup::Tint const &TotalSize,
-    std::ostream &os) {
+    [[maybe_unused]] std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   Tidx n = eList.size();
@@ -224,7 +224,7 @@ template <typename Tgroup>
 vectface DoubleCosetDescription_CanonicInitialTriv(
     std::vector<typename Tgroup::Telt> const &BigGens, Tgroup const &SmaGRP,
     Face const &eList, typename Tgroup::Tint const &TotalSize,
-    std::ostream &os) {
+    [[maybe_unused]] std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   using Tint = typename Tgroup::Tint;
   Tidx n = eList.size();
@@ -762,12 +762,15 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   os_err << "|BigGRP|=" << BigGRP.size() << " |SmaGRP|=" << SmaGRP.size()
          << "\n";
 #endif
-  size_t nb_orbit_big = eListBig.size();
   Tint nb_orbit_sma;
+#ifdef DEBUG_DOUBLE_COSET
   size_t pos = 0;
+#endif
   std::vector<Telt> BigGens = BigGRP.SmallGeneratingSet();
   for (auto &eSet : eListBig) {
+#ifdef DEBUG_DOUBLE_COSET
     pos++;
+#endif
     Tint TotalSize = BigGRP.OrbitSize_OnSets(eSet);
     vectface ListListSet = DoubleCosetDescription_Canonic<Tgroup>(
         BigGens, SmaGRP, eSet, TotalSize, os_err);
@@ -778,7 +781,7 @@ void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
       os3 << res << "\n";
     }
 #ifdef DEBUG_DOUBLE_COSET
-    os_err << "iInc=" << pos << " / " << nb_orbit_big
+    os_err << "iInc=" << pos << " / " << eListBig.size()
            << " |ListInc2|=" << nb_orbit_sma << " |LInc|=" << orb_siz << "\n";
 #endif
   }
