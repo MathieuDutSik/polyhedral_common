@@ -798,10 +798,14 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
       std::optional<MyMatrix<T>> opt =
         is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
       if (opt) {
+        // We have this problem that the first cosets is not necessarily the one of
+        // GRPsub and that the coset of the GRPsub is also not necessarily the identity.
+        if (!GRPsub.isin(eCosReprPerm)) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-        os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
+          os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
 #endif
-        return eCosReprPerm;
+          return eCosReprPerm;
+        }
       }
     }
     return {};
@@ -928,7 +932,11 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
         return {{}, eProd};
       }
       if (is_stab_space(eCosReprMatr, LinSpa)) {
-        return {eCosReprPerm, {}};
+        // We have this problem that the first cosets is not necessarily the one of
+        // GRPsub and that the coset of the GRPsub is also not necessarily the identity.
+        if (!GRPsub1.isin(eCosReprPerm)) {
+          return {eCosReprPerm, {}};
+        }
       }
     }
     return {{}, {}};
