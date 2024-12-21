@@ -7,13 +7,13 @@
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
-#PROGRAM		= TSPACE_Stabilizer
+PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
-PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
+#PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
@@ -29,12 +29,12 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++11 -O3
 #CC		= g++ -std=c++11 -Wall -g -O2 -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 #CC		= g++ -std=c++11 -Wall -O9 -DDEBUG
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #   APPLE CLANG
 #CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 #CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize-trap
 #CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize-memory-use-after-dtor -fsanitize-memory-track-origins -fsanitize-memory-param-retval -fsanitize-thread-atomics
-CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC             = g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 #   GCC
 #CC             = g++-13 -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment -fsanitize=leak -Wstrict-aliasing
 #CC		= g++ -std=c++17 -Wall -g -O2 -static-libgcc -static-libstdc++
@@ -60,7 +60,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        = -DDEBUG_DELAUNAY_ENUMERATION -DDEBUG_ADJACENCY_SCHEME
 #COPTIONS        = -DDEBUG_ADJACENCY_SCHEME
 #COPTIONS        = -DDEBUG_ADJACENCY_SCHEME -DDEBUG_RECURSIVE_DUAL_DESC -DTIMINGS_RECURSIVE_DUAL_DESC
-COPTIONS        =
+#COPTIONS        =
+COPTIONS        = -DDEBUG_ASCENDING_CHAINS_COSETS
 #COPTIONS        = -DDEBUG -DSANITY_CHECK -DTIMINGS
 
 

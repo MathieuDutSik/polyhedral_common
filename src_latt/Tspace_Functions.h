@@ -729,7 +729,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
                          MyMatrix<T> const &eMat, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  //  using TintGroup = typename Tgroup::Tint;
+  using LeftCosets = typename Tgroup::LeftCosets;
   using Tfield = T;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
@@ -793,17 +793,15 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
     // Not sure if left or right cosets.
     // Left  transversals are g H
     // Right transversals are H g
-    std::vector<Telt> ListCos = FullGRP.LeftTransversal_Direct(GRPsub);
-    for (auto &eCosReprPerm : ListCos) {
-      if (!eCosReprPerm.isIdentity()) {
-        std::optional<MyMatrix<T>> opt =
-            is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
-        if (opt) {
+    LeftCosets rc = FullGRP.left_cosets(GRPsub);
+    for (auto &eCosReprPerm : rc) {
+      std::optional<MyMatrix<T>> opt =
+        is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
+      if (opt) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-          os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
+        os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
 #endif
-          return eCosReprPerm;
-        }
+        return eCosReprPerm;
       }
     }
     return {};
@@ -846,6 +844,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  using LeftCosets = typename Tgroup::LeftCosets;
   //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
@@ -920,18 +919,16 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   };
   auto try_solution = [&]() -> PartSol {
     // Not sure if left or right cosets.
-    std::vector<Telt> ListCos = FullGRP1.LeftTransversal_Direct(GRPsub1);
-    for (auto &eCosReprPerm : ListCos) {
-      if (!eCosReprPerm.isIdentity()) {
-        MyMatrix<T> eCosReprMatr =
-            get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
-        MyMatrix<T> eProd = eCosReprMatr * OneEquiv;
-        if (is_stab_space(eProd, LinSpa)) {
-          return {{}, eProd};
-        }
-        if (is_stab_space(eCosReprMatr, LinSpa)) {
-          return {eCosReprPerm, {}};
-        }
+    LeftCosets rc = FullGRP1.left_cosets(GRPsub1);
+    for (auto &eCosReprPerm : rc) {
+      MyMatrix<T> eCosReprMatr =
+        get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
+      MyMatrix<T> eProd = eCosReprMatr * OneEquiv;
+      if (is_stab_space(eProd, LinSpa)) {
+        return {{}, eProd};
+      }
+      if (is_stab_space(eCosReprMatr, LinSpa)) {
+        return {eCosReprPerm, {}};
       }
     }
     return {{}, {}};
@@ -1038,7 +1035,7 @@ LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const& ListMat, s
   LinSpa.SuperMat =
     GetOnePositiveDefiniteMatrix<T, Tint>(LinSpa.ListMat, os);
   // ListComm not set as it cannot be guessed.
-  // ListSubspaces not set 
+  // Same for ListSubspaces.
   reset_pt_stab_gens<T,Tint>(LinSpa, os);
   LinSpa.isBravais = IsBravaisSpace(LinSpa.n, LinSpa.ListMat,
                                     LinSpa.PtStabGens, os);
