@@ -415,6 +415,31 @@ void PrintDoubleCosetCasesTestProblem(
   }
 }
 
+template <typename Tgroup, typename Tface_orbitsize>
+void PrintAllRawDoubleCosetEntries(
+    Tgroup const &BigGRP, Tgroup const &SmaGRP,
+    const Tface_orbitsize &ListFaceOrbitsize) {
+  using Tint = typename Tgroup::Tint;
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  std::string strSizeV = std::to_string(SmaGRP.size());
+  std::string strSizeG = std::to_string(BigGRP.size());
+  for (size_t i_orbit = 0; i_orbit < nbOrbit; i_orbit++) {
+    std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const &f = pair.first;
+    Tgroup eStab = BigGRP.Stabilizer_OnSets(f);
+    std::string strSizeU = std::to_string(eStab.size());
+    std::string Prefix = "RawDoubleCoset_" + strSizeG + "_" + strSizeU + "_" + strSizeV + "_-_";
+    std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+    std::ofstream os(FileOut);
+    WriteGroup(os, BigGRP);
+    WriteGroup(os, eStab);
+    WriteGroup(os, SmaGRP);
+  }
+}
+
+
+
+
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
 vectface DoubleCosetDescription_Representation_Block(
     Tgroup const &BigGRP, Tgroup const &SmaGRP,
@@ -576,7 +601,7 @@ vectface DoubleCosetDescription_SingleCoset_Block(
   using Tidx = typename Telt::Tidx;
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
-  std::vector<Telt> ListCos = BigGRP.LeftTransversal_Direct(SmaGRP);
+  std::vector<Telt> ListCos = BigGRP.get_all_left_cosets(SmaGRP);
   size_t nbOrbit = ListFaceOrbitsize.size();
   for (size_t i_orbit = 0; i_orbit < nbOrbit; i_orbit++) {
     std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
@@ -608,6 +633,9 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 #endif
 #ifdef PRINT_DOUBLE_COSETS_TEST_PROBLEM
   PrintDoubleCosetCasesTestProblem(BigGRP, SmaGRP, ListFaceOrbitsize);
+#endif
+#ifdef CREATE_RAW_DOUBLE_COSET
+  PrintAllRawDoubleCosetEntries(BigGRP, SmaGRP, ListFaceOrbitsize);
 #endif
   auto get_split = [&]() -> vectface {
     if (method_split == "repr") {
