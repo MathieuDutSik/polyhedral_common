@@ -778,6 +778,18 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   return eListSma;
 }
 
+/*
+  Some information from the run of the test cases in CI_tests/DBL directory:
+  - The "double_cosets" seem to work best overall.
+  - Sometimes the "single_cosets" works better than "double_cosets" though
+  when it does, not by much.
+  - The "repr" is sometimes working faster than "canonic" though usually the
+  "canonic" is faster.
+  - The "canonic" and "canonic_initial_triv" seem to have similar performance.
+  - The "exhaustive_*" functions that generates the whole orbit
+  are actually not performing that well. But the "exhaustive_std"
+  and "exhaustive_robin" are performing the best among those.
+ */
 template <typename Tgroup, typename Tface_orbitsize>
 vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
                                       Tgroup const &SmaGRP,
@@ -793,20 +805,20 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
   if (method_split != "guess") {
     return f_direct(method_split);
   } else {
-    if (ListFaceOrbitsize.size() < 3000) {
+    // Now it is "guess" being used.
+    if (ListFaceOrbitsize.size() < 30000) {
       // Too small orbit size, sampling is too expensive.
       Tint index = BigGRP.size() / SmaGRP.size();
-      if (index < 50) {
+      if (index < 10) {
         return f_direct("single_cosets");
       }
-      if (SmaGRP.size() < 200) {
-        return f_direct("exhaustive");
-      }
-      return f_direct("canonic");
+      return f_direct("double_cosets");
     }
+    // Doing the sampling since we have a very large number of orbits
+    // to treat.
     std::vector<std::string> Lmethod = {"canonic", "canonic_initial_triv",
                                         "exhaustive_std", "exhaustive_robin",
-                                        "single_cosets"};
+                                        "single_cosets", "double_cosets"};
     int64_t max_val = std::numeric_limits<int64_t>::max();
     int64_t smallest_time = max_val;
     std::string chosen_method = "unset";
