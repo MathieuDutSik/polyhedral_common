@@ -17,7 +17,8 @@ int main(int argc, char *argv[]) {
                                            "exhaustive_sparse",
                                            "exhaustive_robin",
                                            "exhaustive_hopscotch",
-                                           "single_cosets"};
+                                           "single_cosets",
+                                           "double_cosets"};
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -61,6 +62,7 @@ int main(int argc, char *argv[]) {
     //
     std::set<size_t> SetSizes;
     for (auto &method : ListMethod) {
+      std::cerr << "-----------------------------\n";
       HumanTime time;
       vectface ListFaceSma = OrbitSplittingListOrbit_spec(
           BigGRP, SmaGRP, ListFaceOrbitsizes, method, std::cerr);
@@ -69,6 +71,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       SetSizes.insert(ListFaceSma.size());
     }
+    std::cerr << "-----------------------------\n";
     if (SetSizes.size() != 1) {
       std::cerr << "Incoherency in the orbit splitting computation. Methods "
                    "give different results\n";

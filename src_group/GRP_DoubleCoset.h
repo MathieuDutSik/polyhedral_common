@@ -589,13 +589,20 @@ vectface DoubleCosetDescription_CanonicInitialTriv_ExhaustiveLimit_Block(
 }
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
-vectface DoubleCosetDescription_SingleCoset_Block(
+vectface DoubleCosetDescription_DoubleCoset_Block(
     Tgroup const &BigGRP, Tgroup const &SmaGRP,
     const Tface_orbitsize &ListFaceOrbitsize, Fterminal f_terminal,
-    std::ostream &os) {
-  // Compute the left cosets, that is BigGRP = cup_i g_i SmaGRP
-  // Then form the representatives x g_i and test for equivalence.
-  // Should be great when the index is small.
+    [[maybe_unused]] std::ostream &os) {
+  // Compute the double cosets.
+  // For an orbit representative x, computes the stabilizer eStab
+  // and writes
+  // BigGRP = cup_i eStab g_i SmaGRP
+  // which gets us
+  // x BigGRP = cup_i x g_i SmaGRP
+  // which gets us the representatives x g_i.
+  // The double coset decompositions are written G = cup_u U g_i V
+  // We this computes the dcc_u which then works with it.
+  // So, only one single big computation is needed.
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
@@ -649,7 +656,7 @@ vectface DoubleCosetDescription_SingleCoset_Block(
 }
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
-vectface DoubleCosetDescription_DoubleCoset_Block(
+vectface DoubleCosetDescription_SingleCoset_Block(
     Tgroup const &BigGRP, Tgroup const &SmaGRP,
     const Tface_orbitsize &ListFaceOrbitsize, Fterminal f_terminal,
     std::ostream &os) {
