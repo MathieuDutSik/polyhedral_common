@@ -617,13 +617,22 @@ vectface DoubleCosetDescription_DoubleCoset_Block(
     Face const &eSet = pair.first;
     if (f_terminal())
       break;
-    Tgroup eStab = BigGRP.Stabilizer_OnSets(eSet);
+    Tint const &TotalSize = pair.second;
+    auto get_stab=[&]() -> Tgroup {
+      if (TotalSize < BigGRP.size()) {
+        // Non-trivial stabilizer, we recompute.
+        return BigGRP.Stabilizer_OnSets(eSet);
+      } else {
+        // The stabilizer is necessarily trivial.
+        return Tgroup(n);
+      }
+    };
+    Tgroup eStab = get_stab();
     for (auto & eCos : dcc_u.double_cosets(eStab)) {
       Face eSetRepr = OnFace(eSet, eCos);
       eListSma.push_back(eSetRepr);
     }
 #ifdef DEBUG_DOUBLE_COSET
-    Tint const &TotalSize = pair.second;
     Tint ord = BigGRP.size() / eStab.size();
     if (TotalSize != ord) {
       std::cerr << "We have TotalSize=" << TotalSize << " but ord=" << ord << " maybe inconsistent database\n";
