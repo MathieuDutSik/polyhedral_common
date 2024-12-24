@@ -599,6 +599,66 @@ vectface DoubleCosetDescription_SingleCoset_Block(
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
+  using DoubleCosetComputer = typename Tgroup::DoubleCosetComputer;
+  Tidx n = BigGRP.n_act();
+  vectface eListSma(n);
+  DoubleCosetComputer dcc_u = BigGRP.double_coset_computer_u(SmaGRP);
+  std::vector<Telt> ListCos = BigGRP.get_all_left_cosets(SmaGRP);
+  size_t nbOrbit = ListFaceOrbitsize.size();
+  for (size_t i_orbit = 0; i_orbit < nbOrbit; i_orbit++) {
+    std::pair<Face, Tint> pair = ListFaceOrbitsize.GetPair(i_orbit);
+    Face const &eSet = pair.first;
+    if (f_terminal())
+      break;
+    Tgroup eStab = BigGRP.Stabilizer_OnSets(eSet);
+    for (auto & eCos : dcc_u.double_cosets(eStab)) {
+      Face eSetRepr = OnFace(eSet, eCos);
+      eListSma.push_back(eSetRepr);
+    }
+#ifdef DEBUG_DOUBLE_COSET
+    Tint const &TotalSize = pair.second;
+    Tint ord = BigGRP.size() / eStab.size();
+    if (TotalSize != ord) {
+      std::cerr << "We have TotalSize=" << TotalSize << " but ord=" << ord << " maybe inconsistent database\n";
+      throw TerminalException{1};
+    }
+    Tint sum_size = 0;
+    std::vector<Face> LRepr;
+    for (auto & eCos : dcc_u.double_cosets(eStab)) {
+      Face eSetRepr = OnFace(eSet, eCos);
+      LRepr.push_back(eSetRepr);
+      sum_size += SmaGRP.OrbitSize_OnSets(eSetRepr);
+    }
+    if (TotalSize != sum_size) {
+      std::cerr << "We have TotalSize=" << TotalSize << " but sum_size=" << sum_size << " therefore double coset problem\n";
+      throw TerminalException{1};
+    }
+    for (size_t i_repr=0; i_repr<LRepr.size(); i_repr++) {
+      for (size_t j_repr=i_repr+1; j_repr<LRepr.size(); j_repr++) {
+        std::optional<Telt> opt = SmaGRP.RepresentativeAction_OnSets(LRepr[i_repr], LRepr[j_repr]);
+        if (opt) {
+          std::cerr << "Found an equivalence between orbit representative i_repr=" << i_repr << " and j_repr=" << j_repr << "\n";
+          std::cerr << "That should not happen\n";
+          throw TerminalException{1};
+        }
+      }
+    }
+#endif
+  }
+  return eListSma;
+}
+
+template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
+vectface DoubleCosetDescription_DoubleCoset_Block(
+    Tgroup const &BigGRP, Tgroup const &SmaGRP,
+    const Tface_orbitsize &ListFaceOrbitsize, Fterminal f_terminal,
+    std::ostream &os) {
+  // Compute the left cosets, that is BigGRP = cup_i g_i SmaGRP
+  // Then form the representatives x g_i and test for equivalence.
+  // Should be great when the index is small.
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Tgroup::Tint;
+  using Tidx = typename Telt::Tidx;
   Tidx n = BigGRP.n_act();
   vectface eListSma(n);
   std::vector<Telt> ListCos = BigGRP.get_all_left_cosets(SmaGRP);
@@ -673,6 +733,10 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
     }
     if (method_split == "single_cosets") {
       return DoubleCosetDescription_SingleCoset_Block(
+          BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
+    }
+    if (method_split == "double_cosets") {
+      return DoubleCosetDescription_DoubleCoset_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
     }
     std::optional<std::string> opt =

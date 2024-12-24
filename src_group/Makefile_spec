@@ -16,10 +16,10 @@
 #PROGRAM		= GRP_LinearSpace_Equivalence
 #PROGRAM		= GRP_LinearSpace_Stabilizer_RightCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset
-PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset GRP_LinPolytopeIntegral_Automorphism
+#PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_RightCoset GRP_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism
-#PROGRAM		= GRP_RuntimeOrbitSplitting
+PROGRAM		= GRP_RuntimeOrbitSplitting
 #PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= GRP_IsomorphismReduction
