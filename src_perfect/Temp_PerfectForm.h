@@ -547,6 +547,46 @@ template <typename T> struct DataLinSpa {
   bool NeedCheckStabilization;
 };
 
+template <typename T, typename Tgroup, typename Fcorrect>
+std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
+    MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,
+    typename Tgroup::Telt const &ePerm, Fcorrect f_correct) {
+  using Telt = typename Tgroup::Telt;
+  for (auto &fPerm : GRP1) {
+    Telt eEquivCand = fPerm * ePerm;
+    MyMatrix<T> eBigMat = FindTransformation(EXT1_T, EXT2_T, eEquivCand);
+    if (f_correct(eBigMat))
+      return eBigMat;
+  }
+  return {};
+}
+
+template <typename T, typename Tgroup, typename Fcorrect>
+Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
+                                              Tgroup const &GRPisom,
+                                              Fcorrect f_correct) {
+  static_assert(
+      is_ring_field<T>::value,
+      "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method4");
+  using Telt = typename Tgroup::Telt;
+  int nbVert = EXT_T.rows();
+  std::vector<Telt> generatorList;
+  Tgroup GRPret(nbVert);
+  auto fInsert = [&](Telt const &ePerm) -> void {
+    bool test = GRPret.isin(ePerm);
+    if (!test) {
+      generatorList.push_back(ePerm);
+      GRPret = Tgroup(generatorList, nbVert);
+    }
+  };
+  for (auto &ePerm : GRPisom) {
+    MyMatrix<T> eBigMat = FindTransformation(EXT_T, EXT_T, ePerm);
+    if (f_correct(eBigMat))
+      fInsert(ePerm);
+  }
+  return GRPret;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
