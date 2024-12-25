@@ -786,12 +786,7 @@ MatrixIntegral_RepresentativeAction([[maybe_unused]]
 #endif
     return {};
   }
-  MyMatrix<T> eMat = RepresentPermutationAsMatrix(helper, *opt, os);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: eMat=\n";
-  WriteMatrix(os, eMat);
-#endif
-  return eMat;
+  return RepresentPermutationAsMatrix(helper, *opt, os);
 }
 
 template <typename T, typename Tmod, typename Telt, typename Thelper>
@@ -870,9 +865,6 @@ MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
   os << "MAT_GRP: Beginning of MatrixIntegral_PreImageSubgroup\n";
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before PreImageSubgroup\n";
-#endif
   std::vector<MyMatrix<T>> ListGen =
       permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
           eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
@@ -897,9 +889,6 @@ MatrixIntegral_Stabilizer(typename Thelper::Treturn const &eret,
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before StabilizerMatrixPermSubset\n";
-#endif
   std::vector<MyMatrix<T>> ListGen =
       permutalib::StabilizerMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
           eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
@@ -925,9 +914,6 @@ MatrixIntegral_Stabilizer_RightCoset(typename Thelper::Treturn const &eret,
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before StabilizerRightCosetMatrixPermSubset\n";
-#endif
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>, Tint>(
           eret.ListMatrGens, eret.ListPermGens, id_matr, eFace);
@@ -1373,8 +1359,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::vector<MyVector<Tmod>> const &O = *opt_fso;
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Orbit size |O|=" << O.size()
-       << "\n";
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
     Treturn eret =
         MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
@@ -1387,7 +1372,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
        << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
        << " |eFace|=" << eFace.count() << "\n";
 #endif
-
     ListMatrRet = f_stab(eret, GRPwork, eFace);
     ListMatrRetMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
@@ -1590,7 +1574,7 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Returning from LinearSpace_Stabilizer_RightCoset\n";
 #endif
-  return {ListMatr_C, coset};
+  return {std::move(ListMatr_C), coset};
 }
 
 template <typename T>
@@ -1641,10 +1625,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
       bool test = CanTestSolutionIntMat(eCan, eVect);
       if (!test) {
-#ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP:   i=" << i << " eVect=" << StringVectorGAP(eVect)
-           << "\n";
-#endif
         return ModuloReductionVector<T, Tmod>(eVect, TheMod);
       }
     }
@@ -1696,17 +1676,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, we have eret 1\n";
 #endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have GRPperm 1\n";
-#endif
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
       Face eFace1 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace1workMod);
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: nbRow=" << eret.nbRow << " eFace1=" << StringFace(eFace1)
-         << " eFace2=" << StringFace(eFace2) << "\n";
-#endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
@@ -1748,10 +1721,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
           ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
     } else {
       MyVector<Tmod> const &V = *test2;
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, Before OrbitComputation "
-            "2\n";
-#endif
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
@@ -1764,9 +1733,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have eret 2\n";
 #endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have GRPperm 2\n";
-#endif
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
@@ -1813,8 +1779,6 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
                                Thelper const &helper,
                                MyMatrix<T> const &InSpace1,
                                MyMatrix<T> const &InSpace2, std::ostream &os) {
-  static_assert(is_ring_field<T>::value,
-                "Requires T to be a field in LinearSpace_Equivalence_Kernel");
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Beginning of LinearSpace_Equivalence_Kernel\n";
   os << "MAT_GRP: |ListMatr|=" << ListMatr.size() << "\n";
@@ -1843,12 +1807,6 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
     return {};
   }
   std::vector<T> eList = FactorsInt(LFact1);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: |eList|=" << eList.size() << " eList =";
-  for (auto &eVal : eList)
-    os << " " << eVal;
-  os << "\n";
-#endif
   CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace2);
   auto IsEquivalence = [&](MyMatrix<T> const &eEquiv) -> bool {
     for (int i = 0; i < n; i++) {
@@ -1896,9 +1854,7 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before returning from LinearSpace_Equivalence_Kernel, "
-        "retuning "
-        "eElt\n";
+  os << "MAT_GRP: Before returning from LinearSpace_Equivalence_Kernel, retuning eElt\n";
 #endif
   return eElt;
 }
@@ -1933,9 +1889,6 @@ template <typename T, typename Tgroup>
 std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
     std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
     std::ostream &os) {
-  static_assert(
-      is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Automorphism_Subspaces");
   using Telt = typename Tgroup::Telt;
   MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
   MyMatrix<T> InvBasis = Inverse(eBasis);
@@ -1975,9 +1928,6 @@ template <typename T, typename Tgroup>
 Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
     std::vector<MyMatrix<T>> const &ListMatr, MyMatrix<T> const &EXTfaithful,
     std::ostream &os) {
-  static_assert(is_ring_field<T>::value,
-                "Requires T to be a field in "
-                "LinPolytopeIntegral_Automorphism_RightCoset_Subspaces");
   using Telt = typename Tgroup::Telt;
   MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
   MyMatrix<T> InvBasis = Inverse(eBasis);
@@ -2124,8 +2074,7 @@ MatrixIntegral_Equivalence_General(std::vector<MyMatrix<T>> const &LGen1,
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<Tint> eProd = UniversalMatrixConversion<Tint, T>(eProd_T);
-  return eProd;
+  return UniversalMatrixConversion<Tint, T>(eProd_T);
 }
 
 // Find a matrix g in GRPrat such that   EquivRat * g   in   GL(n,Z)
@@ -2144,8 +2093,7 @@ MatrixIntegral_Equivalence_Bis_General(std::vector<MyMatrix<T>> const &GRPrat,
   MyMatrix<Tint> const &TheSol = *opt;
   // So we have TheSol = g * Inverse(EquivRat) in GL(n,Z)
   // Inverse(TheSol) = EquivRat * g in GL(n,Z)
-  MyMatrix<Tint> TheSolInv = Inverse(TheSol);
-  return TheSolInv;
+  return Inverse(TheSol);
 }
 
 template <typename T, typename Tgroup>
@@ -2192,9 +2140,6 @@ template <typename T, typename Tgroup>
 Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
                                               Tgroup const &GRPisom,
                                               std::ostream &os) {
-  static_assert(
-      is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method8");
   using Telt = typename Tgroup::Telt;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
@@ -2219,9 +2164,6 @@ std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
 LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
                                                   Tgroup const &GRPisom,
                                                   std::ostream &os) {
-  static_assert(
-      is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method8");
   using Telt = typename Tgroup::Telt;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
@@ -2253,9 +2195,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T,
     std::vector<MyMatrix<T>> const &ListMatrGens2,
     typename Tgroup::Telt const &eEquiv, std::ostream &os) {
-  static_assert(
-      is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Isomorphism_Subspaces");
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
 #endif
@@ -2280,10 +2219,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
 #endif
   //
   MyMatrix<T> TheMatEquiv = FindTransformation(EXTbas1, EXTbas2, eEquiv);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: TheMatEquiv=\n";
-  WriteMatrix(os, TheMatEquiv);
-#endif
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto &eGen : ListMatrGens2) {
     MyMatrix<T> NewGen = eBasis2 * eGen * InvBasis2;
@@ -2299,10 +2234,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     return {};
   MyMatrix<T> const &eSpaceEquiv = *opt;
   MyMatrix<T> eMatFinal = InvBasis1 * TheMatEquiv * eSpaceEquiv * eBasis2;
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: We have eMatFinal=\n";
-  WriteMatrix(os, eMatFinal);
-#endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(eMatFinal)) {
     std::cerr << "LinPolytopeIntegral_Isomorphism_Subspaces: eMatFinal should "
