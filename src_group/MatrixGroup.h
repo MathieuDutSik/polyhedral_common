@@ -341,20 +341,11 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   T TheDet = T_abs(DeterminantMat(TheSpace));
   T eDiv = 1;
   int n = TheSpace.rows();
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
+  RecSolutionIntMat<T> eCan(TheSpace);
   while (true) {
-    auto get_is_ok = [&]() -> bool {
-      for (int i = 0; i < n; i++) {
-        MyVector<T> eVect = ZeroVector<T>(n);
-        eVect(i) = eDiv;
-        bool test = CanTestSolutionIntMat(eCan, eVect);
-        if (!test) {
-          return false;
-        }
-      }
-      return true;
-    };
-    if (get_is_ok()) {
+    MyMatrix<T> M = eDiv * IdentityMat<T>(n);
+    bool test = eCan.is_containing_m(M);
+    if (test) {
       return eDiv;
     }
 #ifdef SANITY_CHECK_MATRIX_GROUP
@@ -518,10 +509,10 @@ Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
   size_t Osiz = O.size();
   size_t siz = nbRow + Osiz;
   Face eFace(siz);
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
+  RecSolutionIntMat<T> eCan(TheSpace);
   for (size_t iO = 0; iO < Osiz; iO++) {
     MyVector<T> const &eVect = UniversalVectorConversion<T, Tmod>(O[iO]);
-    bool test = CanTestSolutionIntMat(eCan, eVect);
+    bool test = eCan.has_solution_v(eVect);
     if (test) {
       eFace[nbRow + iO] = 1;
     }
@@ -977,24 +968,14 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
         MyMatrix<T> eReprImg = ePair.second * eMatrGen;
         //
         MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
-        CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
-        auto IsEqual = [&](MyMatrix<T> const &fSpace) -> bool {
-          for (int i = 0; i < n; i++) {
-            MyVector<T> V = GetMatrixRow(fSpace, i);
-            bool test = CanTestSolutionIntMat(eCan, V);
-            if (!test) {
-              return false;
-            }
-          }
-          return true;
-        };
-        if (IsEqual(eSpace2)) {
+        RecSolutionIntMat<T> eCan(eSpaceMod);
+        if (eCan.is_containing_m(eSpace2)) {
           std::optional<MyMatrix<T>> opt = eReprImg;
           return opt;
         }
         auto fInsert = [&](Tpair const &ePair) -> bool {
           for (auto &fPair : ListPair)
-            if (IsEqual(fPair.first))
+            if (eCan.is_containing_m(fPair.first))
               return false;
           ListPair.push_back(ePair);
           return f_terminate(ePair.first);
@@ -1038,20 +1019,10 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
         MyMatrix<T> eReprImg = ePair.second * eMatrGen;
         //
         MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
-        CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceMod);
-        auto IsEqual = [&](MyMatrix<T> const &fSpace) -> bool {
-          for (int i = 0; i < n; i++) {
-            MyVector<T> V = GetMatrixRow(fSpace, i);
-            bool test = CanTestSolutionIntMat(eCan, V);
-            if (!test) {
-              return false;
-            }
-          }
-          return true;
-        };
+        RecSolutionIntMat<T> eCan(eSpaceMod);
         auto fInsert = [&](Tpair const &ePair) -> bool {
           for (auto &fPair : ListPair)
-            if (IsEqual(fPair.first))
+            if (eCan.is_containing_m(fPair.first))
               return false;
           ListPair.push_back(ePair);
           return f_terminate(ePair.first);
@@ -1075,20 +1046,10 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
     for (auto &eMatrGen : ListMatrGen) {
       MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
       MyMatrix<T> eSpaceImgMod = Concatenate(eSpaceImg, ModSpace);
-      CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(eSpaceImgMod);
-      auto f_equal = [&](MyMatrix<T> const &fSpace) -> bool {
-        for (int i = 0; i < n; i++) {
-          MyVector<T> V = GetMatrixRow(fSpace, i);
-          bool test = CanTestSolutionIntMat(eCan, V);
-          if (!test) {
-            return false;
-          }
-        }
-        return true;
-      };
+      RecSolutionIntMat<T> eCan(eSpaceImgMod);
       auto f_insert = [&]() -> void {
         for (size_t jPair = 0; jPair < nPair; jPair++) {
-          if (f_equal(ListPair[jPair].first)) {
+          if (eCan.is_containing_m(ListPair[jPair].first)) {
             MyMatrix<T> eGenMatr_new =
                 ePair.second * eMatrGen * Inverse(ListPair[jPair].second);
             if (!IsIdentity(eGenMatr_new))
@@ -1166,11 +1127,11 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   };
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
   MyMatrix<T> TheSpaceMod = Concatenate(TheSpace, ModSpace);
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
+  RecSolutionIntMat<T> eCan(TheSpaceMod);
   auto IsStabilized = [&](MyVector<T> const &V) -> bool {
     for (auto &eMatrGen : ListMatrGen) {
       MyVector<T> Vimg = eMatrGen.transpose() * V;
-      bool test = CanTestSolutionIntMat(eCan, Vimg);
+      bool test = eCan.has_solution_v(Vimg);
       if (!test) {
         return false;
       }
@@ -1311,14 +1272,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   //    ---ListMatr1, TheSpace1, MatrEquiv
   // We could look at the quotient. (Z_d)^n / TheSpace and look for point
   // stabilizers Maybe we can translate to classes easily and
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpaceMod);
+  RecSolutionIntMat<T> eCan(TheSpaceMod);
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
       -> std::optional<MyVector<T>> {
     for (auto &eGen : ListMatrInp) {
       MyMatrix<T> TheSpace_img = TheSpace * eGen;
       for (int i = 0; i < n; i++) {
         MyVector<T> eVectG = GetMatrixRow(TheSpace_img, i);
-        bool test = CanTestSolutionIntMat(eCan, eVectG);
+        bool test = eCan.has_solution_v(eVectG);
         if (!test) {
           return GetMatrixRow(TheSpace, i);
         }
@@ -1411,31 +1372,29 @@ LinearSpace_ModStabilizer(std::vector<MyMatrix<T>> const &ListMatr,
 
 template <typename T, typename Tgroup, typename Thelper, typename Fstab>
 std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
-    std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
+    std::vector<MyMatrix<T>> const &ListGen, Thelper const &helper,
     MyMatrix<T> const &TheSpace, Fstab f_stab, std::ostream &os) {
   int n = helper.n;
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
 #endif
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace);
+  RecSolutionIntMat<T> eCan(TheSpace);
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListGen) -> bool {
     for (auto &eGen : ListGen) {
       MyMatrix<T> TheSpace_img = TheSpace * eGen;
       for (int i = 0; i < n; i++) {
         MyVector<T> eVect = GetMatrixRow(TheSpace_img, i);
-        bool test = CanTestSolutionIntMat(eCan, eVect);
+        bool test = eCan.has_solution_v(eVect);
         if (!test) {
           return false;
         }
       }
     }
-#ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: Leaving IsStabilizing: true\n";
-#endif
     return true;
   };
-  if (IsStabilizing(ListMatr))
-    return ListMatr;
+  if (IsStabilizing(ListGen)) {
+    return ListGen;
+  }
   T LFact = LinearSpace_GetDivisor(TheSpace);
   std::vector<T> eList = FactorsInt(LFact);
   int siz = eList.size();
@@ -1443,28 +1402,28 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   os << "MAT_GRP: LinearSpace_StabilizerGen_Kernel LFact=" << LFact
      << " siz=" << siz << "\n";
 #endif
-  std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+  std::vector<MyMatrix<T>> ListGenRet = ListGen;
   for (int i = 1; i <= siz; i++) {
     T TheMod = 1;
     for (int j = 0; j < i; j++)
       TheMod *= eList[j];
-    ListMatrRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
-        ListMatrRet, helper, TheSpace, TheMod, f_stab, os);
-    if (IsStabilizing(ListMatrRet))
-      return ListMatrRet;
+    ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
+        ListGenRet, helper, TheSpace, TheMod, f_stab, os);
+    if (IsStabilizing(ListGenRet))
+      return ListGenRet;
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
-  if (!IsStabilizing(ListMatrRet)) {
+  if (!IsStabilizing(ListGenRet)) {
     std::cerr << "MAT_GRP: Error in LinearSpace_Stabilizer_Kernel\n";
     throw TerminalException{1};
   }
 #endif
-  return ListMatrRet;
+  return ListGenRet;
 }
 
 template <typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>>
-LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
+LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListGen,
                               Thelper const &helper,
                               MyMatrix<T> const &TheSpace, std::ostream &os) {
   using Treturn = typename Thelper::Treturn;
@@ -1476,13 +1435,13 @@ LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Before LinearSpace_StabilizerGen_Kernel\n";
 #endif
-  std::vector<MyMatrix<T>> ListGen =
+  std::vector<MyMatrix<T>> ListGenRet =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
-          ListMatr, helper, TheSpace, f_stab, os);
+          ListGen, helper, TheSpace, f_stab, os);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
-  return ListGen;
+  return ListGenRet;
 }
 
 template <typename T> struct Stab_RightCoset {
@@ -1620,13 +1579,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     MyVector<Tmod> eVect = eElt.transpose() * eClass;
     return VectorMod(eVect, TheMod_mod);
   };
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace2Mod);
+  RecSolutionIntMat<T> eCan(TheSpace2Mod);
   auto IsEquiv =
       [&](MyMatrix<T> const &eEquiv) -> std::optional<MyVector<Tmod>> {
     MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
     for (int i = 0; i < n; i++) {
       MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
-      bool test = CanTestSolutionIntMat(eCan, eVect);
+      bool test = eCan.has_solution_v(eVect);
       if (!test) {
         return ModuloReductionVector<T, Tmod>(eVect, TheMod);
       }
@@ -1641,7 +1600,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       MyMatrix<T> TheSpace2img = TheSpace2 * eGen;
       for (int i = 0; i < n; i++) {
         MyVector<T> eVect = GetMatrixRow(TheSpace2img, i);
-        bool test = CanTestSolutionIntMat(eCan, eVect);
+        bool test = eCan.has_solution_v(eVect);
         if (!test) {
           return ModuloReductionVector<T, Tmod>(eVect, TheMod);
         }
@@ -1804,17 +1763,10 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
     return {};
   }
   std::vector<T> eList = FactorsInt(LFact1);
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpace2);
+  RecSolutionIntMat<T> eCan(TheSpace2);
   auto IsEquivalence = [&](MyMatrix<T> const &eEquiv) -> bool {
     MyMatrix<T> TheSpace1img = TheSpace1 * eEquiv;
-    for (int i = 0; i < n; i++) {
-      MyVector<T> eVect = GetMatrixRow(TheSpace1img, i);
-      bool test = CanTestSolutionIntMat(eCan, eVect);
-      if (!test) {
-        return false;
-      }
-    }
-    return true;
+    return eCan.is_containing_m(TheSpace1img);
   };
   std::vector<MyMatrix<T>> ListMatrWork = ListMatr;
   int siz = eList.size();

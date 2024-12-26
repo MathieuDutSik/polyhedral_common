@@ -415,11 +415,11 @@ std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
   std::cerr << "TheSpann\n";
   WriteMatrix(std::cerr, TheSpann);
 #endif
-  CanSolIntMat<T> eCan = ComputeCanonicalFormFastReduction(TheSpann);
+  RecSolutionIntMat<T> eCan(TheSpann);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have eCan\n";
 #endif
-  std::optional<MyMatrix<T>> opt = CanSolutionIntMatMat(eCan, M);
+  std::optional<MyMatrix<T>> opt = eCan.get_solution_m(M);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have opt\n";
 #endif
@@ -429,7 +429,7 @@ std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
     throw TerminalException{1};
   }
 #endif
-  return {TheSpann, *opt};
+  return {std::move(TheSpann), std::move(*opt)};
 }
 
 template <typename T, typename Telt>
