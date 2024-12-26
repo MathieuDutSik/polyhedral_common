@@ -28,6 +28,7 @@ do
     Print("fCommand=", fCommand, "\n");
     Exec(fCommand);
     U1:=ReadAsFunction(eFileIrred1)();
+    RemoveFile(eFileIrred1);
     #
     if DoTest2_Clarkson then
         eFileIrred2:=Concatenation("Irred_2_", String(i));
@@ -36,6 +37,7 @@ do
         Print("gCommand=", gCommand, "\n");
         Exec(gCommand);
         U2:=ReadAsFunction(eFileIrred2)();
+        RemoveFile(eFileIrred2);
         #
         if U1<>U2 then
             Print("Inconsistency problem between method 1 and 2 at i=", i, "\n");
@@ -50,6 +52,7 @@ do
         Exec(gCommand);
         Print("gCommand=", gCommand, "\n");
         U3:=ReadAsFunction(eFileIrred3)();
+        RemoveFile(eFileIrred3);
         #
         if U1<>U3 then
             Print("Inconsistency problem between method 1 and 3 at i=", i, "\n");
@@ -64,6 +67,7 @@ do
         Print("hCommand=", hCommand, "\n");
         Exec(hCommand);
         U4:=ReadAsFunction(eFileIrred4)();
+        RemoveFile(eFileIrred4);
         #
         if U1<>U4 then
             Print("Inconsistency problem between method 1 and 4 at i=", i, "\n");
