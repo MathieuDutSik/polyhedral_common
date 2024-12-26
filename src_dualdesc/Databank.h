@@ -200,7 +200,8 @@ public:
 template <typename T> T read_data(boost::asio::ip::tcp::socket &socket) {
   boost::asio::streambuf buf;
   boost::asio::read_until(socket, buf, "\n");
-  std::string data = boost::asio::buffer_cast<const char *>(buf.data());
+  const char* raw_data = static_cast<const char*>(buf.data().data());
+  std::string data(raw_data, buf.size());
   T data_o;
   std::stringstream iss(data);
   boost::archive::text_iarchive ia(iss);
@@ -225,8 +226,8 @@ void send_data(boost::asio::ip::tcp::socket &socket, const T &data) {
 template <typename T>
 void send_data_atomic(const boost::asio::ip::tcp::endpoint &endpoint,
                       const T &data) {
-  boost::asio::io_service io_service;
-  boost::asio::ip::tcp::socket socket(io_service);
+  boost::asio::io_context io_context;
+  boost::asio::ip::tcp::socket socket(io_context);
   socket.connect(endpoint);
   send_data<T>(socket, data);
   socket.close();
@@ -272,9 +273,9 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
   std::unordered_map<Tkey, Tval> ListEnt;
   ReadingDatabaseFromPrefix(ListEnt, Saving, SavingPrefix, os);
   //
-  boost::asio::io_service io_service;
+  boost::asio::io_context io_context;
   boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
-  boost::asio::ip::tcp::acceptor acceptor(io_service, endpoint);
+  boost::asio::ip::tcp::acceptor acceptor(io_context, endpoint);
 #ifdef DEBUG_DATABANK
   size_t n_iter = 0;
 #endif
@@ -339,8 +340,8 @@ public:
         endpoint, {'i', std::move(eKey), std::move(eVal)});
   }
   Tval GetDualDesc(const Tkey &eKey) const {
-    boost::asio::io_service io_service;
-    boost::asio::ip::tcp::socket socket(io_service);
+    boost::asio::io_context io_context;
+    boost::asio::ip::tcp::socket socket(io_context);
     socket.connect(endpoint);
     send_data<TripleNKV<Tkey, Tval>>(socket, {'g', std::move(eKey), Tval()});
     return read_data<Tval>(socket);

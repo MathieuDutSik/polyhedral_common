@@ -1298,23 +1298,34 @@ private:
         ListRecReprKplane.push_back(fRecReprKplane);
       };
       auto SpanRepresentatives = [&](MyMatrix<Tint> const &ePlane) {
-      // Some possible improvement. Use the double cosets
-      // The double coset consists in splitting an orbit x G as
-      // y1 H \cup ..... yN H
-      // Or in other words G = \cup_i Stab(x) y_i H
-      //
-      // In that case
-      // G = group of rational transformation preserving L = S^{perp}
-      //     and acting integrally on it.
-      // Stab(x) = Integral transformations preserving L and some vector x in L.
-      // H = group of integral transformations preserving the big lattice
-      //     and preserving L.
-      //
-      // If G = H the only one entry to treat.
-      // What that mean is that when we go down the chain of subgroup by
-      // breaking down the orbit split. Can this happen in the same way over all
-      // the orbits? The full of the lattice group is G(Qmat) and the full orbit
-      // is x G(Qmat) We want to write the code as
+        // Some possible improvement. Use the double cosets
+        // The double coset consists in splitting an orbit x G as
+        // y1 H \cup ..... yN H
+        // Or in other words G = \cup_i Stab(x) y_i H
+        // This is the canonical stuff.
+        //
+        // The groups being used.
+        // G = group of rational transformation preserving L = S^{perp}
+        //     and acting integrally on it.
+        // Stab({S, x}) = Integral transformations preserving {L, x}
+        //     considered as plane or flag and extended to acting integrally
+        //     on L in the same way as G.
+        // H = group of integral transformations preserving the big lattice
+        //     and preserving L.
+        //
+        // The first method is to compute the cosets for the group G in
+        // G_int. This can be computed quite efficiently with the stabilizer
+        // algorithm. The spanned objects are then tested for equivalence.
+        // That method is reasonable, but slow.
+        //
+        // What could be done?
+        // * The code done for _RightCoset can be adapted. We put as input
+        //   the stabilizer and get as output another stabilizers.
+        // * Compute the orbits of element x under the group G \cap G(L)
+        //   We just need to have another stabilizer.
+        // * Does that make sense for working with the {L, x}?
+        //   We need to have the right combination.
+        // * 
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif

@@ -872,7 +872,9 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
   // At the same time, we build the set of facets (with
   // no duplication)
   std::set<MyVector<T>> SetFAC;
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
   size_t n_size1 = 0;
+#endif
   auto is_matching_facet = [&](MyVector<T> const &eFAC) -> bool {
     for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
       T sum = 0;
@@ -899,7 +901,9 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
         return {};
       }
       SetFAC.insert(eFAC);
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
       n_size1++;
+#endif
     }
   }
 #ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS

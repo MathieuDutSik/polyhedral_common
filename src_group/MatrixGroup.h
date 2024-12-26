@@ -423,16 +423,16 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
   };
   if (fInsert(a))
     return {};
-  size_t pos = 0;
+  size_t start = 0;
   while (true) {
     size_t len = TheOrbit.size();
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP:  OrbitComputation_limit pos=" << pos << " len=" << len
+    os << "MAT_GRP: OrbitComputation_limit start=" << start << " len=" << len
        << "\n";
 #endif
-    if (pos == len)
+    if (start == len)
       break;
-    for (size_t i = pos; i < len; i++) {
+    for (size_t i = start; i < len; i++) {
       // Doing a copy to avoid memory problem.
       T2 x = TheOrbit[i];
       for (auto &eGen : ListGen) {
@@ -441,7 +441,7 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
           return {};
       }
     }
-    pos = len;
+    start = len;
   }
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: End of OrbitComputation_limit\n";
@@ -750,8 +750,9 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
     std::vector<Tidx> v(nbRow_tidx);
-    for (Tidx i = 0; i < nbRow_tidx; i++)
+    for (Tidx i = 0; i < nbRow_tidx; i++) {
       v[i] = OnPoints(i, ePermI);
+    }
     Telt ePerm(std::move(v));
     return RepresentPermutationAsMatrix(helper, ePerm, os);
   };
@@ -1672,9 +1673,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, ListMatrRetMod, helper, O, TheMod, os);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, we have eret 1\n";
-#endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
@@ -1698,8 +1696,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
               eret, GRPperm, helper, eFace1, eFace2, os);
       if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: Exit while loop with proof that no equivalence "
-              "exists\n";
+        os << "MAT_GRP: Exit as no equivalence exixts\n";
 #endif
         return {};
       }
@@ -1711,7 +1708,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
           os << "MAT_GRP: eElt and GRPwork are correct. Exiting\n";
 #endif
-          ResultTestModEquivalence<T> res{ListMatrRet, eElt};
+          ResultTestModEquivalence<T> res{std::move(ListMatrRet), std::move(eElt)};
           return res;
         }
       }
@@ -1729,9 +1726,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, ListMatrRetMod, helper, O, TheMod, os);
-#ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have eret 2\n";
-#endif
       Tgroup GRPperm(eret.ListPermGens, eret.siz);
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP

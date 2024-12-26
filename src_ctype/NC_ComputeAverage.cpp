@@ -23,7 +23,6 @@ int main(int argc, char *argv[]) {
     //
     // Now reading the
     //
-    using Tint = int64_t;
     if (!IsExistingFile(FileName)) {
       std::cerr << "FileName=" << FileName << " is missing\n";
       throw TerminalException{1};
