@@ -652,7 +652,6 @@ MatrixIntegral_GeneratePermutationGroup(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: We have ListPermGenProv\n";
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
   os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
 #endif
@@ -672,7 +671,6 @@ MatrixIntegral_PreImageSubgroup([[maybe_unused]]
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<MyMatrix<T>> ListMatrGen;
-  Tidx nbRow_tidx = helper.EXTfaithful.rows();
   for (auto &eGen : eGRP.GeneratorsOfGroup()) {
     MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eGen, os);
     ListMatrGen.emplace_back(std::move(eMatr));
@@ -697,14 +695,14 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
   using Tidx = typename Telt::Tidx;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
-     << "\n";
+  os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
     std::vector<Tidx> v(nbRow_tidx);
-    for (Tidx i = 0; i < nbRow_tidx; i++)
+    for (Tidx i = 0; i < nbRow_tidx; i++) {
       v[i] = OnPoints(i, ePermI);
+    }
     Telt ePerm(std::move(v));
     return RepresentPermutationAsMatrix(helper, ePerm, os);
   };
@@ -735,8 +733,7 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   using RightCosets = typename Tgroup::RightCosets;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP:   |eStab|=" << eStab.size() << " |eFace|=" << eFace.count()
-     << "\n";
+  os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
   Tidx nbRow_tidx = helper.EXTfaithful.rows();
   auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
@@ -756,7 +753,7 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   for (auto &eCos : rc) {
     ListRightCoset.emplace_back(std::move(get_matr(eCos)));
   }
-  return {ListMatrGen, ListRightCoset};
+  return {std::move(ListMatrGen), std::move(ListRightCoset)};
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -819,10 +816,10 @@ MatrixIntegral_GeneratePermutationGroup(
 #ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime timeB;
 #endif
-    MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << "\n";
 #endif
+    MyMatrix<Tmod> const &eMatrGenMod = ListMatrGensMod[iGen];
     std::vector<Tidx> v(siz);
     std::vector<MyVector<Tmod>> ListImage(Osiz);
     // That code below is shorter and it has the same speed as the above.
@@ -956,12 +953,12 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
   ListPair.push_back({eSpace1, IdentityMat<T>(n)});
   if (f_terminate(eSpace1))
     return {};
-  size_t pos = 0;
+  size_t start = 0;
   while (true) {
     size_t len = ListPair.size();
-    if (pos == len)
+    if (start == len)
       break;
-    for (size_t idx = pos; idx < len; idx++) {
+    for (size_t idx = start; idx < len; idx++) {
       Tpair const &ePair = ListPair[idx];
       for (auto &eMatrGen : ListMatrGen) {
         MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
@@ -985,9 +982,9 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: pos=" << pos << " len=" << len << "\n";
+    os << "MAT_GRP: start=" << start << " len=" << len << "\n";
 #endif
-    pos = len;
+    start = len;
   }
   std::optional<MyMatrix<T>> opt;
   return opt;
@@ -1007,12 +1004,12 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   ListPair.push_back({eSpace, IdentityMat<T>(n)});
   if (f_terminate(eSpace))
     return {};
-  size_t pos = 0;
+  size_t start = 0;
   while (true) {
     size_t len = ListPair.size();
-    if (pos == len)
+    if (start == len)
       break;
-    for (size_t idx = pos; idx < len; idx++) {
+    for (size_t idx = start; idx < len; idx++) {
       Tpair const &ePair = ListPair[idx];
       for (auto &eMatrGen : ListMatrGen) {
         MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
@@ -1032,9 +1029,9 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: pos=" << pos << " len=" << len << "\n";
+    os << "MAT_GRP: start=" << start << " len=" << len << "\n";
 #endif
-    pos = len;
+    start = len;
   }
   //
   // Orbit is fine, now computing the stabilizer by using the Schreier lemma.
@@ -1060,9 +1057,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
       f_insert();
     }
   }
-  std::vector<MyMatrix<T>> ListGen;
-  for (auto &eGen : SetGen)
-    ListGen.push_back(eGen);
+  std::vector<MyMatrix<T>> ListGen(SetGen.begin(), SetGen.end());
   return ListGen;
 }
 
@@ -1382,12 +1377,8 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListGen) -> bool {
     for (auto &eGen : ListGen) {
       MyMatrix<T> TheSpace_img = TheSpace * eGen;
-      for (int i = 0; i < n; i++) {
-        MyVector<T> eVect = GetMatrixRow(TheSpace_img, i);
-        bool test = eCan.has_solution_v(eVect);
-        if (!test) {
-          return false;
-        }
+      if (!eCan.is_containing_m(TheSpace_img)) {
+        return false;
       }
     }
     return true;
