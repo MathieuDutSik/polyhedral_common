@@ -82,7 +82,6 @@ template <typename T, typename Telt> struct FiniteMatrixGroupHelper {
 template <typename T, typename Telt>
 struct ResultGeneratePermutationGroup_FiniteIsotropic {
   int nbRow;
-  int siz;
   std::vector<Telt> ListPermGens;
 };
 
@@ -991,8 +990,9 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
           if (eCan.is_containing_m(ListPair[jPair].first)) {
             MyMatrix<T> eGenMatr_new =
                 ePair.second * eMatrGen * Inverse(ListPair[jPair].second);
-            if (!IsIdentity(eGenMatr_new))
+            if (!IsIdentity(eGenMatr_new)) {
               SetGen.insert(eGenMatr_new);
+            }
           }
         }
       };
@@ -1244,10 +1244,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       break;
     }
     const MyVector<T> &V = *opt;
-#ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Working with V="
-       << StringVectorGAP(V) << "\n";
-#endif
     std::optional<std::vector<MyVector<Tmod>>> opt_fso =
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, TheSpace, TheMod, V, helper, os);
@@ -1264,13 +1260,8 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
-    Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
-    auto f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
-      return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
-    };
-
     Treturn eret =
-      MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, f_get_perm, os);
+      MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(ListMatrRet, helper, O, TheMod, os);
     Tidx siz_act = eret.nbRow + O.size();
     Tgroup GRPwork(eret.ListPermGens, siz_act);
     Face eFace = GetFace<T, Tmod>(eret.nbRow, O, TheSpaceMod);
@@ -1421,6 +1412,18 @@ struct DoubleCosetEntry {
 /*
   Computes the Double cosets between the stabilizer of the subspace
   and the group V in argument.
+  --
+  PB1: In contrast to the classical algorithm for finite groups,
+  we cannot know when we are at the last step. Therefore, we have to
+  compute the stabilizers all the time.
+  --
+  PB2: The orbit being generated can be on the big side of things.
+  Therefore, we need to use the double cosets from the finite
+  group algorithm. Likely, we also want to have the corresponding
+  stabilizing subgroup.
+  ---
+  PB3: Computing in permutation groups is a winning strategy. This
+  works o
  */
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
@@ -1438,7 +1441,9 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
             eret, GRP, helper, eFace, os);
     std::vector<DoubleCosetEntry<T>> new_entries;
     for (auto &entry: entries) {
-      
+
+
+
     }
     entries = new_entries;
     return pair.first;
