@@ -1319,12 +1319,35 @@ private:
         // That method is reasonable, but slow.
         //
         // What could be done?
-        // * The code done for _RightCoset can be adapted. We put as input
-        //   the stabilizer and get as output another stabilizers.
-        // * Compute the orbits of element x under the group G \cap G(L)
-        //   We just need to have another stabilizer.
-        // * Does that make sense for working with the {L, x}?
-        //   We need to have the right combination.
+        // * Get a correct computation of the initial set to consider.
+        //   Right now, it works by kind of chance since we compute
+        //   only for k=1 and k=2.
+        // * So, we need to have a good strategy for computing the
+        //   The problem is to compute the orbits of the vectors.
+        // * The computation can be done in the space S^{perp}.
+        // * From the computation in the group of the space S^{perp}
+        //   We can get the orbits for the space L and the group
+        //   that is an extension G_{ext} of this one.
+        // * We can compute the stabilizer in the space S^{perp} which
+        //   we need just above anyway. We extend it and then we have the
+        //   Stab_{ext} group by the same process as above.
+        // * This is what the double coset is supposed to enter into the
+        //   picture.
+        // * The group G is G_ext. The group U is Stab_{ext} and V is
+        //   G_{ext} \cap GL(L).
+        // * So, that fits with the scheme of the Stabilizer_RightCoset.
+        //   When the computation is started, the group V is not known
+        //   and V is computed at the same time as the double cosets are.
+        // * So, the designs seems relatively clear, but what we would
+        //   need is sensible examples. Those have to be finite groups
+        //   - The lattice simplices are good examples, since they have
+        //     some sequence of stabilizers.
+        //   - The fundamental domains of reflective lorentzian groups.
+        //   - The full group and the arithmetic group are always clear.
+        //   - For the other group we can take a cyclic group generated
+        //     by a random permutation.
+        //  All, in all, that looks like a reasonable stretgy for
+        //  debugging the scheme.
         // * 
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
