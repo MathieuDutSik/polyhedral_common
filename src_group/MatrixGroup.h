@@ -596,8 +596,13 @@ MatrixIntegral_GeneratePermutationGroupA(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef DEBUG_MATRIX_GROUP
-  permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
-  os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
+  if (ListPermGenProv.size() > 0) {
+    Tidx siz = ListPermGenProv[0].size();
+    permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
+    os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
+  } else {
+    os << "MAT_GRP: |GRPprov|=1 (no generators)\n";
+  }
 #endif
   return {nbRow, ListPermGenProv};
 }
