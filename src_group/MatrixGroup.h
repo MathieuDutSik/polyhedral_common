@@ -66,7 +66,6 @@ size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
 template <typename T, typename Telt>
 struct ResultGeneratePermutationGroup_Finite {
   int nbRow;
-  int siz;
   std::vector<Telt> ListPermGens;
 };
 
@@ -102,7 +101,6 @@ template <typename T, typename Telt> struct FiniteIsotropicMatrixGroupHelper {
 template <typename T, typename Telt>
 struct ResultGeneratePermutationGroup_General {
   int nbRow;
-  int siz;
   std::vector<MyMatrix<T>> ListMatrGens;
   std::vector<Telt> ListPermGens;
 };
@@ -562,100 +560,47 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   return M;
 }
 
-template <typename T, typename Tmod, typename Telt, typename Thelper>
+template <typename T, typename Telt, typename Thelper, typename Fgetperm>
 inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                typename Thelper::Treturn>::type
-MatrixIntegral_GeneratePermutationGroup(
+MatrixIntegral_GeneratePermutationGroupA(
     std::vector<MyMatrix<T>> const &ListMatrGens,
-    Thelper const &helper,
-    std::vector<MyVector<Tmod>> const &O, T const &TheMod, std::ostream &os) {
+    Thelper const &helper, Fgetperm f_get_perm, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_GeneratePermutationGroup "
+  os << "MAT_GRP: Beginning of MatrixIntegral_GeneratePermutationGroupA "
         "(has_determining_ext)\n";
 #endif
-#ifdef TIMINGS_MATRIX_GROUP
-  MicrosecondTime time;
-#endif
   using Tidx = typename Telt::Tidx;
-  int Osiz = O.size();
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup, Osiz=" << Osiz
-     << "\n";
-#endif
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
-  int siz = nbRow + Osiz;
-  Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
-  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  auto TheAction = [&](MyVector<Tmod> const &eClass,
-                       MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
-    MyVector<Tmod> eVect = eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod_mod);
-  };
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: SortingPerm|=" << time << "\n";
-#endif
-  Telt ePermSinv = ~ePermS;
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: ePermSinv|=" << time << "\n";
-#endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
-#ifdef TIMINGS_MATRIX_GROUP
-    MicrosecondTime timeB;
-#endif
-    MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
-    MyMatrix<Tmod> eMatrGenMod = ModuloReductionMatrix<T,Tmod>(eMatrGen, TheMod);
-    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
-        helper, eMatrGen, os);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << "\n";
 #endif
+    MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
+    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
+        helper, eMatrGen, os);
+    Telt ePermOrbit = f_get_perm(eMatrGen);
+    Tidx Osiz = ePermOrbit.size();
+    Tidx siz = nbRow_tidx + Osiz;
     std::vector<Tidx> v(siz);
-    for (Tidx i = 0; i < nbRow_tidx; i++)
+    for (Tidx i = 0; i < nbRow_tidx; i++) {
       v[i] = ePermGen.at(i);
-    std::vector<MyVector<Tmod>> ListImage(Osiz);
-    // That code below is shorter and it has the same speed as the above.
-    // We keep the more complicate because it shows where most of the runtime
-    // is: In computing Oprod.
-    for (int iV = 0; iV < Osiz; iV++)
-      ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-    Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-    Telt ePermBinv = ~ePermB;
-    // By the construction and above check we have
-    // V1reord[i] = V1[g1.at(i)]
-    // V2reord[i] = V2[g2.at(i)]
-    // We have V1reord = V2reord which gets us
-    // V2[i] = V1[g1 * g2^{-1}(i)]
-    Telt ePermGenSelect = ePermBinv * ePermS;
-    for (int iO = 0; iO < Osiz; iO++) {
-      int jO = ePermGenSelect.at(iO);
-      v[nbRow + iO] = nbRow + jO;
+    }
+    for (Tidx iO = 0; iO < Osiz; iO++) {
+      Tidx jO = ePermOrbit.at(iO);
+      v[nbRow_tidx + iO] = nbRow_tidx + jO;
     }
     Telt eNewPerm(std::move(v));
-#ifdef SANITY_CHECK_MATRIX_GROUP
-    for (int iO = 0; iO < Osiz; iO++) {
-      MyVector<Tmod> eVect = O[iO];
-      MyVector<Tmod> eVectImg1 = TheAction(eVect, eMatrGenMod);
-      size_t pos = eNewPerm.at(iO + nbRow_tidx) - nbRow_tidx;
-      MyVector<Tmod> eVectImg2 = O[pos];
-      if (eVectImg1 != eVectImg2) {
-        std::cerr << "  Inconsistency\n";
-        std::cerr << "  iGen=" << iGen << " iO=" << iO << "\n";
-        std::cerr << "  eVectImg1=" << StringVectorGAP(eVectImg1) << "\n";
-        std::cerr << "  eVectImg2=" << StringVectorGAP(eVectImg2) << "\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef DEBUG_MATRIX_GROUP
   permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
   os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
 #endif
-  return {nbRow, siz, ListPermGenProv};
+  return {nbRow, ListPermGenProv};
 }
 
 template <typename T, typename Tgroup, typename Thelper>
@@ -776,64 +721,70 @@ MatrixIntegral_RepresentativeAction([[maybe_unused]]
   return RepresentPermutationAsMatrix(helper, *opt, os);
 }
 
-template <typename T, typename Tmod, typename Telt, typename Thelper>
+template <typename T, typename Telt, typename Thelper, typename Fgetperm>
 inline typename std::enable_if<
     !has_determining_ext<Thelper>::value,
     ResultGeneratePermutationGroup_General<T, Telt>>::type
-MatrixIntegral_GeneratePermutationGroup(
+MatrixIntegral_GeneratePermutationGroupA(
     std::vector<MyMatrix<T>> const &ListMatrGens,
     [[maybe_unused]] Thelper const &helper,
-    std::vector<MyVector<Tmod>> const &O, T const &TheMod,
+    Fgetperm f_get_perm,
     [[maybe_unused]] std::ostream &os) {
-#ifdef TIMINGS_MATRIX_GROUP
-  MicrosecondTime time;
-#endif
-  using Tidx = typename Telt::Tidx;
-  int Osiz = O.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup, Osiz=" << Osiz
-     << "\n";
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroupA\n";
 #endif
-  Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
-  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
-  auto TheAction = [&](MyVector<Tmod> const &eClass,
-                       MyMatrix<Tmod> const &eElt) -> MyVector<Tmod> {
-    MyVector<Tmod> eVect = eElt.transpose() * eClass;
-    return VectorMod(eVect, TheMod_mod);
-  };
-  Telt ePermSinv = ~ePermS;
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
-#ifdef TIMINGS_MATRIX_GROUP
-    MicrosecondTime timeB;
-#endif
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: iGen=" << iGen << "/" << nbGen << "\n";
 #endif
-    MyMatrix<Tmod> eMatrGenMod = ModuloReductionMatrix<T, Tmod>(ListMatrGens[iGen], TheMod);
-    std::vector<MyVector<Tmod>> ListImage(Osiz);
-    // That code below is shorter and it has the same speed as the above.
-    // We keep the more complicate because it shows where most of the runtime
-    // is: In computing Oprod.
-    for (int iV = 0; iV < Osiz; iV++)
-      ListImage[iV] = TheAction(O[iV], eMatrGenMod);
-    Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
-    Telt ePermBinv = ~ePermB;
-    // By the construction and above check we have
-    // V1reord[i] = V1[g1.at(i)]
-    // V2reord[i] = V2[g2.at(i)]
-    // We have V1reord = V2reord which gets us
-    // V2[i] = V1[g1 * g2^{-1}(i)]
-    Telt ePermGenSelect = ePermBinv * ePermS;
+    Telt ePermGenSelect = f_get_perm(ListMatrGens[iGen]);
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroup "
+  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroupA "
         "(!has_determining_ext) returns\n";
 #endif
-  return {0, Osiz, ListMatrGens, std::move(ListPermGenProv)};
+  return {0, ListMatrGens, std::move(ListPermGenProv)};
 }
+
+template<typename T, typename Tmod, typename Telt>
+Telt get_permutation_from_orbit(MyMatrix<T> const& eGen, std::vector<MyVector<Tmod>> const& O, T const& TheMod, Telt const& ePermS) {
+  using Tidx = typename Telt::Tidx;
+  Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
+  size_t Osiz = O.size();
+  std::vector<MyVector<Tmod>> ListImage(Osiz);
+  MyMatrix<Tmod> eGenMod = ModuloReductionMatrix<T,Tmod>(eGen, TheMod);
+  for (size_t iV = 0; iV < Osiz; iV++) {
+    MyVector<Tmod> eVect = eGenMod.transpose() * O[iV];
+    ListImage[iV] = VectorMod(eVect, TheMod_mod);
+  }
+  Telt ePermB = Telt(SortingPerm<MyVector<Tmod>, Tidx>(ListImage));
+  Telt ePermBinv = ~ePermB;
+  // By the construction and above check we have
+  // V1reord[i] = V1[g1.at(i)]
+  // V2reord[i] = V2[g2.at(i)]
+  // We have V1reord = V2reord which gets us
+  // V2[i] = V1[g1 * g2^{-1}(i)]
+  Telt ePermGen = ePermBinv * ePermS;
+  return ePermGen;
+}
+
+template <typename T, typename Tmod, typename Telt, typename Thelper>
+typename Thelper::Treturn MatrixIntegral_GeneratePermutationGroup(
+    std::vector<MyMatrix<T>> const &ListMatrGens,
+    Thelper const &helper,
+    std::vector<MyVector<Tmod>> const &O, T const &TheMod,
+    std::ostream &os) {
+  using Tidx = typename Telt::Tidx;
+  Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+  auto f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
+    return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+  };
+  return MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrGens, helper, f_get_perm, os);
+}
+
 
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
@@ -1197,6 +1148,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   return {};
 }
 
+
 // The space must be defining a finite index subgroup of T^n
 template <typename T, typename Tmod, typename Tgroup, typename Thelper,
           typename Fstab>
@@ -1313,13 +1265,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
     Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
-    Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
+    auto f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
+      return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+    };
 
     Treturn eret =
-        MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
-            ListMatrRet, helper, O, TheMod, os);
-
-    Tgroup GRPwork(eret.ListPermGens, eret.siz);
+      MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, f_get_perm, os);
+    Tidx siz_act = eret.nbRow + O.size();
+    Tgroup GRPwork(eret.ListPermGens, siz_act);
     Face eFace = GetFace<T, Tmod>(eret.nbRow, O, TheSpaceMod);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
@@ -1656,7 +1609,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, helper, O, TheMod, os);
-      Tgroup GRPperm(eret.ListPermGens, eret.siz);
+      size_t siz_act = eret.nbRow + O.size();
+      Tgroup GRPperm(eret.ListPermGens, siz_act);
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
       Face eFace1 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace1workMod);
@@ -1709,7 +1663,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, helper, O, TheMod, os);
-      Tgroup GRPperm(eret.ListPermGens, eret.siz);
+      size_t siz_act = eret.nbRow + O.size();
+      Tgroup GRPperm(eret.ListPermGens, siz_act);
       Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
