@@ -19,9 +19,6 @@ void full_process_A(std::string const &eFileEXT, std::string const &eFileGram,
                     std::string const &OutFormat, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileEXT);
   MyMatrix<T> GramMat = ReadMatrixFile<T>(eFileGram);
-  int nbCol = EXT.cols();
-  int nbRow = EXT.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   Tgroup GRP =
       LinPolytope_Automorphism_GramMat<T, Tgroup>(EXT, GramMat, std::cerr);

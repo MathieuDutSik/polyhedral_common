@@ -34,9 +34,7 @@ int main(int argc, char *argv[]) {
     //
     std::string eFile = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
-    int nbCol = EXT.cols();
     int nbRow = EXT.rows();
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     auto get_canonicalized_wmat =
         [](MyMatrix<T> const &EXT) -> std::pair<Twmat, Tgroup> {

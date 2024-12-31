@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
       FileO = argv[3];
     }
     std::ifstream is(FileI);
-    int nbMat, len;
+    int nbMat;
     is >> nbMat;
     //
     std::vector<MyMatrix<T>> ListMat1;
@@ -64,6 +64,7 @@ int main(int argc, char *argv[]) {
       }
     }
     int n_row1 = EXT1.rows();
+    int len;
     is >> len;
     if (len != n_row1) {
       std::cerr << "We have n_row1=" << n_row1 << " but len=" << len << "\n";

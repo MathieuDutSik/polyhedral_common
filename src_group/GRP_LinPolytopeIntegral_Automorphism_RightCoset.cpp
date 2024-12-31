@@ -15,9 +15,6 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
-  size_t nbCol = EXT.cols();
-  size_t nbRow = EXT.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::pair<Tgroup, std::vector<Telt>> pair =
       LinPolytopeIntegral_Automorphism_RightCoset<Tint, Tgroup>(EXT, std::cerr);

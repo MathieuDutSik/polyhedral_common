@@ -34,38 +34,11 @@ int main(int argc, char *argv[]) {
     std::string SPA2_file = argv[3];
     std::string OUT_file = argv[4];
     //
-    std::vector<MyMatrix<T>> ListMatrGen;
-    {
-      std::ifstream is(GRP_file);
-      int nbMat;
-      is >> nbMat;
-      int n = -1;
-      for (int iMat = 0; iMat < nbMat; iMat++) {
-        MyMatrix<T> eMatrGen = ReadMatrix<T>(is);
-        n = eMatrGen.rows();
-        ListMatrGen.push_back(eMatrGen);
-      }
-      GeneralMatrixGroupHelper<T, Telt> helper{n};
-      std::cerr << "|MG|=" << L1normMatrixGroup(helper, ListMatrGen) << "\n";
-      std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-          LLLMatrixGroupReduction<T, Tint>(helper, ListMatrGen);
-      std::vector<MyMatrix<T>> ListGenNew = pair.first;
-      std::cerr << "|MGnew|=" << L1normMatrixGroup(helper, ListGenNew) << "\n";
-      std::cerr << "Pmat=\n";
-      WriteMatrix(std::cerr, pair.second);
-    }
+    std::vector<MyMatrix<T>> ListMatrGen = ReadListMatrixFile<T>(GRP_file);
     //
-    MyMatrix<T> eLatt1;
-    {
-      std::ifstream is(SPA1_file);
-      eLatt1 = ReadMatrix<T>(is);
-    }
+    MyMatrix<T> eLatt1 = ReadMatrixFile<T>(SPA1_file);
     //
-    MyMatrix<T> eLatt2;
-    {
-      std::ifstream is(SPA2_file);
-      eLatt2 = ReadMatrix<T>(is);
-    }
+    MyMatrix<T> eLatt2 = ReadMatrixFile<T>(SPA2_file);
     //
     int n = eLatt2.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};

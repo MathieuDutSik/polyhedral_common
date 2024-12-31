@@ -42,7 +42,8 @@ void process(std::string const &FileExt1, std::string const &FileExt2,
         for (size_t iRow = 0; iRow < nbRow; iRow++) {
           if (iRow > 0)
             os << ",";
-          os << (V[iRow] + 1);
+          int eVal = V[iRow] + 1;
+          os << eVal;
         }
         os << "];\n";
       } else {

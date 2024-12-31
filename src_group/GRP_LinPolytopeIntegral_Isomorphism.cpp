@@ -15,9 +15,6 @@ void process_A(std::string const &FileExt1, std::string const &FileExt2,
   using Tgroup = permutalib::Group<Telt, Tint>;
   MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(FileExt1);
   MyMatrix<Tint> EXT2 = ReadMatrixFile<Tint>(FileExt2);
-  size_t nbCol = EXT1.cols();
-  size_t nbRow = EXT1.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::optional<MyMatrix<Tint>> equiv =
       LinPolytopeIntegral_Isomorphism<Tint, Tgroup>(EXT1, EXT2, std::cerr);

@@ -46,9 +46,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<Tint> GramMat1 = ReadMatrixFile<Tint>(FileGram1);
     MyMatrix<Tint> EXT2 = ReadMatrixFile<Tint>(FileExt2);
     MyMatrix<Tint> GramMat2 = ReadMatrixFile<Tint>(FileGram2);
-    size_t nbCol = EXT1.cols();
     size_t nbRow = EXT1.rows();
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     std::optional<std::vector<Tidx>> equiv =
         LinPolytope_Isomorphism_GramMat<Tint, Tidx>(EXT1, GramMat1, EXT2,

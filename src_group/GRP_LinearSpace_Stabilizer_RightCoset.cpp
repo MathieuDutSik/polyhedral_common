@@ -12,13 +12,12 @@ int main(int argc, char *argv[]) {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr
-          << "GRP_LinearSpace_Equivalence [GRP_file] [SPA_file] [OUT_file]\n";
+      std::cerr << "GRP_LinearSpace_Stabilizer_RightCoset [GRP_file] [SPA_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA_file    : The file containing the space\n";
-      std::cerr
-          << "OUT_file    : The file containing the result to be read in GAP\n";
+      std::cerr << "OUT_file    : The file containing the result\n";
+      std::cerr << "              to be read in GAP\n";
       return -1;
     }
     using T = mpq_class;
@@ -32,22 +31,9 @@ int main(int argc, char *argv[]) {
     std::string SPA_file = argv[2];
     std::string OUT_file = argv[3];
     //
-    std::vector<MyMatrix<T>> ListMatrGen;
-    {
-      std::ifstream is(GRP_file);
-      int nbMat;
-      is >> nbMat;
-      for (int iMat = 0; iMat < nbMat; iMat++) {
-        MyMatrix<T> eMatrGen = ReadMatrix<T>(is);
-        ListMatrGen.push_back(eMatrGen);
-      }
-    }
+    std::vector<MyMatrix<T>> ListMatrGen = ReadListMatrixFile<T>(GRP_file);
     //
-    MyMatrix<T> eLatt;
-    {
-      std::ifstream is(SPA_file);
-      eLatt = ReadMatrix<T>(is);
-    }
+    MyMatrix<T> eLatt = ReadMatrixFile<T>(SPA_file);
     //
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};

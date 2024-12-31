@@ -1876,7 +1876,7 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
       throw TerminalException{1};
     }
 #endif
-    ListMatrGens.push_back(NewGen);
+    ListMatrGens.emplace_back(std::move(NewGen));
   }
   FiniteMatrixGroupHelper<T, Telt> helper =
       ComputeFiniteMatrixGroupHelper<T, Telt>(EXTbas);
@@ -1900,7 +1900,7 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
       throw TerminalException{1};
     }
 #endif
-    ListMatrGensB.push_back(NewGen);
+    ListMatrGensB.emplace_back(std::move(NewGen));
   }
   pair.coset_desc.conjugate(eBasis);
   return {std::move(ListMatrGensB), pair.coset_desc};
@@ -1956,7 +1956,7 @@ std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(
     }
 #endif
     MyMatrix<Tint> eGen4 = UniversalMatrixConversion<Tint, T>(eGen4_T);
-    LGen4.push_back(eGen4);
+    LGen4.emplace_back(std::move(eGen4));
   }
   return LGen4;
 }

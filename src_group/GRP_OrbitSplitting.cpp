@@ -26,11 +26,11 @@ int main(int argc, char *argv[]) {
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::cerr << "Reading input\n";
     //
-    std::ifstream is1(argv[1]);
-    Tgroup BigGRP = ReadGroup<Tgroup>(is1);
+    std::string BigGRP_file = argv[1];
+    Tgroup BigGRP = ReadGroupFile<Tgroup>(BigGRP_file);
     //
-    std::ifstream is2(argv[2]);
-    Tgroup SmaGRP = ReadGroup<Tgroup>(is2);
+    std::string SmaGRP_file = argv[2];
+    Tgroup SmaGRP = ReadGroupFile<Tgroup>(SmaGRP_file);
     //
     std::ifstream is3(argv[3]);
     vectface ListFaceBig = ReadListFace(is3);

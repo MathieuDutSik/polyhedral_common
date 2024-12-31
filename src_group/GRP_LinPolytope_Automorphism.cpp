@@ -18,9 +18,6 @@ template <typename T, typename Tgroup>
 void full_process_A(std::string const &eFile, std::string const &OutFormat,
                     std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
-  int nbCol = EXT.cols();
-  int nbRow = EXT.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   Tgroup GRP = LinPolytope_Automorphism<T, Tgroup>(EXT, std::cerr);
   std::cerr << "|GRP|=" << GRP.size() << "\n";
@@ -30,8 +27,8 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
   }
   if (OutFormat == "ListMatrixFile") {
     int rnk = RankMat(EXT);
-    if (rnk != nbCol) {
-      std::cerr << "We have rnk=" << rnk << " but nbCol=" << nbCol << "\n";
+    if (rnk != EXT.cols()) {
+      std::cerr << "We have rnk=" << rnk << " but nbCol=" << EXT.cols() << "\n";
       std::cerr << "Therefore, we cannot build the matrix generators\n";
       throw TerminalException{1};
     }

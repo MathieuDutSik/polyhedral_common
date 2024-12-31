@@ -19,13 +19,10 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     std::string eFile = argv[1];
     MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(eFile);
-    int nbCol = EXT.cols();
     int nbRow = EXT.rows();
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     MyMatrix<Tint> EXT_can = LinPolytope_CanonicForm<Tint>(EXT, std::cerr);
-    std::cerr
-        << "------------------------------------------------------------\n";
+    std::cerr << "-----------------------------------------------------\n";
     //
     auto get_random_equivalent =
         [](MyMatrix<Tint> const &eMat) -> MyMatrix<Tint> {

@@ -32,22 +32,9 @@ int main(int argc, char *argv[]) {
     std::string SPA_file = argv[2];
     std::string OUT_file = argv[3];
     //
-    std::vector<MyMatrix<T>> ListMatrGen;
-    {
-      std::ifstream is(GRP_file);
-      int nbMat;
-      is >> nbMat;
-      for (int iMat = 0; iMat < nbMat; iMat++) {
-        MyMatrix<T> eMatrGen = ReadMatrix<T>(is);
-        ListMatrGen.push_back(eMatrGen);
-      }
-    }
+    std::vector<MyMatrix<T>> ListMatrGen = ReadListMatrixFile<T>(GRP_file);
     //
-    MyMatrix<T> eLatt;
-    {
-      std::ifstream is(SPA_file);
-      eLatt = ReadMatrix<T>(is);
-    }
+    MyMatrix<T> eLatt = ReadMatrixFile<T>(SPA_file);
     //
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt> helper{n};

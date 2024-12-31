@@ -21,9 +21,7 @@ int main(int argc, char *argv[]) {
     using Tidx = uint16_t;
     std::string eFile = argv[1];
     MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(eFile);
-    int nbCol = EXT1.cols();
     int nbRow = EXT1.rows();
-    std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
     auto get_random_equivalent =
         [](MyMatrix<Tint> const &eMat) -> MyMatrix<Tint> {
