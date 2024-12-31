@@ -557,13 +557,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   std::optional<MyMatrix<T>> opt =
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
           helper.G, Subspace1, helper.G, Subspace2, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  if (!opt) {
-    std::cerr << "We should have opt well defined\n";
-    throw TerminalException{1};
-  }
-#endif
-  return *opt;
+  return unfold_opt(opt, "The isotropic extension should work");
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
@@ -573,8 +567,7 @@ MatrixIntegral_GeneratePermutationGroupA(
     std::vector<MyMatrix<T>> const &ListMatrGens,
     Thelper const &helper, Fgetperm f_get_perm, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_GeneratePermutationGroupA "
-        "(has_determining_ext)\n";
+  os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA(has)\n";
 #endif
   using Tidx = typename Telt::Tidx;
   int nbRow = helper.EXTfaithful.rows();
@@ -668,7 +661,7 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   RightCosets rc = GRPperm.right_cosets(eStab);
   for (auto &eCos : rc) {
     MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eCos, os);
-    ListRightCoset.emplace_back(std::move(eCos));
+    ListRightCoset.emplace_back(std::move(eMatr));
   }
   return {std::move(ListMatrGen), std::move(ListRightCoset)};
 }
@@ -705,7 +698,7 @@ MatrixIntegral_GeneratePermutationGroupA(
     Fgetperm f_get_perm,
     [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroupA\n";
+  os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA(!has)\n";
 #endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
@@ -716,10 +709,6 @@ MatrixIntegral_GeneratePermutationGroupA(
     Telt ePermGenSelect = f_get_perm(ListMatrGens[iGen]);
     ListPermGenProv.emplace_back(std::move(ePermGenSelect));
   }
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroupA "
-        "(!has_determining_ext) returns\n";
-#endif
   return {0, ListMatrGens, std::move(ListPermGenProv)};
 }
 
@@ -1228,8 +1217,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     ListMatrRet = f_stab(eret, GRPwork, eFace);
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, return |ListMatrRet|="
-     << ListMatrRet.size() << "\n";
+  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod |ListMatrRet|=" << ListMatrRet.size() << "\n";
 #endif
   return ListMatrRet;
 }
