@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_IsomorphismReduction [EXT] [FAC] [GRP] [OUT]\n";
+      std::cerr << "GRP_IsomorphismReduction [EXT] [FAC] [GRP] [OUT]\n";
       std::cerr << "\n";
       std::cerr << "EXT : The vertices\n";
       std::cerr << "FAC : The facets\n";

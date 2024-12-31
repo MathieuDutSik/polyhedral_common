@@ -13,7 +13,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr
-          << "GRP_LinearSpace_Equivalence [GRP_file] [SPA_file] [OUT_file]\n";
+          << "GRP_LinearSpace_Stabilizer [GRP_file] [SPA_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA_file    : The file containing the space\n";

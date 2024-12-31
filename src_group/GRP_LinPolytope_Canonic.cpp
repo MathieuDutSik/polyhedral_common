@@ -10,9 +10,9 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_Canonic [EXTIN] [OutCan]\n";
+      std::cerr << "GRP_LinPolytope_Canonic [EXTIN] [OutCan]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_LinPolytope_Canonic [EXTIN]\n";
+      std::cerr << "GRP_LinPolytope_Canonic [EXTIN]\n";
       std::cerr << "\n";
       std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
                    "matter)\n";

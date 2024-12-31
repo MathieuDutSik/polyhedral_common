@@ -98,7 +98,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytope_Isomorphism\n";
+    std::cerr << "Error in GRP_LinPolytope_Isomorphism_GramMat\n";
     exit(e.eVal);
   }
   runtime(time1);

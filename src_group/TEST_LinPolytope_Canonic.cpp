@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     std::string eFile = argv[1];
     MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(eFile);
-    int nbRow = EXT.rows();
     //
     MyMatrix<Tint> EXT_can = LinPolytope_CanonicForm<Tint>(EXT, std::cerr);
     std::cerr << "-----------------------------------------------------\n";

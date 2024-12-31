@@ -99,10 +99,10 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT] [OutFormat] "
+      std::cerr << "GRP_LinPolytope_Automorphism arith [FileEXT] [OutFormat] "
                    "[FileGRP]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytope_Automorphism Arith [FileEXT]\n";
+      std::cerr << "GRP_LinPolytope_Automorphism arith [FileEXT]\n";
       std::cerr << "\n";
       std::cerr << "FileEXT   : The list of vectors\n";
       std::cerr << "OutFormat : The format of output (GAP, ListMatrixFile, or "

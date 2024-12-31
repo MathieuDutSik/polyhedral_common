@@ -42,9 +42,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileEXT]\n";
       std::cerr << "\n";
-      std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
-                   "matter)\n";
-      std::cerr << "OutCan : The canonicalization file\n";
+      std::cerr << "EXTIN  : The list of vertices\n";
+      std::cerr << "OutCan : The file for the hash\n";
       return -1;
     }
     //

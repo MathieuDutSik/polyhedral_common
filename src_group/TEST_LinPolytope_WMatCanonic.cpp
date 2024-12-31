@@ -11,10 +11,9 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 2) {
       std::cerr << "This program is used as\n";
-      std::cerr << "TEST_LinPolytope_Canonic [EXTIN]\n";
+      std::cerr << "TEST_LinPolytope_WMatCanonic [EXTIN]\n";
       std::cerr << "\n";
-      std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
-                   "matter)\n";
+      std::cerr << "EXTIN  : The list of vertices\n";
       return -1;
     }
     //
@@ -34,7 +33,6 @@ int main(int argc, char *argv[]) {
     //
     std::string eFile = argv[1];
     MyMatrix<T> EXT = ReadMatrixFile<T>(eFile);
-    int nbRow = EXT.rows();
     //
     auto get_canonicalized_wmat =
         [](MyMatrix<T> const &EXT) -> std::pair<Twmat, Tgroup> {

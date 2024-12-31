@@ -14,8 +14,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "TEST_WeightMatrixLimited [EXTIN]\n";
       std::cerr << "\n";
-      std::cerr
-          << "EXTIN : The list of vertices (or inequalities for that matter)\n";
+      std::cerr << "EXTIN : The list of vertices\n";
       return -1;
     }
     //

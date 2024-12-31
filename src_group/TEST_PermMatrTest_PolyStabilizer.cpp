@@ -10,15 +10,13 @@ int main(int argc, char *argv[]) {
     if (argc != 4) {
       std::cerr << "This program is used as\n";
       std::cerr
-          << "GRP_PermMatrTest_PolyAutomorphism single [MatrFile] [FaceFile]\n";
-      std::cerr << "GRP_PermMatrTest_PolyAutomorphism random [MatrFile] [k]\n";
+          << "TEST_PermMatrTest_PolyAutomorphism single [MatrFile] [FaceFile]\n";
+      std::cerr << "TEST_PermMatrTest_PolyAutomorphism random [MatrFile] [k]\n";
       std::cerr
-          << "GRP_PermMatrTest_PolyAutomorphism multiple [ListMatrFile] [k]\n";
+          << "TEST_PermMatrTest_PolyAutomorphism multiple [ListMatrFile] [k]\n";
       return -1;
     }
     using T = mpq_class;
-    //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     //
     auto process = [&]() -> void {
       std::string option = argv[1];

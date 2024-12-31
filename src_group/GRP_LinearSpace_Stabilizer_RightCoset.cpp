@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     os << ");\n";
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinearSpace_Stabilizer\n";
+    std::cerr << "Error in GRP_LinearSpace_Stabilizer_RightCoset\n";
     exit(e.eVal);
   }
   runtime(time1);

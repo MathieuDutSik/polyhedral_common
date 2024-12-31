@@ -10,7 +10,7 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 2) {
       std::cerr << "This program is used as\n";
-      std::cerr << "TEST_LinPolytope_Canonic [EXTIN]\n";
+      std::cerr << "TEST_LinPolytope_Isomorphism [EXTIN]\n";
       std::cerr << "\n";
       std::cerr << "EXTIN  : The list of vertices (or inequalities for that "
                    "matter)\n";
@@ -21,7 +21,6 @@ int main(int argc, char *argv[]) {
     using Tidx = uint16_t;
     std::string eFile = argv[1];
     MyMatrix<Tint> EXT1 = ReadMatrixFile<Tint>(eFile);
-    int nbRow = EXT1.rows();
     //
     auto get_random_equivalent =
         [](MyMatrix<Tint> const &eMat) -> MyMatrix<Tint> {

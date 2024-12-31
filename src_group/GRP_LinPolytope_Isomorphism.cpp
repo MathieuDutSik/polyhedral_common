@@ -12,9 +12,7 @@ void process(std::string const &FileExt1, std::string const &FileExt2,
   using Tidx = uint32_t;
   MyMatrix<T> EXT1 = ReadMatrixFile<T>(FileExt1);
   MyMatrix<T> EXT2 = ReadMatrixFile<T>(FileExt2);
-  size_t nbCol = EXT1.cols();
   size_t nbRow = EXT1.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   std::optional<std::vector<Tidx>> equiv =
       LinPolytope_Isomorphism<T, Tidx>(EXT1, EXT2, std::cerr);

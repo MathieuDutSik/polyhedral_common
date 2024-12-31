@@ -87,10 +87,10 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [FileEXT] "
+      std::cerr << "GRP_LinPolytope_Automorphism_GramMat Arith [FileEXT] "
                    "[FileGram] [OutFormat] [OutGroup]\n";
       std::cerr << "or\n";
-      std::cerr << "POLY_LinPolytope_Automorphism_GramMat Arith [FileEXT] "
+      std::cerr << "GRP_LinPolytope_Automorphism_GramMat Arith [FileEXT] "
                    "[FileGram]\n";
       std::cerr << "\n";
       std::cerr << "FileEXT   : The list of vertices\n";
@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of the program\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytope_Automorphism\n";
+    std::cerr << "Error in GRP_LinPolytope_Automorphism_GramMat\n";
     exit(e.eVal);
   }
   runtime(time1);

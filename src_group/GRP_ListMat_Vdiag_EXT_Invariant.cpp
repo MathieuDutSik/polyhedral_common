@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant [INfile] [OUTfile]\n";
       std::cerr << "\n";
       std::cerr << "INfile    : The file containing the group\n";
-      std::cerr << "OUTfile   : The file containing the two pairs\n";
+      std::cerr << "OUTfile   : The file containing the hash\n";
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS

@@ -18,8 +18,6 @@ int main(int argc, char *argv[]) {
     }
     using T = mpq_class;
     //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
-    //
     auto process = [&]() -> void {
       std::string option = argv[1];
       if (option == "single") {
