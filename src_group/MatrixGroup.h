@@ -147,8 +147,8 @@ TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt> const &helper,
   int len = EXTfaithful_new.rows();
   for (int i = 0; i < len; i++) {
     MyVector<T> eV = GetMatrixRow(EXTfaithful_new, i);
-    ListV_new.push_back(eV);
     MapV_new[eV] = i;
+    ListV_new.emplace_back(std::move(eV));
   }
   return {helper.n,
           std::move(G_new),
@@ -288,7 +288,7 @@ template <typename T> struct CosetDescription {
     while (iter != get_end()) {
       MyMatrix<T> eCos = *iter;
       MyMatrix<Tout> eCos_out = UniversalMatrixConversion<Tout, T>(eCos);
-      ListCos.push_back(eCos_out);
+      ListCos.emplace_back(std::move(eCos_out));
       iter++;
     }
     return ListCos;
@@ -543,8 +543,9 @@ MyMatrix<T> RepresentPermutationAsMatrix(
   MyMatrix<T> Subspace2(n_rows, n_cols);
   for (int i_row = 0; i_row < n_rows; i_row++) {
     int j_row = OnPoints(i_row, ePerm);
-    MyVector<T> V = GetMatrixRow(Subspace1, j_row);
-    AssignMatrixRow(Subspace2, i_row, V);
+    for (int i_col=0; i_col<n_cols; i_col++) {
+      Subspace2(i_row, i_col) = Subspace1(j_row, i_col);
+    }
   }
   std::optional<MyMatrix<T>> opt =
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
@@ -603,25 +604,7 @@ MatrixIntegral_GeneratePermutationGroupA(
     os << "MAT_GRP: |GRPprov|=1 (no generators)\n";
   }
 #endif
-  return {nbRow, ListPermGenProv};
-}
-
-template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               std::vector<MyMatrix<T>>>::type
-MatrixIntegral_PreImageSubgroup([[maybe_unused]]
-                                typename Thelper::Treturn const &eret,
-                                Tgroup const &eGRP, Thelper const &helper,
-                                std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_PreImageSubgroup\n";
-#endif
-  std::vector<MyMatrix<T>> ListMatrGen;
-  for (auto &eGen : eGRP.GeneratorsOfGroup()) {
-    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eGen, os);
-    ListMatrGen.emplace_back(std::move(eMatr));
-  }
-  return ListMatrGen;
+  return {nbRow, std::move(ListPermGenProv)};
 }
 
 // We have a finite set on which the group is acting. Therefore, we can apply
@@ -786,26 +769,6 @@ typename Thelper::Treturn MatrixIntegral_GeneratePermutationGroup(
     return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
   };
   return MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrGens, helper, f_get_perm, os);
-}
-
-
-template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value,
-                               std::vector<MyMatrix<T>>>::type
-MatrixIntegral_PreImageSubgroup(typename Thelper::Treturn const &eret,
-                                Tgroup const &eGRP, Thelper const &helper,
-                                [[maybe_unused]] std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_PreImageSubgroup\n";
-#endif
-  MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  std::vector<MyMatrix<T>> ListGen =
-      permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
-          eret.ListMatrGens, eret.ListPermGens, id_matr, eGRP);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After PreImageSubgroup\n";
-#endif
-  return ListGen;
 }
 
 // We compute the stabilizer by applying the Schreier algorithm
@@ -1132,7 +1095,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     std::vector<MyMatrix<T>> LMatr;
     for (auto &eGen : fGRP.GeneratorsOfGroup()) {
       MyMatrix<T> eMat = RepresentPermutationAsMatrix(helper, eGen, os);
-      LMatr.push_back(eMat);
+      LMatr.emplace_back(std::move(eMat));
     }
     MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
     std::optional<std::vector<MyVector<Tmod>>> opt = try_basis(InvBasis);
