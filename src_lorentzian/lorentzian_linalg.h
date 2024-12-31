@@ -360,7 +360,7 @@ GetFacetOneDomain(std::vector<MyVector<T>> const &l_vect, std::ostream &os) {
 template <typename T>
 MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
-    MyMatrix<T> const &Subspace2, [[maybe_unused]] std::ostream &os) {
+    MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
 #ifdef DEBUG_LORENTZIAN_LINALG
   auto terminate = [&](std::string const &msg) -> void {
@@ -457,7 +457,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
 template <typename T>
 std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
-    MyMatrix<T> const &Subspace2, std::ostream &os) {
+    MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
   std::vector<int> ListRowSelect = TMat_SelectRowCol(Subspace1).ListRowSelect;
   MyMatrix<T> Subspace1_red = SelectRow(Subspace1, ListRowSelect);
@@ -466,7 +466,7 @@ std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     return {};
   }
   MyMatrix<T> eEquiv = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
-      G1, Subspace1_red, G2, Subspace2_red, os);
+      G1, Subspace1_red, G2, Subspace2_red);
   if (Subspace1 * eEquiv != Subspace2)
     return {};
   return eEquiv;

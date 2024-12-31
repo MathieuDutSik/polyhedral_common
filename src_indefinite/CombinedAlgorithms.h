@@ -118,7 +118,7 @@ public:
 #endif
       std::optional<MyMatrix<T>> opt =
           LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
-              Qmat, Subspace1, Qmat, Subspace2, os);
+              Qmat, Subspace1, Qmat, Subspace2);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1|=" << time << "\n";
 #endif
@@ -1592,7 +1592,7 @@ private:
         MyMatrix<T> Subspace2 = eRec1.NSP_T;
         std::optional<MyMatrix<T>> opt =
             LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Q1, Subspace1, Q2,
-                                                              Subspace2, os);
+                                                              Subspace2);
         MyMatrix<T> EquivRat = unfold_opt(opt, "failed to find EquivRat");
         MyMatrix<T> EquivRatInv = Inverse(EquivRat);
         MyVector<T> v1_inv_equivrat = EquivRatInv.transpose() * eRec1.v_T;

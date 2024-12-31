@@ -471,7 +471,7 @@ MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
     MyMatrix<T> Subspace2 = MatrixRowAction(Subspace1, eGen);
     std::optional<MyMatrix<T>> opt =
         LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2,
-                                                          Subspace2, os);
+                                                          Subspace2);
 #ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
     if (!opt) {
       std::cerr << "We could not find the isotropy equivalence\n";
@@ -726,7 +726,7 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
     AssignMatrixRow(Subspace2_img, iRow, fV);
   }
   return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2,
-                                                           Subspace2_img, os);
+                                                           Subspace2_img);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -774,7 +774,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
 #endif
     std::optional<MyMatrix<T>> opt1 =
         LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G1, Subspace1, G2,
-                                                          Subspace2, os);
+                                                          Subspace2);
     if (!opt1) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
       std::cerr << "opt1 : Failed at extending equivalence\n";

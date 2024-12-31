@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> eLatt2 = ReadMatrixFile<T>(SPA2_file);
     //
     int n = eLatt2.rows();
-    GeneralMatrixGroupHelper<T, Telt> helper{n};
+    GeneralMatrixGroupHelper<T, Telt, Tint> helper{n};
     std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup>(
         ListMatrGen, helper, eLatt1, eLatt2, std::cerr);
     //

@@ -22,10 +22,10 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     using T = mpq_class;
-    using Tint = mpz_class;
+    using TintGroup = mpz_class;
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using Tgroup = permutalib::Group<Telt, Tint>;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     std::string GRP_file = argv[1];
@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> V_gens = ReadListMatrixFile<T>(VGRP_file);
     //
     int n = eLatt.rows();
-    GeneralMatrixGroupHelper<T, Telt> helper{n};
+    GeneralMatrixGroupHelper<T, Telt, TintGroup> helper{n};
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrGen, helper, eLatt, V_gens, std::cerr);
     //
