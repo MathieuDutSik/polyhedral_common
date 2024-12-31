@@ -84,10 +84,10 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT] "
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT] "
                    "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism arith [EXT]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT]\n";
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
