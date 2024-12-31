@@ -526,7 +526,14 @@ RepresentPermutationAsMatrix(FiniteMatrixGroupHelper<T, Telt> const &helper,
   os << "MAT_GRP: Beginning of RepresentPermutationAsMatrix for "
         "FiniteMatrixGroupHelper\n";
 #endif
-  return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePerm);
+  using Tidx = typename Telt::Tidx;
+  Tidx nbRow_tidx = helper.EXTfaithful.rows();
+  std::vector<Tidx> v(nbRow_tidx);
+  for (Tidx i = 0; i < nbRow_tidx; i++) {
+    v[i] = OnPoints(i, ePerm);
+  }
+  Telt ePermB(std::move(v));
+  return FindTransformation(helper.EXTfaithful, helper.EXTfaithful, ePermB);
 }
 
 template <typename T, typename Telt>
@@ -620,24 +627,14 @@ MatrixIntegral_Stabilizer([[maybe_unused]]
   os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer "
         "(has_determining_ext)\n";
 #endif
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
-  Tidx nbRow_tidx = helper.EXTfaithful.rows();
-  auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
-    std::vector<Tidx> v(nbRow_tidx);
-    for (Tidx i = 0; i < nbRow_tidx; i++) {
-      v[i] = OnPoints(i, ePermI);
-    }
-    Telt ePerm(std::move(v));
-    return RepresentPermutationAsMatrix(helper, ePerm, os);
-  };
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto &eGen : eStab.GeneratorsOfGroup()) {
-    ListMatrGen.emplace_back(std::move(get_matr(eGen)));
+    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eGen, os);
+    ListMatrGen.emplace_back(std::move(eMatr));
   }
   return ListMatrGen;
 }
@@ -657,30 +654,21 @@ MatrixIntegral_Stabilizer_RightCoset([[maybe_unused]]
   os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer_RightCoset "
         "(has_determining_ext)\n";
 #endif
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   using RightCosets = typename Tgroup::RightCosets;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
-  Tidx nbRow_tidx = helper.EXTfaithful.rows();
-  auto get_matr = [&](Telt const &ePermI) -> MyMatrix<T> {
-    std::vector<Tidx> v(nbRow_tidx);
-    for (Tidx i = 0; i < nbRow_tidx; i++) {
-      v[i] = OnPoints(i, ePermI);
-    }
-    Telt ePerm(std::move(v));
-    return RepresentPermutationAsMatrix(helper, ePerm, os);
-  };
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto &eGen : eStab.GeneratorsOfGroup()) {
-    ListMatrGen.emplace_back(std::move(get_matr(eGen)));
+    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eGen, os);
+    ListMatrGen.emplace_back(std::move(eMatr));
   }
   std::vector<MyMatrix<T>> ListRightCoset;
   RightCosets rc = GRPperm.right_cosets(eStab);
   for (auto &eCos : rc) {
-    ListRightCoset.emplace_back(std::move(get_matr(eCos)));
+    MyMatrix<T> eMatr = RepresentPermutationAsMatrix(helper, eCos, os);
+    ListRightCoset.emplace_back(std::move(eCos));
   }
   return {std::move(ListMatrGen), std::move(ListRightCoset)};
 }
@@ -694,7 +682,7 @@ MatrixIntegral_RepresentativeAction([[maybe_unused]]
                                     Thelper const &helper, Face const &eFace1,
                                     Face const &eFace2, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction\n";
+  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction(has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   std::optional<Telt> opt = GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
@@ -829,7 +817,7 @@ MatrixIntegral_RepresentativeAction(typename Thelper::Treturn const &eret,
                                     Face const &eFace2,
                                     [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction 2\n";
+  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction(!has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using Tint = typename Tgroup::Tint;
