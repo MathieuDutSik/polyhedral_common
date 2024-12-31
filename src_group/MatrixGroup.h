@@ -301,7 +301,7 @@ template <typename T, typename Thelper>
 T L1normMatrixGroup(Thelper const &helper,
                     std::vector<MyMatrix<T>> const &ListMatr) {
   int n = helper.n;
-  T sum = 0;
+  T sum(0);
   for (auto &eMat : ListMatr) {
     for (int i = 0; i < n; i++)
       for (int j = 0; j < n; j++)
@@ -336,7 +336,7 @@ LLLMatrixGroupReduction(Thelper const &helper,
 
 template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
   T TheDet = T_abs(DeterminantMat(TheSpace));
-  T eDiv = 1;
+  T eDiv(1);
   int n = TheSpace.rows();
   RecSolutionIntMat<T> eCan(TheSpace);
   while (true) {
@@ -369,7 +369,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
   }
   LGenTot.push_back(IdentityMat<T>(n));
   MyMatrix<T> TheSpace = IdentityMat<T>(n);
-  T TheDet = 1;
+  T TheDet(1);
   while (true) {
     std::vector<MyVector<T>> ConcatSpace;
     for (auto &eGen : LGenTot) {
@@ -555,8 +555,7 @@ MyMatrix<T> RepresentPermutationAsMatrix(
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> const &M = *opt;
-  return M;
+  return *opt;
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
@@ -1091,7 +1090,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   for (auto &eMatrGen : ListMatrGen) {
     Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
         helper, eMatrGen, os);
-    ListPermGen.push_back(ePermGen);
+    ListPermGen.emplace_back(std::move(ePermGen));
   }
   size_t len = helper.EXTfaithful.rows();
   Telt id_perm(len);
@@ -1167,7 +1166,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   using Treturn = typename Thelper::Treturn;
   int n = helper.n;
 #ifdef DEBUG_MATRIX_GROUP
-  T TotSize = 1;
+  T TotSize(1);
   for (int i = 0; i < n; i++)
     TotSize *= TheMod;
   os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod
@@ -1336,7 +1335,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
 #endif
   std::vector<MyMatrix<T>> ListGenRet = ListGen;
   for (int i = 1; i <= siz; i++) {
-    T TheMod = 1;
+    T TheMod(1);
     for (int j = 0; j < i; j++)
       TheMod *= eList[j];
     ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
@@ -1428,7 +1427,13 @@ struct DoubleCosetEntry {
   stabilizing subgroup.
   ---
   PB3: Computing in permutation groups is a winning strategy. This
-  works o
+  works fine for the has_determining_ext = true case.
+  We need to have a single function that does the job. That is in
+  order to avoid recomputing the stabilizer of eFace.
+  For the has_determining_ext = false case, I need to code that
+  in the permutalib code. That will be a single loop. But that is
+  fine because it works that way for the cosets. Will see if further
+  work is needed if failing.
  */
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
@@ -1759,7 +1764,7 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   for (int i = 1; i <= siz; i++) {
     if (IsEquivalence(eElt))
       return eElt;
-    T TheMod = 1;
+    T TheMod(1);
     for (int j = 0; j < i; j++)
       TheMod *= eList[j];
     MyMatrix<T> TheSpace1Img = TheSpace1 * eElt;
@@ -2087,9 +2092,11 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
       LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(ListMatrGen, EXT_T,
                                                             os);
   std::vector<Telt> ListPermGens;
-  for (auto &eMatr : ListMatr)
-    ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
-        helper, eMatr, os));
+  for (auto &eMatr : ListMatr) {
+    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
+        helper, eMatr, os);
+    ListPermGens.emplace_back(std::move(ePermGen));
+  }
   return Tgroup(ListPermGens, nbVert);
 }
 
@@ -2111,15 +2118,16 @@ LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
       LinPolytopeIntegral_Automorphism_RightCoset_Subspaces<T, Tgroup>(
           ListMatrGen, EXT_T, os);
   std::vector<Telt> ListPermGens;
-  for (auto &eMatr : pair.list_gen)
-    ListPermGens.push_back(GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
-        helper, eMatr, os));
+  for (auto &eMatr : pair.list_gen) {
+    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
+        helper, eMatr, os);
+    ListPermGens.emplace_back(std::move(ePermGen));
+  }
   Tgroup GRPret(ListPermGens, nbVert);
   std::vector<Telt> RightCoset;
   for (auto eMatr : pair.coset_desc) {
-    Telt eRepr =
-        GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
-    RightCoset.push_back(eRepr);
+    Telt eCos = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
+    RightCoset.emplace_back(std::move(eCos));
   }
   return {std::move(GRPret), std::move(RightCoset)};
 }

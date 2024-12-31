@@ -1348,7 +1348,9 @@ private:
         //     by a random permutation.
         //  All, in all, that looks like a reasonable stretgy for
         //  debugging the scheme.
-        // * 
+        // * Now our mystery: How to compute the list of orbits up to the
+        //   relevant isometry group. This is we compute the isometries for
+        //   QmatRed
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif
