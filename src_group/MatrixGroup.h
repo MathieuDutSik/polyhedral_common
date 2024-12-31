@@ -1440,7 +1440,7 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
     for (auto &entry: entries) {
       std::vector<MyMatrix<T>> const& V_gens = entry.stab_gens;
       Treturn fret =
-        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(Vmatr_gens, helper, f_get_perm, os);
+        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens, helper, f_get_perm, os);
       Tgroup Vperm_gens = Tgroup(fret.ListPermGens, siz_act);
       std::vector<DccEntry> span_de = dcc_u.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
@@ -1527,6 +1527,42 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
 #endif
   return {std::move(ListMatr_C), coset};
 }
+
+template <typename T, typename Tgroup, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> LinearSpace_Stabilizer_DoubleCoset(
+    std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
+    MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& V_gens, std::ostream &os) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
+  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  std::vector<MyMatrix<T>> V_gens_B;
+  for (auto &eMatr_B : V_gens) {
+    MyMatrix<T> eMatr_C = Pmat_T * eMatr_B * PmatInv_T;
+    V_gens_B.emplace_back(std::move(eMatr_C));
+  }
+  std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pairB =
+      LinearSpace_Stabilizer_DoubleCoset_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new, TheSpace_C, V_gens_B, os);
+  std::vector<MyMatrix<T>> l_gen_C;
+  for (auto &eMatr_B : pairB.first) {
+    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+    l_gen_C.emplace_back(std::move(eMatr_C));
+  }
+  std::vector<MyMatrix<T>> l_cos_C;
+  for (auto &eMatr_B : pairB.second) {
+    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+    l_cos_C.emplace_back(std::move(eMatr_C));
+  }
+  return {std::move(l_gen_C), std::move(l_cos_C)};
+}
+
+
 
 template <typename T>
 using ResultTestModEquivalence =
@@ -1837,7 +1873,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegral_Automorphism_Subspaces(
       throw TerminalException{1};
     }
 #endif
-    ListMatrGens.push_back(NewGen);
+    ListMatrGens.emplace_back(std::move(NewGen));
   }
   FiniteMatrixGroupHelper<T, Telt> helper =
       ComputeFiniteMatrixGroupHelper<T, Telt>(EXTbas);
