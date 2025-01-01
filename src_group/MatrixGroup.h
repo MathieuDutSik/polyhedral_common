@@ -91,6 +91,9 @@ template <typename T, typename Telt, typename Tint> struct FiniteMatrixGroupHelp
   MyMatrix<T> EXTfaithful;
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
+  PreImager constant_pre_imager() const {
+    return PreImager { EXTfaithful };
+  }
   PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm) const {
     return PreImager { EXTfaithful };
   }
@@ -108,7 +111,8 @@ template <typename T, typename Telt>
 struct PreImager_FiniteIsotropic {
   MyMatrix<T> G;
   MyMatrix<T> EXTfaithful;
-  MyVector<T> Visotrop;
+  PreImager_FiniteIsotropic(MyMatrix<T> const& _G, MyMatrix<T> const& _EXTfaithful) : G(_G), EXTfaithful(_EXTfaithful) {
+  }
   MyMatrix<T> pre_image_elt(Telt const& elt) const {
     MyMatrix<T> const &Subspace1 = EXTfaithful;
     int n_rows = Subspace1.rows();
@@ -135,8 +139,11 @@ template <typename T, typename Telt, typename Tint> struct FiniteIsotropicMatrix
   MyVector<T> Visotrop;
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
+  PreImager constant_pre_imager() const {
+    return PreImager(G, EXTfaithful);
+  }
   PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm) const {
-    return PreImager_FiniteIsotropic(G, EXTfaithful, Visotrop);
+    return constant_pre_imager();
   }
 };
 
@@ -1089,9 +1096,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     }
     return {};
   };
-  // Ansatz here as for the case of interest, this is not used. But that
-  // could be different for others. Need to think about this.
-  PreImager pre_imager = helper.pre_imager({}, {});
+  PreImager pre_imager = helper.constant_pre_imager();
   for (size_t iGroup = 0; iGroup < len_group; iGroup++) {
     size_t jGroup = len_group - 1 - iGroup;
     Tgroup const &fGRP = ListGroup[jGroup];
