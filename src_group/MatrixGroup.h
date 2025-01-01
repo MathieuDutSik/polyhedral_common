@@ -95,7 +95,7 @@ template <typename T, typename Telt, typename Tint> struct FiniteMatrixGroupHelp
     return PreImager { EXTfaithful };
   }
   PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm) const {
-    return PreImager { EXTfaithful };
+    return constant_pre_imager();
   }
 };
 

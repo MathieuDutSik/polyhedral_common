@@ -1246,6 +1246,7 @@ template <typename T, typename Tint, typename Tgroup>
 ApproximateModel<T, Tint>
 INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
   int n = Qmat.rows();
   EichlerReduction<T, Tint> er = GetEichlerHyperplaneBasis<T, Tint>(Qmat, os);
   ApproximateModel<T, Tint> approx =
@@ -1254,14 +1255,14 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   std::vector<MyMatrix<Tint>> ListGen = approx.GetApproximateGroup(os);
   std::vector<MyMatrix<T>> ListGen_T =
       UniversalStdVectorMatrixConversion<T, Tint>(ListGen);
-  GeneralMatrixGroupHelper<T, Telt> helper{n};
+  using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
+  Thelper helper{n};
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: INDEF_FORM_GetApproximateModel, Before "
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   Stab_RightCoset<T> stab_right_coset =
-      LinearSpace_Stabilizer_RightCoset<T, Tgroup,
-                                        GeneralMatrixGroupHelper<T, Telt>>(
+      LinearSpace_Stabilizer_RightCoset<T, Tgroup, Thelper>(
           ListGen_T, helper, er.Embed_T, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: INDEF_FORM_GetApproximateModel, After "
