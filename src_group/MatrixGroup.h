@@ -91,6 +91,9 @@ template <typename T, typename Telt, typename Tint> struct FiniteMatrixGroupHelp
   MyMatrix<T> EXTfaithful;
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
+  int nbRow() const {
+    return EXTfaithful.rows();
+  }
   PreImager constant_pre_imager() const {
     return PreImager { EXTfaithful };
   }
@@ -139,6 +142,9 @@ template <typename T, typename Telt, typename Tint> struct FiniteIsotropicMatrix
   MyVector<T> Visotrop;
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
+  int nbRow() const {
+    return EXTfaithful.rows();
+  }
   PreImager constant_pre_imager() const {
     return PreImager(G, EXTfaithful);
   }
@@ -173,6 +179,9 @@ template <typename T, typename Telt, typename Tint> struct GeneralMatrixGroupHel
   using Treturn = ResultGeneratePermutationGroup_General<T, Telt>;
   using PreImager = PreImager_General<T, Telt, Tint>;
   int n;
+  int nbRow() const {
+    return 0;
+  }
   PreImager pre_imager(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm) const {
     return PreImager(l_matr, l_perm, n);
   }
@@ -1245,9 +1254,10 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     };
     Treturn eret =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, f_get_perm, os);
-    Tidx siz_act = eret.nbRow + O.size();
+    int nbRow = helper.nbRow();
+    Tidx siz_act = nbRow + O.size();
     Tgroup GRPwork(eret.ListPermGens, siz_act);
-    Face eFace = GetFace<T, Tmod>(eret.nbRow, O, TheSpaceMod);
+    Face eFace = GetFace<T, Tmod>(nbRow, O, TheSpaceMod);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
        << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
@@ -1700,12 +1710,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, helper, O, TheMod, os);
-      size_t siz_act = eret.nbRow + O.size();
+      size_t nbRow = helper.nbRow();
+      size_t siz_act = nbRow + O.size();
       Tgroup GRPperm(eret.ListPermGens, siz_act);
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
-      Face eFace1 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace1workMod);
-      Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
+      Face eFace1 = GetFace<T, Tmod>(nbRow, O, TheSpace1workMod);
+      Face eFace2 = GetFace<T, Tmod>(nbRow, O, TheSpace2Mod);
 #ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
@@ -1752,9 +1763,10 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Treturn eret =
           MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
               ListMatrRet, helper, O, TheMod, os);
-      size_t siz_act = eret.nbRow + O.size();
+      int nbRow = helper.nbRow();
+      size_t siz_act = nbRow + O.size();
       Tgroup GRPperm(eret.ListPermGens, siz_act);
-      Face eFace2 = GetFace<T, Tmod>(eret.nbRow, O, TheSpace2Mod);
+      Face eFace2 = GetFace<T, Tmod>(nbRow, O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
          << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()

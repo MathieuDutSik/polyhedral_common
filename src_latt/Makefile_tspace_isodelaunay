@@ -2,13 +2,15 @@ PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I../src_isotropy -I../src_short -I.
+#COPTIONS        = -DDEBUG -DSANITY_CHECK
 COPTIONS        =
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
