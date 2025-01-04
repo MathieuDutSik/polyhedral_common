@@ -151,6 +151,23 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   }
 }
 
+template<typename Tgroup>
+void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const& GRP, Face const& f1, Face const& f2) {
+  std::string prefix = "RepresentativeAction_OnSets_GRP_f1_f2_idx";
+  std::string FileOut = FindAvailableFileFromPrefix(prefix);
+  std::ofstream os(FileOut);
+  WriteGroup(os, GRP);
+  auto f_print=[&](Face const& f) -> void {
+    for (size_t i=0; i<f.size(); i++) {
+      os << " " << f[i];
+    }
+    os << "\n";
+  };
+  f_print(f1);
+  f_print(f2);
+}
+
+
 template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;

@@ -1336,6 +1336,9 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
     CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
 #endif
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
+#ifdef PRINT_ISO_DELAUNAY_DOMAIN_REPRESENTATIVE_ACTION
+      PrintRepresentativeAction_OnSets_GRP_f1_f2(ListOrbitDelaunay.l_dels[iDelaunayOld].GRP, eAdj.eInc, eInc);
+#endif
       std::optional<Telt> opt =
           ListOrbitDelaunay.l_dels[iDelaunayOld]
               .GRP.RepresentativeAction_OnSets(eAdj.eInc, eInc);
