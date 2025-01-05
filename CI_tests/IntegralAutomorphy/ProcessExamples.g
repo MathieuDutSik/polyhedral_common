@@ -4,7 +4,7 @@ CI_Decision_Reset();
 ListFiles:=[];
 for n in [5..7]
 do
-    FileName:=Concatenation("ClassificationSimplices", String(n));
+    FileName:=Concatenation("../DATA/ClassificationSimplices", String(n));
     Add(ListFiles, FileName);
 od;
 

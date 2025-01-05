@@ -751,10 +751,12 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
       return DoubleCosetDescription_SingleCoset_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
     }
+    /*
     if (method_split == "double_cosets") {
       return DoubleCosetDescription_DoubleCoset_Block(
           BigGRP, SmaGRP, ListFaceOrbitsize, f_terminal, os);
     }
+    */
     std::optional<std::string> opt =
         get_postfix(method_split, "canonic_initial_triv_exhaustive_limit");
     if (opt) {
@@ -806,19 +808,22 @@ vectface OrbitSplittingListOrbit_spec(Tgroup const &BigGRP,
     return f_direct(method_split);
   } else {
     // Now it is "guess" being used.
-    if (ListFaceOrbitsize.size() < 30000) {
+    if (ListFaceOrbitsize.size() < 3000) {
       // Too small orbit size, sampling is too expensive.
       Tint index = BigGRP.size() / SmaGRP.size();
-      if (index < 10) {
+      if (index < 50) {
         return f_direct("single_cosets");
       }
-      return f_direct("double_cosets");
+      if (SmaGRP.size() < 200) {
+        return f_direct("exhaustive");
+      }
+      return f_direct("canonic");
     }
     // Doing the sampling since we have a very large number of orbits
     // to treat.
     std::vector<std::string> Lmethod = {"canonic", "canonic_initial_triv",
                                         "exhaustive_std", "exhaustive_robin",
-                                        "single_cosets", "double_cosets"};
+                                        "single_cosets"};
     int64_t max_val = std::numeric_limits<int64_t>::max();
     int64_t smallest_time = max_val;
     std::string chosen_method = "unset";

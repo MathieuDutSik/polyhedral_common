@@ -1968,6 +1968,69 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
   return {std::move(ListMatrGensB), pair.coset_desc};
 }
 
+template <typename T, typename Tgroup>
+std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
+LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(std::vector<MyMatrix<T>> const &ListMatrFull, std::vector<MyMatrix<T>> const& ListMatrV, MyMatrix<T> const &EXTfaithful,
+    std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
+  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
+  MyMatrix<T> InvBasis = Inverse(eBasis);
+  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  std::vector<MyMatrix<T>> ListMatrFullGens;
+  for (auto &eGen : ListMatrFull) {
+    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrFullGens.emplace_back(std::move(NewGen));
+  }
+  std::vector<MyMatrix<T>> ListMatrVGens;
+  for (auto &eGen : ListMatrV) {
+    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrVGens.emplace_back(std::move(NewGen));
+  }
+  FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
+    ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
+  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
+        "before LinearSpace_Stabilizer_RightCoset\n";
+#endif
+  std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> pair =
+    LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
+        "LinearSpace_Stabilizer_DoubleCoset\n";
+#endif
+  std::vector<MyMatrix<T>> ListMatrStabGens;
+  for (auto &eGen : pair.first) {
+    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrStabGens.emplace_back(std::move(NewGen));
+  }
+  std::vector<MyMatrix<T>> ListDoubleCosets;
+  for (auto &eGen : pair.second) {
+    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+    ListDoubleCosets.emplace_back(std::move(NewGen));
+  }
+  return {std::move(ListMatrStabGens), std::move(ListDoubleCosets)};
+}
+
 template <typename T>
 std::vector<MyMatrix<T>>
 ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
@@ -2194,6 +2257,44 @@ LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
     RightCoset.emplace_back(std::move(eCos));
   }
   return {std::move(GRPret), std::move(RightCoset)};
+}
+
+template <typename T, typename Tgroup>
+std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
+LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(MyMatrix<T> const &EXT_T,
+                                                   Tgroup const &GRPfull,
+                                                   Tgroup const &GrpV,
+                                                   std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
+  int nbVert = EXT_T.rows();
+  std::vector<MyMatrix<T>> ListMatrGenFull;
+  for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
+    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
+    ListMatrGenFull.push_back(eMat);
+  }
+  std::vector<MyMatrix<T>> ListMatrGenV;
+  for (auto &eGen : GrpV.GeneratorsOfGroup()) {
+    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
+    ListMatrGenV.push_back(eMat);
+  }
+  using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
+  Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXT_T);
+  std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
+      LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces<T, Tgroup>(ListMatrGenFull, ListMatrGenV, EXT_T, os);
+  std::vector<Telt> ListPermGens;
+  for (auto &eMatr : pair.first) {
+    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
+        helper, eMatr, os);
+    ListPermGens.emplace_back(std::move(ePermGen));
+  }
+  Tgroup GRPret(ListPermGens, nbVert);
+  std::vector<Telt> DoubleCosets;
+  for (auto eMatr : pair.second) {
+    Telt eCos = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
+    DoubleCosets.emplace_back(std::move(eCos));
+  }
+  return {std::move(GRPret), std::move(DoubleCosets)};
 }
 
 template <typename T, typename Tgroup>
