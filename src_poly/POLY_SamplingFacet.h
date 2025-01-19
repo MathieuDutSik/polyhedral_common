@@ -284,6 +284,9 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
         ListOpt.push_back(ListStr[i_ent]);
       return DUALDESC_SamplingFacetProcedure(EXT, ListOpt, os);
     }
+    if (ansOpt == "fullrankfacetset") {
+      return GetFullRankFacetSet(EXT, os);
+    }
     if (ansOpt == "lrs_limited") {
       int upperlimit = 100;
       // So possible format is lrs_limited:upperlimit_1000
@@ -340,114 +343,6 @@ DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);
-}
-
-template <typename T>
-vectface Kernel_GetFullRankFacetSet(
-    const MyMatrix<T> &EXT,
-    const MyMatrix<typename SubsetRankOneSolver<T>::Tint> &EXT_int,
-    std::ostream &os) {
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
-  size_t dim = EXT.cols();
-  size_t n_rows = EXT.rows();
-  if (dim == 2) {
-    if (n_rows != 2) {
-      std::cerr << "SAMP: In dimension 2, the cone should have exactly\n";
-      std::cerr << "SAMP: two extreme rays\n";
-      throw TerminalException{1};
-    }
-    vectface vf_ret(2);
-    Face f1(2), f2(2);
-    f1[0] = 1;
-    f2[1] = 1;
-    vf_ret.push_back(f1);
-    vf_ret.push_back(f2);
-    return vf_ret;
-  }
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: Before Kernel_FindSingleVertex\n";
-#endif
-  Face eSet = Kernel_FindSingleVertex(EXT, os);
-  // Here we use a trick that the ColumnReduction will select the first column
-  // and so will return a matrix that is polytopal
-  MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
-  MyMatrix<Tint> EXTsel_pre_int = SelectRow(EXT_int, eSet);
-  std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
-  MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
-  MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: |EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
-     << " rnk=" << RankMat(EXTsel) << "\n";
-#endif
-#ifdef SANITY_CHECK_SAMPLING_FACET
-  if (!IsPolytopal(EXTsel)) {
-    std::cerr << "SAMP: The configuration EXTsel is not polytopal\n";
-    throw TerminalException{1};
-  }
-#endif
-  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: We have ListRidge\n";
-#endif
-  FlippingFramework<T> RPLlift(EXT, EXT_int, eSet, os);
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: We have FlippingFramework\n";
-#endif
-  vectface vf_ret(n_rows);
-  vf_ret.push_back(eSet);
-  for (auto &eRidge : ListRidge) {
-    Face eFace = RPLlift.FlipFace(eRidge);
-    vf_ret.push_back(eFace);
-  }
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: We have vf_ret\n";
-#endif
-#ifdef SANITY_CHECK_SAMPLING_FACET
-  MyMatrix<T> FACsamp(vf_ret.size(), dim);
-  int pos = 0;
-  for (auto &face : vf_ret) {
-    MyVector<T> eFAC = FindFacetInequality(EXT, face);
-    AssignMatrixRow(FACsamp, pos, eFAC);
-    pos++;
-  }
-  if (RankMat(FACsamp) != static_cast<int>(dim)) {
-    std::cerr << "SAMP: Failed to find a ful rank vector configuration\n";
-    throw TerminalException{1};
-  }
-#endif
-  return vf_ret;
-}
-
-template <typename T>
-vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
-#ifdef TIMINGS_SAMPLING_FACET
-  MicrosecondTime time;
-#endif
-  MyMatrix<T> EXT_B = ColumnReduction(EXT);
-#ifdef TIMINGS_SAMPLING_FACET
-  os << "|SAMP: ColumnReduction|=" << time << "\n";
-#endif
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: Before Polytopization\n";
-#endif
-  MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
-#ifdef TIMINGS_SAMPLING_FACET
-  os << "|SAMP: Polytopization|=" << time << "\n";
-#endif
-  MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
-#ifdef TIMINGS_SAMPLING_FACET
-  os << "|SAMP: SetIsobarycenter|=" << time << "\n";
-#endif
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
-  MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: Before Kernel_GetFullRankFacetSet\n";
-#endif
-  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
-#ifdef TIMINGS_SAMPLING_FACET
-  os << "|SAMP: Kernel_GetFullRankFacetSet|=" << time << "\n";
-#endif
-  return vf;
 }
 
 // clang-format off
