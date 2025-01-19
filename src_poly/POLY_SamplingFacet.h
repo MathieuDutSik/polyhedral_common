@@ -28,8 +28,9 @@
 struct recSamplingOption {
   int critlevel;
   int critdim;
-  int maxnbcall;
+  int maxnboper;
   int maxnbsize;
+  bool greedy_termination;
   std::string prog;
 };
 
@@ -37,17 +38,18 @@ template <typename T>
 vectface
 Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
                                        recSamplingOption const &eOption,
-                                       int &nbCall, std::ostream &os) {
+                                       int &nbOper, std::ostream &os) {
   int dim = RankMat(EXT);
   int len = EXT.rows();
   std::string prog = eOption.prog;
   int critlevel = eOption.critlevel;
   int critdim = eOption.critdim;
-  int maxnbcall = eOption.maxnbcall;
+  int maxnboper = eOption.maxnboper;
   int maxnbsize = eOption.maxnbsize;
+  bool greedy_termination = eOption.greedy_termination;
 #ifdef DEBUG_SAMPLING_FACET
   os << "SAMP: critlevel=" << critlevel << " critdim=" << critdim
-     << " prog=" << prog << " maxnbcall=" << maxnbcall
+     << " prog=" << prog << " maxnboper=" << maxnboper
      << " maxnbsize=" << maxnbsize << "\n";
 #endif
   auto IsRecursive = [&]() -> bool {
@@ -61,11 +63,12 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   };
   bool DoRecur = IsRecursive();
 #ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur << " nbCall=" << nbCall << "\n";
+  os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur << " nbOper=" << nbOper << "\n";
 #endif
   vectface ListFace(EXT.rows());
+  std::unordered_set<size_t> set_incd;
   auto FuncInsert = [&](Face const &eFace) -> void {
-#ifdef DEBUG_SAMPLING_FACET
+#ifdef DEBUG_SAMPLING_FACET_DISABLE
     os << "SAMP: eFace.count()=" << eFace.count() << "\n";
     os << "SAMP: ListFace=";
     for (auto &fFace : ListFace) {
@@ -73,12 +76,12 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     }
     os << "\n";
 #endif
-    for (auto &fFace : ListFace) {
-      if (fFace.count() == eFace.count()) {
-        return;
-      }
+    size_t incd = eFace.count();
+    if (set_incd.count(incd) == 1) {
+      return;
     }
     ListFace.push_back(eFace);
+    set_incd.insert(incd);
   };
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
@@ -102,7 +105,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #ifdef DEBUG_SAMPLING_FACET
     os << "SAMP: DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
 #endif
-    nbCall++;
+    nbOper++;
     return ListFace;
   }
   Face eInc = FindOneInitialVertex(EXT, os);
@@ -114,19 +117,22 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     os << "SAMP: while loop start=" << start << " nbCases=" << nbCases << "\n";
 #endif
     for (size_t iC=start; iC<nbCases; iC++) {
-      nbCall++;
+      size_t nbCaseBefore = ListFace.size();
+      nbOper++;
       Face eFace = ListFace[iC];
-#ifdef DEBUG_SAMPLING_FACET
+#ifdef DEBUG_SAMPLING_FACET_DISABLE
       os << "SAMP: len=" << len << " dim=" << dim << " treating iC=" << iC << " |eFace|=" << eFace.size() << "/" << eFace.count() << "\n";
 #endif
       MyMatrix<T> EXTred = SelectRow(EXT, eFace);
       vectface ListRidge =
-        Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
+        Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbOper, os);
       SimplifiedFlippingFramework<T> sff(EXT, eFace, os);
       for (auto &eRidge : ListRidge) {
         Face eFlip = sff.FlipFace(eRidge);
         FuncInsert(eFlip);
       }
+      size_t nbCaseAfter = ListFace.size();
+      // We have enough, ending the stuff.
       if (maxnbsize != -1) {
         int siz = ListFace.size();
         if (siz > maxnbsize) {
@@ -137,17 +143,31 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
           return ListFace;
         }
       }
-      if (maxnbcall != -1) {
-        if (nbCall > maxnbcall) {
+      // Too many calls, we drop out
+      if (maxnboper != -1) {
+        if (nbOper > maxnboper) {
 #ifdef DEBUG_SAMPLING_FACET
-          os << "SAMP: Ending by maxnbcall\n";
+          os << "SAMP: Ending by maxnboper\n";
+#endif
+          return ListFace;
+        }
+      }
+      // Aggressive termination if selected, we 
+      if (greedy_termination) {
+        if (nbCaseBefore == nbCaseAfter) {
+#ifdef DEBUG_SAMPLING_FACET
+          os << "SAMP: Ending due to lack of progress\n";
 #endif
           return ListFace;
         }
       }
     }
     start = nbCases;
+    // All orbits have been treated.
     if (nbCases == ListFace.size()) {
+#ifdef DEBUG_SAMPLING_FACET
+      os << "SAMP: Ending since all orbits are treated\n";
+#endif
       break;
     }
   }
@@ -165,21 +185,35 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   std::string prog = "lrs";
   int critlevel = 50;
   int critdim = 15;
-  int maxnbcall = -1;
+  int maxnboper = 1000;
   int maxnbsize = 20;
+  bool greedy_termination = true;
   for (auto &eOpt : ListOpt) {
     std::vector<std::string> ListStrB = STRING_Split(eOpt, "_");
     if (ListStrB.size() == 2) {
-      if (ListStrB[0] == "prog")
+      if (ListStrB[0] == "prog") {
         prog = ListStrB[1];
-      if (ListStrB[0] == "critlevel")
+      }
+      if (ListStrB[0] == "critlevel") {
         std::istringstream(ListStrB[1]) >> critlevel;
-      if (ListStrB[0] == "critdim")
+      }
+      if (ListStrB[0] == "critdim") {
         std::istringstream(ListStrB[1]) >> critdim;
-      if (ListStrB[0] == "maxnbcall")
-        std::istringstream(ListStrB[1]) >> maxnbcall;
-      if (ListStrB[0] == "maxnbsize")
+      }
+      if (ListStrB[0] == "maxnboper") {
+        std::istringstream(ListStrB[1]) >> maxnboper;
+      }
+      if (ListStrB[0] == "maxnbsize") {
         std::istringstream(ListStrB[1]) >> maxnbsize;
+      }
+      if (ListStrB[0] == "greedy_termination") {
+        if (ListStrB[1] == "true") {
+          greedy_termination = true;
+        }
+        if (ListStrB[1] == "false") {
+          greedy_termination = false;
+        }
+      }
     }
   }
   if (prog != "lrs" && prog != "cdd") {
@@ -188,13 +222,14 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     throw TerminalException{1};
   }
   recSamplingOption eOption;
-  eOption.maxnbcall = maxnbcall;
+  eOption.maxnboper = maxnboper;
   eOption.prog = prog;
   eOption.critlevel = critlevel;
   eOption.critdim = critdim;
   eOption.maxnbsize = maxnbsize;
-  int nbcall = 0;
-  return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbcall, os);
+  eOption.greedy_termination = greedy_termination;
+  int nbOper = 0;
+  return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbOper, os);
 }
 
 template <typename T>
