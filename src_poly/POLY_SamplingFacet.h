@@ -27,6 +27,7 @@
 
 struct recSamplingOption {
   int critlevel;
+  int critdim;
   int maxnbcall;
   int maxnbsize;
   std::string prog;
@@ -41,45 +42,63 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   int len = EXT.rows();
   std::string prog = eOption.prog;
   int critlevel = eOption.critlevel;
+  int critdim = eOption.critdim;
   int maxnbcall = eOption.maxnbcall;
   int maxnbsize = eOption.maxnbsize;
 #ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: critlevel=" << critlevel << " prog=" << prog
-     << " maxnbcall=" << maxnbcall << "\n";
+  os << "SAMP: critlevel=" << critlevel << " critdim=" << critdim
+     << " prog=" << prog << " maxnbcall=" << maxnbcall
+     << " maxnbsize=" << maxnbsize << "\n";
 #endif
   auto IsRecursive = [&]() -> bool {
-    if (len < critlevel)
+    if (len < critlevel) {
       return false;
-    if (dim < 15)
+    }
+    if (dim < critdim) {
       return false;
+    }
     return true;
   };
   bool DoRecur = IsRecursive();
+#ifdef DEBUG_SAMPLING_FACET
+  os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur << " nbCall=" << nbCall << "\n";
+#endif
   vectface ListFace(EXT.rows());
-  std::vector<int> ListStatus;
   auto FuncInsert = [&](Face const &eFace) -> void {
+#ifdef DEBUG_SAMPLING_FACET
+    os << "SAMP: eFace.count()=" << eFace.count() << "\n";
+    os << "SAMP: ListFace=";
     for (auto &fFace : ListFace) {
-      if (fFace.count() == eFace.count())
+      os << fFace.count() << " ";
+    }
+    os << "\n";
+#endif
+    for (auto &fFace : ListFace) {
+      if (fFace.count() == eFace.count()) {
         return;
+      }
     }
     ListFace.push_back(eFace);
-    ListStatus.push_back(0);
   };
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: dim=" << dim << "  len=" << len << "\n";
-#endif
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (prog == "lrs")
         return lrs::DualDescription_incd(EXT);
       if (prog == "cdd")
         return cdd::DualDescription_incd(EXT, os);
-      std::cerr << "SAMP: Failed to find a matching program\n";
+      std::cerr << "SAMP: Failed to find a matching program. Allowed: cdd/lrs\n";
       throw TerminalException{1};
     };
+#ifdef TIMINGS_SAMPLING_FACET
+    MicrosecondTime time;
+#endif
     vectface ListIncd = comp_dd();
-    for (auto &eFace : ListIncd)
+#ifdef TIMINGS_SAMPLING_FACET
+    os << "|SAMP: ListIncd, comp_dd|=" << time << "\n";
+#endif
+    for (auto &eFace : ListIncd) {
       FuncInsert(eFace);
+    }
 #ifdef DEBUG_SAMPLING_FACET
     os << "SAMP: DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
 #endif
@@ -88,44 +107,49 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   }
   Face eInc = FindOneInitialVertex(EXT, os);
   FuncInsert(eInc);
+  size_t start = 0;
   while (true) {
-    int nbCases = ListFace.size();
-    bool IsFinished = true;
-    for (int iC = 0; iC < nbCases; iC++)
-      if (ListStatus[iC] == 0) {
-        // we liberally increase the nbCall value
-        nbCall++;
-        IsFinished = false;
-        ListStatus[iC] = 1;
-        Face eFace = ListFace[iC];
-        MyMatrix<T> EXTred = SelectRow(EXT, eFace);
-        vectface ListRidge =
-            Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
-        for (auto &eRidge : ListRidge) {
-          Face eFlip = ComputeFlipping(EXT, eFace, eRidge, os);
-          FuncInsert(eFlip);
-        }
-        if (maxnbsize != -1) {
-          int siz = ListFace.size();
-          if (maxnbsize > siz) {
+    size_t nbCases = ListFace.size();
 #ifdef DEBUG_SAMPLING_FACET
-            os << "SAMP: Ending by maxsize criterion\n";
-            os << "SAMP: siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+    os << "SAMP: while loop start=" << start << " nbCases=" << nbCases << "\n";
 #endif
-            return ListFace;
-          }
-        }
-        if (maxnbcall != -1) {
-          if (nbCall > maxnbcall) {
+    for (size_t iC=start; iC<nbCases; iC++) {
+      nbCall++;
+      Face eFace = ListFace[iC];
 #ifdef DEBUG_SAMPLING_FACET
-            os << "SAMP: Ending by maxnbcall\n";
+      os << "SAMP: len=" << len << " dim=" << dim << " treating iC=" << iC << " |eFace|=" << eFace.size() << "/" << eFace.count() << "\n";
 #endif
-            return ListFace;
-          }
+      MyMatrix<T> EXTred = SelectRow(EXT, eFace);
+      vectface ListRidge =
+        Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbCall, os);
+      SimplifiedFlippingFramework<T> sff(EXT, eFace, os);
+      for (auto &eRidge : ListRidge) {
+        Face eFlip = sff.FlipFace(eRidge);
+        FuncInsert(eFlip);
+      }
+      if (maxnbsize != -1) {
+        int siz = ListFace.size();
+        if (siz > maxnbsize) {
+#ifdef DEBUG_SAMPLING_FACET
+          os << "SAMP: Ending by maxsize criterion\n";
+          os << "SAMP: siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
+#endif
+          return ListFace;
         }
       }
-    if (IsFinished)
+      if (maxnbcall != -1) {
+        if (nbCall > maxnbcall) {
+#ifdef DEBUG_SAMPLING_FACET
+          os << "SAMP: Ending by maxnbcall\n";
+#endif
+          return ListFace;
+        }
+      }
+    }
+    start = nbCases;
+    if (nbCases == ListFace.size()) {
       break;
+    }
   }
 #ifdef DEBUG_SAMPLING_FACET
   os << "SAMP: RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
@@ -140,6 +164,7 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
                                 std::ostream &os) {
   std::string prog = "lrs";
   int critlevel = 50;
+  int critdim = 15;
   int maxnbcall = -1;
   int maxnbsize = 20;
   for (auto &eOpt : ListOpt) {
@@ -149,6 +174,8 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
         prog = ListStrB[1];
       if (ListStrB[0] == "critlevel")
         std::istringstream(ListStrB[1]) >> critlevel;
+      if (ListStrB[0] == "critdim")
+        std::istringstream(ListStrB[1]) >> critdim;
       if (ListStrB[0] == "maxnbcall")
         std::istringstream(ListStrB[1]) >> maxnbcall;
       if (ListStrB[0] == "maxnbsize")
@@ -164,6 +191,7 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   eOption.maxnbcall = maxnbcall;
   eOption.prog = prog;
   eOption.critlevel = critlevel;
+  eOption.critdim = critdim;
   eOption.maxnbsize = maxnbsize;
   int nbcall = 0;
   return Kernel_DUALDESC_SamplingFacetProcedure(EXT, eOption, nbcall, os);

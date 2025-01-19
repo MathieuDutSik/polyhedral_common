@@ -1147,7 +1147,7 @@ public:
     return foc.GetListFaceOrbitsize();
   }
   void FuncInsert(Face const &face_can) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     if (face_can.size() != static_cast<size_t>(nbRow)) {
       std::cerr << "We have |face_can|=" << face_can.size()
                 << " but nbRow=" << nbRow << "\n";
@@ -1201,7 +1201,7 @@ public:
     InsertEntryDatabase({face_can, orbSize}, false, foc.nbOrbit);
   }
   void FuncInsertPair(Face const &face_orbsize) {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     if (face_orbsize.size() != delta) {
       std::cerr << "RDD: We have |face_orbsize|=" << face_orbsize.size()
                 << " but delta=" << delta << "\n";
@@ -1253,7 +1253,7 @@ public:
        << "\n";
     os << "RDD: FuncPutOrbitAsDone : CompleteList_SetUndone\n";
     for (auto &kv : CompleteList_SetUndone) {
-      os << "kv.first=" << kv.first << " |kv.second|=" << kv.second.size()
+      os << "RDD: kv.first=" << kv.first << " |kv.second|=" << kv.second.size()
          << "\n";
     }
     os << "RDD: FuncPutOrbitAsDone : i_orb=" << i_orb << "\n";
@@ -1272,7 +1272,7 @@ public:
     if (V.size() == 1) {
       CompleteList_SetUndone.erase(len);
     } else {
-#ifdef TRACK_DATABASE
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
       if (V.size() == 0) {
         std::cerr << "We have V.size = 0 which is not allowed here\n";
         throw TerminalException{1};
@@ -1791,11 +1791,12 @@ public:
   DatabaseOrbits(DatabaseOrbits<TbasicBank> &&) = delete;
   DatabaseOrbits &operator=(const DatabaseOrbits<TbasicBank> &) = delete;
   void print_status() const {
-#ifdef DEBUG_RECURSIVE_DUAL_DESC
+#ifdef TRACK_RUN
     os << "RDD: Status : orbit=(" << bb.foc.nbOrbit << "," << bb.foc.nbOrbitDone
        << "," << (bb.foc.nbOrbit - bb.foc.nbOrbitDone) << ") facet=("
        << bb.foc.TotalNumber << "," << (bb.foc.TotalNumber - bb.foc.nbUndone)
-       << "," << bb.foc.nbUndone << ")\n\n";
+       << "," << bb.foc.nbUndone << ")"
+       << " " << strPresChar << "\n\n";
 #endif
   }
   DatabaseOrbits(TbasicBank &bb, const std::string &MainPrefix,
@@ -2433,9 +2434,29 @@ Kernel_DUALDESC_AdjacencyDecomposition(
       RPL.FuncInsert(face);
     }
   };
-  if (RPL.FuncNumberOrbit() == 0) {
+  size_t nr_orbit = RPL.FuncNumberOrbit();
+#ifdef TRACK_RUN
+  os << "RDD: Kernel_DUALDESC_AdjacencyDecomposition nr_orbit=" << nr_orbit << "\n";
+#endif
+  if (nr_orbit == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-    for (auto &face : DirectComputationInitialFacetSet(bb.EXT, ansSamp, os)) {
+#ifdef TRACK_RUN
+    os << "RDD: ansSamp=" << ansSamp << " |EXT|=" << bb.EXT.rows() << "/" << bb.EXT.cols() << "\n";
+#endif
+    vectface vf = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
+#ifdef TRACK_RUN
+    os << "RDD: DirectComputationInitialFacetSet |vf|=" << vf.size() << "\n";
+    std::unordered_map<size_t, size_t> map;
+    os << "RDD: map=";
+    for (auto &face : vf) {
+      map[face.count()] += 1;
+    }
+    for (auto & kv: map) {
+      os << "(" << kv.first << "," << kv.second << ") ";
+    }
+    os << "\n";
+#endif
+    for (auto &face : vf) {
       Face face_can = bb.operation_face(face);
       f_insert(face_can);
     }
