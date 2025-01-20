@@ -30,10 +30,16 @@
 #define DEBUG_POLYTOPIZATION
 #define DEBUG_SEARCH_POSITIVE_RELATION
 #define DEBUG_GEOMETRICALLY_UNIQUE
+#define DEBUG_FULL_RANK_FACET_SET
 #endif
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_SEARCH_POSITIVE_RELATION
+#define SANITY_CHECK_FULL_RANK_FACET_SET
+#endif
+
+#ifdef TIMINGS
+#define TIMINGS_FULL_RANK_FACET_SET
 #endif
 
 template <typename T>
@@ -1597,10 +1603,16 @@ vectface Kernel_GetFullRankFacetSet(
     vf_ret.push_back(f2);
     return vf_ret;
   }
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: Before Kernel_FindSingleVertex\n";
 #endif
   Face eSet = Kernel_FindSingleVertex(EXT, os);
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  os << "|SAMP: Kernel_FindSingleVertex|=" << time << "\n";
+#endif
   // Here we use a trick that the ColumnReduction will select the first column
   // and so will return a matrix that is polytopal
   MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
@@ -1608,6 +1620,9 @@ vectface Kernel_GetFullRankFacetSet(
   std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
   MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
   MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  os << "|SAMP: SelectRow / SelectColumn / ColumnReductionSet|=" << time << "\n";
+#endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: |EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
      << " rnk=" << RankMat(EXTsel) << "\n";
@@ -1619,10 +1634,16 @@ vectface Kernel_GetFullRankFacetSet(
   }
 #endif
   vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  os << "|SAMP: ListRidge|=" << time << "\n";
+#endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: We have ListRidge\n";
 #endif
   FlippingFramework<T> RPLlift(EXT, EXT_int, eSet, os);
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  os << "|SAMP: FlippingFramework|=" << time << "\n";
+#endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: We have FlippingFramework\n";
 #endif
@@ -1632,6 +1653,9 @@ vectface Kernel_GetFullRankFacetSet(
     Face eFace = RPLlift.FlipFace(eRidge);
     vf_ret.push_back(eFace);
   }
+#ifdef TIMINGS_FULL_RANK_FACET_SET
+  os << "|SAMP: vf_ret|=" << time << "\n";
+#endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: We have vf_ret\n";
 #endif
