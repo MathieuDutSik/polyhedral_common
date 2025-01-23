@@ -1641,11 +1641,7 @@ EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
 }
 
 template <typename T>
-vectface Kernel_GetFullRankFacetSet(
-    const MyMatrix<T> &EXT,
-    const MyMatrix<typename SubsetRankOneSolver<T>::Tint> &EXT_int,
-    std::ostream &os) {
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
+vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
   size_t dim = EXT.cols();
   size_t n_rows = EXT.rows();
   if (dim == 2) {
@@ -1674,11 +1670,10 @@ vectface Kernel_GetFullRankFacetSet(
 #endif
   // Here we use a trick that the ColumnReduction will select the first column
   // and so will return a matrix that is polytopal
-  MyMatrix<T> EXTsel_pre = SelectRow(EXT, eSet);
-  MyMatrix<Tint> EXTsel_pre_int = SelectRow(EXT_int, eSet);
-  std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre);
-  MyMatrix<T> EXTsel = SelectColumn(EXTsel_pre, l_cols);
-  MyMatrix<Tint> EXTsel_int = SelectColumn(EXTsel_pre_int, l_cols);
+  MyMatrix<T> EXTsel_pre1 = SelectRow(EXT, eSet);
+  std::vector<int> l_cols = ColumnReductionSet(EXTsel_pre1);
+  MyMatrix<T> EXTsel_pre2 = SelectColumn(EXTsel_pre1, l_cols);
+  MyMatrix<T> EXTsel = SetIsobarycenter(EXTsel_pre2); // Essential step, selecting a subset offsets the isobarycenter.
 #ifdef TIMINGS_FULL_RANK_FACET_SET
   os << "|SAMP: SelectRow / SelectColumn / ColumnReductionSet|=" << time << "\n";
 #endif
@@ -1692,14 +1687,14 @@ vectface Kernel_GetFullRankFacetSet(
     throw TerminalException{1};
   }
 #endif
-  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, EXTsel_int, os);
+  vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
   os << "|SAMP: ListRidge|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: We have ListRidge\n";
 #endif
-  FlippingFramework<T> RPLlift(EXT, EXT_int, eSet, os);
+  SimplifiedFlippingFramework<T> RPLlift(EXT, eSet, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
   os << "|SAMP: FlippingFramework|=" << time << "\n";
 #endif
@@ -1754,12 +1749,10 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #ifdef TIMINGS_FULL_RANK_FACET_SET
   os << "|SAMP: SetIsobarycenter|=" << time << "\n";
 #endif
-  using Tint = typename SubsetRankOneSolver<T>::Tint;
-  MyMatrix<Tint> EXT_D_int = Get_EXT_int(EXT_D);
 #ifdef DEBUG_FULL_RANK_FACET_SET
   os << "SAMP: Before Kernel_GetFullRankFacetSet\n";
 #endif
-  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, EXT_D_int, os);
+  vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
   os << "|SAMP: Kernel_GetFullRankFacetSet|=" << time << "\n";
 #endif

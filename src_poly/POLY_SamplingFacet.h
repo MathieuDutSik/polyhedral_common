@@ -85,11 +85,13 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   };
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
-      if (prog == "lrs")
-        return lrs::DualDescription_incd(EXT);
-      if (prog == "cdd")
-        return cdd::DualDescription_incd(EXT, os);
-      std::cerr << "SAMP: Failed to find a matching program. Allowed: cdd/lrs\n";
+      if (is_method_supported<T>(prog)) {
+        return DirectFacetComputationIncidence(EXT, prog, os);
+      }
+      if (prog == "fullrankfacetset") {
+        return GetFullRankFacetSet(EXT, os);
+      }
+      std::cerr << "SAMP: Failed to find a matching method\n";
       throw TerminalException{1};
     };
 #ifdef TIMINGS_SAMPLING_FACET

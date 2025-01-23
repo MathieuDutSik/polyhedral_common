@@ -419,6 +419,49 @@ void DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
+bool is_method_supported(std::string const &prog) {
+  if (prog == "cdd_cbased") {
+#ifdef USE_CDDLIB
+    return true;
+#else
+    return false;
+#endif
+  }
+  //
+  if constexpr (is_ring_field<T>::value) {
+    if (prog == "cdd")
+      return true;
+    // If it is a field, then it makes sense to look at the internal ring
+    if (prog == "lrs_ring")
+      return true;
+  }
+  //
+  if (prog == "small_polytopes")
+    return true;
+  // It applies to the field case or ring
+  if (prog == "lrs")
+    return true;
+  // It applies to the field case or ring
+  if (prog == "pd_lrs")
+    return true;
+  //
+  if constexpr (is_implementation_of_Q<T>::value) {
+    if (prog == "glrs")
+      return true;
+    //
+    if (prog == "ppl_ext")
+      return true;
+    //
+    if (prog == "cdd_ext")
+      return true;
+    //
+    if (prog == "normaliz")
+      return true;
+  }
+  return false;
+}
+
+template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
                                          std::string const &ansProg,
                                          std::ostream &os) {
