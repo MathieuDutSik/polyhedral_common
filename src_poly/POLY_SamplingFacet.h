@@ -78,6 +78,13 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     for (auto & kv: map_undone) {
       ListFace.push_back(kv.second);
     }
+#ifdef DEBUG_SAMPLING_FACET
+    os << "SAMP: ListFace=";
+    for (auto & eFace: ListFace) {
+      os << eFace.count() << " ";
+    }
+    os << "\n";
+#endif
     return ListFace;
   };
   auto func_insert=[&](Face const& f) -> void {
