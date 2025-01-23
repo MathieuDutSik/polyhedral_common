@@ -120,6 +120,60 @@ template <typename T> T sqr_estimate_facet_coefficients(MyMatrix<T> const &M) {
 }
 
 template <typename T>
+bool TestFacetInequality(MyMatrix<T> const &EXT, Face const &eList) {
+  static_assert(is_ring_field<T>::value,
+                "Requires T to be a field in CheckFacetInequalityKernel");
+  int siz = eList.size();
+  int nb = eList.count();
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  if (nbRow != siz) {
+    std::cerr << "nbRow=" << nbRow << " siz=" << siz
+              << " which is inconsistent\n";
+    throw TerminalException{1};
+  }
+  boost::dynamic_bitset<>::size_type aRow = eList.find_first();
+  auto f = [&](MyMatrix<T> &M, size_t eRank,
+               [[maybe_unused]] size_t iRow) -> void {
+    M.row(eRank) = EXT.row(aRow);
+    aRow = eList.find_next(aRow);
+  };
+  MyMatrix<T> NSP = NullspaceTrMat_Kernel<T, decltype(f)>(nb, nbCol, f);
+  if (NSP.rows() != 1) {
+    return false;
+  }
+  int nbPlus = 0;
+  int nbMinus = 0;
+  MyVector<T> eVect(nbCol);
+  for (int iCol = 0; iCol < nbCol; iCol++)
+    eVect(iCol) = NSP(0, iCol);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    T eScal(0);
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      eScal += eVect(iCol) * EXT(iRow, iCol);
+    if (eScal == 0) {
+      if (eList[iRow] != 1) {
+        return false;
+      }
+    } else {
+      if (eList[iRow] != 0) {
+        return false;
+      }
+      if (eScal > 0) {
+        nbPlus++;
+      }
+      if (eScal < 0) {
+        nbMinus++;
+      }
+    }
+  }
+  if (nbMinus > 0 && nbPlus > 0) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T>
 void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList,
                                 std::string const &context) {
   static_assert(is_ring_field<T>::value,

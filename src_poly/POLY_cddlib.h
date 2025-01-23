@@ -3652,8 +3652,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   n_iter = 0;
   do {
     n_iter += 1;
-#ifdef DEBUG_CDD
-    os << "CDD: n_iter=" << n_iter << "\n";
+#ifdef DEBUG_CDD_DISABLE
+    os << "CDD: dd_DualSimplexMaximize n_iter=" << n_iter << "\n";
 #endif
     if (maxiter != 0) {
       if (n_iter == maxiter) {
@@ -3813,8 +3813,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
   n_iter = 0;
   do { /* Criss-Cross Method */
     n_iter += 1;
-#ifdef DEBUG_CDD
-    os << "CDD: n_iter=" << n_iter << "\n";
+#ifdef DEBUG_CDD_DISABLE
+    os << "CDD: dd_CrissCrossMaximize n_iter=" << n_iter << "\n";
 #endif
     if (maxiter != 0) {
       if (n_iter == maxiter) {
@@ -8278,7 +8278,8 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   }
 }
 
-  template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream& os) {
+template <typename T>
+MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   int nbCol = TheEXT.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8294,7 +8295,8 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   return TheFAC;
 }
 
-  template <typename T> vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream& os) {
+template <typename T>
+vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream& os) {
   dd_ErrorType err = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
@@ -8552,14 +8554,14 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
   for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
-#ifdef DEBUG_CDD
+#ifdef DEBUG_CDD_DISABLE
     os << "CDD: j=" << static_cast<int>(j) << "/" << static_cast<int>(d) << " idx=" << static_cast<int>(idx) << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
 #endif
     V(j - 1) = EXT(idx - 1, 0);
     for (i = 0; i < d - 1; i++) {
       M(i, j - 1) = -EXT(idx - 1, i + 1);
     }
-#ifdef DEBUG_CDD
+#ifdef DEBUG_CDD_DISABLR
     os << "CDD: After V and M sets\n";
 #endif
   }
@@ -8585,9 +8587,6 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     for (int iCol = 0; iCol < nbCol - 1; iCol++) {
       eSum += DirectSolution(iCol) * EXT(iRow, iCol + 1);
     }
-#ifdef DEBUG_CDD
-  os << "CDD: We have eSum\n";
-#endif
     if (eSum < 0) {
 #ifdef DEBUG_CDD
       os << "CDD: LIFT ERROR, Not an interior point at iRow=" << iRow
@@ -8792,13 +8791,14 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
       return *optB;
     }
   }
+#ifdef DEBUG_CDD
+  os << "CDD: The lifting scheme failed, now using the direct approach\n";
+#endif
   return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
 }
 
 template <typename T>
-LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT,
-                                    MyVector<T> const &eVect,
-                                    [[maybe_unused]] std::ostream &os) {
+LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT, MyVector<T> const &eVect, std::ostream &os) {
   if (EXT.cols() < 4) {
     return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
   }

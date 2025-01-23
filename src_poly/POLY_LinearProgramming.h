@@ -31,11 +31,13 @@
 #define DEBUG_SEARCH_POSITIVE_RELATION
 #define DEBUG_GEOMETRICALLY_UNIQUE
 #define DEBUG_FULL_RANK_FACET_SET
+#define DEBUG_FIND_SINGLE_VERTEX
 #endif
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_SEARCH_POSITIVE_RELATION
 #define SANITY_CHECK_FULL_RANK_FACET_SET
+#define SANITY_CHECK_FIND_SINGLE_VERTEX
 #endif
 
 #ifdef TIMINGS
@@ -110,8 +112,12 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
 #endif
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
-  if (IsPolytopal(EXT))
+  if (IsPolytopal(EXT)) {
+#ifdef DEBUG_POLYTOPIZATION
+    os << "LP: Early termination of the polytopization stuff\n";
+#endif
     return EXT;
+  }
   //
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   T eVal, prov;
@@ -119,15 +125,16 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
   MyMatrix<T> eBasis(nbCol, nbCol);
   MyVector<T> eVect(nbCol + 1);
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    eVal = -1;
+    eVal = T(-1);
     nMat(iRow, 0) = eVal;
     for (int iCol = 0; iCol < nbCol; iCol++)
       nMat(iRow, iCol + 1) = EXT(iRow, iCol);
   }
   for (int iCol = 0; iCol <= nbCol; iCol++) {
     T eSum(0);
-    for (int iRow = 0; iRow < nbRow; iRow++)
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       eSum += nMat(iRow, iCol);
+    }
     eVect(iCol) = eSum;
   }
   //
@@ -210,31 +217,81 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyVector<T> eVect = MyVector<T>(nbCol);
-  MyVector<T> TheVert = MyVector<T>(nbCol);
+  eVect(0) = 0;
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+  size_t n_iter = 0;
+#endif
+#ifdef DEBUG_FIND_SINGLE_VERTEX_DISABLE
+  os << "LP: Kernel_FindSingleVertex, EXT=\n";
+  WriteMatrix(os, EXT);
+#endif
   while (true) {
-    for (int iCol = 0; iCol < nbCol; iCol++) {
+    for (int iCol = 1; iCol < nbCol; iCol++) {
       int a = random();
       int b = random();
       T eVal(a - b);
       eVect(iCol) = eVal;
     }
     LpSolution<T> eSol = CDD_LinearProgramming(EXT, eVect, os);
-    MyVector<T> SolDir = eSol.DirectSolution;
-    TheVert(0) = 1;
-    for (int iCol = 0; iCol < nbCol - 1; iCol++)
-      TheVert(iCol + 1) = SolDir(iCol);
-    Face eInc(nbRow);
+    MyVector<T> const& SolDir = eSol.DirectSolution;
+    T const& OptimalValue = eSol.OptimalValue;
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+    os << "LP: nbCol=" << nbCol << " |SolDir|=" << SolDir.size() << "\n";
+    os << "LP: optimal_value=" << OptimalValue << "\n";
+    os << "LP: SolDir=" << StringVector(SolDir) << "\n";
+#endif
+    Face Inc_eSum(nbRow);
+    Face Inc_contrib(nbRow);
+    T min_contrib(0);
     for (int iRow = 0; iRow < nbRow; iRow++) {
-      T eSum(0);
-      for (int iCol = 0; iCol < nbCol; iCol++)
-        eSum += EXT(iRow, iCol) * TheVert(iCol);
-      if (eSum == 0)
-        eInc[iRow] = 1;
+#ifdef SANITY_CHECK_FIND_SINGLE_VERTEX
+      if (EXT(iRow,0) == 1) {
+        std::cerr << "The first entry should be equal to 1\n";
+        throw TerminalException{1};
+      }
+#endif
+      T contrib(0);
+      for (int iCol = 0; iCol < nbCol-1; iCol++) {
+        contrib += EXT(iRow, iCol + 1) * SolDir(iCol);
+      }
+      T eSum = EXT(iRow, 0) + contrib;
+      if (eSum == 0) {
+        Inc_eSum[iRow] = 1;
+      }
+      if (contrib == 0) {
+        Inc_contrib[iRow] = 1;
+      }
+      if (min_contrib > contrib) {
+        min_contrib = contrib;
+      }
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+      os << "LP: iRow=" << iRow << " contrib=" << contrib << " eSum=" << eSum << "\n";
+#endif
+#ifdef SANITY_CHECK_FIND_SINGLE_VERTEX
+      if (eSum < 0) {
+        std::cerr << "The obtained vertex violates facet iRow=" << iRow << "\n";
+        throw TerminalException{1};
+      }
+#endif
     }
-    MyMatrix<T> RnkMat = SelectRow(EXT, eInc);
-    int TheRank = RankMat(RnkMat);
-    if (TheRank == nbCol - 1) {
-      return eInc;
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+    n_iter += 1;
+    os << "LP: Kernel_FindSingleVertex, min_contrib=" << min_contrib << "\n";
+    os << "LP: Kernel_FindSingleVertex, n_iter=" << n_iter << "\n";
+#endif
+    if (min_contrib == 0 && OptimalValue == 0) {
+      if (TestFacetInequality(EXT, Inc_contrib)) {
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+        os << "LP: Kernel_FindSingleVertex, returning Inc_contrib at n_iter=" << n_iter << "\n";
+#endif
+        return Inc_contrib;
+      }
+    }
+    if (TestFacetInequality(EXT, Inc_eSum)) {
+#ifdef DEBUG_FIND_SINGLE_VERTEX
+      os << "LP: Kernel_FindSingleVertex, returning Inc_eSum at n_iter=" << n_iter << "\n";
+#endif
+      return Inc_eSum;
     }
   }
 }
@@ -1195,20 +1252,22 @@ bool IsFullDimensional(MyMatrix<T> const &FAC, std::ostream &os) {
   int nbCol = FAC.cols();
   MyMatrix<T> FACexp(nbRow, 1 + nbCol);
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    FACexp(iRow, 0) = -1;
+    FACexp(iRow, 0) = T(-1);
     for (int iCol = 0; iCol < nbCol; iCol++)
       FACexp(iRow, 1 + iCol) = FAC(iRow, iCol);
   }
   MyVector<T> SumIneq(1 + nbCol);
   for (int iCol = 0; iCol <= nbCol; iCol++) {
-    T sum = 0;
-    for (int iRow = 0; iRow < nbRow; iRow++)
+    T sum(0);
+    for (int iRow = 0; iRow < nbRow; iRow++) {
       sum += FACexp(iRow, iCol);
+    }
     SumIneq(iCol) = sum;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FACexp, SumIneq, os);
-  if (eSol.PrimalDefined && eSol.DualDefined)
+  if (eSol.PrimalDefined && eSol.DualDefined) {
     return true;
+  }
   return false;
 }
 
