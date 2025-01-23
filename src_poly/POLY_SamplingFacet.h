@@ -65,24 +65,51 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #ifdef DEBUG_SAMPLING_FACET
   os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur << " nbOper=" << nbOper << "\n";
 #endif
-  vectface ListFace(EXT.rows());
-  std::unordered_set<size_t> set_incd;
-  auto FuncInsert = [&](Face const &eFace) -> void {
-#ifdef DEBUG_SAMPLING_FACET_DISABLE
-    os << "SAMP: eFace.count()=" << eFace.count() << "\n";
-    os << "SAMP: ListFace=";
-    for (auto &fFace : ListFace) {
-      os << fFace.count() << " ";
+  //
+  // The database and the functionality
+  //
+  std::unordered_map<size_t, Face> map_done;
+  std::unordered_map<size_t, Face> map_undone;
+  auto get_vectface=[&]() -> vectface {
+    vectface ListFace(EXT.rows());
+    for (auto & kv: map_done) {
+      ListFace.push_back(kv.second);
     }
-    os << "\n";
-#endif
-    size_t incd = eFace.count();
-    if (set_incd.count(incd) == 1) {
+    for (auto & kv: map_undone) {
+      ListFace.push_back(kv.second);
+    }
+    return ListFace;
+  };
+  auto func_insert=[&](Face const& f) -> void {
+    size_t incd = f.count();
+    if (map_done.count(incd) == 1) {
+      // already present
       return;
     }
-    ListFace.push_back(eFace);
-    set_incd.insert(incd);
+    if (map_undone.count(incd) == 1) {
+      // already present
+      return;
+    }
+    map_undone[incd] = f;
   };
+  auto set_as_done=[&](Face const& f) -> void {
+    size_t incd = f.count();
+    map_undone.erase(incd);
+    map_done[incd] = f;
+  };
+  auto get_undone=[&]() -> vectface {
+    vectface vf_undone(EXT.rows());
+    for (auto & kv: map_undone) {
+      vf_undone.push_back(kv.second);
+    }
+    return vf_undone;
+  };
+  auto get_nbcase=[&]() -> size_t {
+    return map_done.size() + map_undone.size();
+  };
+  //
+  // The non recursive case
+  //
   if (!DoRecur) {
     auto comp_dd = [&]() -> vectface {
       if (is_method_supported<T>(prog)) {
@@ -102,47 +129,50 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     os << "|SAMP: ListIncd, comp_dd|=" << time << "\n";
 #endif
     for (auto &eFace : ListIncd) {
-      FuncInsert(eFace);
+      func_insert(eFace);
     }
 #ifdef DEBUG_SAMPLING_FACET
-    os << "SAMP: DirectDualDesc |ListFace|=" << ListFace.size() << "\n";
+    os << "SAMP: DirectDualDesc |ListFace|=" << get_nbcase() << "\n";
 #endif
     nbOper++;
-    return ListFace;
+    return get_vectface();
   }
   Face eInc = FindOneInitialVertex(EXT, os);
-  FuncInsert(eInc);
-  size_t start = 0;
+  func_insert(eInc);
   while (true) {
-    size_t nbCases = ListFace.size();
+    size_t nbCases = get_nbcase();
 #ifdef DEBUG_SAMPLING_FACET
-    os << "SAMP: while loop start=" << start << " nbCases=" << nbCases << "\n";
+    os << "SAMP: while nbCases=" << nbCases << "\n";
 #endif
-    for (size_t iC=start; iC<nbCases; iC++) {
-      size_t nbCaseBefore = ListFace.size();
+    vectface vf_undone = get_undone();
+    if (vf_undone.size() == 0) {
+#ifdef DEBUG_SAMPLING_FACET
+      os << "SAMP: Nothing more to do, exiting\n";
+#endif
+      get_vectface();
+    }
+    for (auto & eFace : vf_undone) {
+      set_as_done(eFace);
+      size_t nbCaseBefore = get_nbcase();
       nbOper++;
-      Face eFace = ListFace[iC];
-#ifdef DEBUG_SAMPLING_FACET_DISABLE
-      os << "SAMP: len=" << len << " dim=" << dim << " treating iC=" << iC << " |eFace|=" << eFace.size() << "/" << eFace.count() << "\n";
-#endif
       MyMatrix<T> EXTred = SelectRow(EXT, eFace);
       vectface ListRidge =
         Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbOper, os);
       SimplifiedFlippingFramework<T> sff(EXT, eFace, os);
       for (auto &eRidge : ListRidge) {
         Face eFlip = sff.FlipFace(eRidge);
-        FuncInsert(eFlip);
+        func_insert(eFlip);
       }
-      size_t nbCaseAfter = ListFace.size();
+      size_t nbCaseAfter = get_nbcase();
       // We have enough, ending the stuff.
       if (maxnbsize != -1) {
-        int siz = ListFace.size();
+        int siz = get_nbcase();
         if (siz > maxnbsize) {
 #ifdef DEBUG_SAMPLING_FACET
           os << "SAMP: Ending by maxsize criterion\n";
           os << "SAMP: siz=" << siz << " maxnbsize=" << maxnbsize << "\n";
 #endif
-          return ListFace;
+          return get_vectface();
         }
       }
       // Too many calls, we drop out
@@ -151,32 +181,20 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #ifdef DEBUG_SAMPLING_FACET
           os << "SAMP: Ending by maxnboper\n";
 #endif
-          return ListFace;
+          return get_vectface();
         }
       }
-      // Aggressive termination if selected, we 
+      // Aggressive termination if selected, we
       if (greedy_termination) {
         if (nbCaseBefore == nbCaseAfter) {
 #ifdef DEBUG_SAMPLING_FACET
           os << "SAMP: Ending due to lack of progress\n";
 #endif
-          return ListFace;
+          return get_vectface();
         }
       }
     }
-    start = nbCases;
-    // All orbits have been treated.
-    if (nbCases == ListFace.size()) {
-#ifdef DEBUG_SAMPLING_FACET
-      os << "SAMP: Ending since all orbits are treated\n";
-#endif
-      break;
-    }
   }
-#ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: RecursiveDualDesc |ListFace|=" << ListFace.size() << "\n";
-#endif
-  return ListFace;
 }
 
 template <typename T>
@@ -217,11 +235,6 @@ DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
         }
       }
     }
-  }
-  if (prog != "lrs" && prog != "cdd") {
-    std::cerr << "SAMP: We have prog=" << prog << "\n";
-    std::cerr << "SAMP: but the only allowed input formats are lrs and cdd\n";
-    throw TerminalException{1};
   }
   recSamplingOption eOption;
   eOption.maxnboper = maxnboper;
