@@ -68,8 +68,8 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   //
   // The database and the functionality
   //
-  std::unordered_map<size_t, Face> map_done;
-  std::unordered_map<size_t, Face> map_undone;
+  std::unordered_map<size_t, Face> map_done; // no ordering
+  std::map<size_t, Face> map_undone; // ordering is important.
   auto get_vectface=[&]() -> vectface {
     vectface ListFace(EXT.rows());
     for (auto & kv: map_done) {
@@ -147,9 +147,8 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   Face eInc = FindOneInitialVertex(EXT, os);
   func_insert(eInc);
   while (true) {
-    size_t nbCases = get_nbcase();
 #ifdef DEBUG_SAMPLING_FACET
-    os << "SAMP: while nbCases=" << nbCases << "\n";
+    os << "SAMP: while nbCases=" << get_nbcase() << "\n";
 #endif
     vectface vf_undone = get_undone();
     if (vf_undone.size() == 0) {
