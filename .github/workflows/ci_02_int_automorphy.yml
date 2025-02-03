@@ -65,8 +65,6 @@ jobs:
 
       - name: Build test code
         run: |
-          ls
-          echo "After ls"
 
           pwd
           echo "After pwd"
@@ -80,19 +78,13 @@ jobs:
           echo "After nauty compilation"
 
           # BLISS
-          echo "Step 1"
-          ls work
-          echo "Step 2"
-          ls work/polyhedral_common
-          echo "Step 3"
-          ls work/polyhedral_common/polyhedral_common
-          echo "Step 4"
-          ls work/polyhedral_common/polyhedral_common/basic_common_cpp
-          echo "Step 5"
-          ls work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib
-          echo "Step 6"
-          ls work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
-          echo "Step 7"
+          echo "After Step 1"
+          cd /home/runner && ls work/polyhedral_common/polyhedral_common
+          echo "After Step 2"
+          cd /home/runner && ls work/polyhedral_common/polyhedral_common/basic_common_cpp
+          echo "After Step 3"
+          cd /home/runner && ls work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib
+          echo "After Step 4"
           cd /home/runner && unzip work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
           mkdir -p /home/runner/opt/libbliss/lib
           mkdir -p /home/runner/opt/libbliss/include
