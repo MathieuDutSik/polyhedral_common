@@ -73,8 +73,17 @@ jobs:
           pwd
           echo "After nauty compilation"
 
-          mkdir basic_common_cpp/ExternalLib/bliss/build
-          cd basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH .. && make all install && cd ../../../..
+          # BLISS
+          cd /home/runner && unzip work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
+          mkdir -p /home/runner/opt/libbliss/lib
+          mkdir -p /home/runner/opt/libbliss/include
+          echo "After directory creation"
+          cd /home/runner/opt/libbliss/lib && cmake /home/runner/bliss-0.77 && make
+          echo "After compilation"
+          cd /home/runner/opt/libbliss/include && cp /home/runner/bliss-0.77/src/*.hh .
+          echo "After header files copy"
+          cd /home/runner/work/polyhedral_common/polyhedral_common
+          echo "After cd"
           pwd
           echo "After bliss compilation"
 
