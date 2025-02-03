@@ -54,7 +54,7 @@ TestEquiv:=function(eList)
         Print("eGram2=\n");
         PrintArray(eGram2);
         Print("TestEquiv: Failed at U = fail\n");
-        return false;
+        return rec(fct:="TestEquiv", eGram1:=eGram1, eGram2:=eGram2, eP:=eP);
     fi;
     if U * eGram1 * TransposedMat(U) <> eGram2 then
         Print("TestEquiv: Failed at U * eGram1 * TransposedMat(U) <> eGram2\n");
@@ -159,7 +159,7 @@ TestOrbitIsotropic:=function(eList, kDim)
 end;
 
 FullTest:=function()
-    local eRec, ListRec, eList, k;
+    local eRec, ListRec, eList, k, result;
     ListRec:=[];
     Add(ListRec, rec(eList:=["U", "2U"], k:=2));
     Add(ListRec, rec(eList:=["U", "2U", "A2"], k:=2));
@@ -172,17 +172,20 @@ FullTest:=function()
         Print("Working with eRec=", eRec, "\n");
         eList:=eRec.eList;
         k:=eRec.k;
-        if TestStab(eList)=false then
+        result:=TestStab(eList);
+        if result<>true then
             Print("Failed the TestStab\n");
-            return false;
+            return result;
         fi;
-        if TestEquiv(eList)=false then
+        result:=TestEquiv(eList);
+        if result<>true then
             Print("Failed the TestEquiv\n");
-            return false;
+            return result;
         fi;
-        if TestOrbitRepresentative(eList)=false then
+        result:=TestOrbitRepresentative(eList);
+        if result<>true then
             Print("Failed the TestOrbitRepresentative\n");
-            return false;
+            return result;
         fi;
 #        if TestOrbitIsotropic(eList, k)=false then
 #            return false;
@@ -193,7 +196,7 @@ end;
 
 result:=FullTest();
 CI_Decision_Reset();
-if result=false then
+if result<>true then
     # Error case
     Print("Error case\n");
 else
