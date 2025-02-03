@@ -78,19 +78,11 @@ jobs:
           echo "After nauty compilation"
 
           # BLISS
-          echo "After Step 1"
-          cd /home/runner && ls work/polyhedral_common/polyhedral_common
-          echo "After Step 2"
-          cd /home/runner && ls work/polyhedral_common/polyhedral_common/basic_common_cpp
-          echo "After Step 3"
-          cd /home/runner && ls work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib
-          echo "After Step 4"
           cd /home/runner && unzip work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
           mkdir -p /home/runner/opt/libbliss/lib
           mkdir -p /home/runner/opt/libbliss/include
           cd /home/runner/opt/libbliss/lib && cmake /home/runner/bliss-0.77 && make
           cd /home/runner/opt/libbliss/include && cp /home/runner/bliss-0.77/src/*.hh .
-          cd /home/runner/work/basic_common_cpp/basic_common_cpp
           cd /home/runner/work/polyhedral_common/polyhedral_common
           pwd
           echo "After bliss compilation"
