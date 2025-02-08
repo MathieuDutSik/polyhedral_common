@@ -900,8 +900,9 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   }
   map_vert_nRow[nWei + 1] = nbRow;
   std::vector<std::pair<int, int>> f_vect;
-  for (auto &kv : map_vert_nRow)
+  for (auto &kv : map_vert_nRow) {
     f_vect.push_back({kv.first, kv.second});
+  }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   f_check(f_vect, 3);
 #endif

@@ -666,28 +666,6 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
 }
 
 template <typename T, typename Tint>
-void check_shvec_info_request(T_shvec_info<T, Tint> const &info,
-                              T_shvec_request<T> const &request) {
-  if (request.mode == TempShvec_globals::TEMP_SHVEC_MODE_LORENTZIAN) {
-    MyVector<T> c = request.coset;
-    for (auto &eV : info.short_vectors) {
-      MyVector<T> V_T = UniversalVectorConversion<T, Tint>(eV);
-      T norm(0);
-      for (int i = 0; i < request.dim; i++) {
-        for (int j = 0; j < request.dim; j++) {
-          norm += (V_T(i) + c(i)) * (V_T(j) + c(j)) * request.gram_matrix(i, j);
-        }
-      }
-      if (norm > request.bound) {
-        std::cerr << "Inconsistency in check_shvec_info_request\n";
-        std::cerr << "norm=" << norm << " bound=" << request.bound << "\n";
-        throw TerminalException{1};
-      }
-    }
-  }
-}
-
-template <typename T, typename Tint>
 T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
                                      int mode,
                                      [[maybe_unused]] std::ostream &os) {
@@ -704,17 +682,9 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
 #ifdef TIMINGS_SHVEC
   os << "|SHVEC: T_computeShvec_Kernel|=" << time << "\n";
 #endif
-#ifdef SANITY_CHECK_SHVEC
-  std::cerr << "Case 1\n";
-  check_shvec_info_request(info1, ePair.first);
-#endif
   T_shvec_info<T, Tint> info2 = ApplyReductionToShvecInfo(info1, ePair.second);
 #ifdef TIMINGS_SHVEC
   os << "|SHVEC: ApplyReductionToShvecInfo|=" << time << "\n";
-#endif
-#ifdef SANITY_CHECK_SHVEC
-  std::cerr << "Case 2\n";
-  check_shvec_info_request(info2, request);
 #endif
   return info2;
 }
