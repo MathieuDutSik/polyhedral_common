@@ -147,19 +147,25 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     MapVertexBlock[iRow] = get_T_idx(val);
   }
   if (canonically) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: canonically reordering\n";
+#endif
     std::pair<std::vector<T>, std::vector<int>> rec_pair =
         GetReorderingInfoWeight(ListWeight);
     const std::vector<int> &g = rec_pair.second;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: |g|=" << g.size() << "\n";
     os << "WMS: |MapVertexBlock|=" << MapVertexBlock.size() << "\n";
     os << "WMS: nbRow=" << nbRow << "\n";
+#endif
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
+      int NewIdx = g[MapVertexBlock[iRow]];
+      MapVertexBlock[iRow] = NewIdx;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "WMS:   iRow=" << iRow << "\n";
       os << "WMS:   MapVertexBlock[iRow]=" << MapVertexBlock[iRow] << "\n";
-      int NewIdx = g[MapVertexBlock[iRow]];
       os << "WMS:   NewIdx=" << NewIdx << "\n";
-      MapVertexBlock[iRow] = NewIdx;
+#endif
     }
   }
   std::vector<std::vector<Tidx>> ListBlocks(ListWeight.size());
@@ -1160,16 +1166,51 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   int sum_adj = 0;
-  int nb_error = 0;
+  int nb_error01 = 0;
+  int nb_error02 = 0;
+  int nb_error12 = 0;
+  size_t sum_deg0 = 0;
+  size_t sum_deg1 = 0;
+  size_t sum_deg2 = 0;
   for (size_t iVert = 0; iVert < nbVertTot; iVert++) {
     int deg0 = s.d[iVert];
     int deg1 = ListDegExpe1[iVert];
     int deg2 = ListDegExpe2[iVert];
-    if (deg0 != deg1 || deg0 != deg2 || deg1 != deg2) {
+    sum_deg0 += static_cast<size_t>(deg0);
+    sum_deg1 += static_cast<size_t>(deg1);
+    sum_deg2 += static_cast<size_t>(deg2);
+    if (deg0 != deg1) {
+      std::cerr << "iVert=" << iVert << " deg0=" << deg0
+                << " deg1=" << deg1;
+      if (deg0 > deg1) {
+        std::cerr << " A";
+      } else {
+        std::cerr << " B";
+      }
+      std::cerr << "\n";
+      nb_error01++;
+    }
+    if (deg0 != deg2) {
       std::cerr << "iVert=" << iVert << " deg0=" << s.d[iVert]
-                << " deg1=" << ListDegExpe1[iVert]
-                << " deg2=" << ListDegExpe2[iVert] << "\n";
-      nb_error++;
+                << " deg2=" << deg2;
+      if (deg0 > deg2) {
+        std::cerr << " A";
+      } else {
+        std::cerr << " B";
+      }
+      std::cerr << "\n";
+      nb_error02++;
+    }
+    if (deg1 != deg2) {
+      std::cerr << "iVert=" << iVert << " deg1=" << deg1
+                << " deg2=" << deg2;
+      if (deg1 > deg2) {
+        std::cerr << " A";
+      } else {
+        std::cerr << " B";
+      }
+      std::cerr << "\n";
+      nb_error12++;
     }
     sum_adj += ListDegExpe2[iVert];
   }
@@ -1178,8 +1219,16 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
       (static_cast<double>(nbVertTot) * static_cast<double>(nbVertTot - 1));
   os << "WMS: sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent
      << " frac_adj=" << frac_adj << "\n";
-  if (nb_error > 0) {
-    std::cerr << "nb_error=" << nb_error << "\n";
+  std::cerr << "WMS: nb_error01=" << nb_error01
+            << "  nb_error02=" << nb_error02
+            << "  nb_error12=" << nb_error12
+            << "\n";
+  std::cerr << "WMS: sum_deg0=" << sum_deg0
+            << "  sum_deg1=" << sum_deg1
+            << "  sum_deg2=" << sum_deg2
+            << "\n";
+  if (nb_error01 + nb_error02 + nb_error12 > 0) {
+    std::cerr << "some error occurred\n";
     throw TerminalException{1};
   }
 #endif
@@ -1326,7 +1375,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   std::vector<int> StatusCase(nbCase);
   size_t idx = 0;
   auto set_status_case = [&]() -> void {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: set_status_case, begin\n";
+#endif
     for (size_t iCase = 0; iCase < nbCase; iCase++)
       StatusCase[iCase] = 0;
     for (size_t u = 0; u < idx; u++) {
@@ -1334,7 +1385,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       if (f_covered[pos] == 0)
         StatusCase[ListIdx[u]] = 1;
     }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: set_status_case, end\n";
+#endif
   };
   auto sum_status_case = [&]() -> int {
     int sum = 0;
@@ -1350,8 +1403,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
         return false;
       set_status_case();
       int sum_new = sum_status_case();
-      if (sum_new > sum_prev)
+      if (sum_new > sum_prev) {
         return true;
+      }
     }
   };
   while (true) {
