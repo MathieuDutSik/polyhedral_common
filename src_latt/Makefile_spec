@@ -6,8 +6,8 @@
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= TSPACE_FileFormatConversion
-#PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
-PROGRAM		= TSPACE_Stabilizer
+PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
+#PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
@@ -63,6 +63,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 #COPTIONS        =
 #COPTIONS        = -DDEBUG_ASCENDING_CHAINS_COSETS -DTIMINGS_ASCENDING_CHAINS_COSETS
 COPTIONS        = -DDEBUG -DSANITY_CHECK -DTIMINGS
+#COPTIONS        = -DDEBUG_WEIGHT_MATRIX_SPECIFIED -DDEBUG_TSPACE_FUNCTIONS
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)

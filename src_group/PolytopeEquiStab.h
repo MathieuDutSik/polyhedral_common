@@ -972,7 +972,7 @@ DataMapping<Tidx> ExtendPartialAutomorphism(
 //    ---In other words, the folding is done at the same step
 //       as when e go from edge colored to vertex colored
 //       graphs.
-
+//
 // ---ListMat is assumed to be symmetric
 // ---Note that EXT does not have to be of full rank.
 //    It makes perfect sense to compute some group
@@ -984,6 +984,9 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
                           std::vector<T> const &Vdiag, F f,
                           [[maybe_unused]] std::ostream &os) {
   bool is_symm = is_family_symmmetric(ListMat);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: FCT_ListMat_Vdiag: is_symm=" << is_symm << "\n";
+#endif
   size_t nbRow = EXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
@@ -1276,7 +1279,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
     MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat2)) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-      os << "PES: Not equiv from TestEqualityMatrix from iMat=" << iMat << "\n";
+      os << "PES: Not equiv from TestEqualityMatrix from iMat=" << iMat << "/" << nMat << "\n";
 #endif
       return {};
     }

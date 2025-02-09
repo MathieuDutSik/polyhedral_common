@@ -441,9 +441,9 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP: IsBravaisSpace: |Big_ListMat}=" << Big_ListMat.rows() << " / "
+  os << "TSP: IsBravaisSpace: |Big_ListMat|=" << Big_ListMat.rows() << " / "
      << Big_ListMat.cols() << "\n";
-  os << "TSP: IsBravaisSpace: |Big_BasisInv}=" << Big_BasisInv.rows() << " / "
+  os << "TSP: IsBravaisSpace: |Big_BasisInv|=" << Big_BasisInv.rows() << " / "
      << Big_BasisInv.cols() << "\n";
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
     std::cerr << "The elements of ListMat are not in the invariant space which "
@@ -614,12 +614,12 @@ GetFamilyDiscMatrices(MyMatrix<T> const &eG,
   std::vector<MyMatrix<T>> ListDisc{eG};
   for (auto &eComm : ListComm) {
     MyMatrix<T> prod = eComm * eG;
-    ListDisc.push_back(prod);
+    ListDisc.emplace_back(std::move(prod));
   }
   for (auto &subspace : ListSubspace) {
     MyMatrix<T> ProjMat = GetOrthogonalProjectorMatrix(eG, subspace);
     MyMatrix<T> prod = ProjMat * eG;
-    ListDisc.push_back(prod);
+    ListDisc.emplace_back(std::move(prod));
   }
   return ListDisc;
 }
@@ -855,14 +855,23 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
   if (SHV1_T.rows() != SHV2_T.rows()) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Exiting here at |SHV1| <> |SHV2|\n";
+#endif
     return {};
   }
   int n_row = SHV1_T.rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: n_row=" << n_row << "\n";
+#endif
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
   std::vector<MyMatrix<T>> ListMat1 =
       GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
   std::vector<MyMatrix<T>> ListMat2 =
       GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: |ListMat1|=" << ListMat1.size() << " |ListMat1|=" << ListMat1.size() << "\n";
+#endif
   std::optional<std::vector<Tidx>> opt1 =
       TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);

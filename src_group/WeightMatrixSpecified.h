@@ -672,10 +672,11 @@ inline typename std::enable_if<is_symm, size_t>::type
 evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
             size_t iVert, size_t jVert, F2 f2) {
   if (jVert == nbRow + 1) {
-    if (iVert == nbRow)
+    if (iVert == nbRow) {
       return nWei;
-    else
+    } else {
       return nWei + 1;
+    }
   } else {
     if (jVert == nbRow) {
       return map.at(f2(iVert));
@@ -923,7 +924,7 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
 }
 
 template <typename T, bool is_symm, typename F1, typename F2>
-SimplifiedVectexColoredGraph
+SimplifiedVertexColoredGraph
 GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
                  std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
@@ -1096,7 +1097,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
     for (size_t iH = 0; iH < hS; iH++)
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
 
-  SimplifiedVectexColoredGraph s =
+  SimplifiedVertexColoredGraph s =
       GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
   // Now setting up the adjacencies
   int pos = 0;
@@ -1239,6 +1240,16 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   return s;
 }
 
+template <typename TidxC, typename Tidx, bool is_symm>
+std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
+GetGroupCanonicalization_KnownSignature_TidxC(SimplifiedVertexColoredGraph const& s, size_t const& nbRow, std::ostream& os) {
+  std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
+    GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow, os);
+  std::vector<Tidx> MapVectRev2 =
+    GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(nbRow, ePair.first, os);
+  return {std::move(MapVectRev2), std::move(ePair.second)};
+}
+
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalization_KnownSignature(
@@ -1256,48 +1267,20 @@ GetGroupCanonicalization_KnownSignature(
   os << "WMS: Before calling GetSimplifiedVCG from "
         "GetGroupCanonicalization_KnownSignature\n";
 #endif
-  SimplifiedVectexColoredGraph s =
+  SimplifiedVertexColoredGraph s =
       GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   if (s.nbVert < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    using TidxC = uint8_t;
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
-                                                                    os);
-    std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
-            nbRow, ePair.first, os);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalization_KnownSignature_TidxC<uint8_t,Tidx,is_symm>(s, nbRow, os);
   }
   if (s.nbVert < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    using TidxC = uint16_t;
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
-                                                                    os);
-    std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
-            nbRow, ePair.first, os);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalization_KnownSignature_TidxC<uint16_t,Tidx,is_symm>(s, nbRow, os);
   }
   if (s.nbVert < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    using TidxC = uint32_t;
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
-                                                                    os);
-    std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
-            nbRow, ePair.first, os);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalization_KnownSignature_TidxC<uint32_t,Tidx,is_symm>(s, nbRow, os);
   }
 #if !defined __APPLE__
   if (s.nbVert < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    using TidxC = uint64_t;
-    std::pair<std::vector<TidxC>, std::vector<std::vector<Tidx>>> ePair =
-        GRAPH_GetCanonicalOrdering_ListGenerators_Simp<TidxC, Tidx>(s, nbRow,
-                                                                    os);
-    std::vector<Tidx> MapVectRev2 =
-        GetCanonicalizationVector_KernelBis<Tidx, TidxC, is_symm>(
-            nbRow, ePair.first, os);
-    return {std::move(MapVectRev2), std::move(ePair.second)};
+    return GetGroupCanonicalization_KnownSignature_TidxC<uint64_t,Tidx,is_symm>(s, nbRow, os);
   }
 #endif
   std::cerr << "Failed to find matching numeric in "
@@ -1321,7 +1304,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
   os << "WMS: Before calling GetSimplifiedVCG from "
         "GetStabilizerWeightMatrix_KnownSignature\n";
 #endif
-  SimplifiedVectexColoredGraph s =
+  SimplifiedVertexColoredGraph s =
       GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
   return GRAPH_GetListGenerators_Simp<Tidx>(s, nbRow, os);
 }
@@ -1477,8 +1460,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 #endif
       for (size_t u = 0; u < ListEnt.size(); u++) {
         size_t pos = ListEnt[u];
-        if (f_incorr[u] == 0)
+        if (f_incorr[u] == 0) {
           f_covered[pos] = 1;
+        }
       }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "WMS: Before IsCorrect test IsCorrect=" << IsCorrect << "\n";
