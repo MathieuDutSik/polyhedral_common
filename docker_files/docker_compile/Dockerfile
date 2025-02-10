@@ -68,18 +68,6 @@ ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
 ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
 ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
-# downloading netcdf functionality and compiling it
-RUN apt-get install -y libcurl4-openssl-dev m4
-RUN wget https://www.gfd-dennou.org/arch/netcdf/unidata-mirror/netcdf-c-4.8.0.tar.gz
-RUN wget https://fossies.org/linux/misc/netcdf-cxx4-4.3.1.tar.gz
-RUN tar -vxzf netcdf-c-4.8.0.tar.gz && cd netcdf-c-4.8.0 && export LDFLAGS="-L/opt/hdf5-1.12.0/lib -lhdf5_hl -lhdf5 -Wl,-rpath,/opt/hdf5-1.12.0/lib" && export CPPFLAGS="-I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-4.8.0 && make && make install
-RUN tar -vxzf netcdf-cxx4-4.3.1.tar.gz && cd netcdf-cxx4-4.3.1 && export LDFLAGS="-L/opt/netcdf-4.8.0/lib -lnetcdf -Wl,-rpath,/opt/netcdf-4.8.0/lib" && export CPPFLAGS="-I/opt/netcdf-4.8.0/include -I/opt/hdf5-1.12.0/include" && ./configure --prefix=/opt/netcdf-cxx4-4.3.1 && make && make install
-ENV NETCDF_CXX_PATH /opt/netcdf-cxx4-4.3.1
-ENV NETCDF_C_PATH /opt/netcdf-4.8.0
-ENV NETCDF_CXX_ALLINC "-I$NETCDF_CXX_PATH/include -I$NETCDF_C_PATH/include"
-ENV NETCDF_CXX_LINK "-L$NETCDF_CXX_PATH/lib -lnetcdf_c++4 -Wl,-rpath,$NETCDF_CXX_PATH/lib"
-
-
 # cloning polyhedral code
 RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
@@ -108,5 +96,5 @@ ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
 # Compiling polyhedral functionality
-RUN cd GIT/polyhedral_common && ./compile.sh
+RUN cd GIT/polyhedral_common && ./compile_docker.sh
 #RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh
