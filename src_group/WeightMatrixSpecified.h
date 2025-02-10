@@ -119,7 +119,7 @@ template <typename Tidx> struct VertexPartition {
 template <typename T, typename Tidx, typename F1, typename F2>
 VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
                                                     bool canonically,
-                                                    std::ostream &os) {
+                                                    [[maybe_unused]] std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "ComputeInitialVertexPartition : We have nbRow=" << nbRow
@@ -1093,9 +1093,11 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   // Now building the adjacencies for traces
   //
   int nbAdjacent = 0;
-  for (size_t iCase = 0; iCase < nbCase; iCase++)
-    for (size_t iH = 0; iH < hS; iH++)
+  for (size_t iCase = 0; iCase < nbCase; iCase++) {
+    for (size_t iH = 0; iH < hS; iH++) {
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
+    }
+  }
 
   SimplifiedVertexColoredGraph s =
       GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
