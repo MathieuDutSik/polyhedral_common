@@ -738,6 +738,9 @@ inline typename std::enable_if<is_symm, ExpandedSymbolic>::type
 get_expanded_symbolic(size_t nbWeight,
                       WeightMatrixVertexSignatures<T> const &WMVS,
                       [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  MicrosecondTime time;
+#endif
   size_t nbRow = WMVS.nbRow;
   // The old vertices, but there ar now two more vertices being added
   std::vector<std::vector<std::pair<int, int>>> list_signature;
@@ -783,6 +786,9 @@ get_expanded_symbolic(size_t nbWeight,
   // nbCase - 1 corresponds to for nbRow + 1
   vertex_to_signature.push_back(nbCase - 2);
   vertex_to_signature.push_back(nbCase - 1);
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  os << "|WMS: get_expanded_symbolic(is_symm=true)|=" << time << "\n";
+#endif
   return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
@@ -804,6 +810,9 @@ template <typename T, bool is_symm>
 inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type
 get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
                       [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  MicrosecondTime time;
+#endif
   size_t nbRow = WMVS.nbRow;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "WMS: nWei=" << nWei << " nbRow=" << nbRow << "\n";
@@ -851,8 +860,9 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
     size_t len = esign.size() / 2;
     // The off diagonal values of the old matrix. So adjacencies (V = v1, w2)
     // with v <> w.
-    for (size_t u = 0; u < len; u++)
+    for (size_t u = 0; u < len; u++) {
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
+    }
     // Adjacency (V = v1, v2) that we missed from the above
     fUpdate(e_vect, nWei, 1);
     // Adjacencies (V = v1, w1) with v  <> w.
@@ -877,8 +887,9 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
     // The adjacencies (V = v2, w1) with v <> w
-    for (size_t u = 0; u < len; u++)
+    for (size_t u = 0; u < len; u++) {
       e_vect.push_back({esign[1 + 2 * u], esign[2 + 2 * u]});
+    }
     // The adjacency (V = v2, w1) that we missed from above
     fUpdate(e_vect, nWei, 1);
     // The adjacency (V = v2, w2) for v<> w
@@ -920,6 +931,9 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   }
   vertex_to_signature.push_back(2 * n_sign_old);
   // Moving the results.
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  os << "|WMS: get_expanded_symbolic(is_symm=false)|=" << time << "\n";
+#endif
   return {std::move(list_signature), std::move(vertex_to_signature)};
 }
 
@@ -955,18 +969,9 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   ExpandedSymbolic expand =
       get_expanded_symbolic<T, is_symm>(nbWeight, WMVS, os);
   size_t nbCase = expand.list_signature.size();
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: |vertex_to_signature|=" << expand.vertex_to_signature.size()
      << "\n";
-  std::map<int, size_t> map_sign_mult;
-  for (size_t i = 0; i < expand.vertex_to_signature.size(); i++) {
-    int sign = expand.vertex_to_signature[i];
-    os << "WMS:   i=" << i << " sign=" << sign << "\n";
-    map_sign_mult[sign] += 1;
-  }
-  for (auto & kv : map_sign_mult) {
-    std::cerr << "WMS:  sign=" << kv.first << " mult=" << kv.second << "\n";
-  }
   os << "WMS: |List_signature|=" << expand.list_signature.size() << "\n";
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     os << "WMS:   iCase=" << iCase << " V =";
@@ -1197,7 +1202,8 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
     sum_deg1 += static_cast<size_t>(deg1);
     if (deg0 != deg1) {
       int delta = deg0 - deg1;
-      std::cerr << "iVert=" << iVert << " deg0=" << deg0
+      std::cerr << "i=" << i << " iVert=" << iVert << " iH=" << iH
+                << " deg0=" << deg0
                 << " deg1=" << deg1;
       if (deg0 > deg1) {
         std::cerr << " A";
@@ -1314,7 +1320,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
   ---Fproc2 : function taking the output and returning the list of generators
   ---Fproc3 : function taking all of it and returning the output.
 */
-template <bool canonically, typename T, typename Tidx, typename Tret1,
+template <bool canonically, bool is_symm, typename T, typename Tidx, typename Tret1,
           typename Tret2, typename Tret3, typename F1, typename F2, typename F3,
           typename F4, typename Fproc1, typename Fproc2, typename Fproc3>
 Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
@@ -1552,7 +1558,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     return LGenFinal;
   };
   const bool canonically = false;
-  return BlockBreakdown_Heuristic<canonically, T, Tidx, Tret1, Tret2, Tret3>(
+  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(
       nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3, os);
 }
 
@@ -1603,7 +1609,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
     return {f5(Vsubset, ePair.first), LGenFinal};
   };
   const bool canonically = true;
-  return BlockBreakdown_Heuristic<canonically, T, Tidx, Tret1, Tret2, Tret3>(
+  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(
       nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3, os);
 }
 
