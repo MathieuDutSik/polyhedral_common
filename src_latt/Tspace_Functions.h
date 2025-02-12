@@ -734,6 +734,21 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV.rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: LINSPA_ComputeStabilizer n_row=" << n_row << "\n";
+  std::unordered_set<MyVector<Tint>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = GetMatrixRow(SHV, i_row);
+    set.insert(V);
+  }
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = - GetMatrixRow(SHV, i_row);
+    if (set.count(V) == 0) {
+      std::cerr << "The vector V is missing from set\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   std::vector<T> Vdiag(n_row, 0);
   std::vector<MyMatrix<T>> ListMat =
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);

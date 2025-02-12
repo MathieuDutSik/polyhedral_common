@@ -984,10 +984,10 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
                           std::vector<T> const &Vdiag, F f,
                           [[maybe_unused]] std::ostream &os) {
   bool is_symm = is_family_symmmetric(ListMat);
-#ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: FCT_ListMat_Vdiag: is_symm=" << is_symm << "\n";
-#endif
   size_t nbRow = EXT.rows();
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: FCT_ListMat_Vdiag: is_symm=" << is_symm << " nbRow=" << nbRow << "\n";
+#endif
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
     std::cerr

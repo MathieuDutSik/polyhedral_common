@@ -958,8 +958,14 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "WMS: |vertex_to_signature|=" << expand.vertex_to_signature.size()
      << "\n";
+  std::map<int, size_t> map_sign_mult;
   for (size_t i = 0; i < expand.vertex_to_signature.size(); i++) {
-    os << "WMS:   i=" << i << " sign=" << expand.vertex_to_signature[i] << "\n";
+    int sign = expand.vertex_to_signature[i];
+    os << "WMS:   i=" << i << " sign=" << sign << "\n";
+    map_sign_mult[sign] += 1;
+  }
+  for (auto & kv : map_sign_mult) {
+    std::cerr << "WMS:  sign=" << kv.first << " mult=" << kv.second << "\n";
   }
   os << "WMS: |List_signature|=" << expand.list_signature.size() << "\n";
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
@@ -978,6 +984,12 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
     int iCase = expand.vertex_to_signature[i];
     ListNbCase[iCase]++;
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  for (size_t iCase = 0; iCase < nbCase; iCase++) {
+    os << "WMS:   iCase=" << iCase << "/" << nbCase
+       << " ListNbCase=" << ListNbCase[iCase] << "\n";
+  }
+#endif
   //
   // Now computing the weight by multiplier
   //
@@ -1006,8 +1018,9 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   // improvement accross the board in memory usage, but we do not)
   //
   std::vector<size_t> ListIdx(nbMult);
-  for (size_t iMult = 0; iMult < nbMult; iMult++)
+  for (size_t iMult = 0; iMult < nbMult; iMult++) {
     ListIdx[iMult] = iMult;
+  }
   std::stable_sort(ListIdx.begin(), ListIdx.end(),
                    [&](const size_t &idx1, const size_t &idx2) -> bool {
                      return WeightByMult[idx1] > WeightByMult[idx2];
@@ -1018,7 +1031,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   //
   // Now computing the list of signature
   //
-  MyMatrix<int> MatrixAdj = ZeroMatrix<int>(hS, nbCase);
+  MyMatrix<size_t> MatrixAdj = ZeroMatrix<size_t>(hS, nbCase);
   // Adjacencies (iVert + nbVert*iH , iVert + nbVert*jH)
   size_t nb_adj1 = hS - 1;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1070,13 +1083,13 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
 #endif
     for (auto &e_pair : e_vect) {
       int iWeight = ListIdx[e_pair.first];
-      int eMult = e_pair.second;
+      size_t eMult = e_pair.second;
       size_t shift = iWeight * e_pow;
       for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
         if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2 * i_pow];
           int iH2 = V[2 * i_pow + 1];
-          // Adjacency (iVert + nbVert*iH , jVert + nbVert*iH2)
+          // Adjacency (iVert + nbVert*iH1 , jVert + nbVert*iH2)
           MatrixAdj(iH1, iCase) += eMult;
           if (iH1 != iH2) {
             // Adjacency (iVert + nbVert*iH2 , jVert + nbVert*iH1)
@@ -1092,7 +1105,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   //
   // Now building the adjacencies for traces
   //
-  int nbAdjacent = 0;
+  size_t nbAdjacent = 0;
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     for (size_t iH = 0; iH < hS; iH++) {
       nbAdjacent += ListNbCase[iCase] * MatrixAdj(iH, iCase);
@@ -1102,8 +1115,8 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
   SimplifiedVertexColoredGraph s =
       GetSimplifiedVertexColoredGraph(nbVertTot, nbAdjacent, hS);
   // Now setting up the adjacencies
-  int pos = 0;
-  std::vector<int> ListShift(nbVertTot);
+  size_t pos = 0;
+  std::vector<size_t> ListShift(nbVertTot);
   for (size_t i = 0; i < nbVertTot; i++) {
     size_t iVert = i % nbVert;
     size_t iH = i / nbVert;
@@ -1122,25 +1135,27 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
 #endif
   //
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  std::vector<int> ListDegExpe1(nbVertTot, 0);
-  std::vector<int> ListDegExpe2(nbVertTot, 0);
+  std::vector<int> ListDegExpe(nbVertTot, 0);
 #endif
   auto f_adj = [&](size_t iVert, size_t jVert) -> void {
     s.e[ListShift[iVert]] = jVert;
     ListShift[iVert]++;
+    s.e[ListShift[jVert]] = iVert;
+    ListShift[jVert]++;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    ListDegExpe1[iVert]++;
-    ListDegExpe2[jVert]++;
+    ListDegExpe[iVert]++;
+    ListDegExpe[jVert]++;
 #endif
   };
-  for (size_t iVert = 0; iVert < nbVert; iVert++)
-    for (size_t iH = 0; iH < hS - 1; iH++)
+  for (size_t iVert = 0; iVert < nbVert; iVert++) {
+    for (size_t iH = 0; iH < hS - 1; iH++) {
       for (size_t jH = iH + 1; jH < hS; jH++) {
         size_t aVert = iVert + nbVert * iH;
         size_t bVert = iVert + nbVert * jH;
         f_adj(aVert, bVert);
-        f_adj(bVert, aVert);
       }
+    }
+  }
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
       // Both for is_symm = true/false, only the iVert < nbRow needs to be
@@ -1151,39 +1166,37 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
       size_t val =
           evaluate_f2<T, is_symm>(nbRow, nbWeight, map, iVert, jVert, f2);
       size_t shift = e_pow * ListIdx[val];
-      for (size_t i_pow = 0; i_pow < e_pow; i_pow++)
+      for (size_t i_pow = 0; i_pow < e_pow; i_pow++) {
         if (f_total[shift + i_pow] == 1) {
           int iH1 = V[2 * i_pow];
           int iH2 = V[2 * i_pow + 1];
           size_t aVert = iVert + nbVert * iH1;
           size_t bVert = jVert + nbVert * iH2;
           f_adj(aVert, bVert);
-          f_adj(bVert, aVert);
           if (iH1 != iH2) {
             aVert = iVert + nbVert * iH2;
             bVert = jVert + nbVert * iH1;
             f_adj(aVert, bVert);
-            f_adj(bVert, aVert);
           }
         }
+      }
     }
   }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   int sum_adj = 0;
   int nb_error01 = 0;
-  int nb_error02 = 0;
-  int nb_error12 = 0;
   size_t sum_deg0 = 0;
   size_t sum_deg1 = 0;
-  size_t sum_deg2 = 0;
-  for (size_t iVert = 0; iVert < nbVertTot; iVert++) {
-    int deg0 = s.d[iVert];
-    int deg1 = ListDegExpe1[iVert];
-    int deg2 = ListDegExpe2[iVert];
+  std::unordered_set<std::pair<size_t, size_t>> set_case_error;
+  for (size_t i = 0; i < nbVertTot; i++) {
+    size_t iVert = i % nbVert;
+    size_t iH = i / nbVert;
+    int deg0 = s.d[i];
+    int deg1 = ListDegExpe[i];
     sum_deg0 += static_cast<size_t>(deg0);
     sum_deg1 += static_cast<size_t>(deg1);
-    sum_deg2 += static_cast<size_t>(deg2);
     if (deg0 != deg1) {
+      int delta = deg0 - deg1;
       std::cerr << "iVert=" << iVert << " deg0=" << deg0
                 << " deg1=" << deg1;
       if (deg0 > deg1) {
@@ -1191,47 +1204,26 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
       } else {
         std::cerr << " B";
       }
-      std::cerr << "\n";
+      std::cerr << " delta=" << delta << "\n";
+      std::pair<size_t, size_t> pair{iVert, iH};
+      set_case_error.insert(pair);
       nb_error01++;
     }
-    if (deg0 != deg2) {
-      std::cerr << "iVert=" << iVert << " deg0=" << s.d[iVert]
-                << " deg2=" << deg2;
-      if (deg0 > deg2) {
-        std::cerr << " A";
-      } else {
-        std::cerr << " B";
-      }
-      std::cerr << "\n";
-      nb_error02++;
-    }
-    if (deg1 != deg2) {
-      std::cerr << "iVert=" << iVert << " deg1=" << deg1
-                << " deg2=" << deg2;
-      if (deg1 > deg2) {
-        std::cerr << " A";
-      } else {
-        std::cerr << " B";
-      }
-      std::cerr << "\n";
-      nb_error12++;
-    }
-    sum_adj += ListDegExpe2[iVert];
+    sum_adj += deg1;
   }
   double frac_adj =
       static_cast<double>(sum_adj) /
       (static_cast<double>(nbVertTot) * static_cast<double>(nbVertTot - 1));
   os << "WMS: sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent
      << " frac_adj=" << frac_adj << "\n";
-  std::cerr << "WMS: nb_error01=" << nb_error01
-            << "  nb_error02=" << nb_error02
-            << "  nb_error12=" << nb_error12
-            << "\n";
-  std::cerr << "WMS: sum_deg0=" << sum_deg0
-            << "  sum_deg1=" << sum_deg1
-            << "  sum_deg2=" << sum_deg2
-            << "\n";
-  if (nb_error01 + nb_error02 + nb_error12 > 0) {
+  std::cerr << "WMS: nb_error01=" << nb_error01 << "\n";
+  std::cerr << "WMS: sum_deg0=" << sum_deg0 << "  sum_deg1=" << sum_deg1 << "\n";
+  /*
+  for (auto & case_error : set_case_error) {
+    std::cerr << "case_error: iVert=" << case_error.first << " iH=" << case_error.second << "\n";
+  }
+  */
+  if (nb_error01 > 0) {
     std::cerr << "some error occurred\n";
     throw TerminalException{1};
   }
@@ -1364,12 +1356,14 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: set_status_case, begin\n";
 #endif
-    for (size_t iCase = 0; iCase < nbCase; iCase++)
+    for (size_t iCase = 0; iCase < nbCase; iCase++) {
       StatusCase[iCase] = 0;
+    }
     for (size_t u = 0; u < idx; u++) {
       size_t pos = ListIdx[u];
-      if (f_covered[pos] == 0)
+      if (f_covered[pos] == 0) {
         StatusCase[ListIdx[u]] = 1;
+      }
     }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: set_status_case, end\n";
@@ -1385,8 +1379,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     int sum_prev = sum_status_case();
     while (true) {
       idx++;
-      if (idx == nbCase + 1)
+      if (idx == nbCase + 1) {
         return false;
+      }
       set_status_case();
       int sum_new = sum_status_case();
       if (sum_new > sum_prev) {
@@ -1401,15 +1396,17 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       int iCase = VP.MapVertexBlock[iRow];
-      if (StatusCase[iCase] == 1)
+      if (StatusCase[iCase] == 1) {
         CurrentListIdx.push_back(iRow);
+      }
     }
     size_t nbRow_res = CurrentListIdx.size();
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS: idx=" << idx << " |CurrentListIdx|=" << nbRow_res << "\n";
-#endif
     //
-    if (f3(CurrentListIdx)) {
+    bool test_f3 = f3(CurrentListIdx);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    os << "WMS: idx=" << idx << " |CurrentListIdx|=" << nbRow_res << " test_f3=" << test_f3 << "\n";
+#endif
+    if (test_f3) {
       std::vector<std::vector<Tidx>> ListBlocks;
       std::vector<size_t> ListEnt;
       for (size_t u = 0; u < nbCase; u++)
@@ -1421,7 +1418,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       auto f2_res = [&](size_t jRow) -> T { return f2(CurrentListIdx[jRow]); };
       WeightMatrixVertexSignatures<T> WMVS_res =
           ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res, os);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
       os << "WMS: WMVS_res=\n";
       PrintWMVS(WMVS_res, os);
 #endif
@@ -1432,10 +1429,14 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
       bool IsCorrect = true;
       std::vector<std::vector<Tidx>> LGen;
       Face f_incorr(ListEnt.size());
-      for (auto &eList : fproc2(ret1)) {
+      const Tret2& ret_fproc2 = fproc2(ret1);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+      os << "WMS: After fproc2 |ret_fproc2|=" << ret_fproc2.size() << "\n";
+#endif
+      for (auto &eList : ret_fproc2) {
         DataMapping<Tidx> test = f4(CurrentListIdx, eList, ListBlocks);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-        os << "WMS: After f2\n";
+        os << "WMS: After f4 test.correct=" << test.correct << "\n";
 #endif
         if (test.correct) {
           LGen.push_back(test.eGen);
@@ -1499,7 +1500,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   using Tret1 = std::vector<std::vector<Tidx>>;
   using Tret2 = std::vector<std::vector<Tidx>>;
   using Tret3 = std::vector<std::vector<Tidx>>;
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: Thematrix=\n";
   std::unordered_map<T, size_t> map_T;
   size_t n_val = 0;
@@ -1527,12 +1528,16 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 #endif
   auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    os << "WMS: GetStabilizerWeightMatrix_Heuristic(fproc1) |WMVS_res|="
+       << WMVS_res.nbRow << " nbWeight=" << WMVS_res.nbWeight << "\n";
+#endif
     return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(
         WMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS: GetStabilizerWeightMatrix_Heuristic : |ListGen|="
+    os << "WMS: GetStabilizerWeightMatrix_Heuristic(fproc2) : |ListGen|="
        << ListGen.size() << "\n";
 #endif
     return ListGen;
@@ -1541,7 +1546,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
                     [[maybe_unused]] const Tret1 &ret1,
                     const std::vector<std::vector<Tidx>> &LGenFinal) -> Tret3 {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS: GetStabilizerWeightMatrix_Heuristic : |LGenFinal|="
+    os << "WMS: GetStabilizerWeightMatrix_Heuristic(fproc3) : |LGenFinal|="
        << LGenFinal.size() << "\n";
 #endif
     return LGenFinal;
