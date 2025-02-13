@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
   boost::mpi::communicator world;
   HumanTime time1;
   try {
-    Eigen::initParallel();
     FullNamelist eFull =
         NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains();
     if (argc != 2) {

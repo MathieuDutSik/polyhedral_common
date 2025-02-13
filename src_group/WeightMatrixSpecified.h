@@ -481,7 +481,7 @@ WeightMatrixVertexSignatures<T> EmptyWeightMatrixVertexSignatures() {
 
 template <typename T> struct PairWeightMatrixVertexSignatures {
   WeightMatrixVertexSignatures<T> WMVS_direct;
-  WeightMatrixVertexSignatures<T> WMVS_tr;
+  WeightMatrixVertexSignatures<T> WMVS_dual;
 };
 
 
@@ -776,11 +776,12 @@ struct ExpandedSymbolic {
 template <typename T, bool is_symm>
 inline typename std::enable_if<is_symm, ExpandedSymbolic>::type
 get_expanded_symbolic(size_t nbWeight,
-                      WeightMatrixVertexSignatures<T> const &WMVS,
+                      PairWeightMatrixVertexSignatures<T> const &PairWMVS,
                       [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
+  WeightMatrixVertexSignatures<T> const &WMVS = PairWMVS.WMVS_direct;
   size_t nbRow = WMVS.nbRow;
   // The old vertices, but there ar now two more vertices being added
   std::vector<std::vector<std::pair<int, int>>> list_signature;
@@ -848,15 +849,20 @@ get_expanded_symbolic(size_t nbWeight,
 // The diagonal value is available via WMVS in the first value.
 template <typename T, bool is_symm>
 inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type
-get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
+get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &PairWMVS,
                       [[maybe_unused]] std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
 #endif
-  size_t nbRow = WMVS.nbRow;
+  WeightMatrixVertexSignatures<T> const &WMVS_direct = PairWMVS.WMVS_direct;
+  WeightMatrixVertexSignatures<T> const &WMVS_dual = PairWMVS.WMVS_dual;
+  size_t nbRow = WMVS_direct.nbRow;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "WMS: nWei=" << nWei << " nbRow=" << nbRow << "\n";
-  PrintWMVS(WMVS, os);
+  os << "WMS: WMVS_direct=\n";
+  PrintWMVS(WMVS_direct, os);
+  os << "WMS: WMVS_dual=\n";
+  PrintWMVS(WMVS_dual, os);
 #endif
   std::vector<std::vector<std::pair<int, int>>> list_signature;
   std::vector<int> vertex_to_signature;
@@ -872,7 +878,8 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
     }
     e_vect.push_back({i_weight, shift}); // Thus shift shouldn be positive here
   };
-  size_t n_sign_old = WMVS.ListPossibleSignatures.size();
+  size_t n_sign_direct = WMVS_direct.ListPossibleSignatures.size();
+  size_t n_sign_dual = WMVS_dual.ListPossibleSignatures.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   auto f_check = [&](std::vector<std::pair<int, int>> const &e_vect,
                      int the_case) -> void {
@@ -894,7 +901,7 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   // != w)
   // -- Add the weight nWei for just one time (the (v1,v2) adjacency)
   // -- Add the diagonal weight just one time (on
-  for (auto &esign : WMVS.ListPossibleSignatures) {
+  for (auto &esign : WMVS_direct.ListPossibleSignatures) {
     // Our vertex is named V and is of the form v1
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
@@ -922,7 +929,7 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   // and not moved)
   // -- Add the value mWei for just one time (the (v1,v2) adjacency)
   // -- Add the value nWei + 1 for two times (PURE GUESS at this point)
-  for (auto &esign : WMVS.ListPossibleSignatures) {
+  for (auto &esign : WMVS_dual.ListPossibleSignatures) {
     // Our vertex is of the form V = v2
     std::vector<std::pair<int, int>> e_vect;
     size_t len = esign.size() / 2;
@@ -946,8 +953,8 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   // -- The value nWei + 1 is for nbRow times
   std::unordered_map<int, int> map_vert_nRow;
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
-    int isign = WMVS.ListSignatureByVertex[iRow];
-    int iweight_diag = WMVS.ListPossibleSignatures[isign][0];
+    int isign = WMVS_direct.ListSignatureByVertex[iRow];
+    int iweight_diag = WMVS_direct.ListPossibleSignatures[isign][0];
     map_vert_nRow[iweight_diag]++;
   }
   map_vert_nRow[nWei + 1] = nbRow;
@@ -961,15 +968,15 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
   list_signature.push_back(f_vect);
   // Now the signatures.
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
-    int iCaseOld = WMVS.ListSignatureByVertex[i_row];
-    vertex_to_signature.push_back(iCaseOld);
+    int iCaseDirect = WMVS_direct.ListSignatureByVertex[i_row];
+    vertex_to_signature.push_back(iCaseDirect);
   }
   for (size_t i_row = 0; i_row < nbRow; i_row++) {
-    int iCaseOld = WMVS.ListSignatureByVertex[i_row];
-    int iCaseNew = iCaseOld + n_sign_old;
+    int iCaseDual = WMVS_dual.ListSignatureByVertex[i_row];
+    int iCaseNew = iCaseDual + n_sign_direct;
     vertex_to_signature.push_back(iCaseNew);
   }
-  vertex_to_signature.push_back(2 * n_sign_old);
+  vertex_to_signature.push_back(n_sign_direct + n_sign_dual);
   // Moving the results.
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   os << "|WMS: get_expanded_symbolic(is_symm=false)|=" << time << "\n";
@@ -1008,7 +1015,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
   std::vector<int> V = Pairs_GetListPair(hS, nbMult);
   size_t e_pow = V.size() / 2;
   ExpandedSymbolic expand =
-      get_expanded_symbolic<T, is_symm>(nbWeight, WMVS, os);
+      get_expanded_symbolic<T, is_symm>(nbWeight, PairWMVS, os);
   size_t nbCase = expand.list_signature.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: |vertex_to_signature|=" << expand.vertex_to_signature.size()
