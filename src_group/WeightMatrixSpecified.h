@@ -773,6 +773,12 @@ template <typename T, bool is_symm, typename F2>
 inline typename std::enable_if<!is_symm, size_t>::type
 evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
             size_t iVert, size_t jVert, F2 f2) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  if (iVert >= jVert) {
+    std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " but we should have iVert < jVert\n";
+    throw TerminalException{1};
+  }
+#endif
   size_t iVertRed = iVert % nbRow;
   size_t jVertRed = jVert % nbRow;
   if (jVert == 2 * nbRow) {
@@ -785,7 +791,23 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
       return nWei + 1;
     }
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  if (iVert >= 2 * nbRow) {
+    std::cerr << "WMS: We should have iVert < 2 * nbRow\n";
+    throw TerminalException{1};
+  }
+  if (jVert >= 2 * nbRow) {
+    std::cerr << "WMS: We should have jVert < 2 * nbRow\n";
+    throw TerminalException{1};
+  }
+#endif
   if (iVertRed == jVertRed) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    if (iVert + nbRow != jVert) {
+      std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " but we should have iVert + nbRow = jVert\n";
+      throw TerminalException{1};
+    }
+#endif
     // Because iVert < jVert, that case can only occurs if iVert = v1 and jVert
     // = v2 for some v. Case B
     return nWei;
@@ -1134,9 +1156,11 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "WMS: hS=" << hS << " nb_adj1=" << nb_adj1 << "\n";
 #endif
-  for (size_t iH = 0; iH < hS; iH++)
-    for (size_t iCase = 0; iCase < nbCase; iCase++)
+  for (size_t iH = 0; iH < hS; iH++) {
+    for (size_t iCase = 0; iCase < nbCase; iCase++) {
       MatrixAdj(iH, iCase) += nb_adj1;
+    }
+  }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   auto f_print = [&]() -> void {
     os << "WMS: hS=" << hS << " nbCase=" << nbCase << " MatrixAdj=\n";
@@ -1253,6 +1277,73 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
       }
     }
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  MyMatrix<size_t> Mval(nbVert, nbVert);
+  for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
+    if (iVert < nbRow) {
+      // Both for is_symm = true/false, only the iVert < nbRow needs to be
+      // computed.
+      f1(iVert);
+    }
+    for (size_t jVert = iVert + 1; jVert < nbVert; jVert++) {
+      size_t val =
+          evaluate_f2<T, is_symm>(nbRow, nbWeight, map, iVert, jVert, f2);
+      Mval(iVert, jVert) = val;
+      Mval(jVert, iVert) = val;
+    }
+  }
+  for (size_t iVert = 0; iVert < nbVert; iVert++) {
+    std::set<size_t> indices;
+    std::unordered_map<size_t, size_t> map_eval;
+    for (size_t jVert = 0; jVert < nbVert; jVert++) {
+      if (iVert != jVert) {
+        size_t val = Mval(iVert, jVert);
+        map_eval[val] += 1;
+        indices.insert(val);
+      }
+    }
+    std::unordered_map<size_t, size_t> map_matrix;
+    int iCase = expand.vertex_to_signature[iVert];
+    std::vector<std::pair<int, int>> const &e_vect =
+        expand.list_signature[iCase];
+    for (auto & epair : e_vect) {
+      size_t val = epair.first;
+      map_matrix[val] = epair.second;
+      indices.insert(val);
+    }
+    size_t n_error = 0;
+    for (auto & val : indices) {
+      size_t mult_eval = map_eval[val];
+      size_t mult_matrix = map_matrix[val];
+      if (mult_eval != mult_matrix) {
+        n_error += 1;
+      }
+    }
+    if (n_error > 0) {
+      os << "WMS: iVert=" << iVert << " mult_disc =";
+      for (auto & val : indices) {
+        size_t mult_eval = map_eval[val];
+        size_t mult_matrix = map_matrix[val];
+        if (mult_eval != mult_matrix) {
+          os << " (" << val << "," << mult_eval << "/" << mult_matrix << ")";
+        }
+      }
+      os << "\n";
+      os << "WMS:     iCase=" << iCase;
+      for (auto & epair : e_vect) {
+        os << " (" << epair.first << "," << epair.second << ")";
+      }
+      os << "\n";
+      os << "WMS:     eff_mult=";
+      for (auto & kv : map_eval) {
+        if (kv.second > 0) {
+          os << " (" << kv.first << "," << kv.second << ")";
+        }
+      }
+      os << "\n";
+    }
+  }
+#endif
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
       // Both for is_symm = true/false, only the iVert < nbRow needs to be
@@ -1315,7 +1406,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
   os << "WMS: sum_adj=" << sum_adj << " nbAdjacent=" << nbAdjacent
      << " frac_adj=" << frac_adj << "\n";
   std::cerr << "WMS: nb_error01=" << nb_error01 << "\n";
-  std::cerr << "WMS: sum_deg0=" << sum_deg0 << "  sum_deg1=" << sum_deg1 << "\n";
+  std::cerr << "WMS: sum_deg0=" << sum_deg0 << "  sum_deg1=" << sum_deg1 << " nbAdjacent=" << nbAdjacent << "\n";
   /*
   for (auto & case_error : set_case_error) {
     std::cerr << "case_error: iVert=" << case_error.first << " iH=" << case_error.second << "\n";
