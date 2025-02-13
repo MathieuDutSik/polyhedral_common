@@ -778,6 +778,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
   MyMatrix<T> MatVtr;
   std::vector<T> LScal;
   int i_set;
+  int i_set_tr;
   ListMatSymm_Vdiag_WeightMat(MyMatrix<T> const &_EXT,
                               std::vector<MyMatrix<T>> const &_ListMat,
                               std::vector<T> const &_Vdiag)
@@ -819,7 +820,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
         MatVtr(iMat, iCol) = eSum;
       }
     }
-    i_set = i;
+    i_set_tr = i;
   }
   std::vector<T> f2tr(int j) {
     for (int iMat = 0; iMat < nMat; iMat++) {
@@ -829,7 +830,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
       LScal[iMat] = eSum;
     }
     T eVal(0);
-    if (i_set == j)
+    if (i_set_tr == j)
       eVal = Vdiag[j];
     LScal[nMat] = eVal;
     return LScal;

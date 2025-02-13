@@ -660,6 +660,49 @@ inline typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::t
 ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
                             F1tr f1tr, F2tr f2tr,
                             [[maybe_unused]] std::ostream &os) {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  std::vector<std::vector<T>> Mat_direct;
+  for (size_t i=0; i<nbRow; i++) {
+    std::vector<T> eV;
+    f1(i);
+    for (size_t j=0; j<nbRow; j++) {
+      T val = f2(j);
+      eV.push_back(val);
+    }
+    Mat_direct.push_back(eV);
+  }
+  std::vector<std::vector<T>> Mat_dual;
+  for (size_t i=0; i<nbRow; i++) {
+    std::vector<T> eV;
+    f1tr(i);
+    for (size_t j=0; j<nbRow; j++) {
+      T val = f2tr(j);
+      eV.push_back(val);
+    }
+    Mat_dual.push_back(eV);
+  }
+  size_t n_error_direct_dual = 0;
+  size_t n_nonsymm_direct = 0;
+  size_t n_nonsymm_dual = 0;
+  for (size_t i=0; i<nbRow; i++) {
+    for (size_t j=0; j<nbRow; j++) {
+      T val1 = Mat_direct[i][j];
+      T val2 = Mat_dual[j][i];
+      if (val1 != val2) {
+        n_error_direct_dual += 1;
+      }
+      if (Mat_direct[i][j] != Mat_direct[j][i]) {
+        n_nonsymm_direct += 1;
+      }
+      if (Mat_dual[i][j] != Mat_dual[j][i]) {
+        n_nonsymm_dual += 1;
+      }
+    }
+  }
+  os << "WMS: n_error_direct_dual=" << n_error_direct_dual << "\n";
+  os << "WMS: n_nonsymm_direct=" << n_nonsymm_direct << "\n";
+  os << "WMS: n_nonsymm_dual=" << n_nonsymm_dual << "\n";
+#endif
   WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
   WeightMatrixVertexSignatures<T> WMVS_dual = ComputeVertexSignatures<T>(nbRow, f1tr, f2tr, os);
   return {std::move(WMVS_direct), std::move(WMVS_dual)};
@@ -881,6 +924,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
   size_t n_sign_direct = WMVS_direct.ListPossibleSignatures.size();
   size_t n_sign_dual = WMVS_dual.ListPossibleSignatures.size();
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: n_sign_direct=" << n_sign_direct << " n_sign_dual=" << n_sign_dual << "\n";
   auto f_check = [&](std::vector<std::pair<int, int>> const &e_vect,
                      int the_case) -> void {
     size_t sum_vert = 0;
