@@ -79,8 +79,6 @@
 #define TIMINGS_WEIGHT_MATRIX_SPECIFIED
 #endif
 
-using SignVertex = std::vector<int>;
-
 template <typename T>
 std::pair<std::vector<T>, std::vector<int>>
 GetReorderingInfoWeight(const std::vector<T> &ListWeight) {
@@ -203,10 +201,10 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
     }
     return idx - 1;
   };
-  UNORD_MAP_SPECIFIC<SignVertex, int> ValueMap_Tvs;
-  std::vector<SignVertex> ListPossibleSignatures;
+  UNORD_MAP_SPECIFIC<std::vector<int>, int> ValueMap_Tvs;
+  std::vector<std::vector<int>> ListPossibleSignatures;
   int idxSign = 0;
-  auto get_Tvs_idx = [&](SignVertex const &esign) -> int {
+  auto get_Tvs_idx = [&](std::vector<int> const &esign) -> int {
     int &idx = ValueMap_Tvs[esign];
     if (idx == 0) {
       // value is missing
@@ -462,7 +460,7 @@ template <typename T> struct WeightMatrixVertexSignatures {
   size_t nbRow;
   size_t nbWeight;
   std::vector<T> ListWeight;
-  std::vector<SignVertex> ListPossibleSignatures;
+  std::vector<std::vector<int>> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
   std::vector<int> ListNbCase;
 };
@@ -472,7 +470,7 @@ WeightMatrixVertexSignatures<T> EmptyWeightMatrixVertexSignatures() {
   size_t nbRow = 0;
   size_t nbWeight = 0;
   std::vector<T> ListWeight;
-  std::vector<SignVertex> ListPossibleSignatures;
+  std::vector<std::vector<int>> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
   std::vector<int> ListNbCase;
   return {nbRow, nbWeight, ListWeight, ListPossibleSignatures, ListSignatureByVertex, ListNbCase};
@@ -509,8 +507,9 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
     // First selection by the number of cases.
     std::pair<bool, bool> test1 =
         fctComp(WMVS.ListNbCase[idx1], WMVS.ListNbCase[idx2]);
-    if (test1.first)
+    if (test1.first) {
       return test1.second;
+    }
     // The cases with high number of cases are preferable.
     size_t len1 = WMVS.ListPossibleSignatures[idx1].size();
     size_t len2 = WMVS.ListPossibleSignatures[idx2].size();
@@ -524,8 +523,9 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
     const std::vector<int> &list_pair2 = WMVS.ListPossibleSignatures[idx2];
     for (size_t i = 0; i < len1; i++) {
       std::pair<bool, bool> test4 = fctComp(list_pair1[i], list_pair2[i]);
-      if (test4.first)
+      if (test4.first) {
         return test4.second;
+      }
     }
     return false;
   });
@@ -548,7 +548,7 @@ void PrintWMVS(WeightMatrixVertexSignatures<T> const &WMVS, std::ostream &os) {
   os << "\n";
   //
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
-    SignVertex eCase = WMVS.ListPossibleSignatures[iCase];
+    std::vector<int> eCase = WMVS.ListPossibleSignatures[iCase];
     os << "WMS: iCase=" << iCase << "/" << nbCase
        << " nb=" << WMVS.ListNbCase[iCase] << " eCase=" << eCase[0];
     size_t len = eCase.size() / 2;
@@ -582,10 +582,10 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
     }
     return idx - 1;
   };
-  UNORD_MAP_SPECIFIC<SignVertex, int> ValueMap_Tvs;
-  std::vector<SignVertex> ListPossibleSignatures;
+  UNORD_MAP_SPECIFIC<std::vector<int>, int> ValueMap_Tvs;
+  std::vector<std::vector<int>> ListPossibleSignatures;
   int idxSign = 0;
-  auto get_Tvs_idx = [&](SignVertex const &esign) -> int {
+  auto get_Tvs_idx = [&](std::vector<int> const &esign) -> int {
     int &idx = ValueMap_Tvs[esign];
     if (idx == 0) {
       // value is missing
@@ -616,12 +616,13 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
       }
     }
     esign.push_back(idx_diagonal);
-    for (int u = 0; u < len; u++)
+    for (int u = 0; u < len; u++) {
       if (list_mult[u] > 0) {
         esign.push_back(u);
         esign.push_back(list_mult[u]);
         list_mult[u] = 0;
       }
+    }
     int idx_sign = get_Tvs_idx(esign);
     esign.clear();
     ListSignatureByVertex[iRow] = idx_sign;
@@ -649,17 +650,56 @@ template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typ
 inline typename std::enable_if<is_symm, PairWeightMatrixVertexSignatures<T>>::type
 ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
                             [[maybe_unused]] F1tr f1tr, [[maybe_unused]] F2tr f2tr,
-                            [[maybe_unused]] std::ostream &os) {
+                            std::ostream &os) {
   WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
   WeightMatrixVertexSignatures<T> WMVS_dual = EmptyWeightMatrixVertexSignatures<T>();
   return {std::move(WMVS_direct), std::move(WMVS_dual)};
+}
+
+template <typename T>
+void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
+                     [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  MicrosecondTime time;
+#endif
+  // Building the permutation on the weights
+  std::pair<std::vector<T>, std::vector<int>> rec_pair =
+      GetReorderingInfoWeight(WMVS.ListWeight);
+  size_t n_Wei = WMVS.ListWeight.size();
+  const std::vector<int> &g = rec_pair.second;
+  WMVS.ListWeight = rec_pair.first;
+  // Changing the list of signatures
+  std::vector<std::vector<int>> NewListPossibleSignatures;
+  for (auto &ePossSignature : WMVS.ListPossibleSignatures) {
+    int NewDiag = g[ePossSignature[0]];
+    size_t len = ePossSignature.size() / 2;
+    std::vector<int> list_mult(n_Wei, 0);
+    for (size_t i = 0; i < len; i++) {
+      int NewVal = g[ePossSignature[1 + 2 * i]];
+      int eMult = ePossSignature[2 + 2 * i];
+      list_mult[NewVal] = eMult;
+    }
+    //
+    std::vector<int> newsign;
+    newsign.push_back(NewDiag);
+    for (size_t i = 0; i < n_Wei; i++)
+      if (list_mult[i] > 0) {
+        newsign.push_back(i);
+        newsign.push_back(list_mult[i]);
+      }
+    NewListPossibleSignatures.push_back(newsign);
+  }
+  WMVS.ListPossibleSignatures = NewListPossibleSignatures;
+#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
+  os << "|WMS: RenormalizeWMVS|=" << time << "\n";
+#endif
 }
 
 template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typename F2tr>
 inline typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::type
 ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
                             F1tr f1tr, F2tr f2tr,
-                            [[maybe_unused]] std::ostream &os) {
+                            std::ostream &os) {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   std::vector<std::vector<T>> Mat_direct;
   for (size_t i=0; i<nbRow; i++) {
@@ -702,49 +742,22 @@ ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
   os << "WMS: n_error_direct_dual=" << n_error_direct_dual << "\n";
   os << "WMS: n_nonsymm_direct=" << n_nonsymm_direct << "\n";
   os << "WMS: n_nonsymm_dual=" << n_nonsymm_dual << "\n";
+  if (n_error_direct_dual > 0) {
+    std::cerr << "We have n_error_direct_dual=" << n_error_direct_dual << "\n";
+    throw TerminalException{1};
+  }
 #endif
   WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
+  RenormalizeWMVS(WMVS_direct, os);
   WeightMatrixVertexSignatures<T> WMVS_dual = ComputeVertexSignatures<T>(nbRow, f1tr, f2tr, os);
-  return {std::move(WMVS_direct), std::move(WMVS_dual)};
-}
-
-template <typename T>
-void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
-                     [[maybe_unused]] std::ostream &os) {
-#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  MicrosecondTime time;
-#endif
-  // Building the permutation on the weights
-  std::pair<std::vector<T>, std::vector<int>> rec_pair =
-      GetReorderingInfoWeight(WMVS.ListWeight);
-  size_t n_Wei = WMVS.ListWeight.size();
-  const std::vector<int> &g = rec_pair.second;
-  WMVS.ListWeight = rec_pair.first;
-  // Changing the list of signatures
-  std::vector<SignVertex> NewListPossibleSignatures;
-  for (auto &ePossSignature : WMVS.ListPossibleSignatures) {
-    int NewDiag = g[ePossSignature[0]];
-    size_t len = ePossSignature.size() / 2;
-    std::vector<int> list_mult(n_Wei, 0);
-    for (size_t i = 0; i < len; i++) {
-      int NewVal = g[ePossSignature[1 + 2 * i]];
-      int eMult = ePossSignature[2 + 2 * i];
-      list_mult[NewVal] = eMult;
-    }
-    //
-    std::vector<int> newsign;
-    newsign.push_back(NewDiag);
-    for (size_t i = 0; i < n_Wei; i++)
-      if (list_mult[i] > 0) {
-        newsign.push_back(i);
-        newsign.push_back(list_mult[i]);
-      }
-    NewListPossibleSignatures.push_back(newsign);
+  RenormalizeWMVS(WMVS_dual, os);
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  if (WMVS_direct.ListWeight != WMVS_dual.ListWeight) {
+    std::cerr << "WMS: We have WMVS_direct.ListWeight != WMVS_dual.ListWeight which is not what we want\n";
+    throw TerminalException{1};
   }
-  WMVS.ListPossibleSignatures = NewListPossibleSignatures;
-#ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
-  os << "|WMS: RenormalizeWMVS|=" << time << "\n";
 #endif
+  return {std::move(WMVS_direct), std::move(WMVS_dual)};
 }
 
 /*
@@ -822,6 +835,12 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
     // with v != w Case A2
     return nWei + 2;
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  if (iVert >= nbRow || nbRow > jVert) {
+    std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " for the Case E entry\n";
+    throw TerminalException{1};
+  }
+#endif
   // From previous check, we are now in the situation where iVert = v1 and jVert
   // = w2 with v != w. Case E
   return map.at(f2(jVertRed));
@@ -1294,7 +1313,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
   }
   for (size_t iVert = 0; iVert < nbVert; iVert++) {
     std::set<size_t> indices;
-    std::unordered_map<size_t, size_t> map_eval;
+    std::map<size_t, size_t> map_eval;
     for (size_t jVert = 0; jVert < nbVert; jVert++) {
       if (iVert != jVert) {
         size_t val = Mval(iVert, jVert);
@@ -1302,7 +1321,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
         indices.insert(val);
       }
     }
-    std::unordered_map<size_t, size_t> map_matrix;
+    std::map<size_t, size_t> map_matrix;
     int iCase = expand.vertex_to_signature[iVert];
     std::vector<std::pair<int, int>> const &e_vect =
         expand.list_signature[iCase];
@@ -1341,6 +1360,8 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
         }
       }
       os << "\n";
+      std::cerr << "WMS: That is not matching\n";
+      throw TerminalException{1};
     }
   }
 #endif
