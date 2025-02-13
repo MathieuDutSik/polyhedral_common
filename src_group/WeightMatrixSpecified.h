@@ -467,6 +467,26 @@ template <typename T> struct WeightMatrixVertexSignatures {
   std::vector<int> ListNbCase;
 };
 
+template<typename T>
+WeightMatrixVertexSignatures<T> EmptyWeightMatrixVertexSignatures() {
+  size_t nbRow = 0;
+  size_t nbWeight = 0;
+  std::vector<T> ListWeight;
+  std::vector<SignVertex> ListPossibleSignatures;
+  std::vector<int> ListSignatureByVertex;
+  std::vector<int> ListNbCase;
+  return {nbRow, nbWeight, ListWeight, ListPossibleSignatures, ListSignatureByVertex, ListNbCase};
+}
+
+
+template <typename T> struct PairWeightMatrixVertexSignatures {
+  WeightMatrixVertexSignatures<T> WMVS_direct;
+  WeightMatrixVertexSignatures<T> WMVS_tr;
+};
+
+
+
+
 template <typename T>
 std::vector<int>
 GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
@@ -623,6 +643,26 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
           std::move(ListPossibleSignatures),
           std::move(ListSignatureByVertex),
           std::move(ListNbCase)};
+}
+
+template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typename F2tr>
+inline typename std::enable_if<is_symm, PairWeightMatrixVertexSignatures<T>>::type
+ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
+                            [[maybe_unused]] F1tr f1tr, [[maybe_unused]] F2tr f2tr,
+                            [[maybe_unused]] std::ostream &os) {
+  WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
+  WeightMatrixVertexSignatures<T> WMVS_dual = EmptyWeightMatrixVertexSignatures<T>();
+  return {std::move(WMVS_direct), std::move(WMVS_dual)};
+}
+
+template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typename F2tr>
+inline typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::type
+ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
+                            F1tr f1tr, F2tr f2tr,
+                            [[maybe_unused]] std::ostream &os) {
+  WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
+  WeightMatrixVertexSignatures<T> WMVS_dual = ComputeVertexSignatures<T>(nbRow, f1tr, f2tr, os);
+  return {std::move(WMVS_direct), std::move(WMVS_dual)};
 }
 
 template <typename T>
@@ -939,7 +979,7 @@ get_expanded_symbolic(size_t nWei, WeightMatrixVertexSignatures<T> const &WMVS,
 
 template <typename T, bool is_symm, typename F1, typename F2>
 SimplifiedVertexColoredGraph
-GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
+GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWMVS,
                  std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
   MicrosecondTime time;
@@ -947,6 +987,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, WeightMatrixVertexSignatures<T> const &WMVS,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
   os << "WMS: Beginning of GetSimplifiedVCG\n";
 #endif
+  WeightMatrixVertexSignatures<T> const &WMVS = PairWMVS.WMVS_direct;
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
   std::vector<T> const &ListWeight = WMVS.ListWeight;
@@ -1253,9 +1294,9 @@ GetGroupCanonicalization_KnownSignature_TidxC(SimplifiedVertexColoredGraph const
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
 GetGroupCanonicalization_KnownSignature(
-    WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
+    PairWeightMatrixVertexSignatures<T> const &PairWMVS, F1 f1, F2 f2,
     std::ostream &os) {
-  size_t nbRow = WMVS.nbRow;
+  size_t nbRow = PairWMVS.WMVS_direct.nbRow;
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetGroupCanonicalization_KnownSignature : We have nbRow="
@@ -1268,7 +1309,7 @@ GetGroupCanonicalization_KnownSignature(
         "GetGroupCanonicalization_KnownSignature\n";
 #endif
   SimplifiedVertexColoredGraph s =
-      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, PairWMVS, os);
   if (s.nbVert < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
     return GetGroupCanonicalization_KnownSignature_TidxC<uint8_t,Tidx,is_symm>(s, nbRow, os);
   }
@@ -1290,9 +1331,9 @@ GetGroupCanonicalization_KnownSignature(
 
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2>
 std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
-    WeightMatrixVertexSignatures<T> const &WMVS, F1 f1, F2 f2,
+    PairWeightMatrixVertexSignatures<T> const &PairWMVS, F1 f1, F2 f2,
     std::ostream &os) {
-  size_t nbRow = WMVS.nbRow;
+  size_t nbRow = PairWMVS.WMVS_direct.nbRow;
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetStabilizerWeightMatrix_KnownSignature : We have nbRow="
@@ -1305,7 +1346,7 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
         "GetStabilizerWeightMatrix_KnownSignature\n";
 #endif
   SimplifiedVertexColoredGraph s =
-      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, WMVS, os);
+      GetSimplifiedVCG<T, is_symm, F1, F2>(f1, f2, PairWMVS, os);
   return GRAPH_GetListGenerators_Simp<Tidx>(s, nbRow, os);
 }
 
@@ -1321,9 +1362,11 @@ std::vector<std::vector<Tidx>> GetStabilizerWeightMatrix_KnownSignature(
   ---Fproc3 : function taking all of it and returning the output.
 */
 template <bool canonically, bool is_symm, typename T, typename Tidx, typename Tret1,
-          typename Tret2, typename Tret3, typename F1, typename F2, typename F3,
+          typename Tret2, typename Tret3, typename F1, typename F2, typename F1tr, typename F2tr,
+          typename F3,
           typename F4, typename Fproc1, typename Fproc2, typename Fproc3>
-Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
+Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
+                               F3 f3, F4 f4,
                                Fproc1 fproc1, Fproc2 fproc2, Fproc3 fproc3,
                                std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
@@ -1422,13 +1465,17 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
         }
       auto f1_res = [&](size_t iRow) -> void { f1(CurrentListIdx[iRow]); };
       auto f2_res = [&](size_t jRow) -> T { return f2(CurrentListIdx[jRow]); };
-      WeightMatrixVertexSignatures<T> WMVS_res =
-          ComputeVertexSignatures<T>(nbRow_res, f1_res, f2_res, os);
+      auto f1tr_res = [&](size_t iRow) -> void { f1tr(CurrentListIdx[iRow]); };
+      auto f2tr_res = [&](size_t jRow) -> T { return f2tr(CurrentListIdx[jRow]); };
+      PairWeightMatrixVertexSignatures<T> PairWMVS_res =
+        ComputePairVertexSignatures<T, is_symm>(nbRow_res, f1_res, f2_res, f1tr_res, f2tr_res, os);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
-      os << "WMS: WMVS_res=\n";
-      PrintWMVS(WMVS_res, os);
+      os << "WMS: PairWMVS_res.WMVS_direct=\n";
+      PrintWMVS(PairWMVS_res.WMVS_direct, os);
+      os << "WMS: PairWMVS_res.WMVS_dual=\n";
+      PrintWMVS(PairWMVS_res.WMVS_dual, os);
 #endif
-      Tret1 ret1 = fproc1(WMVS_res, f1_res, f2_res);
+      Tret1 ret1 = fproc1(PairWMVS_res, f1_res, f2_res);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "WMS: After fproc1\n";
 #endif
@@ -1489,10 +1536,11 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
 }
 
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F1tr, typename F2tr,
           typename F3, typename F4>
 std::vector<std::vector<Tidx>>
-GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
-                                    std::ostream &os) {
+GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
+                                    F3 f3, F4 f4, std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetStabilizerWeightMatrix_Heuristic : We have nbRow=" << nbRow
@@ -1532,14 +1580,14 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   }
   os << "WMS: Beginning of GetStabilizerWeightMatrix_Heuristic\n";
 #endif
-  auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
+  auto fproc1 = [&](const PairWeightMatrixVertexSignatures<T> &PairWMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: GetStabilizerWeightMatrix_Heuristic(fproc1) |WMVS_res|="
-       << WMVS_res.nbRow << " nbWeight=" << WMVS_res.nbWeight << "\n";
+       << PairWMVS_res.WMVS_direct.nbRow << " nbWeight=" << PairWMVS_res.WMVS_direct.nbWeight << "\n";
 #endif
     return GetStabilizerWeightMatrix_KnownSignature<T, Tidx, is_symm>(
-        WMVS_res, f1_res, f2_res, os);
+        PairWMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ListGen) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1558,8 +1606,7 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
     return LGenFinal;
   };
   const bool canonically = false;
-  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(
-      nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3, os);
+  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(nbRow, f1, f2, f1tr, f2tr, f3, f4, fproc1, fproc2, fproc3, os);
 }
 
 /*
@@ -1571,10 +1618,11 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4,
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,
+          typename F1tr, typename F2tr,
           typename F3, typename F4, typename F5>
 std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>
-GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
-                                         F4 f4, F5 f5, std::ostream &os) {
+GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
+                                         F3 f3, F4 f4, F5 f5, std::ostream &os) {
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
     std::cerr << "GetGroupCanonicalizationVector_Heuristic : We have nbRow="
@@ -1588,10 +1636,13 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
   using Tret1 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
   using Tret2 = std::vector<std::vector<Tidx>>;
   using Tret3 = std::pair<std::vector<Tidx>, std::vector<std::vector<Tidx>>>;
-  auto fproc1 = [&](const WeightMatrixVertexSignatures<T> &WMVS_res,
+  auto fproc1 = [&](const PairWeightMatrixVertexSignatures<T> &PairWMVS_res,
                     auto f1_res, auto f2_res) -> Tret1 {
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    os << "WMS: GetGroupCanonicalizationVector_Heuristic, before GetGroupCanonicalization_KnownSignature\n";
+#endif
     return GetGroupCanonicalization_KnownSignature<T, Tidx, is_symm>(
-        WMVS_res, f1_res, f2_res, os);
+        PairWMVS_res, f1_res, f2_res, os);
   };
   auto fproc2 = [&](const Tret1 &ePair) -> const Tret2 & {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1609,8 +1660,7 @@ GetGroupCanonicalizationVector_Heuristic(size_t nbRow, F1 f1, F2 f2, F3 f3,
     return {f5(Vsubset, ePair.first), LGenFinal};
   };
   const bool canonically = true;
-  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(
-      nbRow, f1, f2, f3, f4, fproc1, fproc2, fproc3, os);
+  return BlockBreakdown_Heuristic<canonically, is_symm, T, Tidx, Tret1, Tret2, Tret3>(nbRow, f1, f2, f1tr, f2tr, f3, f4, fproc1, fproc2, fproc3, os);
 }
 
 // clang-format off

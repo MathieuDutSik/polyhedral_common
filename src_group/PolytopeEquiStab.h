@@ -220,6 +220,7 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   size_t nbCol = TheEXT.cols();
   using Tfield = typename overlying_field<T>::field_type;
   MyVector<T> V(nbCol);
+  MyVector<T> Vtr(nbCol);
   // Functions for computing the weighted matrix entries.
   auto f1 = [&](size_t iRow) -> void {
     for (size_t iCol = 0; iCol < nbCol; iCol++) {
@@ -233,6 +234,20 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
     T eSum(0);
     for (size_t iCol = 0; iCol < nbCol; iCol++)
       eSum += V(iCol) * TheEXT(jRow, iCol);
+    return eSum;
+  };
+  auto f1tr = [&](size_t iRow) -> void {
+    for (size_t iCol = 0; iCol < nbCol; iCol++) {
+      T eSum(0);
+      for (size_t jCol = 0; jCol < nbCol; jCol++)
+        eSum += Qinput(iCol, jCol) * TheEXT(iRow, jCol);
+      Vtr(iCol) = eSum;
+    }
+  };
+  auto f2tr = [&](size_t jRow) -> T {
+    T eSum(0);
+    for (size_t iCol = 0; iCol < nbCol; iCol++)
+      eSum += Vtr(iCol) * TheEXT(jRow, iCol);
     return eSum;
   };
   // Preemptive check that the subset is adequate
@@ -259,7 +274,7 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
                                                           PartOrd);
   };
   bool is_symm = IsSymmetricMatrix(Qinput);
-  return f(nbRow, f1, f2, f3, f4, f5, is_symm);
+  return f(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm);
 }
 
 template <typename T, typename Tidx, typename Treturn, typename F>
@@ -408,7 +423,9 @@ template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
                                                   std::ostream &os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
+  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
+               [[maybe_unused]] auto f2tr,
+               [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
@@ -442,7 +459,8 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
                                                     size_t max_offdiag,
                                                     std::ostream &os) {
   using Treturn = WeightMatrixLimited<true, T>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
+  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr, [[maybe_unused]] auto f2tr,
+               [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrixLimited<true, T>(nbRow, f1, f2, max_offdiag, os);
@@ -452,8 +470,8 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
 }
 
 template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
-          typename F2, typename F3, typename F4>
-std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3,
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4>
+std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
                                           F4 f4, bool is_symm,
                                           std::ostream &os) {
   //  using Tgr = GraphBitset;
@@ -464,11 +482,9 @@ std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F3 f3,
 #endif
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
     if (is_symm) {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(
-          nbRow, f1, f2, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     } else {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(
-          nbRow, f1, f2, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     }
   } else {
     if (is_symm) {
@@ -494,10 +510,10 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
   HumanTime time;
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
                [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
-    return f_for_stab<T, Tidx, Tidx_value, decltype(f1), decltype(f2),
-                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f3, f4,
+    return f_for_stab<T, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f1tr), decltype(f2tr),
+                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4,
                                                   is_symm, os);
   };
   Treturn ListGen =
@@ -549,8 +565,8 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT, std::ostream &os) {
 }
 
 template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
-          typename F2, typename F3, typename F4, typename F5>
-std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5,
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4, typename F5>
+std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
                                 bool is_symm, std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "f_for_canonic: nbRow=" << nbRow << "\n";
@@ -559,13 +575,11 @@ std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F3 f3, F4 f4, F5 f5,
   using Tgr = GraphListAdj;
   if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
     if (is_symm) {
-      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(
-                 nbRow, f1, f2, f3, f4, f5, os)
-          .first;
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
+        .first;
     } else {
-      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(
-                 nbRow, f1, f2, f3, f4, f5, os)
-          .first;
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
+        .first;
     }
   } else {
     if (is_symm) {
@@ -592,11 +606,11 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
 #endif
 
   using Treturn = std::vector<Tidx>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5,
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4, auto f5,
                bool is_symm) -> Treturn {
     return f_for_canonic<T, Tidx, Tidx_value, decltype(f1), decltype(f2),
-                         decltype(f3), decltype(f4), decltype(f5)>(
-        nbRow, f1, f2, f3, f4, f5, is_symm, os);
+                         decltype(f1tr), decltype(f2tr),
+                         decltype(f3), decltype(f4), decltype(f5)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, os);
   };
   std::vector<Tidx> CanonicOrd =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
@@ -760,6 +774,7 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
   int nbCol;
   int nMat;
   MyMatrix<T> MatV;
+  MyMatrix<T> MatVtr;
   std::vector<T> LScal;
   int i_set;
   ListMatSymm_Vdiag_WeightMat(MyMatrix<T> const &_EXT,
@@ -767,11 +782,11 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
                               std::vector<T> const &_Vdiag)
       : EXT(_EXT), ListMat(_ListMat), Vdiag(_Vdiag), nbRow(EXT.rows()),
         nbCol(EXT.cols()), nMat(ListMat.size()), MatV(nMat, nbCol),
-        LScal(nMat + 1) {}
+        MatVtr(nMat, nbCol), LScal(nMat + 1) {}
   void f1(int i) {
     for (int iMat = 0; iMat < nMat; iMat++) {
       for (int iCol = 0; iCol < nbCol; iCol++) {
-        T eSum = 0;
+        T eSum(0);
         for (int jCol = 0; jCol < nbCol; jCol++) {
           eSum += ListMat[iMat](jCol, iCol) * EXT(i, jCol);
         }
@@ -782,12 +797,37 @@ template <typename T> struct ListMatSymm_Vdiag_WeightMat {
   }
   std::vector<T> f2(int j) {
     for (int iMat = 0; iMat < nMat; iMat++) {
-      T eSum = 0;
+      T eSum(0);
       for (int iCol = 0; iCol < nbCol; iCol++)
         eSum += MatV(iMat, iCol) * EXT(j, iCol);
       LScal[iMat] = eSum;
     }
-    T eVal = 0;
+    T eVal(0);
+    if (i_set == j)
+      eVal = Vdiag[j];
+    LScal[nMat] = eVal;
+    return LScal;
+  }
+  void f1tr(int i) {
+    for (int iMat = 0; iMat < nMat; iMat++) {
+      for (int iCol = 0; iCol < nbCol; iCol++) {
+        T eSum(0);
+        for (int jCol = 0; jCol < nbCol; jCol++) {
+          eSum += ListMat[iMat](iCol, jCol) * EXT(i, jCol);
+        }
+        MatVtr(iMat, iCol) = eSum;
+      }
+    }
+    i_set = i;
+  }
+  std::vector<T> f2tr(int j) {
+    for (int iMat = 0; iMat < nMat; iMat++) {
+      T eSum(0);
+      for (int iCol = 0; iCol < nbCol; iCol++)
+        eSum += MatVtr(iMat, iCol) * EXT(j, iCol);
+      LScal[iMat] = eSum;
+    }
+    T eVal(0);
     if (i_set == j)
       eVal = Vdiag[j];
     LScal[nMat] = eVal;
@@ -1000,6 +1040,8 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
   ListMatSymm_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
   auto f1 = [&](size_t iRow) -> void { lms.f1(iRow); };
   auto f2 = [&](size_t jRow) -> std::vector<T> { return lms.f2(jRow); };
+  auto f1tr = [&](size_t iRow) -> void { lms.f1tr(iRow); };
+  auto f2tr = [&](size_t jRow) -> std::vector<T> { return lms.f2tr(jRow); };
   // Preemptive check that the subset is adequate
   auto f3 = [&](std::vector<Tidx> const &Vsubset) -> bool {
     return IsSubsetFullRank<T, Tfield, Tidx>(EXT, Vsubset);
@@ -1017,7 +1059,7 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
     return ExtendPartialCanonicalization<T, Tfield, Tidx>(EXT, Vsubset,
                                                           PartOrd);
   };
-  return f(nbRow, f1, f2, f3, f4, f5, is_symm);
+  return f(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm);
 }
 
 template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
@@ -1117,11 +1159,11 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
   SecondTime time;
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4,
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
                [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
     return f_for_stab<std::vector<T>, Tidx, Tidx_value, decltype(f1),
-                      decltype(f2), decltype(f3), decltype(f4)>(
-        nbRow, f1, f2, f3, f4, is_symm, os);
+                      decltype(f2), decltype(f1tr), decltype(f2tr),
+                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, is_symm, os);
   };
   Treturn ListGen = FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
       EXT, ListMat, Vdiag, f, os);
@@ -1175,11 +1217,11 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
   SecondTime time;
 #endif
   using Treturn = std::vector<Tidx>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f3, auto f4, auto f5,
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4, auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
-    return f_for_canonic<std::vector<T>, Tidx, Tidx_value, decltype(f1),
-                         decltype(f2), decltype(f3), decltype(f4),
-                         decltype(f5)>(nbRow, f1, f2, f3, f4, f5, is_symm, os);
+    return f_for_canonic<std::vector<T>, Tidx, Tidx_value, decltype(f1), decltype(f2),
+                         decltype(f1tr), decltype(f2tr), decltype(f3), decltype(f4),
+                         decltype(f5)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, os);
   };
   Treturn CanonicReord =
       FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
