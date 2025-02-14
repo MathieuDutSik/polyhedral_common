@@ -47,7 +47,7 @@ int main(int argc, char *argv[]) {
       WriteMatrixGAP(os, eSHV);
     }
     os << "]);\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of the SHORT_ReduceVectorFamilyGAP\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_ReduceVectorFamilyGAP\n";
     exit(e.eVal);

@@ -83,9 +83,9 @@ int main(int argc, char *argv[]) {
         print_result(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_IndefiniteReduction\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in IndefiniteReduction\n";
+    std::cerr << "Error in LATT_IndefiniteReduction\n";
     exit(e.eVal);
   }
   runtime(time);

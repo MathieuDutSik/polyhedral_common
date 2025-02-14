@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TestPermutationSignCanonic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TestPermutationSignCanonic\n";
     exit(e.eVal);

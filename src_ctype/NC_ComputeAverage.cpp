@@ -98,9 +98,9 @@ int main(int argc, char *argv[]) {
     for (int u = 0; u < nRow; u++) {
       std::cerr << Lines[u] << "\\\\\n";
     }
-
+    std::cerr << "Normal termination of NC_ComputeAverage\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in NC_ComputeAverage\n";
     exit(e.eVal);
   }
 }

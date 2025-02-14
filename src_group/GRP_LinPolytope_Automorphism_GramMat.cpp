@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
         full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinPolytope_Automorphism_GramMat\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Automorphism_GramMat\n";
     exit(e.eVal);

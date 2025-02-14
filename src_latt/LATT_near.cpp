@@ -176,9 +176,9 @@ int main(int argc, char *argv[]) {
         call_SV(os);
       }
     }
-    std::cerr << "Normal termination of the program LATT_near\n";
+    std::cerr << "Normal termination of LATT_near\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of LATT_near\n";
+    std::cerr << "Error in LATT_near\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -68,9 +68,9 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < len; i++)
       std::cerr << "i=" << i << " diag=" << LOut[i]
                 << " v=" << StringVector(LVect[i]) << "\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of COXDYN_FindExtensions\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in COXDYN_FindExtensions\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     } else {
       os << "Non Realizable\n";
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of SHORT_TestRealizability\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_TestRealizability\n";
     exit(e.eVal);

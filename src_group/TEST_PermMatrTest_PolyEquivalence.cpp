@@ -59,7 +59,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     process();
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_PermMatrTest_PolyEquivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_PermMatrTest_PolyEquivalence\n";
     exit(e.eVal);

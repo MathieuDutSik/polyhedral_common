@@ -56,8 +56,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of LATT_canonicalizeMultiple\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of "
-                 "LATT_canonicalizeMultiple\n";
+    std::cerr << "Error in LATT_canonicalizeMultiple\n";
     exit(e.eVal);
   }
   runtime(time);

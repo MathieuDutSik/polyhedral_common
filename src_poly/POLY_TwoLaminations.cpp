@@ -97,9 +97,9 @@ int main(int argc, char *argv[]) {
       }
     }
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_TwoLaminations\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in TEST_PolytopeIntegralPoints\n";
+    std::cerr << "Error in TEST_TwoLaminations\n";
     exit(e.eVal);
   }
   runtime(time1);

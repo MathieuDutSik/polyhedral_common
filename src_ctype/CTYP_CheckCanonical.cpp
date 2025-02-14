@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
         }
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of CTYP_CheckCanonical\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CTYP_CheckCanonical\n";
     exit(e.eVal);

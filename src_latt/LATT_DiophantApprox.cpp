@@ -36,7 +36,7 @@ int main(int argc, char *argv[]) {
     T penalty = ComputeDiophantinePenalty(V, eRes);
     std::cerr << "penalty=" << penalty << "\n";
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_DiophantApprox\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_DiophantApprox\n";
     exit(e.eVal);

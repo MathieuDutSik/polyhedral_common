@@ -79,9 +79,9 @@ int main(int argc, char *argv[]) {
     }
     MyMatrix<T> EXT;
     OutputFacets_file(EXT, GRP, TheOutput, OutFile, OutFormat, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_ReadPartialEnum\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in POLY_ReadPartialEnum\n";
     exit(e.eVal);
   }
 }

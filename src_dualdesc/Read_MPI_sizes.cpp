@@ -25,9 +25,9 @@ int main(int argc, char *argv[]) {
       }
       std::cerr << "\n";
     }
-    std::cerr << "Normal end of the program\n";
+    std::cerr << "Normal termination of Read_MPI_sizes\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in Read_MPI_sizes\n";
     exit(e.eVal);
   }
 }

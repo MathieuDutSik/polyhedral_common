@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     WriteMatrix(std::cerr, recLLL.GramMatRed);
     std::cerr << "recLLL.Pmat=\n";
     WriteMatrix(std::cerr, recLLL.Pmat);
+    std::cerr << "Normal termination of LATT_lll\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_lll\n";
     exit(e.eVal);

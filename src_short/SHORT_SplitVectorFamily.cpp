@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
       if (res == mod)
         WriteMatrix(os, ListSHV[iShort]);
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of SHORT_SplitVectorFamily\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_SplitVectorFamily\n";
     exit(e.eVal);

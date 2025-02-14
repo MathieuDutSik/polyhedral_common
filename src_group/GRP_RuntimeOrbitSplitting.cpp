@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_RuntimeOrbitSplitting\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_RuntimeOrbitSplitting\n";
     exit(e.eVal);

@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
     };
     signal(SIGINT, process_signal);
     DataBankAsioServer<Tkey, Tval>(Saving, SavingPrefix, port, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_RunTheBank\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_RunTheBank\n";
     exit(e.eVal);

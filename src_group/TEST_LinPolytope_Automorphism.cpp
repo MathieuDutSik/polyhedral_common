@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_LinPolytope_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_LinPolytope_Automorphism\n";
     exit(e.eVal);

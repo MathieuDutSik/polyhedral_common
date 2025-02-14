@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinPolytope_Invariant\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Invariant\n";
     exit(e.eVal);

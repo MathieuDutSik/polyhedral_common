@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
         throw TerminalException{1};
       }
     }
-    std::cerr << "Normal end of the program\n";
+    std::cerr << "Normal end of POLY_CheckCanonicalGAP\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_CheckCanonicalGAP\n";
     exit(e.eVal);

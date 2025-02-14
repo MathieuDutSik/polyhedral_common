@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     process_A(world, eFull);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_MPI_PerfectLorentzian\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_MPI_PerfectLorentzian\n";
     exit(e.eVal);

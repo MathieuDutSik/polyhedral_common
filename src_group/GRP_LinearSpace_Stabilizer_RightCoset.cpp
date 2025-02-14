@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     os << "), ListCos:=";
     f_print(RightCoset);
     os << ");\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinearSpace_Stabilizer_RightCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinearSpace_Stabilizer_RightCoset\n";
     exit(e.eVal);

@@ -92,9 +92,9 @@ int main(int argc, char *argv[]) {
     };
     f();
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_DirectSerialDualDesc\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in POLY_DirectSerialDualDesc\n";
     exit(e.eVal);
   }
   runtime(time1);

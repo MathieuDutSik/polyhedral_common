@@ -85,7 +85,7 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_FindIsotropic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_FindIsotropic\n";
     exit(e.eVal);

@@ -62,9 +62,9 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     RecOption rec_option = ReadInitialData(eFull);
     Process_rec_option<Tgroup>(rec_option, std::cerr);
-    std::cerr << "Normal termination of the program time=" << time << "\n";
+    std::cerr << "Normal termination of POINCARE_Initial_Computation\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POINCARE_Initial_Computation time=" << time << "\n";
+    std::cerr << "Error in POINCARE_Initial_Computation\n";
     exit(e.eVal);
   }
 }

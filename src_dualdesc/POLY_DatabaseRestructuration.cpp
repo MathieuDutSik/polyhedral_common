@@ -125,9 +125,9 @@ int main(int argc, char *argv[]) {
       delete List_FB[iProc];
       delete List_FF[iProc];
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_DatabaseRestructuration\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in POLY_DatabaseRestructuration\n";
     exit(e.eVal);
   }
   runtime(time);

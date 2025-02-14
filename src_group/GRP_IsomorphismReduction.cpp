@@ -67,9 +67,9 @@ int main(int argc, char *argv[]) {
     vectface vf_red = OrbitSplittingSet(vf, GRP);
     //
     VectVectInt_Gap_PrintFile(FileOUT, vf_red);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_IsomorphismReduction\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in GRP_IsomorphismReduction\n";
     exit(e.eVal);
   }
   runtime(time1);

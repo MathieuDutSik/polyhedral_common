@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_SerialComputeDelaunay\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_SerialComputeDelaunay\n";
     exit(e.eVal);

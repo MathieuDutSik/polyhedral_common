@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
       else
         std::cout << "The matrix is positive definite\n";
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of CheckPositiveSemiDefinite\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CheckPositiveSemiDefinite\n";
     exit(e.eVal);

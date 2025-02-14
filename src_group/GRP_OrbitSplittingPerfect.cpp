@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     OrbitSplittingPerfectFacet(BigGRP, SmaGRP, ListFaceBig, os2, os3,
                                std::cerr);
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_OrbitSplittingPerfect\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_OrbitSplittingPerfect\n";
     exit(e.eVal);

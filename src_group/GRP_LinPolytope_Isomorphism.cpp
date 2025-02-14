@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     f();
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinPolytope_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Isomorphism\n";
     exit(e.eVal);

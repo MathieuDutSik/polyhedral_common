@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_DetMinimization\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in IndefiniteLLL\n";
+    std::cerr << "Error in LATT_DetMinimization\n";
     exit(e.eVal);
   }
   runtime(time);

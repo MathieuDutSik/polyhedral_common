@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
         write_result(opt, OutFormat, os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TSPACE_Equivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Equivalence\n";
     exit(e.eVal);

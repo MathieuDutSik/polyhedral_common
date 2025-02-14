@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionEdgewalk_Isomorphism<T, Tint, Tgroup>(eFull, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk_Isomorphism\n";
     exit(e.eVal);

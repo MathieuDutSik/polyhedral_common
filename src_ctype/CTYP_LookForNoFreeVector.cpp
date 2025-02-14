@@ -112,7 +112,7 @@ int main(int argc, char *argv[]) {
     for (size_t i_try = 0; i_try < n_try; i_try++) {
       GetLocalFreenessMinimum<Tint>(dim, max_s, Prefix);
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of CTYP_LookForNoFreeVector\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CTYP_LookForNoFreeVector\n";
     exit(e.eVal);

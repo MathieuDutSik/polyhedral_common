@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
       os << "\n";
     };
     DoProcessing(M, B, f);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_ZeroOneSolutions\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ZeroOneSolutions\n";
     exit(e.eVal);

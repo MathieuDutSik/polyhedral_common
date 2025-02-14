@@ -165,7 +165,7 @@ int main(int argc, char *argv[]) {
         full_process_B<Tgroup>(arith, FileEXT, OutFormat, os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinPolytope_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Automorphism\n";
     exit(e.eVal);

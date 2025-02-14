@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
     //    Tgroup GRP =
     //    LinPolytopeIntegralWMat_Automorphism<T,Tgroup,std::vector<T>,Tidx_value>(ep))
     //    std::cerr << GRP << "\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_LinPolytopeIntegral_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_LinPolytopeIntegral_Automorphism\n";
     exit(e.eVal);

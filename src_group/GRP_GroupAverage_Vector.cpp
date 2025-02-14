@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "eVecAvg=\n";
     WriteVector(std::cerr, eVecAvg);
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_GroupAverage_Vector\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_GroupAverage_Vector\n";
     exit(e.eVal);

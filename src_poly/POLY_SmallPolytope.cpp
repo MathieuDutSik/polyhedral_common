@@ -53,9 +53,9 @@ int main(int argc, char *argv[]) {
     }
     int n_facet = n_p * n_m + n_z;
     std::cerr << "n_facet=" << n_facet << "\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_SmallPolytopes\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs\n";
+    std::cerr << "Error in POLY_SmallPolytopes\n";
     exit(e.eVal);
   }
   runtime(time1);

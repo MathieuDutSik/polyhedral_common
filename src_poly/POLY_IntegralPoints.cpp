@@ -38,7 +38,7 @@ int main(int argc, char *argv[]) {
       WriteVectorGAP(os, ePt);
     }
     os << "];\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_IntegralPoints\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_IntegralPoints\n";
     exit(e.eVal);

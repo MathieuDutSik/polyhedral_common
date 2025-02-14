@@ -138,9 +138,9 @@ int main(int argc, char *argv[]) {
         f_process_database(ePrefix);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_FindNeededBalinski\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in POLY_FindNeededBalinski\n";
     exit(e.eVal);
   }
   runtime(time1);

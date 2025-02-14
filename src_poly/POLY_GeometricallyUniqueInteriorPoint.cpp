@@ -142,7 +142,7 @@ int main(int argc, char *argv[]) {
       }
     }
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_LinearDetermineByInequalities\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_LinearDetermineByInequalities\n";
     exit(e.eVal);

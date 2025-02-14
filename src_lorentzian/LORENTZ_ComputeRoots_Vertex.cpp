@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
       std::ofstream os(file);
       prt(os);
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_ComputeRoots_Vertex\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_ComputeRoots_Vertex\n";
     exit(e.eVal);

@@ -85,9 +85,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     compute_pointedness(std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_IsPointedCone\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs\n";
+    std::cerr << "Error in POLY_IsPointedCone\n";
     exit(e.eVal);
   }
   runtime(time1);

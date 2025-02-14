@@ -129,7 +129,7 @@ int main(int argc, char *argv[]) {
         call_lrs(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_lrs_volume\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs_volume\n";
     exit(e.eVal);

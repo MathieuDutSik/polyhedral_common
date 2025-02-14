@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
       osF << "return " << GAP_logical(test) << ";\n";
     }
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_GeometricallyUniquePoint\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_GeometricallyUniquePoint\n";
     exit(e.eVal);

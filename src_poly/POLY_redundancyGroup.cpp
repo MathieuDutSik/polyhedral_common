@@ -180,7 +180,7 @@ int main(int argc, char *argv[]) {
         compute_redundancy(osF);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_redundancyClarksonBlocks\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_redundancyClarksonBlocks\n";
     exit(e.eVal);

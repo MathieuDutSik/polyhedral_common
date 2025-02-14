@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
         call_dualdesc(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_dual_description\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_dual_description\n";
     exit(e.eVal);

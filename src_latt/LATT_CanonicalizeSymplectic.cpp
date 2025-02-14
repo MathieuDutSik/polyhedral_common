@@ -50,8 +50,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of LATT_canonicalizeSymplectic\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of "
-                 "LATT_canonicalizeSymplectic\n";
+    std::cerr << "Error in LATT_canonicalizeSymplectic\n";
     exit(e.eVal);
   }
   runtime(time);

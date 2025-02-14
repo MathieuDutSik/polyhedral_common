@@ -108,7 +108,7 @@ int main(int argc, char *argv[]) {
     }
     os << "];\n";
     std::cerr << "nbFound=" << nbFound << "\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of SHORT_EnumerateCyclicCases\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_EnumerateCyclicCases\n";
     exit(e.eVal);

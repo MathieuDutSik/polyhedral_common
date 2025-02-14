@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(FileNML, eFull);
     //
     MainFunctionFaceLattice<Tgroup>(eFull);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_FaceLatticeGen\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_FaceLatticeGen\n";
     exit(e.eVal);

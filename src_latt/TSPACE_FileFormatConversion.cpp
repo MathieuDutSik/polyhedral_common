@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
     LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, std::cerr);
     WriteLinSpaceFile(FILEOUT, LinSpa);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_ConvertTspace\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ConvertTspace\n";
     exit(e.eVal);

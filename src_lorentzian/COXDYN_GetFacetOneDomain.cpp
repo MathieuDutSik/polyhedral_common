@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     os << "return ";
     WriteMatrixGAP(os, Mred);
     os << ";\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of COXDYN_GetFacetOneDomain\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in COXDYN_GetFacetOneDomain\n";
     exit(e.eVal);

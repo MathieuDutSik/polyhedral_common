@@ -53,9 +53,9 @@ int main(int argc, char *argv[]) {
     bool test = EvaluationConnectednessCriterion_Kernel(
         FAC, GRP, EXT_undone, vf_undone, f_recur, std::cerr);
     std::cerr << "Obtained result=" << test << "\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_EvaluateBalinski\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in POLY_EvaluateBalinski\n";
     exit(e.eVal);
   }
   runtime(time1);

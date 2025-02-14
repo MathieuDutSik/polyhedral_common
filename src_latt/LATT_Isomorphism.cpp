@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of LATT_Isomorphism\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of LATT_Isomorphism\n";
+    std::cerr << "Error in LATT_Isomorphism\n";
     exit(e.eVal);
   }
   runtime(time);

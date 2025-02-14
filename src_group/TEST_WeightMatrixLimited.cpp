@@ -70,7 +70,7 @@ int main(int argc, char *argv[]) {
       WeightMatrixLimited<true, T> WMatLimited2(GRP, max_offdiag, std::cerr);
       test_WMat(WMatLimited2);
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TEST_WeightMatrixLimited\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_WeightMatrixLimited\n";
     exit(e.eVal);

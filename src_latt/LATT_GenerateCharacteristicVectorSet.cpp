@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
     process_A(arithmetic_mat, arithmetic_vec, choice, MatFile, OutFile);
     std::cerr << "Normal termination of LATT_Automorphism\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Raised exception led to premature end of LATT_Automorphism\n";
+    std::cerr << "Error in LATT_Automorphism\n";
     exit(e.eVal);
   }
   runtime(time);

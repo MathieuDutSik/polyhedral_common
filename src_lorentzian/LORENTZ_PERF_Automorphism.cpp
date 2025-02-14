@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = mpz_class;
     process_C<T, Tint>(FileMatrix, OutFormat, FileOut);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_PERF_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_PERF_Automorphism\n";
     exit(e.eVal);

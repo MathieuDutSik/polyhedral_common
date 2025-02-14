@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     };
     EnumerateOrbitPrimitiveVector<int>(ListMat, pPrime, n, FCT);
     os << "];\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_VectorSplitting\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_VectorSplitting\n";
     exit(e.eVal);

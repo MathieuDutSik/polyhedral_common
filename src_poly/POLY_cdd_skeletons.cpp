@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
     std::ofstream os3(prefix_out + "_ridge_graph");
     GRAPH_PrintOutputGAP(os3, eDDA.RidgeGraph);
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_cdd_skeletons\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_cdd_skeletons\n";
     exit(e.eVal);

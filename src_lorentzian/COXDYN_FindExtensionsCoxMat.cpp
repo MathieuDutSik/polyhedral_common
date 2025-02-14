@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     std::string OutFile = argv[4];
     std::ofstream os(OutFile);
     os << "return " << StringMatrixGAP(Mtot) << ";\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of COXDYN_FindExtensionsCoxMat\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in COXDYN_FindExtensionsCoxMat\n";
     exit(e.eVal);

@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
         print_mat(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of VectFamily_Reduction\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in VectFamily_Reduction\n";
     exit(e.eVal);

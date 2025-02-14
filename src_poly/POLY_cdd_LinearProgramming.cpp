@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
         call_lp(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_cdd_LinearProgramming\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_dual_description\n";
+    std::cerr << "Error in POLY_cdd_LinearProgramming\n";
     exit(e.eVal);
   }
   runtime(time1);

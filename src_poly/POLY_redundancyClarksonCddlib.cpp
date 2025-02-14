@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "You need to compile this program with USE_CDDLIB\n";
     throw TerminalException{1};
 #endif
+    std::cerr << "Normal termination of POLY_redundancyClarksonCddlib\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_redundancyClarksonCddlib\n";
     exit(e.eVal);

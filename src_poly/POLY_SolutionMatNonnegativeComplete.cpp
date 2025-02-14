@@ -95,7 +95,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     compute_solution(std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_SolutionMatNonnegativeComplete\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_SolutionMatNonnegativeComplete\n";
     exit(e.eVal);

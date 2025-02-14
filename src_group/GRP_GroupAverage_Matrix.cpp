@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "eMatAvg=\n";
     WriteMatrix(std::cerr, eMatAvg);
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_GroupAverage_Matrix\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_GroupAverage_Matrix\n";
     exit(e.eVal);

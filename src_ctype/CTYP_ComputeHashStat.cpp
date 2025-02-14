@@ -85,8 +85,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "multiplicity=" << kv2.first << " attained " << kv2.second
                 << " times\n";
     }
+    std::cerr << "Normal termination in CTYP_ComputeHashStat\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in CTYP_ComputeHashStat\n";
     exit(e.eVal);
   }
 }

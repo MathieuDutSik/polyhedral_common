@@ -37,7 +37,7 @@ int main(int argc, char *argv[]) {
         os << " " << CanonicOrd[iRow];
       os << "\n";
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinPolytope_Canonic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Canonic\n";
     exit(e.eVal);

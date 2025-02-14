@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
       std::cerr << " " << order;
     std::cerr << "\n";
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_GetIntegralMatricesPossibleOrders\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_GetIntegralMatricesPossibleOrders\n";
     exit(e.eVal);

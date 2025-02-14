@@ -42,7 +42,7 @@ int main(int argc, char *argv[]) {
         OrbitSplittingListOrbit(BigGRP, SmaGRP, ListFaceOrbitsizes, std::cerr);
     std::cerr << "|ListFaceSma|=" << ListFaceSma.size() << "\n";
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_OrbitSplitting\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_OrbitSplitting\n";
     exit(e.eVal);

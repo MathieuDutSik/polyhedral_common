@@ -109,12 +109,12 @@ int main(int argc, char *argv[]) {
     };
     process();
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_SerialDualDesc\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong in the computation, please debug\n";
+    std::cerr << "Error in POLY_SerialDualDesc\n";
     exit(e.eVal);
   } catch (RuntimeException const &e) {
-    std::cerr << "The maximum runtime has been reached, exiting the program\n";
+    std::cerr << "The maximum runtime has been reached, exiting POLY_SerialDualDesc\n";
     // exit(e.eVal);
   }
   runtime(time1);

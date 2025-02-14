@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "\n";
 #endif
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of sv_exact\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in sv_exact\n";
     exit(e.eVal);

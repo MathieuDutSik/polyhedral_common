@@ -66,7 +66,7 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     process_A(world, eFull);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LATT_MPI_Lattice_IsoDelaunayDomain\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_MPI_Lattice_IsoDelaunayDomain\n";
     exit(e.eVal);

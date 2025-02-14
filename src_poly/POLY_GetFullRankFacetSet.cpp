@@ -43,7 +43,7 @@ int main(int argc, char *argv[]) {
     }
     os << "];\n";
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_GetFullRankFacetSet\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_GetFullRankFacetSet\n";
     exit(e.eVal);

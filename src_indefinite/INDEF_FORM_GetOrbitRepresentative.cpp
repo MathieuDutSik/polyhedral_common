@@ -88,7 +88,7 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of INDEF_FORM_GetOrbitRepresentative\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative\n";
     exit(e.eVal);

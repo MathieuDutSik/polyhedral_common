@@ -90,9 +90,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     compute_skeleton(std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_SkelettonClarkson\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs\n";
+    std::cerr << "Error in POLY_SkelettonClarkson\n";
     exit(e.eVal);
   }
   runtime(time1);

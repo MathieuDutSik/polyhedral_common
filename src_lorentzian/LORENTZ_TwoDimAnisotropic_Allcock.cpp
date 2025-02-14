@@ -102,7 +102,7 @@ int main(int argc, char *argv[]) {
     } else {
       std::cerr << "No solution were found\n";
     }
-    std::cerr << "Normal end of the program\n";
+    std::cerr << "Normal end of LORENTZ_TwoDimAnisotropic_Allcock\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_TwoDimAnisotropic_Allcock\n";
     exit(e.eVal);

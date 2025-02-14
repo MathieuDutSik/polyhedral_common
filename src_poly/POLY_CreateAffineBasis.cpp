@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
       WriteMatrixGAP(BASfs, eBasis);
       BASfs << ";\n";
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_CreateAffineBasis\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_CreateAffineBasis\n";
     exit(e.eVal);

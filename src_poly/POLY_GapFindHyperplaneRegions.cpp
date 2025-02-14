@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
       os << "]";
     }
     os << "];\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_GapFindHyperplaneRegions\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_GapFindHyperplaneRegions\n";
     exit(e.eVal);

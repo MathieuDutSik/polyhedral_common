@@ -154,9 +154,9 @@ int main(int argc, char *argv[]) {
       eFileO = argv[5];
     }
     process_B(eFileI, eFileO, method, OutFormat, arith, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_redundancy\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something wrong happenned somewhere\n";
+    std::cerr << "Error in POLY_redundancy\n";
     exit(e.eVal);
   }
   runtime(time1);

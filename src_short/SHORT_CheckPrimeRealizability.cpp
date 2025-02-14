@@ -84,7 +84,7 @@ int main(int argc, char *argv[]) {
       nbCase++;
     }
     osO << "];\n";
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of SHORT_CheckPrimeRealizability\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in SHORT_CheckPrimeRealizability\n";
     exit(e.eVal);

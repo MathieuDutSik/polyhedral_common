@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
     };
     evaluation();
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_SolutionMatNonnegative\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_SolutionMatNonnegative\n";
     exit(e.eVal);

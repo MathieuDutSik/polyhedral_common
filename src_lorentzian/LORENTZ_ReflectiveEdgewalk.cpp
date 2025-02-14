@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
       }
     }
     //
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_FundDomain_AllcockEdgewalk\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk\n";
     exit(e.eVal);

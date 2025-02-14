@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
       }
       os << ";\n";
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of GRP_LinearSpace_Equivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinearSpace_Equivalence\n";
     exit(e.eVal);

@@ -71,7 +71,7 @@ int main(int argc, char *argv[]) {
         write_group(ListGen, OutFormat, os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of TSPACE_Stabilizer\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Stabilizer\n";
     exit(e.eVal);

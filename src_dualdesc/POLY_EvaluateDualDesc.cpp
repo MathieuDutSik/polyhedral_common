@@ -77,8 +77,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "Result eProg=" << eProg << " tot_size=" << tot_size
                 << " time=" << time << "\n";
     }
+    std::cerr << "Normal termination of POLY_EvaluateDualDesc\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in POLY_EvaluateDualDesc\n";
     exit(e.eVal);
   }
 }

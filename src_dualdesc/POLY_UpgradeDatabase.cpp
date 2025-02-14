@@ -93,9 +93,9 @@ int main(int argc, char *argv[]) {
     RemoveFileIfExist(eFileFF);
     FileFace ff(eFileFF, delta);
     ff.direct_write(vfo.serial_get_std_vector_uint8_t());
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_UpgradeDatabase\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Something went wrong\n";
+    std::cerr << "Error in POLY_UpgradeDatabase\n";
     exit(e.eVal);
   }
   runtime(time);

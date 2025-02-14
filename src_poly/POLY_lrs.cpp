@@ -275,7 +275,7 @@ int main(int argc, char *argv[]) {
         call_lrs(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_lrs\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs\n";
     exit(e.eVal);

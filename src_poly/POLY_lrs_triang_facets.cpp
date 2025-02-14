@@ -126,9 +126,9 @@ int main(int argc, char *argv[]) {
         call_lrs(os);
       }
     }
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of POLY_lrs_triang_facets\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in POLY_lrs_triangulation\n";
+    std::cerr << "Error in POLY_lrs_triang_facets\n";
     exit(e.eVal);
   }
   runtime(time1);

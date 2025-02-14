@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionVinberg<T, Tint>(eFull, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_FundDomain_Vinberg\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_Vinberg\n";
     exit(e.eVal);

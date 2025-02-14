@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     ComputeLatticeIsoEdgeDomains<T, Tint, Tgroup>(world, eFull);
+    std::cerr << "Normal termination in CTYP_MPI_AdjScheme\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CTYP_MPI_AdjScheme\n";
     exit(e.eVal);

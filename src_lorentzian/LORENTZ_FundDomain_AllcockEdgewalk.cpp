@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
     MainFunctionEdgewalk<T, Tint, Tgroup>(eFull, std::cerr);
-    std::cerr << "Normal termination of the program\n";
+    std::cerr << "Normal termination of LORENTZ_FundDomain_AllcockEdgewalk\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LORENTZ_FundDomain_AllcockEdgewalk\n";
     exit(e.eVal);
