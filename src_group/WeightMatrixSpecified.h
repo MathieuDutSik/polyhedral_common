@@ -160,6 +160,7 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: |g|=" << g.size() << "\n";
     os << "WMS: |MapVertexBlock|=" << MapVertexBlock.size() << " nbRow=" << nbRow << "\n";
+    os << "WMS: ComputeInitialVertexPartition, ListWeight=" << rec_pair.first << "\n";
 #endif
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       int NewIdx = g[MapVertexBlock[iRow]];
@@ -202,7 +203,8 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
 template <typename T, typename Tidx, typename F1, typename F2>
 bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
                                    const int &iBlock, F1 f1, F2 f2,
-                                   bool canonically) {
+                                   bool canonically,
+                                   [[maybe_unused]] std::ostream &os) {
   size_t nbRow = VP.nbRow;
   size_t max_poss_rows = size_t(std::numeric_limits<Tidx>::max());
   if (nbRow >= max_poss_rows) {
@@ -261,12 +263,13 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
       }
       list_mult[idx]++;
     }
-    for (int u = 0; u < len; u++)
+    for (int u = 0; u < len; u++) {
       if (list_mult[u] > 0) {
         esign.push_back(u);
         esign.push_back(list_mult[u]);
         list_mult[u] = 0;
       }
+    }
     int idx_sign = get_Tvs_idx(esign);
     esign.clear();
     V[iBreak] = idx_sign;
@@ -280,6 +283,9 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
     std::pair<std::vector<T>, std::vector<int>> rec_pair_A =
         GetReorderingInfoWeight(ListWeight);
     ListWeight = rec_pair_A.first;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    os << "WMS: RefineSpecificVertexPartition, ListWeight=" << ListWeight << "\n";
+#endif
     size_t n_Wei = ListWeight.size();
     std::vector<int> list_mult(n_Wei, 0);
     const std::vector<int> &g = rec_pair_A.second;
@@ -296,6 +302,7 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
         if (list_mult[i] > 0) {
           newsign.push_back(i);
           newsign.push_back(list_mult[i]);
+          list_mult[i] = 0;
         }
       }
       esign = std::move(newsign);
@@ -393,9 +400,9 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
     int n_block = VP.ListBlocks.size();
     // First looking at the diagonal
     bool test1 = RefineSpecificVertexPartition<T, Tidx>(VP, iBlock, iBlock, f1,
-                                                        f2, canonically);
+                                                        f2, canonically, os);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS:   iBlock=" << iBlock << " test1=" << test1 << "\n";
+    os << "WMS:   iBlock/iBlock=" << iBlock << " test1=" << test1 << "\n";
 #endif
     if (test1) {
       size_t len1 = VP.ListBlocks.size();
@@ -404,7 +411,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
         status.push_back(0);
       }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-      os << "WMS:   len1=" << len1 << " len2=" << len2 << "\n";
+      os << "WMS:   DoRefinement early, len1=" << len1 << " len2=" << len2 << "\n";
 #endif
       return true;
     }
@@ -412,11 +419,11 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
     bool DidSomething = false;
     for (int jBlock = 0; jBlock < n_block; jBlock++) {
       if (iBlock != jBlock) {
-        bool test2 = RefineSpecificVertexPartition<T, Tidx>(
-            VP, jBlock, iBlock, f1, f2, canonically);
+        bool test2 = RefineSpecificVertexPartition<T, Tidx>(VP, jBlock, iBlock, f1, f2, canonically, os);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
         os << "WMS:   iBlock=" << iBlock << " jBlock=" << jBlock
-           << " test2=" << test2 << "\n";
+           << " test2=" << test2
+           << " len1=" << VP.ListBlocks.size() << " len2=" << status.size() << "\n";
 #endif
         if (test2) {
           status[jBlock] = 0;
@@ -1130,6 +1137,9 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
   size_t nbRow = WMVS.nbRow;
   size_t nbWeight = WMVS.nbWeight;
   std::vector<T> const &ListWeight = WMVS.ListWeight;
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: GetSimplifiedVCG, ListWeight=" << ListWeight << "\n";
+#endif
   std::unordered_map<T, size_t> map;
   for (size_t iWei = 0; iWei < nbWeight; iWei++) {
     map[ListWeight[iWei]] = iWei;
