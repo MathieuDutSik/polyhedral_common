@@ -136,7 +136,7 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
       idx = idxWeight;
       ListWeight.push_back(eval);
     }
-    return Tidx(idx - 1);
+    return static_cast<Tidx>(idx - 1);
   };
   std::vector<Tidx> MapVertexBlock(nbRow);
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
@@ -144,6 +144,12 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     T val = f2(iRow);
     MapVertexBlock[iRow] = get_T_idx(val);
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  if (idxWeight != ListWeight.size()) {
+    std::cerr << "WMS: Incoherent lengths\n";
+    throw TerminalException{1};
+  }
+#endif
   if (canonically) {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: canonically reordering\n";
@@ -153,24 +159,42 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     const std::vector<int> &g = rec_pair.second;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: |g|=" << g.size() << "\n";
-    os << "WMS: |MapVertexBlock|=" << MapVertexBlock.size() << "\n";
-    os << "WMS: nbRow=" << nbRow << "\n";
+    os << "WMS: |MapVertexBlock|=" << MapVertexBlock.size() << " nbRow=" << nbRow << "\n";
 #endif
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       int NewIdx = g[MapVertexBlock[iRow]];
       MapVertexBlock[iRow] = NewIdx;
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
       os << "WMS:   iRow=" << iRow << "\n";
       os << "WMS:   MapVertexBlock[iRow]=" << MapVertexBlock[iRow] << "\n";
       os << "WMS:   NewIdx=" << NewIdx << "\n";
 #endif
     }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+    const std::vector<T> & NewListWeight = rec_pair.first;
+    for (size_t idx=1; idx<idxWeight; idx++) {
+      size_t idx1 = idx - 1;
+      size_t idx2 = idx;
+      if (NewListWeight[idx1] > NewListWeight[idx2]) {
+        std::cerr << "WMS: idx1=" << idx1 << " weight1=" << NewListWeight[idx1] << "\n";
+        std::cerr << "WMS: idx2=" << idx2 << " weight2=" << NewListWeight[idx1] << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
   }
-  std::vector<std::vector<Tidx>> ListBlocks(ListWeight.size());
+  size_t n_weight = ListWeight.size();
+  std::vector<std::vector<Tidx>> ListBlocks(n_weight);
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     Tidx pos = MapVertexBlock[iRow];
     ListBlocks[pos].push_back(iRow);
   }
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  os << "WMS: n_weight=" << n_weight << "\n";
+  for (size_t i_weight=0; i_weight<n_weight; i_weight++) {
+    os << "WMS: i_weight=" << i_weight << " |Block|=" << ListBlocks[i_weight].size() << "\n";
+  }
+#endif
   return {nbRow, std::move(MapVertexBlock), std::move(ListBlocks)};
 }
 
@@ -248,8 +272,9 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
     V[iBreak] = idx_sign;
   }
   size_t n_block = ListPossibleSignatures.size();
-  if (n_block == 1)
+  if (n_block == 1) {
     return false;
+  }
   if (canonically) {
     // First reordering the weights
     std::pair<std::vector<T>, std::vector<int>> rec_pair_A =
@@ -267,11 +292,12 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
       }
       //
       std::vector<int> newsign;
-      for (size_t i = 0; i < n_Wei; i++)
+      for (size_t i = 0; i < n_Wei; i++) {
         if (list_mult[i] > 0) {
           newsign.push_back(i);
           newsign.push_back(list_mult[i]);
         }
+      }
       esign = std::move(newsign);
     }
     // Now reordering the signatures
@@ -305,18 +331,19 @@ bool RefineSpecificVertexPartition(VertexPartition<Tidx> &VP, const int &jBlock,
   return true;
 }
 
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
 template <typename Tidx>
 void PrintVertexPartitionInfo(const VertexPartition<Tidx> &VP,
                               const std::vector<uint8_t> &status,
                               std::ostream &os) {
-  os << "WMS: nbRow=" << VP.nbRow << "\n";
   size_t n_block = VP.ListBlocks.size();
+  os << "WMS: VP, nbRow=" << VP.nbRow << "  ListBlocks=";
   for (size_t i = 0; i < n_block; i++) {
-    os << "WMS:   i=" << i << "/" << n_block
-       << " siz=" << VP.ListBlocks[i].size() << " status=" << int(status[i])
-       << "\n";
+    os << VP.ListBlocks[i].size() << "," << int(status[i]) << " ";
   }
+  os << "\n";
 }
+#endif
 
 template <typename T, typename Tidx, typename F1, typename F2>
 VertexPartition<Tidx>
@@ -373,8 +400,9 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
     if (test1) {
       size_t len1 = VP.ListBlocks.size();
       size_t len2 = status.size();
-      for (size_t i = len2; i < len1; i++)
+      for (size_t i = len2; i < len1; i++) {
         status.push_back(0);
+      }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
       os << "WMS:   len1=" << len1 << " len2=" << len2 << "\n";
 #endif
@@ -394,8 +422,9 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
           status[jBlock] = 0;
           size_t len1 = VP.ListBlocks.size();
           size_t len2 = status.size();
-          for (size_t i = len2; i < len1; i++)
+          for (size_t i = len2; i < len1; i++) {
             status.push_back(0);
+          }
           DidSomething = true;
         }
       }
@@ -404,11 +433,12 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
   };
   while (true) {
     int iBlock = GetPreferable_iBlock();
-    if (iBlock == -1)
-      break;
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-    os << "WMS: iBlock=" << iBlock << "\n";
+    os << "WMS: GetPreferable_iBlock, iBlock=" << iBlock << "\n";
 #endif
+    if (iBlock == -1) {
+      break;
+    }
 #ifdef TIMINGS_WEIGHT_MATRIX_SPECIFIED
     MicrosecondTime time;
 #endif
@@ -419,10 +449,11 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
     os << "WMS: After Dorefinement\n";
     PrintVertexPartitionInfo(VP, status, os);
-    os << "WMS: test=" << test << "\n";
+    os << "WMS: DoRefinement, test=" << test << "\n";
 #endif
-    if (!test)
+    if (!test) {
       break;
+    }
   }
   return VP;
 }
@@ -430,15 +461,27 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
 // We use stable_sort to make sure that from the canonical ordering of the
 // blocks we get a canonical ordering for the block sizes.
 template <typename Tidx>
-std::vector<int> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
+std::vector<size_t> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
   size_t nbCase = VP.ListBlocks.size();
-  std::vector<int> ListIdx(nbCase);
+  std::vector<size_t> ListIdx(nbCase);
   for (size_t iCase = 0; iCase < nbCase; iCase++)
     ListIdx[iCase] = iCase;
   std::stable_sort(
       ListIdx.begin(), ListIdx.end(), [&](int idx1, int idx2) -> bool {
         return VP.ListBlocks[idx1].size() < VP.ListBlocks[idx2].size();
       });
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+  for (size_t iCase=1; iCase<nbCase; iCase++) {
+    size_t idx1 = ListIdx[iCase-1];
+    size_t idx2 = ListIdx[iCase];
+    size_t siz1 = VP.ListBlocks[idx1].size();
+    size_t siz2 = VP.ListBlocks[idx2].size();
+    if (siz1 > siz2) {
+      std::cerr << "WMS: iCase=" << iCase << " siz1=" << siz1 << " siz2=" << siz2 << "\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   return ListIdx;
 }
 
@@ -473,18 +516,20 @@ WeightMatrixVertexSignatures<T> EmptyWeightMatrixVertexSignatures() {
   std::vector<std::vector<int>> ListPossibleSignatures;
   std::vector<int> ListSignatureByVertex;
   std::vector<int> ListNbCase;
-  return {nbRow, nbWeight, ListWeight, ListPossibleSignatures, ListSignatureByVertex, ListNbCase};
+  return {nbRow,
+          nbWeight,
+          std::move(ListWeight),
+          std::move(ListPossibleSignatures),
+          std::move(ListSignatureByVertex),
+          std::move(ListNbCase)};
 }
-
 
 template <typename T> struct PairWeightMatrixVertexSignatures {
   WeightMatrixVertexSignatures<T> WMVS_direct;
   WeightMatrixVertexSignatures<T> WMVS_dual;
 };
 
-
-
-
+/*
 template <typename T>
 std::vector<int>
 GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
@@ -534,6 +579,7 @@ GetOrdering_ListIdx(WeightMatrixVertexSignatures<T> const &WMVS,
 #endif
   return ListIdx;
 }
+*/
 
 template <typename T>
 void PrintWMVS(WeightMatrixVertexSignatures<T> const &WMVS, std::ostream &os) {
@@ -682,11 +728,12 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
     //
     std::vector<int> newsign;
     newsign.push_back(NewDiag);
-    for (size_t i = 0; i < n_Wei; i++)
+    for (size_t i = 0; i < n_Wei; i++) {
       if (list_mult[i] > 0) {
         newsign.push_back(i);
         newsign.push_back(list_mult[i]);
       }
+    }
     NewListPossibleSignatures.push_back(newsign);
   }
   WMVS.ListPossibleSignatures = NewListPossibleSignatures;
@@ -1552,15 +1599,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
   os << "|WMS: ComputeVertexPartition|=" << time << "\n";
 #endif
   size_t nbCase = VP.ListBlocks.size();
-  std::vector<int> ListIdx = GetOrdering_ListIdx(VP);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
-  os << "WMS: nbCase=" << nbCase << "\n";
-  for (size_t iCase = 0; iCase < nbCase; iCase++) {
-    int idx = ListIdx[iCase];
-    os << "WMS:   iCase=" << iCase << " ListIdx[iCase]=" << idx
-       << " nbCase=" << VP.ListBlocks[idx].size() << "\n";
-  }
-#endif
+  std::vector<size_t> ListIdx = GetOrdering_ListIdx(VP);
   Face f_covered(nbCase);
   std::vector<int> StatusCase(nbCase);
   size_t idx = 0;
@@ -1570,11 +1609,11 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
 #endif
     for (size_t iCase = 0; iCase < nbCase; iCase++) {
       StatusCase[iCase] = 0;
-    }
+     }
     for (size_t u = 0; u < idx; u++) {
       size_t pos = ListIdx[u];
       if (f_covered[pos] == 0) {
-        StatusCase[ListIdx[u]] = 1;
+        StatusCase[pos] = 1;
       }
     }
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
@@ -1603,8 +1642,9 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
   };
   while (true) {
     bool test = increase_idx();
-    if (!test)
+    if (!test) {
       break;
+    }
     std::vector<Tidx> CurrentListIdx;
     for (size_t iRow = 0; iRow < nbRow; iRow++) {
       int iCase = VP.MapVertexBlock[iRow];
@@ -1774,10 +1814,12 @@ GetStabilizerWeightMatrix_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr 
 
 /*
   ---F1/F2 : The first/second template function for creating the Weight matrix
+  ---F1tr/F2tr : The first/second template function for creating the transposed
+     Weight matrix
   ---F3    : The function for testing acceptability of sets for consideration
-  (e.g. rank function)
+     (e.g. rank function)
   ---F4    : The function for testing acceptability of small generators and
-  returning the big generators.
+     returning the big generators.
   ---F5    : The lifting of canonicalization from a subset to the full set.
 */
 template <typename T, typename Tidx, bool is_symm, typename F1, typename F2,

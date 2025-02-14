@@ -228,7 +228,7 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
   // Now testing that we have EXT1 EqMat = EXT2
   for (size_t iRow = 0; iRow < nbRow; iRow++) {
     size_t iRowImg = eList[iRow];
-#ifdef DEBUG_PERM_FCT
+#ifdef DEBUG_PERM_FCT_DISABLE
     std::cerr << "PERM: iRow=" << iRow << " iRowImg=" << iRowImg << "\n";
 #endif
     // We can have f1 = f2 which zould invalidate reference so copy is needed
