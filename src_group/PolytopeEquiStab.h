@@ -1070,7 +1070,8 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
                               std::vector<MyMatrix<T>> const &ListMat,
                               std::vector<T> const &Vdiag, std::ostream &os) {
   using Treturn = WeightMatrix<true, std::vector<T>, Tidx_value>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f3,
+  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
+               [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
