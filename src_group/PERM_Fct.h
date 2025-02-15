@@ -215,7 +215,7 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
       M2_field(iRow, iCol) = UniversalScalarConversion<Tfield, T>(V(iCol));
   }
   MyMatrix<Tfield> EqMat = M1inv_field * M2_field;
-#ifdef DEBUG_PERM_FCT
+#ifdef DEBUG_PERM_FCT_DISABLE
   std::cerr << "PERM: M1_field=\n";
   WriteMatrix(std::cerr, M1_field);
   std::cerr << "PERM: M1inv_field=\n";
@@ -234,7 +234,7 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
     // We can have f1 = f2 which zould invalidate reference so copy is needed
     MyVector<T> V1 = f1(iRow);
     const MyVector<T> &V2 = f2(iRowImg);
-#ifdef DEBUG_PERM_FCT_NOW_OK
+#ifdef DEBUG_PERM_FCT_DIABLE
     std::cerr << "PERM: V1      =";
     WriteVectorNoDim(std::cerr, V1);
     std::cerr << "PERM: V2      =";

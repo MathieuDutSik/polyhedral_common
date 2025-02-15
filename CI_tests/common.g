@@ -119,6 +119,7 @@ ReadMatrixFile:=function(eFile)
         fi;
         Add(TheMat, eLine);
     od;
+    CloseStream(file);
     return TheMat;
 end;
 
