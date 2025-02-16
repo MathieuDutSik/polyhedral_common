@@ -406,7 +406,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     std::vector<MyVector<Tint>> ListClasses;
     for (auto &iRepr : ListRepr) {
       MyVector<Tint> eV = shr_ptr->ListClasses[iRepr];
-      ListClasses.push_back(eV);
+      ListClasses.emplace_back(std::move(eV));
     }
     shr_ptr->ListClasses = ListClasses;
 #ifdef TIMINGS_APPROXIMATE_MODELS
@@ -569,11 +569,15 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     // of A on those vectors. So, it is a finite problem. But it is a hard one
     // as the search space might be very large.
     //
-#ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: Beginning of EnumerateVectorOverDiscriminant X=" << X << "\n";
-#endif
     MyMatrix<T> const &Qmat = shr_ptr->Qmat;
     MyMatrix<T> const &Gmat = shr_ptr->Gmat;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: Beginning of EnumerateVectorOverDiscriminant X=" << X << "\n";
+    os << "MODEL: EnumerateVectorOverDiscriminant Qmat=\n";
+    WriteMatrix(os, Qmat);
+    os << "MODEL: EnumerateVectorOverDiscriminant Gmat=\n";
+    WriteMatrix(os, Gmat);
+#endif
     std::vector<MyVector<Tint>> const &ListClasses = shr_ptr->ListClasses;
     int n = Qmat.rows();
     T two(2);
@@ -706,7 +710,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       eSolution_T(3) = Xdiv2;
       MyVector<Tint> eSolution =
           UniversalVectorConversion<Tint, T>(eSolution_T);
-      ListSolution.push_back(eSolution);
+      ListSolution.emplace_back(std::move(eSolution));
     }
 #ifdef TIMINGS_APPROXIMATE_MODELS
     os << "|MODEL: EnumerateVectorOverDiscriminant|=" << time << "\n";
@@ -1267,6 +1271,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
 #ifdef DEBUG_APPROXIMATE_MODELS
   os << "MODEL: INDEF_FORM_GetApproximateModel, After "
         "LinearSpace_Stabilizer_RightCoset\n";
+  os << "MODEL: INDEF_FORM_GetApproximateModel, |Embed_T|=" << DeterminantMat(er.Embed_T) << "\n";
 #endif
   std::vector<MyMatrix<Tint>> ListCoset =
       stab_right_coset.coset_desc.template expand<Tint>();
@@ -1300,12 +1305,16 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   os << "MODEL: We have shr_ptr\n";
 #endif
 
-  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>, T)>
+  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>, T, std::ostream&)>
       get_vector_representatives =
           [=](MyVector<Tint> const &eRepr,
-              [[maybe_unused]] T const &X) -> std::vector<MyVector<Tint>> {
+              [[maybe_unused]] T const &X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
     std::vector<MyVector<Tint>> ListV;
-    for (auto &eCos : shr_ptr->ListCoset) {
+    std::vector<MyMatrix<Tint>> const& ListCoset = shr_ptr->ListCoset;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: get_vector_representatives |ListCoset|=" << ListCoset.size() << "\n";
+#endif
+    for (auto &eCos : ListCoset) {
       MyVector<Tint> fRepr = eCos.transpose() * eRepr;
       std::optional<MyVector<Tint>> opt =
           SolutionIntMat(shr_ptr->er.Embed, fRepr);
@@ -1349,10 +1358,16 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
        << "\n";
 #endif
     T Xscal = X * shr_ptr->er.scal;
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: GetCoveringOrbitRepresentatives 3: er.scal=" << shr_ptr->er.scal << " Xscal=" << Xscal << "\n";
+#endif
+    std::vector<MyVector<Tint>> ListReprRed = shr_ptr->approx.GetCoveringOrbitRepresentatives(Xscal, os);
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: GetCoveringOrbitRepresentatives 3: |ListReprRed|=" << ListReprRed.size() << "\n";
+#endif
     std::vector<MyVector<Tint>> ListRepr;
-    for (auto &eRepr :
-         shr_ptr->approx.GetCoveringOrbitRepresentatives(Xscal, os)) {
-      for (auto &fRepr : get_vector_representatives(eRepr, X)) {
+    for (auto &eRepr : ListReprRed) {
+      for (auto &fRepr : get_vector_representatives(eRepr, X, os)) {
         ListRepr.push_back(fRepr);
       }
     }
@@ -1379,7 +1394,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
        << "\n";
 #endif
     MyVector<Tint> const &eRepr = *opt;
-    std::vector<MyVector<Tint>> ListV = get_vector_representatives(eRepr, X);
+    std::vector<MyVector<Tint>> ListV = get_vector_representatives(eRepr, X, os);
     if (ListV.size() > 0) {
       return ListV[0];
     }

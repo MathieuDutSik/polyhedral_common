@@ -260,6 +260,11 @@ void process_entry(std::string const &arith, std::string const &FileCode,
     using T = QuadField<Trat, 2>;
     return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
   }
+  if (arith == "Qsqrt5") {
+    using Trat = mpq_class;
+    using T = QuadField<Trat, 5>;
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
+  }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
 }

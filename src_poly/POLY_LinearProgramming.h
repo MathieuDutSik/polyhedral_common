@@ -211,6 +211,8 @@ template <typename T> MyMatrix<T> SetIsobarycenter(MyMatrix<T> const &EXT) {
   return nMat;
 }
 
+// The code was changed so that 
+//
 template <typename T>
 Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
@@ -245,8 +247,10 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
     T min_contrib(0);
     for (int iRow = 0; iRow < nbRow; iRow++) {
 #ifdef SANITY_CHECK_FIND_SINGLE_VERTEX
-      if (EXT(iRow,0) == 1) {
-        std::cerr << "The first entry should be equal to 1\n";
+      if (EXT(iRow,0) != 1) {
+        std::cerr << "Kernel_FindSingleVertex, EXT=\n";
+        WriteMatrix(std::cerr, EXT);
+        std::cerr << "The first entry should be equal to 1, iRow=" << iRow << "\n";
         throw TerminalException{1};
       }
 #endif

@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "INDEF_ApproximateOrbitRepresentative [arith] [MatFile] [X] "
                    "[OutFormat] [OutFile]\n";
+      std::cerr << "        --------\n";
+      std::cerr << "Allowed values for arith: gmp\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];

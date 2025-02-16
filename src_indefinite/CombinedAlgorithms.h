@@ -1506,6 +1506,10 @@ private:
 #endif
     std::vector<MyVector<Tint>> ListCand =
         approx.GetCoveringOrbitRepresentatives(X, os);
+#ifdef SPECIFIC_END_FOR_DEBUGGING_GET_COVERING_ORBIT_REPRESENTATIVES
+    os << "COMB: Early termination for debugging |ListCand|=" << ListCand.size() << "\n";
+    throw TerminalException{1};
+#endif
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: approx.GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif

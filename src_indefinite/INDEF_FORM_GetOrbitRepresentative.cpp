@@ -53,6 +53,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "INDEF_FORM_GetOrbitRepresentative [arith] [MatFile] "
                    "[Xnorm] [OutFormat] [OutFile]\n";
+      std::cerr << "     -----\n";
+      std::cerr << "arith can be: gmp\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
