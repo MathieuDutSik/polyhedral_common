@@ -144,7 +144,7 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     T val = f2(iRow);
     MapVertexBlock[iRow] = get_T_idx(val);
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (idxWeight != ListWeight.size()) {
     std::cerr << "WMS: Incoherent lengths\n";
     throw TerminalException{1};
@@ -190,7 +190,7 @@ VertexPartition<Tidx> ComputeInitialVertexPartition(size_t nbRow, F1 f1, F2 f2,
     Tidx pos = MapVertexBlock[iRow];
     ListBlocks[pos].push_back(iRow);
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: n_weight=" << n_weight << "\n";
   for (size_t i_weight=0; i_weight<n_weight; i_weight++) {
     os << "WMS: i_weight=" << i_weight << " |Block|=" << ListBlocks[i_weight].size() << "\n";
@@ -453,7 +453,7 @@ ComputeVertexPartition(size_t nbRow, F1 f1, F2 f2, bool canonically,
 #ifdef TIMINGS
     os << "|WMS: DoRefinement|=" << time << "\n";
 #endif
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
     os << "WMS: After Dorefinement\n";
     PrintVertexPartitionInfo(VP, status, os);
     os << "WMS: DoRefinement, test=" << test << "\n";
@@ -477,7 +477,7 @@ std::vector<size_t> GetOrdering_ListIdx(const VertexPartition<Tidx> &VP) {
       ListIdx.begin(), ListIdx.end(), [&](int idx1, int idx2) -> bool {
         return VP.ListBlocks[idx1].size() < VP.ListBlocks[idx2].size();
       });
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   for (size_t iCase=1; iCase<nbCase; iCase++) {
     size_t idx1 = ListIdx[iCase-1];
     size_t idx2 = ListIdx[iCase];
@@ -754,7 +754,7 @@ inline typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::t
 ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
                             F1tr f1tr, F2tr f2tr,
                             std::ostream &os) {
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   std::vector<std::vector<T>> Mat_direct;
   for (size_t i=0; i<nbRow; i++) {
     std::vector<T> eV;
@@ -805,7 +805,7 @@ ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
   RenormalizeWMVS(WMVS_direct, os);
   WeightMatrixVertexSignatures<T> WMVS_dual = ComputeVertexSignatures<T>(nbRow, f1tr, f2tr, os);
   RenormalizeWMVS(WMVS_dual, os);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (WMVS_direct.ListWeight != WMVS_dual.ListWeight) {
     std::cerr << "WMS: We have WMVS_direct.ListWeight != WMVS_dual.ListWeight which is not what we want\n";
     throw TerminalException{1};
@@ -840,7 +840,7 @@ template <typename T, bool is_symm, typename F2>
 inline typename std::enable_if<!is_symm, size_t>::type
 evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
             size_t iVert, size_t jVert, F2 f2) {
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (iVert >= jVert) {
     std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " but we should have iVert < jVert\n";
     throw TerminalException{1};
@@ -858,7 +858,7 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
       return nWei + 1;
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (iVert >= 2 * nbRow) {
     std::cerr << "WMS: We should have iVert < 2 * nbRow\n";
     throw TerminalException{1};
@@ -869,7 +869,7 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
   }
 #endif
   if (iVertRed == jVertRed) {
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
     if (iVert + nbRow != jVert) {
       std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " but we should have iVert + nbRow = jVert\n";
       throw TerminalException{1};
@@ -889,7 +889,7 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
     // with v != w Case A2
     return nWei + 2;
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (iVert >= nbRow || nbRow > jVert) {
     std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert << " for the Case E entry\n";
     throw TerminalException{1};
@@ -995,7 +995,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
   WeightMatrixVertexSignatures<T> const &WMVS_direct = PairWMVS.WMVS_direct;
   WeightMatrixVertexSignatures<T> const &WMVS_dual = PairWMVS.WMVS_dual;
   size_t nbRow = WMVS_direct.nbRow;
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: nWei=" << nWei << " nbRow=" << nbRow << "\n";
   os << "WMS: WMVS_direct=\n";
   PrintWMVS(WMVS_direct, os);
@@ -1018,7 +1018,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
   };
   size_t n_sign_direct = WMVS_direct.ListPossibleSignatures.size();
   size_t n_sign_dual = WMVS_dual.ListPossibleSignatures.size();
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: n_sign_direct=" << n_sign_direct << " n_sign_dual=" << n_sign_dual << "\n";
   auto f_check = [&](std::vector<std::pair<int, int>> const &e_vect,
                      int the_case) -> void {
@@ -1056,7 +1056,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
     // Adjacency (V, spec = 2*nbRow)
     int diag_val = esign[0]; // The diagonal value
     fUpdate(e_vect, diag_val, 1);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
     f_check(e_vect, 1);
 #endif
     list_signature.push_back(e_vect);
@@ -1082,7 +1082,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
     fUpdate(e_vect, nWei + 2, nbRow - 1);
     // The adjacency (V = v2, spec)
     fUpdate(e_vect, nWei + 1, 1);
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
     f_check(e_vect, 2);
 #endif
     list_signature.push_back(e_vect);
@@ -1101,7 +1101,7 @@ get_expanded_symbolic(size_t nWei, PairWeightMatrixVertexSignatures<T> const &Pa
   for (auto &kv : map_vert_nRow) {
     f_vect.push_back({kv.first, kv.second});
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   f_check(f_vect, 3);
 #endif
   list_signature.push_back(f_vect);
@@ -1179,7 +1179,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
     int iCase = expand.vertex_to_signature[i];
     ListNbCase[iCase]++;
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     os << "WMS:   iCase=" << iCase << "/" << nbCase
        << " ListNbCase=" << ListNbCase[iCase] << "\n";
@@ -1199,7 +1199,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
       WeightByMult[iWeight] += sizCase * eMult;
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   os << "WMS: nbMult=" << nbMult << "\n";
   for (size_t iMult = 0; iMult < nbMult; iMult++) {
     os << "WMS:   iMult=" << iMult << "/" << nbMult
@@ -1237,7 +1237,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
       MatrixAdj(iH, iCase) += nb_adj1;
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   auto f_print = [&]() -> void {
     os << "WMS: hS=" << hS << " nbCase=" << nbCase << " MatrixAdj=\n";
     for (size_t iH = 0; iH < hS; iH++) {
@@ -1267,7 +1267,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
   for (size_t iCase = 0; iCase < nbCase; iCase++) {
     std::vector<std::pair<int, int>> const &e_vect =
         expand.list_signature[iCase];
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
     for (auto &epair : e_vect) {
       if (epair.second < 0) {
         os << "WMS: iCase=" << iCase << "\n";
@@ -1353,7 +1353,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
       }
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   MyMatrix<size_t> Mval(nbVert, nbVert);
   for (size_t iVert = 0; iVert < nbVert - 1; iVert++) {
     if (iVert < nbRow) {
@@ -1448,7 +1448,7 @@ GetSimplifiedVCG(F1 f1, F2 f2, PairWeightMatrixVertexSignatures<T> const &PairWM
       }
     }
   }
-#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED
+#ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_DISABLE
   int sum_adj = 0;
   int nb_error01 = 0;
   size_t sum_deg0 = 0;
