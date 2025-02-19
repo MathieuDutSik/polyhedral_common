@@ -171,7 +171,7 @@ template <typename Tint> std::vector<MyMatrix<Tint>> GeneratorsSL2Z() {
   eGenT(0, 0) = 1;
   eGenT(0, 1) = 1;
   eGenT(1, 1) = 1;
-  return {eGenS, eGenT};
+  return {std::move(eGenS), std::move(eGenT)};
 }
 
 template <typename T, typename Tint> struct InternalEichler {
@@ -1269,9 +1269,25 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
       LinearSpace_Stabilizer_RightCoset<T, Tgroup, Thelper>(
           ListGen_T, helper, er.Embed_T, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
+  os << "MODEL: INDEF_FORM_GetApproximateModel |cosets|=" << stab_right_coset.coset_desc.total_size() << "\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, After "
         "LinearSpace_Stabilizer_RightCoset\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, |Embed_T|=" << DeterminantMat(er.Embed_T) << "\n";
+  os << "MODEL: INDEF_FORM_GetApproximateModel, Embed_T=\n";
+  WriteMatrix(os, er.Embed_T);
+  auto f_terminate=[&]([[maybe_unused]] MyMatrix<T> const& eSpace) -> bool {
+    return false;
+  };
+  T TheMod = LinearSpace_GetDivisor(er.Embed_T);
+  std::optional<std::vector<MyMatrix<T>>> opt = DirectSpaceOrbit_Stabilizer<T,decltype(f_terminate)>(ListGen_T, er.Embed_T, TheMod, f_terminate, os);
+  if (opt) {
+    std::vector<MyMatrix<T>> const& LGen = *opt;
+    os << "MODEL: INDEF_FORM_GetApproximateModel, |LGen|=" << LGen.size() << "\n";
+  } else {
+    std::cerr << "The run did not return which is unexpected\n";
+    throw TerminalException{1};
+  }
+
 #endif
   std::vector<MyMatrix<Tint>> ListCoset =
       stab_right_coset.coset_desc.template expand<Tint>();

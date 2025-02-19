@@ -317,6 +317,13 @@ template <typename T> struct CosetDescription {
       ListListCoset.push_back(ListCoset);
     }
   }
+  size_t total_size() const {
+    size_t total_size = 1;
+    for (auto & eList : ListListCoset) {
+      total_size *= eList.size();
+    }
+    return total_size;
+  }
   void conjugate(MyMatrix<T> const &P) {
     MyMatrix<T> Pinv = Inverse(P);
     size_t len = ListListCoset.size();
@@ -901,38 +908,59 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
                             [[maybe_unused]] std::ostream &os) {
   int n = eSpace.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, We have ModSpace\n";
+#endif
   // Tpair is a pair <Space, Repr>
   using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
   std::vector<Tpair> ListPair;
   ListPair.push_back({eSpace, IdentityMat<T>(n)});
-  if (f_terminate(eSpace))
+  if (f_terminate(eSpace)) {
     return {};
+  }
   size_t start = 0;
   while (true) {
     size_t len = ListPair.size();
-    if (start == len)
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, start=" << start << " len=" << len << "\n";
+#endif
+    if (start == len) {
       break;
+    }
     for (size_t idx = start; idx < len; idx++) {
-      Tpair const &ePair = ListPair[idx];
+      Tpair ePair = ListPair[idx]; // Copy is needed since ListPair is extended
+#ifdef DEBUG_MATRIX_GROUP
+      size_t jdx = 0;
+#endif
       for (auto &eMatrGen : ListMatrGen) {
+#ifdef DEBUG_MATRIX_GROUP
+        os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, jdx=" << jdx << " / " << ListMatrGen.size() << "\n";
+        jdx += 1;
+#endif
         MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
-        MyMatrix<T> eReprImg = ePair.second * eMatrGen;
-        //
-        MyMatrix<T> eSpaceMod = Concatenate(ePair.first, ModSpace);
-        RecSolutionIntMat<T> eCan(eSpaceMod);
-        auto fInsert = [&](Tpair const &ePair) -> bool {
-          for (auto &fPair : ListPair)
-            if (eCan.is_containing_m(fPair.first))
-              return false;
-          ListPair.push_back(ePair);
-          return f_terminate(ePair.first);
-        };
-        if (fInsert(eSpaceImg))
+        if (f_terminate(eSpaceImg)) {
           return {};
+        }
+        //
+        MyMatrix<T> eSpaceMod = Concatenate(eSpaceImg, ModSpace);
+        RecSolutionIntMat<T> eCan(eSpaceMod);
+        auto need_insert = [&]() -> bool {
+          for (auto &fPair : ListPair) {
+            if (eCan.is_containing_m(fPair.first)) {
+              return false;
+            }
+          }
+          return true;
+        };
+        if (need_insert()) {
+          MyMatrix<T> eReprImg = ePair.second * eMatrGen;
+          Tpair ePairNew{std::move(eSpaceImg), std::move(eReprImg)};
+          ListPair.emplace_back(std::move(ePairNew));
+        }
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: start=" << start << " len=" << len << "\n";
+    os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, end of loop |ListPair|=" << ListPair.size() << "\n";
 #endif
     start = len;
   }
@@ -941,6 +969,9 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   //
   std::unordered_set<MyMatrix<T>> SetGen;
   size_t nPair = ListPair.size();
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, nPair=" << nPair << "\n";
+#endif
   for (size_t iPair = 0; iPair < nPair; iPair++) {
     Tpair const &ePair = ListPair[iPair];
     for (auto &eMatrGen : ListMatrGen) {
