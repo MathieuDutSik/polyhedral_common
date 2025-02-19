@@ -25,6 +25,21 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
     os << "return " << GRP.GapString() << ";\n";
     return;
   }
+  if (OutFormat == "RecGAP") {
+    std::string strGAPmatr = "[";
+    bool IsFirst = true;
+    for (auto &eGen : GRP.GeneratorsOfGroup()) {
+      MyMatrix<T> M = RepresentVertexPermutation(EXT, EXT, eGen);
+      if (!IsFirst)
+        strGAPmatr += ",";
+      IsFirst = false;
+      strGAPmatr += StringMatrixGAP(M);
+    }
+    strGAPmatr += "]";
+    os << "return rec(GAPperm:=" << GRP.GapString()
+       << ", GAPmatr:=" << strGAPmatr << ");";
+    return;
+  }
   if (OutFormat == "ListMatrixFile") {
     int rnk = RankMat(EXT);
     if (rnk != EXT.cols()) {

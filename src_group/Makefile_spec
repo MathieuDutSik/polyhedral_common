@@ -1,11 +1,10 @@
 #PROGRAM		= TEST_LinPolytope_Automorphism
-#PROGRAM		= GRP_LinPolytope_Automorphism
+PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= TEST_LinPolytope_Isomorphism
 #PROGRAM		= TEST_LinPolytope_Canonic
 #PROGRAM		= TEST_LinPolytope_WMatCanonic
 #PROGRAM		= TEST_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_OrbitSplittingPerfect
-#PROGRAM		= GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= TEST_WeightMatrixLimited
 #PROGRAM		= GRP_ListMat_Vdiag_EXT_Invariant
@@ -30,7 +29,7 @@
 #PROGRAM		= GRP_GroupAverage_Vector GRP_GroupAverage_Matrix
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= GRP_LinearSpace_Stabilizer_DoubleCoset
-PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCoset
+#PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCoset
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

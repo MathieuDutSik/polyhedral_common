@@ -30,6 +30,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
       MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eGen);
       if (!IsFirst)
         strGAPmatr += ",";
+      IsFirst=false;
       strGAPmatr += StringMatrixGAP(M);
     }
     strGAPmatr += "]";

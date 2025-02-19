@@ -30,6 +30,7 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
       MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eElt);
       if (!IsFirst)
         strGAPmatr += ",";
+      IsFirst=false;
       strGAPmatr += StringMatrixGAP(M);
     }
     strGAPmatr += "]";
@@ -75,10 +76,10 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT] [GRP_V] "
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith [EXT] [GRP_V] "
                    "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT] [GRP_V]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith [EXT] [GRP_V]\n";
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
