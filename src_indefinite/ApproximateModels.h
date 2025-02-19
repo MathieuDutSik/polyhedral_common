@@ -506,6 +506,9 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       FuncInsert(ExpandGenerator(GetLeftMultiplication(eGen)));
       FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
     }
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: GetApproximateGroup : After SL2Z, |ListGenerators|=" << ListGenerators.size() << "\n";
+#endif
     // Now looking at the isotropic vectors, generating the Eichler
     // transvections
     for (int i = 0; i < 4; i++) {
@@ -513,17 +516,19 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       eVect(i) = 1;
       MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       MyVector<T> eProd = Qmat * eVect_T;
-      MyMatrix<T> eProd_M(1, n);
-      for (int i = 0; i < n; i++) {
-        eProd_M(0, i) = eProd(i);
-      }
-      MyMatrix<T> BasisOrth = NullspaceIntMat(eProd_M);
+      MyMatrix<T> BasisOrth = NullspaceIntVect(eProd);
+#ifdef DEBUG_APPROXIMATE_MODELS
+      os << "MODEL: GetApproximateGroup : |BasisOrth|=" << BasisOrth.rows() << " / " << BasisOrth.cols() << "\n";
+#endif
       for (int i = 0; i < BasisOrth.rows(); i++) {
         MyVector<T> eOrth_T = GetMatrixRow(BasisOrth, i);
         MyVector<Tint> eOrth = UniversalVectorConversion<Tint, T>(eOrth_T);
         FuncInsert(INDEF_FORM_Eichler_Transvection(Qmat, eVect, eOrth));
       }
     }
+#ifdef DEBUG_APPROXIMATE_MODELS
+    os << "MODEL: GetApproximateGroup : After transvections, |ListGenerators|=" << ListGenerators.size() << "\n";
+#endif
 #ifdef TIMINGS_APPROXIMATE_MODELS
     os << "|MODEL: GetApproximateGroup|=" << time << "\n";
 #endif
@@ -1275,6 +1280,8 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   os << "MODEL: INDEF_FORM_GetApproximateModel, |Embed_T|=" << DeterminantMat(er.Embed_T) << "\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, Embed_T=\n";
   WriteMatrix(os, er.Embed_T);
+#endif
+#ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
   auto f_terminate=[&]([[maybe_unused]] MyMatrix<T> const& eSpace) -> bool {
     return false;
   };
@@ -1287,7 +1294,6 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
     std::cerr << "The run did not return which is unexpected\n";
     throw TerminalException{1};
   }
-
 #endif
   std::vector<MyMatrix<Tint>> ListCoset =
       stab_right_coset.coset_desc.template expand<Tint>();
