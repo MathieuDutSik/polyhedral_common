@@ -1448,9 +1448,10 @@ private:
     MicrosecondTime time;
 #endif
     AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
+    int n = Q.rows();
     auto orbit_decomposition = [&](std::vector<MyVector<Tint>> const &l_vect)
         -> std::vector<MyVector<Tint>> {
-      std::vector<MyVector<Tint>> ListRepr;
+      std::vector<std::vector<MyVector<Tint>>> ListGroupedRepr;
       auto f_insert = [&](MyVector<Tint> fRepr) -> void {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
         T fNorm = EvaluationQuadForm<T, Tint>(Q, fRepr);
@@ -1459,17 +1460,42 @@ private:
           throw TerminalException{1};
         }
 #endif
-        for (auto &eRepr : ListRepr) {
+        for (size_t u=0; u<ListGroupedRepr.size(); u++) {
+          MyVector<Tint> const& eRepr = ListGroupedRepr[u][0];
           std::optional<MyMatrix<Tint>> opt =
               INDEF_FORM_EquivalenceVector(Q, Q, eRepr, fRepr);
           if (opt) {
+            ListGroupedRepr[u].push_back(fRepr);
             return;
           }
         }
-        ListRepr.push_back(fRepr);
+        ListGroupedRepr.push_back({fRepr});
       };
       for (auto &eVect : l_vect) {
         f_insert(eVect);
+      }
+      std::vector<MyVector<Tint>> ListRepr;
+      for (auto & eGroupedRepr : ListGroupedRepr) {
+        T min_norm(0);
+        MyVector<Tint> ChosenRepr;
+        bool IsFirst = true;
+        for (auto & eRepr : eGroupedRepr) {
+          T norm(0);
+          for (int i=0; i<n; i++) {
+            norm += T_abs(eRepr(i));
+          }
+          if (IsFirst) {
+            ChosenRepr = eRepr;
+            min_norm = norm;
+            IsFirst = false;
+          } else {
+            if (norm < min_norm) {
+              ChosenRepr = eRepr;
+              min_norm = norm;
+            }
+          }
+        }
+        ListRepr.push_back(ChosenRepr);
       }
       return ListRepr;
     };
