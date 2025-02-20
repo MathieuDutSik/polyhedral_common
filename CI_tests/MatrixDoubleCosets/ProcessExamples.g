@@ -43,7 +43,7 @@ end;
 # Compute the double cosets of G_rat = \cup_i G_int g_i G_int.
 
 TestCase_Automorphy_DoubleCoset:=function(EXT)
-    local FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult, ListSets, sumElt, eCos, eU, eV, eG, eList, eSet, iSet, jSet, eInt;
+    local FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult, ListSets, sumElt, eCos, eU, eV, eG, eList, eSet, iSet, jSet, eInt, LGen, eGen, NewGen, GRP_v_conj, GRPinter, ListRightCos, eRightCos, fRightCos, Lentry, eEntry, eList_method1, eList_method2, eSet_method1, eSet_method2, method1;
     FileI:=Filename(DirectoryTemporary(), "Test.in");
     FileO:=Filename(DirectoryTemporary(), "Test.out");
     FileGRP_V:=Filename(DirectoryTemporary(), "Test.grp_V");
@@ -77,18 +77,52 @@ TestCase_Automorphy_DoubleCoset:=function(EXT)
     fi;
     for eCos in RecResult.DoubleCosetsPerm
     do
-        eList:=[];
+        LGen:=[];
+        for eGen in GeneratorsOfGroup(GRP_V.GAPperm)
+        do
+            NewGen:=eCos * eGen * Inverse(eCos);
+            Add(LGen, NewGen);
+        od;
+        GRP_v_conj:=Group(LGen);
+        GRPinter:=Intersection(GRP_v_conj, GRP_U);
+        ListRightCos:=RightCosets(GRP_v_conj, GRPinter);
+        Lentry:=[];
+        for eRightCos in ListRightCos
+        do
+            fRightCos:=Representative(eRightCos) * eCos;
+            Add(Lentry, fRightCos);
+        od;
+        #
+        eList_method2:=[];
         for eU in GRP_U
         do
-            for eV in GRP_V.GAPperm
+            for eEntry in Lentry
             do
-                eG:=eU * eCos * eV;
-                Add(eList, eG);
+                eG:=eU * eEntry;
+                Add(eList_method2, eG);
             od;
         od;
-        eSet:=Set(eList);
-        sumElt:=sumElt + Length(eSet);
-        Add(ListSets, eSet);
+        eSet_method2:=Set(eList_method2);
+        #
+        method1:=false;
+        if method1 then
+            eList_method1:=[];
+            for eU in GRP_U
+            do
+                for eV in GRP_V.GAPperm
+                do
+                    eG:=eU * eCos * eV;
+                    Add(eList_method1, eG);
+                od;
+            od;
+            eSet_method1:=Set(eList_method1);
+            if eSet_method1<>eSet_method2 then
+                Error("The computation methods are inconsistent");
+            fi;
+        fi;
+
+        sumElt:=sumElt + Length(eSet_method2);
+        Add(ListSets, eSet_method2);
     od;
     Print("Creation of the double cosets as raw sets done\n");
     for iSet in [1..Length(ListSets)]
