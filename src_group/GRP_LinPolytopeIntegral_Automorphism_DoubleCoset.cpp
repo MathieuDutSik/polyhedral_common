@@ -123,9 +123,9 @@ int main(int argc, char *argv[]) {
         process_B(os);
       }
     }
-    std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Isomorphism\n";
+    std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytopeIntegral_Isomorphism\n";
+    std::cerr << "Error in GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
     exit(e.eVal);
   }
   runtime(time1);

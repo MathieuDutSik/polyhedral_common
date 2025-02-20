@@ -38,7 +38,7 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DTIMINGS
 #CDEFS           = -DTIMINGS -DDEBUG
 #CDEFS           = -DTIMINGS -DUSE_BLISS
-CDEFS           = -DUSE_BLISS
+CDEFS           = -DUSE_BLISS -DDEBUG_DOUBLE_COSET_ENUM
 
 CTOTAL = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

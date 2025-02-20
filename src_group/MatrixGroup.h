@@ -1491,6 +1491,9 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
     Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
     PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+#ifdef DEBUG_DOUBLE_COSET_ENUM
+    os << "MAT_GRP: Before GRP.double_coset_computer_v\n";
+#endif
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab);
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
@@ -2402,7 +2405,6 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
   return LinPolytopeIntegral_Isomorphism_Subspaces<T, Tgroup>(
       EXT1_T, EXT2_T, ListMatrGens, ePerm, os);
 }
-
 
 template<typename Telt, typename T>
 std::string get_matrs_as_string(MyMatrix<T> const& EXT, std::vector<Telt> const &l_elt) {

@@ -156,11 +156,13 @@ do
     Print("     pos=", pos, "/", Length(ListEXT), " |EXT|=", Length(EXT), "/", Length(EXT[1]), "\n");
     test:=TestCase_Automorphy_DoubleCoset(EXT);
     if test=false then
+        Error("Stop here");
         n_error:=n_error + 1;
     fi;
     pos:=pos + 1;
 od;
 
+Print("n_error=", n_error, "\n");
 if n_error=0 then
     Print("Normal case\n");
     CI_Write_Ok();
