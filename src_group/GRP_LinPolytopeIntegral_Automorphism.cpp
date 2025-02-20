@@ -24,16 +24,7 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
     return;
   }
   if (OutFormat == "RecGAP") {
-    std::string strGAPmatr = "[";
-    bool IsFirst = true;
-    for (auto &eGen : GRP.GeneratorsOfGroup()) {
-      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eGen);
-      if (!IsFirst)
-        strGAPmatr += ",";
-      IsFirst=false;
-      strGAPmatr += StringMatrixGAP(M);
-    }
-    strGAPmatr += "]";
+    std::string strGAPmatr = get_matrs_as_string(EXT, GRP.GeneratorsOfGroup());
     os << "return rec(GAPperm:=" << GRP.GapString()
        << ", GAPmatr:=" << strGAPmatr << ");";
     return;

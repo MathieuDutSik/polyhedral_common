@@ -43,27 +43,14 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
     std::cerr << "s_elt has the wrong size\n";
     throw TerminalException{1};
   }
-  auto get_as_string = [&](std::vector<Telt> const &l_elt) -> std::string {
-    std::string strGAPmatr = "[";
-    bool IsFirst = true;
-    for (auto &eElt : l_elt) {
-      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eElt);
-      if (!IsFirst)
-        strGAPmatr += ",";
-      IsFirst=false;
-      strGAPmatr += StringMatrixGAP(M);
-    }
-    strGAPmatr += "]";
-    return strGAPmatr;
-  };
   if (OutFormat == "GAP") {
     os_out << "return " << GRP.GapString() << ";\n";
     return;
   }
   if (OutFormat == "RecGAP") {
     std::string strGAPgroup =
-        "Group(" + get_as_string(GRP.GeneratorsOfGroup()) + ")";
-    std::string strCoset = get_as_string(pair.second);
+      "Group(" + get_matrs_as_string(EXT,  GRP.GeneratorsOfGroup()) + ")";
+    std::string strCoset = get_matrs_as_string(EXT, pair.second);
     os_out << "return rec(GAPperm:=" << GRP.GapString()
            << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
     return;

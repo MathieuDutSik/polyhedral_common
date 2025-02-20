@@ -15,6 +15,7 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
+  MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield,Tint>(EXT);
   Tgroup GrpV = ReadGroupFile<Tgroup>(FileGrpV);
   //
   std::pair<Tgroup, std::vector<Telt>> pair =
@@ -23,25 +24,13 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
   std::cerr << "|pair.first|=" << pair.first.size()
             << " |pair.second|=" << pair.second.size() << "\n";
   Tgroup const& GRP = pair.first;
-  auto get_matrs_as_string = [&](std::vector<Telt> const &l_elt) -> std::string {
-    std::string strGAPmatr = "[";
-    bool IsFirst = true;
-    for (auto &eElt : l_elt) {
-      MyMatrix<Tint> M = RepresentVertexPermutation(EXT, EXT, eElt);
-      if (!IsFirst)
-        strGAPmatr += ",";
-      IsFirst=false;
-      strGAPmatr += StringMatrixGAP(M);
-    }
-    strGAPmatr += "]";
-    return strGAPmatr;
-  };
   auto get_perms_as_string = [&](std::vector<Telt> const &l_elt) -> std::string {
     std::string strGAPperm = "[";
     bool IsFirst = true;
     for (auto &eElt : l_elt) {
       if (!IsFirst)
         strGAPperm += ",";
+      IsFirst = false;
       strGAPperm += std::to_string(eElt);
     }
     strGAPperm += "]";
@@ -53,8 +42,8 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
   }
   if (OutFormat == "RecGAP") {
     std::string strGAPgroupMatr =
-        "Group(" + get_matrs_as_string(GRP.GeneratorsOfGroup()) + ")";
-    std::string strCosetMatr = get_matrs_as_string(pair.second);
+      "Group(" + get_matrs_as_string(EXT, GRP.GeneratorsOfGroup()) + ")";
+    std::string strCosetMatr = get_matrs_as_string(EXT_field, pair.second);
     std::string strCosetPerm = get_perms_as_string(pair.second);
     os_out << "return rec(GAPperm:=" << GRP.GapString()
            << ", GAPmatr:=" << strGAPgroupMatr

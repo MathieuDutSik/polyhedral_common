@@ -1491,7 +1491,7 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
     Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
     PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
-    DoubleCosetComputer dcc_u = GRP.double_coset_computer_u(eStab);
+    DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab);
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
     for (auto &entry: entries) {
@@ -1499,7 +1499,7 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
       std::vector<Telt> ListPermGens_B =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens, helper, f_get_perm, os);
       Tgroup Vperm_gens = Tgroup(ListPermGens_B, siz_act);
-      std::vector<DccEntry> span_de = dcc_u.double_cosets_and_stabilizers(Vperm_gens);
+      std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
         Tgroup Vred_perm(e_de.stab_gens, siz_act);
@@ -2401,6 +2401,22 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
   }
   return LinPolytopeIntegral_Isomorphism_Subspaces<T, Tgroup>(
       EXT1_T, EXT2_T, ListMatrGens, ePerm, os);
+}
+
+
+template<typename Telt, typename T>
+std::string get_matrs_as_string(MyMatrix<T> const& EXT, std::vector<Telt> const &l_elt) {
+  std::string strGAPmatr = "[";
+  bool IsFirst = true;
+  for (auto &eElt : l_elt) {
+    MyMatrix<T> M = RepresentVertexPermutation(EXT, EXT, eElt);
+    if (!IsFirst)
+      strGAPmatr += ",";
+    IsFirst = false;
+    strGAPmatr += StringMatrixGAP(M);
+  }
+  strGAPmatr += "]";
+  return strGAPmatr;
 }
 
 // clang-format off

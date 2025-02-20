@@ -12,6 +12,7 @@
 #include "NumberTheoryQuadField.h"
 #include "Permutation.h"
 #include "PolytopeEquiStab.h"
+#include "MatrixGroup.h"
 // clang-format on
 
 template <typename T, typename Tgroup>
@@ -26,16 +27,7 @@ void full_process_A(std::string const &eFile, std::string const &OutFormat,
     return;
   }
   if (OutFormat == "RecGAP") {
-    std::string strGAPmatr = "[";
-    bool IsFirst = true;
-    for (auto &eGen : GRP.GeneratorsOfGroup()) {
-      MyMatrix<T> M = RepresentVertexPermutation(EXT, EXT, eGen);
-      if (!IsFirst)
-        strGAPmatr += ",";
-      IsFirst = false;
-      strGAPmatr += StringMatrixGAP(M);
-    }
-    strGAPmatr += "]";
+    std::string strGAPmatr = get_matrs_as_string(EXT, GRP.GeneratorsOfGroup());
     os << "return rec(GAPperm:=" << GRP.GapString()
        << ", GAPmatr:=" << strGAPmatr << ");";
     return;
