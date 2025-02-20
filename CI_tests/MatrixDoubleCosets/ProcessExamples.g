@@ -43,7 +43,7 @@ end;
 # Compute the double cosets of G_rat = \cup_i G_int g_i G_int.
 
 TestCase_Automorphy_DoubleCoset:=function(EXT)
-    local FileI, FileO, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult, ListSets, sumElt, eCos, eU, eV, eG, eList, eSet, iSet, jSet, eInt;
+    local FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult, ListSets, sumElt, eCos, eU, eV, eG, eList, eSet, iSet, jSet, eInt;
     FileI:=Filename(DirectoryTemporary(), "Test.in");
     FileO:=Filename(DirectoryTemporary(), "Test.out");
     FileGRP_V:=Filename(DirectoryTemporary(), "Test.grp_V");
@@ -71,6 +71,10 @@ TestCase_Automorphy_DoubleCoset:=function(EXT)
     Print("|G_rat|=", Order(GRP_rat.GAPperm), " |GRP_U|=", Order(GRP_U), " |GRP_V|=", Order(GRP_V.GAPperm), " |LCos|=", Length(RecResult.DoubleCosetsPerm), "\n");
     ListSets:=[];
     sumElt:=0;
+    if GRP_U<>GRP_V.GAPperm then
+        Print("GRP_U and GRP_V should be equal\n");
+        return false;
+    fi;
     for eCos in RecResult.DoubleCosetsPerm
     do
         eList:=[];
@@ -115,7 +119,7 @@ n_error:=0;
 
 for EXT in ListEXT
 do
-    Print("pos=", pos, "/", Length(ListEXT), " |EXT|=", Length(EXT), "/", Length(EXT[1]), "\n");
+    Print("     pos=", pos, "/", Length(ListEXT), " |EXT|=", Length(EXT), "/", Length(EXT[1]), "\n");
     test:=TestCase_Automorphy_DoubleCoset(EXT);
     if test=false then
         n_error:=n_error + 1;
