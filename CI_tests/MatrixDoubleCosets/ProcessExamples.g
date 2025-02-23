@@ -61,7 +61,7 @@ TestCase_Automorphy_DoubleCoset:=function(EXT)
         return false;
     fi;
     WriteGroupFile(FileGRP_V, Length(EXT), GRP_V.GAPperm);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism_DoubleCoset";
+    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer";
     TheCommand:=Concatenation(eProg, " rational ", FileI, " ", FileGRP_V, " RecGAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
