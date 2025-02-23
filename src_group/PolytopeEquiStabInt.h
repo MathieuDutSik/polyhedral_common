@@ -130,6 +130,17 @@ LinPolytopeIntegral_Automorphism_DoubleCoset(const MyMatrix<Tint> &EXT,
   return LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(EXT_T, GRPisom, GrpV, os);
 }
 
+template <typename Tint, typename Tgroup>
+std::pair<Tgroup, std::vector<PairCosetStabGens<typename Tgroup::Telt>>>
+LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer(const MyMatrix<Tint> &EXT,
+                                                       Tgroup const& GrpV,
+                                                       std::ostream &os) {
+  using Tfield = typename overlying_field<Tint>::field_type;
+  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
+  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
+  return LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(EXT_T, GRPisom, GrpV, os);
+}
+
 template <typename Tint, typename Tidx_value>
 MyMatrix<Tint>
 LinPolytopeAntipodalIntegral_CanonicForm_Tidx_value(MyMatrix<Tint> const &EXT,
