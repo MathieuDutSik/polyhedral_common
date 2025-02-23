@@ -71,7 +71,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 #CDEFS           = -DDEBUG
 #CDEFS           = -DDEBUG -DUSE_BLISS
 #CDEFS           = -DDEBUG -DTIMINGS
-CDEFS           =
+CDEFS           = -DDEBUG_DOUBLE_COSET_ENUM
 
 
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
