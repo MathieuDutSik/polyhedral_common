@@ -62,7 +62,9 @@ template <typename T> MyMatrix<T> DropZeroColumn(MyMatrix<T> const &M) {
 
 template <typename T, typename Tgroup>
 void process_entry_type(std::string const &FileCode,
-                        std::string const &FileGramMat) {
+                        std::string const &FileGramMat,
+                        std::string const &OutFormat,
+                        std::ostream& osf) {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> preCODE = ReadMatrixFile<T>(FileCode);
   int nbEnt = preCODE.rows();
@@ -122,15 +124,9 @@ void process_entry_type(std::string const &FileCode,
     std::cerr << " (" << kv.first << "," << kv.second << ")";
   }
   std::cerr << "\n";
-  for (auto &kv : s_norm) {
-    T norm = kv.first;
-    std::cerr << "norm=" << norm << " lv=";
-    for (int iEnt = 0; iEnt < nbEnt; iEnt++) {
-      if (norm_by_vertex[iEnt] == norm) {
-        std::cerr << " " << iEnt;
-      }
-    }
-    std::cerr << "\n";
+  if (s_norm.size() > 1) {
+    std::cerr << "The number of different norms is incorrect\n";
+    throw TerminalException{1};
   }
   auto get_main_norm = [&]() -> T {
     for (auto &kv : s_norm) {
@@ -157,6 +153,7 @@ void process_entry_type(std::string const &FileCode,
   double MinCosine = 0;
   bool IsFirst = true;
   size_t pos = 0;
+  std::vector<MyVector<T>> ListExtremeRay;
   for (auto &eFace : vf) {
     Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
     TintGroup OrbSize = GRP.size() / eStab.size();
@@ -227,12 +224,17 @@ void process_entry_type(std::string const &FileCode,
       MinCosineSqr = CosineSqr;
       MinCosine = Cosine;
       IsFirst = false;
+      ListExtremeRay.push_back(eRay);
     } else {
-      if (Cosine < MinCosine) {
-        MinCosine = Cosine;
-      }
-      if (CosineSqr < MinCosineSqr) {
-        MinCosineSqr = CosineSqr;
+      if (Cosine == MinCosine) {
+        ListExtremeRay.push_back(eRay);
+      } else {
+        if (Cosine < MinCosine) {
+          MinCosine = Cosine;
+          MinCosineSqr = CosineSqr;
+          ListExtremeRay.clear();
+          ListExtremeRay.push_back(eRay);
+        }
       }
     }
     pos += 1;
@@ -241,29 +243,39 @@ void process_entry_type(std::string const &FileCode,
   std::cerr << "MinCosineSqr=" << MinCosineSqr << "\n";
   double cov_angle = acos(MinCosine);
   std::cerr << "cov_angle=" << cov_angle << "\n";
+  if (OutFormat == "GAP") {
+    osf << "return rec(ListExtremeRay:=[";
+    MyMatrix<T> MatExtremeRay = MatrixFromVectorFamily(ListExtremeRay);
+    WriteMatrixGAP(osf, MatExtremeRay);
+    osf << "]);\n";
+    return;
+  }
+  std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  throw TerminalException{1};
 }
 
 template <typename Tgroup>
 void process_entry(std::string const &arith, std::string const &FileCode,
-                   std::string const &FileGramMat) {
+                   std::string const &FileGramMat,
+                   std::string const& OutFormat, std::ostream & osf) {
   if (arith == "rational") {
     using T = mpq_class;
-    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
-  }
-  if (arith == "Qsqrt3") {
-    using Trat = mpq_class;
-    using T = QuadField<Trat, 3>;
-    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat, OutFormat, osf);
   }
   if (arith == "Qsqrt2") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 2>;
-    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat, OutFormat, osf);
+  }
+  if (arith == "Qsqrt3") {
+    using Trat = mpq_class;
+    using T = QuadField<Trat, 3>;
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat, OutFormat, osf);
   }
   if (arith == "Qsqrt5") {
     using Trat = mpq_class;
     using T = QuadField<Trat, 5>;
-    return process_entry_type<T, Tgroup>(FileCode, FileGramMat);
+    return process_entry_type<T, Tgroup>(FileCode, FileGramMat, OutFormat, osf);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
@@ -272,8 +284,12 @@ void process_entry(std::string const &arith, std::string const &FileCode,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 4) {
+    if (argc != 4 && argc != 6) {
       std::cerr << "CODE_Analysis [arith] [FileCODE] [FileGRAM]\n";
+      std::cerr << "    or\n";
+      std::cerr << "CODE_Analysis [arith] [FileCODE] [FileGRAM] [OutFormat] [FileO]\n";
+      std::cerr << "   ---------------\n";
+      std::cerr << "arith: rational, Qsqrt2, Qsqrt3, Qsqrt5\n";
       throw TerminalException{1};
     }
     using Tidx = uint32_t;
@@ -283,7 +299,22 @@ int main(int argc, char *argv[]) {
     std::string arith = argv[1];
     std::string FileCode = argv[2];
     std::string FileGramMat = argv[3];
-    process_entry<Tgroup>(arith, FileCode, FileGramMat);
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 6) {
+      OutFormat = argv[4];
+      FileO = argv[5];
+    }
+    if (FileO == "stderr") {
+      process_entry<Tgroup>(arith, FileCode, FileGramMat, OutFormat, std::cerr);
+    } else {
+      if (FileO == "stdout") {
+        process_entry<Tgroup>(arith, FileCode, FileGramMat, OutFormat, std::cout);
+      } else {
+        std::ofstream osf(FileO);
+        process_entry<Tgroup>(arith, FileCode, FileGramMat, OutFormat, osf);
+      }
+    }
     std::cerr << "Normal termination of the program time=" << time << "\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in CODE_Analysis time=" << time << "\n";

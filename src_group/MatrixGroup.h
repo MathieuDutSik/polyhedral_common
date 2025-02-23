@@ -254,8 +254,8 @@ template <typename Telt> struct CosetIterator {
   }
   Telt evaluate() const {
     Telt x = id;
-    for (size_t u = 0; u < ListPos.size(); u++) {
-      size_t v = ListPos.size() - 1 - u;
+    for (size_t u = 0; u < len; u++) {
+      size_t v = len - 1 - u;
       x *= ListListCoset[v][ListPos[v]];
     }
     return x;
@@ -473,8 +473,9 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
     }
     return false;
   };
-  if (fInsert(a))
+  if (fInsert(a)) {
     return {};
+  }
   size_t start = 0;
   while (true) {
     size_t len = TheOrbit.size();
@@ -482,15 +483,17 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
     os << "MAT_GRP: OrbitComputation_limit start=" << start << " len=" << len
        << "\n";
 #endif
-    if (start == len)
+    if (start == len) {
       break;
+    }
     for (size_t i = start; i < len; i++) {
       // Doing a copy to avoid memory problem.
       T2 x = TheOrbit[i];
       for (auto &eGen : ListGen) {
         T2 u = f_prod(x, eGen);
-        if (fInsert(u))
+        if (fInsert(u)) {
           return {};
+        }
       }
     }
     start = len;
@@ -580,7 +583,6 @@ Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
   }
   return eFace;
 }
-
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
 inline typename std::enable_if<has_determining_ext<Thelper>::value, std::vector<Telt>>::type
@@ -1208,7 +1210,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   // We could look at the quotient. (Z_d)^n / TheSpace and look for point
   // stabilizers Maybe we can translate to classes easily and
   RecSolutionIntMat<T> eCan(TheSpaceMod);
-  auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
+  auto IsNotStabilizing = [&](std::vector<MyMatrix<T>> const &ListMatrInp)
       -> std::optional<MyVector<T>> {
     for (auto &eGen : ListMatrInp) {
       MyMatrix<T> TheSpace_img = TheSpace * eGen;
@@ -1227,9 +1229,9 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime time;
 #endif
-    std::optional<MyVector<T>> opt = IsStabilizing(ListMatrRet);
+    std::optional<MyVector<T>> opt = IsNotStabilizing(ListMatrRet);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "|MAT_GRP: IsStabilizing|=" << time << "\n";
+    os << "|MAT_GRP: IsNotStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -1330,12 +1332,14 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   std::vector<MyMatrix<T>> ListGenRet = ListGen;
   for (int i = 1; i <= siz; i++) {
     T TheMod(1);
-    for (int j = 0; j < i; j++)
+    for (int j = 0; j < i; j++) {
       TheMod *= eList[j];
+    }
     ListGenRet = LinearSpace_ModStabilizer<T, Tgroup, Thelper, Fstab>(
         ListGenRet, helper, TheSpace, TheMod, f_stab, os);
-    if (IsStabilizing(ListGenRet))
+    if (IsStabilizing(ListGenRet)) {
       return ListGenRet;
+    }
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsStabilizing(ListGenRet)) {
@@ -1423,7 +1427,6 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   return ListMatrGen;
 }
 
-
 template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
@@ -1444,6 +1447,13 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   return ListGen;
 }
 
+/*
+  The dcs is the representative.
+  The list stab_gens is a set of generators "x"
+  of a group of transformations V
+  such that
+  U dcs x = U.dcs
+ */
 template<typename T>
 struct DoubleCosetEntry {
   MyMatrix<T> dcs;
@@ -1473,8 +1483,8 @@ struct DoubleCosetEntry {
   work is needed if failing.
  */
 template <typename T, typename Tgroup, typename Thelper>
-std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
-LinearSpace_Stabilizer_DoubleCoset_Kernel(
+std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>>
+LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& Vmatr_gens, std::ostream &os) {
   using PreImager = typename Thelper::PreImager;
@@ -1517,14 +1527,22 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
   std::vector<MyMatrix<T>> l_gens_ret =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           l_gens, helper, TheSpace, f_stab, os);
-  std::vector<MyMatrix<T>> l_dcs;
-  for (auto & entry : entries) {
-    l_dcs.push_back(entry.dcs);
-  }
-  return {std::move(l_gens_ret), l_dcs};
+  return {std::move(l_gens_ret), std::move(entries)};
 }
 
-
+template <typename T, typename Tgroup, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
+LinearSpace_Stabilizer_DoubleCoset_Kernel(
+    std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
+    MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& Vmatr_gens, std::ostream &os) {
+  std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pair =
+    LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel<T, Tgroup, Thelper>(l_gens, helper, TheSpace, Vmatr_gens, os);
+  std::vector<MyMatrix<T>> l_dcs;
+  for (auto & entry : pair.second) {
+    l_dcs.push_back(entry.dcs);
+  }
+  return {std::move(pair.first), std::move(l_dcs)};
+}
 
 template <typename T, typename Tgroup, typename Thelper>
 std::vector<MyMatrix<T>>
@@ -1622,8 +1640,6 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> LinearSpace_Stabili
   return {std::move(l_gen_C), std::move(l_cos_C)};
 }
 
-
-
 template <typename T>
 using ResultTestModEquivalence =
     std::pair<std::vector<MyMatrix<T>>, MyMatrix<T>>;
@@ -1706,7 +1722,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       std::vector<MyMatrix<Tmod>> ListMatrRetMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
       std::vector<MyVector<Tmod>> O =
-          OrbitComputation(ListMatrRetMod, V, TheAction, os);
+        OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size()
          << "\n";
