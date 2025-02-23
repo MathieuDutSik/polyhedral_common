@@ -23,6 +23,7 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
   Tgroup const& GrpU = pair.first;
   std::vector<Telt> l_dcs;
   for (auto & eDCS : pair.second) {
+    std::cerr << "eDCS.cos=" << eDCS.cos << "\n";
     std::unordered_set<Telt> set_cos;
     for (auto & x_u : GrpU) {
       Telt p = x_u * eDCS.cos;
@@ -37,7 +38,7 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
         }
       }
     };
-    for (auto & gen : GrpV.GeneratorsOfGroup()) {
+    for (auto & gen : eDCS.stab_gens) {
       check_stab(gen);
     }
     l_dcs.push_back(eDCS.cos);
