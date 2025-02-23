@@ -1627,18 +1627,59 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> LinearSpace_Stabili
   }
   std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pairB =
       LinearSpace_Stabilizer_DoubleCoset_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new, TheSpace_C, V_gens_B, os);
-  std::vector<MyMatrix<T>> l_gen_C;
-  for (auto &eMatr_B : pairB.first) {
-    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-    l_gen_C.emplace_back(std::move(eMatr_C));
-  }
-  std::vector<MyMatrix<T>> l_cos_C;
-  for (auto &eMatr_B : pairB.second) {
-    MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
-    l_cos_C.emplace_back(std::move(eMatr_C));
-  }
+  auto convert=[&](std::vector<MyMatrix<T>> const& l_mat) -> std::vector<MyMatrix<T>> {
+    std::vector<MyMatrix<T>> l_mat_tr;
+    for (auto &eMatr_B : l_mat) {
+      MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+      l_mat_tr.emplace_back(std::move(eMatr_C));
+    }
+    return l_mat_tr;
+  };
+  std::vector<MyMatrix<T>> l_gen_C = convert(pairB.first);
+  std::vector<MyMatrix<T>> l_cos_C = convert(pairB.second);
   return {std::move(l_gen_C), std::move(l_cos_C)};
 }
+
+template <typename T, typename Tgroup, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>,std::vector<DoubleCosetEntry<T>>> LinearSpace_Stabilizer_DoubleCosetStabilizer(
+    std::vector<MyMatrix<T>> const &ListMatr, Thelper const &helper,
+    MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& V_gens, std::ostream &os) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
+      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+  std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
+  MyMatrix<Tint> const &Pmat = pair.second;
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
+  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
+  MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
+  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  Thelper helper_new = TransformHelper(helper, Pmat_T);
+  std::vector<MyMatrix<T>> V_gens_B;
+  for (auto &eMatr_B : V_gens) {
+    MyMatrix<T> eMatr_C = Pmat_T * eMatr_B * PmatInv_T;
+    V_gens_B.emplace_back(std::move(eMatr_C));
+  }
+  std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pairB =
+      LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new, TheSpace_C, V_gens_B, os);
+  auto convert=[&](std::vector<MyMatrix<T>> const& l_mat) -> std::vector<MyMatrix<T>> {
+    std::vector<MyMatrix<T>> l_mat_tr;
+    for (auto &eMatr_B : l_mat) {
+      MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
+      l_mat_tr.emplace_back(std::move(eMatr_C));
+    }
+    return l_mat_tr;
+  };
+  std::vector<MyMatrix<T>> l_gen_C = convert(pairB.first);
+  std::vector<DoubleCosetEntry<T>> l_dcs_C;
+  for (auto & dcs : pairB.second) {
+    MyMatrix<T> cos_C = PmatInv_T * dcs.cos * Pmat_T;
+    std::vector<MyMatrix<T>> stab_gens_C = convert(dcs.stab_gens);
+    DoubleCosetEntry<T> dcs_C{std::move(cos_C), std::move(stab_gens_C)};
+    l_dcs_C.emplace_back(std::move(dcs_C));
+  }
+  return {std::move(l_gen_C), std::move(l_dcs_C)};
+}
+
 
 template <typename T>
 using ResultTestModEquivalence =
@@ -2020,8 +2061,7 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
 
 template <typename T, typename Tgroup>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
-LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(std::vector<MyMatrix<T>> const &ListMatrFull, std::vector<MyMatrix<T>> const& ListMatrV, MyMatrix<T> const &EXTfaithful,
-    std::ostream &os) {
+LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(std::vector<MyMatrix<T>> const &ListMatrFull, std::vector<MyMatrix<T>> const& ListMatrV, MyMatrix<T> const &EXTfaithful, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
@@ -2074,11 +2114,79 @@ LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(std::vector<MyMatrix<T>> 
     ListMatrStabGens.emplace_back(std::move(NewGen));
   }
   std::vector<MyMatrix<T>> ListDoubleCosets;
-  for (auto &eGen : pair.second) {
-    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
-    ListDoubleCosets.emplace_back(std::move(NewGen));
+  for (auto &eCos : pair.second) {
+    MyMatrix<T> NewCos = InvBasis * eCos * eBasis;
+    ListDoubleCosets.emplace_back(std::move(NewCos));
   }
   return {std::move(ListMatrStabGens), std::move(ListDoubleCosets)};
+}
+
+template <typename T, typename Tgroup>
+std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>>
+LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer_Subspaces(std::vector<MyMatrix<T>> const &ListMatrFull, std::vector<MyMatrix<T>> const& ListMatrV, MyMatrix<T> const &EXTfaithful, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
+  MyMatrix<T> eBasis = GetZbasis(EXTfaithful);
+  MyMatrix<T> InvBasis = Inverse(eBasis);
+  MyMatrix<T> EXTbas = EXTfaithful * InvBasis;
+  std::vector<MyMatrix<T>> ListMatrFullGens;
+  for (auto &eGen : ListMatrFull) {
+    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrFullGens.emplace_back(std::move(NewGen));
+  }
+  std::vector<MyMatrix<T>> ListMatrVGens;
+  for (auto &eGen : ListMatrV) {
+    MyMatrix<T> NewGen = eBasis * eGen * InvBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrVGens.emplace_back(std::move(NewGen));
+  }
+  FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
+    ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
+  MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
+        "before LinearSpace_Stabilizer_RightCoset\n";
+#endif
+  std::pair<std::vector<MyMatrix<T>>,std::vector<DoubleCosetEntry<T>>> pair =
+    LinearSpace_Stabilizer_DoubleCosetStabilizer<T, Tgroup>(ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
+        "LinearSpace_Stabilizer_DoubleCoset\n";
+#endif
+  std::vector<MyMatrix<T>> ListMatrStabGens;
+  for (auto &eGen : pair.first) {
+    MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+#ifdef SANITY_CHECK_MATRIX_GROUP
+    if (!IsIntegralMatrix(NewGen)) {
+      std::cerr << "Clear error in the code\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListMatrStabGens.emplace_back(std::move(NewGen));
+  }
+  std::vector<DoubleCosetEntry<T>> ListDoubleCosetStabilizer;
+  for (auto &dcs : pair.second) {
+    MyMatrix<T> NewCos = InvBasis * dcs.cos * eBasis;
+    std::vector<MyMatrix<T>> new_stab_gens;
+    for (auto & eGen : dcs.stab_gens) {
+      MyMatrix<T> NewGen = InvBasis * eGen * eBasis;
+      new_stab_gens.emplace_back(std::move(NewGen));
+    }
+    DoubleCosetEntry<T> new_dcs{std::move(NewCos), std::move(new_stab_gens)};
+    ListDoubleCosetStabilizer.emplace_back(std::move(new_dcs));
+  }
+  return {std::move(ListMatrStabGens), std::move(ListDoubleCosetStabilizer)};
 }
 
 template <typename T>
