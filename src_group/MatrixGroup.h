@@ -1502,44 +1502,34 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
     PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: Before GRP.double_coset_computer_v\n";
+    os << "MAT_GRP: Before GRP.double_coset_computer_v |GRP|=" << GRP.size() << " |eStab|=" << eStab.size() << " n_act=" << static_cast<size_t>(eStab.n_act()) << "\n";
 #endif
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab);
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
     for (auto &entry: entries) {
+      MyMatrix<T> cos_inv = Inverse(entry.cos);
       std::vector<MyMatrix<T>> const& V_gens = entry.stab_gens;
+      std::vector<MyMatrix<T>> V_gens_conj;
+      for (auto & eGen : V_gens) {
+        MyMatrix<T> NewGen = entry.cos * eGen * cos_inv;
+        V_gens_conj.emplace_back(std::move(NewGen));
+      }
       std::vector<Telt> ListPermGens_B =
-        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens, helper, f_get_perm, os);
+        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens_conj, helper, f_get_perm, os);
       Tgroup Vperm_gens = Tgroup(ListPermGens_B, siz_act);
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
-#ifdef DEBUG_DOUBLE_COSET_ENUM
-        if (false) { // That check fails. Is the test wrong or do we have a bug
-          Telt eCosPerm = f_get_perm(eCos);
-          if (eCosPerm != e_de.cos) {
-            std::cerr << "eCosPerm =" << eCosPerm << " siz=" << eCosPerm.size() << "\n";
-            std::cerr << "e_de.cos =" << e_de.cos << " siz=" << e_de.cos.size() << "\n";
-            std::cerr << "Inconsistency in eCos\n";
-            throw TerminalException{1};
-          }
-        }
-#endif
         Tgroup Vred_perm(e_de.stab_gens, siz_act);
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
-#ifdef DEBUG_DOUBLE_COSET_ENUM
-        if (false) {
-          for (auto & eMatr : Vred_matr) {
-            Telt ePerm = f_get_perm(eMatr);
-            if (!Vred_perm.isin(ePerm)) {
-              std::cerr << "elements of Vred_matr should map to something in Vred_perm\n";
-              throw TerminalException{1};
-            }
-          }
+        std::vector<MyMatrix<T>> Vred_matr_conj;
+        for (auto & eGen : Vred_matr) {
+          MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
+          Vred_matr_conj.emplace_back(std::move(NewGen));
         }
-#endif
-        DoubleCosetEntry<T> new_de{std::move(eCos), std::move(Vred_matr)};
+        MyMatrix<T> NewCos = eCos * entry.cos;
+        DoubleCosetEntry<T> new_de{std::move(NewCos), std::move(Vred_matr_conj)};
         new_entries.emplace_back(std::move(new_de));
       }
     }
