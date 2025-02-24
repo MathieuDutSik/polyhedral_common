@@ -56,10 +56,10 @@ jobs:
           sudo apt-get install -y cmake
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
-          sudo apt-get install -y libgsl-dev libglpk-dev libflint-dev
+          sudo apt-get install -y libglpk-dev libflint-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y libntl-dev libmpfr-dev
+          sudo apt-get install -y libmpfr-dev
           sudo apt-get install -y openmpi-bin libopenmpi-dev
           sudo apt-get install -y autoconf autotools-dev libtool
 
@@ -118,4 +118,9 @@ jobs:
 
           cd CI_tests/IntegralAutomorphy
           ../../gap.sh < ProcessExamples.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
           cd ../..
+          echo "After integral automorphy"
