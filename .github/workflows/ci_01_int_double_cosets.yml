@@ -7,7 +7,7 @@ name: CI(01) of Matrix Double Cosets
 on:
   # One time per month
   schedule:
-    - cron: "0 0 2 * *"
+    - cron: "0 0 1 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -22,8 +22,6 @@ jobs:
       EIGEN_PATH: /home/runner/work/opt/eigen
       GLPK_INCLUDE: "-I/usr/include"
       GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
-      FLINT_INCDIR: "/include"
-      FLINT_LINK: "-lflint"
       CDDLIB_PATH: "/home/runner/work/opt/cddlib"
       CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
       CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
