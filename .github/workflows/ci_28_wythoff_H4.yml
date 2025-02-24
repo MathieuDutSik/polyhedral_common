@@ -111,7 +111,7 @@ jobs:
 
       - name: Test dual description of WythoffH4
         run: |
-          cd src_dualdesc && make -f Makefile_CI && cd ..
+          cd src_dualdesc && make -f Makefile_serial_dualdesc && cd ..
           echo "After compilation of Dual description code"
 
           cd CI_tests/WythoffH4 && ../../gap.sh < TestWythoff.g

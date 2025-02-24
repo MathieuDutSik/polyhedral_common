@@ -125,7 +125,7 @@ jobs:
 
       - name: Test dual description using symmetries
         run: |
-          cd src_dualdesc && make -f Makefile_CI && cd ..
+          cd src_dualdesc && make -f Makefile_serial_dualdesc && cd ..
           echo "After compilation of dual desc code"
 
           cd CI_tests/EquivDualDesc && ../../gap.sh < TestCases.g
