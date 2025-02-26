@@ -27,7 +27,7 @@ int main(int argc, char *argv[]) {
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
-    std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
+    std::cerr << "GRP_LinearSpace_Stabilizer_DoubleCoset : Reading input\n";
     std::string GRP_file = argv[1];
     std::string SPA_file = argv[2];
     std::string VGRP_file = argv[3];
@@ -43,21 +43,10 @@ int main(int argc, char *argv[]) {
       LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrGen, helper, eLatt, V_gens, std::cerr);
     //
     std::ofstream os(OUT_file);
-    auto f_print = [&](std::vector<MyMatrix<T>> const &Lmat) -> void {
-      os << "[";
-      bool IsFirst = true;
-      for (auto &eMat : Lmat) {
-        if (!IsFirst)
-          os << ",\n";
-        IsFirst = false;
-        WriteMatrixGAP(os, eMat);
-      }
-      os << "]";
-    };
     os << "return rec(GRPmatr:=Group(";
-    f_print(pair.first);
-    os << ", ListCos:=";
-    f_print(pair.second);
+    WriteListMatrixGAP(os, pair.first);
+    os << "), ListCos:=";
+    WriteListMatrixGAP(os, pair.second);
     os << ");\n";
     std::cerr << "Normal termination of GRP_LinearSpace_Stabilizer_DoubleCoset\n";
   } catch (TerminalException const &e) {
