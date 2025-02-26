@@ -116,6 +116,10 @@ void process_entry_type(std::string const &FileCode,
       std::cerr << " " << CODE(iEnt, i);
     }
     std::cerr << "\n";
+    if (norm == 0) {
+      std::cerr << "The norm should not be equal to zero\n";
+      throw TerminalException{1};
+    }
     s_norm[norm] += 1;
     norm_by_vertex.push_back(norm);
   }

@@ -14,6 +14,7 @@
 
 #ifdef DEBUG
 #define DEBUG_INDEFINITE_LLL
+#define DEBUG_SIMPLE_INDEFINITE_REDUCTION
 #endif
 
 #ifdef TIMINGS
@@ -217,7 +218,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
     MyMatrix<T> Mred = M;
     MyVector<T> Xisotrop = MyVector<T>(0);
     std::optional<MyVector<T>> opt = {Xisotrop};
-    return {B, Mred, opt};
+    return {std::move(B), std::move(Mred), opt};
   }
 #ifdef TIMINGS_INDEFINITE_LLL
   MicrosecondTime time;
@@ -226,7 +227,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
   os << "ILLL: Beginning of ComputeReductionIndefinite\n";
 #endif
   auto get_norm = [&](MyMatrix<T> const &mat) -> T {
-    T sum = 0;
+    T sum(0);
     for (int i = 0; i < n; i++)
       for (int j = 0; j < n; j++)
         sum += T_abs(mat(i, j));
@@ -340,7 +341,7 @@ template<typename T, typename Tint>
 ResultReduction<T, Tint>
 SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   auto l1_norm=[&](MyMatrix<T> const& U) -> T {
     T sum = 0;
     for (int i=0; i<n; i++) {
@@ -353,7 +354,21 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
 #endif
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
-#ifdef DEBUG_INDEFINITE_LLL
+  // We choose the indices at random in order to avoid always
+  // hitting the same indices
+  std::vector<int> indices;
+  for (int i=0; i<n; i++)
+    indices.push_back(i);
+  auto f_transpose=[&]() -> void {
+    int i = random() % n;
+    int j = random() % n;
+    if (i != j) {
+      int k = indices[i];
+      indices[i] = indices[j];
+      indices[j] = k;
+    }
+  };
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   os << "=======================================================\n";
   os << "ILLL: n=" << n << "\n";
   os << "ILLL: M=\n";
@@ -363,17 +378,17 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   struct ResSearch {
     int i;
     int j;
-    int c;
+    Tint c;
   };
   // Apply the transformation
   // tilde(M) = (Id + c U_ij) M (Id + c U_ji)
   //          = (M + c Row(M,j) at row i) ( Id + c U_ji)
-  //          = M + c Row(M,j) at row i + c Col(M,j) at col i + c^2 
+  //          = M + c Row(M,j) at row i + c Col(M,j) at col i + c^2
   auto eval=[&](ResSearch const& x) -> T {
     int i = x.i;
     int j = x.j;
-    int c = x.c;
-#ifdef DEBUG_INDEFINITE_LLL
+    Tint c = x.c;
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
     os << "ILLL: eval: i=" << i << " j=" << j << " c=" << c << "\n";
 #endif
     //
@@ -382,7 +397,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       if (k != i) {
         T val1 = T_abs( Mwork(i,k) );
         T val2 = T_abs( T(Mwork(i,k) + c * Mwork(j,k)) );
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
         os << "ILLL: eval, off: k=" << k << " val1=" << val1 << " val2=" << val2 << "\n";
 #endif
         delta_off += val1 - val2;
@@ -390,25 +405,50 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     }
     T val1 = T_abs( Mwork(i,i) );
     T val2 = T_abs( T(Mwork(i,i) + 2 * c * Mwork(j,i) + c * c * Mwork(j,j)) );
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
     os << "ILLL: eval, diag, val1=" << val1 << " val2=" << val2 << "\n";
 #endif
     T delta_diag = val1 - val2;
     T delta = 2 * delta_off + delta_diag;
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
     os << "ILLL: eval, summary, delta_off=" << delta_off << " delta_diag=" << delta_diag << " delta=" << delta << "\n";
 #endif
     return delta;
   };
+  auto direction_search=[&](ResSearch const& x) -> std::optional<ResSearch> {
+    T val = eval(x);
+    if (val <= 0) {
+      return {};
+    }
+    T best_delta = val;
+    ResSearch x_ret = x;
+    while(true) {
+      x_ret.c += x.c;
+      T val = eval(x_ret);
+      if (val <= best_delta) {
+        x_ret.c -= x.c; // Revert the change that would increase the norm.
+        return x_ret;
+      }
+      best_delta = val;
+    }
+  };
   auto f_search=[&]() -> std::optional<ResSearch> {
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
+    f_transpose();
+    for (int i_s=0; i_s<n; i_s++) {
+      int i = indices[i_s];
+      for (int j_s=0; j_s<n; j_s++) {
+        int j = indices[j_s];
         if (i != j) {
           for (int pre_sign=0; pre_sign<2; pre_sign++) {
-            int sign = -1 + 2 * pre_sign;
+            Tint sign = Tint(-1 + 2 * pre_sign);
             ResSearch x{i, j, sign};
-            if (eval(x) > 0) {
-              return x;
+            std::optional<ResSearch> opt = direction_search(x);
+            if (opt) {
+              ResSearch const& x_final = *opt;
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
+              os << "ILLL: x_final=(" << x_final.i << " / " << x_final.j << " / " << x_final.c << ")\n";
+#endif
+              return x_final;
             }
           }
         }
@@ -419,22 +459,23 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   auto update=[&](ResSearch const& x) -> void {
     int i = x.i;
     int j = x.j;
-    int c = x.c;
+    Tint c = x.c;
+    T c_T = UniversalScalarConversion<T,Tint>(c);
     B.row(i) += c * B.row(j);
-    Mwork.row(i) += c * Mwork.row(j);
-    Mwork.col(i) += c * Mwork.col(j);
+    Mwork.row(i) += c_T * Mwork.row(j);
+    Mwork.col(i) += c_T * Mwork.col(j);
   };
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   auto f_compute=[&](ResSearch const& x) -> std::pair<MyMatrix<Tint>, MyMatrix<T>> {
     int i = x.i;
     int j = x.j;
-    int c = x.c;
+    T c = x.c;
     MyMatrix<Tint> eUnit = IdentityMat<Tint>(n);
     eUnit(i,j) = c;
     MyMatrix<Tint> Btest = eUnit * B;
     MyMatrix<T> BT_test = UniversalMatrixConversion<T,Tint>(Btest);
     MyMatrix<T> Mwork_test = BT_test * M * BT_test.transpose();
-    return {Btest, Mwork_test};
+    return {std::move(Btest), std::move(Mwork_test)};
   };
   size_t n_oper = 0;
 #endif
@@ -443,9 +484,9 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     std::optional<ResSearch> opt = f_search();
     if (opt) {
       ResSearch const& x = *opt;
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
       n_oper += 1;
-      os << "------------ " << n_oper << " --------------------\n";
+      os << "------------ n_oper=" << n_oper << " --------------------\n";
       os << "ILLL: i=" << x.i << " j=" << x.j << " c=" << x.c << "\n";
       T norm_prev = l1_norm(Mwork);
       os << "ILLL: Mwork=\n";
@@ -455,13 +496,11 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       WriteMatrix(os, pair.first);
       os << "ILLL: pair.second(M)=\n";
       WriteMatrix(os, pair.second);
-      os << "ILLL: Mwork=\n";
-      WriteMatrix(os, Mwork);
       os << "ILLL: L1(Mwork)=" << l1_norm(Mwork) << " L1(pair.second)=" << l1_norm(pair.second) << "\n";
       T delta = eval(x);
 #endif
       update(x);
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
       T norm_next = l1_norm(Mwork);
       size_t num_error = 0;
       if (norm_prev - delta != norm_next) {
@@ -535,7 +574,7 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
   auto f_norm=[&](MyMatrix<T> const& U) -> T {
-    T sum = 0;
+    T sum(0);
     for (int i=0; i<n; i++) {
       for (int j=0; j<n; j++) {
         sum += T_abs(U(i,j));
@@ -544,6 +583,9 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     return sum;
   };
   T norm_work = f_norm(M);
+#ifdef DEBUG_INDEFINITE_LLL
+  size_t n_iter = 0;
+#endif
   while(true) {
     size_t n_operation = 0;
     // Applying the LLL first
@@ -564,6 +606,10 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
       Mwork = res2.Mred;
       norm_work = norm2;
     }
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: n_iter=" << n_iter << " n_operation=" << n_operation << "\n";
+    n_iter += 1;
+#endif
     // If did nothing then exit. Necessarily we will reach that stage at some point
     if (n_operation < 2) {
       return {std::move(B), std::move(Mwork)};
@@ -584,7 +630,7 @@ IndefiniteReduction_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
     int n = M.rows();
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
     MyMatrix<T> Mred = M;
-    return {B, Mred};
+    return {std::move(B), std::move(Mred)};
   }
 }
 
