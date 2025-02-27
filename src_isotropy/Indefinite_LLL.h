@@ -611,7 +611,7 @@ template <typename T, typename Tint>
 ResultReduction<T, Tint>
 IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
-  MyMatrix<Tint> B = ZeroMatrix<Tint>(n, n);
+  MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
   std::pair<int, int> signature = GetSignature(M);
   int n_plus = signature.first;
@@ -697,13 +697,22 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     size_t n_operation = 0;
     for (int choice=0; choice<n_choice; choice++) {
       std::optional<ResultReduction<T,Tint>> opt = compute_by_block(Mwork);
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: Obtainer opt from compute_by_block\n";
+#endif
       if (opt) {
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: Call to compute_by_block was successful, returning\n";
+#endif
         return *opt;
       }
       ResultReduction<T,Tint> res = compute_reduction(Mwork, choice);
       T norm = get_l1_norm(res.Mred);
       if (norm < norm_work) {
         n_operation += 1;
+#ifdef DEBUG_INDEFINITE_LLL
+        os << "choice=" << choice << " was successful, |norm old|=" << norm_work << " |norm new|=" << norm << "\n";
+#endif
         B = res.B * B;
         Mwork = res.Mred;
         norm_work = norm;

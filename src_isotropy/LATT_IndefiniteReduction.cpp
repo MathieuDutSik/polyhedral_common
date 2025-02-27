@@ -48,7 +48,9 @@ int main(int argc, char *argv[]) {
       ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
-      if (T_abs(DeterminantMat(B_T)) != 1) {
+      T det = T_abs(DeterminantMat(B_T));
+      if (det != 1) {
+        std::cerr << "det=" << det << "\n";
         std::cerr << "B_T should have determinant 1 or -1\n";
         throw TerminalException{1};
       }
