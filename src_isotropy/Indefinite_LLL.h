@@ -6,6 +6,8 @@
 #include "MAT_Matrix.h"
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
+#include "SignatureSymmetric.h"
+#include "ClassicLLL.h"
 #include <algorithm>
 #include <limits>
 #include <utility>
@@ -321,7 +323,7 @@ LLLIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
 }
 
 template<typename T>
-std::vector<std::vector<size_t>> MatrixConnectedComponents(MyMatrix<T> const& M) {
+GraphBitset GetMatrixGraph(MyMatrix<T> const& M) {
   size_t n = M.rows();
   GraphBitset eG(n);
   for (size_t i = 0; i < n; i++) {
@@ -332,9 +334,25 @@ std::vector<std::vector<size_t>> MatrixConnectedComponents(MyMatrix<T> const& M)
       }
     }
   }
+  return eG;
+}
+
+
+
+template<typename T>
+std::vector<std::vector<size_t>> MatrixConnectedComponents(MyMatrix<T> const& M) {
+  GraphBitset eG = GetMatrixGraph(M);
   std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
   return LConn;
 }
+
+template<typename T>
+bool IsMatrixConnected(MyMatrix<T> const& M) {
+  GraphBitset eG = GetMatrixGraph(M);
+  std::vector<std::vector<size_t>> LConn = ConnectedComponents_set(eG);
+  return LConn.size() == 1;
+}
+
 
 
 template<typename T, typename Tint>
@@ -537,6 +555,20 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   }
 }
 
+template<typename T>
+T get_l1_norm(MyMatrix<T> const& U) {
+  int n = U.rows();
+  T sum(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      sum += T_abs(U(i,j));
+    }
+  }
+  return sum;
+}
+
+
+
 template<typename T, typename Tint>
 ResultReduction<T, Tint>
 BlockSimpleIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
@@ -567,44 +599,115 @@ BlockSimpleIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   return {std::move(B), std::move(Mret)};
 }
 
+template <typename T>
+std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
+  int nbPlus = DiagInfo.nbPlus;
+  int nbMinus = DiagInfo.nbMinus;
+  return {nbPlus, nbMinus};
+}
+
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
-  MyMatrix<Tint> B = IdentityMat<Tint>(n);
+  MyMatrix<Tint> B = ZeroMatrix<Tint>(n, n);
   MyMatrix<T> Mwork = M;
-  auto f_norm=[&](MyMatrix<T> const& U) -> T {
-    T sum(0);
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        sum += T_abs(U(i,j));
+  std::pair<int, int> signature = GetSignature(M);
+  int n_plus = signature.first;
+  int n_minus = signature.second;
+  int n_choice = 4;
+  if (n_plus > 0 && n_minus > 0) {
+    n_choice = 2;
+  }
+  auto compute_by_block=[&](auto & Min) -> std::optional<ResultReduction<T,Tint>> {
+    std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(Min);
+    if (LConn.size() == 1) {
+      return {};
+    }
+    MyMatrix<Tint> B_block = ZeroMatrix<Tint>(n, n);
+    MyMatrix<T> M_block = ZeroMatrix<T>(n, n);
+    for (auto & eConn : LConn) {
+      int len = eConn.size();
+      MyMatrix<T> M_conn(len, len);
+      for (int i=0; i<len; i++) {
+        for (int j=0; j<len; j++) {
+          size_t i_big = eConn[i];
+          size_t j_big = eConn[j];
+          M_conn(i, j) = Min(i_big, j_big);
+        }
+      }
+      ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(M_conn, os);
+      for (int i=0; i<len; i++) {
+        for (int j=0; j<len; j++) {
+          size_t i_big = eConn[i];
+          size_t j_big = eConn[j];
+          B_block(i_big, j_big) = res.B(i,j);
+          M_block(i_big, j_big) = res.Mred(i,j);
+        }
       }
     }
-    return sum;
+    MyMatrix<Tint> Bret = B_block * B;
+    ResultReduction<T,Tint> res{std::move(Bret), std::move(M_block)};
+    return res;
   };
-  T norm_work = f_norm(M);
+  auto compute_reduction=[&](MyMatrix<T> const& Min, int const& choice) -> ResultReduction<T, Tint> {
+    if (choice == 0) {
+      return LLLIndefiniteReduction<T,Tint>(Min, os);
+    }
+    if (choice == 1) {
+      return SimpleIndefiniteReduction<T,Tint>(Min, os);
+    }
+    if (choice == 2 || choice == 3) {
+      if (n_plus > 0 && n_minus > 0) {
+        MyMatrix<Tint> B = IdentityMat<Tint>(n);
+        return {std::move(B), Min};
+      }
+      auto get_m=[&]() -> MyMatrix<T> {
+        if (n_plus == 0) {
+          return -Min;
+        }
+        return Min;
+      };
+      MyMatrix<T> Mcall = get_m();
+      auto get_redmat=[&]() -> MyMatrix<Tint> {
+        if (choice == 2) {
+          LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Mcall);
+          return rec.Pmat;
+        } else {
+          LLLreduction<T, Tint> rec = LLLreducedBasisDual<T, Tint>(Mcall);
+          return rec.Pmat;
+        }
+      };
+      MyMatrix<Tint> B = get_redmat();
+      MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+      MyMatrix<T> Mout = B_T * Min * B_T.transpose();
+      return {std::move(B), std::move(Mout)};
+    }
+    std::cerr << "The chosen option is not accepted\n";
+    throw TerminalException{1};
+  };
+
+
+  T norm_work = get_l1_norm(M);
 #ifdef DEBUG_INDEFINITE_LLL
   size_t n_iter = 0;
 #endif
   while(true) {
     size_t n_operation = 0;
-    // Applying the LLL first
-    ResultReduction<T, Tint> res1 = LLLIndefiniteReduction<T,Tint>(Mwork, os);
-    T norm1 = f_norm(res1.Mred);
-    if (norm1 < norm_work) {
-      n_operation += 1;
-      B = res1.B * B;
-      Mwork = res1.Mred;
-      norm_work = norm1;
-    }
-    // Applying the BlockSimple second
-    ResultReduction<T, Tint> res2 = BlockSimpleIndefiniteReduction<T,Tint>(Mwork, os);
-    T norm2 = f_norm(res2.Mred);
-    if (norm2 < norm_work) {
-      n_operation += 1;
-      B = res2.B * B;
-      Mwork = res2.Mred;
-      norm_work = norm2;
+    for (int choice=0; choice<n_choice; choice++) {
+      std::optional<ResultReduction<T,Tint>> opt = compute_by_block(Mwork);
+      if (opt) {
+        return *opt;
+      }
+      ResultReduction<T,Tint> res = compute_reduction(Mwork, choice);
+      T norm = get_l1_norm(res.Mred);
+      if (norm < norm_work) {
+        n_operation += 1;
+        B = res.B * B;
+        Mwork = res.Mred;
+        norm_work = norm;
+      }
     }
 #ifdef DEBUG_INDEFINITE_LLL
     os << "ILLL: n_iter=" << n_iter << " n_operation=" << n_operation << "\n";
@@ -616,9 +719,6 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     }
   }
 }
-
-
-
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
