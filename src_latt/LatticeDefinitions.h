@@ -53,12 +53,13 @@ Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const &eMat,
   int iShort = 0;
   for (int iRow = 0; iRow < nbRow; iRow++)
     if (ListStatus[iRow] == 1) {
-      for (int i = 0; i < n; i++)
+      for (int i = 0; i < n; i++) {
         TheSHV(iShort, i) = SHV(iRow, i);
+      }
       iShort++;
     }
   //  std::cerr << "MinNorm=" << MinNorm << "\n";
-  return {MinNorm, TheSHV};
+  return {MinNorm, std::move(TheSHV)};
 }
 
 template <typename T, typename Tint> struct resultCVP {
@@ -87,13 +88,15 @@ void EnumerateOrbitPrimitiveVector(
     std::vector<MyMatrix<int>> const &ListMat, int const &pPrime,
     int const &dim,
     std::function<void(std::vector<int> const &, int const &)> const &FCT) {
-  Tint expo = 1;
-  for (int i = 0; i < dim; i++)
+  Tint expo(1);
+  for (int i = 0; i < dim; i++) {
     expo *= pPrime;
+  }
   Tint TotalNb = (expo - 1) / (pPrime - 1);
   Face StatusVect(TotalNb);
-  for (Tint i = 0; i < TotalNb; i++)
+  for (Tint i = 0; i < TotalNb; i++) {
     StatusVect[i] = 1;
+  }
   //
   // The modulo p Operations
   //
@@ -113,26 +116,19 @@ void EnumerateOrbitPrimitiveVector(
         eInv = j;
     }
     ListInverse[i] = eInv;
-    //    std::cerr << "i=" << i << " ListInverse=" << eInv << "\n";
   }
   auto PrimitivizeVector = [&](std::vector<int> &V) -> void {
-    /*    std::cerr << "PrimitiveVector Vi=";
-    for (int i=0; i<dim; i++)
-      std::cerr << " " << V[i];
-      std::cerr << "\n";*/
     int ifound = -1;
-    for (int i = 0; i < dim; i++)
-      if (V[i] != 0)
+    for (int i = 0; i < dim; i++) {
+      if (V[i] != 0) {
         ifound = i;
+      }
+    }
     int eVal = V[ifound];
     int eInv = ListInverse[eVal];
-    //    std::cerr << "eVal=" << eVal << " eInv=" << eInv << "\n";
-    for (int i = 0; i <= ifound; i++)
+    for (int i = 0; i <= ifound; i++) {
       V[i] = ProdModP(eInv, V[i]);
-    /*    std::cerr << "PrimitiveVector Vo=";
-    for (int i=0; i<dim; i++)
-      std::cerr << " " << V[i];
-      std::cerr << "\n";*/
+    }
   };
   auto ImagePrimitiveVector =
       [&](MyMatrix<int> const &M,
@@ -143,8 +139,6 @@ void EnumerateOrbitPrimitiveVector(
       for (int j = 0; j < dim; j++)
         sum += M(j, i) * V[j];
       int res = Canonicalization(sum);
-      //      std::cerr << "sum=" << sum << " pPrime=" << pPrime << " res=" <<
-      //      res << "\n";
       Vret[i] = res;
     }
     PrimitivizeVector(Vret);
@@ -157,17 +151,7 @@ void EnumerateOrbitPrimitiveVector(
       std::cerr << "Inconsistency to be solved\n";
       throw TerminalException{1};
     }
-    /*    std::cerr << "Vin=";
-    for (int i=0; i<dim; i++)
-      std::cerr << " " << Vin[i];
-    std::cerr << "\n";
-    std::cerr << "M=\n";
-    WriteMatrix(std::cerr, M);*/
     std::vector<int> Vout = ImagePrimitiveVector(M, Vin);
-    /*    std::cerr << "Vout=";
-    for (int i=0; i<dim; i++)
-      std::cerr << " " << Vout[i];
-      std::cerr << "\n";*/
     return ConvertPrimitiveVectorToNumber<Tint>(Vout, pPrime);
   };
   //

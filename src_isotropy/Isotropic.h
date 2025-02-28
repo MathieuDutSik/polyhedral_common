@@ -171,7 +171,10 @@ std::optional<MyVector<T>> GetIsotropIndefiniteLLL(MyMatrix<T> const &Q,
     iter += 1;
 #endif
     // Compute the LLL reduction.
-    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw);
+    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Qw, os);
+#ifdef DEBUG_ISOTROPIC
+    os << "ISOTROP: GetIsotropIndefiniteLLL. We have res\n";
+#endif
     if (res.Xisotrop) {
       MyVector<T> const &Xisotrop = *res.Xisotrop;
       MyVector<T> V = Pw.transpose() * Xisotrop;

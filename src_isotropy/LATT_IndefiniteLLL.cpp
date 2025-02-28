@@ -14,7 +14,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
   std::cerr << "We have M\n";
 
-  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M);
+  ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M, std::cerr);
   std::cerr << "B_T=\n";
   WriteMatrix(std::cerr, res.B);
   std::cerr << "Mred=\n";

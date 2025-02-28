@@ -8,8 +8,8 @@ PROGRAM		= INDEF_FORM_GetOrbitRepresentative
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
@@ -32,8 +32,8 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 #CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
 #CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_APPROXIMATE_MODELS -DDEBUG_POSITIVE_NEGATIVE_FORMS  -DTIMINGS
 #CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_APPROXIMATE_MODELS -DDEBUG_MATRIX_GROUP
-#CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG
-CDEFS           =
+CDEFS           = -DDEBUG -DSANITY_CHECK
+#CDEFS           =
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

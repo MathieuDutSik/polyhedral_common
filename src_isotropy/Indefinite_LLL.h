@@ -34,7 +34,7 @@ template <typename T> struct ResultGramSchmidt_Indefinite {
 
 template <typename T, typename Tint>
 ResultGramSchmidt_Indefinite<T>
-GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
+GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   MyMatrix<T> mu(n, n);
   struct PairInf {
@@ -63,13 +63,13 @@ GramSchmidtOrthonormalization(MyMatrix<T> const &M, MyMatrix<Tint> const &B) {
 #ifdef DEBUG_INDEFINITE_LLL
     det2 = det2 * scal;
 #endif
-    PairInf epair{std::move(Bistar_M), scal};
+    PairInf epair{Bistar_M, scal};
     Bstar.push_back(Bistar);
     Bstar_norms.push_back(scal);
     l_inf.push_back(epair);
   }
 #ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "ILLL: det1=" << det1 << " det2=" << det2 << "\n";
+  os << "ILLL: det1=" << det1 << " det2=" << det2 << "\n";
 #endif
   return {true, Bstar, Bstar_norms, mu, {}};
 }
@@ -85,7 +85,7 @@ template <typename T, typename Tint> struct ResultIndefiniteLLL {
 // Adapted from Denis Simon, Solving Quadratic Equations Using Reduced
 // Unimodular Quadratic Forms, Math. Comp. 74(251) 1531--1543
 template <typename T, typename Tint>
-ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
+ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   if (n == 0) {
     MyMatrix<Tint> B = IdentityMat<Tint>(0);
@@ -106,7 +106,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
         return {};
       }
     };
-    return {std::move(B), std::move(Mred), get_iso()};
+    return {B, Mred, get_iso()};
   }
   // The c constant of the LLL algorithm
   T c = T(7) / T(8);
@@ -122,25 +122,25 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
   int k = 1;
   while (true) {
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k
+    os << "ILLL: Passing in Indefinite_LLL det=" << det << " k=" << k
               << "\n";
-    std::cerr << "ILLL: M=\n";
-    WriteMatrix(std::cerr, M);
-    std::cerr << "ILLL: B=\n";
-    WriteMatrix(std::cerr, B);
+    os << "ILLL: M=\n";
+    WriteMatrix(os, M);
+    os << "ILLL: B=\n";
+    WriteMatrix(os, B);
 #endif
-    ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B);
+    ResultGramSchmidt_Indefinite<T> ResGS = GramSchmidtOrthonormalization(M, B, os);
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: Bstar_norms =";
+    os << "ILLL: Bstar_norms =";
     for (auto &eN : ResGS.Bstar_norms)
-      std::cerr << " " << eN;
-    std::cerr << "\n";
+      os << " " << eN;
+    os << "\n";
 #endif
     if (!ResGS.success) {
 #ifdef DEBUG_INDEFINITE_LLL
-      std::cerr << "ILLL: Returning from Indefinite_LLL (!ResGS.success)\n";
+      os << "ILLL: Returning from Indefinite_LLL (!ResGS.success)\n";
 #endif
-      return {std::move(B), get_matrix(), ResGS.Xisotrop};
+      return {B, get_matrix(), ResGS.Xisotrop};
     }
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
@@ -154,11 +154,11 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     T sum1 = T_abs(sum1_pre);
     T sum2 = c * T_abs(ResGS.Bstar_norms[k - 1]);
 #ifdef DEBUG_INDEFINITE_LLL
-    std::cerr << "ILLL: sum1=" << sum1 << " sum2=" << sum2 << "\n";
+    os << "ILLL: sum1=" << sum1 << " sum2=" << sum2 << "\n";
 #endif
     if (sum1 < sum2) {
 #ifdef DEBUG_INDEFINITE_LLL
-      std::cerr << "ILLL: Swapping k=" << k << " and " << (k - 1) << "\n";
+      os << "ILLL: Swapping k=" << k << " and " << (k - 1) << "\n";
 #endif
       for (int i = 0; i < n; i++) {
         std::swap(B(k, i), B(k - 1, i));
@@ -172,9 +172,9 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
     }
   }
 #ifdef DEBUG_INDEFINITE_LLL
-  std::cerr << "ILLL: Returning from Indefinite_LLL 2\n";
+  os << "ILLL: Returning from ndefinite_LLL 2\n";
 #endif
-  return {std::move(B), get_matrix(), {}};
+  return {B, get_matrix(), {}};
 }
 
 /*
@@ -215,14 +215,14 @@ template <typename T, typename Tint>
 ResultIndefiniteLLL<T, Tint>
 ComputeReductionIndefinite(MyMatrix<T> const &M,
                            bool const& look_for_isotropic,
-                           [[maybe_unused]] std::ostream &os) {
+                           std::ostream &os) {
   int n = M.rows();
   if (n == 0) {
     MyMatrix<Tint> B = IdentityMat<Tint>(0);
     MyMatrix<T> Mred = M;
     MyVector<T> Xisotrop = MyVector<T>(0);
     std::optional<MyVector<T>> opt = {Xisotrop};
-    return {std::move(B), std::move(Mred), opt};
+    return {B, Mred, opt};
   }
 #ifdef TIMINGS_INDEFINITE_LLL
   MicrosecondTime time;
@@ -244,7 +244,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
   size_t iter_no_improv = 0;
   size_t limit_iter = 2 * n;
   while (true) {
-    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Mwork);
+    ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(Mwork, os);
 #ifdef DEBUG_INDEFINITE_LLL
     os << "ILLL: We have computed res\n";
 #endif
@@ -274,7 +274,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
 #ifdef TIMINGS_INDEFINITE_LLL
       os << "|ILLL: ComputeReductionIndefinite(Iso)|=" << time << "\n";
 #endif
-      return {std::move(Bret), std::move(Mwork), V};
+      return {Bret, Mwork, V};
     }
     // Applying the reduction
     B = res.B * B;
@@ -295,7 +295,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
 #ifdef TIMINGS_INDEFINITE_LLL
         os << "|ILLL: ComputeReductionIndefinite(None)|=" << time << "\n";
 #endif
-        return {std::move(B), std::move(Mwork), {}};
+        return {B, Mwork, {}};
       }
     } else {
       iter_no_improv = 0;
@@ -321,12 +321,12 @@ LLLIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
   if (n == 1) {
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
-    return {std::move(B), M};
+    return {B, M};
   }
   bool look_for_isotropic = false;
   ResultIndefiniteLLL<T, Tint> res =
     ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
-  return {std::move(res.B), std::move(res.Mred)};
+  return {res.B, res.Mred};
 }
 
 template<typename T>
@@ -368,7 +368,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   int n = M.rows();
   if (n == 1) {
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
-    return {std::move(B), M};
+    return {B, M};
   }
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   auto l1_norm=[&](MyMatrix<T> const& U) -> T {
@@ -504,7 +504,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     MyMatrix<Tint> Btest = eUnit * B;
     MyMatrix<T> BT_test = UniversalMatrixConversion<T,Tint>(Btest);
     MyMatrix<T> Mwork_test = BT_test * M * BT_test.transpose();
-    return {std::move(Btest), std::move(Mwork_test)};
+    return {Btest, Mwork_test};
   };
   size_t n_oper = 0;
 #endif
@@ -533,26 +533,26 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       T norm_next = l1_norm(Mwork);
       size_t num_error = 0;
       if (norm_prev - delta != norm_next) {
-        std::cerr << "ILLL: norm_prev=" << norm_prev << " delta=" << delta << " norm_next=" << norm_next << "\n";
-        std::cerr << "ILLL: B=\n";
-        WriteMatrix(std::cerr, B);
-        std::cerr << "ILLL: Mwork=\n";
-        WriteMatrix(std::cerr, Mwork);
-        std::cerr << "L1-Norm inconsistency\n";
+        os << "ILLL: norm_prev=" << norm_prev << " delta=" << delta << " norm_next=" << norm_next << "\n";
+        os << "ILLL: B=\n";
+        WriteMatrix(os, B);
+        os << "ILLL: Mwork=\n";
+        WriteMatrix(os, Mwork);
+        os << "L1-Norm inconsistency\n";
         num_error += 1;
       }
       if (pair.first != B) {
-        std::cerr << "B inconsistency\n";
+        os << "B inconsistency\n";
         num_error += 1;
       }
       if (pair.second != Mwork) {
-        std::cerr << "Mwork inconsistency\n";
+        os << "Mwork inconsistency\n";
         num_error += 1;
       }
       MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
       MyMatrix<T> prod = B_T * M * B_T.transpose();
       if (prod != Mwork) {
-        std::cerr << "B / Mwork inconsistency\n";
+        os << "B / Mwork inconsistency\n";
         num_error += 1;
       }
       if (num_error > 0) {
@@ -561,7 +561,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       }
 #endif
     } else {
-      return {std::move(B), std::move(Mwork)};
+      return {B, Mwork};
     }
   }
 }
@@ -627,7 +627,7 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
       }
     }
     MyMatrix<Tint> Bret = B_block * B;
-    ResultReduction<T,Tint> res{std::move(Bret), std::move(M_block)};
+    ResultReduction<T,Tint> res{Bret, M_block};
     return res;
   };
   auto compute_reduction=[&](MyMatrix<T> const& Min, int const& choice) -> ResultReduction<T, Tint> {
@@ -638,9 +638,12 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
       return SimpleIndefiniteReduction<T,Tint>(Min, os);
     }
     if (choice == 2 || choice == 3) {
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
+#endif
       if (n_plus > 0 && n_minus > 0) {
         MyMatrix<Tint> B = IdentityMat<Tint>(n);
-        return {std::move(B), Min};
+        return {B, Min};
       }
       auto get_m=[&]() -> MyMatrix<T> {
         if (n_plus == 0) {
@@ -649,21 +652,43 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
         return Min;
       };
       MyMatrix<T> Mcall = get_m();
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, Mcall=\n";
+      WriteMatrix(os, Mcall);
+#endif
       auto get_redmat=[&]() -> MyMatrix<Tint> {
         if (choice == 2) {
+#ifdef DEBUG_INDEFINITE_LLL
+          os << "ILLL: IndefiniteReduction, before LLLreduceBasis\n";
+#endif
           LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Mcall);
           return rec.Pmat;
         } else {
+#ifdef DEBUG_INDEFINITE_LLL
+          os << "ILLL: IndefiniteReduction, before LLLreduceBasisDual\n";
+#endif
           LLLreduction<T, Tint> rec = LLLreducedBasisDual<T, Tint>(Mcall);
           return rec.Pmat;
         }
       };
       MyMatrix<Tint> B = get_redmat();
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, B=\n";
+      WriteMatrix(os, B);
+#endif
       MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, B_T=\n";
+      WriteMatrix(os, B_T);
+#endif
       MyMatrix<T> Mout = B_T * Min * B_T.transpose();
-      return {std::move(B), std::move(Mout)};
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, Mout=\n";
+      WriteMatrix(os, Mout);
+#endif
+      return {B, Mout};
     }
-    std::cerr << "The chosen option is not accepted\n";
+    std::cerr << "ILLL: The chosen option is not accepted\n";
     throw TerminalException{1};
   };
 
@@ -680,20 +705,29 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
 #endif
       std::optional<ResultReduction<T,Tint>> opt = compute_by_block(Mwork);
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: Obtainer opt from compute_by_block\n";
+      os << "ILLL: Obtained opt from compute_by_block choice=" << choice << "\n";
 #endif
       if (opt) {
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: Call to compute_by_block was successful, returning\n";
+        os << "ILLL: Call to compute_by_block was successful, returning\n";
 #endif
         return *opt;
       }
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, before compute_reduction\n";
+#endif
       ResultReduction<T,Tint> res = compute_reduction(Mwork, choice);
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, after compute_reduction\n";
+#endif
       T norm = get_l1_norm(res.Mred);
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: IndefiniteReduction, norm=" << norm << " norm_work=" << norm_work << "\n";
+#endif
       if (norm < norm_work) {
         n_operation += 1;
 #ifdef DEBUG_INDEFINITE_LLL
-        os << "choice=" << choice << " was successful, |norm old|=" << norm_work << " |norm new|=" << norm << "\n";
+        os << "ILLL: choice=" << choice << " was successful, |norm old|=" << norm_work << " |norm new|=" << norm << "\n";
 #endif
         B = res.B * B;
         Mwork = res.Mred;
@@ -706,7 +740,7 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
 #endif
     // If did nothing then exit. Necessarily we will reach that stage at some point
     if (n_operation < 2) {
-      return {std::move(B), std::move(Mwork)};
+      return {B, Mwork};
     }
   }
 }
@@ -721,7 +755,7 @@ IndefiniteReduction_opt(MyMatrix<T> const &M, bool const &ApplyReduction,
     int n = M.rows();
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
     MyMatrix<T> Mred = M;
-    return {std::move(B), std::move(Mred)};
+    return {B, Mred};
   }
 }
 

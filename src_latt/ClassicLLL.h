@@ -2,6 +2,11 @@
 #ifndef SRC_LATT_CLASSICLLL_H_
 #define SRC_LATT_CLASSICLLL_H_
 
+#ifdef DEBUG
+#define DEBUG_CLASSIC_LLL
+#endif
+
+
 template <typename T, typename Tint> struct LLLreduction {
   MyMatrix<T> GramMatRed;
   MyMatrix<Tint> Pmat;
@@ -27,15 +32,21 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tmat> gram = GramMat;
   int nbRow = gram.rows();
   int nbCol = gram.cols();
+#ifdef DEBUG_CLASSIC_LLL
+  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+#endif
   if (nbRow != nbCol) {
-    std::cerr << "The matrix is not square. Impossible to run LLL\n";
     throw TerminalException{1};
   }
   int n = nbRow;
-  if (n == 1) {
-    MyMatrix<Tint> Pmat = IdentityMat<Tint>(n);
-    return {GramMat, std::move(Pmat)};
+#ifdef DEBUG_CLASSIC_LLL
+  int rnk = RankMat(GramMat);
+  if (rnk != n) {
+    std::cerr << "rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "The matrix is not of full rank\n";
+    throw TerminalException{1};
   }
+#endif
   int k = 1;
   int kmax = 0;
   MyMatrix<Tfield> mue = ZeroMatrix<Tfield>(n, n);
@@ -43,19 +54,27 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyVector<Tfield> ak(n);
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   auto RED = [&](int const &l) -> void {
+#ifdef DEBUG_CLASSIC_LLL
+    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
+#endif
     if (1 < mue(k, l) * 2 || mue(k, l) * 2 < -1) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
+#ifdef DEBUG_CLASSIC_LLL
+      std::cerr << "RED, before oper q=" << q << "\n";
+      WriteMatrix(std::cerr, gram);
+#endif
       gram(k, k) -= q_T * gram(k, l);
-      for (int i = r + 1; i <= l; i++) {
+      for (int i = r + 1; i <= l; i++)
         gram(k, i) -= q_T * gram(l, i);
-      }
-      for (int i = l + 1; i <= k; i++) {
+      for (int i = l + 1; i <= k; i++)
         gram(k, i) -= q_T * gram(i, l);
-      }
-      for (int i = k + 1; i < n; i++) {
+      for (int i = k + 1; i < n; i++)
         gram(i, k) -= q_T * gram(i, l);
-      }
+#ifdef DEBUG_CLASSIC_LLL
+      std::cerr << "After gram Oper\n";
+      WriteMatrix(std::cerr, gram);
+#endif
       mue(k, l) = mue(k, l) - q_T;
       for (int i = r + 1; i <= l - 1; i++)
         mue(k, i) -= q_T * mue(l, i);
@@ -63,17 +82,21 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     }
   };
   Tfield y = Tfield(99) / Tfield(100);
+#ifdef DEBUG_CLASSIC_LLL
+  std::cerr << " y=" << y << "\n";
+#endif
   int i = 0;
   while (true) {
     Tmat eVal = gram(i, i);
-    if (eVal > 0) {
+    if (eVal > 0)
       break;
-    }
     i++;
-    if (i == n) {
+    if (i == n)
       break;
-    }
   }
+#ifdef DEBUG_CLASSIC_LLL
+  std::cerr << "After the while loop i=" << i << "\n";
+#endif
   if (i >= n) {
     r = n - 1;
     k = n;
@@ -88,52 +111,58 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       H.row(i).swap(H.row(i));
     }
   }
+#ifdef DEBUG_CLASSIC_LLL
+  std::cerr << "After the if test r=" << r << " k=" << k << " kmax=" << kmax
+            << "\n";
+#endif
   MyVector<Tfield> B(n);
   B(0) = UniversalScalarConversion<Tfield, Tmat>(gram(0, 0));
   while (k < n) {
+#ifdef DEBUG_CLASSIC_LLL
+    std::cerr << "While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
+#endif
     if (k > kmax) {
       kmax = k;
       B(k) = UniversalScalarConversion<Tfield, Tmat>(gram(k, k));
-      for (int u = 0; u < n; u++) {
+      for (int u = 0; u < n; u++)
         mue(k, u) = 0;
-      }
       for (int j = r + 1; j <= k - 1; j++) {
         ak(j) = UniversalScalarConversion<Tfield, Tmat>(gram(k, j));
-        for (int i = r + 1; i <= j - 1; i++) {
+        for (int i = r + 1; i <= j - 1; i++)
           ak(j) -= mue(j, i) * ak(i);
-        }
         mue(k, j) = ak(j) / B(j);
         B(k) -= mue(k, j) * ak(j);
       }
     }
     RED(k - 1);
+#ifdef DEBUG_CLASSIC_LLL
+    bool test=B(k) < ( y - mue(k,k-1) * mue(k,k-1) ) * B(k-1);
+    std::cerr << "While loop, step 3 y=" << y << " mue(k,k-1)=" <<
+      mue(k,k-1) << " B(k)=" << B(k) << " B(k-1)=" << B(k-1) << " test=" <<
+      test << "\n";
+#endif
     while (B(k) < (y - mue(k, k - 1) * mue(k, k - 1)) * B(k - 1)) {
       H.row(k).swap(H.row(k - 1));
-      for (int j = r + 1; j <= k - 2; j++) {
+      for (int j = r + 1; j <= k - 2; j++)
         std::swap(gram(k, j), gram(k - 1, j));
-      }
-      for (int j = k + 1; j < n; j++) {
+      for (int j = k + 1; j < n; j++)
         std::swap(gram(j, k), gram(j, k - 1));
-      }
       std::swap(gram(k - 1, k - 1), gram(k, k));
-      for (int j = r + 1; j <= k - 2; j++) {
+      for (int j = r + 1; j <= k - 2; j++)
         std::swap(mue(k, j), mue(k - 1, j));
-      }
       Tfield mmue = mue(k, k - 1);
       Tfield BB = B(k) + mmue * mmue * B(k - 1);
       if (BB == 0) {
         B(k) = B(k - 1);
         B(k - 1) = 0;
-        for (int i = k + 1; k <= kmax; k++) {
+        for (int i = k + 1; k <= kmax; k++)
           std::swap(mue(i, k), mue(i, k - 1));
-        }
       } else {
         if (B(k) == 0 && mmue != 0) {
           B(k - 1) = BB;
           mue(k, k - 1) = 1 / mmue;
-          for (int i = k + 1; k <= kmax; k++) {
+          for (int i = k + 1; k <= kmax; k++)
             mue(i, k - 1) /= mmue;
-          }
         } else {
           Tfield q = B(k - 1) / BB;
           mue(k, k - 1) = mmue * q;
@@ -146,30 +175,32 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
           }
         }
       }
-      if (k > 1) {
+      if (k > 1)
         k--;
-      }
       RED(k - 1);
     }
-    if (B(r + 1) == 0) {
+    if (B(r + 1) == 0)
       r++;
-    }
+#ifdef DEBUG_CLASSIC_LLL
+    std::cerr << "While loop, step 5 k=" << k << " r=" << r << "\n";
+#endif
     for (int l = k - 2; l >= r + 1; l--) {
       RED(l);
     }
     k++;
   }
-  for (int i = 1; i < n; i++) {
-    for (int j = 0; j < i; j++) {
+  for (int i = 1; i < n; i++)
+    for (int j = 0; j < i; j++)
       gram(j, i) = gram(i, j);
-    }
-  }
   LLLreduction<Tmat, Tint> res = {std::move(gram), std::move(H)};
 #ifdef DEBUG
   CheckLLLreduction(res, GramMat);
 #endif
   return res;
 }
+
+
+
 
 /*
   We reduced the inverse of GramMat using LLL so
