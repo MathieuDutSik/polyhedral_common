@@ -27,11 +27,15 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tmat> gram = GramMat;
   int nbRow = gram.rows();
   int nbCol = gram.cols();
-  //  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   if (nbRow != nbCol) {
+    std::cerr << "The matrix is not square. Impossible to run LLL\n";
     throw TerminalException{1};
   }
   int n = nbRow;
+  if (n == 1) {
+    MyMatrix<Tint> Pmat = IdentityMat<Tint>(n);
+    return {GramMat, std::move(Pmat)};
+  }
   int k = 1;
   int kmax = 0;
   MyMatrix<Tfield> mue = ZeroMatrix<Tfield>(n, n);
@@ -39,48 +43,37 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyVector<Tfield> ak(n);
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   auto RED = [&](int const &l) -> void {
-    //    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) <<
-    //    "\n";
     if (1 < mue(k, l) * 2 || mue(k, l) * 2 < -1) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
-      //      std::cerr << "RED, before oper q=" << q << "\n";
-      //      WriteMatrix(std::cerr, gram);
       gram(k, k) -= q_T * gram(k, l);
-      //      std::cerr << "RED step 1\n";
-      for (int i = r + 1; i <= l; i++)
+      for (int i = r + 1; i <= l; i++) {
         gram(k, i) -= q_T * gram(l, i);
-      //      std::cerr << "RED step 2\n";
-      for (int i = l + 1; i <= k; i++)
+      }
+      for (int i = l + 1; i <= k; i++) {
         gram(k, i) -= q_T * gram(i, l);
-      //      std::cerr << "RED step 3 n=" << n << "\n";
-      for (int i = k + 1; i < n; i++)
+      }
+      for (int i = k + 1; i < n; i++) {
         gram(i, k) -= q_T * gram(i, l);
-      //      std::cerr << "After gram Oper\n";
-      //      WriteMatrix(std::cerr, gram);
-      //      std::cerr << "RED step 4\n";
+      }
       mue(k, l) = mue(k, l) - q_T;
-      //      std::cerr << "RED step 5\n";
       for (int i = r + 1; i <= l - 1; i++)
         mue(k, i) -= q_T * mue(l, i);
-      //      std::cerr << "RED step 6\n";
       H.row(k) -= q * H.row(l);
-      //      std::cerr << "RED step 7\n";
     }
   };
   Tfield y = Tfield(99) / Tfield(100);
-  //  std::cerr << " y=" << y << "\n";
   int i = 0;
   while (true) {
     Tmat eVal = gram(i, i);
-    //    std::cerr << "i=" << i << " eVal=" << eVal << "\n";
-    if (eVal > 0)
+    if (eVal > 0) {
       break;
+    }
     i++;
-    if (i == n)
+    if (i == n) {
       break;
+    }
   }
-  //  std::cerr << "After the while loop i=" << i << "\n";
   if (i >= n) {
     r = n - 1;
     k = n;
@@ -95,102 +88,82 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       H.row(i).swap(H.row(i));
     }
   }
-  //  std::cerr << "After the if test r=" << r << " k=" << k << " kmax=" << kmax
-  //  << "\n";
   MyVector<Tfield> B(n);
   B(0) = UniversalScalarConversion<Tfield, Tmat>(gram(0, 0));
-  //  std::cerr << "Before while loop\n";
   while (k < n) {
-    //    std::cerr << "While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
     if (k > kmax) {
       kmax = k;
       B(k) = UniversalScalarConversion<Tfield, Tmat>(gram(k, k));
-      for (int u = 0; u < n; u++)
+      for (int u = 0; u < n; u++) {
         mue(k, u) = 0;
+      }
       for (int j = r + 1; j <= k - 1; j++) {
         ak(j) = UniversalScalarConversion<Tfield, Tmat>(gram(k, j));
-        for (int i = r + 1; i <= j - 1; i++)
+        for (int i = r + 1; i <= j - 1; i++) {
           ak(j) -= mue(j, i) * ak(i);
+        }
         mue(k, j) = ak(j) / B(j);
         B(k) -= mue(k, j) * ak(j);
       }
     }
-    //    std::cerr << "While loop, step 2 k=" << k << "\n";
     RED(k - 1);
-    //    bool test=B(k) < ( y - mue(k,k-1) * mue(k,k-1) ) * B(k-1);
-    //    std::cerr << "While loop, step 3 y=" << y << " mue(k,k-1)=" <<
-    //    mue(k,k-1) << " B(k)=" << B(k) << " B(k-1)=" << B(k-1) << " test=" <<
-    //    test << "\n";
     while (B(k) < (y - mue(k, k - 1) * mue(k, k - 1)) * B(k - 1)) {
-      //      std::cerr << "Sec While loop, step 1\n";
       H.row(k).swap(H.row(k - 1));
-      //      std::cerr << "Sec While loop, step 2\n";
-      for (int j = r + 1; j <= k - 2; j++)
+      for (int j = r + 1; j <= k - 2; j++) {
         std::swap(gram(k, j), gram(k - 1, j));
-      //      std::cerr << "Sec While loop, step 3\n";
-      for (int j = k + 1; j < n; j++)
+      }
+      for (int j = k + 1; j < n; j++) {
         std::swap(gram(j, k), gram(j, k - 1));
-      //      std::cerr << "Sec While loop, step 4\n";
+      }
       std::swap(gram(k - 1, k - 1), gram(k, k));
-      //      std::cerr << "Sec While loop, step 5\n";
-      for (int j = r + 1; j <= k - 2; j++)
+      for (int j = r + 1; j <= k - 2; j++) {
         std::swap(mue(k, j), mue(k - 1, j));
-      //      std::cerr << "Sec While loop, step 6\n";
+      }
       Tfield mmue = mue(k, k - 1);
       Tfield BB = B(k) + mmue * mmue * B(k - 1);
-      //      std::cerr << "Sec While loop, step 7 BB=" << BB << "\n";
       if (BB == 0) {
         B(k) = B(k - 1);
         B(k - 1) = 0;
-        for (int i = k + 1; k <= kmax; k++)
+        for (int i = k + 1; k <= kmax; k++) {
           std::swap(mue(i, k), mue(i, k - 1));
+        }
       } else {
         if (B(k) == 0 && mmue != 0) {
           B(k - 1) = BB;
           mue(k, k - 1) = 1 / mmue;
-          for (int i = k + 1; k <= kmax; k++)
+          for (int i = k + 1; k <= kmax; k++) {
             mue(i, k - 1) /= mmue;
+          }
         } else {
-          //  std::cerr << "Sec While loop, step 7.2.1\n";
           Tfield q = B(k - 1) / BB;
-          //  std::cerr << "Sec While loop, step 7.2.2\n";
           mue(k, k - 1) = mmue * q;
-          //  std::cerr << "Sec While loop, step 7.2.3\n";
           B(k) *= q;
-          //  std::cerr << "Sec While loop, step 7.2.4\n";
           B(k - 1) = BB;
           for (int i = k + 1; i <= kmax; i++) {
-            //  std::cerr << "Sec While loop, step 7.2.5.1\n";
             Tfield q = mue(i, k);
-            //  std::cerr << "Sec While loop, step 7.2.5.2\n";
             mue(i, k) = mue(i, k - 1) - mmue * q;
-            //  std::cerr << "Sec While loop, step 7.2.5.3\n";
             mue(i, k - 1) = q + mue(k, k - 1) * mue(i, k);
-            //  std::cerr << "Sec While loop, step 7.2.5.4\n";
           }
-          //  std::cerr << "Sec While loop, step 7.2.6\n";
         }
       }
-      //  std::cerr << "Sec While loop, step 8\n";
-      if (k > 1)
+      if (k > 1) {
         k--;
+      }
       RED(k - 1);
-      //  std::cerr << "Sec While loop, step 9\n";
     }
-    //  std::cerr << "While loop, step 4\n";
-    if (B(r + 1) == 0)
+    if (B(r + 1) == 0) {
       r++;
-    //  std::cerr << "While loop, step 5 k=" << k << " r=" << r << "\n";
+    }
     for (int l = k - 2; l >= r + 1; l--) {
-      //  std::cerr << "  While loop, step 5.1 l=" << l << "\n";
       RED(l);
     }
-    //  std::cerr << "While loop, step 6\n";
     k++;
   }
-  for (int i = 1; i < n; i++)
-    for (int j = 0; j < i; j++)
+  for (int i = 1; i < n; i++) {
+    for (int j = 0; j < i; j++) {
       gram(j, i) = gram(i, j);
+    }
+  }
   LLLreduction<Tmat, Tint> res = {std::move(gram), std::move(H)};
 #ifdef DEBUG
   CheckLLLreduction(res, GramMat);

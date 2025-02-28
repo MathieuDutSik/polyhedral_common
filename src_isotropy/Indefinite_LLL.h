@@ -106,7 +106,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
         return {};
       }
     };
-    return {B, Mred, get_iso()};
+    return {std::move(B), std::move(Mred), get_iso()};
   }
   // The c constant of the LLL algorithm
   T c = T(7) / T(8);
@@ -140,7 +140,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
 #ifdef DEBUG_INDEFINITE_LLL
       std::cerr << "ILLL: Returning from Indefinite_LLL (!ResGS.success)\n";
 #endif
-      return {B, get_matrix(), ResGS.Xisotrop};
+      return {std::move(B), get_matrix(), ResGS.Xisotrop};
     }
     for (int i = n - 1; i >= 0; i--) {
       for (int j = 0; j < i; j++) {
@@ -174,7 +174,7 @@ ResultIndefiniteLLL<T, Tint> Indefinite_LLL(MyMatrix<T> const &M) {
 #ifdef DEBUG_INDEFINITE_LLL
   std::cerr << "ILLL: Returning from Indefinite_LLL 2\n";
 #endif
-  return {B, get_matrix(), {}};
+  return {std::move(B), get_matrix(), {}};
 }
 
 /*
@@ -187,8 +187,9 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
   for (int iter = 0; iter < 4 * n; iter++) {
     int i = random() % n;
     int j = random() % n;
-    if (i != j)
+    if (i != j) {
       std::swap(LPos[i], LPos[j]);
+    }
   }
   std::vector<int> LDiag(n);
   for (int i = 0; i < n; i++) {
@@ -196,8 +197,9 @@ template <typename Tint> MyMatrix<Tint> get_random_int_matrix(int const &n) {
     LDiag[i] = -1 + 2 * val;
   }
   MyMatrix<Tint> Unit = ZeroMatrix<Tint>(n, n);
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     Unit(i, LPos[i]) = LDiag[i];
+  }
   return Unit;
 }
 
@@ -272,7 +274,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
 #ifdef TIMINGS_INDEFINITE_LLL
       os << "|ILLL: ComputeReductionIndefinite(Iso)|=" << time << "\n";
 #endif
-      return {Bret, Mwork, V};
+      return {std::move(Bret), std::move(Mwork), V};
     }
     // Applying the reduction
     B = res.B * B;
@@ -293,7 +295,7 @@ ComputeReductionIndefinite(MyMatrix<T> const &M,
 #ifdef TIMINGS_INDEFINITE_LLL
         os << "|ILLL: ComputeReductionIndefinite(None)|=" << time << "\n";
 #endif
-        return {B, Mwork, {}};
+        return {std::move(B), std::move(Mwork), {}};
       }
     } else {
       iter_no_improv = 0;
@@ -316,6 +318,11 @@ template <typename T, typename Tint> struct ResultReduction {
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 LLLIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+  int n = M.rows();
+  if (n == 1) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(n);
+    return {std::move(B), M};
+  }
   bool look_for_isotropic = false;
   ResultIndefiniteLLL<T, Tint> res =
     ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
@@ -359,6 +366,10 @@ template<typename T, typename Tint>
 ResultReduction<T, Tint>
 SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
+  if (n == 1) {
+    MyMatrix<Tint> B = IdentityMat<Tint>(n);
+    return {std::move(B), M};
+  }
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   auto l1_norm=[&](MyMatrix<T> const& U) -> T {
     T sum = 0;
@@ -567,38 +578,6 @@ T get_l1_norm(MyMatrix<T> const& U) {
   return sum;
 }
 
-
-
-template<typename T, typename Tint>
-ResultReduction<T, Tint>
-BlockSimpleIndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
-  int n = M.rows();
-  MyMatrix<Tint> B = ZeroMatrix<Tint>(n, n);
-  MyMatrix<T> Mret = ZeroMatrix<T>(n, n);
-  std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(M);
-  for (auto & eConn : LConn) {
-    int len = eConn.size();
-    MyMatrix<T> M_conn(len, len);
-    for (int i=0; i<len; i++) {
-      for (int j=0; j<len; j++) {
-        size_t i_big = eConn[i];
-        size_t j_big = eConn[j];
-        M_conn(i, j) = M(i_big, j_big);
-      }
-    }
-    ResultReduction<T, Tint> res = SimpleIndefiniteReduction<T,Tint>(M_conn, os);
-    for (int i=0; i<len; i++) {
-      for (int j=0; j<len; j++) {
-        size_t i_big = eConn[i];
-        size_t j_big = eConn[j];
-        B(i_big, j_big) = res.B(i,j);
-        Mret(i_big, j_big) = res.Mred(i,j);
-      }
-    }
-  }
-  return {std::move(B), std::move(Mret)};
-}
-
 template <typename T>
 std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
@@ -696,6 +675,9 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   while(true) {
     size_t n_operation = 0;
     for (int choice=0; choice<n_choice; choice++) {
+#ifdef DEBUG_INDEFINITE_LLL
+      os << "ILLL: |Mwork|=" << Mwork.rows() << " / " << Mwork.cols() << "\n";
+#endif
       std::optional<ResultReduction<T,Tint>> opt = compute_by_block(Mwork);
 #ifdef DEBUG_INDEFINITE_LLL
       os << "ILLL: Obtainer opt from compute_by_block\n";
