@@ -5,7 +5,7 @@
 #else
 # include "NumberTheory.h"
 #endif
-#include "IndefApproxCanonical.h"
+#include "Indefinite_LLL.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
