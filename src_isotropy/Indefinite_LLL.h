@@ -586,6 +586,24 @@ std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
   return {nbPlus, nbMinus};
 }
 
+/*
+  Compute a reduction to a matrix with smaller L1-norm by
+  applying GL_n(Z) transformations. The matrix is not necessarily
+  positive definite and they may be non-degenerate.
+
+  Three kinds of transformations are used:
+  1) Indefinite LLL from Denis Simon
+  2) Simple exhaustive reduction by looking for transformations
+     I_n + alpha X_{i,j}
+  3) Classic LLL though it works only for positive definite or negative
+     definite matrices. I think there is an extension to semidefinite
+     from the GAP code.
+  4) The Dual Classic LLL which may sometimes be better.
+
+  When blocks are found, they are kept. The heuristic being that you
+  cannot do better than blocks. This also allows to apply the LLL to
+  matrices for which this does not appear valid.
+ */
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
@@ -595,12 +613,44 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   std::pair<int, int> signature = GetSignature(M);
   int n_plus = signature.first;
   int n_minus = signature.second;
-  int n_choice = 4;
-  if (n_plus > 0 && n_minus > 0) {
-    n_choice = 2;
+  int n_zero = n - n_plus - n_minus;
+  std::vector<int> choices;
+  if (n_zero > 0) {
+    choices.push_back(0);
+    choices.push_back(1);
+  } else {
+    if (n_plus > 0 && n_minus > 0) {
+      choices.push_back(0);
+      choices.push_back(1);
+    } else {
+      choices.push_back(0);
+      choices.push_back(1);
+      choices.push_back(2);
+      choices.push_back(3);
+    }
   }
   auto compute_by_block=[&](auto & Min) -> std::optional<ResultReduction<T,Tint>> {
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: IndefiniteReduction, compute_by_block, Min=\n";
+    WriteMatrix(os, Min);
+#endif
     std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(Min);
+#ifdef DEBUG_INDEFINITE_LLL
+    os << "ILLL: IndefiniteReduction, compute_by_block, LConn=[";
+    for (auto & eConn : LConn) {
+      bool IsFirst = true;
+      os << " {";
+      for (auto & eVal : eConn) {
+        if (!IsFirst) {
+          os << ",";
+        }
+        IsFirst = false;
+        os << eVal;
+      }
+      os << "}";
+    }
+    os << " ]\n";
+#endif
     if (LConn.size() == 1) {
       return {};
     }
@@ -616,6 +666,10 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
           M_conn(i, j) = Min(i_big, j_big);
         }
       }
+#ifdef DEBUG_INDEFINITE_LLL
+      int rnk = RankMat(M_conn);
+      os << "ILLL: IndefiniteReduction, len=" << len << " RankMat(M_conn)=" << rnk << "\n";
+#endif
       ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(M_conn, os);
       for (int i=0; i<len; i++) {
         for (int j=0; j<len; j++) {
@@ -699,7 +753,7 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
 #endif
   while(true) {
     size_t n_operation = 0;
-    for (int choice=0; choice<n_choice; choice++) {
+    for (auto &choice : choices) {
 #ifdef DEBUG_INDEFINITE_LLL
       os << "ILLL: |Mwork|=" << Mwork.rows() << " / " << Mwork.cols() << "\n";
 #endif
