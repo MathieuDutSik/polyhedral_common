@@ -3,7 +3,7 @@
 #define SRC_INDEFINITE_INDEFINITE_LLL_H_
 
 // clang-format off
-#include "MAT_Matrix.h"
+#include "MAT_MatrixInt.h"
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
 #include "SignatureSymmetric.h"
@@ -633,12 +633,12 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
   }
   auto compute_by_block=[&](auto & Min) -> std::optional<ResultReduction<T,Tint>> {
 #ifdef DEBUG_INDEFINITE_LLL
-    os << "ILLL: IndefiniteReduction, compute_by_block, Min=\n";
+    os << "ILLL: IndefiniteReductionNonDegenerate, compute_by_block, Min=\n";
     WriteMatrix(os, Min);
 #endif
     std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(Min);
 #ifdef DEBUG_INDEFINITE_LLL
-    os << "ILLL: IndefiniteReduction, compute_by_block, LConn=[";
+    os << "ILLL: IndefiniteReductionNonDegenerate, compute_by_block, LConn=[";
     for (auto & eConn : LConn) {
       bool IsFirst = true;
       os << " {";
@@ -670,9 +670,9 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
       }
 #ifdef DEBUG_INDEFINITE_LLL
       int rnk = RankMat(M_conn);
-      os << "ILLL: IndefiniteReduction, len=" << len << " RankMat(M_conn)=" << rnk << "\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, len=" << len << " RankMat(M_conn)=" << rnk << "\n";
 #endif
-      ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(M_conn, os);
+      ResultReduction<T, Tint> res = IndefiniteReductionNonDegenerate<T,Tint>(M_conn, os);
       for (int i=0; i<len; i++) {
         for (int j=0; j<len; j++) {
           size_t i_big = eConn[i];
@@ -695,7 +695,7 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
     }
     if (choice == 2 || choice == 3) {
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, n_plus=" << n_plus << " n_minus=" << n_minus << "\n";
 #endif
       if (n_plus > 0 && n_minus > 0) {
         MyMatrix<Tint> B = IdentityMat<Tint>(n);
@@ -709,19 +709,19 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
       };
       MyMatrix<T> Mcall = get_m();
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, Mcall=\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, Mcall=\n";
       WriteMatrix(os, Mcall);
 #endif
       auto get_redmat=[&]() -> MyMatrix<Tint> {
         if (choice == 2) {
 #ifdef DEBUG_INDEFINITE_LLL
-          os << "ILLL: IndefiniteReduction, before LLLreduceBasis\n";
+          os << "ILLL: IndefiniteReductionNonDegenerate, before LLLreduceBasis\n";
 #endif
           LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Mcall);
           return rec.Pmat;
         } else {
 #ifdef DEBUG_INDEFINITE_LLL
-          os << "ILLL: IndefiniteReduction, before LLLreduceBasisDual\n";
+          os << "ILLL: IndefiniteReductionNonDegenerate, before LLLreduceBasisDual\n";
 #endif
           LLLreduction<T, Tint> rec = LLLreducedBasisDual<T, Tint>(Mcall);
           return rec.Pmat;
@@ -729,17 +729,17 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
       };
       MyMatrix<Tint> B = get_redmat();
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, B=\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, B=\n";
       WriteMatrix(os, B);
 #endif
       MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, B_T=\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, B_T=\n";
       WriteMatrix(os, B_T);
 #endif
       MyMatrix<T> Mout = B_T * Min * B_T.transpose();
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, Mout=\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, Mout=\n";
       WriteMatrix(os, Mout);
 #endif
       return {B, Mout};
@@ -770,15 +770,15 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
         return *opt;
       }
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, before compute_reduction\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, before compute_reduction\n";
 #endif
       ResultReduction<T,Tint> res = compute_reduction(Mwork, choice);
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, after compute_reduction\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, after compute_reduction\n";
 #endif
       T norm = get_l1_norm(res.Mred);
 #ifdef DEBUG_INDEFINITE_LLL
-      os << "ILLL: IndefiniteReduction, norm=" << norm << " norm_work=" << norm_work << "\n";
+      os << "ILLL: IndefiniteReductionNonDegenerate, norm=" << norm << " norm_work=" << norm_work << "\n";
 #endif
       if (norm < norm_work) {
         n_operation += 1;
@@ -807,7 +807,7 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
  */
 template <typename T, typename Tint>
 std::pair<ResultReduction<T, Tint>, int>
-get_nondegenerate_reduction(MyMatrix<T> const& M, std::ostream &os) {
+get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
   MyMatrix<T> M2 = RemoveFractionMatrix(M);
   MyMatrix<Tint> M3 = UniversalMatrixConversion<Tint,T>(M2);
@@ -829,7 +829,7 @@ template <typename T, typename Tint>
 ResultReduction<T, Tint>
 IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
-  std::pair<ResultReduction<T, Tint>, int> pair = get_nondegenerate_reduction(M, os);
+  std::pair<ResultReduction<T, Tint>, int> pair = get_nondegenerate_reduction<T,Tint>(M, os);
   int dim_nondeg = pair.second;
   MyMatrix<T> MredA(dim_nondeg, dim_nondeg);
   for (int i=0; i<dim_nondeg; i++) {

@@ -205,15 +205,15 @@ ResultReduction<T, Tint> order_blocks_by_signature(MyMatrix<T> const& M, [[maybe
       for (int j=0; j<len; j++) {
         size_t i_big = eConn[i];
         size_t j_big = eConn[j];
-        M_conn(i, j) = Min(i_big, j_big);
+        M_conn(i, j) = M(i_big, j_big);
       }
     }
     l_block.push_back(M_conn);
-    OrderingInfoIndefForm<T> eInfo = get_ordering_info_indef_form(Mconn);
+    OrderingInfoIndefForm<T> eInfo = get_ordering_info_indef_form(M_conn);
     l_ord_infos.push_back(eInfo);
   }
   std::vector<size_t> ListIdx(n_conn);
-  for (size_t iConn=0; iConn<n_conn; i_conn++) {
+  for (size_t iConn=0; iConn<n_conn; iConn++) {
     ListIdx[iConn] = iConn;
   }
   //
@@ -269,6 +269,7 @@ ResultReduction<T, Tint> order_blocks_by_signature(MyMatrix<T> const& M, [[maybe
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 get_individual_reduction(MyMatrix<T> const& M, std::ostream &os) {
+  int n = M.rows();
   std::pair<int, int> signature = GetSignature(M);
   int n_plus = signature.first;
   int n_minus = signature.second;
@@ -321,6 +322,7 @@ get_individual_reduction(MyMatrix<T> const& M, std::ostream &os) {
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
 apply_reduction_on_blocks(MyMatrix<T> const& M, std::ostream &os) {
+  int n = M.rows();
   std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(M);
   MyMatrix<T> Mred = ZeroMatrix<T>(n,n);
   MyMatrix<Tint> B = ZeroMatrix<Tint>(n,n);
