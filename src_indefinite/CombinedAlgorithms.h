@@ -668,9 +668,9 @@ private:
       return {eGen};
     }
     ResultReduction<T, Tint> ResRed =
-        ComputeReductionIndefinitePermSign<T, Tint>(Qmat, os);
+      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: ComputeReductionIndefinitePermSign(ResRed)|=" << time << "\n";
+    os << "|COMB: ApproxCanonicalIndefiniteForm(ResRed)|=" << time << "\n";
 #endif
     MyMatrix<T> const &QmatRed = ResRed.Mred;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -762,14 +762,14 @@ private:
       }
     }
     ResultReduction<T, Tint> res1 =
-        ComputeReductionIndefinitePermSign<T, Tint>(Qmat1, os);
+      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat1, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: ComputeReductionIndefinitePermSign(Qmat1)|=" << time << "\n";
+    os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat1)|=" << time << "\n";
 #endif
     ResultReduction<T, Tint> res2 =
-        ComputeReductionIndefinitePermSign<T, Tint>(Qmat2, os);
+      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: ComputeReductionIndefinitePermSign(Qmat2)|=" << time << "\n";
+    os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat2)|=" << time << "\n";
 #endif
     MyMatrix<T> const &QmatRed1 = res1.Mred;
     MyMatrix<T> const &QmatRed2 = res2.Mred;

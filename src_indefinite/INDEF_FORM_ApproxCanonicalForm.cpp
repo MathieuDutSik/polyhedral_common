@@ -12,9 +12,9 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 4 && argc != 2) {
-      std::cerr << "LATT_IndefiniteReductionPermSign [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "INDEF_FORM_ApproxCanonicalForm [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_IndefiniteReductionPermSign [FileI]\n";
+      std::cerr << "INDEF_FORM_ApproxCanonicalForm [FileI]\n";
       std::cerr << "or\n";
       std::cerr << "FileI     : The input file\n";
       std::cerr << "OutFormat : Possible values, GAP and Oscar\n";
@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> ResRed =
-          ComputeReductionIndefinitePermSign<T, Tint>(M, std::cerr);
+        ApproxCanonicalIndefiniteForm<T, Tint>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(ResRed.B);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       if (T_abs(DeterminantMat(B_T)) != 1) {

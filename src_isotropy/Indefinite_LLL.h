@@ -586,10 +586,11 @@ std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
   return {nbPlus, nbMinus};
 }
 
+
 /*
   Compute a reduction to a matrix with smaller L1-norm by
   applying GL_n(Z) transformations. The matrix is not necessarily
-  positive definite and they may be non-degenerate.
+  positive definite.
 
   Three kinds of transformations are used:
   1) Indefinite LLL from Denis Simon
@@ -606,28 +607,29 @@ std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
  */
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
-IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
   std::pair<int, int> signature = GetSignature(M);
   int n_plus = signature.first;
   int n_minus = signature.second;
+#ifdef DEBUG_INDEFINITE_LLL
   int n_zero = n - n_plus - n_minus;
-  std::vector<int> choices;
   if (n_zero > 0) {
+    std::cerr << "The matrix should be non-degenerate\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<int> choices;
+  if (n_plus > 0 && n_minus > 0) {
     choices.push_back(0);
     choices.push_back(1);
   } else {
-    if (n_plus > 0 && n_minus > 0) {
-      choices.push_back(0);
-      choices.push_back(1);
-    } else {
-      choices.push_back(0);
-      choices.push_back(1);
-      choices.push_back(2);
-      choices.push_back(3);
-    }
+    choices.push_back(0);
+    choices.push_back(1);
+    choices.push_back(2);
+    choices.push_back(3);
   }
   auto compute_by_block=[&](auto & Min) -> std::optional<ResultReduction<T,Tint>> {
 #ifdef DEBUG_INDEFINITE_LLL
@@ -798,6 +800,72 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     }
   }
 }
+
+
+/*
+  For a degenerate matrix the non-degenerate part is uniquely defined.
+ */
+template <typename T, typename Tint>
+std::pair<ResultReduction<T, Tint>, int>
+get_nondegenerate_reduction(MyMatrix<T> const& M, std::ostream &os) {
+  int n = M.rows();
+  MyMatrix<T> M2 = RemoveFractionMatrix(M);
+  MyMatrix<Tint> M3 = UniversalMatrixConversion<Tint,T>(M2);
+  MyMatrix<Tint> NSP = NullspaceIntMat(M3);
+  MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
+  MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
+  int dim_nondeg = TheCompl.size();
+  MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+  MyMatrix<T> Mred = FullBasis_T * M * FullBasis_T.transpose();
+  ResultReduction<T, Tint> res{FullBasis, Mred};
+  return {res, dim_nondeg};
+}
+
+
+/*
+  Now doing the reduction for indefinite forms.
+ */
+template <typename T, typename Tint>
+ResultReduction<T, Tint>
+IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
+  int n = M.rows();
+  std::pair<ResultReduction<T, Tint>, int> pair = get_nondegenerate_reduction(M, os);
+  int dim_nondeg = pair.second;
+  MyMatrix<T> MredA(dim_nondeg, dim_nondeg);
+  for (int i=0; i<dim_nondeg; i++) {
+    for (int j=0; j<dim_nondeg; j++) {
+      MredA(i, j) = pair.first.Mred(i,j);
+    }
+  }
+  ResultReduction<T, Tint> res = IndefiniteReductionNonDegenerate<T,Tint>(MredA, os);
+  MyMatrix<T> MredB = ZeroMatrix<T>(n, n);
+  MyMatrix<Tint> BredB = IdentityMat<Tint>(n);
+  for (int i=0; i<dim_nondeg; i++) {
+    for (int j=0; j<dim_nondeg; j++) {
+      MredB(i, j) = res.Mred(i,j);
+      BredB(i, j) = res.B(i, j);
+    }
+  }
+  MyMatrix<Tint> B = BredB * pair.first.B;
+  ResultReduction<T, Tint> res_ret{B, MredB};
+#ifdef DEBUG_INDEFINITE_LLL
+  MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+  MyMatrix<T> prod = B_T * M * B_T.transpose();
+  if (prod != MredB) {
+    std::cerr << "The reduction did not work out correctly\n";
+    throw TerminalException{1};
+  }
+#endif
+  return res_ret;
+}
+
+
+
+
+
+
+
+
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
