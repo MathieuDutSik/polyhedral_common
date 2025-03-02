@@ -6,6 +6,7 @@
 #include "Indefinite_LLL.h"
 #include "GRAPH_BitsetType.h"
 #include "GRAPH_GraphicalBasic.h"
+#include "LatticeStabEquiCan.h"
 #include "WeightMatrix.h"
 // clang-format on
 
