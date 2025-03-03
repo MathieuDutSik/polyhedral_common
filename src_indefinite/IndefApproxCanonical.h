@@ -370,7 +370,7 @@ ApproxCanonicalIndefiniteForm(MyMatrix<T> const &M, std::ostream &os) {
     throw TerminalException{1};
   }
 #endif
-  return {std::move(B), std::move(RRI_B.Mred)};
+  return {std::move(B), std::move(RRI_C.Mred)};
 }
 
 // clang-format off

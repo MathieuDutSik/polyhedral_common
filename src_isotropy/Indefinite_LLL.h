@@ -809,15 +809,45 @@ template <typename T, typename Tint>
 std::pair<ResultReduction<T, Tint>, int>
 get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 1\n";
+#endif
   MyMatrix<T> M2 = RemoveFractionMatrix(M);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 2\n";
+#endif
   MyMatrix<Tint> M3 = UniversalMatrixConversion<Tint,T>(M2);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 3\n";
+#endif
   MyMatrix<Tint> NSP = NullspaceIntMat(M3);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 4\n";
+#endif
   MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 5\n";
+#endif
   MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
-  int dim_nondeg = TheCompl.size();
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 6\n";
+#endif
+  int dim_nondeg = TheCompl.rows();
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 7\n";
+#endif
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 8\n";
+#endif
   MyMatrix<T> Mred = FullBasis_T * M * FullBasis_T.transpose();
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 9\n";
+#endif
   ResultReduction<T, Tint> res{FullBasis, Mred};
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, step 10\n";
+#endif
   return {res, dim_nondeg};
 }
 
@@ -829,15 +859,30 @@ template <typename T, typename Tint>
 ResultReduction<T, Tint>
 IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: IndefiniteReduction, before get_nondegenerate_reduction\n";
+#endif
   std::pair<ResultReduction<T, Tint>, int> pair = get_nondegenerate_reduction<T,Tint>(M, os);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: IndefiniteReduction, after get_nondegenerate_reduction\n";
+#endif
   int dim_nondeg = pair.second;
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: IndefiniteReduction, dim_nondeg=" << dim_nondeg << "\n";
+#endif
   MyMatrix<T> MredA(dim_nondeg, dim_nondeg);
   for (int i=0; i<dim_nondeg; i++) {
     for (int j=0; j<dim_nondeg; j++) {
       MredA(i, j) = pair.first.Mred(i,j);
     }
   }
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: We have MredA\n";
+#endif
   ResultReduction<T, Tint> res = IndefiniteReductionNonDegenerate<T,Tint>(MredA, os);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: We have res\n";
+#endif
   MyMatrix<T> MredB = ZeroMatrix<T>(n, n);
   MyMatrix<Tint> BredB = IdentityMat<Tint>(n);
   for (int i=0; i<dim_nondeg; i++) {
@@ -846,6 +891,9 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
       BredB(i, j) = res.B(i, j);
     }
   }
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: We have MredB / BredB\n";
+#endif
   MyMatrix<Tint> B = BredB * pair.first.B;
   ResultReduction<T, Tint> res_ret{B, MredB};
 #ifdef DEBUG_INDEFINITE_LLL

@@ -105,7 +105,7 @@ public:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyVector<T> prodV = RetMat.transpose() * v_T;
       if (prodV != v_T) {
-        std::cerr << "RetMat is not preserving the vector v\n";
+        std::cerr << "COMB: RetMat is not preserving the vector v\n";
         throw TerminalException{1};
       }
 #endif
@@ -127,7 +127,7 @@ public:
       MyVector<T> vImg = RetMat.transpose() * v_T;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       if (vImg != v_T && vImg != -v_T) {
-        std::cerr << "RetMat should map v to v or -v\n";
+        std::cerr << "COMB: RetMat should map v to v or -v\n";
         throw TerminalException{1};
       }
 #endif
@@ -181,11 +181,11 @@ public:
     }
     T eDet = DeterminantMat(TransRed);
     if (T_abs(eDet) != 1) {
-      std::cerr << "TransRed should have absolute determinant 1\n";
+      std::cerr << "COMB: TransRed should have absolute determinant 1\n";
       throw TerminalException{1};
     }
     if (!TestEqualitySpaces(PlaneImg, Plane_T)) {
-      std::cerr << "Plane should be invariant (isotropic case)\n";
+      std::cerr << "COMB: Plane should be invariant (isotropic case)\n";
       throw TerminalException{1};
     }
     int dimNSP = NSP_T.rows();
@@ -198,8 +198,7 @@ public:
       AssignMatrixRow(RetMat_red, u, gV);
     }
     if (RetMat_red != eEndoRed_T) {
-      std::cerr << "RetMat_red restricted to the nullspace is not the original "
-                   "eEndoRed\n";
+      std::cerr << "COMB: RetMat_red restricted to the nullspace is not the original eEndoRed\n";
       throw TerminalException{1};
     }
   }
@@ -510,7 +509,7 @@ private:
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
       MyMatrix<T> prod = eGen_T * Qmat * eGen_T.transpose();
       if (prod != Qmat) {
-        std::cerr << "eGen is not preserving Qmat\n";
+        std::cerr << "COMB: eGen is not preserving Qmat\n";
         throw TerminalException{1};
       }
 #endif
@@ -719,7 +718,7 @@ private:
       MyMatrix<T> NewGen_T = UniversalMatrixConversion<T, Tint>(NewGen);
       MyMatrix<T> eProd = NewGen_T * Qmat * NewGen_T.transpose();
       if (eProd != Qmat) {
-        std::cerr << "The matrix is not an equivalence for Qmat\n";
+        std::cerr << "COMB: The matrix is not an equivalence for Qmat\n";
         throw TerminalException{1};
       }
 #endif
@@ -811,7 +810,7 @@ private:
       MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T, Tint>(eEquiv);
       MyMatrix<T> eProd = eEquiv_T * QmatRed1 * eEquiv_T.transpose();
       if (eProd != QmatRed2) {
-        std::cerr << "The matrix eEquiv is not an equivalence for QmatRed1 / QmatRed2\n";
+        std::cerr << "COMB: The matrix eEquiv is not an equivalence for QmatRed1 / QmatRed2\n";
         throw TerminalException{1};
       }
 #endif
@@ -820,7 +819,7 @@ private:
       MyMatrix<T> NewEquiv_T = UniversalMatrixConversion<T, Tint>(NewEquiv);
       MyMatrix<T> NewProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
       if (NewProd != Qmat2) {
-        std::cerr << "The matrix NewEquiv is not an equivalence for Qmat1 / Qmat2\n";
+        std::cerr << "COMB: The matrix NewEquiv is not an equivalence for Qmat1 / Qmat2\n";
         throw TerminalException{1};
       }
 #endif
@@ -884,7 +883,7 @@ private:
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
       if (eProd != eRec.GramMatRed) {
-        std::cerr << "eGenB should preserve eRec.GramMatRed\n";
+        std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
         throw TerminalException{1};
       }
       std::vector<MyMatrix<Tint>> ListSpaces =
@@ -892,7 +891,7 @@ private:
       for (auto &eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
         if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
-          std::cerr << "The space eSpace is not correctly preserved\n";
+          std::cerr << "COMB: The space eSpace is not correctly preserved\n";
           throw TerminalException{1};
         }
       }
@@ -912,7 +911,7 @@ private:
     if (choice == INDEFINITE_FORM_FLAG) {
       return f_stab_flag(eRec);
     }
-    std::cerr << "Failed to have a valid input choice in f_stab\n";
+    std::cerr << "COMB: Failed to have a valid input choice in f_stab\n";
     throw TerminalException{1};
   }
   std::optional<MyMatrix<Tint>>
@@ -952,7 +951,8 @@ private:
     MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T, Tint>(TheEquiv);
     MyMatrix<T> eProd = TheEquiv_T * eRec1.GramMatRed * TheEquiv_T.transpose();
     if (eProd != eRec2.GramMatRed) {
-      std::cerr << "This is not an equivalence\n";
+      std::cerr << "COMB: This is not an equivalence\n";
+      throw TerminalException{1};
     }
     std::vector<MyMatrix<Tint>> ListSpaces1 =
         f_get_list_spaces(eRec1.PlaneExpr);
@@ -963,7 +963,7 @@ private:
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
       MyMatrix<Tint> const &eSpace2 = ListSpaces2[iSpace];
       if (!TestEqualitySpaces(eSpace1_img, eSpace2)) {
-        std::cerr << "The space are not correctly mapped\n";
+        std::cerr << "COMB: The space are not correctly mapped\n";
         throw TerminalException{1};
       }
     }
@@ -983,7 +983,7 @@ private:
     if (choice == INDEFINITE_FORM_FLAG) {
       return f_equiv_flag(eRec1, eRec2);
     }
-    std::cerr << "Failed to have a valid input choice in f_equiv\n";
+    std::cerr << "COMB: Failed to have a valid input choice in f_equiv\n";
     throw TerminalException{1};
   }
   //
@@ -1050,7 +1050,7 @@ private:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eProd = EquivRat * Qmat1 * EquivRat.transpose();
     if (eProd != Qmat2) {
-      std::cerr << "The matrix EquivRat is not mapping Qmat1 to Qmat2\n";
+      std::cerr << "COMB: The matrix EquivRat is not mapping Qmat1 to Qmat2\n";
       throw TerminalException{1};
     }
 #endif
@@ -1060,7 +1060,7 @@ private:
     MyMatrix<T> Plane2_T = UniversalMatrixConversion<T, Tint>(Plane2);
     MyMatrix<T> Plane1_img = Plane1_T * EquivRatInv;
     if (!TestEqualitySpaces(Plane1_img, Plane2_T)) {
-      std::cerr << "Plane1 and Plane2 should be mapped\n";
+      std::cerr << "COMB: Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
 #endif
@@ -1093,14 +1093,13 @@ private:
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T, Tint>(TheRet);
     MyMatrix<T> eProdB = TheRet_T * Qmat1 * TheRet_T.transpose();
     if (eProdB != Qmat2) {
-      std::cerr << "The redution matrix did not work as we expected it. Please "
-                   "debug\n";
+      std::cerr << "COMB: The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
     MyMatrix<Tint> TheRetInv = Inverse(TheRet);
     MyMatrix<Tint> Plane1_imgB = Plane1 * TheRetInv;
     if (!TestEqualitySpaces(Plane1_imgB, Plane2)) {
-      std::cerr << "Plane1 and Plane2 should be mapped\n";
+      std::cerr << "COMB: Plane1 and Plane2 should be mapped\n";
       throw TerminalException{1};
     }
 #endif
@@ -1131,8 +1130,7 @@ private:
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
-      std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be "
-                   "full dimensional\n";
+      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
       throw TerminalException{1};
     }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
@@ -1171,8 +1169,7 @@ private:
     // The group stabilizing ePlane^{perp} can be injected
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
-      std::cerr << "Right now INDEF_FORM_StabilizerVector requires Qmat to be "
-                   "full dimensional\n";
+      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
       throw TerminalException{1};
     }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
@@ -1185,7 +1182,7 @@ private:
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
       MyMatrix<T> eProd = eGen_T * eRec.GramMatRed * eGen_T.transpose();
       if (eProd != eRec.GramMatRed) {
-        std::cerr << "GRP1 does not preserve eRec.GramMatRed\n";
+        std::cerr << "COMB: GRP1 does not preserve eRec.GramMatRed\n";
         throw TerminalException{1};
       }
     }
@@ -1198,7 +1195,7 @@ private:
     for (auto &eGen : GRP2) {
       MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
       if (eProd != Qmat) {
-        std::cerr << "GRP2 does not preserve Qmat\n";
+        std::cerr << "COMB: GRP2 does not preserve Qmat\n";
         throw TerminalException{1};
       }
       MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
@@ -1208,7 +1205,7 @@ private:
         MyVector<T> eLine = GetMatrixRow(ePlaneImg, u);
         std::optional<MyVector<T>> opt = SolutionIntMat(ePlane_T, eLine);
         if (!opt) {
-          std::cerr << "ePlane should be left invariant by eGen\n";
+          std::cerr << "COMB: ePlane should be left invariant by eGen\n";
           throw TerminalException{1};
         }
       }
@@ -1220,7 +1217,7 @@ private:
     for (auto &eCos : ListRightCoset) {
       MyMatrix<T> eProd = eCos * Qmat * eCos.transpose();
       if (eProd != Qmat) {
-        std::cerr << "eCos is not preserving Qmat\n";
+        std::cerr << "COMB: eCos is not preserving Qmat\n";
         throw TerminalException{1};
       }
     }
@@ -1456,7 +1453,8 @@ private:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
         T fNorm = EvaluationQuadForm<T, Tint>(Q, fRepr);
         if (fNorm != X) {
-          std::cerr << "The norm is inconsistent\n";
+          std::cerr << "COMB: fNorm=" << fNorm << " X=" << X << "\n";
+          std::cerr << "COMB: The norm is inconsistent\n";
           throw TerminalException{1};
         }
 #endif
@@ -1514,9 +1512,9 @@ private:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       std::vector<MyVector<Tint>> ListReprRed = orbit_decomposition(ListRepr);
       if (ListReprRed.size() != ListRepr.size()) {
-        std::cerr << "|ListRepr|=" << ListRepr.size()
+        std::cerr << "COMB: |ListRepr|=" << ListRepr.size()
                   << " |ListReprRed|=" << ListReprRed.size() << "\n";
-        std::cerr << "The ListRepr should have been reduced\n";
+        std::cerr << "COMB: The ListRepr should have been reduced\n";
         throw TerminalException{1};
       }
 #endif
@@ -1553,7 +1551,7 @@ private:
   INDEF_FORM_StabilizerVector_Reduced(MyMatrix<T> const &Qmat,
                                       MyVector<Tint> const &v) {
     if (RankMat(Qmat) != Qmat.rows()) {
-      std::cerr << "Right now the matrix Qmat should be full dimensional\n";
+      std::cerr << "COMB: Right now the matrix Qmat should be full dimensional\n";
       throw TerminalException{1};
     }
     int n = Qmat.rows();
@@ -1580,12 +1578,12 @@ private:
       MyMatrix<T> eMat_T = UniversalMatrixConversion<T, Tint>(eMat);
       MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
       if (eProd != Qmat) {
-        std::cerr << "The matrix eMat does not preserves Qmat\n";
+        std::cerr << "COMB: The matrix eMat does not preserves Qmat\n";
         throw TerminalException{1};
       }
       MyVector<Tint> v_eMat = eMat.transpose() * v;
       if (v_eMat != v) {
-        std::cerr << "The matrix eMat does not preserves v\n";
+        std::cerr << "COMB: The matrix eMat does not preserves v\n";
         throw TerminalException{1};
       }
     }
@@ -1601,7 +1599,7 @@ private:
       return {};
     }
     if (RankMat(Q1) != Q1.rows()) {
-      std::cerr << "We need Q1 to be a square matrix\n";
+      std::cerr << "COMB: We need Q1 to be a square matrix\n";
       throw TerminalException{1};
     }
     T eNorm = EvaluationQuadForm<T, Tint>(Q1, v1);
@@ -1640,7 +1638,7 @@ private:
     MyVector<T> v2_T = UniversalVectorConversion<T, Tint>(v2);
     MyVector<T> v_EquivRatInv = EquivRatInv.transpose() * v1_T;
     if (v_EquivRatInv != v2_T) {
-      std::cerr << "The vector v1 is not mapped correctly\n";
+      std::cerr << "COMB: The vector v1 is not mapped correctly\n";
       throw TerminalException{1};
     }
 #endif
@@ -1666,14 +1664,13 @@ private:
     MyMatrix<T> TheRet_T = UniversalMatrixConversion<T, Tint>(TheRet);
     MyMatrix<T> eProd = TheRet_T * Q1 * TheRet_T.transpose();
     if (eProd != Q2) {
-      std::cerr << "The redution matrix did not work as we expected it. Please "
-                   "debug\n";
+      std::cerr << "COMB: The redution matrix did not work as we expected it. Please debug\n";
       throw TerminalException{1};
     }
     MyMatrix<Tint> TheRetInv = Inverse(TheRet);
     MyVector<Tint> v_TheRetInv = TheRetInv.transpose() * v1;
     if (v_TheRetInv != v2) {
-      std::cerr << "The vector v1 is not mapped correctly\n";
+      std::cerr << "COMB: The vector v1 is not mapped correctly\n";
       throw TerminalException{1};
     }
 #endif
@@ -1707,7 +1704,7 @@ private:
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * Q * eGenB_T.transpose();
       if (eProd != Q) {
-        std::cerr << "eGenB should preserve Qmat\n";
+        std::cerr << "COMB: eGenB should preserve Qmat\n";
         throw TerminalException{1};
       }
 #endif
@@ -1757,7 +1754,7 @@ private:
     MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T, Tint>(TheEquiv);
     MyMatrix<T> eProd = TheEquiv_T * Q1 * TheEquiv_T.transpose();
     if (eProd != Q2) {
-      std::cerr << "TheEquiv is not mapping Q1 to Q2\n";
+      std::cerr << "COMB: TheEquiv is not mapping Q1 to Q2\n";
       throw TerminalException{1};
     }
 #endif
