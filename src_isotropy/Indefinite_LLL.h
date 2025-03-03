@@ -361,6 +361,17 @@ bool IsMatrixConnected(MyMatrix<T> const& M) {
 }
 
 
+template<typename T>
+T get_l1_norm(MyMatrix<T> const& U) {
+  int n = U.rows();
+  T sum(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      sum += T_abs(U(i,j));
+    }
+  }
+  return sum;
+}
 
 template<typename T, typename Tint>
 ResultReduction<T, Tint>
@@ -370,17 +381,6 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     MyMatrix<Tint> B = IdentityMat<Tint>(n);
     return {B, M};
   }
-#ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
-  auto l1_norm=[&](MyMatrix<T> const& U) -> T {
-    T sum = 0;
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        sum += T_abs(U(i,j));
-      }
-    }
-    return sum;
-  };
-#endif
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
   // We choose the indices at random in order to avoid always
@@ -402,7 +402,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   os << "ILLL: n=" << n << "\n";
   os << "ILLL: M=\n";
   WriteMatrix(os, M);
-  os << "ILLL: L1(M)=" << l1_norm(M) << "\n";
+  os << "ILLL: L1(M)=" << get_l1_norm(M) << "\n";
 #endif
   struct ResSearch {
     int i;
@@ -413,7 +413,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   // tilde(M) = (Id + c U_ij) M (Id + c U_ji)
   //          = (M + c Row(M,j) at row i) ( Id + c U_ji)
   //          = M + c Row(M,j) at row i + c Col(M,j) at col i + c^2
-  auto eval=[&](ResSearch const& x) -> T {
+  auto get_delta=[&](ResSearch const& x) -> T {
     int i = x.i;
     int j = x.j;
     Tint c = x.c;
@@ -445,7 +445,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     return delta;
   };
   auto direction_search=[&](ResSearch const& x) -> std::optional<ResSearch> {
-    T val = eval(x);
+    T val = get_delta(x);
     if (val <= 0) {
       return {};
     }
@@ -453,7 +453,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     ResSearch x_ret = x;
     while(true) {
       x_ret.c += x.c;
-      T val = eval(x_ret);
+      T val = get_delta(x_ret);
       if (val <= best_delta) {
         x_ret.c -= x.c; // Revert the change that would increase the norm.
         return x_ret;
@@ -517,7 +517,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       n_oper += 1;
       os << "------------ n_oper=" << n_oper << " --------------------\n";
       os << "ILLL: i=" << x.i << " j=" << x.j << " c=" << x.c << "\n";
-      T norm_prev = l1_norm(Mwork);
+      T norm_prev = get_l1_norm(Mwork);
       os << "ILLL: Mwork=\n";
       WriteMatrix(os, Mwork);
       std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = f_compute(x);
@@ -525,12 +525,12 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
       WriteMatrix(os, pair.first);
       os << "ILLL: pair.second(M)=\n";
       WriteMatrix(os, pair.second);
-      os << "ILLL: L1(Mwork)=" << l1_norm(Mwork) << " L1(pair.second)=" << l1_norm(pair.second) << "\n";
-      T delta = eval(x);
+      os << "ILLL: L1(Mwork)=" << get_l1_norm(Mwork) << " L1(pair.second)=" << get_l1_norm(pair.second) << "\n";
+      T delta = get_delta(x);
 #endif
       update(x);
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
-      T norm_next = l1_norm(Mwork);
+      T norm_next = get_l1_norm(Mwork);
       size_t num_error = 0;
       if (norm_prev - delta != norm_next) {
         os << "ILLL: norm_prev=" << norm_prev << " delta=" << delta << " norm_next=" << norm_next << "\n";
@@ -566,18 +566,6 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   }
 }
 
-template<typename T>
-T get_l1_norm(MyMatrix<T> const& U) {
-  int n = U.rows();
-  T sum(0);
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      sum += T_abs(U(i,j));
-    }
-  }
-  return sum;
-}
-
 template <typename T>
 std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
@@ -597,8 +585,7 @@ std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
   2) Simple exhaustive reduction by looking for transformations
      I_n + alpha X_{i,j}
   3) Classic LLL though it works only for positive definite or negative
-     definite matrices. I think there is an extension to semidefinite
-     from the GAP code.
+     definite matrices.
   4) The Dual Classic LLL which may sometimes be better.
 
   When blocks are found, they are kept. The heuristic being that you
@@ -617,7 +604,7 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
 #ifdef DEBUG_INDEFINITE_LLL
   int n_zero = n - n_plus - n_minus;
   if (n_zero > 0) {
-    std::cerr << "The matrix should be non-degenerate\n";
+    std::cerr << "ILLL: The matrix should be non-degenerate\n";
     throw TerminalException{1};
   }
 #endif
@@ -851,9 +838,8 @@ get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream 
   return {res, dim_nondeg};
 }
 
-
 /*
-  Now doing the reduction for indefinite forms.
+  Now doing the reduction for indefinite forms, possibly degenerate.
  */
 template <typename T, typename Tint>
 ResultReduction<T, Tint>
@@ -877,11 +863,11 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     }
   }
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: We have MredA\n";
+  os << "ILLL: IndefiniteReduction, We have MredA\n";
 #endif
   ResultReduction<T, Tint> res = IndefiniteReductionNonDegenerate<T,Tint>(MredA, os);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: We have res\n";
+  os << "ILLL: IndefiniteReduction, We have res\n";
 #endif
   MyMatrix<T> MredB = ZeroMatrix<T>(n, n);
   MyMatrix<Tint> BredB = IdentityMat<Tint>(n);
@@ -892,7 +878,7 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
     }
   }
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: We have MredB / BredB\n";
+  os << "ILLL: IndefiniteReduction, We have MredB / BredB\n";
 #endif
   MyMatrix<Tint> B = BredB * pair.first.B;
   ResultReduction<T, Tint> res_ret{B, MredB};
@@ -900,20 +886,12 @@ IndefiniteReduction(MyMatrix<T> const &M, std::ostream &os) {
   MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
   MyMatrix<T> prod = B_T * M * B_T.transpose();
   if (prod != MredB) {
-    std::cerr << "The reduction did not work out correctly\n";
+    std::cerr << "ILLL: The reduction did not work out correctly\n";
     throw TerminalException{1};
   }
 #endif
   return res_ret;
 }
-
-
-
-
-
-
-
-
 
 template <typename T, typename Tint>
 ResultReduction<T, Tint>

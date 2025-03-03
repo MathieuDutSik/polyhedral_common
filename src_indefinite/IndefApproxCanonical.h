@@ -57,8 +57,8 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
   MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T, Tint>(Mtrans1);
   MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
-    std::cerr << "The matrix product does not work as expected\n";
-    std::cerr << "eProd=\n";
+    std::cerr << "IAC: The matrix product does not work as expected\n";
+    std::cerr << "IAC: eProd=\n";
     WriteMatrix(std::cerr, eProd);
     throw TerminalException{1};
   }
@@ -111,6 +111,7 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
   MyMatrix<Tint> eP = Mtrans2 * Mtrans1;
   MyMatrix<T> eP_T = UniversalMatrixConversion<T, Tint>(eP);
   MyMatrix<T> M_red = eP_T * M * eP_T.transpose();
+  // No check needed
   return {std::move(eP), std::move(M_red)};
 }
 
@@ -259,7 +260,7 @@ ResultReduction<T, Tint> order_blocks_by_signature(MyMatrix<T> const& M, [[maybe
   MyMatrix<T> Bret_T = UniversalMatrixConversion<T,Tint>(Bret);
   MyMatrix<T> prod = Bret_T * M * Bret_T.transpose();
   if (prod != Mret) {
-    std::cerr << "The matrix is not an equivalence\n";
+    std::cerr << "IAC: The matrix is not an equivalence\n";
     throw TerminalException{1};
   }
 #endif
@@ -278,11 +279,11 @@ get_individual_reduction(MyMatrix<T> const& M, std::ostream &os) {
   if (n_zero > 0) {
 #ifdef DEBUG_INDEX_APPROX_CANONICAL
     if (n_plus > 0 || n_minus > 0) {
-      std::cerr << "We should have a zero matrix\n";
+      std::cerr << "IAC: We should have a zero matrix\n";
       throw TerminalException{1};
     }
     if (n_zero != 1) {
-      std::cerr << "The dimension of the zero matrix should be 1\n";
+      std::cerr << "IAC: The dimension of the zero matrix should be 1\n";
       throw TerminalException{1};
     }
 #endif
@@ -307,9 +308,9 @@ get_individual_reduction(MyMatrix<T> const& M, std::ostream &os) {
     MyMatrix<T> Mred = T(pair.first) * cpd.Mat;
 #ifdef DEBUG_INDEX_APPROX_CANONICAL
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
-    MyMatrix<T> prod = B_T * Mred * B_T.transpose();
-    if (prod != M) {
-      std::cerr << "The reduction did not work out correctly\n";
+    MyMatrix<T> prod = B_T * M * B_T.transpose();
+    if (prod != Mred) {
+      std::cerr << "IAC: The reduction did not work out correctly for Canonic_PosDef\n";
       throw TerminalException{1};
     }
 #endif
@@ -347,6 +348,14 @@ apply_reduction_on_blocks(MyMatrix<T> const& M, std::ostream &os) {
       }
     }
   }
+#ifdef DEBUG_INDEX_APPROX_CANONICAL
+  MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+  MyMatrix<T> prod = B_T * M * B_T.transpose();
+  if (prod != Mred) {
+    std::cerr << "IAC: The reduction did not work out correctly\n";
+    throw TerminalException{1};
+  }
+#endif
   return {B, Mred};
 }
 
