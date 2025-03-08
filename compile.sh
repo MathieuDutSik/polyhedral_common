@@ -13,7 +13,6 @@ set -e
 (cd src_ctype && make clean && make)
 (cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
-(cd src_spherical_code && make clean && make)
 (cd src_poincare_polyhedron && make clean && make)
 (cd src_indefinite && make clean && make)
 echo "Normal termination of compile.sh"
