@@ -1169,8 +1169,8 @@ private:
   INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat,
                                                  MyMatrix<Tint> const &ePlane,
                                                  int const &choice) {
-    // We have two groups:
-    // -- H1 The group stabilizing ePlane (which is rational)
+    // We have the following groups:
+    // -- H1 The group stabilizing ePlane (which is integral)
     // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
@@ -1179,16 +1179,6 @@ private:
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
-#endif
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    for (auto &eGen : GRP1) {
-      MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
-      MyMatrix<T> eProd = eGen_T * eRec.GramMatRed * eGen_T.transpose();
-      if (eProd != eRec.GramMatRed) {
-        std::cerr << "COMB: GRP1 does not preserve eRec.GramMatRed\n";
-        throw TerminalException{1};
-      }
-    }
 #endif
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -1253,21 +1243,50 @@ private:
     }
     return LCosRet;
   }
+  std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
+                                          MyMatrix<Tint> const& Plane,
+                                          MyVector<Tint> const& V,
+                                          int const& choice) {
+    // Computes the stabilizer.
+    // If choice = PLANE, then we need to stabilize both PLANE and (PLANE, V)
+    // If choice = FLAG,  then we need to stabilize the flags of (PLANE, V)
+    if (choice == INDEFINITE_FORM_FLAG) {
+      MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
+      INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
+      std::vector<MyMatrix<Tint>> GRP1 = f_stab_flag(eRec);
+      return eRec.MapOrthogonalSublatticeGroup(GRP1);
+    }
+    if (choice == INDEFINITE_FORM_PLANE) {
+      std::cerr << "COMB: The code needs to be written here\n";
+      throw TerminalException{1};
+    }
+    std::cerr << "COMB: No valid option\n";
+    throw TerminalException{1};
+  }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& Plane,
                                            MyVector<Tint> const& V,
                                            int const& choice) {
-    
-
-    
-    return {};
-  }
-  std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const &Q,
-                                           MyMatrix<Tint> const &Plane1,
-                                           MyMatrix<Tint> const &Plane2,
-                                           int const &choice) {
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Q, Q, Plane1, Plane2,
-                                                          choice);
+    // We have the following groups:
+    // -- H1 The group stabilizing ePlane (which is integral)
+    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
+    //    (which is rational)
+    // -- The intersection H = G \cap GL_n(Z)
+    // The right cosets that are computed are the ones of G / H.
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, begin\n";
+#endif
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP1\n";
+#endif
+    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, choice);
+    int n = Q.rows();
+    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
+      MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
+    return pair.second;
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat, int k,
