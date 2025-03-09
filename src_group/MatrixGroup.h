@@ -2374,6 +2374,53 @@ std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(
 }
 
 template <typename T, typename Tgroup>
+std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>>
+MatrixIntegral_DoubleCosets_General(
+    int const &n, std::vector<MyMatrix<T>> const &LGenG1,
+    std::vector<MyMatrix<T>> const &LGenV1,
+    std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
+  using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1);
+  MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  if (!IsIntegralMatrix(InvInvariantSpace)) {
+    std::cerr << "MAT_GRP: The matrix InvInvariantSpace should be integral\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<MyMatrix<T>> LGenG2 =
+      ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenG1);
+  std::vector<MyMatrix<T>> LGenV2 =
+      ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenV1);
+  Thelper helper{n};
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, before "
+        "LinearSpace_Stabilizer_DoubleCoset\n";
+#endif
+  std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> pair =
+      LinearSpace_Stabilizer_DoubleCoset<T, Tgroup, Thelper>(LGenG2, helper, InvInvariantSpace, LGenV2, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, after "
+        "LinearSpace_Stabilizer_DoubleCoset\n";
+#endif
+  std::vector<MyMatrix<T>> LGenRet;
+  for (auto & eGen1 : pair.first) {
+    MyMatrix<T> eGen2 = InvInvariantSpace * eGen1 * InvariantSpace;
+    LGenRet.push_back(eGen2);
+  }
+  std::vector<MyMatrix<T>> LCosRet;
+  for (auto & eCos1 : pair.second) {
+    MyMatrix<T> eCos2 = InvInvariantSpace * eCos1 * InvariantSpace;
+    LCosRet.push_back(eCos2);
+  }
+  return {LGenRet, LCosRet};
+}
+
+
+
+template <typename T, typename Tgroup>
 Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
                                               Tgroup const &GRPisom,
                                               std::ostream &os) {
