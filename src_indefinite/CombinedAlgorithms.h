@@ -1133,24 +1133,25 @@ private:
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
-    int n = Qmat.rows();
-    if (RankMat(Qmat) != n) {
-      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
-      throw TerminalException{1};
-    }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel, We have GRP1\n";
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP1\n";
 #endif
     std::vector<MyMatrix<T>> GRP2 = eRec.MapOrthogonalSublatticeGroup(GRP1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel, We have GRP2\n";
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP2\n";
 #endif
+    int n = Qmat.rows();
     return MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+    int n = Qmat.rows();
+    if (RankMat(Qmat) != n) {
+      std::cerr << "COMB: Right now INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel requires Qmat to be full dimensional\n";
+      throw TerminalException{1};
+    }
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     MyMatrix<Tint> B_inv = Inverse(res.B);
     MyMatrix<Tint> Plane_red = Plane * B_inv;
@@ -1174,11 +1175,6 @@ private:
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
-    int n = Qmat.rows();
-    if (RankMat(Qmat) != n) {
-      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
-      throw TerminalException{1};
-    }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -1218,6 +1214,7 @@ private:
       }
     }
 #endif
+    int n = Qmat.rows();
     std::vector<MyMatrix<T>> ListRightCoset =
         MatrixIntegral_RightCosets_General<T, Tgroup>(n, GRP2, os);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
@@ -1235,7 +1232,12 @@ private:
   INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat,
                                                 MyMatrix<Tint> const &ePlane,
                                                 int const &choice) {
-    // Apply the 
+    int n = Qmat.rows();
+    if (RankMat(Qmat) != n) {
+      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
+      throw TerminalException{1};
+    }
+    // Apply the indefinite reduction algorithm
     ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
@@ -1251,19 +1253,13 @@ private:
     }
     return LCosRet;
   }
-  size_t fiso_inv(MyMatrix<T> const &Q, MyMatrix<Tint> const &Plane,
-                  int const &choice) {
-    return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Q, Plane, choice);
-  }
-  std::vector<MyMatrix<T>> f_right_cosets(MyMatrix<T> const &Q,
-                                          MyMatrix<Tint> const &Plane,
-                                          int const &choice) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Q, Plane, choice);
-  }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& Plane,
                                            MyVector<Tint> const& V,
                                            int const& choice) {
+    
+
+    
     return {};
   }
   std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const &Q,
@@ -1309,7 +1305,7 @@ private:
           }
         }
 #endif
-        size_t eInv = fiso_inv(Qmat, Plane, choice);
+        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, choice);
         return {Plane, eInv};
       };
       std::vector<PlaneInv> ListRecReprKplane;
@@ -1321,8 +1317,8 @@ private:
         for (auto &eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
-                fiso_equiv(Qmat, eRecReprKplane.ePlane,
-                           fRecReprKplane.ePlane, choice);
+              INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
+                                                             fRecReprKplane.ePlane, choice);
             if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
               n_over_generation += 1;
@@ -1422,7 +1418,7 @@ private:
 #endif
         auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
           if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return f_right_cosets(Qmat, ePlane, choice);
+            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, choice);
           } else {
             return {};
           }
