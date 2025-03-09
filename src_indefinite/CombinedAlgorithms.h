@@ -35,6 +35,9 @@
 static const int INDEFINITE_FORM_PLANE = 32;
 static const int INDEFINITE_FORM_FLAG = 92;
 
+static const int METHOD_GENERATION_RIGHT_COSETS = 49;
+static const int METHOD_GENERATION_DOUBLE_COSETS = 81;
+
 template <typename T, typename Tint> struct INDEF_FORM_GetVectorStructure {
 public:
   T eNorm;
@@ -1261,9 +1264,10 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat, int k,
-                                             int const &choice) {
+                                              int const& method_generation,
+                                              int const &choice) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel, beginning\n";
+    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced, beginning\n";
 #endif
     T eNorm(0);
     std::vector<MyMatrix<Tint>> ListOrbit;
@@ -1277,17 +1281,34 @@ private:
         size_t eInv;
       };
       auto get_planeinv = [&](MyMatrix<Tint> const &Plane) -> PlaneInv {
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+        int dim = Plane.rows();
+        for (int i=0; i<dim; i++) {
+          MyVector<Tint> V = GetMatrixRow(Plane, i);
+          if (EvaluationQuadForm<T, Tint>(Qmat, V) != 0) {
+            std::cerr << "COMB: V is not isotropic\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
         size_t eInv = fiso_inv(Qmat, Plane, choice);
         return {Plane, eInv};
       };
       std::vector<PlaneInv> ListRecReprKplane;
-      auto fInsert = [&](PlaneInv const &fRecReprKplane) -> void {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      size_t n_over_generation = 0;
+#endif
+      auto fInsert = [&](MyMatrix<Tint> const& fPlane) -> void {
+        PlaneInv fRecReprKplane = get_planeinv(fPlane);
         for (auto &eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
                 fiso_equiv(Qmat, eRecReprKplane.ePlane,
                            fRecReprKplane.ePlane, choice);
             if (opt) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+              n_over_generation += 1;
+#endif
               return;
             }
           }
@@ -1381,8 +1402,17 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListOrbitF|=" << ListOrbitF.size() << "\n";
 #endif
-        std::vector<MyMatrix<T>> ListRightCosets =
-            fiso_coset(Qmat, ePlane, choice);
+        auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
+          if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
+            return fiso_coset(Qmat, ePlane, choice);
+          }
+          if (method_generation == METHOD_GENERATION_DOUBLE_COSETS) {
+            return {};
+          }
+          std::cerr << "No valid method being provided with method_generation\n";
+          throw TerminalException{1};
+        };
+        std::vector<MyMatrix<T>> ListRightCosets = get_right_cosets();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
 #endif
@@ -1391,30 +1421,16 @@ private:
           MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
           for (auto &eCos : ListRightCosets) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-            if (EvaluationQuadForm(Qmat, eVectC_T) != 0) {
-              std::cerr << "COMB: eVectC is not isotropic\n";
-              throw TerminalException{1};
-            }
-            if (!IsIntegralVector(eVectC_T)) {
-              std::cerr << "COMB: eVectC_T should be integral\n";
-              throw TerminalException{1};
-            }
-#endif
             MyVector<Tint> eVectC =
                 UniversalVectorConversion<Tint, T>(eVectC_T);
             MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-            os << "COMB: Before get_planeinv\n";
-#endif
-            PlaneInv eRecReprKplane = get_planeinv(ePlaneB);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-            os << "COMB: After get_planeinv\n";
-#endif
-            fInsert(eRecReprKplane);
+            fInsert(ePlaneB);
           }
         }
       };
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: n_over_generation = " << n_over_generation << "\n";
+#endif
       for (auto &eRepr : ListOrbit) {
         SpanRepresentatives(eRepr);
       }
@@ -1431,7 +1447,7 @@ private:
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     //
     std::vector<MyMatrix<Tint>> LOrb =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, choice);
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, choice);
     std::vector<MyMatrix<Tint>> LOrbRet;
     for (auto & eOrb : LOrb) {
       MyMatrix<Tint> eOrbRet = eOrb * res.B;
@@ -1760,8 +1776,6 @@ private:
 #endif
     return TheEquiv;
   }
-
-
 public:
   IndefiniteCombinedAlgo(std::ostream &_os) : os(_os) {}
   // Now the specific implementations
