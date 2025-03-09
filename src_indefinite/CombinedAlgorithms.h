@@ -241,8 +241,10 @@ public:
     QmatRed = TheCompl * GramMatRed * TheCompl.transpose();
   }
   // We map automorphism group of a sublattice to the full group.
-  // The difficulty os that the rational kernel is of strictly positive Q-rank
+  // The difficulty is that the rational kernel is non-trivial
   // if dim(Plane) > 1.
+  // The extension maps an integral group of automorphism to a rational
+  // group of automorphism of a higher dimensional space.
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
@@ -1167,9 +1169,11 @@ private:
                                                  MyMatrix<Tint> const &ePlane,
                                                  int const &choice) {
     // We have two groups:
-    // -- The group stabilizing ePlane
-    // -- The group stabilizing ePlane^{perp} and its mapping to the full group.
-    // The group stabilizing ePlane^{perp} can be injected
+    // -- H1 The group stabilizing ePlane (which is rational)
+    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
+    //    (which is rational)
+    // -- The intersection H = G \cap GL_n(Z)
+    // The right cosets that are computed are the ones of G / H.
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
       std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
@@ -1231,6 +1235,7 @@ private:
   INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat,
                                                 MyMatrix<Tint> const &ePlane,
                                                 int const &choice) {
+    // Apply the 
     ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
@@ -1250,10 +1255,16 @@ private:
                   int const &choice) {
     return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Q, Plane, choice);
   }
-  std::vector<MyMatrix<T>> fiso_coset(MyMatrix<T> const &Q,
-                                      MyMatrix<Tint> const &Plane,
-                                      int const &choice) {
+  std::vector<MyMatrix<T>> f_right_cosets(MyMatrix<T> const &Q,
+                                          MyMatrix<Tint> const &Plane,
+                                          int const &choice) {
     return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Q, Plane, choice);
+  }
+  std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
+                                           MyMatrix<Tint> const& Plane,
+                                           MyVector<Tint> const& V,
+                                           int const& choice) {
+    return {};
   }
   std::optional<MyMatrix<Tint>> fiso_equiv(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const &Plane1,
@@ -1268,6 +1279,13 @@ private:
                                               int const &choice) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced, beginning\n";
+#endif
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    if (method_generation != METHOD_GENERATION_RIGHT_COSETS &&
+        method_generation != METHOD_GENERATION_DOUBLE_COSETS) {
+      std::cerr << "No valid method being provided with method_generation\n";
+      throw TerminalException{1};
+    }
 #endif
     T eNorm(0);
     std::vector<MyMatrix<Tint>> ListOrbit;
@@ -1404,13 +1422,10 @@ private:
 #endif
         auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
           if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return fiso_coset(Qmat, ePlane, choice);
-          }
-          if (method_generation == METHOD_GENERATION_DOUBLE_COSETS) {
+            return f_right_cosets(Qmat, ePlane, choice);
+          } else {
             return {};
           }
-          std::cerr << "No valid method being provided with method_generation\n";
-          throw TerminalException{1};
         };
         std::vector<MyMatrix<T>> ListRightCosets = get_right_cosets();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -1419,10 +1434,17 @@ private:
         for (auto &eVect : ListOrbitF) {
           MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
           MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
-          for (auto &eCos : ListRightCosets) {
+          auto get_cosets=[&]() -> std::vector<MyMatrix<T>> {
+            if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
+              return ListRightCosets;
+            } else {
+              return f_double_cosets(Qmat, ePlane, eVectB, choice);
+            }
+          };
+          for (auto &eCos : get_cosets()) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
             MyVector<Tint> eVectC =
-                UniversalVectorConversion<Tint, T>(eVectC_T);
+              UniversalVectorConversion<Tint, T>(eVectC_T);
             MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
             fInsert(ePlaneB);
           }
@@ -1445,9 +1467,17 @@ private:
   INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
                                              int const &choice) {
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
-    //
+    // Double cosets method is more efficient in principle than right cosets.
     std::vector<MyMatrix<Tint>> LOrb =
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, choice);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
+    std::vector<MyMatrix<Tint>> LOrbB =
       INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, choice);
+    if (LOrbB.size() != LOrb.size()) {
+      std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
+      throw TerminalException{1};
+    }
+#endif
     std::vector<MyMatrix<Tint>> LOrbRet;
     for (auto & eOrb : LOrb) {
       MyMatrix<Tint> eOrbRet = eOrb * res.B;
@@ -1776,6 +1806,8 @@ private:
 #endif
     return TheEquiv;
   }
+
+
 public:
   IndefiniteCombinedAlgo(std::ostream &_os) : os(_os) {}
   // Now the specific implementations
