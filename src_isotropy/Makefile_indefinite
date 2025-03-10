@@ -21,7 +21,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 CTOTAL          = $(CLOCAL) $(CFLAGS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(BOOST_LINK) $(NAUTY_LINK)
 
 
 %.o: %.cpp

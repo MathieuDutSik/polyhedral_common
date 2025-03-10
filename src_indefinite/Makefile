@@ -21,7 +21,7 @@ CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(MPFR_LINK) $(BOOST_LINK) $(NAUTY_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(BOOST_LINK) $(NAUTY_LINK)
 
 
 %.o: %.cpp

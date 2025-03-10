@@ -21,11 +21,11 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_latt -I../src_poly -I../permutalib/src -I../src_lorentzian -I../src_short -I../src_isotropy -I.
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(MPFR_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) $(MPREAL_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(MPFR_LINK) $(FLINT_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(FLINT_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK)
 
 %.o: %.cpp
 	@echo

@@ -323,6 +323,57 @@ public:
   }
 };
 
+/*
+  As obtained by GeneratorsOfGroup(GeneralLinearGroup(6,Integers))
+  in GAP.
+ */
+template <typename T>
+std::vector<MyMatrix<T>> GeneralLinearGroup(int const &n) {
+  std::vector<MyMatrix<T>> ListGens;
+  if (n > 1) {
+    MyMatrix<T> mat1 = ZeroMatrix<T>(n, n);
+    for (int i = 0; i < n; i++) {
+      int iNext = 0;
+      if (i < n - 1) {
+        iNext = i + 1;
+      }
+      mat1(i, iNext) = 1;
+    }
+    ListGens.push_back(mat1);
+  }
+  //
+  if (n > 2) {
+    MyMatrix<T> mat2 = ZeroMatrix<T>(n, n);
+    mat2(1, 0) = 1;
+    mat2(0, 1) = 1;
+    for (int i = 2; i < n; i++) {
+      mat2(i, i) = 1;
+    }
+    ListGens.push_back(mat2);
+  }
+  //
+  MyMatrix<T> mat3 = IdentityMat<T>(n);
+  mat3(0, 0) = -1;
+  ListGens.push_back(mat3);
+  //
+  if (n > 1) {
+    MyMatrix<T> mat4 = IdentityMat<T>(n);
+    mat4(0, 1) = 1;
+    ListGens.push_back(mat4);
+  }
+  //
+  return ListGens;
+}
+
+/*
+  The successive dimensions of the flag.
+ */
+struct SequenceDimension {
+  std::vector<size_t> dims;
+};
+
+
+
 template <typename T>
 std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const &n) {
   std::vector<MyMatrix<T>> LGen;
@@ -375,47 +426,6 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
   return ListGens;
 }
 
-/*
-  As obtained by GeneratorsOfGroup(GeneralLinearGroup(6,Integers))
-  in GAP.
- */
-template <typename T>
-std::vector<MyMatrix<T>> GeneralLinearGroup(int const &n) {
-  std::vector<MyMatrix<T>> ListGens;
-  if (n > 1) {
-    MyMatrix<T> mat1 = ZeroMatrix<T>(n, n);
-    for (int i = 0; i < n; i++) {
-      int iNext = 0;
-      if (i < n - 1) {
-        iNext = i + 1;
-      }
-      mat1(i, iNext) = 1;
-    }
-    ListGens.push_back(mat1);
-  }
-  //
-  if (n > 2) {
-    MyMatrix<T> mat2 = ZeroMatrix<T>(n, n);
-    mat2(1, 0) = 1;
-    mat2(0, 1) = 1;
-    for (int i = 2; i < n; i++) {
-      mat2(i, i) = 1;
-    }
-    ListGens.push_back(mat2);
-  }
-  //
-  MyMatrix<T> mat3 = IdentityMat<T>(n);
-  mat3(0, 0) = -1;
-  ListGens.push_back(mat3);
-  //
-  if (n > 1) {
-    MyMatrix<T> mat4 = IdentityMat<T>(n);
-    mat4(0, 1) = 1;
-    ListGens.push_back(mat4);
-  }
-  //
-  return ListGens;
-}
 
 /*
   Isometry group defined on a p dimensional space for a quadratic form Qp.

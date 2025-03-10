@@ -65,7 +65,7 @@ ENV GLPK_LINK="-L$GLPK_PATH/lib -lglpk -Wl,-rpath,$GLPK_PATH/lib"
 
 
 # flint
-RUN apt-get install -y libflint-dev libntl-dev libmpfr-dev
+RUN apt-get install -y libflint-dev libntl-dev
 ENV FLINT_INCDIR /include
 ENV FLINT_LINK -lflint
 
@@ -114,7 +114,7 @@ RUN mv /tmp/include /opt/linbox
 RUN mv /tmp/bin /opt/linbox
 ENV LINBOX_PATH /opt/linbox
 ENV LINBOX_INCLUDE "-DHAVE_CONFIG_H -DDISABLE_COMMENTATOR -DNDEBUG -UDEBUG -fopenmp -I$LINBOX_PATH/include"
-ENV LINBOX_LINK "-fopenmp -lntl -lmpfr -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
+ENV LINBOX_LINK "-fopenmp -lntl -lflint -L$LINBOX_PATH/lib -lopenblas -lpthread -lgfortran -lgivaro -lgmpxx -lgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
 # cloning polyhedral code
@@ -145,13 +145,6 @@ ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
-
-
-# mpfrc++
-ENV MPFR_INCDIR /usr/include
-ENV MPFR_LINK "-lmpfr"
-ENV MPREAL_INCLUDE "-I/opt/mpfrc++-3.6.8"
-RUN cp -r GIT/polyhedral_common/basic_common_cpp/ExternalLib/mpfrc++-3.6.8 /opt/mpfrc++-3.6.8
 
 
 # openmpi

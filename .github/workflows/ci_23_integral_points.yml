@@ -28,8 +28,6 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
-      MPFR_INCDIR: /usr/include
-      MPFR_LINK: "-lmpfr"
 
     steps:
       - uses: actions/checkout@v2
@@ -51,7 +49,6 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y libmpfr-dev
           sudo apt-get install -y openmpi-bin libopenmpi-dev
           sudo apt-get install -y autoconf autotools-dev libtool
 
