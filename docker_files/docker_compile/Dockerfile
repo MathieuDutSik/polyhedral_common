@@ -68,25 +68,37 @@ ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
 ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
 ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
+
 # openmpi
 RUN apt-get install -y openmpi-bin libopenmpi-dev
 ENV MPI_INCLUDE_CPP "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
 ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 
 
-
-
 # nauty/traces
 ENV NAUTY_PATH /opt/nauty
 ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
 ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
+RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
 RUN cd GIT/nauty && ./configure --prefix=/opt/nauty
 RUN cd GIT/nauty && make && make install
 
+
 # cloning polyhedral code
-RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
+
+
+# bliss
+ENV LIBBLISS_PATH /opt/bliss
+ENV LIBBLISS_INCLUDE "-I$LIBBLISS_PATH/include"
+ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
+RUN mkdir -p /opt/bliss/include
+RUN mkdir -p /opt/bliss/lib
+RUN cd /opt/bliss/lib && unzip /GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
+RUN cd /opt/bliss/lib && cmake /opt/bliss/lib/bliss-0.77 && make
+RUN cd /opt/bliss/include && cp /opt/bliss/lib/bliss-0.77/src/*.hh .
+
 
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common && ./compile_docker.sh
