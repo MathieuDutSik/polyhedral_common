@@ -81,7 +81,7 @@ ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
 ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
 RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
-RUN cd GIT/nauty && ./configure --prefix=/opt/nauty
+RUN cd GIT/nauty &&  ./configure --prefix=/opt/nauty
 RUN cd GIT/nauty && make && make install
 
 
@@ -91,7 +91,7 @@ RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git -
 
 # bliss
 ENV LIBBLISS_PATH /opt/bliss
-ENV LIBBLISS_INCLUDE "-I$LIBBLISS_PATH/include"
+ENV LIBBLISS_INCDIR "$LIBBLISS_PATH/include"
 ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
 RUN mkdir -p /opt/bliss/include
 RUN mkdir -p /opt/bliss/lib
