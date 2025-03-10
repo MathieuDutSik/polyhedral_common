@@ -78,7 +78,7 @@ ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
 # nauty/traces
 ENV NAUTY_PATH /opt/nauty
 ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
-ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
+ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
 RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
 RUN cd GIT/nauty &&  ./configure --prefix=/opt/nauty
