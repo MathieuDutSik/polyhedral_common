@@ -367,23 +367,80 @@ std::vector<MyMatrix<T>> GeneralLinearGroup(int const &n) {
 
 /*
   The successive dimensions of the flag.
+  For the full plane of dimension k, dims={k}
+  For the full sequence of flags, we have dims={1,1,.... , 1}
  */
-struct SequenceDimension {
+struct SeqDims {
   std::vector<size_t> dims;
 };
+
+SeqDims seq_dims_plane(int const& k) {
+  std::vector<size_t> dims{static_cast<size_t>(k)};
+  return SeqDims{dims};
+}
+
+SeqDims seq_dims_flag(int const& k) {
+  std::vector<size_t> dims;
+  for (int i=0; i<k; i++) {
+    dims.push_back(1);
+  }
+  return SeqDims{dims};
+}
+
+
+template<typename Tint>
+std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd) {
+  size_t n_case = sd.dims.size();
+  int dim = ListVect.cols();
+  std::vector<MyMatrix<Tint>> ListSpaces;
+  for (size_t i_case=0; i_case<n_case; i_case++) {
+    int sum_dim = 0;
+    for (size_t u=0; u<=i_case; u++) {
+      sum_dim += sd.dims[u];
+    }
+    MyMatrix<Tint> eSpace(sum_dim, dim);
+    for (int u = 0; u < sum_dim; u++) {
+      for (int iCol = 0; iCol < dim; iCol++) {
+        eSpace(u, iCol) = ListVect(u, iCol);
+      }
+    }
+    ListSpaces.push_back(eSpace);
+  }
+  return ListSpaces;
+}
+
+
 
 
 
 template <typename T>
-std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const &n) {
-  std::vector<MyMatrix<T>> LGen;
-  for (int i = 0; i < n; i++) {
-    MyMatrix<T> TheMat = IdentityMat<T>(n);
-    TheMat(i, i) = -1;
-    LGen.push_back(TheMat);
+std::vector<MyMatrix<T>> GetAutomorphismOfFlag(SeqDims const& sd) {
+  size_t n_case = sd.dims.size();
+  std::vector<int> starts;
+  int pos = 0;
+  for (auto& edim : sd.dims) {
+    starts.push_back(pos);
+    pos += edim;
   }
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < i; j++) {
+  int n = pos;
+  std::vector<MyMatrix<T>> LGen;
+  for (size_t i_case=0; i_case<n_case; i_case++) {
+    int start = starts[i_case];
+    int dim = sd.dims[i_case];
+    for (auto & eGen: GeneralLinearGroup<T>(dim)) {
+      MyMatrix<T> TheMat = IdentityMat<T>(n);
+      for (int i=0; i<dim; i++) {
+        for (int j=0; j<dim; j++) {
+          TheMat(i+start, j+start) = eGen(i,j);
+        }
+      }
+      LGen.push_back(TheMat);
+    }
+  }
+  for (size_t i_case = 0; i_case < n_case; i_case++) {
+    for (size_t j_case = 0; j_case < i_case; j_case++) {
+      int i = starts[i_case];
+      int j = starts[j_case];
       MyMatrix<T> TheMat = IdentityMat<T>(n);
       TheMat(i, j) = 1;
       LGen.push_back(TheMat);
@@ -391,41 +448,6 @@ std::vector<MyMatrix<T>> GetAutomorphismOfFlag(int const &n) {
   }
   return LGen;
 }
-
-template <typename T>
-std::vector<MyMatrix<T>>
-ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
-                               int const &p, int const &n) {
-  std::vector<MyMatrix<T>> ListGens;
-  for (auto &eGen : GRPmatr) {
-    MyMatrix<T> NewMat = IdentityMat<T>(n);
-    for (int i = 0; i < p; i++) {
-      for (int j = 0; j < p; j++) {
-        NewMat(i, j) = eGen(i, j);
-      }
-    }
-    ListGens.push_back(NewMat);
-  }
-  std::vector<MyMatrix<T>> SubNPgroup = GetAutomorphismOfFlag<T>(n - p);
-  for (auto &eGen : SubNPgroup) {
-    MyMatrix<T> NewMat = IdentityMat<T>(n);
-    for (int i = 0; i < n - p; i++) {
-      for (int j = 0; j < n - p; j++) {
-        NewMat(i + p, j + p) = eGen(i, j);
-      }
-    }
-    ListGens.push_back(NewMat);
-  }
-  for (int i = 0; i < p; i++) {
-    for (int idx = p; idx < n; idx++) {
-      MyMatrix<T> NewMat = IdentityMat<T>(n);
-      NewMat(i, idx) = 1;
-      ListGens.push_back(NewMat);
-    }
-  }
-  return ListGens;
-}
-
 
 /*
   Isometry group defined on a p dimensional space for a quadratic form Qp.
@@ -482,6 +504,53 @@ ExtendIsometryGroup(std::vector<MyMatrix<T>> const &GRPmatr, int const &p,
   }
   return ListGens;
 }
+
+/*
+  p is the dimension of the group GRPmatr.
+  n is the full dimension of the space,
+ */
+template <typename T>
+std::vector<MyMatrix<T>>
+ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
+                               int const &p, int const &n, SeqDims const& sd) {
+  std::vector<MyMatrix<T>> ListGens;
+  for (auto &eGen : GRPmatr) {
+    MyMatrix<T> NewMat = IdentityMat<T>(n);
+    for (int i = 0; i < p; i++) {
+      for (int j = 0; j < p; j++) {
+        NewMat(i, j) = eGen(i, j);
+      }
+    }
+    ListGens.push_back(NewMat);
+  }
+  std::vector<MyMatrix<T>> SubNPgroup = GetAutomorphismOfFlag<T>(sd);
+  for (auto &eGen : SubNPgroup) {
+    MyMatrix<T> NewMat = IdentityMat<T>(n);
+    for (int i = 0; i < n - p; i++) {
+      for (int j = 0; j < n - p; j++) {
+        NewMat(i + p, j + p) = eGen(i, j);
+      }
+    }
+    ListGens.push_back(NewMat);
+  }
+  for (int i = 0; i < p; i++) {
+    int idx = p;
+    for (auto& edim : sd.dims) {
+      MyMatrix<T> NewMat = IdentityMat<T>(n);
+      NewMat(i, idx) = 1;
+      ListGens.push_back(NewMat);
+      idx += edim;
+    }
+  }
+  return ListGens;
+}
+
+
+
+
+
+
+
 
 template <typename T, typename Tint, typename Tgroup>
 struct IndefiniteCombinedAlgo {
@@ -847,34 +916,7 @@ private:
   // Specific functions f_stab_*, f_equiv_*
   //
   std::vector<MyMatrix<Tint>>
-  f_stab_plane(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec) {
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    MicrosecondTime time;
-#endif
-    std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: f_stab_plane|=" << time << "\n";
-#endif
-    return LGen;
-  }
-  std::vector<MyMatrix<Tint>>
-  f_get_list_spaces(MyMatrix<Tint> const &ListVect) {
-    int n_vect = ListVect.rows();
-    int dim = ListVect.cols();
-    std::vector<MyMatrix<Tint>> ListSpaces;
-    for (int len = 1; len <= n_vect; len++) {
-      MyMatrix<Tint> eSpace(len, dim);
-      for (int u = 0; u < len; u++) {
-        for (int iCol = 0; iCol < dim; iCol++) {
-          eSpace(u, iCol) = ListVect(u, iCol);
-        }
-      }
-      ListSpaces.push_back(eSpace);
-    }
-    return ListSpaces;
-  }
-  std::vector<MyMatrix<Tint>>
-  f_stab_flag(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec) {
+  f_stab(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec, SeqDims const& sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -887,7 +929,7 @@ private:
     os << "COMB: f_stab_flag, We have GRPred\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPfull =
-        ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim);
+      ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_flag, We have GRPfull\n";
 #endif
@@ -902,7 +944,7 @@ private:
         throw TerminalException{1};
       }
       std::vector<MyMatrix<Tint>> ListSpaces =
-          f_get_list_spaces(eRec.PlaneExpr);
+        f_get_list_spaces(eRec.PlaneExpr, sd);
       for (auto &eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
         if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
@@ -918,32 +960,10 @@ private:
 #endif
     return ListGenTot;
   }
-  std::vector<MyMatrix<Tint>>
-  f_stab(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec, int choice) {
-    if (choice == INDEFINITE_FORM_PLANE) {
-      return f_stab_plane(eRec);
-    }
-    if (choice == INDEFINITE_FORM_FLAG) {
-      return f_stab_flag(eRec);
-    }
-    std::cerr << "COMB: Failed to have a valid input choice in f_stab\n";
-    throw TerminalException{1};
-  }
   std::optional<MyMatrix<Tint>>
-  f_equiv_plane(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
-                INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2) {
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    MicrosecondTime time;
-#endif
-    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence(eRec1.GramMatRed, eRec2.GramMatRed);
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: f_equiv_plane|=" << time << "\n";
-#endif
-    return opt;
-  }
-  std::optional<MyMatrix<Tint>>
-  f_equiv_flag(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
-               INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2) {
+  f_equiv(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
+          INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2,
+          SeqDims const& sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -970,9 +990,9 @@ private:
       throw TerminalException{1};
     }
     std::vector<MyMatrix<Tint>> ListSpaces1 =
-        f_get_list_spaces(eRec1.PlaneExpr);
+      f_get_list_spaces(eRec1.PlaneExpr, sd);
     std::vector<MyMatrix<Tint>> ListSpaces2 =
-        f_get_list_spaces(eRec2.PlaneExpr);
+      f_get_list_spaces(eRec2.PlaneExpr, sd);
     MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
     for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
@@ -988,24 +1008,11 @@ private:
 #endif
     return TheEquiv;
   }
-  std::optional<MyMatrix<Tint>>
-  f_equiv(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
-          INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2,
-          int const &choice) {
-    if (choice == INDEFINITE_FORM_PLANE) {
-      return f_equiv_plane(eRec1, eRec2);
-    }
-    if (choice == INDEFINITE_FORM_FLAG) {
-      return f_equiv_flag(eRec1, eRec2);
-    }
-    std::cerr << "COMB: Failed to have a valid input choice in f_equiv\n";
-    throw TerminalException{1};
-  }
   //
   // The function using choice integer input
   //
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Reduced(
-      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, start\n";
 #endif
@@ -1013,7 +1020,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have eRec\n";
 #endif
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP1\n";
 #endif
@@ -1034,23 +1041,23 @@ private:
     return eInvRed + GRP_inv;
   }
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(
-      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
     MyMatrix<Tint> PlaneRed = Plane * Binv;
-    return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(res.Mred, PlaneRed, choice);
+    return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(res.Mred, PlaneRed, sd);
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2,
-      int const &choice) {
-    if (INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat1, Plane1, choice) !=
-        INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat2, Plane2, choice)) {
+      SeqDims const &sd) {
+    if (INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat1, Plane1, sd) !=
+        INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat2, Plane2, sd)) {
       return {};
     }
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec1(Qmat1, Plane1, os);
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec2(Qmat2, Plane2, os);
-    std::optional<MyMatrix<Tint>> opt = f_equiv(eRec1, eRec2, choice);
+    std::optional<MyMatrix<Tint>> opt = f_equiv(eRec1, eRec2, sd);
     if (!opt) {
       return {};
     }
@@ -1085,7 +1092,7 @@ private:
           UniversalMatrixConversion<Tint, T>(EquivRat);
       return EquivRat_tint;
     }
-    std::vector<MyMatrix<Tint>> GRP1_A = f_stab(eRec1, choice);
+    std::vector<MyMatrix<Tint>> GRP1_A = f_stab(eRec1, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Equivalence_IsotropicKstuff_Kernel, We have "
           "GRP1_A\n";
@@ -1123,7 +1130,7 @@ private:
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2,
-      int const &choice) {
+      SeqDims const &sd) {
     ResultReduction<T, Tint> res1 = IndefiniteReduction<T,Tint>(Qmat1, os);
     MyMatrix<Tint> B1_inv = Inverse(res1.B);
     MyMatrix<Tint> Plane1_red = Plane1 * B1_inv;
@@ -1133,7 +1140,7 @@ private:
     MyMatrix<Tint> Plane2_red = Plane2 * B2_inv;
     //
     std::optional<MyMatrix<Tint>> opt =
-      INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(res1.Mred, res2.Mred, Plane1_red, Plane2_red, choice);
+      INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(res1.Mred, res2.Mred, Plane1_red, Plane2_red, sd);
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
@@ -1142,9 +1149,9 @@ private:
     return {};
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(
-      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP1\n";
 #endif
@@ -1156,7 +1163,7 @@ private:
     return MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(
-      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, int const &choice) {
+      MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
       std::cerr << "COMB: Right now INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel requires Qmat to be full dimensional\n";
@@ -1167,7 +1174,7 @@ private:
     MyMatrix<Tint> Plane_red = Plane * B_inv;
     //
     std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(res.Mred, Plane_red, choice);
+      INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(res.Mred, Plane_red, sd);
     std::vector<MyMatrix<Tint>> LGenRet;
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
@@ -1178,7 +1185,7 @@ private:
   std::vector<MyMatrix<T>>
   INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat,
                                                  MyMatrix<Tint> const &ePlane,
-                                                 int const &choice) {
+                                                 SeqDims const &sd) {
     // We have the following groups:
     // -- H1 The group stabilizing ePlane (which is integral)
     // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
@@ -1186,7 +1193,7 @@ private:
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
 #endif
@@ -1231,7 +1238,7 @@ private:
   std::vector<MyMatrix<T>>
   INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat,
                                                 MyMatrix<Tint> const &ePlane,
-                                                int const &choice) {
+                                                SeqDims const &sd) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
       std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
@@ -1245,7 +1252,7 @@ private:
     //
     MyMatrix<Tint> ePlaneRed = ePlane * Binv;
     std::vector<MyMatrix<T>> LCos =
-      INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(res.Mred, ePlaneRed, choice);
+      INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(res.Mred, ePlaneRed, sd);
     std::vector<MyMatrix<T>> LCosRet;
     for (auto & eCos : LCos) {
       MyMatrix<T> eCosRet = B_Tinv * eCos * B_T;
@@ -1256,27 +1263,20 @@ private:
   std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
                                           MyMatrix<Tint> const& Plane,
                                           MyVector<Tint> const& V,
-                                          int const& choice) {
-    // Computes the stabilizer.
-    // If choice = PLANE, then we need to stabilize both PLANE and (PLANE, V)
-    // If choice = FLAG,  then we need to stabilize the flags of (PLANE, V)
-    if (choice == INDEFINITE_FORM_FLAG) {
-      MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
-      INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
-      std::vector<MyMatrix<Tint>> GRP1 = f_stab_flag(eRec);
-      return eRec.MapOrthogonalSublatticeGroup(GRP1);
-    }
-    if (choice == INDEFINITE_FORM_PLANE) {
-      std::cerr << "COMB: The code needs to be written here\n";
-      throw TerminalException{1};
-    }
-    std::cerr << "COMB: No valid option\n";
-    throw TerminalException{1};
+                                          SeqDims const& sd) {
+    // Computes the relevant stabilizer.
+    std::vector<size_t> dims = sd.dims;
+    dims.push_back(1);
+    SeqDims sd_ext{dims};
+    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
+    return eRec.MapOrthogonalSublatticeGroup(GRP1);
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& Plane,
                                            MyVector<Tint> const& V,
-                                           int const& choice) {
+                                           SeqDims const& sd) {
     // We have the following groups:
     // -- H1 The group stabilizing ePlane (which is integral)
     // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
@@ -1287,12 +1287,12 @@ private:
     os << "COMB: f_double_cosets, begin\n";
 #endif
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, choice);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP1\n";
 #endif
     std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroup(GRP1);
-    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, choice);
+    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, sd);
     int n = Q.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
@@ -1301,7 +1301,7 @@ private:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat, int k,
                                               int const& method_generation,
-                                              int const &choice) {
+                                              SeqDims const &sd) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced, beginning\n";
 #endif
@@ -1334,7 +1334,7 @@ private:
           }
         }
 #endif
-        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, choice);
+        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd);
         return {Plane, eInv};
       };
       std::vector<PlaneInv> ListRecReprKplane;
@@ -1347,7 +1347,7 @@ private:
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
               INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
-                                                             fRecReprKplane.ePlane, choice);
+                                                             fRecReprKplane.ePlane, sd);
             if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
               n_over_generation += 1;
@@ -1447,7 +1447,7 @@ private:
 #endif
         auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
           if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, choice);
+            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd);
           } else {
             return {};
           }
@@ -1463,7 +1463,7 @@ private:
             if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
               return ListRightCosets;
             } else {
-              return f_double_cosets(Qmat, ePlane, eVectB, choice);
+              return f_double_cosets(Qmat, ePlane, eVectB, sd);
             }
           };
           for (auto &eCos : get_cosets()) {
@@ -1490,14 +1490,14 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
-                                             int const &choice) {
+                                             SeqDims const &sd) {
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     // Double cosets method is more efficient in principle than right cosets.
     std::vector<MyMatrix<Tint>> LOrb =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, choice);
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
     std::vector<MyMatrix<Tint>> LOrbB =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, choice);
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
     if (LOrbB.size() != LOrb.size()) {
       std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
       throw TerminalException{1};
@@ -1861,36 +1861,36 @@ public:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const &Q,
                                         MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
-                                                        INDEFINITE_FORM_PLANE);
+    SeqDims sd = seq_dims_plane(Plane.rows());
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_Stabilizer_IsotropicKflag(MyMatrix<T> const &Q,
                                        MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane,
-                                                        INDEFINITE_FORM_FLAG);
+    SeqDims sd = seq_dims_flag(Plane.rows());
+    return INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   std::vector<MyMatrix<T>>
   INDEF_FORM_RightCosets_IsotropicKplane(MyMatrix<T> const &Q,
                                          MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
-                                                         INDEFINITE_FORM_PLANE);
+    SeqDims sd = seq_dims_plane(Plane.rows());
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   std::vector<MyMatrix<T>>
   INDEF_FORM_RightCosets_IsotropicKflag(MyMatrix<T> const &Q,
                                         MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane,
-                                                         INDEFINITE_FORM_FLAG);
+    SeqDims sd = seq_dims_flag(Plane.rows());
+    return INDEF_FORM_RightCosets_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKplane(MyMatrix<T> const &Q, int k) {
-    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
-                                                      INDEFINITE_FORM_PLANE);
+    SeqDims sd = seq_dims_plane(k);
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k, sd);
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKflag(MyMatrix<T> const &Q, int k) {
-    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k,
-                                                      INDEFINITE_FORM_FLAG);
+    SeqDims sd = seq_dims_flag(k);
+    return INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(Q, k, sd);
   }
   std::vector<MyVector<Tint>>
   INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const &Q, T const &X) {
