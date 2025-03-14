@@ -389,15 +389,23 @@ SeqDims seq_dims_flag(int const& k) {
 
 
 template<typename Tint>
-std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd) {
+std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd, [[maybe_unused]] std::ostream& os) {
   size_t n_case = sd.dims.size();
   int dim = ListVect.cols();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "f_get_list_spaces, n_case=" << n_case << " dim=" << dim << " n_rows=" << ListVect.rows() << "\n";
+  os << "f_get_list_spaces, ListVect=\n";
+  WriteMatrix(os, ListVect);
+#endif
   std::vector<MyMatrix<Tint>> ListSpaces;
   for (size_t i_case=0; i_case<n_case; i_case++) {
     int sum_dim = 0;
     for (size_t u=0; u<=i_case; u++) {
       sum_dim += sd.dims[u];
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim << "\n";
+#endif
     MyMatrix<Tint> eSpace(sum_dim, dim);
     for (int u = 0; u < sum_dim; u++) {
       for (int iCol = 0; iCol < dim; iCol++) {
@@ -913,7 +921,7 @@ private:
     }
   }
   //
-  // Specific functions f_stab_*, f_equiv_*
+  // Specific functions f_stab, f_equiv
   //
   std::vector<MyMatrix<Tint>>
   f_stab(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec, SeqDims const& sd) {
@@ -921,21 +929,44 @@ private:
     MicrosecondTime time;
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_flag, start\n";
+    os << "COMB: f_stab, start\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_flag, We have GRPred\n";
+    os << "COMB: f_stab, We have GRPred\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPfull =
       ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_flag, We have GRPfull\n";
+    os << "COMB: f_stab, We have GRPfull\n";
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto &eGen : GRPfull) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: f_stab, eGen=\n";
+      WriteMatrix(os, eGen);
+      os << "COMB: f_stab, eRec.FullBasis=\n";
+      WriteMatrix(os, eRec.FullBasis);
+      os << "COMB: f_stab, eRec.FullBasisInv=\n";
+      WriteMatrix(os, eRec.FullBasisInv);
+#endif
       MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: f_stab, eGenB=\n";
+      WriteMatrix(os, eGenB);
+      os << "COMB: f_stab, eRec.GramMatRed=\n";
+      WriteMatrix(os, eRec.GramMatRed);
+#endif
+#if defined DEBUG_INDEFINITE_COMBINED_ALGORITHMS && defined SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      std::vector<MyMatrix<Tint>> ListSpacesB =
+        f_get_list_spaces(eRec.PlaneExpr, sd, os);
+      os << "COMB: f_stab, |ListSpacesB|=" << ListSpacesB.size() << "\n";
+      for (auto & eSpace: ListSpacesB) {
+        os << "COMB: f_stab, |eSpace|=" << eSpace.rows() << " / " << eSpace.cols() << "\n";
+        WriteMatrix(os, eSpace);
+      }
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
@@ -944,7 +975,7 @@ private:
         throw TerminalException{1};
       }
       std::vector<MyMatrix<Tint>> ListSpaces =
-        f_get_list_spaces(eRec.PlaneExpr, sd);
+        f_get_list_spaces(eRec.PlaneExpr, sd, os);
       for (auto &eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
         if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
@@ -955,8 +986,11 @@ private:
 #endif
       ListGenTot.push_back(eGenB);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab, We have ListGenTot\n";
+#endif
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: f_stab_flag|=" << time << "\n";
+    os << "|COMB: f_stab|=" << time << "\n";
 #endif
     return ListGenTot;
   }
@@ -990,9 +1024,9 @@ private:
       throw TerminalException{1};
     }
     std::vector<MyMatrix<Tint>> ListSpaces1 =
-      f_get_list_spaces(eRec1.PlaneExpr, sd);
+      f_get_list_spaces(eRec1.PlaneExpr, sd, os);
     std::vector<MyMatrix<Tint>> ListSpaces2 =
-      f_get_list_spaces(eRec2.PlaneExpr, sd);
+      f_get_list_spaces(eRec2.PlaneExpr, sd, os);
     MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
     for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
@@ -1004,7 +1038,7 @@ private:
     }
 #endif
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    os << "|COMB: f_equiv_flag|=" << time << "\n";
+    os << "|COMB: f_equiv|=" << time << "\n";
 #endif
     return TheEquiv;
   }
@@ -1269,9 +1303,10 @@ private:
     dims.push_back(1);
     SeqDims sd_ext{dims};
     MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
-    return eRec.MapOrthogonalSublatticeGroup(GRP1);
+    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    return LGen;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& Plane,
