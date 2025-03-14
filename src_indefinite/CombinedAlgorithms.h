@@ -30,6 +30,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+#define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
 #endif
 
 static const int INDEFINITE_FORM_PLANE = 32;
@@ -394,6 +395,20 @@ SeqDims seq_dims_reduced(SeqDims const& sd, int const& k) {
   std::cerr << "COMB: We should not reach that stage\n";
   throw TerminalException{1};
 }
+
+void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os) {
+  os << "COMB: SeqDims " << name << "=[ ";
+  bool IsFirst = true;
+  for (auto & edim: sd.dims) {
+    if (!IsFirst) {
+      os << " | ";
+    }
+    IsFirst = false;
+    os << edim;
+  }
+  os << " ]\n";
+}
+
 
 
 SeqDims seq_dims_plane(int const& k) {
@@ -954,6 +969,9 @@ private:
     os << "COMB: f_stab, start\n";
 #endif
     SeqDims sd_red = seq_dims_reduced(sd, eRec.PlaneExpr.rows());
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    write_seq_dims(sd_red, "sd_red(f_stab)", os);
+#endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -967,30 +985,7 @@ private:
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto &eGen : GRPfull) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: f_stab, eGen=\n";
-      WriteMatrix(os, eGen);
-      os << "COMB: f_stab, eRec.FullBasis=\n";
-      WriteMatrix(os, eRec.FullBasis);
-      os << "COMB: f_stab, eRec.FullBasisInv=\n";
-      WriteMatrix(os, eRec.FullBasisInv);
-#endif
       MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: f_stab, eGenB=\n";
-      WriteMatrix(os, eGenB);
-      os << "COMB: f_stab, eRec.GramMatRed=\n";
-      WriteMatrix(os, eRec.GramMatRed);
-#endif
-#if defined DEBUG_INDEFINITE_COMBINED_ALGORITHMS && defined SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      std::vector<MyMatrix<Tint>> ListSpacesB =
-        f_get_list_spaces(eRec.PlaneExpr, sd_red, os);
-      os << "COMB: f_stab, |ListSpacesB|=" << ListSpacesB.size() << "\n";
-      for (auto & eSpace: ListSpacesB) {
-        os << "COMB: f_stab, |eSpace|=" << eSpace.rows() << " / " << eSpace.cols() << "\n";
-        WriteMatrix(os, eSpace);
-      }
-#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
       MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
@@ -1326,10 +1321,15 @@ private:
     MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
     // Computes the relevant stabilizer.
-    SeqDims sd_red = seq_dims_reduced(sd, eRec.PlaneExpr.rows());
+    SeqDims sd_red = seq_dims_reduced(sd, Plane.rows());
     std::vector<size_t> dims = sd_red.dims;
     dims.push_back(1);
     SeqDims sd_ext{dims};
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    write_seq_dims(sd, "sd(f_stab_plane_v)", os);
+    write_seq_dims(sd_red, "sd_red(f_stab_plane_v)", os);
+    write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
+#endif
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
     std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroup(GRP1);
     return LGen;
@@ -1353,10 +1353,19 @@ private:
     os << "COMB: f_double_cosets, we have GRP1\n";
 #endif
     std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroup(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP_G\n";
+#endif
     std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP_V\n";
+#endif
     int n = Q.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have pair\n";
+#endif
     return pair.second;
   }
   std::vector<MyMatrix<Tint>>

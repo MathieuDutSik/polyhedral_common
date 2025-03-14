@@ -2214,7 +2214,10 @@ ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
     MyMatrix<T> eGen2 = PmatInv * eGen1 * Pmat;
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!IsIntegralMatrix(eGen2)) {
-      std::cerr << "The matrix eGen2 should be integral\n";
+      std::cerr << "MAT_GRP: Error in ConjugateListGeneratorsTestInt\n";
+      std::cerr << "MAT_GRP: The matrix eGen2 should be integral\n";
+      std::cerr << "MAT_GRP: eGen2=\n";
+      WriteMatrix(std::cerr, eGen2);
       throw TerminalException{1};
     }
 #endif
@@ -2382,8 +2385,21 @@ MatrixIntegral_DoubleCosets_General(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: We have LGenG1=\n";
+  WriteListMatrix(os, LGenG1);
+  os << "MAT_GRP: We have LGenV1=\n";
+  WriteListMatrix(os, LGenV1);
+#endif
   MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: We have |InvariantSpace|=" << DeterminantMat(InvariantSpace) << "\n";
+  os << "MAT_GRP: We have InvariantSpace=\n";
+  WriteMatrix(os, InvariantSpace);
+  os << "MAT_GRP: We have InvInvariantSpace=\n";
+  WriteMatrix(os, InvInvariantSpace);
+#endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
     std::cerr << "MAT_GRP: The matrix InvInvariantSpace should be integral\n";
@@ -2392,8 +2408,14 @@ MatrixIntegral_DoubleCosets_General(
 #endif
   std::vector<MyMatrix<T>> LGenG2 =
       ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenG1);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: We have LGenG2\n";
+#endif
   std::vector<MyMatrix<T>> LGenV2 =
       ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenV1);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: We have LGenV2\n";
+#endif
   Thelper helper{n};
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, before "
