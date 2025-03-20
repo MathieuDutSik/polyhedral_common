@@ -246,41 +246,102 @@ public:
   // if dim(Plane) > 1.
   // The extension maps an integral group of automorphism to a rational
   // group of automorphism of a higher dimensional space.
+  //
+  // This poses some painful problems:
+  // * The rational stuff can be defined. But it will be infinite
+  //   dimensional.
+  // * From an element, we can compute the lift. We can minimize
+  //   the denominators. The solution is never unique. But can we find
+  //   something better.
+  // * Given a lattice, can we test if a lift exists or not? Yes,
+  //   definitely.
+  // * The idea is that we can find some subspace being stabilized
+  //   which makes it integral. This is the big ask. We have no reason
+  // * When having the stabilized subspace, we can compute the
+  //   relevant kernel.
+  // * We can also compute the effective lifting method that stabilizes
+  //   the subspace in question.
+
+  //
+  // Description of the function being used.
+  //
+
+  // Lift mapping. The sublattice in argument is supposed to help doing that.
+  MyMatrix<T> LiftToFullAutomorphism(MyMatrix<T> const& eGenRed, MyMatrix<T> const& HelpingSublattice) {
+    MyMatrix<T> const &Subspace1 = NSP_T;
+    MyMatrix<T> eGenRed_T = UniversalMatrixConversion<T, Tint>(eGenRed);
+    MyMatrix<T> Subspace2 = eGenRed_T * NSP_T;
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(Qmat, Subspace1, Qmat, Subspace2, os);
+    MyMatrix<T> eGen = TheRec.get_one_transformation();
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    check_generator(eGenRed, eGen);
+#endif
+    return eGen;
+  }
+
+
+  // The following function attempts to compute an invariant sublattice
+  // For the computed lift of the matrix group. There is no theoretical
+  // guarantee that the lift exists, but so far it has always happened.
+  // Of course what we want is the smallest sublattice
+  MyMatrix<T>
+  ComputeInvariantSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+
+
+    while(true) {
+    }
+  }
+
+  // Computes integral kernel relevant to the subspace
+  // Nice to know would be to understand the structure of the group.
+  std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Subspace) {
+  }
+
+
+
+  // We use the sublattice to map the group GRPmatr to higher dimension.
+  std::vector<MyMatrix<T>>
+  MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) {
+    std::vector<MyMatrix<T>> ListGens;
+    RecSolutionIntMat<T> eCan(TheSpace);
+    for (auto & eGenRed: GRPmatr) {
+      MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      // At this point, we expect the lifted automorphism to preserve the lattice.
+      // This is because first it should exist and second the reduction of the coefficients
+      // should make the algorithm work.
+      MyMatrix<T> Sublattice_img = Sublattice * eGen;
+      if (!eCan.is_containing_m(TheSpace_img)) {
+        std::cerr << "COMB: The sublattice should be preservec\n";
+        throw TerminalException{1};
+      }
+#endif
+      ListGens.push_back(eGen);
+    }
+    for (auto & eGen: ComputeRelevantKernel(Subspace)) {
+      ListGens.push_back(eGen);
+    }
+    return ListGens;
+  }
+
+
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) {
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-    MicrosecondTime time;
-#endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: MapOrthogonalSublatticeGroup, beginning\n";
-#endif
+    MyMatrix<T> Sublattice = ComputeInvariantSublattice(GRPmatr);
+    return MapOrthogonalSublatticeGroupUsingSublattice(GRPmatr, Sublattice);
+  }
+
+  std::vector<MyMatrix<T>>
+  MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) {
     MyMatrix<T> const &Subspace1 = NSP_T;
     std::vector<MyMatrix<T>> ListGenTotal;
     std::vector<T> ListD{1};
     for (auto &eEndoRed : GRPmatr) {
       MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T, Tint>(eEndoRed);
       MyMatrix<T> Subspace2 = eEndoRed_T * NSP_T;
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-      MicrosecondTime time_loc;
-#endif
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(
           Qmat, Subspace1, Qmat, Subspace2, os);
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-      os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism|=" << time_loc << "\n";
-#endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: MapOrthogonalSublatticeGroup, We have TheRec 1\n";
-#endif
       MyMatrix<T> RetMat = TheRec.get_one_transformation();
-#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-      os << "|COMB: get_one_transformation|=" << time_loc << "\n";
-#endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: MapOrthogonalSublatticeGroup, We have RetMat\n";
-#endif
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      check_generator(eEndoRed, RetMat);
-#endif
       ListGenTotal.push_back(RetMat);
       T eDen = GetDenominatorMatrix(RetMat);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
@@ -1317,6 +1378,7 @@ private:
   std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
                                           MyMatrix<Tint> const& Plane,
                                           MyVector<Tint> const& V,
+                                          MyMatrix<T> const& Sublattice,
                                           SeqDims const& sd) {
     MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
@@ -1331,7 +1393,7 @@ private:
     write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
 #endif
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
-    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
     return LGen;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
@@ -1352,11 +1414,16 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP1\n";
 #endif
-    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroup(GRP1);
+    MyMatrix<T> Sublattice = ComputeInvariantSublattice(GRP1);
+    return MapOrthogonalSublatticeGroupUsingSublattice(GRPmatr, Sublattice);
+
+
+    
+    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_G\n";
 #endif
-    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, sd);
+    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, Sublattice, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V\n";
 #endif
