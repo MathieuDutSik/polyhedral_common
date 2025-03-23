@@ -303,7 +303,7 @@ public:
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) {
     std::vector<MyMatrix<T>> ListGens;
-    RecSolutionIntMat<T> eCan(TheSpace);
+    RecSolutionIntMat<T> eCan(Sublattice);
     for (auto & eGenRed: GRPmatr) {
       MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS

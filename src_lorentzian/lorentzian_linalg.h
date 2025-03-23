@@ -16,6 +16,10 @@
 #define DEBUG_LORENTZIAN_LINALG
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LORENTZIAN_LINALG
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_LORENTZIAN_LINALG
 #endif
@@ -780,6 +784,137 @@ public:
     return ListEquiv_terms3;
   }
 };
+
+
+
+// Resolution of B = X A + A^T X^T
+// b_{ij} = sum_k x_{ik} a_{kj} + a_{ki} x_{jk}
+// Resolution of B = H U^T + U H^T
+// 0      = sum_k h_{ik} u_{jk} + u_{ik} h_{jk}
+template <typename T>
+std::vector<Matrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) {
+  int dim = Umat.rows();
+  MyMatrix<T> TheMat = ZeroMatrix<T>(dim * dim, dim * dim);
+  auto f = [&](int i, int j) -> int { return i + dim * j; };
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      int u = f(i, j);
+      for (int k = 0; k < dim; k++) {
+        // contribudion h_{ik} u_{jk}
+        int v1 = f(i, k);
+        TheMat(v1, u) += Umat(j, k);
+        // contribution u_{ik} h_{jk}
+        int v2 = f(j, k);
+        TheMat(v2, u) += Umat(i, k);
+      }
+    }
+  }
+  auto f_getmat = [&](MyVector<T> const &eVect) -> MyMatrix<T> {
+    MyMatrix<T> eMat(dim, dim);
+    for (int i = 0; i < dim; i++) {
+      for (int j = 0; j < dim; j++) {
+        eMat(i, j) = eVect(f(i, j));
+      }
+    }
+    return eMat;
+  };
+  std::vector<MyMatrix<T>> BasisIntegralKernel;
+  MyMatrix<T> NSP = NullspaceIntMat(TheMat);
+  int dimNSP = NSP.rows();
+  for (int u = 0; u < dimNSP; u++) {
+    MyVector<T> eVect = GetMatrixRow(NSP, u);
+    MyMatrix<T> Hmat = f_getmat(eVect);
+#ifdef DEBUG_LORENTZIAN_LINALG
+    MyMatrix<T> SumMat = Hmat * Umat.transpose() + Umat * Hmat.transpose();
+    if (!IsZeroMatrix(SumMat)) {
+      std::cerr << "LORLIN: Failed to find the correct solution 2\n";
+      throw TerminalException{1};
+    }
+#endif
+    BasisIntegralKernel.push_back(eMat);
+  }
+  return BasisIntegralKernel;
+}
+
+
+
+
+/*
+  We have a subspace NSP, which is the orthogonal of an isotrop subspace for Q.
+  Sublattice is a sublattice which restricted to R \otimes NSP is exactly NSP.
+  ---
+  We are looking for the group of isometries of the full space that are isometries
+  for Q and when restricted to NSP are the identity.
+  ---
+  Analysis of the problem:
+  * By inverting the Sublattice, we can make sure that we are in Z^n.
+  * We find the basis in the complement TheCompl.
+  * The image of TheCompl is then TheCompl + H IsotropSpace
+  * The equation to resolve is (with H integral)
+    Q[TheCompl + H IsotropSpace] = Q[TheCompl]
+    That is
+    (TheCompl + H Iso) Q (Iso^T H^T + TheCompl^T) = TheCompl Q TheCompl^T
+    Expanding and simplifying, we are left with
+    H Iso Q TheCompl^T + TheCompl Q Iso^T H^T = 0
+    Write U = TheCompl Q Iso^T we obtain
+    H U^T + U H^T.
+  * The group being generated is actually commutative. The generators
+    correspond to the generator of the integral kernel.
+  */
+template<typename T, typename Tint>
+std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice) {
+  int dim = Q.rows();
+  MyMatrix<T> SublatticeInv = Inverse(Sublattice);
+  MyMatrix<T> NSP_red = NSP * SublatticeInv;
+  MyMatrix<T> Q_red = Sublattice * Q * Sublattice.transpose();
+  MyMatrix<T> eProd1 = NSP_red * Q_red;
+  MyMatrix<T> eProd2 = RemoveFractionMatrix(eProd1);
+  MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint,T>(eProd2);
+  MyMatrix<Tint> IsotropSpace = NullspaceIntTrMat(eProd3);
+  int dim_iso = IsotropSpace.rows();
+  MyMatrix<T> IsotropSpace_T = UniversalMatrixConversion<T,Tint>(IsotropSpace);
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
+  MyMatrix<T> Iso_Q_Iso = IsotropSpace_T * Q_red * IsotropSpace_T.transpose();
+  if (!IsZeroMatrix(Iso_Q_Iso)) {
+    std::cerr << "LORLIN: The space should be totally isotropic\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP_red, dim);
+  MyMatrix<T> FullBasis = Concatenate(NSP_red, TheCompl);
+  MyMatrix<T> FullBasisInv = Inverse(FullBasis);
+  MyMatrix<T> U = TheCompl * Q_red * IsotropSpace_T.transpose();
+  std::vector<Matrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
+  std::vector<MyMatrix<T>> ListGens;
+  for (auto & eVectBasis: BasisIntegralKernel) {
+    MyMatrix<T> TheComplImg = TheCompl + eVectBasis + IsotropSpace_T;
+    MyMatrix<T> FullBasisImg = Concatenate(NSP_red, TheComplImg);
+    MyMatrix<T> eGen1 = FullBasisInv * FullBasisImg;
+    MyMatrix<T> eGen2 = SublatticeInv * eGen1 * Sublattice;
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
+    MyMatrix<T> DiffNSP = NSP * eGen2 - NSP;
+    if (!IsZeroMatrix(DiffNSP)) {
+      std::cerr << "LORLIN: NSP should be pointwise preserved\n";
+      throw TerminalException{1};
+    }
+    RecSolutionIntMat<T> eCan(Sublattice);
+    MyMatrix<T> SublatticeImg = Sublattice * eGen2;
+    if (!eCan.is_containing_m(TheSpace_img)) {
+      std::cerr << "LORLIN: The sublattice should be globally preservec\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> Q_img = eGen2 * Q * eGen2.transpose();
+    if (Q != Q_img) {
+      std::cerr << "LORLIN: The quadratic form Q should be preservec\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListGens.push_back(eGen2);
+  }
+  return ListGens;
+}
+
+
 
 /*
   For a dimension N, we want to find all the possible integers k such that there
