@@ -787,12 +787,10 @@ public:
 
 
 
-// Resolution of B = X A + A^T X^T
-// b_{ij} = sum_k x_{ik} a_{kj} + a_{ki} x_{jk}
 // Resolution of B = H U^T + U H^T
 // 0      = sum_k h_{ik} u_{jk} + u_{ik} h_{jk}
 template <typename T>
-std::vector<Matrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) {
+std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) {
   int dim = Umat.rows();
   MyMatrix<T> TheMat = ZeroMatrix<T>(dim * dim, dim * dim);
   auto f = [&](int i, int j) -> int { return i + dim * j; };
@@ -831,7 +829,7 @@ std::vector<Matrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) {
       throw TerminalException{1};
     }
 #endif
-    BasisIntegralKernel.push_back(eMat);
+    BasisIntegralKernel.push_back(Hmat);
   }
   return BasisIntegralKernel;
 }
@@ -871,7 +869,6 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
   MyMatrix<T> eProd2 = RemoveFractionMatrix(eProd1);
   MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint,T>(eProd2);
   MyMatrix<Tint> IsotropSpace = NullspaceIntTrMat(eProd3);
-  int dim_iso = IsotropSpace.rows();
   MyMatrix<T> IsotropSpace_T = UniversalMatrixConversion<T,Tint>(IsotropSpace);
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
   MyMatrix<T> Iso_Q_Iso = IsotropSpace_T * Q_red * IsotropSpace_T.transpose();
@@ -884,7 +881,7 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
   MyMatrix<T> FullBasis = Concatenate(NSP_red, TheCompl);
   MyMatrix<T> FullBasisInv = Inverse(FullBasis);
   MyMatrix<T> U = TheCompl * Q_red * IsotropSpace_T.transpose();
-  std::vector<Matrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
+  std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
   std::vector<MyMatrix<T>> ListGens;
   for (auto & eVectBasis: BasisIntegralKernel) {
     MyMatrix<T> TheComplImg = TheCompl + eVectBasis + IsotropSpace_T;
@@ -899,7 +896,7 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
     }
     RecSolutionIntMat<T> eCan(Sublattice);
     MyMatrix<T> SublatticeImg = Sublattice * eGen2;
-    if (!eCan.is_containing_m(TheSpace_img)) {
+    if (!eCan.is_containing_m(SublatticeImg)) {
       std::cerr << "LORLIN: The sublattice should be globally preservec\n";
       throw TerminalException{1};
     }
