@@ -10,19 +10,23 @@ TestRedundancy:=function(eRec)
     #
     eProg:="../../src_group/GRP_LinPolytope_Automorphism";
     eCommand:=Concatenation(eProg, " rational ", eRec.eFile, " GAP ", eFileGRP);
+    Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
     if IsExistingFile(eFileGRP)=false then
         Print("Missing file eFileGRP=", eFileGRP, "\n");
         return false;
     fi;
+    Print("We have eFileGRP=", eFileGRP, "\n");
     #
     fProg:="../../src_poly/POLY_redundancyGroup";
-    fCommand:=Concatenation(gProg, " Equivariant rational ", eRec.eFile, " ", eFileGRP, " GAP ", eFileIrred);
-    Exec(gCommand);
-    if IsExistingFile(eFileGRP)=false then
-        Print("Missing file eFileGRP=", eFileGRP, "\n");
+    fCommand:=Concatenation(fProg, " Equivariant rational ", eRec.eFile, " ", eFileGRP, " GAP ", eFileIrred);
+    Print("fCommand=", fCommand, "\n");
+    Exec(fCommand);
+    if IsExistingFile(eFileIrred)=false then
+        Print("Missing file eFileIrred=", eFileIrred, "\n");
         return false;
     fi;
+    Print("We have eFileIrred=", eFileIrred, "\n");
     U:=ReadAsFunction(eFileIrred)();
     RemoveFileIfExist(eFileGRP);
     RemoveFileIfExist(eFileIrred);

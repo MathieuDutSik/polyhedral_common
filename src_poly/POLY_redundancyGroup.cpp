@@ -16,8 +16,11 @@ template <typename T, typename Tgroup>
 void process(std::string const &FileEXT, std::string const &FileGRP,
              std::string const &method, std::string const &OutFormat,
              std::ostream &os_out, std::ostream &os) {
+  std::cerr << "process: start\n";
   MyMatrix<T> preEXT = ReadMatrixFile<T>(FileEXT);
+  std::cerr << "process: We have preEXT\n";
   MyMatrix<T> EXT = lrs::FirstColumnZeroCond(preEXT).first;
+  std::cerr << "process: We have EXT\n";
   size_t nbRow = EXT.rows();
   Tgroup GRP = ReadGroupFile<Tgroup>(FileGRP);
   std::cerr << "|GRP|=" << GRP.size() << " nbRow=" << nbRow << "\n";
@@ -28,8 +31,6 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
       std::vector<int> BlockBelong(nbRow);
       for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
         Face f = vfo[i_orbit];
-        //    std::cerr << "i_orbit=" << i_orbit << "/" << n_orbit << " |f|=" <<
-        //    f.size() << "/" << f.count() << "\n";
         for (size_t i = 0; i < nbRow; i++) {
           if (f[i] == 1) {
             BlockBelong[i] = i_orbit;
@@ -39,6 +40,7 @@ void process(std::string const &FileEXT, std::string const &FileGRP,
       return cdd::RedundancyReductionClarksonBlocks(EXT, BlockBelong, os);
     }
     if (method == "Equivariant") {
+      std::cerr << "process: before GetNonRedundant_Equivariant\n";
       return GetNonRedundant_Equivariant(EXT, GRP, os);
     }
     std::cerr << "Failed to find a relevant method\n";
