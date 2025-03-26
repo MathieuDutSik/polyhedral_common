@@ -227,9 +227,14 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
   auto RetrieveShortestDesc =
       [&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
     int len = ListMat.size();
-    for (int i = 0; i < len; i++)
-      if (ListMat[i] == eMat)
+    for (int i = 0; i < len; i++) {
+      if (ListMat[i] == eMat) {
+#ifdef DEBUG_FLIP
+        os << "PERF: Memoization success\n";
+#endif
         return ListShort[i];
+      }
+    }
 #ifdef DEBUG_FLIP
     os << "PERF: CALL ShortestFunction\n";
 #endif
@@ -238,6 +243,9 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
     ListShort.push_back(RecSHV);
     return RecSHV;
   };
+#ifdef DEBUG_FLIP
+  os << "PERF: RetrieveShortestDesc, case 1 (eMatIn)\n";
+#endif
   Tshortest<T, Tint> const RecSHVperf = RetrieveShortestDesc(eMatIn);
 #ifdef DEBUG_FLIP
   os << "Kernel_Flipping_Perfect : SHVinformation=\n";
@@ -286,7 +294,7 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
   while (true) {
     MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "PERF: CALL IsAdmissible\n";
+    os << "PERF: CALL IsAdmissible (Qupp)\n";
 #endif
     bool test = eRecShort.IsAdmissible(Qupp);
 #ifdef DEBUG_FLIP
@@ -297,6 +305,11 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
     if (!test) {
       TheUpperBound = (TheUpperBound + TheLowerBound) / 2;
     } else {
+#ifdef DEBUG_FLIP
+      os << "PERF: Qupp=\n";
+      WriteMatrix(os, Qupp);
+      os << "PERF: RetrieveShortestDesc, case 2 (Qupp)\n";
+#endif
       Tshortest<T, Tint> RecSHV = RetrieveShortestDesc(Qupp);
 #ifdef DEBUG_FLIP
       os << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
@@ -324,7 +337,13 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 #endif
     MyMatrix<T> Qlow = eMatIn + TheLowerBound * eMatDir;
     MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
+#ifdef DEBUG_FLIP
+    os << "PERF: RetrieveShortestDesc, case 3 (Qlow)\n";
+#endif
     Tshortest<T, Tint> RecSHVlow = RetrieveShortestDesc(Qlow);
+#ifdef DEBUG_FLIP
+    os << "PERF: RetrieveShortestDesc, case 4 (Qupp)\n";
+#endif
     Tshortest<T, Tint> RecSHVupp = RetrieveShortestDesc(Qupp);
 #ifdef DEBUG_FLIP
     os << "RecSHVupp.eMin=" << RecSHVupp.eMin
@@ -364,6 +383,9 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 #ifdef DEBUG_FLIP
     os << "Qgamma=\n";
     WriteMatrix(os, Qgamma);
+#endif
+#ifdef DEBUG_FLIP
+    os << "PERF: RetrieveShortestDesc, case 5 (Qgamma)\n";
 #endif
     Tshortest<T, Tint> RecSHVgamma = RetrieveShortestDesc(Qgamma);
 #ifdef DEBUG_FLIP

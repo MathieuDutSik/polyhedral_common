@@ -173,8 +173,6 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
       Vexpand(i) = eFacet(i) / Wvect(i);
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
     T ScalDir = MatrixScalarProduct(eMatDir, eMat);
-
-    //    MyMatrix<T> eMatDir=LINSPA_GetMatrixInTspace(LinSpa, eFacet);
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "Before KernelFlipping nbIter=" << nbIter << "\n";
 #endif
