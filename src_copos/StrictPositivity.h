@@ -66,7 +66,10 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     WriteMatrix(os, eMatI);
 #endif
     CopositivityTestResult<Tint> result =
-        TestCopositivity<T, Tint>(eMatI, InitialBasis, os);
+        TestStrictCopositivity<T, Tint>(eMatI, InitialBasis, os);
+#ifdef DEBUG_STRICT_POSITIVITY
+    os << "STR: IsAdmissible result=" << result.test << "\n";
+#endif
     return result.test;
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
@@ -135,10 +138,12 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
         T eVal = V(iBlock) / V(nbBlock);
         RealizingFamily.row(iIdx) = eNaked.SHV.row(iSHV);
         eVectRet(iIdx) = eVal;
-        for (int u = 0; u < n; u++)
-          for (int v = 0; v < n; v++)
+        for (int u = 0; u < n; u++) {
+          for (int v = 0; v < n; v++) {
             TotalSum(u, v) +=
                 eVal * RealizingFamily(iIdx, u) * RealizingFamily(iIdx, v);
+          }
+        }
       }
 #ifdef DEBUG_STRICT_POSITIVITY
       os << "STR: nbIter=" << nbIter << "\n";

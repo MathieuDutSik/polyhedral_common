@@ -226,7 +226,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
       os << " " << ListH[i];
     os << "\n";
     os << "COP: Computing norms and Zmax\n";
-    os << "n=" << n << "\n";
+    os << "COP: n=" << n << "\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
 #ifdef DEBUG_COPOSITIVITY
@@ -637,6 +637,16 @@ SingleTestStrictCopositivity(MyMatrix<T> const &eSymmMat,
           MyVector<Tint> Vint = UniversalVectorConversion<Tint, T>(Vred);
           MyVector<Tint> eVect =
               Vint(0) * TheBasis.row(i) + Vint(1) * TheBasis.row(j);
+#ifdef DEBUG_COPOSITIVITY
+          std::cerr << "COP: TheBasis=\n";
+          WriteMatrix(std::cerr, TheBasis);
+          std::cerr << "COP: eSymmMat=\n";
+          WriteMatrix(std::cerr, eSymmMat);
+          std::cerr << "COP: eSymmMatB=\n";
+          WriteMatrix(std::cerr, eSymmMatB);
+          std::cerr << "COP: i=" << i << " j=" << j << " a=" << a << " b=" << b << " c=" << c << "\n";
+          std::cerr << "COP: Terminate the tree enumeration\n";
+#endif
           return {false, "zero vector detected", std::move(eVect)};
         }
         if (b * b > a * c) {
@@ -835,6 +845,12 @@ CopositivityTestResult<Tint> EnumerateCopositiveShortVector_Kernel(
     CopositivityTestResult<Tint> fResult = f_test(TheBasis, eSymmMatB);
     if (!fResult.test) {
       eResult = fResult;
+#ifdef DEBUG_COPOSITIVITY
+      os << "COP: TheBasis=\n";
+      WriteMatrix(os, TheBasis);
+      os << "COP: strNature=" << fResult.strNature << "\n";
+      os << "COP: Terminate the tree enumeration\n";
+#endif
       return false;
     }
     //
@@ -875,6 +891,9 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
 #endif
   int n = eSymmMat.rows();
   T MinNorm = MinimumDiagonal(eSymmMat);
+#ifdef DEBUG_COPOSITIVITY
+  size_t nbCone = 0;
+#endif
   std::unordered_set<MyVector<Tint>> TotalListVect_set;
   auto f_insert = [&](MyMatrix<Tint> const &TheBasis,
                       MyMatrix<T> const &eSymmMatB) -> bool {
@@ -897,6 +916,9 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
     };
     EnumerateShortVectorInCone_UnderPositivityCond_F(eSymmMat, TheBasis,
                                                      MinNorm, f, os);
+#ifdef DEBUG_COPOSITIVITY
+    nbCone += 1;
+#endif
     return true;
   };
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,
@@ -906,6 +928,7 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);
 #ifdef SANITY_CHECK_COPOSITIVITY
+  os << "COP: nbCone=" << nbCone << "\n";
   if (!eResult.test) {
     std::cerr << "COP: We should not have non-copositivity in "
                  "CopositiveShortestVector\n";
@@ -1019,6 +1042,37 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
   auto f_test = [&](MyMatrix<Tint> const &TheBasis,
                     MyMatrix<T> const &eSymmMatB) -> CopositivityTestResult<Tint> {
     return SingleTestCopositivity(eSymmMat, TheBasis, eSymmMatB);
+  };
+  CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
+      eSymmMat, InitialBasis, f_insert, f_test, os);
+#ifdef DEBUG_COPOSITIVITY
+  os << "COP: nbCone=" << nbCone << "\n";
+#endif
+  return eResult;
+}
+
+template <typename T, typename Tint>
+CopositivityTestResult<Tint>
+TestStrictCopositivity(MyMatrix<T> const &eSymmMat,
+                       MyMatrix<Tint> const &InitialBasis, std::ostream &os) {
+  int n = eSymmMat.rows();
+#ifdef DEBUG_COPOSITIVITY
+  size_t nbCone = 0;
+#endif
+  auto f_insert = [&]([[maybe_unused]] MyMatrix<Tint> const &TheBasis,
+                      MyMatrix<T> const &eSymmMatB) -> bool {
+    for (int i = 0; i < n; i++)
+      for (int j = i + 1; j < n; j++)
+        if (eSymmMatB(i, j) < 0)
+          return false;
+#ifdef DEBUG_COPOSITIVITY
+    nbCone++;
+#endif
+    return true;
+  };
+  auto f_test = [&](MyMatrix<Tint> const &TheBasis,
+                    MyMatrix<T> const &eSymmMatB) -> CopositivityTestResult<Tint> {
+    return SingleTestStrictCopositivity(eSymmMat, TheBasis, eSymmMatB);
   };
   CopositivityTestResult<Tint> eResult = EnumerateCopositiveShortVector_Kernel(
       eSymmMat, InitialBasis, f_insert, f_test, os);

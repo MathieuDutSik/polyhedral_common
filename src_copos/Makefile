@@ -1,4 +1,4 @@
-PROGRAM		= CP_CopositiveMin CP_CopositiveListCone CP_TestCompletePositivity CP_CopositiveKernelMin CP_CopositiveMaxNorm CP_TestCopositivity
+PROGRAM		= CP_CopositiveMin CP_CopositiveListCone CP_TestCompletePositivity CP_CopositiveKernelMin CP_CopositiveMaxNorm CP_TestCopositivity CP_TestStrictCopositivity
 #PROGRAM		= CP_TestCompletePositivity
 #PROGRAM		= CP_CopositiveMaxNorm
 #PROGRAM		= CP_TestCopositivity
