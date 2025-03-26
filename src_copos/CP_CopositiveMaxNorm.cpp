@@ -5,7 +5,7 @@
 // clang-format on
 
 template<typename T, typename Tint>
-void compute(std::string const& FileI, std::string const& strMaxNorm, std::string const& OutFormat, std::ostream& os) {
+void compute(std::string const& FileI, std::string const& strMaxNorm, std::string const& OutFormat, std::ostream& os_out) {
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   T MaxNorm = ParseScalar<T>(strMaxNorm);
   //
@@ -15,7 +15,7 @@ void compute(std::string const& FileI, std::string const& strMaxNorm, std::strin
     EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
                                             MaxNorm, std::cerr);
   //
-  WriteCopositivityEnumResult(os, OutFormat, eSymmMat, CopoRes);
+  WriteCopositivityEnumResult(os_out, OutFormat, eSymmMat, CopoRes);
 }
 
 

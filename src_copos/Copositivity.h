@@ -61,8 +61,8 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
   double C2_doubl = UniversalScalarConversion<double, T>(C2);
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (b <= 0 || C <= 0) {
-    std::cerr << "b should be strictly positive. b=" << b << "\n";
-    std::cerr << "C should be strictly positive. C=" << C << "\n";
+    std::cerr << "COP: b should be strictly positive. b=" << b << "\n";
+    std::cerr << "COP: C should be strictly positive. C=" << C << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -107,7 +107,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   MyMatrix<T> tstSymmMatB = TheBasis_T * eSymmMat * TheBasis_T.transpose();
   bool test1 = TestCopositivityByPositivityCoeff(tstSymmMatB);
   if (!test1) {
-    std::cerr << "Inconsistency in the positivity of coefficients\n";
+    std::cerr << "COP: Inconsistency in the positivity of coefficients\n";
     throw TerminalException{1};
   }
 #endif
@@ -119,16 +119,16 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   MyMatrix<Tint> Pinv_cgr = Pinv_int.transpose();
   MyMatrix<T> eSymmMatB = Pinv * eSymmMat * Pinv.transpose();
 #ifdef DEBUG_COPOSITIVITY
-  os << "eRedBas.Pmat=\n";
+  os << "COP: eRedBas.Pmat=\n";
   WriteMatrix(os, eRedBas.Pmat);
-  os << "eSymmMat=\n";
+  os << "COP: eSymmMat=\n";
   WriteMatrix(os, eSymmMat);
-  os << "TheBasis=\n";
+  os << "COP: TheBasis=\n";
   WriteMatrix(os, TheBasis);
   //
-  os << "eSymmMatB=\n";
+  os << "COP: eSymmMatB=\n";
   WriteMatrix(os, eSymmMatB);
-  os << "TheBasisReord=\n";
+  os << "COP: TheBasisReord=\n";
   WriteMatrix(os, TheBasisReord);
 #endif
   MyMatrix<T> TheBasisReord_T =
@@ -138,8 +138,8 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
 #ifdef SANITY_CHECK_COPOSITIVITY
   bool test2 = TestCopositivityByPositivityCoeff(eSymmMatC);
   if (!test2) {
-    std::cerr << "Inconsistency in the positivity of coefficients\n";
-    std::cerr << "and a matrix error as well (We should have test1=test2)\n";
+    std::cerr << "COP: Inconsistency in the positivity of coefficients\n";
+    std::cerr << "COP: and a matrix error as well (We should have test1=test2)\n";
     throw TerminalException{1};
   }
 #endif
@@ -148,7 +148,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   for (int i = 0; i < n; i++)
     AII[i] = TheBasisReord(i, i);
 #ifdef DEBUG_COPOSITIVITY
-  os << "AII=";
+  os << "COP: AII=";
   for (int i = 0; i < n; i++)
     os << " " << AII[i];
   os << "\n";
@@ -186,7 +186,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   auto ComputeHXZmaxNorm = [&](int const &nupdt) -> void {
   // First we can compute the ListH just from the X
 #ifdef DEBUG_COPOSITIVITY
-    os << "ComputeHXZmaxNorm : Before computing ListH, Lambda and X\n";
+    os << "COP: ComputeHXZmaxNorm : Before computing ListH, Lambda and X\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
       T eNumber = 0;
@@ -200,48 +200,48 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
 #ifdef SANITY_CHECK_COPOSITIVITY
       mpz_class eDen = eX_q.get_den();
       if (eDen > 1) {
-        std::cerr << "eDen should be equal to 1\n";
-        std::cerr << "eZ=" << eZ << "\n";
-        std::cerr << "eX_q=" << eX_q << "\n";
+        std::cerr << "COP: eDen should be equal to 1\n";
+        std::cerr << "COP: eZ=" << eZ << "\n";
+        std::cerr << "COP: eX_q=" << eX_q << "\n";
         throw TerminalException{1};
       }
 #endif
       X(i) = UniversalScalarConversion<Tint, T>(eX_q);
     }
 #ifdef DEBUG_COPOSITIVITY
-    os << "X=";
+    os << "COP: X=";
     for (int i = 0; i < n; i++)
       os << " " << X(i);
     os << "\n";
-    os << "Z=";
+    os << "COP: Z=";
     for (int i = 0; i < n; i++)
       os << " " << Z[i];
     os << "\n";
-    os << "Lambda=";
+    os << "COP: Lambda=";
     for (int i = 0; i < n; i++)
       os << " " << Lambda[i];
     os << "\n";
-    os << "ListH=";
+    os << "COP: ListH=";
     for (int i = 0; i < n; i++)
       os << " " << ListH[i];
     os << "\n";
-    os << "Computing norms and Zmax\n";
+    os << "COP: Computing norms and Zmax\n";
     os << "n=" << n << "\n";
 #endif
     for (int i = nupdt - 1; i >= 0; i--) {
 #ifdef DEBUG_COPOSITIVITY
-      os << "i=" << i << " / " << nupdt << "\n";
+      os << "COP: i=" << i << " / " << nupdt << "\n";
 #endif
       T Qii = eSymmMatC(i, i);
       T eNorm = Qii * Lambda[i] * Lambda[i];
       T eW = 0;
 #ifdef DEBUG_COPOSITIVITY
-      os << "Norm compute step 1\n";
+      os << "COP: Norm compute step 1\n";
 #endif
       for (int j = i + 1; j < n; j++)
         eW += 2 * eSymmMatC(i, j) * Lambda[j];
 #ifdef DEBUG_COPOSITIVITY
-      os << "Norm compute step 2\n";
+      os << "COP: Norm compute step 2\n";
 #endif
       T NextNorm;
       if (i < n - 1) {
@@ -263,11 +263,11 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
       }
     }
 #ifdef DEBUG_COPOSITIVITY
-    os << "Zmax=";
+    os << "COP: Zmax=";
     for (int i = 0; i < n; i++)
       os << " " << Zmax[i];
     os << "\n";
-    os << "ListNorm=";
+    os << "COP: ListNorm=";
     for (int i = 0; i < n; i++)
       os << " " << ListNorm[i];
     os << "\n";
@@ -278,7 +278,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   //
   ComputeHXZmaxNorm(n);
 #ifdef DEBUG_COPOSITIVITY
-  os << "After ComputeHXZmaxNorm\n";
+  os << "COP: After ComputeHXZmaxNorm\n";
 #endif
   //
   // The tree search function
@@ -286,16 +286,16 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   auto NextInTree = [&]() -> bool {
 #ifdef DEBUG_COPOSITIVITY
     for (int i = 0; i < n; i++)
-      os << "i=" << i << " Zmax=" << Zmax[i] << "\n";
+      os << "COP: i=" << i << " Zmax=" << Zmax[i] << "\n";
 #endif
     for (int i = 0; i < n; i++) {
       if (Z[i] < Zmax[i]) {
 #ifdef DEBUG_COPOSITIVITY
-        os << "Clear update here Z[i]=" << Z[i] << "\n";
+        os << "COP: Clear update here Z[i]=" << Z[i] << "\n";
 #endif
         Z[i]++;
 #ifdef DEBUG_COPOSITIVITY
-        os << "i=" << i << " Z[i]=" << Z[i] << "\n";
+        os << "COP: i=" << i << " Z[i]=" << Z[i] << "\n";
 #endif
         for (int j = 0; j < i; j++)
           Z[j] = 0;
@@ -308,50 +308,50 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   while (true) {
     if (ListNorm[0] <= MaxNorm) {
 #ifdef DEBUG_COPOSITIVITY
-      os << "Before computing NewX\n";
-      os << "Pinv_int=\n";
+      os << "COP: Before computing NewX\n";
+      os << "COP: Pinv_int=\n";
       WriteMatrix(os, Pinv_int);
 #endif
       MyVector<Tint> NewX = Pinv_cgr * X;
 #ifdef SANITY_CHECK_COPOSITIVITY
       T eVal = EvaluationQuadForm(eSymmMat, NewX);
       if (eVal != ListNorm[0]) {
-        std::cerr << "Norm inconsistency in the code\n";
-        std::cerr << "eVal=" << eVal << " ListNorm[0]=" << ListNorm[0] << "\n";
-        std::cerr << "NewX=";
+        std::cerr << "COP: Norm inconsistency in the code\n";
+        std::cerr << "COP: eVal=" << eVal << " ListNorm[0]=" << ListNorm[0] << "\n";
+        std::cerr << "COP: NewX=";
         WriteVectorNoDim(std::cerr, NewX);
-        std::cerr << "X=";
+        std::cerr << "COP: X=";
         WriteVectorNoDim(std::cerr, X);
         std::cerr << "\n";
         for (int i = 0; i < n; i++) {
-          std::cerr << "i=" << i << " norm=" << ListNorm[i] << "\n";
+          std::cerr << "COP: i=" << i << " norm=" << ListNorm[i] << "\n";
         }
         throw TerminalException{1};
       }
       if (NewX.minCoeff() < 0) {
-        std::cerr << "X=";
+        std::cerr << "COP: X=";
         WriteVectorNoDim(std::cerr, X);
-        std::cerr << "Error. We found a negative vector\n";
-        std::cerr << "eSymmMat=\n";
+        std::cerr << "COP: Error. We found a negative vector\n";
+        std::cerr << "COP: eSymmMat=\n";
         WriteMatrix(std::cerr, eSymmMat);
-        std::cerr << "TheBasis=\n";
+        std::cerr << "COP: TheBasis=\n";
         WriteMatrix(std::cerr, TheBasis);
-        std::cerr << "MaxNorm=" << MaxNorm << "\n";
+        std::cerr << "COP: MaxNorm=" << MaxNorm << "\n";
         throw TerminalException{1};
       }
 #endif
       f(NewX, ListNorm[0]);
     }
 #ifdef DEBUG_COPOSITIVITY
-    os << "X=[";
+    os << "COP: X=[";
     for (int i = 0; i < n; i++)
       os << " " << X(i);
     os << "]\n";
-    os << "Z=[";
+    os << "COP: Z=[";
     for (int i = 0; i < n; i++)
       os << " " << Z[i];
     os << "]\n";
-    os << "Lambda=[";
+    os << "COP: Lambda=[";
     for (int i = 0; i < n; i++)
       os << " " << Lambda[i];
     os << "]\n";
@@ -416,7 +416,7 @@ void WriteCopositivityTestResult(
     os_out << "}\n";
     return;
   }
-  std::cerr << "WriteCopositivityTestResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  std::cerr << "COP: WriteCopositivityTestResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};
 }
 
@@ -427,56 +427,56 @@ template <typename Tint> struct CopositivityEnumResult {
 };
 
 template <typename T, typename Tint>
-void WriteCopositivityEnumResult(std::ostream &os, std::string const &OutFormat,
+void WriteCopositivityEnumResult(std::ostream &os_out, std::string const &OutFormat,
                                  MyMatrix<T> const &eSymmMat,
                                  CopositivityEnumResult<Tint> const &CopoRes) {
   if (OutFormat == "classic") {
     if (CopoRes.test == false) {
-      os << "Matrix is not Copositive\n";
-      os << "Nature=" << CopoRes.eResult.strNature << "\n";
-      os << "eVect1=";
-      WriteVectorNoDim(os, CopoRes.eResult.eVectResult1);
+      os_out << "Matrix is not Copositive\n";
+      os_out << "Nature=" << CopoRes.eResult.strNature << "\n";
+      os_out << "eVect1=";
+      WriteVectorNoDim(os_out, CopoRes.eResult.eVectResult1);
     } else {
       int n = eSymmMat.rows();
-      os << "Matrix is Copositive\n";
+      os_out << "Matrix is Copositive\n";
       int nbVect = CopoRes.TotalListVect.size();
-      os << "nbVect=" << nbVect << "\n";
+      os_out << "nbVect=" << nbVect << "\n";
       for (int iVect = 0; iVect < nbVect; iVect++) {
         MyVector<Tint> eVect = CopoRes.TotalListVect[iVect];
         T eNorm = EvaluationQuadForm(eSymmMat, eVect);
-        os << "iVect=" << iVect << " eVect=[";
+        os_out << "iVect=" << iVect << " eVect=[";
         for (int i = 0; i < n; i++) {
           if (i > 0)
-            os << ",";
-          os << eVect[i];
+            os_out << ",";
+          os_out << eVect[i];
         }
-        os << "] norm=" << eNorm << "\n";
+        os_out << "] norm=" << eNorm << "\n";
       }
     }
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(isCopositive:=" << GAP_logical(CopoRes.test);
+    os_out << "return rec(isCopositive:=" << GAP_logical(CopoRes.test);
     if (CopoRes.test) {
-      os << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
-      os << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
+      os_out << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
+      os_out << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
     } else {
       int nbVect = CopoRes.TotalListVect.size();
-      os << ", ListVect:=[";
+      os_out << ", ListVect:=[";
       for (int iVect = 0; iVect < nbVect; iVect++) {
         if (iVect > 0)
-          os << ",\n";
+          os_out << ",\n";
         MyVector<Tint> eVect = CopoRes.TotalListVect[iVect];
         T eNorm = EvaluationQuadForm(eSymmMat, eVect);
-        os << "rec(vect:=" << StringVectorGAP(eVect) << ", norm:=" << eNorm
+        os_out << "rec(vect:=" << StringVectorGAP(eVect) << ", norm:=" << eNorm
            << ")";
       }
-      os << "]";
+      os_out << "]";
     }
-    os << ");\n";
+    os_out << ");\n";
     return;
   }
-  std::cerr << "WriteCopositivityEnumResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+  std::cerr << "COP: WriteCopositivityEnumResult: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};
 }
 
@@ -557,20 +557,20 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
   int jFound = PairIJ_found.second;
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (iFound == -1) {
-    std::cerr << "iFound=" << iFound << " jFound=" << jFound
+    std::cerr << "COP: iFound=" << iFound << " jFound=" << jFound
               << " x=" << PairXY_found.first << " y=" << PairXY_found.second
               << "\n";
-    std::cerr << "eSymmMatB=\n";
+    std::cerr << "COP: eSymmMatB=\n";
     WriteMatrix(std::cerr, eSymmMatB);
-    std::cerr << "TheBasis=\n";
+    std::cerr << "COP: TheBasis=\n";
     WriteMatrix(std::cerr, TheBasis);
-    std::cerr << "Looks like the matrix is all non-negative. No need for "
+    std::cerr << "COP: Looks like the matrix is all non-negative. No need for "
                  "splitting. Most likely a bug\n";
     throw TerminalException{1};
   }
 #endif
 #ifdef PRINT_SPLIT_CONE
-  std::cerr << "iFound=" << iFound << " jFound=" << jFound
+  std::cerr << "COP: iFound=" << iFound << " jFound=" << jFound
             << " PairXY_found=" << PairXY_found.first << " / "
             << PairXY_found.second << "\n";
 #endif
@@ -605,7 +605,7 @@ std::vector<MyMatrix<Tint>> PairDecomposition(MyMatrix<T> const &eSymmMat,
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (OptMinimum == 2) {
     if (eSymmMatB1(iFound, jFound) < 0 || eSymmMatB2(iFound, jFound) < 0) {
-      std::cerr << "We clearly have a bug in our computation\n";
+      std::cerr << "COP: We clearly have a bug in our computation\n";
       throw TerminalException{1};
     }
   }
@@ -869,7 +869,7 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
   CopositivityTestResult<Tint> kerResult =
       SearchByZeroInKernel<T, Tint>(eSymmMat, os);
   if (!kerResult.test) {
-    std::cerr << "The matrix should not have any non-trivial kernel. Inconsistency in the run. A bug to be solved\n";
+    std::cerr << "COP: The matrix should not have any non-trivial kernel. Inconsistency in the run. A bug to be solved\n";
     throw TerminalException{1};
   }
 #endif
@@ -907,7 +907,7 @@ Tshortest<T, Tint> CopositiveShortestVector(MyMatrix<T> const &eSymmMat,
       eSymmMat, InitialBasis, f_insert, f_test, os);
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (!eResult.test) {
-    std::cerr << "We should not have non-copositivity in "
+    std::cerr << "COP: We should not have non-copositivity in "
                  "CopositiveShortestVector\n";
     throw TerminalException{1};
   }
@@ -1057,18 +1057,18 @@ EnumerateCopositiveShortVector(MyMatrix<T> const &eSymmMat,
   CopositivityEnumResult<Tint> res2 =
       EnumerateCopositiveShortVector_V2(eSymmMat, InitialBasis, MaxNorm, os);
   if (res1.test != res2.test) {
-    std::cerr << "Inconsistency in computing res1.test and res2.test\n";
+    std::cerr << "COP: Inconsistency in computing res1.test and res2.test\n";
     throw TerminalException{1};
   }
   if (!res1.test)
     return res1;
   if (res1.TotalListVect != res2.TotalListVect) {
-    std::cerr << "res1.TotalListVect, |res1.TotalListVect|="
+    std::cerr << "COP: res1.TotalListVect, |res1.TotalListVect|="
               << res1.TotalListVect.size() << "\n";
     for (auto &eVect : res1.TotalListVect)
       WriteVectorNoDim(std::cerr, eVect);
     //
-    std::cerr << "res2.TotalListVect, |res2.TotalListVect|="
+    std::cerr << "COP: res2.TotalListVect, |res2.TotalListVect|="
               << res2.TotalListVect.size() << "\n";
     for (auto &eVect : res2.TotalListVect)
       WriteVectorNoDim(std::cerr, eVect);
@@ -1093,7 +1093,7 @@ CopositiveShortestVector_V1(MyMatrix<T> const &eSymmMat,
       EnumerateCopositiveShortVector(eSymmMat, InitialBasis, MaxNorm, os);
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (!CopoRes.test) {
-    std::cerr << "Inconsistency in result\n";
+    std::cerr << "COP: Inconsistency in result\n";
     throw TerminalException{1};
   }
 #endif

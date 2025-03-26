@@ -45,7 +45,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
                                std::ostream &os) {
 #ifdef SANITY_CHECK_STRICT_POSITIVITY
   if (!IsSymmetricMatrix(eMat)) {
-    std::cerr << "The matrix should be symmetric\n";
+    std::cerr << "STR: The matrix should be symmetric\n";
     throw TerminalException{1};
   }
 #endif
@@ -54,15 +54,15 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   MyVector<T> eMatExpr = LINSPA_GetVectorOfMatrixExpression(LinSpa, eMat);
 #ifdef DEBUG_STRICT_POSITIVITY
   int dimLinSpa = LinSpa.ListMat.size();
-  os << "dimLinSpa=" << dimLinSpa << "\n";
-  os << "eMatExpr=";
+  os << "STR: dimLinSpa=" << dimLinSpa << "\n";
+  os << "STR: eMatExpr=";
   WriteVectorNoDim(os, eMatExpr);
 #endif
   //
   std::function<bool(MyMatrix<T>)> IsAdmissible =
       [&](MyMatrix<T> const &eMatI) -> bool {
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "IsAdmissible eMatI=\n";
+    os << "STR: IsAdmissible eMatI=\n";
     WriteMatrix(os, eMatI);
 #endif
     CopositivityTestResult<Tint> result =
@@ -72,7 +72,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
       [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "ShortestFunction eMatI=\n";
+    os << "STR: ShortestFunction eMatI=\n";
     WriteMatrix(os, eMatI);
 #endif
     return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
@@ -95,29 +95,29 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     T ScalMat = MatrixScalarProduct(SearchMatrix, eMat);
     if (ScalMat <= 0) {
 #ifdef DEBUG_STRICT_POSITIVITY
-      os << "We obtained proof of non strict CP property\n";
+      os << "STR: We obtained proof of non strict CP property\n";
 #endif
       return {false, {}, {}, SearchMatrix};
     }
     //
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "Before computing ConeClassical\n";
+    os << "STR: Before computing ConeClassical\n";
 #endif
     MyMatrix<T> ConeClassical =
         GetNakedPerfectConeClassical<T, Tint>(eNaked.SHVred);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "Before SearchPositiveRelationSimple RankMat(ConeClassical)="
-              << RankMat(ConeClassical) << " nbIter=" << nbIter << "\n";
+    os << "STR: Before SearchPositiveRelationSimple RankMat(ConeClassical)="
+       << RankMat(ConeClassical) << " nbIter=" << nbIter << "\n";
 #endif
     PosRelRes<T> eRel =
         SearchForExistenceStrictPositiveRelation(eNaked.SHVred, eMat, os);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
+    os << "STR: We have PosRelRes eTestExist=" << eRel.eTestExist << "\n";
 #endif
     if (eRel.eTestExist) {
       MyVector<T> const &V = *eRel.TheRelat;
 #ifdef DEBUG_STRICT_POSITIVITY
-      os << "TheRelat=";
+      os << "STR: TheRelat=";
       WriteVectorNoDim(os, V);
 #endif
       std::vector<int> ListIdx;
@@ -141,23 +141,23 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
                 eVal * RealizingFamily(iIdx, u) * RealizingFamily(iIdx, v);
       }
 #ifdef DEBUG_STRICT_POSITIVITY
-      os << "nbIter=" << nbIter << "\n";
-      os << "TotalSum=\n";
+      os << "STR: nbIter=" << nbIter << "\n";
+      os << "STR: TotalSum=\n";
       WriteMatrix(os, TotalSum);
 #endif
       return {true, RealizingFamily, eVectRet, {}};
     }
     // Now trying to do the flipping
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "Before FindViolatedFace nbIter=" << nbIter << "\n";
+    os << "STR: Before FindViolatedFace nbIter=" << nbIter << "\n";
 #endif
     MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
     Face eFace = FindViolatedFace(ConeClassical, eMatVect, os);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "eFace.count=" << eFace.count()
+    os << "STR: eFace.count=" << eFace.count()
        << " eFace.size=" << eFace.size() << "\n";
-    os << "Before FindFacetInequality nbIter=" << nbIter << "\n";
-    os << "RankMat(ConeClassical)=" << RankMat(ConeClassical) << "\n";
+    os << "STR: Before FindFacetInequality nbIter=" << nbIter << "\n";
+    os << "STR: RankMat(ConeClassical)=" << RankMat(ConeClassical) << "\n";
 #endif
     int dimSymm = ConeClassical.cols();
     MyVector<T> eFacet = FindFacetInequality(ConeClassical, eFace);
@@ -174,15 +174,15 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
     T ScalDir = MatrixScalarProduct(eMatDir, eMat);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "Before KernelFlipping nbIter=" << nbIter << "\n";
+    os << "STR: Before KernelFlipping nbIter=" << nbIter << "\n";
 #endif
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePair =
       Kernel_Flipping_Perfect<T, Tint>(eRecShort, SearchMatrix, eMatDir, os);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "Before SearchMatrix assignation nbIter=" << nbIter << "\n";
-    os << "NewMat=\n";
+    os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
+    os << "STR: NewMat=\n";
     WriteMatrix(os, ePair.first);
-    os << "Before SearchMatrix assignation nbIter=" << nbIter << "\n";
+    os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
 #endif
     SearchMatrix = ePair.first;
   }
@@ -190,69 +190,69 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 
 template <typename T, typename Tint>
 void WriteStrictPositivityResult(
-    std::ostream &os, std::string const &OutFormat,
+    std::ostream &os_out, std::string const &OutFormat,
     TestStrictPositivity<T, Tint> const &StrictPos) {
   if (OutFormat == "classic") {
-    os << "result=" << StrictPos.result << "\n";
+    os_out << "result=" << StrictPos.result << "\n";
     if (StrictPos.result) {
       int n = StrictPos.RealizingFamily.cols();
       int nbBlock = StrictPos.RealizingFamily.rows();
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
         T eVal = StrictPos.ListCoeff(iBlock);
-        os << "iB=" << iBlock << " val=" << eVal << " V=";
+        os_out << "iB=" << iBlock << " val=" << eVal << " V=";
         for (int i = 0; i < n; i++)
-          os << StrictPos.RealizingFamily(iBlock, i) << " ";
-        os << "\n";
+          os_out << StrictPos.RealizingFamily(iBlock, i) << " ";
+        os_out << "\n";
       }
     } else {
-      os << "Certificate of non strict completely positive matrix:\n";
-      os << "Following matrix has negative scalar product with eMat and is "
+      os_out << "Certificate of non strict completely positive matrix:\n";
+      os_out << "Following matrix has negative scalar product with eMat and is "
             "copositive:\n";
-      WriteMatrix(os, StrictPos.CertificateNonStrictlyPositive);
+      WriteMatrix(os_out, StrictPos.CertificateNonStrictlyPositive);
     }
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(result:=" << GAP_logical(StrictPos.result);
+    os_out << "return rec(result:=" << GAP_logical(StrictPos.result);
     if (StrictPos.result) {
       int nbBlock = StrictPos.RealizingFamily.rows();
-      os << ", RealizingFamily:=[";
+      os_out << ", RealizingFamily:=[";
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
         if (iBlock > 0)
-          os << ",\n";
+          os_out << ",\n";
         T eVal = StrictPos.ListCoeff(iBlock);
         MyVector<Tint> V = GetMatrixRow(StrictPos.RealizingFamily, iBlock);
-        os << "rec(val:=" << eVal << ", V:=" << StringVectorGAP(V) << ")";
+        os_out << "rec(val:=" << eVal << ", V:=" << StringVectorGAP(V) << ")";
       }
-      os << "]";
+      os_out << "]";
     } else {
-      os << ", Certificate:="
+      os_out << ", Certificate:="
          << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
     }
-    os << ");\n";
+    os_out << ");\n";
     return;
   }
   if (OutFormat == "PYTHON") {
-    os << "{\"result\":" << PYTHON_logical(StrictPos.result);
+    os_out << "{\"result\":" << PYTHON_logical(StrictPos.result);
     if (StrictPos.result) {
       int nbBlock = StrictPos.RealizingFamily.rows();
-      os << ", \"RealizingFamily\":[";
+      os_out << ", \"RealizingFamily\":[";
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
         if (iBlock > 0)
-          os << ",";
+          os_out << ",";
         T eVal = StrictPos.ListCoeff(iBlock);
         MyVector<Tint> V = GetMatrixRow(StrictPos.RealizingFamily, iBlock);
-        os << "{\"val\":" << eVal << ", \"V\":" << StringVectorPYTHON(V) << "}";
+        os_out << "{\"val\":" << eVal << ", \"V\":" << StringVectorPYTHON(V) << "}";
       }
-      os << "]";
+      os_out << "]";
     } else {
-      os << ", \"Certificate\":"
+      os_out << ", \"Certificate\":"
          << StringMatrixPYTHON(StrictPos.CertificateNonStrictlyPositive);
     }
-    os << "}\n";
+    os_out << "}\n";
     return;
   }
-  std::cerr << "WriteStrictPositivityResult: Failed to find a matching entry "
+  std::cerr << "STR: WriteStrictPositivityResult: Failed to find a matching entry "
                "for output\n";
   throw TerminalException{1};
 }
