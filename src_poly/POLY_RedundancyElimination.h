@@ -356,8 +356,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
         if (ePair.first) {
           // The facet is redundant
           RedundancyStatus[eIdx] = 0;
-          for (auto &fIdx : ePair.second)
+          for (auto &fIdx : ePair.second) {
             NewCand.insert(fIdx);
+          }
         } else {
           // The facet is irredundant. Mission accomplished.
           SetIRowIrredundant(eIdx);
@@ -365,10 +366,12 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
         }
       }
       WorkLIdx.clear();
-      for (auto &eIdx : NewCand)
+      for (auto &eIdx : NewCand) {
         // Only those unconcluded need to be considered.
-        if (RedundancyStatus[eIdx] == -1)
+        if (RedundancyStatus[eIdx] == -1) {
           WorkLIdx.push_back(eIdx);
+        }
+      }
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
       if (WorkLIdx.size() == 0) {
         std::cerr << "WorkLIdx is empty. Not allowed\n";
@@ -389,15 +392,18 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     FindOneMoreFacet(i_row);
   };
   // Now processing all the data
-  for (int i_row = 0; i_row < n_rows; i_row++)
-    if (RedundancyStatus[i_row] == -1)
+  for (int i_row = 0; i_row < n_rows; i_row++) {
+    if (RedundancyStatus[i_row] == -1) {
       ProcessOnePoint(i_row);
+    }
+  }
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
-  for (int i_row = 0; i_row < n_rows; i_row++)
+  for (int i_row = 0; i_row < n_rows; i_row++) {
     if (RedundancyStatus[i_row] == -1) {
       std::cerr << "The algorithm failed to treat all the points\n";
       throw TerminalException{1};
     }
+  }
 #endif
   std::sort(ListKnownIrred.begin(), ListKnownIrred.end());
   return ListKnownIrred;
