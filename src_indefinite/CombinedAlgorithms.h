@@ -344,6 +344,17 @@ public:
       }
       if (found_pos == max_possval) {
         // No new lattice found. This means that the lattice is actually preserving everything.
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+        RecSolutionIntMat<T> eCan(Sublattice);
+        for (auto & eGenRed: GRPmatr) {
+          MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
+          MyMatrix<T> Sublattice_img = Sublattice * eGen;
+          if (!eCan.is_containing_m(Sublattice_img)) {
+            std::cerr << "COMB: The sublattice should be preserved\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
         return Sublattice;
       } else {
         Sublattice = Sublattice * list_lattice[found_pos];
@@ -379,11 +390,17 @@ public:
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) {
     std::vector<MyMatrix<T>> ListGens;
-    RecSolutionIntMat<T> eCan(Sublattice);
     for (auto & eGenRed: GRPmatr) {
       MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
+      ListGens.push_back(eGen);
+    }
+    for (auto & eGen: ComputeRelevantKernel(Sublattice)) {
+      ListGens.push_back(eGen);
+    }
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      // At this point, we expect the lifted automorphism to preserve the lattice.
+    RecSolutionIntMat<T> eCan(Sublattice);
+    for (auto & eGen : ListGens) {
+      // We expect the lifted automorphism to preserve the lattice.
       // This is because first it should exist and second the reduction of the coefficients
       // should make the algorithm work.
       MyMatrix<T> Sublattice_img = Sublattice * eGen;
@@ -391,12 +408,8 @@ public:
         std::cerr << "COMB: The sublattice should be preservec\n";
         throw TerminalException{1};
       }
+    }
 #endif
-      ListGens.push_back(eGen);
-    }
-    for (auto & eGen: ComputeRelevantKernel(Sublattice)) {
-      ListGens.push_back(eGen);
-    }
     return ListGens;
   }
 
@@ -483,6 +496,15 @@ SeqDims seq_dims_reduced(SeqDims const& sd, int const& k) {
   std::cerr << "COMB: We should not reach that stage\n";
   throw TerminalException{1};
 }
+
+SeqDims seq_dims_append_one(SeqDims const& sd) {
+  std::vector<size_t> dims = sd.dims;
+  dims.push_back(1);
+  SeqDims sd_ext{dims};
+  return sd_ext;
+}
+
+
 
 void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os) {
   os << "COMB: SeqDims " << name << "=[ ";
@@ -1411,16 +1433,20 @@ private:
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
     // Computes the relevant stabilizer.
     SeqDims sd_red = seq_dims_reduced(sd, Plane.rows());
-    std::vector<size_t> dims = sd_red.dims;
-    dims.push_back(1);
-    SeqDims sd_ext{dims};
+    SeqDims sd_ext = seq_dims_append_one(sd_red);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_stab_plane_v)", os);
     write_seq_dims(sd_red, "sd_red(f_stab_plane_v)", os);
     write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
 #endif
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have GRP1\n";
+#endif
     std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have LGen\n";
+#endif
     return LGen;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
@@ -2190,8 +2216,6 @@ public:
 #endif
     return {};
   }
-
-
 };
 
 // clang-format off
