@@ -1,6 +1,6 @@
 #PROGRAM		= INDEF_ApproximateOrbitRepresentative
 #PROGRAM		= TEST_EquiStabFamily
-PROGRAM		= INDEF_ApproximateOrbitRepresentative INDEF_FORM_GetOrbitRepresentative INDEF_FORM_TestEquivalence INDEF_FORM_AutomorphismGroup INDEF_FORM_GetOrbit_IsotropicKplane INDEF_FORM_TestEquivalenceVector INDEF_FORM_ApproxCanonicalForm
+PROGRAM		= INDEF_ApproximateOrbitRepresentative INDEF_FORM_GetOrbitRepresentative INDEF_FORM_TestEquivalence INDEF_FORM_AutomorphismGroup INDEF_FORM_GetOrbit_IsotropicKplane INDEF_FORM_TestEquivalenceVector INDEF_FORM_ApproxCanonicalForm INDEF_FORM_InvariantIsotropicPlane INDEF_FORM_StabilizerIsotropicPlane
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -8,37 +8,32 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &MatFile, std::string const &KStr,
-             std::string choice, std::string const &OutFormat,
+void process(std::string const &QFile, std::string const& PlaneFile, std::string const& choice,
+             std::string const &OutFormat,
              std::ostream &os_out) {
-  MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
-  int k = ParseScalar<int>(KStr);
+  MyMatrix<T> Qmat = ReadMatrixFile<T>(QFile);
+  MyMatrix<Tint> Plane = ReadMatrixFile<Tint>(PlaneFile);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
-  auto f_get = [&]() -> std::vector<MyMatrix<Tint>> {
+  auto f_get=[&]() -> std::vector<MyMatrix<Tint>> {
     if (choice == "plane") {
-      return comb.INDEF_FORM_GetOrbit_IsotropicKplane(Qmat, k);
+      return comb.INDEF_FORM_Stabilizer_IsotropicKplane(Qmat, Plane);
     }
     if (choice == "flag") {
-      return comb.INDEF_FORM_GetOrbit_IsotropicKflag(Qmat, k);
+      return comb.INDEF_FORM_Stabilizer_IsotropicKflag(Qmat, Plane);
     }
     std::cerr << "No correct choice. choice=" << choice << "\n";
     throw TerminalException{1};
   };
-  std::vector<MyMatrix<Tint>> l_planes = f_get();
-  for (auto & e_plane : l_planes) {
-    MyMatrix<T> e_plane_T = UniversalMatrixConversion<T,Tint>(e_plane);
-    MyMatrix<T> prod = e_plane_T * Qmat * e_plane_T.transpose();
-    if (!IsZeroMatrix(prod)) {
-      std::cerr << "The plane is not an isotropic plane\n";
-      throw TerminalException{1};
-    }
+  std::vector<MyMatrix<Tint>> l_gen = f_get();
+  if (OutFormat == "CPP") {
+    return WriteListMatrix(os_out, l_gen);
   }
   if (OutFormat == "PYTHON") {
-    return WriteListMatrixPYTHON(os_out, l_planes);
+    return WriteListMatrixPYTHON(os_out, l_gen);
   }
   if (OutFormat == "GAP") {
     os_out << "return ";
-    WriteListMatrixGAP(os_out, l_planes);
+    WriteListMatrixGAP(os_out, l_gen);
     os_out << ";\n";
     return;
   }
@@ -50,16 +45,15 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane [arith] [MatFile] "
-                   "[k] [choice]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] [choice]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_GetOrbit_IsotropicKplane [arith] [MatFile] "
-                   "[k] [choice] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] [choice] [OutFormat] "
+                   "[OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
-    std::string MatFile = argv[2];
-    std::string KStr = argv[3];
+    std::string QFile = argv[2];
+    std::string PlaneFile = argv[3];
     std::string choice = argv[4];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
@@ -76,7 +70,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T, Tint, Tgroup>(MatFile, KStr, choice, OutFormat, os);
+        return process<T, Tint, Tgroup>(QFile, PlaneFile, choice, OutFormat, os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
@@ -91,9 +85,10 @@ int main(int argc, char *argv[]) {
         f(os);
       }
     }
-    std::cerr << "Normal termination of INDEF_FORM_GetOrbit_IsotropicKplane\n";
+    std::cerr << "Normal termination of INDEF_FORM_StabilizerIsotropicPlane\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_GetOrbit_IsotropicKplane\n";
+    std::cerr << "Error in INDEF_FORM_StabilizerIsotropicPlane\n";
+    runtime(time);
     exit(e.eVal);
   }
   runtime(time);

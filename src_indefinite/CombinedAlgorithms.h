@@ -1998,25 +1998,27 @@ public:
   // Now the specific implementations
   size_t INDEF_FORM_Invariant_IsotropicKplane(MyMatrix<T> const &Q,
                                               MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
-                                                       INDEFINITE_FORM_PLANE);
+    SeqDims sd = seq_dims_plane(Plane.rows());
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   size_t INDEF_FORM_Invariant_IsotropicKflag(MyMatrix<T> const &Q,
                                              MyMatrix<Tint> const &Plane) {
-    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane,
-                                                       INDEFINITE_FORM_FLAG);
+    SeqDims sd = seq_dims_flag(Plane.rows());
+    return INDEF_FORM_Invariant_IsotropicKstuff_Kernel(Q, Plane, sd);
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKplane(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
+    SeqDims sd = seq_dims_plane(Plane1.rows());
     return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_PLANE);
+        Qmat1, Qmat2, Plane1, Plane2, sd);
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
+    SeqDims sd = seq_dims_flag(Plane1.rows());
     return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, INDEFINITE_FORM_FLAG);
+        Qmat1, Qmat2, Plane1, Plane2, sd);
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const &Q,
