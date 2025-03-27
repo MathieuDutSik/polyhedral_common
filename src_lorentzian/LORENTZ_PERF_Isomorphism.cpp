@@ -72,7 +72,6 @@ void process_C(std::string const &FileMatrix1, std::string const &FileMatrix2,
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    Eigen::initParallel();
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
