@@ -1,5 +1,4 @@
 Read("../common.g");
-CI_Decision_Reset();
 
 ListFiles:=[];
 for n in [5..7]
@@ -17,8 +16,13 @@ TestCase_Automorphy:=function(EXT)
     TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("FileO does not exist\n");
+        return false;
+    fi;
     TheGRP:=ReadAsFunction(FileO)();
     Print("|TheGRP|=", Order(TheGRP), "\n");
+    return true;
 end;
 
 TestCase_Automorphy_RightCoset:=function(EXT)
@@ -30,21 +34,39 @@ TestCase_Automorphy_RightCoset:=function(EXT)
     TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("FileO does not exist\n");
+        return false;
+    fi;
     TheGRP:=ReadAsFunction(FileO)();
     Print("|TheGRP|=", Order(TheGRP), "\n");
+    return true;
 end;
 
 #
 
+n_error:=0;
 for eFile in ListFiles
 do
     ListEXT:=ReadAsFunction(eFile)();
     Print("eFile=", eFile, " |ListEXT|=", Length(ListEXT), "\n");
     for EXT in ListEXT
     do
-        TestCase_Automorphy(EXT);
-        TestCase_Automorphy_RightCoset(EXT);
+        test:=TestCase_Automorphy(EXT);
+        if test=false then
+            n_error:=n_error+1;
+        fi;
+        test:=TestCase_Automorphy_RightCoset(EXT);
+        if test=false then
+            n_error:=n_error+1;
+        fi;
     od;
 od;
 
-CI_Write_Ok();
+CI_Decision_Reset();
+if n_error > 0 then
+    Print("Error case\n");
+else
+    Print("Normal case\n");
+    CI_Write_Ok();
+fi;

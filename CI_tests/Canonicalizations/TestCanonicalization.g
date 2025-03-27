@@ -43,6 +43,9 @@ GetCanonicalForm:=function(eMat)
     eProg:="../../src_latt/LATT_Canonicalize";
     TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP_full ", FileOut);
     Exec(TheCommand);
+    if IsExistingFile(FileOut)=false then
+        return fail;
+    fi;
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn);
     RemoveFile(FileOut);
@@ -52,12 +55,12 @@ end;
 
 
 
-
-n_error:=0;
-for iMat in [1..Length(ListMat)]
-do
-    eMat:=ListMat[iMat];
+TestMat:=function(eMat)
+    local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B;
     TheCan:=GetCanonicalForm(eMat);
+    if TheCan=fail then
+        return false;
+    fi;
     n:=Length(eMat);
     GRP:=GeneralLinearGroup(n, Integers);
     LGen:=GeneratorsOfGroup(GRP);
@@ -72,10 +75,27 @@ do
         od;
         eMat_B:=eP * eMat * TransposedMat(eP);
         TheCan_B:=GetCanonicalForm(eMat_B);
+        if TheCan_B=fail then
+            return false;
+        fi;
         if TheCan_B<>TheCan then
-            n_error:=n_error + 1;
+            return false;
         fi;
     od;
+    return true;
+end;
+
+
+
+
+n_error:=0;
+for iMat in [1..Length(ListMat)]
+do
+    eMat:=ListMat[iMat];
+    test:=TestMat(eMat);
+    if test=false then
+        n_error:=n_error+1;
+    fi;
 od;
 Print("n_error=", n_error, "\n");
 

@@ -17,11 +17,17 @@ do
     TheCommand:=Concatenation(eProg, " ", eFileExt, " ", FileResult);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
-    TheResult:=ReadAsFunction(FileResult)();
-    if TheResult=false then
+    if IsExistingFile(FileResult)=false then
+        Print("The FileResult does not exist\n");
         n_error:=n_error + 1;
+    else
+        TheResult:=ReadAsFunction(FileResult)();
+        if TheResult=false then
+            Print("The result is not correct\n");
+            n_error:=n_error + 1;
+        fi;
+        RemoveFileIfExist(FileResult);
     fi;
-    RemoveFileIfExist(FileResult);
     iFile:=iFile + 1;
     Print("iFile=", iFile, "/", n_file, " n_error=", n_error, "\n");
 od;

@@ -17,6 +17,9 @@ get_grp_automorphy:=function(EXT)
     TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return fail;
+    fi;
     TheGRP_rat:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
     RemoveFile(FileO);
@@ -33,6 +36,9 @@ get_grp_integral_automorphy:=function(EXT)
     TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return fail;
+    fi;
     TheGRP_int:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
     RemoveFile(FileO);
@@ -129,7 +135,15 @@ TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
     WriteMatrixFile(FileI, EXT);
     Print("Begin TestCase_Automorphy_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     GRP_rat:=get_grp_automorphy(EXT);
+    if GRP_rat=fail then
+        Print("GRP_rat=fail which we do not want\n");
+        return false;
+    fi;
     GRP_V:=get_grp_integral_automorphy(EXT);
+    if GRP_V=fail then
+        Print("GRP_V=fail which we do not want\n");
+        return false;
+    fi;
     if IsSubgroup(GRP_rat.GAPperm, GRP_V.GAPperm)=false then
         Print("|EXT|=", Length(EXT), " / ", Length(EXT[1]), " Det=", DeterminantMat(EXT), "\n");
         Print("EXT=\n");
@@ -144,6 +158,10 @@ TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
     TheCommand:=Concatenation(eProg, " rational ", FileI, " ", FileGRP_V, " RecGAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("The FileO does not exist\n");
+        return false;
+    fi;
     RecResult:=ReadAsFunction(FileO)();
     Print("We have RecResult\n");
     GRP_U:=RecResult.GAPperm;
@@ -167,8 +185,16 @@ TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
     FileO:=Filename(DirectoryTemporary(), "Test.out");
     Print("Begin TestCase_Automorphy_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     GRP_rat:=get_grp_automorphy(EXT);
+    if GRP_rat=fail then
+        Print("GRP_rat=fail which we do not want\n");
+        return false;
+    fi;
     TheSpace:=IdentityMat(dim);
     GRP_V:=get_grp_integral_automorphy(EXT);
+    if GRP_V=fail then
+        Print("GRP_V=fail which we do not want\n");
+        return false;
+    fi;
     if IsSubgroup(GRP_rat.GAPperm, GRP_V.GAPperm)=false then
         Print("|EXT|=", Length(EXT), " / ", Length(EXT[1]), " Det=", DeterminantMat(EXT), "\n");
         Print("EXT=\n");
@@ -185,6 +211,10 @@ TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
     TheCommand:=Concatenation(eProg, " ", FileGRP, " ", FileSPA, " ", FileGRP_V, " ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("The FileO does not exist\n");
+        return false;
+    fi;
     RecResult:=ReadAsFunction(FileO)();
     RemoveFile(FileGRP);
     RemoveFile(FileSPA);

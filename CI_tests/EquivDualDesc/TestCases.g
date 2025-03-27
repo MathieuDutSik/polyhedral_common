@@ -9,6 +9,10 @@ TestDualDesc:=function(eRec)
     TheCommand:=Concatenation("(cd ", prefix, " && ", eProg, " input.nml)");
     Exec(TheCommand);
     FileOut:=Concatenation(prefix, "/orbits");
+    if IsExistingFile(FileOut)=false then
+        Print("No output file\n");
+        return false;
+    fi;
     LOrb:=ReadAsFunction(FileOut)();
     RemoveFile(FileOut);
     if Length(LOrb)<>eRec.n_orbit then
