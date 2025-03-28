@@ -556,7 +556,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
 #ifdef TRACK_INFOS_LOG
     std::cout << "rec(group:=" << StringListGen(LGen1_D) << "),\n";
 #endif
-    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
     MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2 =
         ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
@@ -801,7 +801,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
         MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D);
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in
     // GLn(Z)
-    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+    MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
     MyMatrix<T> InvariantSpaceInv = Inverse(InvariantSpace);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
     os << "InvariantSpace=\n";

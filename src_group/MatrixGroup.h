@@ -425,7 +425,8 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
 template <typename T>
 MyMatrix<T>
 MatrixIntegral_GetInvariantSpace(int const &n,
-                                 std::vector<MyMatrix<T>> const &LGen) {
+                                 std::vector<MyMatrix<T>> const &LGen,
+                                 [[maybe_unused]] std::ostream &os) {
   std::vector<MyMatrix<T>> LGenTot;
   for (auto &eGen : LGen) {
     LGenTot.push_back(eGen);
@@ -434,6 +435,9 @@ MatrixIntegral_GetInvariantSpace(int const &n,
   LGenTot.push_back(IdentityMat<T>(n));
   MyMatrix<T> TheSpace = IdentityMat<T>(n);
   T TheDet(1);
+#ifdef DEBUG_MATRIX_GROUP
+  size_t iter = 0;
+#endif
   while (true) {
     std::vector<MyVector<T>> ConcatSpace;
     for (auto &eGen : LGenTot) {
@@ -449,6 +453,10 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     }
     TheSpace = NewSpace;
     TheDet = NewDet;
+#ifdef DEBUG_MATRIX_GROUP
+    std::cerr << "MAT_GRP: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
+    iter += 1;
+#endif
   }
 }
 
@@ -2235,7 +2243,7 @@ std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
-  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
@@ -2273,7 +2281,7 @@ MatrixIntegral_Equivalence_General(std::vector<MyMatrix<T>> const &LGen1,
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int n = EquivRat.rows();
-  MyMatrix<T> TheSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> TheSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
   MyMatrix<T> TheSpaceInv = Inverse(TheSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(TheSpaceInv)) {
@@ -2341,7 +2349,7 @@ std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
-  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1);
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGen1, os);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
@@ -2391,7 +2399,7 @@ MatrixIntegral_DoubleCosets_General(
   os << "MAT_GRP: We have LGenV1=\n";
   WriteListMatrix(os, LGenV1);
 #endif
-  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1);
+  MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1, os);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: We have |InvariantSpace|=" << DeterminantMat(InvariantSpace) << "\n";

@@ -275,13 +275,15 @@ public:
     MyMatrix<T> QmatRed = HelpingSublattice * Qmat * HelpingSublattice.transpose();
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(QmatRed, Subspace1, QmatRed, Subspace2, os);
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
-    MyMatrix<T> eGen2 = HelpingSublattice * eGen1 * HelpingSublatticeInv;
+    MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: HelpingSublattice=\n";
+    WriteMatrix(os, HelpingSublattice);
+    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
     return eGen2;
   }
-
 
   // The following function attempts to compute an invariant sublattice
   // For the computed lift of the matrix group. There is no theoretical
@@ -292,6 +294,9 @@ public:
     size_t max_possval = std::numeric_limits<size_t>::max();
     int n = Qmat.rows();
     size_t n_gen = GRPmatr.size();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: ComputeInvariantSublattice, n_gen=" << n_gen << "\n";
+#endif
     Face AlreadySolved(n_gen);
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
     MyMatrix<T> SublatticeInv = IdentityMat<T>(n);
@@ -320,8 +325,11 @@ public:
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
           std::vector<MyMatrix<T>> LGen = already_done;
           LGen.push_back(eGen3);
-          MyMatrix<T> SubSublatt = MatrixIntegral_GetInvariantSpace(n, LGen);
+          MyMatrix<T> SubSublatt = MatrixIntegral_GetInvariantSpace(n, LGen, os);
           T det = T_abs(DeterminantMat(SubSublatt));
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+          os << "COMB: ComputeInvariantSublattice, i_gen=" << i_gen << " |LGen|=" << LGen.size() << " det=" << det << "\n";
+#endif
           list_pos.push_back(pos);
           list_idx.push_back(i_gen);
           list_lattice.push_back(SubSublatt);
@@ -342,6 +350,9 @@ public:
           }
         }
       }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: ComputeInvariantSublattice, max_det=" << max_det << " found_pos=" << found_pos << "\n";
+#endif
       if (found_pos == max_possval) {
         // No new lattice found. This means that the lattice is actually preserving everything.
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
@@ -540,8 +551,8 @@ std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, Se
   size_t n_case = sd.dims.size();
   int dim = ListVect.cols();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "f_get_list_spaces, n_case=" << n_case << " dim=" << dim << " n_rows=" << ListVect.rows() << "\n";
-  os << "f_get_list_spaces, ListVect=\n";
+  os << "COMB: f_get_list_spaces, n_case=" << n_case << " dim=" << dim << " n_rows=" << ListVect.rows() << "\n";
+  os << "COMB: f_get_list_spaces, ListVect=\n";
   WriteMatrix(os, ListVect);
 #endif
   std::vector<MyMatrix<Tint>> ListSpaces;
@@ -551,7 +562,7 @@ std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, Se
       sum_dim += sd.dims[u];
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim << "\n";
+    os << "COMB: f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim << "\n";
 #endif
     MyMatrix<Tint> eSpace(sum_dim, dim);
     for (int u = 0; u < sum_dim; u++) {
