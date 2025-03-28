@@ -227,9 +227,9 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
   Tint eVal = 1;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
-    T scal_expe = eVal * TheRec.gcd;
+    T scal_expe1 = eVal * TheRec.gcd;
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 1 eVal=" << eVal
-       << " scal_expe=" << scal_expe << " MaxScal=" << MaxScal
+       << " scal_expe=" << scal_expe1 << " MaxScal=" << MaxScal
        << " iter_findpos=" << iter_findpos << "\n";
     iter_findpos += 1;
 #endif
@@ -286,8 +286,9 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
       MyVector<T> eSolC_T = UniversalVectorConversion<T, Tint>(eSolC);
       MyVector<T> eSolA_T = UniversalVectorConversion<T, Tint>(eSolA);
       T scal = eSolC_T.dot(eVect_LorMat);
-      if (scal != scal_expe) {
-        std::cerr << "LORPERF: scal=" << scal << " scal_expe=" << scal_expe << "\n";
+      T scal_expe2 = eVal * TheRec.gcd;
+      if (scal != scal_expe2) {
+        std::cerr << "LORPERF: scal=" << scal << " scal_expe2=" << scal_expe2 << "\n";
         throw TerminalException{1};
       }
       if (scal > MaxScal) {

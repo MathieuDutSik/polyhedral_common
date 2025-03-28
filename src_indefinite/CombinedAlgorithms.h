@@ -314,7 +314,7 @@ public:
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
-          already_done.push_back(eGen2);
+          already_done.push_back(eGen3);
         }
       }
       size_t pos = 0;
