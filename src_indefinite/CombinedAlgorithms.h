@@ -277,9 +277,9 @@ public:
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: HelpingSublattice=\n";
-    WriteMatrix(os, HelpingSublattice);
-    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
+    //    os << "COMB: HelpingSublattice=\n";
+    //    WriteMatrix(os, HelpingSublattice);
+    //    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
     return eGen2;
@@ -290,12 +290,12 @@ public:
   // guarantee that the lift exists, but so far it has always happened.
   // Of course what we want is the smallest sublattice
   MyMatrix<T>
-  ComputeInvariantSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+  ComputeInvariantSublattice_method1(std::vector<MyMatrix<Tint>> const &GRPmatr) {
     size_t max_possval = std::numeric_limits<size_t>::max();
     int n = Qmat.rows();
     size_t n_gen = GRPmatr.size();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: ComputeInvariantSublattice, n_gen=" << n_gen << "\n";
+    os << "COMB: ComputeInvariantSublattice_method1, n_gen=" << n_gen << "\n";
 #endif
     Face AlreadySolved(n_gen);
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
@@ -314,6 +314,12 @@ public:
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+          if (!IsIntegralMatrix(eGen3)) {
+            std::cerr << "COMB: eGen3 should be integral\n";
+            throw TerminalException{1};
+          }
+#endif
           already_done.push_back(eGen3);
         }
       }
@@ -328,7 +334,7 @@ public:
           MyMatrix<T> SubSublatt = MatrixIntegral_GetInvariantSpace(n, LGen, os);
           T det = T_abs(DeterminantMat(SubSublatt));
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-          os << "COMB: ComputeInvariantSublattice, i_gen=" << i_gen << " |LGen|=" << LGen.size() << " det=" << det << "\n";
+          os << "COMB: ComputeInvariantSublattice_method1, i_gen=" << i_gen << " |LGen|=" << LGen.size() << " det=" << det << "\n";
 #endif
           list_pos.push_back(pos);
           list_idx.push_back(i_gen);
@@ -351,7 +357,7 @@ public:
         }
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: ComputeInvariantSublattice, max_det=" << max_det << " found_pos=" << found_pos << "\n";
+      os << "COMB: ComputeInvariantSublattice_method1, max_det=" << max_det << " found_pos=" << found_pos << "\n";
 #endif
       if (found_pos == max_possval) {
         // No new lattice found. This means that the lattice is actually preserving everything.
@@ -368,8 +374,11 @@ public:
 #endif
         return Sublattice;
       } else {
-        Sublattice = Sublattice * list_lattice[found_pos];
+        Sublattice = list_lattice[found_pos] * Sublattice;
         SublatticeInv = Inverse(Sublattice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: ComputeInvariantSublattice_method1, Det(Sublattice)=" << DeterminantMat(Sublattice) << "\n";
+#endif
         Face NewAlreadySolved(n_gen);
         for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
@@ -389,13 +398,33 @@ public:
     }
   }
 
+  // The direct method since method1 appears to require more work.
+  MyMatrix<T>
+  ComputeInvariantSublattice_method2(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+    int n = Qmat.rows();
+    MyMatrix<T> Sublattice = IdentityMat<T>(n);
+    std::vector<MyMatrix<T>> LGen;
+    for (auto & eGen1 : GRPmatr) {
+      MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
+      LGen.push_back(eGen2);
+    }
+    MyMatrix<T> SublatticeRet = MatrixIntegral_GetInvariantSpace(n, LGen, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: ComputeInvariantSublattice_method2, Det(SublatticeRet)=" << DeterminantMat(SublatticeRet) << "\n";
+#endif
+    return SublatticeRet;
+  }
+
+  MyMatrix<T>
+  ComputeInvariantSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+    return ComputeInvariantSublattice_method2(GRPmatr);
+  }
+
   // Computes integral kernel relevant to the subspace
   // Nice to know would be to understand the structure of the group.
   std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Sublattice) {
     return GetOrthogonalTotallyIsotropicKernelSubspace<T,Tint>(Qmat, NSP_T, Sublattice);
   }
-
-
 
   // We use the sublattice to map the group GRPmatr to higher dimension.
   std::vector<MyMatrix<T>>

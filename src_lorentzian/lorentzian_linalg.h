@@ -837,6 +837,9 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) 
 
 
 
+
+
+
 /*
   We have a subspace NSP, which is the orthogonal of an isotrop subspace for Q.
   Sublattice is a sublattice which restricted to R \otimes NSP is exactly NSP.
@@ -863,9 +866,10 @@ template<typename T, typename Tint>
 std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice) {
   int dim = Q.rows();
   MyMatrix<T> SublatticeInv = Inverse(Sublattice);
-  MyMatrix<T> NSP_red = NSP * SublatticeInv;
+  MyMatrix<T> NSP_redA = NSP * SublatticeInv;
+  MyMatrix<T> NSP_redB = IntegralSpaceSaturation(NSP_redA);
   MyMatrix<T> Q_red = Sublattice * Q * Sublattice.transpose();
-  MyMatrix<T> eProd1 = NSP_red * Q_red;
+  MyMatrix<T> eProd1 = NSP_redA * Q_red;
   MyMatrix<T> eProd2 = RemoveFractionMatrix(eProd1);
   MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint,T>(eProd2);
   MyMatrix<Tint> IsotropSpace = NullspaceIntTrMat(eProd3);
@@ -877,15 +881,15 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP_red, dim);
-  MyMatrix<T> FullBasis = Concatenate(NSP_red, TheCompl);
+  MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP_redB, dim);
+  MyMatrix<T> FullBasis = Concatenate(NSP_redB, TheCompl);
   MyMatrix<T> FullBasisInv = Inverse(FullBasis);
   MyMatrix<T> U = TheCompl * Q_red * IsotropSpace_T.transpose();
   std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
   std::vector<MyMatrix<T>> ListGens;
   for (auto & eVectBasis: BasisIntegralKernel) {
     MyMatrix<T> TheComplImg = TheCompl + eVectBasis + IsotropSpace_T;
-    MyMatrix<T> FullBasisImg = Concatenate(NSP_red, TheComplImg);
+    MyMatrix<T> FullBasisImg = Concatenate(NSP_redB, TheComplImg);
     MyMatrix<T> eGen1 = FullBasisInv * FullBasisImg;
     MyMatrix<T> eGen2 = SublatticeInv * eGen1 * Sublattice;
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
