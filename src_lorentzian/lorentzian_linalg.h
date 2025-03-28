@@ -761,6 +761,9 @@ public:
 #ifdef DEBUG_LORENTZIAN_LINALG
     check_transformation(RetSol);
 #endif
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: After check_transformation\n";
+#endif
     return RetSol;
   }
   std::vector<MyMatrix<T>> get_kernel_generating_set(T const &d) {
@@ -863,17 +866,39 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) 
     correspond to the generator of the integral kernel.
   */
 template<typename T, typename Tint>
-std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice) {
+std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice, [[maybe_unused]] std::ostream &os) {
   int dim = Q.rows();
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 1, Sublattice=\n";
+  WriteMatrix(os, Sublattice);
+#endif
   MyMatrix<T> SublatticeInv = Inverse(Sublattice);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 2\n";
+#endif
   MyMatrix<T> NSP_redA = NSP * SublatticeInv;
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 3\n";
+#endif
   MyMatrix<T> NSP_redB = IntegralSpaceSaturation(NSP_redA);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 4\n";
+#endif
   MyMatrix<T> Q_red = Sublattice * Q * Sublattice.transpose();
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 5\n";
+#endif
   MyMatrix<T> eProd1 = NSP_redA * Q_red;
   MyMatrix<T> eProd2 = RemoveFractionMatrix(eProd1);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 6\n";
+#endif
   MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint,T>(eProd2);
   MyMatrix<Tint> IsotropSpace = NullspaceIntTrMat(eProd3);
   MyMatrix<T> IsotropSpace_T = UniversalMatrixConversion<T,Tint>(IsotropSpace);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 7\n";
+#endif
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
   MyMatrix<T> Iso_Q_Iso = IsotropSpace_T * Q_red * IsotropSpace_T.transpose();
   if (!IsZeroMatrix(Iso_Q_Iso)) {
@@ -882,16 +907,40 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
   }
 #endif
   MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP_redB, dim);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 8\n";
+#endif
   MyMatrix<T> FullBasis = Concatenate(NSP_redB, TheCompl);
   MyMatrix<T> FullBasisInv = Inverse(FullBasis);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 9\n";
+#endif
   MyMatrix<T> U = TheCompl * Q_red * IsotropSpace_T.transpose();
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 10\n";
+#endif
   std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 11\n";
+#endif
   std::vector<MyMatrix<T>> ListGens;
   for (auto & eVectBasis: BasisIntegralKernel) {
-    MyMatrix<T> TheComplImg = TheCompl + eVectBasis + IsotropSpace_T;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: TotIsoKernSubspace, loop, step 1\n";
+#endif
+    MyMatrix<T> TheComplImg = TheCompl + eVectBasis * IsotropSpace_T;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: TotIsoKernSubspace, loop, step 2\n";
+#endif
     MyMatrix<T> FullBasisImg = Concatenate(NSP_redB, TheComplImg);
     MyMatrix<T> eGen1 = FullBasisInv * FullBasisImg;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: TotIsoKernSubspace, loop, step 3\n";
+#endif
     MyMatrix<T> eGen2 = SublatticeInv * eGen1 * Sublattice;
+#ifdef DEBUG_LORENTZIAN_LINALG
+    os << "LORLIN: TotIsoKernSubspace, loop, step 4\n";
+#endif
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> DiffNSP = NSP * eGen2 - NSP;
     if (!IsZeroMatrix(DiffNSP)) {
@@ -901,17 +950,20 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
     RecSolutionIntMat<T> eCan(Sublattice);
     MyMatrix<T> SublatticeImg = Sublattice * eGen2;
     if (!eCan.is_containing_m(SublatticeImg)) {
-      std::cerr << "LORLIN: The sublattice should be globally preservec\n";
+      std::cerr << "LORLIN: The sublattice should be globally preserved\n";
       throw TerminalException{1};
     }
     MyMatrix<T> Q_img = eGen2 * Q * eGen2.transpose();
     if (Q != Q_img) {
-      std::cerr << "LORLIN: The quadratic form Q should be preservec\n";
+      std::cerr << "LORLIN: The quadratic form Q should be preserved\n";
       throw TerminalException{1};
     }
 #endif
     ListGens.push_back(eGen2);
   }
+#ifdef DEBUG_LORENTZIAN_LINALG
+  os << "LORLIN: TotIsoKernSubspace, step 12 |ListGens|=" << ListGens.size() << "\n";
+#endif
   return ListGens;
 }
 

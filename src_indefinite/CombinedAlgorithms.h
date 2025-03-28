@@ -268,19 +268,34 @@ public:
 
   // Lift mapping. The sublattice in argument is supposed to help doing that.
   MyMatrix<T> LiftToFullAutomorphism(MyMatrix<Tint> const& eGenRed, MyMatrix<T> const& HelpingSublattice) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: LiftToFullAutomorphism, step 1\n";
+#endif
     MyMatrix<T> HelpingSublatticeInv = Inverse(HelpingSublattice);
     MyMatrix<T> Subspace1 = NSP_T * HelpingSublatticeInv;
     MyMatrix<T> eGenRed_T = UniversalMatrixConversion<T, Tint>(eGenRed);
     MyMatrix<T> Subspace2 = eGenRed_T * Subspace1;
     MyMatrix<T> QmatRed = HelpingSublattice * Qmat * HelpingSublattice.transpose();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: LiftToFullAutomorphism, step 2\n";
+#endif
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(QmatRed, Subspace1, QmatRed, Subspace2, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: LiftToFullAutomorphism, step 3\n";
+#endif
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: LiftToFullAutomorphism, step 4\n";
+#endif
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     //    os << "COMB: HelpingSublattice=\n";
     //    WriteMatrix(os, HelpingSublattice);
     //    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: LiftToFullAutomorphism, step 5\n";
 #endif
     return eGen2;
   }
@@ -408,6 +423,9 @@ public:
       MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
       LGen.push_back(eGen2);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: ComputeInvariantSublattice_method2, we have LGen\n";
+#endif
     MyMatrix<T> SublatticeRet = MatrixIntegral_GetInvariantSpace(n, LGen, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: ComputeInvariantSublattice_method2, Det(SublatticeRet)=" << DeterminantMat(SublatticeRet) << "\n";
@@ -423,7 +441,7 @@ public:
   // Computes integral kernel relevant to the subspace
   // Nice to know would be to understand the structure of the group.
   std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Sublattice) {
-    return GetOrthogonalTotallyIsotropicKernelSubspace<T,Tint>(Qmat, NSP_T, Sublattice);
+    return GetOrthogonalTotallyIsotropicKernelSubspace<T,Tint>(Qmat, NSP_T, Sublattice, os);
   }
 
   // We use the sublattice to map the group GRPmatr to higher dimension.
@@ -434,20 +452,29 @@ public:
       MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
       ListGens.push_back(eGen);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroupUsingSublattice, after lifts\n";
+#endif
     for (auto & eGen: ComputeRelevantKernel(Sublattice)) {
       ListGens.push_back(eGen);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: MapOrthogonalSublatticeGroupUsingSublattice, after kernel gens\n";
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     RecSolutionIntMat<T> eCan(Sublattice);
+    size_t i_gen = 0;
     for (auto & eGen : ListGens) {
       // We expect the lifted automorphism to preserve the lattice.
       // This is because first it should exist and second the reduction of the coefficients
       // should make the algorithm work.
       MyMatrix<T> Sublattice_img = Sublattice * eGen;
       if (!eCan.is_containing_m(Sublattice_img)) {
-        std::cerr << "COMB: The sublattice should be preservec\n";
+        std::cerr << "COMB: i_gen=" << i_gen << " |GRPmatr|=" << GRPmatr.size() << " |ListGens|=" << ListGens.size() << "\n";
+        std::cerr << "COMB: The sublattice should be preserved\n";
         throw TerminalException{1};
       }
+      i_gen += 1;
     }
 #endif
     return ListGens;
