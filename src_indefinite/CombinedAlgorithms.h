@@ -611,7 +611,7 @@ template<typename Tint>
 std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd, [[maybe_unused]] std::ostream& os) {
   size_t n_case = sd.dims.size();
   int dim = ListVect.cols();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
   os << "COMB: f_get_list_spaces, n_case=" << n_case << " dim=" << dim << " n_rows=" << ListVect.rows() << "\n";
   os << "COMB: f_get_list_spaces, ListVect=\n";
   WriteMatrix(os, ListVect);
@@ -622,7 +622,7 @@ std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, Se
     for (size_t u=0; u<=i_case; u++) {
       sum_dim += sd.dims[u];
     }
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim << "\n";
 #endif
     MyMatrix<Tint> eSpace(sum_dim, dim);
@@ -1445,6 +1445,25 @@ private:
     std::vector<MyMatrix<Tint>> LGenRet;
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T,Tint>(eGenRet);
+      MyMatrix<T> eProd = eGenRet_T * Qmat * eGenRet_T.transpose();
+      if (eProd != Qmat) {
+        std::cerr << "COMB: Qmat should be preserved by eGen\n";
+        throw TerminalException{1};
+      }
+      std::vector<MyMatrix<Tint>> ListSpaces =
+        f_get_list_spaces(Plane, sd, os);
+      MyMatrix<Tint> eGenRetInv = Inverse(eGenRet);
+      for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
+        MyMatrix<Tint> const &eSpace = ListSpaces[iSpace];
+        MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRetInv;
+        if (!TestEqualitySpaces(eSpace_img, eSpace)) {
+          std::cerr << "COMB: The space are not correctly mapped\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
       LGenRet.push_back(eGenRet);
     }
     return LGenRet;
@@ -1599,11 +1618,11 @@ private:
     return pair.second;
   }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(MyMatrix<T> const &Qmat, int k,
-                                              int const& method_generation,
-                                              SeqDims const &sd) {
+  INDEF_FORM_GetOrbit_IsotropicKstuff_Method(MyMatrix<T> const &Qmat, int k,
+                                             int const& method_generation,
+                                             SeqDims const &sd) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced, beginning\n";
+    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Method, beginning\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     if (method_generation != METHOD_GENERATION_RIGHT_COSETS &&
@@ -1642,8 +1661,12 @@ private:
       std::vector<PlaneInv> ListRecReprKplane;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       size_t n_over_generation = 0;
+      size_t n_insert = 0;
 #endif
       auto fInsert = [&](MyMatrix<Tint> const& fPlane) -> void {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        n_insert += 1;
+#endif
         PlaneInv fRecReprKplane = get_planeinv(fPlane);
         for (auto &eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
@@ -1768,7 +1791,11 @@ private:
               return f_double_cosets(Qmat, ePlane, eVectB, sd1);
             }
           };
-          for (auto &eCos : get_cosets()) {
+          std::vector<MyMatrix<T>> list_cosets = get_cosets();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+          os << "COMB: |list_cosets|=" << list_cosets.size() << "\n";
+#endif
+          for (auto &eCos : list_cosets) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
             MyVector<Tint> eVectC =
               UniversalVectorConversion<Tint, T>(eVectC_T);
@@ -1777,12 +1804,12 @@ private:
           }
         }
       };
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: n_over_generation = " << n_over_generation << "\n";
-#endif
       for (auto &eRepr : ListOrbit) {
         SpanRepresentatives(eRepr);
       }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
+#endif
       ListOrbit.clear();
       for (auto &eRec : ListRecReprKplane) {
         ListOrbit.push_back(eRec.ePlane);
@@ -1796,10 +1823,10 @@ private:
     ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
     // Double cosets method is more efficient in principle than right cosets.
     std::vector<MyMatrix<Tint>> LOrb =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
     std::vector<MyMatrix<Tint>> LOrbB =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Reduced(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
     if (LOrbB.size() != LOrb.size()) {
       std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
       throw TerminalException{1};
