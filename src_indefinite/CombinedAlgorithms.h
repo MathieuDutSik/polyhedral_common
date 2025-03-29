@@ -573,8 +573,6 @@ SeqDims seq_dims_append_one(SeqDims const& sd) {
   return sd_ext;
 }
 
-
-
 void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os) {
   os << "COMB: SeqDims " << name << "=[ ";
   bool IsFirst = true;
@@ -587,8 +585,6 @@ void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os
   }
   os << " ]\n";
 }
-
-
 
 SeqDims seq_dims_plane(int const& k) {
   std::vector<size_t> dims{static_cast<size_t>(k)};
@@ -603,6 +599,13 @@ SeqDims seq_dims_flag(int const& k) {
   return SeqDims{dims};
 }
 
+size_t k_dim(SeqDims const& sd) {
+  size_t sum = 0;
+  for (auto & val : sd.dims) {
+    sum += val;
+  }
+  return sum;
+}
 
 template<typename Tint>
 std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd, [[maybe_unused]] std::ostream& os) {
@@ -1136,9 +1139,14 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab, start\n";
 #endif
-    SeqDims sd_red = seq_dims_reduced(sd, eRec.PlaneExpr.rows());
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    if (static_cast<int>(k_dim(sd)) != eRec.PlaneExpr.rows()) {
+      std::cerr << "The input of sd is not of the correct dimension\n";
+      throw TerminalException{1};
+    }
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd_red, "sd_red(f_stab)", os);
+    write_seq_dims(sd, "sd_red(f_stab)", os);
 #endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
@@ -1147,7 +1155,7 @@ private:
     os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPfull =
-      ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd_red);
+      ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab, We have GRPfull\n";
 #endif
@@ -1162,7 +1170,7 @@ private:
         throw TerminalException{1};
       }
       std::vector<MyMatrix<Tint>> ListSpaces =
-        f_get_list_spaces(eRec.PlaneExpr, sd_red, os);
+        f_get_list_spaces(eRec.PlaneExpr, sd, os);
       for (auto &eSpace : ListSpaces) {
         MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
         if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
@@ -1188,7 +1196,12 @@ private:
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
-    SeqDims sd_red = seq_dims_reduced(sd, eRec1.PlaneExpr.rows());
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    if (static_cast<int>(k_dim(sd)) != eRec1.PlaneExpr.rows()) {
+      std::cerr << "The input of sd is not of the correct dimension\n";
+      throw TerminalException{1};
+    }
+#endif
     std::optional<MyMatrix<Tint>> opt =
         INDEF_FORM_TestEquivalence(eRec1.QmatRed, eRec2.QmatRed);
     if (!opt) {
@@ -1212,9 +1225,9 @@ private:
       throw TerminalException{1};
     }
     std::vector<MyMatrix<Tint>> ListSpaces1 =
-      f_get_list_spaces(eRec1.PlaneExpr, sd_red, os);
+      f_get_list_spaces(eRec1.PlaneExpr, sd, os);
     std::vector<MyMatrix<Tint>> ListSpaces2 =
-      f_get_list_spaces(eRec2.PlaneExpr, sd_red, os);
+      f_get_list_spaces(eRec2.PlaneExpr, sd, os);
     MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
     for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
@@ -1366,6 +1379,27 @@ private:
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eEquivRet_T = UniversalMatrixConversion<T,Tint>(eEquivRet);
+      MyMatrix<T> eProd = eEquivRet_T * Qmat1 * eEquivRet_T.transpose();
+      if (eProd != Qmat2) {
+        std::cerr << "COMB: Qmat1 should be mapped to Qmat2\n";
+        throw TerminalException{1};
+      }
+      std::vector<MyMatrix<Tint>> ListSpaces1 =
+        f_get_list_spaces(Plane1, sd, os);
+      std::vector<MyMatrix<Tint>> ListSpaces2 =
+        f_get_list_spaces(Plane2, sd, os);
+      MyMatrix<Tint> TheEquivInv = Inverse(eEquivRet);
+      for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
+        MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
+        MyMatrix<Tint> const &eSpace2 = ListSpaces2[iSpace];
+        if (!TestEqualitySpaces(eSpace1_img, eSpace2)) {
+          std::cerr << "COMB: The space are not correctly mapped\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
       return eEquivRet;
     }
     return {};
@@ -1494,11 +1528,9 @@ private:
 #endif
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
     // Computes the relevant stabilizer.
-    SeqDims sd_red = seq_dims_reduced(sd, Plane.rows());
-    SeqDims sd_ext = seq_dims_append_one(sd_red);
+    SeqDims sd_ext = seq_dims_append_one(sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_stab_plane_v)", os);
-    write_seq_dims(sd_red, "sd_red(f_stab_plane_v)", os);
     write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
 #endif
     std::vector<MyMatrix<Tint>> GRP1_v = f_stab(eRec, sd_ext);
@@ -1576,6 +1608,8 @@ private:
       ListOrbit.push_back(ePlane);
     }
     for (int iK = 2; iK <= k; iK++) {
+      SeqDims sd1 = seq_dims_reduced(sd, iK - 1);
+      SeqDims sd2 = seq_dims_reduced(sd, iK);
       struct PlaneInv {
         MyMatrix<Tint> ePlane;
         size_t eInv;
@@ -1591,7 +1625,7 @@ private:
           }
         }
 #endif
-        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd);
+        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd2);
         return {Plane, eInv};
       };
       std::vector<PlaneInv> ListRecReprKplane;
@@ -1604,7 +1638,7 @@ private:
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
               INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
-                                                             fRecReprKplane.ePlane, sd);
+                                                             fRecReprKplane.ePlane, sd2);
             if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
               n_over_generation += 1;
@@ -1704,7 +1738,7 @@ private:
 #endif
         auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
           if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd);
+            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd1);
           } else {
             return {};
           }
@@ -1720,7 +1754,7 @@ private:
             if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
               return ListRightCosets;
             } else {
-              return f_double_cosets(Qmat, ePlane, eVectB, sd);
+              return f_double_cosets(Qmat, ePlane, eVectB, sd1);
             }
           };
           for (auto &eCos : get_cosets()) {
