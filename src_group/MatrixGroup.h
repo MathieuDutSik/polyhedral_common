@@ -2272,6 +2272,28 @@ std::vector<MyMatrix<Tint>> MatrixIntegral_Stabilizer_General(
   return LGen4;
 }
 
+// Instead of Z^n, we now want "Sublattice" to be preserved.
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>> MatrixIntegral_Stabilizer_Sublattice(
+    MyMatrix<T> const& Sublattice, std::vector<MyMatrix<T>> const &LGen1, std::ostream &os) {
+  MyMatrix<T> SublatticeInv = Inverse(Sublattice);
+  int n = SublatticeInv.rows();
+  std::vector<MyMatrix<T>> LGen2;
+  for (auto & eGen1 : LGen1) {
+    MyMatrix<T> eGen2 = SublatticeInv * eGen1 * Sublattice;
+    LGen2.push_back(eGen2);
+  }
+  std::vector<MyMatrix<Tint>> LGen3 = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, LGen2, os);
+  std::vector<MyMatrix<T>> LGen4;
+  for (auto & eGen3 : LGen3) {
+    MyMatrix<T> eGen3_T = UniversalMatrixConversion<T,Tint>(eGen3);
+    MyMatrix<T> eGen4 = Sublattice * eGen3_T * SublatticeInv;
+    LGen4.push_back(eGen4);
+  }
+  return LGen4;
+}
+
+
 // Returns an element g in GRPrat such that   g * EquivRat   in GL(n,Z)
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>

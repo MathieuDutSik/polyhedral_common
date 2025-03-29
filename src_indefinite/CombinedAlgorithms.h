@@ -1568,11 +1568,17 @@ private:
     os << "COMB: f_stab_plane_v, we have GRP1_v\n";
     WriteListMatrix(os, GRP1_v);
 #endif
-    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1_v, Sublattice);
+    // Computes the subgroup preserving a sublattice
+    std::vector<MyMatrix<T>> LGenV_A = eRec.MapOrthogonalSublatticeGroup(GRP1_v);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have LGen\n";
+    os << "COMB: f_stab_plane_v, we have LGenV_A\n";
 #endif
-    return LGen;
+    std::vector<MyMatrix<T>> LGenV_B =
+      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have LGenV_B\n";
+#endif
+    return LGenV_B;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& ePlane,
@@ -1584,6 +1590,15 @@ private:
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
+    //
+    // The construction should go into the following way:
+    // ---We have the ePlane as an isotropic space and v another isotropic
+    //    vector.
+    // ---We can compute the automorphism group of ePlane^T.
+    //    And extend to a space stabilizing a lattice L.
+    // ---For fPlane = ePlane + v. The construction gets us another
+    //    group and another sublattice.
+    // ---But the sublattice are not related!
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, begin\n";
     os << "COMB: f_double_cosets, ePlane=\n";
