@@ -268,7 +268,7 @@ public:
 
   // Lift mapping. The sublattice in argument is supposed to help doing that.
   MyMatrix<T> LiftToFullAutomorphism(MyMatrix<Tint> const& eGenRed, MyMatrix<T> const& HelpingSublattice) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 1\n";
 #endif
     MyMatrix<T> HelpingSublatticeInv = Inverse(HelpingSublattice);
@@ -276,15 +276,15 @@ public:
     MyMatrix<T> eGenRed_T = UniversalMatrixConversion<T, Tint>(eGenRed);
     MyMatrix<T> Subspace2 = eGenRed_T * Subspace1;
     MyMatrix<T> QmatRed = HelpingSublattice * Qmat * HelpingSublattice.transpose();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 2\n";
 #endif
     LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(QmatRed, Subspace1, QmatRed, Subspace2, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 3\n";
 #endif
     MyMatrix<T> eGen1 = TheRec.get_one_transformation();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 4\n";
 #endif
     MyMatrix<T> eGen2 = HelpingSublatticeInv * eGen1 * HelpingSublattice;
@@ -294,7 +294,7 @@ public:
     //    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 5\n";
 #endif
     return eGen2;
@@ -448,6 +448,8 @@ public:
   std::vector<MyMatrix<T>>
   MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) {
     std::vector<MyMatrix<T>> ListGens;
+    //    int n = Qmat.rows();
+    //    MyMatrix<T> IdMat = IdentityMat
     for (auto & eGenRed: GRPmatr) {
       MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
       ListGens.push_back(eGen);
@@ -631,10 +633,6 @@ std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, Se
   return ListSpaces;
 }
 
-
-
-
-
 template <typename T>
 std::vector<MyMatrix<T>> GetAutomorphismOfFlag(SeqDims const& sd) {
   size_t n_case = sd.dims.size();
@@ -766,13 +764,6 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
   }
   return ListGens;
 }
-
-
-
-
-
-
-
 
 template <typename T, typename Tint, typename Tgroup>
 struct IndefiniteCombinedAlgo {
@@ -1493,10 +1484,14 @@ private:
   }
   std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
                                           MyMatrix<Tint> const& Plane,
-                                          MyVector<Tint> const& V,
+                                          MyVector<Tint> const& v,
                                           MyMatrix<T> const& Sublattice,
                                           SeqDims const& sd) {
-    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, V);
+    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, fPlane=\n";
+    WriteMatrix(os, fPlane);
+#endif
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
     // Computes the relevant stabilizer.
     SeqDims sd_red = seq_dims_reduced(sd, Plane.rows());
@@ -1506,19 +1501,20 @@ private:
     write_seq_dims(sd_red, "sd_red(f_stab_plane_v)", os);
     write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
 #endif
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd_ext);
+    std::vector<MyMatrix<Tint>> GRP1_v = f_stab(eRec, sd_ext);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have GRP1\n";
+    os << "COMB: f_stab_plane_v, we have GRP1_v\n";
+    WriteListMatrix(os, GRP1_v);
 #endif
-    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
+    std::vector<MyMatrix<T>> LGen = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1_v, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_plane_v, we have LGen\n";
 #endif
     return LGen;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
-                                           MyMatrix<Tint> const& Plane,
-                                           MyVector<Tint> const& V,
+                                           MyMatrix<Tint> const& ePlane,
+                                           MyVector<Tint> const& v,
                                            SeqDims const& sd) {
     // We have the following groups:
     // -- H1 The group stabilizing ePlane (which is integral)
@@ -1528,18 +1524,26 @@ private:
     // The right cosets that are computed are the ones of G / H.
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, begin\n";
+    os << "COMB: f_double_cosets, ePlane=\n";
+    WriteMatrix(os, ePlane);
 #endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, Plane, os);
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, ePlane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    write_seq_dims(sd, "sd(f_double_cosets)", os);
     os << "COMB: f_double_cosets, we have GRP1\n";
+    WriteListMatrix(os, GRP1);
 #endif
     MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, Sublattice=\n";
+    WriteMatrix(os, Sublattice);
+#endif
     std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_G\n";
 #endif
-    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, Plane, V, Sublattice, sd);
+    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, ePlane, v, Sublattice, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V\n";
 #endif
@@ -2056,9 +2060,9 @@ private:
     MyMatrix<T> QmatRed2 = TheCompl2_T * Q2 * TheCompl2_T.transpose();
     int p = TheCompl1.rows();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "QmatRed1=\n";
+    os << "COMB: QmatRed1=\n";
     WriteMatrix(os, QmatRed1);
-    os << "QmatRed2=\n";
+    os << "COMB: QmatRed2=\n";
     WriteMatrix(os, QmatRed2);
 #endif
     std::optional<MyMatrix<Tint>> opt =
@@ -2235,6 +2239,14 @@ public:
     std::vector<MyMatrix<Tint>> LGenRet;
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T, Tint>(eGenRet);
+      MyMatrix<T> eProd = eGenRet_T * Q * eGenRet_T.transpose();
+      if (eProd != Q) {
+        std::cerr << "COMB: eGenRet should preserve Q\n";
+        throw TerminalException{1};
+      }
+#endif
       LGenRet.push_back(eGenRet);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -2256,17 +2268,17 @@ public:
       return eGen;
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "Q1=\n";
+    os << "COMB: Q1=\n";
     WriteMatrix(os, Q1);
-    os << "Q2=\n";
+    os << "COMB: Q2=\n";
     WriteMatrix(os, Q2);
 #endif
     ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
     ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "res1.Mred=\n";
+    os << "COMB: res1.Mred=\n";
     WriteMatrix(os, res1.Mred);
-    os << "res2.Mred=\n";
+    os << "COMB: res2.Mred=\n";
     WriteMatrix(os, res2.Mred);
 #endif
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
