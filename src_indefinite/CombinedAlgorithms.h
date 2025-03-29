@@ -599,12 +599,12 @@ SeqDims seq_dims_flag(int const& k) {
   return SeqDims{dims};
 }
 
-size_t k_dim(SeqDims const& sd) {
+int k_dim(SeqDims const& sd) {
   size_t sum = 0;
   for (auto & val : sd.dims) {
     sum += val;
   }
-  return sum;
+  return static_cast<int>(sum);
 }
 
 template<typename Tint>
@@ -736,6 +736,13 @@ template <typename T>
 std::vector<MyMatrix<T>>
 ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
                                int const &p, int const &n, SeqDims const& sd) {
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+  if (p + k_dim(sd) != n) {
+    std::cerr << "COMB: ExtendIsometryGroup_Triangular, the dimension of sd\n";
+    std::cerr << "is not adequate\n";
+    throw TerminalException{1};
+  }
+#endif
   std::vector<MyMatrix<T>> ListGens;
   for (auto &eGen : GRPmatr) {
     MyMatrix<T> NewMat = IdentityMat<T>(n);
@@ -1140,24 +1147,28 @@ private:
     os << "COMB: f_stab, start\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    if (static_cast<int>(k_dim(sd)) != eRec.PlaneExpr.rows()) {
+    if (k_dim(sd) != eRec.PlaneExpr.rows()) {
       std::cerr << "The input of sd is not of the correct dimension\n";
       throw TerminalException{1};
     }
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd, "sd_red(f_stab)", os);
+    write_seq_dims(sd, "sd(f_stab)", os);
 #endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab, We have GRPred\n";
+    os << "COMB: f_stab, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
     os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
+    os << "COMB: f_stab, we have GRPred=\n";
+    WriteListMatrix(os, GRPred);
 #endif
     std::vector<MyMatrix<Tint>> GRPfull =
       ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab, We have GRPfull\n";
+    os << "COMB: f_stab, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
+    os << "COMB: f_stab, we have GRPfull=\n";
+    WriteListMatrix(os, GRPfull);
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot;
     for (auto &eGen : GRPfull) {
@@ -1197,7 +1208,7 @@ private:
     MicrosecondTime time;
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    if (static_cast<int>(k_dim(sd)) != eRec1.PlaneExpr.rows()) {
+    if (k_dim(sd) != eRec1.PlaneExpr.rows()) {
       std::cerr << "The input of sd is not of the correct dimension\n";
       throw TerminalException{1};
     }
@@ -1356,7 +1367,7 @@ private:
     MyMatrix<Tint> TheRetInv = Inverse(TheRet);
     MyMatrix<Tint> Plane1_imgB = Plane1 * TheRetInv;
     if (!TestEqualitySpaces(Plane1_imgB, Plane2)) {
-      std::cerr << "COMB: Plane1 and Plane2 should be mapped\n";
+      std::cerr << "COMB: Plane1 should be mapped on Plane2\n";
       throw TerminalException{1};
     }
 #endif
