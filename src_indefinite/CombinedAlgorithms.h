@@ -1599,10 +1599,24 @@ private:
     // The right cosets that are computed are the ones of G / H.
     //
     // The construction should go into the following way:
-    // ---We have the ePlane as an isotropic space and v another isotropic
-    //    vector.
-    // ---We can compute the automorphism group of ePlane^T.
-    //    And extend to a space stabilizing a lattice L.
+    // ---We have the ePlane as an isotropic space:
+    //  * We can compute the automorphism group G1 of ePlane^T.
+    //  * G1 can be extended to an automorphism group G1^{ext}
+    //    of R^n preserving a finite index lattice L.
+    //  * We can compute the integral stabilizer G2.
+    // ---We compute the orbits of vectors v for the group G1.
+    //    which is the same as G1^{ext}.
+    // ---That gets us the orbits for the group {ePlane,v}.
+    //  * The vector v belongs to ePlane^T. Therefore the
+    //    problem is within the space ePlane^T.
+    //  * The stabilizer of {ePlane,v} in ePlane^T is H1.
+    //  * Computing the extension H1^{ext} to R^n, the
+    //    sublattice and the integral stabilization H2.
+    //  * The double cosets decomposition that we are looking
+    //    forward is
+    //    G1 = \cup_g H1 g G2
+    // ---So, that seems standard. The problem is that we need
+    //    to embed it into the space ePlane^T.
     // ---For fPlane = ePlane + v. The construction gets us another
     //    group and another sublattice.
     // ---But the sublattice are not related!

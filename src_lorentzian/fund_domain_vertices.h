@@ -560,7 +560,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
     std::vector<MyMatrix<T>> LGen2 =
         ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
-    auto get_gen3 = [&]() -> std::vector<MyMatrix<T>> {
+    auto get_gen3 = [&]() -> RetMI_S<T, Tgroup> {
       if (vertFull.method == "isotropstabequiv_V1") {
         using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
         Thelper helper{n};
@@ -588,7 +588,8 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
     }
 #endif
     std::vector<MyMatrix<T>> LGen4;
-    for (auto &eGen3 : get_gen3()) {
+    RetMI_S<T,Tgroup> ret = get_gen3();
+    for (auto &eGen3 : ret.LGen) {
       MyMatrix<T> eGen4 = InvInvariantSpace * eGen3 * InvariantSpace;
 #ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
       if (!IsIntegralMatrix(eGen4)) {
