@@ -502,14 +502,14 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "We have LGen1_B\n";
 #endif
-  std::vector<MyMatrix<T>> LGen1_C =
+  RetMI_S<T,Tgroup> ret =
       LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(
           LGen1_B, Subspace1_proj, std::cerr);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have LGen1_C\n";
+  std::cerr << "We have ret, index=" << ret.index << "\n";
 #endif
   std::vector<Telt> LGen1_D;
-  for (auto &eGen : LGen1_C) {
+  for (auto &eGen : ret.LGen) {
     MyMatrix<T> Subspace1_projImg = Subspace1_proj * eGen;
     Telt ePerm =
         GetPermutationOnVectors<T, Telt>(Subspace1_proj, Subspace1_projImg);

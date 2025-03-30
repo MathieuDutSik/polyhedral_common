@@ -38,8 +38,10 @@ int main(int argc, char *argv[]) {
     //
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt, TintGroup> helper{n};
-    std::vector<MyMatrix<T>> LGen = LinearSpace_Stabilizer<T, Tgroup>(
+    RetMI_S<T,Tgroup> ret = LinearSpace_Stabilizer<T, Tgroup>(
         ListMatrGen, helper, eLatt, std::cerr);
+    std::vector<MyMatrix<T>> LGen = ret.LGen;
+    std::cerr << "index=" << ret.index << "\n";
     //
     {
       if (LGen.size() == 0)

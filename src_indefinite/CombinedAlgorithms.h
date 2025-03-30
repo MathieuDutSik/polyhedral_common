@@ -1427,7 +1427,11 @@ private:
     os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP2\n";
 #endif
     int n = Qmat.rows();
-    return MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
+    RetMI_S<Tint,Tgroup> ret = MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, index=" << ret.index << "\n";
+#endif
+    return ret.LGen;
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
@@ -1551,6 +1555,7 @@ private:
                                           MyVector<Tint> const& v,
                                           MyMatrix<T> const& Sublattice,
                                           SeqDims const& sd) {
+    int n = Q.rows();
     MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, v);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_plane_v, fPlane=\n";
@@ -1573,12 +1578,14 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_plane_v, we have LGenV_A\n";
 #endif
-    std::vector<MyMatrix<T>> LGenV_B =
-      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
+    //    std::vector<MyMatrix<T>> LGenV_B =
+    //      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
+    RetMI_S<T,Tgroup> ret =
+      MatrixIntegral_Stabilizer_General<T,T,Tgroup>(n, LGenV_A, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have LGenV_B\n";
+    os << "COMB: f_stab_plane_v, we have ret, index=" << ret.index << "\n";
 #endif
-    return LGenV_B;
+    return ret.LGen;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& ePlane,
@@ -1623,6 +1630,24 @@ private:
     std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, ePlane, v, Sublattice, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V\n";
+#endif
+#ifdef CREATE_INDEFINITE_COMBINED_ALGORITHMS_DEBUG_INFOS
+    {
+      int n = Q.rows();
+      RetMI_S<Tint,Tgroup> ret_U = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP_G, os);
+      os << "COMB: index=" << ret_U.index << "\n";
+      std::vector<MyMatrix<Tint>> const& GRP_U = ret_U.LGen;
+      std::string Prefix = "ECase_GRP_x_GRP_U_x_GRP_V";
+      std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+      std::ofstream osf(FileOut);
+      osf << "return rec(GRP_G:=";
+      WriteListMatrixGAP(osf, GRP_G);
+      osf << ", GRP_U:=";
+      WriteListMatrixGAP(osf, GRP_U);
+      osf << ", GRP_V:=";
+      WriteListMatrixGAP(osf, GRP_V);
+      osf << ");\n";
+    }
 #endif
     int n = Q.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
@@ -1986,10 +2011,13 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have GRP2_T\n";
 #endif
-    std::vector<MyMatrix<Tint>> ListMat =
+    RetMI_S<Tint,Tgroup> ret =
         MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2_T, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, index=" << ret.index << "\n";
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    for (auto &eMat : ListMat) {
+    for (auto &eMat : ret.LGen) {
       MyMatrix<T> eMat_T = UniversalMatrixConversion<T, Tint>(eMat);
       MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
       if (eProd != Qmat) {
@@ -2003,7 +2031,7 @@ private:
       }
     }
 #endif
-    return ListMat;
+    return ret.LGen;
   }
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_EquivalenceVector_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
