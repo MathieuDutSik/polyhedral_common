@@ -1620,6 +1620,17 @@ private:
     // ---For fPlane = ePlane + v. The construction gets us another
     //    group and another sublattice.
     // ---But the sublattice are not related!
+    // ---What we can do is compute the sequence of
+    //    std::vector<ReductionStep>
+    //    with struct ReductionStep {
+    //           std::vector<MyMatrix<T>> ListMatr;
+    //           std::vector<Telt> ListPerm;
+    //           Face eFace;
+    //         }
+    // ---We could build the vector std::vector<ReductionStep>
+    //    and process them.
+    // ---Problem: Do we have that H1 stabilize ePlane^T?
+    //    Probably yes.
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, begin\n";
     os << "COMB: f_double_cosets, ePlane=\n";
