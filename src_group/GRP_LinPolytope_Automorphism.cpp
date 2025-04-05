@@ -162,16 +162,10 @@ int main(int argc, char *argv[]) {
       FileGRP = argv[4];
     }
     //
-    if (FileGRP == "stderr") {
-      full_process_B<Tgroup>(arith, FileEXT, OutFormat, std::cerr);
-    } else {
-      if (FileGRP == "stdout") {
-        full_process_B<Tgroup>(arith, FileEXT, OutFormat, std::cout);
-      } else {
-        std::ofstream os(FileGRP);
-        full_process_B<Tgroup>(arith, FileEXT, OutFormat, os);
-      }
-    }
+    auto f=[&](std::ostream& os_out) {
+      full_process_B<Tgroup>(arith, FileEXT, OutFormat, os_out);
+    };
+    print_stderr_stdout_file(FileGRP, f);
     std::cerr << "Normal termination of GRP_LinPolytope_Automorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Automorphism\n";

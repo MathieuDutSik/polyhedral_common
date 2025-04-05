@@ -2926,16 +2926,10 @@ void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
     Write_BankEntry(OutFile, eP.first, eP.second);
     return;
   }
-  if (OutFile == "stderr") {
-    OutputFacets_stream(EXT, TheOutput, std::cerr, OutFormat, os);
-  } else {
-    if (OutFile == "stdout") {
-      OutputFacets_stream(EXT, TheOutput, std::cout, OutFormat, os);
-    } else {
-      std::ofstream os_out(OutFile);
-      OutputFacets_stream(EXT, TheOutput, os_out, OutFormat, os);
-    }
-  }
+  auto f_print=[&](std::ostream& os_out) -> void {
+    OutputFacets_stream(EXT, TheOutput, os_out, OutFormat, os);
+  };
+  print_stderr_stdout_file(OutFile, f_print);
 }
 
 

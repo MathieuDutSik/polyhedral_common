@@ -654,7 +654,7 @@ void PrintListListOrb_IntGAP(std::ostream &os_out,
   os_out << "];\n";
 }
 
-void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os_out,
+void OutputFaces_stream(const std::vector<vectface> &TheOutput, std::ostream &os_out,
                       const std::string &OutFormat) {
   if (OutFormat == "GAP") {
     os_out << "return ";
@@ -687,18 +687,6 @@ void OutputFaces_File(const std::vector<vectface> &TheOutput, std::ostream &os_o
   }
   std::cerr << "No option has been chosen\n";
   throw TerminalException{1};
-}
-
-void OutputFaces(const std::vector<vectface> &TheOutput,
-                 const std::string &OUTfile, const std::string &OutFormat) {
-  if (OUTfile == "stderr") {
-    return OutputFaces_File(TheOutput, std::cerr, OutFormat);
-  }
-  if (OUTfile == "stdout") {
-    return OutputFaces_File(TheOutput, std::cout, OutFormat);
-  }
-  std::ofstream os_out(OUTfile);
-  return OutputFaces_File(TheOutput, os_out, OutFormat);
 }
 
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
@@ -918,7 +906,10 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
       EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final,
                        ComputeTotalNumberFaces, os);
   //
-  OutputFaces(TheOutput, OUTfile, OutFormat);
+  auto f_print=[&](std::ostream& os_out) -> void {
+    OutputFaces_stream(TheOutput, os_out, OutFormat);
+  };
+  print_stderr_stdout_file(OUTfile, f_print);
   //
   SingleBlock BlockGROUP = eFull.ListBlock.at("GROUP");
   bool ComputeAutGroup = BlockGROUP.ListBoolValues.at("ComputeAutGroup");

@@ -54,12 +54,7 @@ void process_A(std::string const &eFileI, std::string const &eFileO,
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
   };
-  if (eFileO == "stderr")
-    return print_result(std::cerr);
-  if (eFileO == "stdout")
-    return print_result(std::cout);
-  std::ofstream osF(eFileO);
-  return print_result(osF);
+  print_stderr_stdout_file(eFileO, print_result);
 }
 
 void process_B(std::string const &eFileI, std::string const &eFileO,

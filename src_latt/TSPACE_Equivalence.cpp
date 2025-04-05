@@ -64,16 +64,10 @@ int main(int argc, char *argv[]) {
     std::optional<MyMatrix<Tint>> opt =
         LINSPA_TestEquivalenceGramMatrix<T, Tint, Tgroup>(LinSpa, eMat1, eMat2,
                                                           std::cerr);
-    if (FileOut == "stderr") {
-      write_result(opt, OutFormat, std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        write_result(opt, OutFormat, std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        write_result(opt, OutFormat, os);
-      }
-    }
+    auto f=[&](std::ostream& os_out) -> void {
+      write_result(opt, OutFormat, os_out);
+    };
+    print_stderr_stdout_file(FileOut, f);
     std::cerr << "Normal termination of TSPACE_Equivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Equivalence\n";

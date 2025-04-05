@@ -94,16 +94,7 @@ int main(int argc, char *argv[]) {
       }
     };
     //
-    if (FileO == "stderr") {
-      do_print(std::cerr);
-    } else {
-      if (FileO == "stderr") {
-        do_print(std::cout);
-      } else {
-        std::ofstream os(FileO);
-        do_print(os);
-      }
-    }
+    print_stderr_stdout_file(FileO, do_print);
     std::cerr << "Normal termination of DEC_TestUnionCones\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in DEC_TestUnionCones\n";

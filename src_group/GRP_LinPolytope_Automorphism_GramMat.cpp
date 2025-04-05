@@ -131,17 +131,10 @@ int main(int argc, char *argv[]) {
       FileOut = argv[5];
     }
     //
-    if (FileOut == "stderr") {
-      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat,
-                               std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, os);
-      }
-    }
+    auto f=[&](std::ostream& os_out) -> void {
+      full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, os_out);
+    };
+    print_stderr_stdout_file(FileOut, f);
     std::cerr << "Normal termination of GRP_LinPolytope_Automorphism_GramMat\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Automorphism_GramMat\n";

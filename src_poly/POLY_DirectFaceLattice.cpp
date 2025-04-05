@@ -10,7 +10,7 @@
 // clang-format on
 
 template <typename T, typename Tgroup>
-void MainFunctionFaceLattice(std::string const& FACfile, std::string const& GRPfile, int const& LevSearch, std::string const& OutFormat, std::string const& OutFile) {
+void MainFunctionFaceLattice(std::string const& FACfile, std::string const& GRPfile, int const& LevSearch, std::string const& OutFormat, std::ostream& os_out) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(FACfile);
   Tgroup GRP = ReadGroupFile<Tgroup>(GRPfile);
   std::string method_spann = "LinearProgramming";
@@ -20,7 +20,7 @@ void MainFunctionFaceLattice(std::string const& FACfile, std::string const& GRPf
   std::vector<vectface> TheOutput =
     EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final,
                      ComputeTotalNumberFaces, std::cerr);
-  OutputFaces(TheOutput, OutFile, OutFormat);
+  OutputFaces_stream(TheOutput, os_out, OutFormat);
 }
 
 int main(int argc, char *argv[]) {
@@ -50,24 +50,24 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[5];
       OutFile = argv[6];
     }
-    auto f=[&]() -> void {
+    auto f=[&](std::ostream& os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, OutFile);
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, os_out);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, OutFile);
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, os_out);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, OutFile);
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, os_out);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, OutFile);
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, os_out);
       }
       std::optional<std::string> opt_realalgebraic =
         get_postfix(arith, "RealAlgebraic=");
@@ -83,12 +83,12 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, OutFile);
+        return MainFunctionFaceLattice<T, Tgroup>(FACfile, GRPfile, LevSearch, OutFormat, os_out);
       }
       std::cerr << "Failed to find a matching arithmetic arith=" << arith << "\n";
       throw TerminalException{1};
     };
-    f();
+    print_stderr_stdout_file(OutFile, f);
     //
     std::cerr << "Normal termination of POLY_DirectFaceLattice\n";
   } catch (TerminalException const &e) {

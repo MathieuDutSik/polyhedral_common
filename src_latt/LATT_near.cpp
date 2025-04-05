@@ -166,16 +166,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    if (FileOut == "stderr") {
-      call_SV(std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        call_SV(std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        call_SV(os);
-      }
-    }
+    print_stderr_stdout_file(FileOut, call_SV);
     std::cerr << "Normal termination of LATT_near\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_near\n";

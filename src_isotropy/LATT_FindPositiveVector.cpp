@@ -75,16 +75,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    if (FileO == "stderr") {
-      f(std::cerr);
-    } else {
-      if (FileO == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(FileO);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(FileO, f);
     std::cerr << "Normal termination of LATT_FindIsotropic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_FindIsotropic\n";

@@ -159,16 +159,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    if (eFileO == "stderr") {
-      dual_desc(std::cerr);
-    } else {
-      if (eFileO == "stdout") {
-        dual_desc(std::cout);
-      } else {
-        std::ofstream os(eFileO);
-        dual_desc(os);
-      }
-    }
+    print_stderr_stdout_file(eFileO, dual_desc);
     std::cerr << "Normal termination of POLY_dual_description\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_dual_description\n";

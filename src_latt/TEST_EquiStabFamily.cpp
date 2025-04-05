@@ -184,16 +184,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    if (FileOut == "stderr") {
-      f(std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(FileOut, f);
     std::cerr << "Normal termination of TEST_EquiStabFamily\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TEST_EquiStabFamily\n";

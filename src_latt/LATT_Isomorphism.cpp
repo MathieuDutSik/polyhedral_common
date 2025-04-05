@@ -65,16 +65,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    if (OutFile == "stderr") {
-      prt(std::cerr);
-    } else {
-      if (OutFile == "stdout") {
-        prt(std::cout);
-      } else {
-        std::ofstream os(OutFile);
-        prt(os);
-      }
-    }
+    print_stderr_stdout_file(OutFile, prt);
     std::cerr << "Normal termination of LATT_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_Isomorphism\n";

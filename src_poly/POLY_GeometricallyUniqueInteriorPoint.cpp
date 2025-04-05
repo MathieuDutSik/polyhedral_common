@@ -11,18 +11,18 @@
 
 template <typename T>
 void process(std::string const &eFile, std::string const &OutFormat,
-             std::ostream &os) {
+             std::ostream &os_out) {
   MyMatrix<T> FAC = ReadMatrixFile<T>(eFile);
   //
   MyVector<T> eSol = GetGeometricallyUniqueInteriorPoint(FAC, std::cerr);
   if (OutFormat == "GAP") {
-    os << "return ";
-    WriteVectorGAP(os, eSol);
-    os << ";\n";
+    os_out << "return ";
+    WriteVectorGAP(os_out, eSol);
+    os_out << ";\n";
     return;
   }
   if (OutFormat == "CPP") {
-    return WriteVector(os, eSol);
+    return WriteVector(os_out, eSol);
   }
   std::cerr << "Error in process, missing support for OutFormat=" << OutFormat
             << "\n";
@@ -84,32 +84,32 @@ int main(int argc, char *argv[]) {
       FileSPA = argv[4];
     }
 
-    auto f = [&](std::ostream &os) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -125,22 +125,13 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(FileFAC, OutFormat, os);
+        return process<T>(FileFAC, OutFormat, os_out);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
       throw TerminalException{1};
     };
-    if (FileSPA == "stderr") {
-      f(std::cerr);
-    } else {
-      if (FileSPA == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(FileSPA);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(FileSPA, f);
     //
     std::cerr << "Normal termination of POLY_LinearDetermineByInequalities\n";
   } catch (TerminalException const &e) {

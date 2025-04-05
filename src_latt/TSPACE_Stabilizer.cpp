@@ -61,16 +61,10 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
     std::vector<MyMatrix<T>> ListGen =
         LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
-    if (FileOut == "stderr") {
-      write_group(ListGen, OutFormat, std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        write_group(ListGen, OutFormat, std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        write_group(ListGen, OutFormat, os);
-      }
-    }
+    auto f=[&](std::ostream& os_out) -> void {
+      write_group(ListGen, OutFormat, os_out);
+    };
+    print_stderr_stdout_file(FileOut, f);
     std::cerr << "Normal termination of TSPACE_Stabilizer\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in TSPACE_Stabilizer\n";

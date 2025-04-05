@@ -79,16 +79,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
     };
-    if (OutFile == "stderr") {
-      f(std::cerr);
-    } else {
-      if (OutFile == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(OutFile);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(OutFile, f);
+    //
     std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in INDEF_FORM_TestEquivalence\n";

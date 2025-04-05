@@ -1611,16 +1611,10 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   //
   std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
   std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
-  if (FileOut == "stderr") {
-    Print_DataReflectionGroup(data, OutFormat, std::cerr);
-  } else {
-    if (FileOut == "stdout") {
-      Print_DataReflectionGroup(data, OutFormat, std::cout);
-    } else {
-      std::ofstream osF(FileOut);
-      Print_DataReflectionGroup(data, OutFormat, osF);
-    }
-  }
+  auto f_print=[&](std::ostream& os_out) -> void {
+    Print_DataReflectionGroup(data, OutFormat, os_out);
+  };
+  print_stderr_stdout_file(FileOut, f_print);
 }
 
 // clang-format off

@@ -134,16 +134,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    if (FileSPA == "stderr") {
-      f(std::cerr);
-    } else {
-      if (FileSPA == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(FileSPA);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(FileSPA, f);
     //
     std::cerr << "Normal termination of POLY_LinearDetermineByInequalities\n";
   } catch (TerminalException const &e) {

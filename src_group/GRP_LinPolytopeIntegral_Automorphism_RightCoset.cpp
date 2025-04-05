@@ -118,16 +118,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "arith=" << arith << " allowed = rational and mpq_integer\n";
       throw TerminalException{1};
     };
-    if (FileOut == "stderr") {
-      process_B(std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        process_B(std::cout);
-      } else {
-        std::ofstream os(FileOut);
-        process_B(os);
-      }
-    }
+    print_stderr_stdout_file(FileOut, process_B);
     std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Automorphism_RightCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytopeIntegral_Automorphism_RightCoset\n";

@@ -52,16 +52,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "No matching format in print_mat\n";
       throw TerminalException{1};
     };
-    if (FileO == "stderr") {
-      print_mat(std::cerr);
-    } else {
-      if (FileO == "stdout") {
-        print_mat(std::cout);
-      } else {
-        std::ofstream os(FileO);
-        print_mat(os);
-      }
-    }
+    print_stderr_stdout_file(FileO, print_mat);
     std::cerr << "Normal termination of VectFamily_Reduction\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in VectFamily_Reduction\n";

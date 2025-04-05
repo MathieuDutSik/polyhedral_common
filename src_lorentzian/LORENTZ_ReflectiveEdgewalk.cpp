@@ -49,17 +49,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";
       throw TerminalException{1};
     };
-    //
-    if (OutFile == "stderr") {
-      f(std::cerr);
-    } else {
-      if (OutFile == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os_out(OutFile);
-        f(os_out);
-      }
-    }
+    print_stderr_stdout_file(OutFile, f);
     //
     std::cerr << "Normal termination of LORENTZ_FundDomain_AllcockEdgewalk\n";
   } catch (TerminalException const &e) {

@@ -265,16 +265,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    if (eFileO == "stderr") {
-      call_lrs(std::cerr);
-    } else {
-      if (eFileO == "stdout") {
-        call_lrs(std::cout);
-      } else {
-        std::ofstream os(eFileO);
-        call_lrs(os);
-      }
-    }
+    print_stderr_stdout_file(eFileO, call_lrs);
     std::cerr << "Normal termination of POLY_lrs\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_lrs\n";

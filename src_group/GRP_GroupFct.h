@@ -244,7 +244,7 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
 template <typename Tgroup>
 void WriteGroupFormat(std::string const &FileGroup,
                       std::string const &OutFormat, Tgroup const &TheGRP) {
-  auto f = [&](std::ostream &os) -> void {
+  auto f_print = [&](std::ostream &os) -> void {
     if (OutFormat == "CPP") {
       return WriteGroup(os, TheGRP);
     }
@@ -255,14 +255,7 @@ void WriteGroupFormat(std::string const &FileGroup,
         << "Failed to find a matching entry. Allowed types are GAP and CPP\n";
     throw TerminalException{1};
   };
-  if (FileGroup == "stderr") {
-    return f(std::cerr);
-  }
-  if (FileGroup == "stdout") {
-    return f(std::cout);
-  }
-  std::ofstream os(FileGroup);
-  return f(os);
+  print_stderr_stdout_file(FileGroup, f_print);
 }
 
 //

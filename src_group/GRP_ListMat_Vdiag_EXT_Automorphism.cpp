@@ -40,16 +40,7 @@ void process_inner1(std::string const &FileO, std::string const &OutFormat,
     std::cerr << "Failed to find a matching OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};
   };
-  if (FileO == "stderr") {
-    f_print(std::cerr);
-  } else {
-    if (FileO == "stdout") {
-      f_print(std::cout);
-    } else {
-      std::ofstream os(FileO);
-      f_print(os);
-    }
-  }
+  print_stderr_stdout_file(FileO, f_print);
 }
 
 template <typename Tfield, typename Twork, typename Tinput, typename Tgroup>

@@ -148,16 +148,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    if (FileO == "stderr") {
-      prt(std::cerr);
-    } else {
-      if (FileO == "stdout") {
-        prt(std::cout);
-      } else {
-        std::ofstream os(FileO);
-        prt(os);
-      }
-    }
+    print_stderr_stdout_file(FileO, prt);
     std::cerr << "Normal termination of GRP_ListMat_Vdiag_EXT_Isomorphism\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_ListMat_Vdiag_EXT_Isomorphism\n";

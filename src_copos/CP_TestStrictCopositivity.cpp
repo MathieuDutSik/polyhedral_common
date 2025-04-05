@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     //
-    auto f = [&](std::ostream &os) -> void {
+    auto f_print = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
@@ -61,16 +61,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     //
-    if (OutFile == "stderr") {
-      f(std::cerr);
-    } else {
-      if (OutFile == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(OutFile);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(OutFile, f_print);
     //
     std::cerr << "Normal completion of the program\n";
   } catch (TerminalException const &e) {

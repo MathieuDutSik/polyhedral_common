@@ -52,16 +52,7 @@ void process(std::string const &FileExt1, std::string const &FileExt2,
     std::cerr << "Failed to find a matching entry\n";
     throw TerminalException{1};
   };
-  if (FileO == "stderr") {
-    print_info(std::cerr);
-  } else {
-    if (FileO == "stdout") {
-      print_info(std::cout);
-    } else {
-      std::ofstream os(FileO);
-      print_info(os);
-    }
-  }
+  print_stderr_stdout_file(FileO, print_info);
 }
 
 int main(int argc, char *argv[]) {

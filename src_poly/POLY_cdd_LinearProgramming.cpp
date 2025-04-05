@@ -144,16 +144,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    if (eFileO == "stderr") {
-      call_lp(std::cerr);
-    } else {
-      if (eFileO == "stdout") {
-        call_lp(std::cout);
-      } else {
-        std::ofstream os(eFileO);
-        call_lp(os);
-      }
-    }
+    print_stderr_stdout_file(eFileO, call_lp);
     std::cerr << "Normal termination of POLY_cdd_LinearProgramming\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_cdd_LinearProgramming\n";

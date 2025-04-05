@@ -75,16 +75,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    if (FileO == "stderr") {
-      print_result(std::cerr);
-    } else {
-      if (FileO == "stdout") {
-        print_result(std::cout);
-      } else {
-        std::ofstream os(FileO);
-        print_result(os);
-      }
-    }
+    print_stderr_stdout_file(FileO, print_result);
     std::cerr << "Normal termination of LATT_LLLreduceBasis\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_LLLreduceBasis\n";

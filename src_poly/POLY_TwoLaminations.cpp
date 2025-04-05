@@ -86,16 +86,7 @@ int main(int argc, char *argv[]) {
                 << "\n";
       throw TerminalException{1};
     };
-    if (OutFile == "stderr") {
-      f(std::cerr);
-    } else {
-      if (OutFile == "stdout") {
-        f(std::cout);
-      } else {
-        std::ofstream os(OutFile);
-        f(os);
-      }
-    }
+    print_stderr_stdout_file(OutFile, f);
     //
     std::cerr << "Normal termination of TEST_TwoLaminations\n";
   } catch (TerminalException const &e) {

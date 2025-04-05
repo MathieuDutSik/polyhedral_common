@@ -172,16 +172,7 @@ int main(int argc, char *argv[]) {
                    "RealAlgebraic\n";
       throw TerminalException{1};
     };
-    if (FileOut == "stderr") {
-      compute_redundancy(std::cerr);
-    } else {
-      if (FileOut == "stdout") {
-        compute_redundancy(std::cout);
-      } else {
-        std::ofstream osF(FileOut);
-        compute_redundancy(osF);
-      }
-    }
+    print_stderr_stdout_file(FileOut, compute_redundancy);
     std::cerr << "Normal termination of POLY_redundancyClarksonBlocks\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in POLY_redundancyClarksonBlocks\n";
