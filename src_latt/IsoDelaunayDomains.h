@@ -22,6 +22,10 @@
 #define DEBUG_ISO_DELAUNAY_DOMAIN_22_21
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+#endif
+
 template <typename T, typename Tint, typename Tgroup>
 struct DataIsoDelaunayDomains {
   // The Linear space of matrices
@@ -172,7 +176,7 @@ MyVector<T> VoronoiLinearInequality(VoronoiInequalityPreComput<T> const &vipc,
     Ineq(iGram) = val;
     iGram++;
   }
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_DISABLE
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN_DISABLE
   for (int iVert = 0; iVert <= n; iVert++) {
     for (int u = 0; u < n; u++) {
       TheVertRed(u) = vipc.VertBasis_T(iVert, u + 1);
@@ -399,14 +403,16 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   for (int u = 0; u < dimSpace; u++) {
     RetMat += ThePt(u) * LinSpa.ListMat[u];
   }
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
   MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
   int n_row = EXT.rows();
+  MyMatrix<T> SumMatExtRay = ZeroMatrix<T>(n, n);
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
     for (int u = 0; u < dimSpace; u++) {
       RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
     }
+    SumMatExtRay += RemoveFractionMatrix(RayMat);
     DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat);
     if (DiagInfo.nbMinus > 0) {
       std::cerr
@@ -416,7 +422,8 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     }
   }
 #endif
-  return {nbIneq, std::move(RetMat)};
+  //  return {nbIneq, std::move(RetMat)};
+  return {nbIneq, std::move(SumMatExtRay)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -494,7 +501,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
       return *opt;
     }
   }
-  std::cerr << "Failed to find a matching entry in "
+  std::cerr << "ISODEL: Failed to find a matching entry in "
                "GetInitialGenericDelaunayTesselation\n";
   throw TerminalException{1};
 }
@@ -1092,16 +1099,20 @@ FullRepart<T, Tvert, Tgroup> FindRepartitionningInfoNextGeneration(
       FlippingFramework<T> frame(TotalListVertices, TotalListVertices_int,
                                  Linc_face, os);
       for (auto &eFace : vf) {
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(EXT2, eFace, "FuncInsertFace EXT2 eFace");
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: Before FlipFace |EXT2|=" << EXT2.rows() << " / "
            << EXT2.cols() << " |eFace|=" << eFace.size() << " / "
            << eFace.count() << "\n";
 #endif
         Face eInc = frame.FlipFace(eFace);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
         CheckFacetInequality(TotalListVertices, eInc,
                              "FuncInsertFace TotalListVertices eInc");
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: After FlipFace |eInc|=" << eInc.size() << " / "
            << eInc.count() << "\n";
 #endif
@@ -1168,7 +1179,7 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
       Gra.AddAdjacent(eAI.iOrb, iOrbAdj);
     }
   }
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
   if (!IsSymmetricGraph(Gra)) {
     std::cerr << "ISODEL: The graph is not symmetric\n";
     throw TerminalException{1};
@@ -1263,6 +1274,11 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
        << static_cast<int>(ListInfo[iInfo][iFacet].Position) << "\n";
     os << "ISODEL: FLT: |EXT|=" << EXT.rows() << " / " << EXT.cols()
        << " rnk=" << RankMat(EXT) << "\n";
+    os << "ISODEL: FLT: |TheStab|=" << TheStab.size() << "\n";
+    os << "ISODEL: FLT: |ListAdj|=" << ListInfo[iInfo][iFacet].ListAdj.size()
+       << "\n";
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
     if (RankMat(EXT) == dim + 1) {
       CheckFacetInequality(EXT, eInc, "get_matching_listinfo EXT eInc");
     }
@@ -1271,9 +1287,6 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
       std::cerr << "The group TheStab is not a symmetry group\n";
       throw TerminalException{1};
     }
-    os << "ISODEL: FLT: |TheStab|=" << TheStab.size() << "\n";
-    os << "ISODEL: FLT: |ListAdj|=" << ListInfo[iInfo][iFacet].ListAdj.size()
-       << "\n";
 #endif
     auto get_bigmat = [&](Telt const &ePerm) -> MyMatrix<Tvert> {
       int8_t Position = ListInfo[iInfo][iFacet].Position;
@@ -1313,6 +1326,8 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
          << eInc.count() << "\n";
       os << "ISODEL: FLT: TheStab, n_act=" << TheStab.n_act()
          << " order=" << TheStab.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
       if (RankMat(EXT) == dim + 1) {
         CheckFacetInequality(EXT, eAdj.eInc,
                              "get_matching_listinfo EXT eAdj.eInc");
@@ -1334,7 +1349,7 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
   auto get_matching_old_tessel = [&](int const &iDelaunayOld,
                                      Face const &eInc) -> MatchedFacet {
     MyMatrix<Tvert> const &EXT = ListOrbitDelaunay.l_dels[iDelaunayOld].EXT;
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
     CheckFacetInequality(EXT, eInc, "get_matching_old_tessel EXT eInc");
 #endif
     for (auto &eAdj : ListOrbitDelaunay.l_dels[iDelaunayOld].ListAdj) {
@@ -1612,11 +1627,13 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
               ListInfo[iInfo][kFacet].eBigMat * eMat2 * eMat1;
           MyMatrix<Tvert> EXT7 =
               ListInfo[jInfo][TheFoundAdj3.iOrb].EXT * BigMat1;
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
           if (SortMatrix(EXT7) != SortMatrix(ImageEXTbarrel)) {
             std::cerr << "We fail an important test with the barrel images\n";
             throw TerminalException{1};
           }
+#endif
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
           os << "ISODEL: FLT: |EXT7|=" << EXT7.rows() << " / " << EXT7.cols()
              << " rnk=" << RankMat(EXT7) << "\n";
           os << "ISODEL: FLT: |LincEXT|=" << LincEXT.rows() << " / "
@@ -1993,6 +2010,8 @@ struct DataIsoDelaunayDomainsFunc {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
     os << "ISODEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols()
        << " nbIrred=" << nbIrred << "\n";
+    os << "ISODEL: x.GramMat=\n";
+    WriteMatrix(os, x.GramMat);
 #endif
     std::vector<MyVector<T>> l_ineq;
     std::unordered_map<MyVector<T>, size_t> map_ineq;
@@ -2004,7 +2023,7 @@ struct DataIsoDelaunayDomainsFunc {
     // Compute the automorphism group on the central gram and then the facets
     std::vector<MyMatrix<T>> ListGenTot =
         LINSPA_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.GramMat,
-                                                  data.rddo.os);
+                                                  os);
     std::vector<Telt> ListPermGens;
     for (auto &eGenTot : ListGenTot) {
       MyMatrix<T> MatSpace = matrix_in_t_space(eGenTot, data.LinSpa);

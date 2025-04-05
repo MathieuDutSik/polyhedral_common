@@ -778,6 +778,9 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   };
   std::optional<std::vector<MyMatrix<T>>> opt = get_generators();
   if (opt) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: LINSPA_ComputeStabilizer success of the direct approach\n";
+#endif
     return *opt;
   }
   //
@@ -793,7 +796,6 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer |FullGRP|=" << FullGRP.size() << "\n";
 #endif
-  std::vector<Telt> LGenPermPtWiseStab;
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
@@ -864,6 +866,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using LeftCosets = typename Tgroup::LeftCosets;
+  using RightCosets = typename Tgroup::RightCosets;
   //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
@@ -939,9 +942,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     LGenPerm1.push_back(ePerm1);
   }
   Tgroup FullGRP1(LGenPerm1, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << "\n";
-#endif
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenGlobStab1_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
@@ -950,6 +950,34 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   }
   Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " |GRPsub1|=" << GRPsub1.size() << "\n";
+#endif
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  auto f_get_group_size=[&]() -> size_t {
+    size_t n_elt = 0;
+    for (auto & elt: FullGRP1) {
+      MyMatrix<T> eMatr =
+        get_mat_from_shv_perm(elt, SHV1_T, eMat1);
+      if (is_stab_space(eMatr, LinSpa)) {
+        n_elt += 1;
+      }
+    }
+    return n_elt;
+  };
+  size_t n_elt = f_get_group_size();
+  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " n_elt=" << n_elt << " |GRPsub1|=" << GRPsub1.size() << "\n";
+  auto f_exhaustive=[&]() -> std::optional<MyMatrix<Tint>> {
+    for (auto & elt: FullGRP1) {
+      MyMatrix<T> eMatr =
+        get_mat_from_shv_perm(elt, SHV1_T, eMat1);
+      MyMatrix<T> eProd_T = eMatr * OneEquiv;
+      if (is_stab_space(eProd_T, LinSpa)) {
+        MyMatrix<Tint> eProd = UniversalMatrixConversion<Tint, T>(eProd_T);
+        return eProd;
+      }
+    }
+    return {};
+  };
   size_t pos_equiv_grp = 0;
   os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
@@ -958,8 +986,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     std::optional<MyMatrix<T>> sol;
   };
   auto try_solution = [&]() -> PartSol {
-    // Not sure if left or right cosets.
-    LeftCosets rc = FullGRP1.left_cosets(GRPsub1);
+    // The left cosets are the cosets such as G = \cup_c c H
+    // The right cosets are the cosets such as G = \cup_c H c
+    // 
+    RightCosets rc = FullGRP1.right_cosets(GRPsub1);
     for (auto &eCosReprPerm : rc) {
       MyMatrix<T> eCosReprMatr =
         get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
@@ -971,6 +1001,9 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
         // We have this problem that the first cosets is not necessarily the one of
         // GRPsub and that the coset of the GRPsub is also not necessarily the identity.
         if (!GRPsub1.isin(eCosReprPerm)) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+          os << "TSPACE: We found some new generator\n";
+#endif
           return {eCosReprPerm, {}};
         }
       }
@@ -982,9 +1015,21 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     if (p_sol.sol) {
       MyMatrix<T> const &Pmat_T = *p_sol.sol;
       MyMatrix<Tint> Pmat = UniversalMatrixConversion<Tint, T>(Pmat_T);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+      if (!f_exhaustive()) {
+        std::cerr << "TSPACE: We found equiv with one method but the exhaustive does not\n";
+        throw TerminalException{1};
+      }
+#endif
       return Pmat;
     }
     if (!p_sol.new_gen) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+      if (f_exhaustive()) {
+        std::cerr << "TSPACE: We found non-equiv with one method but the exhaustive does\n";
+        throw TerminalException{1};
+      }
+#endif
       return {};
     }
     LGenGlobStab1_perm.push_back(*p_sol.new_gen);

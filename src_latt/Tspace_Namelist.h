@@ -285,7 +285,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   LinSpaceMatrix<T> LinSpa = get_linspace();
 #ifdef DEBUG_TSPACE_NAMELIST
-  os << "TSP: ReadTspace: |PsTabbGens|=" << LinSpa.PtStabGens.size() << "\n";
+  os << "TSP: ReadTspace: |PtStabGens|=" << LinSpa.PtStabGens.size() << "\n";
   os << "TSP: ReadTspace: |ListMat|=" << LinSpa.ListMat.size() << "\n";
   for (auto &eGen : LinSpa.PtStabGens) {
     for (auto &eMat : LinSpa.ListMat) {
