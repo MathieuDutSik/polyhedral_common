@@ -562,7 +562,7 @@ bool WriteFamilyObjects(
     [[maybe_unused]] std::ostream &os) {
   if (OutFormat == "NumberGAP") {
     size_t len = l_tot.size();
-    os_out << "return " << len << ";\n";
+    os_out << "return rec(nb:=" << len << ");\n";
     return false;
   }
   if (OutFormat == "ObjectGAP") {

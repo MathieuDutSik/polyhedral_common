@@ -143,7 +143,7 @@ template <typename T>
 MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
-    std::cerr << "We have n_mat = 0\n";
+    std::cerr << "TSPACE: We have n_mat = 0\n";
     throw TerminalException{1};
   }
   int n = ListMat[0].rows();
@@ -217,7 +217,7 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
     for (auto &eGen : ListGen) {
       MyMatrix<T> eProd = eGen * eBasis * eGen.transpose();
       if (eProd != eBasis) {
-        std::cerr << "We have eProd <> eBasis, so a linear algebra bug\n";
+        std::cerr << "TSPACE: We have eProd <> eBasis, so a linear algebra bug\n";
         throw TerminalException{1};
       }
     }
@@ -282,7 +282,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
                              std::ostream &os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
-    std::cerr << "The number of matrices is 0 so we cannot build a positive "
+    std::cerr << "TSPACE: The number of matrices is 0 so we cannot build a positive "
                  "definite matrix\n";
     throw TerminalException{1};
   }
@@ -330,7 +330,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.PrimalDefined || !eSol.DualDefined) {
       std::cerr
-          << "The LpSolution dual and primal solutions should be defined\n";
+          << "TSPACE: The LpSolution dual and primal solutions should be defined\n";
       throw TerminalException{1};
     }
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
@@ -392,12 +392,12 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
     std::optional<MyMatrix<T>> opt =
         FindTransformationGeneral_vect(SHV_T, SHV_T, eList);
     if (!opt) {
-      std::cerr << "Failed to find the matrix\n";
+      std::cerr << "TSPACE: Failed to find the matrix\n";
       throw TerminalException{1};
     }
     MyMatrix<T> const &M_T = *opt;
     if (!IsIntegralMatrix(M_T)) {
-      std::cerr << "Bug: The matrix should be integral\n";
+      std::cerr << "TSPACE: Bug: The matrix should be integral\n";
       throw TerminalException{1};
     }
     for (auto &eMat : LinSpa.ListMat) {
@@ -420,17 +420,17 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
     ListGen_T.push_back(eGen_T);
   }
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP: IsBravaisSpace: |ListGen|=" << ListGen.size() << "\n";
-  os << "TSP: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
+  os << "TSPACE: IsBravaisSpace: |ListGen|=" << ListGen.size() << "\n";
+  os << "TSPACE: IsBravaisSpace: |ListMat|=" << ListMat.size() << "\n";
   for (auto &eGen : ListGen) {
     for (auto &eMat : ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
       if (eMatImg != eMat) {
-        std::cerr << "TSP: IsBravaisSpace: |eMat|=" << eMat.rows() << " / "
+        std::cerr << "TSPACE: IsBravaisSpace: |eMat|=" << eMat.rows() << " / "
                   << eMat.cols() << "\n";
-        std::cerr << "TSP: IsBravaisSpace: |eGen|=" << eGen.rows() << " / "
+        std::cerr << "TSPACE: IsBravaisSpace: |eGen|=" << eGen.rows() << " / "
                   << eGen.cols() << "\n";
-        std::cerr << "TSP: IsBravaisSpace: eMat should equal to eMatImg\n";
+        std::cerr << "TSPACE: IsBravaisSpace: eMat should equal to eMatImg\n";
         throw TerminalException{1};
       }
     }
@@ -441,12 +441,12 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<T> Big_BasisInv = GetListMatAsBigMat(BasisInv);
   //
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP: IsBravaisSpace: |Big_ListMat|=" << Big_ListMat.rows() << " / "
+  os << "TSPACE: IsBravaisSpace: |Big_ListMat|=" << Big_ListMat.rows() << " / "
      << Big_ListMat.cols() << "\n";
-  os << "TSP: IsBravaisSpace: |Big_BasisInv|=" << Big_BasisInv.rows() << " / "
+  os << "TSPACE: IsBravaisSpace: |Big_BasisInv|=" << Big_BasisInv.rows() << " / "
      << Big_BasisInv.cols() << "\n";
   if (!IsSubspaceContained(Big_ListMat, Big_BasisInv)) {
-    std::cerr << "The elements of ListMat are not in the invariant space which "
+    std::cerr << "TSPACE: The elements of ListMat are not in the invariant space which "
                  "is not acceptable\n";
     throw TerminalException{1};
   }
@@ -468,19 +468,19 @@ GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const &LinSpa,
   int N = 2;
   while (true) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: Before "
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: Before "
           "GetRandomPositiveDefinite\n";
 #endif
     MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: After "
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: After "
           "GetRandomPositiveDefinite\n";
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: TestMat=\n";
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: TestMat=\n";
     WriteMatrix(os, TheMat);
 #endif
     bool test = IsSymmetryGroupCorrect<T, Tint>(TheMat, LinSpa, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSP: GetRandomPositiveDefiniteNoNontrialSymm: test=" << test << "\n";
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: test=" << test << "\n";
 #endif
     if (test) {
       return TheMat;
@@ -498,15 +498,15 @@ std::vector<MyMatrix<T>>
 IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
-    std::cerr << "We have n_mat=0\n";
-    std::cerr << "The code could work with n_mat=0 but we are not sure it "
+    std::cerr << "TSPACE: We have n_mat=0\n";
+    std::cerr << "TSPACE: The code could work with n_mat=0 but we are not sure it "
                  "makes sense\n";
     throw TerminalException{1};
   }
   int n = ListMat[0].rows();
   int sym_dim = (n + 1) * n / 2;
   if (n_mat == sym_dim) {
-    std::cerr << "We have n_mat=" << n_mat << " equal to sym_dim=" << sym_dim
+    std::cerr << "TSPACE: We have n_mat=" << n_mat << " equal to sym_dim=" << sym_dim
               << "\n";
     throw TerminalException{1};
   }
@@ -523,7 +523,7 @@ IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat) {
   MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
   MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);
   if (BigMat_renorm.rows() != n_mat) {
-    std::cerr << "Incoherence in the dimensions\n";
+    std::cerr << "TSPACE: Incoherence in the dimensions\n";
     throw TerminalException{1};
   }
   std::vector<MyMatrix<T>> ListMatRet;
@@ -550,10 +550,10 @@ MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
   int nbMat = ListMat.size();
   int siz = eVect.size();
   if (siz != nbMat) {
-    std::cerr << "Error in GetMatrixFromBasis\n";
-    std::cerr << "  siz=" << siz << "\n";
-    std::cerr << "nbMat=" << nbMat << "\n";
-    std::cerr << "But they should be both equal\n";
+    std::cerr << "TSPACE: Error in GetMatrixFromBasis\n";
+    std::cerr << "TSPACE:  siz=" << siz << "\n";
+    std::cerr << "TSPACE: nbMat=" << nbMat << "\n";
+    std::cerr << "TSPACE: But they should be both equal\n";
     throw TerminalException{1};
   }
   for (int iMat = 0; iMat < nbMat; iMat++)
@@ -663,12 +663,12 @@ MyMatrix<T> get_mat_from_shv_perm(Telt const &elt, MyMatrix<T> const &SHV_T,
   MyMatrix<T> Pmat = unfold_opt(opt, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(Pmat)) {
-    std::cerr << "The matrix TransMat should be integral\n";
+    std::cerr << "TSPACE: The matrix TransMat should be integral\n";
     throw TerminalException{1};
   }
   MyMatrix<T> eMatImg = Pmat * eMat * Pmat.transpose();
   if (eMatImg != eMat) {
-    std::cerr << "The matrix TransMat does not preserve eMat\n";
+    std::cerr << "TSPACE: The matrix TransMat does not preserve eMat\n";
     throw TerminalException{1};
   }
 #endif
@@ -744,7 +744,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   for (int i_row=0; i_row<n_row; i_row++) {
     MyVector<Tint> V = - GetMatrixRow(SHV, i_row);
     if (set.count(V) == 0) {
-      std::cerr << "The vector V is missing from set\n";
+      std::cerr << "TSPACE: The vector V is missing from set\n";
       throw TerminalException{1};
     }
   }
@@ -907,19 +907,25 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(OneEquiv)) {
-    std::cerr << "The matrix TransMat should be integral\n";
+    std::cerr << "TSPACE: The matrix TransMat should be integral\n";
     throw TerminalException{1};
   }
   MyMatrix<T> eMat1_img = OneEquiv * eMat1 * OneEquiv.transpose();
   if (eMat1_img != eMat2) {
-    std::cerr << "The matrix TransMat does not preserve eMat\n";
+    std::cerr << "TSPACE: The matrix TransMat does not preserve eMat\n";
     throw TerminalException{1};
   }
 #endif
   if (is_stab_space(OneEquiv, LinSpa)) {
     MyMatrix<Tint> OneEquiv_tint = UniversalMatrixConversion<Tint, T>(OneEquiv);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Direct approach success, no need to go further\n";
+#endif
     return OneEquiv_tint;
   }
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: Direct approach failure, computing stabilizer and iterating\n";
+#endif
   //
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
   // resolving that.
@@ -933,6 +939,9 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     LGenPerm1.push_back(ePerm1);
   }
   Tgroup FullGRP1(LGenPerm1, n_row);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: Direct approach failure, computing stabilizer and iterating\n";
+#endif
   std::vector<Telt> LGenPermPtWiseStab1;
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenGlobStab1_perm;
@@ -1042,7 +1051,7 @@ void reset_paperwork(LinSpaceMatrix<T> & LinSpa) {
     LinSpa.ListMatAsBigMat = GetListMatAsBigMat(LinSpa.ListMat);
     LinSpa.n = LinSpa.ListMat[0].rows();
   } else {
-    std::cerr << "We have 0 matrices for ListMat\n";
+    std::cerr << "TSPACE: We have 0 matrices for ListMat\n";
     throw TerminalException{1};
   }
 }

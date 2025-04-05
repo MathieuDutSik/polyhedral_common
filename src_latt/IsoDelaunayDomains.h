@@ -19,6 +19,7 @@
 
 #ifdef DEBUG
 #define DEBUG_ISO_DELAUNAY_DOMAIN
+#define DEBUG_ISO_DELAUNAY_DOMAIN_22_21
 #endif
 
 template <typename T, typename Tint, typename Tgroup>
@@ -94,7 +95,8 @@ size_t ComputeInvariantDelaunayTessellation(
     combine_hash(hash_ret, kv.first);
     combine_hash(hash_ret, kv.second);
   }
-  return hash_ret;
+  return 0;
+  //  return hash_ret;
 }
 
 template <typename T, typename Tvert>
@@ -1988,7 +1990,7 @@ struct DataIsoDelaunayDomainsFunc {
         cdd::RedundancyReductionClarkson(FAC_extend, os);
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
     os << "ISODEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols()
        << " nbIrred=" << nbIrred << "\n";
 #endif
@@ -2021,8 +2023,14 @@ struct DataIsoDelaunayDomainsFunc {
     }
     Tgroup GRPperm = Tgroup(ListPermGens, nbIrred);
     x_in.GRPperm = GRPperm;
-    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+
+
+    //    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
+    std::vector<size_t> l_idx;
+    for (size_t iFAC=0; iFAC<nbIrred; iFAC++) {
+      l_idx.push_back(iFAC);
+    }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
     os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
        << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
 #endif
