@@ -560,6 +560,11 @@ bool WriteFamilyObjects(
     std::ostream& os_out,
     std::vector<DatabaseEntry_Serial<Tobj, TadjO>> const &l_tot,
     [[maybe_unused]] std::ostream &os) {
+  if (OutFormat == "NumberGAP") {
+    size_t len = l_tot.size();
+    os_out << "return " << len << ";\n";
+    return false;
+  }
   if (OutFormat == "ObjectGAP") {
     os_out << "return [";
     size_t len = l_tot.size();

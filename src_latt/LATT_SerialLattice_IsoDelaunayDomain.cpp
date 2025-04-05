@@ -19,9 +19,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
   int dimEXT = LinSpa.n + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
     AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
-  std::cerr << "We have AllArr\n";
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
-  std::cerr << "We have rddo\n";
   //
   std::optional<MyMatrix<T>> CommonGramMat;
   DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
@@ -44,7 +42,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
   }
   std::vector<Tout> const& l_tot = *opt;
   bool result = WriteFamilyObjects(OutFormat, os_out, l_tot, std::cerr);
-  if (!result) {
+  if (result) {
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};
   }
@@ -64,7 +62,7 @@ int main(int argc, char *argv[]) {
     }
     std::string arith = argv[1];
     std::string FileListMat = argv[2];
-    std::string OutFormat = "GAP";
+    std::string OutFormat = "NumberGAP";
     std::string OutFile = "stderr";
     if (argc == 5) {
       OutFormat = argv[3];
