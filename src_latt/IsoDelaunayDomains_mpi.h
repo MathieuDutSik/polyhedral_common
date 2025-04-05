@@ -52,12 +52,14 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    std::ofstream os_out(OutFile);
-    bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
-    if (result) {
-      std::cerr	<< "ISODELMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
-      throw TerminalException{1};
-    }
+    auto f_print=[&](std::ostream& os_out) -> void {
+      bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
+      if (result) {
+        std::cerr	<< "ISODELMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+        throw TerminalException{1};
+      }
+    };
+    print_stderr_stdout_file(OutFile, f_print);
   }
 }
 
