@@ -940,9 +940,8 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   }
   Tgroup FullGRP1(LGenPerm1, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Direct approach failure, computing stabilizer and iterating\n";
+  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << "\n";
 #endif
-  std::vector<Telt> LGenPermPtWiseStab1;
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenGlobStab1_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
@@ -950,6 +949,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     LGenGlobStab1_perm.push_back(ePerm);
   }
   Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  size_t pos_equiv_grp = 0;
+  os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
+#endif
   struct PartSol {
     std::optional<Telt> new_gen;
     std::optional<MyMatrix<T>> sol;
@@ -986,6 +989,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     }
     LGenGlobStab1_perm.push_back(*p_sol.new_gen);
     GRPsub1 = Tgroup(LGenGlobStab1_perm, n_row);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    pos_equiv_grp += 1;
+    os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
+#endif
   }
 }
 
