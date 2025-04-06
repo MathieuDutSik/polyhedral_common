@@ -2127,7 +2127,7 @@ struct DataIsoDelaunayDomainsFunc {
     std::vector<TadjI> l_adj;
     for (auto &i : l_idx) {
       int idxIrred = ListIrred[i];
-      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, idxIrred, os);
+      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
       MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
       for (int u = 0; u < dimSpace; u++) {
         TestMat += TestPt(u) * data.LinSpa.ListMat[u];

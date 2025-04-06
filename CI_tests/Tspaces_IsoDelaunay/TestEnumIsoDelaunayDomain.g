@@ -1,14 +1,14 @@
 Read("../common.g");
 Print("Beginning Test enumeration of iso-Delaunay domains\n");
 
-TestEnumeration:=function(eRec)
+get_nb_domains:=function(eFile)
     local FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
     #
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
     FileResult:="Result";
-    Print("eRec=", eRec, "\n");
-    TheCommand:=Concatenation("cp ", eRec.eFile, " ", FileLinSpa);
+    Print("eFile=", eFile, "\n");
+    TheCommand:=Concatenation("cp ", eFile, " ", FileLinSpa);
     Exec(TheCommand);
     #
     eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
@@ -22,17 +22,27 @@ TestEnumeration:=function(eRec)
     U:=ReadAsFunction(FileResult)();
     RemoveFile(FileLinSpa);
     RemoveFile(FileResult);
-    is_correct:=eRec.nb = U.nb;
-    Print("eRec.nb=", eRec.nb, " U.nb=", U.nb, " is_correct=", is_correct, "\n");
+    return U.nb;
+end;
+
+
+
+TestEnumeration:=function(eRec)
+    local comp_nb, is_correct;
+    comp_nb:=get_nb_domains(eRec.eFile);
+    is_correct:=eRec.nb = comp_nb;
+    Print("eRec.nb=", eRec.nb, " comp_nb=", comp_nb, " is_correct=", is_correct, "\n");
     if is_correct=false then
         Print("  FOUND SOME ERROR\n");
     fi;
-    return rec(is_correct:=is_correct);
+    return is_correct;
 end;
 
+eData1:=rec(prefix:="TSPACES_Bravais", FileS:="ListCases_Bravais");
+eData2:=rec(prefix:="TSPACES_Coxeter", FileS:="ListCases_Coxeter");
+
 ListRec:=[];
-for eData in [rec(prefix:="TSPACES_Bravais", FileS:="ListCases_Bravais"),
-              rec(prefix:="TSPACES_Coxeter", FileS:="ListCases_Coxeter")]
+for eData in [eData1, eData2]
 do
     Lst:=ReadAsFunction(eData.FileS)();
     for elst in Lst
@@ -43,6 +53,28 @@ do
     od;
 od;
 
+Recompute:=function(eData)
+    local Lst, ListEntries, iter, elst, eFile, comp_nb, eEntry;
+    Lst:=ReadAsFunction(eData.FileS)();
+    ListEntries:=[];
+    iter:=0;
+    for elst in Lst
+    do
+        eFile:=Concatenation(eData.prefix, "/", elst.eFile);
+        Print("Recompute iter=", iter, " / ", Length(Lst), " eFile=", elst.eFile, "\n");
+        comp_nb:=get_nb_domains(eFile);
+        eEntry:=rec(eFile:=elst.eFile, nb:=comp_nb);
+        Add(ListEntries, eEntry);
+        iter:=iter + 1;
+    od;
+    SaveDataToFile(eData.FileS, ListEntries);
+end;
+Recompute(eData1);
+Recompute(eData2);
+
+
+
+
 FullTest:=function()
     local n_error, iRec, eRec, RecReply;
     n_error:=0;
@@ -51,7 +83,7 @@ FullTest:=function()
     do
         Print("iRec=", iRec, " / ", Length(ListRec), " n_error=", n_error, "\n");
         RecReply:=TestEnumeration(eRec);
-        if RecReply.is_correct=false then
+        if RecReply=false then
             n_error:=n_error+1;
         fi;
         iRec:=iRec + 1;
