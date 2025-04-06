@@ -8,7 +8,6 @@
 
 int main(int argc, char *argv[]) {
   try {
-    Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_PERFECT();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";

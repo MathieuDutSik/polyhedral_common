@@ -554,12 +554,17 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   return l_obj;
 }
 
-template <typename Tobj, typename TadjO>
+template <typename Tdata, typename Tobj, typename TadjO>
 bool WriteFamilyObjects(
+    Tdata const& data,
     std::string const &OutFormat,
     std::ostream& os_out,
     std::vector<DatabaseEntry_Serial<Tobj, TadjO>> const &l_tot,
-    [[maybe_unused]] std::ostream &os) {
+    std::ostream &os) {
+  if (OutFormat == "nothing") {
+    std::cerr << "No output\n";
+    return false;
+  }
   if (OutFormat == "NumberGAP") {
     size_t len = l_tot.size();
     os_out << "return rec(nb:=" << len << ");\n";
@@ -572,6 +577,17 @@ bool WriteFamilyObjects(
       if (i > 0)
         os_out << ",\n";
       WriteEntryGAP(os_out, l_tot[i].x);
+    }
+    os_out << "];\n";
+    return false;
+  }
+  if (OutFormat == "DetailedObjectGAP") {
+    os_out << "return [";
+    size_t len = l_tot.size();
+    for (size_t i = 0; i < len; i++) {
+      if (i > 0)
+        os_out << ",\n";
+      WriteDetailedEntryGAP(os_out, data, l_tot[i].x, os);
     }
     os_out << "];\n";
     return false;

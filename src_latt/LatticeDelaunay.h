@@ -403,6 +403,14 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << "]";
 }
 
+template <typename Tvert, typename Tint, typename Tgroup>
+void WriteDetailedEntryGAP(std::ostream &os_out,
+                           [[maybe_unused]] DataLattice<Tvert, Tint, Tgroup> const& data,
+                           DelaunayTesselation<Tvert, Tgroup> const &DT,
+                           [[maybe_unused]] std::ostream& os) {
+  WriteEntryGAP(os_out, DT);
+}
+
 template <typename Tvert, typename Tgroup>
 void WriteEntryPYTHON(std::ostream &os_out,
                       DelaunayTesselation<Tvert, Tgroup> const &DT) {

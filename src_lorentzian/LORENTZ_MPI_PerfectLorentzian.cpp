@@ -52,7 +52,6 @@ int main(int argc, char *argv[]) {
   boost::mpi::communicator world;
   HumanTime time1;
   try {
-    Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";

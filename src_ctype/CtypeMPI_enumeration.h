@@ -101,6 +101,14 @@ void WriteEntryGAP(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
 }
 
 template <typename Tint>
+void WriteDetailedEntryGAP(std::ostream &os_out,
+                           [[maybe_unused]] DataCtype const& data,
+                           IsoEdgeDomain_Obj<Tint> const &entry,
+                           [[maybe_unused]] std::ostream &os) {
+  WriteEntryGAP(os_out, entry);
+}
+
+template <typename Tint>
 void WriteEntryPYTHON(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
   os_out << "{\"Ctype\":";
   WriteMatrixPYTHON(os_out, entry.ctype_arr.eMat);
@@ -221,7 +229,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
       comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
     std::ofstream os_out(OutFile);
-    bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
+    bool result = WriteFamilyObjects_MPI<DataCtype, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
     if (result) {
       std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
       throw TerminalException{1};

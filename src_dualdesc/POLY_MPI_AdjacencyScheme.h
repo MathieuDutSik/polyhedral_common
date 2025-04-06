@@ -956,26 +956,26 @@ EnumerateAndStore_MPI(boost::mpi::communicator &comm, Tdata &data,
 /*
   Returns true if something else needs to be done forward.
  */
-template <typename Tobj, typename TadjO>
+template <typename Tdata, typename Tobj, typename TadjO>
 bool WriteFamilyObjects_MPI(
-    boost::mpi::communicator &comm, std::string const &OutFormat,
+    boost::mpi::communicator &comm,
+    Tdata const& data,
+    std::string const &OutFormat,
     std::ostream& os_out,
     std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_loc,
     std::ostream &os) {
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
   int i_proc_out = 0;
   int i_rank = comm.rank();
-  std::vector<std::string> poss{"ObjectGAP", "ObjectPYTHON", "ObjectFullAdjacencyGAP", "ObjectFullAdjacencyPYTHON", "ObjectReducedAdjacencyGAP", "ObjectReducedAdjacencyPYTHON", "AdjacencyGAP", "AdjacencyPYTHON"};
+  std::vector<std::string> poss{"ObjectGAP", "DetailedObjectGAP", "ObjectPYTHON", "ObjectFullAdjacencyGAP", "ObjectFullAdjacencyPYTHON", "ObjectReducedAdjacencyGAP", "ObjectReducedAdjacencyPYTHON", "AdjacencyGAP", "AdjacencyPYTHON", "nothing"};
   if (std::find(poss.begin(), poss.end(), OutFormat) != poss.end()) {
     std::vector<Tout> l_tot = my_mpi_gather(comm, l_loc, i_proc_out);
+    bool test;
     if (i_rank == i_proc_out) {
-      return WriteFamilyObjects(OutFormat, os_out, l_tot, os);
+      test = WriteFamilyObjects(data, OutFormat, os_out, l_tot, os);
     }
-    return false;
-  }
-  if (OutFormat == "nothing") {
-    std::cerr << "No output\n";
-    return false;
+    boost::mpi::broadcast(comm, test, i_proc_out);
+    return test;
   }
   if (OutFormat == "NumberGAP") {
     size_t nb_loc = l_loc.size();

@@ -53,7 +53,7 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
     auto f_print=[&](std::ostream& os_out) -> void {
-      bool result = WriteFamilyObjects_MPI<Tobj, TadjO>(comm, OutFormat, os_out, pair.second, os);
+      bool result = WriteFamilyObjects_MPI<DataIsoDelaunayDomains<T, Tint, Tgroup>, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
         std::cerr	<< "ISODELMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
         throw TerminalException{1};

@@ -41,7 +41,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
     throw TerminalException{1};
   }
   std::vector<Tout> const& l_tot = *opt;
-  bool result = WriteFamilyObjects(OutFormat, os_out, l_tot, std::cerr);
+  bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
   if (result) {
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
     throw TerminalException{1};

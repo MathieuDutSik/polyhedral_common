@@ -1900,9 +1900,9 @@ struct IsoDelaunayDomain_Obj {
 };
 
 template <typename T, typename Tint, typename Tgroup>
-void WriteEntryGAP(std::ostream &os_out,
-                   IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent) {
-  os_out << "rec(DT_gram:=";
+void WriteBasicEntryGAP(std::ostream &os_out,
+                        IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent) {
+  os_out << "DT_gram:=";
   WriteEntryGAP(os_out, ent.DT_gram);
   //
   os_out << ", ListIneq:=[";
@@ -1917,6 +1917,57 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << "]";
   //
   os_out << ", GRPperm:=" << ent.GRPperm.GapString();
+}
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteEntryGAP(std::ostream &os_out,
+                   IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent) {
+  os_out << "rec(";
+  WriteBasicEntryGAP(os_out, ent);
+  os_out << ")";
+}
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteDetailedEntryGAP(std::ostream &os_out,
+                           [[maybe_unused]] DataIsoDelaunayDomains<T, Tint, Tgroup> const& data,
+                           IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent, std::ostream& os) {
+  os_out << "rec(";
+  //  WriteBasicEntryGAP(os_out, ent);
+  os_out << "GRPpermSize:=" << ent.GRPperm.size();
+  int dimSpace = data.LinSpa.ListMat.size();
+  int n = ent.DT_gram.GramMat.rows();
+  MyMatrix<T> FAC = GetFACineq(ent.ListIneq);
+  MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
+  std::vector<int> ListIrred =
+    cdd::RedundancyReductionClarkson(FAC_extend, os);
+  int nbIneq = FAC.rows();
+  os_out << ", n_ineq:=" << nbIneq;
+  os_out << ", n_irred:=" << ListIrred.size();
+  os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
+  //
+  MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
+  int n_row = EXT.rows();
+  std::map<int, size_t> map_rank;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyMatrix<T> RayMat = ZeroMatrix<T>(n, n);
+    for (int u = 0; u < dimSpace; u++) {
+      RayMat += EXT(i_row, u) * data.LinSpa.ListMat[u];
+    }
+    int rnk = RankMat(RayMat);
+    map_rank[rnk] += 1;
+  }
+  os_out << ", ListRank:=[";
+  bool IsFirst = true;
+  for (auto & kv: map_rank) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst=false;
+    os_out << "[" << kv.first << "," << kv.second << "]";
+  }
+  os_out << "]";
   //
   os_out << ")";
 }

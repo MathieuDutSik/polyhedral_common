@@ -20,7 +20,6 @@ int main(int argc, char *argv[]) {
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   try {
-    Eigen::initParallel();
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";

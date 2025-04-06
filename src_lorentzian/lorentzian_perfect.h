@@ -1210,6 +1210,15 @@ void WriteEntryGAP(std::ostream &os_out,
   os_out << ", GRP:=" << ent.GRP.GapString() << ")";
 }
 
+template <typename T, typename Tint, typename Tgroup>
+void WriteDetailedEntryGAP(std::ostream &os_out,
+                           DataPerfectLorentzian<T, Tint, Tgroup> const& data,
+                           PerfLorentzian_Obj<Tint, Tgroup> const &ent, std::ostream& os) {
+  os_out << "rec(EXT:=";
+  WriteMatrixGAP(os_out, ent.EXT);
+  os_out << ", GRP:=" << ent.GRP.GapString() << ")";
+}
+
 template <typename Tint, typename Tgroup>
 void WriteEntryPYTHON(std::ostream &os_out,
                       PerfLorentzian_Obj<Tint, Tgroup> const &ent) {
