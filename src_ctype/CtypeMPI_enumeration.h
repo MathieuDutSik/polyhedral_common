@@ -228,12 +228,14 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    std::ofstream os_out(OutFile);
-    bool result = WriteFamilyObjects_MPI<DataCtype, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
-    if (result) {
-      std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
-      throw TerminalException{1};
-    }
+    auto f_print=[&](std::ostream& os_out) -> void {
+      bool result = WriteFamilyObjects_MPI<DataCtype, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
+      if (result) {
+        std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+        throw TerminalException{1};
+      }
+    };
+    print_stderr_stdout_file(OutFile, f_print);
   }
 }
 
