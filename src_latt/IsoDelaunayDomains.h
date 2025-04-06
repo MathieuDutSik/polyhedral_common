@@ -2004,7 +2004,18 @@ struct DataIsoDelaunayDomainsFunc {
     MyMatrix<T> FAC = GetFACineq(ListIneq);
     MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
     std::vector<int> ListIrred =
-        cdd::RedundancyReductionClarkson(FAC_extend, os);
+      cdd::RedundancyReductionClarkson(FAC_extend, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
+    std::vector<int> ListIrred_DD = RedundancyReductionDualDescription(FAC_extend, "lrs", os);
+    Face f_irred = VectorToFace(ListIrred, FAC_extend.rows());
+    Face f_irred_DD = VectorToFace(ListIrred_DD, FAC_extend.rows());
+    if (f_irred != f_irred_DD) {
+      std::cerr << "Inconsistency in the computation of redundancy\n";
+      throw TerminalException{1};
+    } else {
+      os << "ISODEL: Coherency of the redundancy computation\n";
+    }
+#endif
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21

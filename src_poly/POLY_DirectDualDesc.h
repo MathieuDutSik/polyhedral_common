@@ -774,6 +774,50 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return TheOutput;
 }
 
+template <typename T>
+std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT, std::string const& ansProg, std::ostream& os) {
+  std::vector<std::pair<Face, MyVector<T>>> ListFacet;
+  auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
+    ListFacet.push_back(pair_face);
+  };
+  DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: redundancy, |ListFacet|=" << ListFacet.size() << "\n";
+#endif
+  int n_ext = EXT.rows();
+  int dim = RankMat(EXT);
+  int crit_quant = dim - 1;
+  size_t crit_quant_s = crit_quant;
+  std::vector<int> ListIrred;
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    std::vector<MyVector<T>> ListIncd;
+    for (auto & eFacet: ListFacet) {
+      if (eFacet.first[i_ext] == 1) {
+        ListIncd.push_back(eFacet.second);
+      }
+    }
+#ifdef DEBUG_DUAL_DESC
+    os << "DDD: redundancy, i_ext=" << i_ext << " |ListIncd|=" << ListIncd.size() << "\n";
+#endif
+    if (ListIncd.size() >= crit_quant_s) {
+      MyMatrix<T> MatIncd = MatrixFromVectorFamily(ListIncd);
+      int rnk = RankMat(MatIncd);
+#ifdef DEBUG_DUAL_DESC
+      os << "DDD: redundancy, i_ext=" << i_ext << " rnk=" << rnk << "\n";
+#endif
+      if (rnk == crit_quant) {
+        ListIrred.push_back(i_ext);
+      }
+    }
+  }
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: redundancy, |ListIrred|=" << ListIrred.size() << "\n";
+#endif
+  return ListIrred;
+}
+
+
+
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_
 // clang-format on
