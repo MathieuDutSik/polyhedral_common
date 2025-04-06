@@ -582,14 +582,14 @@ bool WriteFamilyObjects(
     return false;
   }
   if (OutFormat == "DetailedObjectGAP") {
-    os_out << "return [";
+    os_out << "return rec(ListEntry:=[\n";
     size_t len = l_tot.size();
     for (size_t i = 0; i < len; i++) {
       if (i > 0)
         os_out << ",\n";
       WriteDetailedEntryGAP(os_out, data, l_tot[i].x, os);
     }
-    os_out << "];\n";
+    os_out << "], n_obj:=" << len << ");\n";
     return false;
   }
   if (OutFormat == "ObjectPYTHON") {

@@ -1931,7 +1931,7 @@ void WriteEntryGAP(std::ostream &os_out,
 
 template <typename T, typename Tint, typename Tgroup>
 void WriteDetailedEntryGAP(std::ostream &os_out,
-                           [[maybe_unused]] DataIsoDelaunayDomains<T, Tint, Tgroup> const& data,
+                           DataIsoDelaunayDomains<T, Tint, Tgroup> const& data,
                            IsoDelaunayDomain_Obj<T, Tint, Tgroup> const &ent, std::ostream& os) {
   os_out << "rec(";
   //  WriteBasicEntryGAP(os_out, ent);

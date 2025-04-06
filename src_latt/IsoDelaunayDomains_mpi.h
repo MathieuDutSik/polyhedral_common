@@ -52,6 +52,8 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
+    // Need to reread after the move
+    DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, AllArr, os);
     auto f_print=[&](std::ostream& os_out) -> void {
       bool result = WriteFamilyObjects_MPI<DataIsoDelaunayDomains<T, Tint, Tgroup>, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
