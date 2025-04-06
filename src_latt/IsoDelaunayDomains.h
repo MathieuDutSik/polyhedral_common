@@ -1943,9 +1943,11 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   std::vector<int> ListIrred =
     cdd::RedundancyReductionClarkson(FAC_extend, os);
   int nbIneq = FAC.rows();
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(ent.DT_gram.GramMat, os);
   os_out << ", n_ineq:=" << nbIneq;
   os_out << ", n_irred:=" << ListIrred.size();
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
+  os_out << ", n_shv:=" << SHV.rows();
   //
   MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
   int n_row = EXT.rows();
@@ -1958,16 +1960,28 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
     int rnk = RankMat(RayMat);
     map_rank[rnk] += 1;
   }
-  os_out << ", ListRank:=[";
-  bool IsFirst = true;
-  for (auto & kv: map_rank) {
-    if (!IsFirst) {
-      os_out << ",";
+  auto write_map_val=[&](std::map<int,size_t> const& map) -> void {
+    bool IsFirst = true;
+    os_out << "[";
+    for (auto & kv: map) {
+      if (!IsFirst) {
+        os_out << ",";
+      }
+      IsFirst=false;
+      os_out << "[" << kv.first << "," << kv.second << "]";
     }
-    IsFirst=false;
-    os_out << "[" << kv.first << "," << kv.second << "]";
+    os_out << "]";
+  };
+  os_out << ", ListRank:=";
+  write_map_val(map_rank);
+  //
+  std::map<int, size_t> map_nb_vert;
+  for (auto & eDel: ent.DT_gram.DT.l_dels) {
+    int nb_vert = eDel.EXT.rows();
+    map_nb_vert[nb_vert] += 1;
   }
-  os_out << "]";
+  os_out << ", ListNbVert:=";
+  write_map_val(map_nb_vert);
   //
   os_out << ")";
 }
