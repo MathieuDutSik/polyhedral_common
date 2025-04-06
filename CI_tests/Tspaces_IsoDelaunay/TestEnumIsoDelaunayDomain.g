@@ -69,8 +69,8 @@ Recompute:=function(eData)
     od;
     SaveDataToFile(eData.FileS, ListEntries);
 end;
-Recompute(eData1);
-Recompute(eData2);
+#Recompute(eData1);
+#Recompute(eData2);
 
 
 

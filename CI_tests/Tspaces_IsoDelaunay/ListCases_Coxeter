@@ -1,4 +1,5 @@
-return [
-rec(eFile:="TSPACE_Coxeter9_5_iO1_single_vect", nb:=22),
-rec(eFile:="TSPACE_Coxeter9_5_iO1_bravais_stabilizer", nb:=210)
-];
+return [ rec(
+      eFile := "TSPACE_Coxeter9_5_iO1_single_vect",
+      nb := 22 ), rec(
+      eFile := "TSPACE_Coxeter9_5_iO1_bravais_stabilizer",
+      nb := 210 ) ];
