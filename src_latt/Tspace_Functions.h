@@ -193,13 +193,13 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
       }
   MyMatrix<T> MatEquations = MatrixFromVectorFamily(ListEquations);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "Before call to NullspaceTrMat nbGen=" << ListGen.size()
+  os << "TSPACE: Before call to NullspaceTrMat nbGen=" << ListGen.size()
      << " MatEquations(rows/cols)=" << MatEquations.rows() << " / "
      << MatEquations.cols() << "\n";
 #endif
   MyMatrix<T> NSP = NullspaceTrMat(MatEquations);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "After call to NullspaceTrMat |NSP|=" << NSP.rows() << " / "
+  os << "TSPACE: After call to NullspaceTrMat |NSP|=" << NSP.rows() << " / "
      << NSP.cols() << "\n";
 #endif
   int dimSpa = NSP.rows();
@@ -875,21 +875,23 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using RightCosets = typename Tgroup::RightCosets;
+  using LeftCosets = typename Tgroup::LeftCosets;
   //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
+  T det1 = DeterminantMat(eMat1);
+  T det2 = DeterminantMat(eMat2);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
-  if (SHV1_T.rows() != SHV2_T.rows()) {
+  if (SHV1_T.rows() != SHV2_T.rows() || det1 != det2) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Exiting here at |SHV1| <> |SHV2|\n";
+    os << "TSPACE: Equiv, Exiting here at |SHV1| <> |SHV2|\n";
 #endif
     return {};
   }
   int n_row = SHV1_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: n_row=" << n_row << "\n";
+  os << "TSPACE: Equiv, n_row=" << n_row << " det=" << det1 << "\n";
 #endif
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
   std::vector<MyMatrix<T>> ListMat1 =
@@ -897,14 +899,14 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   std::vector<MyMatrix<T>> ListMat2 =
       GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: |ListMat1|=" << ListMat1.size() << " |ListMat1|=" << ListMat1.size() << "\n";
+  os << "TSPACE: Equiv, |ListMat1|=" << ListMat1.size() << " |ListMat1|=" << ListMat1.size() << "\n";
 #endif
   std::optional<std::vector<Tidx>> opt1 =
       TestEquivalence_ListMat_Vdiag<T, Tfield, Tidx>(
           SHV1_T, ListMat1, Vdiag1, SHV2_T, ListMat2, Vdiag2, os);
   if (!opt1) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Exiting here at opt1\n";
+    os << "TSPACE: Equiv, Exiting here at opt1\n";
 #endif
     return {};
   }
@@ -919,24 +921,24 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> OneEquiv = unfold_opt(opt2, "Failed to get transformation");
 #ifdef DEBUG_TSPACE_FUNCTIONS
   if (!IsIntegralMatrix(OneEquiv)) {
-    std::cerr << "TSPACE: The matrix TransMat should be integral\n";
+    std::cerr << "TSPACE: Equiv, The matrix TransMat should be integral\n";
     throw TerminalException{1};
   }
   MyMatrix<T> eMat1_img = OneEquiv * eMat1 * OneEquiv.transpose();
   if (eMat1_img != eMat2) {
-    std::cerr << "TSPACE: The matrix TransMat does not preserve eMat\n";
+    std::cerr << "TSPACE: Equiv, The matrix TransMat does not preserve eMat\n";
     throw TerminalException{1};
   }
 #endif
   if (is_stab_space(OneEquiv, LinSpa)) {
     MyMatrix<Tint> OneEquiv_tint = UniversalMatrixConversion<Tint, T>(OneEquiv);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Direct approach success, no need to go further\n";
+    os << "TSPACE: Equiv, Direct approach success, no need to go further\n";
 #endif
     return OneEquiv_tint;
   }
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Direct approach failure, computing stabilizer and iterating\n";
+  os << "TSPACE: Equiv, Direct approach failure, computing stabilizer and iterating\n";
 #endif
   //
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
@@ -979,7 +981,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     for (auto & elt: FullGRP1) {
       MyMatrix<T> eMatr =
         get_mat_from_shv_perm(elt, SHV1_T, eMat1);
-      MyMatrix<T> eProd_T = eMatr * OneEquiv;
+      MyMatrix<T> eProd_T = OneEquiv * eMatr;
       if (is_stab_space(eProd_T, LinSpa)) {
         MyMatrix<Tint> eProd = UniversalMatrixConversion<Tint, T>(eProd_T);
         return eProd;
@@ -997,12 +999,22 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   auto try_solution = [&]() -> PartSol {
     // The left cosets are the cosets such as G = \cup_c c H
     // The right cosets are the cosets such as G = \cup_c H c
-    RightCosets rc = FullGRP1.right_cosets(GRPsub1);
+    LeftCosets rc = FullGRP1.left_cosets(GRPsub1);
     for (auto &eCosReprPerm : rc) {
       MyMatrix<T> eCosReprMatr =
         get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
-      MyMatrix<T> eProd = eCosReprMatr * OneEquiv;
+      MyMatrix<T> eProd = OneEquiv * eCosReprMatr;
       if (is_stab_space(eProd, LinSpa)) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+        os << "TSPACE: Equiv, We found an equivalence\n";
+#endif
+#ifdef DEBUG_TSPACE_FUNCTIONS
+        MyMatrix<T> eMat1_img = eProd * eMat1 * eProd.transpose();
+        if (eMat1_img != eMat2) {
+          std::cerr << "TSPACE: Equiv, we do not have an equivalence\n";
+          throw TerminalException{1};
+        }
+#endif
         return {{}, eProd};
       }
       if (is_stab_space(eCosReprMatr, LinSpa)) {
@@ -1010,7 +1022,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
         // GRPsub and that the coset of the GRPsub is also not necessarily the identity.
         if (!GRPsub1.isin(eCosReprPerm)) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-          os << "TSPACE: We found some new generator\n";
+          os << "TSPACE: Equiv, We found some new generator\n";
 #endif
           return {eCosReprPerm, {}};
         }
