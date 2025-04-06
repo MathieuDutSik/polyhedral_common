@@ -222,12 +222,21 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     };
     nonce++;
     std::vector<size_t> &vect = indices_by_hash[eI.hash_hashmap];
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+    os << "MPI_ADJ_SCH: We have vect reference for eI.hash_hashmap=" << eI.hash_hashmap << "\n";
+#endif
     for (auto &idx : vect) {
       Tobj x = f_idx_obj(idx);
 #ifdef TIMINGS_MPI_ADJACENCY_SCHEME
       MicrosecondTime time_f_repr;
 #endif
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+      os << "MPI_ADJ_SCH: process_single_entryAdjI, before f_repr\n";
+#endif
       std::optional<TadjO> opt = f_repr(x, eI.x, i_rank, idx);
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+      os << "MPI_ADJ_SCH: process_single_entryAdjI, after f_repr\n";
+#endif
 #ifdef TIMINGS_MPI_ADJACENCY_SCHEME
       os << "|MPI_ADJ_SCH: f_repr|=" << time_f_repr << "\n";
 #endif
@@ -303,10 +312,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     MicrosecondTime time;
 #endif
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
-    os << "MPI_ADJ_SCH:process_entriesAdjO : Before |v|=" << v.size()
+    os << "MPI_ADJ_SCH: process_entriesAdjO : Before |v|=" << v.size()
        << " |map_adjO|=" << map_adjO.size() << " \n";
     for (auto &kv : map_adjO) {
-      os << "MPI_ADJ_SCH:process_entriesAdjO : Before i_orb=" << kv.first
+      os << "MPI_ADJ_SCH: process_entriesAdjO : Before i_orb=" << kv.first
          << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size()
          << "\n";
     }
@@ -315,10 +324,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       map_adjO[eEnt.i_orb_orig].second.emplace_back(std::move(eEnt.x));
     }
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
-    os << "MPI_ADJ_SCH:process_entriesAdjO : After |map_adjO|=" << map_adjO.size()
+    os << "MPI_ADJ_SCH: process_entriesAdjO : After |map_adjO|=" << map_adjO.size()
        << " \n";
     for (auto &kv : map_adjO) {
-      os << "MPI_ADJ_SCH:process_entriesAdjO : After i_orb=" << kv.first
+      os << "MPI_ADJ_SCH: process_entriesAdjO : After i_orb=" << kv.first
          << " siz=" << kv.second.first << " |l_adj|=" << kv.second.second.size()
          << "\n";
     }

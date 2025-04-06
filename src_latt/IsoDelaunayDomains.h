@@ -19,7 +19,6 @@
 
 #ifdef DEBUG
 #define DEBUG_ISO_DELAUNAY_DOMAIN
-#define DEBUG_ISO_DELAUNAY_DOMAIN_22_21
 #endif
 
 #ifdef SANITY_CHECK
@@ -2035,9 +2034,15 @@ struct DataIsoDelaunayDomainsFunc {
                                                               x.DT_gram.DT);
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    data.rddo.os << "ISODEL: f_repr, before LINSPA_TestEquivalenceGramMatrix\n";
+#endif
     std::optional<MyMatrix<Tint>> opt =
         LINSPA_TestEquivalenceGramMatrix<T, Tint, Tgroup>(
             data.LinSpa, x.DT_gram.GramMat, y.DT_gram.GramMat, data.rddo.os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    data.rddo.os << "ISODEL: f_repr, after LINSPA_TestEquivalenceGramMatrix\n";
+#endif
     if (!opt) {
       return {};
     }
@@ -2069,7 +2074,7 @@ struct DataIsoDelaunayDomainsFunc {
     MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
     std::vector<int> ListIrred =
       cdd::RedundancyReductionClarkson(FAC_extend, os);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     std::vector<int> ListIrred_DD = RedundancyReductionDualDescription(FAC_extend, "lrs", os);
     Face f_irred = VectorToFace(ListIrred, FAC_extend.rows());
     Face f_irred_DD = VectorToFace(ListIrred_DD, FAC_extend.rows());
@@ -2082,7 +2087,7 @@ struct DataIsoDelaunayDomainsFunc {
 #endif
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: f_adj: |FAC|=" << FAC.rows() << " / " << FAC.cols()
        << " nbIrred=" << nbIrred << "\n";
     os << "ISODEL: x.GramMat=\n";
@@ -2120,31 +2125,50 @@ struct DataIsoDelaunayDomainsFunc {
 
 
     std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
-#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
        << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
 #endif
     std::vector<TadjI> l_adj;
     for (auto &i : l_idx) {
       int idxIrred = ListIrred[i];
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: f_adj, i=" << i << " idxIrred=" << idxIrred << "\n";
+#endif
       MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: f_adj, We have TestPt\n";
+#endif
       MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
       for (int u = 0; u < dimSpace; u++) {
         TestMat += TestPt(u) * data.LinSpa.ListMat[u];
       }
-      if (IsPositiveDefinite(TestMat)) {
+      bool test = IsPositiveDefinite(TestMat);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: f_adj, We have test for TestMat\n";
+#endif
+      if (test) {
         FullAdjInfo<T> eRecIneq = ListIneq[idxIrred];
         DelaunayTesselation<Tint, Tgroup> DTadj =
             FlippingLtype<T, Tint, Tgroup>(x.DT, x.GramMat,
                                            eRecIneq.ListAdjInfo, data.rddo);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISODEL: After FlippingLtype\n";
+#endif
         std::pair<int, MyMatrix<T>> pair =
             GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISODEL: After GetInteriorGramMatrix\n";
+#endif
         IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
             std::move(DTadj), pair.first, std::move(pair.second)};
         TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
         l_adj.push_back(eAdj);
       }
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: Before returning l_adj\n";
+#endif
     return l_adj;
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }

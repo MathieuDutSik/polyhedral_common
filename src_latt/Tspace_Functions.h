@@ -18,6 +18,10 @@
 #define DEBUG_TSPACE_FUNCTIONS
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_TSPACE_FUNCTIONS
+#endif
+
 /*
   By a T-space, we mean a vector space which intersect the cone of positive
   definite matrices. We are interested here only on those positive definite
@@ -977,6 +981,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   };
   size_t n_elt = f_get_group_size();
   os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " n_elt=" << n_elt << " |GRPsub1|=" << GRPsub1.size() << "\n";
+  size_t pos_equiv_grp = 0;
+  os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   auto f_exhaustive=[&]() -> std::optional<MyMatrix<Tint>> {
     for (auto & elt: FullGRP1) {
       MyMatrix<T> eMatr =
@@ -989,8 +997,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     }
     return {};
   };
-  size_t pos_equiv_grp = 0;
-  os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
   struct PartSol {
     std::optional<Telt> new_gen;
@@ -998,8 +1004,14 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   };
   auto try_solution = [&]() -> PartSol {
     // The left cosets are the cosets such as G = \cup_c c H
-    // The right cosets are the cosets such as G = \cup_c H c
+    // We need to use left cosets for the computation
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " |GRPsub1|=" << GRPsub1.size() << "\n";
+#endif
     LeftCosets rc = FullGRP1.left_cosets(GRPsub1);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Equiv, we have rc\n";
+#endif
     for (auto &eCosReprPerm : rc) {
       MyMatrix<T> eCosReprMatr =
         get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
@@ -1031,24 +1043,36 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
     return {{}, {}};
   };
   while (true) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Equiv, before try_solution\n";
+#endif
     PartSol p_sol = try_solution();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: Equiv, after try_solution\n";
+#endif
     if (p_sol.sol) {
       MyMatrix<T> const &Pmat_T = *p_sol.sol;
       MyMatrix<Tint> Pmat = UniversalMatrixConversion<Tint, T>(Pmat_T);
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
       if (!f_exhaustive()) {
         std::cerr << "TSPACE: We found equiv with one method but the exhaustive does not\n";
         throw TerminalException{1};
       }
 #endif
+#ifdef DEBUG_TSPACE_FUNCTIONS
+      os << "TSPACE: Equiv, before returning Pmat\n";
+#endif
       return Pmat;
     }
     if (!p_sol.new_gen) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
       if (f_exhaustive()) {
         std::cerr << "TSPACE: We found non-equiv with one method but the exhaustive does\n";
         throw TerminalException{1};
       }
+#endif
+#ifdef DEBUG_TSPACE_FUNCTIONS
+      os << "TSPACE: Equiv, before returning None\n";
 #endif
       return {};
     }
