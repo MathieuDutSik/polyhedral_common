@@ -99,8 +99,7 @@ size_t ComputeInvariantDelaunayTessellation(
     combine_hash(hash_ret, kv.first);
     combine_hash(hash_ret, kv.second);
   }
-  return 0;
-  //  return hash_ret;
+  return hash_ret;
 }
 
 template <typename T, typename Tvert>
@@ -2120,11 +2119,7 @@ struct DataIsoDelaunayDomainsFunc {
     x_in.GRPperm = GRPperm;
 
 
-    //    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
-    std::vector<size_t> l_idx;
-    for (size_t iFAC=0; iFAC<nbIrred; iFAC++) {
-      l_idx.push_back(iFAC);
-    }
+    std::vector<size_t> l_idx = DecomposeOrbitPoint_FullRepr(GRPperm);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN_22_21
     os << "ISODEL: f_adj: |GRPperm|=" << GRPperm.size()
        << " nbIrred=" << nbIrred << " |l_idx|=" << l_idx.size() << "\n";
@@ -2132,7 +2127,7 @@ struct DataIsoDelaunayDomainsFunc {
     std::vector<TadjI> l_adj;
     for (auto &i : l_idx) {
       int idxIrred = ListIrred[i];
-      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, i, os);
+      MyVector<T> TestPt = GetSpaceInteriorPointFacet(FACred, idxIrred, os);
       MyMatrix<T> TestMat = ZeroMatrix<T>(n, n);
       for (int u = 0; u < dimSpace; u++) {
         TestMat += TestPt(u) * data.LinSpa.ListMat[u];

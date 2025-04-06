@@ -25,7 +25,7 @@ TestEnumeration:=function(eRec)
     is_correct:=eRec.nb = U.nb;
     Print("eRec.nb=", eRec.nb, " U.nb=", U.nb, " is_correct=", is_correct, "\n");
     if is_correct=false then
-        Print("FOUND SOME ERROR\n");
+        Print("  FOUND SOME ERROR\n");
     fi;
     return rec(is_correct:=is_correct);
 end;
@@ -53,7 +53,6 @@ FullTest:=function()
         RecReply:=TestEnumeration(eRec);
         if RecReply.is_correct=false then
             n_error:=n_error+1;
-#            return n_error;
         fi;
         iRec:=iRec + 1;
     od;
