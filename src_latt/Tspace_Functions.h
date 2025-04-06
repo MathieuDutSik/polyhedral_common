@@ -807,7 +807,17 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   os << "TSPACE: LINSPA_ComputeStabilizer |GRPsub|=" << GRPsub.size() << "\n";
 #endif
   auto try_upgrade = [&]() -> std::optional<Telt> {
-    // Not sure if left or right cosets.
+    // We can use either the left or right cosets.
+    // This is because the right thing to use is the double cosets.
+    // However, we do not have the formalism for having iterator
+    // over the double cosets. We build all of them.
+    //
+    // For the left/right cosets we have efficient iterators
+    // and that is why we use them here. We cannot afford at all
+    // to enumerate all the double cosets because we will have
+    // some scenario where FullGRP is big, GRPsub very small and
+    // that would mean enumerating all the elements of the group.
+    //
     // Left  transversals are g H
     // Right transversals are H g
     LeftCosets rc = FullGRP.left_cosets(GRPsub);
@@ -865,7 +875,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using LeftCosets = typename Tgroup::LeftCosets;
   using RightCosets = typename Tgroup::RightCosets;
   //  using Tfield = T;
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
@@ -988,7 +997,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   auto try_solution = [&]() -> PartSol {
     // The left cosets are the cosets such as G = \cup_c c H
     // The right cosets are the cosets such as G = \cup_c H c
-    // 
     RightCosets rc = FullGRP1.right_cosets(GRPsub1);
     for (auto &eCosReprPerm : rc) {
       MyMatrix<T> eCosReprMatr =

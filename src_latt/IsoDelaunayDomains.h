@@ -421,9 +421,9 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
       throw TerminalException{1};
     }
   }
+  RetMat = SumMatExtRay;
 #endif
-  //  return {nbIneq, std::move(RetMat)};
-  return {nbIneq, std::move(SumMatExtRay)};
+  return {nbIneq, std::move(RetMat)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
