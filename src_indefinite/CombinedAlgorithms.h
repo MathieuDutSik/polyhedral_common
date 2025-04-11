@@ -796,24 +796,36 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   }
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: f_stab, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
-  os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
-  os << "COMB: f_stab, we have GRPred=\n";
+  os << "COMB: EIG_IO, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
+  os << "COMB: EIG_IO, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
+  os << "COMB: EIG_IO, we have GRPred=\n";
   WriteListMatrix(os, GRPred);
 #endif
   std::vector<MyMatrix<Tint>> GRPfull =
     ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: f_stab, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
-  os << "COMB: f_stab, we have GRPfull=\n";
+  os << "COMB: EIG_IO, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
+  os << "COMB: EIG_IO, we have GRPfull=\n";
   WriteListMatrix(os, GRPfull);
 #endif
   std::vector<MyMatrix<Tint>> ListGenTot;
   for (auto &eGen : GRPfull) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: EIG_IO, before eGenB\n";
+#endif
     MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: EIG_IO, after eGenB\n";
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
+# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: EIG_IO, before eProd\n";
+# endif
     MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
+# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: EIG_IO, after eProd\n";
+# endif
     if (eProd != eRec.GramMatRed) {
       std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
       throw TerminalException{1};
@@ -830,6 +842,9 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
 #endif
     ListGenTot.push_back(eGenB);
   }
+# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "COMB: EIG_IO, returning ListGensTot\n";
+# endif
   return ListGenTot;
 }
 
@@ -1932,7 +1947,7 @@ private:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     T eNorm = EvaluationQuadForm<T, Tint>(eRec.QmatRed, v);
     if (eNorm != 0) {
-      os << "COMB: v should be an isotropic vector for Q\n";
+      std::cerr << "COMB: v should be an isotropic vector for Q\n";
       throw TerminalException{1};
     }
 #endif
@@ -1944,19 +1959,58 @@ private:
     for (auto & eGen2 : ExtendIsometryGroup_IsotropicOrth(LGen2, eRec, sd, os)) {
       LGenRet.push_back(eGen2);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 1\n";
+    os << "COMB: f_stab_plane_v, |v|=" << v.size() << "\n";
+    os << "COMB: f_stab_plane_v, |eRec.TheCompl|=" << eRec.TheCompl.rows() << " / " << eRec.TheCompl.cols() << "\n";
+#endif
     // Third part: The mappings from v to v + v_iso
-    MyVector<Tint> v_full = eRec.NSP.transpose() * v;
-    MyMatrix<Tint> fPlane = ConcatenateMatVec(eRec.Plane, v_full);
+    MyVector<Tint> v_full = eRec.TheCompl.transpose() * v;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 2\n";
+#endif
+    MyMatrix<Tint> fPlane = ConcatenateMatVec(eRec.PlaneExpr, v_full);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 3\n";
+    os << "COMB: f_stab_plane_v, n=" << n << "\n";
+    os << "COMB: f_stab_plane_v, fPlane=";
+    WriteMatrix(os, fPlane);
+#endif
     MyMatrix<Tint> TheCompl = SubspaceCompletionInt(fPlane, n);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 4\n";
+#endif
     MyMatrix<Tint> FullBasis = Concatenate(fPlane, TheCompl);
-    MyMatrix<Tint> FullBasisInv = Concatenate(fPlane, TheCompl);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 5\n";
+    os << "COMB: f_stab_plane_v, FullBasis=";
+    WriteMatrix(os, FullBasis);
+    MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+    MyMatrix<T> eProd = FullBasis_T * eRec.GramMatRed * FullBasis_T.transpose();
+    os << "COMB: f_stab_plane_v, eProd=";
+    WriteMatrix(os, eProd);
+#endif
+    MyMatrix<Tint> FullBasisInv = Inverse(FullBasis);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 6\n";
+    os << "COMB: f_stab_plane_v, FullBasisInv=";
+    WriteMatrix(os, FullBasisInv);
+#endif
     int k = eRec.Plane.rows();
     for (int iK=0; iK<k; iK++) {
       MyMatrix<Tint> eGenBasis = IdentityMat<Tint>(n);
-      eGenBasis(iK, k) = 1;
+      eGenBasis(k, iK) = 1;
       MyMatrix<Tint> eGen = FullBasisInv * eGenBasis * FullBasis;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: f_stab_plane_v, iK=" << iK << "\n";
+      os << "COMB: f_stab_plane_v, eGenBasis=\n";
+      WriteMatrix(os, eGenBasis);
+#endif
       LGenRet.push_back(eGen);
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, step 7\n";
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     SeqDims sd_ext = seq_dims_append_one(sd);
     for (auto & eGenRet: LGenRet) {
@@ -1977,6 +2031,9 @@ private:
         }
       }
     }
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, returning LGenRet\n";
 #endif
     return LGenRet;
   }
