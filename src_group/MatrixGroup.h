@@ -1452,15 +1452,23 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
                                 Tgroup const &eGRP, Thelper const &helper,
                                 [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has)\n";
+  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
 #endif
+  using Telt = typename Tgroup::Telt;
   using PreImager = typename Thelper::PreImager;
   std::vector<MyMatrix<T>> ListMatrGen;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+  std::vector<Telt> LGenSmall = eGRP.SmallGeneratingSet();
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |LGenSmall|=" << LGenSmall.size() << "\n";
+#endif
   for (auto &eGen : eGRP.GeneratorsOfGroup()) {
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: |ListMatrGen|=" << ListMatrGen.size() << "\n";
+#endif
   return ListMatrGen;
 }
 
@@ -1472,14 +1480,14 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
                                 Tgroup const &eGRP, Thelper const &helper,
                                 [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has)\n";
+  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
   std::vector<MyMatrix<T>> ListGen =
       permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
           ListMatr, ListPermGens, id_matr, eGRP);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After PreImageSubgroup\n";
+  os << "MAT_GRP: After PreImageSubgroup |ListGen|=" << ListGen.size() << "\n";
 #endif
   return ListGen;
 }
