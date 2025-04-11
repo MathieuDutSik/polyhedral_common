@@ -1550,360 +1550,6 @@ private:
     }
     return LCosRet;
   }
-  std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
-                                          MyMatrix<Tint> const& Plane,
-                                          MyVector<Tint> const& v,
-                                          MyMatrix<T> const& Sublattice,
-                                          SeqDims const& sd) {
-    int n = Q.rows();
-    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, v);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, fPlane=\n";
-    WriteMatrix(os, fPlane);
-#endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
-    // Computes the relevant stabilizer.
-    SeqDims sd_ext = seq_dims_append_one(sd);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd, "sd(f_stab_plane_v)", os);
-    write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
-#endif
-    std::vector<MyMatrix<Tint>> GRP1_v = f_stab(eRec, sd_ext);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have GRP1_v\n";
-    WriteListMatrix(os, GRP1_v);
-#endif
-    // Computes the subgroup preserving a sublattice
-    std::vector<MyMatrix<T>> LGenV_A = eRec.MapOrthogonalSublatticeGroup(GRP1_v);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have LGenV_A\n";
-#endif
-    //    std::vector<MyMatrix<T>> LGenV_B =
-    //      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
-    RetMI_S<T,Tgroup> ret =
-      MatrixIntegral_Stabilizer_General<T,T,Tgroup>(n, LGenV_A, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have ret, index=" << ret.index << "\n";
-#endif
-    return ret.LGen;
-  }
-  std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
-                                           MyMatrix<Tint> const& ePlane,
-                                           MyVector<Tint> const& v,
-                                           SeqDims const& sd) {
-    // We have the following groups:
-    // -- H1 The group stabilizing ePlane (which is integral)
-    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
-    //    (which is rational)
-    // -- The intersection H = G \cap GL_n(Z)
-    // The right cosets that are computed are the ones of G / H.
-    //
-    // The construction should go into the following way:
-    // ---We have the ePlane as an isotropic space:
-    //  * We can compute the automorphism group G1 of ePlane^T.
-    //  * G1 can be extended to an automorphism group G1^{ext}
-    //    of R^n preserving a finite index lattice L.
-    //  * We can compute the integral stabilizer G2.
-    // ---We compute the orbits of vectors v for the group G1.
-    //    which is the same as G1^{ext}.
-    // ---That gets us the orbits for the group {ePlane,v}.
-    //  * The vector v belongs to ePlane^T. Therefore the
-    //    problem is within the space ePlane^T.
-    //  * The stabilizer of {ePlane,v} in ePlane^T is H1.
-    //  * Computing the extension H1^{ext} to R^n, the
-    //    sublattice and the integral stabilization H2.
-    //  * The double cosets decomposition that we are looking
-    //    forward is
-    //    G1 = \cup_g H1 g G2
-    // ---So, that seems standard. The problem is that we need
-    //    to embed it into the space ePlane^T.
-    // ---For fPlane = ePlane + v. The construction gets us another
-    //    group and another sublattice.
-    // ---But the sublattice are not related!
-    // ---What we can do is compute the sequence of
-    //    std::vector<ReductionStep>
-    //    with struct ReductionStep {
-    //           std::vector<MyMatrix<T>> ListMatr;
-    //           std::vector<Telt> ListPerm;
-    //           Face eFace;
-    //         }
-    // ---We could build the vector std::vector<ReductionStep>
-    //    and process them.
-    // ---Problem: Do we have that H1 stabilize ePlane^T?
-    //    Probably yes.
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, begin\n";
-    os << "COMB: f_double_cosets, ePlane=\n";
-    WriteMatrix(os, ePlane);
-#endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, ePlane, os);
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd, "sd(f_double_cosets)", os);
-    os << "COMB: f_double_cosets, we have GRP1\n";
-    WriteListMatrix(os, GRP1);
-#endif
-    MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP1);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, Sublattice=\n";
-    WriteMatrix(os, Sublattice);
-#endif
-    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have GRP_G\n";
-#endif
-    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, ePlane, v, Sublattice, sd);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have GRP_V\n";
-#endif
-#ifdef CREATE_INDEFINITE_COMBINED_ALGORITHMS_DEBUG_INFOS
-    {
-      int n = Q.rows();
-      RetMI_S<Tint,Tgroup> ret_U = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP_G, os);
-      os << "COMB: index=" << ret_U.index << "\n";
-      std::vector<MyMatrix<Tint>> const& GRP_U = ret_U.LGen;
-      std::string Prefix = "ECase_GRP_x_GRP_U_x_GRP_V";
-      std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-      std::ofstream osf(FileOut);
-      osf << "return rec(GRP_G:=";
-      WriteListMatrixGAP(osf, GRP_G);
-      osf << ", GRP_U:=";
-      WriteListMatrixGAP(osf, GRP_U);
-      osf << ", GRP_V:=";
-      WriteListMatrixGAP(osf, GRP_V);
-      osf << ");\n";
-    }
-#endif
-    int n = Q.rows();
-    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
-      MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have pair\n";
-#endif
-    return pair.second;
-  }
-  std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKstuff_Method(MyMatrix<T> const &Qmat, int k,
-                                             int const& method_generation,
-                                             SeqDims const &sd) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Method, beginning\n";
-#endif
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    if (method_generation != METHOD_GENERATION_RIGHT_COSETS &&
-        method_generation != METHOD_GENERATION_DOUBLE_COSETS) {
-      std::cerr << "No valid method being provided with method_generation\n";
-      throw TerminalException{1};
-    }
-#endif
-    T eNorm(0);
-    std::vector<MyMatrix<Tint>> ListOrbit;
-    for (auto &eVect : INDEF_FORM_GetOrbitRepresentative(Qmat, eNorm)) {
-      MyMatrix<Tint> ePlane = MatrixFromVector(eVect);
-      ListOrbit.push_back(ePlane);
-    }
-    for (int iK = 2; iK <= k; iK++) {
-      SeqDims sd1 = seq_dims_reduced(sd, iK - 1);
-      SeqDims sd2 = seq_dims_reduced(sd, iK);
-      struct PlaneInv {
-        MyMatrix<Tint> ePlane;
-        size_t eInv;
-      };
-      auto get_planeinv = [&](MyMatrix<Tint> const &Plane) -> PlaneInv {
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-        int dim = Plane.rows();
-        for (int i=0; i<dim; i++) {
-          MyVector<Tint> V = GetMatrixRow(Plane, i);
-          if (EvaluationQuadForm<T, Tint>(Qmat, V) != 0) {
-            std::cerr << "COMB: V is not isotropic\n";
-            throw TerminalException{1};
-          }
-        }
-#endif
-        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd2);
-        return {Plane, eInv};
-      };
-      std::vector<PlaneInv> ListRecReprKplane;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      size_t n_over_generation = 0;
-      size_t n_insert = 0;
-#endif
-      auto fInsert = [&](MyMatrix<Tint> const& fPlane) -> void {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        n_insert += 1;
-#endif
-        PlaneInv fRecReprKplane = get_planeinv(fPlane);
-        for (auto &eRecReprKplane : ListRecReprKplane) {
-          if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
-            std::optional<MyMatrix<Tint>> opt =
-              INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
-                                                             fRecReprKplane.ePlane, sd2);
-            if (opt) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-              n_over_generation += 1;
-#endif
-              return;
-            }
-          }
-        }
-        ListRecReprKplane.push_back(fRecReprKplane);
-      };
-      auto SpanRepresentatives = [&](MyMatrix<Tint> const &ePlane) {
-        // Some possible improvement. Use the double cosets
-        // The double coset consists in splitting an orbit x G as
-        // y1 H \cup ..... yN H
-        // Or in other words G = \cup_i Stab(x) y_i H
-        // This is the canonical stuff.
-        //
-        // The groups being used.
-        // G = group of rational transformation preserving L = S^{perp}
-        //     and acting integrally on it.
-        // Stab({S, x}) = Integral transformations preserving {L, x}
-        //     considered as plane or flag and extended to acting integrally
-        //     on L in the same way as G.
-        // H = group of integral transformations preserving the big lattice
-        //     and preserving L.
-        //
-        // The first method is to compute the cosets for the group G in
-        // G_int. This can be computed quite efficiently with the stabilizer
-        // algorithm. The spanned objects are then tested for equivalence.
-        // That method is reasonable, but slow.
-        //
-        // What could be done?
-        // * Get a correct computation of the initial set to consider.
-        //   Right now, it works by kind of chance since we compute
-        //   only for k=1 and k=2.
-        // * So, we need to have a good strategy for computing the
-        //   The problem is to compute the orbits of the vectors.
-        // * The computation can be done in the space S^{perp}.
-        // * From the computation in the group of the space S^{perp}
-        //   We can get the orbits for the space L and the group
-        //   that is an extension G_{ext} of this one.
-        // * We can compute the stabilizer in the space S^{perp} which
-        //   we need just above anyway. We extend it and then we have the
-        //   Stab_{ext} group by the same process as above.
-        // * This is what the double coset is supposed to enter into the
-        //   picture.
-        // * The group G is G_ext. The group U is Stab_{ext} and V is
-        //   G_{ext} \cap GL(L).
-        // * So, that fits with the scheme of the Stabilizer_RightCoset.
-        //   When the computation is started, the group V is not known
-        //   and V is computed at the same time as the double cosets are.
-        // * So, the designs seems relatively clear, but what we would
-        //   need is sensible examples. Those have to be finite groups
-        //   - The lattice simplices are good examples, since they have
-        //     some sequence of stabilizers.
-        //   - The fundamental domains of reflective lorentzian groups.
-        //   - The full group and the arithmetic group are always clear.
-        //   - For the other group we can take a cyclic group generated
-        //     by a random permutation.
-        //  All, in all, that looks like a reasonable stretgy for
-        //  debugging the scheme.
-        // * Now our mystery: How to compute the list of orbits up to the
-        //   relevant isometry group. This is we compute the isometries for
-        //   QmatRed
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: SpanRepresentatives, beginning\n";
-#endif
-        MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
-        MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
-        MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
-        MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
-        int dimNSP = NSP.rows();
-        MyMatrix<Tint> ePlane_expr(k - 1, dimNSP);
-        for (int u = 0; u < k - 1; u++) {
-          MyVector<Tint> eV = GetMatrixRow(ePlane, u);
-          std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
-          MyVector<Tint> eSol = unfold_opt(opt, "eSol should not be fail");
-          AssignMatrixRow(ePlane_expr, u, eSol);
-        }
-        MyMatrix<Tint> ComplBasisInNSP =
-            SubspaceCompletionInt(ePlane_expr, dimNSP);
-        MyMatrix<Tint> NSP_sub = ComplBasisInNSP * NSP;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: SpanRepresentatives, NSP_sub=\n";
-        WriteMatrix(os, NSP_sub);
-#endif
-        MyMatrix<T> NSP_sub_T = UniversalMatrixConversion<T, Tint>(NSP_sub);
-        MyMatrix<T> QmatRed = NSP_sub_T * Qmat * NSP_sub_T.transpose();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: SpanRepresentatives, QmatRed=\n";
-        WriteMatrix(os, QmatRed);
-#endif
-        std::vector<MyVector<Tint>> ListOrbitF =
-            INDEF_FORM_GetOrbitRepresentative(QmatRed, eNorm);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: |ListOrbitF|=" << ListOrbitF.size() << "\n";
-#endif
-        auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
-          if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd1);
-          } else {
-            return {};
-          }
-        };
-        std::vector<MyMatrix<T>> ListRightCosets = get_right_cosets();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
-#endif
-        for (auto &eVect : ListOrbitF) {
-          MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
-          MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
-          auto get_cosets=[&]() -> std::vector<MyMatrix<T>> {
-            if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-              return ListRightCosets;
-            } else {
-              return f_double_cosets(Qmat, ePlane, eVectB, sd1);
-            }
-          };
-          std::vector<MyMatrix<T>> list_cosets = get_cosets();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-          os << "COMB: |list_cosets|=" << list_cosets.size() << "\n";
-#endif
-          for (auto &eCos : list_cosets) {
-            MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
-            MyVector<Tint> eVectC =
-              UniversalVectorConversion<Tint, T>(eVectC_T);
-            MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
-            fInsert(ePlaneB);
-          }
-        }
-      };
-      for (auto &eRepr : ListOrbit) {
-        SpanRepresentatives(eRepr);
-      }
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
-#endif
-      ListOrbit.clear();
-      for (auto &eRec : ListRecReprKplane) {
-        ListOrbit.push_back(eRec.ePlane);
-      }
-    }
-    return ListOrbit;
-  }
-  std::vector<MyMatrix<Tint>>
-  INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
-                                             SeqDims const &sd) {
-    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
-    // Double cosets method is more efficient in principle than right cosets.
-    std::vector<MyMatrix<Tint>> LOrb =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
-    std::vector<MyMatrix<Tint>> LOrbB =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
-    if (LOrbB.size() != LOrb.size()) {
-      std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
-      throw TerminalException{1};
-    }
-#endif
-    std::vector<MyMatrix<Tint>> LOrbRet;
-    for (auto & eOrb : LOrb) {
-      MyMatrix<Tint> eOrbRet = eOrb * res.B;
-      LOrbRet.push_back(eOrbRet);
-    }
-    return LOrbRet;
-  }
   std::vector<MyVector<Tint>>
   INDEF_FORM_GetOrbitRepresentative_Reduced(MyMatrix<T> const &Q, T const &X) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
@@ -2228,6 +1874,390 @@ private:
 #endif
     return TheEquiv;
   }
+  std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
+                                          MyMatrix<Tint> const& Plane,
+                                          MyVector<Tint> const& v,
+                                          MyMatrix<T> const& Sublattice,
+                                          SeqDims const& sd) {
+    int n = Q.rows();
+    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, fPlane=\n";
+    WriteMatrix(os, fPlane);
+#endif
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
+    // Computes the relevant stabilizer.
+    SeqDims sd_ext = seq_dims_append_one(sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    write_seq_dims(sd, "sd(f_stab_plane_v)", os);
+    write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
+#endif
+    std::vector<MyMatrix<Tint>> GRP1_v = f_stab(eRec, sd_ext);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have GRP1_v\n";
+    WriteListMatrix(os, GRP1_v);
+#endif
+    // Computes the subgroup preserving a sublattice
+    std::vector<MyMatrix<T>> LGenV_A = eRec.MapOrthogonalSublatticeGroup(GRP1_v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have LGenV_A\n";
+#endif
+    //    std::vector<MyMatrix<T>> LGenV_B =
+    //      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
+    RetMI_S<T,Tgroup> ret =
+      MatrixIntegral_Stabilizer_General<T,T,Tgroup>(n, LGenV_A, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, we have ret, index=" << ret.index << "\n";
+#endif
+    return ret.LGen;
+  }
+  std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
+                                           MyMatrix<Tint> const& ePlane,
+                                           MyVector<Tint> const& v,
+                                           SeqDims const& sd) {
+    // We have the following groups:
+    // -- H1 The group stabilizing ePlane (which is integral)
+    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
+    //    (which is rational)
+    // -- The intersection H = G \cap GL_n(Z)
+    // The right cosets that are computed are the ones of G / H.
+    //
+    // The construction should go into the following way:
+    // ---We have the ePlane as an isotropic space:
+    //    * We can compute the automorphism group G1 of ePlane^T.
+    //    * G1 can be extended to an automorphism group G1^{ext}
+    //      of R^n preserving a finite index lattice L.
+    //    * We can compute the integral stabilizer G2 that will be
+    //      a finite index subgroup of G1^{ext}.
+    // ---We compute the orbits of vectors v for the group G1.
+    //    which is the same as G1^{ext}.
+    // ---What we want to obtain is the orbits for the group G2.
+    //    In other words, we want an orbit splitting to occur.
+    // ---That gets us the orbits for the group {ePlane,v}.
+    //    * The vector v belongs to ePlane^T. Therefore the
+    //      problem is within the space ePlane^T.
+    //    * The stabilizer of {ePlane,v} in {ePlane,v}^T is H1.
+    //    * Computing the extension H1^{ext} to R^n, the
+    //      sublattice and the integral stabilization H2.
+    //    * The double cosets decomposition that we are looking
+    //      for is
+    //      G1^{ext} = \cup_g H1^{ext} g G2
+    // ---With that choice of construction, it is forced upon
+    //    us that H1^{ext} be a subgroup of G1^{ext}. Therefore
+    //    It is put upon us that the lattice being stabilized
+    //    by both will be the same.
+    // ---But how we build all that is another story.
+    //    * On the one hand, H1^{ext} is a strict subgroup of G1^{ext}.
+    //    * On the other hand the extension is somewhat bigger because
+    //      for G1 we extend from dimension n - k and for H1 we
+    //      extend from dimension n - k - 1.
+    // ---What are the implications:
+    //    * Computing the kernel should use the structure of the
+    //      preserved spaces.
+    //    * The computation of orbits of vectors could very well
+    //      be followed.
+    //    * The question of whether an element belongs to the
+    //      group can be decided by the preservation of the lattice
+    //      
+    // ---So, that seems standard. The problem is that we need
+    //    to embed it into the space ePlane^T.
+    // ---For fPlane = ePlane + v. The construction gets us another
+    //    group and another sublattice.
+    // ---But the sublattice are not related!
+    // ---Maybe we could reduce everything to ePlane^T. Idea
+    //    goes as follows
+    //    * What we can do in the iterating algorithm that gets
+    //      us the integral part the following steps:
+    //      std::vector<ReductionStep>
+    //      with struct ReductionStep {
+    //           std::vector<MyMatrix<T>> ListMatr;
+    //           std::vector<Telt> ListPerm;
+    //           Face eFace;
+    //      }
+    //    * We could build the vector std::vector<ReductionStep>
+    //      and process them.
+    //    * Problem: Do we have that H1 stabilize ePlane^T?
+    //      If done correctly, yes, see above.
+    //    * But that seems all too hackish. If we modify the
+    //      ListMatr, then we migh break the homomorphisms in
+    //      question.
+    //
+    // 
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, begin\n";
+    os << "COMB: f_double_cosets, ePlane=\n";
+    WriteMatrix(os, ePlane);
+#endif
+    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, ePlane, os);
+    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    write_seq_dims(sd, "sd(f_double_cosets)", os);
+    os << "COMB: f_double_cosets, we have GRP1\n";
+    WriteListMatrix(os, GRP1);
+#endif
+    MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, Sublattice=\n";
+    WriteMatrix(os, Sublattice);
+#endif
+    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP_G\n";
+#endif
+    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, ePlane, v, Sublattice, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP_V\n";
+#endif
+#ifdef CREATE_INDEFINITE_COMBINED_ALGORITHMS_DEBUG_INFOS
+    {
+      int n = Q.rows();
+      RetMI_S<Tint,Tgroup> ret_U = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP_G, os);
+      os << "COMB: index=" << ret_U.index << "\n";
+      std::vector<MyMatrix<Tint>> const& GRP_U = ret_U.LGen;
+      std::string Prefix = "ECase_GRP_x_GRP_U_x_GRP_V";
+      std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+      std::ofstream osf(FileOut);
+      osf << "return rec(GRP_G:=";
+      WriteListMatrixGAP(osf, GRP_G);
+      osf << ", GRP_U:=";
+      WriteListMatrixGAP(osf, GRP_U);
+      osf << ", GRP_V:=";
+      WriteListMatrixGAP(osf, GRP_V);
+      osf << ");\n";
+    }
+#endif
+    int n = Q.rows();
+    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
+      MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have pair\n";
+#endif
+    return pair.second;
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_GetOrbit_IsotropicKstuff_Method(MyMatrix<T> const &Qmat, int k,
+                                             int const& method_generation,
+                                             SeqDims const &sd) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Method, beginning\n";
+#endif
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    if (method_generation != METHOD_GENERATION_RIGHT_COSETS &&
+        method_generation != METHOD_GENERATION_DOUBLE_COSETS) {
+      std::cerr << "No valid method being provided with method_generation\n";
+      throw TerminalException{1};
+    }
+#endif
+    T ZeroNorm(0);
+    std::vector<MyMatrix<Tint>> ListOrbit;
+    for (auto &eVect : INDEF_FORM_GetOrbitRepresentative(Qmat, ZeroNorm)) {
+      MyMatrix<Tint> ePlane = MatrixFromVector(eVect);
+      ListOrbit.push_back(ePlane);
+    }
+    for (int iK = 2; iK <= k; iK++) {
+      SeqDims sd1 = seq_dims_reduced(sd, iK - 1);
+      SeqDims sd2 = seq_dims_reduced(sd, iK);
+      struct PlaneInv {
+        MyMatrix<Tint> ePlane;
+        size_t eInv;
+      };
+      auto get_planeinv = [&](MyMatrix<Tint> const &Plane) -> PlaneInv {
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+        int dim = Plane.rows();
+        for (int i=0; i<dim; i++) {
+          MyVector<Tint> V = GetMatrixRow(Plane, i);
+          if (EvaluationQuadForm<T, Tint>(Qmat, V) != 0) {
+            std::cerr << "COMB: V is not isotropic\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
+        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd2);
+        return {Plane, eInv};
+      };
+      std::vector<PlaneInv> ListRecReprKplane;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      size_t n_over_generation = 0;
+      size_t n_insert = 0;
+#endif
+      auto fInsert = [&](MyMatrix<Tint> const& fPlane) -> void {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        n_insert += 1;
+#endif
+        PlaneInv fRecReprKplane = get_planeinv(fPlane);
+        for (auto &eRecReprKplane : ListRecReprKplane) {
+          if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
+            std::optional<MyMatrix<Tint>> opt =
+              INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
+                                                             fRecReprKplane.ePlane, sd2);
+            if (opt) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+              n_over_generation += 1;
+#endif
+              return;
+            }
+          }
+        }
+        ListRecReprKplane.push_back(fRecReprKplane);
+      };
+      auto SpanRepresentatives = [&](MyMatrix<Tint> const &ePlane) {
+        // Some possible improvement. Use the double cosets
+        // The double coset consists in splitting an orbit x G as
+        // y1 H \cup ..... yN H
+        // Or in other words G = \cup_i Stab(x) y_i H
+        // This is the canonical stuff.
+        //
+        // The groups being used.
+        // G = group of rational transformation preserving L = S^{perp}
+        //     and acting integrally on it.
+        // Stab({S, x}) = Integral transformations preserving {L, x}
+        //     considered as plane or flag and extended to acting integrally
+        //     on L in the same way as G.
+        // H = group of integral transformations preserving the big lattice
+        //     and preserving L.
+        //
+        // The first method is to compute the cosets for the group G in
+        // G_int. This can be computed quite efficiently with the stabilizer
+        // algorithm. The spanned objects are then tested for equivalence.
+        // That method is reasonable, but slow.
+        //
+        // What could be done?
+        // * Get a correct computation of the initial set to consider.
+        //   Right now, it works by kind of chance since we compute
+        //   only for k=1 and k=2.
+        // * So, we need to have a good strategy for computing the
+        //   The problem is to compute the orbits of the vectors.
+        // * The computation can be done in the space S^{perp}.
+        // * From the computation in the group of the space S^{perp}
+        //   We can get the orbits for the space L and the group
+        //   that is an extension G_{ext} of this one.
+        // * We can compute the stabilizer in the space S^{perp} which
+        //   we need just above anyway. We extend it and then we have the
+        //   Stab_{ext} group by the same process as above.
+        // * This is what the double coset is supposed to enter into the
+        //   picture.
+        // * The group G is G_ext. The group U is Stab_{ext} and V is
+        //   G_{ext} \cap GL(L).
+        // * So, that fits with the scheme of the Stabilizer_RightCoset.
+        //   When the computation is started, the group V is not known
+        //   and V is computed at the same time as the double cosets are.
+        // * So, the designs seems relatively clear, but what we would
+        //   need is sensible examples. Those have to be finite groups
+        //   - The lattice simplices are good examples, since they have
+        //     some sequence of stabilizers.
+        //   - The fundamental domains of reflective lorentzian groups.
+        //   - The full group and the arithmetic group are always clear.
+        //   - For the other group we can take a cyclic group generated
+        //     by a random permutation.
+        //  All, in all, that looks like a reasonable stretgy for
+        //  debugging the scheme.
+        // * Now our mystery: How to compute the list of orbits up to the
+        //   relevant isometry group. This is we compute the isometries for
+        //   QmatRed
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, beginning\n";
+#endif
+        MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
+        MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
+        MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
+        MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
+        int dimNSP = NSP.rows();
+        MyMatrix<Tint> ePlane_expr(k - 1, dimNSP);
+        for (int u = 0; u < k - 1; u++) {
+          MyVector<Tint> eV = GetMatrixRow(ePlane, u);
+          std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
+          MyVector<Tint> eSol = unfold_opt(opt, "eSol should not be fail");
+          AssignMatrixRow(ePlane_expr, u, eSol);
+        }
+        MyMatrix<Tint> ComplBasisInNSP =
+            SubspaceCompletionInt(ePlane_expr, dimNSP);
+        MyMatrix<Tint> NSP_sub = ComplBasisInNSP * NSP;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, NSP_sub=\n";
+        WriteMatrix(os, NSP_sub);
+#endif
+        MyMatrix<T> NSP_sub_T = UniversalMatrixConversion<T, Tint>(NSP_sub);
+        MyMatrix<T> QmatRed = NSP_sub_T * Qmat * NSP_sub_T.transpose();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: SpanRepresentatives, QmatRed=\n";
+        WriteMatrix(os, QmatRed);
+#endif
+        std::vector<MyVector<Tint>> ListOrbitF =
+            INDEF_FORM_GetOrbitRepresentative(QmatRed, ZeroNorm);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: |ListOrbitF|=" << ListOrbitF.size() << "\n";
+#endif
+        auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
+          if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
+            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd1);
+          } else {
+            return {};
+          }
+        };
+        std::vector<MyMatrix<T>> ListRightCosets = get_right_cosets();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
+#endif
+        for (auto &eVect : ListOrbitF) {
+          MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
+          MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
+          auto get_cosets=[&]() -> std::vector<MyMatrix<T>> {
+            if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
+              return ListRightCosets;
+            } else {
+              return f_double_cosets(Qmat, ePlane, eVectB, sd1);
+            }
+          };
+          std::vector<MyMatrix<T>> list_cosets = get_cosets();
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+          os << "COMB: |list_cosets|=" << list_cosets.size() << "\n";
+#endif
+          for (auto &eCos : list_cosets) {
+            MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
+            MyVector<Tint> eVectC =
+              UniversalVectorConversion<Tint, T>(eVectC_T);
+            MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
+            fInsert(ePlaneB);
+          }
+        }
+      };
+      for (auto &eRepr : ListOrbit) {
+        SpanRepresentatives(eRepr);
+      }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
+#endif
+      ListOrbit.clear();
+      for (auto &eRec : ListRecReprKplane) {
+        ListOrbit.push_back(eRec.ePlane);
+      }
+    }
+    return ListOrbit;
+  }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
+                                             SeqDims const &sd) {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    // Double cosets method is more efficient in principle than right cosets.
+    std::vector<MyMatrix<Tint>> LOrb =
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
+    std::vector<MyMatrix<Tint>> LOrbB =
+      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
+    if (LOrbB.size() != LOrb.size()) {
+      std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    std::vector<MyMatrix<Tint>> LOrbRet;
+    for (auto & eOrb : LOrb) {
+      MyMatrix<Tint> eOrbRet = eOrb * res.B;
+      LOrbRet.push_back(eOrbRet);
+    }
+    return LOrbRet;
+  }
+
+
 
 
 public:
