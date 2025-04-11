@@ -168,6 +168,8 @@ public:
   MyMatrix<T> FullBasis_T;
   MyMatrix<Tint> FullBasis;
   MyMatrix<Tint> FullBasisInv;
+  MyMatrix<T> TheCompl_T;
+  MyMatrix<Tint> TheCompl;
   int the_dim;
   int dimCompl;
   std::ostream &os;
@@ -234,12 +236,13 @@ public:
       AssignMatrixRow(PlaneExpr_T, u, fV);
     }
     PlaneExpr = UniversalMatrixConversion<Tint, T>(PlaneExpr_T);
-    MyMatrix<T> TheCompl = SubspaceCompletionInt(PlaneExpr_T, the_dim);
-    dimCompl = TheCompl.rows();
-    FullBasis_T = Concatenate(TheCompl, PlaneExpr_T);
+    TheCompl_T = SubspaceCompletionInt(PlaneExpr_T, the_dim);
+    TheCompl = UniversalMatrixConversion<Tint, T>(TheCompl_T);
+    dimCompl = TheCompl_T.rows();
+    FullBasis_T = Concatenate(TheCompl_T, PlaneExpr_T);
     FullBasis = UniversalMatrixConversion<Tint, T>(FullBasis_T);
     FullBasisInv = Inverse(FullBasis);
-    QmatRed = TheCompl * GramMatRed * TheCompl.transpose();
+    QmatRed = TheCompl_T * GramMatRed * TheCompl_T.transpose();
   }
   // We map automorphism group of a sublattice to the full group.
   // The difficulty is that the rational kernel is non-trivial
@@ -1942,8 +1945,7 @@ private:
       LGenRet.push_back(eGen2);
     }
     // Third part: The mappings from v to v + v_iso
-    //    MyVector<Tint> v_full = 
-    MyVector<Tint> v_full = v;
+    MyVector<Tint> v_full = eRec.NSP.transpose() * v;
     MyMatrix<Tint> fPlane = ConcatenateMatVec(eRec.Plane, v_full);
     MyMatrix<Tint> TheCompl = SubspaceCompletionInt(fPlane, n);
     MyMatrix<Tint> FullBasis = Concatenate(fPlane, TheCompl);
@@ -2201,33 +2203,8 @@ private:
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif
         INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
-        MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
-        MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
-        MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
-        MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
-        int dimNSP = NSP.rows();
-        MyMatrix<Tint> ePlane_expr(k - 1, dimNSP);
-        for (int u = 0; u < k - 1; u++) {
-          MyVector<Tint> eV = GetMatrixRow(ePlane, u);
-          std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP, eV);
-          MyVector<Tint> eSol = unfold_opt(opt, "eSol should not be fail");
-          AssignMatrixRow(ePlane_expr, u, eSol);
-        }
-        MyMatrix<Tint> ComplBasisInNSP =
-            SubspaceCompletionInt(ePlane_expr, dimNSP);
-        MyMatrix<Tint> NSP_sub = ComplBasisInNSP * NSP;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: SpanRepresentatives, NSP_sub=\n";
-        WriteMatrix(os, NSP_sub);
-#endif
-        MyMatrix<T> NSP_sub_T = UniversalMatrixConversion<T, Tint>(NSP_sub);
-        MyMatrix<T> QmatRed = NSP_sub_T * Qmat * NSP_sub_T.transpose();
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: SpanRepresentatives, QmatRed=\n";
-        WriteMatrix(os, QmatRed);
-#endif
         std::vector<MyVector<Tint>> ListOrbitF =
-            INDEF_FORM_GetOrbitRepresentative(QmatRed, ZeroNorm);
+            INDEF_FORM_GetOrbitRepresentative(eRec.QmatRed, ZeroNorm);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListOrbitF|=" << ListOrbitF.size() << "\n";
 #endif
@@ -2242,14 +2219,15 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
 #endif
+        MyMatrix<Tint> Embed = eRec.TheCompl * eRec.NSP;
         for (auto &eVect : ListOrbitF) {
-          MyVector<Tint> eVectB = NSP_sub.transpose() * eVect;
+          MyVector<Tint> eVectB = Embed.transpose() * eVect;
           MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
           auto get_cosets=[&]() -> std::vector<MyMatrix<T>> {
             if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
               return ListRightCosets;
             } else {
-              return f_double_cosets(eRec, eVectB, sd1);
+              return f_double_cosets(eRec, eVect, sd1);
             }
           };
           std::vector<MyMatrix<T>> list_cosets = get_cosets();
