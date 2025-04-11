@@ -173,7 +173,7 @@ public:
   std::ostream &os;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
   void check_generator(MyMatrix<Tint> const &eEndoRed,
-                       MyMatrix<T> const &RetMat) {
+                       MyMatrix<T> const &RetMat) const {
     MyMatrix<T> eEndoRed_T = UniversalMatrixConversion<T, Tint>(eEndoRed);
     MyMatrix<T> PlaneImg = Plane_T * RetMat;
     MyMatrix<T> TransRed(dim, dim);
@@ -267,7 +267,7 @@ public:
   //
 
   // Lift mapping. The sublattice in argument is supposed to help doing that.
-  MyMatrix<T> LiftToFullAutomorphism(MyMatrix<Tint> const& eGenRed, MyMatrix<T> const& HelpingSublattice) {
+  MyMatrix<T> LiftToFullAutomorphism(MyMatrix<Tint> const& eGenRed, MyMatrix<T> const& HelpingSublattice) const {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 1\n";
 #endif
@@ -305,7 +305,7 @@ public:
   // guarantee that the lift exists, but so far it has always happened.
   // Of course what we want is the smallest sublattice
   MyMatrix<T>
-  ComputeInvariantSublattice_method1(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+  ComputeInvariantSublattice_method1(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     size_t max_possval = std::numeric_limits<size_t>::max();
     int n = Qmat.rows();
     size_t n_gen = GRPmatr.size();
@@ -415,7 +415,7 @@ public:
 
   // The direct method since method1 appears to require more work.
   MyMatrix<T>
-  ComputeInvariantSublattice_method2(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+  ComputeInvariantSublattice_method2(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     int n = Qmat.rows();
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
     std::vector<MyMatrix<T>> LGen;
@@ -434,19 +434,19 @@ public:
   }
 
   MyMatrix<T>
-  ComputeInvariantSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+  ComputeInvariantSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     return ComputeInvariantSublattice_method2(GRPmatr);
   }
 
   // Computes integral kernel relevant to the subspace
   // Nice to know would be to understand the structure of the group.
-  std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Sublattice) {
+  std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Sublattice) const {
     return GetOrthogonalTotallyIsotropicKernelSubspace<T,Tint>(Qmat, NSP_T, Sublattice, os);
   }
 
   // We use the sublattice to map the group GRPmatr to higher dimension.
   std::vector<MyMatrix<T>>
-  MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) {
+  MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) const {
     std::vector<MyMatrix<T>> ListGens;
     //    int n = Qmat.rows();
     //    MyMatrix<T> IdMat = IdentityMat
@@ -484,7 +484,7 @@ public:
 
 
   std::vector<MyMatrix<T>>
-  MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) {
+  MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     MyMatrix<T> Sublattice = ComputeInvariantSublattice(GRPmatr);
     return MapOrthogonalSublatticeGroupUsingSublattice(GRPmatr, Sublattice);
   }
@@ -1978,8 +1978,7 @@ private:
 #endif
     return LGenRet;
   }
-  std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
-                                           MyMatrix<Tint> const& ePlane,
+  std::vector<MyMatrix<T>> f_double_cosets(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const& eRec,
                                            MyVector<Tint> const& v,
                                            SeqDims const& sd) {
     // We have the following groups:
@@ -2046,12 +2045,6 @@ private:
     //      ListMatr, then we migh break the homomorphisms in
     //      question.
     //
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, begin\n";
-    os << "COMB: f_double_cosets, ePlane=\n";
-    WriteMatrix(os, ePlane);
-#endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, ePlane, os);
     std::vector<MyMatrix<Tint>> GRP_G_plane = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_double_cosets)", os);
@@ -2076,7 +2069,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V\n";
 #endif
-    int n = Q.rows();
+    int n = eRec.Qmat.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
       MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -2207,6 +2200,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif
+        INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
         MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
         MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
         MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
@@ -2255,7 +2249,7 @@ private:
             if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
               return ListRightCosets;
             } else {
-              return f_double_cosets(Qmat, ePlane, eVectB, sd1);
+              return f_double_cosets(eRec, eVectB, sd1);
             }
           };
           std::vector<MyMatrix<T>> list_cosets = get_cosets();
