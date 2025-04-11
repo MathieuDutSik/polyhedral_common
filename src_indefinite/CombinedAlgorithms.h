@@ -775,6 +775,63 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
   return ListGens;
 }
 
+// Extend the isometry group which should preserve
+// the eRec.QmatRed
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatrix<Tint>> const& GRPred,
+                                                              INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec,
+                                                              SeqDims const& sd,
+                                                              std::ostream& os) {
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+  for (auto & eGen : GRPred) {
+    MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+    MyMatrix<T> prod = eGen_T * eRec.QmatRed * eGen_T.transpose();
+    if (prod != eRec.QmatRed) {
+      std::cerr << "COMB: eGen should preserve eRec.QmatRed\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "COMB: f_stab, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
+  os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
+  os << "COMB: f_stab, we have GRPred=\n";
+  WriteListMatrix(os, GRPred);
+#endif
+  std::vector<MyMatrix<Tint>> GRPfull =
+    ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "COMB: f_stab, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
+  os << "COMB: f_stab, we have GRPfull=\n";
+  WriteListMatrix(os, GRPfull);
+#endif
+  std::vector<MyMatrix<Tint>> ListGenTot;
+  for (auto &eGen : GRPfull) {
+    MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
+    MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
+    if (eProd != eRec.GramMatRed) {
+      std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
+      throw TerminalException{1};
+    }
+    std::vector<MyMatrix<Tint>> ListSpaces =
+      f_get_list_spaces(eRec.PlaneExpr, sd, os);
+    for (auto &eSpace : ListSpaces) {
+      MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
+      if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
+        std::cerr << "COMB: The space eSpace is not correctly preserved\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    ListGenTot.push_back(eGenB);
+  }
+  return ListGenTot;
+}
+
+
+
 template <typename T, typename Tint, typename Tgroup>
 struct IndefiniteCombinedAlgo {
 private:
@@ -1163,35 +1220,8 @@ private:
     os << "COMB: f_stab, we have GRPred=\n";
     WriteListMatrix(os, GRPred);
 #endif
-    std::vector<MyMatrix<Tint>> GRPfull =
-      ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
-    os << "COMB: f_stab, we have GRPfull=\n";
-    WriteListMatrix(os, GRPfull);
-#endif
-    std::vector<MyMatrix<Tint>> ListGenTot;
-    for (auto &eGen : GRPfull) {
-      MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
-      MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
-      if (eProd != eRec.GramMatRed) {
-        std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
-        throw TerminalException{1};
-      }
-      std::vector<MyMatrix<Tint>> ListSpaces =
-        f_get_list_spaces(eRec.PlaneExpr, sd, os);
-      for (auto &eSpace : ListSpaces) {
-        MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
-        if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
-          std::cerr << "COMB: The space eSpace is not correctly preserved\n";
-          throw TerminalException{1};
-        }
-      }
-#endif
-      ListGenTot.push_back(eGenB);
-    }
+    std::vector<MyMatrix<Tint>> ListGenTot =
+      ExtendIsometryGroup_IsotropicOrth(GRPred, eRec, sd, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab, We have ListGenTot\n";
 #endif
@@ -1458,10 +1488,9 @@ private:
       }
       std::vector<MyMatrix<Tint>> ListSpaces =
         f_get_list_spaces(Plane, sd, os);
-      MyMatrix<Tint> eGenRetInv = Inverse(eGenRet);
       for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
         MyMatrix<Tint> const &eSpace = ListSpaces[iSpace];
-        MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRetInv;
+        MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRet;
         if (!TestEqualitySpaces(eSpace_img, eSpace)) {
           std::cerr << "COMB: The space are not correctly mapped\n";
           throw TerminalException{1};
@@ -1704,6 +1733,22 @@ private:
 #endif
     return ret.LGen;
   }
+  std::vector<MyMatrix<Tint>>
+  INDEF_FORM_StabilizerVector_NotReduced(MyMatrix<T> const &Q,
+                              MyVector<Tint> const &v) {
+    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+    MyMatrix<Tint> Binv = Inverse(res.B);
+    //
+    MyVector<Tint> vRed = Binv.transpose() * v;
+    std::vector<MyMatrix<Tint>> LGen =
+      INDEF_FORM_StabilizerVector_Reduced(res.Mred, vRed);
+    std::vector<MyMatrix<Tint>> LGenRet;
+    for (auto & eGen : LGen) {
+      MyMatrix<Tint> eGenRet = Binv * eGen * res.B;
+      LGenRet.push_back(eGenRet);
+    }
+    return LGenRet;
+  }
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_EquivalenceVector_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
                                        MyVector<Tint> const &v1,
@@ -1874,42 +1919,64 @@ private:
 #endif
     return TheEquiv;
   }
-  std::vector<MyMatrix<T>> f_stab_plane_v(MyMatrix<T> const &Q,
-                                          MyMatrix<Tint> const& Plane,
-                                          MyVector<Tint> const& v,
-                                          MyMatrix<T> const& Sublattice,
-                                          SeqDims const& sd) {
-    int n = Q.rows();
-    MyMatrix<Tint> fPlane = ConcatenateMatVec(Plane, v);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, fPlane=\n";
-    WriteMatrix(os, fPlane);
+  // v should be an isotropic vector of eRec.QmatRed,
+  // Returns a subgroup stabilizing the isotropic vector v in eRec.
+  // The code below returns the full stabilizer, but it is not really
+  std::vector<MyMatrix<Tint>> f_stab_plane_v(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const& eRec,
+                                             MyVector<Tint> const& v,
+                                             SeqDims const& sd) {
+    int n = eRec.GramMatRed.rows();
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    T eNorm = EvaluationQuadForm<T, Tint>(eRec.QmatRed, v);
+    if (eNorm != 0) {
+      os << "COMB: v should be an isotropic vector for Q\n";
+      throw TerminalException{1};
+    }
 #endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, fPlane, os);
-    // Computes the relevant stabilizer.
+    std::vector<MyMatrix<Tint>> LGenRet;
+    // First part: Mapping v to -v
+    LGenRet.push_back(-IdentityMat<Tint>(n));
+    // Second part: the mapping to v to v.
+    std::vector<MyMatrix<Tint>> LGen2 = INDEF_FORM_StabilizerVector_NotReduced(eRec.QmatRed, v);
+    for (auto & eGen2 : ExtendIsometryGroup_IsotropicOrth(LGen2, eRec, sd, os)) {
+      LGenRet.push_back(eGen2);
+    }
+    // Third part: The mappings from v to v + v_iso
+    //    MyVector<Tint> v_full = 
+    MyVector<Tint> v_full = v;
+    MyMatrix<Tint> fPlane = ConcatenateMatVec(eRec.Plane, v_full);
+    MyMatrix<Tint> TheCompl = SubspaceCompletionInt(fPlane, n);
+    MyMatrix<Tint> FullBasis = Concatenate(fPlane, TheCompl);
+    MyMatrix<Tint> FullBasisInv = Concatenate(fPlane, TheCompl);
+    int k = eRec.Plane.rows();
+    for (int iK=0; iK<k; iK++) {
+      MyMatrix<Tint> eGenBasis = IdentityMat<Tint>(n);
+      eGenBasis(iK, k) = 1;
+      MyMatrix<Tint> eGen = FullBasisInv * eGenBasis * FullBasis;
+      LGenRet.push_back(eGen);
+    }
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     SeqDims sd_ext = seq_dims_append_one(sd);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd, "sd(f_stab_plane_v)", os);
-    write_seq_dims(sd_ext, "sd_ext(f_stab_plane_v)", os);
+    for (auto & eGenRet: LGenRet) {
+      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T,Tint>(eGenRet);
+      MyMatrix<T> prod = eGenRet_T * eRec.GramMatRed * eGenRet_T.transpose();
+      if (prod != eRec.GramMatRed) {
+        std::cerr << "COMB: The generator eGen should preserve eRec.GramMatRed\n";
+        throw TerminalException{1};
+      }
+      std::vector<MyMatrix<Tint>> ListSpaces =
+        f_get_list_spaces(fPlane, sd_ext, os);
+      for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
+        MyMatrix<Tint> const &eSpace = ListSpaces[iSpace];
+        MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRet;
+        if (!TestEqualitySpaces(eSpace_img, eSpace)) {
+          std::cerr << "COMB: The space are not correctly mapped\n";
+          throw TerminalException{1};
+        }
+      }
+    }
 #endif
-    std::vector<MyMatrix<Tint>> GRP1_v = f_stab(eRec, sd_ext);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have GRP1_v\n";
-    WriteListMatrix(os, GRP1_v);
-#endif
-    // Computes the subgroup preserving a sublattice
-    std::vector<MyMatrix<T>> LGenV_A = eRec.MapOrthogonalSublatticeGroup(GRP1_v);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have LGenV_A\n";
-#endif
-    //    std::vector<MyMatrix<T>> LGenV_B =
-    //      MatrixIntegral_Stabilizer_Sublattice<T,Tint,Tgroup>(Sublattice, LGenV_A, os);
-    RetMI_S<T,Tgroup> ret =
-      MatrixIntegral_Stabilizer_General<T,T,Tgroup>(n, LGenV_A, os);
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab_plane_v, we have ret, index=" << ret.index << "\n";
-#endif
-    return ret.LGen;
+    return LGenRet;
   }
   std::vector<MyMatrix<T>> f_double_cosets(MyMatrix<T> const &Q,
                                            MyMatrix<Tint> const& ePlane,
@@ -1958,12 +2025,9 @@ private:
     //      be followed.
     //    * The question of whether an element belongs to the
     //      group can be decided by the preservation of the lattice
-    //      
-    // ---So, that seems standard. The problem is that we need
-    //    to embed it into the space ePlane^T.
-    // ---For fPlane = ePlane + v. The construction gets us another
-    //    group and another sublattice.
-    // ---But the sublattice are not related!
+    //    * We can compute the stabilizer of v explicitly in the
+    //      same space as it is computed.
+    //      Then map it and ob
     // ---Maybe we could reduce everything to ePlane^T. Idea
     //    goes as follows
     //    * What we can do in the iterating algorithm that gets
@@ -1982,49 +2046,35 @@ private:
     //      ListMatr, then we migh break the homomorphisms in
     //      question.
     //
-    // 
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, begin\n";
     os << "COMB: f_double_cosets, ePlane=\n";
     WriteMatrix(os, ePlane);
 #endif
     INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Q, ePlane, os);
-    std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
+    std::vector<MyMatrix<Tint>> GRP_G_plane = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_double_cosets)", os);
-    os << "COMB: f_double_cosets, we have GRP1\n";
-    WriteListMatrix(os, GRP1);
+    os << "COMB: f_double_cosets, we have GRP_G_plane\n";
+    WriteListMatrix(os, GRP_G_plane);
 #endif
-    MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP1);
+    std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have GRP_V_plane\n";
+#endif
+    MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP_G_plane);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, Sublattice=\n";
     WriteMatrix(os, Sublattice);
 #endif
-    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP1, Sublattice);
+    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_G_plane, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_G\n";
 #endif
-    std::vector<MyMatrix<T>> GRP_V = f_stab_plane_v(Q, ePlane, v, Sublattice, sd);
+    // Computation below should succeed because GRP_V_plane is a subgroup of GRP_G_plane
+    std::vector<MyMatrix<T>> GRP_V = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_V_plane, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V\n";
-#endif
-#ifdef CREATE_INDEFINITE_COMBINED_ALGORITHMS_DEBUG_INFOS
-    {
-      int n = Q.rows();
-      RetMI_S<Tint,Tgroup> ret_U = MatrixIntegral_Stabilizer_General<T,Tint,Tgroup>(n, GRP_G, os);
-      os << "COMB: index=" << ret_U.index << "\n";
-      std::vector<MyMatrix<Tint>> const& GRP_U = ret_U.LGen;
-      std::string Prefix = "ECase_GRP_x_GRP_U_x_GRP_V";
-      std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-      std::ofstream osf(FileOut);
-      osf << "return rec(GRP_G:=";
-      WriteListMatrixGAP(osf, GRP_G);
-      osf << ", GRP_U:=";
-      WriteListMatrixGAP(osf, GRP_U);
-      osf << ", GRP_V:=";
-      WriteListMatrixGAP(osf, GRP_V);
-      osf << ");\n";
-    }
 #endif
     int n = Q.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
@@ -2336,18 +2386,24 @@ public:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_StabilizerVector(MyMatrix<T> const &Q,
                               MyVector<Tint> const &v) {
-    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
-    MyMatrix<Tint> Binv = Inverse(res.B);
-    //
-    MyVector<Tint> vRed = Binv.transpose() * v;
     std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_StabilizerVector_Reduced(res.Mred, vRed);
-    std::vector<MyMatrix<Tint>> LGenRet;
+      INDEF_FORM_StabilizerVector_NotReduced(Q, v);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : LGen) {
-      MyMatrix<Tint> eGenRet = Binv * eGen * res.B;
-      LGenRet.push_back(eGenRet);
+      MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+      MyMatrix<T> prod = eGen_T * Q * eGen_T.transpose();
+      if (prod != Q) {
+        std::cerr << "COMB: eGen does not preserve Q\n";
+        throw TerminalException{1};
+      }
+      MyVector<Tint> v_img = v * eGen.transpose();
+      if (v_img != v) {
+        std::cerr << "COMB: eGen does not preserve v\n";
+        throw TerminalException{1};
+      }
     }
-    return LGenRet;
+#endif
+    return LGen;
   }
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_EquivalenceVector(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
@@ -2365,7 +2421,7 @@ public:
     if (opt) {
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
       MyMatrix<T> prod = eEquiv_T * res1.Mred * eEquiv_T.transpose();
       if (prod != res2.Mred) {
