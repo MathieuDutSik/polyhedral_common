@@ -152,7 +152,7 @@ public:
   }
 };
 
-template <typename T, typename Tint> struct INDEF_FORM_GetRec_IsotropicKplane {
+template <typename T, typename Tint> struct INDEF_FORM_Rec_IsotropicKplane {
 public:
   MyMatrix<T> Qmat;
   MyMatrix<Tint> Plane;
@@ -207,9 +207,9 @@ public:
     }
   }
 #endif
-  INDEF_FORM_GetRec_IsotropicKplane(MyMatrix<T> const &_Qmat,
-                                    MyMatrix<Tint> const &_Plane,
-                                    std::ostream &_os)
+  INDEF_FORM_Rec_IsotropicKplane(MyMatrix<T> const &_Qmat,
+                                 MyMatrix<Tint> const &_Plane,
+                                 std::ostream &_os)
       : Qmat(_Qmat), Plane(_Plane), dimSpace(Qmat.rows()), dim(Plane.rows()),
         os(_os) {
     Plane_T = UniversalMatrixConversion<T, Tint>(Plane);
@@ -779,7 +779,7 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
 // the eRec.QmatRed
 template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatrix<Tint>> const& GRPred,
-                                                              INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec,
+                                                              INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
                                                               SeqDims const& sd,
                                                               std::ostream& os) {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
@@ -1196,7 +1196,7 @@ private:
   // Specific functions f_stab, f_equiv
   //
   std::vector<MyMatrix<Tint>>
-  f_stab(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec, SeqDims const& sd) {
+  f_stab(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec, SeqDims const& sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -1231,8 +1231,8 @@ private:
     return ListGenTot;
   }
   std::optional<MyMatrix<Tint>>
-  f_equiv(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec1,
-          INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const &eRec2,
+  f_equiv(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec1,
+          INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec2,
           SeqDims const& sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
@@ -1292,7 +1292,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, start\n";
 #endif
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have eRec\n";
 #endif
@@ -1331,8 +1331,8 @@ private:
         INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat2, Plane2, sd)) {
       return {};
     }
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec1(Qmat1, Plane1, os);
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec2(Qmat2, Plane2, os);
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec1(Qmat1, Plane1, os);
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec2(Qmat2, Plane2, os);
     std::optional<MyMatrix<Tint>> opt = f_equiv(eRec1, eRec2, sd);
     if (!opt) {
       return {};
@@ -1447,7 +1447,7 @@ private:
   }
   std::vector<MyMatrix<Tint>> INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec(Qmat, Plane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP1\n";
@@ -1511,7 +1511,7 @@ private:
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
-    INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
     std::vector<MyMatrix<Tint>> GRP1 = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_RightCosets_IsotropicKstuff_Kernel, We have GRP1\n";
@@ -1922,7 +1922,7 @@ private:
   // v should be an isotropic vector of eRec.QmatRed,
   // Returns a subgroup stabilizing the isotropic vector v in eRec.
   // The code below returns the full stabilizer, but it is not really
-  std::vector<MyMatrix<Tint>> f_stab_plane_v(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const& eRec,
+  std::vector<MyMatrix<Tint>> f_stab_plane_v(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const& eRec,
                                              MyVector<Tint> const& v,
                                              SeqDims const& sd) {
     int n = eRec.GramMatRed.rows();
@@ -1978,7 +1978,7 @@ private:
 #endif
     return LGenRet;
   }
-  std::vector<MyMatrix<T>> f_double_cosets(INDEF_FORM_GetRec_IsotropicKplane<T, Tint> const& eRec,
+  std::vector<MyMatrix<T>> f_double_cosets(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const& eRec,
                                            MyVector<Tint> const& v,
                                            SeqDims const& sd) {
     // We have the following groups:
@@ -2200,7 +2200,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif
-        INDEF_FORM_GetRec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
+        INDEF_FORM_Rec_IsotropicKplane<T, Tint> eRec(Qmat, ePlane, os);
         MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
         MyMatrix<T> ePlaneQ = ePlane_T * Qmat;
         MyMatrix<T> NSP_T = NullspaceIntTrMat(ePlaneQ);
