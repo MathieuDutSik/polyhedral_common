@@ -1546,6 +1546,8 @@ void TestPreImageSubgroup(std::function<typename Tgroup::Telt(MyMatrix<T> const&
   }
   Tgroup GRPimg(LGen, n_act);
   if (GRPimg != OrigGRP) {
+    Tgroup IntGRP = GRPimg.Intersection(OrigGRP);
+    std::cerr << "MAT_GRP: |GRPimg|=" << GRPimg.size() << " |OrigGRP|=" << OrigGRP.size() << " |IntGRP|=" << IntGRP.size() << "\n";
     std::cerr << "MAT_GRP: The image of the PreImage is not equal to the original group\n";
     std::cerr << "MAT_GRP: This failing one basic check of correctness (this is not a complete\n";
     std::cerr << "MAT_GRP: check if the morphism is not an isomorphism)\n";
@@ -1632,6 +1634,12 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
         }
 #endif
         Tgroup Vred_perm(e_de.stab_gens, siz_act);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+        if (!Vperm_gens.IsSubgroup(Vred_perm)) {
+          std::cerr << "MAT_GRP: Vperm_gens should contain Vred_perm as subgroup\n";
+          throw TerminalException{1};
+        }
+#endif
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         TestPreImageSubgroup(f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
