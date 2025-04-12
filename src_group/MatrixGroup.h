@@ -23,6 +23,7 @@
 
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP
+#define DEBUG_DOUBLE_COSET_ENUM
 #endif
 
 #ifdef TIMINGS
@@ -31,6 +32,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_MATRIX_GROUP
+#define SANITY_CHECK_DOUBLE_COSET_ENUM
 #endif
 
 template <typename T>
@@ -1518,6 +1520,42 @@ struct DoubleCosetEntry {
   std::vector<MyMatrix<T>> stab_gens;
 };
 
+template <typename T, typename Tgroup>
+void TestPreImageSubgroup(std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
+                          std::vector<MyMatrix<T>> const& MatrPreImage,
+                          Tgroup const& OrigGRP, std::string const& context) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  if (MatrPreImage.size() == 0) {
+    if (OrigGRP.size() != 1) {
+      std::cerr << "MAT_GRP: Error, in context=" << context << "\n";
+      std::cerr << "MAT_GRP: If MatrPreImage is empty, then necessarily OrigGRP has to be trivial\n";
+      std::cerr << "MAT_GRP: Though that may not be sufficient in itself if the mapping is not an isomorphism\n";
+      throw TerminalException{1};
+    }
+  }
+  Tidx n_act = OrigGRP.n_act();
+  std::vector<Telt> LGen;
+  for (auto & eMatrGen : MatrPreImage) {
+    Telt ePermGen = f_get_perm(eMatrGen);
+    if (ePermGen.size() != n_act) {
+      std::cerr << "MAT_GRP: The obtained permutation is not of the right size\n";
+      throw TerminalException{1};
+    }
+    LGen.push_back(ePermGen);
+  }
+  Tgroup GRPimg(LGen, n_act);
+  if (GRPimg != OrigGRP) {
+    std::cerr << "MAT_GRP: The image of the PreImage is not equal to the original group\n";
+    std::cerr << "MAT_GRP: This failing one basic check of correctness (this is not a complete\n";
+    std::cerr << "MAT_GRP: check if the morphism is not an isomorphism)\n";
+    std::cerr << "MAT_GRP: context=" << context << "\n";
+    throw TerminalException{1};
+  }
+}
+
+
+
 /*
   Computes the Double cosets between the stabilizer of the subspace
   and the group V in argument.
@@ -1579,8 +1617,17 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+        if (f_get_perm(eCos) != e_de.cos) {
+          std::cerr << "MAT_GRP: Computation of PreImage of subgroup failed\n";
+          throw TerminalException{1};
+        }
+#endif
         Tgroup Vred_perm(e_de.stab_gens, siz_act);
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+        TestPreImageSubgroup(f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
+#endif
         std::vector<MyMatrix<T>> Vred_matr_conj;
         for (auto & eGen : Vred_matr) {
           MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
@@ -1595,7 +1642,11 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     os << "MAT_GRP: We found |new_entries|=" << new_entries.size() << "\n";
 #endif
     entries = new_entries;
-    return MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
+    std::vector<MyMatrix<T>> LGenMatr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+    TestPreImageSubgroup(f_get_perm, LGenMatr, eStab, "eStab");
+#endif
+    return LGenMatr;
   };
   std::vector<MyMatrix<T>> l_gens_ret =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
