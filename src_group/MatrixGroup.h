@@ -1488,6 +1488,12 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |GRP_build|=" << GRP_build.size() << " |eGRP|=" << eGRP.size() << "\n";
   bool test = GRP_build.IsSubgroup(eGRP);
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) IsSubgroup=" << test << "\n";
+  if (false) {
+    WriteGroupFile("GRP_build", GRP_build);
+    WriteGroupFile("eGRP", eGRP);
+    std::cerr << "Now debugging from here\n";
+    throw TerminalException{1};
+  }
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
   std::vector<MyMatrix<T>> ListGen =
