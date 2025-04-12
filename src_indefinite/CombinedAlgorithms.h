@@ -809,6 +809,7 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   WriteListMatrix(os, GRPfull);
 #endif
   std::vector<MyMatrix<Tint>> ListGenTot;
+  ListGenTot.push_back(-IdentityMat<Tint>(eRec.the_dim));
   for (auto &eGen : GRPfull) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: EIG_IO, before eGenB\n";
