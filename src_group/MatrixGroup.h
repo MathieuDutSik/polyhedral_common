@@ -1640,6 +1640,13 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           throw TerminalException{1};
         }
 #endif
+#ifdef DEBUG_DOUBLE_COSET_ENUM
+        os << "MAT_GRP: |Vred_perm|=" << Vred_perm.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
+        {
+          WriteGroupFile("GRP_build_V2", Vperm_gens);
+          WriteGroupFile("eGRP_V2", Vred_perm);
+        }
+#endif
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         TestPreImageSubgroup(f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
