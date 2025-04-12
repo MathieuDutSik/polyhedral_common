@@ -848,6 +848,83 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   return ListGenTot;
 }
 
+// Computes the residue modulo N.
+// This is used for debugging and allows getting finite
+// groups that can test membership.
+template <typename T, typename Tgroup>
+Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const& ListM, int const& N) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  if (ListM.size() == 0) {
+    std::cerr << "COMB: Not possible to work if zero vectors are available\n";
+    throw TerminalException{1};
+  }
+  int n = ListM[0].rows();
+  MyMatrix<int> Mat_cos = BuildSet(n, N);
+  std::vector<MyVector<int>> l_cos;
+  std::unordered_map<MyVector<int>,size_t> map_cos;
+  int n_row = Mat_cos.rows();
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<int> eRow = GetMatrixRow(Mat_cos, i_row);
+    l_cos.push_back(eRow);
+    map_cos[eRow] = i_row;
+  }
+  Tidx n_act = n_row;
+  T N_T = UniversalScalarConversion<T,int>(N);
+  auto get_perm=[&](MyMatrix<T> const& eM) -> Telt {
+    MyMatrix<int> eMred(n, n);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        T res_T = ResInt(eM(i,j), N_T);
+        int res = UniversalScalarConversion<int, T>(res_T);
+        eMred(i,j) = res;
+      }
+    }
+    MyVector<int> eV3(n);
+    std::vector<Tidx> eList;
+    for (int i_row=0; i_row<n_row; i_row++) {
+      MyVector<int> eV1 = l_cos[i_row];
+      MyVector<int> eV2 = eMred.transpose() * eV1;
+      for (int i=0; i<n; i++) {
+        int res = ResInt(eV2(i), N);
+        eV3(i) = res;
+      }
+      size_t pos = map_cos.at(eV3);
+      eList.push_back(pos);
+    }
+    Telt ePerm(eList);
+    return ePerm;
+  };
+  std::vector<Telt> ListPerm;
+  for (auto & eM : ListM) {
+    Telt ePerm = get_perm(eM);
+    ListPerm.push_back(ePerm);
+  }
+  return Tgroup(ListPerm, n_act);
+}
+
+template <typename T, typename Tgroup>
+void CheckGroupSubgroup(std::vector<MyMatrix<T>> const& ListGRP, std::vector<MyMatrix<T>> const& ListSubGRP) {
+  int n = ListGRP[0].rows();
+  T limit(10000);
+  for (int N=2; N<=20; N++) {
+    T N_T = UniversalScalarConversion<T,int>(N);
+    T Npow = MyPow(N_T, n);
+    if (Npow > limit) {
+      break;
+    }
+    Tgroup GRP = GenerateGroupModuloAction<T,Tgroup>(ListGRP, N);
+    Tgroup SubGRP = GenerateGroupModuloAction<T,Tgroup>(ListSubGRP, N);
+    std::cerr << "COMB: N=" << N << " Npow=" << Npow << " |GRP|=" << GRP.size() << " |SubGRP|=" << SubGRP.size() << "\n";
+    bool test = GRP.IsSubgroup(SubGRP);
+    if (!test) {
+      std::cerr << "COMB: Found SubGRP not to be a subgroup of GRP\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+
 
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2111,6 +2188,9 @@ private:
     WriteListMatrix(os, GRP_G_plane);
 #endif
     std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    CheckGroupSubgroup<Tint,Tgroup>(GRP_G_plane, GRP_V_plane);
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V_plane\n";
 #endif

@@ -1618,6 +1618,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       bool test_is_sub = GRP.IsSubgroup(Vperm_gens);
       if (!test_is_sub) {
         std::cerr << "MAT_GRP: Vperm_gens should be a subgroup of GRP\n";
+        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab|=" << eStab.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
         throw TerminalException{1};
       }
 #endif
