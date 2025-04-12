@@ -1614,6 +1614,13 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       std::vector<Telt> ListPermGens_B =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens_conj, helper, f_get_perm, os);
       Tgroup Vperm_gens = Tgroup(ListPermGens_B, siz_act);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+      bool test_is_sub = GRP.IsSubgroup(Vperm_gens);
+      if (!test_is_sub) {
+        std::cerr << "MAT_GRP: Vperm_gens should be a subgroup of GRP\n";
+        throw TerminalException{1};
+      }
+#endif
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
