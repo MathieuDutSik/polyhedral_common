@@ -907,7 +907,7 @@ Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const& ListM, int cons
 template <typename T, typename Tgroup>
 void CheckGroupSubgroup(std::vector<MyMatrix<T>> const& ListGRP, std::vector<MyMatrix<T>> const& ListSubGRP) {
   int n = ListGRP[0].rows();
-  T limit(50000);
+  T limit(10000);
   for (int N=2; N<=20; N++) {
     T N_T = UniversalScalarConversion<T,int>(N);
     T Npow = MyPow(N_T, n);

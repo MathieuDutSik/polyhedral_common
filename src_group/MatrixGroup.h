@@ -640,7 +640,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
   }
 #ifdef DEBUG_MATRIX_GROUP
   if (ListPermGenProv.size() > 0) {
-    Tidx siz = ListPermGenProv[0].size();
+    typename Telt::Tidx siz = ListPermGenProv[0].size();
     permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
     os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
   } else {
@@ -1511,7 +1511,8 @@ void TestPreImageSubgroup(Thelper const &helper,
                           std::vector<MyMatrix<T>> const& ListMatrGen,
                           std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
                           std::vector<MyMatrix<T>> const& MatrPreImage,
-                          Tgroup const& OrigGRP, std::string const& context) {
+                          Tgroup const& OrigGRP, std::string const& context,
+                          std::ostream& os) {
   using PreImager = typename Thelper::PreImager;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
@@ -1524,27 +1525,62 @@ void TestPreImageSubgroup(Thelper const &helper,
       throw TerminalException{1};
     }
   }
+  auto f_map_matr=[&](MyMatrix<T> const& eMatr) -> Telt {
+    return MatrixIntegral_MapPermutation<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, eMatr, os);
+  };
   Tidx n_act = OrigGRP.n_act();
   std::vector<Telt> LGen;
   for (auto & eMatrGen : MatrPreImage) {
-    Telt ePermGen = f_get_perm(eMatrGen);
+    Telt ePermGen = f_map_matr(eMatrGen);
     if (ePermGen.size() != n_act) {
       std::cerr << "MAT_GRP: The obtained permutation is not of the right size\n";
       throw TerminalException{1};
     }
     LGen.push_back(ePermGen);
   }
+  std::vector<Telt> LGenB;
+  size_t n_orig_gen = 0;
+  size_t n_orig_gen_error = 0;
+  std::vector<std::pair<Telt, Telt>> l_pair_err;
+  for (auto & eGen: OrigGRP.GeneratorsOfGroup()) {
+    n_orig_gen += 1;
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
+    Telt eGenB = f_map_matr(eMatr);
+    if (eGen != eGenB) {
+      n_orig_gen_error += 1;
+    }
+    LGenB.push_back(eGenB);
+  }
+
   Tgroup GRPfull(ListPermGen, n_act);
   Tgroup GRPimg(LGen, n_act);
+  Tgroup GRPimgB(LGenB, n_act);
   if (GRPimg != OrigGRP) {
     Tgroup IntGRP = GRPimg.Intersection(OrigGRP);
-    std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup\n";
+    std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
+    std::cerr << "MAT_GRP: n_orig_gen=" << n_orig_gen << " n_orig_gen_error=" << n_orig_gen_error << "\n";
     std::cerr << "MAT_GRP: |GRPfull|=" << GRPfull.size() << "\n";
     std::cerr << "MAT_GRP: |GRPimg|=" << GRPimg.size() << " |OrigGRP|=" << OrigGRP.size() << " |IntGRP|=" << IntGRP.size() << "\n";
     std::cerr << "MAT_GRP: The image of the PreImage is not equal to the original group\n";
     std::cerr << "MAT_GRP: This failing one basic check of correctness (this is not a complete\n";
     std::cerr << "MAT_GRP: check if the morphism is not an isomorphism)\n";
-    std::cerr << "MAT_GRP: context=" << context << "\n";
+    std::cerr << "MAT_GRP: |GRPimgB|=" << GRPimgB.size() << "\n";
+    if (GRPimgB == OrigGRP) {
+      std::cerr << "MAT_GRP: GRPimgB is EQUAL to OrigGRP\n";
+    } else {
+      std::cerr << "MAT_GRP: GRPimgB is NOT EQUAL to OrigGRP\n";
+    }
+    if (GRPimgB == GRPimg) {
+      std::cerr << "MAT_GRP: GRPimgB is EQUAL to GRPimg\n";
+    } else {
+      std::cerr << "MAT_GRP: GRPimgB is NOT EQUAL to GRPimg\n";
+    }
+    std::string FileGRP = "AllGRP";
+    std::ofstream os_grp(FileGRP);
+    os_grp << "return rec(GRPfull:=" << GRPfull.GapString() << ",\n"
+           << " OrigGRP:=" << OrigGRP.GapString() << ",\n"
+           << " GRPimg:=" << GRPimg.GapString() << ",\n"
+           << " GRPimgB:=" << GRPimgB.GapString() << ");\n";
     throw TerminalException{1};
   }
 }
@@ -1642,7 +1678,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        TestPreImageSubgroup(helper, ListPermGens_B, V_gens, f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
+        TestPreImageSubgroup(helper, ListPermGens_B, V_gens, f_get_perm, Vred_matr, Vred_perm, "Vred_perm", os);
 #endif
         std::vector<MyMatrix<T>> Vred_matr_conj;
         for (auto & eGen : Vred_matr) {
@@ -1660,7 +1696,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     entries = new_entries;
     std::vector<MyMatrix<T>> LGenMatr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    TestPreImageSubgroup(helper, ListPermGens, ListMatr, f_get_perm, LGenMatr, eStab, "eStab");
+    TestPreImageSubgroup(helper, ListPermGens, ListMatr, f_get_perm, LGenMatr, eStab, "eStab", os);
 #endif
     return LGenMatr;
   };
