@@ -156,7 +156,6 @@ public:
   }
 };
 
-
 template <typename T, typename Telt, typename Tint> struct GeneralMatrixGroupHelper {
   using PreImager = PreImager_General<T, Telt, Tint>;
   int n;
@@ -810,9 +809,10 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
 #endif
+  Telt id_perm = stab.get_identity();
   std::vector<MyMatrix<T>> LGen =
-    permutalib::PreImageSubgroupAction<Tgroup, TeltMatr, Tobj, decltype(f_op)>(
-      ListMatrGens, ListPermGens, id_matr, stab, f, f_op);
+    permutalib::PreImageSubgroupAction<Telt, TeltMatr, Tobj, decltype(f_op)>(
+      ListMatrGens, ListPermGens, id_matr, id_perm, f, f_op);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After StabilizerMatrixPermSubset\n";
 #endif
@@ -1528,11 +1528,22 @@ void TestPreImageSubgroup(Thelper const &helper,
   auto f_map_matr=[&](MyMatrix<T> const& eMatr) -> Telt {
     return MatrixIntegral_MapPermutation<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, eMatr, os);
   };
+  size_t n_gen = ListPermGen.size();
+  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+    Telt ePerm = f_map_matr(ListMatrGen[i_gen]);
+    if (ePerm != ListPermGen[i_gen]) {
+      std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
+      std::cerr << "MAT_GRP: i_gen=" << i_gen << "\n";
+      std::cerr << "MAT_GRP: Inconsistency with ListMatrGen / ListPermGen\n";
+      throw TerminalException{1};
+    }
+  }
   Tidx n_act = OrigGRP.n_act();
   std::vector<Telt> LGen;
   for (auto & eMatrGen : MatrPreImage) {
     Telt ePermGen = f_map_matr(eMatrGen);
     if (ePermGen.size() != n_act) {
+      std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
       std::cerr << "MAT_GRP: The obtained permutation is not of the right size\n";
       throw TerminalException{1};
     }
@@ -1551,7 +1562,6 @@ void TestPreImageSubgroup(Thelper const &helper,
     }
     LGenB.push_back(eGenB);
   }
-
   Tgroup GRPfull(ListPermGen, n_act);
   Tgroup GRPimg(LGen, n_act);
   Tgroup GRPimgB(LGenB, n_act);
@@ -1625,31 +1635,31 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
   auto f_stab = [&](std::vector<Telt> const &ListPermGens, Tgroup const &GRP,
                     Face const &eFace,
                     std::function<Telt(MyMatrix<T> const&)> f_get_perm,
-                    std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
-    Tgroup eStab = GRP.Stabilizer_OnSets(eFace);
-    PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+                    std::vector<MyMatrix<T>> const& ListMatrGens) -> std::vector<MyMatrix<T>> {
+    Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
+    PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: Before GRP.double_coset_computer_v |GRP|=" << GRP.size() << " |eStab|=" << eStab.size() << " n_act=" << static_cast<size_t>(eStab.n_act()) << "\n";
+    os << "MAT_GRP: Before GRP.double_coset_computer_v |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " n_act=" << static_cast<size_t>(eStab_perm.n_act()) << "\n";
 #endif
-    DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab);
+    DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
     for (auto &entry: entries) {
       MyMatrix<T> cos_inv = Inverse(entry.cos);
-      std::vector<MyMatrix<T>> const& V_gens = entry.stab_gens;
-      std::vector<MyMatrix<T>> V_gens_conj;
-      for (auto & eGen : V_gens) {
+      std::vector<MyMatrix<T>> const& Vmatr = entry.stab_gens;
+      std::vector<MyMatrix<T>> Vmatr_conj;
+      for (auto & eGen : Vmatr) {
         MyMatrix<T> NewGen = entry.cos * eGen * cos_inv;
-        V_gens_conj.emplace_back(std::move(NewGen));
+        Vmatr_conj.emplace_back(std::move(NewGen));
       }
-      std::vector<Telt> ListPermGens_B =
-        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(V_gens_conj, helper, f_get_perm, os);
-      Tgroup Vperm_gens = Tgroup(ListPermGens_B, siz_act);
+      std::vector<Telt> Vperm_conj =
+        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(Vmatr_conj, helper, f_get_perm, os);
+      Tgroup Vperm_gens = Tgroup(Vperm_conj, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
       bool test_is_sub = GRP.IsSubgroup(Vperm_gens);
       if (!test_is_sub) {
         std::cerr << "MAT_GRP: Vperm_gens should be a subgroup of GRP\n";
-        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab|=" << eStab.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
+        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
         throw TerminalException{1};
       }
 #endif
@@ -1662,31 +1672,31 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           throw TerminalException{1};
         }
 #endif
-        Tgroup Vred_perm(e_de.stab_gens, siz_act);
+        Tgroup Stab_perm(e_de.stab_gens, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        if (!Vperm_gens.IsSubgroup(Vred_perm)) {
-          std::cerr << "MAT_GRP: Vperm_gens should contain Vred_perm as subgroup\n";
+        if (!Vperm_gens.IsSubgroup(Stab_perm)) {
+          std::cerr << "MAT_GRP: Vperm_gens should contain Stab_perm as subgroup\n";
           throw TerminalException{1};
         }
 #endif
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-        os << "MAT_GRP: |Vred_perm|=" << Vred_perm.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
+        os << "MAT_GRP: |Stab_perm|=" << Stab_perm.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
         {
           WriteGroupFile("GRP_build_V2", Vperm_gens);
-          WriteGroupFile("eGRP_V2", Vred_perm);
+          WriteGroupFile("eGRP_V2", Stab_perm);
         }
 #endif
-        std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
+        std::vector<MyMatrix<T>> Stab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(Vperm_conj, Vmatr, Stab_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        TestPreImageSubgroup(helper, ListPermGens_B, V_gens, f_get_perm, Vred_matr, Vred_perm, "Vred_perm", os);
+        TestPreImageSubgroup(helper, Vperm_conj, Vmatr_conj, f_get_perm, Stab_matr, Stab_perm, "Stab_perm", os);
 #endif
-        std::vector<MyMatrix<T>> Vred_matr_conj;
-        for (auto & eGen : Vred_matr) {
+        std::vector<MyMatrix<T>> Stab_matr_conj;
+        for (auto & eGen : Stab_matr) {
           MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
-          Vred_matr_conj.emplace_back(std::move(NewGen));
+          Stab_matr_conj.emplace_back(std::move(NewGen));
         }
         MyMatrix<T> NewCos = eCos * entry.cos;
-        DoubleCosetEntry<T> new_de{std::move(NewCos), std::move(Vred_matr_conj)};
+        DoubleCosetEntry<T> new_de{std::move(NewCos), std::move(Stab_matr_conj)};
         new_entries.emplace_back(std::move(new_de));
       }
     }
@@ -1694,11 +1704,11 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     os << "MAT_GRP: We found |new_entries|=" << new_entries.size() << "\n";
 #endif
     entries = new_entries;
-    std::vector<MyMatrix<T>> LGenMatr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
+    std::vector<MyMatrix<T>> eStab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatrGens, eStab_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    TestPreImageSubgroup(helper, ListPermGens, ListMatr, f_get_perm, LGenMatr, eStab, "eStab", os);
+    TestPreImageSubgroup(helper, ListPermGens, ListMatrGens, f_get_perm, eStab_matr, eStab_perm, "eStab", os);
 #endif
-    return LGenMatr;
+    return eStab_matr;
   };
   std::vector<MyMatrix<T>> l_gens_ret =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
