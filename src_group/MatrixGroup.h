@@ -595,16 +595,39 @@ Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
-inline typename std::enable_if<has_determining_ext<Thelper>::value, std::vector<Telt>>::type
-MatrixIntegral_GeneratePermutationGroupA(
-    std::vector<MyMatrix<T>> const &ListMatrGens,
-    Thelper const &helper, Fgetperm f_get_perm, std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA(has)\n";
-#endif
+inline typename std::enable_if<has_determining_ext<Thelper>::value, Telt>::type
+MatrixIntegral_MapPermutation(Thelper const &helper, Fgetperm f_get_perm, MyMatrix<T> const& eMatr, std::ostream &os) {
   using Tidx = typename Telt::Tidx;
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
+  Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(helper, eMatr, os);
+  Telt ePermOrbit = f_get_perm(eMatr);
+  Tidx Osiz = ePermOrbit.size();
+  Tidx siz = nbRow_tidx + Osiz;
+  std::vector<Tidx> v(siz);
+  for (Tidx i = 0; i < nbRow_tidx; i++) {
+    v[i] = ePermGen.at(i);
+  }
+  for (Tidx iO = 0; iO < Osiz; iO++) {
+    Tidx jO = ePermOrbit.at(iO);
+    v[nbRow_tidx + iO] = nbRow_tidx + jO;
+  }
+  return Telt(std::move(v));
+}
+
+template <typename T, typename Telt, typename Thelper, typename Fgetperm>
+inline typename std::enable_if<!has_determining_ext<Thelper>::value, Telt>::type
+MatrixIntegral_MapPermutation([[maybe_unused]] Thelper const &helper, Fgetperm f_get_perm, MyMatrix<T> const& eMatr, [[maybe_unused]] std::ostream &os) {
+  return f_get_perm(eMatr);
+}
+
+template <typename T, typename Telt, typename Thelper, typename Fgetperm>
+std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
+    std::vector<MyMatrix<T>> const &ListMatrGens,
+    Thelper const &helper, Fgetperm f_get_perm, std::ostream &os) {
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA\n";
+#endif
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
 #ifdef DEBUG_MATRIX_GROUP
@@ -612,20 +635,7 @@ MatrixIntegral_GeneratePermutationGroupA(
 #endif
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
-    Telt ePermGen = GetPermutationForFiniteMatrixGroup<T, Telt, Thelper>(
-        helper, eMatrGen, os);
-    Telt ePermOrbit = f_get_perm(eMatrGen);
-    Tidx Osiz = ePermOrbit.size();
-    Tidx siz = nbRow_tidx + Osiz;
-    std::vector<Tidx> v(siz);
-    for (Tidx i = 0; i < nbRow_tidx; i++) {
-      v[i] = ePermGen.at(i);
-    }
-    for (Tidx iO = 0; iO < Osiz; iO++) {
-      Tidx jO = ePermOrbit.at(iO);
-      v[nbRow_tidx + iO] = nbRow_tidx + jO;
-    }
-    Telt eNewPerm(std::move(v));
+    Telt eNewPerm = MatrixIntegral_MapPermutation<T,Telt,Thelper,Fgetperm>(helper, f_get_perm, eMatrGen, os);
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef DEBUG_MATRIX_GROUP
@@ -732,31 +742,6 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
   }
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
   return pre_imager.pre_image_elt(*opt);
-}
-
-template <typename T, typename Telt, typename Thelper, typename Fgetperm>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value, std::vector<Telt>>::type
-MatrixIntegral_GeneratePermutationGroupA(
-    std::vector<MyMatrix<T>> const &ListMatrGens,
-    [[maybe_unused]] Thelper const &helper,
-    Fgetperm f_get_perm,
-    [[maybe_unused]] std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA(!has)\n";
-#endif
-  std::vector<Telt> ListPermGenProv;
-  size_t nbGen = ListMatrGens.size();
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Processing nbGen=" << nbGen << " generators\n";
-#endif
-  for (size_t iGen = 0; iGen < nbGen; iGen++) {
-    Telt ePermGenSelect = f_get_perm(ListMatrGens[iGen]);
-    ListPermGenProv.emplace_back(std::move(ePermGenSelect));
-  }
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After generation\n";
-#endif
-  return ListPermGenProv;
 }
 
 template<typename T, typename Tmod, typename Telt>
@@ -1520,13 +1505,17 @@ struct DoubleCosetEntry {
   std::vector<MyMatrix<T>> stab_gens;
 };
 
-template <typename T, typename Tgroup>
-void TestPreImageSubgroup(std::vector<typename Tgroup::Telt> const& ListPermGen,
+template <typename T, typename Tgroup, typename Thelper>
+void TestPreImageSubgroup(Thelper const &helper,
+                          std::vector<typename Tgroup::Telt> const& ListPermGen,
+                          std::vector<MyMatrix<T>> const& ListMatrGen,
                           std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
                           std::vector<MyMatrix<T>> const& MatrPreImage,
                           Tgroup const& OrigGRP, std::string const& context) {
+  using PreImager = typename Thelper::PreImager;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
+  PreImager pre_imager = helper.pre_imager(ListMatrGen, ListPermGen);
   if (MatrPreImage.size() == 0) {
     if (OrigGRP.size() != 1) {
       std::cerr << "MAT_GRP: Error, in context=" << context << "\n";
@@ -1653,7 +1642,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        TestPreImageSubgroup(ListPermGens_B, f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
+        TestPreImageSubgroup(helper, ListPermGens_B, V_gens, f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
 #endif
         std::vector<MyMatrix<T>> Vred_matr_conj;
         for (auto & eGen : Vred_matr) {
@@ -1671,7 +1660,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     entries = new_entries;
     std::vector<MyMatrix<T>> LGenMatr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    TestPreImageSubgroup(ListPermGens, f_get_perm, LGenMatr, eStab, "eStab");
+    TestPreImageSubgroup(helper, ListPermGens, ListMatr, f_get_perm, LGenMatr, eStab, "eStab");
 #endif
     return LGenMatr;
   };
