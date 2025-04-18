@@ -1521,7 +1521,8 @@ struct DoubleCosetEntry {
 };
 
 template <typename T, typename Tgroup>
-void TestPreImageSubgroup(std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
+void TestPreImageSubgroup(std::vector<typename Tgroup::Telt> const& ListPermGen,
+                          std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
                           std::vector<MyMatrix<T>> const& MatrPreImage,
                           Tgroup const& OrigGRP, std::string const& context) {
   using Telt = typename Tgroup::Telt;
@@ -1544,9 +1545,12 @@ void TestPreImageSubgroup(std::function<typename Tgroup::Telt(MyMatrix<T> const&
     }
     LGen.push_back(ePermGen);
   }
+  Tgroup GRPfull(ListPermGen, n_act);
   Tgroup GRPimg(LGen, n_act);
   if (GRPimg != OrigGRP) {
     Tgroup IntGRP = GRPimg.Intersection(OrigGRP);
+    std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup\n";
+    std::cerr << "MAT_GRP: |GRPfull|=" << GRPfull.size() << "\n";
     std::cerr << "MAT_GRP: |GRPimg|=" << GRPimg.size() << " |OrigGRP|=" << OrigGRP.size() << " |IntGRP|=" << IntGRP.size() << "\n";
     std::cerr << "MAT_GRP: The image of the PreImage is not equal to the original group\n";
     std::cerr << "MAT_GRP: This failing one basic check of correctness (this is not a complete\n";
@@ -1649,7 +1653,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
         std::vector<MyMatrix<T>> Vred_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens_B, V_gens, Vred_perm, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        TestPreImageSubgroup(f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
+        TestPreImageSubgroup(ListPermGens_B, f_get_perm, Vred_matr, Vred_perm, "Vred_perm");
 #endif
         std::vector<MyMatrix<T>> Vred_matr_conj;
         for (auto & eGen : Vred_matr) {
@@ -1667,7 +1671,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     entries = new_entries;
     std::vector<MyMatrix<T>> LGenMatr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatr, eStab, helper, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    TestPreImageSubgroup(f_get_perm, LGenMatr, eStab, "eStab");
+    TestPreImageSubgroup(ListPermGens, f_get_perm, LGenMatr, eStab, "eStab");
 #endif
     return LGenMatr;
   };
