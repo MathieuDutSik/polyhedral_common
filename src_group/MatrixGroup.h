@@ -1449,7 +1449,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |LGenSmall|=" << LGenSmall.size() << "\n";
 #endif
-  for (auto &eGen : eGRP.GeneratorsOfGroup()) {
+  for (auto &eGen : LGenSmall) {
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
