@@ -784,7 +784,7 @@ template <typename T, typename Tint>
 std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatrix<Tint>> const& GRPred,
                                                               INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
                                                               SeqDims const& sd,
-                                                              std::ostream& os) {
+                                                              [[maybe_unused]] std::ostream& os) {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
   for (auto & eGen : GRPred) {
     MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
@@ -1329,7 +1329,7 @@ private:
   std::optional<MyMatrix<Tint>>
   f_equiv(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec1,
           INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec2,
-          SeqDims const& sd) {
+          [[maybe_unused]] SeqDims const& sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif

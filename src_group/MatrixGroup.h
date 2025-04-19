@@ -624,6 +624,9 @@ template <typename T, typename Telt, typename Thelper, typename Fgetperm>
 std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
     std::vector<MyMatrix<T>> const &ListMatrGens,
     Thelper const &helper, Fgetperm f_get_perm, std::ostream &os) {
+#ifdef TIMINGS_MATRIX_GROUP
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA\n";
 #endif
@@ -637,6 +640,9 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
     Telt eNewPerm = MatrixIntegral_MapMatrix<T,Telt,Thelper,Fgetperm>(helper, f_get_perm, eMatrGen, os);
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   if (ListPermGenProv.size() > 0) {
     typename Telt::Tidx siz = ListPermGenProv[0].size();
@@ -1466,7 +1472,7 @@ inline typename std::enable_if<!has_determining_ext<Thelper>::value,
 MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPermGens,
                                 std::vector<MyMatrix<T>> const& ListMatr,
                                 Tgroup const &eGRP, Thelper const &helper,
-                                std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
+                                [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                                 [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
