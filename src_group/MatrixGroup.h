@@ -1490,6 +1490,25 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
           ListMatr, ListPermGens, id_matr, eGRP);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After PreImageSubgroup |ListGen|=" << ListGen.size() << "\n";
+  size_t n_gen = ListMatr.size();
+  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+    Telt MatrGen_img = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, ListMatr[i_gen], os);
+    if (MatrGen_img != ListPermGens[i_gen]) {
+      std::cerr << "Inconsistency in the input at i_gen=" << i_gen << "\n";
+      throw TerminalException{1};
+    }
+  }
+  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+    for (size_t j_gen=0; j_gen<n_gen; j_gen++) {
+      MyMatrix<T> MatrProd = ListMatr[i_gen] * ListMatr[j_gen];
+      Telt PermProd = ListPermGens[i_gen] * ListPermGens[j_gen];
+      Telt MatrProd_img = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, MatrProd, os);
+      if (PermProd != MatrProd_img) {
+        std::cerr << "Inconsistency in the products at i_gen=" << i_gen << " j_gen=" << j_gen << "\n";
+        throw TerminalException{1};
+      }
+    }
+  }
   std::vector<std::pair<MyMatrix<T>, Telt>> list_pair =
       permutalib::PreImageSubgroupTotal<Tgroup, MyMatrix<T>>(
           ListMatr, ListPermGens, id_matr, eGRP);
@@ -1500,6 +1519,9 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
       throw TerminalException{1};
     }
   }
+
+
+  
 #endif
   return ListGen;
 }
@@ -1698,7 +1720,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           WriteGroupFile("eGRP_V2", Stab_perm);
         }
 #endif
-        std::vector<MyMatrix<T>> Stab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(Vperm_conj, Vmatr, Stab_perm, helper, f_get_perm, os);
+        std::vector<MyMatrix<T>> Stab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(Vperm_conj, Vmatr_conj, Stab_perm, helper, f_get_perm, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         TestPreImageSubgroup(helper, Vperm_conj, Vmatr_conj, f_get_perm, Stab_matr, Stab_perm, "Stab_perm", os);
 #endif
