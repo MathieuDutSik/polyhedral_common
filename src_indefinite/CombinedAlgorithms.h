@@ -1827,6 +1827,9 @@ private:
       }
     }
 #endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, returning\n";
+#endif
     return ret.LGen;
   }
   std::vector<MyMatrix<Tint>>
@@ -2034,6 +2037,9 @@ private:
     LGenRet.push_back(-IdentityMat<Tint>(n));
     // Second part: the mapping to v to v.
     std::vector<MyMatrix<Tint>> LGen2 = INDEF_FORM_StabilizerVector_NotReduced(eRec.QmatRed, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_stab_plane_v, We have LGen2\n";
+#endif
     for (auto & eGen2 : ExtendIsometryGroup_IsotropicOrth(LGen2, eRec, sd, os)) {
       LGenRet.push_back(eGen2);
     }
@@ -2498,6 +2504,9 @@ public:
                               MyVector<Tint> const &v) {
     std::vector<MyMatrix<Tint>> LGen =
       INDEF_FORM_StabilizerVector_NotReduced(Q, v);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector, We have LGen\n";
+#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : LGen) {
       MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
@@ -2506,12 +2515,15 @@ public:
         std::cerr << "COMB: eGen does not preserve Q\n";
         throw TerminalException{1};
       }
-      MyVector<Tint> v_img = v * eGen.transpose();
+      MyVector<Tint> v_img = eGen.transpose() * v;
       if (v_img != v) {
         std::cerr << "COMB: eGen does not preserve v\n";
         throw TerminalException{1};
       }
     }
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_StabilizerVector, after the checks\n";
 #endif
     return LGen;
   }
