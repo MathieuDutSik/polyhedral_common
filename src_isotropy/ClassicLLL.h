@@ -18,7 +18,7 @@ void CheckLLLreduction(LLLreduction<T, Tint> const &res,
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(res.Pmat);
   MyMatrix<T> prod = Pmat_T * GramMat * Pmat_T.transpose();
   if (prod != res.GramMatRed) {
-    std::cerr << "The GramMatRed is not the reduced expression\n";
+    std::cerr << "LLL: The GramMatRed is not the reduced expression\n";
     throw TerminalException{1};
   }
 }
@@ -33,7 +33,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   int nbRow = gram.rows();
   int nbCol = gram.cols();
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+  std::cerr << "LLL: nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
 #endif
   if (nbRow != nbCol) {
     throw TerminalException{1};
@@ -42,8 +42,8 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
 #ifdef DEBUG_CLASSIC_LLL
   int rnk = RankMat(GramMat);
   if (rnk != n) {
-    std::cerr << "rnk=" << rnk << " n=" << n << "\n";
-    std::cerr << "The matrix is not of full rank\n";
+    std::cerr << "LLL: rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "LLL: The matrix is not of full rank\n";
     throw TerminalException{1};
   }
 #endif
@@ -55,13 +55,13 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   auto RED = [&](int const &l) -> void {
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
+    std::cerr << "LLL: k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
 #endif
     if (1 < mue(k, l) * 2 || mue(k, l) * 2 < -1) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
 #ifdef DEBUG_CLASSIC_LLL
-      std::cerr << "RED, before oper q=" << q << "\n";
+      std::cerr << "LLL: RED, before oper q=" << q << "\n";
       WriteMatrix(std::cerr, gram);
 #endif
       gram(k, k) -= q_T * gram(k, l);
@@ -72,7 +72,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       for (int i = k + 1; i < n; i++)
         gram(i, k) -= q_T * gram(i, l);
 #ifdef DEBUG_CLASSIC_LLL
-      std::cerr << "After gram Oper\n";
+      std::cerr << "LLL: After gram Oper\n";
       WriteMatrix(std::cerr, gram);
 #endif
       mue(k, l) = mue(k, l) - q_T;
@@ -83,7 +83,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   };
   Tfield y = Tfield(99) / Tfield(100);
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << " y=" << y << "\n";
+  std::cerr << "LLL: y=" << y << "\n";
 #endif
   int i = 0;
   while (true) {
@@ -95,7 +95,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       break;
   }
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "After the while loop i=" << i << "\n";
+  std::cerr << "LLL: After the while loop i=" << i << "\n";
 #endif
   if (i >= n) {
     r = n - 1;
@@ -112,14 +112,14 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     }
   }
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "After the if test r=" << r << " k=" << k << " kmax=" << kmax
+  std::cerr << "LLL: After the if test r=" << r << " k=" << k << " kmax=" << kmax
             << "\n";
 #endif
   MyVector<Tfield> B(n);
   B(0) = UniversalScalarConversion<Tfield, Tmat>(gram(0, 0));
   while (k < n) {
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
+    std::cerr << "LLL: While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
 #endif
     if (k > kmax) {
       kmax = k;
@@ -137,7 +137,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     RED(k - 1);
 #ifdef DEBUG_CLASSIC_LLL
     bool test=B(k) < ( y - mue(k,k-1) * mue(k,k-1) ) * B(k-1);
-    std::cerr << "While loop, step 3 y=" << y << " mue(k,k-1)=" <<
+    std::cerr << "LLL: While loop, step 3 y=" << y << " mue(k,k-1)=" <<
       mue(k,k-1) << " B(k)=" << B(k) << " B(k-1)=" << B(k-1) << " test=" <<
       test << "\n";
 #endif
@@ -182,7 +182,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     if (B(r + 1) == 0)
       r++;
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "While loop, step 5 k=" << k << " r=" << r << "\n";
+    std::cerr << "LLL: While loop, step 5 k=" << k << " r=" << r << "\n";
 #endif
     for (int l = k - 2; l >= r + 1; l--) {
       RED(l);
@@ -193,7 +193,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     for (int j = 0; j < i; j++)
       gram(j, i) = gram(i, j);
   LLLreduction<Tmat, Tint> res = {std::move(gram), std::move(H)};
-#ifdef DEBUG
+#ifdef DEBUG_CLASSIC_LLL
   CheckLLLreduction(res, GramMat);
 #endif
   return res;
@@ -233,7 +233,7 @@ LLLreduction<Tmat, Tint> LLLreducedGeneral(MyMatrix<Tmat> const &GramMat,
     return LLLreducedBasis<Tmat, Tint>(GramMat);
   if (method == "dual")
     return LLLreducedBasisDual<Tmat, Tint>(GramMat);
-  std::cerr << "No matching method\n";
+  std::cerr << "LLL: No matching method\n";
   throw TerminalException{1};
 }
 
@@ -255,16 +255,16 @@ template <typename T, typename Tint> struct LLLbasis {
 
 template <typename T, typename Tint>
 LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
-  //  std::cerr << "LLLbasisReduction, step 1\n";
-  //  std::cerr << "|Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
-  //  std::cerr << "Latt=\n";
+  //  std::cerr << "LLL: LLLbasisReduction, step 1\n";
+  //  std::cerr << "LLL: |Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
+  //  std::cerr << "LLL: Latt=\n";
   //  WriteMatrix(std::cerr, Latt);
   MyMatrix<T> GramMat = Latt * Latt.transpose();
-  //  std::cerr << "LLLbasisReduction, step 2\n";
+  //  std::cerr << "LLL: LLLbasisReduction, step 2\n";
   LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(GramMat);
-  //  std::cerr << "LLLbasisReduction, step 3\n";
+  //  std::cerr << "LLL: LLLbasisReduction, step 3\n";
   MyMatrix<T> LattRed = UniversalMatrixConversion<T, Tint>(pair.Pmat) * Latt;
-  //  std::cerr << "LLLbasisReduction, step 4\n";
+  //  std::cerr << "LLL: LLLbasisReduction, step 4\n";
   return {LattRed, pair.Pmat};
 }
 
@@ -287,19 +287,19 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
     return TheGram;
   };
   MyMatrix<T> TheGram = GetGram(M);
-  std::cerr << "ReduceVectorFamily, step 1\n";
+  std::cerr << "LLL: ReduceVectorFamily, step 1\n";
   LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method);
-  std::cerr << "ReduceVectorFamily, step 2\n";
+  std::cerr << "LLL: ReduceVectorFamily, step 2\n";
   MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
-  std::cerr << "ReduceVectorFamily, step 3\n";
+  std::cerr << "LLL: ReduceVectorFamily, step 3\n";
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  std::cerr << "ReduceVectorFamily, step 4\n";
-  std::cerr << "|M|=" << M.rows() << "/" << M.cols()
+  std::cerr << "LLL: ReduceVectorFamily, step 4\n";
+  std::cerr << "LLL: |M|=" << M.rows() << "/" << M.cols()
             << " |Pmat_T|=" << Pmat_T.rows() << "/" << Pmat_T.cols() << "\n";
   MyMatrix<T> Mred = M * Pmat_T;
-  std::cerr << "ReduceVectorFamily, step 5\n";
+  std::cerr << "LLL: ReduceVectorFamily, step 5\n";
   if (GetGram(Mred) != res.GramMatRed) {
-    std::cerr << "Matrix error somewhere\n";
+    std::cerr << "LLL: Matrix error somewhere\n";
     throw TerminalException{1};
   }
   return {std::move(Mred), std::move(Pmat_T)};

@@ -570,7 +570,7 @@ template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
 std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
                                 bool is_symm, std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "f_for_canonic: nbRow=" << nbRow << "\n";
+  os << "PES: f_for_canonic: nbRow=" << nbRow << "\n";
 #endif
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;

@@ -2567,15 +2567,14 @@ vectface DUALDESC_AdjacencyDecomposition(
     }
     Tint GroupSizeComp = TheGRPrelevant.size();
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
+    os << "RDD: RESPAWN a new ADM computation |GRP|=" << GroupSizeComp
        << " TheDim=" << EXT.cols() << " |EXT|=" << nbRow << "\n";
 #endif
     std::string MainPrefix = ePrefix + "D_" + std::to_string(nbRow);
     std::string ansChosenDatabase =
         HeuristicEvaluation(TheMap, AllArr.ChosenDatabase);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-    os << "DUALDESC_ChosenDatabase : ChosenDatabase = " << ansChosenDatabase
-       << "\n";
+    os << "RDD: ChosenDatabase = " << ansChosenDatabase << "\n";
 #endif
     if (ansChosenDatabase == "canonic") {
       using TbasicBank = DatabaseCanonic<T, Tint, Tgroup>;
@@ -2607,8 +2606,8 @@ vectface DUALDESC_AdjacencyDecomposition(
                                                     Tidx_value, TbasicBank>(
           TheBank, bb, AllArr, MainPrefix, TheMap, f_dd, os);
     }
-    std::cerr << "compute_split_or_not: Failed to find a matching entry\n";
-    std::cerr << "Authorized values: canonic, repr\n";
+    std::cerr << "RDD: compute_split_or_not: Failed to find a matching entry\n";
+    std::cerr << "RDD: Authorized values: canonic, repr\n";
     throw TerminalException{1};
   };
   FaceOrbitsizeTableContainer<Tint> ListOrbitFaceOrbitsize =
@@ -2841,7 +2840,7 @@ vectface ReadFacets(std::string const &Format, std::string const &File,
     vectface vf = datagap::ConvertGAPread_ListFace<T, Telt>(data, n);
     return vf;
   }
-  std::cerr << "No option has been chosen\n";
+  std::cerr << "RDD: No option has been chosen\n";
   throw TerminalException{1};
 }
 
@@ -2895,7 +2894,7 @@ void OutputFacets_stream(const MyMatrix<T> &EXT,
     }
     return;
   }
-  std::cerr << "No option has been chosen\n";
+  std::cerr << "RDD: No option has been chosen\n";
   throw TerminalException{1};
 }
 
@@ -3136,10 +3135,10 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   // Setting up the Control C event.
   ExitEvent = false;
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
-    std::cerr << "Before submission of signal_callback_handler\n";
+    std::cerr << "RDD: Before submission of signal_callback_handler\n";
     signal(SIGINT, signal_callback_handler);
   } else {
-    std::cerr << "Do not capture the CtrlC event\n";
+    std::cerr << "RDD: Do not capture the CtrlC event\n";
   }
   //
   using TintGroup = typename Tgroup::Tint;
@@ -3241,8 +3240,8 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
   int rnk = RankMat(EXT);
   if (rnk != EXT.cols()) {
     std::cerr
-        << "For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
-    std::cerr << "rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols()
+        << "RDD: For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
+    std::cerr << "RDD: rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols()
               << "\n";
     throw TerminalException{1};
   }

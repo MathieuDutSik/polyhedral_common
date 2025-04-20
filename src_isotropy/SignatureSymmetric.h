@@ -7,6 +7,10 @@
 #include "COMB_Vectors.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_SIGNATURE_SYMMETRIC
+#endif
+
 template <typename T>
 MyVector<T> FindNonIsotropeVector(MyMatrix<T> const &SymMat) {
   int n = SymMat.rows();
@@ -42,13 +46,13 @@ DiagSymMat<T>
 DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n = SymMat.rows();
-#ifdef DEBUG_POSITIVITY
-  std::cerr << "Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
+#ifdef DEBUG_SIGNATURE_SYMMETRIC
+  std::cerr << "SIGN: Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
   WriteMatrix(std::cerr, SymMat);
   int rnk = RankMat(SymMat);
   if (rnk != n) {
-    std::cerr << "POS: Error in DiagonalizeNonDegenerateSymmetricMatrix\n";
-    std::cerr << "POS: rnk=" << rnk << " n=" << n << "\n";
+    std::cerr << "SIGN: Error in DiagonalizeNonDegenerateSymmetricMatrix\n";
+    std::cerr << "SIGN: rnk=" << rnk << " n=" << n << "\n";
     throw TerminalException{1};
   }
 #endif
@@ -61,8 +65,8 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
     if (i == 0) {
       BasisOrthogonal = IdentityMat<T>(n);
     } else {
-#ifdef DEBUG_POSITIVITY
-      std::cerr << "|ListVect|=" << ListVect.size() << "\n";
+#ifdef DEBUG_SIGNATURE_SYMMETRIC
+      std::cerr << "SIGN: |ListVect|=" << ListVect.size() << "\n";
 #endif
       MyMatrix<T> TheBasis = MatrixFromVectorFamily(ListVect);
       MyMatrix<T> eProd = SymMat * TheBasis.transpose();
@@ -76,8 +80,8 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
   }
   MyMatrix<T> TheBasis = MatrixFromVectorFamily(ListVect);
   MyMatrix<T> RedMat = TheBasis * SymMat * TheBasis.transpose();
-#ifdef DEBUG_POSITIVITY
-  std::cerr << "RedMat=\n";
+#ifdef DEBUG_SIGNATURE_SYMMETRIC
+  std::cerr << "SIGN: RedMat=\n";
   WriteMatrix(std::cerr, RedMat);
 #endif
   int nbPlus = 0;
@@ -89,8 +93,8 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
     if (RedMat(i, i) < 0)
       nbMinus++;
   }
-#ifdef DEBUG_POSITIVITY
-  std::cerr << "nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
+#ifdef DEBUG_SIGNATURE_SYMMETRIC
+  std::cerr << "SIGN: nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
 #endif
   return {TheBasis, RedMat, nbZero, nbPlus, nbMinus};
 }
@@ -163,12 +167,15 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat) {
   int nbMinus = 0;
   int nbZero = 0;
   for (int i = 0; i < n1; i++) {
-    if (RedMat(i, i) > 0)
+    if (RedMat(i, i) > 0) {
       nbPlus++;
-    if (RedMat(i, i) < 0)
+    }
+    if (RedMat(i, i) < 0) {
       nbMinus++;
-    if (RedMat(i, i) == 0)
+    }
+    if (RedMat(i, i) == 0) {
       nbZero++;
+    }
   }
   return {RMat, RedMat, nbZero, nbPlus, nbMinus};
 }
