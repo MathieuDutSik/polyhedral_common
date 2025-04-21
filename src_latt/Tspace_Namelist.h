@@ -121,7 +121,7 @@ void WriteLinSpaceFile(std::string const &eFile,
 
 
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   std::string TypeTspace = Blk.ListStringValues.at("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
@@ -166,7 +166,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (PtGroupMethod == "Compute") {
-      return reset_pt_stab_gens<T,Tint>(LinSpaRet, os);
+      return reset_pt_stab_gens<T,Tint,Tgroup>(LinSpaRet, os);
     }
     if (PtGroupMethod == "InvGroupInit") {
       std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");

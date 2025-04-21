@@ -19,7 +19,7 @@ void process_inner1(std::string const &FileO, std::string const &OutFormat,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<Twork, Tfield, Tidx>(
+      GetListGenAutomorphism_ListMat_Vdiag<Twork, Tfield, Tgroup>(
           EXT, ListMat, Vdiag, std::cerr);
   //
   std::vector<Telt> LGen;

@@ -251,20 +251,20 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
           BigMat, ListComm,  ListSubspaces, PtStab};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
                              std::vector<MyMatrix<T>> const &ListMat,
                              std::ostream &os) {
-  using Tidx = uint32_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
   using Tfield = T;
   MyMatrix<Tint> SHV =
       ExtractInvariantVectorFamilyZbasis<T, Tint>(SuperMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   std::vector<T> Vdiag(SHV_T.rows(), 0);
   std::vector<std::vector<Tidx>> ListGenPerm =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat,
-                                                            Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                              Vdiag, os);
   std::vector<MyMatrix<Tint>> ListGenMatr;
   for (auto &eList : ListGenPerm) {
     MyMatrix<T> eMatr_T = FindTransformation_vect(SHV_T, SHV_T, eList);
@@ -379,10 +379,10 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
   }
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
                             LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
-  using Tidx = uint32_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
   using Tfield = T;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
@@ -390,8 +390,8 @@ bool IsSymmetryGroupCorrect(MyMatrix<T> const &GramMat,
   std::vector<T> Vdiag(n_row, 0);
   std::vector<MyMatrix<T>> ListMat = {GramMat};
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat,
-                                                            Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                              Vdiag, os);
   for (auto &eList : ListGen) {
     std::optional<MyMatrix<T>> opt =
         FindTransformationGeneral_vect(SHV_T, SHV_T, eList);
@@ -465,26 +465,26 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
   * Not globally stabilizing the T-space.
   * Having an action on the T-space that is non-trivial.
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 MyMatrix<T>
-GetRandomPositiveDefiniteNoNontrialSymm(LinSpaceMatrix<T> const &LinSpa,
+GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa,
                                         std::ostream &os) {
   int N = 2;
   while (true) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: Before "
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: Before "
           "GetRandomPositiveDefinite\n";
 #endif
     MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: After "
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: After "
           "GetRandomPositiveDefinite\n";
-    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: TestMat=\n";
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: TestMat=\n";
     WriteMatrix(os, TheMat);
 #endif
-    bool test = IsSymmetryGroupCorrect<T, Tint>(TheMat, LinSpa, os);
+    bool test = IsSymmetryGroupCorrect<T, Tint, Tgroup>(TheMat, LinSpa, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: GetRandomPositiveDefiniteNoNontrialSymm: test=" << test << "\n";
+    os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: test=" << test << "\n";
 #endif
     if (test) {
       return TheMat;
@@ -758,8 +758,8 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
       GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
 
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV_T, ListMat,
-                                                            Vdiag, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
+                                                              Vdiag, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer |ListGen|=" << ListGen.size() << "\n";
 #endif
@@ -949,8 +949,8 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   // resolving that.
   //
   std::vector<std::vector<Tidx>> ListGen1 =
-      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tidx>(SHV1_T, ListMat1,
-                                                            Vdiag1, os);
+      GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV1_T, ListMat1,
+                                                              Vdiag1, os);
   std::vector<Telt> LGenPerm1;
   for (auto &eList1 : ListGen1) {
     Telt ePerm1(eList1);
@@ -1152,11 +1152,11 @@ void reset_paperwork(LinSpaceMatrix<T> & LinSpa) {
   }
 }
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 void reset_pt_stab_gens(LinSpaceMatrix<T> & LinSpa, std::ostream & os) {
   std::vector<MyMatrix<Tint>> ListGens =
-    ComputePointStabilizerTspace<T, Tint>(LinSpa.SuperMat,
-                                          LinSpa.ListMat, os);
+    ComputePointStabilizerTspace<T, Tint, Tgroup>(LinSpa.SuperMat,
+                                                  LinSpa.ListMat, os);
   LinSpa.PtStabGens.clear();
   for (auto &eGen : ListGens) {
     LinSpa.PtStabGens.push_back(UniversalMatrixConversion<T, Tint>(eGen));
@@ -1164,7 +1164,7 @@ void reset_pt_stab_gens(LinSpaceMatrix<T> & LinSpa, std::ostream & os) {
 }
 
 
-template<typename T, typename Tint>
+template<typename T, typename Tint, typename Tgroup>
 LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const& ListMat, std::ostream& os) {
   LinSpaceMatrix<T> LinSpa;
   LinSpa.ListMat = ListMat;
@@ -1173,7 +1173,7 @@ LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const& ListMat, s
     GetOnePositiveDefiniteMatrix<T, Tint>(LinSpa.ListMat, os);
   // ListComm not set as it cannot be guessed.
   // Same for ListSubspaces.
-  reset_pt_stab_gens<T,Tint>(LinSpa, os);
+  reset_pt_stab_gens<T,Tint,Tgroup>(LinSpa, os);
   LinSpa.isBravais = IsBravaisSpace(LinSpa.n, LinSpa.ListMat,
                                     LinSpa.PtStabGens, os);
   return LinSpa;

@@ -5,6 +5,8 @@
 #else
 # include "NumberTheory.h"
 #endif
+#include "Group.h"
+#include "Permutation.h"
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
@@ -26,6 +28,10 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = mpz_class;
 #endif
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     //
     std::string FileListMat = argv[1];
     std::string OutFormat = "GAP";
@@ -37,7 +43,7 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
     std::vector<MyMatrix<Tint>> ListGen =
-        ArithmeticAutomorphismGroupMultiple<T, Tint>(ListMat, std::cerr);
+      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {

@@ -14,7 +14,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
-  LinSpaceMatrix<T> LinSpa = BuildLinSpaceMatrix<T,Tint>(ListMat, std::cerr);
+  LinSpaceMatrix<T> LinSpa = BuildLinSpaceMatrix<T,Tint,Tgroup>(ListMat, std::cerr);
   //
   int dimEXT = LinSpa.n + 1;
   PolyHeuristicSerial<TintGroup> AllArr =

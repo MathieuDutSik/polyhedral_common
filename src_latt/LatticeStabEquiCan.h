@@ -238,18 +238,18 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ArithmeticAutomorphismGroupMultiple_inner(std::vector<MyMatrix<T>> const &ListMat,
                                           MyMatrix<Tint> const& SHV,
                                           std::ostream &os) {
-  using Tidx = uint32_t;
+  using Tidx = typename Tgroup::Telt::Tidx;
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, 0);
 
   std::vector<std::vector<Tidx>> ListGen =
-      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tidx>(SHV_T, ListMat, Vdiag,
+      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
                                                        os);
 
   std::vector<MyMatrix<Tint>> ListGenRet;
@@ -273,16 +273,16 @@ ArithmeticAutomorphismGroupMultiple_inner(std::vector<MyMatrix<T>> const &ListMa
   return ListGenRet;
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ArithmeticAutomorphismGroup_inner(MyMatrix<T> const &inpMat,
                                   MyMatrix<Tint> const& SHV,
                                   std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
-  return ArithmeticAutomorphismGroupMultiple_inner(ListMat, SHV, os);
+  return ArithmeticAutomorphismGroupMultiple_inner<T,Tint,Tgroup>(ListMat, SHV, os);
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
                                     std::ostream &os) {
@@ -294,14 +294,14 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
-  return ArithmeticAutomorphismGroupMultiple_inner(ListMat, SHV, os);
+  return ArithmeticAutomorphismGroupMultiple_inner<T,Tint,Tgroup>(ListMat, SHV, os);
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
-  return ArithmeticAutomorphismGroupMultiple<T, Tint>(ListMat, os);
+  return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
 }
 
 template <typename T, typename Tint>

@@ -2,6 +2,8 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "Tspace_General.h"
+#include "Group.h"
+#include "Permutation.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {
@@ -9,6 +11,10 @@ int main(int argc, char *argv[]) {
   try {
     using T = mpq_class;
     using Tint = mpz_class;
+    using Tidx = uint32_t;
+    using Telt = permutalib::SingleSidedPerm<Tidx>;
+    using TintGroup = mpz_class;
+    using Tgroup = permutalib::Group<Telt, TintGroup>;
     FullNamelist eFull = NAMELIST_GetOneTSPACE();
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
@@ -27,7 +33,7 @@ int main(int argc, char *argv[]) {
     NAMELIST_ReadNamelistFile(TspaceNamelistFile, eFull);
     //
     SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
-    LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, std::cerr);
+    LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
     WriteLinSpaceFile(FILEOUT, LinSpa);
     std::cerr << "Normal termination of LATT_ConvertTspace\n";
   } catch (TerminalException const &e) {

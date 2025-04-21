@@ -40,7 +40,12 @@
 #define TIMINGS_LIN_POLYTOPE_INTEGRAL_WMAT
 #endif
 
-#ifdef DEBUG
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_THRESHOLD_SCHEME
+#define SANITY_CHECK_AGRESSIVE_THRESHOLD_SUBSET_SCHEME
+#endif
+
+#ifdef SANITY_CHECK_AGRESSIVE_THRESHOLD_SUBSET_SCHEME
 static const size_t THRESHOLD_USE_SUBSET_SCHEME = 2;
 #else
 static const size_t THRESHOLD_USE_SUBSET_SCHEME = 1000;
@@ -470,24 +475,27 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
   return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
 }
 
-template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
+template <typename Tvalue, typename Tgroup, typename Tidx_value, typename F1,
           typename F2, typename F1tr, typename F2tr, typename F3, typename F4>
-std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
-                                          F4 f4, bool is_symm,
-                                          std::ostream &os) {
+std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
+                                                                 F4 f4, bool is_symm,
+                                                                 std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: nbRow=" << nbRow << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME
      << "\n";
 #endif
-  if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
+  auto f_heuristic=[&]() -> std::vector<std::vector<Tidx>> {
     if (is_symm) {
       return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     } else {
       return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     }
-  } else {
+  };
+  auto f_kernel=[&]() -> std::vector<std::vector<Tidx>> {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
@@ -497,6 +505,38 @@ std::vector<std::vector<Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
       return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
                                               false>(WMat, os);
     }
+  };
+#ifdef SANITY_CHECK_THRESHOLD_SCHEME
+  std::vector<Tgroup> LGrp;
+  for (int i=0; i<2; i++) {
+    auto iife=[&]() -> std::vector<std::vector<Tidx>> {
+      if (i == 0) {
+        return f_heuristic();
+      } else {
+        return f_kernel();
+      }
+    };
+    std::vector<std::vector<Tidx>> LGen1 = iife();
+    std::vector<Telt> LGen2;
+    Tidx n_act = 0;
+    for (auto & eGen1 : LGen1) {
+      n_act = eGen1.size();
+      Telt eGen2(eGen1);
+      LGen2.push_back(eGen2);
+    }
+    Tgroup eGrp(LGen2, n_act);
+    LGrp.push_back(eGrp);
+  }
+  if (LGrp[0] != LGrp[1]) {
+    std::cerr << "PES: The groups computed from the different scheme are not coherent\n";
+    throw TerminalException{1};
+  }
+#endif
+
+  if (nbRow > THRESHOLD_USE_SUBSET_SCHEME) {
+    return f_heuristic();
+  } else {
+    return f_kernel();
   }
 }
 
@@ -513,7 +553,7 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
   using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
                [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
-    return f_for_stab<T, Tidx, Tidx_value, decltype(f1), decltype(f2), decltype(f1tr), decltype(f2tr),
+    return f_for_stab<T, Tgroup, Tidx_value, decltype(f1), decltype(f2), decltype(f1tr), decltype(f2tr),
                       decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4,
                                                   is_symm, os);
   };
@@ -1148,10 +1188,12 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
   throw TerminalException{1};
 }
 
-template <typename T, typename Tfield, typename Tidx, typename Tidx_value>
-std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
+template <typename T, typename Tfield, typename Tgroup, typename Tidx_value>
+std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
+  using Tidx = typename Tgroup::Telt::Tidx;
+  using Treturn = std::vector<std::vector<Tidx>>;
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (!is_family_symmmetric(ListMat)) {
     std::cerr << "The matrices of ListMat are not symmetric\n";
@@ -1161,10 +1203,9 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
-  using Treturn = std::vector<std::vector<Tidx>>;
   auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
                [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
-    return f_for_stab<std::vector<T>, Tidx, Tidx_value, decltype(f1),
+    return f_for_stab<std::vector<T>, Tgroup, Tidx_value, decltype(f1),
                       decltype(f2), decltype(f1tr), decltype(f2tr),
                       decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, is_symm, os);
   };
@@ -1176,29 +1217,29 @@ std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
   return ListGen;
 }
 
-template <typename T, typename Tfield, typename Tidx>
-std::vector<std::vector<Tidx>> GetListGenAutomorphism_ListMat_Vdiag(
+template <typename T, typename Tfield, typename Tgroup>
+std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_ListMat_Vdiag(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_val_poss = nbRow * nbRow / 2 + 1;
   if (max_val_poss < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx,
+    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
                                                            uint8_t>(
         EXT, ListMat, Vdiag, os);
   }
   if (max_val_poss < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx,
+    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
                                                            uint16_t>(
         EXT, ListMat, Vdiag, os);
   }
   if (max_val_poss < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx,
+    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
                                                            uint32_t>(
         EXT, ListMat, Vdiag, os);
   }
   if (max_val_poss < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx,
+    return GetListGenAutomorphism_ListMat_Vdiag_Tidx_value<T, Tfield, Tgroup,
                                                            uint64_t>(
         EXT, ListMat, Vdiag, os);
   }

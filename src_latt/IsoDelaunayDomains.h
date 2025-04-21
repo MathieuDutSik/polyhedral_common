@@ -466,7 +466,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
 #endif
   auto test_matrix = [&](MyMatrix<T> const &GramMat)
       -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
-    bool test = IsSymmetryGroupCorrect<T, Tint>(GramMat, data.LinSpa, os);
+    bool test = IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
     if (!test) {
       return {};
     }
@@ -487,12 +487,12 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
   };
   while (true) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrialSymm\n";
+    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm\n";
 #endif
     MyMatrix<T> GramMat =
-        GetRandomPositiveDefiniteNoNontrialSymm<T, Tint>(data.LinSpa, os);
+      GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: After GetRandomPositiveDefiniteNoNontrialSymm\n";
+    os << "ISODEL: After GetRandomPositiveDefiniteNoNontrivialSymm\n";
 #endif
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix(GramMat);
     if (opt) {
@@ -2194,7 +2194,7 @@ DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains(FullNamelis
   os << "We have CommonGramMat\n";
 #endif
   //
-  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   os << "We have LinSpa\n";
 #endif

@@ -15,7 +15,7 @@ void compute_orbit_basis(std::string const &FileM, std::string const &OutFormat,
   T_shvec_info<T, Tint> info = computeMinimum_GramMat<T, Tint>(GramMat);
   MyMatrix<Tint> SHV = MatrixFromVectorFamily(info.short_vectors);
   std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroup<T, Tint>(GramMat, std::cerr);
+    ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, std::cerr);
   vectface vf = EnumerateOrbitBasis<Tgroup, Tint>(SHV, ListGen, std::cerr);
   if (OutFormat == "GAP") {
     os << "return rec(SHV:=";

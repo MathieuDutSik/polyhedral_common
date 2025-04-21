@@ -803,7 +803,7 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
   We compute some isometries of the lattice coming from the blocks.
   The only constraint is that the matrices being returned are isometries.
  */
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
                                               std::ostream &os) {
 #ifdef TIMINGS_APPROXIMATE_MODELS
@@ -853,7 +853,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
     std::vector<size_t> const &eConn = LConn[iConn];
     size_t dim = eConn.size();
     std::vector<MyMatrix<Tint>> LGen =
-        INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint>(eQ, os);
+      INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(eQ, os);
     for (auto &eGen : LGen) {
       MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
       for (size_t i = 0; i < dim; i++) {
@@ -1318,7 +1318,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   os << "MODEL: We have ListGenerators\n";
 #endif
   std::vector<MyMatrix<Tint>> GRPeasy =
-      GetEasyIsometries<T, Tint>(er.QmatEichler, os);
+    GetEasyIsometries<T, Tint, Tgroup>(er.QmatEichler, os);
   approx.SetListClassesOrbitwise(GRPeasy, os);
   InternalApproxCase<T, Tint> iac{Qmat, er, ListCoset, ListGenerators, approx};
   std::shared_ptr<InternalApproxCase<T, Tint>> shr_ptr =

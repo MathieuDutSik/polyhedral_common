@@ -950,7 +950,7 @@ private:
     os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
 #endif
     if (eBlock.h == 0) {
-      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint>(mat, os);
+      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(mat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: INDEF_FORM_AutomorphismGroup_PosNeg|=" << time << "\n";
 #endif

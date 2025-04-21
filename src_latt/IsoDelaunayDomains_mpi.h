@@ -20,7 +20,7 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   std::ostream &os = *os_ptr;
   SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
   SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
-  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint>(BlockTSPACE, os);
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   int dimEXT = LinSpa.n + 1;
   //
   bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
