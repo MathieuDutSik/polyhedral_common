@@ -53,7 +53,7 @@ ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
     Tidx j_row = CanonicOrd[i_row];
     Mtrans1(i_row, j_row) = 1;
   }
-#ifdef DEBUG_INDEFINITE_LLL
+#ifdef DEBUG_INDEX_APPROX_CANONICAL
   MyMatrix<T> Mtrans1_T = UniversalMatrixConversion<T, Tint>(Mtrans1);
   MyMatrix<T> eProd = Mtrans1_T * M * Mtrans1_T.transpose();
   if (eProd != Mreord) {
