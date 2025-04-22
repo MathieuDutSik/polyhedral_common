@@ -50,7 +50,7 @@
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_STAB = 1000;
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_CANONIC = 1000;
 
-static const size_t THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC = 1000;
+static const size_t THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC = 2;
 
 //
 // Equivalence of subsets and stabilizer of a WeightMatrix
@@ -218,8 +218,8 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   size_t nbRow = TheEXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr << "Error in FCT_EXT_Qinput due to too small coefficient range\n";
-    std::cerr << "nbRow=" << nbRow
+    std::cerr << "PES: Error in FCT_EXT_Qinput due to too small coefficient range\n";
+    std::cerr << "PES: nbRow=" << nbRow
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
@@ -339,15 +339,15 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
   os << "PES: |GramMat2|=" << GramMat2.rows() << " / " << GramMat2.cols()
      << "\n";
   if (nbRow != CanonicReord1.size()) {
-    std::cerr << "nbRow=" << nbRow
+    std::cerr << "PES: nbRow=" << nbRow
               << " |CanonicReord1|=" << CanonicReord1.size() << "\n";
-    std::cerr << "CanonicReord1 should be of length nbRow\n";
+    std::cerr << "PES: CanonicReord1 should be of length nbRow\n";
     throw TerminalException{1};
   }
   if (nbRow != CanonicReord2.size()) {
-    std::cerr << "nbRow=" << nbRow
+    std::cerr << "PES: nbRow=" << nbRow
               << " |CanonicReord2|=" << CanonicReord2.size() << "\n";
-    std::cerr << "CanonicReord2 should be of length nbRow\n";
+    std::cerr << "PES: CanonicReord2 should be of length nbRow\n";
     throw TerminalException{1};
   }
 #endif
@@ -355,8 +355,8 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
     size_t pos = static_cast<size_t>(CanonicReord1[idx]);
     if (pos >= nbRow) {
-      std::cerr << "pos=" << pos << " nbRow=" << nbRow << "\n";
-      std::cerr << "CanonicReord1 entry is above the tange\n";
+      std::cerr << "PES: pos=" << pos << " nbRow=" << nbRow << "\n";
+      std::cerr << "PES: CanonicReord1 entry is above the tange\n";
       throw TerminalException{1};
     }
 #endif
@@ -422,7 +422,7 @@ GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
   }
 #endif
-  std::cerr << "Failed to find matching numeric in GetSimpleWeightMatrix\n";
+  std::cerr << "PES: Failed to find matching numeric in GetSimpleWeightMatrix\n";
   throw TerminalException{1};
 }
 
@@ -457,7 +457,7 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
     return FCT_EXT_Qinv<T, Tidx, Treturn, decltype(f)>(TheEXT, f, os);
   }
 #endif
-  std::cerr << "Failed to find matching numeric in GetWeightMatrix\n";
+  std::cerr << "PES: Failed to find matching numeric in GetWeightMatrix\n";
   throw TerminalException{1};
 }
 
@@ -595,7 +595,7 @@ Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
     return LinPolytope_Automorphism_GramMat_Tidx_value<T, Tgroup, uint64_t>(
         EXT, GramMat, os);
   }
-  std::cerr << "Failed to find a matching type\n";
+  std::cerr << "PES: Failed to find a matching type\n";
   throw TerminalException{1};
 }
 
@@ -611,7 +611,7 @@ template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
 std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
                                 bool is_symm, size_t threshold, std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: f_for_canonic: nbRow=" << nbRow << "\n";
+  os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold << "\n";
 #endif
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
@@ -677,7 +677,7 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, My
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint64_t>(EXT, GramMat, threshold, os);
   }
-  std::cerr << "Failed to find a match for Tidx_value\n";
+  std::cerr << "PES: Failed to find a match for Tidx_value\n";
   throw TerminalException{1};
 }
 
@@ -727,18 +727,20 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold, st
   if (n_rows < size_t(std::numeric_limits<uint64_t>::max()))
     return LinPolytope_CanonicForm_Tidx<T, uint64_t>(EXT, threshold, os);
 #endif
-  std::cerr << "LinPolytope_CanonicForm : Failed to find matching numeric\n";
+  std::cerr << "PES: LinPolytope_CanonicForm : Failed to find matching numeric\n";
   throw TerminalException{1};
 }
 
 template <typename T>
-void check_iso_info_coherence(std::optional<T> const& IsoInfo1, std::optional<T> const& IsoInfo2) {
+void check_iso_info_coherence(std::optional<T> const& IsoInfo1, std::optional<T> const& IsoInfo2, std::string const& context) {
   if (!IsoInfo1 && IsoInfo2) {
-    std::cerr << "IsoInfo1 fails to find isomorphism, but IsoInfo2 does\n";
+    std::cerr << "PES: IsoInfo1 fails to find isomorphism, but IsoInfo2 does\n";
+    std::cerr << "PES: context=" << context << "\n";
     throw TerminalException{1};
   }
   if (IsoInfo1 && !IsoInfo2) {
-    std::cerr << "IsoInfo1 finds isomorphism but IsoInfo2 does not\n";
+    std::cerr << "PES: IsoInfo1 finds isomorphism but IsoInfo2 does not\n";
+    std::cerr << "PES: context=" << context << "\n";
     throw TerminalException{1};
   }
 }
@@ -761,7 +763,7 @@ LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytope_Isomorphism");
 #endif
   if (!IsoInfo)
     return {};
@@ -787,7 +789,7 @@ std::optional<std::vector<Tidx>> LinPolytope_Isomorphism_GramMat(
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytope_Isomorphism_GramMat");
 #endif
   if (!IsoInfo)
     return {};
@@ -961,7 +963,7 @@ DataMapping<Tidx> ExtendPartialAutomorphism(
     MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield, T>(eMat);
     MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat_F)) {
-      std::cerr << "The matrix P should preserve the matrices at this point\n";
+      std::cerr << "PES: The matrix P should preserve the matrices at this point\n";
       throw TerminalException{1};
     }
   }
@@ -1070,8 +1072,8 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
     std::cerr
-        << "Error in FCT_ListMat_Vdiag due to too small coefficient range\n";
-    std::cerr << "nbRow=" << nbRow
+        << "PES: Error in FCT_ListMat_Vdiag due to too small coefficient range\n";
+    std::cerr << "PES: nbRow=" << nbRow
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
   }
@@ -1181,7 +1183,7 @@ size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
     return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(
         EXT, ListMat, Vdiag, os);
   }
-  std::cerr << "Failed to find a matching type\n";
+  std::cerr << "PES: Failed to find a matching type\n";
   throw TerminalException{1};
 }
 
@@ -1193,7 +1195,7 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_Lis
   using Treturn = std::vector<std::vector<Tidx>>;
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (!is_family_symmmetric(ListMat)) {
-    std::cerr << "The matrices of ListMat are not symmetric\n";
+    std::cerr << "PES: The matrices of ListMat are not symmetric\n";
     throw TerminalException{1};
   }
 #endif
@@ -1240,7 +1242,7 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_Lis
                                                            uint64_t>(
         EXT, ListMat, Vdiag, os);
   }
-  std::cerr << "Failed to find a matching Tidx_value\n";
+  std::cerr << "PES: Failed to find a matching Tidx_value\n";
   throw TerminalException{1};
 }
 
@@ -1250,7 +1252,7 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
     std::vector<T> const &Vdiag, size_t threshold, std::ostream &os) {
 #ifdef SANITY_CHECK_POLYTOPE_EQUI_STAB
   for (!is_family_symmmetric(ListMat)) {
-    std::cerr << "The matrices of ListMat are not symmetric\n";
+    std::cerr << "PES: The matrices of ListMat are not symmetric\n";
     throw TerminalException{1};
   }
 #endif
@@ -1292,7 +1294,7 @@ Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
     return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(EXT, ListMat, Vdiag, threshold, os);
   }
-  std::cerr << "No matching type for Tidx_value\n";
+  std::cerr << "PES: No matching type for Tidx_value\n";
   throw TerminalException{1};
 }
 
@@ -1321,7 +1323,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B, "TestEquivalence_ListMat_Vdiag_Tidx_value");
 #endif
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: We have IsoInfo\n";
@@ -1419,7 +1421,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag(
     return TestEquivalence_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(
         EXT1, ListMat1, Vdiag1, EXT2, ListMat2, Vdiag2, os);
   }
-  std::cerr << "Failed to find a match for Tidx_value\n";
+  std::cerr << "PES: Failed to find a match for Tidx_value\n";
   throw TerminalException{1};
 }
 
@@ -1783,7 +1785,7 @@ LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value(
   for (auto &eVal : WMatAbs.WMat.GetWeight()) {
     strWMat += " " + std::to_string(eVal);
   }
-  std::cerr << "strWMat=" << strWMat << "\n";
+  os << "PES: strWMat=" << strWMat << "\n";
   size_t eHash3 = MD5_hash_T<size_t>(strWMat);
   os << "PES: eHash3=" << eHash3 << "\n";
 #endif
@@ -1835,7 +1837,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick(
     return LinPolytopeAntipodalIntegral_CanonicForm_AbsTrick_Tidx_value<
         Tint, uint64_t>(EXT, Qmat, os);
   }
-  std::cerr << "Failed to match for Tidx_value\n";
+  std::cerr << "PES: Failed to match for Tidx_value\n";
   throw TerminalException{1};
 }
 

@@ -61,7 +61,7 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytopeIntegral_Isomorphism");
 #endif
   if (!IsoInfo)
     return {};
@@ -81,11 +81,11 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
     const MyMatrix<Tint> &EXT1, const MyMatrix<T> &GramMat1,
     const MyMatrix<Tint> &EXT2, const MyMatrix<T> &GramMat2, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   if (EXT1.rows() != EXT2.rows()) {
     return {};
   }
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
   auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> {
@@ -95,8 +95,12 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
+  //  os << "PESI: EXT1_T=\n";
+  //  WriteMatrix(os, EXT1_T);
+  //  os << "PESI: EXT2_T=\n";
+  //  WriteMatrix(os, EXT2_T);
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytopeIntegral_Isomorphism_GramMat");
 #endif
   if (!IsoInfo)
     return {};
