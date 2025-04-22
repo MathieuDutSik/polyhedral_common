@@ -33,6 +33,7 @@
 #ifdef DEBUG
 #define DEBUG_POLYTOPE_EQUI_STAB
 #define DEBUG_LIN_POLYTOPE_INTEGRAL_WMAT
+#define DEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM
 #endif
 
 #ifdef TIMINGS
@@ -371,7 +372,9 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
   if (!test) {
-    // We fail the polytope equivalence
+#ifdef DEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM
+    os << "PES: We fail the polytope equivalence\n";
+#endif
     return {};
   }
   // We check that EXT1 P = EXT2
@@ -384,9 +387,14 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
       UniversalMatrixConversion<Tfield, T>(GramMat2);
   MyMatrix<Tfield> eProd = P * GramMat2_Tfield * P.transpose();
   if (eProd != GramMat1_Tfield) {
-    // We fail the Gram test
+#ifdef DEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM
+    os << "PES: We fail the Gram test\n";
+#endif
     return {};
   }
+#ifdef DEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM
+  os << "PES: We find an isomorphism\n";
+#endif
   std::pair<std::vector<Tidx>, MyMatrix<Tfield>> IsoInfo{ListIdx, P};
   return IsoInfo;
 }
