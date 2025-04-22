@@ -36,24 +36,33 @@
 #define DEBUG_POLYTOPE_EQUI_STAB_INT
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
+#endif
+
+
+
 template <typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
                                 const MyMatrix<Tint> &EXT2, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using Tfield = typename overlying_field<Tint>::field_type;
   if (EXT1.rows() != EXT2.rows()) {
     return {};
   }
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  std::vector<Tidx> CanonicReord1 =
-      LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, os);
-  std::vector<Tidx> CanonicReord2 =
-      LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, os);
-  //
-  using Tfield = typename overlying_field<Tint>::field_type;
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1,
-                                                      CanonicReord2);
+  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, threshold, os);
+    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, threshold, os);
+    //
+    return IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+  };
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+#ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+#endif
   if (!IsoInfo)
     return {};
   Telt ePerm(IsoInfo->first);
@@ -79,14 +88,16 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
   using Tidx = typename Telt::Tidx;
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
-  std::vector<Tidx> CanonicReord1 =
-      LinPolytope_CanonicOrdering<T, Tidx>(EXT1_T, os);
-  std::vector<Tidx> CanonicReord2 =
-      LinPolytope_CanonicOrdering<T, Tidx>(EXT2_T, os);
-  //
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
-      IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(
-          EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
+  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> {
+    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<T, Tidx>(EXT1_T, threshold, os);
+    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<T, Tidx>(EXT2_T, threshold, os);
+    return IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
+  };
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+#ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B);
+#endif
   if (!IsoInfo)
     return {};
   Telt ePerm(IsoInfo->first);

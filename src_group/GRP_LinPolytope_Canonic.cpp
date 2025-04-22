@@ -28,8 +28,9 @@ int main(int argc, char *argv[]) {
     size_t nbRow = EXT.rows();
     std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
     //
+    size_t threshold = THRESHOLD_USE_SUBSET_SCHEME_CANONIC;
     std::vector<Tidx> CanonicOrd =
-        LinPolytope_CanonicOrdering<T, Tidx>(EXT, std::cerr);
+      LinPolytope_CanonicOrdering<T, Tidx>(EXT, threshold, std::cerr);
     //
     if (argc == 3) {
       std::ofstream os(argv[2]);
