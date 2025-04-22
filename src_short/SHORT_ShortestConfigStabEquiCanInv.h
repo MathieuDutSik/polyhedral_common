@@ -50,7 +50,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
                                                 std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
-  return ArithmeticAutomorphismGroup_inner<T,Tint>(eRec1.GramMat, eRec1.SHVdisc, os);
+  return ArithmeticAutomorphismGroup_inner<T,Tint, Tgroup>(eRec1.GramMat, eRec1.SHVdisc, os);
 }
 
 template <typename T, typename Tint>
