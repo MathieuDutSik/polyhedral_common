@@ -92,12 +92,14 @@ TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const &WMat,
       TestEquivalenceWeightMatrix_norenorm_perm<int, Telt>(WMat1, WMat2, os);
   if (!test)
     return {};
+  Telt const& eElt = *test;
   std::vector<Tidx> eList(n);
   for (size_t i = 0; i < n; i++) {
-    Tidx eVal = OnPoints(i, *test);
+    Tidx eVal = OnPoints(i, eElt);
     eList[i] = eVal;
   }
-  return Telt(std::move(eList));
+  Telt fElt(std::move(eList));
+  return fElt;
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
@@ -619,7 +621,7 @@ template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
 std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
                                 bool is_symm, size_t threshold, std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold << "\n";
+  os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold << " is_symm=" << is_symm << "\n";
 #endif
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
