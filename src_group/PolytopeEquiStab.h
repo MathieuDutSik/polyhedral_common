@@ -496,7 +496,7 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: nbRow=" << nbRow << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME_STAB
+  os << "PES: f_for_stab: nbRow=" << nbRow << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME_STAB
      << "\n";
 #endif
   auto f_heuristic=[&]() -> std::vector<std::vector<Tidx>> {
