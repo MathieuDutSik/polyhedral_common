@@ -683,7 +683,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #endif
   std::vector<MyMatrix<T>> LGen;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
-  for (auto &eGen : eStab.GeneratorsOfGroup()) {
+  for (auto &eGen : eStab.SmallGeneratingSet()) {
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     LGen.emplace_back(std::move(eMatr));
   }
@@ -712,7 +712,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
 #endif
   std::vector<MyMatrix<T>> ListMatrGen;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
-  for (auto &eGen : eStab.GeneratorsOfGroup()) {
+  for (auto &eGen : eStab.SmallGeneratingSet()) {
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
@@ -1150,7 +1150,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
        << " |fGRP|=" << fGRP.size() << "\n";
 #endif
     std::vector<MyMatrix<T>> LMatr;
-    for (auto &eGen : fGRP.GeneratorsOfGroup()) {
+    for (auto &eGen : fGRP.SmallGeneratingSet()) {
       MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen);
       LMatr.emplace_back(std::move(eMat));
     }
@@ -1388,7 +1388,13 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
                     Face const &eFace,
                     [[maybe_unused]] std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), before MatrixIntegral_Stabilizer\n";
+#endif
     RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatr, GRP, helper, eFace, os);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), after MatrixIntegral_Stabilizer\n";
+#endif
     total_index *= ret.index;
     return ret.LGen;
   };
@@ -1420,9 +1426,15 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
                     Face const &eFace,
                     [[maybe_unused]] std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), beginning\n";
+#endif
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
     MatrixIntegral_Stabilizer_RightCoset<T, Tgroup, Thelper>(ListPermGens, ListMatr, GRP, helper, eFace, os);
     coset.insert(pair.second);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), after MatrixIntegral_Stabilizer_RightCoset\n";
+#endif
     return pair.first;
   };
 #ifdef DEBUG_MATRIX_GROUP
@@ -1593,7 +1605,7 @@ void TestPreImageSubgroup(Thelper const &helper,
   size_t n_orig_gen = 0;
   size_t n_orig_gen_error = 0;
   std::vector<std::pair<Telt, Telt>> l_pair_err;
-  for (auto & eGen: OrigGRP.GeneratorsOfGroup()) {
+  for (auto & eGen: OrigGRP.SmallGeneratingSet()) {
     n_orig_gen += 1;
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     Telt eGenB = f_map_matr(eMatr);
@@ -1676,10 +1688,16 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
                     Face const &eFace,
                     std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatrGens) -> std::vector<MyMatrix<T>> {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), beginning |GRP|=" << GRP.size() << " n_act=" << static_cast<size_t>(GRP.n_act()) << "\n";
+#endif
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " |ListPermGens|=" << ListPermGens.size() << "\n";
+#endif
     PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: Before GRP.double_coset_computer_v |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " n_act=" << static_cast<size_t>(eStab_perm.n_act()) << "\n";
+    os << "MAT_GRP: We have pre_imager\n";
 #endif
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
     Tidx siz_act = eFace.size();
@@ -2685,7 +2703,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
-  for (auto &eGen : GRPisom.GeneratorsOfGroup()) {
+  for (auto &eGen : GRPisom.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGen.push_back(eMat);
   }
@@ -2712,7 +2730,7 @@ LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
-  for (auto &eGen : GRPisom.GeneratorsOfGroup()) {
+  for (auto &eGen : GRPisom.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGen.push_back(eMat);
   }
@@ -2746,12 +2764,12 @@ LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(MyMatrix<T> const &EXT_T,
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGenFull;
-  for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
+  for (auto &eGen : GRPfull.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGenFull.push_back(eMat);
   }
   std::vector<MyMatrix<T>> ListMatrGenV;
-  for (auto &eGen : GrpV.GeneratorsOfGroup()) {
+  for (auto &eGen : GrpV.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGenV.push_back(eMat);
   }
@@ -2790,12 +2808,12 @@ LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(MyMatrix<T> const &
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGenFull;
-  for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
+  for (auto &eGen : GRPfull.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGenFull.push_back(eMat);
   }
   std::vector<MyMatrix<T>> ListMatrGenV;
-  for (auto &eGen : GrpV.GeneratorsOfGroup()) {
+  for (auto &eGen : GrpV.SmallGeneratingSet()) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGenV.push_back(eMat);
   }
@@ -2889,7 +2907,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
     typename Tgroup::Telt const &ePerm, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   std::vector<MyMatrix<T>> ListMatrGens;
-  std::vector<Telt> LGen = GRP1.GeneratorsOfGroup();
+  std::vector<Telt> LGen = GRP1.SmallGeneratingSet();
   for (auto &eGen : LGen) {
     Telt ePermGen = (~ePerm) * eGen * ePerm;
     MyMatrix<T> eMatr = FindTransformation(EXT2_T, EXT2_T, ePermGen);

@@ -478,7 +478,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(
   os << "PES: We have GRPfull\n";
 #endif
   std::vector<MyMatrix<T>> ListGenMat;
-  for (auto &eGen : GRPfull.GeneratorsOfGroup()) {
+  for (auto &eGen : GRPfull.SmallGeneratingSet()) {
     MyMatrix<T> eMat_T = FindTransformation(ep.first, ep.first, eGen);
     ListGenMat.push_back(eMat_T);
   }
