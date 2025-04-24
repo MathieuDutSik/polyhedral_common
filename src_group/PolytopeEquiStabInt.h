@@ -40,8 +40,6 @@
 #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
 #endif
 
-
-
 template <typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
@@ -90,14 +88,14 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
   auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> {
     std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1_T, GramMat1, threshold, os);
-    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
+    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
     std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2_T, GramMat2, threshold, os);
-    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
+    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
     return IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
-  os << "---------------------------------------------------------------------------\n";
+  //  os << "---------------------------------------------------------------------------\n";
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
   check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytopeIntegral_Isomorphism_GramMat");
 #endif

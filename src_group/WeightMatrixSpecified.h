@@ -699,10 +699,13 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
 
 template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typename F2tr>
 inline typename std::enable_if<is_symm, PairWeightMatrixVertexSignatures<T>>::type
-ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
+ComputePairVertexSignatures(size_t nbRow, bool canonically, F1 f1, F2 f2,
                             [[maybe_unused]] F1tr f1tr, [[maybe_unused]] F2tr f2tr,
                             std::ostream &os) {
   WeightMatrixVertexSignatures<T> WMVS_direct = ComputeVertexSignatures<T>(nbRow, f1, f2, os);
+  if (canonically) {
+    RenormalizeWMVS(WMVS_direct, os);
+  }
   WeightMatrixVertexSignatures<T> WMVS_dual = EmptyWeightMatrixVertexSignatures<T>();
   return {std::move(WMVS_direct), std::move(WMVS_dual)};
 }
@@ -749,7 +752,7 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
 
 template <typename T, bool is_symm, typename F1, typename F2, typename F1tr, typename F2tr>
 inline typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::type
-ComputePairVertexSignatures(size_t nbRow, F1 f1, F2 f2,
+ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically, F1 f1, F2 f2,
                             F1tr f1tr, F2tr f2tr,
                             std::ostream &os) {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
@@ -1671,7 +1674,7 @@ Tret3 BlockBreakdown_Heuristic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
       auto f1tr_res = [&](size_t iRow) -> void { f1tr(CurrentListIdx[iRow]); };
       auto f2tr_res = [&](size_t jRow) -> T { return f2tr(CurrentListIdx[jRow]); };
       PairWeightMatrixVertexSignatures<T> PairWMVS_res =
-        ComputePairVertexSignatures<T, is_symm>(nbRow_res, f1_res, f2_res, f1tr_res, f2tr_res, os);
+        ComputePairVertexSignatures<T, is_symm>(nbRow_res, canonically, f1_res, f2_res, f1tr_res, f2tr_res, os);
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
       os << "WMS: PairWMVS_res.WMVS_direct=\n";
       PrintWMVS(PairWMVS_res.WMVS_direct, os);
