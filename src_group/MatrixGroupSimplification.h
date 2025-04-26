@@ -52,10 +52,13 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     T comp = f_complexity(eM);
     return {eM, comp};
   };
-  std::set<Tcomb, decltype(f_comp)> set(f_comp);
+  std::map<Tcomb, size_t, decltype(f_comp)> set(f_comp);
+  size_t nonce = 0;
   for (auto & eM: ListM) {
-    set.insert(get_pair(eM));
+    set[get_pair(eM)] = nonce;
+    nonce += 1;
   }
+  std::unordered_set<std::pair<size_t,size_t>> set_treated;
   auto f_generate_candidate=[&](Tcomb const& a, Tcomb const& b) -> std::vector<Tcomb> {
     MyMatrix<T> a_inv = Inverse(a.first);
     MyMatrix<T> b_inv = Inverse(b.first);
@@ -143,7 +146,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   T total_complexity(0);
   for (auto & pair: set) {
-    total_complexity += pair.second;
+    total_complexity += pair.first.second;
   }
   os << "SIMP: total_complexity=" << total_complexity << "\n";
 #endif
@@ -181,6 +184,8 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     size_t n_operation = 0;
+    size_t n_already0 = 0;
+    size_t n_already1 = 0;
 #endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -188,18 +193,33 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #endif
       auto iter1 = set.begin();
       std::advance(iter1, u);
-      Tcomb a = *iter1;
+      Tcomb a = iter1->first;
+      size_t nonce_a = iter1->second;
       //
       auto iter2 = set.begin();
       std::advance(iter2, v);
-      Tcomb b = *iter2;
+      Tcomb b = iter2->first;
+      size_t nonce_b = iter2->second;
+      std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
       os << "SIMP:   Complexities, a.second=" << a.second << " b.second=" << b.second << "\n";
 #endif
       //
-      std::pair<size_t, std::vector<Tcomb>> pair = f_reduce(a, b);
+      bool already_treated = false;
+      std::pair<size_t, std::vector<Tcomb>> pair{0,{}};
+      if (set_treated.find(nonce_pair) != set_treated.end()) {
+        already_treated = true;
+      } else {
+        pair = f_reduce(a, b);
+      }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP:   n_changes=" << pair.first << "\n";
+      if (already_treated) {
+        n_already1 += 1;
+      }
+      if (!already_treated) {
+        n_already0 += 1;
+      }
+      os << "SIMP:   n_changes=" << pair.first << " already_treated=" << already_treated << " n_already0=" << n_already0 << " n_already1=" << n_already1 << "\n";
 #endif
       if (pair.first > 0) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -256,7 +276,8 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
           os << "SIMP:  elt.comp=" << elt.second << " elt.eM=\n";
           WriteMatrix(os, elt.first);
 #endif
-          set.insert(elt);
+          set[elt] = nonce;
+          nonce += 1;
           size_t distance = get_pos(elt);
           if (distance < min_distance_bis) {
             min_distance_bis = distance;
@@ -323,6 +344,9 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
         os << "SIMP:   a/b_attained=" << a_attained << "/" << b_attained << " min_distance_bis=" << min_distance_bis << "\n";
 #endif
       } else {
+        if (!already_treated) {
+          set_treated.insert(nonce_pair);
+        }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
         os << "SIMP:   no change, incrementing u / v\n";
 #endif
@@ -338,10 +362,10 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   T return_complexity(0);
 #endif
-  for (auto & elt: set) {
-    new_list_gens.push_back(elt.first);
+  for (auto & kv: set) {
+    new_list_gens.push_back(kv.first.first);
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    return_complexity += elt.second;
+    return_complexity += kv.first.second;
 #endif
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
