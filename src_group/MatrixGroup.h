@@ -8,6 +8,7 @@
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
 #include "MAT_MatrixMod.h"
+#include "ClassicLLL.h"
 #include "PERM_Fct.h"
 #include "Timings.h"
 #include "factorizations.h"
@@ -466,12 +467,21 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     MyMatrix<T> NewSpace = GetZbasis(MatrixFromVectorFamily(ConcatSpace));
     T NewDet = T_abs(DeterminantMat(NewSpace));
     if (NewDet == TheDet) {
-      return TheSpace;
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, TheSpace=\n";
+      WriteMatrix(os, TheSpace);
+#endif
+      MyMatrix<T> TheSpaceRed = LLLbasisReduction<T,T>(TheSpace).LattRed;
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, TheSpaceRed=\n";
+      WriteMatrix(os, TheSpaceRed);
+#endif
+      return TheSpaceRed;
     }
     TheSpace = NewSpace;
     TheDet = NewDet;
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "MAT_GRP: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
+    os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
     iter += 1;
 #endif
   }

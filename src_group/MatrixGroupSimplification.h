@@ -62,11 +62,11 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     MyMatrix<T> prod1 = a.first * b.first;
     Tcomb pair1 = get_pair(prod1);
     MyMatrix<T> prod2 = a_inv * b.first;
-    Tcomb pair2 = get_pair(prod1);
+    Tcomb pair2 = get_pair(prod2);
     MyMatrix<T> prod3 = a.first * b_inv;
-    Tcomb pair3 = get_pair(prod1);
+    Tcomb pair3 = get_pair(prod3);
     MyMatrix<T> prod4 = a_inv * b_inv;
-    Tcomb pair4 = get_pair(prod1);
+    Tcomb pair4 = get_pair(prod4);
     return {pair1, pair2, pair3, pair4};
   };
   auto f_get_best_candidate=[&](Tcomb const& a, Tcomb const& b) -> Tcomb {
@@ -140,6 +140,13 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     size_t distance = std::distance(set.begin(), iter);
     return distance;
   };
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  T total_complexity(0);
+  for (auto & pair: set) {
+    total_complexity += pair.second;
+  }
+  os << "SIMP: total_complexity=" << total_complexity << "\n";
+#endif
   auto look_for_simplification=[&]() -> void {
     // Iterating over the elements and looking for simplifications.
     //
@@ -173,11 +180,6 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     }
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    T total_complexity(0);
-    for (auto & pair: set) {
-      total_complexity += pair.second;
-    }
-    os << "SIMP: total_complexity=" << total_complexity << "\n";
     size_t n_operation = 0;
 #endif
     while(true) {
@@ -343,7 +345,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #endif
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  os << "SIMP: return_complexity=" << return_complexity << "\n";
+  os << "SIMP: total_complexity=" << total_complexity << " return_complexity=" << return_complexity << "\n";
 #endif
   return new_list_gens;
 }
