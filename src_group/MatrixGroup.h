@@ -35,6 +35,22 @@
 #define SANITY_CHECK_DOUBLE_COSET_ENUM
 #endif
 
+#define WRITE_MATRIX_GROUP_TRACK_INFO
+
+
+
+template <typename T>
+void write_matrix_group(std::vector<MyMatrix<T>> const& list_mat, std::string const& context) {
+  if (list_mat.size() == 0) {
+    return;
+  }
+  int dim = list_mat[0].rows();
+  std::string Prefix = "MatrixGroup_" + context + "_dim" + std::to_string(dim) + "_idx";
+  std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+  WriteListMatrixFile(FileOut, list_mat);
+}
+
+
 template <typename T>
 size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
   std::set<T> set_den;
@@ -627,6 +643,9 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
 #endif
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListMatrGens, "MatrixIntegral_GeneratePermutationGroupA_input");
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_GeneratePermutationGroupA\n";
 #endif
@@ -687,6 +706,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     LGen.emplace_back(std::move(eMatr));
   }
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(LGen, "MatrixIntegral_Stabilizer");
+#endif
   return {index, LGen};
 }
 
@@ -716,6 +738,9 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListMatrGen, "MatrixIntegral_Stabilizer_RightCoset");
+#endif
   std::vector<MyMatrix<T>> ListRightCoset;
   RightCosets rc = GRPperm.right_cosets(eStab);
   for (auto &eCos : rc) {
@@ -822,6 +847,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After StabilizerMatrixPermSubset\n";
 #endif
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(LGen, "MatrixIntegral_Stabilizer_has_not");
+#endif
   return {index, LGen};
 }
 
@@ -846,6 +874,10 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
           ListMatr, ListPermGens, id_matr, eFace);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After StabilizerRightCosetMatrixPermSubset\n";
+#endif
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(pair.first, "MatrixIntegral_Stabilizer_RightCoset_has_not_first");
+  write_matrix_group(pair.second, "MatrixIntegral_Stabilizer_RightCoset_has_not_second");
 #endif
   return pair;
 }
@@ -1022,6 +1054,9 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
     }
   }
   std::vector<MyMatrix<T>> ListGen(SetGen.begin(), SetGen.end());
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListGen, "DirectSpaceOrbit_Stabilizer");
+#endif
   return ListGen;
 }
 
@@ -1475,6 +1510,9 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |ListMatrGen|=" << ListMatrGen.size() << "\n";
 #endif
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListMatrGen, "MatrixIntegral_PreImageSubgroup_has");
+#endif
   return ListMatrGen;
 }
 
@@ -1506,8 +1544,13 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   std::vector<MyMatrix<T>> ListGen =
       permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
           ListMatr, ListPermGens, id_matr, eGRP);
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListGen, "MatrixIntegral_PreImageSubgroup_has_not");
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After PreImageSubgroup |ListGen|=" << ListGen.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_MATRIX_GROUP_DISABLE
   size_t n_gen = ListMatr.size();
   for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
     Telt MatrGen_img = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, ListMatr[i_gen], os);
@@ -1537,9 +1580,6 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
       throw TerminalException{1};
     }
   }
-
-
-  
 #endif
   return ListGen;
 }
