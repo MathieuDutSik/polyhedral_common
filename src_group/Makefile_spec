@@ -28,9 +28,10 @@
 #PROGRAM		= GRP_LinPolytope_Invariant
 #PROGRAM		= GRP_GroupAverage_Vector GRP_GroupAverage_Matrix
 #PROGRAM		= GRP_LinPolytope_Isomorphism
-PROGRAM		= GRP_LinearSpace_Stabilizer_DoubleCoset
+#PROGRAM		= GRP_LinearSpace_Stabilizer_DoubleCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer
+PROGRAM		= GRP_MatrixGroupSimplification
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -71,7 +72,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 #CDEFS           = -DDEBUG
 #CDEFS           = -DDEBUG -DUSE_BLISS
 #CDEFS           = -DDEBUG -DTIMINGS
-CDEFS           = -DDEBUG_DOUBLE_COSET_ENUM
+#CDEFS           = -DDEBUG_DOUBLE_COSET_ENUM
+CDEFS           = -DDEBUG_MATRIX_GROUP_SIMPLIFICATION
 
 
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)

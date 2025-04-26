@@ -1,8 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheoryBoostGmpInt.h"
 #include "NumberTheory.h"
-#include "PolytopeEquiStab.h"
+#include "MatrixGroupSimplification.h"
 // clang-format on
 
 template <typename T>
@@ -12,7 +11,7 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
     return get_complexity_measure(M).ell1;
   };
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
-  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexity(ListM, f_complexity);
+  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexity(ListM, f_complexity, std::cerr);
   //
   if (OutFormat == "GAP") {
     os_out << "return ";
@@ -56,17 +55,17 @@ int main(int argc, char *argv[]) {
     auto f = [&](std::ostream &os) -> void {
       if (arith == "mpq_class") {
         using T = mpq_class;
-        return process<T>(FileExt, OutFormat, os);
+        return process<T>(FileMatrGroup, OutFormat, os);
       }
       if (arith == "mpz_class") {
         using T = mpz_class;
-        return process<T>(FileExt, OutFormat, os);
+        return process<T>(FileMatrGroup, OutFormat, os);
       }
       std::cerr << "Failed to find a matching arith\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);
-    std::cerr << "Normal termination of GRP_LinPolytope_Invariant\n";
+    std::cerr << "Normal termination of GRP_MatrixGroupSimplification\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytope_Invariant\n";
     exit(e.eVal);
