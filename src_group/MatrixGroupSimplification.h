@@ -52,10 +52,10 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     T comp = f_complexity(eM);
     return {eM, comp};
   };
-  std::map<Tcomb, size_t, decltype(f_comp)> set(f_comp);
+  std::map<Tcomb, size_t, decltype(f_comp)> map(f_comp);
   size_t nonce = 0;
   for (auto & eM: ListM) {
-    set[get_pair(eM)] = nonce;
+    map[get_pair(eM)] = nonce;
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
@@ -75,20 +75,11 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
   auto f_get_best_candidate=[&](Tcomb const& a, Tcomb const& b) -> Tcomb {
     std::vector<Tcomb> l_comb = f_generate_candidate(a, b);
     Tcomb best_comp = l_comb[0];
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    size_t i_choice = 0;
-#endif
     for (size_t i=1; i<l_comb.size(); i++) {
       if (l_comb[i].second < best_comp.second) {
         best_comp = l_comb[i];
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-        i_choice = i;
-#endif
       }
     }
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    os << "SIMP: f_get_best_candidate, choosing i_choice=" << i_choice << "\n";
-#endif
     return best_comp;
   };
   auto f_reduce=[&](Tcomb const& a, Tcomb const& b) -> std::pair<size_t, std::vector<Tcomb>> {
@@ -127,27 +118,27 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     }
   };
   auto erase_entry=[&](Tcomb const& val) -> void {
-    auto iter = set.find(val);
-    if (iter == set.end()) {
+    auto iter = map.find(val);
+    if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to be removed\n";
       throw TerminalException{1};
     }
-    set.erase(iter);
+    map.erase(iter);
   };
   auto get_pos=[&](Tcomb const& val) -> size_t {
-    auto iter = set.find(val);
-    if (iter == set.end()) {
+    auto iter = map.find(val);
+    if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to get the position\n";
       throw TerminalException{1};
     }
-    size_t distance = std::distance(set.begin(), iter);
+    size_t distance = std::distance(map.begin(), iter);
     return distance;
   };
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   T total_complexity(0);
-  for (auto & pair: set) {
-    total_complexity += pair.first.second;
+  for (auto & kv: map) {
+    total_complexity += kv.first.second;
   }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity=" << total_complexity << "\n";
 #endif
   auto look_for_simplification=[&]() -> void {
@@ -162,12 +153,12 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     size_t u = 0;
     size_t v = 1;
     auto increment_uv=[&]() -> bool {
-      if (v < set.size() - 1) {
+      if (v < map.size() - 1) {
         v += 1;
       } else {
         u += 1;
         v = u + 1;
-        if (u == set.size() - 1) {
+        if (u == map.size() - 1) {
           return false;
         }
       }
@@ -189,14 +180,14 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 #endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP: Addressing u=" << u << " v=" << v << " n_operation=" << n_operation << " |set|=" << set.size() << "\n";
+      os << "SIMP: Addressing u=" << u << " v=" << v << " n_operation=" << n_operation << " |set|=" << map.size() << "\n";
 #endif
-      auto iter1 = set.begin();
+      auto iter1 = map.begin();
       std::advance(iter1, u);
       Tcomb a = iter1->first;
       size_t nonce_a = iter1->second;
       //
-      auto iter2 = set.begin();
+      auto iter2 = map.begin();
       std::advance(iter2, v);
       Tcomb b = iter2->first;
       size_t nonce_b = iter2->second;
@@ -241,11 +232,11 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
           os << "SIMP:  ent.comp=" << ent.second << " elt.eM=\n";
           WriteMatrix(os, ent.first);
 #endif
-          auto iter = set.find(ent);
-          if (iter == set.end()) {
+          auto iter = map.find(ent);
+          if (iter == map.end()) {
             new_elt.push_back(ent);
           } else {
-            size_t distance = std::distance(set.begin(), iter);
+            size_t distance = std::distance(map.begin(), iter);
             if (distance < min_distance) {
               min_distance = distance;
             }
@@ -276,7 +267,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
           os << "SIMP:  elt.comp=" << elt.second << " elt.eM=\n";
           WriteMatrix(os, elt.first);
 #endif
-          set[elt] = nonce;
+          map[elt] = nonce;
           nonce += 1;
           size_t distance = get_pos(elt);
           if (distance < min_distance_bis) {
@@ -288,10 +279,10 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
           // Two scenarios
           if (!a_attained) {
             // a was removed,
-            if (u == set.size()) { // This can happen if a and b are removed and there is nothing after.
+            if (u == map.size()) { // This can happen if a and b are removed and there is nothing after.
               break;
             }
-            if (u == set.size() - 1) {
+            if (u == map.size() - 1) {
               // This can happen if a is removed but either b or something is after and that is it.
               // So, no more operation possible
               break;
@@ -300,9 +291,9 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
             v = u + 1; // This is a valid position, continuing
           } else {
             // a still exists
-            if (v == set.size()) {
+            if (v == map.size()) {
               // v is not invalid, going to the next if possible.
-              if (u < set.size() - 2) { // Enough space to make something work
+              if (u < map.size() - 2) { // Enough space to make something work
                 u += 1;
                 v = u + 1;
               } else {
@@ -357,20 +348,26 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
       }
     }
   };
-  look_for_simplification();
-  std::vector<MyMatrix<T>> new_list_gens;
+
+
+  while(true) {
+    look_for_simplification();
+    T new_complexity(0);
+    for (auto & kv: map) {
+      new_complexity += kv.first.second;
+    }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  T return_complexity(0);
+    os << "SIMP: total_complexity=" << total_complexity << " new_complexity=" << new_complexity << "\n";
 #endif
-  for (auto & kv: set) {
-    new_list_gens.push_back(kv.first.first);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    return_complexity += kv.first.second;
-#endif
+    if (total_complexity == new_complexity) {
+      break;
+    }
+    total_complexity = new_complexity;
   }
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  os << "SIMP: total_complexity=" << total_complexity << " return_complexity=" << return_complexity << "\n";
-#endif
+  std::vector<MyMatrix<T>> new_list_gens;
+  for (auto & kv: map) {
+    new_list_gens.push_back(kv.first.first);
+  }
   return new_list_gens;
 }
 
