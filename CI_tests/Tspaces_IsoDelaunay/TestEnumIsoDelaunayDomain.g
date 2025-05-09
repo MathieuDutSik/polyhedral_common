@@ -1,6 +1,10 @@
 Read("../common.g");
 Print("Beginning Test enumeration of iso-Delaunay domains\n");
 
+method:="serial";
+#method:="mpi";
+
+
 get_nb_domains:=function(eFile)
     local FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
     #
@@ -11,11 +15,19 @@ get_nb_domains:=function(eFile)
     TheCommand:=Concatenation("cp ", eFile, " ", FileLinSpa);
     Exec(TheCommand);
     #
-    eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
-    TheCommand:=Concatenation(eProg, " ", FileNml);
-    Exec(TheCommand);
+    if method = "serial" then
+        eProg:="../../src_latt/LATT_SerialLattice_IsoDelaunayDomain";
+        TheCommand:=Concatenation(eProg, " ", FileNml);
+        Exec(TheCommand);
+    fi;
+    if method = "mpi" then
+        eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
+        TheCommand:=Concatenation(eProg, " ", FileNml);
+        Exec(TheCommand);
+    fi;
     #
     if IsExistingFile(FileResult)=false then
+        Print("method=", method, "\n");
         Print("The output file is not existing. That qualifies as a fail\n");
         return rec(is_correct:=false);
     fi;

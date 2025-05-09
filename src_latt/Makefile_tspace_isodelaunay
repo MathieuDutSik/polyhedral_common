@@ -1,4 +1,5 @@
-PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
+#PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_SerialLattice_IsoDelaunayDomain
+PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

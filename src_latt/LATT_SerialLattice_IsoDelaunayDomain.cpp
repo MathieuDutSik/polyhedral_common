@@ -7,30 +7,38 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process(std::string const& FileListMat, std::string const& OutFormat, std::ostream& os_out) {
+void process_A(FullNamelist const &eFull) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
-  std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
-  LinSpaceMatrix<T> LinSpa = BuildLinSpaceMatrix<T,Tint,Tgroup>(ListMat, std::cerr);
-  //
+  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
   int dimEXT = LinSpa.n + 1;
-  PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   //
-  std::optional<MyMatrix<T>> CommonGramMat;
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data{LinSpa, std::move(rddo),
-                                               CommonGramMat};
+  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  //
+  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  CreateDirectory(STORAGE_Prefix);
+  //
+  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  //
+  std::string FileDualDesc =
+      BlockDATA.ListStringValues.at("FileDualDescription");
+  PolyHeuristicSerial<TintGroup> AllArr =
+      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
+                                                         std::cerr);
+
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, AllArr, std::cerr);
   //
   using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
   using TadjO = typename Tdata::TadjO;
   using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
-  int max_runtime_second = 0;
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
@@ -41,6 +49,7 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
     throw TerminalException{1};
   }
   std::vector<Tout> const& l_tot = *opt;
+  std::ofstream os_out(OutFile);
   bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
   if (result) {
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
@@ -48,36 +57,55 @@ void process(std::string const& FileListMat, std::string const& OutFormat, std::
   }
 }
 
+template <typename T>
+void process_B(FullNamelist const &eFull) {
+  std::string arithmetic_Tint =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
+  if (arithmetic_Tint == "gmp_integer") {
+    using Tint = mpz_class;
+    return process_A<T, Tint>(eFull);
+  }
+  std::cerr << "LATT_SerialLattice_IsoDelaunayDomain B: Failed to find a "
+               "matching type for arithmetic_Tint="
+            << arithmetic_Tint << "\n";
+  std::cerr << "Available types: gmp_integer\n";
+  throw TerminalException{1};
+}
+
+void process_C(FullNamelist const &eFull) {
+  std::string arithmetic_T =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
+  if (arithmetic_T == "gmp_rational") {
+    using T = mpq_class;
+    return process_B<T>(eFull);
+  }
+  std::cerr << "LATT_SerialLattice_IsoDelaunayDomain A: Failed to find a "
+	       "matching type for arithmetic_T="
+            << arithmetic_T << "\n";
+  std::cerr << "Available types: gmp_rational\n";
+  throw TerminalException{1};
+}
+
+
+
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 3 && argc != 5) {
+    FullNamelist eFull =
+        NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains();
+    if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_SerialLattice_IsoDelaunayDomain [arith] [FileListMat]\n";
-      std::cerr << "      or\n";
-      std::cerr << "LATT_SerialLattice_IsoDelaunayDomain [arith] [FileListMat] [OutFormat] [OutFile]\n";
-      std::cerr << "with arith the arithmetic type\n";
+      std::cerr << "LATT_SerialLattice_IsoDelaunayDomain [file.nml]\n";
+      std::cerr << "With file.nml a namelist file\n";
+      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
       return -1;
     }
-    std::string arith = argv[1];
-    std::string FileListMat = argv[2];
-    std::string OutFormat = "NumberGAP";
-    std::string OutFile = "stderr";
-    if (argc == 5) {
-      OutFormat = argv[3];
-      OutFile = argv[4];
-    }
-    auto f=[&](std::ostream& os) -> void {
-      if (arith == "gmp") {
-        using T = mpq_class;
-        using Tint = mpz_class;
-        return process<T,Tint>(FileListMat, OutFormat, os);
-      }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
-      throw TerminalException{1};
-    };
-    print_stderr_stdout_file(OutFile, f);
+    //
+    std::string eFileName = argv[1];
+    NAMELIST_ReadNamelistFile(eFileName, eFull);
+    process_C(eFull);
+    //
     std::cerr << "Normal termination of LATT_SerialLattice_IsoDelaunayDomain\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_SerialLattice_IsoDelaunayDomain\n";
