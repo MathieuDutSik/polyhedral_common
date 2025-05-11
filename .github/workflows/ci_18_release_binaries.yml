@@ -16,6 +16,7 @@ on:
 #    - master
 jobs:
   build-linux:
+    timeout-minutes: 120  # 2 hours
     runs-on: ubuntu-latest
     env:
       BOOST_INCDIR: "/usr/include"

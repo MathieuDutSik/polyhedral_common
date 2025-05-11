@@ -11,7 +11,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
                   GRP_LinPolytopeIntegral_Isomorphism GRP_LinPolytopeIntegral_Automorphism \
                   GRP_LinPolytopeIntegral_Automorphism_RightCoset \
                   GRP_LinPolytope_Canonic GRP_LinPolytope_Invariant \
-                  GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect \
+                  GRP_RuntimeOrbitSplitting GRP_OrbitSplittingPerfect GRP_MatrixGroupSimplification \
 		  GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Isomorphism_GramMat \
 		  GRP_IsomorphismReduction GRP_GroupAverage_Matrix GRP_GroupAverage_Vector \
 		  GRP_LinearSpace_Stabilizer_DoubleCoset GRP_LinPolytopeIntegral_Automorphism_DoubleCoset \
