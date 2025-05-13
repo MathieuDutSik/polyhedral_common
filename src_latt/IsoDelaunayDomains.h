@@ -442,6 +442,9 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
        << "\n";
 #endif
     if (test1) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: GetInitialGenericDelaunayTesselation, true by IsDelaunayPolytopeInducingEqualities\n";
+#endif
       return true;
     }
     if (data.CommonGramMat) {
@@ -456,6 +459,9 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
          << "\n";
 #endif
       if (!test2) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+        os << "ISODEL: GetInitialGenericDelaunayTesselation, true by IsDelaunayAcceptableForGramMat\n";
+#endif
         return true;
       }
     }
@@ -468,8 +474,14 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
       -> std::optional<DelaunayTesselation<Tint, Tgroup>> {
     bool test = IsSymmetryGroupCorrect<T, Tint, Tgroup>(GramMat, data.LinSpa, os);
     if (!test) {
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+      os << "ISODEL: GetInitialGenericDelaunayTesselation, failing by symmetry\n";
+#endif
       return {};
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: GetInitialGenericDelaunayTesselation, symmetry is ok\n";
+#endif
     using TintGroup = typename Tgroup::Tint;
     int dimEXT = GramMat.rows() + 1;
     PolyHeuristicSerial<TintGroup> AllArr =
@@ -482,22 +494,32 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
        << data_lattice.rddo.AllArr.OutFile << "\n";
 #endif
     int max_runtime_second = 0;
-    return EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
-        data_lattice, f_incorrect, max_runtime_second);
+    std::optional<DelaunayTesselation<Tint, Tgroup>> result = EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(data_lattice, f_incorrect, max_runtime_second);
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    os << "ISODEL: GetInitialGenericDelaunayTesselation, return something\n";
+#endif
+    return result;
   };
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+  size_t n_iter = 0;
+#endif
   while (true) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm\n";
+    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm, n_iter=" << n_iter << "\n";
 #endif
     MyMatrix<T> GramMat =
       GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: After GetRandomPositiveDefiniteNoNontrivialSymm\n";
+    os << "ISODEL: After GetRandomPositiveDefiniteNoNontrivialSymm, GramMat=\n";
+    WriteMatrix(os, GramMat);
 #endif
     std::optional<DelaunayTesselation<Tint, Tgroup>> opt = test_matrix(GramMat);
     if (opt) {
       return *opt;
     }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN
+    n_iter += 1;
+#endif
   }
   std::cerr << "ISODEL: Failed to find a matching entry in "
                "GetInitialGenericDelaunayTesselation\n";
