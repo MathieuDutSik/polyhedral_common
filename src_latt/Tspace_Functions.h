@@ -467,15 +467,15 @@ bool IsBravaisSpace(int n, std::vector<MyMatrix<T>> const &ListMat,
  */
 template <typename T, typename Tint, typename Tgroup>
 MyMatrix<T>
-GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa,
-                                        std::ostream &os) {
-  int N = 2;
+GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa, int const& N,
+                                          std::ostream &os) {
+  int N_work = N;
   while (true) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: Before "
           "GetRandomPositiveDefinite\n";
 #endif
-    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N);
+    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N_work);
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: After "
           "GetRandomPositiveDefinite\n";
@@ -487,9 +487,12 @@ GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa,
     os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: test=" << test << "\n";
 #endif
     if (test) {
+#ifdef DEBUG_TSPACE_FUNCTIONS
+      os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: return with N_work=" << N_work << "\n";
+#endif
       return TheMat;
     }
-    N += 1;
+    N_work += 1;
   }
 }
 

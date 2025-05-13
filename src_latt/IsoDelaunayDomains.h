@@ -503,12 +503,13 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
   size_t n_iter = 0;
 #endif
+  int N = 2;
   while (true) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm, n_iter=" << n_iter << "\n";
+    os << "ISODEL: Before GetRandomPositiveDefiniteNoNontrivialSymm, n_iter=" << n_iter << " N=" << N << "\n";
 #endif
     MyMatrix<T> GramMat =
-      GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa, os);
+      GetRandomPositiveDefiniteNoNontrivialSymm<T, Tint, Tgroup>(data.LinSpa, N, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: After GetRandomPositiveDefiniteNoNontrivialSymm, GramMat=\n";
     WriteMatrix(os, GramMat);
@@ -520,6 +521,7 @@ DelaunayTesselation<Tint, Tgroup> GetInitialGenericDelaunayTesselation(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     n_iter += 1;
 #endif
+    N += 1;
   }
   std::cerr << "ISODEL: Failed to find a matching entry in "
                "GetInitialGenericDelaunayTesselation\n";
