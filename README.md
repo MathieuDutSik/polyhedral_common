@@ -1,5 +1,5 @@
-Polytopes, lattices and quadratic forms programs
-================================================
+Polyhedral: Computational Tools for Polytopes, Lattices, and Quadratic Forms
+============================================================================
 
 This is the set of functionality for dealing with polytopes,
 quadratic forms and lattices.
