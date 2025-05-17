@@ -905,7 +905,7 @@ Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const& ListM, int cons
 }
 
 template <typename T, typename Tgroup>
-void CheckGroupSubgroup(std::vector<MyMatrix<T>> const& ListGRP, std::vector<MyMatrix<T>> const& ListSubGRP) {
+void CheckGroupSubgroup(std::vector<MyMatrix<T>> const& ListGRP, std::vector<MyMatrix<T>> const& ListSubGRP, [[maybe_unused]] std::ostream& os) {
   int n = ListGRP[0].rows();
   T limit(10000);
   for (int N=2; N<=20; N++) {
@@ -916,7 +916,9 @@ void CheckGroupSubgroup(std::vector<MyMatrix<T>> const& ListGRP, std::vector<MyM
     }
     Tgroup GRP = GenerateGroupModuloAction<T,Tgroup>(ListGRP, N);
     Tgroup SubGRP = GenerateGroupModuloAction<T,Tgroup>(ListSubGRP, N);
-    std::cerr << "COMB: N=" << N << " Npow=" << Npow << " |GRP|=" << GRP.size() << " |SubGRP|=" << SubGRP.size() << "\n";
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: N=" << N << " Npow=" << Npow << " |GRP|=" << GRP.size() << " |SubGRP|=" << SubGRP.size() << "\n";
+#endif
     bool test = GRP.IsSubgroup(SubGRP);
     if (!test) {
       std::cerr << "COMB: Found SubGRP not to be a subgroup of GRP\n";
@@ -2196,7 +2198,7 @@ private:
 #endif
     std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    CheckGroupSubgroup<Tint,Tgroup>(GRP_G_plane, GRP_V_plane);
+    CheckGroupSubgroup<Tint,Tgroup>(GRP_G_plane, GRP_V_plane, os);
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have GRP_V_plane\n";

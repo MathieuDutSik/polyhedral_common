@@ -34,11 +34,19 @@ ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const& M) {
   return {ell1, ellinfinity};
 }
 
+// LocalSimpProduct is a local encapsulation of the product operation
+// Supposed to be used only here
+template<typename T>
+MyMatrix<T> LocalSimpProduct(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
+  return M1 * M2;
+}
 
-template<typename T, typename Fcomplexity>
-std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatrix<T>> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
+
+
+template<typename Tnorm, typename Ttype, typename Fcomplexity>
+std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
-  using Tcomb = std::pair<MyMatrix<T>, T>;
+  using Tcomb = std::pair<Ttype, Tnorm>;
   auto f_comp=[](Tcomb const& a, Tcomb const& b) -> bool {
     if (a.second < b.second) {
       return true;
@@ -48,8 +56,8 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     }
     return a.first < b.first;
   };
-  auto get_pair=[&](MyMatrix<T> const& eM) -> Tcomb {
-    T comp = f_complexity(eM);
+  auto get_pair=[&](Ttype const& eM) -> Tcomb {
+    Tnorm comp = f_complexity(eM);
     return {eM, comp};
   };
   std::map<Tcomb, size_t, decltype(f_comp)> map(f_comp);
@@ -60,15 +68,18 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
   auto f_generate_candidate=[&](Tcomb const& a, Tcomb const& b) -> std::vector<Tcomb> {
-    MyMatrix<T> a_inv = Inverse(a.first);
-    MyMatrix<T> b_inv = Inverse(b.first);
-    MyMatrix<T> prod1 = a.first * b.first;
+    Ttype a_inv = Inverse(a.first);
+    Ttype b_inv = Inverse(b.first);
+    Ttype prod1 = LocalSimpProduct(a.first, b.first);
     Tcomb pair1 = get_pair(prod1);
-    MyMatrix<T> prod2 = a_inv * b.first;
+    //
+    Ttype prod2 = LocalSimpProduct(a_inv, b.first);
     Tcomb pair2 = get_pair(prod2);
-    MyMatrix<T> prod3 = a.first * b_inv;
+    //
+    Ttype prod3 = LocalSimpProduct(a.first, b_inv);
     Tcomb pair3 = get_pair(prod3);
-    MyMatrix<T> prod4 = a_inv * b_inv;
+    //
+    Ttype prod4 = LocalSimpProduct(a_inv, b_inv);
     Tcomb pair4 = get_pair(prod4);
     return {pair1, pair2, pair3, pair4};
   };
@@ -88,9 +99,9 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     size_t n_change = 0;
     while(true) {
       Tcomb cand = f_get_best_candidate(a_work, b_work);
-      T a_norm = a_work.second;
-      T b_norm = b_work.second;
-      T cand_norm = cand.second;
+      Tnorm a_norm = a_work.second;
+      Tnorm b_norm = b_work.second;
+      Tnorm cand_norm = cand.second;
       bool do_something = true;
       if (cand_norm < a_norm && cand_norm < b_norm) {
         if (a_norm < b_norm) {
@@ -134,7 +145,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     size_t distance = std::distance(map.begin(), iter);
     return distance;
   };
-  T total_complexity(0);
+  Tnorm total_complexity(0);
   for (auto & kv: map) {
     total_complexity += kv.first.second;
   }
@@ -352,7 +363,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
 
   while(true) {
     look_for_simplification();
-    T new_complexity(0);
+    Tnorm new_complexity(0);
     for (auto & kv: map) {
       new_complexity += kv.first.second;
     }
@@ -364,29 +375,29 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityKernel(std::vector<MyMatri
     }
     total_complexity = new_complexity;
   }
-  std::vector<MyMatrix<T>> new_list_gens;
+  std::vector<Ttype> new_list_gens;
   for (auto & kv: map) {
     new_list_gens.push_back(kv.first.first);
   }
   return new_list_gens;
 }
 
-template<typename T, typename Fcomplexity>
-std::vector<MyMatrix<T>> ExhaustiveReductionComplexity(std::vector<MyMatrix<T>> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
-  std::unordered_set<MyMatrix<T>> SetMred;
+template<typename Tnorm, typename Ttype, typename Fcomplexity>
+std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
+  std::unordered_set<Ttype> SetMred;
   for (auto & eM : ListM) {
-    MyMatrix<T> eM_inv = Inverse(eM);
+    Ttype eM_inv = Inverse(eM);
     if (eM < eM_inv) {
       SetMred.insert(eM);
     } else {
       SetMred.insert(eM_inv);
     }
   }
-  std::vector<MyMatrix<T>> ListMred;
+  std::vector<Ttype> ListMred;
   for (auto & eM: SetMred) {
     ListMred.push_back(eM);
   }
-  return ExhaustiveReductionComplexityKernel(ListM, f_complexity, os);
+  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity>(ListM, f_complexity, os);
 }
 
 

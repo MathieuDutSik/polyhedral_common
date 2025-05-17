@@ -13,6 +13,7 @@
 #include "Timings.h"
 #include "factorizations.h"
 #include "two_dim_lorentzian.h"
+#include "MatrixGroupSimplification.h"
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>

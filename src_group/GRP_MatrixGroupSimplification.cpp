@@ -11,7 +11,7 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
     return get_complexity_measure(M).ell1;
   };
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
-  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexity(ListM, f_complexity, std::cerr);
+  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity)>(ListM, f_complexity, std::cerr);
   //
   if (OutFormat == "GAP") {
     os_out << "return ";
