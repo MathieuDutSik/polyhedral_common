@@ -43,6 +43,17 @@ MyMatrix<T> LocalSimpProduct(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
 
 
 
+template<typename T, typename Telt>
+std::pair<MyMatrix<T>,Telt> Inverse(std::pair<MyMatrix<T>,Telt> const& pair) {
+  return {Inverse(pair.first), Inverse(pair.second)};
+}
+
+template<typename T, typename Telt>
+std::pair<MyMatrix<T>,Telt> LocalSimpProduct(std::pair<MyMatrix<T>,Telt> const& pair1, std::pair<MyMatrix<T>,Telt> const& pair2) {
+  return {pair1.first * pair2.first, pair1.second * pair2.second};
+}
+
+
 template<typename Tnorm, typename Ttype, typename Fcomplexity>
 std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
@@ -400,9 +411,36 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
   return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity>(ListM, f_complexity, os);
 }
 
+template<typename T>
+std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, [[maybe_unused]] std::ostream& os) {
+  auto f_complexity=[&](MyMatrix<T> const& M) -> T {
+    return get_complexity_measure(M).ell1;
+  };
+  return ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity)>(ListM, f_complexity, os);
+}
 
-
-
+template<typename T, typename Telt>
+std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, [[maybe_unused]] std::ostream& os) {
+  using Ttype = std::pair<MyMatrix<T>, Telt>;
+  auto f_complexity=[&](Ttype const& pair) -> T {
+    return get_complexity_measure(pair.first).ell1;
+  };
+  std::vector<Ttype> ListPair;
+  size_t n_gen = ListM.size();
+  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+    Ttype pair{ListM[i_gen], ListPerm[i_gen]};
+    ListPair.push_back(pair);
+  }
+  std::vector<Ttype> RetPair = ExhaustiveReductionComplexity<T,Ttype,decltype(f_complexity)>(ListPair, f_complexity, os);
+  std::vector<MyMatrix<T>> RetListM;
+  std::vector<Telt> RetListPerm;
+  size_t n_gen_ret = RetPair.size();
+  for (size_t i_gr=0; i_gr<n_gen_ret; i_gr++) {
+    RetListM.push_back(RetPair[i_gr].first);
+    RetListPerm.push_back(RetPair[i_gr].second);
+  }
+  return {RetListM, RetListPerm};
+}
 
 
 // clang-format off

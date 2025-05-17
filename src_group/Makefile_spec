@@ -31,7 +31,7 @@
 #PROGRAM		= GRP_LinearSpace_Stabilizer_DoubleCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCoset
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer
-PROGRAM		= GRP_MatrixGroupSimplification
+PROGRAM		= GRP_MatrixGroupSimplification GRP_MatrixGroupPermSimplification
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

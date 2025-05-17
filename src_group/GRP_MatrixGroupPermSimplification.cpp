@@ -2,13 +2,23 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "MatrixGroupSimplification.h"
+#include "Permutation.h"
 // clang-format on
 
 template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
-  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexityGroupMatrix<T>(ListM, std::cerr);
+  size_t n_gen = ListM.size();
+  std::vector<Telt> ListPerm;
+  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+    Telt elt;
+    ListPerm.push_back(elt);
+  }
+  std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> retpair = ExhaustiveReductionComplexityGroupMatrixPerm<T,Telt>(ListM, ListPerm, std::cerr);
+  std::vector<MyMatrix<T>> const& ListMred = retpair.first;
   //
   if (OutFormat == "GAP") {
     os_out << "return ";
