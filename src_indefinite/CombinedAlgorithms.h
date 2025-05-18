@@ -811,22 +811,10 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   std::vector<MyMatrix<Tint>> ListGenTot;
   ListGenTot.push_back(-IdentityMat<Tint>(eRec.the_dim));
   for (auto &eGen : GRPfull) {
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: EIG_IO, before eGenB\n";
-#endif
     MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: EIG_IO, after eGenB\n";
-#endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
-# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: EIG_IO, before eProd\n";
-# endif
     MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
-# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: EIG_IO, after eProd\n";
-# endif
     if (eProd != eRec.GramMatRed) {
       std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
       throw TerminalException{1};
