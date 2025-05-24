@@ -52,6 +52,41 @@ void write_matrix_group(std::vector<MyMatrix<T>> const& list_mat, std::string co
   WriteListMatrixFile(FileOut, list_mat);
 }
 
+template<typename T>
+std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat) {
+  if (list_mat.size() == 0) {
+    return "zero generators";
+  }
+  int n = list_mat[0].rows();
+  size_t n_mat = list_mat.size();
+  std::vector<T> list_ell1;
+  std::vector<T> list_ellinfinity;
+  T ell1_global(0);
+  T ellinfinite_global(0);
+  for (auto & e_mat: list_mat) {
+    T ell1(0);
+    T ellinfinity(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        T val = e_mat(i,j);
+        T abs_val = T_abs(val);
+        ell1 += abs_val;
+        if (abs_val > ellinfinity) {
+          ellinfinity = abs_val;
+        }
+      }
+    }
+    list_ell1.push_back(ell1);
+    list_ellinfinity.push_back(ellinfinity);
+    ell1_global += ell1;
+    if (ellinfinity > ellinfinite_global) {
+      ellinfinite_global = ellinfinity;
+    }
+  }
+  return "(n_gen=" + std::to_string(n_mat) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+}
+
+
 
 template <typename T>
 size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
@@ -167,6 +202,9 @@ private:
   permutalib::PreImagerElement<Telt,MyMatrix<T>, Tint> inner;
 public:
   PreImager_General(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm, int const& dim) : inner(l_matr, l_perm, IdentityMat<T>(dim)) {
+#ifdef DEBUG_MATRIX_GROUP
+    std::cerr << "MAT_GRP: After building inner\n";
+#endif
   }
   MyMatrix<T> pre_image_elt(Telt const& elt) const {
     std::optional<MyMatrix<T>> opt = inner.get_preimage(elt);
@@ -181,6 +219,9 @@ template <typename T, typename Telt, typename Tint> struct GeneralMatrixGroupHel
     return 0;
   }
   PreImager pre_imager(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm) const {
+#ifdef DEBUG_MATRIX_GROUP
+    std::cerr << "MAT_GRP: Before PreImager constructor\n";
+#endif
     return PreImager(l_matr, l_perm, n);
   }
 };
@@ -1609,7 +1650,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   write_matrix_group(ListGen1, "MatrixIntegral_PreImageSubgroup_has_not1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After PreImageSubgroup |ListGen1|=" << ListGen1.size() << "\n";
+  os << "MAT_GRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
 #endif
 #ifdef SANITY_CHECK_MATRIX_GROUP_DISABLE
   size_t n_gen = ListMatr.size();
@@ -1647,7 +1688,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After ExhaustiveReductionComplexityGroupMatrix |ListGen2|=" << ListGen2.size() << "\n";
+  os << "MAT_GRP: After ExhaustiveReductionComplexityGroupMatrix comp(ListGen2)=" << compute_complexity_listmat(ListGen2) << "\n";
 #endif
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(ListGen2, "MatrixIntegral_PreImageSubgroup_has_not2");
@@ -1805,6 +1846,10 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " |ListPermGens|=" << ListPermGens.size() << "\n";
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
+#endif
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+    write_matrix_group(ListMatrGens, "LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel_f_stab");
 #endif
     PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens);
 #ifdef DEBUG_DOUBLE_COSET_ENUM

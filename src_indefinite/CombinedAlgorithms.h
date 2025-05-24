@@ -831,10 +831,14 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
 #endif
     ListGenTot.push_back(eGenB);
   }
-# ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: EIG_IO, returning ListGensTot\n";
-# endif
-  return ListGenTot;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "COMB: EIG_IO, we have ListGensTot, comp=" << compute_complexity_listmat(ListGenTot) << "\n";
+#endif
+  std::vector<MyMatrix<Tint>>  ListGenRet = ExhaustiveReductionComplexityGroupMatrix<Tint>(ListGenTot, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+  os << "COMB: EIG_IO, we have ListGensRet, comp=" << compute_complexity_listmat(ListGenRet) << "\n";
+#endif
+  return ListGenRet;
 }
 
 // Computes the residue modulo N.
