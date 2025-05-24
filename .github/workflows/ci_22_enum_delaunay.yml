@@ -115,5 +115,9 @@ jobs:
 
           cd CI_tests/22_EnumLatticeDelaunays
           ../../gap.sh < TestDelaunay.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
           cd ../..
           echo "After the tests"
