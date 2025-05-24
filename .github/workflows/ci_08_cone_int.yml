@@ -114,6 +114,6 @@ jobs:
           pwd
           echo "After compilation of Cone intersection test code"
 
-          cd CI_tests/ConeIntersection
+          cd CI_tests/08_ConeIntersection
           ../../src_polydecomp/DEC_TestIntersectionMethods FamilyCones.txt
           cd ../..

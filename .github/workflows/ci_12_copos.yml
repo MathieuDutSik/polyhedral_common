@@ -110,7 +110,7 @@ jobs:
           cd src_copos && make && cd ..
           echo "After compilation of copositivity code"
 
-          cd CI_tests/Copositivity
+          cd CI_tests/12_Copositivity
           ../../gap.sh < TestCompletePositivity.g
           ../../gap.sh < TestCopos.g
           cd ../..

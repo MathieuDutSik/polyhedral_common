@@ -110,7 +110,7 @@ jobs:
           cd src_poly && make -f Makefile_simple_dual_desc && cd ..
           echo "After compilation of Dual description code"
 
-          cd CI_tests/SimpleDualDesc
+          cd CI_tests/24_SimpleDualDesc
           ../../gap.sh < TestSimpleDualDesc.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2

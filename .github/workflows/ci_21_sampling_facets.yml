@@ -106,7 +106,8 @@ jobs:
           cd src_dualdesc && make -f Makefile_sampling_facets && cd ..
           echo "After compilation of sampling facets"
 
-          cd CI_tests/SamplingFacets && ../../gap.sh < TestSampling.g
+          cd CI_tests/21_SamplingFacets
+          ../../gap.sh < TestSampling.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1

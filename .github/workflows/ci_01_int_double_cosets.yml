@@ -91,7 +91,7 @@ jobs:
           pwd
           echo "After compilation of group code"
 
-          cd CI_tests/MatrixDoubleCosets
+          cd CI_tests/01_MatrixDoubleCosets
           ../../gap.sh < ProcessExamples.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2

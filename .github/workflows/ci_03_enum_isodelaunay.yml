@@ -114,7 +114,7 @@ jobs:
           pwd
           echo "After compilation of LATT_MPI_Lattice_IsoDelaunayDomain"
 
-          cd CI_tests/Tspaces_IsoDelaunay
+          cd CI_tests/03_Tspaces_IsoDelaunay
           ../../gap.sh < TestEnumIsoDelaunayDomain.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2

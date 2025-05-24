@@ -106,7 +106,8 @@ jobs:
           cd src_poly && make -f Makefile_two_lamination && cd ..
           echo "After compilation of POLY_TwoLaminations program"
 
-          cd CI_tests/Laminations && ../../gap.sh < TestLamination.g
+          cd CI_tests/17_Laminations
+          ../../gap.sh < TestLamination.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1

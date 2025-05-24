@@ -110,7 +110,8 @@ jobs:
           cd src_isotropy && make && cd ..
           echo "After compilation of isotropy code"
 
-          cd CI_tests/Isotropic && ../../gap.sh < TestIsotropic.g
+          cd CI_tests/09_Isotropic
+          ../../gap.sh < TestIsotropic.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1

@@ -116,7 +116,8 @@ jobs:
           pwd
           echo "After compilation of redundancy code"
 
-          cd CI_tests/RedundancyCtype5 && ../../gap.sh < TestCoherence.g
+          cd CI_tests/25_RedundancyCtype5
+          ../../gap.sh < TestCoherence.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
@@ -124,7 +125,8 @@ jobs:
           cd ../..
           echo "After computation of redundancy for C-types"
 
-          cd CI_tests/RedundantEquiv && ../../gap.sh < TestCoherence.g
+          cd CI_tests/25_RedundantEquiv
+          ../../gap.sh < TestCoherence.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1

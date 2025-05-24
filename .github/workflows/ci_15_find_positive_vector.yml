@@ -110,7 +110,8 @@ jobs:
           cd src_isotropy && make && cd ..
           echo "After compilation of isotropy code"
 
-          cd CI_tests/FindPositiveVectors && ../../gap.sh < FindPositiveVector.g
+          cd CI_tests/15_FindPositiveVectors
+          ../../gap.sh < FindPositiveVector.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code should have created the file" >&2
             exit 1

@@ -108,7 +108,7 @@ jobs:
           echo "After compilation of face lattice gen"
 
           # Running the test
-          cd CI_tests/GroupSkeleton
+          cd CI_tests/07_GroupSkeleton
           ../../gap.sh < TestGroupSkeleton.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "Error: file not found!" >&2

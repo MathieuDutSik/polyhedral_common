@@ -107,7 +107,8 @@ jobs:
           echo "After compilation of indefinite codes"
 
           # Running the test
-          cd CI_tests/IndefiniteComp && ../../gap.sh < AllTests.g
+          cd CI_tests/19_IndefiniteComp
+          ../../gap.sh < AllTests.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "Error: file not found!" >&2
             exit 1

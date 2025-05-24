@@ -113,5 +113,7 @@ jobs:
           cd src_latt && make -f Makefile_MPI_ComputeDelaunay && cd ..
           echo "After compilation of LATT_MPI_ComputeDelaunay"
 
-          cd CI_tests/EnumLatticeDelaunays && ../../gap.sh < TestDelaunay.g && cd ../..
+          cd CI_tests/22_EnumLatticeDelaunays
+          ../../gap.sh < TestDelaunay.g
+          cd ../..
           echo "After the tests"

@@ -108,7 +108,7 @@ jobs:
           echo "After compilation of geometrical unique test code"
 
           # Running the test
-          cd CI_tests/GeometricallyUnique
+          cd CI_tests/06_GeometricallyUnique
           tar -vxzf AllExamples.tar.gz
           ../../gap.sh < ProcessEntries.g
           if [ ! -f "CI_CONCLUSION" ]; then
