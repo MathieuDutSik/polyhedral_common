@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "lorentzian_perfect.h"
+#include "Isotropic.h"
 #include "POLY_MPI_AdjacencyScheme.h"
 // clang-format on
 
@@ -32,6 +33,10 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 #endif
   std::string LorMatFile = BlockDATA.get_string("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
+  check_correctness_lorentzian_perfect(LorMat);
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+  os << "LORPERFMPI: Pass the lorentzian correctness check\n";
+#endif
   //
   std::string TheOption_str = BlockDATA.get_string("Option");
   auto get_option = [&]() -> int {
@@ -45,6 +50,14 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
     throw TerminalException{1};
   };
   int TheOption = get_option();
+  if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
+    bool test = is_isotropic(LorMat, os);
+    if (!test) {
+      std::cerr << "LORPERFMPI: We have a request with isotropic\n";
+      std::cerr << "LORPERFMPI: However, the matrix is not isotropic\n";
+      throw TerminalException{1};
+    }
+  }
   //
   std::string OutFormat = BlockDATA.get_string("OutFormat");
   std::string OutFile = BlockDATA.get_string("OutFile");
