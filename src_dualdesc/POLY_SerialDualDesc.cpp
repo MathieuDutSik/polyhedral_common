@@ -48,7 +48,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "POLY_SerialDualDesc [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     std::string eFileName = argv[1];
@@ -90,9 +90,8 @@ int main(int argc, char *argv[]) {
       }
       if (NumericalType == "RealAlgebraic") {
         using T_rat = mpq_class;
-        SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-        std::string FileAlgebraicField =
-            BlockDATA.ListStringValues.at("FileAlgebraicField");
+        SingleBlock const& BlockDATA = eFull.get_block("DATA");
+        std::string FileAlgebraicField = BlockDATA.get_string("FileAlgebraicField");
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";

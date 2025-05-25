@@ -1415,7 +1415,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["LorMatFile"] = "unset.gram";
@@ -1426,26 +1425,21 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   ListIntValues1["max_runtime_second"] = 0;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // STORAGE
-  std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListBoolValues2["Saving"] = false;
   ListStringValues2["Prefix"] = "/irrelevant/";
   SingleBlock BlockSTORAGE;
-  BlockSTORAGE.ListIntValues = ListIntValues2;
-  BlockSTORAGE.ListBoolValues = ListBoolValues2;
-  BlockSTORAGE.ListStringValues = ListStringValues2;
-  BlockSTORAGE.ListListStringValues = ListListStringValues2;
+  BlockSTORAGE.setListBoolValues(ListBoolValues2);
+  BlockSTORAGE.setListStringValues(ListStringValues2);
   ListBlock["STORAGE"] = BlockSTORAGE;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint, typename Tgroup>

@@ -28,9 +28,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   // DATA
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["OutFormat"] = "nothing";
@@ -41,14 +39,12 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   ListBoolValues1["Saving"] = false;
   ListStringValues1["Prefix"] = "/irrelevant/";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename Tint> struct IsoEdgeDomain_AdjI {
@@ -194,8 +190,8 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
 template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
                                   FullNamelist const &eFull) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  bool ApplyStdUnitbuf = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  bool ApplyStdUnitbuf = BlockDATA.get_bool("ApplyStdUnitbuf");
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog =
@@ -208,15 +204,15 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
     os << "Do not apply UnitBuf\n";
   }
   //
-  bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
-  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  bool STORAGE_Saving = BlockDATA.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int n = BlockDATA.ListIntValues.at("n");
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  int n = BlockDATA.get_int("n");
+  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
   std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   DataCtype data{n, os};

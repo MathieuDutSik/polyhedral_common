@@ -28,7 +28,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "Temp_ThreadedADM [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     std::string eFileName = argv[1];
@@ -41,10 +41,10 @@ int main(int argc, char *argv[]) {
     using Tval = TripleStore<Tgroup>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-    bool Saving = BlockPROC.ListBoolValues.at("Saving");
-    std::string SavingPrefix = BlockPROC.ListStringValues.at("Prefix");
-    int port_i = BlockPROC.ListIntValues.at("port");
+    SingleBlock const& BlockPROC = eFull.get_block("PROC");
+    bool Saving = BlockPROC.get_bool("Saving");
+    std::string SavingPrefix = BlockPROC.get_string("Prefix");
+    int port_i = BlockPROC.get_int("port");
     std::cerr << "port_i=" << port_i << "\n";
     uint16_t port = port_i;
     //

@@ -13,21 +13,20 @@ void process_A(FullNamelist const &eFull) {
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
 
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
   int dimEXT = LinSpa.n + 1;
   //
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
   //
-  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
   //
-  std::string FileDualDesc =
-      BlockDATA.ListStringValues.at("FileDualDescription");
+  std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          std::cerr);
@@ -98,7 +97,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_SerialLattice_IsoDelaunayDomain [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     //

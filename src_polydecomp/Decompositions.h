@@ -749,12 +749,12 @@ Whether to test for pairwise intersection of cones. That test can be expensive a
   ListBoolValues1_doc["BreakConnectedComponents"] = "Default: false\n\
 It can be that the cones are union of disjoint cones. In that first process this";
   SingleBlock BlockPROC;
-  BlockPROC.setListIntValues(ListIntValues1_doc);
-  BlockPROC.setListBoolValues(ListBoolValues1_doc);
-  BlockPROC.setListStringValues(ListStringValues1_doc);
+  BlockPROC.setListIntValues_doc(ListIntValues1_doc);
+  BlockPROC.setListBoolValues_doc(ListBoolValues1_doc);
+  BlockPROC.setListStringValues_doc(ListStringValues1_doc);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {std::move(ListBlock), "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T> struct ConeSimpDesc {

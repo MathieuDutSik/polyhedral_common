@@ -12,19 +12,19 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
                               FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  SingleBlock BlockSTORAGE = eFull.get_block("STORAGE");
   //
-  bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
-  std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
+  bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
   std::cerr << "LORPERFMPI: max_runtime_second=" << max_runtime_second << "\n";
-  std::string LorMatFile = BlockDATA.ListStringValues.at("LorMatFile");
+  std::string LorMatFile = BlockDATA.get_string("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
   //
-  std::string TheOption_str = BlockDATA.ListStringValues.at("TheOption");
+  std::string TheOption_str = BlockDATA.get_string("TheOption");
   auto get_option = [&]() -> int {
     if (TheOption_str == "isotropic") {
       return LORENTZIAN_PERFECT_OPTION_ISOTROP;
@@ -37,15 +37,14 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   };
   int TheOption = get_option();
   //
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
   std::cerr << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
   //
   int n = LorMat.rows();
   int dimEXT = n + 1;
   using TintGroup = typename Tgroup::Tint;
-  std::string FileDualDesc =
-      BlockDATA.ListStringValues.at("FileDualDescription");
+  std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          os);

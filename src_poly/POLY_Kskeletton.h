@@ -717,9 +717,9 @@ The level of the search. If set to -1 then the full lattice is computed";
   ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\
 Whether to compute the total number of faces by stabilizer computation";
   SingleBlock BlockPROC;
-  BlockPROC.setListIntValues(ListIntValues1_doc);
-  BlockPROC.setListBoolValues(ListBoolValues1_doc);
-  BlockPROC.setListStringValues(ListStringValues1_doc);
+  BlockPROC.setListIntValues_doc(ListIntValues1_doc);
+  BlockPROC.setListBoolValues_doc(ListBoolValues1_doc);
+  BlockPROC.setListStringValues_doc(ListStringValues1_doc);
   ListBlock["PROC"] = BlockPROC;
   // GROUP
   std::map<std::string, std::string> ListStringValues2_doc;
@@ -736,11 +736,11 @@ stdout for std::cout,\n\
 stderr for std::cerr and\n\
 otherwise to the file";
   SingleBlock BlockGROUP;
-  BlockGROUP.setListBoolValues(ListBoolValues2_doc);
-  BlockGROUP.setListStringValues(ListStringValues2_doc);
+  BlockGROUP.setListBoolValues_doc(ListBoolValues2_doc);
+  BlockGROUP.setListStringValues_doc(ListStringValues2_doc);
   ListBlock["GROUP"] = BlockGROUP;
   // Merging all data
-  return {std::move(ListBlock), "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename Tgroup, typename Tgr>
@@ -843,8 +843,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: Reading PROC\n";
 #endif
-  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-  std::string FACfile = BlockPROC.ListStringValues.at("FACfile");
+  SingleBlock const& BlockPROC = eFull.get_block("PROC");
+  std::string const& FACfile = BlockPROC.get_string("FACfile");
   MyMatrix<T> FAC = ReadMatrixFile<T>(FACfile);
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
@@ -860,10 +860,10 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
     throw TerminalException{1};
   }
   //
-  std::string method_spann = BlockPROC.ListStringValues.at("method_spann");
-  std::string method_final = BlockPROC.ListStringValues.at("method_final");
+  std::string method_spann = BlockPROC.get_string("method_spann");
+  std::string method_final = BlockPROC.get_string("method_final");
   bool ComputeTotalNumberFaces =
-      BlockPROC.ListBoolValues.at("ComputeTotalNumberFaces");
+    BlockPROC.get_bool("ComputeTotalNumberFaces");
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: method_final=" << method_final << "\n";
   os << "SKEL: method_spann=" << method_spann << "\n";
@@ -873,7 +873,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   MyMatrix<T> EXT;
   if (method_spann == "ExtremeRays" ||
       method_spann == "ExtremeRaysNonSimplicial") {
-    std::string EXTfile = BlockPROC.ListStringValues.at("EXTfile");
+    std::string EXTfile = BlockPROC.get_string("EXTfile");
     EXT = ReadMatrixFile<T>(EXTfile);
     if (FAC.cols() != EXT.cols()) {
       std::cerr << "The dimension of EXT and FAC should be the same\n";
@@ -881,13 +881,13 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
     }
   }
   //
-  std::string GRPfile = BlockPROC.ListStringValues.at("GRPfile");
+  std::string GRPfile = BlockPROC.get_string("GRPfile");
   Tgroup GRP = ReadGroupFile<Tgroup>(GRPfile);
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |GRP|=" << GRP.size() << "\n";
 #endif
   //
-  int LevSearch = BlockPROC.ListIntValues.at("LevSearch");
+  int LevSearch = BlockPROC.get_int("LevSearch");
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: LevSearch=" << LevSearch << "\n";
 #endif
@@ -896,8 +896,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
     LevSearch = nbCol - 2;
   }
   //
-  std::string OUTfile = BlockPROC.ListStringValues.at("OUTfile");
-  std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
+  std::string OUTfile = BlockPROC.get_string("OUTfile");
+  std::string OutFormat = BlockPROC.get_string("OutFormat");
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
 #endif
@@ -911,8 +911,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   };
   print_stderr_stdout_file(OUTfile, f_print);
   //
-  SingleBlock BlockGROUP = eFull.ListBlock.at("GROUP");
-  bool ComputeAutGroup = BlockGROUP.ListBoolValues.at("ComputeAutGroup");
+  SingleBlock const& BlockGROUP = eFull.get_block("GROUP");
+  bool ComputeAutGroup = BlockGROUP.get_bool("ComputeAutGroup");
   if (ComputeAutGroup) {
     //    using Tgr = GraphBitset;
     using Tgr = GraphListAdj;
@@ -921,8 +921,8 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
 #ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: |GRPfull|=" << GRPfull.size() << "\n";
 #endif
-    std::string FileGroup = BlockGROUP.ListStringValues.at("FileGroup");
-    std::string OutFormat = BlockGROUP.ListStringValues.at("OutFormat");
+    std::string FileGroup = BlockGROUP.get_string("FileGroup");
+    std::string OutFormat = BlockGROUP.get_string("OutFormat");
 #ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: FileGroup=" << FileGroup << "\n";
     os << "SKEL: OutFormat=" << OutFormat << "\n";

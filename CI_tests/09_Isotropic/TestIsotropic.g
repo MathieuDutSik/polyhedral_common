@@ -47,7 +47,7 @@ TestIsotropic:=function(eRec)
     return rec(is_correct:=true);
 end;
 
-ListRec:=ReadAsFunction("IsotropicCases")();;
+ListRec:=ReadAsFunction("../DATA/IsotropicCases")();;
 ListDim3:=Filtered(ListRec, x->Length(x.M) = 3);
 ListDim4:=Filtered(ListRec, x->Length(x.M) = 4);
 ListDim5:=Filtered(ListRec, x->Length(x.M) = 5);

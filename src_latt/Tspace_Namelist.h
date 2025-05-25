@@ -61,16 +61,16 @@ The filename for the list of subspaces that are preserved";
 unset: If unset then the file is not needed\n\
 The filename used for reading the whole T-space";
   SingleBlock BlockTSPACE;
-  BlockTSPACE.setListStringValues(ListStringValues1_doc);
-  BlockTSPACE.setListBoolValues(ListBoolValues1_doc);
-  BlockTSPACE.setListIntValues(ListIntValues1_doc);
+  BlockTSPACE.setListStringValues_doc(ListStringValues1_doc);
+  BlockTSPACE.setListBoolValues_doc(ListBoolValues1_doc);
+  BlockTSPACE.setListIntValues_doc(ListIntValues1_doc);
   return BlockTSPACE;
 }
 
 FullNamelist NAMELIST_GetOneTSPACE() {
   std::map<std::string, SingleBlock> ListBlock;
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T>
@@ -123,13 +123,13 @@ void WriteLinSpaceFile(std::string const &eFile,
 
 template <typename T, typename Tint, typename Tgroup>
 LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
-  std::string TypeTspace = Blk.ListStringValues.at("TypeTspace");
+  std::string const& TypeTspace = Blk.get_string("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
   auto set_paperwork = [&]() -> void {
     reset_paperwork(LinSpaRet);
   };
   auto set_listcomm = [&]() -> void {
-    std::string ListComm = Blk.ListStringValues.at("ListComm");
+    std::string const& ListComm = Blk.get_string("ListComm");
     if (ListComm == "Trivial") {
       LinSpaRet.ListComm.clear();
       return;
@@ -144,7 +144,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (ListComm == "File") {
-      std::string FileListComm = Blk.ListStringValues.at("FileListComm");
+      std::string const& FileListComm = Blk.get_string("FileListComm");
       LinSpaRet.ListComm = ReadListMatrixFile<T>(FileListComm);
       return;
     }
@@ -153,13 +153,13 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto set_subspaces = [&]() -> void {
     std::string FileListSubspaces =
-        Blk.ListStringValues.at("FileListSubspaces");
+      Blk.get_string("FileListSubspaces");
     if (FileListSubspaces != "unset") {
       LinSpaRet.ListSubspaces = ReadListMatrixFile<T>(FileListSubspaces);
     }
   };
   auto set_pt_stab = [&]() -> void {
-    std::string PtGroupMethod = Blk.ListStringValues.at("PtGroupMethod");
+    std::string PtGroupMethod = Blk.get_string("PtGroupMethod");
     if (PtGroupMethod == "Trivial") {
       MyVector<T> eGen = -IdentityMat<T>(LinSpaRet.n);
       LinSpaRet.PtStabGens = {eGen};
@@ -169,13 +169,13 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return reset_pt_stab_gens<T,Tint,Tgroup>(LinSpaRet, os);
     }
     if (PtGroupMethod == "InvGroupInit") {
-      std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");
+      std::string const& FileInvGroup = Blk.get_string("FileInvGroup");
       LinSpaRet.PtStabGens = ReadListMatrixFile<T>(FileInvGroup);
       return;
     }
     if (PtGroupMethod == "File") {
       std::string FilePtGroupGenerator =
-          Blk.ListStringValues.at("FilePtGroupGenerator");
+        Blk.get_string("FilePtGroupGenerator");
       if (FilePtGroupGenerator == "unset") {
         std::cerr << "The FilePtGroupGenerator has not been set up, or set to "
                      "unset\n";
@@ -192,7 +192,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
                                          LinSpaRet.PtStabGens, os);
   };
   auto set_supermat = [&]() -> void {
-    std::string SuperMatMethod = Blk.ListStringValues.at("SuperMatMethod");
+    std::string SuperMatMethod = Blk.get_string("SuperMatMethod");
     if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" &&
         TypeTspace != "InvGroup") {
       if (SuperMatMethod == "NotNeeded") {
@@ -223,7 +223,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (SuperMatMethod == "File") {
-      std::string FileSuperMat = Blk.ListStringValues.at("FileSuperMat");
+      std::string FileSuperMat = Blk.get_string("FileSuperMat");
       if (FileSuperMat == "unset") {
         std::cerr << "The FileSuperMat has not been set up, or set to unset\n";
         throw TerminalException{1};
@@ -236,9 +236,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto get_linspace = [&]() -> LinSpaceMatrix<T> {
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
-      int n = Blk.ListIntValues.at("RealImagDim");
-      int eSum = Blk.ListIntValues.at("RealImagSum");
-      int eProd = Blk.ListIntValues.at("RealImagProd");
+      int n = Blk.get_int("RealImagDim");
+      int eSum = Blk.get_int("RealImagSum");
+      int eProd = Blk.get_int("RealImagProd");
       if (TypeTspace == "RealQuad")
         LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
       if (TypeTspace == "ImagQuad")
@@ -250,7 +250,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return LinSpaRet;
     }
     if (TypeTspace == "InvGroup") {
-      std::string FileInvGroup = Blk.ListStringValues.at("FileInvGroup");
+      std::string FileInvGroup = Blk.get_string("FileInvGroup");
       std::vector<MyMatrix<T>> LGen = ReadListMatrixFile<T>(FileInvGroup);
       if (LGen.size() == 0) {
         std::cerr << "We have 0 matrices\n";
@@ -266,7 +266,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return LinSpaRet;
     }
     if (TypeTspace == "Raw") {
-      std::string FileListMat = Blk.ListStringValues.at("FileListMat");
+      std::string const& FileListMat = Blk.get_string("FileListMat");
       LinSpaRet.ListMat = ReadListMatrixFile<T>(FileListMat);
       set_paperwork();
       set_supermat();
@@ -277,7 +277,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return LinSpaRet;
     }
     if (TypeTspace == "File") {
-      std::string FileLinSpa = Blk.ListStringValues.at("FileLinSpa");
+      std::string const& FileLinSpa = Blk.get_string("FileLinSpa");
       return ReadLinSpaceFile<T>(FileLinSpa, os);
     }
     std::cerr << "Failed to find an option for TypeTspace that suits\n";

@@ -96,12 +96,12 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_CTYPE_MPI() {
   ListIntValues1["MpiBufferSize"] = 20;
   ListBoolValues1["StopWhenFinished"] = false;
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 static int tag_form_adj = 37;
@@ -175,7 +175,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "This program is used as\n";
     std::cerr << "CTYP_MPI_Enumeration_c [file.nml]\n";
     std::cerr << "With file.nml a namelist file\n";
-    NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+    eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
     return -1;
   }
   std::string eFileName = argv[1];
@@ -183,20 +183,20 @@ int main(int argc, char *argv[]) {
   //
   // Parsing the input file
   //
-  SingleBlock BlDATA = eFull.ListBlock["DATA"];
+  SingleBlock const& BlDATA = eFull.get_block("DATA");
   //  int n=BlDATA.ListIntValues.at("n");
-  size_t n = BlDATA.ListIntValues.at("n");
+  size_t n = BlDATA.get_int("n");
   int MaxNumberFlyingMessage =
-      BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
+    BlDATA.get_int("MaxNumberFlyingMessage");
   size_t MaxStoredUnsentMatrices =
-      BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
-  int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
-  size_t MpiBufferSize = BlDATA.ListIntValues.at("MpiBufferSize");
+    BlDATA.get_int("MaxStoredUnsentMatrices");
+  int MaxRunTimeSecond = BlDATA.get_int("MaxRunTimeSecond");
+  size_t MpiBufferSize = BlDATA.get_int("MpiBufferSize");
   int TimeForDeclaringItOver =
-      BlDATA.ListIntValues.at("TimeForDeclaringItOver");
-  bool StopWhenFinished = BlDATA.ListBoolValues.at("StopWhenFinished");
-  std::string WorkingPrefix = BlDATA.ListStringValues.at("WorkingPrefix");
-  std::string WorkingAdjPrefix = BlDATA.ListStringValues.at("WorkingAdjPrefix");
+    BlDATA.get_int("TimeForDeclaringItOver");
+  bool StopWhenFinished = BlDATA.get_bool("StopWhenFinished");
+  std::string WorkingPrefix = BlDATA.get_string("WorkingPrefix");
+  std::string WorkingAdjPrefix = BlDATA.get_string("WorkingAdjPrefix");
   //
   // The basic sizes
   //

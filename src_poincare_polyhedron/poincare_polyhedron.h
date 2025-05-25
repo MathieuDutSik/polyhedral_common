@@ -1676,34 +1676,34 @@ Method used for computing TypeI neighbors";
   ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
 Whether to generate new elements from vertex matchings";
   SingleBlock BlockPROC;
-  BlockPROC.setListBoolValues(ListBoolValues_doc);
-  BlockPROC.setListIntValues(ListIntValues_doc);
-  BlockPROC.setListStringValues(ListStringValues_doc);
+  BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
+  BlockPROC.setListIntValues_doc(ListIntValues_doc);
+  BlockPROC.setListStringValues_doc(ListStringValues_doc);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {std::move(ListBlock), "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 RecOption ReadInitialData(FullNamelist const &eFull) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
+  SingleBlock const& BlockPROC = eFull.get_block("PROC");
   std::string method_adjacent =
-      BlockPROC.ListStringValues.at("method_adjacent");
-  std::string eCommand_DD = BlockPROC.ListStringValues.at("eCommand_DD");
-  std::string PrefixSave = BlockPROC.ListStringValues.at("PrefixSave");
+    BlockPROC.get_string("method_adjacent");
+  std::string eCommand_DD = BlockPROC.get_string("eCommand_DD");
+  std::string PrefixSave = BlockPROC.get_string("PrefixSave");
   std::string FileDataPoincare =
-      BlockPROC.ListStringValues.at("FileDataPoincare");
-  std::string FileO = BlockPROC.ListStringValues.at("FileO");
-  std::string Arithmetic = BlockPROC.ListStringValues.at("Arithmetic");
-  std::string Approach = BlockPROC.ListStringValues.at("Approach");
-  std::string MethodMissingI = BlockPROC.ListStringValues.at("MethodMissingI");
+    BlockPROC.get_string("FileDataPoincare");
+  std::string FileO = BlockPROC.get_string("FileO");
+  std::string Arithmetic = BlockPROC.get_string("Arithmetic");
+  std::string Approach = BlockPROC.get_string("Approach");
+  std::string MethodMissingI = BlockPROC.get_string("MethodMissingI");
   std::string MethodVertexMatching =
-      BlockPROC.ListStringValues.at("MethodVertexMatching");
-  int n_iter_max = BlockPROC.ListIntValues.at("n_iter_max");
-  int n_expand = BlockPROC.ListIntValues.at("n_expand");
+    BlockPROC.get_string("MethodVertexMatching");
+  int n_iter_max = BlockPROC.get_int("n_iter_max");
+  int n_expand = BlockPROC.get_int("n_expand");
   bool ComputeStabilizerPermutation =
-      BlockPROC.ListBoolValues.at("ComputeStabilizerPermutation");
+    BlockPROC.get_bool("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation =
-      BlockPROC.ListBoolValues.at("ComputeGroupPresentation");
+    BlockPROC.get_bool("ComputeGroupPresentation");
   return {method_adjacent,
           eCommand_DD,
           PrefixSave,

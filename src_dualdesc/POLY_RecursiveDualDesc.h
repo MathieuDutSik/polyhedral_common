@@ -2747,9 +2747,9 @@ This is about whether to used the advanced Balinski termination criterion";
   ListBoolValues1_doc["SimpleExchangeScheme"] = "Default: F\n\
 If selected then a message sent to another node can be sent only after the previously sent is marked as finished";
   SingleBlock BlockDATA;
-  BlockDATA.setListStringValues(ListStringValues1_doc);
-  BlockDATA.setListBoolValues(ListBoolValues1_doc);
-  BlockDATA.setListIntValues(ListIntValues1_doc);
+  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
+  BlockDATA.setListBoolValues_doc(ListBoolValues1_doc);
+  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
   ListBlock["DATA"] = BlockDATA;
   // HEURISTIC
   std::map<std::string, std::string> ListStringValuesH_doc;
@@ -2785,7 +2785,7 @@ If set to unset.heu then disabled";
 The heuristic for choosing the canonicalization method used.\n\
 If set to unset.heu then disabled";
   SingleBlock BlockHEURIS;
-  BlockHEURIS.setListStringValues(ListStringValuesH_doc);
+  BlockHEURIS.setListStringValues_doc(ListStringValuesH_doc);
   ListBlock["HEURISTIC"] = BlockHEURIS;
   // METHOD
   std::map<std::string, std::string> ListBoolValues2_doc;
@@ -2795,8 +2795,8 @@ Whether to save the bank information to a disk for further reuse";
   ListStringValues2_doc["Prefix"] = "Default: /irrelevant/\n\
 The directory in which the bank is saved. Put something significant if Saving = T";
   SingleBlock BlockMETHOD;
-  BlockMETHOD.setListBoolValues(ListBoolValues2_doc);
-  BlockMETHOD.setListStringValues(ListStringValues2_doc);
+  BlockMETHOD.setListBoolValues_doc(ListBoolValues2_doc);
+  BlockMETHOD.setListStringValues_doc(ListStringValues2_doc);
   ListBlock["METHOD"] = BlockMETHOD;
   // BANK
   std::map<std::string, std::string> ListBoolValues3_doc;
@@ -2806,11 +2806,11 @@ Whether to track the computation on file or not";
   ListStringValues3_doc["Prefix"] = "Default: /irrelevant/\n\
 The prefix in which data is saved. Put something significant if Saving = T";
   SingleBlock BlockBANK;
-  BlockBANK.setListBoolValues(ListBoolValues3_doc);
-  BlockBANK.setListStringValues(ListStringValues3_doc);
+  BlockBANK.setListBoolValues_doc(ListBoolValues3_doc);
+  BlockBANK.setListStringValues_doc(ListStringValues3_doc);
   ListBlock["BANK"] = BlockBANK;
   // Merging all data
-  return {std::move(ListBlock), "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 FullNamelist NAMELIST_GetStandard_BankingSystem() {
@@ -2823,12 +2823,12 @@ FullNamelist NAMELIST_GetStandard_BankingSystem() {
   ListStringValues1["Prefix"] = "/irrelevant/";
   ListIntValues1["port"] = 1234;
   SingleBlock BlockPROC;
-  BlockPROC.ListIntValues = ListIntValues1;
-  BlockPROC.ListBoolValues = ListBoolValues1;
-  BlockPROC.ListStringValues = ListStringValues1;
+  BlockPROC.setListIntValues(ListIntValues1);
+  BlockPROC.setListBoolValues(ListBoolValues1);
+  BlockPROC.setListStringValues(ListStringValues1);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {std::move(ListBlock), "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tgroup>
@@ -2934,14 +2934,14 @@ void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
 
 
 template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  std::string const& EXTfile = BlockDATA.get_string("EXTfile");
   return ReadMatrixFile<T>(EXTfile);
 }
 
 std::string GetNumericalType(FullNamelist const &eFull) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string NumericalType = BlockDATA.ListStringValues.at("NumericalType");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  std::string const& NumericalType = BlockDATA.get_string("NumericalType");
   std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
                                  "mpq_rational",  "Qsqrt2",   "Qsqrt5",
                                  "RealAlgebraic"};
@@ -2959,8 +2959,8 @@ std::string GetNumericalType(FullNamelist const &eFull) {
 template <typename T, typename Tidx>
 MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull,
                              [[maybe_unused]] std::ostream &os) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  std::string EXTfile = BlockDATA.get_string("EXTfile");
   IsExistingFileDie(EXTfile);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: EXTfile=" << EXTfile << "\n";
@@ -2979,8 +2979,8 @@ MyMatrix<T> Get_EXT_DualDesc(FullNamelist const &eFull,
 template <typename Tgroup>
 Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
                         [[maybe_unused]] std::ostream &os) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  std::string GRPfile = BlockDATA.get_string("GRPfile");
   IsExistingFileDie(GRPfile);
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: GRPfile=" << GRPfile << "\n";
@@ -2992,8 +2992,8 @@ Tgroup Get_GRP_DualDesc(FullNamelist const &eFull,
 
 bool Get_InterceptCtrlC_statuc(FullNamelist const &eFull,
                                [[maybe_unused]] std::ostream &os) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  bool intercept_ctrl_c = BlockDATA.ListBoolValues.at("InterceptCtrlC");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  bool intercept_ctrl_c = BlockDATA.get_bool("InterceptCtrlC");
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   os << "RDD: intercept_ctrl_c=" << intercept_ctrl_c << "\n";
 #endif
@@ -3038,35 +3038,35 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
                                  PolyHeuristicSerial<Tint> &AllArr,
                                  std::ostream &os) {
   //
-  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
-  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock const& BlockMETHOD = eFull.get_block("METHOD");
+  SingleBlock const& BlockBANK = eFull.get_block("BANK");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
   //
-  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
+  bool BANK_Saving = BlockBANK.get_bool("Saving");
   AllArr.BANK_Saving = BANK_Saving;
   //
-  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
+  std::string BANK_Prefix = BlockBANK.get_string("Prefix");
   AllArr.BANK_Prefix = BANK_Prefix;
   //
-  std::string OutFile = BlockDATA.ListStringValues.at("OUTfile");
+  std::string OutFile = BlockDATA.get_string("OUTfile");
   AllArr.OutFile = OutFile;
   //
   bool DeterministicRuntime =
-      BlockDATA.ListBoolValues.at("DeterministicRuntime");
+    BlockDATA.get_bool("DeterministicRuntime");
   if (!DeterministicRuntime) {
     unsigned seed = get_random_seed();
     srand(seed);
   }
   //
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
   AllArr.OutFormat = OutFormat;
   //
-  int port_i = BlockDATA.ListIntValues.at("port");
+  int port_i = BlockDATA.get_int("port");
   uint16_t port = port_i;
   AllArr.port = port;
   //
   std::string bank_parallelization_method =
-      BlockDATA.ListStringValues.at("bank_parallelization_method");
+    BlockDATA.get_string("bank_parallelization_method");
   AllArr.bank_parallelization_method = bank_parallelization_method;
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
@@ -3084,21 +3084,21 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   SetHeuristic(eFull, "ChoiceCanonicalizationFile",
                AllArr.ChoiceCanonicalization, os);
   //
-  bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
+  bool DD_Saving = BlockMETHOD.get_bool("Saving");
   AllArr.DD_Saving = DD_Saving;
   //
-  std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
+  std::string DD_Prefix = BlockMETHOD.get_string("Prefix");
   AllArr.DD_Prefix = DD_Prefix;
   //
-  int max_runtime = BlockDATA.ListIntValues.at("max_runtime");
+  int max_runtime = BlockDATA.get_int("max_runtime");
   AllArr.max_runtime = max_runtime;
   //
   bool AdvancedTerminationCriterion =
-      BlockDATA.ListBoolValues.at("AdvancedTerminationCriterion");
+    BlockDATA.get_bool("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
   bool SimpleExchangeScheme =
-      BlockDATA.ListBoolValues.at("SimpleExchangeScheme");
+    BlockDATA.get_bool("SimpleExchangeScheme");
   AllArr.SimpleExchangeScheme = SimpleExchangeScheme;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC

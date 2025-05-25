@@ -51,7 +51,7 @@ int main(int argc, char *argv[]) {
     FullNamelist eFull = NAMELIST_GetPoincareInput();
     if (argc != 2) {
       std::cerr << "POINCARE_Initial_Computation [FileNML]\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       throw TerminalException{1};
     }
     using Tidx = int32_t;

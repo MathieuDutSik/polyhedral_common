@@ -136,14 +136,14 @@ template <typename Tint>
 FundInvariantVectorFamily<Tint>
 ComputeFundamentalInvariant(MyMatrix<Tint> const &M) {
   int n = M.cols();
-  std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pair = SmithNormalForm(M);
-  MyMatrix<Tint> Mred = pair.first * M * pair.second;
+  MyVector<Tint> eVect = SmithNormalFormInvariant(M);
   int rank = 0;
   Tint index = 1;
   for (int i = 0; i < n; i++) {
-    if (Mred(i, i) != 0) {
+    Tint val = eVect(i);
+    if (val != 0) {
       rank++;
-      index *= Mred(i, i);
+      index *= val;
     }
   }
 #ifdef DEBUG_IVF

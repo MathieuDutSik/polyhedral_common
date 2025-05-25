@@ -23,12 +23,12 @@ FullNamelist NAMELIST_InitialPreparation() {
   ListStringValues1["PrefixInput"] = "LOGinput_";
   ListStringValues1["PrefixOutput"] = "LOGoutput_";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename Tinput, typename Toutput>
@@ -65,7 +65,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CTYP_MPI_Enumeration_c [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     std::string eFileName = argv[1];
@@ -73,15 +73,15 @@ int main(int argc, char *argv[]) {
     //
     // Parsing the input
     //
-    SingleBlock BlDATA = eFull.ListBlock["DATA"];
-    size_t n = BlDATA.ListIntValues.at("n");
+    SingleBlock const& BlDATA = eFull.get_block("DATA");
+    size_t n = BlDATA.get_int("n");
     size_t n_vect = std::pow(2, n) - 1;
-    size_t NprocInput = BlDATA.ListIntValues.at("NprocInput");
-    size_t NprocOutput = BlDATA.ListIntValues.at("NprocOutput");
-    std::string PrefixInput = BlDATA.ListStringValues.at("PrefixInput");
-    std::string InputFile = BlDATA.ListStringValues.at("InputFile");
-    std::string PrefixOutput = BlDATA.ListStringValues.at("PrefixOutput");
-    std::string NatureInput = BlDATA.ListStringValues.at("NatureInput");
+    size_t NprocInput = BlDATA.get_int("NprocInput");
+    size_t NprocOutput = BlDATA.get_int("NprocOutput");
+    std::string PrefixInput = BlDATA.get_string("PrefixInput");
+    std::string InputFile = BlDATA.get_string("InputFile");
+    std::string PrefixOutput = BlDATA.get_string("PrefixOutput");
+    std::string NatureInput = BlDATA.get_string("NatureInput");
     int posNature =
         PositionVect({std::string("text"), std::string("netcdf")}, NatureInput);
     if (posNature == -1) {
@@ -89,7 +89,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "NatureInput=" << NatureInput << "\n";
       throw TerminalException{1};
     }
-    std::string OutputType = BlDATA.ListStringValues.at("OutputType");
+    std::string OutputType = BlDATA.get_string("OutputType");
     int posType = PositionVect({std::string("byte"), std::string("short"),
                                 std::string("int"), std::string("int64")},
                                OutputType);
@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     bool ApplyCanonicalization =
-        BlDATA.ListBoolValues.at("ApplyCanonicalization");
+      BlDATA.get_bool("ApplyCanonicalization");
     //
     // Creating the netcdf output files.
     //

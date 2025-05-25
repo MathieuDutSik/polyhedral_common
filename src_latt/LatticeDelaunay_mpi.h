@@ -74,28 +74,28 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
   int dimEXT = GramMat.rows() + 1;
-  SingleBlock BlockSTORAGE = eFull.ListBlock.at("STORAGE");
+  SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
   //
-  bool STORAGE_Saving = BlockSTORAGE.ListBoolValues.at("Saving");
-  std::string STORAGE_Prefix = BlockSTORAGE.ListStringValues.at("Prefix");
+  bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second << "\n";
 #endif
   //
   std::string FileDualDesc =
-      BlockDATA.ListStringValues.at("FileDualDescription");
+    BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          os);

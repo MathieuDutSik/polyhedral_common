@@ -665,29 +665,23 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListIntValues1["max_runtime_second"] = 0;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListDoubleValues(ListDoubleValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
+  BlockDATA.setListListStringValues(ListListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // STORAGE
-  std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListBoolValues2["Saving"] = false;
   ListStringValues2["Prefix"] = "/irrelevant/";
   SingleBlock BlockSTORAGE;
-  BlockSTORAGE.ListIntValues = ListIntValues2;
-  BlockSTORAGE.ListBoolValues = ListBoolValues2;
-  BlockSTORAGE.ListDoubleValues = ListDoubleValues2;
-  BlockSTORAGE.ListStringValues = ListStringValues2;
-  BlockSTORAGE.ListListStringValues = ListListStringValues2;
+  BlockSTORAGE.setListBoolValues(ListBoolValues2);
+  BlockSTORAGE.setListStringValues(ListStringValues2);
   ListBlock["STORAGE"] = BlockSTORAGE;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -711,12 +705,12 @@ template <typename T, typename Tint, typename Tgroup>
 DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
                                               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
                                               std::ostream& os) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
 
-  std::string GRAMfile = BlockDATA.ListStringValues.at("GRAMfile");
+  std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
   //
-  std::string SVRfile = BlockDATA.ListStringValues.at("SVRfile");
+  std::string SVRfile = BlockDATA.get_string("SVRfile");
   auto get_SVR = [&]() -> MyMatrix<T> {
     if (IsExistingFile(SVRfile)) {
       return ReadMatrixFile<T>(SVRfile);
@@ -729,8 +723,8 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
   os << "DEL_ENUM: |SVR|=" << SVR.rows() << "\n";
 #endif
   //
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

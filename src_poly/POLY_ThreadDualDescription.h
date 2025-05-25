@@ -695,20 +695,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
 FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["EXTfile"] = "unset.ext";
   ListStringValues1["GRPfile"] = "unset.grp";
   ListStringValues1["OUTfile"] = "unset.out";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // HEURISTIC
   std::map<std::string, std::string> ListStringValuesH;
@@ -719,65 +711,55 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
   ListStringValuesH["MethodInitialFacetSetFile"] = "unset.heu";
   ListStringValuesH["BankSaveHeuristicFile"] = "unset.heu";
   SingleBlock BlockHEURIS;
-  BlockHEURIS.ListStringValues = ListStringValuesH;
+  BlockHEURIS.setListStringValues(ListStringValuesH);
   ListBlock["HEURISTIC"] = BlockHEURIS;
   // METHOD
   std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListIntValues2["NPROC"] = 1;
   ListBoolValues2["Saving"] = false;
   ListStringValues2["Prefix"] = "/irrelevant/";
   ListBoolValues2["FullDataInMemory"] = true;
   SingleBlock BlockMETHOD;
-  BlockMETHOD.ListIntValues = ListIntValues2;
-  BlockMETHOD.ListBoolValues = ListBoolValues2;
-  BlockMETHOD.ListDoubleValues = ListDoubleValues2;
-  BlockMETHOD.ListStringValues = ListStringValues2;
-  BlockMETHOD.ListListStringValues = ListListStringValues2;
+  BlockMETHOD.setListIntValues(ListIntValues2);
+  BlockMETHOD.setListBoolValues(ListBoolValues2);
+  BlockMETHOD.setListStringValues(ListStringValues2);
   ListBlock["METHOD"] = BlockMETHOD;
   // BANK
-  std::map<std::string, int> ListIntValues3;
   std::map<std::string, bool> ListBoolValues3;
-  std::map<std::string, double> ListDoubleValues3;
   std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string>> ListListStringValues3;
   ListStringValues3["Prefix"] = "./unset/";
   ListBoolValues3["Saving"] = false;
   ListBoolValues3["FullDataInMemory"] = true;
   SingleBlock BlockBANK;
-  BlockBANK.ListIntValues = ListIntValues3;
-  BlockBANK.ListBoolValues = ListBoolValues3;
-  BlockBANK.ListDoubleValues = ListDoubleValues3;
-  BlockBANK.ListStringValues = ListStringValues3;
-  BlockBANK.ListListStringValues = ListListStringValues3;
+  BlockBANK.setListBoolValues(ListBoolValues3);
+  BlockBANK.setListStringValues(ListStringValues3);
   ListBlock["BANK"] = BlockBANK;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tgroup>
 void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
-  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
-  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
-  bool BANK_Memory = BlockBANK.ListBoolValues.at("FullDataInMemory");
-  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
+  SingleBlock const& BlockBANK = eFull.get_block("BANK");
+  bool BANK_Saving = BlockBANK.get_bool("Saving");
+  bool BANK_Memory = BlockBANK.get_bool("FullDataInMemory");
+  std::string BANK_Prefix = BlockBANK.get_string("Prefix");
   FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
       GetRec_FctsDataBank<T, Tgroup>();
   DataBank<PolyhedralEntry<T, Tgroup>> TheBank(BANK_Saving, BANK_Memory,
                                                BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  std::string EXTfile = BlockDATA.ListStringValues.at("EXTfile");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  std::string EXTfile = BlockDATA.get_string("EXTfile");
   IsExistingFileDie(EXTfile);
   std::cerr << "EXTfile=" << EXTfile << "\n";
-  std::string GRPfile = BlockDATA.ListStringValues.at("GRPfile");
+  std::string GRPfile = BlockDATA.get_string("GRPfile");
   IsExistingFileDie(GRPfile);
   std::cerr << "GRPfile=" << GRPfile << "\n";
-  std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
+  std::string OUTfile = BlockDATA.get_string("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT = ReadMatrix<T>(EXTfs);
@@ -785,8 +767,8 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   Tgroup GRP = ReadGroup<Tgroup>(GRPfs);
   //
   std::cerr << "Creating MPROC\n";
-  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
-  int NbThr = BlockMETHOD.ListIntValues.at("NPROC");
+  SingleBlock BlockMETHOD = eFull.get_block("METHOD");
+  int NbThr = BlockMETHOD.get_int("NPROC");
   MainProcessor MProc(NbThr);
   int TheId = MProc.MPU_GetId();
   //
@@ -803,9 +785,9 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
                std::cerr);
   SetHeuristic(eFull, "BankSaveHeuristicFile", AllArr.BankSave, std::cerr);
   //
-  bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
-  std::string DD_Prefix = BlockMETHOD.ListStringValues.at("Prefix");
+  bool DD_Saving = BlockMETHOD.get_bool("Saving");
+  bool DD_Memory = BlockMETHOD.get_bool("FullDataInMemory");
+  std::string DD_Prefix = BlockMETHOD.get_string("Prefix");
   AllArr.DD_Saving = DD_Saving;
   AllArr.DD_Memory = DD_Memory;
   //

@@ -727,8 +727,8 @@ struct unlimited_request {
 };
 
 bool ApplyStdUnitbuf(FullNamelist const &eFull) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  bool result = BlockDATA.ListBoolValues.at("ApplyStdUnitbuf");
+  SingleBlock BlockDATA = eFull.get_block("DATA");
+  bool result = BlockDATA.get_bool("ApplyStdUnitbuf");
   return result;
 }
 

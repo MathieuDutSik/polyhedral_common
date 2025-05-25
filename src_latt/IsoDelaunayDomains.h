@@ -1771,16 +1771,16 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   ListStringValues1["Prefix"] = "/irrelevant/";
   ListStringValues1["CVPmethod"] = "SVexact";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListDoubleValues(ListDoubleValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
+  BlockDATA.setListListStringValues(ListListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint, typename Tgroup> struct IsoDelaunayDomain {
@@ -2203,10 +2203,10 @@ template <typename T, typename Tint, typename Tgroup>
 DataIsoDelaunayDomains<T, Tint, Tgroup> get_data_isodelaunay_domains(FullNamelist const &eFull,
                                                                      PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
                                                                      std::ostream& os) {
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   auto get_common = [&]() -> std::optional<MyMatrix<T>> {
-    std::string CommonGramMat = BlockDATA.ListStringValues.at("CommonGramMat");
+    std::string const& CommonGramMat = BlockDATA.get_string("CommonGramMat");
     if (CommonGramMat == "unset") {
       return {};
     }

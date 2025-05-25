@@ -220,7 +220,7 @@ template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
-                        std::ostream & os) {
+                        [[maybe_unused]] std::ostream & os) {
   std::vector<MyMatrix<T>> ListMat;
   std::vector<Tshortest<T, Tint>> ListShort;
   // Memoization procedure

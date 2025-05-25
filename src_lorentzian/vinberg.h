@@ -1561,24 +1561,24 @@ FullNamelist NAMELIST_GetStandard_VINBERG() {
       "stdout, or stderr or the filename you want to write to";
   ListBoolValues1["ReflectivityEarlyTermination"] = false;
   SingleBlock BlockPROC;
-  BlockPROC.ListStringValues = ListStringValues1;
-  BlockPROC.ListBoolValues = ListBoolValues1;
+  BlockPROC.setListStringValues(ListStringValues1);
+  BlockPROC.setListBoolValues(ListBoolValues1);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint>
 void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-  std::string FileLorMat = BlockPROC.ListStringValues.at("FileLorMat");
+  SingleBlock const& BlockPROC = eFull.get_block("PROC");
+  std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   TestLorentzianity(G);
   //
-  std::string OptionNorms = BlockPROC.ListStringValues.at("OptionNorms");
-  std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
+  std::string OptionNorms = BlockPROC.get_string("OptionNorms");
+  std::string DualDescProg = BlockPROC.get_string("DualDescProg");
   bool ReflectivityEarlyTermination =
-      BlockPROC.ListBoolValues.at("ReflectivityEarlyTermination");
+    BlockPROC.get_bool("ReflectivityEarlyTermination");
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint, T>(G);
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   std::vector<Tint> root_lengths;
@@ -1592,7 +1592,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   os << "\n";
 #endif
   //
-  std::string FileV0 = BlockPROC.ListStringValues.at("FileV0");
+  std::string FileV0 = BlockPROC.get_string("FileV0");
   MyVector<Tint> v0;
   if (FileV0 == "compute") {
     v0 = GetV0_vector<T, Tint>(G, os);
@@ -1609,8 +1609,8 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   DataReflectionGroup<T, Tint> data =
       GetDataReflectionGroup<T, Tint>(ListRoot, G_i);
   //
-  std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
-  std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
+  std::string OutFormat = BlockPROC.get_string("OutFormat");
+  std::string FileOut = BlockPROC.get_string("FileOut");
   auto f_print=[&](std::ostream& os_out) -> void {
     Print_DataReflectionGroup(data, OutFormat, os_out);
   };

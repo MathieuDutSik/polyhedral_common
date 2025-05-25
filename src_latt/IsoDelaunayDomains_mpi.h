@@ -18,27 +18,27 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockTSPACE = eFull.ListBlock.at("TSPACE");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   int dimEXT = LinSpa.n + 1;
   //
-  bool STORAGE_Saving = BlockDATA.ListBoolValues.at("Saving");
-  std::string STORAGE_Prefix = BlockDATA.ListStringValues.at("Prefix");
+  bool STORAGE_Saving = BlockDATA.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.ListIntValues.at("max_runtime_second");
+  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
 #ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: max_runtime_second=" << max_runtime_second << "\n";
 #endif
-  std::string OutFormat = BlockDATA.ListStringValues.at("OutFormat");
-  std::string OutFile = BlockDATA.ListStringValues.at("OutFile");
+  std::string OutFormat = BlockDATA.get_string("OutFormat");
+  std::string OutFile = BlockDATA.get_string("OutFile");
 #ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif
   //
   std::string FileDualDesc =
-      BlockDATA.ListStringValues.at("FileDualDescription");
+    BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          os);

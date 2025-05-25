@@ -32,19 +32,19 @@ int main(int argc, char *argv[]) {
     FullNamelist eFull = NAMELIST_TestUnionCones();
     if (argc != 2) {
       std::cerr << "DEC_TestUnionCones [FileNML]\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     std::string FileNML = argv[1];
     NAMELIST_ReadNamelistFile(FileNML, eFull);
-    SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
+    SingleBlock const& BlockPROC = eFull.get_block("PROC");
     //
-    std::string FileI = BlockPROC.ListStringValues.at("FileI");
-    std::string FileO = BlockPROC.ListStringValues.at("FileO");
+    std::string FileI = BlockPROC.get_string("FileI");
+    std::string FileO = BlockPROC.get_string("FileO");
     bool TestPairwiseIntersection =
-        BlockPROC.ListBoolValues.at("TestPairwiseIntersection");
+      BlockPROC.get_bool("TestPairwiseIntersection");
     bool BreakConnectedComponents =
-        BlockPROC.ListBoolValues.at("BreakConnectedComponents");
+      BlockPROC.get_bool("BreakConnectedComponents");
     //
     // Reading the polyhedral cones.
     //

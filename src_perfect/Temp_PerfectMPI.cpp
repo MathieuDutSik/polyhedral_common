@@ -16,10 +16,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListIntValues1["n"] = 9;
   ListIntValues1["MaxNumberFlyingMessage"] = 100;
   ListIntValues1["MaxIncidenceTreating"] = 45 + 20;
@@ -30,14 +27,11 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI() {
   ListStringValues1["ListMatrixInput"] = "ListMatrix";
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint>
@@ -84,17 +78,17 @@ int main() {
   FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_MPI();
   std::string eFileName = "perfectenum.nml";
   NAMELIST_ReadNamelistFile(eFileName, eFull);
-  SingleBlock BlDATA = eFull.ListBlock["DATA"];
+  SingleBlock const& BlDATA = eFull.get_block("DATA");
   //  int n=BlDATA.ListIntValues.at("n");
   int MaxNumberFlyingMessage =
-      BlDATA.ListIntValues.at("MaxNumberFlyingMessage");
-  int MaxIncidenceTreating = BlDATA.ListIntValues.at("MaxIncidenceTreating");
+    BlDATA.get_int("MaxNumberFlyingMessage");
+  int MaxIncidenceTreating = BlDATA.get_int("MaxIncidenceTreating");
   int MaxStoredUnsentMatrices =
-      BlDATA.ListIntValues.at("MaxStoredUnsentMatrices");
-  int MinIncidenceRealized = BlDATA.ListIntValues.at("MinIncidenceRealized");
-  int MaxIncidenceRealized = BlDATA.ListIntValues.at("MaxIncidenceRealized");
-  int MaxRunTimeSecond = BlDATA.ListIntValues.at("MaxRunTimeSecond");
-  std::string FileMatrix = BlDATA.ListStringValues.at("ListMatrixInput");
+    BlDATA.get_int("MaxStoredUnsentMatrices");
+  int MinIncidenceRealized = BlDATA.get_int("MinIncidenceRealized");
+  int MaxIncidenceRealized = BlDATA.get_int("MaxIncidenceRealized");
+  int MaxRunTimeSecond = BlDATA.get_int("MaxRunTimeSecond");
+  std::string FileMatrix = BlDATA.get_string("ListMatrixInput");
   //
   boost::mpi::environment env;
   boost::mpi::communicator world;

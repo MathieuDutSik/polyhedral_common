@@ -58,11 +58,11 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   ListStringValues1["FileHeuristicIdealStabEquiv"] = "unset.heu";
   ListStringValues1["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
   SingleBlock BlockPROC;
-  BlockPROC.ListStringValues = ListStringValues1;
-  BlockPROC.ListBoolValues = ListBoolValues1;
+  BlockPROC.setListStringValues(ListStringValues1);
+  BlockPROC.setListBoolValues(ListBoolValues1);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
@@ -81,11 +81,11 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
   // Normally, we want to ApplyReduction, this is for debug only
   ListBoolValues1["ApplyReduction"] = true;
   SingleBlock BlockPROC;
-  BlockPROC.ListStringValues = ListStringValues1;
-  BlockPROC.ListBoolValues = ListBoolValues1;
+  BlockPROC.setListStringValues(ListStringValues1);
+  BlockPROC.setListBoolValues(ListBoolValues1);
   ListBlock["PROC"] = BlockPROC;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T>
@@ -2152,16 +2152,16 @@ ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostre
 
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-  std::string FileLorMat = BlockPROC.ListStringValues.at("FileLorMat");
+  SingleBlock const& BlockPROC = eFull.get_block("PROC");
+  std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   TestLorentzianity(G);
   //
-  std::string OptionNorms = BlockPROC.ListStringValues.at("OptionNorms");
-  std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
+  std::string OptionNorms = BlockPROC.get_string("OptionNorms");
+  std::string DualDescProg = BlockPROC.get_string("DualDescProg");
   bool EarlyTerminationIfNotReflective =
-      BlockPROC.ListBoolValues.at("EarlyTerminationIfNotReflective");
-  bool ApplyReduction = BlockPROC.ListBoolValues.at("ApplyReduction");
+    BlockPROC.get_bool("EarlyTerminationIfNotReflective");
+  bool ApplyReduction = BlockPROC.get_bool("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
 #ifdef DEBUG_EDGEWALK
@@ -2169,23 +2169,23 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
 #endif
   //
   std::string FileHeuristicIdealStabEquiv =
-      BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
+    BlockPROC.get_string("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv =
       GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   std::string FileHeuristicTryTerminateDualDescription =
-      BlockPROC.ListStringValues.at("FileHeuristicTryTerminateDualDescription");
+    BlockPROC.get_string("FileHeuristicTryTerminateDualDescription");
   TheHeuristic<Tint> HeuristicTryTerminateDualDescription =
       GetHeuristicTryTerminateDualDescription<Tint>();
   ReadHeuristicFileCond(FileHeuristicTryTerminateDualDescription,
                         HeuristicTryTerminateDualDescription);
   //
   auto print_result_edgewalk = [&](ResultEdgewalk<T, Tint> const &re) -> void {
-    std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
-    std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
+    std::string OutFormat = BlockPROC.get_string("OutFormat");
+    std::string FileOut = BlockPROC.get_string("FileOut");
     bool ComputeAllSimpleRoots =
-        BlockPROC.ListBoolValues.at("ComputeAllSimpleRoots");
+      BlockPROC.get_bool("ComputeAllSimpleRoots");
 #ifdef DEBUG_EDGEWALK
     os << "EDGE: OutFormat=" << OutFormat << " FileOut=" << FileOut
        << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
@@ -2197,9 +2197,9 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
   };
   //
   std::string OptionInitialVertex =
-      BlockPROC.ListStringValues.at("OptionInitialVertex");
+    BlockPROC.get_string("OptionInitialVertex");
   std::string FileInitialVertex =
-      BlockPROC.ListStringValues.at("FileInitialVertex");
+    BlockPROC.get_string("FileInitialVertex");
   try {
     FundDomainVertex<T, Tint> eVert = get_initial_vertex<T, Tint, Tgroup>(
         si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
@@ -2231,21 +2231,21 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
                                       std::ostream &os) {
-  SingleBlock BlockPROC = eFull.ListBlock.at("PROC");
-  std::string FileLorMat1 = BlockPROC.ListStringValues.at("FileLorMat1");
-  std::string FileLorMat2 = BlockPROC.ListStringValues.at("FileLorMat2");
+  SingleBlock const& BlockPROC = eFull.get_block("PROC");
+  std::string const& FileLorMat1 = BlockPROC.get_string("FileLorMat1");
+  std::string const& FileLorMat2 = BlockPROC.get_string("FileLorMat2");
   MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat1);
   MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat2);
   TestLorentzianity(G1);
   TestLorentzianity(G2);
   std::string FileHeuristicIdealStabEquiv =
-      BlockPROC.ListStringValues.at("FileHeuristicIdealStabEquiv");
+    BlockPROC.get_string("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv =
       GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   auto print_result = [&](std::optional<MyMatrix<Tint>> const &opt) -> void {
-    std::string OutFormat = BlockPROC.ListStringValues.at("OutFormat");
+    std::string OutFormat = BlockPROC.get_string("OutFormat");
     auto print_result_isomorphism = [&](std::ostream &os_out) -> void {
       if (OutFormat == "GAP") {
         if (opt) {
@@ -2260,13 +2260,13 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
                 << "\n";
       throw TerminalException{1};
     };
-    std::string FileOut = BlockPROC.ListStringValues.at("FileOut");
+    std::string FileOut = BlockPROC.get_string("FileOut");
     print_stderr_stdout_file(FileOut, print_result_isomorphism);
   };
   //
   std::string OptionNorms = "all";
-  bool ApplyReduction = BlockPROC.ListBoolValues.at("ApplyReduction");
-  std::string DualDescProg = BlockPROC.ListStringValues.at("DualDescProg");
+  bool ApplyReduction = BlockPROC.get_bool("ApplyReduction");
+  std::string DualDescProg = BlockPROC.get_string("DualDescProg");
   std::vector<T> l_norms1 =
       get_initial_list_norms<T, Tint>(G1, OptionNorms, os);
   std::vector<T> l_norms2 =

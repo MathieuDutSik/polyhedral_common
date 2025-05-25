@@ -338,9 +338,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT() {
   // DATA
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["LinSpaFile"] = "unset.gram";
   ListStringValues1["OUTfile"] = "unset.out";
   ListBoolValues1["SavingPerfect"] = false;
@@ -349,65 +347,53 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT() {
   ListBoolValues1["ReturnAll"] = false;
   ListStringValues1["PrefixPerfect"] = "/irrelevant/";
   SingleBlock BlockDATA;
-  BlockDATA.ListIntValues = ListIntValues1;
-  BlockDATA.ListBoolValues = ListBoolValues1;
-  BlockDATA.ListDoubleValues = ListDoubleValues1;
-  BlockDATA.ListStringValues = ListStringValues1;
-  BlockDATA.ListListStringValues = ListListStringValues1;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // METHOD
   std::map<std::string, int> ListIntValues2;
   std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, double> ListDoubleValues2;
   std::map<std::string, std::string> ListStringValues2;
-  std::map<std::string, std::vector<std::string>> ListListStringValues2;
   ListIntValues2["NPROC"] = 1;
   ListIntValues2["UpperLimitMethod4"] = 10000;
   ListBoolValues2["Saving"] = false;
-  ListStringValues2["PrefixPolyhedral"] = "/irrelevant/";
   ListBoolValues2["FullDataInMemory"] = true;
+  ListStringValues2["PrefixPolyhedral"] = "/irrelevant/";
   ListStringValues2["SplittingHeuristicFile"] = "unset.heu";
   ListStringValues2["AdditionalSymmetryHeuristicFile"] = "unset.heu";
   ListStringValues2["DualDescriptionHeuristicFile"] = "unset.heu";
   ListStringValues2["StabEquivFacetHeuristicFile"] = "unset.heu";
   ListStringValues2["MethodInitialFacetSetFile"] = "unset.heu";
   SingleBlock BlockMETHOD;
-  BlockMETHOD.ListIntValues = ListIntValues2;
-  BlockMETHOD.ListBoolValues = ListBoolValues2;
-  BlockMETHOD.ListDoubleValues = ListDoubleValues2;
-  BlockMETHOD.ListStringValues = ListStringValues2;
-  BlockMETHOD.ListListStringValues = ListListStringValues2;
+  BlockMETHOD.setListIntValues(ListIntValues2);
+  BlockMETHOD.setListBoolValues(ListBoolValues2);
+  BlockMETHOD.setListStringValues(ListStringValues2);
   ListBlock["METHOD"] = BlockMETHOD;
   // BANK
-  std::map<std::string, int> ListIntValues3;
   std::map<std::string, bool> ListBoolValues3;
-  std::map<std::string, double> ListDoubleValues3;
   std::map<std::string, std::string> ListStringValues3;
-  std::map<std::string, std::vector<std::string>> ListListStringValues3;
   ListStringValues3["BankSaveHeuristicFile"] = "unset.heu";
   ListStringValues3["Prefix"] = "./unset/";
   ListBoolValues3["Saving"] = false;
   ListBoolValues3["FullDataInMemory"] = true;
   SingleBlock BlockBANK;
-  BlockBANK.ListIntValues = ListIntValues3;
-  BlockBANK.ListBoolValues = ListBoolValues3;
-  BlockBANK.ListDoubleValues = ListDoubleValues3;
-  BlockBANK.ListStringValues = ListStringValues3;
-  BlockBANK.ListListStringValues = ListListStringValues3;
+  BlockBANK.setListBoolValues(ListBoolValues3);
+  BlockBANK.setListStringValues(ListStringValues3);
   ListBlock["BANK"] = BlockBANK;
   // Merging all data
-  return {ListBlock, "undefined"};
+  return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint, typename Tgroup>
 void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
-  SingleBlock BlockBANK = eFull.ListBlock.at("BANK");
-  SingleBlock BlockDATA = eFull.ListBlock.at("DATA");
-  SingleBlock BlockMETHOD = eFull.ListBlock.at("METHOD");
+  SingleBlock const& BlockBANK = eFull.get_block("BANK");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockMETHOD = eFull.get_block("METHOD");
   //
-  bool BANK_Saving = BlockBANK.ListBoolValues.at("Saving");
-  bool BANK_Memory = BlockBANK.ListBoolValues.at("FullDataInMemory");
-  std::string BANK_Prefix = BlockBANK.ListStringValues.at("Prefix");
+  bool BANK_Saving = BlockBANK.get_bool("Saving");
+  bool BANK_Memory = BlockBANK.get_bool("FullDataInMemory");
+  std::string BANK_Prefix = BlockBANK.get_string("Prefix");
   CreateDirectory(BANK_Prefix);
   FctsDataBank<PolyhedralEntry<T, Tgroup>> recFct =
       GetRec_FctsDataBank<T, Tgroup>();
@@ -415,27 +401,27 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
                                                BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
-  std::string LINSPAfile = BlockDATA.ListStringValues.at("LinSpaFile");
+  std::string LINSPAfile = BlockDATA.get_string("LinSpaFile");
   IsExistingFileDie(LINSPAfile);
   std::cerr << "LINSPAfile=" << LINSPAfile << "\n";
-  std::string OUTfile = BlockDATA.ListStringValues.at("OUTfile");
+  std::string OUTfile = BlockDATA.get_string("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
   //
   std::ifstream LINSPAfs(LINSPAfile);
   LinSpaceMatrix<T> LinSpa;
   LINSPAfs >> LinSpa;
   bool NeedCheckStabilization =
-      BlockDATA.ListBoolValues.at("NeedCheckStabilization");
-  bool SavingPerfect = BlockDATA.ListBoolValues.at("SavingPerfect");
-  bool FullDataInMemory = BlockDATA.ListBoolValues.at("FullDataInMemory");
-  bool ReturnAll = BlockDATA.ListBoolValues.at("ReturnAll");
-  std::string PrefixPerfect = BlockDATA.ListStringValues.at("PrefixPerfect");
+    BlockDATA.get_bool("NeedCheckStabilization");
+  bool SavingPerfect = BlockDATA.get_bool("SavingPerfect");
+  bool FullDataInMemory = BlockDATA.get_bool("FullDataInMemory");
+  bool ReturnAll = BlockDATA.get_bool("ReturnAll");
+  std::string PrefixPerfect = BlockDATA.get_string("PrefixPerfect");
   CreateDirectory(PrefixPerfect);
   std::string PrefixPolyhedral =
-      BlockMETHOD.ListStringValues.at("PrefixPolyhedral");
+    BlockMETHOD.get_string("PrefixPolyhedral");
   CreateDirectory(PrefixPolyhedral);
-  int UpperLimitMethod4 = BlockMETHOD.ListIntValues.at("UpperLimitMethod4");
-  std::string CVPmethod = BlockMETHOD.ListStringValues.at("CVPmethod");
+  int UpperLimitMethod4 = BlockMETHOD.get_int("UpperLimitMethod4");
+  std::string CVPmethod = BlockMETHOD.get_string("CVPmethod");
   mpz_class UpperLimitMethod4_z = UpperLimitMethod4;
   DataLinSpa<T> eData;
   eData.LinSpa = LinSpa;
@@ -448,14 +434,14 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   eData.NeedCheckStabilization = NeedCheckStabilization;
   //
   std::cerr << "Creating MPROC\n";
-  int NbThr = BlockMETHOD.ListIntValues.at("NPROC");
+  int NbThr = BlockMETHOD.get_int("NPROC");
   MainProcessor MProc(NbThr);
   int TheId = MProc.MPU_GetId();
   //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
   std::string HeuSplitFile =
-      BlockMETHOD.ListStringValues.at("SplittingHeuristicFile");
+    BlockMETHOD.get_string("SplittingHeuristicFile");
   if (HeuSplitFile != "unset.heu") {
     IsExistingFileDie(HeuSplitFile);
     std::ifstream SPLITfs(HeuSplitFile);
@@ -463,7 +449,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
   //
   std::string AddiSymmFile =
-      BlockMETHOD.ListStringValues.at("AdditionalSymmetryHeuristicFile");
+    BlockMETHOD.get_string("AdditionalSymmetryHeuristicFile");
   if (AddiSymmFile != "unset.heu") {
     IsExistingFileDie(AddiSymmFile);
     std::ifstream SYMMfs(AddiSymmFile);
@@ -471,7 +457,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
   //
   std::string DualDescFile =
-      BlockMETHOD.ListStringValues.at("DualDescriptionHeuristicFile");
+    BlockMETHOD.get_string("DualDescriptionHeuristicFile");
   if (DualDescFile != "unset.heu") {
     IsExistingFileDie(DualDescFile);
     std::ifstream DDfs(DualDescFile);
@@ -479,7 +465,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
   //
   std::string StabEquivFile =
-      BlockMETHOD.ListStringValues.at("StabEquivFacetHeuristicFile");
+    BlockMETHOD.get_string("StabEquivFacetHeuristicFile");
   if (StabEquivFile != "unset.heu") {
     IsExistingFileDie(StabEquivFile);
     std::ifstream STEQfs(StabEquivFile);
@@ -487,7 +473,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
   //
   std::string MethodFacetFile =
-      BlockMETHOD.ListStringValues.at("MethodInitialFacetSetFile");
+    BlockMETHOD.get_string("MethodInitialFacetSetFile");
   if (MethodFacetFile != "unset.heu") {
     IsExistingFileDie(MethodFacetFile);
     std::ifstream MIFSfs(MethodFacetFile);
@@ -495,15 +481,15 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   }
   //
   std::string BankSaveFile =
-      BlockBANK.ListStringValues.at("BankSaveHeuristicFile");
+    BlockBANK.get_string("BankSaveHeuristicFile");
   if (BankSaveFile != "unset.heu") {
     IsExistingFileDie(BankSaveFile);
     std::ifstream BANKfs(BankSaveFile);
     AllArr.BankSave = ReadHeuristic<mpz_class>(BANKfs);
   }
   //
-  bool DD_Saving = BlockMETHOD.ListBoolValues.at("Saving");
-  bool DD_Memory = BlockMETHOD.ListBoolValues.at("FullDataInMemory");
+  bool DD_Saving = BlockMETHOD.get_bool("Saving");
+  bool DD_Memory = BlockMETHOD.get_bool("FullDataInMemory");
   AllArr.DD_Saving = DD_Saving;
   AllArr.DD_Memory = DD_Memory;
   //
