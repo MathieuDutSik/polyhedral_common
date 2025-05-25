@@ -408,7 +408,10 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
   for (auto & eM: SetMred) {
     ListMred.push_back(eM);
   }
-  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity>(ListM, f_complexity, os);
+  if (ListMred.size() <= 1) {
+    return ListMred;
+  }
+  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity>(ListMred, f_complexity, os);
 }
 
 template<typename T>

@@ -46,20 +46,6 @@ template <typename T> T MaximumDiagonal(MyMatrix<T> const &eMat) {
   return MaxNorm;
 }
 
-template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &eMat) {
-  int n = eMat.rows();
-  for (int siz = 1; siz <= n; siz++) {
-    MyMatrix<T> eMatRed(siz, siz);
-    for (int i = 0; i < siz; i++)
-      for (int j = 0; j < siz; j++)
-        eMatRed(i, j) = eMat(i, j);
-    T eDet = DeterminantMat(eMatRed);
-    if (eDet <= 0)
-      return false;
-  }
-  return true;
-}
-
 template <typename T> MyMatrix<T> AnLattice(int const &n) {
   MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
   for (int i = 0; i < n; i++)

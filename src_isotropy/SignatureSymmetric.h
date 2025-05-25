@@ -180,6 +180,51 @@ DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat) {
   return {RMat, RedMat, nbZero, nbPlus, nbMinus};
 }
 
+template <typename T> bool IsPositiveDefinite_V1(MyMatrix<T> const &eMat) {
+  int n = eMat.rows();
+  for (int siz = 1; siz <= n; siz++) {
+    MyMatrix<T> eMatRed(siz, siz);
+    for (int i = 0; i < siz; i++)
+      for (int j = 0; j < siz; j++)
+        eMatRed(i, j) = eMat(i, j);
+    T eDet = DeterminantMat(eMatRed);
+    if (eDet <= 0)
+      return false;
+  }
+  return true;
+}
+
+template <typename T> bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat) {
+  NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
+  MyMatrix<T> const& SymMat2 = NSP1.NonDegenerate;
+  if (SymMat2.rows() < SymMat.rows()) {
+    return false;
+  }
+  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2);
+  if (NSP2.nbMinus > 0) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat) {
+#ifdef DEBUG_SIGNATURE_SYMMETRIC
+  MicrosecondTime time;
+  bool test1 = IsPositiveDefinite_V1(SymMat);
+  std::cerr << "|SIGN: IsPositiveDefinite (V1)|=" << time << "\n";
+  bool test2 = IsPositiveDefinite_V2(SymMat);
+  std::cerr << "|SIGN: IsPositiveDefinite (V2)|=" << time << "\n";
+  if (test1 != test2) {
+    std::cerr << "The test of positive definiteness gave different result for different method\n";
+    throw TerminalException{1};
+  }
+  return test1;
+#else
+  return IsPositiveDefinite_V2(SymMat);
+#endif
+}
+
+
 // clang-format off
 #endif  //  SRC_LATT_SIGN_SIGNATURE_H_
 // clang-format on

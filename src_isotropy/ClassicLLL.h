@@ -58,6 +58,12 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     LLLreduction<Tmat, Tint> res{GramMatRet, H};
     return res;
   }
+#ifdef SANITY_CHECK_CLASSIC_LLL
+  if (!IsPositiveDefinite(GramMat)) {
+    std::cerr << "LLL: For the LLL reduction, the matrix needs to be positive definite\n";
+    throw TerminalException{1};
+  }
+#endif
   int k = 1;
   int kmax = 0;
   MyMatrix<Tfield> mue = ZeroMatrix<Tfield>(n, n);
