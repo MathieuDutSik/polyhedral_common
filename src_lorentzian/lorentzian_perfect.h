@@ -42,7 +42,7 @@ static const int LORENTZIAN_PERFECT_OPTION_TOTAL = 47;
 
 std::string GetNatureOption(int const &TheOption) {
   if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
-    return "isotrop";
+    return "isotropic";
   }
   if (TheOption == LORENTZIAN_PERFECT_OPTION_TOTAL) {
     return "total";
