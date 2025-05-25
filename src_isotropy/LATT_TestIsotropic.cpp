@@ -72,7 +72,7 @@ int main(int argc, char *argv[]) {
         return process<T>(FileI, OutFormat, os);
       }
       */
-      std::cerr << "Failed to find matching type for arith\n";
+      std::cerr << "Failed to find matching type for arith. Possibility: rational\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);

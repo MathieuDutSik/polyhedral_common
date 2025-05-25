@@ -51,6 +51,21 @@ std::string GetNatureOption(int const &TheOption) {
   throw TerminalException{1};
 }
 
+template<typename T>
+void check_correctness_lorentzian_perfect(MyMatrix<T> const& G) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
+  if (DiagInfo.nbZero != 0) {
+    std::cerr << "LORPERF: matrix has non-zero kernel";
+    throw TerminalException{1};
+  }
+  int nbPlus = DiagInfo.nbPlus;
+  if (nbPlus != 1) {
+    std::cerr << "LORPERF: The signature should be n_plus=1, n_minus=n\n";
+    throw TerminalException{1};
+  }
+}
+
+
 /*
   We search for the solution such that 0 < x * L * eVect <= MaxScal
   and x * L * x >= 0.
@@ -1528,11 +1543,28 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
   int dim = LorMat.rows();
-  if (has_isotropic_factorization(LorMat)) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetGeneratorsAutom, beginning\n";
+#endif
+  check_correctness_lorentzian_perfect(LorMat);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetGeneratorsAutom, after correctness checks\n";
+#endif
+  bool test = has_isotropic_factorization(LorMat);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_GetGeneratorsAutom, test=" << test << "\n";
+#endif
+  if (test) {
     if (dim == 1) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: LORENTZ_GetGeneratorsAutom, before OneDimIsotropic_AutomGenerator\n";
+#endif
       return OneDimIsotropic_AutomGenerator<T,Tint>(LorMat);
     }
     if (dim == 2) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+      os << "LORPERF: LORENTZ_GetGeneratorsAutom, before TwoDimIsotropic_AutomGenerator\n";
+#endif
       return TwoDimIsotropic_AutomGenerator<T,Tint>(LorMat);
     }
   }
@@ -1774,6 +1806,7 @@ std::vector<MyVector<Tint>>
 LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
                                std::ostream &os) {
   int dim = LorMat.rows();
+  check_correctness_lorentzian_perfect(LorMat);
   if (has_isotropic_factorization(LorMat)) {
     if (dim == 1) {
       std::cerr << "We need to write down the code for this case\n";
@@ -1887,10 +1920,22 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
                                        MyMatrix<T> const &LorMat2, std::ostream &os) {
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: Before IndefiniteReduction, LorMat1=\n";
+  WriteMatrix(os, LorMat1);
+  os << "LORPERF: LorMat2=\n";
+  WriteMatrix(os, LorMat2);
+#endif
   ResultReduction<T, Tint> res1 =
     IndefiniteReduction<T,Tint>(LorMat1, os);
   ResultReduction<T, Tint> res2 =
     IndefiniteReduction<T,Tint>(LorMat2, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: After IndefiniteReduction, res1.Mred=\n";
+  WriteMatrix(os, res1.Mred);
+  os << "LORPERF: res2.Mred=\n";
+  WriteMatrix(os, res2.Mred);
+#endif
   // We have res1.B * LorMat1 * res1.B^T = res1.Mred
   //     and res2.B * LorMat2 * res2.B^T = res2.Mred
   std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices_Reduced<T,Tint,Tgroup>(res1.Mred, res2.Mred, os);
@@ -1909,7 +1954,20 @@ std::optional<MyMatrix<Tint>>
 LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
                                 MyMatrix<T> const &LorMat2, std::ostream &os) {
   int dim = LorMat1.rows();
-  if (has_isotropic_factorization(LorMat1)) {
+  check_correctness_lorentzian_perfect(LorMat1);
+  check_correctness_lorentzian_perfect(LorMat2);
+  bool test1 = has_isotropic_factorization(LorMat1);
+  bool test2 = has_isotropic_factorization(LorMat2);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_TestEquivalenceMatrices, test1=" << test1 << " test2=" << test2 << "\n";
+#endif
+  if (test1 != test2) {
+    return {};
+  }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: LORENTZ_TestEquivalenceMatrices, before the calls with dim=" << dim << "\n";
+#endif
+  if (test1) {
     if (dim == 1) {
       return OneDimIsotropic_TestEquivalence<T,Tint>(LorMat1, LorMat2);
     }

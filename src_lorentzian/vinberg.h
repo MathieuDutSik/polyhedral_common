@@ -157,8 +157,9 @@ template <typename T, typename Tint>
 std::vector<T> get_initial_list_norms(MyMatrix<T> const &G,
                                       std::string const &OptionNorms,
                                       std::ostream &os) {
-  if (OptionNorms == "K3")
+  if (OptionNorms == "K3") {
     return {T(2)};
+  }
   if (OptionNorms == "all") {
     FractionMatrix<T> Fr = RemoveFractionMatrixPlusCoeff(G);
     MyMatrix<Tint> G_Tint = UniversalMatrixConversion<Tint, T>(Fr.TheMat);

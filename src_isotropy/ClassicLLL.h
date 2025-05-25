@@ -34,8 +34,13 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   int nbCol = gram.cols();
 #ifdef DEBUG_CLASSIC_LLL
   std::cerr << "LLL: nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
+  std::cerr << "LLL: GramMat=\n";
+  WriteMatrix(std::cerr, GramMat);
 #endif
   if (nbRow != nbCol) {
+#ifdef DEBUG_CLASSIC_LLL
+    std::cerr << "LLL: The matrix should be square\n";
+#endif
     throw TerminalException{1};
   }
   int n = nbRow;
@@ -47,6 +52,12 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     throw TerminalException{1};
   }
 #endif
+  if (nbRow == 1 || nbRow == 0) {
+    MyMatrix<Tmat> GramMatRet = GramMat;
+    MyMatrix<Tint> H = IdentityMat<Tint>(nbRow);
+    LLLreduction<Tmat, Tint> res{GramMatRet, H};
+    return res;
+  }
   int k = 1;
   int kmax = 0;
   MyMatrix<Tfield> mue = ZeroMatrix<Tfield>(n, n);

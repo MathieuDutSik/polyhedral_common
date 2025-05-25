@@ -7,11 +7,18 @@
 #include "POLY_MPI_AdjacencyScheme.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_LORENTZIAN_PERFECT_MPI
+#endif
+
 template <typename T, typename Tint, typename Tgroup>
 void ComputePerfectLorentzian(boost::mpi::communicator &comm,
                               FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+  os << "LORPERFMPI: ComputePerfectLorentzian, beginning\n";
+#endif
   SingleBlock BlockDATA = eFull.get_block("DATA");
   SingleBlock BlockSTORAGE = eFull.get_block("STORAGE");
   //
@@ -20,11 +27,13 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   CreateDirectory(STORAGE_Prefix);
   //
   int max_runtime_second = BlockDATA.get_int("max_runtime_second");
-  std::cerr << "LORPERFMPI: max_runtime_second=" << max_runtime_second << "\n";
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+  os << "LORPERFMPI: max_runtime_second=" << max_runtime_second << "\n";
+#endif
   std::string LorMatFile = BlockDATA.get_string("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
   //
-  std::string TheOption_str = BlockDATA.get_string("TheOption");
+  std::string TheOption_str = BlockDATA.get_string("Option");
   auto get_option = [&]() -> int {
     if (TheOption_str == "isotropic") {
       return LORENTZIAN_PERFECT_OPTION_ISOTROP;
@@ -39,7 +48,9 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   //
   std::string OutFormat = BlockDATA.get_string("OutFormat");
   std::string OutFile = BlockDATA.get_string("OutFile");
-  std::cerr << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+  os << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+#endif
   //
   int n = LorMat.rows();
   int dimEXT = n + 1;
@@ -60,7 +71,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   //
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
-#ifdef DEBUG_DELAUNAY_ENUMERATION
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: We now have IsFinished=" << pair.first << "\n";
   os << "LORPERFMPI: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
