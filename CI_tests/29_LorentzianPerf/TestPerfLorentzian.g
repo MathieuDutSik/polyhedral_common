@@ -51,15 +51,19 @@ ListDim5:=Filtered(ListRec, x->Length(x.M) = 5);
 ListDim5gt:=Filtered(ListRec, x->Length(x.M) > 5);
 
 
-ListWorkRec:=ListDim5{[1..20]};
+ListWorkRec:=[];
+Append(ListWorkRec, ListDim3{[1..10]});
+Append(ListWorkRec, ListDim4{[1..10]});
+Append(ListWorkRec, ListDim5{[1..10]});
+Append(ListWorkRec, ListDim5gt{[1..10]});
 
 
-#ListChoices:=["isotropic", "total"];
+ListChoices:=["isotropic", "total"];
 #ListChoices:=["total"];
-ListChoices:=["isotropic"];
+#ListChoices:=["isotropic"];
 
 
-GetListPerf:=function(ListRec)
+GetListResult:=function(ListRec)
     local ListEntry, nRec, iRec, eRec, choice, nPerf, eEntry;
     ListEntry:=[];
     nRec:=Length(ListRec);
@@ -77,5 +81,23 @@ GetListPerf:=function(ListRec)
     return ListEntry;
 end;
 
-ListEntry:=GetListPerf(ListWorkRec);
+ListEntry:=GetListResult(ListWorkRec);
+CI_Decision_Reset();
 
+FileSave:="Result_Enumeration";
+if IsExistingFile(FileSave)=false then
+    SaveDataToFile(FileSave, ListEntry);
+else
+    ListResult:=ReadAsFunction(FileSave)();
+    if ListResult<>ListEntry then
+        Print("Error case\n");
+    else
+        Print("Normal case\n");
+        CI_Write_Ok();
+    fi;
+fi;
+
+Print("|ListDim3|=", Length(ListDim3), "\n");
+Print("|ListDim4|=", Length(ListDim4), "\n");
+Print("|ListDim5|=", Length(ListDim5), "\n");
+Print("|ListDim5gt|=", Length(ListDim5gt), "\n");
