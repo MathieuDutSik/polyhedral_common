@@ -402,10 +402,19 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
   bool OnlyShortest = true;
   T MaxScal = EvaluationQuadForm(LorMat, PosVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_SearchInitialVector: NaxScal=" << MaxScal << "\n";
+  os << "LORPERF: LORENTZ_SearchInitialVector: PosVect=" << StringVectorGAP(PosVect) << "\n";
+  os << "LORPERF: LORENTZ_SearchInitialVector: MaxScal=" << MaxScal << "\n";
 #endif
-  return LORENTZ_FindPositiveVectors<T, Tint>(LorMat, PosVect, MaxScal,
-                                              TheOption, OnlyShortest, os);
+  // For the "total" it terminates at the first call.
+  // For "isotropic", more iterations may be needed.
+  while(true) {
+    std::vector<MyVector<Tint>> LVect = LORENTZ_FindPositiveVectors<T, Tint>(LorMat, PosVect, MaxScal,
+                                                                             TheOption, OnlyShortest, os);
+    if (LVect.size() > 0) {
+      return LVect;
+    }
+    MaxScal *= 2;
+  }
 }
 
 template <typename T>
