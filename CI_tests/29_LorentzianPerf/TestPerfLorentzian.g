@@ -2,7 +2,7 @@ Read("../common.g");
 Print("Beginning TestPerfectEnumeration\n");
 
 GetNumberPerfectLorentzian:=function(eRec, choice)
-    local n, FileIn, FileOut, FileNml, eProg, TheCommand, U, V, eNorm, eNormSqr, output, LorMat;
+    local n, FileIn, FileOut, FileNml, eProg, TheCommand, U, V, eNorm, eNormSqr, strOut, LorMat;
     n:=Length(eRec.M);
     FileIn:=Filename(DirectoryTemporary(), "Test.in");
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
@@ -14,14 +14,14 @@ GetNumberPerfectLorentzian:=function(eRec, choice)
         return fail;
     fi;
     #
-    output:=OutputTextFile(FileNml, true);
-    AppendTo(output, "&DATA\n");
-    AppendTo(output, "  LorMatFile = \"", FileIn, "\"\n");
-    AppendTo(output, "  Option = \"", choice, "\"\n");
-    AppendTo(output, "  OutFormat = \"NumberGAP\"\n");
-    AppendTo(output, "  OutFile = \"", FileOut, "\"\n");
-    AppendTo(output, "/\n");
-    CloseStream(output);
+    strOut:="&DATA\n";
+    strOut:=Concatenation(strOut, "  LorMatFile = \"", FileIn, "\"\n");
+    strOut:=Concatenation(strOut, "  Option = \"", choice, "\"\n");
+    strOut:=Concatenation(strOut, "  OutFormat = \"NumberGAP\"\n");
+    strOut:=Concatenation(strOut, "  OutFile = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
+    WriteStringFile(FileNml, strOut);
     #
     LorMat:= - eRec.M;
     WriteMatrixFile(FileIn, LorMat);
