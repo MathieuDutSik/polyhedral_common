@@ -51,6 +51,14 @@ ListDim5:=Filtered(ListRec, x->Length(x.M) = 5);
 ListDim5gt:=Filtered(ListRec, x->Length(x.M) > 5);
 
 
+ListWorkRec:=ListDim5{[1..20]};
+
+
+#ListChoices:=["isotropic", "total"];
+#ListChoices:=["total"];
+ListChoices:=["isotropic"];
+
+
 GetListPerf:=function(ListRec)
     local ListEntry, nRec, iRec, eRec, choice, nPerf, eEntry;
     ListEntry:=[];
@@ -58,7 +66,7 @@ GetListPerf:=function(ListRec)
     for iRec in [1..Length(ListRec)]
     do
         eRec:=ListRec[iRec];
-        for choice in ["isotropic", "total"]
+        for choice in ListChoices
         do
             Print("iRec=", iRec, " / ", nRec, " choice=", choice, "\n");
             nPerf:=GetNumberPerfectLorentzian(eRec, choice);
@@ -69,5 +77,5 @@ GetListPerf:=function(ListRec)
     return ListEntry;
 end;
 
-ListEntry:=GetListPerf(ListRec{[1..5]});
+ListEntry:=GetListPerf(ListWorkRec);
 

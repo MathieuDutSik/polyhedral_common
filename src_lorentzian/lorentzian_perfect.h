@@ -402,8 +402,7 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
   bool OnlyShortest = true;
   T MaxScal = EvaluationQuadForm(LorMat, PosVect);
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: LORENTZ_SearchInitialVector: Before "
-        "LORENTZ_FindPositiveVectors\n";
+  os << "LORPERF: LORENTZ_SearchInitialVector: NaxScal=" << MaxScal << "\n";
 #endif
   return LORENTZ_FindPositiveVectors<T, Tint>(LorMat, PosVect, MaxScal,
                                               TheOption, OnlyShortest, os);
@@ -954,12 +953,27 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
   MyVector<T> CentralVect_T = UniversalVectorConversion<T, Tint>(CentralVect);
   std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T, Tint>(
       LorMat, CentralVect_T, TheOption, os);
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+  if (CritSet.size() == 0) {
+    std::cerr << "LORPERF: CritSet is empty which ruins everything\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef DEBUG_LORENTZIAN_PERFECT
-  os << "LORPERF: GetOnePerfect: We have CritSet\n";
+  os << "LORPERF: GetOnePerfect: We have CritSet |CritSet|=" << CritSet.size() << "\n";
 #endif
   MyVector<T> CritSet0_T = UniversalVectorConversion<T, Tint>(CritSet[0]);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOnePerfect: We have CritSet0_T\n";
+#endif
   MyVector<T> LorMat_Central = LorMat * CentralVect_T;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOnePerfect: We have LorMat_Central\n";
+#endif
   T eScal = LorMat_Central.dot(CritSet0_T);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: GetOnePerfect: We have eScal\n";
+#endif
   MyVector<T> eNSPbas = ConcatenateScalarVector(T(-eScal), LorMat_Central);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: GetOnePerfect: Before loop\n";
