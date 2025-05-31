@@ -272,16 +272,17 @@ template <typename T, typename Tint> struct LLLbasis {
 
 template <typename T, typename Tint>
 LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
-  //  std::cerr << "LLL: LLLbasisReduction, step 1\n";
-  //  std::cerr << "LLL: |Latt|=" << Latt.rows() << " / " << Latt.cols() << "\n";
-  //  std::cerr << "LLL: Latt=\n";
-  //  WriteMatrix(std::cerr, Latt);
   MyMatrix<T> GramMat = Latt * Latt.transpose();
-  //  std::cerr << "LLL: LLLbasisReduction, step 2\n";
   LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(GramMat);
-  //  std::cerr << "LLL: LLLbasisReduction, step 3\n";
   MyMatrix<T> LattRed = UniversalMatrixConversion<T, Tint>(pair.Pmat) * Latt;
-  //  std::cerr << "LLL: LLLbasisReduction, step 4\n";
+  return {LattRed, pair.Pmat};
+}
+
+template <typename T, typename Tint>
+LLLbasis<T, Tint> LLLbasisReductionGeneral(MyMatrix<T> const &Latt, std::string const& method) {
+  MyMatrix<T> GramMat = Latt * Latt.transpose();
+  LLLreduction<T, Tint> pair = LLLreducedGeneral<T, Tint>(GramMat, method);
+  MyMatrix<T> LattRed = UniversalMatrixConversion<T, Tint>(pair.Pmat) * Latt;
   return {LattRed, pair.Pmat};
 }
 
@@ -320,6 +321,45 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
     throw TerminalException{1};
   }
   return {std::move(Mred), std::move(Pmat_T)};
+}
+
+
+template<typename T>
+MyMatrix<T> SublatticeBasisReduction(MyMatrix<T> const& Latt) {
+  //  using Tfield = typename overlying_field<Tint>::field_type;
+  using Tint = typename underlying_ring<T>::ring_type;
+  int n_row = Latt.rows();
+  int n_col = Latt.cols();
+  auto f_norm=[&](MyMatrix<T> const& H) -> T {
+    T norm(0);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      for (int i_col=0; i_col<n_col; i_col++) {
+        norm += T_abs(H(i_row, i_col));
+      }
+    }
+    return norm;
+  };
+  MyMatrix<T> Latt_work = Latt;
+  T norm_work = f_norm(Latt);
+  std::vector<std::string> l_method{"direct", "dual"};
+  while(true) {
+    int n_success = 0;
+    for (auto & method: l_method) {
+      LLLbasis<T, Tint> rec = LLLbasisReductionGeneral<T,Tint>(Latt_work, method);
+      MyMatrix<T> const& Latt_cand = rec.LattRed;
+      T norm_cand = f_norm(Latt_cand);
+      if (norm_cand < norm_work) {
+        n_success += 1;
+        Latt_work = Latt_cand;
+        norm_work = norm_cand;
+      }
+    }
+    if (n_success == 0) {
+      return Latt_work;
+    }
+  }
+
+
 }
 
 // clang-format off

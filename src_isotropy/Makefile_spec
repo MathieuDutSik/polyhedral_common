@@ -5,9 +5,10 @@
 #PROGRAM		= LATT_TestIsotropic
 #PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
 #PROGRAM		= LATT_IndefiniteReduction
-PROGRAM		= LATT_LLLreduceBasis
+#PROGRAM		= LATT_LLLreduceBasis
 #PROGRAM		= LATT_IndefiniteLLL
 #PROGRAM		= LATT_FindPositiveVector
+PROGRAM		= LATT_SublatticeBasisReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
