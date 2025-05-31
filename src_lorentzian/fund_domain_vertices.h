@@ -410,7 +410,7 @@ std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
   std::cerr << "TheSpann_pre\n";
   WriteMatrix(std::cerr, TheSpann_pre);
 #endif
-  MyMatrix<T> TheSpann = LLLbasisReduction<T, Tint>(TheSpann_pre).LattRed;
+  MyMatrix<T> TheSpann = SublatticeBasisReduction(TheSpann_pre);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   std::cerr << "TheSpann\n";
   WriteMatrix(std::cerr, TheSpann);

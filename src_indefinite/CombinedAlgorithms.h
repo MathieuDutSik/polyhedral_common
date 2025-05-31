@@ -1774,10 +1774,6 @@ private:
 #endif
     std::vector<MyVector<Tint>> ListCand =
         approx.GetCoveringOrbitRepresentatives(X, os);
-#ifdef SPECIFIC_END_FOR_DEBUGGING_GET_COVERING_ORBIT_REPRESENTATIVES
-    os << "COMB: Early termination for debugging |ListCand|=" << ListCand.size() << "\n";
-    throw TerminalException{1};
-#endif
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: approx.GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif
@@ -1785,7 +1781,16 @@ private:
     os << "COMB: GetCoveringOrbitRepresentatives, |ListCand|="
        << ListCand.size() << "\n";
 #endif
-    std::vector<MyVector<Tint>> ListRepr = orbit_decomposition(ListCand);
+    std::vector<MyMatrix<Tint>> ListGenApprox = approx.GetApproximateGroup(os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: GetCoveringOrbitRepresentatives, |ListGenApprox|="
+       << ListGenApprox.size() << "\n";
+#endif
+    std::vector<MyVector<Tint>> ListCandSimp = ExhaustiveVectorSimplifications(ListCand, ListGenApprox);
+
+
+    
+    std::vector<MyVector<Tint>> ListRepr = orbit_decomposition(ListCandSimp);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: orbit_decomposition|=" << time << "\n";
 #endif

@@ -6,6 +6,10 @@
 #define DEBUG_CLASSIC_LLL
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_CLASSIC_LLL
+#endif
+
 
 template <typename T, typename Tint> struct LLLreduction {
   MyMatrix<T> GramMatRed;
@@ -309,10 +313,12 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
   MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> Mred = M * Pmat_T;
+#ifdef SANITY_CHECK_CLASSIC_LLL
   if (GetGram(Mred) != res.GramMatRed) {
     std::cerr << "LLL: Matrix error somewhere\n";
     throw TerminalException{1};
   }
+#endif
   return {std::move(Mred), std::move(Pmat_T)};
 }
 

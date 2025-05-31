@@ -529,7 +529,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     }
     MyMatrix<T> NewSpace1 = GetZbasis(MatrixFromVectorFamily(ConcatSpace));
     // The LLL reduction appears quite efficient
-    MyMatrix<T> NewSpace = LLLbasisReduction<T,T>(NewSpace1).LattRed;
+    MyMatrix<T> NewSpace = SublatticeBasisReduction(NewSpace1);
     T NewDet = T_abs(DeterminantMat(NewSpace));
     if (NewDet == TheDet) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -1997,7 +1997,7 @@ RetMI_S<T,Tgroup> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMat
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   RetMI_S<T,Tgroup> ret =
       LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
@@ -2026,7 +2026,7 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   Stab_RightCoset<T> pairB =
       LinearSpace_Stabilizer_RightCoset_Kernel<T, Tgroup, Thelper>(
@@ -2059,7 +2059,7 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> LinearSpace_Stabili
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::vector<MyMatrix<T>> V_gens_B;
   for (auto &eMatr_B : V_gens) {
@@ -2093,7 +2093,7 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<DoubleCosetEntry<T>>> LinearSpace
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = LLLbasisReduction<T, Tint>(TheSpace_B).LattRed;
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::vector<MyMatrix<T>> V_gens_B;
   for (auto &eMatr_B : V_gens) {
@@ -2402,8 +2402,8 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> InSpace1_B = InSpace1 * PmatInv_T;
   MyMatrix<T> InSpace2_B = InSpace2 * PmatInv_T;
-  MyMatrix<T> InSpace1_C = LLLbasisReduction<T, Tint>(InSpace1_B).LattRed;
-  MyMatrix<T> InSpace2_C = LLLbasisReduction<T, Tint>(InSpace2_B).LattRed;
+  MyMatrix<T> InSpace1_C = SublatticeBasisReduction(InSpace1_B);
+  MyMatrix<T> InSpace2_C = SublatticeBasisReduction(InSpace2_B);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::optional<MyMatrix<T>> opt =
       LinearSpace_Equivalence_Kernel<T, Tgroup, Thelper>(

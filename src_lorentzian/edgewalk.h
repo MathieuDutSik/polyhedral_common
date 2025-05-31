@@ -108,7 +108,7 @@ SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
   std::unordered_map<T, MyMatrix<T>> map_norm_latt;
   for (auto &e_norm : l_norms) {
     MyMatrix<T> Latt_pre = ComputeLattice_LN(G, e_norm);
-    MyMatrix<T> Latt = LLLbasisReduction<T, Tint>(Latt_pre).LattRed;
+    MyMatrix<T> Latt = SublatticeBasisReduction(Latt_pre);
     map_norm_latt[e_norm] = Latt;
   }
   return {G, l_norms, std::move(map_norm_latt)};
@@ -1914,8 +1914,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
 #endif
       MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
       MyMatrix<T> Latt_inter_NSP_pre = IntersectionLattice(Latt, NSP);
-      MyMatrix<T> Latt_inter_NSP =
-          LLLbasisReduction<T, Tint>(Latt_inter_NSP_pre).LattRed;
+      MyMatrix<T> Latt_inter_NSP = SublatticeBasisReduction(Latt_inter_NSP_pre);
       LatticeProjectionFramework<T> fr(G, Subspace, Latt_inter_NSP);
       MapIdxFr[e_norm] = pos;
       ListFr.push_back(fr);

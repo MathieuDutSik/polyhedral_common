@@ -446,5 +446,61 @@ std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComple
 }
 
 
+
+template<typename T>
+std::vector<MyMatrix<T>> Exhaust_get_total_generators(std::vector<MyMatrix<T>> const& list_mat) {
+  std::vector<MyMatrix<T>> list_tot;
+  for (auto & eMat: list_mat) {
+    MyMatrix<T> eMat_inv = Inverse(eMat);
+    list_tot.push_back(eMat);
+    list_tot.push_back(eMat_inv);
+  }
+  return list_tot;
+}
+
+/*
+  Apply a number of exhaustive tricks in order to reduce the size of the vector
+ */
+template<typename T>
+MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
+  int n = V.size();
+  auto f_norm=[&](MyVector<T> const& v) -> T {
+    T norm(0);
+    for (int i=0; i<n; i++) {
+      norm += T_abs(v(i));
+    }
+    return norm;
+  };
+  MyVector<T> V_work = V;
+  T norm_work = f_norm(V);
+  while(true) {
+    int n_succ = 0;
+    for (auto & mat : list_mat) {
+      MyVector<T> V_cand = mat.transpose() * V_work;
+      T norm_cand = f_norm(V_cand);
+      if (norm_cand < norm_work) {
+        V_work = V_cand;
+        norm_work = norm_cand;
+        n_succ += 1;
+      }
+    }
+    if (n_succ == 0) {
+      return V_work;
+    }
+  }
+}
+
+template<typename T>
+std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const& list_V, std::vector<MyMatrix<T>> const& list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+  std::vector<MyVector<T>> list_V_red;
+  for (auto& eV: list_V) {
+    MyVector<T> eV_red = ExhaustiveVectorSimplification(eV, list_mat_tot);
+    list_V_red.push_back(eV_red);
+  }
+  return list_V_red;
+}
+
+
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUP_H_
