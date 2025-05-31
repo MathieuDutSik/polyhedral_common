@@ -224,7 +224,7 @@ public:
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<T> PreNSP_T = NullspaceIntTrMat(eProd);
+    MyMatrix<T> PreNSP_T = SublatticeBasisReduction(NullspaceIntTrMat(eProd));
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, eProd=\n";
     WriteMatrix(os, eProd);
@@ -1788,8 +1788,6 @@ private:
 #endif
     std::vector<MyVector<Tint>> ListCandSimp = ExhaustiveVectorSimplifications(ListCand, ListGenApprox);
 
-
-    
     std::vector<MyVector<Tint>> ListRepr = orbit_decomposition(ListCandSimp);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: orbit_decomposition|=" << time << "\n";
@@ -1956,7 +1954,7 @@ private:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup_Reduced(MyMatrix<T> const &Q) {
     int n = Q.rows();
-    MyMatrix<T> NSP_T = NullspaceIntMat(Q);
+    MyMatrix<T> NSP_T = SublatticeBasisReduction(NullspaceIntMat(Q));
     MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
     MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
     MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
@@ -1995,13 +1993,13 @@ private:
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
     int n = Q1.rows();
-    MyMatrix<T> NSP1_T = NullspaceIntMat(Q1);
+    MyMatrix<T> NSP1_T = SublatticeBasisReduction(NullspaceIntMat(Q1));
     MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint, T>(NSP1_T);
     MyMatrix<Tint> TheCompl1 = SubspaceCompletionInt(NSP1, n);
     MyMatrix<T> TheCompl1_T = UniversalMatrixConversion<T, Tint>(TheCompl1);
     MyMatrix<Tint> FullBasis1 = Concatenate(TheCompl1, NSP1);
     MyMatrix<T> QmatRed1 = TheCompl1_T * Q1 * TheCompl1_T.transpose();
-    MyMatrix<T> NSP2_T = NullspaceIntMat(Q2);
+    MyMatrix<T> NSP2_T = SublatticeBasisReduction(NullspaceIntMat(Q2));
     MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint, T>(NSP2_T);
     MyMatrix<Tint> TheCompl2 = SubspaceCompletionInt(NSP2, n);
     MyMatrix<T> TheCompl2_T = UniversalMatrixConversion<T, Tint>(TheCompl2);
@@ -2382,6 +2380,10 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
 #endif
+        std::vector<MyMatrix<Tint>> LGenStab = INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Qmat, ePlane, sd1);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: |LGenStab|=" << LGenStab.size() << "\n";
+#endif
         MyMatrix<Tint> Embed = eRec.TheCompl * eRec.NSP;
         for (auto &eVect : ListOrbitF) {
           MyVector<Tint> eVectB = Embed.transpose() * eVect;
@@ -2401,7 +2403,16 @@ private:
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
             MyVector<Tint> eVectC =
               UniversalVectorConversion<Tint, T>(eVectC_T);
-            MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectC);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+            os << "COMB: LGenStab=\n";
+            WriteListMatrix(os, LGenStab);
+            os << "COMB: eVectC=" << StringVectorGAP(eVectC) << "\n";
+#endif
+            MyVector<Tint> eVectD = ExhaustiveVectorSimplification(eVectC, LGenStab);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+            os << "COMB: eVectD=" << StringVectorGAP(eVectD) << "\n";
+#endif
+            MyMatrix<Tint> ePlaneB = ConcatenateMatVec(ePlane, eVectD);
             fInsert(ePlaneB);
           }
         }

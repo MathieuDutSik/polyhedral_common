@@ -462,7 +462,7 @@ std::vector<MyMatrix<T>> Exhaust_get_total_generators(std::vector<MyMatrix<T>> c
   Apply a number of exhaustive tricks in order to reduce the size of the vector
  */
 template<typename T>
-MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
+MyVector<T> ExhaustiveVectorSimplificationKernel(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
   int n = V.size();
   auto f_norm=[&](MyVector<T> const& v) -> T {
     T norm(0);
@@ -489,6 +489,13 @@ MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyM
     }
   }
 }
+
+template<typename T>
+MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+  return ExhaustiveVectorSimplificationKernel(V, list_mat_tot);
+}
+
 
 template<typename T>
 std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const& list_V, std::vector<MyMatrix<T>> const& list_mat) {
