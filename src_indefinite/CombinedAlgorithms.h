@@ -231,7 +231,7 @@ public:
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, PreNSP_T=\n";
     WriteMatrix(os, PreNSP_T);
 #endif
-    NSP_T = LLLbasisReduction<T,T>(PreNSP_T).LattRed;
+    NSP_T = SublatticeBasisReduction(PreNSP_T);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, NSP_T=\n";
     WriteMatrix(os, NSP_T);

@@ -305,17 +305,10 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
     return TheGram;
   };
   MyMatrix<T> TheGram = GetGram(M);
-  std::cerr << "LLL: ReduceVectorFamily, step 1\n";
   LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method);
-  std::cerr << "LLL: ReduceVectorFamily, step 2\n";
   MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
-  std::cerr << "LLL: ReduceVectorFamily, step 3\n";
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  std::cerr << "LLL: ReduceVectorFamily, step 4\n";
-  std::cerr << "LLL: |M|=" << M.rows() << "/" << M.cols()
-            << " |Pmat_T|=" << Pmat_T.rows() << "/" << Pmat_T.cols() << "\n";
   MyMatrix<T> Mred = M * Pmat_T;
-  std::cerr << "LLL: ReduceVectorFamily, step 5\n";
   if (GetGram(Mred) != res.GramMatRed) {
     std::cerr << "LLL: Matrix error somewhere\n";
     throw TerminalException{1};
@@ -324,9 +317,14 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
 }
 
 
+/*
+  The code for finding a nice basis of a lattice.
+  ----
+  We use LLL, but there are other alternatives to consider:
+  * Exhaustive search as done for indefinite matrices.
+ */
 template<typename T>
-MyMatrix<T> SublatticeBasisReduction(MyMatrix<T> const& Latt) {
-  //  using Tfield = typename overlying_field<Tint>::field_type;
+MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const& Latt) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n_row = Latt.rows();
   int n_col = Latt.cols();
@@ -358,8 +356,22 @@ MyMatrix<T> SublatticeBasisReduction(MyMatrix<T> const& Latt) {
       return Latt_work;
     }
   }
+}
 
+template<typename T>
+inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
+SublatticeBasisReduction(MyMatrix<T> const& Latt) {
+  return SublatticeBasisReductionKernel(Latt);
+}
 
+template<typename T>
+inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
+SublatticeBasisReduction(MyMatrix<T> const& Latt) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> Latt_F = UniversalMatrixConversion<Tfield,T>(Latt);
+  MyMatrix<Tfield> LattRed_F = SublatticeBasisReductionKernel(Latt_F);
+  MyMatrix<T> LattRed = UniversalMatrixConversion<T,Tfield>(LattRed_F);
+  return LattRed;
 }
 
 // clang-format off
