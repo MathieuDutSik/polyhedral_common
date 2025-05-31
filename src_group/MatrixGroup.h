@@ -53,6 +53,25 @@ void write_matrix_group(std::vector<MyMatrix<T>> const& list_mat, std::string co
 }
 
 template<typename T>
+std::string compute_complexity_matrix(MyMatrix<T> const& mat) {
+  int n = mat.rows();
+  T ell1(0);
+  T ellinfinity(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      T val = mat(i,j);
+      T abs_val = T_abs(val);
+      ell1 += abs_val;
+      if (abs_val > ellinfinity) {
+        ellinfinity = abs_val;
+      }
+    }
+  }
+  return "(ell1=" + std::to_string(ell1) + ", ellinf=" + std::to_string(ellinfinity) + ")";
+}
+
+
+template<typename T>
 std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat) {
   if (list_mat.size() == 0) {
     return "zero generators";
@@ -85,6 +104,8 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
   }
   return "(n_gen=" + std::to_string(n_mat) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
 }
+
+
 
 
 
@@ -768,7 +789,13 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has1");
 #endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
+#endif
   std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
+#endif
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
@@ -925,7 +952,13 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not1");
 #endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
+#endif
   std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
+#endif
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
@@ -1527,7 +1560,13 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(ListGenRet1, "LinearSpace_Stabilizer_Kernel1");
 #endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
+#endif
   std::vector<MyMatrix<T>> ListGenRet2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGenRet1, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
+#endif
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(ListGenRet2, "LinearSpace_Stabilizer_Kernel2");
 #endif
@@ -1602,12 +1641,18 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(ListMatrGen1, "MatrixIntegral_PreImageSubgroup_has1");
 #endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen1)=" << compute_complexity_listmat(ListMatrGen1) << "\n";
+#endif
   std::vector<MyMatrix<T>> ListMatrGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatrGen1, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen2)=" << compute_complexity_listmat(ListMatrGen2) << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |ListMatrGen2|=" << ListMatrGen2.size() << "\n";
 #endif
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
-  write_matrix_group(ListMatrGen2, "LinearSpace_Stabilizer_Kernel2");
+  write_matrix_group(ListMatrGen2, "MatrixIntegral_PreImageSubgroup_has2");
 #endif
   return ListMatrGen2;
 }
@@ -1683,12 +1728,15 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
     }
   }
 #endif
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
+#endif
   std::vector<MyMatrix<T>> ListGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGen1, os);
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After ExhaustiveReductionComplexityGroupMatrix comp(ListGen2)=" << compute_complexity_listmat(ListGen2) << "\n";
+  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen2)=" << compute_complexity_listmat(ListGen2) << "\n";
 #endif
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(ListGen2, "MatrixIntegral_PreImageSubgroup_has_not2");

@@ -224,7 +224,18 @@ public:
       throw TerminalException{1};
     }
 #endif
-    NSP_T = NullspaceIntTrMat(eProd);
+    MyMatrix<T> PreNSP_T = NullspaceIntTrMat(eProd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Rec_IsotropicKplane, eProd=\n";
+    WriteMatrix(os, eProd);
+    os << "COMB: INDEF_FORM_Rec_IsotropicKplane, PreNSP_T=\n";
+    WriteMatrix(os, PreNSP_T);
+#endif
+    NSP_T = LLLbasisReduction<T,T>(PreNSP_T).LattRed;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_Rec_IsotropicKplane, NSP_T=\n";
+    WriteMatrix(os, NSP_T);
+#endif
     NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
     GramMatRed = NSP_T * Qmat * NSP_T.transpose();
     the_dim = NSP_T.rows();
@@ -1179,7 +1190,7 @@ private:
       LGenFinal.push_back(NewGen);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have LGenFinal\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have comp(LGenFinal)=" << compute_complexity_listmat(LGenFinal) << "\n";
 #endif
     return LGenFinal;
   }
@@ -1301,6 +1312,9 @@ private:
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_stab)", os);
+#endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Before, GRPred = INDEF_FORM_AutomorphismGroup, comp(eRec.QmatRed)=" << compute_complexity_matrix(eRec.QmatRed) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
@@ -1792,6 +1806,9 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have eRec\n";
 #endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Before, GRP1 = INDEF_FORM_AutomorphismGroup, comp(eRec.GramMatRed)=" << compute_complexity_matrix(eRec.GramMatRed) << "\n";
+#endif
     std::vector<MyMatrix<Tint>> GRP1 =
         INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -1894,6 +1911,9 @@ private:
       throw TerminalException{1};
     }
 #endif
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: Before, GRP1_A = INDEF_FORM_AutomorphismGroup, comp(eRec1.GramMatRed)=" << compute_complexity_matrix(eRec1.GramMatRed) << "\n";
+#endif
     std::vector<MyMatrix<Tint>> GRP1_A =
         INDEF_FORM_AutomorphismGroup(eRec1.GramMatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -1963,7 +1983,7 @@ private:
       ListGenTot.push_back(eGenB);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, returning ListGenTot\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, returning comp(ListGenTot)=" << compute_complexity_listmat(ListGenTot) << "\n";
 #endif
     return ListGenTot;
   }
@@ -2557,6 +2577,9 @@ public:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup(MyMatrix<T> const &Q) {
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, start, comp(Q)=" << compute_complexity_matrix(Q) << "\n";
+#endif
     if (Q.rows() == 0) {
       MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
       return {eGen};
@@ -2576,7 +2599,11 @@ public:
     //
     std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_Reduced(res.Mred);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, We have LGen\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.B)=" << compute_complexity_matrix(res.B) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.Mred)=" << compute_complexity_matrix(res.Mred) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(Q)=" << compute_complexity_matrix(Q) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(B_inv)=" << compute_complexity_matrix(B_inv) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have comp(LGen)=" << compute_complexity_listmat(LGen) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> LGenRet;
     for (auto & eGen : LGen) {
@@ -2592,9 +2619,13 @@ public:
       LGenRet.push_back(eGenRet);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, We have LGenRet\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRet)=" << compute_complexity_listmat(LGenRet) << "\n";
 #endif
-    return LGenRet;
+    std::vector<MyMatrix<Tint>>  LGenRetB = ExhaustiveReductionComplexityGroupMatrix<Tint>(LGenRet, os);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRetB)=" << compute_complexity_listmat(LGenRetB) << "\n";
+#endif
+    return LGenRetB;
   }
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
