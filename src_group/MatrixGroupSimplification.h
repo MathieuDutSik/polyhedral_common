@@ -502,11 +502,61 @@ std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>
   std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
   std::vector<MyVector<T>> list_V_red;
   for (auto& eV: list_V) {
-    MyVector<T> eV_red = ExhaustiveVectorSimplification(eV, list_mat_tot);
+    MyVector<T> eV_red = ExhaustiveVectorSimplificationKernel(eV, list_mat_tot);
     list_V_red.push_back(eV_red);
   }
   return list_V_red;
 }
+
+/*
+  Take a matrix M in argument.
+  Look for ways to multiply by elements of list_mat
+  so that the L1 norm of M G decreases
+ */
+template<typename T>
+MyMatrix<T> ExhaustiveMatrixCosetSimplificationKernel(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
+  int n = M.rows();
+  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+    T norm(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        norm += T_abs(Hin(i,j));
+      }
+    }
+    return norm;
+  };
+  MyMatrix<T> M_work = M;
+  T norm_work = f_norm(M);
+  while(true) {
+    int n_succ = 0;
+    for (auto & mat : list_mat) {
+      MyMatrix<T> M_cand = M_work * mat;
+      T norm_cand = f_norm(M_cand);
+      if (norm_cand < norm_work) {
+        M_work = M_cand;
+        norm_work = norm_cand;
+        n_succ += 1;
+      }
+    }
+    if (n_succ == 0) {
+      return M_work;
+    }
+  }
+}
+
+
+template<typename T>
+std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatrix<T>> const& list_cos, std::vector<MyMatrix<T>> const& list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+  std::vector<MyMatrix<T>> list_cos_red;
+  for (auto& eCos: list_cos) {
+    MyMatrix<T> eCos_red = ExhaustiveMatrixCosetSimplificationKernel(eCos, list_mat_tot);
+    list_cos_red.push_back(eCos_red);
+  }
+  return list_cos_red;
+}
+
+
 
 
 // clang-format off
