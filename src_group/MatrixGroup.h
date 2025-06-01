@@ -37,7 +37,7 @@
 #define SANITY_CHECK_DOUBLE_COSET_ENUM
 #endif
 
-#define WRITE_MATRIX_GROUP_TRACK_INFO
+//#define WRITE_MATRIX_GROUP_TRACK_INFO
 
 
 
@@ -940,6 +940,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
 #endif
   Telt id_perm = stab.get_identity();
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
+#endif
   std::vector<MyMatrix<T>> LGen1 =
     permutalib::PreImageSubgroupAction<Telt, TeltMatr, Tobj, decltype(f_op)>(
       ListMatrGens, ListPermGens, id_matr, id_perm, f, f_op);
@@ -947,7 +950,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "|MAT_GRP: MatrixIntegral_Stabilizer, PreImageSubgroupAction|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After StabilizerMatrixPermSubset\n";
+  os << "MAT_GRP: After permutalib::PreImageSubgroupAction\n";
 #endif
 #ifdef WRITE_MATRIX_GROUP_TRACK_INFO
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not1");
@@ -1402,6 +1405,13 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     return {};
   };
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+  ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
   while (true) {
 #ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime time;
@@ -1449,6 +1459,13 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
        << " |eFace|=" << eFace.count() << "\n";
 #endif
     ListMatrRet = f_stab(ListPermGens, GRPwork, eFace, f_get_perm, ListMatrRet);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+    ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
   }
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod |ListMatrRet|=" << ListMatrRet.size() << "\n";

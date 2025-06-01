@@ -809,15 +809,15 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   os << "COMB: EIG_IO, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
   os << "COMB: EIG_IO, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
-  os << "COMB: EIG_IO, we have GRPred=\n";
-  WriteListMatrix(os, GRPred);
+  //  os << "COMB: EIG_IO, we have GRPred=\n";
+  //  WriteListMatrix(os, GRPred);
 #endif
   std::vector<MyMatrix<Tint>> GRPfull =
     ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
   os << "COMB: EIG_IO, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
-  os << "COMB: EIG_IO, we have GRPfull=\n";
-  WriteListMatrix(os, GRPfull);
+  //  os << "COMB: EIG_IO, we have GRPfull=\n";
+  //  WriteListMatrix(os, GRPfull);
 #endif
   std::vector<MyMatrix<Tint>> ListGenTot;
   ListGenTot.push_back(-IdentityMat<Tint>(eRec.the_dim));
@@ -1143,6 +1143,12 @@ private:
 #endif
     MyMatrix<Tint> const &B = ResRed.B;
     MyMatrix<Tint> Binv = Inverse(B);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Qmat)=" << compute_complexity_matrix(Qmat) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(ResRed.B)=" << compute_complexity_matrix(ResRed.B) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Binv)=" << compute_complexity_matrix(Binv) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(QmatRed)=" << compute_complexity_matrix(QmatRed) << "\n";
+#endif
     auto get_stab = [&]() -> std::vector<MyMatrix<Tint>> {
       std::optional<std::vector<MyMatrix<Tint>>> opt =
           database.attempt_stabilizer(QmatRed);
@@ -1321,8 +1327,8 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
     os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
-    os << "COMB: f_stab, we have GRPred=\n";
-    WriteListMatrix(os, GRPred);
+    //    os << "COMB: f_stab, we have GRPred=\n";
+    //    WriteListMatrix(os, GRPred);
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot =
       ExtendIsometryGroup_IsotropicOrth(GRPred, eRec, sd, os);
@@ -2207,16 +2213,19 @@ private:
     //
     std::vector<MyMatrix<Tint>> GRP_G_plane = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    write_seq_dims(sd, "sd(f_double_cosets)", os);
-    os << "COMB: f_double_cosets, we have GRP_G_plane\n";
-    WriteListMatrix(os, GRP_G_plane);
-#endif
-    std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    CheckGroupSubgroup<Tint,Tgroup>(GRP_G_plane, GRP_V_plane, os);
+    os << "COMB: f_double_cosets, we have comp(GRP_G_plane)=" << compute_complexity_listmat(GRP_G_plane) << "\n";
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have GRP_V_plane\n";
+    write_seq_dims(sd, "sd(f_double_cosets)", os);
+    //    os << "COMB: f_double_cosets, we have GRP_G_plane\n";
+    //    WriteListMatrix(os, GRP_G_plane);
+#endif
+    std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: f_double_cosets, we have comp(GRP_V_plane)=" << compute_complexity_listmat(GRP_V_plane) << "\n";
+#endif
+#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
+    CheckGroupSubgroup<Tint,Tgroup>(GRP_G_plane, GRP_V_plane, os);
 #endif
     MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP_G_plane);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -2225,12 +2234,12 @@ private:
 #endif
     std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_G_plane, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have GRP_G\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_G)=" << compute_complexity_listmat(GRP_G) << "\n";
 #endif
     // Computation below should succeed because GRP_V_plane is a subgroup of GRP_G_plane
     std::vector<MyMatrix<T>> GRP_V = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_V_plane, Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have GRP_V\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_V)=" << compute_complexity_listmat(GRP_V) << "\n";
 #endif
     int n = eRec.Qmat.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
@@ -2406,8 +2415,8 @@ private:
             MyVector<Tint> eVectC =
               UniversalVectorConversion<Tint, T>(eVectC_T);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-            os << "COMB: LGenStab=\n";
-            WriteListMatrix(os, LGenStab);
+            //            os << "COMB: LGenStab=\n";
+            //            WriteListMatrix(os, LGenStab);
             os << "COMB: eVectC=" << StringVectorGAP(eVectC) << "\n";
 #endif
             MyVector<Tint> eVectD = ExhaustiveVectorSimplification(eVectC, LGenStab);
