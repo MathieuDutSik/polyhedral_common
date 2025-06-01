@@ -8,8 +8,8 @@ PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
+#CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
+CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
@@ -42,7 +42,7 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 #CDEFS           = -DSANITY_CHECK
 #CDEFS           = -DSANITY_CHECK -DDEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM -DDEBUG_POLYTOPE_EQUI_STAB -DDEBUG_WEIGHT_MATRIX_SPECIFIED -DDEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS -DPERMUTALIB_BLOCKING_SANITY_CHECK
-CDEFS           = -DSANITY_CHECK -DDEBUG_APPROXIMATE_MODELS -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_MATRIX_GROUP -DTIMINGS
+CDEFS           = -DSANITY_CHECK -DDEBUG_APPROXIMATE_MODELS -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_MATRIX_GROUP -DTIMINGS -DDEBUG_MATRIX_GROUP_SIMPLIFICATION
 
 
 

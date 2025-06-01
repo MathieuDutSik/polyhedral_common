@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
         using T = mpz_class;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching arith\n";
+      std::cerr << "Failed to find a matching arith. Allowed is mpq_class / mpz_class\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);

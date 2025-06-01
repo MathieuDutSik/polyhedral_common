@@ -9,6 +9,8 @@
 #define DEBUG_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
+//#define DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
+
 
 template<typename T>
 struct ComplexityMeasure {
@@ -78,6 +80,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
+  // Generate the possible ways to simplify the pair of elements.
   auto f_generate_candidate=[&](Tcomb const& a, Tcomb const& b) -> std::vector<Tcomb> {
     Ttype a_inv = Inverse(a.first);
     Ttype b_inv = Inverse(b.first);
@@ -94,6 +97,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     Tcomb pair4 = get_pair(prod4);
     return {pair1, pair2, pair3, pair4};
   };
+  // Selects the best candidates in the 4 being generated.
   auto f_get_best_candidate=[&](Tcomb const& a, Tcomb const& b) -> Tcomb {
     std::vector<Tcomb> l_comb = f_generate_candidate(a, b);
     Tcomb best_comp = l_comb[0];
@@ -104,6 +108,8 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     }
     return best_comp;
   };
+  // Iterate the reduction algorithm over pairs of elements.
+  // The result of the iteration might be a 0, 1 or 2 new elements.
   auto f_reduce=[&](Tcomb const& a, Tcomb const& b) -> std::pair<size_t, std::vector<Tcomb>> {
     Tcomb a_work = a;
     Tcomb b_work = b;
@@ -175,6 +181,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     size_t u = 0;
     size_t v = 1;
     auto increment_uv=[&]() -> bool {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+      os << "SIMP: Starting increment_uv with u=" << u << " v=" << v << "\n";
+#endif
       if (v < map.size() - 1) {
         v += 1;
       } else {
@@ -189,16 +198,14 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
     size_t pos = 0;
     os << "SIMP: starting with the following matrices\n";
-    for (auto & pair: set) {
-      os << "SIMP: pos=" << pos << " comp=" << pair.second << " eM=\n";
-      WriteMatrix(os, pair.first);
+    for (auto & kv: map) {
+      os << "SIMP: pos=" << pos << " nonce=" << kv.second << " norm=" << kv.first.second << " eM=\n";
+      WriteMatrix(os, kv.first.first);
       pos += 1;
     }
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     size_t n_operation = 0;
-    size_t n_already0 = 0;
-    size_t n_already1 = 0;
 #endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -225,16 +232,11 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       } else {
         pair = f_reduce(a, b);
       }
+      size_t n_changes = pair.first;
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      if (already_treated) {
-        n_already1 += 1;
-      }
-      if (!already_treated) {
-        n_already0 += 1;
-      }
-      os << "SIMP:   n_changes=" << pair.first << " already_treated=" << already_treated << " n_already0=" << n_already0 << " n_already1=" << n_already1 << "\n";
+      os << "SIMP:   n_changes=" << n_changes << " already_treated=" << already_treated << "\n";
 #endif
-      if (pair.first > 0) {
+      if (n_changes > 0) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
         n_operation += 1;
 #endif
@@ -284,6 +286,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
           throw TerminalException{1};
         }
         size_t min_distance_bis = miss_val;
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
+        os << "SIMP:  |new_elt|=" << new_elt.size() << "\n";
+#endif
         for (auto & elt: new_elt) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
           os << "SIMP:  elt.comp=" << elt.second << " elt.eM=\n";
@@ -297,6 +302,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
           }
         }
         if (min_distance_bis == miss_val) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
+          os << "SIMP:  Scenario A\n";
+#endif
           // This scenario occurs if the new found generators are already present
           // Two scenarios
           if (!a_attained) {
@@ -326,8 +334,18 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
             }
           }
         } else {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
+          os << "SIMP:  Scenario B, |new_elt|=" << new_elt.size() << " min_distance_bis=" << min_distance_bis << "\n";
+#endif
           // We have a new generator, adjusting accordingly.
           if (!a_attained) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
+            os << "SIMP:  Scenario B, A\n";
+#endif
+            if (min_distance_bis == map.size() - 1) {
+              // We reach the end of what we can do.
+              break;
+            }
             u = min_distance_bis;
             v = min_distance_bis + 1;
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -415,7 +433,10 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
 }
 
 template<typename T>
-std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, [[maybe_unused]] std::ostream& os) {
+std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, std::ostream& os) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  //  write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
+#endif
   auto f_complexity=[&](MyMatrix<T> const& M) -> T {
     return get_complexity_measure(M).ell1;
   };

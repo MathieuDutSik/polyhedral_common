@@ -1903,6 +1903,11 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #ifdef DEBUG_DOUBLE_COSET_ENUM
     os << "MAT_GRP: We have pre_imager\n";
 #endif
+    std::vector<MyMatrix<T>> eStab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatrGens, eStab_perm, helper, f_get_perm, os);
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+    TestPreImageSubgroup(helper, ListPermGens, ListMatrGens, f_get_perm, eStab_matr, eStab_perm, "eStab", os);
+#endif
+    std::vector<MyMatrix<T>> eStab_matr_tot = Exhaust_get_total_generators(eStab_matr);
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
@@ -1950,8 +1955,10 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
           Stab_matr_conj.emplace_back(std::move(NewGen));
         }
-        MyMatrix<T> NewCos = eCos * entry.cos;
-        DoubleCosetEntry<T> new_de{std::move(NewCos), std::move(Stab_matr_conj)};
+        std::vector<MyMatrix<T>> Stab_matr_conj_red = ExhaustiveReductionComplexityGroupMatrix(Stab_matr_conj, os);
+        MyMatrix<T> new_cos = eCos * entry.cos;
+        //        MyMatrix<T> new_cos_red = ExhaustiveMatrixCosetSimplificationKernel(new_cos, eStab_matr_tot);
+        DoubleCosetEntry<T> new_de{std::move(new_cos), std::move(Stab_matr_conj)};
         new_entries.emplace_back(std::move(new_de));
       }
     }
@@ -1959,10 +1966,6 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     os << "MAT_GRP: We found |new_entries|=" << new_entries.size() << "\n";
 #endif
     entries = new_entries;
-    std::vector<MyMatrix<T>> eStab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatrGens, eStab_perm, helper, f_get_perm, os);
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-    TestPreImageSubgroup(helper, ListPermGens, ListMatrGens, f_get_perm, eStab_matr, eStab_perm, "eStab", os);
-#endif
     return eStab_matr;
   };
   std::vector<MyMatrix<T>> l_gens_ret =
