@@ -2855,7 +2855,7 @@ MatrixIntegral_DoubleCosets_General(
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_DISABLE
   os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, LGenG1=\n";
   WriteListMatrix(os, LGenG1);
   os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, LGenV1=\n";
