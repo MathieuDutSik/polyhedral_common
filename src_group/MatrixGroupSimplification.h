@@ -434,8 +434,8 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
 
 template<typename T>
 std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, std::ostream& os) {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  //  write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
+#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+  write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
 #endif
   auto f_complexity=[&](MyMatrix<T> const& M) -> T {
     return get_complexity_measure(M).ell1;
