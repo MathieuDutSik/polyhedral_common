@@ -19,8 +19,6 @@
 #PROGRAM		= GRP_LinPolytopeIntegral_Isomorphism
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism
 #PROGRAM		= GRP_RuntimeOrbitSplitting
-#PROGRAM		= TEST_PermMatrTest_PolyStabilizer TEST_PermMatrTest_PolyEquivalence
-#PROGRAM		= TEST_PermMatrTest_PolyEquivalence
 #PROGRAM		= GRP_IsomorphismReduction
 #PROGRAM		= GRP_LinPolytope_Automorphism_GramMat GRP_LinPolytope_Automorphism
 #PROGRAM		= GRP_LinPolytope_Automorphism GRP_LinPolytope_Isomorphism GRP_LinPolytope_Invariant

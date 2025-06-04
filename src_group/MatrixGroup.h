@@ -14,6 +14,7 @@
 #include "factorizations.h"
 #include "two_dim_lorentzian.h"
 #include "MatrixGroupSimplification.h"
+#include "TestGroup.h"
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -796,6 +797,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(LGen1, LGen2, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
 #endif
@@ -971,6 +975,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(LGen1, LGen2, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
 #endif
@@ -1596,6 +1603,9 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListGenRet2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGenRet1, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(ListGenRet1, ListGenRet2, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
 #endif
@@ -1680,6 +1690,9 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen1)=" << compute_complexity_listmat(ListMatrGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatrGen1, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(ListMatrGen1, ListMatrGen2, os);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen2)=" << compute_complexity_listmat(ListMatrGen2) << "\n";
 #endif
@@ -1767,6 +1780,9 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGen1, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(ListGen1, ListGen2, os);
+#endif
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
@@ -1975,9 +1991,14 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, eCos=\n";
-        Obtained eCos=\n";
+        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";
         WriteMatrix(os, eCos);
+        DoubleCosetSimplification<T> udv1 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, eStab_matr, Vmatr_conj);
+        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv1.d_cos_red)=" << compute_complexity_matrix(udv1.d_cos_red) << " udv1.d_cos_red=\n";
+        WriteMatrix(os, udv1.d_cos_red);
+        DoubleCosetSimplification<T> udv2 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, Vmatr_conj, eStab_matr);
+        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv2.d_cos_red)=" << compute_complexity_matrix(udv2.d_cos_red) << " udv2.d_cos_red=\n";
+        WriteMatrix(os, udv2.d_cos_red);
 #endif
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         if (f_get_perm(eCos) != e_de.cos) {
@@ -2002,6 +2023,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           Stab_matr_conj.emplace_back(std::move(NewGen));
         }
         std::vector<MyMatrix<T>> Stab_matr_conj_red = ExhaustiveReductionComplexityGroupMatrix(Stab_matr_conj, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP
+        CheckGroupEquality<T,Tgroup>(Stab_matr_conj_red, Stab_matr_conj, os);
+#endif
         MyMatrix<T> new_cos = eCos * entry.cos;
         //        MyMatrix<T> new_cos_red = ExhaustiveMatrixCosetSimplificationKernel(new_cos, eStab_matr_tot);
         DoubleCosetEntry<T> new_de{std::move(new_cos), std::move(Stab_matr_conj)};

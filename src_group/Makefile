@@ -1,5 +1,4 @@
 PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
-                  TEST_PermMatrTest_PolyEquivalence TEST_PermMatrTest_PolyStabilizer \
                   TEST_LinPolytope_Canonic TEST_WeightMatrixLimited \
 		  TEST_LinPolytope_WMatCanonic \
 		  TEST_LinPolytopeIntegral_Automorphism \

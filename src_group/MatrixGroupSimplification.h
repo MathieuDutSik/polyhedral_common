@@ -578,22 +578,56 @@ std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatr
 }
 
 /*
+  The result of the simplification algorithm for double cosets
  */
 template<typename T>
 struct DoubleCosetSimplification {
-  
-  
+  MyMatrix<T> u_red; // The u reduction element
+  MyMatrix<T> d_cos_red; // The reduced coset
+  MyMatrix<T> v_red; // The v_reduction element
 };
 
 
+// The double coset is U x V
 template<typename T>
-std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatrix<T>> const& list_cos, std::vector<MyMatrix<T>> const& list_mat) {
+DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens) {
+  std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
+  std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
 
-
-
-
-
-
+  int n = d_cos.rows();
+  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+    T norm(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        norm += T_abs(Hin(i,j));
+      }
+    }
+    return norm;
+  };
+  MyMatrix<T> u_red = IdentityMat<T>(n);
+  MyMatrix<T> v_red = IdentityMat<T>(n);
+  MyMatrix<T> d_cos_work = d_cos;
+  T norm_work = f_norm(d_cos);
+  while(true) {
+    size_t n_oper = 0;
+    for (auto & u_gen : u_gens_tot) {
+      for (auto & v_gen: v_gens_tot) {
+        MyMatrix<T> d_cos_cand = u_gen * d_cos_work * v_gen;
+        T norm_cand = f_norm(d_cos_cand);
+        if (norm_cand < norm_work) {
+          d_cos_work = d_cos_cand;
+          norm_work = norm_cand;
+          u_red = u_gen * u_red;
+          v_red = v_red * v_gen;
+          n_oper += 1;
+        }
+      }
+    }
+    if (n_oper == 0) {
+      return {u_red, d_cos_work, v_red};
+    }
+  }
+}
 
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUP_H_
