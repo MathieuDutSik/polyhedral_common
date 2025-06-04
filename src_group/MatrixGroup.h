@@ -1985,6 +1985,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       }
 #endif
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |span_de|=" << span_de.size() << "\n";
+#endif
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
