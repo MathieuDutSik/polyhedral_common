@@ -1974,6 +1974,11 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
 #endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
+#ifdef DEBUG_MATRIX_GROUP
+        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, eCos=\n";
+        Obtained eCos=\n";
+        WriteMatrix(os, eCos);
+#endif
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         if (f_get_perm(eCos) != e_de.cos) {
           std::cerr << "MAT_GRP: Computation of PreImage of subgroup failed\n";

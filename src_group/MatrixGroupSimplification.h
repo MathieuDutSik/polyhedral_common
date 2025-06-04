@@ -577,6 +577,21 @@ std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatr
   return list_cos_red;
 }
 
+/*
+ */
+template<typename T>
+struct DoubleCosetSimplification {
+  
+  
+};
+
+
+template<typename T>
+std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatrix<T>> const& list_cos, std::vector<MyMatrix<T>> const& list_mat) {
+
+
+
+
 
 
 
