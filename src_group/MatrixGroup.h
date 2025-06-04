@@ -780,6 +780,9 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
   std::vector<MyMatrix<T>> LGen1;
   for (auto &eGen : eStab.SmallGeneratingSet()) {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: MatrixIntegral_Stabilizer(has), before pre_image_elt\n";
+#endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     LGen1.emplace_back(std::move(eMatr));
   }
@@ -828,6 +831,9 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
   std::vector<MyMatrix<T>> ListMatrGen;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
   for (auto &eGen : eStab.SmallGeneratingSet()) {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eGen\n";
+#endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
@@ -837,6 +843,9 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
   std::vector<MyMatrix<T>> ListRightCoset;
   RightCosets rc = GRPperm.right_cosets(eStab);
   for (auto &eCos : rc) {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eCos\n";
+#endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eCos);
     ListRightCoset.emplace_back(std::move(eMatr));
   }
@@ -864,6 +873,9 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
     return {};
   }
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
+#endif
   return pre_imager.pre_image_elt(*opt);
 }
 
@@ -1304,6 +1316,9 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
 #endif
     std::vector<MyMatrix<T>> LMatr;
     for (auto &eGen : fGRP.SmallGeneratingSet()) {
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: FindingSmallOrbit(has)), before pre_image_elt for eGen\n";
+#endif
       MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen);
       LMatr.emplace_back(std::move(eMat));
     }
@@ -1649,6 +1664,9 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #endif
   std::vector<MyMatrix<T>> ListMatrGen1;
   for (auto &eGen : LGenSmall) {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), before pre_image_elt for eGen\n";
+#endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen1.emplace_back(std::move(eMatr));
   }
@@ -1824,6 +1842,9 @@ void TestPreImageSubgroup(Thelper const &helper,
   std::vector<std::pair<Telt, Telt>> l_pair_err;
   for (auto & eGen: OrigGRP.SmallGeneratingSet()) {
     n_orig_gen += 1;
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: TestPreImageSubgroup, before pre_image_elt for eGen\n";
+#endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     Telt eGenB = f_map_matr(eMatr);
     if (eGen != eGenB) {
@@ -1949,6 +1970,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
       for (auto & e_de: span_de) {
+#ifdef DEBUG_MATRIX_GROUP
+        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
+#endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         if (f_get_perm(eCos) != e_de.cos) {
