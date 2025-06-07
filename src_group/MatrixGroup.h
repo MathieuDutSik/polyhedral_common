@@ -1910,14 +1910,14 @@ struct ResultSimplificationDoubleCosets {
 
 
 template<typename T, typename Tgroup, typename Thelper>
-std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(Thelper const& helper,
-                                                                                typename Thelper::PreImager pre_imager,
-                                                                                Tgroup GRP_U, Tgroup GRP_V,
-                                                                                std::vector<MyMatrix<T>> const& ListMatr_U,
-                                                                                std::vector<MyMatrix<T>> const& ListMatr_V,
-                                                                                std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
-                                                                                typename Tgroup::Telt cos_perm,
-                                                                                std::ostream& os) {
+ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificationDoubleCoset(Thelper const& helper,
+                                                                                              typename Thelper::PreImager pre_imager,
+                                                                                              Tgroup GRP_U, Tgroup GRP_V,
+                                                                                              std::vector<MyMatrix<T>> const& ListMatr_U,
+                                                                                              std::vector<MyMatrix<T>> const& ListMatr_V,
+                                                                                              std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
+                                                                                              typename Tgroup::Telt cos_perm,
+                                                                                              std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   struct IntermediateState {
     MyMatrix<T> cos_matr;
@@ -1968,12 +1968,12 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
       }
     }
     if (n_improv == 0) {
-      //        Telt udv_u_img = f_get_perm(udv.u_red);
-      //        Telt udv_v_img = f_get_perm(udv.v_red);
-      //        cos_matr_work = cos_matr_cand;
-      //        cos_perm_work = cos_perm_cand;
-      //        norm_work = norm_cand;
-      return {res_work.first.cos_matr, res_work.first.cos_perm};
+      Telt udv_u_img = f_get_perm(res_work.first.udv.u_red);
+      Telt udv_v_img = f_get_perm(res_work.first.udv.v_red);
+      Telt elt_u_ret = udv_u_img * elt_u;
+      Telt elt_v_ret = elt_v * udv_v_img;
+      Telt cos_perm_ret = elt_u_ret * cos_perm * elt_v_ret;
+      return {res_work.first.cos_matr, cos_perm_ret, elt_u_ret, elt_v_ret};
     }
   }
 }
@@ -2071,14 +2071,14 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
-        std::pair<MyMatrix<T>,typename Tgroup::Telt> pair = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(helper,
-                                                                                                                 pre_imager,
-                                                                                                                 eStab_perm, Vgroup_conj,
-                                                                                                                 eStab_matr, Vmatr_conj,
-                                                                                                                 f_get_perm,
-                                                                                                                 e_de.cos, os);
+        ResultSimplificationDoubleCosets<T, Telt> result = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(helper,
+                                                                                                                pre_imager,
+                                                                                                                eStab_perm, Vgroup_conj,
+                                                                                                                eStab_matr, Vmatr_conj,
+                                                                                                                f_get_perm,
+                                                                                                                e_de.cos, os);
         os << "MAT_GRP: pair\n";
-        WriteMatrix(os, pair.first);
+        WriteMatrix(os, result.cos_matr);
 #endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
 #ifdef DEBUG_MATRIX_GROUP
