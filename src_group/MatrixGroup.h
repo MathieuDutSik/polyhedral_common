@@ -1973,7 +1973,14 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
       Telt elt_u_ret = udv_u_img * elt_u;
       Telt elt_v_ret = elt_v * udv_v_img;
       Telt cos_perm_ret = elt_u_ret * cos_perm * elt_v_ret;
-      return {res_work.first.cos_matr, cos_perm_ret, elt_u_ret, elt_v_ret};
+      MyMatrix<T> const& cos_matr = res_work.first.cos_matr;
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+      if (f_get_perm(cos_matr) != cos_perm_ret) {
+        std::cerr << "MAT_GRP: cos_matr is not as we expect\n";
+        throw TerminalException{1};
+      }
+#endif
+      return {cos_matr, cos_perm_ret, elt_u_ret, elt_v_ret};
     }
   }
 }
@@ -2064,6 +2071,11 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       }
 #endif
       // The double cosets being computed are of the form U x V.
+      // The returned entry U x V has an associated group S.
+      // That group satisfies U x S = U x.
+      // This is equivalent to U x S x^{-1} = U or W = x S x^{-1} \subset U.
+      // The new stabilizer T satisfies W = y T y^{-1} for y the new stabilizer.
+      // So, T = y^{-1}x S x^{-1}y therefore we write z = y^{-1}x and zinv = x^{-1}y.
       std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vgroup_conj);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |span_de|=" << span_de.size() << "\n";
@@ -2071,25 +2083,19 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
+#endif
         ResultSimplificationDoubleCosets<T, Telt> result = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(helper,
                                                                                                                 pre_imager,
                                                                                                                 eStab_perm, Vgroup_conj,
                                                                                                                 eStab_matr, Vmatr_conj,
                                                                                                                 f_get_perm,
                                                                                                                 e_de.cos, os);
-        os << "MAT_GRP: pair\n";
+        os << "MAT_GRP: result\n";
         WriteMatrix(os, result.cos_matr);
-#endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";
         WriteMatrix(os, eCos);
-        DoubleCosetSimplification<T> udv1 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, eStab_matr, Vmatr_conj, 10000);
-        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv1.d_cos_red)=" << compute_complexity_matrix(udv1.d_cos_red) << " udv1.d_cos_red=\n";
-        WriteMatrix(os, udv1.d_cos_red);
-        DoubleCosetSimplification<T> udv2 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, Vmatr_conj, eStab_matr, 10000);
-        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv2.d_cos_red)=" << compute_complexity_matrix(udv2.d_cos_red) << " udv2.d_cos_red=\n";
-        WriteMatrix(os, udv2.d_cos_red);
 #endif
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         if (f_get_perm(eCos) != e_de.cos) {
