@@ -1900,9 +1900,18 @@ void TestPreImageSubgroup(Thelper const &helper,
 }
 
 
+template<typename T, typename Telt>
+struct ResultSimplificationDoubleCosets {
+  MyMatrix<T> CosMatr;
+  Telt CosPerm;
+  Telt elt_u;
+  Telt elt_v;
+};
+
+
 template<typename T, typename Tgroup, typename Thelper>
-std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(typename Thelper::PreImager pre_imager,
-                                                                                typename Tgroup::Telt::Tidx const& siz_act,
+std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(Thelper const& helper,
+                                                                                typename Thelper::PreImager pre_imager,
                                                                                 Tgroup GRP_U, Tgroup GRP_V,
                                                                                 std::vector<MyMatrix<T>> const& ListMatr_U,
                                                                                 std::vector<MyMatrix<T>> const& ListMatr_V,
@@ -1910,14 +1919,7 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
                                                                                 typename Tgroup::Telt cos_perm,
                                                                                 std::ostream& os) {
   using Telt = typename Tgroup::Telt;
-  //  using PreImager = typename Thelper::PreImager;
-  Telt cos_perm_work = cos_perm;
-  MyMatrix<T> cos_matr_work = pre_imager.pre_image_elt(cos_perm_work);
-  size_t max_iter = 10000;
-  DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_work, ListMatr_U, ListMatr_V, max_iter);
-  cos_matr_work = udv.d_cos_red;
-
-  int n = cos_matr_work.rows();
+  int n = helper.n;
   auto f_norm=[&](MyMatrix<T> const& H) -> T {
     T norm(0);
     for (int i=0; i<n; i++) {
@@ -1927,9 +1929,18 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
     }
     return norm;
   };
+  Telt cos_perm_work = cos_perm;
+  MyMatrix<T> cos_matr_work = pre_imager.pre_image_elt(cos_perm_work);
+  size_t max_iter = 1000;
+  DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_work, ListMatr_U, ListMatr_V, max_iter);
+  cos_matr_work = udv.d_cos_red;
+
   T norm_work = f_norm(cos_matr_work);
-  Telt elt_u = GRP_U.get_identity();
-  Telt elt_v = GRP_V.get_identity();
+  Telt id = GRP_U.get_identity();
+  Telt elt_u = id;
+  Telt elt_v = id;
+  Telt final_elt_u = id;
+  Telt final_elt_v = id;
   int n_iter = 100;
   while(true) {
     size_t n_improv = 0;
@@ -1952,6 +1963,8 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
         n_improv += 1;
         elt_u = elt_u_cand;
         elt_v = elt_v_cand;
+        Telt udv_u_img = f_get_perm(udv.u_red);
+        Telt udv_v_img = f_get_perm(udv.v_red);
         cos_matr_work = cos_matr_cand;
         cos_perm_work = cos_perm_cand;
         norm_work = norm_cand;
@@ -2058,8 +2071,8 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
-        std::pair<MyMatrix<T>,typename Tgroup::Telt> pair = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(pre_imager,
-                                                                                                                 siz_act,
+        std::pair<MyMatrix<T>,typename Tgroup::Telt> pair = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(helper,
+                                                                                                                 pre_imager,
                                                                                                                  eStab_perm, Vgroup_conj,
                                                                                                                  eStab_matr, Vmatr_conj,
                                                                                                                  f_get_perm,

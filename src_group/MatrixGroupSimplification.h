@@ -674,7 +674,7 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
     return false;
   };
   auto f_search=[&]() -> bool {
-    int chosen_method = 2;
+    int chosen_method = 3;
     f_random_transpose(indices_u);
     f_random_transpose(indices_v);
     if (chosen_method == 1) {
@@ -687,6 +687,17 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
       }
       return f_search_v();
     }
+    if (chosen_method == 3) {
+      bool test_u = f_search_u();
+      if (test_u) {
+        return true;
+      }
+      bool test_v = f_search_v();
+      if (test_v) {
+        return true;
+      }
+      return f_search_uv();
+    }
     return false;
   };
   size_t n_iter = 0;
@@ -694,9 +705,11 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
     bool test = f_search();
     std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
     if (!test) {
+      std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(A)=" << n_iter << " norm_work=" << norm_work << "\n";
       return {u_red, d_cos_work, v_red};
     }
     if (n_iter == max_iter) {
+      std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(B)=" << n_iter << " norm_work=" << norm_work << "\n";
       return {u_red, d_cos_work, v_red};
     }
     n_iter += 1;
