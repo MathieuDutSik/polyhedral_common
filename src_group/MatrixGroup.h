@@ -40,8 +40,6 @@
 
 //#define WRITE_MATRIX_GROUP_TRACK_INFO
 
-
-
 template <typename T>
 void write_matrix_group(std::vector<MyMatrix<T>> const& list_mat, std::string const& context) {
   if (list_mat.size() == 0) {
@@ -1902,6 +1900,74 @@ void TestPreImageSubgroup(Thelper const &helper,
 }
 
 
+template<typename T, typename Tgroup, typename Thelper>
+std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(typename Thelper::PreImager pre_imager,
+                                                                                typename Tgroup::Telt::Tidx const& siz_act,
+                                                                                Tgroup GRP_U, Tgroup GRP_V,
+                                                                                std::vector<MyMatrix<T>> const& ListMatr_U,
+                                                                                std::vector<MyMatrix<T>> const& ListMatr_V,
+                                                                                std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
+                                                                                typename Tgroup::Telt cos_perm,
+                                                                                std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  //  using PreImager = typename Thelper::PreImager;
+  Telt cos_perm_work = cos_perm;
+  MyMatrix<T> cos_matr_work = pre_imager.pre_image_elt(cos_perm_work);
+  size_t max_iter = 10000;
+  DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_work, ListMatr_U, ListMatr_V, max_iter);
+  cos_matr_work = udv.d_cos_red;
+
+  int n = cos_matr_work.rows();
+  auto f_norm=[&](MyMatrix<T> const& H) -> T {
+    T norm(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        norm += T_abs(H(i,j));
+      }
+    }
+    return norm;
+  };
+  T norm_work = f_norm(cos_matr_work);
+  Telt elt_u = GRP_U.get_identity();
+  Telt elt_v = GRP_V.get_identity();
+  int n_iter = 100;
+  while(true) {
+    size_t n_improv = 0;
+    for (int i=0; i<n_iter; i++) {
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " start\n";
+      Telt rand_u = GRP_U.rand();
+      Telt rand_v = GRP_V.rand();
+      Telt elt_u_cand = rand_u * elt_u;
+      Telt elt_v_cand = elt_v * rand_v;
+      Telt cos_perm_cand = elt_u_cand * cos_perm * elt_v_cand;
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " Tgroup computation finished\n";
+      MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand);
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " pre_image_elt done\n";
+      DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter);
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " after ExhaustiveMatrixDoubleCosetSimplifications\n";
+      cos_matr_cand = udv.d_cos_red;
+      T norm_cand = f_norm(cos_matr_cand);
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " norm_cand=" << norm_cand << "\n";
+      if (norm_cand < norm_work) {
+        n_improv += 1;
+        elt_u = elt_u_cand;
+        elt_v = elt_v_cand;
+        cos_matr_work = cos_matr_cand;
+        cos_perm_work = cos_perm_cand;
+        norm_work = norm_cand;
+        os << "MAT_GRP:   Now norm_work=" << norm_work << " cos_matr_work=\n";
+        WriteMatrix(os, cos_matr_work);
+      }
+    }
+    if (n_improv == 0) {
+      return {cos_matr_work, cos_perm_work};
+    }
+  }
+}
+
+
+
+
 
 /*
   Computes the Double cosets between the stabilizer of the subspace
@@ -1975,31 +2041,40 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       }
       std::vector<Telt> Vperm_conj =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(Vmatr_conj, helper, f_get_perm, os);
-      Tgroup Vperm_gens = Tgroup(Vperm_conj, siz_act);
+      Tgroup Vgroup_conj = Tgroup(Vperm_conj, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-      bool test_is_sub = GRP.IsSubgroup(Vperm_gens);
+      bool test_is_sub = GRP.IsSubgroup(Vgroup_conj);
       if (!test_is_sub) {
-        std::cerr << "MAT_GRP: Vperm_gens should be a subgroup of GRP\n";
-        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " |Vperm_gens|=" << Vperm_gens.size() << "\n";
+        std::cerr << "MAT_GRP: Vgroup_conj should be a subgroup of GRP\n";
+        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " |Vgroup_conj|=" << Vgroup_conj.size() << "\n";
         throw TerminalException{1};
       }
 #endif
-      std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vperm_gens);
+      // The double cosets being computed are of the form U x V.
+      std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vgroup_conj);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |span_de|=" << span_de.size() << "\n";
 #endif
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
+        std::pair<MyMatrix<T>,typename Tgroup::Telt> pair = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(pre_imager,
+                                                                                                                 siz_act,
+                                                                                                                 eStab_perm, Vgroup_conj,
+                                                                                                                 eStab_matr, Vmatr_conj,
+                                                                                                                 f_get_perm,
+                                                                                                                 e_de.cos, os);
+        os << "MAT_GRP: pair\n";
+        WriteMatrix(os, pair.first);
 #endif
         MyMatrix<T> eCos = pre_imager.pre_image_elt(e_de.cos);
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";
         WriteMatrix(os, eCos);
-        DoubleCosetSimplification<T> udv1 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, eStab_matr, Vmatr_conj);
+        DoubleCosetSimplification<T> udv1 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, eStab_matr, Vmatr_conj, 10000);
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv1.d_cos_red)=" << compute_complexity_matrix(udv1.d_cos_red) << " udv1.d_cos_red=\n";
         WriteMatrix(os, udv1.d_cos_red);
-        DoubleCosetSimplification<T> udv2 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, Vmatr_conj, eStab_matr);
+        DoubleCosetSimplification<T> udv2 = ExhaustiveMatrixDoubleCosetSimplifications(eCos, Vmatr_conj, eStab_matr, 10000);
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(udv2.d_cos_red)=" << compute_complexity_matrix(udv2.d_cos_red) << " udv2.d_cos_red=\n";
         WriteMatrix(os, udv2.d_cos_red);
 #endif
@@ -2011,8 +2086,8 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
         Tgroup Stab_perm(e_de.stab_gens, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-        if (!Vperm_gens.IsSubgroup(Stab_perm)) {
-          std::cerr << "MAT_GRP: Vperm_gens should contain Stab_perm as subgroup\n";
+        if (!Vgroup_conj.IsSubgroup(Stab_perm)) {
+          std::cerr << "MAT_GRP: Vgroup_conj should contain Stab_perm as subgroup\n";
           throw TerminalException{1};
         }
 #endif

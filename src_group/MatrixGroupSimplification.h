@@ -590,10 +590,12 @@ struct DoubleCosetSimplification {
 
 // The double coset is U x V
 template<typename T>
-DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens) {
+DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter) {
   std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
   std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
-
+  int n_gens_u = u_gens_tot.size();
+  int n_gens_v = v_gens_tot.size();
+  std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications |u_gens_tot|=" << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
   int n = d_cos.rows();
   auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
     T norm(0);
@@ -608,24 +610,96 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
   MyMatrix<T> v_red = IdentityMat<T>(n);
   MyMatrix<T> d_cos_work = d_cos;
   T norm_work = f_norm(d_cos);
-  while(true) {
-    size_t n_oper = 0;
-    for (auto & u_gen : u_gens_tot) {
-      for (auto & v_gen: v_gens_tot) {
+  std::vector<int> indices_u;
+  for (int i=0; i<n_gens_u; i++) {
+    indices_u.push_back(i);
+  }
+  std::vector<int> indices_v;
+  for (int i=0; i<n_gens_v; i++) {
+    indices_v.push_back(i);
+  }
+
+
+  auto f_search_uv=[&]() -> bool {
+    for (int u=0; u<n_gens_u; u++) {
+      for (int v=0; v<n_gens_v; v++) {
+        int u2 = indices_u[u];
+        int v2 = indices_v[v];
+        MyMatrix<T> const& u_gen = u_gens_tot[u2];
+        MyMatrix<T> const& v_gen = v_gens_tot[v2];
         MyMatrix<T> d_cos_cand = u_gen * d_cos_work * v_gen;
         T norm_cand = f_norm(d_cos_cand);
         if (norm_cand < norm_work) {
+          std::cerr << "MAT_SIMP: Improving with u2=" << u2 << " v2=" << v2 << " XXX u=" << u << " v=" << v << "\n";
           d_cos_work = d_cos_cand;
           norm_work = norm_cand;
           u_red = u_gen * u_red;
           v_red = v_red * v_gen;
-          n_oper += 1;
+          return true;
         }
       }
     }
-    if (n_oper == 0) {
+    return false;
+  };
+  auto f_search_u=[&]() -> bool {
+    for (int u=0; u<n_gens_u; u++) {
+      int u2 = indices_u[u];
+      MyMatrix<T> const& u_gen = u_gens_tot[u2];
+      MyMatrix<T> d_cos_cand = u_gen * d_cos_work;
+      T norm_cand = f_norm(d_cos_cand);
+      if (norm_cand < norm_work) {
+        std::cerr << "MAT_SIMP: Improving with u2=" << u2 << "\n";
+        d_cos_work = d_cos_cand;
+        norm_work = norm_cand;
+        u_red = u_gen * u_red;
+        return true;
+      }
+    }
+    return false;
+  };
+  auto f_search_v=[&]() -> bool {
+    for (int v=0; v<n_gens_v; v++) {
+      int v2 = indices_v[v];
+      MyMatrix<T> const& v_gen = v_gens_tot[v2];
+      MyMatrix<T> d_cos_cand = d_cos_work * v_gen;
+      T norm_cand = f_norm(d_cos_cand);
+      if (norm_cand < norm_work) {
+        std::cerr << "MAT_SIMP: Improving with v2=" << v2 << "\n";
+        d_cos_work = d_cos_cand;
+        norm_work = norm_cand;
+        v_red = v_red * v_gen;
+        return true;
+      }
+    }
+    return false;
+  };
+  auto f_search=[&]() -> bool {
+    int chosen_method = 2;
+    f_random_transpose(indices_u);
+    f_random_transpose(indices_v);
+    if (chosen_method == 1) {
+      return f_search_uv();
+    }
+    if (chosen_method == 2) {
+      bool test_u = f_search_u();
+      if (test_u) {
+        return true;
+      }
+      return f_search_v();
+    }
+    return false;
+  };
+  size_t n_iter = 0;
+  while(true) {
+    bool test = f_search();
+    std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
+    if (!test) {
       return {u_red, d_cos_work, v_red};
     }
+    if (n_iter == max_iter) {
+      return {u_red, d_cos_work, v_red};
+    }
+    n_iter += 1;
   }
 }
 

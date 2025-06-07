@@ -373,6 +373,18 @@ T get_l1_norm(MyMatrix<T> const& U) {
   return sum;
 }
 
+void f_random_transpose(std::vector<int> & V) {
+  int n = V.size();
+  int i = random() % n;
+  int j = random() % n;
+  if (i != j) {
+    int k = V[i];
+    V[i] = V[j];
+    V[j] = k;
+  }
+}
+
+
 template<typename T, typename Tint>
 ResultReduction<T, Tint>
 SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
@@ -388,15 +400,6 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   std::vector<int> indices;
   for (int i=0; i<n; i++)
     indices.push_back(i);
-  auto f_transpose=[&]() -> void {
-    int i = random() % n;
-    int j = random() % n;
-    if (i != j) {
-      int k = indices[i];
-      indices[i] = indices[j];
-      indices[j] = k;
-    }
-  };
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   os << "=======================================================\n";
   os << "ILLL: n=" << n << "\n";
@@ -462,7 +465,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
     }
   };
   auto f_search=[&]() -> std::optional<ResSearch> {
-    f_transpose();
+    f_random_transpose(indices);
     for (int i_s=0; i_s<n; i_s++) {
       int i = indices[i_s];
       for (int j_s=0; j_s<n; j_s++) {
