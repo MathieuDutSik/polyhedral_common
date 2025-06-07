@@ -1902,8 +1902,8 @@ void TestPreImageSubgroup(Thelper const &helper,
 
 template<typename T, typename Telt>
 struct ResultSimplificationDoubleCosets {
-  MyMatrix<T> CosMatr;
-  Telt CosPerm;
+  MyMatrix<T> cos_matr;
+  Telt cos_perm;
   Telt elt_u;
   Telt elt_v;
 };
@@ -1919,6 +1919,12 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
                                                                                 typename Tgroup::Telt cos_perm,
                                                                                 std::ostream& os) {
   using Telt = typename Tgroup::Telt;
+  struct IntermediateState {
+    MyMatrix<T> cos_matr;
+    Telt cos_perm;
+    DoubleCosetSimplification<T> udv;
+  };
+  using Tresult = std::pair<IntermediateState, T>;
   int n = helper.n;
   auto f_norm=[&](MyMatrix<T> const& H) -> T {
     T norm(0);
@@ -1929,18 +1935,19 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
     }
     return norm;
   };
-  Telt cos_perm_work = cos_perm;
-  MyMatrix<T> cos_matr_work = pre_imager.pre_image_elt(cos_perm_work);
-  size_t max_iter = 1000;
-  DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_work, ListMatr_U, ListMatr_V, max_iter);
-  cos_matr_work = udv.d_cos_red;
-
-  T norm_work = f_norm(cos_matr_work);
   Telt id = GRP_U.get_identity();
+  auto get_result_reduction=[&](Telt const& x_u, Telt const& x_v) -> Tresult {
+    Telt cos_perm_cand = x_u * cos_perm * x_v;
+    MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand);
+    size_t max_iter = 1000;
+    DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter);
+    T norm_cand = f_norm(udv.d_cos_red);
+    IntermediateState is{cos_matr_cand, cos_perm_cand, udv};
+    return {is, norm_cand};
+  };
   Telt elt_u = id;
   Telt elt_v = id;
-  Telt final_elt_u = id;
-  Telt final_elt_v = id;
+  Tresult res_work = get_result_reduction(elt_u, elt_v);
   int n_iter = 100;
   while(true) {
     size_t n_improv = 0;
@@ -1950,30 +1957,23 @@ std::pair<MyMatrix<T>,typename Tgroup::Telt> IterativeSimplificationDoubleCoset(
       Telt rand_v = GRP_V.rand();
       Telt elt_u_cand = rand_u * elt_u;
       Telt elt_v_cand = elt_v * rand_v;
-      Telt cos_perm_cand = elt_u_cand * cos_perm * elt_v_cand;
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " Tgroup computation finished\n";
-      MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand);
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " pre_image_elt done\n";
-      DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter);
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " after ExhaustiveMatrixDoubleCosetSimplifications\n";
-      cos_matr_cand = udv.d_cos_red;
-      T norm_cand = f_norm(cos_matr_cand);
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " norm_cand=" << norm_cand << "\n";
-      if (norm_cand < norm_work) {
+      Tresult res_cand = get_result_reduction(elt_u_cand, elt_v_cand);
+      if (res_cand.second < res_work.second) {
         n_improv += 1;
+        res_work = res_cand;
         elt_u = elt_u_cand;
         elt_v = elt_v_cand;
-        Telt udv_u_img = f_get_perm(udv.u_red);
-        Telt udv_v_img = f_get_perm(udv.v_red);
-        cos_matr_work = cos_matr_cand;
-        cos_perm_work = cos_perm_cand;
-        norm_work = norm_cand;
-        os << "MAT_GRP:   Now norm_work=" << norm_work << " cos_matr_work=\n";
-        WriteMatrix(os, cos_matr_work);
+        os << "MAT_GRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
+        WriteMatrix(os, res_work.first.cos_matr);
       }
     }
     if (n_improv == 0) {
-      return {cos_matr_work, cos_perm_work};
+      //        Telt udv_u_img = f_get_perm(udv.u_red);
+      //        Telt udv_v_img = f_get_perm(udv.v_red);
+      //        cos_matr_work = cos_matr_cand;
+      //        cos_perm_work = cos_perm_cand;
+      //        norm_work = norm_cand;
+      return {res_work.first.cos_matr, res_work.first.cos_perm};
     }
   }
 }
