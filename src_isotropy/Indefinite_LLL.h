@@ -398,8 +398,9 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
   // We choose the indices at random in order to avoid always
   // hitting the same indices
   std::vector<int> indices;
-  for (int i=0; i<n; i++)
+  for (int i=0; i<n; i++) {
     indices.push_back(i);
+  }
 #ifdef DEBUG_SIMPLE_INDEFINITE_REDUCTION
   os << "=======================================================\n";
   os << "ILLL: n=" << n << "\n";
@@ -800,43 +801,47 @@ std::pair<ResultReduction<T, Tint>, int>
 get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream &os) {
   int n = M.rows();
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 1\n";
+  os << "ILLL: get_nondegenerate_reduction, We have n\n";
 #endif
   MyMatrix<T> M2 = RemoveFractionMatrix(M);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 2\n";
+  os << "ILLL: get_nondegenerate_reduction, We have M2\n";
 #endif
   MyMatrix<Tint> M3 = UniversalMatrixConversion<Tint,T>(M2);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 3\n";
+  os << "ILLL: get_nondegenerate_reduction, We have M3\n";
 #endif
-  MyMatrix<Tint> NSP = NullspaceIntMat(M3);
+  MyMatrix<Tint> PreNSP = NullspaceIntMat(M3);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 4\n";
+  os << "ILLL: get_nondegenerate_reduction, We have PreNSP\n";
+#endif
+  MyMatrix<Tint> NSP = SublatticeBasisReduction(PreNSP);
+#ifdef DEBUG_INDEFINITE_LLL
+  os << "ILLL: get_nondegenerate_reduction, We have NSP\n";
 #endif
   MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 5\n";
+  os << "ILLL: get_nondegenerate_reduction, We have TheCompl\n";
 #endif
   MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 6\n";
+  os << "ILLL: get_nondegenerate_reduction, We have FullBasis\n";
 #endif
   int dim_nondeg = TheCompl.rows();
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 7\n";
+  os << "ILLL: get_nondegenerate_reduction, We have dim_nondeg\n";
 #endif
   MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 8\n";
+  os << "ILLL: get_nondegenerate_reduction, We have FullBasis_T\n";
 #endif
   MyMatrix<T> Mred = FullBasis_T * M * FullBasis_T.transpose();
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 9\n";
+  os << "ILLL: get_nondegenerate_reduction, We have Mred\n";
 #endif
   ResultReduction<T, Tint> res{FullBasis, Mred};
 #ifdef DEBUG_INDEFINITE_LLL
-  os << "ILLL: get_nondegenerate_reduction, step 10\n";
+  os << "ILLL: get_nondegenerate_reduction, We have res\n";
 #endif
   return {res, dim_nondeg};
 }
