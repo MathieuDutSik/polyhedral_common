@@ -1952,7 +1952,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   while(true) {
     size_t n_improv = 0;
     for (int i=0; i<n_iter; i++) {
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " start\n";
+      os << "MAT_GRP: i=" << i << " / " << n_iter << " res_work.second=" << res_work.second << "\n";
       Telt rand_u = GRP_U.rand();
       Telt rand_v = GRP_V.rand();
       Telt elt_u_cand = rand_u * elt_u;
@@ -2044,7 +2044,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     os << "MAT_GRP: We have pre_imager\n";
 #endif
     std::vector<MyMatrix<T>> eStab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatrGens, eStab_perm, helper, f_get_perm, os);
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM_DISABLE
     TestPreImageSubgroup(helper, ListPermGens, ListMatrGens, f_get_perm, eStab_matr, eStab_perm, "eStab", os);
 #endif
     std::vector<MyMatrix<T>> eStab_matr_tot = Exhaust_get_total_generators(eStab_matr);
@@ -2116,7 +2116,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
         }
 #endif
         std::vector<MyMatrix<T>> Stab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(Vperm_conj, Vmatr_conj, Stab_perm, helper, f_get_perm, os);
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM_DISABLE
         TestPreImageSubgroup(helper, Vperm_conj, Vmatr_conj, f_get_perm, Stab_matr, Stab_perm, "Stab_perm", os);
 #endif
         std::vector<MyMatrix<T>> Stab_matr_conj;
