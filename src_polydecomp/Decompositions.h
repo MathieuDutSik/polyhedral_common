@@ -169,7 +169,7 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   MyMatrix<Tint> P = M * G;
   MyMatrix<Tint> Spann;
   MyMatrix<Tint> Concat = M;
-  MyMatrix<Tint> NSP = NullspaceIntMat(TransposedMat(P));
+  MyMatrix<Tint> NSP = SublatticeBasisReduction(NullspaceIntMat(TransposedMat(P)));
   if (NSP.rows() > 0) {
     MyMatrix<Tint> Gres = -NSP * G * NSP.transpose();
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T, Tint>(Gres);

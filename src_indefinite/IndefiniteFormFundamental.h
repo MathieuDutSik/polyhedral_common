@@ -73,7 +73,7 @@ template <typename T> struct hash<INDEF_InvariantQ<T>> {
 
 template <typename T> size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat) {
   int n = Qmat.rows();
-  MyMatrix<T> NSP = NullspaceIntMat(Qmat);
+  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(Qmat));
   MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP, n);
   MyMatrix<T> GramRed = TheCompl * Qmat * TheCompl.transpose();
   T eDet = DeterminantMat(GramRed);

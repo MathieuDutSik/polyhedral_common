@@ -132,7 +132,7 @@ std::optional<MyVector<Tint>> INDEF_FindIsotropic(MyMatrix<T> const &M,
   os << "MODEL: rnk=" << rnk << " n=" << n << "\n";
 #endif
   if (rnk < n) {
-    MyMatrix<T> NSP_T = NullspaceIntMat(M);
+    MyMatrix<T> NSP_T = SublatticeBasisReduction(NullspaceIntMat(M));
     MyVector<T> eV_T = GetMatrixRow(NSP_T, 0);
     MyVector<Tint> eV = UniversalVectorConversion<Tint, T>(eV_T);
 #ifdef DEBUG_APPROXIMATE_MODELS

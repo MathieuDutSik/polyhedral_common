@@ -820,7 +820,7 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) 
     return eMat;
   };
   std::vector<MyMatrix<T>> BasisIntegralKernel;
-  MyMatrix<T> NSP = NullspaceIntMat(TheMat);
+  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(TheMat));
   int dimNSP = NSP.rows();
   for (int u = 0; u < dimNSP; u++) {
     MyVector<T> eVect = GetMatrixRow(NSP, u);
@@ -1134,7 +1134,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
 #endif
     MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
     if (!IsZeroMatrix(eDiff)) {
-      MyMatrix<Tint> NSP = NullspaceIntMat(eDiff);
+      MyMatrix<Tint> NSP = SublatticeBasisReduction(NullspaceIntMat(eDiff));
       if (NSP.rows() == 0) {
         is_finite = false;
         InvariantBasis = MyMatrix<Tint>(0, G.rows());

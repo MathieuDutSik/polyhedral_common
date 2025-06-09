@@ -732,7 +732,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
 #endif
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_DISABLE
   if (ListPermGenProv.size() > 0) {
     typename Telt::Tidx siz = ListPermGenProv[0].size();
     permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
@@ -1926,6 +1926,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   };
   using Tresult = std::pair<IntermediateState, T>;
   int n = helper.n;
+  T absolute_minimum = UniversalScalarConversion<T,int>(n);
   auto f_norm=[&](MyMatrix<T> const& H) -> T {
     T norm(0);
     for (int i=0; i<n; i++) {
@@ -1948,6 +1949,24 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   Telt elt_u = id;
   Telt elt_v = id;
   Tresult res_work = get_result_reduction(elt_u, elt_v);
+  auto get_final=[&]() -> ResultSimplificationDoubleCosets<T,Telt> {
+    Telt udv_u_img = f_get_perm(res_work.first.udv.u_red);
+    Telt udv_v_img = f_get_perm(res_work.first.udv.v_red);
+    Telt elt_u_ret = udv_u_img * elt_u;
+    Telt elt_v_ret = elt_v * udv_v_img;
+    Telt cos_perm_ret = elt_u_ret * cos_perm * elt_v_ret;
+    MyMatrix<T> const& cos_matr = res_work.first.udv.d_cos_red;
+#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
+    if (f_get_perm(cos_matr) != cos_perm_ret) {
+      std::cerr << "MAT_GRP: cos_matr is not as we expect\n";
+      throw TerminalException{1};
+    }
+#endif
+    return {cos_matr, cos_perm_ret, elt_u_ret, elt_v_ret};
+  };
+  if (res_work.second == absolute_minimum) {
+    return get_final();
+  }
   int n_iter = 100;
   while(true) {
     size_t n_improv = 0;
@@ -1964,29 +1983,37 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
         elt_u = elt_u_cand;
         elt_v = elt_v_cand;
         os << "MAT_GRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
-        WriteMatrix(os, res_work.first.cos_matr);
+        WriteMatrix(os, res_work.first.udv.d_cos_red);
       }
     }
     if (n_improv == 0) {
-      Telt udv_u_img = f_get_perm(res_work.first.udv.u_red);
-      Telt udv_v_img = f_get_perm(res_work.first.udv.v_red);
-      Telt elt_u_ret = udv_u_img * elt_u;
-      Telt elt_v_ret = elt_v * udv_v_img;
-      Telt cos_perm_ret = elt_u_ret * cos_perm * elt_v_ret;
-      MyMatrix<T> const& cos_matr = res_work.first.udv.d_cos_red;
-#ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
-      if (f_get_perm(cos_matr) != cos_perm_ret) {
-        std::cerr << "MAT_GRP: cos_matr is not as we expect\n";
-        throw TerminalException{1};
-      }
-#endif
-      return {cos_matr, cos_perm_ret, elt_u_ret, elt_v_ret};
+      return get_final();
     }
   }
 }
 
-
-
+/*
+  If there is a single double coset, then we can set it to identity.
+ */
+template<typename Tgroup>
+std::vector<typename Tgroup::DccEntry> simplify_span_de(Tgroup const& grp, std::vector<typename Tgroup::DccEntry> const& span_de) {
+  using DccEntry = typename Tgroup::DccEntry;
+  using Telt = typename Tgroup::Telt;
+  if (span_de.size() > 1) {
+    return span_de;
+  }
+  Telt id = grp.get_identity();
+  DccEntry const& ent = span_de[0];
+  Telt cos = ent.cos;
+  Telt cos_inv = Inverse(cos);
+  std::vector<Telt> stab_gens;
+  for (auto & e_gen: ent.stab_gens) {
+    Telt f_gen = cos * e_gen * cos_inv;
+    stab_gens.push_back(f_gen);
+  }
+  DccEntry f_ent{id, stab_gens};
+  return {f_ent};
+}
 
 
 /*
@@ -2049,6 +2076,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 #endif
     std::vector<MyMatrix<T>> eStab_matr_tot = Exhaust_get_total_generators(eStab_matr);
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
+#ifdef DEBUG_DOUBLE_COSET_ENUM
+    os << "MAT_GRP: We have dcc_v\n";
+#endif
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
     for (auto &entry: entries) {
@@ -2059,8 +2089,14 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
         MyMatrix<T> NewGen = entry.cos * eGen * cos_inv;
         Vmatr_conj.emplace_back(std::move(NewGen));
       }
+#ifdef DEBUG_DOUBLE_COSET_ENUM
+      os << "MAT_GRP: We have Vmatr_conj\n";
+#endif
       std::vector<Telt> Vperm_conj =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(Vmatr_conj, helper, f_get_perm, os);
+#ifdef DEBUG_DOUBLE_COSET_ENUM
+      os << "MAT_GRP: We have Vperm_conj\n";
+#endif
       Tgroup Vgroup_conj = Tgroup(Vperm_conj, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
       bool test_is_sub = GRP.IsSubgroup(Vgroup_conj);
@@ -2080,10 +2116,12 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
       // In our context we write x_new = u x v    and x = u^{-1} x_new v^{-1}
       // That gets us U x_new v^{-1} S = U x_new v^{-1}
       // So, S_new = v^{-1} S v
-      std::vector<DccEntry> span_de = dcc_v.double_cosets_and_stabilizers(Vgroup_conj);
+      std::vector<DccEntry> pre_span_de = dcc_v.double_cosets_and_stabilizers(Vgroup_conj);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |span_de|=" << span_de.size() << "\n";
+      os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |pre_span_de|=" << pre_span_de.size() << "\n";
 #endif
+      std::vector<DccEntry> span_de = pre_span_de;
+      //      std::vector<DccEntry> span_de = simplify_span_de(Vgroup_conj, pre_span_de);
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
@@ -2101,8 +2139,6 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           Telt f_gen = vinv * e_gen * v;
           stab_gens.push_back(f_gen);
         }
-        os << "MAT_GRP: result\n";
-        WriteMatrix(os, result.cos_matr);
         MyMatrix<T> const& eCos = result.cos_matr;
 #ifdef DEBUG_MATRIX_GROUP
         os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";

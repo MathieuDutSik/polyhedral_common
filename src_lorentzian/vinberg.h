@@ -540,7 +540,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   }
   os << "w0=" << StringVectorGAP(w0) << "\n";
 #endif
-  MyMatrix<Tint> U_block = NullspaceIntMat(Bmat);
+  MyMatrix<Tint> U_block = SublatticeBasisReduction(NullspaceIntMat(Bmat));
   size_t dim = U_block.rows();
 #ifdef DEBUG_VINBERG
   if (dim != n - 1) {
