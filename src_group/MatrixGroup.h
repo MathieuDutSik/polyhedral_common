@@ -1940,7 +1940,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
     Telt cos_perm_cand = x_u * cos_perm * x_v;
     MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand);
     size_t max_iter = 1000;
-    DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter);
+    DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter, os);
     T norm_cand = f_norm(udv.d_cos_red);
     IntermediateState is{cos_matr_cand, cos_perm_cand, udv};
     return {is, norm_cand};
@@ -2129,7 +2129,6 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
         CheckGroupEquality<T,Tgroup>(Stab_matr_conj_red, Stab_matr_conj, os);
 #endif
         MyMatrix<T> new_cos = eCos * entry.cos;
-        //        MyMatrix<T> new_cos_red = ExhaustiveMatrixCosetSimplificationKernel(new_cos, eStab_matr_tot);
         DoubleCosetEntry<T> new_de{std::move(new_cos), std::move(Stab_matr_conj)};
         new_entries.emplace_back(std::move(new_de));
       }

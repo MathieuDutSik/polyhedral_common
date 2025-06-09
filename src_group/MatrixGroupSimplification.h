@@ -7,6 +7,7 @@
 
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#define DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
 #endif
 
 //#define DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
@@ -590,12 +591,14 @@ struct DoubleCosetSimplification {
 
 // The double coset is U x V
 template<typename T>
-DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter) {
+DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter, [[maybe_unused]] std::ostream& os) {
   std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
   std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
   int n_gens_u = u_gens_tot.size();
   int n_gens_v = v_gens_tot.size();
-  std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications |u_gens_tot|=" << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+  os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications |u_gens_tot|=" << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
+#endif
   int n = d_cos.rows();
   auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
     T norm(0);
@@ -630,7 +633,9 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
         MyMatrix<T> d_cos_cand = u_gen * d_cos_work * v_gen;
         T norm_cand = f_norm(d_cos_cand);
         if (norm_cand < norm_work) {
-          std::cerr << "MAT_SIMP: Improving with u2=" << u2 << " v2=" << v2 << " XXX u=" << u << " v=" << v << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+          os << "DCOS_SIMP: Improving with u2=" << u2 << " v2=" << v2 << " XXX u=" << u << " v=" << v << "\n";
+#endif
           d_cos_work = d_cos_cand;
           norm_work = norm_cand;
           u_red = u_gen * u_red;
@@ -648,7 +653,9 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
       MyMatrix<T> d_cos_cand = u_gen * d_cos_work;
       T norm_cand = f_norm(d_cos_cand);
       if (norm_cand < norm_work) {
-        std::cerr << "MAT_SIMP: Improving with u2=" << u2 << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+        os << "DCOS_SIMP: Improving with u2=" << u2 << "\n";
+#endif
         d_cos_work = d_cos_cand;
         norm_work = norm_cand;
         u_red = u_gen * u_red;
@@ -664,7 +671,9 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
       MyMatrix<T> d_cos_cand = d_cos_work * v_gen;
       T norm_cand = f_norm(d_cos_cand);
       if (norm_cand < norm_work) {
-        std::cerr << "MAT_SIMP: Improving with v2=" << v2 << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+        os << "DCOS_SIMP: Improving with v2=" << v2 << "\n";
+#endif
         d_cos_work = d_cos_cand;
         norm_work = norm_cand;
         v_red = v_red * v_gen;
@@ -703,13 +712,19 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
   size_t n_iter = 0;
   while(true) {
     bool test = f_search();
-    std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+    os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
+#endif
     if (!test) {
-      std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(A)=" << n_iter << " norm_work=" << norm_work << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(A)=" << n_iter << " norm_work=" << norm_work << "\n";
+#endif
       return {u_red, d_cos_work, v_red};
     }
     if (n_iter == max_iter) {
-      std::cerr << "MAT_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(B)=" << n_iter << " norm_work=" << norm_work << "\n";
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(B)=" << n_iter << " norm_work=" << norm_work << "\n";
+#endif
       return {u_red, d_cos_work, v_red};
     }
     n_iter += 1;
