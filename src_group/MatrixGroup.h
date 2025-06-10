@@ -1984,6 +1984,9 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
         elt_v = elt_v_cand;
         os << "MAT_GRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
         WriteMatrix(os, res_work.first.udv.d_cos_red);
+        if (res_work.second == absolute_minimum) {
+          return get_final();
+        }
       }
     }
     if (n_improv == 0) {
