@@ -732,15 +732,6 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
 #endif
-#ifdef DEBUG_MATRIX_GROUP_DISABLE
-  if (ListPermGenProv.size() > 0) {
-    typename Telt::Tidx siz = ListPermGenProv[0].size();
-    permutalib::Group<Telt, mpz_class> GRPprov(ListPermGenProv, siz);
-    os << "MAT_GRP: |GRPprov|=" << GRPprov.size() << "\n";
-  } else {
-    os << "MAT_GRP: |GRPprov|=1 (no generators)\n";
-  }
-#endif
   return ListPermGenProv;
 }
 
@@ -952,6 +943,8 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   TintGroup index = GRP.size() / stab.size();
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
+  WriteGroupFile("MatrixIntegral_Stabilizer_not_has_GRP", GRP);
+  WriteGroupFile("MatrixIntegral_Stabilizer_not_has_stab", stab);
 #endif
   Telt id_perm = stab.get_identity();
 #ifdef DEBUG_MATRIX_GROUP
@@ -1473,6 +1466,14 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     Tidx siz_act = nbRow + O.size();
     Tgroup GRPwork(ListPermGens, siz_act);
     Face eFace = GetFace<T, Tmod>(nbRow, O, TheSpaceMod);
+    //
+    // As it turns out, the eFace tend to be disjoint accross different embeddings.
+    // That does not seem to be guaranteed by theoretical reasons. Just something
+    // common.
+    //
+    // What we can do is collect the intersections and from that decompose the space
+    // as a disjoint union
+    //
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
        << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
@@ -1742,37 +1743,6 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
-#endif
-#ifdef SANITY_CHECK_MATRIX_GROUP_DISABLE
-  size_t n_gen = ListMatr.size();
-  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
-    Telt MatrGen_img = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, ListMatr[i_gen], os);
-    if (MatrGen_img != ListPermGens[i_gen]) {
-      std::cerr << "Inconsistency in the input at i_gen=" << i_gen << "\n";
-      throw TerminalException{1};
-    }
-  }
-  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
-    for (size_t j_gen=0; j_gen<n_gen; j_gen++) {
-      MyMatrix<T> MatrProd = ListMatr[i_gen] * ListMatr[j_gen];
-      Telt PermProd = ListPermGens[i_gen] * ListPermGens[j_gen];
-      Telt MatrProd_img = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, MatrProd, os);
-      if (PermProd != MatrProd_img) {
-        std::cerr << "Inconsistency in the products at i_gen=" << i_gen << " j_gen=" << j_gen << "\n";
-        throw TerminalException{1};
-      }
-    }
-  }
-  std::vector<std::pair<MyMatrix<T>, Telt>> list_pair =
-      permutalib::PreImageSubgroupTotal<Tgroup, MyMatrix<T>>(
-          ListMatr, ListPermGens, id_matr, eGRP);
-  for (auto & pair: list_pair) {
-    Telt eMatrImg = MatrixIntegral_MapMatrix<T,Telt,Thelper,decltype(f_get_perm)>(helper, f_get_perm, pair.first, os);
-    if (eMatrImg != pair.second) {
-      std::cerr << "pair does not appear to be coherent\n";
-      throw TerminalException{1};
-    }
-  }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
