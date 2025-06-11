@@ -663,17 +663,16 @@ GetPermutationForFiniteMatrixGroup(Thelper const &helper,
 }
 
 template <typename T, typename Tmod>
-Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
+Face GetFace(std::vector<MyVector<Tmod>> const &O,
              MyMatrix<T> const &TheSpace) {
   size_t Osiz = O.size();
-  size_t siz = nbRow + Osiz;
-  Face eFace(siz);
+  Face eFace(Osiz);
   RecSolutionIntMat<T> eCan(TheSpace);
   for (size_t iO = 0; iO < Osiz; iO++) {
     MyVector<T> const &eVect = UniversalVectorConversion<T, Tmod>(O[iO]);
     bool test = eCan.has_solution_v(eVect);
     if (test) {
-      eFace[nbRow + iO] = 1;
+      eFace[iO] = 1;
     }
   }
   return eFace;
@@ -702,7 +701,7 @@ public:
   std::function<Telt(const MyMatrix<T>&)> f_get_perm;
   Face face;
 private:
-  PartitionStorage<Tidx> partition;
+  PartitionStorage<Telt> partition;
 public:
   PartitionReduction(std::vector<MyMatrix<T>> const& ListMat, std::function<Telt(const MyMatrix<T>&)> const& f_get_perm_inp, Face const& face_inp) : partition(face_inp) {
     std::vector<Telt> list_gens;
@@ -1506,10 +1505,16 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
       return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
     };
     int nbRow = helper.nbRow();
-    Face eFace = GetFace<T, Tmod>(nbRow, O, TheSpaceMod);
+    Face eFace_pre = GetFace<T, Tmod>(O, TheSpaceMod);
+    PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre);
+    Face eFace = TranslateFace(nbRow, pr.face);
     std::vector<Telt> ListPermGens =
-      MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, f_get_perm, os);
-    Tidx siz_act = nbRow + O.size();
+      MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
+    Tidx siz_act = eFace.size();
+    for (auto & eGen: ListPermGens) {
+      os << "eGen=" << eGen << "\n";
+    }
+    os << "siz_act=" << siz_act << "\n";
     Tgroup GRPwork(ListPermGens, siz_act);
     //
     // As it turns out, the eFace tend to be disjoint accross different embeddings.
@@ -1524,7 +1529,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
        << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
        << " |eFace|=" << eFace.count() << "\n";
 #endif
-    ListMatrRet = f_stab(ListPermGens, GRPwork, eFace, f_get_perm, ListMatrRet);
+    ListMatrRet = f_stab(ListPermGens, GRPwork, eFace, pr.f_get_perm, ListMatrRet);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
@@ -2446,8 +2451,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Tgroup GRPperm(ListPermGens, siz_act);
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
-      Face eFace1 = GetFace<T, Tmod>(nbRow, O, TheSpace1workMod);
-      Face eFace2 = GetFace<T, Tmod>(nbRow, O, TheSpace2Mod);
+      Face eFace1 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace1workMod));
+      Face eFace2 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace2Mod));
 #ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
@@ -2498,7 +2503,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       int nbRow = helper.nbRow();
       size_t siz_act = nbRow + O.size();
       Tgroup GRPperm(ListPermGens, siz_act);
-      Face eFace2 = GetFace<T, Tmod>(nbRow, O, TheSpace2Mod);
+      Face eFace2 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace2Mod));
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
          << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()

@@ -1074,6 +1074,9 @@ public:
     n_elt = f.size();
     Tidx pos_in = 0;
     Tidx pos_out = 0;
+    points = std::vector<Tidx>(n_elt);
+    cellno = std::vector<Tidx>(n_elt);
+    cellpos = std::vector<Tidx>(n_elt);
     for (Tidx i=0; i<n_elt; i++) {
       if (f[i] == 1) {
         points[pos_in] = i;
@@ -1141,8 +1144,8 @@ public:
             }
           }
           lengths[i_cell] = siz_part;
-          lengths[n_part + n_part_more] = siz_out_part;
-          firsts[n_part + n_part_more] = firsts[i_cell] + siz_part;
+          lengths.push_back(siz_out_part);
+          firsts.push_back(firsts[i_cell] + siz_part);
           for (Tidx u=0; u<len; u++) {
             scratch3[u] = 0;
           }
@@ -1172,7 +1175,7 @@ public:
   }
   Face map_face(Face const& f) const {
 #ifdef SANITY_CHECK_GROUP_FCT
-    std::vector<Tidx> n_occur(n_parts, 0);
+    std::vector<Tidx> n_occur(n_part, 0);
 #endif
     Face fret(n_part);
     for (Tidx i=0; i<n_elt; i++) {
