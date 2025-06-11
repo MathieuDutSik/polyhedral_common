@@ -726,6 +726,9 @@ public:
       return partition.map_permutation(g);
     };
   }
+  std::optional<Face> map_face_opt(Face const& f) const {
+    return partition.map_face_opt(f);
+  }
 };
 
 
@@ -1541,10 +1544,6 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     std::vector<Telt> ListPermGens =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
     Tidx siz_act = eFace.size();
-    for (auto & eGen: ListPermGens) {
-      os << "eGen=" << eGen << "\n";
-    }
-    os << "siz_act=" << siz_act << "\n";
     Tgroup GRPwork(ListPermGens, siz_act);
     //
     // As it turns out, the eFace tend to be disjoint accross different embeddings.
@@ -2416,6 +2415,13 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   MyMatrix<T> TheSpace1Mod = Concatenate(TheSpace1, ModSpace);
   MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+  ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
   MyMatrix<T> eElt = IdentityMat<T>(n);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
   auto TheAction = [&](MyVector<Tmod> const &eClass,
@@ -2469,23 +2475,36 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
       std::vector<MyVector<Tmod>> O =
         OrbitComputation(ListMatrRetMod, V, TheAction, os);
-      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
-
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size()
          << "\n";
 #endif
-
-      std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
-              ListMatrRet, helper, O, TheMod, os);
-      size_t nbRow = helper.nbRow();
-      size_t siz_act = nbRow + O.size();
-      Tgroup GRPperm(ListPermGens, siz_act);
+      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+      std::function<Telt(MyMatrix<T> const&)> f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
+        return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+      };
+      int nbRow = helper.nbRow();
       MyMatrix<T> TheSpace1work = TheSpace1 * eElt;
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
-      Face eFace1 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace1workMod));
-      Face eFace2 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace2Mod));
+      Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1workMod);
+      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
+      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre);
+      Face eFace1 = TranslateFace(nbRow, pr.face);
+      std::optional<Face> opt_face2 = pr.map_face_opt(eFace2_pre);
+      if (!opt_face2) {
+#ifdef DEBUG_MATRIX_GROUP
+        os << "MAT_GRP: Exit as no eFace2 does not map correctly to the partition\n";
+#endif
+        return {};
+      }
+      Face const& eFace2 = TranslateFace(nbRow, *opt_face2);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have eFace1 / 2\n";
+#endif
+      std::vector<Telt> ListPermGens =
+        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
+      size_t siz_act = eFace1.size();
+      Tgroup GRPperm(ListPermGens, siz_act);
 #ifdef SANITY_CHECK_MATRIX_GROUP
       if (eFace1.count() == 0 && eFace2.count() == 0) {
         std::cerr << "Error in LinearSpace_ModEquivalence_Tmod. |eFace1| = "
@@ -2521,23 +2540,37 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       }
       RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+      ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
     } else {
       MyVector<Tmod> const &V = *test2;
       std::vector<MyMatrix<Tmod>> ListMatrRetMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
-      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: |O|=" << O.size() << "\n";
 #endif
-      std::vector<Telt> ListPermGens =
-          MatrixIntegral_GeneratePermutationGroup<T, Tmod, Telt, Thelper>(
-              ListMatrRet, helper, O, TheMod, os);
+      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+      std::function<Telt(MyMatrix<T> const&)> f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
+        return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
+      };
       int nbRow = helper.nbRow();
-      size_t siz_act = nbRow + O.size();
+      Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
+      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre);
+      Face eFace2 = TranslateFace(nbRow, pr.face);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: We have eFace2\n";
+#endif
+      std::vector<Telt> ListPermGens =
+        MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
+      size_t siz_act = eFace2.size();
       Tgroup GRPperm(ListPermGens, siz_act);
-      Face eFace2 = TranslateFace(nbRow, GetFace<T, Tmod>(O, TheSpace2Mod));
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
          << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()
@@ -2546,7 +2579,11 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have ListMatrRet\n";
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+      ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(F), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
     }
   }

@@ -1197,6 +1197,23 @@ public:
 #endif
     return fret;
   }
+  std::optional<Face> map_face_opt(Face const& f) const {
+    std::vector<Tidx> n_occur(n_part, 0);
+    Face fret(n_part);
+    for (Tidx i=0; i<n_elt; i++) {
+      if (f[i] == 1) {
+        Tidx i_cell = cellno[i];
+        n_occur[i_cell] += 1;
+        fret[i_cell] = 1;
+      }
+    }
+    for (Tidx i_part=0; i_part<n_part; i_part++) {
+      if (n_occur[i_part] != 0 && n_occur[i_part] != lengths[i_part]) {
+        return {};
+      }
+    }
+    return fret;
+  }
   Telt map_permutation(Telt const& g) const {
     std::vector<Tidx> eList(n_part);
     for (Tidx i_cell=0; i_cell<n_part; i_cell++) {
