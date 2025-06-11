@@ -679,6 +679,51 @@ Face GetFace(int const &nbRow, std::vector<MyVector<Tmod>> const &O,
   return eFace;
 }
 
+Face TranslateFace(int const& nbRow, Face const& face) {
+  if (nbRow == 0) {
+    return face;
+  }
+  int siz = face.size();
+  Face ftrans(siz + nbRow);
+  for (int i=0; i<siz; i++) {
+    ftrans[nbRow + i] = face[i];
+  }
+  return ftrans;
+}
+
+
+// The subsets can be grouped with a block decomposition
+//
+template<typename T, typename Telt>
+struct PartitionReduction {
+private:
+  using Tidx = typename Telt::Tidx;
+public:
+  std::function<Telt(const MyMatrix<T>&)> f_get_perm;
+  Face face;
+private:
+  PartitionStorage<Tidx> partition;
+public:
+  PartitionReduction(std::vector<MyMatrix<T>> const& ListMat, std::function<Telt(const MyMatrix<T>&)> const& f_get_perm_inp, Face const& face_inp) : partition(face_inp) {
+    std::vector<Telt> list_gens;
+    for (auto& eMat: ListMat) {
+      Telt egen = f_get_perm_inp(eMat);
+      list_gens.push_back(egen);
+    }
+    partition.RefinePartitionByListElt(list_gens);
+    face = partition.map_face(face_inp);
+    f_get_perm = [f_get_perm_inp, this](MyMatrix<T> const& eMat) -> Telt {
+      Telt g = f_get_perm_inp(eMat);
+      return partition.map_permutation(g);
+    };
+  }
+};
+
+
+
+
+
+
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
 inline typename std::enable_if<has_determining_ext<Thelper>::value, Telt>::type
 MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm, MyMatrix<T> const& eMatr, std::ostream &os) {
@@ -1460,12 +1505,12 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     std::function<Telt(MyMatrix<T> const&)> f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
       return get_permutation_from_orbit(eGen, O, TheMod, ePermS);
     };
+    int nbRow = helper.nbRow();
+    Face eFace = GetFace<T, Tmod>(nbRow, O, TheSpaceMod);
     std::vector<Telt> ListPermGens =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, f_get_perm, os);
-    int nbRow = helper.nbRow();
     Tidx siz_act = nbRow + O.size();
     Tgroup GRPwork(ListPermGens, siz_act);
-    Face eFace = GetFace<T, Tmod>(nbRow, O, TheSpaceMod);
     //
     // As it turns out, the eFace tend to be disjoint accross different embeddings.
     // That does not seem to be guaranteed by theoretical reasons. Just something

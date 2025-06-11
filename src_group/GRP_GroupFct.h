@@ -21,6 +21,10 @@
 #define DEBUG_GROUP
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_GROUP_FCT
+#endif
+
 //
 // permutation functions
 //
@@ -1031,6 +1035,178 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
   }
   return list_ret;
 }
+
+// This is a remake of the "Partition<Tidx>" in partition.h of
+// permutalib. But that code is super sensitive and we do not
+// want to manipulate it.
+template<typename Telt>
+struct PartitionStorage {
+private:
+  using Tidx = typename Telt::Tidx;
+public:
+  // The list of points in the list
+  std::vector<Tidx> points;
+  // The indices of the first points.
+  std::vector<Tidx> firsts;
+  // The lengths of the part.
+  std::vector<Tidx> lengths;
+  // The cell to which it belongs
+  std::vector<Tidx> cellno;
+  // The position in the cell to which it belongs
+  std::vector<Tidx> cellpos;
+  // number of parts
+  Tidx n_part;
+  // number of elements
+  Tidx n_elt;
+  // scratch arrays
+  std::vector<Tidx> scratch1;
+  std::vector<Tidx> scratch2;
+  std::vector<Tidx> scratch3;
+  std::vector<Tidx> scratch4;
+  PartitionStorage(Face const& f) {
+    size_t siz_in = f.count();
+    size_t siz_out = f.size() - siz_in;
+    firsts.push_back(0);
+    firsts.push_back(siz_in);
+    lengths.push_back(siz_in);
+    lengths.push_back(siz_out);
+    n_part = 2;
+    n_elt = f.size();
+    Tidx pos_in = 0;
+    Tidx pos_out = 0;
+    for (Tidx i=0; i<n_elt; i++) {
+      if (f[i] == 1) {
+        points[pos_in] = i;
+        cellno[i] = 0;
+        cellpos[i] = pos_in;
+        pos_in += 1;
+      } else {
+        points[pos_out + siz_in] = i;
+        cellno[i] = 1;
+        cellpos[i] = pos_out;
+        pos_out += 1;
+      }
+    }
+    scratch1 = std::vector<Tidx>(n_elt);
+    scratch2 = std::vector<Tidx>(n_elt);
+    scratch3 = std::vector<Tidx>(n_elt, 0);
+    scratch4 = std::vector<Tidx>(n_elt);
+  }
+  bool RefinePartitionByElement(Telt const& g) {
+    for (Tidx ipart=0; ipart<n_part; ipart++) {
+      for (Tidx j=0; j<n_part; j++) {
+        scratch1[j] = 0;
+      }
+      Tidx pos_first = firsts[ipart];
+      Tidx len = lengths[ipart];
+      for (Tidx u=0; u<len; u++) {
+        Tidx x = points[pos_first + u];
+        Tidx y = g.at(x);
+        Tidx i_cell = cellno[y];
+        Tidx first = firsts[i_cell];
+        Tidx n_belong = scratch1[i_cell];
+        scratch2[first + n_belong] = y;
+        n_belong += 1;
+        scratch1[i_cell] = n_belong;
+      }
+      Tidx n_part_more = 0;
+      for (Tidx i_cell=0; i_cell<n_part; i_cell++) {
+        Tidx siz_part = scratch1[i_cell];
+        if (siz_part != 0 && siz_part != lengths[i_cell]) {
+          Tidx len = lengths[i_cell];
+          Tidx first = firsts[i_cell];
+          Tidx siz_out_part = len - siz_part;
+          for (Tidx i=0; i<siz_part; i++) {
+            Tidx x = scratch2[first + i];
+            Tidx pos = cellpos[x];
+            scratch3[pos] = 1;
+          }
+          for (Tidx i=0; i<len; i++) {
+            scratch4[i] = points[first + i];
+          }
+          Tidx pos_in = 0;
+          Tidx pos_out = 0;
+          for (Tidx u=0; u<len; u++) {
+            Tidx x = scratch4[u];
+            if (scratch3[u] == 1) {
+              points[first + pos_in] = x;
+              cellno[x] = i_cell;
+              cellpos[x] = pos_in;
+              pos_in += 1;
+            } else {
+              points[first + siz_part + pos_out] = x;
+              cellno[x] = n_part + n_part_more;
+              cellpos[x] = pos_out;
+              pos_out += 1;
+            }
+          }
+          lengths[i_cell] = siz_part;
+          lengths[n_part + n_part_more] = siz_out_part;
+          firsts[n_part + n_part_more] = firsts[i_cell] + siz_part;
+          for (Tidx u=0; u<len; u++) {
+            scratch3[u] = 0;
+          }
+          n_part_more += 1;
+        }
+      }
+      n_part += n_part_more;
+      if (n_part_more > 0) {
+        return false;
+      }
+    }
+    return true;
+  }
+  void RefinePartitionByListElt(std::vector<Telt> const& list_gen) {
+    while(true) {
+      bool IsFinished = true;
+      for (auto & e_gen: list_gen) {
+        bool test = RefinePartitionByElement(e_gen);
+        if (!test) {
+          IsFinished = false;
+        }
+      }
+      if (IsFinished) {
+        break;
+      }
+    }
+  }
+  Face map_face(Face const& f) const {
+#ifdef SANITY_CHECK_GROUP_FCT
+    std::vector<Tidx> n_occur(n_parts, 0);
+#endif
+    Face fret(n_part);
+    for (Tidx i=0; i<n_elt; i++) {
+      if (f[i] == 1) {
+        Tidx i_cell = cellno[i];
+#ifdef SANITY_CHECK_GROUP_FCT
+        n_occur[i_cell] += 1;
+#endif
+        fret[i_cell] = 1;
+      }
+    }
+#ifdef SANITY_CHECK_GROUP_FCT
+    for (Tidx i_part=0; i_part<n_part; i_part++) {
+      if (n_occur[i_part] != 0 && n_occur[i_part] != lengths[i_part]) {
+        std::cerr << "The size is not what we expect\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    return fret;
+  }
+  Telt map_permutation(Telt const& g) const {
+    std::vector<Tidx> eList(n_part);
+    for (Tidx i_cell=0; i_cell<n_part; i_cell++) {
+      Tidx x = points[firsts[i_cell]];
+      Tidx y = g.at(x);
+      Tidx j_cell = cellno[y];
+      eList[i_cell] = j_cell;
+    }
+    return Telt(eList);
+  }
+};
+
+
 
 // clang-format off
 #endif  // SRC_GROUP_GRP_GROUPFCT_H_
