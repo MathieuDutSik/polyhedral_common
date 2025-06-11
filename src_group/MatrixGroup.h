@@ -616,6 +616,16 @@ std::vector<T2> OrbitComputation(std::vector<T1> const &ListGen, T2 const &a,
   return *opt;
 }
 
+/*
+template <typename T1, typename T2, typename Fprod>
+std::vector<T2> OrbitComputationSort(std::vector<T1> const &ListGen, T2 const &a,
+                                     const Fprod &f_prod, std::ostream &os) {
+  std::vector<T2> orb = OrbitComputation(ListGen, a, f_prod, os);
+  std::sort(orb.begin(), orb.end());
+  return orb;
+}
+*/
+
 template <typename T, typename Telt, typename Tint>
 FiniteMatrixGroupHelper<T, Telt, Tint>
 ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
@@ -1381,6 +1391,26 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   }
   return {};
 }
+
+/*
+  Does not compile for a mysterious reason.
+
+template <typename T, typename Tmod, typename Tgroup, typename Thelper>
+std::optional<std::vector<MyVector<Tmod>>>
+FindingSmallOrbitSort(std::vector<MyMatrix<T>> const &ListMatrGen,
+                      MyMatrix<T> const &TheSpace, T const &TheMod,
+                      MyVector<T> const &a, Thelper const &helper,
+                      std::ostream &os) {
+  std::optional<std::vector<MyVector<Tmod>>> opt = FindingSmallOrbit(ListMatrGen, TheSpace, TheMod, a, helper, os);
+  if (!opt) {
+    return {};
+  }
+  std::vector<MyVector<Tmod>> V = *opt;
+  std::sort(V.begin(), V.end());
+  return V;
+}
+*/
+
 
 
 // The space must be defining a finite index subgroup of T^n
@@ -2373,6 +2403,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     bool const &NeedStabilizer, MyMatrix<T> const &TheSpace1,
     MyMatrix<T> const &TheSpace2, T const &TheMod, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   int n = TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   os << "------------------------------------------------------\n";
@@ -2438,6 +2469,8 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
       std::vector<MyVector<Tmod>> O =
         OrbitComputation(ListMatrRetMod, V, TheAction, os);
+      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
+
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size()
          << "\n";
@@ -2494,6 +2527,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrRet, TheMod);
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
+      Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: |O|=" << O.size() << "\n";
 #endif
