@@ -41,6 +41,7 @@ include_directories(${CMAKE_SOURCE_DIR}/src_lorentzian)
 include_directories(${CMAKE_SOURCE_DIR}/src_poly)
 include_directories(${CMAKE_SOURCE_DIR}/permutalib/src)
 include_directories(${CMAKE_SOURCE_DIR}/src)
+include_directories(${CMAKE_BINARY_DIR}/external/nauty/install/include)
 
 include(ExternalProject)
 
@@ -57,6 +58,7 @@ ExternalProject_Add(
 # Grouped the libraries
 set(MY_LIBRARIES_GRP ${CMAKE_BINARY_DIR}/external/nauty/install/lib/libnauty.a ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
 set(MY_LIBRARIES ${Boost_LIBRARIES} ${GMPXX_LIBRARY} ${GMP_LIBRARY})
+
 
 # Add the executable
 add_executable(POLY_DirectSerialDualDesc ${CMAKE_SOURCE_DIR}/src_dualdesc/POLY_DirectSerialDualDesc.cpp)

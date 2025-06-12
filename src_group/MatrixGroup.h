@@ -2488,8 +2488,15 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       MyMatrix<T> TheSpace1workMod = Concatenate(TheSpace1work, ModSpace);
       Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1workMod);
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|=" << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|=" << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
+#endif
       PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre);
       Face eFace1 = TranslateFace(nbRow, pr.face);
+#ifdef DEBUG_MATRIX_GROUP
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1|=" << eFace1.size() << " / " << eFace1.count() << "\n";
+#endif
       std::optional<Face> opt_face2 = pr.map_face_opt(eFace2_pre);
       if (!opt_face2) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -2499,7 +2506,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       }
       Face const& eFace2 = TranslateFace(nbRow, *opt_face2);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, We have eFace1 / 2\n";
+      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace2|=" << eFace2.size() << " / " << eFace2.count() << "\n";
 #endif
       std::vector<Telt> ListPermGens =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
