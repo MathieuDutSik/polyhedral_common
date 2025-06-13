@@ -799,6 +799,29 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
           GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
 }
 
+template<typename T>
+bool INDEF_FORM_IsU(MyMatrix<T> const& Qmat) {
+  if (Qmat.rows() != 2) {
+    return false;
+  }
+  if (Qmat(0,0) == 0 && Qmat(1,1) == 0) {
+    return true;
+  }
+  return false;
+}
+
+template<typename T, typename Tint>
+std::vector<MyMatrix<Tint>> INDEF_FORM_AutU([[maybe_unused]] MyMatrix<T> const& eQ) {
+  MyMatrix<Tint> M1 = ZeroMatrix<Tint>(2,2);
+  M1(1,0) = 1;
+  M1(0,1) = 1;
+  MyMatrix<Tint> M2 = ZeroMatrix<Tint>(2,2);
+  M2(0,0) = -1;
+  M2(1,1) = -1;
+  std::vector<MyMatrix<Tint>> LGen{M1,M2};
+  return LGen;
+}
+
 /*
   We compute some isometries of the lattice coming from the blocks.
   The only constraint is that the matrices being returned are isometries.
@@ -827,6 +850,19 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
   std::vector<std::vector<size_t>> LConn = MatrixConnectedComponents(Qmat);
   std::vector<MyMatrix<T>> ListQ;
   std::vector<size_t> ListPosIdx;
+  std::vector<size_t> ListUIdx;
+  auto f_insert_aut=[&](std::vector<MyMatrix<Tint>> const& LGen, std::vector<size_t> const& eConn) -> void {
+    size_t dim = eConn.size();
+    for (auto &eGen : LGen) {
+      MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
+      for (size_t i = 0; i < dim; i++) {
+        for (size_t j = 0; j < dim; j++) {
+          eBigGen(eConn[i], eConn[j]) = eGen(i, j);
+        }
+      }
+      f_insert(eBigGen);
+    }
+  };
   for (size_t iConn = 0; iConn < LConn.size(); iConn++) {
     std::vector<size_t> const &eConn = LConn[iConn];
     size_t dim = eConn.size();
@@ -837,34 +873,26 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
       }
     }
     ListQ.push_back(eQ);
-    bool test = INDEF_FORM_IsPosNeg(eQ);
+    bool test_pn = INDEF_FORM_IsPosNeg(eQ);
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: iConn=" << iConn << " dim=" << dim << " test=" << test
+    os << "MODEL: iConn=" << iConn << " dim=" << dim << " test_pn=" << test_pn
        << "\n";
     os << "MODEL: eQ=\n";
     WriteMatrix(os, eQ);
 #endif
-    if (test) {
+    // The test of positivity / negativity
+    if (test_pn) {
       ListPosIdx.push_back(iConn);
+      std::vector<MyMatrix<Tint>> LGen =
+        INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(eQ, os);
+      f_insert_aut(LGen, eConn);
     }
-  }
-  for (auto &iConn : ListPosIdx) {
-    MyMatrix<T> const &eQ = ListQ[iConn];
-    std::vector<size_t> const &eConn = LConn[iConn];
-    size_t dim = eConn.size();
-    std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(eQ, os);
-    for (auto &eGen : LGen) {
-      MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
-      for (size_t i = 0; i < dim; i++) {
-        for (size_t j = 0; j < dim; j++) {
-          eBigGen(eConn[i], eConn[j]) = eGen(i, j);
-        }
-      }
-#ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: Before f_insert, case 1\n";
-#endif
-      f_insert(eBigGen);
+    // The test of U matrix
+    bool test_u = INDEF_FORM_IsU(eQ);
+    if (test_u) {
+      ListUIdx.push_back(iConn);
+      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutU<T,Tint>(eQ);
+      f_insert_aut(LGen, eConn);
     }
   }
   /*
@@ -884,37 +912,49 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
     S = P
     R = P^{-1}
    */
-  size_t nbConnRed = ListPosIdx.size();
-  for (size_t iConnRed = 0; iConnRed < nbConnRed; iConnRed++) {
-    size_t iConn = ListPosIdx[iConnRed];
-    MyMatrix<T> const &eQ = ListQ[iConn];
-    std::vector<size_t> const &eConn = LConn[iConn];
-    for (size_t jConnRed = iConnRed + 1; jConnRed < nbConnRed; jConnRed++) {
-      size_t jConn = ListPosIdx[jConnRed];
-      MyMatrix<T> const &fQ = ListQ[jConn];
-      std::vector<size_t> const &fConn = LConn[jConn];
-      size_t dim = eConn.size();
-      std::optional<MyMatrix<Tint>> opt =
-          INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(eQ, fQ, os);
-      if (opt) {
-        MyMatrix<Tint> const &P = *opt;
-        MyMatrix<Tint> Pinv = Inverse(P);
-        MyMatrix<Tint> BigP = IdentityMat<Tint>(n);
-        for (size_t i = 0; i < dim; i++) {
-          for (size_t j = 0; j < dim; j++) {
-            BigP(eConn[i], eConn[j]) = 0;
-            BigP(fConn[i], fConn[j]) = 0;
-            BigP(eConn[i], fConn[j]) = Pinv(i, j);
-            BigP(fConn[i], eConn[j]) = P(i, j);
+  auto f_insert_isom=[&](std::vector<size_t> ListIdx, std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> const& f_isom) -> void {
+    size_t nbConnRed = ListIdx.size();
+    for (size_t iConnRed = 0; iConnRed < nbConnRed; iConnRed++) {
+      size_t iConn = ListIdx[iConnRed];
+      MyMatrix<T> const &eQ = ListQ[iConn];
+      std::vector<size_t> const &eConn = LConn[iConn];
+      for (size_t jConnRed = iConnRed + 1; jConnRed < nbConnRed; jConnRed++) {
+        size_t jConn = ListIdx[jConnRed];
+        MyMatrix<T> const &fQ = ListQ[jConn];
+        std::vector<size_t> const &fConn = LConn[jConn];
+        size_t dim = eConn.size();
+        std::optional<MyMatrix<Tint>> opt = f_isom(eQ, fQ);
+        if (opt) {
+          MyMatrix<Tint> const &P = *opt;
+          MyMatrix<Tint> Pinv = Inverse(P);
+          MyMatrix<Tint> BigP = IdentityMat<Tint>(n);
+          for (size_t i = 0; i < dim; i++) {
+            for (size_t j = 0; j < dim; j++) {
+              BigP(eConn[i], eConn[j]) = 0;
+              BigP(fConn[i], fConn[j]) = 0;
+              BigP(eConn[i], fConn[j]) = Pinv(i, j);
+              BigP(fConn[i], eConn[j]) = P(i, j);
+            }
           }
-        }
 #ifdef DEBUG_APPROXIMATE_MODELS
-        os << "MODEL: Before f_insert, case 2\n";
+          os << "MODEL: Before f_insert, case 2\n";
 #endif
-        f_insert(BigP);
+          f_insert(BigP);
+        }
       }
     }
-  }
+  };
+  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> f_isom_pn=[&](MyMatrix<T> const& eQ, MyMatrix<T> const& fQ) -> std::optional<MyMatrix<Tint>> {
+    return INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(eQ, fQ, os);
+  };
+  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> f_isom_u=[&](MyMatrix<T> const& eQ, MyMatrix<T> const& fQ) -> std::optional<MyMatrix<Tint>> {
+    if (eQ(1,0) != fQ(1,0)) {
+      return {};
+    }
+    return IdentityMat<Tint>(2);
+  };
+  f_insert_isom(ListPosIdx, f_isom_pn);
+  f_insert_isom(ListUIdx, f_isom_u);
 #ifdef TIMINGS_APPROXIMATE_MODELS
   os << "|MODEL: GetEasyIsometries|=" << time << "\n";
 #endif
