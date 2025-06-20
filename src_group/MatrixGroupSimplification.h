@@ -10,6 +10,10 @@
 #define DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
 #endif
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
+#endif
+
 //#define DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
 
 
@@ -435,7 +439,7 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
 
 template<typename T>
 std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, std::ostream& os) {
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
   write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
 #endif
   auto f_complexity=[&](MyMatrix<T> const& M) -> T {

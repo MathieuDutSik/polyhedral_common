@@ -38,7 +38,9 @@
 #define SANITY_CHECK_DOUBLE_COSET_ENUM
 #endif
 
-//#define WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO
+#define TRACK_INFO_MATRIX_GROUP
+#endif
 
 template <typename T>
 void write_matrix_group(std::vector<MyMatrix<T>> const& list_mat, std::string const& context) {
@@ -770,7 +772,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListMatrGens, "MatrixIntegral_GeneratePermutationGroupA_input");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -836,7 +838,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), PreImager|=" << time << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -852,7 +854,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(LGen2, "MatrixIntegral_Stabilizer_has2");
 #endif
   return {index, LGen2};
@@ -887,7 +889,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListMatrGen, "MatrixIntegral_Stabilizer_RightCoset");
 #endif
   std::vector<MyMatrix<T>> ListRightCoset;
@@ -1016,7 +1018,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After permutalib::PreImageSubgroupAction\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -1032,7 +1034,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not2");
 #endif
   return {index, LGen2};
@@ -1060,7 +1062,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After StabilizerRightCosetMatrixPermSubset\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(pair.first, "MatrixIntegral_Stabilizer_RightCoset_has_not_first");
   write_matrix_group(pair.second, "MatrixIntegral_Stabilizer_RightCoset_has_not_second");
 #endif
@@ -1239,7 +1241,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
     }
   }
   std::vector<MyMatrix<T>> ListGen(SetGen.begin(), SetGen.end());
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListGen, "DirectSpaceOrbit_Stabilizer");
 #endif
   return ListGen;
@@ -1674,7 +1676,7 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListGenRet1, "LinearSpace_Stabilizer_Kernel1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -1687,7 +1689,7 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListGenRet2, "LinearSpace_Stabilizer_Kernel2");
 #endif
   return {total_index, ListGenRet2};
@@ -1761,7 +1763,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |ListMatrGen1|=" << ListMatrGen1.size() << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListMatrGen1, "MatrixIntegral_PreImageSubgroup_has1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -1777,7 +1779,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |ListMatrGen2|=" << ListMatrGen2.size() << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListMatrGen2, "MatrixIntegral_PreImageSubgroup_has2");
 #endif
   return ListMatrGen2;
@@ -1817,7 +1819,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), permutalib::PreImageSubgroup|=" << time << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListGen1, "MatrixIntegral_PreImageSubgroup_has_not1");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
@@ -1836,7 +1838,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen2)=" << compute_complexity_listmat(ListGen2) << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(ListGen2, "MatrixIntegral_PreImageSubgroup_has_not2");
 #endif
   return ListGen2;
@@ -2115,7 +2117,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " |ListPermGens|=" << ListPermGens.size() << "\n";
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
 #endif
-#ifdef WRITE_MATRIX_GROUP_TRACK_INFO
+#ifdef TRACK_INFO_MATRIX_GROUP
     write_matrix_group(ListMatrGens, "LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel_f_stab");
 #endif
     PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens);

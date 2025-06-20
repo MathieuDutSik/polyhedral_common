@@ -33,6 +33,10 @@
 #define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
 #endif
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_INDEFINITE_COMBINED_ALGORITHMS
+#endif
+
 static const int INDEFINITE_FORM_PLANE = 32;
 static const int INDEFINITE_FORM_FLAG = 92;
 
@@ -977,6 +981,10 @@ private:
       return opt;
     }
     if (eBlock1.h == 1) {
+#ifdef TRACK_INFO_INDEFINITE_COMBINED_ALGORITHMS
+      std::vector<MyMatrix<T>> pair_mat{mat1, mat2};
+      write_matrix_group(pair_mat, "input_lorentz_test_equivalence_matrices");
+#endif
       std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
