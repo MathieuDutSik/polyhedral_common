@@ -1200,7 +1200,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
   MyVector<T> V(n);
   for (int iRow = 0; iRow < nbRow; iRow++) {
     for (int i = 0; i < n; i++) {
-      T sum = 0;
+      T sum(0);
       for (int j = 0; j < n; j++) {
         sum += LorMat(i, j) * EXT_T(iRow, j);
       }
@@ -1212,7 +1212,7 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
     }
     ListDiagNorm[scal] += 1;
     for (int jRow = iRow + 1; jRow < nbRow; jRow++) {
-      T scal = 0;
+      T scal(0);
       for (int i = 0; i < n; i++) {
         scal += V(i) * EXT_T(jRow, i);
       }
@@ -1220,6 +1220,9 @@ size_t ComputeInvariantPerfectForm(size_t seed, MyMatrix<T> const &LorMat,
     }
   }
   size_t hash = ComputeHashTwoMap(seed, ListDiagNorm, ListOffDiagNorm);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+  os << "LORPERF: ComputeInvariantPerfectForm |EXT|=" << EXT.rows() << " |ListDiagNorm|=" << ListDiagNorm.size() << " |ListOffDiagNorm|=" << ListOffDiagNorm.size() << " hash=" << hash << "\n";
+#endif
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORPERF: ComputeInvariantPerfectForm|=" << time << "\n";
 #endif

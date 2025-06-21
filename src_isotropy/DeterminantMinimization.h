@@ -5,6 +5,7 @@
 // clang-format off
 #include "factorizations.h"
 #include "MAT_MatrixMod.h"
+#include "ClassicLLL.h"
 #include <algorithm>
 #include <limits>
 #include <utility>

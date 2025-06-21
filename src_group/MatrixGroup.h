@@ -3357,17 +3357,30 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T,
     std::vector<MyMatrix<T>> const &ListMatrGens2,
     typename Tgroup::Telt const &eEquiv, std::ostream &os) {
+#ifdef TIMINGS_MATRIX_GROUP
+  MicrosecondTime time;
+#endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
+  os << "MAT_GRP: |EXT1_T|=" << EXT1_T.rows() << " |EXT2_T|=" << EXT2_T.rows() << "\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> eBasis1 = GetZbasis(EXT1_T);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: GetZbasis1|=" << time << "\n";
+#endif
   MyMatrix<T> eBasis2 = GetZbasis(EXT2_T);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: GetZbasis2|=" << time << "\n";
+#endif
   MyMatrix<T> InvBasis1 = Inverse(eBasis1);
   MyMatrix<T> InvBasis2 = Inverse(eBasis2);
   MyMatrix<T> EXTbas1 = EXT1_T * InvBasis1;
   MyMatrix<T> EXTbas2 = EXT2_T * InvBasis2;
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: InvBasisX / EXTbasX|=" << time << "\n";
+#endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
   using Tidx = typename Telt::Tidx;
   for (auto &eMatGen2 : ListMatrGens2) {
@@ -3379,20 +3392,38 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
       throw TerminalException{1};
     }
   }
+# ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: RepresentVertexPermutationTest|=" << time << "\n";
+# endif
 #endif
   //
   MyMatrix<T> TheMatEquiv = FindTransformation(EXTbas1, EXTbas2, eEquiv);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: FindTransformation|=" << time << "\n";
+#endif
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto &eGen : ListMatrGens2) {
     MyMatrix<T> NewGen = eBasis2 * eGen * InvBasis2;
     ListMatrGen.push_back(NewGen);
   }
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: ListMatrGen|=" << time << "\n";
+#endif
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
     ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas2);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: helper|=" << time << "\n";
+#endif
   MyMatrix<T> eLatt1 = Inverse(eBasis1) * TheMatEquiv;
   MyMatrix<T> eLatt2 = Inverse(eBasis2);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: eLattX|=" << time << "\n";
+#endif
   std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup>(
       ListMatrGen, helper, eLatt1, eLatt2, os);
+#ifdef TIMINGS_MATRIX_GROUP
+  os << "|MAT_GRP: LinearSpace_Equivalence|=" << time << "\n";
+#endif
   if (!opt)
     return {};
   MyMatrix<T> const &eSpaceEquiv = *opt;

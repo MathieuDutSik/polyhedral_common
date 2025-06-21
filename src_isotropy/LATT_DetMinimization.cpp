@@ -14,12 +14,16 @@ void process(std::string const &FileI, std::string const &OutFormat,
   MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
   //
   ResultDetMin<T> res = DeterminantMinimization(Q, std::cerr);
+  T det1 = DeterminantMat(Q);
+  T det2 = DeterminantMat(res.Mred);
+  std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
   if (OutFormat == "GAP") {
     os << "return rec(P:=";
     WriteMatrixGAP(os, res.P);
     os << ", Mred:=";
     WriteMatrixGAP(os, res.Mred);
     os << ");\n";
+    return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";
   throw TerminalException{1};
@@ -71,7 +75,7 @@ int main(int argc, char *argv[]) {
       }
       */
 
-      std::cerr << "Failed to find matching type for arith\n";
+      std::cerr << "Failed to find matching type for arith. Possibilities: rational\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);
