@@ -414,25 +414,25 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
         Tfield val = UniversalScalarConversion<Tfield, T>(EXT1(i_row, j_row));
         eSum1 += val * P(j_row, i_col);
       }
-      std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
-      if (!opt) {
+      std::optional<T> optA = UniversalScalarConversionCheck<T, Tfield>(eSum1);
+      if (!optA) {
 #ifdef TIMINGS_PERM_FCT
         std::cerr << "|PERM: RepresentVertexPermutationTest 1|=" << time << "\n";
 #endif
         // We fail because the image is not integral.
         return {};
       }
-      VectorContain(i_col) = *opt;
+      VectorContain(i_col) = *optA;
     }
-    std::optional<size_t> opt = Cont.GetIdx_v(VectorContain);
-    if (!opt) {
+    std::optional<size_t> optB = Cont.GetIdx_v(VectorContain);
+    if (!optB) {
 #ifdef TIMINGS_PERM_FCT
       std::cerr << "|PERM: RepresentVertexPermutationTest 2|=" << time << "\n";
 #endif
       // We fail because the image does not belong to EXT2
       return {};
     }
-    size_t pos = *opt;
+    size_t pos = *optB;
     V[i_row] = pos;
     f[pos] = 1;
   }

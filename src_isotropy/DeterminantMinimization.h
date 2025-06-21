@@ -110,9 +110,13 @@ bool IsMatrixNonZeroMultiple(MyMatrix<T> const &M1, MyMatrix<T> const &M2) {
   understand yet.
   Things are not done strictly in the same way, but the same ideas
   are implemented.
+  ----------------------------
+  When having "only_equivariant = true", only the operations that do not depend
+  on a choice are applied.
  */
 template <typename T>
 ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
+                                        bool only_equivariant,
                                         std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   using Tring = typename underlying_ring<T>::ring_type;
@@ -231,183 +235,209 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
         return Qtilde;
       };
       bool DoSomething = false;
-      // Apply Lemma 4
-      if (d_mult_i == n && !DoSomething) {
+      //
+      // Lemma 4 is eminently equivariant and do not depend a choice. Apply it if possible.
+      //
+      bool apply_lemma4 = true;
+      if (apply_lemma4) {
+        if (d_mult_i == n && !DoSomething) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: Apply Lemma 4\n";
+          os << "DETMIN: Apply Lemma 4\n";
 #endif
-        Qw = Qw / p;
-        DoSomething = true;
-        DoSomethingGlobal = true;
-        v_mult_i -= 2 * n;
-        v_mult_s -= 2 * n;
+          Qw = Qw / p;
+          DoSomething = true;
+          DoSomethingGlobal = true;
+          v_mult_i -= 2 * n;
+          v_mult_s -= 2 * n;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        for (int i = 0; i < n; i++) {
-          for (int j = 0; j < n; j++) {
-            T res = ResInt(Qw(i, j), p);
-            if (res != 0) {
-              std::cerr << "Qw is not divisible by p as expected\n";
-              os << "Qw=\n";
-              WriteMatrix(os, Qw);
-              throw TerminalException{1};
+          for (int i = 0; i < n; i++) {
+            for (int j = 0; j < n; j++) {
+              T res = ResInt(Qw(i, j), p);
+              if (res != 0) {
+                std::cerr << "Qw is not divisible by p as expected\n";
+                os << "Qw=\n";
+                WriteMatrix(os, Qw);
+                throw TerminalException{1};
+              }
             }
           }
-        }
 #endif
+        }
       }
-      // Apply Lemma 5
+      //
+      // Lemma 5 reduces the matrix by the kernel of the nullspace mod p.
+      // So, yes, it is equivariant. More precisely, any way to apply it
+      // lead us to an equivalent result.
+      //
+      bool apply_lemma5 = true;
+      if (apply_lemma5) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-      os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
+        os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
 #endif
-      if (d_mult_i < v_mult_i && !DoSomething) {
+        if (d_mult_i < v_mult_i && !DoSomething) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: Apply Lemma 5\n";
+          os << "DETMIN: Apply Lemma 5\n";
 #endif
-        change_basis();
-        MyMatrix<T> Qtilde = get_qtilde();
-        ResultNullspaceMod<T> resB = GetAdjustedBasis(Qtilde, p, os);
-        MyMatrix<T> Hmat = IdentityMat<T>(n);
-        for (int i = 0; i < d_mult_i; i++) {
-          for (int j = 0; j < d_mult_i; j++) {
-            Hmat(i, j) = resB.BasisTot(i, j);
-          }
-        }
-        Pw = Hmat * Pw;
-        Qw = Hmat * Qw * Hmat.transpose();
-        int dimNSPB = resB.dimNSP;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        check_state();
-        for (int i = 0; i < dimNSPB; i++) {
-          for (int j = 0; j < dimNSPB; j++) {
-            T res = ResInt(Qw(i, j), p_sqr);
-            if (res != 0) {
-              std::cerr << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * "
-                           "p as expected\n";
-              throw TerminalException{1};
+          change_basis();
+          MyMatrix<T> Qtilde = get_qtilde();
+          ResultNullspaceMod<T> resB = GetAdjustedBasis(Qtilde, p, os);
+          MyMatrix<T> Hmat = IdentityMat<T>(n);
+          for (int i = 0; i < d_mult_i; i++) {
+            for (int j = 0; j < d_mult_i; j++) {
+              Hmat(i, j) = resB.BasisTot(i, j);
             }
           }
-        }
-#endif
-        MyMatrix<T> U = IdentityMat<T>(n);
-        for (int i = 0; i < dimNSPB; i++)
-          U(i, i) = 1 / p;
-        Pw = U * Pw;
-        Qw = U * Qw * U.transpose();
+          Pw = Hmat * Pw;
+          Qw = Hmat * Qw * Hmat.transpose();
+          int dimNSPB = resB.dimNSP;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        check_state();
-        if (!IsIntegralMatrix(Qw)) {
-          std::cerr << "The matrix Qw is not integral\n";
-          throw TerminalException{1};
-        }
-#endif
-        DoSomething = true;
-        DoSomethingGlobal = true;
-        v_mult_i -= 2 * dimNSPB;
-        v_mult_s -= 2 * dimNSPB;
-      }
-      // Apply Lemma 6
-      size_t &ref = map_lemma6[p];
-      if (d_mult_i == v_mult_i && d_mult_i >= 2 && n > 2 * d_mult_i &&
-          !DoSomething && ref == 0) {
-        ref = 1;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: Apply Lemma 6\n";
-        os << "DETMIN: Before det=" << DeterminantMat(Qw)
-           << " d_mult_i=" << d_mult_i << "\n";
-#endif
-        change_basis();
-        MyMatrix<T> U = IdentityMat<T>(n);
-        for (int u = d_mult_i; u < n; u++) {
-          U(u, u) = p;
-        }
-        Pw = U * Pw;
-        Qw = U * Qw * U.transpose() / p;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        check_state();
-#endif
-        DoSomething = true;
-        DoSomethingGlobal = true;
-        int dec = 2 * (n - d_mult_i) - n;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec << "\n";
-        os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw)
-           << " det(U)=" << DeterminantMat(U) << "\n";
-#endif
-        v_mult_i += dec;
-        v_mult_s += dec;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: After  v_mult_i=" << v_mult_i << "\n";
-#endif
-      }
-      // Apply Lemma 7 (joined with Lemma 8)
-      if (d_mult_i == v_mult_i && !DoSomething) {
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: Apply Lemma 7 (or 8)\n";
-#endif
-        change_basis();
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: After change_basis\n";
-#endif
-        MyMatrix<T> Qtilde = get_qtilde();
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: After get_qtilde\n";
-        os << "DETMIN: Qtilde=\n";
-        WriteMatrix(os, Qtilde);
-#endif
-        std::optional<MyVector<T>> opt = FindIsotropicVectorMod(Qtilde, p);
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: After FindIsotropicVectorMod\n";
-#endif
-        if (opt) {
-          MyVector<T> const &eV_pre = *opt;
-          MyVector<T> eV = RemoveFractionVectorPlusCoeff(eV_pre).TheVect;
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: We have |eV|=" << eV.size() << "\n";
-          os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
-          T val = EvaluationQuadForm(Qtilde, eV);
-          T val_mod = ResInt(val, p);
-          if (val_mod != 0) {
-            std::cerr << "DETMIN: We have val=" << val
-                      << " but val_mod=" << val_mod << "\n";
-            throw TerminalException{1};
+          check_state();
+          for (int i = 0; i < dimNSPB; i++) {
+            for (int j = 0; j < dimNSPB; j++) {
+              T res = ResInt(Qw(i, j), p_sqr);
+              if (res != 0) {
+                std::cerr << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * "
+                  "p as expected\n";
+                throw TerminalException{1};
+              }
+            }
           }
 #endif
-          MyMatrix<T> M = ZeroMatrix<T>(1, n);
-          for (int i = 0; i < d_mult_i; i++)
-            M(0, i) = eV(i);
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: We have M, n=" << n << "\n";
-          os << "DETMIN: M=\n";
-          WriteMatrix(os, M);
-#endif
-          MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: We have BasisCompl\n";
-#endif
-          MyMatrix<T> U = Concatenate(M, BasisCompl);
-#ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: We have U\n";
-#endif
+          MyMatrix<T> U = IdentityMat<T>(n);
+          for (int i = 0; i < dimNSPB; i++)
+            U(i, i) = 1 / p;
           Pw = U * Pw;
           Qw = U * Qw * U.transpose();
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
           check_state();
-          T res = ResInt(Qw(0, 0), p_sqr);
-          if (res != 0) {
-            std::cerr << "We do not have Qtilde(0,0) divisible by p^2\n";
-            std::cerr << "Qw=\n";
-            WriteMatrix(std::cerr, Qw);
+          if (!IsIntegralMatrix(Qw)) {
+            std::cerr << "The matrix Qw is not integral\n";
             throw TerminalException{1};
           }
 #endif
-          MyMatrix<T> V = IdentityMat<T>(n);
-          V(0, 0) = 1 / p;
-          Pw = V * Pw;
-          Qw = V * Qw * V.transpose();
           DoSomething = true;
           DoSomethingGlobal = true;
-          v_mult_i -= 2;
-          v_mult_s -= 2;
+          v_mult_i -= 2 * dimNSPB;
+          v_mult_s -= 2 * dimNSPB;
+        }
+      }
+      //
+      // Lemma 6 also applies a nullspace reduction. So, same as Lemma 5.
+      // 
+      bool apply_lemma6 = true;
+      if (apply_lemma6) {
+        // Apply Lemma 6
+        size_t &ref = map_lemma6[p];
+        if (d_mult_i == v_mult_i && d_mult_i >= 2 && n > 2 * d_mult_i &&
+            !DoSomething && ref == 0) {
+          ref = 1;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: Apply Lemma 6\n";
+          os << "DETMIN: Before det=" << DeterminantMat(Qw)
+             << " d_mult_i=" << d_mult_i << "\n";
+#endif
+          change_basis();
+          MyMatrix<T> U = IdentityMat<T>(n);
+          for (int u = d_mult_i; u < n; u++) {
+            U(u, u) = p;
+          }
+          Pw = U * Pw;
+          Qw = U * Qw * U.transpose() / p;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          check_state();
+#endif
+          DoSomething = true;
+          DoSomethingGlobal = true;
+          int dec = 2 * (n - d_mult_i) - n;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec << "\n";
+          os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw)
+             << " det(U)=" << DeterminantMat(U) << "\n";
+#endif
+          v_mult_i += dec;
+          v_mult_s += dec;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: After  v_mult_i=" << v_mult_i << "\n";
+#endif
+        }
+      }
+      //
+      // This Lemma relies on finding an isotropic vector mod p.
+      // It very much depends on a random process and is not equivariant
+      // at all.
+      //
+      bool apply_lemma78 = !only_equivariant;
+      if (apply_lemma78) {
+        // Apply Lemma 7 (joined with Lemma 8)
+        if (d_mult_i == v_mult_i && !DoSomething) {
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: Apply Lemma 7 (or 8)\n";
+#endif
+          change_basis();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: After change_basis\n";
+#endif
+          MyMatrix<T> Qtilde = get_qtilde();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: After get_qtilde\n";
+          os << "DETMIN: Qtilde=\n";
+          WriteMatrix(os, Qtilde);
+#endif
+          std::optional<MyVector<T>> opt = FindIsotropicVectorMod(Qtilde, p);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+          os << "DETMIN: After FindIsotropicVectorMod\n";
+#endif
+          if (opt) {
+            MyVector<T> const &eV_pre = *opt;
+            MyVector<T> eV = RemoveFractionVectorPlusCoeff(eV_pre).TheVect;
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+            os << "DETMIN: We have |eV|=" << eV.size() << "\n";
+            os << "DETMIN: eV=" << StringVectorGAP(eV) << "\n";
+            T val = EvaluationQuadForm(Qtilde, eV);
+            T val_mod = ResInt(val, p);
+            if (val_mod != 0) {
+              std::cerr << "DETMIN: We have val=" << val
+                        << " but val_mod=" << val_mod << "\n";
+              throw TerminalException{1};
+            }
+#endif
+            MyMatrix<T> M = ZeroMatrix<T>(1, n);
+            for (int i = 0; i < d_mult_i; i++)
+              M(0, i) = eV(i);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+            os << "DETMIN: We have M, n=" << n << "\n";
+            os << "DETMIN: M=\n";
+            WriteMatrix(os, M);
+#endif
+            MyMatrix<T> BasisCompl = SubspaceCompletionInt(M, n);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+            os << "DETMIN: We have BasisCompl\n";
+#endif
+            MyMatrix<T> U = Concatenate(M, BasisCompl);
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+            os << "DETMIN: We have U\n";
+#endif
+            Pw = U * Pw;
+            Qw = U * Qw * U.transpose();
+#ifdef DEBUG_DETERMINANT_MINIMIZATION
+            check_state();
+            T res = ResInt(Qw(0, 0), p_sqr);
+            if (res != 0) {
+              std::cerr << "We do not have Qtilde(0,0) divisible by p^2\n";
+              std::cerr << "Qw=\n";
+              WriteMatrix(std::cerr, Qw);
+              throw TerminalException{1};
+            }
+#endif
+            MyMatrix<T> V = IdentityMat<T>(n);
+            V(0, 0) = 1 / p;
+            Pw = V * Pw;
+            Qw = V * Qw * V.transpose();
+            DoSomething = true;
+            DoSomethingGlobal = true;
+            v_mult_i -= 2;
+            v_mult_s -= 2;
+          }
         }
       }
 #ifdef DEBUG_DETERMINANT_MINIMIZATION

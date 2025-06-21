@@ -11,22 +11,32 @@
 template <typename T>
 void process(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os) {
-  MyMatrix<T> Q = ReadMatrixFile<T>(FileI);
+  MyMatrix<T> Q1 = ReadMatrixFile<T>(FileI);
   //
-  ResultDetMin<T> res = DeterminantMinimization(Q, false, std::cerr);
-  T det1 = DeterminantMat(Q);
-  T det2 = DeterminantMat(res.Mred);
-  std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
-  if (OutFormat == "GAP") {
-    os << "return rec(P:=";
-    WriteMatrixGAP(os, res.P);
-    os << ", Mred:=";
-    WriteMatrixGAP(os, res.Mred);
-    os << ");\n";
-    return;
-  }
-  std::cerr << "Failed to find a matching OutFormat\n";
-  throw TerminalException{1};
+  auto f_print=[&](MyMatrix<T> const& Qinp) -> void {
+    T det1 = DeterminantMat(Qinp);
+    ResultDetMin<T> res = DeterminantMinimization(Qinp, true, std::cerr);
+    T det2 = DeterminantMat(res.Mred);
+    std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
+    if (OutFormat == "GAP") {
+      os << "return rec(P:=";
+      WriteMatrixGAP(os, res.P);
+      os << ", Mred:=";
+      WriteMatrixGAP(os, res.Mred);
+      os << ");\n";
+      return;
+    }
+    if (OutFormat == "CPP") {
+      WriteMatrix(os, res.Mred);
+      return;
+    }
+    std::cerr << "Failed to find a matching OutFormat\n";
+    throw TerminalException{1};
+  };
+  MyMatrix<T> Qinv = Inverse(Q1);
+  MyMatrix<T> Q2 = RemoveFractionMatrix(Qinv);
+  f_print(Q1);
+  f_print(Q2);
 }
 
 int main(int argc, char *argv[]) {
@@ -34,9 +44,14 @@ int main(int argc, char *argv[]) {
   try {
     if (argc != 3 && argc != 5) {
       std::cerr
-          << "LATT_DetMinimization arithmetic [FileI] [OutFormat] [FileO]\n";
+          << "LATT_Automorphyreduction arithmetic [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_DetMinimization arithmetic [FileI]\n";
+      std::cerr << "LATT_AutomorphyReduction arithmetic [FileI]\n";
+      std::cerr << "or\n";
+      std::cerr << "Determining if two matrices are equivalent and computing the automorphism group\n";
+      std::cerr << "are tough problems. Two tools may help:\n";
+      std::cerr << "* The equivalence for the inverse may be easier\n";
+      std::cerr << "* The determinant may be reduceable and the problem easier to solve for the reduced form\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -79,9 +94,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);
-    std::cerr << "Normal termination of LATT_DetMinimization\n";
+    std::cerr << "Normal termination of LATT_AutomorphyReduction\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in LATT_DetMinimization\n";
+    std::cerr << "Error in LATT_AutomorphyReduction\n";
     exit(e.eVal);
   }
   runtime(time);

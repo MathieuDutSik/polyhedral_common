@@ -1,6 +1,6 @@
 #PROGRAM		= LATT_IndefiniteLLL LATT_IndefiniteReduction TestPermutationSignCanonic LATT_DetMinimization
 #PROGRAM		= TestPermutationSignCanonic
-PROGRAM		= LATT_DetMinimization
+#PROGRAM		= LATT_DetMinimization
 #PROGRAM		= LATT_FindIsotropic
 #PROGRAM		= LATT_TestIsotropic
 #PROGRAM		= LATT_TestIsotropic LATT_FindIsotropic
@@ -9,6 +9,7 @@ PROGRAM		= LATT_DetMinimization
 #PROGRAM		= LATT_IndefiniteLLL
 #PROGRAM		= LATT_FindPositiveVector
 #PROGRAM		= LATT_SublatticeBasisReduction
+PROGRAM		= LATT_AutomorphyReduction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
