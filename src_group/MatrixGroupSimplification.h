@@ -41,6 +41,20 @@ ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const& M) {
   return {ell1, ellinfinity};
 }
 
+template<typename T>
+T get_ell1_complexity_measure(MyMatrix<T> const& M) {
+  int n = M.rows();
+  T ell1(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      T val = M(i,j);
+      T abs_val = T_abs(val);
+      ell1 += abs_val;
+    }
+  }
+  return ell1;
+}
+
 // LocalSimpProduct is a local encapsulation of the product operation
 // Supposed to be used only here
 template<typename T>
@@ -64,46 +78,58 @@ std::pair<MyMatrix<T>,Telt> LocalSimpProduct(std::pair<MyMatrix<T>,Telt> const& 
 template<typename Tnorm, typename Ttype, typename Fcomplexity>
 std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
+  using TtypePair = std::pair<Ttype, Ttype>;
+  using TcombPair = std::pair<TtypePair, Tnorm>;
   using Tcomb = std::pair<Ttype, Tnorm>;
-  auto f_comp=[](Tcomb const& a, Tcomb const& b) -> bool {
+  auto f_comp=[](TcombPair const& a, TcombPair const& b) -> bool {
     if (a.second < b.second) {
       return true;
     }
     if (a.second > b.second) {
       return false;
     }
-    return a.first < b.first;
+    return a.first.first < b.first.first;
   };
-  auto get_pair=[&](Ttype const& eM) -> Tcomb {
+  auto get_comb=[&](Ttype const& eM) -> Tcomb {
     Tnorm comp = f_complexity(eM);
     return {eM, comp};
   };
-  std::map<Tcomb, size_t, decltype(f_comp)> map(f_comp);
+  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair {
+    Ttype p_inv = Inverse(p.first);
+    TtypePair p_pair{p.first, p_inv};
+    return {p_pair, p.second};
+  };
+  std::map<TcombPair, size_t, decltype(f_comp)> map(f_comp);
   size_t nonce = 0;
   for (auto & eM: ListM) {
-    map[get_pair(eM)] = nonce;
+    Tcomb comb1 = get_comb(eM);
+    TcombPair comb2 = get_comb_pair(comb1);
+    map[comb2] = nonce;
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
   // Generate the possible ways to simplify the pair of elements.
-  auto f_generate_candidate=[&](Tcomb const& a, Tcomb const& b) -> std::vector<Tcomb> {
-    Ttype a_inv = Inverse(a.first);
-    Ttype b_inv = Inverse(b.first);
-    Ttype prod1 = LocalSimpProduct(a.first, b.first);
-    Tcomb pair1 = get_pair(prod1);
+  auto f_generate_candidate=[&](TcombPair const& a, TcombPair const& b) -> std::vector<Tcomb> {
+    Ttype const& a_dir = a.first.first;
+    Ttype const& b_dir = b.first.first;
+    Ttype const& a_inv = a.first.second;
+    Ttype const& b_inv = b.first.second;
     //
-    Ttype prod2 = LocalSimpProduct(a_inv, b.first);
-    Tcomb pair2 = get_pair(prod2);
+    Ttype prod1 = LocalSimpProduct(a_dir, b_dir);
+    Tcomb pair1 = get_comb(prod1);
     //
-    Ttype prod3 = LocalSimpProduct(a.first, b_inv);
-    Tcomb pair3 = get_pair(prod3);
+    Ttype prod2 = LocalSimpProduct(a_inv, b_dir);
+    Tcomb pair2 = get_comb(prod2);
+    //
+    Ttype prod3 = LocalSimpProduct(a_dir, b_inv);
+    Tcomb pair3 = get_comb(prod3);
     //
     Ttype prod4 = LocalSimpProduct(a_inv, b_inv);
-    Tcomb pair4 = get_pair(prod4);
+    Tcomb pair4 = get_comb(prod4);
     return {pair1, pair2, pair3, pair4};
   };
   // Selects the best candidates in the 4 being generated.
-  auto f_get_best_candidate=[&](Tcomb const& a, Tcomb const& b) -> Tcomb {
+  auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
     std::vector<Tcomb> l_comb = f_generate_candidate(a, b);
     Tcomb best_comp = l_comb[0];
     for (size_t i=1; i<l_comb.size(); i++) {
@@ -115,9 +141,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   };
   // Iterate the reduction algorithm over pairs of elements.
   // The result of the iteration might be a 0, 1 or 2 new elements.
-  auto f_reduce=[&](Tcomb const& a, Tcomb const& b) -> std::pair<size_t, std::vector<Tcomb>> {
-    Tcomb a_work = a;
-    Tcomb b_work = b;
+  auto f_reduce=[&](TcombPair const& a, TcombPair const& b) -> std::pair<size_t, std::vector<TcombPair>> {
+    TcombPair a_work = a;
+    TcombPair b_work = b;
     size_t n_change = 0;
     while(true) {
       Tcomb cand = f_get_best_candidate(a_work, b_work);
@@ -127,30 +153,30 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       bool do_something = true;
       if (cand_norm < a_norm && cand_norm < b_norm) {
         if (a_norm < b_norm) {
-          b_work = cand;
+          b_work = get_comb_pair(cand);
         } else {
-          a_work = cand;
+          a_work = get_comb_pair(cand);
         }
       } else {
         if (cand_norm < b_norm) {
-          b_work = cand;
+          b_work = get_comb_pair(cand);
         } else {
           if (cand_norm < a_norm) {
-            a_work = cand;
+            a_work = get_comb_pair(cand);
           } else {
             do_something = false;
           }
         }
       }
       if (!do_something) {
-        std::vector<Tcomb> npair{a_work, b_work};
+        std::vector<TcombPair> npair{a_work, b_work};
         return {n_change, npair};
       } else {
         n_change += 1;
       }
     }
   };
-  auto erase_entry=[&](Tcomb const& val) -> void {
+  auto erase_entry=[&](TcombPair const& val) -> void {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to be removed\n";
@@ -158,7 +184,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     }
     map.erase(iter);
   };
-  auto get_pos=[&](Tcomb const& val) -> size_t {
+  auto get_pos=[&](TcombPair const& val) -> size_t {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to get the position\n";
@@ -218,12 +244,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
-      Tcomb a = iter1->first;
+      TcombPair a = iter1->first;
       size_t nonce_a = iter1->second;
       //
       auto iter2 = map.begin();
       std::advance(iter2, v);
-      Tcomb b = iter2->first;
+      TcombPair b = iter2->first;
       size_t nonce_b = iter2->second;
       std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -231,7 +257,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
       //
       bool already_treated = false;
-      std::pair<size_t, std::vector<Tcomb>> pair{0,{}};
+      std::pair<size_t, std::vector<TcombPair>> pair{0,{}};
       if (set_treated.find(nonce_pair) != set_treated.end()) {
         already_treated = true;
       } else {
@@ -239,7 +265,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       }
       size_t n_changes = pair.first;
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP:   n_changes=" << n_changes << " already_treated=" << already_treated << "\n";
+      os << "SIMP:   n_changes=" << n_changes << " already_treated=" << already_treated << " |set_treated|=" << set_treated.size() << "\n";
 #endif
       if (n_changes > 0) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -252,7 +278,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
         WriteMatrix(os, b.first);
 #endif
         std::vector<size_t> att;
-        std::vector<Tcomb> new_elt;
+        std::vector<TcombPair> new_elt;
         size_t min_distance = miss_val;
         bool a_attained = false;
         bool b_attained = false;
@@ -411,7 +437,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   }
   std::vector<Ttype> new_list_gens;
   for (auto & kv: map) {
-    new_list_gens.push_back(kv.first.first);
+    new_list_gens.push_back(kv.first.first.first);
   }
   return new_list_gens;
 }

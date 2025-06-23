@@ -59,9 +59,10 @@ Compilation options related to debug
 There are several environment variables that can be used during runtime.
 * `DEBUG` for making some print statements and making some checks. Those checks have to be fast.
 * `KEY_VALUE` for printing some `KEY(....) VALUE=(....)` that can be used for postprocessing of the options and heuristic optimization.
-* `CHECK` for making checks that can be expensive to do.
 * `TIMINGS` for printing some runtime information.
 * `SANITY_CHECK` for doing some checks and stopping if incoherence are detected.
+* `SANITY_CHECK_EXTENSIVE` for doing some long running checks and stopping if incoherence are detected. Since those are long running, a print statement must mark their beginning and another one their end.
+* `TRACK_INFO` for printing stuff for further work down the line.
 
 The options `TIMINGS` and `DEBUG` enable all the timings and debugging statements.
 For a more granular debugging, stuff like `DEBUG_LINEAR_PROGRAM` can be used. See
