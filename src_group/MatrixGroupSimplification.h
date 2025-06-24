@@ -55,28 +55,12 @@ T get_ell1_complexity_measure(MyMatrix<T> const& M) {
   return ell1;
 }
 
-// LocalSimpProduct is a local encapsulation of the product operation
-// Supposed to be used only here
-template<typename T>
-MyMatrix<T> LocalSimpProduct(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
-  return M1 * M2;
-}
-
-
-
-template<typename T, typename Telt>
-std::pair<MyMatrix<T>,Telt> Inverse(std::pair<MyMatrix<T>,Telt> const& pair) {
-  return {Inverse(pair.first), Inverse(pair.second)};
-}
-
-template<typename T, typename Telt>
-std::pair<MyMatrix<T>,Telt> LocalSimpProduct(std::pair<MyMatrix<T>,Telt> const& pair1, std::pair<MyMatrix<T>,Telt> const& pair2) {
-  return {pair1.first * pair2.first, pair1.second * pair2.second};
-}
-
-
-template<typename Tnorm, typename Ttype, typename Fcomplexity>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
+// The tool for simplifying a list of generators.
+// The transformations being applied are Tietze transformations.
+// We could add some conjugacy operations like  U V U^{-1}.
+// But those are more expensive
+template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
+std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
   using TtypePair = std::pair<Ttype, Ttype>;
   using TcombPair = std::pair<TtypePair, Tnorm>;
@@ -95,7 +79,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     return {eM, comp};
   };
   auto get_comb_pair=[&](Tcomb const& p) -> TcombPair {
-    Ttype p_inv = Inverse(p.first);
+    Ttype p_inv = f_invers(p.first);
     TtypePair p_pair{p.first, p_inv};
     return {p_pair, p.second};
   };
@@ -115,16 +99,16 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     Ttype const& a_inv = a.first.second;
     Ttype const& b_inv = b.first.second;
     //
-    Ttype prod1 = LocalSimpProduct(a_dir, b_dir);
+    Ttype prod1 = f_product(a_dir, b_dir);
     Tcomb pair1 = get_comb(prod1);
     //
-    Ttype prod2 = LocalSimpProduct(a_inv, b_dir);
+    Ttype prod2 = f_product(a_inv, b_dir);
     Tcomb pair2 = get_comb(prod2);
     //
-    Ttype prod3 = LocalSimpProduct(a_dir, b_inv);
+    Ttype prod3 = f_product(a_dir, b_inv);
     Tcomb pair3 = get_comb(prod3);
     //
-    Ttype prod4 = LocalSimpProduct(a_inv, b_inv);
+    Ttype prod4 = f_product(a_inv, b_inv);
     Tcomb pair4 = get_comb(prod4);
     return {pair1, pair2, pair3, pair4};
   };
@@ -442,8 +426,8 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   return new_list_gens;
 }
 
-template<typename Tnorm, typename Ttype, typename Fcomplexity>
-std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, [[maybe_unused]] std::ostream& os) {
+template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
+std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   std::unordered_set<Ttype> SetMred;
   for (auto & eM : ListM) {
     Ttype eM_inv = Inverse(eM);
@@ -460,7 +444,7 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
   if (ListMred.size() <= 1) {
     return ListMred;
   }
-  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity>(ListMred, f_complexity, os);
+  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMred, f_complexity, f_invers, f_product, os);
 }
 
 template<typename T>
@@ -469,16 +453,28 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<My
   write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
 #endif
   auto f_complexity=[&](MyMatrix<T> const& M) -> T {
-    return get_complexity_measure(M).ell1;
+    return get_ell1_complexity_measure(M);
   };
-  return ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity)>(ListM, f_complexity, os);
+  auto f_invers=[](MyMatrix<T> const& M) -> MyMatrix<T> {
+    return Inverse(M);
+  };
+  auto f_product=[](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
+    return A * B;
+  };
+  return ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListM, f_complexity, f_invers, f_product, os);
 }
 
 template<typename T, typename Telt>
 std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, [[maybe_unused]] std::ostream& os) {
   using Ttype = std::pair<MyMatrix<T>, Telt>;
   auto f_complexity=[&](Ttype const& pair) -> T {
-    return get_complexity_measure(pair.first).ell1;
+    return get_ell1_complexity_measure(pair.first);
+  };
+  auto f_invers=[](Ttype const& pair) -> Ttype {
+    return {Inverse(pair.first), Inverse(pair.second)};
+  };
+  auto f_product=[](Ttype const& p1, Ttype const& p2) -> Ttype {
+    return {p1.first * p2.first, p1.second * p2.second};
   };
   std::vector<Ttype> ListPair;
   size_t n_gen = ListM.size();
@@ -486,7 +482,7 @@ std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComple
     Ttype pair{ListM[i_gen], ListPerm[i_gen]};
     ListPair.push_back(pair);
   }
-  std::vector<Ttype> RetPair = ExhaustiveReductionComplexity<T,Ttype,decltype(f_complexity)>(ListPair, f_complexity, os);
+  std::vector<Ttype> RetPair = ExhaustiveReductionComplexity<T,Ttype,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListPair, f_complexity, f_invers, f_product, os);
   std::vector<MyMatrix<T>> RetListM;
   std::vector<Telt> RetListPerm;
   size_t n_gen_ret = RetPair.size();
