@@ -93,35 +93,35 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
   // Generate the possible ways to simplify the pair of elements.
-  auto f_generate_candidate=[&](TcombPair const& a, TcombPair const& b) -> std::vector<Tcomb> {
+  // and select the one with the smallest norm
+  auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
     Ttype const& a_dir = a.first.first;
     Ttype const& b_dir = b.first.first;
     Ttype const& a_inv = a.first.second;
     Ttype const& b_inv = b.first.second;
     //
-    Ttype prod1 = f_product(a_dir, b_dir);
-    Tcomb pair1 = get_comb(prod1);
+    Ttype prod_gen = f_product(a_dir, b_dir);
+    Tcomb pair_ret = get_comb(prod_gen);
     //
-    Ttype prod2 = f_product(a_inv, b_dir);
-    Tcomb pair2 = get_comb(prod2);
-    //
-    Ttype prod3 = f_product(a_dir, b_inv);
-    Tcomb pair3 = get_comb(prod3);
-    //
-    Ttype prod4 = f_product(a_inv, b_inv);
-    Tcomb pair4 = get_comb(prod4);
-    return {pair1, pair2, pair3, pair4};
-  };
-  // Selects the best candidates in the 4 being generated.
-  auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
-    std::vector<Tcomb> l_comb = f_generate_candidate(a, b);
-    Tcomb best_comp = l_comb[0];
-    for (size_t i=1; i<l_comb.size(); i++) {
-      if (l_comb[i].second < best_comp.second) {
-        best_comp = l_comb[i];
-      }
+    prod_gen = f_product(a_inv, b_dir);
+    Tcomb pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
     }
-    return best_comp;
+    //
+    prod_gen = f_product(a_dir, b_inv);
+    pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
+    }
+    //
+    prod_gen = f_product(a_inv, b_inv);
+    pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
+    }
+    //
+    return pair_ret;
   };
   // Iterate the reduction algorithm over pairs of elements.
   // The result of the iteration might be a 0, 1 or 2 new elements.
