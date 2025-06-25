@@ -235,6 +235,76 @@ MatrixIntegral_GetInvariantSpace(int const &n,
   }
 }
 
+
+
+template<typename T, typename Tgroup>
+std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
+  using Tseq = permutalib::SequenceType<false>;
+  std::vector<Tseq> ListSeq;
+  std::vector<MyMatrix<T>> ListMatrInv;
+  for (size_t i_elt=0; i_elt<ListPerm.size(); i_elt++) {
+    std::vector<int64_t> ListIdx{int64_t(i_elt) + 1};
+    Tseq seq(ListIdx);
+    ListSeq.push_back(seq);
+    MyMatrix<T> eMatrInv = Inverse(ListMatr[i_elt]);
+    ListMatrInv.push_back(eMatrInv);
+  }
+  std::vector<Tseq> ListSeq_sub =
+    permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_matr, eGRP);
+  std::vector<Tseq> ListSeq_sub_red = ExhaustiveReductionComplexitySequences(ListSeq_sub, os);
+  std::vector<MyMatrix<T>> ListMatr_sub;
+  for (auto & eSeq : ListSeq_sub_red) {
+    MyMatrix<T> eMatr = id_matr;
+    for (auto & eVal : eSeq.getVect()) {
+      if (eVal > 0) {
+        size_t pos = eVal - 1;
+        eMatr *= ListMatr[pos];
+      } else {
+        size_t fVal = - eVal;
+        size_t pos = fVal - 1;
+        eMatr *= ListMatrInv[pos];
+      }
+    }
+    ListMatr_sub.push_back(eMatr);
+  }
+  std::vector<MyMatrix<T>> ListMatr_ret = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr_sub, os);
+  return ListMatr_ret;
+}
+
+
+
+
+
+template<typename T, typename Tgroup>
+std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  Telt id_perm = eGRP.get_identity();
+  Tidx len = id_perm.size();
+  Tgroup GRPbig(ListPerm, len);
+  if (GRPbig.size() == eGRP.size()) {
+    return ListMatr;
+  }
+  std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
+  size_t len_stab = l_grp.size() - 1;
+  std::vector<MyMatrix<T>> LGenMatr = ListMatr;
+  std::vector<Telt> LGenPerm = ListPerm;
+  for (size_t u=0; u<len_stab; u++) {
+    size_t idx = len_stab - 1 - u;
+    LGenMatr = PreImageSubgroupOneStepOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx-1], os);
+    if (idx > 0) {
+      LGenPerm.clear();
+      for (auto & eMatr: LGenMatr) {
+        Telt ePerm = f_get_perm(eMatr);
+        LGenPerm.push_back(ePerm);
+      }
+    }
+  }
+  return LGenMatr;
+}
+
+
+
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUPBASIC_H_
 // clang-format on

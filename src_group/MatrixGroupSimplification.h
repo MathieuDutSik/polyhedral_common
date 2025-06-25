@@ -464,6 +464,20 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<My
   return ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListM, f_complexity, f_invers, f_product, os);
 }
 
+std::vector<permutalib::SequenceType<false>> ExhaustiveReductionComplexitySequences(std::vector<permutalib::SequenceType<false>> const& ListS, std::ostream& os) {
+  using Tseq = permutalib::SequenceType<false>;
+  auto f_complexity=[&](Tseq const& x) -> size_t {
+    return x.complexity();
+  };
+  auto f_invers=[&](Tseq const& x) -> Tseq {
+    return Inverse(x);
+  };
+  auto f_product=[&](Tseq const& x, Tseq const& y) -> Tseq {
+    return x * y;
+  };
+  return ExhaustiveReductionComplexity<size_t,Tseq,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListM, f_complexity, f_invers, f_product, os);
+}
+
 template<typename T, typename Telt>
 std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, [[maybe_unused]] std::ostream& os) {
   using Ttype = std::pair<MyMatrix<T>, Telt>;
@@ -603,6 +617,10 @@ std::vector<MyMatrix<T>> ExhaustiveMatrixCosetSimplifications(std::vector<MyMatr
   }
   return list_cos_red;
 }
+
+
+
+
 
 /*
   The result of the simplification algorithm for double cosets
