@@ -291,7 +291,7 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   std::vector<Telt> LGenPerm = ListPerm;
   for (size_t u=0; u<len_stab; u++) {
     size_t idx = len_stab - 1 - u;
-    LGenMatr = PreImageSubgroupOneStepOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx-1], os);
+    LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx-1], os);
     if (idx > 0) {
       LGenPerm.clear();
       for (auto & eMatr: LGenMatr) {

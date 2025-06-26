@@ -475,7 +475,7 @@ std::vector<permutalib::SequenceType<false>> ExhaustiveReductionComplexitySequen
   auto f_product=[&](Tseq const& x, Tseq const& y) -> Tseq {
     return x * y;
   };
-  return ExhaustiveReductionComplexity<size_t,Tseq,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListM, f_complexity, f_invers, f_product, os);
+  return ExhaustiveReductionComplexity<size_t,Tseq,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListS, f_complexity, f_invers, f_product, os);
 }
 
 template<typename T, typename Telt>
