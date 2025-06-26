@@ -96,9 +96,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+  NanosecondTime time_total;
+#endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    size_t n_operation = 0;
-    size_t n_get_best_candidate = 0;
+  size_t n_operation = 0;
+  size_t n_get_best_candidate = 0;
 #endif
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
@@ -232,7 +235,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP: u=" << u << " v=" << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << "\n";
+      os << "SIMP: " << u << " / " << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << "\n";
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
@@ -256,7 +259,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
         pair = f_reduce(a, b);
       }
       size_t n_changes = pair.first;
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
       os << "SIMP:   n_changes=" << n_changes << " already_treated=" << already_treated << " |set_treated|=" << set_treated.size() << "\n";
 #endif
       if (n_changes > 0) {
@@ -431,6 +434,13 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   for (auto & kv: map) {
     new_list_gens.push_back(kv.first.first.first);
   }
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+  int64_t delta = time_total.eval_int64();
+  double delta_d = static_cast<double>(delta);
+  double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
+  double avg_cost_best = delta_d / n_get_best_candidate_d;
+  os << "|SIMP: ExhaustiveReductionComplexityKernel, avg(f_get_best_candidate)|=" << avg_cost_best << "\n";
+#endif
   return new_list_gens;
 }
 
