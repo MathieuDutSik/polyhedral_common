@@ -265,8 +265,9 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
     MyMatrix<T> eMatrInv = Inverse(ListMatr[i_elt]);
     ListMatrInv.push_back(eMatrInv);
   }
+  Tseq id_seq;
   std::vector<Tseq> ListSeq_sub =
-    permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_matr, eGRP);
+    permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_seq, eGRP);
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListSeq_sub)=" << compute_complexity_listseq(ListSeq_sub) << "\n";
 #endif

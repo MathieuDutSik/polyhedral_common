@@ -773,7 +773,7 @@ inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                RetMI_S<T,Tgroup>>::type
 MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens,
                           std::vector<MyMatrix<T>> const& ListMatrGens,
-                          [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
+                          std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                           [[maybe_unused]] Tgroup const &GRPperm,
                           Thelper const &helper, Face const &f,
                           [[maybe_unused]] std::ostream &os) {
@@ -786,8 +786,6 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   using Tidx = typename Telt::Tidx;
-  using Tobj = Face;
-  using TeltMatr = MyMatrix<T>;
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
   Tidx len = f.size();
   Tgroup GRP(ListPermGens, len);
@@ -796,49 +794,20 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "|MAT_GRP: MatrixIntegral_Stabilizer, Stabilizer_OnSets|=" << time << "\n";
 #endif
 
-  auto f_op = [&](Tobj const &x, Telt const &u) -> Tobj {
-    return OnSets(x, u);
-  };
-
   TintGroup index = GRP.size() / stab.size();
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
-  WriteGroupFile("MatrixIntegral_Stabilizer_not_has_GRP", GRP);
-  WriteGroupFile("MatrixIntegral_Stabilizer_not_has_stab", stab);
 #endif
   Telt id_perm = stab.get_identity();
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
 #endif
-  std::vector<MyMatrix<T>> LGen1 =
-    permutalib::PreImageSubgroupAction<Telt, TeltMatr, Tobj, decltype(f_op)>(
-      ListMatrGens, ListPermGens, id_matr, id_perm, f, f_op);
+  std::vector<MyMatrix<T>> ListGen =
+    PreImageSubgroup<T, Tgroup>(ListMatrGens, ListPermGens, f_get_perm, id_matr, stab, os);
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer, PreImageSubgroupAction|=" << time << "\n";
 #endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After permutalib::PreImageSubgroupAction\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not1");
-#endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
-#endif
-  std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  CheckGroupEquality<T,Tgroup>(LGen1, LGen2, os);
-#endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
-#endif
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has_not2");
-#endif
-  return {index, LGen2};
+  return {index, ListGen};
 }
 
 // We compute the stabilizer and right cosets by applying the Schreier algorithm
