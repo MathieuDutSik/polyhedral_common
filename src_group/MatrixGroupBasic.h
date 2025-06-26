@@ -8,6 +8,7 @@
 #include "MAT_MatrixMod.h"
 #include "ClassicLLL.h"
 #include "Timings.h"
+#include "TestGroup.h"
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -256,6 +257,9 @@ MatrixIntegral_GetInvariantSpace(int const &n,
 template<typename T, typename Tgroup>
 std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
   using Tseq = permutalib::SequenceType<false>;
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  MicrosecondTime time;
+#endif
   std::vector<Tseq> ListSeq;
   std::vector<MyMatrix<T>> ListMatrInv;
   for (size_t i_elt=0; i_elt<ListPerm.size(); i_elt++) {
@@ -265,13 +269,22 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
     MyMatrix<T> eMatrInv = Inverse(ListMatr[i_elt]);
     ListMatrInv.push_back(eMatrInv);
   }
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  os << "|MAT_GRP: PreImageSubgroupOneStep, ListSeq / ListMatrInv|=" << time << "\n";
+#endif
   Tseq id_seq;
   std::vector<Tseq> ListSeq_sub =
     permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_seq, eGRP);
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  os << "|MAT_GRP: PreImageSubgroupOneStep, permutalib::PreImageSubgroup|=" << time << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListSeq_sub)=" << compute_complexity_listseq(ListSeq_sub) << "\n";
 #endif
   std::vector<Tseq> ListSeq_sub_red = ExhaustiveReductionComplexitySequences(ListSeq_sub, os);
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  os << "|MAT_GRP: PreImageSubgroupOneStep, ExhaustiveReductionComplexitySequences|=" << time << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListSeq_sub_red)=" << compute_complexity_listseq(ListSeq_sub_red) << "\n";
 #endif
@@ -290,6 +303,9 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
     }
     ListMatr_sub.push_back(eMatr);
   }
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  os << "|MAT_GRP: PreImageSubgroupOneStep, ListMatr_sub|=" << time << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_sub)=" << compute_complexity_listmat(ListMatr_sub) << "\n";
 #endif
@@ -297,11 +313,14 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
   write_matrix_group(ListGen1, "PreImageSubgroupOneStep");
 #endif
   std::vector<MyMatrix<T>> ListMatr_ret = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr_sub, os);
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  os << "|MAT_GRP: PreImageSubgroupOneStep, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
+#endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_ret)=" << compute_complexity_listmat(ListMatr_ret) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  CheckGroupEquality<T,Tgroup>(ListGen1, ListGen2, os);
+#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
+  CheckGroupEquality<T,Tgroup>(ListMatr_ret, ListMatr_sub, os);
 #endif
   return ListMatr_ret;
 }
