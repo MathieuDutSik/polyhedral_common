@@ -69,8 +69,6 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
   }
   int n = list_mat[0].rows();
   size_t n_mat = list_mat.size();
-  std::vector<T> list_ell1;
-  std::vector<T> list_ellinfinity;
   T ell1_global(0);
   T ellinfinite_global(0);
   for (auto & e_mat: list_mat) {
@@ -86,8 +84,6 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
         }
       }
     }
-    list_ell1.push_back(ell1);
-    list_ellinfinity.push_back(ellinfinity);
     ell1_global += ell1;
     if (ellinfinity > ellinfinite_global) {
       ellinfinite_global = ellinfinity;
@@ -95,6 +91,26 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
   }
   return "(n_gen=" + std::to_string(n_mat) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
 }
+
+
+template<bool always_equal>
+std::string compute_complexity_listseq(std::vector<permutalib::SequenceType<always_equal>> const& list_seq) {
+  size_t n_seq = list_seq.size();
+  size_t ell1_global = 0;
+  size_t ellinfinite_global = 0;
+  for (auto & seq: list_seq) {
+    std::vector<int64_t> const& ListIdx = seq.getVect();
+    size_t len = ListIdx.size();
+    ell1_global += len;
+    if (ellinfinite_global > len) {
+      ellinfinite_global = len;
+    }
+  }
+  return "(n_seq=" + std::to_string(n_seq) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+}
+
+
+
 
 template <typename T>
 size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
@@ -177,7 +193,7 @@ template <typename T> T LinearSpace_GetDivisor(MyMatrix<T> const &TheSpace) {
     if (test) {
       return eDiv;
     }
-#ifdef SANITY_CHECK_MATRIX_GROUP
+#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
     if (eDiv > TheDet) {
       std::cerr << "eDiv=" << eDiv << " TheDet=" << TheDet << "\n";
       std::cerr << "TheSpace=\n";
@@ -203,7 +219,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
   LGenTot.push_back(IdentityMat<T>(n));
   MyMatrix<T> TheSpace = IdentityMat<T>(n);
   T TheDet(1);
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_BASIC
   size_t iter = 0;
 #endif
   while (true) {
@@ -219,7 +235,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     MyMatrix<T> NewSpace = SublatticeBasisReduction(NewSpace1);
     T NewDet = T_abs(DeterminantMat(NewSpace));
     if (NewDet == TheDet) {
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_BASIC
       os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, NewSpace=\n";
       WriteMatrix(os, NewSpace);
       os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, returning after n_iter=" << iter << " TheDet=" << TheDet << "\n";
@@ -228,7 +244,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     }
     TheSpace = NewSpace;
     TheDet = NewDet;
-#ifdef DEBUG_MATRIX_GROUP
+#ifdef DEBUG_MATRIX_GROUP_BASIC
     os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
     iter += 1;
 #endif
@@ -251,7 +267,13 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
   }
   std::vector<Tseq> ListSeq_sub =
     permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_matr, eGRP);
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListSeq_sub)=" << compute_complexity_listseq(ListSeq_sub) << "\n";
+#endif
   std::vector<Tseq> ListSeq_sub_red = ExhaustiveReductionComplexitySequences(ListSeq_sub, os);
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListSeq_sub_red)=" << compute_complexity_listseq(ListSeq_sub_red) << "\n";
+#endif
   std::vector<MyMatrix<T>> ListMatr_sub;
   for (auto & eSeq : ListSeq_sub_red) {
     MyMatrix<T> eMatr = id_matr;
@@ -267,7 +289,19 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
     }
     ListMatr_sub.push_back(eMatr);
   }
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_sub)=" << compute_complexity_listmat(ListMatr_sub) << "\n";
+#endif
+#ifdef TRACK_INFO_MATRIX_GROUP_BASIC
+  write_matrix_group(ListGen1, "PreImageSubgroupOneStep");
+#endif
   std::vector<MyMatrix<T>> ListMatr_ret = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr_sub, os);
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_ret)=" << compute_complexity_listmat(ListMatr_ret) << "\n";
+#endif
+#ifdef SANITY_CHECK_MATRIX_GROUP
+  CheckGroupEquality<T,Tgroup>(ListGen1, ListGen2, os);
+#endif
   return ListMatr_ret;
 }
 
@@ -287,10 +321,18 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   }
   std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
   size_t len_stab = l_grp.size() - 1;
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  for (size_t iGRP=0; iGRP<=len_stab; iGRP++) {
+    os << "MAT_GRP: PreImageSubgroup, iGRP=" << iGRP << " |eGRP|=" << l_grp[iGRP].size() << "\n";
+  }
+#endif
   std::vector<MyMatrix<T>> LGenMatr = ListMatr;
   std::vector<Telt> LGenPerm = ListPerm;
   for (size_t u=0; u<len_stab; u++) {
     size_t idx = len_stab - 1 - u;
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+    os << "MAT_GRP: PreImageSubgroup, len_stab=" << len_stab << " u=" << u << " idx=" << idx << "\n";
+#endif
     LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx-1], os);
     if (idx > 0) {
       LGenPerm.clear();

@@ -606,6 +606,7 @@ inline typename std::enable_if<has_determining_ext<Thelper>::value,
                                RetMI_S<T,Tgroup>>::type
 MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens,
                           std::vector<MyMatrix<T>> const& ListMatr,
+                          [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                           Tgroup const &GRPperm, Thelper const &helper,
                           Face const &eFace, [[maybe_unused]] std::ostream &os) {
   using PreImager = typename Thelper::PreImager;
@@ -772,6 +773,7 @@ inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                RetMI_S<T,Tgroup>>::type
 MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens,
                           std::vector<MyMatrix<T>> const& ListMatrGens,
+                          [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                           [[maybe_unused]] Tgroup const &GRPperm,
                           Thelper const &helper, Face const &f,
                           [[maybe_unused]] std::ostream &os) {
@@ -1459,7 +1461,7 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), before MatrixIntegral_Stabilizer\n";
 #endif
-    RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatr, GRP, helper, eFace, os);
+    RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatr, f_get_perm, GRP, helper, eFace, os);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), after MatrixIntegral_Stabilizer\n";
 #endif
@@ -1588,10 +1590,10 @@ template <typename T, typename Tgroup, typename Thelper>
 inline typename std::enable_if<!has_determining_ext<Thelper>::value,
                                std::vector<MyMatrix<T>>>::type
 MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPermGens,
-                                std::vector<MyMatrix<T>> const& ListMatr,
+                                std::vector<MyMatrix<T>> const& ListMatrGens,
                                 Tgroup const &eGRP, Thelper const &helper,
-                                [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
-                                [[maybe_unused]] std::ostream &os) {
+                                std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
+                                std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
   using Telt = typename Tgroup::Telt;
@@ -1612,35 +1614,15 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   MicrosecondTime time;
 #endif
   MyMatrix<T> id_matr = IdentityMat<T>(helper.n);
-  std::vector<MyMatrix<T>> ListGen1 =
-      permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(
-          ListMatr, ListPermGens, id_matr, eGRP);
+  std::vector<MyMatrix<T>> ListGen =
+    PreImageSubgroup<T,Tgroup>(ListMatrGens, ListPermGens, f_get_perm, id_matr, eGRP, os);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), permutalib::PreImageSubgroup|=" << time << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListGen1, "MatrixIntegral_PreImageSubgroup_has_not1");
+  os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), PreImageSubgroup|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
+  os << "MAT_GRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen) << "\n";
 #endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen1)=" << compute_complexity_listmat(ListGen1) << "\n";
-#endif
-  std::vector<MyMatrix<T>> ListGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGen1, os);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  CheckGroupEquality<T,Tgroup>(ListGen1, ListGen2, os);
-#endif
-#ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
-#endif
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), comp(ListGen2)=" << compute_complexity_listmat(ListGen2) << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListGen2, "MatrixIntegral_PreImageSubgroup_has_not2");
-#endif
-  return ListGen2;
+  return ListGen;
 }
 
 /*
@@ -2346,7 +2328,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
           return res;
         }
       }
-      RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, GRPperm, helper, eFace2, os);
+      RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2384,7 +2366,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
          << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()
          << "\n";
 #endif
-      RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, GRPperm, helper, eFace2, os);
+      RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
