@@ -236,7 +236,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       TcombPair b = iter2->first;
       size_t nonce_b = iter2->second;
       std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
       os << "SIMP:   Complexities, a.second=" << a.second << " b.second=" << b.second << "\n";
 #endif
       //
@@ -393,7 +393,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
         if (!already_treated) {
           set_treated.insert(nonce_pair);
         }
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
         os << "SIMP:   no change, incrementing u / v\n";
 #endif
         bool test = increment_uv();

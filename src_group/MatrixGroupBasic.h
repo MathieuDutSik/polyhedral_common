@@ -103,7 +103,7 @@ std::string compute_complexity_listseq(std::vector<permutalib::SequenceType<alwa
     std::vector<int64_t> const& ListIdx = seq.getVect();
     size_t len = ListIdx.size();
     ell1_global += len;
-    if (ellinfinite_global > len) {
+    if (ellinfinite_global < len) {
       ellinfinite_global = len;
     }
   }
@@ -272,6 +272,9 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
 #ifdef TIMINGS_MATRIX_GROUP_BASIC
   os << "|MAT_GRP: PreImageSubgroupOneStep, ListSeq / ListMatrInv|=" << time << "\n";
 #endif
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroupOneStep, |eGRP|=" << eGRP.size() << " |ListPerm|=" << ListPerm.size() << "\n";
+#endif
   Tseq id_seq;
   std::vector<Tseq> ListSeq_sub =
     permutalib::PreImageSubgroup<Tgroup, Tseq>(ListSeq, ListPerm, id_seq, eGRP);
@@ -342,8 +345,9 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
   size_t len_stab = l_grp.size() - 1;
 #ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroup, len_stab=" << len_stab << "\n";
   for (size_t iGRP=0; iGRP<=len_stab; iGRP++) {
-    os << "MAT_GRP: PreImageSubgroup, iGRP=" << iGRP << " |eGRP|=" << l_grp[iGRP].size() << "\n";
+    os << "MAT_GRP: PreImageSubgroup, iGRP=" << iGRP << "/" << len_stab << " |eGRP|=" << l_grp[iGRP].size() << "\n";
   }
 #endif
   std::vector<MyMatrix<T>> LGenMatr = ListMatr;
@@ -353,7 +357,7 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
 #ifdef DEBUG_MATRIX_GROUP_BASIC
     os << "MAT_GRP: PreImageSubgroup, len_stab=" << len_stab << " u=" << u << " idx=" << idx << "\n";
 #endif
-    LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx-1], os);
+    LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx], os);
     if (idx > 0) {
       LGenPerm.clear();
       for (auto & eMatr: LGenMatr) {
