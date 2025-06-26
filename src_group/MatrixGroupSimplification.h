@@ -10,6 +10,10 @@
 #define DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+#endif
+
 #ifdef TRACK_INFO
 #define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
 #endif
@@ -92,6 +96,10 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    size_t n_operation = 0;
+    size_t n_get_best_candidate = 0;
+#endif
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
   auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
@@ -121,6 +129,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       pair_ret = pair_gen;
     }
     //
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    n_get_best_candidate += 1;
+#endif
     return pair_ret;
   };
   // Iterate the reduction algorithm over pairs of elements.
@@ -196,7 +207,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     size_t u = 0;
     size_t v = 1;
     auto increment_uv=[&]() -> bool {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
       os << "SIMP: Starting increment_uv with u=" << u << " v=" << v << "\n";
 #endif
       if (v < map.size() - 1) {
@@ -219,12 +230,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       pos += 1;
     }
 #endif
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    size_t n_operation = 0;
-#endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP: Addressing u=" << u << " v=" << v << " n_operation=" << n_operation << " |set|=" << map.size() << "\n";
+      os << "SIMP: u=" << u << " v=" << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << "\n";
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
