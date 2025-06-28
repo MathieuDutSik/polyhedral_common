@@ -13,6 +13,13 @@ CI_Write_Ok:=function()
     Exec(TheCommand);
 end;
 
+CI_PrintExistConclusion:=function()
+    local FileName;
+    FileName:="CI_CONCLUSION";
+    test:=IsExistingFile(FileName);
+    Print("CI_PrintExistConclusion, FileName=", FileName, " IsExist=", test, "\n");
+end;
+
 WriteStringFile:=function(eFile, strOut)
     local output;
     output:=OutputTextFile(eFile, true);

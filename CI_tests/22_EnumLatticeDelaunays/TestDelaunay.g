@@ -66,19 +66,26 @@ FullTest:=function()
         fi;
         iRec:=iRec + 1;
     od;
+    Print("FullTest: n_error=", n_error, "\n");
     return n_error;
 end;
 
-n_error:=FullTest();
-Print("2: n_error=", n_error, "\n");
+NestFunction:=function()
+    local n_error;
+    n_error:=FullTest();
+    Print("2: n_error=", n_error, "\n");
+    CI_Decision_Reset();
+    if n_error > 0 then
+        # Error case
+        Print("Error case\n");
+    else
+        # No error case
+        Print("Normal case\n");
+        CI_Write_Ok();
+    fi;
+    CI_PrintExistConclusion();
+end;
 
-CI_Decision_Reset();
-if n_error > 0 then
-    # Error case
-    Print("Error case\n");
-else
-    # No error case
-    Print("Normal case\n");
-    CI_Write_Ok();
-fi;
+NestFunction();
+
 

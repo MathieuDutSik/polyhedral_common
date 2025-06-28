@@ -252,8 +252,6 @@ MatrixIntegral_GetInvariantSpace(int const &n,
   }
 }
 
-
-
 template<typename T, typename Tgroup>
 std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
   using Tseq = permutalib::SequenceType<false>;
@@ -313,7 +311,7 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_sub)=" << compute_complexity_listmat(ListMatr_sub) << "\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP_BASIC
-  write_matrix_group(ListGen1, "PreImageSubgroupOneStep");
+  write_matrix_group(ListMatr_sub, "PreImageSubgroupOneStep");
 #endif
   std::vector<MyMatrix<T>> ListMatr_ret = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr_sub, os);
 #ifdef TIMINGS_MATRIX_GROUP_BASIC
@@ -342,6 +340,10 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   if (GRPbig.size() == eGRP.size()) {
     return ListMatr;
   }
+#ifdef TRACK_INFO_MATRIX_GROUP_BASIC
+  WriteGroupFileGAP("GRPbig", GRPbig);
+  WriteGroupFileGAP("GRPsub", eGRP);
+#endif
   std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
   size_t len_stab = l_grp.size() - 1;
 #ifdef DEBUG_MATRIX_GROUP_BASIC

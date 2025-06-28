@@ -246,6 +246,12 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
 }
 
 template <typename Tgroup>
+void WriteGroupFileGAP(std::string const& eFile, Tgroup const &TheGRP) {
+  std::ofstream osf(eFile);
+  WriteGroupGAP(osf, TheGRP);
+}
+
+template <typename Tgroup>
 void WriteGroupFormat(std::string const &FileGroup,
                       std::string const &OutFormat, Tgroup const &TheGRP) {
   auto f_print = [&](std::ostream &os) -> void {
