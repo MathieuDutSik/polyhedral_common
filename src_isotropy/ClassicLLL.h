@@ -64,7 +64,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat, [[maybe_
     return res;
   }
 #ifdef SANITY_CHECK_CLASSIC_LLL
-  if (!IsPositiveDefinite(GramMat)) {
+  if (!IsPositiveDefinite(GramMat, os)) {
     std::cerr << "LLL: For the LLL reduction, the matrix needs to be positive definite\n";
     throw TerminalException{1};
   }

@@ -52,8 +52,8 @@ std::string GetNatureOption(int const &TheOption) {
 }
 
 template<typename T>
-void check_correctness_lorentzian_perfect(MyMatrix<T> const& G) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
+void check_correctness_lorentzian_perfect(MyMatrix<T> const& G, std::ostream& os) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G, os);
   if (DiagInfo.nbZero != 0) {
     std::cerr << "LORPERF: matrix has non-zero kernel";
     throw TerminalException{1};
@@ -118,7 +118,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
      << DeterminantMat(LorMat) << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: LorMat=\n";
   WriteMatrix(os, LorMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat, os);
   os << "LORPERF: LORENTZ_FindPositiveVectors: nbPlus=" << DiagInfo.nbPlus
      << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus
      << "\n";
@@ -201,7 +201,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #endif
   MyMatrix<T> GramMat = -Ubasis_T * LorMat * Ubasis_T.transpose();
 #ifdef SANITY_CHECK_LORENTZIAN_FIND_POSITIVE_VECTORS
-  if (!IsPositiveDefinite(GramMat)) {
+  if (!IsPositiveDefinite(GramMat, os)) {
     std::cerr << "LORPERF: GramMat=\n";
     WriteMatrix(std::cerr, GramMat);
     std::cerr << "LORPERF: GramMat should be positive definite\n";
@@ -832,7 +832,7 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
 #endif
   MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-  DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat);
+  DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat, os);
   if (dsm.nbMinus == 0) {
     std::cerr << "LORPERF: We should have a negative in the entry\n";
     throw TerminalException{1};
@@ -1572,7 +1572,7 @@ LORENTZ_GetGeneratorsAutom(MyMatrix<T> const &LorMat, std::ostream &os) {
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_GetGeneratorsAutom, beginning\n";
 #endif
-  check_correctness_lorentzian_perfect(LorMat);
+  check_correctness_lorentzian_perfect(LorMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: LORENTZ_GetGeneratorsAutom, after correctness checks\n";
 #endif
@@ -1832,7 +1832,7 @@ std::vector<MyVector<Tint>>
 LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
                                std::ostream &os) {
   int dim = LorMat.rows();
-  check_correctness_lorentzian_perfect(LorMat);
+  check_correctness_lorentzian_perfect(LorMat, os);
   if (has_isotropic_factorization(LorMat)) {
     if (dim == 1) {
       std::cerr << "We need to write down the code for this case\n";
@@ -1847,13 +1847,13 @@ LORENTZ_GetOrbitRepresentative(MyMatrix<T> const &LorMat, T const &X,
 
 template <typename T>
 size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
-                                   [[maybe_unused]] std::ostream &os) {
+                                   std::ostream &os) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
 #endif
   int n = SymMat.rows();
   T det = DeterminantMat<T>(SymMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat, os);
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };
@@ -1980,8 +1980,8 @@ std::optional<MyMatrix<Tint>>
 LORENTZ_TestEquivalenceMatrices(MyMatrix<T> const &LorMat1,
                                 MyMatrix<T> const &LorMat2, std::ostream &os) {
   int dim = LorMat1.rows();
-  check_correctness_lorentzian_perfect(LorMat1);
-  check_correctness_lorentzian_perfect(LorMat2);
+  check_correctness_lorentzian_perfect(LorMat1, os);
+  check_correctness_lorentzian_perfect(LorMat2, os);
   bool test1 = has_isotropic_factorization(LorMat1);
   bool test2 = has_isotropic_factorization(LorMat2);
 #ifdef DEBUG_LORENTZIAN_PERFECT

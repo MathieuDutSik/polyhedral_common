@@ -434,8 +434,8 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                  std::ostream &os) {
   std::function<bool(MyMatrix<T> const &)> IsAdmissible =
-      [](MyMatrix<T> const &eMat) -> bool {
-    return IsPositiveDefinite<T>(eMat);
+      [&os](MyMatrix<T> const &eMat) -> bool {
+        return IsPositiveDefinite<T>(eMat, os);
   };
   std::function<Tshortest<T, Tint>(MyMatrix<T> const &)> ShortestFunction =
       [&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {

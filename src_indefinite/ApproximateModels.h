@@ -873,7 +873,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
       }
     }
     ListQ.push_back(eQ);
-    bool test_pn = INDEF_FORM_IsPosNeg(eQ);
+    bool test_pn = INDEF_FORM_IsPosNeg(eQ, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
     os << "MODEL: iConn=" << iConn << " dim=" << dim << " test_pn=" << test_pn
        << "\n";

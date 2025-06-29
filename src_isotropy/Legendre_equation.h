@@ -381,8 +381,8 @@ reduction_information(MyVector<T> const &aV,
 
 template <typename T>
 std::pair<MyMatrix<T>, MyVector<T>>
-get_reduced_diagonal(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &os) {
-  DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M);
+get_reduced_diagonal(MyMatrix<T> const &M, std::ostream &os) {
+  DiagSymMat<T> dsm = DiagonalizeNonDegenerateSymmetricMatrix(M, os);
   MyVector<T> V1 = GetDiagonal(dsm.RedMat);
 #ifdef DEBUG_LEGENDRE
   os << "V1=" << StringVectorGAP(V1) << "\n";

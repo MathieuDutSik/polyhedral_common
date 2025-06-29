@@ -571,8 +571,8 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M, [[maybe_unused]] std::ostream &o
 }
 
 template <typename T>
-std::pair<int, int> GetSignature(MyMatrix<T> const &M) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
+std::pair<int, int> GetSignature(MyMatrix<T> const &M, std::ostream& os) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M, os);
   int nbPlus = DiagInfo.nbPlus;
   int nbMinus = DiagInfo.nbMinus;
   return {nbPlus, nbMinus};
@@ -602,7 +602,7 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
   int n = M.rows();
   MyMatrix<Tint> B = IdentityMat<Tint>(n);
   MyMatrix<T> Mwork = M;
-  std::pair<int, int> signature = GetSignature(M);
+  std::pair<int, int> signature = GetSignature(M, os);
   int n_plus = signature.first;
   int n_minus = signature.second;
 #ifdef DEBUG_INDEFINITE_LLL

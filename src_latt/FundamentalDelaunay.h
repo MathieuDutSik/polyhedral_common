@@ -475,7 +475,7 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
 
 template <typename T>
 std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
-                                            MyVector<T> const &TheCenter) {
+                                            MyVector<T> const &TheCenter, std::ostream& os) {
   int n = GramMat.rows();
   MyVector<T> TheCenterRed(n);
   for (int i = 0; i < n; i++)
@@ -496,7 +496,7 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   MyMatrix<T> Mat2 = ZeroMatrix<T>(n + 1, n + 1);
   Mat2(0, 0) = 1;
   while (true) {
-    bool test = IsPositiveDefinite(Mat1);
+    bool test = IsPositiveDefinite(Mat1, os);
     if (test)
       break;
     Mat1(0, 0)++;

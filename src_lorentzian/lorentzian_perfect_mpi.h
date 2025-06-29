@@ -33,7 +33,7 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 #endif
   std::string LorMatFile = BlockDATA.get_string("LorMatFile");
   MyMatrix<T> LorMat = ReadMatrixFile<T>(LorMatFile);
-  check_correctness_lorentzian_perfect(LorMat);
+  check_correctness_lorentzian_perfect(LorMat, os);
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: Pass the lorentzian correctness check\n";
 #endif

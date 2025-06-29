@@ -872,7 +872,7 @@ private:
     os << "COMB: Beginning of INDEF_FORM_AutomorphismGroup_Kernel with Qmat=\n";
     WriteMatrix(os, Qmat);
 #endif
-    AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat);
+    AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Qmat, os);
     MyMatrix<T> const &mat = eBlock.mat;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
@@ -963,8 +963,8 @@ private:
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
-    AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1);
-    AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2);
+    AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1, os);
+    AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_TestEquivalence_Kernel, eBlock1.h=" << eBlock1.h << " eBlock2.h=" << eBlock2.h << "\n";
 #endif
@@ -1621,7 +1621,7 @@ private:
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
-    AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q);
+    AttackScheme<T> eBlock = INDEF_FORM_GetAttackScheme(Q, os);
     int n = Q.rows();
     auto orbit_decomposition = [&](std::vector<MyVector<Tint>> const &l_vect)
         -> std::vector<MyVector<Tint>> {

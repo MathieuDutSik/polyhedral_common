@@ -146,7 +146,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       }
   }
 #ifdef DEBUG_SHORTEST_CONFIG
-  std::cerr << "|TheFamilyVect|=" << TheFamilyVect.size() << "\n";
+  os << "|TheFamilyVect|=" << TheFamilyVect.size() << "\n";
 #endif
   auto GetListIneq = [&]() -> MyMatrix<T> {
     int siz = TheFamilyVect.size();
@@ -174,7 +174,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     eRes.reply = false;
     eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-    std::cerr << "RETURN case 1\n";
+    os << "RETURN case 1\n";
 #endif
     return eRes;
   }
@@ -195,7 +195,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     }
     nbIter++;
 #ifdef DEBUG_SHORTEST_CONFIG
-    std::cerr << "nbIter=" << nbIter << "\n";
+    os << "nbIter=" << nbIter << "\n";
 #endif
     MyMatrix<T> ListIneq = GetListIneq();
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
@@ -215,7 +215,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << "RETURN case 2\n";
+        os << "RETURN case 2\n";
 #endif
         return eRes;
       }
@@ -235,7 +235,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     LpSolution<T> eSol = GetLpSolution(SetIneq, ToBeMinimized);
     if (!eSol.PrimalDefined && eSol.DualDefined) {
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "DualDefined but not primal defined\n";
+      os << "DualDefined but not primal defined\n";
 #endif
       int nbIneqSet = SetIneq.size();
       MyVector<T> SumIneq = ZeroVector<T>(1 + nbIneqSet);
@@ -251,7 +251,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << "RETURN case 3\n";
+        os << "RETURN case 3\n";
 #endif
         return eRes;
       }
@@ -259,19 +259,19 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       throw TerminalException{1};
     } else if (eSol.PrimalDefined && !eSol.DualDefined) {
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "PrimalDefined but not dual defined\n";
+      os << "PrimalDefined but not dual defined\n";
 #endif
       // This is the primal_direction case
       MyVector<Tint> eVect = ListVect[0];
       MyVector<Tint> eVectB = 2 * eVect;
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "Inserting from PrimalDefined but not dual defined eVectB=";
-      WriteVectorNoDim(std::cerr, eVectB);
+      os << "Inserting from PrimalDefined but not dual defined eVectB=";
+      WriteVectorNoDim(os, eVectB);
 #endif
       TheFamilyVect.insert(eVectB);
     } else {
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "We have optimal value\n";
+      os << "We have optimal value\n";
 #endif
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (!eSol.PrimalDefined || !eSol.DualDefined) {
@@ -283,15 +283,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eOptimalPrev = eOptimal;
       eOptimal = eSol.OptimalValue;
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev
-                << "\n";
+      os << "eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";
 #endif
       if (eOptimal > 1) {
         eRes.eCase = 4;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << "RETURN case 4\n";
+        os << "RETURN case 4\n";
 #endif
         return eRes;
       }
@@ -300,7 +299,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << "RETURN case 5\n";
+        os << "RETURN case 5\n";
 #endif
         return eRes;
       }
@@ -354,18 +353,18 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         throw TerminalException{1};
       }
 #endif
-      bool testPosDef = IsPositiveDefinite(eMatSec);
+      bool testPosDef = IsPositiveDefinite(eMatSec, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "testPosDef=" << testPosDef << "\n";
+      os << "testPosDef=" << testPosDef << "\n";
 #endif
       if (testPosDef) {
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << "Before computation of T_ShortestVector\n";
-        WriteMatrix(std::cerr, eMatSec);
+        os << "Before computation of T_ShortestVector\n";
+        WriteMatrix(os, eMatSec);
 #endif
         Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eMatSec, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-        std::cerr << " After computation of T_ShortestVector\n";
+        os << " After computation of T_ShortestVector\n";
 #endif
         int nbRow = RecSHV.SHV.rows();
         std::vector<MyVector<Tint>> SHV(nbRow);
@@ -383,7 +382,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
           eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
-          std::cerr << "RETURN case 6\n";
+          os << "RETURN case 6\n";
 #endif
           return eRes;
         } else {
@@ -402,8 +401,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           if (DiffNew.size() > 0) {
             for (auto &eVect : DiffNew) {
 #ifdef DEBUG_SHORTEST_CONFIG
-              std::cerr << "Inserting from DiffNew eVect=";
-              WriteVectorNoDim(std::cerr, eVect);
+              os << "Inserting from DiffNew eVect=";
+              WriteVectorNoDim(os, eVect);
 #endif
               TheFamilyVect.insert(eVect);
             }
@@ -416,7 +415,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
               eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
-              std::cerr << "RETURN case 7\n";
+              os << "RETURN case 7\n";
 #endif
               return eRes;
             } else {
@@ -424,7 +423,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.reply = false;
               eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-              std::cerr << "RETURN case 8\n";
+              os << "RETURN case 8\n";
 #endif
               return eRes;
             }
@@ -447,8 +446,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           }
 #endif
 #ifdef DEBUG_SHORTEST_CONFIG
-          std::cerr << "Inserting from GetShortVectorDegenerate eVect3=";
-          WriteVectorNoDim(std::cerr, eVect3);
+          os << "Inserting from GetShortVectorDegenerate eVect3=";
+          WriteVectorNoDim(os, eVect3);
 #endif
           TheFamilyVect.insert(eVect3);
         } else {
@@ -462,8 +461,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           }
 #endif
 #ifdef DEBUG_SHORTEST_CONFIG
-          std::cerr << "Inserting from GetShortVector eVect=";
-          WriteVectorNoDim(std::cerr, eVect);
+          os << "Inserting from GetShortVector eVect=";
+          WriteVectorNoDim(os, eVect);
 #endif
           TheFamilyVect.insert(eVect);
         }

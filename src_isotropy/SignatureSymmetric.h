@@ -11,6 +11,10 @@
 #define DEBUG_SIGNATURE_SYMMETRIC
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SIGNATURE_SYMMETRIC
+#endif
+
 template <typename T>
 MyVector<T> FindNonIsotropeVector(MyMatrix<T> const &SymMat) {
   int n = SymMat.rows();
@@ -43,12 +47,14 @@ template <typename T> struct DiagSymMat {
 
 template <typename T>
 DiagSymMat<T>
-DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
+DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat, [[maybe_unused]] std::ostream& os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n = SymMat.rows();
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
-  std::cerr << "SIGN: Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
-  WriteMatrix(std::cerr, SymMat);
+  os << "SIGN: Beginning of DiagonalizeNonDegenerateSymmetricMatrix\n";
+  WriteMatrix(os, SymMat);
+#endif
+#ifdef SANITY_CHECK_SIGNATURE_SYMMETRIC
   int rnk = RankMat(SymMat);
   if (rnk != n) {
     std::cerr << "SIGN: Error in DiagonalizeNonDegenerateSymmetricMatrix\n";
@@ -66,7 +72,7 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
       BasisOrthogonal = IdentityMat<T>(n);
     } else {
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
-      std::cerr << "SIGN: |ListVect|=" << ListVect.size() << "\n";
+      os << "SIGN: |ListVect|=" << ListVect.size() << "\n";
 #endif
       MyMatrix<T> TheBasis = MatrixFromVectorFamily(ListVect);
       MyMatrix<T> eProd = SymMat * TheBasis.transpose();
@@ -81,8 +87,8 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
   MyMatrix<T> TheBasis = MatrixFromVectorFamily(ListVect);
   MyMatrix<T> RedMat = TheBasis * SymMat * TheBasis.transpose();
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
-  std::cerr << "SIGN: RedMat=\n";
-  WriteMatrix(std::cerr, RedMat);
+  os << "SIGN: RedMat=\n";
+  WriteMatrix(os, RedMat);
 #endif
   int nbPlus = 0;
   int nbMinus = 0;
@@ -94,7 +100,7 @@ DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat) {
       nbMinus++;
   }
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
-  std::cerr << "SIGN: nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
+  os << "SIGN: nbPlus=" << nbPlus << " nbMinus=" << nbMinus << "\n";
 #endif
   return {TheBasis, RedMat, nbZero, nbPlus, nbMinus};
 }
@@ -147,13 +153,13 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const &SymMat) {
 }
 
 template <typename T>
-DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat) {
+DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat, std::ostream& os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n1 = SymMat.rows();
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
   MyMatrix<T> RMat1 = NSP1.Transform;
   MyMatrix<T> SymMat2 = NSP1.NonDegenerate;
-  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2);
+  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);
   int n2 = SymMat2.rows();
   MyMatrix<T> RMat2 = ZeroMatrix<T>(n1, n1);
   for (int i = 0; i < n2; i++)
@@ -194,33 +200,33 @@ template <typename T> bool IsPositiveDefinite_V1(MyMatrix<T> const &eMat) {
   return true;
 }
 
-template <typename T> bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat) {
+template <typename T> bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat, std::ostream& os) {
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
   MyMatrix<T> const& SymMat2 = NSP1.NonDegenerate;
   if (SymMat2.rows() < SymMat.rows()) {
     return false;
   }
-  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2);
+  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);
   if (NSP2.nbMinus > 0) {
     return false;
   }
   return true;
 }
 
-template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat) {
+template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat, [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
   MicrosecondTime time;
   bool test1 = IsPositiveDefinite_V1(SymMat);
-  std::cerr << "|SIGN: IsPositiveDefinite (V1)|=" << time << "\n";
-  bool test2 = IsPositiveDefinite_V2(SymMat);
-  std::cerr << "|SIGN: IsPositiveDefinite (V2)|=" << time << "\n";
+  os << "|SIGN: IsPositiveDefinite (V1)|=" << time << "\n";
+  bool test2 = IsPositiveDefinite_V2(SymMat, os);
+  os << "|SIGN: IsPositiveDefinite (V2)|=" << time << "\n";
   if (test1 != test2) {
     std::cerr << "The test of positive definiteness gave different result for different method\n";
     throw TerminalException{1};
   }
   return test1;
 #else
-  return IsPositiveDefinite_V2(SymMat);
+  return IsPositiveDefinite_V2(SymMat, os);
 #endif
 }
 

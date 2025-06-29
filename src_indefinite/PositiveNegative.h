@@ -70,7 +70,7 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
     }
     return ListSol;
   };
-  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q);
+  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q, os);
   if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
     MyMatrix<T> Qneg = -Q;
     return get_orbit_representatives(Qneg);
@@ -85,7 +85,7 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 INDEF_FORM_AutomorphismGroup_PosNeg(MyMatrix<T> const &Q, std::ostream &os) {
-  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q);
+  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(Q, os);
   if (DSM.nbPlus == 0 && DSM.nbZero == 0) {
     MyMatrix<T> Qneg = -Q;
     return ArithmeticAutomorphismGroup<T, Tint, Tgroup>(Qneg, os);
@@ -101,8 +101,8 @@ template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>>
 INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
                                   std::ostream &os) {
-  DiagSymMat<T> DSM1 = DiagonalizeNonDegenerateSymmetricMatrix(Q1);
-  DiagSymMat<T> DSM2 = DiagonalizeNonDegenerateSymmetricMatrix(Q2);
+  DiagSymMat<T> DSM1 = DiagonalizeNonDegenerateSymmetricMatrix(Q1, os);
+  DiagSymMat<T> DSM2 = DiagonalizeNonDegenerateSymmetricMatrix(Q2, os);
   if (DSM1.nbPlus != DSM2.nbPlus) {
     return {};
   }
@@ -121,8 +121,8 @@ INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
   throw TerminalException{1};
 }
 
-template <typename T> bool INDEF_FORM_IsPosNeg(MyMatrix<T> const &M) {
-  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(M);
+template <typename T> bool INDEF_FORM_IsPosNeg(MyMatrix<T> const &M, std::ostream& os) {
+  DiagSymMat<T> DSM = DiagonalizeNonDegenerateSymmetricMatrix(M, os);
   if (DSM.nbZero == 0) {
     if (DSM.nbPlus == 0 || DSM.nbMinus == 0) {
       return true;

@@ -272,7 +272,7 @@ template <typename T, typename Tint>
 ResultReduction<T, Tint>
 get_individual_reduction(MyMatrix<T> const& M, std::ostream &os) {
   int n = M.rows();
-  std::pair<int, int> signature = GetSignature(M);
+  std::pair<int, int> signature = GetSignature(M, os);
   int n_plus = signature.first;
   int n_minus = signature.second;
   int n_zero = n - n_plus - n_minus;

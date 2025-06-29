@@ -41,7 +41,7 @@ GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
   MyVector<T> TheCenter = eCP.eCent;
-  std::vector<MyMatrix<T>> CharPair = CharacterizingPair(GramMat, TheCenter);
+  std::vector<MyMatrix<T>> CharPair = CharacterizingPair(GramMat, TheCenter, os);
   MyMatrix<T> Qmat = CharPair[0];
   int nbVect = SHV.rows();
   int nbVert = EXT.rows();

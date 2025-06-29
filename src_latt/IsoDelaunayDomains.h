@@ -411,7 +411,7 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
       RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
     }
     SumMatExtRay += RemoveFractionMatrix(RayMat);
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat);
+    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat, os);
     if (DiagInfo.nbMinus > 0) {
       std::cerr
           << "One ray of the IsoDelaunay domain is not positive semidefinite\n";
@@ -2167,7 +2167,7 @@ struct DataIsoDelaunayDomainsFunc {
       for (int u = 0; u < dimSpace; u++) {
         TestMat += TestPt(u) * data.LinSpa.ListMat[u];
       }
-      bool test = IsPositiveDefinite(TestMat);
+      bool test = IsPositiveDefinite(TestMat, os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: f_adj, We have test for TestMat\n";
 #endif

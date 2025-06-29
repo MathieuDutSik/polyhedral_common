@@ -25,8 +25,8 @@
 #endif
 
 template<typename T>
-std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G);
+std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G, std::ostream& os) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G, os);
   if (DiagInfo.nbZero != 0) {
     std::string reason_non_lorentzian = "matrix has non-zero kernel";
     return reason_non_lorentzian;
@@ -43,8 +43,8 @@ std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G) {
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
-template <typename T> void TestLorentzianity(MyMatrix<T> const &G) {
-  std::optional<std::string> opt = ReasonNonLorentzian(G);
+template <typename T> void TestLorentzianity(MyMatrix<T> const &G, std::ostream& os) {
+  std::optional<std::string> opt = ReasonNonLorentzian(G, os);
   if (opt) {
     std::cerr << "LORLIN: G=\n";
     WriteMatrix(std::cerr, G);
@@ -1157,7 +1157,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     MyMatrix<T> InvariantBasis_T =
         UniversalMatrixConversion<T, Tint>(InvariantBasis);
     MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv);
+    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv, os);
     return DiagInfo;
   }
   size_t get_max_finite_order() const { return max_finite_order; }

@@ -61,8 +61,8 @@ template <typename T> MyMatrix<T> AnLattice(int const &n) {
 }
 
 template <typename T>
-MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat);
+MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat, std::ostream& os) {
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat, os);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
   MyMatrix<T> const &RedMat = DiagInfo.RedMat;
   int n = SymMat.rows();
@@ -132,9 +132,9 @@ GetIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect,
 }
 
 template <typename T>
-std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M) {
+std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M, std::ostream& os) {
   int n = M.rows();
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M);
+  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M, os);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
   MyMatrix<T> const &RedMat = DiagInfo.RedMat;
   std::vector<MyVector<T>> ListVect;
@@ -156,7 +156,7 @@ template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_diag(MyMatrix<T> const &M, T const &CritNorm,
                                       bool const &StrictIneq,
                                       std::ostream &os) {
-  std::vector<MyVector<T>> ListVect = GetPositiveDirections_diag(M);
+  std::vector<MyVector<T>> ListVect = GetPositiveDirections_diag(M, os);
   return GetIntegralVector_family<T, Tint, T>(ListVect, M, CritNorm, StrictIneq,
                                               os);
 }
@@ -206,7 +206,7 @@ GetIntegralVector_allmeth_V1(MyMatrix<T> const &M, T const &CritNorm,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V1: Beginning\n";
 #endif
-  std::vector<MyVector<T>> ListVect = GetPositiveDirections_diag(M);
+  std::vector<MyVector<T>> ListVect = GetPositiveDirections_diag(M, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V1: |ListVect|=" << ListVect.size()
      << "\n";
@@ -311,12 +311,12 @@ template <typename T, typename Tint>
 MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
                                             T const &CritNorm,
                                             bool const &StrictIneq,
-                                            [[maybe_unused]] std::ostream &os) {
+                                            std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V2: Beginning\n";
 #endif
   std::vector<ApproxIterator<T, Tint>> l_approx_diag;
-  for (auto &eVec : GetPositiveDirections_diag(M)) {
+  for (auto &eVec : GetPositiveDirections_diag(M, os)) {
 #ifdef DEBUG_POSITIVITY
     os << "POS: GetIntegralVector_allmeth_V2: diag, eVec="
        << StringVectorGAP(eVec) << "\n";
@@ -665,11 +665,11 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
 template <typename T>
 std::vector<MyVector<T>>
 GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat,
-                           [[maybe_unused]] std::ostream &os) {
+                           std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetSetNegativeOrZeroVector: beginning\n";
 #endif
-  DiagSymMat<T> eRecDiag = DiagonalizeSymmetricMatrix(SymMat);
+  DiagSymMat<T> eRecDiag = DiagonalizeSymmetricMatrix(SymMat, os);
   std::vector<MyVector<T>> TheSet;
   int n = SymMat.rows();
   for (int i = 0; i < n; i++)

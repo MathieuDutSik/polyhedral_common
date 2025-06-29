@@ -292,7 +292,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
   }
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
     MyMatrix<T> const& eMat = ListMat[i_mat];
-    if (IsPositiveDefinite(eMat)) {
+    if (IsPositiveDefinite(eMat, os)) {
       return eMat;
     }
   }
@@ -341,7 +341,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
     }
-    if (IsPositiveDefinite(TrySuperMat)) {
+    if (IsPositiveDefinite(TrySuperMat, os)) {
       return TrySuperMat;
     }
     //
@@ -364,7 +364,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 
 template <typename T>
 MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
-                                      int const &N) {
+                                      int const &N, std::ostream& os) {
   int n = LinSpa.n;
   MyMatrix<T> TheMat = ZeroMatrix<T>(n, n);
   for (auto &eMat : LinSpa.ListMat) {
@@ -372,7 +372,7 @@ MyMatrix<T> GetRandomPositiveDefinite(LinSpaceMatrix<T> const &LinSpa,
     TheMat += coef * eMat;
   }
   while (true) {
-    if (IsPositiveDefinite(TheMat)) {
+    if (IsPositiveDefinite(TheMat, os)) {
       return TheMat;
     }
     TheMat += LinSpa.SuperMat;
@@ -475,7 +475,7 @@ GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa, int c
     os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: Before "
           "GetRandomPositiveDefinite\n";
 #endif
-    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N_work);
+    MyMatrix<T> TheMat = GetRandomPositiveDefinite(LinSpa, N_work, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: GetRandomPositiveDefiniteNoNontrivialSymm: After "
           "GetRandomPositiveDefinite\n";

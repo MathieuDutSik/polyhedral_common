@@ -2007,7 +2007,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
       os << "EDGE: Gprod=\n";
       WriteMatrix(os, Gprod);
 #endif
-      MyVector<T> eVect_A = GetPositiveNormVector(Gprod);
+      MyVector<T> eVect_A = GetPositiveNormVector(Gprod, os);
       MyVector<T> eVect_B = Pplane.transpose() * eVect_A;
       T scal = V.dot(G * eVect_B);
       // This is because of the sign convention
@@ -2106,7 +2106,7 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
 
 template <typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostream& os) {
-  std::optional<std::string> opt = ReasonNonLorentzian(G);
+  std::optional<std::string> opt = ReasonNonLorentzian(G, os);
   bool EarlyTerminationIfNotReflective = true;
   if (opt) {
     return {{}, {}, EarlyTerminationIfNotReflective, opt};
@@ -2155,7 +2155,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock const& BlockPROC = eFull.get_block("PROC");
   std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
-  TestLorentzianity(G);
+  TestLorentzianity(G, os);
   //
   std::string OptionNorms = BlockPROC.get_string("OptionNorms");
   std::string DualDescProg = BlockPROC.get_string("DualDescProg");
@@ -2236,8 +2236,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
   std::string const& FileLorMat2 = BlockPROC.get_string("FileLorMat2");
   MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat1);
   MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat2);
-  TestLorentzianity(G1);
-  TestLorentzianity(G2);
+  TestLorentzianity(G1, os);
+  TestLorentzianity(G2, os);
   std::string FileHeuristicIdealStabEquiv =
     BlockPROC.get_string("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv =

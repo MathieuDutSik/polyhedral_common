@@ -1574,7 +1574,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   SingleBlock const& BlockPROC = eFull.get_block("PROC");
   std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
-  TestLorentzianity(G);
+  TestLorentzianity(G, os);
   //
   std::string OptionNorms = BlockPROC.get_string("OptionNorms");
   std::string DualDescProg = BlockPROC.get_string("DualDescProg");
