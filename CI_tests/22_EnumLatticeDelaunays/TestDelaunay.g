@@ -58,7 +58,7 @@ FullTest:=function()
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
         RecReply:=TestEnumeration(eRec);
-        Print("RecReply=", RecReply, "\n");
+        Print("RecReply(B)=", RecReply, "\n");
         if RecReply.is_correct=false then
             n_error:=n_error+1;
             Print("1: n_error=", n_error, "\n");
