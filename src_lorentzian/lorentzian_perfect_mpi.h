@@ -85,11 +85,15 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+  os << "LORPERFMPI: We now have max_runtime_second=" << max_runtime_second << "\n";
   os << "LORPERFMPI: We now have IsFinished=" << pair.first << "\n";
   os << "LORPERFMPI: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
   //
   if (pair.first) {
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+    os << "LORPERFMPI: Doing some output\n";
+#endif
     auto f_print=[&](std::ostream& os_out) -> void {
       bool result = WriteFamilyObjects_MPI<DataPerfectLorentzian<T, Tint, Tgroup>, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
@@ -98,6 +102,10 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
       }
     };
     print_stderr_stdout_file(OutFile, f_print);
+  } else {
+#ifdef DEBUG_LORENTZIAN_PERFECT_MPI
+    os << "LORPERFMPI: No output being done\n";
+#endif
   }
 }
 

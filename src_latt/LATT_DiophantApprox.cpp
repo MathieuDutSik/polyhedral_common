@@ -29,7 +29,7 @@ int main(int argc, char *argv[]) {
     s >> epsilon;
     //
     DiophantResult<Tint> eRes =
-        SimultaneousDiophantineApproximation<T, Tint>(V, epsilon);
+      SimultaneousDiophantineApproximation<T, Tint>(V, epsilon, std::cerr);
     //
     std::cerr << "Proposed solution = " << GapStringDiophantineApprox(eRes)
               << "\n";

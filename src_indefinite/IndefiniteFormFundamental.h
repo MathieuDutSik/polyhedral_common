@@ -71,9 +71,9 @@ template <typename T> struct hash<INDEF_InvariantQ<T>> {
 }  // namespace std
 // clang-format on
 
-template <typename T> size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat) {
+template <typename T> size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat, std::ostream& os) {
   int n = Qmat.rows();
-  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(Qmat));
+  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(Qmat), os);
   MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP, n);
   MyMatrix<T> GramRed = TheCompl * Qmat * TheCompl.transpose();
   T eDet = DeterminantMat(GramRed);
@@ -120,7 +120,7 @@ template <typename T> struct hash<INDEF_InvariantQV<T>> {
 
 template <typename T, typename Tint>
 size_t INDEF_FORM_InvariantVector(MyMatrix<T> const &Qmat,
-                                  MyVector<Tint> const &v) {
+                                  MyVector<Tint> const &v, std::ostream& os) {
   int eRank = RankMat(Qmat);
   T eNorm = EvaluationQuadForm<T, Tint>(Qmat, v);
   MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
@@ -129,7 +129,7 @@ size_t INDEF_FORM_InvariantVector(MyMatrix<T> const &Qmat,
   T index = RemoveFractionVectorPlusCoeff(eProd).TheMult;
   MyMatrix<T> NSP = NullspaceIntVect(eProd);
   MyMatrix<T> GramRed = NSP * Qmat * NSP.transpose();
-  size_t typeInv = INDEF_FORM_Invariant(GramRed);
+  size_t typeInv = INDEF_FORM_Invariant(GramRed, os);
   //
   INDEF_InvariantQV<T> eInv{eRank, eNorm, index, divisor, typeInv};
   return std::hash<INDEF_InvariantQV<T>>()(eInv);
@@ -160,7 +160,7 @@ template <> struct hash<InvariantIsotropic> {
 
 template <typename T, typename Tint>
 size_t INDEF_FORM_Invariant_IsotropicKplane_Raw(MyMatrix<T> const &Qmat,
-                                                MyMatrix<Tint> const &ePlane) {
+                                                MyMatrix<Tint> const &ePlane, std::ostream& os) {
   int k = ePlane.rows();
   MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
   MyMatrix<T> eProd = ePlane_T * Qmat;
@@ -184,8 +184,8 @@ size_t INDEF_FORM_Invariant_IsotropicKplane_Raw(MyMatrix<T> const &Qmat,
   MyMatrix<T> ComplBasisInNSP = SubspaceCompletionInt(ePlaneB, dimNSP);
   MyMatrix<T> NSP_sub = ComplBasisInNSP * NSP_T;
   MyMatrix<T> QmatRed = NSP_sub * Qmat * NSP_sub.transpose();
-  size_t eInv1 = INDEF_FORM_Invariant(Qmat);
-  size_t eInv2 = INDEF_FORM_Invariant(QmatRed);
+  size_t eInv1 = INDEF_FORM_Invariant(Qmat, os);
+  size_t eInv2 = INDEF_FORM_Invariant(QmatRed, os);
   InvariantIsotropic eInv{k, eInv1, eInv2};
   return std::hash<InvariantIsotropic>()(eInv);
 }

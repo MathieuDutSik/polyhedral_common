@@ -31,24 +31,23 @@ void CheckLLLreduction(LLLreduction<T, Tint> const &res,
 // Adapted from LLLReducedBasis   in zlattice.gi GAP code
 //
 template <typename Tmat, typename Tint>
-LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
+LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat, [[maybe_unused]] std::ostream& os) {
   using Tfield = typename overlying_field<Tmat>::field_type;
   MyMatrix<Tmat> gram = GramMat;
   int nbRow = gram.rows();
-  int nbCol = gram.cols();
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "LLL: nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
-  std::cerr << "LLL: GramMat=\n";
-  WriteMatrix(std::cerr, GramMat);
+  os << "LLL: nbRow=" << nbRow << " nbCol=" << gram.cols() << "\n";
+  os << "LLL: GramMat=\n";
+  WriteMatrix(os, GramMat);
 #endif
-  if (nbRow != nbCol) {
-#ifdef DEBUG_CLASSIC_LLL
+#ifdef SANITY_CHECK_CLASSIC_LLL
+  if (nbRow != gram.cols()) {
     std::cerr << "LLL: The matrix should be square\n";
-#endif
     throw TerminalException{1};
   }
+#endif
   int n = nbRow;
-#ifdef DEBUG_CLASSIC_LLL
+#ifdef SANITY_CHECK_CLASSIC_LLL
   int rnk = RankMat(GramMat);
   if (rnk != n) {
     std::cerr << "LLL: rnk=" << rnk << " n=" << n << "\n";
@@ -76,14 +75,14 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   MyMatrix<Tint> H = IdentityMat<Tint>(n);
   auto RED = [&](int const &l) -> void {
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "LLL: k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
+    os << "LLL: k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
 #endif
     if (1 < mue(k, l) * 2 || mue(k, l) * 2 < -1) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
 #ifdef DEBUG_CLASSIC_LLL
-      std::cerr << "LLL: RED, before oper q=" << q << "\n";
-      WriteMatrix(std::cerr, gram);
+      os << "LLL: RED, before oper q=" << q << "\n";
+      WriteMatrix(os, gram);
 #endif
       gram(k, k) -= q_T * gram(k, l);
       for (int i = r + 1; i <= l; i++)
@@ -93,8 +92,8 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       for (int i = k + 1; i < n; i++)
         gram(i, k) -= q_T * gram(i, l);
 #ifdef DEBUG_CLASSIC_LLL
-      std::cerr << "LLL: After gram Oper\n";
-      WriteMatrix(std::cerr, gram);
+      os << "LLL: After gram Oper\n";
+      WriteMatrix(os, gram);
 #endif
       mue(k, l) = mue(k, l) - q_T;
       for (int i = r + 1; i <= l - 1; i++)
@@ -104,7 +103,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   };
   Tfield y = Tfield(99) / Tfield(100);
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "LLL: y=" << y << "\n";
+  os << "LLL: y=" << y << "\n";
 #endif
   int i = 0;
   while (true) {
@@ -116,7 +115,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
       break;
   }
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "LLL: After the while loop i=" << i << "\n";
+  os << "LLL: After the while loop i=" << i << "\n";
 #endif
   if (i >= n) {
     r = n - 1;
@@ -133,14 +132,13 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     }
   }
 #ifdef DEBUG_CLASSIC_LLL
-  std::cerr << "LLL: After the if test r=" << r << " k=" << k << " kmax=" << kmax
-            << "\n";
+  os << "LLL: After the if test r=" << r << " k=" << k << " kmax=" << kmax << "\n";
 #endif
   MyVector<Tfield> B(n);
   B(0) = UniversalScalarConversion<Tfield, Tmat>(gram(0, 0));
   while (k < n) {
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "LLL: While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
+    os << "LLL: While loop, step 1 k=" << k << " kmax=" << kmax << "\n";
 #endif
     if (k > kmax) {
       kmax = k;
@@ -158,7 +156,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     RED(k - 1);
 #ifdef DEBUG_CLASSIC_LLL
     bool test=B(k) < ( y - mue(k,k-1) * mue(k,k-1) ) * B(k-1);
-    std::cerr << "LLL: While loop, step 3 y=" << y << " mue(k,k-1)=" <<
+    os << "LLL: While loop, step 3 y=" << y << " mue(k,k-1)=" <<
       mue(k,k-1) << " B(k)=" << B(k) << " B(k-1)=" << B(k-1) << " test=" <<
       test << "\n";
 #endif
@@ -203,7 +201,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
     if (B(r + 1) == 0)
       r++;
 #ifdef DEBUG_CLASSIC_LLL
-    std::cerr << "LLL: While loop, step 5 k=" << k << " r=" << r << "\n";
+    os << "LLL: While loop, step 5 k=" << k << " r=" << r << "\n";
 #endif
     for (int l = k - 2; l >= r + 1; l--) {
       RED(l);
@@ -233,9 +231,9 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat) {
   LLLreducedBasisDual and it should work just as well.
  */
 template <typename Tmat, typename Tint>
-LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
+LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat, std::ostream& os) {
   MyMatrix<Tmat> Ginv = Inverse(GramMat);
-  LLLreduction<Tmat, Tint> LLLrec = LLLreducedBasis<Tmat, Tint>(Ginv);
+  LLLreduction<Tmat, Tint> LLLrec = LLLreducedBasis<Tmat, Tint>(Ginv, os);
   MyMatrix<Tmat> const &Gred = LLLrec.GramMatRed;
   MyMatrix<Tint> const &P = LLLrec.Pmat;
   MyMatrix<Tmat> GredInv = Inverse(Gred);
@@ -249,11 +247,11 @@ LLLreduction<Tmat, Tint> LLLreducedBasisDual(MyMatrix<Tmat> const &GramMat) {
 
 template <typename Tmat, typename Tint>
 LLLreduction<Tmat, Tint> LLLreducedGeneral(MyMatrix<Tmat> const &GramMat,
-                                           std::string const &method) {
+                                           std::string const &method, std::ostream& os) {
   if (method == "direct")
-    return LLLreducedBasis<Tmat, Tint>(GramMat);
+    return LLLreducedBasis<Tmat, Tint>(GramMat, os);
   if (method == "dual")
-    return LLLreducedBasisDual<Tmat, Tint>(GramMat);
+    return LLLreducedBasisDual<Tmat, Tint>(GramMat, os);
   std::cerr << "LLL: No matching method\n";
   throw TerminalException{1};
 }
@@ -275,24 +273,24 @@ template <typename T, typename Tint> struct LLLbasis {
 };
 
 template <typename T, typename Tint>
-LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt) {
+LLLbasis<T, Tint> LLLbasisReduction(MyMatrix<T> const &Latt, std::ostream& os) {
   MyMatrix<T> GramMat = Latt * Latt.transpose();
-  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(GramMat);
+  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(GramMat, os);
   MyMatrix<T> LattRed = UniversalMatrixConversion<T, Tint>(pair.Pmat) * Latt;
   return {LattRed, pair.Pmat};
 }
 
 template <typename T, typename Tint>
-LLLbasis<T, Tint> LLLbasisReductionGeneral(MyMatrix<T> const &Latt, std::string const& method) {
+LLLbasis<T, Tint> LLLbasisReductionGeneral(MyMatrix<T> const &Latt, std::string const& method, std::ostream& os) {
   MyMatrix<T> GramMat = Latt * Latt.transpose();
-  LLLreduction<T, Tint> pair = LLLreducedGeneral<T, Tint>(GramMat, method);
+  LLLreduction<T, Tint> pair = LLLreducedGeneral<T, Tint>(GramMat, method, os);
   MyMatrix<T> LattRed = UniversalMatrixConversion<T, Tint>(pair.Pmat) * Latt;
   return {LattRed, pair.Pmat};
 }
 
 template <typename T>
 std::pair<MyMatrix<T>, MyMatrix<T>>
-ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
+ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method, std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
   int nbRow = M.rows();
   int nbCol = M.cols();
@@ -309,7 +307,7 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
     return TheGram;
   };
   MyMatrix<T> TheGram = GetGram(M);
-  LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method);
+  LLLreduction<T, Tint> res = LLLreducedGeneral<T, Tint>(TheGram, method, os);
   MyMatrix<Tint> Pmat = TransposedMat(res.Pmat);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> Mred = M * Pmat_T;
@@ -330,7 +328,7 @@ ReduceVectorFamily(MyMatrix<T> const &M, std::string const &method) {
   * Exhaustive search as done for indefinite matrices.
  */
 template<typename T>
-MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const& Latt) {
+MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const& Latt, std::ostream& os) {
   using Tint = typename underlying_ring<T>::ring_type;
   int n_row = Latt.rows();
   int n_col = Latt.cols();
@@ -349,7 +347,7 @@ MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const& Latt) {
   while(true) {
     int n_success = 0;
     for (auto & method: l_method) {
-      LLLbasis<T, Tint> rec = LLLbasisReductionGeneral<T,Tint>(Latt_work, method);
+      LLLbasis<T, Tint> rec = LLLbasisReductionGeneral<T,Tint>(Latt_work, method, os);
       MyMatrix<T> const& Latt_cand = rec.LattRed;
       T norm_cand = f_norm(Latt_cand);
       if (norm_cand < norm_work) {
@@ -366,16 +364,16 @@ MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const& Latt) {
 
 template<typename T>
 inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
-SublatticeBasisReduction(MyMatrix<T> const& Latt) {
-  return SublatticeBasisReductionKernel(Latt);
+SublatticeBasisReduction(MyMatrix<T> const& Latt, std::ostream& os) {
+  return SublatticeBasisReductionKernel(Latt, os);
 }
 
 template<typename T>
 inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
-SublatticeBasisReduction(MyMatrix<T> const& Latt) {
+SublatticeBasisReduction(MyMatrix<T> const& Latt, std::ostream& os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> Latt_F = UniversalMatrixConversion<Tfield,T>(Latt);
-  MyMatrix<Tfield> LattRed_F = SublatticeBasisReductionKernel(Latt_F);
+  MyMatrix<Tfield> LattRed_F = SublatticeBasisReductionKernel(Latt_F, os);
   MyMatrix<T> LattRed = UniversalMatrixConversion<T,Tfield>(LattRed_F);
   return LattRed;
 }

@@ -39,14 +39,14 @@
 
 template <typename T, typename Tint>
 MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
-                                         [[maybe_unused]] std::ostream &os) {
+                                         std::ostream &os) {
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   os << "IVF: Begining of ExtractInvariantVectorFamily\n";
 #endif
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   MicrosecondTime time;
 #endif
-  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
+  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat, os);
   MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: LLL|=" << time << "\n";
@@ -73,8 +73,8 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
   return SHVret;
 }
 
-template <typename T, typename Tint> T GetMaxNorm(MyMatrix<T> const &eMat) {
-  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat);
+template <typename T, typename Tint> T GetMaxNorm(MyMatrix<T> const &eMat, std::ostream& os) {
+  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat, os);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
   return MaximumDiagonal(eMatRed);
@@ -95,9 +95,9 @@ template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
 }
 
 template <typename T, typename Tint>
-std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat) {
+std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat, std::ostream& os) {
   T incr = GetSmallestIncrement(eMat);
-  T MaxNorm = GetMaxNorm<T, Tint>(eMat);
+  T MaxNorm = GetMaxNorm<T, Tint>(eMat, os);
   std::set<T> AllowedNorms;
   T norm = incr;
   while (true) {
@@ -180,7 +180,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
                                             std::ostream &os) {
   int n = eMat.rows();
   T incr = GetSmallestIncrement(eMat);
-  T MaxNorm = GetMaxNorm<T, Tint>(eMat);
+  T MaxNorm = GetMaxNorm<T, Tint>(eMat, os);
   T norm = incr;
   MyMatrix<Tint> SHVret(0, n);
   while (true) {

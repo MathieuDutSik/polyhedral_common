@@ -399,29 +399,29 @@ DirectCopy(FundDomainVertex_FullInfo<T, Tint, Tgroup> const &fdfi) {
 }
 
 template <typename T, typename Tint>
-std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M) {
+std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M, std::ostream& os) {
   MyMatrix<T> Orth = NullspaceIntTrMat(M);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "Orth=\n";
-  WriteMatrix(std::cerr, Orth);
+  os << "Orth=\n";
+  WriteMatrix(os, Orth);
 #endif
   MyMatrix<T> TheSpann_pre = NullspaceIntTrMat(Orth);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "TheSpann_pre\n";
-  WriteMatrix(std::cerr, TheSpann_pre);
+  os << "TheSpann_pre\n";
+  WriteMatrix(os, TheSpann_pre);
 #endif
-  MyMatrix<T> TheSpann = SublatticeBasisReduction(TheSpann_pre);
+  MyMatrix<T> TheSpann = SublatticeBasisReduction(TheSpann_pre, os);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "TheSpann\n";
-  WriteMatrix(std::cerr, TheSpann);
+  os << "TheSpann\n";
+  WriteMatrix(os, TheSpann);
 #endif
   RecSolutionIntMat<T> eCan(TheSpann);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have eCan\n";
+  os << "We have eCan\n";
 #endif
   std::optional<MyMatrix<T>> opt = eCan.get_solution_m(M);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have opt\n";
+  os << "We have opt\n";
 #endif
 #ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
   if (!opt) {
@@ -486,12 +486,12 @@ MappingPermutationGenerators(MyMatrix<T> const &G1, MyMatrix<T> const &G2,
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<typename Tgroup::Telt>
-FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
+FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
-  MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1).second;
+  MyMatrix<T> Subspace1_proj = ComputeSpanningSpace<T, Tint>(Subspace1, os).second;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "Subspace1_proj=\n";
-  WriteMatrix(std::cerr, Subspace1_proj);
+  os << "Subspace1_proj=\n";
+  WriteMatrix(os, Subspace1_proj);
 #endif
   std::vector<MyMatrix<T>> LGen1_B;
   for (auto &eGen : GRP.GeneratorsOfGroup()) {
@@ -500,13 +500,13 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
     LGen1_B.push_back(eGen_M);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have LGen1_B\n";
+  os << "We have LGen1_B\n";
 #endif
   RetMI_S<T,Tgroup> ret =
       LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(
-          LGen1_B, Subspace1_proj, std::cerr);
+          LGen1_B, Subspace1_proj, os);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have ret, index=" << ret.index << "\n";
+  os << "We have ret, index=" << ret.index << "\n";
 #endif
   std::vector<Telt> LGen1_D;
   for (auto &eGen : ret.LGen) {
@@ -516,7 +516,7 @@ FindIntegralStabilizer(MyMatrix<T> const &Subspace1, Tgroup const &GRP) {
     LGen1_D.push_back(ePerm);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "We have LGen1_D\n";
+  os << "We have LGen1_D\n";
 #endif
   return LGen1_D;
 }
@@ -530,12 +530,12 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<Tint> const &MatRoot = vertFull.vert.MatRoot;
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "LORENTZ_GetStabilizerGenerator, vertFull.method="
-            << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen)
-            << "\n";
-  std::cerr << "gen=" << StringVector(vertFull.vert.gen) << "\n";
-  std::cerr << "LORENTZ_GetStabilizerGenerator MatRoot=\n";
-  WriteMatrix(std::cerr, MatRoot);
+  os << "LORENTZ_GetStabilizerGenerator, vertFull.method="
+     << vertFull.method << " gen=" << StringVectorGAP(vertFull.vert.gen)
+     << "\n";
+  os << "gen=" << StringVector(vertFull.vert.gen) << "\n";
+  os << "LORENTZ_GetStabilizerGenerator MatRoot=\n";
+  WriteMatrix(os, MatRoot);
 #endif
   if (vertFull.method == "extendedvectfamily") {
     return LinPolytopeIntegralWMat_Automorphism<T, Tgroup, std::vector<T>,
@@ -543,14 +543,14 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
                                                           os);
   }
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
-  std::cerr << "|GRP1|=" << vertFull.GRP1.size() << "\n";
+  os << "|GRP1|=" << vertFull.GRP1.size() << "\n";
 #endif
   if (vertFull.method == "isotropstabequiv_V1" ||
       vertFull.method == "isotropstabequiv") {
     int n = G.rows();
     MyMatrix<T> Subspace1 = UniversalMatrixConversion<T, Tint>(MatRoot);
     std::vector<Telt> LGen1_D =
-        FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1);
+      FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull.GRP1, os);
     std::vector<MyMatrix<T>> LGen1 =
         MappingPermutationGenerators(G, G, Subspace1, LGen1_D);
 #ifdef TRACK_INFOS_LOG
@@ -565,7 +565,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
         using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
         Thelper helper{n};
         return LinearSpace_Stabilizer<T, Tgroup, Thelper>(
-            LGen2, helper, InvInvariantSpace, std::cerr);
+            LGen2, helper, InvInvariantSpace, os);
       } else {
         using Thelper = FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>;
         MyVector<T> const &Visotrop = vertFull.vert.gen;
@@ -575,7 +575,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
           ComputeFiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>(G_new, eProd,
                                                              Visotrop);
         return LinearSpace_Stabilizer<T, Tgroup, Thelper>(
-            LGen2, helper, InvInvariantSpace, std::cerr);
+            LGen2, helper, InvInvariantSpace, os);
       }
     };
 #ifdef SANITY_CHECK_LORENTZIAN_STAB_EQUIV
@@ -617,7 +617,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>>
 FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
                         MyMatrix<T> const &Subspace2, MyMatrix<T> const &G2,
-                        Tgroup const &GRP, [[maybe_unused]] std::ostream &os) {
+                        Tgroup const &GRP, std::ostream &os) {
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   os << "------------------------------------------------------------\n";
   os << "FindSubspaceEquivalence, begin\n";
@@ -625,9 +625,9 @@ FindSubspaceEquivalence(MyMatrix<T> const &Subspace1, MyMatrix<T> const &G1,
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   std::pair<MyMatrix<T>, MyMatrix<T>> pair1 =
-      ComputeSpanningSpace<T, Tint>(Subspace1);
+    ComputeSpanningSpace<T, Tint>(Subspace1, os);
   std::pair<MyMatrix<T>, MyMatrix<T>> pair2 =
-      ComputeSpanningSpace<T, Tint>(Subspace2);
+    ComputeSpanningSpace<T, Tint>(Subspace2, os);
 #ifdef DEBUG_LORENTZIAN_STAB_EQUIV
   os << "FindSubspaceEquivalence, We have pair1/pair2\n";
 #endif
@@ -797,7 +797,7 @@ std::optional<MyMatrix<T>> LORENTZ_TestEquivalence(
     os << "|GRP1|=" << vertFull1.GRP1.size() << "\n";
 #endif
     std::vector<Telt> LGen1_D =
-        FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull1.GRP1);
+      FindIntegralStabilizer<T, Tint, Tgroup>(Subspace1, vertFull1.GRP1, os);
     std::vector<MyMatrix<T>> LGen1 =
         MappingPermutationGenerators(G1, G1, Subspace1, LGen1_D);
     // Original question: Does there exist g in GRP(LGen1) s.t. g * EquivRat in

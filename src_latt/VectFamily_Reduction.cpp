@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     };
     std::cerr << "Original complexity measures\n";
     matrix_measure(M);
-    std::pair<MyMatrix<T>, MyMatrix<T>> pair = ReduceVectorFamily(M, method);
+    std::pair<MyMatrix<T>, MyMatrix<T>> pair = ReduceVectorFamily(M, method, std::cerr);
     std::cerr << "Output complexity measures\n";
     matrix_measure(pair.first);
     auto print_mat = [&](std::ostream &os) -> void {

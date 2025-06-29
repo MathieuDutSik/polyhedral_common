@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
     std::vector<T> l_norms =
         get_initial_list_norms<T, Tint>(G, OptionNorms, std::cerr);
     std::cerr << "We have l_norms\n";
-    SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+    SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, std::cerr);
     std::cerr << "We have si\n";
 
     CuspidalBank<T, Tint> cusp_bank;

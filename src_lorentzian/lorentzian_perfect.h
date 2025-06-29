@@ -191,7 +191,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 6\n";
 #endif
-  MyMatrix<T> Ubasis_T = SublatticeBasisReduction(UbasisPre_T);
+  MyMatrix<T> Ubasis_T = SublatticeBasisReduction(UbasisPre_T, os);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 7\n";
 #endif

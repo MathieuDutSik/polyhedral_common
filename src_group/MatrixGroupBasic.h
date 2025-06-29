@@ -162,7 +162,7 @@ T L1normMatrixGroup(Thelper const &helper,
 template <typename T, typename Tint, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>>
 LLLMatrixGroupReduction(Thelper const &helper,
-                        std::vector<MyMatrix<T>> const &ListMatr) {
+                        std::vector<MyMatrix<T>> const &ListMatr, std::ostream& os) {
   int n = helper.n;
   MyMatrix<T> PosDefMat = IdentityMat<T>(n);
   for (auto &eMat : ListMatr) {
@@ -171,7 +171,7 @@ LLLMatrixGroupReduction(Thelper const &helper,
       PosDefMat += eProd;
     }
   }
-  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(PosDefMat);
+  LLLreduction<T, Tint> pair = LLLreducedBasis<T, Tint>(PosDefMat, os);
   MyMatrix<Tint> const &Pmat = pair.Pmat;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
@@ -233,7 +233,7 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     }
     MyMatrix<T> NewSpace1 = GetZbasis(MatrixFromVectorFamily(ConcatSpace));
     // The LLL reduction appears quite efficient
-    MyMatrix<T> NewSpace = SublatticeBasisReduction(NewSpace1);
+    MyMatrix<T> NewSpace = SublatticeBasisReduction(NewSpace1, os);
     T NewDet = T_abs(DeterminantMat(NewSpace));
     if (NewDet == TheDet) {
 #ifdef DEBUG_MATRIX_GROUP_BASIC

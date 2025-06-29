@@ -104,11 +104,12 @@ template <typename T> struct SublattInfos {
 
 template <typename T, typename Tint>
 SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
-                                       std::vector<T> const &l_norms) {
+                                       std::vector<T> const &l_norms,
+                                       std::ostream& os) {
   std::unordered_map<T, MyMatrix<T>> map_norm_latt;
   for (auto &e_norm : l_norms) {
     MyMatrix<T> Latt_pre = ComputeLattice_LN(G, e_norm);
-    MyMatrix<T> Latt = SublatticeBasisReduction(Latt_pre);
+    MyMatrix<T> Latt = SublatticeBasisReduction(Latt_pre, os);
     map_norm_latt[e_norm] = Latt;
   }
   return {G, l_norms, std::move(map_norm_latt)};
@@ -1659,7 +1660,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   std::optional<std::string> reason_non_reflective;
   LorentzianFinitenessGroupTester<T, Tint> group_tester =
-      LorentzianFinitenessGroupTester<T, Tint>(G);
+    LorentzianFinitenessGroupTester<T, Tint>(G, os);
   int nonew_nbdone = 0;
   size_t n_simple_roots = 0;
   auto f_try_terminate = [&]() -> bool {
@@ -1816,7 +1817,7 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
         UniversalMatrixConversion<Tint, T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     std::vector<MyVector<Tint>> l_v =
-        FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm);
+      FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm, os);
     for (auto &e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
       std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, e_root);
@@ -1914,7 +1915,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
 #endif
       MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
       MyMatrix<T> Latt_inter_NSP_pre = IntersectionLattice(Latt, NSP);
-      MyMatrix<T> Latt_inter_NSP = SublatticeBasisReduction(Latt_inter_NSP_pre);
+      MyMatrix<T> Latt_inter_NSP = SublatticeBasisReduction(Latt_inter_NSP_pre, os);
       LatticeProjectionFramework<T> fr(G, Subspace, Latt_inter_NSP);
       MapIdxFr[e_norm] = pos;
       ListFr.push_back(fr);
@@ -1922,7 +1923,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
       MyMatrix<T> const &RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
       std::vector<MyVector<Tint>> l_v =
-          FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm);
+        FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm, os);
 #ifdef DEBUG_EDGEWALK
       os << "EDGE: |l_v|=" << l_v.size() << "\n";
 #endif
@@ -2114,7 +2115,7 @@ ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostre
   std::string DualDescProg = "lrs_iterate";
   bool ApplyReduction = true;
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
-  SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+  SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, os);
   //
   TheHeuristic<Tint> HeuristicIdealStabEquiv =
       GetHeuristicIdealStabEquiv<Tint>();
@@ -2162,7 +2163,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
     BlockPROC.get_bool("EarlyTerminationIfNotReflective");
   bool ApplyReduction = BlockPROC.get_bool("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
-  SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms);
+  SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, os);
 #ifdef DEBUG_EDGEWALK
   os << "EDGE: We have l_norms\n";
 #endif
@@ -2275,8 +2276,8 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
     return;
   }
   std::vector<T> l_norms = l_norms1;
-  SublattInfos<T> si1 = ComputeSublatticeInfos<T, Tint>(G1, l_norms);
-  SublattInfos<T> si2 = ComputeSublatticeInfos<T, Tint>(G1, l_norms);
+  SublattInfos<T> si1 = ComputeSublatticeInfos<T, Tint>(G1, l_norms, os);
+  SublattInfos<T> si2 = ComputeSublatticeInfos<T, Tint>(G1, l_norms, os);
 #ifdef DEBUG_EDGEWALK
   os << "EDGE: We have l_norms\n";
 #endif

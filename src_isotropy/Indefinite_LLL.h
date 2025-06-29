@@ -708,13 +708,13 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
 #ifdef DEBUG_INDEFINITE_LLL
           os << "ILLL: IndefiniteReductionNonDegenerate, before LLLreduceBasis\n";
 #endif
-          LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Mcall);
+          LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(Mcall, os);
           return rec.Pmat;
         } else {
 #ifdef DEBUG_INDEFINITE_LLL
           os << "ILLL: IndefiniteReductionNonDegenerate, before LLLreduceBasisDual\n";
 #endif
-          LLLreduction<T, Tint> rec = LLLreducedBasisDual<T, Tint>(Mcall);
+          LLLreduction<T, Tint> rec = LLLreducedBasisDual<T, Tint>(Mcall, os);
           return rec.Pmat;
         }
       };
@@ -798,7 +798,7 @@ IndefiniteReductionNonDegenerate(MyMatrix<T> const &M, std::ostream &os) {
  */
 template <typename T, typename Tint>
 std::pair<ResultReduction<T, Tint>, int>
-get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream &os) {
+get_nondegenerate_reduction(MyMatrix<T> const& M, std::ostream &os) {
   int n = M.rows();
 #ifdef DEBUG_INDEFINITE_LLL
   os << "ILLL: get_nondegenerate_reduction, We have n\n";
@@ -815,7 +815,7 @@ get_nondegenerate_reduction(MyMatrix<T> const& M, [[maybe_unused]] std::ostream 
 #ifdef DEBUG_INDEFINITE_LLL
   os << "ILLL: get_nondegenerate_reduction, We have PreNSP\n";
 #endif
-  MyMatrix<Tint> NSP = SublatticeBasisReduction(PreNSP);
+  MyMatrix<Tint> NSP = SublatticeBasisReduction(PreNSP, os);
 #ifdef DEBUG_INDEFINITE_LLL
   os << "ILLL: get_nondegenerate_reduction, We have NSP\n";
 #endif

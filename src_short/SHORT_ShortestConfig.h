@@ -503,7 +503,7 @@ template <typename Tint> struct SHVreduced {
 };
 
 template <typename Tint>
-SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV) {
+SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV, std::ostream& os) {
   int n = eSHV.rows();
   int nbVect = eSHV.cols();
   using Tfield = typename overlying_field<Tint>::field_type;
@@ -516,7 +516,7 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV) {
     return TheGram;
   };
   MyMatrix<Tfield> TheGram = GetGram(eSHV);
-  LLLreduction<Tfield, Tint> res = LLLreducedBasis<Tfield, Tint>(TheGram);
+  LLLreduction<Tfield, Tint> res = LLLreducedBasis<Tfield, Tint>(TheGram, os);
   MyMatrix<Tfield> TheRemainder = res.GramMatRed;
   MyMatrix<Tint> TheTrans = res.Pmat;
   MyMatrix<Tint> Pmat = TransposedMat(TheTrans);
@@ -547,7 +547,7 @@ ReplyRealizability<T, Tint>
 SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
                                       std::string const &TheMethod,
                                       std::ostream &os) {
-  SHVreduced<Tint> RecLLL = SHORT_GetLLLreduction_Kernel(Minput);
+  SHVreduced<Tint> RecLLL = SHORT_GetLLLreduction_Kernel(Minput, os);
   MyMatrix<Tint> M = RecLLL.SHVred;
   int n = M.cols();
   std::vector<MyMatrix<Tint>> ListMatrGen =

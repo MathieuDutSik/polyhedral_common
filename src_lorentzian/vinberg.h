@@ -36,8 +36,8 @@
 template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
                                const MyVector<T> &eV, const T &norm, Fins f_ins,
-                               [[maybe_unused]] std::ostream &os) {
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
+                               std::ostream &os) {
+  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
   const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
   const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
   /*
@@ -491,7 +491,7 @@ void Solutioner_CVP(const DataMappingVinbergProblem<T, Tint> &data,
 template <typename T, typename Tint>
 DataMappingVinbergProblem<T, Tint>
 Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
-                const Tint &k, [[maybe_unused]] std::ostream &os) {
+                const Tint &k, std::ostream &os) {
   if (k == 1 || k == 2) {
     // No need for some complex linear algebra work,
     // returning directly
@@ -540,7 +540,7 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   }
   os << "w0=" << StringVectorGAP(w0) << "\n";
 #endif
-  MyMatrix<Tint> U_block = SublatticeBasisReduction(NullspaceIntMat(Bmat));
+  MyMatrix<Tint> U_block = SublatticeBasisReduction(NullspaceIntMat(Bmat), os);
   size_t dim = U_block.rows();
 #ifdef DEBUG_VINBERG
   if (dim != n - 1) {
@@ -667,7 +667,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     // Now we write x = y P and this gets us
     // [y - V_img] G_red [y - V_img]^T
     //
-    LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(data.G);
+    LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(data.G, os);
     MyMatrix<Tint> const &Pmat = RecLLL.Pmat;
     MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
     MyMatrix<T> PmatInv_T = Inverse(Pmat_T);

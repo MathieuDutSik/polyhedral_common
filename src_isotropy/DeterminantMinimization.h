@@ -55,7 +55,7 @@ ResultNullspaceMod<T> GetAdjustedBasis(MyMatrix<T> const &M, T const &TheMod,
   os << "DETMIN: GetAdjustedBasis, OrthTr=\n";
   WriteMatrix(os, OrthTr);
 #endif
-  MyMatrix<T> NSP_b = SublatticeBasisReduction(NullspaceIntMat(OrthTr));
+  MyMatrix<T> NSP_b = SublatticeBasisReduction(NullspaceIntMat(OrthTr), os);
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
   os << "DETMIN: GetAdjustedBasis, Now NSP_b=\n";
   WriteMatrix(os, NSP_b);

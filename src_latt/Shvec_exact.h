@@ -91,10 +91,10 @@ ReductionMod1vector(MyVector<T> const &V) {
  */
 template <typename T, typename Tint>
 std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>>
-GetReducedShvecRequest(T_shvec_request<T> const &request) {
+GetReducedShvecRequest(T_shvec_request<T> const &request, std::ostream& os) {
   int dim = request.dim;
   LLLreduction<T, Tint> eRec =
-      LLLreducedBasisDual<T, Tint>(request.gram_matrix);
+    LLLreducedBasisDual<T, Tint>(request.gram_matrix, os);
   MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
   MyMatrix<T> Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
   MyVector<T> cosetRed = Q_T.transpose() * request.coset;
@@ -668,12 +668,12 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
                                      int mode,
-                                     [[maybe_unused]] std::ostream &os) {
+                                     std::ostream &os) {
 #ifdef TIMINGS_SHVEC
   MicrosecondTime time;
 #endif
   std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>> ePair =
-      GetReducedShvecRequest<T, Tint>(request);
+    GetReducedShvecRequest<T, Tint>(request, os);
 #ifdef TIMINGS_SHVEC
   os << "|SHVEC: GetReducedShvecRequest|=" << time << "\n";
 #endif
@@ -735,15 +735,15 @@ template <typename T, typename Tint> struct CVPSolver {
 private:
   MyMatrix<T> const &GramMat;
   int dim;
-  LLLreduction<T, Tint> eRec;
   std::ostream &os;
+  LLLreduction<T, Tint> eRec;
   MyMatrix<T> Q_T;
   T_shvec_request<T> request;
 
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
-      : GramMat(_GramMat), dim(GramMat.rows()),
-        eRec(LLLreducedBasisDual<T, Tint>(GramMat)), os(_os) {
+    : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
+      eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
     T bound_unset = 0;
@@ -972,9 +972,9 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
                                                  const MyVector<T> &eV,
-                                                 const T &norm) {
+                                                 const T &norm, std::ostream& os) {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
+  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
   const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
@@ -997,9 +997,9 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
                                                   const MyVector<T> &eV,
-                                                  const T &norm) {
+                                                  const T &norm, std::ostream& os) {
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat);
+  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
   const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);

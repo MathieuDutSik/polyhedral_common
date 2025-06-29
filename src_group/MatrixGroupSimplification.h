@@ -3,7 +3,8 @@
 #define SRC_GROUP_MATRIXGROUPSIMPLIFICATION_H_
 
 #include "MAT_Matrix.h"
-
+#include "PermutationElt.h"
+#include "Indefinite_LLL.h"
 
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -101,6 +102,8 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   size_t n_operation = 0;
+#endif
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   size_t n_get_best_candidate = 0;
 #endif
   // Generate the possible ways to simplify the pair of elements.
@@ -132,7 +135,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
       pair_ret = pair_gen;
     }
     //
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
     n_get_best_candidate += 1;
 #endif
     return pair_ret;
@@ -448,7 +451,7 @@ template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers,
 std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   std::unordered_set<Ttype> SetMred;
   for (auto & eM : ListM) {
-    Ttype eM_inv = Inverse(eM);
+    Ttype eM_inv = f_invers(eM);
     if (eM < eM_inv) {
       SetMred.insert(eM);
     } else {

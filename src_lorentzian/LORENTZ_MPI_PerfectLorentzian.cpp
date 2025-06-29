@@ -54,6 +54,9 @@ int main(int argc, char *argv[]) {
   try {
     std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 1\n";
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN();
+    SingleBlock const& BlockDATA = eFull.get_block("DATA");
+    int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+    std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 1, max_runtime_second=" << max_runtime_second << "\n";
     std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 2\n";
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";

@@ -793,7 +793,7 @@ public:
 // Resolution of B = H U^T + U H^T
 // 0      = sum_k h_{ik} u_{jk} + u_{ik} h_{jk}
 template <typename T>
-std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) {
+std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat, std::ostream& os) {
   int dim = Umat.rows();
   MyMatrix<T> TheMat = ZeroMatrix<T>(dim * dim, dim * dim);
   auto f = [&](int i, int j) -> int { return i + dim * j; };
@@ -820,7 +820,7 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) 
     return eMat;
   };
   std::vector<MyMatrix<T>> BasisIntegralKernel;
-  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(TheMat));
+  MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(TheMat), os);
   int dimNSP = NSP.rows();
   for (int u = 0; u < dimNSP; u++) {
     MyVector<T> eVect = GetMatrixRow(NSP, u);
@@ -866,7 +866,7 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat) 
     correspond to the generator of the integral kernel.
   */
 template<typename T, typename Tint>
-std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice, [[maybe_unused]] std::ostream &os) {
+std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice, std::ostream &os) {
   int dim = Q.rows();
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 1, Sublattice=\n";
@@ -919,7 +919,7 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 10\n";
 #endif
-  std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U);
+  std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U, os);
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 11\n";
 #endif
@@ -1100,7 +1100,7 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
 }
 
 template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
-  LorentzianFinitenessGroupTester(MyMatrix<T> const &_G) : G(_G) {
+  LorentzianFinitenessGroupTester(MyMatrix<T> const &_G, std::ostream& _os) : G(_G), os(_os) {
     int dim = G.rows();
     T dim_T = dim;
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
@@ -1109,6 +1109,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     is_finite = true;
   }
   void GeneratorUpdate(MyMatrix<Tint> const &eP) {
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> eP_T = UniversalMatrixConversion<T, Tint>(eP);
     MyMatrix<T> G_img = eP_T * G * eP_T.transpose();
     if (G_img != G) {
@@ -1121,6 +1122,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
       std::cerr << "LORLIN: The matrix eP should leave the quadratic form invariant\n";
       throw TerminalException{1};
     }
+#endif
 #ifdef TIMINGS_LORENTZIAN_LINALG
     SingletonTime time1;
 #endif
@@ -1134,7 +1136,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
 #endif
     MyMatrix<Tint> eDiff = InvariantBasis * eP - InvariantBasis;
     if (!IsZeroMatrix(eDiff)) {
-      MyMatrix<Tint> NSP = SublatticeBasisReduction(NullspaceIntMat(eDiff));
+      MyMatrix<Tint> NSP = SublatticeBasisReduction(NullspaceIntMat(eDiff), os);
       if (NSP.rows() == 0) {
         is_finite = false;
         InvariantBasis = MyMatrix<Tint>(0, G.rows());
@@ -1171,6 +1173,7 @@ private:
   MyMatrix<Tint> InvariantBasis;
   size_t max_finite_order;
   bool is_finite;
+  std::ostream& os;
 };
 
 // clang-format off

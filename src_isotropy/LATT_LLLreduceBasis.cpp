@@ -45,7 +45,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "We have M\n";
     //
     auto print_result = [&](std::ostream &os) -> void {
-      LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(M);
+      LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(M, std::cerr);
       MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(rec.Pmat);
       MyMatrix<T> M_Control = B_T * M * B_T.transpose();
       T det = T_abs(DeterminantMat(B_T));

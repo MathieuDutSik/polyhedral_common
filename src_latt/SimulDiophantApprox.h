@@ -45,7 +45,7 @@ std::string GapStringDiophantineApprox(DiophantResult<Tint> const &Res) {
 
 template <typename T, typename Tint>
 DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
-                                                          T const &epsilon) {
+                                                          T const &epsilon, std::ostream& os) {
   //
   // Building the Gram matrix according to Lenstra, Lenstra, Lovasz, Factoring
   // Polynomials with Rational Coefficients Proposition 1.39, Page 525.
@@ -73,7 +73,7 @@ DiophantResult<Tint> SimultaneousDiophantineApproximation(MyVector<T> const &V,
   //
   // Computing the LLL reduction
   //
-  LLLreduction<T, Tint> LLLinfo = LLLreducedBasis<T, Tint>(GramMat);
+  LLLreduction<T, Tint> LLLinfo = LLLreducedBasis<T, Tint>(GramMat, os);
   //
   // Extrqcting the approimation
   //

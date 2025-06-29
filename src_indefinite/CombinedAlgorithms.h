@@ -228,14 +228,14 @@ public:
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<T> PreNSP_T = SublatticeBasisReduction(NullspaceIntTrMat(eProd));
+    MyMatrix<T> PreNSP_T = SublatticeBasisReduction(NullspaceIntTrMat(eProd), os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, eProd=\n";
     WriteMatrix(os, eProd);
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, PreNSP_T=\n";
     WriteMatrix(os, PreNSP_T);
 #endif
-    NSP_T = SublatticeBasisReduction(PreNSP_T);
+    NSP_T = SublatticeBasisReduction(PreNSP_T, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, NSP_T=\n";
     WriteMatrix(os, NSP_T);
@@ -1341,7 +1341,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have GRP2\n";
 #endif
-    size_t eInvRed = INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane);
+    size_t eInvRed = INDEF_FORM_Invariant_IsotropicKplane_Raw(Qmat, Plane, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Invariant_IsotropicKstuff_Kernel, we have "
           "eInvRed\n";
@@ -1799,8 +1799,8 @@ private:
   INDEF_FORM_EquivalenceVector_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
                                        MyVector<Tint> const &v1,
                                        MyVector<Tint> const &v2) {
-    if (INDEF_FORM_InvariantVector(Q1, v1) !=
-        INDEF_FORM_InvariantVector(Q2, v2)) {
+    if (INDEF_FORM_InvariantVector(Q1, v1, os) !=
+        INDEF_FORM_InvariantVector(Q2, v2, os)) {
       return {};
     }
     if (RankMat(Q1) != Q1.rows()) {
@@ -1887,7 +1887,7 @@ private:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup_Reduced(MyMatrix<T> const &Q) {
     int n = Q.rows();
-    MyMatrix<T> NSP_T = SublatticeBasisReduction(NullspaceIntMat(Q));
+    MyMatrix<T> NSP_T = SublatticeBasisReduction(NullspaceIntMat(Q), os);
     MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint, T>(NSP_T);
     MyMatrix<Tint> TheCompl = SubspaceCompletionInt(NSP, n);
     MyMatrix<Tint> FullBasis = Concatenate(TheCompl, NSP);
@@ -1926,13 +1926,13 @@ private:
   std::optional<MyMatrix<Tint>>
   INDEF_FORM_TestEquivalence_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
     int n = Q1.rows();
-    MyMatrix<T> NSP1_T = SublatticeBasisReduction(NullspaceIntMat(Q1));
+    MyMatrix<T> NSP1_T = SublatticeBasisReduction(NullspaceIntMat(Q1), os);
     MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint, T>(NSP1_T);
     MyMatrix<Tint> TheCompl1 = SubspaceCompletionInt(NSP1, n);
     MyMatrix<T> TheCompl1_T = UniversalMatrixConversion<T, Tint>(TheCompl1);
     MyMatrix<Tint> FullBasis1 = Concatenate(TheCompl1, NSP1);
     MyMatrix<T> QmatRed1 = TheCompl1_T * Q1 * TheCompl1_T.transpose();
-    MyMatrix<T> NSP2_T = SublatticeBasisReduction(NullspaceIntMat(Q2));
+    MyMatrix<T> NSP2_T = SublatticeBasisReduction(NullspaceIntMat(Q2), os);
     MyMatrix<Tint> NSP2 = UniversalMatrixConversion<Tint, T>(NSP2_T);
     MyMatrix<Tint> TheCompl2 = SubspaceCompletionInt(NSP2, n);
     MyMatrix<T> TheCompl2_T = UniversalMatrixConversion<T, Tint>(TheCompl2);

@@ -2008,13 +2008,13 @@ RetMI_S<T,Tgroup> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMat
                        std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+    LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
   MyMatrix<Tint> const &Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   RetMI_S<T,Tgroup> ret =
       LinearSpace_Stabilizer_Kernel<T, Tgroup, Thelper>(ListMatrNew, helper_new,
@@ -2037,13 +2037,13 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
     MyMatrix<T> const &TheSpace, std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+    LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
   MyMatrix<Tint> const &Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   Stab_RightCoset<T> pairB =
       LinearSpace_Stabilizer_RightCoset_Kernel<T, Tgroup, Thelper>(
@@ -2070,13 +2070,13 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> LinearSpace_Stabili
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& V_gens, std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+    LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
   MyMatrix<Tint> const &Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::vector<MyMatrix<T>> V_gens_B;
   for (auto &eMatr_B : V_gens) {
@@ -2104,13 +2104,13 @@ std::pair<std::vector<MyMatrix<T>>,std::vector<DoubleCosetEntry<T>>> LinearSpace
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& V_gens, std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+    LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
   MyMatrix<Tint> const &Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> TheSpace_B = TheSpace * PmatInv_T;
-  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B);
+  MyMatrix<T> TheSpace_C = SublatticeBasisReduction(TheSpace_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::vector<MyMatrix<T>> V_gens_B;
   for (auto &eMatr_B : V_gens) {
@@ -2461,15 +2461,15 @@ LinearSpace_Equivalence(std::vector<MyMatrix<T>> const &ListMatr,
                         MyMatrix<T> const &InSpace2, std::ostream &os) {
   using Tint = typename underlying_ring<T>::ring_type;
   std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>> pair =
-      LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr);
+    LLLMatrixGroupReduction<T, Tint, Thelper>(helper, ListMatr, os);
   std::vector<MyMatrix<T>> const &ListMatrNew = pair.first;
   MyMatrix<Tint> const &Pmat = pair.second;
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
   MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
   MyMatrix<T> InSpace1_B = InSpace1 * PmatInv_T;
   MyMatrix<T> InSpace2_B = InSpace2 * PmatInv_T;
-  MyMatrix<T> InSpace1_C = SublatticeBasisReduction(InSpace1_B);
-  MyMatrix<T> InSpace2_C = SublatticeBasisReduction(InSpace2_B);
+  MyMatrix<T> InSpace1_C = SublatticeBasisReduction(InSpace1_B, os);
+  MyMatrix<T> InSpace2_C = SublatticeBasisReduction(InSpace2_B, os);
   Thelper helper_new = TransformHelper(helper, Pmat_T);
   std::optional<MyMatrix<T>> opt =
       LinearSpace_Equivalence_Kernel<T, Tgroup, Thelper>(
