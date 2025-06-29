@@ -514,7 +514,10 @@ public:
 private:
   PartitionStorage<Telt> partition;
 public:
-  PartitionReduction(std::vector<MyMatrix<T>> const& ListMat, std::function<Telt(const MyMatrix<T>&)> const& f_get_perm_inp, Face const& face_inp) : partition(face_inp) {
+  PartitionReduction(std::vector<MyMatrix<T>> const& ListMat, std::function<Telt(const MyMatrix<T>&)> const& f_get_perm_inp, Face const& face_inp, std::ostream& os) : partition(face_inp, os) {
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MAT_GRP: PartitionReduction, |face_inp|=" << face_inp.size() << " / " << face_inp.count() << "\n";
+#endif
     std::vector<Telt> list_gens;
     for (auto& eMat: ListMat) {
       Telt egen = f_get_perm_inp(eMat);
@@ -1311,7 +1314,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     };
     int nbRow = helper.nbRow();
     Face eFace_pre = GetFace<T, Tmod>(O, TheSpaceMod);
-    PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre);
+    PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace_pre, os);
     Face eFace = TranslateFace(nbRow, pr.face);
     std::vector<Telt> ListPermGens =
       MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
@@ -2244,7 +2247,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|=" << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|=" << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
 #endif
-      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre);
+      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre, os);
       Face eFace1 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1|=" << eFace1.size() << " / " << eFace1.count() << "\n";
@@ -2321,7 +2324,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       };
       int nbRow = helper.nbRow();
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
-      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre);
+      PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre, os);
       Face eFace2 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: We have eFace2\n";

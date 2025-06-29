@@ -655,17 +655,13 @@ std::vector<Tobj> OrbitSplittingGeneralized(
           if (SingleOrbit.count(fObj) == 0 && Additional.count(fObj) == 0) {
             if (NewElts.count(fObj) == 0) {
 #ifdef DEBUG_GROUP
-              if (ListTotal.count(fObj) > 0) {
-                NewElts.insert(fObj);
-                ListTotal.erase(fObj);
-              } else {
+              if (ListTotal.count(fObj) == 0) {
                 std::cerr << "Orbit do not match, PANIC!!!\n";
                 throw TerminalException{1};
               }
-#else
+#endif
               NewElts.insert(fObj);
               ListTotal.erase(fObj);
-#endif
             }
           }
         }
@@ -794,17 +790,13 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
           if (SingleOrbit.count(fSet) == 0 && Additional.count(fSet) == 0) {
             if (NewElts.count(fSet) == 0) {
 #ifdef DEBUG_GROUP
-              if (ListTotal.count(fSet) > 0) {
-                NewElts.insert(fSet);
-                ListTotal.erase(fSet);
-              } else {
+              if (ListTotal.count(fSet) == 0) {
                 std::cerr << "Orbit do not matched, PANIC!!!\n";
                 throw TerminalException{1};
               }
-#else
+#endif
               NewElts.insert(fSet);
               ListTotal.erase(fSet);
-#endif
             }
           }
         }
@@ -1050,6 +1042,7 @@ struct PartitionStorage {
 private:
   using Tidx = typename Telt::Tidx;
 public:
+  std::ostream& os;
   // The list of points in the list
   std::vector<Tidx> points;
   // The indices of the first points.
@@ -1069,15 +1062,29 @@ public:
   std::vector<Tidx> scratch2;
   std::vector<Tidx> scratch3;
   std::vector<Tidx> scratch4;
-  PartitionStorage(Face const& f) {
+  PartitionStorage(Face const& f, std::ostream& _os) : os(_os) {
     size_t siz_in = f.count();
     size_t siz_out = f.size() - siz_in;
     firsts.push_back(0);
     firsts.push_back(siz_in);
     lengths.push_back(siz_in);
     lengths.push_back(siz_out);
-    n_part = 2;
+    Tidx cell_in;
+    Tidx cell_out;
+    if (f.count() > 0 && f.count() < f.size()) {
+      n_part = 2;
+      cell_in = 0;
+      cell_out = 1;
+    } else {
+      n_part = 1;
+      // All goes to the same place. Put 0 all the way.
+      cell_in = 0;
+      cell_out = 0;
+    }
     n_elt = f.size();
+#ifdef DEBUG_GROUP
+    os << "GRPFCT: PartitionStorage(Const), n_elt=" << n_elt << "\n";
+#endif
     Tidx pos_in = 0;
     Tidx pos_out = 0;
     points = std::vector<Tidx>(n_elt);
@@ -1086,12 +1093,12 @@ public:
     for (Tidx i=0; i<n_elt; i++) {
       if (f[i] == 1) {
         points[pos_in] = i;
-        cellno[i] = 0;
+        cellno[i] = cell_in;
         cellpos[i] = pos_in;
         pos_in += 1;
       } else {
         points[pos_out + siz_in] = i;
-        cellno[i] = 1;
+        cellno[i] = cell_out;
         cellpos[i] = pos_out;
         pos_out += 1;
       }

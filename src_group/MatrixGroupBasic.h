@@ -341,8 +341,13 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
     return ListMatr;
   }
 #ifdef TRACK_INFO_MATRIX_GROUP_BASIC
-  WriteGroupFileGAP("GRPbig", GRPbig);
-  WriteGroupFileGAP("GRPsub", eGRP);
+  WriteGroupFile("GRPbig", GRPbig);
+  WriteGroupFile("GRPsub", eGRP);
+  WriteGroupFileGAP("GRPbig_gap", GRPbig);
+  WriteGroupFileGAP("GRPsub_gap", eGRP);
+#endif
+#ifdef DEBUG_MATRIX_GROUP_BASIC
+  os << "MAT_GRP: PreImageSubgroup, beginning\n";
 #endif
   std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
   size_t len_stab = l_grp.size() - 1;

@@ -14,7 +14,7 @@ CI_Write_Ok:=function()
 end;
 
 CI_PrintExistConclusion:=function()
-    local FileName;
+    local FileName, test;
     FileName:="CI_CONCLUSION";
     test:=IsExistingFile(FileName);
     Print("CI_PrintExistConclusion, FileName=", FileName, " IsExist=", test, "\n");
