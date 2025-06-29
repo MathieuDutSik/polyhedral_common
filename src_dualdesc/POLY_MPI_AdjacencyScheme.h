@@ -473,6 +473,9 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     os << "MPI_ADJ_SCH: process_one_entry_obj time_start=" << time_start << " max_time_second=" << max_time_second << "\n";
 #endif
     if (max_time_second > 0 && time_start > max_time_second) {
+#ifdef DEBUG_MPI_ADJACENCY_SCHEME
+      os << "MPI_ADJ_SCH: TERMINATING RUN BECAUSE RUNTIME IS TOO HIGH\n";
+#endif
       return false;
     }
     if (undone.size() == 0) {
