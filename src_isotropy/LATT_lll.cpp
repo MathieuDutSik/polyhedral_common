@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "LatticeDefinitions.h"
+#include "ClassicLLL.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

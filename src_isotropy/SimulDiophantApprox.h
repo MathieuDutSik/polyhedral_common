@@ -3,7 +3,7 @@
 #define SRC_LATT_SIMULDIOPHANTAPPROX_H_
 
 // clang-format off
-#include "LatticeDefinitions.h"
+#include "ClassicLLL.h"
 #include <string>
 #include <utility>
 // clang-format on

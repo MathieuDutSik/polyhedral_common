@@ -2,6 +2,8 @@
 #ifndef SRC_LATT_CLASSICLLL_H_
 #define SRC_LATT_CLASSICLLL_H_
 
+#include "MAT_Matrix.h"
+
 #ifdef DEBUG
 #define DEBUG_CLASSIC_LLL
 #endif

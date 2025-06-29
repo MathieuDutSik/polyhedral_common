@@ -4,8 +4,8 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheorySafeInt.h"
 #include "NumberTheoryQuadField.h"
-#include "POLY_Fundamental.h"
-#include "LatticeDefinitions.h"
+#include "ClassicLLL.h"
+#include "norms.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

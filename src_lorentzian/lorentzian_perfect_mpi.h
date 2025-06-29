@@ -20,8 +20,8 @@ void ComputePerfectLorentzian(boost::mpi::communicator &comm,
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: ComputePerfectLorentzian, beginning\n";
 #endif
-  SingleBlock BlockDATA = eFull.get_block("DATA");
-  SingleBlock BlockSTORAGE = eFull.get_block("STORAGE");
+  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
   //
   bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");

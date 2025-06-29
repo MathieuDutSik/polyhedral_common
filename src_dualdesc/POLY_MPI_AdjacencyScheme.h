@@ -495,10 +495,6 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     os << "|MPI_ADJ_SCH: process_one_entry_obj f_adj|=" << time << "\n";
 #endif
     map_adjO[idx] = {l_adj.size(), {}};
-#ifdef DEBUG_MPI_ADJACENCY_SCHEME
-    os << "MPI_ADJ_SCH: process_one_entry_obj : idx=" << idx
-       << " |l_adj|=" << l_adj.size() << "\n";
-#endif
     nonce++;
     for (auto &x : l_adj) {
       Tobj x_obj = f_adji_obj(x);
