@@ -136,70 +136,36 @@ struct BlockInterval {
     return false;
   }
   // Testing if the intervals are correct
-  bool test_correctness() const {
+  void test_correctness() const {
     size_t n_intervals = intervals.size();
     // Checking that the intervals are increasing
     for (size_t i=1; i<n_intervals; i++) {
       if (intervals[i-1].end > intervals[i].start) {
         std::cerr << "The intervals are overlapping\n";
-        return false;
+        throw TerminalException{1};
       }
       if (intervals[i-1].end == intervals[i].start) {
         std::cerr << "The intervals should be merged\n";
-        return false;
+        throw TerminalException{1};
       }
     }
-    return true;
   }
 
-  // Remove an entry from the BlockInterval, but
-  // do not shift the positions.
-  void remove_entry(size_t x) {
-    size_t low = 0;
-    size_t high = intervals.size();
-
-    while (low < high) {
-      size_t mid = low + (high - low) / 2;
-      Interval& iv = intervals[mid];
-
-      if (x < iv.start) {
-        high = mid;
-      } else if (x >= iv.end) {
-        low = mid + 1;
-      } else {
-        if (x == iv.start) {
-          // Just reduce the interval
-          iv.start += 1;
-          if (iv.start == iv.end) {
-            intervals.erase(intervals.begin() + mid);
-          }
-          return;
-        }
-        if (x == iv.end - 1) {
-          // Just reduce the interval
-          iv.end -= 1;
-          if (iv.start == iv.end) {
-            intervals.erase(intervals.begin() + mid);
-          }
-          return;
-        }
-        // Break down the interval in two pieces
-        size_t end = iv.end;
-        Interval new_iv{x + 1, end};
-        iv.end = x;
-        intervals.insert(intervals.begin() + mid + 1, new_iv);
-        return;
+  std::vector<size_t> list_indices() const {
+    std::vector<size_t> indices;
+    for (auto & interval : intervals) {
+      for (size_t u=interval.start; u<interval.end; u++) {
+        indices.push_back(u);
       }
     }
-    // Nothing to do, exiting.
+    return indices;
   }
-
 
 
   // Remove an entry from the BlockInterval,
   // and shift the positions. This corresponds to a removal
   // from the underlying map.
-  void remove_entry_and_shift(size_t x) {
+  void remove_entry_and_shift_inner(size_t x) {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
@@ -252,11 +218,35 @@ struct BlockInterval {
     }
   }
 
+  // Calling the function and checking it
+  void remove_entry_and_shift(size_t x) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_bef = list_indices();
+#endif
+    remove_entry_and_shift_inner(x);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_aft_expected;
+    for (auto & y : indices_bef) {
+      if (y < x) {
+        indices_aft_expected.push_back(y);
+      }
+      if (y > x) {
+        indices_aft_expected.push_back(y - 1);
+      }
+    }
+    std::vector<size_t> indices_aft_real = list_indices();
+    if (indices_aft_expected != indices_aft_real) {
+      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (A)\n";
+      throw TerminalException{1};
+    }
+    test_correctness();
+#endif
+  }
 
 
   // Add one entry at a position and shift.
   // This corresponds to an insertion in the map.
-  void insert_entry_and_shift(size_t x) {
+  void insert_entry_and_shift_inner(size_t x) {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
@@ -298,8 +288,116 @@ struct BlockInterval {
     }
   }
 
+  void insert_entry_and_shift(size_t x) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_bef = list_indices();
+#endif
+    insert_entry_and_shift_inner(x);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_aft_expected;
+    indices_aft_expected.push_back(x);
+    for (auto & y : indices_bef) {
+      if (y < x) {
+        indices_aft_expected.push_back(y);
+      }
+      if (y >= x) {
+        indices_aft_expected.push_back(y + 1);
+      }
+    }
+    std::sort(indices_aft_expected.begin(), indices_aft_expected.end());
+    std::vector<size_t> indices_aft_real = list_indices();
+    if (indices_aft_expected != indices_aft_real) {
+      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (B)\n";
+      throw TerminalException{1};
+    }
+    test_correctness();
+#endif
+  }
+
   // Shift the index and
+  void noinsert_and_shift_inner(size_t x) {
+    size_t n_intervals = intervals.size();
+    size_t low = 0;
+    size_t high = n_intervals;
+
+    while (low < high) {
+      size_t mid = low + (high - low) / 2;
+      Interval& iv = intervals[mid];
+
+      if (x < iv.start) {
+        high = mid;
+      } else if (x >= iv.end) {
+        low = mid + 1;
+      } else {
+        // x is in [start, end)
+        if (x == iv.start) {
+          // First element in the list
+          for (size_t u=mid; u<n_intervals; u++) {
+            intervals[u].start += 1;
+            intervals[u].end += 1;
+          }
+          return;
+        }
+        if (x == iv.end - 1) {
+          // Last element in the list
+          for (size_t u=mid+1; u<n_intervals; u++) {
+            intervals[u].start += 1;
+            intervals[u].end += 1;
+          }
+          return;
+        }
+        // Break down the interval in two places.
+        size_t end = iv.end;
+        Interval new_iv{x + 1, end};
+        iv.end = x;
+        intervals.insert(intervals.begin() + mid + 1, new_iv);
+        for (size_t u=mid + 2; u<n_intervals; u++) {
+          intervals[u].start += 1;
+          intervals[u].end += 1;
+        }
+        return;
+      }
+    }
+    // x should be outside of the intervals.
+    auto iife_first_interval=[&]() -> size_t {
+      if (x < intervals[low].start) {
+        return low;
+      }
+      if (x >= intervals[low].end) {
+        return low + 1;
+      }
+      std::cerr << "SIMP: We should never reach that stage in BlockInterval\n";
+      throw TerminalException{1};
+    };
+    size_t index = iife_first_interval();
+    for (size_t u=index; u<n_intervals; u++) {
+      intervals[u].start += 1;
+      intervals[u].end += 1;
+    }
+  }
+
   void noinsert_and_shift(size_t x) {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_bef = list_indices();
+#endif
+    noinsert_and_shift_inner(x);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<size_t> indices_aft_expected;
+    for (auto & y : indices_bef) {
+      if (y < x) {
+        indices_aft_expected.push_back(y);
+      }
+      if (y >= x) {
+        indices_aft_expected.push_back(y + 1);
+      }
+    }
+    std::vector<size_t> indices_aft_real = list_indices();
+    if (indices_aft_expected != indices_aft_real) {
+      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (C)\n";
+      throw TerminalException{1};
+    }
+    test_correctness();
+#endif
   }
 
 };
@@ -484,6 +582,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     std::vector<TcombPair> list_insert;
   };
   auto f_search=[&]() -> std::optional<FoundImprov> {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    size_t n_reduce_calls = 0;
+#endif
     for (auto & kv: map) {
       TcombPair const& x1 = kv.first;
       BlockInterval & blk_int = kv.second;
@@ -492,6 +593,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
         if (opt) {
           size_t idx2 = *opt;
           TcombPair const& x2 = vect[idx2];
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+          n_reduce_calls += 1;
+#endif
           std::pair<size_t, std::vector<TcombPair>> pair = f_reduce(x1, x2);
           if (pair.first > 0) {
             bool x1_attained = false;
@@ -518,6 +622,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
               list_delete.push_back(x2);
             }
             FoundImprov found_improv{list_delete, list_insert};
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+            os << "SIMP: f_search, n_reduce_calls=" << n_reduce_calls << "\n";
+#endif
             return found_improv;
           }
         } else {
