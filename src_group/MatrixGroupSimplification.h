@@ -60,12 +60,558 @@ T get_ell1_complexity_measure(MyMatrix<T> const& M) {
   return ell1;
 }
 
+
+struct Interval {
+  size_t start;
+  size_t end;
+};
+
+struct BlockInterval {
+  std::vector<Interval> intervals;
+  BlockInterval() {
+  }
+  BlockInterval(size_t start, size_t end) {
+    Interval interval{start, end};
+    intervals.push_back(interval);
+  }
+  void insert_interval(size_t start, size_t end) {
+    if (start < end) {
+      Interval interval{start, end};
+      intervals.push_back(interval);
+    }
+  }
+  std::optional<size_t> get_first() {
+    if (intervals.size() == 0) {
+      return {};
+    }
+    Interval& interval = intervals[0];
+    size_t val = interval.start;
+    interval.start += 1;
+    if (interval.start == interval.end) {
+      intervals.erase(intervals.begin());
+    }
+    return val;
+  }
+  void print(std::ostream& os) const {
+    size_t n_intervals = intervals.size();
+    for (size_t i_int=0; i_int<n_intervals; i_int++) {
+      if (i_int > 0) {
+        os << ", ";
+      }
+      size_t start = intervals[i_int].start;
+      size_t end = intervals[i_int].end;
+      os << "[" << start << "," << end << ")";
+    }
+  }
+  size_t n_intervals() const {
+    return intervals.size();
+  }
+  bool contains(size_t x) const {
+    size_t low = 0;
+    size_t high = intervals.size();
+
+    while (low < high) {
+      size_t mid = low + (high - low) / 2;
+      const Interval& iv = intervals[mid];
+
+      if (x < iv.start) {
+        high = mid;
+      } else if (x >= iv.end) {
+        low = mid + 1;
+      } else {
+        // x is within [start, end)
+        return true;
+      }
+    }
+    return false;
+  }
+  // Used only for debugging purposes
+  bool contains_direct(size_t x) const {
+    size_t n_intervals = intervals.size();
+    for (size_t i_int=0; i_int<n_intervals; i_int++) {
+      if (intervals[i_int].start <= x && x < intervals[i_int].end) {
+        return true;
+      }
+    }
+    return false;
+  }
+  // Testing if the intervals are correct
+  bool test_correctness() const {
+    size_t n_intervals = intervals.size();
+    // Checking that the intervals are increasing
+    for (size_t i=1; i<n_intervals; i++) {
+      if (intervals[i-1].end > intervals[i].start) {
+        std::cerr << "The intervals are overlapping\n";
+        return false;
+      }
+      if (intervals[i-1].end == intervals[i].start) {
+        std::cerr << "The intervals should be merged\n";
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Remove an entry from the BlockInterval, but
+  // do not shift the positions.
+  void remove_entry(size_t x) {
+    size_t low = 0;
+    size_t high = intervals.size();
+
+    while (low < high) {
+      size_t mid = low + (high - low) / 2;
+      Interval& iv = intervals[mid];
+
+      if (x < iv.start) {
+        high = mid;
+      } else if (x >= iv.end) {
+        low = mid + 1;
+      } else {
+        if (x == iv.start) {
+          // Just reduce the interval
+          iv.start += 1;
+          if (iv.start == iv.end) {
+            intervals.erase(intervals.begin() + mid);
+          }
+          return;
+        }
+        if (x == iv.end - 1) {
+          // Just reduce the interval
+          iv.end -= 1;
+          if (iv.start == iv.end) {
+            intervals.erase(intervals.begin() + mid);
+          }
+          return;
+        }
+        // Break down the interval in two pieces
+        size_t end = iv.end;
+        Interval new_iv{x + 1, end};
+        iv.end = x;
+        intervals.insert(intervals.begin() + mid + 1, new_iv);
+        return;
+      }
+    }
+    // Nothing to do, exiting.
+  }
+
+
+
+  // Remove an entry from the BlockInterval,
+  // and shift the positions. This corresponds to a removal
+  // from the underlying map.
+  void remove_entry_and_shift(size_t x) {
+    size_t n_intervals = intervals.size();
+    size_t low = 0;
+    size_t high = n_intervals;
+
+    while (low < high) {
+      size_t mid = low + (high - low) / 2;
+      Interval& iv = intervals[mid];
+
+      if (x < iv.start) {
+        high = mid;
+      } else if (x >= iv.end) {
+        low = mid + 1;
+      } else {
+        // x is in [start, end)
+        iv.end -= 1;
+        size_t start_shift = mid + 1;;
+        if (iv.start == iv.end) {
+          intervals.erase(intervals.begin() + mid);
+          start_shift = mid;
+        }
+        for (size_t u=start_shift; u<n_intervals; u++) {
+          intervals[u].start -= 1;
+          intervals[u].end -= 1;
+        }
+        return;
+      }
+    }
+    auto iife_first_interval=[&]() -> size_t {
+      if (x < intervals[low].start) {
+        return low;
+      }
+      if (x >= intervals[low].end) {
+        return low + 1;
+      }
+      std::cerr << "SIMP: We should never reach that stage in BlockInterval\n";
+      throw TerminalException{1};
+    };
+    size_t index = iife_first_interval();
+    for (size_t u=index; u<n_intervals; u++) {
+      intervals[u].start -= 1;
+      intervals[u].end -= 1;
+    }
+    // Merge the needed intervals if possible.
+    if (index > 0) {
+      if (intervals[index-1].end == intervals[index].start) {
+        // Merging both intervals
+        intervals[index-1].end = intervals[index].end;
+        intervals.erase(intervals.begin() + index);
+      }
+    }
+  }
+
+
+
+  // Add one entry at a position and shift.
+  // This corresponds to an insertion in the map.
+  void insert_entry_and_shift(size_t x) {
+    size_t n_intervals = intervals.size();
+    size_t low = 0;
+    size_t high = n_intervals;
+
+    while (low < high) {
+      size_t mid = low + (high - low) / 2;
+      Interval& iv = intervals[mid];
+
+      if (x < iv.start) {
+        high = mid;
+      } else if (x > iv.end) {
+        low = mid + 1;
+      } else {
+        // x is in [start, end)
+        iv.end += 1;
+        size_t start_shift = mid + 1;;
+        for (size_t u=start_shift; u<n_intervals; u++) {
+          intervals[u].start += 1;
+          intervals[u].end += 1;
+        }
+        return;
+      }
+    }
+    // x should be outside of the intervals.
+    auto iife_first_interval=[&]() -> size_t {
+      if (x < intervals[low].start) {
+        return low;
+      }
+      if (x >= intervals[low].end) {
+        return low + 1;
+      }
+      std::cerr << "SIMP: We should never reach that stage in BlockInterval\n";
+      throw TerminalException{1};
+    };
+    size_t index = iife_first_interval();
+    for (size_t u=index; u<n_intervals; u++) {
+      intervals[u].start += 1;
+      intervals[u].end += 1;
+    }
+  }
+
+  // Shift the index and
+  void noinsert_and_shift(size_t x) {
+  }
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
 // The tool for simplifying a list of generators.
 // The transformations being applied are Tietze transformations.
 // We could add some conjugacy operations like  U V U^{-1}.
 // But those are more expensive
+//
+// The existing design is not good as there are plenty of
+// repeated operations. Once we find a new simplification, we redo
+// almost everything and that is wildly inefficient.
+//
+// So, what is a good design?
+// * First of all the ordering by the complexity makes full sense.
+//   No discussion about that.
+// * The use of nonces is also perfectly fine and could be
+//   generalized. Or eliminated if we completely avoid having
+//   repetitions!
+// * What we mean when we treat a new element is that we match it
+//   against all the elements. The big problem is what to do when
+//   an interruption happens.
+// * When we have an interruption, we have a change of the order
+//   and we need to adjust immediately.
+// * We could have a storing of the data that need to be treated
+//   by an interval at first. When changes are made, then the
+//   structure is adjusted. Intervals are split and so on.
+//   The underlying idea is that yes splitting would occur but
+//   they would not have a very detrimental impact.
+// * So, the structure could be:
+//   struct Interval {
+//     size_t start;
+//     size_t end;
+//   }
+//   struct BlockInterval {
+//     std::vector<Interval> intervals;
+//   }
+//   with the following functions:
+//   + Removal of one element from the list
+//   + Insert an element at a specified position (and shift the intervals).
+//   + Iterating: We only need one function:
+//     Access to the first element of the list (returns an std::optional<size_t>)
+//     and remove it.
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
 std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+  NanosecondTime time_total;
+#endif
+  using TtypePair = std::pair<Ttype, Ttype>;
+  using TcombPair = std::pair<TtypePair, Tnorm>;
+  using Tcomb = std::pair<Ttype, Tnorm>;
+  auto f_comp=[](TcombPair const& a, TcombPair const& b) -> bool {
+    if (a.second < b.second) {
+      return true;
+    }
+    if (a.second > b.second) {
+      return false;
+    }
+    return a.first.first < b.first.first;
+  };
+  auto get_comb=[&](Ttype const& eM) -> Tcomb {
+    Tnorm comp = f_complexity(eM);
+    return {eM, comp};
+  };
+  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair {
+    Ttype p_inv = f_invers(p.first);
+    TtypePair p_pair{p.first, p_inv};
+    return {p_pair, p.second};
+  };
+  std::map<TcombPair, BlockInterval, decltype(f_comp)> map(f_comp);
+  size_t n_matrix = ListM.size();
+  size_t index = 0;
+  for (auto & eM: ListM) {
+    Tcomb comb1 = get_comb(eM);
+    TcombPair comb2 = get_comb_pair(comb1);
+    BlockInterval blk_int(index+1, n_matrix);
+    map[comb2] = blk_int;
+    index += 1;
+  }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  auto get_complexity=[&]() -> Tnorm {
+    Tnorm total_complexity(0);
+    for (auto & kv: map) {
+      total_complexity += kv.first.second;
+    }
+    return total_complexity;
+  };
+  os << "SIMP: total_complexity(begin)=" << get_complexity() << "\n";
+#endif
+  // We need a vector since the map is not random access.
+  // That is using iterators and advancing them has complexity O(n) for
+  // the map but O(1) for the vector.
+  std::vector<TcombPair> vect;
+  for (auto & kv: map) {
+    vect.push_back(kv.first);
+  }
+  // Generate the possible ways to simplify the pair of elements.
+  // and select the one with the smallest norm
+  auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
+    Ttype const& a_dir = a.first.first;
+    Ttype const& b_dir = b.first.first;
+    Ttype const& a_inv = a.first.second;
+    Ttype const& b_inv = b.first.second;
+    //
+    Ttype prod_gen = f_product(a_dir, b_dir);
+    Tcomb pair_ret = get_comb(prod_gen);
+    //
+    prod_gen = f_product(a_inv, b_dir);
+    Tcomb pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
+    }
+    //
+    prod_gen = f_product(a_dir, b_inv);
+    pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
+    }
+    //
+    prod_gen = f_product(a_inv, b_inv);
+    pair_gen = get_comb(prod_gen);
+    if (pair_gen.second < pair_ret.second) {
+      pair_ret = pair_gen;
+    }
+    //
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+    n_get_best_candidate += 1;
+#endif
+    return pair_ret;
+  };
+  // Iterate the reduction algorithm over pairs of elements.
+  // The result of the iteration might be a 0, 1 or 2 new elements.
+  auto f_reduce=[&](TcombPair const& a, TcombPair const& b) -> std::pair<size_t, std::vector<TcombPair>> {
+    TcombPair a_work = a;
+    TcombPair b_work = b;
+    size_t n_change = 0;
+    while(true) {
+      Tcomb cand = f_get_best_candidate(a_work, b_work);
+      Tnorm a_norm = a_work.second;
+      Tnorm b_norm = b_work.second;
+      Tnorm cand_norm = cand.second;
+      bool do_something = true;
+      if (cand_norm < a_norm && cand_norm < b_norm) {
+        if (a_norm < b_norm) {
+          b_work = get_comb_pair(cand);
+        } else {
+          a_work = get_comb_pair(cand);
+        }
+      } else {
+        if (cand_norm < b_norm) {
+          b_work = get_comb_pair(cand);
+        } else {
+          if (cand_norm < a_norm) {
+            a_work = get_comb_pair(cand);
+          } else {
+            do_something = false;
+          }
+        }
+      }
+      if (!do_something) {
+        std::vector<TcombPair> npair{a_work, b_work};
+        return {n_change, npair};
+      } else {
+        n_change += 1;
+      }
+    }
+  };
+  struct FoundImprov {
+    std::vector<TcombPair> list_delete;
+    std::vector<TcombPair> list_insert;
+  };
+  auto f_search=[&]() -> std::optional<FoundImprov> {
+    for (auto & kv: map) {
+      TcombPair const& x1 = kv.first;
+      BlockInterval & blk_int = kv.second;
+      while(true) {
+        std::optional<size_t> opt = blk_int.get_first();
+        if (opt) {
+          size_t idx2 = *opt;
+          TcombPair const& x2 = vect[idx2];
+          std::pair<size_t, std::vector<TcombPair>> pair = f_reduce(x1, x2);
+          if (pair.first > 0) {
+            bool x1_attained = false;
+            bool x2_attained = false;
+            std::vector<TcombPair> list_delete;
+            std::vector<TcombPair> list_insert;
+            for (auto & ent : pair.second) {
+              bool is_x1 = ent == x1;
+              bool is_x2 = ent == x2;
+              if (is_x1) {
+                x1_attained = true;
+              }
+              if (is_x2) {
+                x2_attained = true;
+              }
+              if (!is_x1 && !is_x2) {
+                list_insert.push_back(ent);
+              }
+            }
+            if (!x1_attained) {
+              list_delete.push_back(x1);
+            }
+            if (!x2_attained) {
+              list_delete.push_back(x2);
+            }
+            FoundImprov found_improv{list_delete, list_insert};
+            return found_improv;
+          }
+        } else {
+          break;
+        }
+      }
+    }
+    return {};
+  };
+  //
+  // Update the data structure of map/vect
+  //
+  auto delete_entry=[&](TcombPair const& val) -> void {
+    auto iter = map.find(val);
+    if (iter == map.end()) {
+      std::cerr << "SIMP: val shoulf be present in order to get the position\n";
+      throw TerminalException{1};
+    }
+    size_t pos = std::distance(map.begin(), iter);
+    map.erase(iter);
+    vect.erase(vect.begin() + pos);
+    for (auto & kv : map) {
+      BlockInterval & blk_int = kv.second;
+      blk_int.remove_entry_and_shift(pos);
+    }
+  };
+  auto insert_entry=[&](TcombPair const& val) -> void {
+    BlockInterval blk_int;
+    auto result = map.insert({val, blk_int});
+    if (!result.second) {
+      std::cerr << "SIMP: Entry is already present. Unexpected\n";
+      throw TerminalException{1};
+    }
+    auto iter = result.first;
+    size_t pos = std::distance(map.begin(), iter);
+    vect.insert(vect.begin() + pos, val);
+    size_t n_entry = vect.size();
+    size_t idx = 0;
+    for (auto & kv: map) {
+      BlockInterval & blk_int = kv.second;
+      if (idx < pos) {
+        blk_int.insert_entry_and_shift(pos);
+      } else {
+        if (idx == pos) {
+          blk_int.insert_interval(pos + 1, n_entry);
+        } else {
+          blk_int.noinsert_and_shift(pos);
+        }
+      }
+      idx += 1;
+    }
+  };
+
+  // Now iterating looking for improvements.
+  while(true) {
+    std::optional<FoundImprov> opt = f_search();
+    if (opt) {
+      FoundImprov found_improv = *opt;
+      for (auto & val : found_improv.list_delete) {
+        delete_entry(val);
+      }
+      for (auto & val : found_improv.list_insert) {
+        insert_entry(val);
+      }
+    } else {
+      break;
+    }
+  }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  os << "SIMP: total_complexity(after)=" << get_complexity() << "\n";
+#endif
+  std::vector<Ttype> new_list_gens;
+  for (auto & kv: map) {
+    new_list_gens.push_back(kv.first.first.first);
+  }
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+  int64_t delta = time_total.eval_int64();
+  double delta_d = static_cast<double>(delta);
+  double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
+  double avg_cost_best = delta_d / n_get_best_candidate_d;
+  os << "|SIMP: ExhaustiveReductionComplexityKernel, avg(f_get_best_candidate)|=" << avg_cost_best << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel|=" << delta << "\n";
+#endif
+  return new_list_gens;
+}
+
+
+
+
+
+
+
+template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
+std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
   using TtypePair = std::pair<Ttype, Ttype>;
   using TcombPair = std::pair<TtypePair, Tnorm>;
@@ -102,6 +648,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   size_t n_operation = 0;
+  size_t i_run = 0;
 #endif
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   size_t n_get_best_candidate = 0;
@@ -238,7 +785,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #endif
     while(true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP: " << u << " / " << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << "\n";
+      os << "SIMP: " << u << " / " << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << " i_run=" << i_run << "\n";
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
@@ -431,6 +978,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     if (total_complexity == new_complexity) {
       break;
     }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    i_run += 1;
+#endif
     total_complexity = new_complexity;
   }
   std::vector<Ttype> new_list_gens;
