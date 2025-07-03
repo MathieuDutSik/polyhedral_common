@@ -19,8 +19,6 @@
 #define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
-//#define DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-
 
 template<typename T>
 struct ComplexityMeasure {
@@ -60,6 +58,17 @@ T get_ell1_complexity_measure(MyMatrix<T> const& M) {
   return ell1;
 }
 
+void print_vector_val(std::vector<size_t> const& V, std::ostream& os) {
+  os << "[";
+  for (size_t u=0; u<V.size(); u++) {
+    if (u > 0) {
+      os << ",";
+    }
+    os << V[u];
+  }
+  os << "]\n";
+}
+
 
 struct Interval {
   size_t start;
@@ -94,6 +103,7 @@ struct BlockInterval {
   }
   void print(std::ostream& os) const {
     size_t n_intervals = intervals.size();
+    os << "SIMP: symbolic: ";
     for (size_t i_int=0; i_int<n_intervals; i_int++) {
       if (i_int > 0) {
         os << ", ";
@@ -102,6 +112,7 @@ struct BlockInterval {
       size_t end = intervals[i_int].end;
       os << "[" << start << "," << end << ")";
     }
+    os << "\n";
   }
   size_t n_intervals() const {
     return intervals.size();
@@ -219,9 +230,14 @@ struct BlockInterval {
   }
 
   // Calling the function and checking it
-  void remove_entry_and_shift(size_t x) {
+  void remove_entry_and_shift(size_t x, std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_bef = list_indices();
+    os << "SIMP: -------------------------------------------\n";
+    os << "SIMP: remove_entry_and_shift, before x=" << x << "\n";
+    print(os);
+    os << "SIMP: indices_bef: ";
+    print_vector_val(indices_bef, os);
 #endif
     remove_entry_and_shift_inner(x);
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -235,6 +251,12 @@ struct BlockInterval {
       }
     }
     std::vector<size_t> indices_aft_real = list_indices();
+    os << "SIMP: remove_entry_and_shift, after\n";
+    print(os);
+    os << "SIMP: indices_aft_expected: ";
+    print_vector_val(indices_aft_expected, os);
+    os << "SIMP: indices_aft_real: ";
+    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (A)\n";
       throw TerminalException{1};
@@ -250,16 +272,21 @@ struct BlockInterval {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
+    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
+        std::cerr << "SIMP: Case 1\n";
         high = mid;
       } else if (x > iv.end) {
+        std::cerr << "SIMP: Case 2\n";
         low = mid + 1;
       } else {
+        std::cerr << "SIMP: Case 3\n";
         // x is in [start, end)
         iv.end += 1;
         size_t start_shift = mid + 1;;
@@ -270,6 +297,7 @@ struct BlockInterval {
         return;
       }
     }
+    std::cerr << "SIMP: Case 4 low=" << low << "\n";
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
       if (x < intervals[low].start) {
@@ -282,15 +310,25 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
-    for (size_t u=index; u<n_intervals; u++) {
+    std::cerr << "SIMP: Case 4 index=" << index << "\n";
+    Interval new_iv{x, x+1};
+    intervals.insert(intervals.begin() + index, new_iv);
+    std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
+    for (size_t u=index + 1; u<n_intervals + 1; u++) {
+      std::cerr << "SIMP: Case 4 u=" << u << "\n";
       intervals[u].start += 1;
       intervals[u].end += 1;
     }
   }
 
-  void insert_entry_and_shift(size_t x) {
+  void insert_entry_and_shift(size_t x, std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_bef = list_indices();
+    os << "SIMP: -------------------------------------------\n";
+    os << "SIMP: insert_entry_and_shift, before x=" << x << "\n";
+    print(os);
+    os << "SIMP: indices_bef: ";
+    print_vector_val(indices_bef, os);
 #endif
     insert_entry_and_shift_inner(x);
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -306,6 +344,12 @@ struct BlockInterval {
     }
     std::sort(indices_aft_expected.begin(), indices_aft_expected.end());
     std::vector<size_t> indices_aft_real = list_indices();
+    os << "SIMP: insert_entry_and_shift, after\n";
+    print(os);
+    os << "SIMP: indices_aft_expected: ";
+    print_vector_val(indices_aft_expected, os);
+    os << "SIMP: indices_aft_real: ";
+    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (B)\n";
       throw TerminalException{1};
@@ -319,9 +363,11 @@ struct BlockInterval {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
+    //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
+      //      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
@@ -376,9 +422,14 @@ struct BlockInterval {
     }
   }
 
-  void noinsert_and_shift(size_t x) {
+  void noinsert_and_shift(size_t x, std::ostream& os) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_bef = list_indices();
+    os << "SIMP: -------------------------------------------\n";
+    os << "SIMP: noinsert_and_shift, before x=" << x << "\n";
+    print(os);
+    os << "SIMP: indices_bef: ";
+    print_vector_val(indices_bef, os);
 #endif
     noinsert_and_shift_inner(x);
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -392,6 +443,12 @@ struct BlockInterval {
       }
     }
     std::vector<size_t> indices_aft_real = list_indices();
+    os << "SIMP: noinsert_and_shift, after\n";
+    print(os);
+    os << "SIMP: indices_aft_expected: ";
+    print_vector_val(indices_aft_expected, os);
+    os << "SIMP: indices_aft_real: ";
+    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (C)\n";
       throw TerminalException{1};
@@ -648,7 +705,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     vect.erase(vect.begin() + pos);
     for (auto & kv : map) {
       BlockInterval & blk_int = kv.second;
-      blk_int.remove_entry_and_shift(pos);
+      blk_int.remove_entry_and_shift(pos, os);
     }
   };
   auto insert_entry=[&](TcombPair const& val) -> void {
@@ -666,12 +723,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     for (auto & kv: map) {
       BlockInterval & blk_int = kv.second;
       if (idx < pos) {
-        blk_int.insert_entry_and_shift(pos);
+        blk_int.insert_entry_and_shift(pos, os);
       } else {
         if (idx == pos) {
           blk_int.insert_interval(pos + 1, n_entry);
         } else {
-          blk_int.noinsert_and_shift(pos);
+          blk_int.noinsert_and_shift(pos, os);
         }
       }
       idx += 1;
