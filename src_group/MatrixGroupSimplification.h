@@ -178,18 +178,38 @@ struct BlockInterval {
   // from the underlying map.
   void remove_entry_and_shift_inner(size_t x) {
     size_t n_intervals = intervals.size();
+    if (n_intervals == 0) {
+      return;
+    }
     size_t low = 0;
     size_t high = n_intervals;
+    //#define DEBUG_REMOVE_ENTRY_AND_SHIFT
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: ------------------- START remove_entry_and_shift_inner -------------------\n";
+    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+#endif
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+#endif
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: case 1\n";
+#endif
         high = mid;
       } else if (x >= iv.end) {
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: case 2\n";
+#endif
         low = mid + 1;
       } else {
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: case 3\n";
+#endif
         // x is in [start, end)
         iv.end -= 1;
         size_t start_shift = mid + 1;;
@@ -204,6 +224,9 @@ struct BlockInterval {
         return;
       }
     }
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: case 4, low=" << low << "\n";
+#endif
     auto iife_first_interval=[&]() -> size_t {
       if (x < intervals[low].start) {
         return low;
@@ -215,6 +238,9 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: case 4, index=" << index << "\n";
+#endif
     for (size_t u=index; u<n_intervals; u++) {
       intervals[u].start -= 1;
       intervals[u].end -= 1;
@@ -227,6 +253,9 @@ struct BlockInterval {
         intervals.erase(intervals.begin() + index);
       }
     }
+#ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: case 4, exiting\n";
+#endif
   }
 
   // Calling the function and checking it
@@ -369,24 +398,41 @@ struct BlockInterval {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
-    //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+    if (n_intervals == 0) {
+      return;
+    }
+    //#define DEBUG_NOINSERT_AND_SHIFT
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+    std::cerr << "SIMP: ------------------- START noinsert_and_shift_inner -------------------\n";
+    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+#endif
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
-      //      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+#endif
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
-        //        std::cerr << "SIMP: Case 1\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+        std::cerr << "SIMP: Case 1\n";
+#endif
         high = mid;
       } else if (x >= iv.end) {
-        //        std::cerr << "SIMP: Case 2\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+        std::cerr << "SIMP: Case 2\n";
+#endif
         low = mid + 1;
       } else {
-        //        std::cerr << "SIMP: Case 3\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+        std::cerr << "SIMP: Case 3\n";
+#endif
         // x is in [start, end)
         if (x == iv.start) {
-          //          std::cerr << "SIMP: Case 3.1\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+          std::cerr << "SIMP: Case 3.1\n";
+#endif
           // First element in the list
           for (size_t u=mid; u<n_intervals; u++) {
             intervals[u].start += 1;
@@ -394,8 +440,10 @@ struct BlockInterval {
           }
           return;
         }
-        if (x == iv.end - 1) {
-          //          std::cerr << "SIMP: Case 3.2\n";
+        if (x == iv.end) {
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+          std::cerr << "SIMP: Case 3.2\n";
+#endif
           // Last element in the list
           for (size_t u=mid+1; u<n_intervals; u++) {
             intervals[u].start += 1;
@@ -403,13 +451,17 @@ struct BlockInterval {
           }
           return;
         }
-        //        std::cerr << "SIMP: Case 3.3, mid=" << mid << "\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+        std::cerr << "SIMP: Case 3.3, mid=" << mid << "\n";
+#endif
         // Break down the interval in two places.
         size_t end = iv.end;
         Interval new_iv{x + 1, end+1};
         iv.end = x;
         intervals.insert(intervals.begin() + mid + 1, new_iv);
-        //        std::cerr << "SIMP: Case 3.3, |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+        std::cerr << "SIMP: Case 3.3, |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+#endif
         for (size_t u=mid + 2; u<n_intervals + 1; u++) {
           intervals[u].start += 1;
           intervals[u].end += 1;
@@ -417,7 +469,9 @@ struct BlockInterval {
         return;
       }
     }
-    //    std::cerr << "SIMP: Case 4\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+    std::cerr << "SIMP: Case 4\n";
+#endif
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
       if (x < intervals[low].start) {
@@ -430,7 +484,9 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
-    //    std::cerr << "SIMP: Case 4, index=" << index << "\n";
+#ifdef DEBUG_NOINSERT_AND_SHIFT
+    std::cerr << "SIMP: Case 4, index=" << index << "\n";
+#endif
     for (size_t u=index; u<n_intervals; u++) {
       intervals[u].start += 1;
       intervals[u].end += 1;
@@ -657,6 +713,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     std::vector<TcombPair> list_delete;
     std::vector<TcombPair> list_insert;
   };
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  size_t i_search = 0;
+#endif
   auto f_search=[&]() -> std::optional<FoundImprov> {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     size_t n_reduce_calls = 0;
@@ -699,7 +758,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
             }
             FoundImprov found_improv{list_delete, list_insert};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-            os << "SIMP: f_search, n_reduce_calls=" << n_reduce_calls << "\n";
+            os << "SIMP: f_search, i_search=" << i_search << " n_reduce_calls=" << n_reduce_calls << "\n";
 #endif
             return found_improv;
           }
@@ -757,6 +816,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   // Now iterating looking for improvements.
   while(true) {
     std::optional<FoundImprov> opt = f_search();
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    i_search += 1;
+#endif
     if (opt) {
       FoundImprov found_improv = *opt;
       for (auto & val : found_improv.list_delete) {
