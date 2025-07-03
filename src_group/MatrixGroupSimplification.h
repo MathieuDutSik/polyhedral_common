@@ -644,6 +644,19 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   for (auto & kv: map) {
     vect.push_back(kv.first);
   }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  auto check_map_vect=[&](std::string const& context) -> void {
+    size_t index = 0;
+    for (auto & kv: map) {
+      if (kv.first != vect[index]) {
+        std::cerr << "SIMP: Error in map/vect at index=" << index << " context=" << context << "\n";
+        throw TerminalException{1};
+      }
+      index += 1;
+    }
+  };
+  check_map_vect("initial");
+#endif
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
   auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
@@ -739,7 +752,8 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
           n_reduce_calls += 1;
 #endif
           std::pair<size_t, std::vector<TcombPair>> pair = f_reduce(x1, x2);
-          if (pair.first > 0) {
+          size_t n_changes = pair.first;
+          if (n_changes > 0) {
             bool x1_attained = false;
             bool x2_attained = false;
             std::vector<TcombPair> list_delete;
@@ -765,7 +779,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
             }
             FoundImprov found_improv{list_delete, list_insert};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-            os << "SIMP: f_search, i_search=" << i_search << " n_reduce_calls=" << n_reduce_calls << " idx1=" << idx1 << " idx2=" << idx2 << "\n";
+            os << "SIMP: f_search, i_search=" << i_search
+               << " n_reduce_calls=" << n_reduce_calls
+               << " n_changes=" << n_changes
+               << " |list_insert|=" << list_insert.size()
+               << " |list_delete|=" << list_delete.size()
+               << " idx1=" << idx1 << " idx2=" << idx2 << "\n";
 #endif
             return found_improv;
           }
@@ -791,6 +810,10 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     size_t pos = std::distance(map.begin(), iter);
     map.erase(iter);
     vect.erase(vect.begin() + pos);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::string context = "delete_entry_at_" + std::to_string(pos);
+    check_map_vect(context);
+#endif
     for (auto & kv : map) {
       BlockInterval & blk_int = kv.second;
       blk_int.remove_entry_and_shift(pos, os);
@@ -806,6 +829,10 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
     auto iter = result.first;
     size_t pos = std::distance(map.begin(), iter);
     vect.insert(vect.begin() + pos, val);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    std::string context = "insert_entry_at_" + std::to_string(pos);
+    check_map_vect(context);
+#endif
     size_t n_entry = vect.size();
     size_t idx = 0;
     for (auto & kv: map) {

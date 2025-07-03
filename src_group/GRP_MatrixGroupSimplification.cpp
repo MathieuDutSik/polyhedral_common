@@ -33,10 +33,12 @@ int main(int argc, char *argv[]) {
       std::cerr << "GRP_MatrixGroupSimplification [Arith] [FileMatrGroup]\n";
       std::cerr << "        [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytope_Invariant [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupSimplification [Arith] [FileMatrGroup]\n";
       std::cerr << "\n";
-      std::cerr << "EXTIN  : The list of vertices\n";
-      std::cerr << "OutCan : The file for the hash\n";
+      std::cerr << "Arith         : mpq_class / mpz_class\n";
+      std::cerr << "FileMatrGroup : The file containing the list of matrices\n";
+      std::cerr << "OutFormat     : Optional parameter GAP / CPP\n";
+      std::cerr << "FileOut       : File where to write the simplified matrices\n";
       return -1;
     }
     //
@@ -64,7 +66,7 @@ int main(int argc, char *argv[]) {
     print_stderr_stdout_file(FileOut, f);
     std::cerr << "Normal termination of GRP_MatrixGroupSimplification\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_LinPolytope_Invariant\n";
+    std::cerr << "Error in GRP_MatrixGroupSimplification\n";
     exit(e.eVal);
   }
   runtime(time);
