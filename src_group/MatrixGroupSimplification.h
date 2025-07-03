@@ -230,17 +230,13 @@ struct BlockInterval {
   }
 
   // Calling the function and checking it
-  void remove_entry_and_shift(size_t x, std::ostream& os) {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  void remove_entry_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
-    os << "SIMP: -------------------------------------------\n";
-    os << "SIMP: remove_entry_and_shift, before x=" << x << "\n";
-    print(os);
-    os << "SIMP: indices_bef: ";
-    print_vector_val(indices_bef, os);
 #endif
     remove_entry_and_shift_inner(x);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
     for (auto & y : indices_bef) {
       if (y < x) {
@@ -251,13 +247,20 @@ struct BlockInterval {
       }
     }
     std::vector<size_t> indices_aft_real = list_indices();
-    os << "SIMP: remove_entry_and_shift, after\n";
-    print(os);
-    os << "SIMP: indices_aft_expected: ";
-    print_vector_val(indices_aft_expected, os);
-    os << "SIMP: indices_aft_real: ";
-    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: -------------------------------------------\n";
+      os << "SIMP: remove_entry_and_shift, before x=" << x << "\n";
+      print(os);
+      os << "SIMP: indices_bef: ";
+      print_vector_val(indices_bef, os);
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: remove_entry_and_shift, after\n";
+      print(os);
+      os << "SIMP: indices_aft_expected: ";
+      print_vector_val(indices_aft_expected, os);
+      os << "SIMP: indices_aft_real: ";
+      print_vector_val(indices_aft_real, os);
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (A)\n";
       throw TerminalException{1};
     }
@@ -272,21 +275,21 @@ struct BlockInterval {
     size_t n_intervals = intervals.size();
     size_t low = 0;
     size_t high = n_intervals;
-    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+    //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
-      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+      //      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
-        std::cerr << "SIMP: Case 1\n";
+        //        std::cerr << "SIMP: Case 1\n";
         high = mid;
       } else if (x > iv.end) {
-        std::cerr << "SIMP: Case 2\n";
+        //        std::cerr << "SIMP: Case 2\n";
         low = mid + 1;
       } else {
-        std::cerr << "SIMP: Case 3\n";
+        //        std::cerr << "SIMP: Case 3\n";
         // x is in [start, end)
         iv.end += 1;
         size_t start_shift = mid + 1;;
@@ -297,7 +300,7 @@ struct BlockInterval {
         return;
       }
     }
-    std::cerr << "SIMP: Case 4 low=" << low << "\n";
+    //    std::cerr << "SIMP: Case 4 low=" << low << "\n";
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
       if (x < intervals[low].start) {
@@ -310,28 +313,24 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
-    std::cerr << "SIMP: Case 4 index=" << index << "\n";
+    //    std::cerr << "SIMP: Case 4 index=" << index << "\n";
     Interval new_iv{x, x+1};
     intervals.insert(intervals.begin() + index, new_iv);
-    std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
+    //    std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
     for (size_t u=index + 1; u<n_intervals + 1; u++) {
-      std::cerr << "SIMP: Case 4 u=" << u << "\n";
+      //      std::cerr << "SIMP: Case 4 u=" << u << "\n";
       intervals[u].start += 1;
       intervals[u].end += 1;
     }
   }
 
-  void insert_entry_and_shift(size_t x, std::ostream& os) {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  void insert_entry_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
-    os << "SIMP: -------------------------------------------\n";
-    os << "SIMP: insert_entry_and_shift, before x=" << x << "\n";
-    print(os);
-    os << "SIMP: indices_bef: ";
-    print_vector_val(indices_bef, os);
 #endif
     insert_entry_and_shift_inner(x);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
     indices_aft_expected.push_back(x);
     for (auto & y : indices_bef) {
@@ -344,13 +343,20 @@ struct BlockInterval {
     }
     std::sort(indices_aft_expected.begin(), indices_aft_expected.end());
     std::vector<size_t> indices_aft_real = list_indices();
-    os << "SIMP: insert_entry_and_shift, after\n";
-    print(os);
-    os << "SIMP: indices_aft_expected: ";
-    print_vector_val(indices_aft_expected, os);
-    os << "SIMP: indices_aft_real: ";
-    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: -------------------------------------------\n";
+      os << "SIMP: insert_entry_and_shift, before x=" << x << "\n";
+      print(os);
+      os << "SIMP: indices_bef: ";
+      print_vector_val(indices_bef, os);
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: insert_entry_and_shift, after\n";
+      print(os);
+      os << "SIMP: indices_aft_expected: ";
+      print_vector_val(indices_aft_expected, os);
+      os << "SIMP: indices_aft_real: ";
+      print_vector_val(indices_aft_real, os);
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (B)\n";
       throw TerminalException{1};
     }
@@ -371,12 +377,16 @@ struct BlockInterval {
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
+        //        std::cerr << "SIMP: Case 1\n";
         high = mid;
       } else if (x >= iv.end) {
+        //        std::cerr << "SIMP: Case 2\n";
         low = mid + 1;
       } else {
+        //        std::cerr << "SIMP: Case 3\n";
         // x is in [start, end)
         if (x == iv.start) {
+          //          std::cerr << "SIMP: Case 3.1\n";
           // First element in the list
           for (size_t u=mid; u<n_intervals; u++) {
             intervals[u].start += 1;
@@ -385,6 +395,7 @@ struct BlockInterval {
           return;
         }
         if (x == iv.end - 1) {
+          //          std::cerr << "SIMP: Case 3.2\n";
           // Last element in the list
           for (size_t u=mid+1; u<n_intervals; u++) {
             intervals[u].start += 1;
@@ -392,18 +403,21 @@ struct BlockInterval {
           }
           return;
         }
+        //        std::cerr << "SIMP: Case 3.3, mid=" << mid << "\n";
         // Break down the interval in two places.
         size_t end = iv.end;
-        Interval new_iv{x + 1, end};
+        Interval new_iv{x + 1, end+1};
         iv.end = x;
         intervals.insert(intervals.begin() + mid + 1, new_iv);
-        for (size_t u=mid + 2; u<n_intervals; u++) {
+        //        std::cerr << "SIMP: Case 3.3, |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+        for (size_t u=mid + 2; u<n_intervals + 1; u++) {
           intervals[u].start += 1;
           intervals[u].end += 1;
         }
         return;
       }
     }
+    //    std::cerr << "SIMP: Case 4\n";
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
       if (x < intervals[low].start) {
@@ -416,23 +430,20 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
+    //    std::cerr << "SIMP: Case 4, index=" << index << "\n";
     for (size_t u=index; u<n_intervals; u++) {
       intervals[u].start += 1;
       intervals[u].end += 1;
     }
   }
 
-  void noinsert_and_shift(size_t x, std::ostream& os) {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  void noinsert_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+    std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
-    os << "SIMP: -------------------------------------------\n";
-    os << "SIMP: noinsert_and_shift, before x=" << x << "\n";
-    print(os);
-    os << "SIMP: indices_bef: ";
-    print_vector_val(indices_bef, os);
 #endif
     noinsert_and_shift_inner(x);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
     for (auto & y : indices_bef) {
       if (y < x) {
@@ -443,13 +454,21 @@ struct BlockInterval {
       }
     }
     std::vector<size_t> indices_aft_real = list_indices();
-    os << "SIMP: noinsert_and_shift, after\n";
-    print(os);
-    os << "SIMP: indices_aft_expected: ";
-    print_vector_val(indices_aft_expected, os);
-    os << "SIMP: indices_aft_real: ";
-    print_vector_val(indices_aft_real, os);
     if (indices_aft_expected != indices_aft_real) {
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: -------------------------------------------\n";
+      os << "SIMP: noinsert_and_shift, before x=" << x << "\n";
+      print(os);
+      os << "SIMP: indices_bef: ";
+      print_vector_val(indices_bef, os);
+      os << "SIMP: -------\n";
+      std::swap(intervals, saved_intervals);
+      os << "SIMP: noinsert_and_shift, after\n";
+      print(os);
+      os << "SIMP: indices_aft_expected: ";
+      print_vector_val(indices_aft_expected, os);
+      os << "SIMP: indices_aft_real: ";
+      print_vector_val(indices_aft_real, os);
       std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (C)\n";
       throw TerminalException{1};
     }
