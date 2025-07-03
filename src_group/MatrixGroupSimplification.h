@@ -181,6 +181,9 @@ struct BlockInterval {
     if (n_intervals == 0) {
       return;
     }
+    if (x >= intervals[n_intervals - 1].end) {
+      return;
+    }
     size_t low = 0;
     size_t high = n_intervals;
     //#define DEBUG_REMOVE_ENTRY_AND_SHIFT
@@ -229,6 +232,14 @@ struct BlockInterval {
     std::cerr << "SIMP: case 4, low=" << low << "\n";
 #endif
     auto iife_first_interval=[&]() -> size_t {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+      if (low >= intervals.size()) {
+        std::cerr << "SIMP: out of range access, low=" << low << " |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+        std::cerr << "SIMP: x=" << x << "\n";
+        print(std::cerr);
+        throw TerminalException{1};
+      }
+#endif
       if (x < intervals[low].start) {
         return low;
       }
@@ -308,6 +319,15 @@ struct BlockInterval {
       intervals.push_back(iv);
       return;
     }
+    if (x == intervals[n_intervals-1].end) {
+      intervals[n_intervals-1].end += 1;
+      return;
+    }
+    if (x > intervals[n_intervals-1].end) {
+      Interval iv{x, x+1};
+      intervals.push_back(iv);
+      return;
+    }
     size_t low = 0;
     size_t high = n_intervals;
     //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
@@ -338,6 +358,14 @@ struct BlockInterval {
     //    std::cerr << "SIMP: Case 4 low=" << low << "\n";
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+      if (low >= intervals.size()) {
+        std::cerr << "SIMP: out of range access. low=" << low << "\n";
+        std::cerr << "SIMP: x=" << x << "\n";
+        print(std::cerr);
+        throw TerminalException{1};
+      }
+#endif
       if (x < intervals[low].start) {
         return low;
       }
@@ -768,7 +796,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
                 x2_attained = true;
               }
               if (!is_x1 && !is_x2) {
-                list_insert.push_back(ent);
+                if (map.find(ent) == map.end()) {
+                  list_insert.push_back(ent);
+                }
               }
             }
             if (!x1_attained) {
@@ -780,10 +810,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
             FoundImprov found_improv{list_delete, list_insert};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
             os << "SIMP: f_search, i_search=" << i_search
+               << " |map|=" << map.size()
                << " n_reduce_calls=" << n_reduce_calls
                << " n_changes=" << n_changes
                << " |list_insert|=" << list_insert.size()
                << " |list_delete|=" << list_delete.size()
+               << " x1_att=" << x1_attained << " x2_att=" << x2_attained
                << " idx1=" << idx1 << " idx2=" << idx2 << "\n";
 #endif
             return found_improv;
@@ -804,7 +836,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   auto delete_entry=[&](TcombPair const& val) -> void {
     auto iter = map.find(val);
     if (iter == map.end()) {
-      std::cerr << "SIMP: val shoulf be present in order to get the position\n";
+      std::cerr << "SIMP: val should be present in order to get the position\n";
       throw TerminalException{1};
     }
     size_t pos = std::distance(map.begin(), iter);
@@ -821,6 +853,14 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   };
   auto insert_entry=[&](TcombPair const& val) -> void {
     BlockInterval blk_int;
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+    auto iter_deb = map.find(val);
+    if (iter_deb != map.end()) {
+      size_t pos_deb = std::distance(map.begin(), iter_deb);
+      std::cerr << "SIMP: insert_entry, entry val already at position " << pos_deb << "\n";
+      throw TerminalException{1};
+    }
+#endif
     auto result = map.insert({val, blk_int});
     if (!result.second) {
       std::cerr << "SIMP: Entry is already present. Unexpected\n";
