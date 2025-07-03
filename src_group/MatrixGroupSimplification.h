@@ -216,6 +216,7 @@ struct BlockInterval {
         if (iv.start == iv.end) {
           intervals.erase(intervals.begin() + mid);
           start_shift = mid;
+          n_intervals -= 1;
         }
         for (size_t u=start_shift; u<n_intervals; u++) {
           intervals[u].start -= 1;
@@ -302,6 +303,11 @@ struct BlockInterval {
   // This corresponds to an insertion in the map.
   void insert_entry_and_shift_inner(size_t x) {
     size_t n_intervals = intervals.size();
+    if (n_intervals == 0) {
+      Interval iv{x, x + 1};
+      intervals.push_back(iv);
+      return;
+    }
     size_t low = 0;
     size_t high = n_intervals;
     //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
@@ -719,6 +725,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   auto f_search=[&]() -> std::optional<FoundImprov> {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     size_t n_reduce_calls = 0;
+    size_t idx1 = 0;
 #endif
     for (auto & kv: map) {
       TcombPair const& x1 = kv.first;
@@ -758,7 +765,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
             }
             FoundImprov found_improv{list_delete, list_insert};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-            os << "SIMP: f_search, i_search=" << i_search << " n_reduce_calls=" << n_reduce_calls << "\n";
+            os << "SIMP: f_search, i_search=" << i_search << " n_reduce_calls=" << n_reduce_calls << " idx1=" << idx1 << " idx2=" << idx2 << "\n";
 #endif
             return found_improv;
           }
@@ -766,6 +773,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
           break;
         }
       }
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+      idx1 += 1;
+#endif
     }
     return {};
   };
