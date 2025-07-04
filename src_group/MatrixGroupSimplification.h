@@ -1388,9 +1388,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 #ifdef METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
   MicrosecondTime time;
   std::vector<Ttype> result_V1 = ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
-  os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << " |result_V1|=" << result_V1.size() << "\n";
   std::vector<Ttype> result_V2 = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
-  os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
   return result_V2;
 #else
   return ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
@@ -1400,7 +1400,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
+std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
   std::unordered_set<Ttype> SetMred;
   for (auto & eM : ListM) {
     Ttype eM_inv = f_invers(eM);
@@ -1452,7 +1452,7 @@ std::vector<permutalib::SequenceType<false>> ExhaustiveReductionComplexitySequen
 }
 
 template<typename T, typename Telt>
-std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, [[maybe_unused]] std::ostream& os) {
+std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, std::ostream& os) {
   using Ttype = std::pair<MyMatrix<T>, Telt>;
   auto f_complexity=[&](Ttype const& pair) -> T {
     return get_ell1_complexity_measure(pair.first);
