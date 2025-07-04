@@ -816,30 +816,18 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
 //     Access to the first element of the list (returns an std::optional<size_t>)
 //     and remove it.
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
-  using Tcomb = std::pair<Ttype, Tnorm>;
+std::vector<TcombPair<Ttype,Tnorm>> ExhaustiveReductionComplexityKernelInner_V2(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   NanosecondTime time_total;
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: ExhaustiveReductionComplexityKernelInner_V2, |ListM|=" << ListM.size() << "\n";
 #endif
-  auto get_comb=[&](Ttype const& eM) -> Tcomb {
-    Tnorm comp = f_complexity(eM);
-    return {eM, comp};
-  };
-  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair<Ttype,Tnorm> {
-    Ttype p_inv = f_invers(p.first);
-    std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
-    return {p_pair, p.second};
-  };
   std::map<TcombPair<Ttype,Tnorm>, BlockInterval> map;
   size_t n_matrix = ListM.size();
   for (auto & eM: ListM) {
-    Tcomb comb1 = get_comb(eM);
-    TcombPair<Ttype,Tnorm> comb2 = get_comb_pair(comb1);
     BlockInterval blk_int;
-    map[comb2] = blk_int;
+    map[eM] = blk_int;
   }
   size_t index = 0;
   for (auto & kv: map) {
@@ -1037,10 +1025,6 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity(after)=" << get_complexity() << "\n";
 #endif
-  std::vector<Ttype> new_list_gens;
-  for (auto & kv: map) {
-    new_list_gens.push_back(kv.first.pair.first);
-  }
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   int64_t delta = time_total.eval_int64();
   double delta_d = static_cast<double>(delta);
@@ -1049,16 +1033,16 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype
   os << "|SIMP: ExhaustiveReductionComplexityKernel, avg(f_get_best_candidate)|=" << avg_cost_best << "\n";
   os << "|SIMP: ExhaustiveReductionComplexityKernel|=" << delta << "\n";
 #endif
-  return new_list_gens;
+  return vect;
 }
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+std::vector<TcombPair<Ttype,Tnorm>> ExhaustiveReductionComplexityKernel_V2(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION_DISABLE
-  auto f_total_comp=[&](std::vector<Ttype> const& ListM) -> Tnorm {
+  auto f_total_comp=[&](std::vector<TcombPair<Ttype,Tnorm>> const& ListM) -> Tnorm {
     Tnorm Tcomp(0);
     for (auto & eM : ListM) {
-      Tcomp += f_complexity(eM);
+      Tcomp += f_complexity(eM.pair.first);
     }
     return Tcomp;
   };
@@ -1066,7 +1050,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
 # ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity(start)=" << curr_total_comp << "\n";
 # endif
-  std::vector<Ttype> ListMwork = ListM;
+  std::vector<TcombPair<Ttype,Tnorm>> ListMwork = ListM;
   size_t n_iter = 0;
   while(true) {
     ListMwork = ExhaustiveReductionComplexityKernelInner_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMwork, f_complexity, f_invers, f_product, os);
@@ -1094,24 +1078,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
 
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
+std::vector<TcombPair<Ttype,Tnorm>> ExhaustiveReductionComplexityKernel_V1(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
-  using Tcomb = std::pair<Ttype, Tnorm>;
-  auto get_comb=[&](Ttype const& eM) -> Tcomb {
-    Tnorm comp = f_complexity(eM);
-    return {eM, comp};
-  };
-  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair<Ttype,Tnorm> {
-    Ttype p_inv = f_invers(p.first);
-    std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
-    return {p_pair, p.second};
-  };
   std::map<TcombPair<Ttype,Tnorm>, size_t> map;
   size_t nonce = 0;
   for (auto & eM: ListM) {
-    Tcomb comb1 = get_comb(eM);
-    TcombPair<Ttype,Tnorm> comb2 = get_comb_pair(comb1);
-    map[comb2] = nonce;
+    map[eM] = nonce;
     nonce += 1;
   }
   std::unordered_set<std::pair<size_t,size_t>> set_treated;
@@ -1383,9 +1355,9 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 #endif
     total_complexity = new_complexity;
   }
-  std::vector<Ttype> new_list_gens;
+  std::vector<TcombPair<Ttype,Tnorm>> new_list_gens;
   for (auto & kv: map) {
-    new_list_gens.push_back(kv.first.pair.first);
+    new_list_gens.push_back(kv.first);
   }
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   int64_t delta = time_total.eval_int64();
@@ -1398,12 +1370,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 }
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+std::vector<TcombPair<Ttype,Tnorm>> ExhaustiveReductionComplexityKernel(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
 #ifdef METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
   MicrosecondTime time;
-  std::vector<Ttype> result_V1 = ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  std::vector<TcombPair<Ttype,Tnorm>> result_V1 = ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
   os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << " |result_V1|=" << result_V1.size() << "\n";
-  std::vector<Ttype> result_V2 = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  std::vector<TcombPair<Ttype,Tnorm>> result_V2 = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
   os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
   return result_V2;
 #else
@@ -1415,6 +1387,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
 std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+  auto get_comb_pair=[&](Ttype const& eM) -> TcombPair<Ttype,Tnorm> {
+    Tnorm norm = f_complexity(eM);
+    Ttype p_inv = f_invers(eM);
+    std::pair<Ttype,Ttype> p_pair{eM, p_inv};
+    return {p_pair, norm};
+  };
   std::unordered_set<Ttype> SetMred;
   for (auto & eM : ListM) {
     Ttype eM_inv = f_invers(eM);
@@ -1424,15 +1402,18 @@ std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM
       SetMred.insert(eM_inv);
     }
   }
-  std::vector<Ttype> ListMred;
+  std::vector<TcombPair<Ttype,Tnorm>> ListMred;
   for (auto & eM: SetMred) {
-    ListMred.push_back(eM);
+    ListMred.push_back(get_comb_pair(eM));
   }
-  if (ListMred.size() <= 1) {
-    return ListMred;
+  std::vector<TcombPair<Ttype,Tnorm>> l_ent = ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMred, f_complexity, f_invers, f_product, os);
+  std::vector<Ttype> l_ent_ret;
+  for (auto &ent: l_ent) {
+    l_ent_ret.push_back(ent.pair.first);
   }
-  return ExhaustiveReductionComplexityKernel<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMred, f_complexity, f_invers, f_product, os);
+  return l_ent_ret;
 }
+
 
 template<typename T>
 std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, std::ostream& os) {
