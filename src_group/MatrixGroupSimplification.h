@@ -19,6 +19,9 @@
 #define TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
+#ifdef METHOD_COMPARISON
+#define METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
+#endif
 
 template<typename T>
 std::string compute_complexity_matrix(MyMatrix<T> const& mat) {
@@ -1422,7 +1425,7 @@ std::optional<std::vector<Ttype>> ExhaustiveReductionComplexityKernel(std::vecto
     os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
     return result_V2;
 #else
-    return ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Fproduct>(ListComb, f_complexity, f_product, os);
+    return ExhaustiveReductionComplexityKernel_V1<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
 #endif
   };
   std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt = get_reduced();
@@ -1571,9 +1574,11 @@ inline typename std::enable_if<!is_implementation_of_Z<T>::value,std::vector<MyM
 
 
 
-
-
-
+/*
+  The reduction algorithm will decrease the L1 norm (and likely the related Linf norm).
+  Therefore, it makes sense to go into faster algorithmic when possible.
+  If that fails, we cleanly fail and use a slower algorithm.
+ */
 template<typename T>
 inline typename std::enable_if<is_implementation_of_Z<T>::value,std::vector<MyMatrix<T>>>::type ExhaustiveReductionComplexityGroupMatrixInner(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, std::ostream& os) {
   T max_val = get_ellinfinity_norm(ListPair);
@@ -1667,7 +1672,7 @@ std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComple
     Ttype pair{ListM[i_gen], ListPerm[i_gen]};
     ListPair.push_back(pair);
   }
-  std::optional<std::vector<Ttype>> opt = ExhaustiveReductionComplexity<Ttype,T,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListPair, f_complexity, f_invers, f_product, os);
+  std::optional<std::vector<Ttype>> opt = ExhaustiveReductionComplexity<Ttype,T,decltype(f_complexity),decltype(f_invers),decltype(f_product),decltype(f_check)>(ListPair, f_complexity, f_invers, f_product, f_check, os);
   if (!opt) {
     std::cerr << "SIMP: We should never reach that stage in ExhaustiveReductionComplexityGroupMatrixPerm\n";
     throw TerminalException{1};
