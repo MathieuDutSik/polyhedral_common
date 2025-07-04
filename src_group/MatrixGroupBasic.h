@@ -243,9 +243,6 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
 #ifdef DEBUG_MATRIX_GROUP_BASIC
   os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_sub)=" << compute_complexity_listmat(ListMatr_sub) << "\n";
 #endif
-#ifdef TRACK_INFO_MATRIX_GROUP_BASIC
-  write_matrix_group(ListMatr_sub, "PreImageSubgroupOneStep");
-#endif
   std::vector<MyMatrix<T>> ListMatr_ret = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr_sub, os);
 #ifdef TIMINGS_MATRIX_GROUP_BASIC
   os << "|MAT_GRP: PreImageSubgroupOneStep, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
