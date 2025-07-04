@@ -666,6 +666,17 @@ bool operator!=(TcombPair<Ttype,Tnorm> const &x, TcombPair<Ttype,Tnorm> const &y
 }
 
 template<typename Ttype, typename Tnorm>
+bool operator<(TcombPair<Ttype,Tnorm> const &a, TcombPair<Ttype,Tnorm> const &b) {
+  if (a.norm < b.norm) {
+    return true;
+  }
+  if (a.norm > b.norm) {
+    return false;
+  }
+  return a.pair.first < b.pair.first;
+}
+
+template<typename Ttype, typename Tnorm>
 struct GenResult {
   std::array<TcombPair<Ttype,Tnorm>, 2> l_ent;
   bool do_something;
@@ -813,15 +824,6 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: ExhaustiveReductionComplexityKernelInner_V2, |ListM|=" << ListM.size() << "\n";
 #endif
-  auto f_comp=[](TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b) -> bool {
-    if (a.norm < b.norm) {
-      return true;
-    }
-    if (a.norm > b.norm) {
-      return false;
-    }
-    return a.pair.first < b.pair.first;
-  };
   auto get_comb=[&](Ttype const& eM) -> Tcomb {
     Tnorm comp = f_complexity(eM);
     return {eM, comp};
@@ -831,7 +833,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype
     std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
     return {p_pair, p.second};
   };
-  std::map<TcombPair<Ttype,Tnorm>, BlockInterval, decltype(f_comp)> map(f_comp);
+  std::map<TcombPair<Ttype,Tnorm>, BlockInterval> map;
   size_t n_matrix = ListM.size();
   for (auto & eM: ListM) {
     Tcomb comb1 = get_comb(eM);
@@ -1095,15 +1097,6 @@ template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers,
 std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
   using Tcomb = std::pair<Ttype, Tnorm>;
-  auto f_comp=[](TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b) -> bool {
-    if (a.norm < b.norm) {
-      return true;
-    }
-    if (a.norm > b.norm) {
-      return false;
-    }
-    return a.pair.first < b.pair.first;
-  };
   auto get_comb=[&](Ttype const& eM) -> Tcomb {
     Tnorm comp = f_complexity(eM);
     return {eM, comp};
@@ -1113,7 +1106,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
     std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
     return {p_pair, p.second};
   };
-  std::map<TcombPair<Ttype,Tnorm>, size_t, decltype(f_comp)> map(f_comp);
+  std::map<TcombPair<Ttype,Tnorm>, size_t> map;
   size_t nonce = 0;
   for (auto & eM: ListM) {
     Tcomb comb1 = get_comb(eM);
