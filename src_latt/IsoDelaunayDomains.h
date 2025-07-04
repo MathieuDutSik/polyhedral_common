@@ -2138,6 +2138,12 @@ struct DataIsoDelaunayDomainsFunc {
         // * One from going from action in the space to action on the dual
         // * One for going from row to column action
         MyVector<T> eVimg = MatSpace * eV;
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+        if (map_ineq.find(eVimg) == map_ineq.end()) {
+          std::cerr << "ISODEL: The entry eVimg is missing from the map\n";
+          throw TerminalException{1};
+        }
+#endif
         size_t pos = map_ineq.at(eVimg);
         l_pos[i] = pos;
       }

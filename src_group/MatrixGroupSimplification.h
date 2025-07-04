@@ -1092,6 +1092,9 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
 std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexityKernel_V1(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, [[maybe_unused]] std::ostream& os) {
+  if (ListM.size() <= 1) {
+    return ListM;
+  }
   size_t miss_val = std::numeric_limits<size_t>::max();
   std::map<TcombPair<Ttype,Tnorm>, size_t> map;
   size_t nonce = 0;
