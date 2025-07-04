@@ -143,10 +143,6 @@ struct BlockInterval {
   std::vector<Interval> intervals;
   BlockInterval() {
   }
-  BlockInterval(size_t start, size_t end) {
-    Interval interval{start, end};
-    intervals.push_back(interval);
-  }
   void insert_interval(size_t start, size_t end) {
     if (start < end) {
       Interval interval{start, end};
@@ -711,12 +707,16 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
   };
   std::map<TcombPair, BlockInterval, decltype(f_comp)> map(f_comp);
   size_t n_matrix = ListM.size();
-  size_t index = 0;
   for (auto & eM: ListM) {
     Tcomb comb1 = get_comb(eM);
     TcombPair comb2 = get_comb_pair(comb1);
-    BlockInterval blk_int(index+1, n_matrix);
+    BlockInterval blk_int;
     map[comb2] = blk_int;
+  }
+  size_t index = 0;
+  for (auto & kv: map) {
+    BlockInterval & blk_int = kv.second;
+    blk_int.insert_interval(index + 1, n_matrix);
     index += 1;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -749,9 +749,15 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
   };
   check_map_vect("initial");
 #endif
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+  size_t n_get_best_candidate = 0;
+#endif
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
   auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    os << "SIMP: f_get_best_candidate, beginning\n";
+#endif
     Ttype const& a_dir = a.first.first;
     Ttype const& b_dir = b.first.first;
     Ttype const& a_inv = a.first.second;
@@ -990,7 +996,32 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
   return new_list_gens;
 }
 
-
+template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
+std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+  auto f_total_comp=[&](std::vector<Ttype> const& ListM) -> Tnorm {
+    Tnorm Tcomp(0);
+    for (auto & eM : ListM) {
+      Tcomp += f_complexity(eM);
+    }
+    return Tcomp;
+  };
+  Tnorm curr_total_comp = f_total_comp(ListM);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  os << "SIMP: total_complexity(start)=" << curr_total_comp << "\n";
+#endif
+  std::vector<Ttype> ListMwork = ListM;
+  while(true) {
+    std::vector<Ttype> ListMwork = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMwork, f_complexity, f_invers, f_product, os);
+    Tnorm new_total_comp = f_total_comp(ListMwork);
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    os << "SIMP: new_total_comp=" << new_total_comp << " curr_total_comp=" << curr_total_comp << "\n";
+#endif
+    if (new_total_comp == curr_total_comp) {
+      return ListMwork;
+    }
+    curr_total_comp = new_total_comp;
+  }
+}
 
 
 
@@ -1393,7 +1424,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const&
   os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
   return result_V2;
 #else
-  return ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  return ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
 #endif
 }
 
@@ -1431,7 +1462,16 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<My
   auto f_invers=[](MyMatrix<T> const& M) -> MyMatrix<T> {
     return Inverse(M);
   };
-  auto f_product=[](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
+  auto f_product=[&](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    os << "SIMP: f_product, A=";
+    WriteMatrix(os, A);
+    os << "SIMP: f_product, B=";
+    WriteMatrix(os, B);
+    MyMatrix<T> result = A * B;
+    os << "SIMP: f_product, result=";
+    WriteMatrix(os, result);
+#endif
     return A * B;
   };
   return ExhaustiveReductionComplexity<T,MyMatrix<T>,decltype(f_complexity),decltype(f_invers),decltype(f_product)>(ListM, f_complexity, f_invers, f_product, os);

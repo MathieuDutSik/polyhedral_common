@@ -63,6 +63,7 @@ There are several environment variables that can be used during runtime.
 * `SANITY_CHECK` for doing some checks and stopping if incoherence are detected.
 * `SANITY_CHECK_EXTENSIVE` for doing some long running checks and stopping if incoherence are detected. Since those are long running, a print statement must mark their beginning and another one their end.
 * `TRACK_INFO` for printing stuff for further work down the line.
+* `METHOD_COMPARISON` for considering two (or more) different methods and comparing their performance (mainly runtime but not only).
 
 The options `TIMINGS` and `DEBUG` enable all the timings and debugging statements.
 For a more granular debugging, stuff like `DEBUG_LINEAR_PROGRAM` can be used. See

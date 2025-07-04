@@ -642,7 +642,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), PreImager|=" << time << "\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has1");
+  write_matrix_group(LGen1, "MatrixIntegral_Stabilizer_has");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
@@ -656,9 +656,6 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
   os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(LGen2, "MatrixIntegral_Stabilizer_has2");
 #endif
   return {index, LGen2};
 }
@@ -1273,6 +1270,9 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef TRACK_INFO_MATRIX_GROUP
+  write_matrix_group(ListMatrRet, "LinearSpace_ModStabilizer_Tmod_A");
+#endif
   ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -1336,6 +1336,9 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     ListMatrRet = f_stab(ListPermGens, GRPwork, eFace, pr.f_get_perm, ListMatrRet);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+#ifdef TRACK_INFO_MATRIX_GROUP
+    write_matrix_group(ListMatrRet, "LinearSpace_ModStabilizer_Tmod_C");
 #endif
     ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
@@ -1450,7 +1453,7 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
   os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListGenRet1, "LinearSpace_Stabilizer_Kernel1");
+  write_matrix_group(ListGenRet1, "LinearSpace_Stabilizer_Kernel");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
@@ -1461,9 +1464,6 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListGenRet2, "LinearSpace_Stabilizer_Kernel2");
 #endif
   return {total_index, ListGenRet2};
 }
@@ -1537,7 +1537,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   os << "MAT_GRP: |ListMatrGen1|=" << ListMatrGen1.size() << "\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListMatrGen1, "MatrixIntegral_PreImageSubgroup_has1");
+  write_matrix_group(ListMatrGen1, "MatrixIntegral_PreImageSubgroup_has");
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen1)=" << compute_complexity_listmat(ListMatrGen1) << "\n";
@@ -1551,9 +1551,6 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: |ListMatrGen2|=" << ListMatrGen2.size() << "\n";
-#endif
-#ifdef TRACK_INFO_MATRIX_GROUP
-  write_matrix_group(ListMatrGen2, "MatrixIntegral_PreImageSubgroup_has2");
 #endif
   return ListMatrGen2;
 }
@@ -1967,6 +1964,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
           MyMatrix<T> NewGen = cos_inv * eGen * entry.cos;
           Stab_matr_conj.emplace_back(std::move(NewGen));
         }
+#ifdef TRACK_INFO_MATRIX_GROUP
+        write_matrix_group(Stab_matr_conj, "LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel");
+#endif
         std::vector<MyMatrix<T>> Stab_matr_conj_red = ExhaustiveReductionComplexityGroupMatrix(Stab_matr_conj, os);
 #ifdef SANITY_CHECK_MATRIX_GROUP
         CheckGroupEquality<T,Tgroup>(Stab_matr_conj_red, Stab_matr_conj, os);
@@ -2173,6 +2173,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef TRACK_INFO_MATRIX_GROUP
+  write_matrix_group(ListMatrRet, "LinearSpace_ModEquivalence_Tmod_A");
+#endif
   ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2305,6 +2308,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
+#ifdef TRACK_INFO_MATRIX_GROUP
+      write_matrix_group(ListMatrRet, "LinearSpace_ModEquivalence_Tmod_C");
+#endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
@@ -2342,6 +2348,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
       os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+#endif
+#ifdef TRACK_INFO_MATRIX_GROUP
+      write_matrix_group(ListMatrRet, "LinearSpace_ModEquivalence_Tmod_E");
 #endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
