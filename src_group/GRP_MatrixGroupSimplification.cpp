@@ -11,9 +11,11 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexityGroupMatrix<T>(ListM, std::cerr);
   //
   if (OutFormat == "GAP") {
-    os_out << "return ";
+    os_out << "return rec(input:=";
+    WriteListMatrixGAP(os_out, ListM);
+    os_out << ", output:=";
     WriteListMatrixGAP(os_out, ListMred);
-    os_out << ";\n";
+    os_out << ");\n";
     return;
   }
   if (OutFormat == "CPP") {
