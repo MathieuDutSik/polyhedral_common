@@ -60,7 +60,7 @@ struct PreImager_Finite {
   }
 };
 
-template <typename T, typename Telt, typename Tint> struct FiniteMatrixGroupHelper {
+template <typename T, typename Telt, typename TintGroup> struct FiniteMatrixGroupHelper {
   using PreImager = PreImager_Finite<T,Telt>;
   int n;
   MyMatrix<T> EXTfaithful;
@@ -102,7 +102,7 @@ struct PreImager_FiniteIsotropic {
   }
 };
 
-template <typename T, typename Telt, typename Tint> struct FiniteIsotropicMatrixGroupHelper {
+template <typename T, typename Telt, typename TintGroup> struct FiniteIsotropicMatrixGroupHelper {
   using PreImager = PreImager_FiniteIsotropic<T,Telt>;
   int n;
   MyMatrix<T> G;
@@ -123,10 +123,10 @@ template <typename T, typename Telt, typename Tint> struct FiniteIsotropicMatrix
 
 //
 
-template <typename T, typename Telt, typename Tint>
+template <typename T, typename Telt, typename TintGroup>
 struct PreImager_General {
 private:
-  permutalib::PreImagerElement<Telt,MyMatrix<T>, Tint> inner;
+  permutalib::PreImagerElement<Telt,MyMatrix<T>, TintGroup> inner;
 public:
   PreImager_General(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm, int const& dim) : inner(l_matr, l_perm, IdentityMat<T>(dim)) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -139,8 +139,8 @@ public:
   }
 };
 
-template <typename T, typename Telt, typename Tint> struct GeneralMatrixGroupHelper {
-  using PreImager = PreImager_General<T, Telt, Tint>;
+template <typename T, typename Telt, typename TintGroup> struct GeneralMatrixGroupHelper {
+  using PreImager = PreImager_General<T, Telt, TintGroup>;
   int n;
   int nbRow() const {
     return 0;
@@ -159,28 +159,28 @@ template <typename Thelper> struct has_determining_ext {
   static const bool value = false;
 };
 
-template <typename T, typename Telt, typename Tint>
-struct has_determining_ext<FiniteMatrixGroupHelper<T, Telt, Tint>> {
+template <typename T, typename Telt, typename TintGroup>
+struct has_determining_ext<FiniteMatrixGroupHelper<T, Telt, TintGroup>> {
   static const bool value = true;
 };
 
-template <typename T, typename Telt, typename Tint>
-struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt, Tint>> {
+template <typename T, typename Telt, typename TintGroup>
+struct has_determining_ext<FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>> {
   static const bool value = true;
 };
 
 //
 
-template <typename T, typename Telt, typename Tint>
-GeneralMatrixGroupHelper<T, Telt, Tint>
-TransformHelper(GeneralMatrixGroupHelper<T, Telt, Tint> const &helper,
+template <typename T, typename Telt, typename TintGroup>
+GeneralMatrixGroupHelper<T, Telt, TintGroup>
+TransformHelper(GeneralMatrixGroupHelper<T, Telt, TintGroup> const &helper,
                 [[maybe_unused]] MyMatrix<T> const &Pmat) {
   return helper;
 }
 
-template <typename T, typename Telt, typename Tint>
-FiniteIsotropicMatrixGroupHelper<T, Telt, Tint>
-TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt, Tint> const &helper,
+template <typename T, typename Telt, typename TintGroup>
+FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>
+TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> const &helper,
                 MyMatrix<T> const &Pmat) {
   MyMatrix<T> PmatInv = Inverse(Pmat);
   MyMatrix<T> G_new = Pmat * helper.G * Pmat.transpose();
@@ -202,9 +202,9 @@ TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt, Tint> const &helper,
           std::move(MapV_new)};
 }
 
-template <typename T, typename Telt, typename Tint>
-FiniteMatrixGroupHelper<T, Telt, Tint>
-TransformHelper(FiniteMatrixGroupHelper<T, Telt, Tint> const &helper,
+template <typename T, typename Telt, typename TintGroup>
+FiniteMatrixGroupHelper<T, Telt, TintGroup>
+TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
                 MyMatrix<T> const &Pmat) {
   MyMatrix<T> PmatInv = Inverse(Pmat);
   MyMatrix<T> EXTfaithful_new = helper.EXTfaithful * PmatInv;
@@ -427,8 +427,8 @@ std::vector<T2> OrbitComputationSort(std::vector<T1> const &ListGen, T2 const &a
 }
 */
 
-template <typename T, typename Telt, typename Tint>
-FiniteMatrixGroupHelper<T, Telt, Tint>
+template <typename T, typename Telt, typename TintGroup>
+FiniteMatrixGroupHelper<T, Telt, TintGroup>
 ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
   std::vector<MyVector<T>> ListV;
   std::unordered_map<MyVector<T>, int> MapV;
@@ -441,8 +441,8 @@ ComputeFiniteMatrixGroupHelper(MyMatrix<T> const &EXT) {
   return {n_col, EXT, std::move(ListV), std::move(MapV)};
 }
 
-template <typename T, typename Telt, typename Tint>
-FiniteIsotropicMatrixGroupHelper<T, Telt, Tint>
+template <typename T, typename Telt, typename TintGroup>
+FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>
 ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
                                         MyMatrix<T> const &EXT,
                                         MyVector<T> const &Visotrop) {
