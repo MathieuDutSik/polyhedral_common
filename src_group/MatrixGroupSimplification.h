@@ -1094,32 +1094,30 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
 std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
   size_t miss_val = std::numeric_limits<size_t>::max();
-  using TtypePair = std::pair<Ttype, Ttype>;
-  using TcombPair = std::pair<TtypePair, Tnorm>;
   using Tcomb = std::pair<Ttype, Tnorm>;
-  auto f_comp=[](TcombPair const& a, TcombPair const& b) -> bool {
-    if (a.second < b.second) {
+  auto f_comp=[](TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b) -> bool {
+    if (a.norm < b.norm) {
       return true;
     }
-    if (a.second > b.second) {
+    if (a.norm > b.norm) {
       return false;
     }
-    return a.first.first < b.first.first;
+    return a.pair.first < b.pair.first;
   };
   auto get_comb=[&](Ttype const& eM) -> Tcomb {
     Tnorm comp = f_complexity(eM);
     return {eM, comp};
   };
-  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair {
+  auto get_comb_pair=[&](Tcomb const& p) -> TcombPair<Ttype,Tnorm> {
     Ttype p_inv = f_invers(p.first);
-    TtypePair p_pair{p.first, p_inv};
+    std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
     return {p_pair, p.second};
   };
-  std::map<TcombPair, size_t, decltype(f_comp)> map(f_comp);
+  std::map<TcombPair<Ttype,Tnorm>, size_t, decltype(f_comp)> map(f_comp);
   size_t nonce = 0;
   for (auto & eM: ListM) {
     Tcomb comb1 = get_comb(eM);
-    TcombPair comb2 = get_comb_pair(comb1);
+    TcombPair<Ttype,Tnorm> comb2 = get_comb_pair(comb1);
     map[comb2] = nonce;
     nonce += 1;
   }
@@ -1134,78 +1132,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   size_t n_get_best_candidate = 0;
 #endif
-  // Generate the possible ways to simplify the pair of elements.
-  // and select the one with the smallest norm
-  auto f_get_best_candidate=[&](TcombPair const& a, TcombPair const& b) -> Tcomb {
-    Ttype const& a_dir = a.first.first;
-    Ttype const& b_dir = b.first.first;
-    Ttype const& a_inv = a.first.second;
-    Ttype const& b_inv = b.first.second;
-    //
-    Ttype prod_gen = f_product(a_dir, b_dir);
-    Tcomb pair_ret = get_comb(prod_gen);
-    //
-    prod_gen = f_product(a_inv, b_dir);
-    Tcomb pair_gen = get_comb(prod_gen);
-    if (pair_gen.second < pair_ret.second) {
-      pair_ret = pair_gen;
-    }
-    //
-    prod_gen = f_product(a_dir, b_inv);
-    pair_gen = get_comb(prod_gen);
-    if (pair_gen.second < pair_ret.second) {
-      pair_ret = pair_gen;
-    }
-    //
-    prod_gen = f_product(a_inv, b_inv);
-    pair_gen = get_comb(prod_gen);
-    if (pair_gen.second < pair_ret.second) {
-      pair_ret = pair_gen;
-    }
-    //
-#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
-    n_get_best_candidate += 1;
-#endif
-    return pair_ret;
-  };
-  // Iterate the reduction algorithm over pairs of elements.
-  // The result of the iteration might be a 0, 1 or 2 new elements.
-  auto f_reduce=[&](TcombPair const& a, TcombPair const& b) -> std::pair<size_t, std::vector<TcombPair>> {
-    TcombPair a_work = a;
-    TcombPair b_work = b;
-    size_t n_change = 0;
-    while(true) {
-      Tcomb cand = f_get_best_candidate(a_work, b_work);
-      Tnorm a_norm = a_work.second;
-      Tnorm b_norm = b_work.second;
-      Tnorm cand_norm = cand.second;
-      bool do_something = true;
-      if (cand_norm < a_norm && cand_norm < b_norm) {
-        if (a_norm < b_norm) {
-          b_work = get_comb_pair(cand);
-        } else {
-          a_work = get_comb_pair(cand);
-        }
-      } else {
-        if (cand_norm < b_norm) {
-          b_work = get_comb_pair(cand);
-        } else {
-          if (cand_norm < a_norm) {
-            a_work = get_comb_pair(cand);
-          } else {
-            do_something = false;
-          }
-        }
-      }
-      if (!do_something) {
-        std::vector<TcombPair> npair{a_work, b_work};
-        return {n_change, npair};
-      } else {
-        n_change += 1;
-      }
-    }
-  };
-  auto erase_entry=[&](TcombPair const& val) -> void {
+  auto erase_entry=[&](TcombPair<Ttype,Tnorm> const& val) -> void {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to be removed\n";
@@ -1213,7 +1140,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
     }
     map.erase(iter);
   };
-  auto get_pos=[&](TcombPair const& val) -> size_t {
+  auto get_pos=[&](TcombPair<Ttype,Tnorm> const& val) -> size_t {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to get the position\n";
@@ -1224,7 +1151,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
   };
   Tnorm total_complexity(0);
   for (auto & kv: map) {
-    total_complexity += kv.first.second;
+    total_complexity += kv.first.norm;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity=" << total_complexity << "\n";
@@ -1270,12 +1197,12 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
-      TcombPair a = iter1->first;
+      TcombPair<Ttype,Tnorm> a = iter1->first;
       size_t nonce_a = iter1->second;
       //
       auto iter2 = map.begin();
       std::advance(iter2, v);
-      TcombPair b = iter2->first;
+      TcombPair<Ttype,Tnorm> b = iter2->first;
       size_t nonce_b = iter2->second;
       std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
@@ -1283,17 +1210,16 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 #endif
       //
       bool already_treated = false;
-      std::pair<size_t, std::vector<TcombPair>> pair{0,{}};
+      GenResult<Ttype,Tnorm> gen{{}, false};
       if (set_treated.find(nonce_pair) != set_treated.end()) {
         already_treated = true;
       } else {
-        pair = f_reduce(a, b);
+        gen = f_reduce<Ttype,Tnorm,Fcomplexity,Finvers,Fproduct>(a, b, f_complexity, f_invers, f_product);
       }
-      size_t n_changes = pair.first;
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-      os << "SIMP:   n_changes=" << n_changes << " already_treated=" << already_treated << " |set_treated|=" << set_treated.size() << "\n";
+      os << "SIMP:   do_something=" << gen.do_something << " already_treated=" << already_treated << " |set_treated|=" << set_treated.size() << "\n";
 #endif
-      if (n_changes > 0) {
+      if (gen.do_something) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
         n_operation += 1;
 #endif
@@ -1304,11 +1230,11 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
         WriteMatrix(os, b.first);
 #endif
         std::vector<size_t> att;
-        std::vector<TcombPair> new_elt;
+        std::vector<TcombPair<Ttype,Tnorm>> new_elt;
         size_t min_distance = miss_val;
         bool a_attained = false;
         bool b_attained = false;
-        for (auto & ent: pair.second) {
+        for (auto & ent: gen.l_ent) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
           os << "SIMP:  ent.comp=" << ent.second << " elt.eM=\n";
           WriteMatrix(os, ent.first);
@@ -1451,7 +1377,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
     look_for_simplification();
     Tnorm new_complexity(0);
     for (auto & kv: map) {
-      new_complexity += kv.first.second;
+      new_complexity += kv.first.norm;
     }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     os << "SIMP: total_complexity=" << total_complexity << " new_complexity=" << new_complexity << "\n";
@@ -1466,7 +1392,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
   }
   std::vector<Ttype> new_list_gens;
   for (auto & kv: map) {
-    new_list_gens.push_back(kv.first.first.first);
+    new_list_gens.push_back(kv.first.pair.first);
   }
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   int64_t delta = time_total.eval_int64();
