@@ -133,12 +133,15 @@ void print_vector_val(std::vector<size_t> const& V, std::ostream& os) {
   os << "]\n";
 }
 
-
+// An interval starting at start with end excluded
 struct Interval {
   size_t start;
   size_t end;
 };
 
+
+// A collection of intervals.
+// The list of intervals is ascending.
 struct BlockInterval {
   std::vector<Interval> intervals;
   BlockInterval() {
@@ -390,21 +393,31 @@ struct BlockInterval {
     }
     size_t low = 0;
     size_t high = n_intervals;
-    //    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
+#endif
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
-      //      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+#endif
       Interval& iv = intervals[mid];
 
       if (x < iv.start) {
-        //        std::cerr << "SIMP: Case 1\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: Case 1\n";
+#endif
         high = mid;
       } else if (x > iv.end) {
-        //        std::cerr << "SIMP: Case 2\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: Case 2\n";
+#endif
         low = mid + 1;
       } else {
-        //        std::cerr << "SIMP: Case 3\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+        std::cerr << "SIMP: Case 3\n";
+#endif
         // x is in [start, end)
         iv.end += 1;
         size_t start_shift = mid + 1;;
@@ -415,7 +428,9 @@ struct BlockInterval {
         return;
       }
     }
-    //    std::cerr << "SIMP: Case 4 low=" << low << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: Case 4 low=" << low << "\n";
+#endif
     // x should be outside of the intervals.
     auto iife_first_interval=[&]() -> size_t {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
@@ -436,12 +451,18 @@ struct BlockInterval {
       throw TerminalException{1};
     };
     size_t index = iife_first_interval();
-    //    std::cerr << "SIMP: Case 4 index=" << index << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: Case 4 index=" << index << "\n";
+#endif
     Interval new_iv{x, x+1};
     intervals.insert(intervals.begin() + index, new_iv);
-    //    std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+    std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
+#endif
     for (size_t u=index + 1; u<n_intervals + 1; u++) {
-      //      std::cerr << "SIMP: Case 4 u=" << u << "\n";
+#ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
+      std::cerr << "SIMP: Case 4 u=" << u << "\n";
+#endif
       intervals[u].start += 1;
       intervals[u].end += 1;
     }
@@ -646,7 +667,7 @@ bool operator!=(TcombPair<Ttype,Tnorm> const &x, TcombPair<Ttype,Tnorm> const &y
 
 template<typename Ttype, typename Tnorm>
 struct GenResult {
-  std::vector<TcombPair<Ttype,Tnorm>> l_ent;
+  std::array<TcombPair<Ttype,Tnorm>, 2> l_ent;
   bool do_something;
 };
 
@@ -716,7 +737,7 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
   Tnorm const& b_norm = b.norm;
   Tnorm const& cand_norm = cand.norm;
   bool do_something = true;
-  auto get_pair=[&]() -> std::vector<TcombPair<Ttype,Tnorm>> {
+  auto get_pair=[&]() -> std::array<TcombPair<Ttype,Tnorm>, 2> {
     if (cand_norm < a_norm && cand_norm < b_norm) {
       if (a_norm < b_norm) {
         return {a, cand};
@@ -740,7 +761,8 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
 }
 
 
-
+// The ordering of the operations between V1 and V2 are different
+// Therefore, the final size of the output may differ.
 
 
 // The tool for simplifying a list of generators.
@@ -783,11 +805,14 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
 //     Access to the first element of the list (returns an std::optional<size_t>)
 //     and remove it.
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+  using Tcomb = std::pair<Ttype, Tnorm>;
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   NanosecondTime time_total;
 #endif
-  using Tcomb = std::pair<Ttype, Tnorm>;
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+  os << "SIMP: ExhaustiveReductionComplexityKernelInner_V2, |ListM|=" << ListM.size() << "\n";
+#endif
   auto f_comp=[](TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b) -> bool {
     if (a.norm < b.norm) {
       return true;
@@ -1026,8 +1051,8 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
 }
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
-#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
+std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION_DISABLE
   auto f_total_comp=[&](std::vector<Ttype> const& ListM) -> Tnorm {
     Tnorm Tcomp(0);
     for (auto & eM : ListM) {
@@ -1042,7 +1067,7 @@ std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& Li
   std::vector<Ttype> ListMwork = ListM;
   size_t n_iter = 0;
   while(true) {
-    std::vector<Ttype> ListMwork = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMwork, f_complexity, f_invers, f_product, os);
+    ListMwork = ExhaustiveReductionComplexityKernelInner_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMwork, f_complexity, f_invers, f_product, os);
     Tnorm new_total_comp = f_total_comp(ListMwork);
 # ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     os << "SIMP: new_total_comp=" << new_total_comp << " curr_total_comp=" << curr_total_comp << "\n";
@@ -1058,7 +1083,7 @@ std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& Li
     n_iter += 1;
   }
 #else
-  return ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  return ExhaustiveReductionComplexityKernelInner_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
 #endif
 }
 
@@ -1502,7 +1527,7 @@ std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<My
     return Inverse(M);
   };
   auto f_product=[&](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_DISABLE
     os << "SIMP: f_product, A=";
     WriteMatrix(os, A);
     os << "SIMP: f_product, B=";
