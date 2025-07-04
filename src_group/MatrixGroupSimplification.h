@@ -828,7 +828,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernelInner_V2(std::vector<Ttype
   };
   auto get_comb_pair=[&](Tcomb const& p) -> TcombPair<Ttype,Tnorm> {
     Ttype p_inv = f_invers(p.first);
-    std::array<Ttype,2> p_pair{p.first, p_inv};
+    std::pair<Ttype,Ttype> p_pair{p.first, p_inv};
     return {p_pair, p.second};
   };
   std::map<TcombPair<Ttype,Tnorm>, BlockInterval, decltype(f_comp)> map(f_comp);
