@@ -21,6 +21,70 @@
 
 
 template<typename T>
+std::string compute_complexity_matrix(MyMatrix<T> const& mat) {
+  int n = mat.rows();
+  T ell1(0);
+  T ellinfinity(0);
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      T val = mat(i,j);
+      T abs_val = T_abs(val);
+      ell1 += abs_val;
+      if (abs_val > ellinfinity) {
+        ellinfinity = abs_val;
+      }
+    }
+  }
+  return "(ell1=" + std::to_string(ell1) + ", ellinf=" + std::to_string(ellinfinity) + ")";
+}
+
+template<typename T>
+std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat) {
+  if (list_mat.size() == 0) {
+    return "zero generators";
+  }
+  int n = list_mat[0].rows();
+  size_t n_mat = list_mat.size();
+  T ell1_global(0);
+  T ellinfinite_global(0);
+  for (auto & e_mat: list_mat) {
+    T ell1(0);
+    T ellinfinity(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        T val = e_mat(i,j);
+        T abs_val = T_abs(val);
+        ell1 += abs_val;
+        if (abs_val > ellinfinity) {
+          ellinfinity = abs_val;
+        }
+      }
+    }
+    ell1_global += ell1;
+    if (ellinfinity > ellinfinite_global) {
+      ellinfinite_global = ellinfinity;
+    }
+  }
+  return "(n_gen=" + std::to_string(n_mat) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+}
+
+template<bool always_equal>
+std::string compute_complexity_listseq(std::vector<permutalib::SequenceType<always_equal>> const& list_seq) {
+  size_t n_seq = list_seq.size();
+  size_t ell1_global = 0;
+  size_t ellinfinite_global = 0;
+  for (auto & seq: list_seq) {
+    std::vector<int64_t> const& ListIdx = seq.getVect();
+    size_t len = ListIdx.size();
+    ell1_global += len;
+    if (ellinfinite_global < len) {
+      ellinfinite_global = len;
+    }
+  }
+  return "(n_seq=" + std::to_string(n_seq) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+}
+
+template<typename T>
 struct ComplexityMeasure {
   T ell1;
   T ellinfinity;
@@ -620,7 +684,7 @@ struct BlockInterval {
 //     Access to the first element of the list (returns an std::optional<size_t>)
 //     and remove it.
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
-std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {
+std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   NanosecondTime time_total;
 #endif
@@ -1318,6 +1382,22 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V1(std::vector<Ttype> con
 #endif
   return new_list_gens;
 }
+
+template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
+std::vector<Ttype> ExhaustiveReductionComplexityKernel(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+#ifdef METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
+  MicrosecondTime time;
+  std::vector<Ttype> result_V1 = ExhaustiveReductionComplexityKernel_V1<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << "\n";
+  std::vector<Ttype> result_V2 = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+  os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << "\n";
+  return result_V2;
+#else
+  return ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+#endif
+}
+
+
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
 std::vector<Ttype> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, [[maybe_unused]] std::ostream& os) {

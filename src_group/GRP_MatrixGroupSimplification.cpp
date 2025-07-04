@@ -20,6 +20,11 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
     WriteListMatrix(os_out, ListMred);
     return;
   }
+  if (OutFormat == "Stat") {
+    os_out << "INPUT : " << compute_complexity_listmat(ListM) << "\n";
+    os_out << "OUTPUT: " << compute_complexity_listmat(ListMred) << "\n";
+    return;
+  }
   std::cerr << "Failed to find a matching OutFormat\n";
   throw TerminalException{1};
 }
@@ -44,7 +49,7 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string FileMatrGroup = argv[2];
-    std::string OutFormat = "CPP";
+    std::string OutFormat = "Stat";
     std::string FileOut = "stderr";
     if (argc == 5) {
       OutFormat = argv[3];
