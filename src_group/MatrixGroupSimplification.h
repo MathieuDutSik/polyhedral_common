@@ -630,16 +630,6 @@ struct BlockInterval {
 
 
 
-
-
-
-
-
-
-
-
-
-
 // The tool for simplifying a list of generators.
 // The transformations being applied are Tietze transformations.
 // We could add some conjugacy operations like  U V U^{-1}.
@@ -998,6 +988,7 @@ std::vector<Ttype> ExhaustiveReductionComplexityKernel_V2(std::vector<Ttype> con
 
 template<typename Tnorm, typename Ttype, typename Fcomplexity, typename Finvers, typename Fproduct>
 std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, std::ostream& os) {
+#ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
   auto f_total_comp=[&](std::vector<Ttype> const& ListM) -> Tnorm {
     Tnorm Tcomp(0);
     for (auto & eM : ListM) {
@@ -1006,21 +997,30 @@ std::vector<Ttype> ExhaustiveReductionComplexity_V2(std::vector<Ttype> const& Li
     return Tcomp;
   };
   Tnorm curr_total_comp = f_total_comp(ListM);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+# ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity(start)=" << curr_total_comp << "\n";
-#endif
+# endif
   std::vector<Ttype> ListMwork = ListM;
+  size_t n_iter = 0;
   while(true) {
     std::vector<Ttype> ListMwork = ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListMwork, f_complexity, f_invers, f_product, os);
     Tnorm new_total_comp = f_total_comp(ListMwork);
-#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+# ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     os << "SIMP: new_total_comp=" << new_total_comp << " curr_total_comp=" << curr_total_comp << "\n";
-#endif
+# endif
     if (new_total_comp == curr_total_comp) {
       return ListMwork;
     }
+    if (n_iter == 1) {
+      std::cerr << "SIMP: The second call did not improve and that is unexpected\n";
+      throw TerminalException{1};
+    }
     curr_total_comp = new_total_comp;
+    n_iter += 1;
   }
+#else
+  return ExhaustiveReductionComplexityKernel_V2<Tnorm,Ttype,Fcomplexity,Finvers,Fproduct>(ListM, f_complexity, f_invers, f_product, os);
+#endif
 }
 
 
