@@ -18,7 +18,9 @@
 
 template <typename T, typename Tvert, typename Tgroup>
 void WriteFamilyDelaunay_Mpi(
-    boost::mpi::communicator &comm, std::string const &OutFormat,
+    boost::mpi::communicator &comm,
+    MyMatrix<T> const& GramMat,
+    std::string const &OutFormat,
     std::string const &OutFile,
     std::vector<DatabaseEntry_MPI<
         typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
@@ -62,6 +64,28 @@ void WriteFamilyDelaunay_Mpi(
       OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
       WriteMatrix(OUTfs, ListDel[iDel].x.EXT);
     }
+  }
+  if (OutFormat == "GAP_Covering") {
+    T max_radius(0);
+    for (auto & eDel : ListDel) {
+      MyMatrix<Tvert> const& EXT = eDel.x;
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+      T SquareRadius = cp.SquareRadius;
+      if (SquareRadius > max_radius) {
+        max_radius = SquareRadius;
+      }
+    }
+    int i_proc_out = 0;
+    std::vector<T> l_ent = my_mpi_gather(comm, max_radius, i_proc_out);
+    for (auto & rad: l_ent) {
+      if (rad > max_radius) {
+        max_radius = rad;
+      }
+    }
+    std::ofstream OUTfs(OutFile);
+    OUTfs << "return rec(max_radius:=" << max_radius << ");\n";
+    return;
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
             << "\n";
@@ -115,8 +139,10 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
 #endif
   //
   if (pair.first) {
-    WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, OutFormat, OutFile, pair.second,
+    WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, OutFile, pair.second,
                                              os);
+  } else {
+    os << "MPI_DEL_ENUM: The enumeration did not finish\n";
   }
 }
 

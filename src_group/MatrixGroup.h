@@ -220,8 +220,17 @@ TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
           std::move(MapV_new)};
 }
 
+// We need a procedure that not just transform the helper, but also
+// changes the type T to an integer type when at all possible.
+// ----
+// What could be done:
+// ---We are working with a type underlying_ring already
+// ---So, the transform_helper could map to that derived
+//    type.
+// ---The derived type could part of the Thelper, like
+//    typename Thelper::ThelperInt;
 
-//
+
 
 
 template <typename T, typename Telt, typename TintGroup>
