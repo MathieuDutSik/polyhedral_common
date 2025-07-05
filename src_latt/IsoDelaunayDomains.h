@@ -2121,7 +2121,8 @@ struct DataIsoDelaunayDomainsFunc {
     std::unordered_map<MyVector<T>, size_t> map_ineq;
     for (size_t i = 0; i < nbIrred; i++) {
       MyVector<T> eV = GetMatrixRow(FACred, i);
-      l_ineq.push_back(eV);
+      MyVector<T> eVred = RemoveFractionVector(eV);
+      l_ineq.push_back(eVred);
       map_ineq[eV] = i;
     }
     // Compute the automorphism group on the central gram and then the facets
@@ -2138,13 +2139,20 @@ struct DataIsoDelaunayDomainsFunc {
         // * One from going from action in the space to action on the dual
         // * One for going from row to column action
         MyVector<T> eVimg = MatSpace * eV;
+        MyVector<T> eVimg_red = RemoveFractionVector(eVimg);
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
-        if (map_ineq.find(eVimg) == map_ineq.end()) {
+        if (map_ineq.find(eVimg_red) == map_ineq.end()) {
+          std::cerr << "ISODEL: eGenTot=\n";
+          WriteMatrix(std::cerr, eGenTot);
+          std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg) << "\n";
+          std::cerr << "ISODEL: i=" << i << " eVimg=" << StringVector(eVimg_red) << "\n";
+          std::cerr << "ISODEL: FACred=\n";
+          WriteMatrix(std::cerr, FACred);
           std::cerr << "ISODEL: The entry eVimg is missing from the map\n";
           throw TerminalException{1};
         }
 #endif
-        size_t pos = map_ineq.at(eVimg);
+        size_t pos = map_ineq.at(eVimg_red);
         l_pos[i] = pos;
       }
       Telt ePermGen(l_pos);
