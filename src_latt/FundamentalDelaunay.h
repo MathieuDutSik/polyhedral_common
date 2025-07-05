@@ -504,6 +504,79 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   return {Mat1, Mat2};
 }
 
+template<typename T>
+struct ResultCov {
+  double CovDensityNormalized;
+  double CovDensity;
+  double CoveringRadius;
+  double DeterminantLattice;
+  double VolumeBall;
+  int TheDim;
+  T TheDet;
+  T TheCov;
+};
+
+template<typename T>
+ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet, T TheCov) {
+
+  double TheCov_d = UniversalScalarConversion<double,T>(TheCov);
+  double TheCovRad = std::sqrt(TheCov_d);
+  double TheDet_d = UniversalScalarConversion<double,T>(TheDet);
+  double TheDetLattice = std::sqrt(TheDet_d);
+  //
+  double val = 1.0;
+  for (int i=0; i<TheDim; i++) {
+    val *= TheCov_d;
+  }
+  double quot = val / TheDet_d;
+  double red = std::sqrt(quot);
+  //
+  auto get_volume_ball=[&]() -> double {
+    double pi = 2 * std::acos(0);
+    int res = TheDim % 2;
+    if (res == 0) {
+      int half_d = TheDim / 2;
+      double powpi = 1.0;
+      double fact = 1.0;
+      for (int i=1; i<=half_d; i++) {
+        powpi *= pi;
+        fact *= i;
+      }
+      return powpi / fact;
+    } else {
+      int half_d = (TheDim - 1)/2;
+      double powpi = 1.0;
+      for (int i=1; i<=half_d; i++) {
+        powpi *= pi;
+      }
+      double fact = 1.0;
+      for (int i=0; i<=half_d; i++) {
+        fact *= (0.5 + i);
+      }
+      return powpi / fact;
+    }
+  };
+  double VolumeBall = get_volume_ball();
+  double CovDens = red * VolumeBall;
+  return {red, CovDens, TheCovRad, TheDetLattice, VolumeBall, TheDim, TheDet, TheCov};
+}
+
+template<typename T>
+std::string to_stringGAP(ResultCov<T> const& x) {
+  return "rec(CovDensityNormalized" + std::to_string(x.CovDensityNormalized)
+    + ", CovDensity:=" + std::to_string(x.CovDensity)
+    + ", CoveringRadius:=" + std::to_string(x.CoveringRadius)
+    + ", DeterminantLattice:=" + std::to_string(x.DeterminantLattice)
+    + ", VolumeBall:=" + std::to_string(x.VolumeBall)
+    + ", TheDim:=" + std::to_string(x.TheDim)
+    + ", TheDet:=" + std::to_string(x.TheDet)
+    + ", TheCov:=" + std::to_string(x.TheCov) + ")";
+}
+
+
+
+
+
 // clang-format off
 #endif  // SRC_LATT_FUNDAMENTALDELAUNAY_H_
 // clang-format on

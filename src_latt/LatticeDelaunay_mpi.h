@@ -78,13 +78,19 @@ void WriteFamilyDelaunay_Mpi(
     }
     int i_proc_out = 0;
     std::vector<T> l_ent = my_mpi_gather(comm, max_radius, i_proc_out);
-    for (auto & rad: l_ent) {
-      if (rad > max_radius) {
-        max_radius = rad;
+    T TheCov(0);
+    if (i_proc_out == i_rank) {
+      T TheDet = DeterminantMat(GramMat);
+      int TheDim = GramMat.rows();
+      for (auto & rad: l_ent) {
+        if (rad > TheCov) {
+          TheCov = rad;
+        }
       }
+      std::ofstream OUTfs(OutFile);
+      ResultCov<T> x = ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCov);
+      OUTfs << "return " << to_stringGAP(x) << ";\n";
     }
-    std::ofstream OUTfs(OutFile);
-    OUTfs << "return rec(max_radius:=" << max_radius << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
