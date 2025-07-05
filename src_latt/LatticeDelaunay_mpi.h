@@ -68,7 +68,7 @@ void WriteFamilyDelaunay_Mpi(
   if (OutFormat == "GAP_Covering") {
     T max_radius(0);
     for (auto & eDel : ListDel) {
-      MyMatrix<Tvert> const& EXT = eDel.x;
+      MyMatrix<Tvert> const& EXT = eDel.x.EXT;
       MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
       CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
       T SquareRadius = cp.SquareRadius;
