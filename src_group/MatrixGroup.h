@@ -185,6 +185,13 @@ TransformHelper(GeneralMatrixGroupHelper<T, Telt, TintGroup> const &helper,
 }
 
 template <typename T, typename Telt, typename TintGroup>
+GeneralMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>
+ToInteger(GeneralMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  return GeneralMatrixGroupHelper<Tint, Telt, TintGroup>{helper.n};
+}
+
+template <typename T, typename Telt, typename TintGroup>
 FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup>
 TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> const &helper,
                 MyMatrix<T> const &Pmat) {
@@ -208,6 +215,38 @@ TransformHelper(FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> const &help
           std::move(MapV_new)};
 }
 
+
+template <typename T, typename Telt, typename TintGroup>
+FiniteIsotropicMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>
+ToInteger(FiniteIsotropicMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  //
+  MyMatrix<T> G2 = RemoveFractionMatrix(helper.G);
+  MyMatrix<Tint> G3 = UniversalMatrixConversion<Tint,T>(G2);
+  //
+  MyMatrix<T> EXTfaithful2 = RemoveFractionMatrix(helper.EXTfaithful);
+  MyMatrix<Tint> EXTfaithful3 = UniversalMatrixConversion<Tint,T>(EXTfaithful2);
+  //
+  MyVector<T> Visotrop2 = RemoveFractionVector(helper.Visotrop);
+  MyVector<Tint> Visotrop3 = UniversalVectorConversion<Tint,T>(Visotrop2);
+  //
+  std::vector<MyVector<Tint>> ListV;
+  std::unordered_map<MyVector<Tint>, int> MapV;
+  int len = EXTfaithful3.rows();
+  for (int i = 0; i < len; i++) {
+    MyVector<Tint> eV = GetMatrixRow(EXTfaithful3, i);
+    MapV[eV] = i;
+    ListV.emplace_back(std::move(eV));
+  }
+  return {helper.n,
+          std::move(G3),
+          std::move(EXTfaithful3),
+          std::move(Visotrop3),
+          std::move(ListV),
+          std::move(MapV)};
+}
+
+
 template <typename T, typename Telt, typename TintGroup>
 FiniteMatrixGroupHelper<T, Telt, TintGroup>
 TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
@@ -225,6 +264,30 @@ TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
   return {helper.n, std::move(EXTfaithful_new), std::move(ListV_new),
           std::move(MapV_new)};
 }
+
+template <typename T, typename Telt, typename TintGroup>
+FiniteMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>
+ToInteger(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
+  using Tint = typename underlying_ring<T>::ring_type;
+  //
+  MyMatrix<T> EXTfaithful2 = RemoveFractionMatrix(helper.EXTfaithful);
+  MyMatrix<Tint> EXTfaithful3 = UniversalMatrixConversion<Tint,T>(EXTfaithful2);
+  //
+  std::vector<MyVector<Tint>> ListV;
+  std::unordered_map<MyVector<Tint>, int> MapV;
+  int len = EXTfaithful3.rows();
+  for (int i = 0; i < len; i++) {
+    MyVector<Tint> eV = GetMatrixRow(EXTfaithful3, i);
+    MapV[eV] = i;
+    ListV.emplace_back(std::move(eV));
+  }
+  return {helper.n, std::move(EXTfaithful3), std::move(ListV),
+          std::move(MapV)};
+}
+
+
+
+
 
 // We need a procedure that not just transform the helper, but also
 // changes the type T to an integer type when at all possible.
