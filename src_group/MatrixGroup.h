@@ -56,7 +56,13 @@ struct PreImager_Finite {
       v[i] = OnPoints(i, elt);
     }
     Telt ePermB(std::move(v));
-    return FindTransformation(EXTfaithful, EXTfaithful, ePermB);
+    std::optional<MyMatrix<T>> opt = FindTransformationRing(EXTfaithful, EXTfaithful, ePermB);
+    if (!opt) {
+      std::cerr << "MAT_GRP: matrix is rational but not integral, so no conversion possible\n";
+      std::cerr << "MAT_GRP: likely a bug since this error cannot occur for other code paths\n";
+      throw TerminalException{1};
+    }
+    return *opt;
   }
 };
 
@@ -2234,28 +2240,11 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence(
 
 template <typename T, typename Tgroup, typename Thelper>
 std::optional<MyMatrix<T>>
-LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
-                               Thelper const &helper,
-                               MyMatrix<T> const &InSpace1,
-                               MyMatrix<T> const &InSpace2, std::ostream &os) {
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of LinearSpace_Equivalence_Kernel\n";
-  os << "MAT_GRP: |ListMatr|=" << ListMatr.size() << "\n";
-  os << "MAT_GRP: Det(InSpace1)=" << DeterminantMat(InSpace1)
-     << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
-#endif
-  FractionMatrix<T> eRec1 = RemoveFractionMatrixPlusCoeff(InSpace1);
-  FractionMatrix<T> eRec2 = RemoveFractionMatrixPlusCoeff(InSpace2);
-#ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: eRec1.TheMult=" << eRec1.TheMult
-     << " eRec2.TheMult=" << eRec2.TheMult << "\n";
-#endif
-  if (eRec1.TheMult != eRec2.TheMult)
-    return {};
-  MyMatrix<T> const &TheSpace1 = eRec1.TheMat;
-  MyMatrix<T> const &TheSpace2 = eRec2.TheMat;
-  //
-  int n = TheSpace1.rows();
+LinearSpace_Equivalence_KernelRing(std::vector<MyMatrix<T>> const &ListMatr,
+                                   Thelper const &helper,
+                                   MyMatrix<T> const &TheSpace1,
+                                   MyMatrix<T> const &TheSpace2, std::ostream &os) {
+  int n = helper.n;
   T LFact1 = LinearSpace_GetDivisor(TheSpace1);
   T LFact2 = LinearSpace_GetDivisor(TheSpace2);
 #ifdef DEBUG_MATRIX_GROUP
@@ -2311,6 +2300,48 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
   return eElt;
 }
+
+template <typename T, typename Tgroup, typename Thelper>
+std::optional<MyMatrix<T>>
+LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
+                               Thelper const &helper,
+                               MyMatrix<T> const &InSpace1,
+                               MyMatrix<T> const &InSpace2, std::ostream &os) {
+  using Tint = typename Thelper::Tint;
+  using ThelperInt = typename Thelper::ThelperInt;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: Beginning of LinearSpace_Equivalence_Kernel\n";
+  os << "MAT_GRP: |ListMatr|=" << ListMatr.size() << "\n";
+  os << "MAT_GRP: Det(InSpace1)=" << DeterminantMat(InSpace1)
+     << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
+#endif
+  FractionMatrix<T> eRec1 = RemoveFractionMatrixPlusCoeff(InSpace1);
+  FractionMatrix<T> eRec2 = RemoveFractionMatrixPlusCoeff(InSpace2);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MAT_GRP: eRec1.TheMult=" << eRec1.TheMult
+     << " eRec2.TheMult=" << eRec2.TheMult << "\n";
+#endif
+  if (eRec1.TheMult != eRec2.TheMult)
+    return {};
+  MyMatrix<T> const &TheSpace1 = eRec1.TheMat;
+  MyMatrix<T> const &TheSpace2 = eRec2.TheMat;
+  MyMatrix<Tint> TheSpace1_int = UniversalMatrixConversion<Tint,T>(TheSpace1);
+  MyMatrix<Tint> TheSpace2_int = UniversalMatrixConversion<Tint,T>(TheSpace2);
+  //
+  ThelperInt helper_int = ToInteger(helper);
+  std::vector<MyMatrix<Tint>> ListMatr_int = UniversalStdVectorMatrixConversion<Tint,T>(ListMatr);
+  //
+  std::optional<MyMatrix<Tint>> opt =
+    LinearSpace_Equivalence_KernelRing<Tint,Tgroup,ThelperInt>(ListMatr_int, helper_int, TheSpace1_int, TheSpace2_int, os);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<Tint> const& M = *opt;
+  MyMatrix<T> M_T = UniversalMatrixConversion<T,Tint>(M);
+  return M_T;
+}
+
+
 
 template <typename T, typename Tgroup, typename Thelper>
 std::optional<MyMatrix<T>>

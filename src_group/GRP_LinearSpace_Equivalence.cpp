@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "NumberTheoryGmp.h"
 #include "Group.h"
 #include "MatrixGroup.h"
 #include "Permutation.h"
@@ -27,6 +28,7 @@ int main(int argc, char *argv[]) {
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
+    using Thelper = GeneralMatrixGroupHelper<T, Telt, Tint>;
     //
     std::cerr << "GRP_ComputeAut_ListMat_Subset_EXT : Reading input\n";
     std::string GRP_file = argv[1];
@@ -41,8 +43,8 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> eLatt2 = ReadMatrixFile<T>(SPA2_file);
     //
     int n = eLatt2.rows();
-    GeneralMatrixGroupHelper<T, Telt, Tint> helper{n};
-    std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup>(
+    Thelper helper{n};
+    std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup, Thelper>(
         ListMatrGen, helper, eLatt1, eLatt2, std::cerr);
     //
     {

@@ -773,6 +773,7 @@ MyMatrix<T> FindTransformationId(MyMatrix<T> const &EXT1,
 template <typename T, typename Telt>
 MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                Telt const &ePerm) {
+  static_assert(is_ring_field<T>::value, "FindTransformation requires the ring to be a field");
 #ifdef DEBUG_PERM_FCT
   size_t sizPerm = ePerm.size();
   size_t sizEXT = EXT1.rows();
@@ -786,6 +787,27 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   MyMatrix<T> eMatr = unfold_opt(opt, "PERM: FindTransformationGeneral fails");
   return eMatr;
 }
+
+template <typename T, typename Telt>
+inline typename std::enable_if<is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
+                       Telt const &ePerm) {
+  MyMatrix<T> M = FindTransformation(EXT1, EXT2, ePerm);
+  return M;
+}
+
+
+template <typename T, typename Telt>
+inline typename std::enable_if<!is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
+                       Telt const &ePerm) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> EXT1_field = UniversalMatrixConversion<Tfield, T>(EXT1);
+  MyMatrix<Tfield> EXT2_field = UniversalMatrixConversion<Tfield, T>(EXT2);
+  MyMatrix<Tfield> M_field = FindTransformation(EXT1_field, EXT2_field, ePerm);
+  return UniversalMatrixConversionCheck<T,Tfield>(M_field);
+}
+
 
 template <typename T, typename Tidx>
 std::optional<MyMatrix<T>>
