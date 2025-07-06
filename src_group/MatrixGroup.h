@@ -62,6 +62,8 @@ struct PreImager_Finite {
 
 template <typename T, typename Telt, typename TintGroup> struct FiniteMatrixGroupHelper {
   using PreImager = PreImager_Finite<T,Telt>;
+  using Tint = typename underlying_ring<T>::ring_type;
+  using ThelperInt = FiniteMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>;
   int n;
   MyMatrix<T> EXTfaithful;
   std::vector<MyVector<T>> ListV;
@@ -104,6 +106,8 @@ struct PreImager_FiniteIsotropic {
 
 template <typename T, typename Telt, typename TintGroup> struct FiniteIsotropicMatrixGroupHelper {
   using PreImager = PreImager_FiniteIsotropic<T,Telt>;
+  using Tint = typename underlying_ring<T>::ring_type;
+  using ThelperInt = FiniteIsotropicMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>;
   int n;
   MyMatrix<T> G;
   MyMatrix<T> EXTfaithful;
@@ -141,6 +145,8 @@ public:
 
 template <typename T, typename Telt, typename TintGroup> struct GeneralMatrixGroupHelper {
   using PreImager = PreImager_General<T, Telt, TintGroup>;
+  using Tint = typename underlying_ring<T>::ring_type;
+  using ThelperInt = GeneralMatrixGroupHelper<typename underlying_ring<T>::ring_type, Telt, TintGroup>;
   int n;
   int nbRow() const {
     return 0;
