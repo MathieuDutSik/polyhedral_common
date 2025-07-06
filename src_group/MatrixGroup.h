@@ -229,9 +229,16 @@ TransformHelper(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper,
 //    type.
 // ---The derived type could part of the Thelper, like
 //    typename Thelper::ThelperInt;
-
-
-
+// ---The conversion from T to Tint have to be done in a
+//    separate function.
+// ---The commands to encapsulate are:
+//    + LinearSpace_Equivalence_Kernel
+//    + LinearSpace_Stabilizer_Kernel
+//    + LinearSpace_Stabilizer_RightCoset_Kernel
+//    + LinearSpace_Stabilizer_DoubleCoset_Kernel
+//    + LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel
+// ---We need independent functions like
+//    ToInteger(.....)
 
 template <typename T, typename Telt, typename TintGroup>
 FiniteMatrixGroupHelper<T, Telt, TintGroup>
