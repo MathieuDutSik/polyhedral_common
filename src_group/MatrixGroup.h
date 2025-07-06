@@ -1296,7 +1296,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListGen,
+RetMI_S<T, Tgroup> LinearSpace_Stabilizer_KernelRing(std::vector<MyMatrix<T>> const &ListGen,
                               Thelper const &helper,
                               MyMatrix<T> const &TheSpace, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -1337,6 +1337,22 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const 
 #endif
   return {total_index, ListGenRet2};
 }
+
+
+template <typename T, typename Tgroup, typename Thelper>
+RetMI_S<T, Tgroup> LinearSpace_Stabilizer_Kernel(std::vector<MyMatrix<T>> const &ListGen,
+                              Thelper const &helper,
+                              MyMatrix<T> const &TheSpace, std::ostream &os) {
+  using Tint = typename Thelper::Tint;
+  using ThelperInt = typename Thelper::ThelperInt;
+  std::vector<MyMatrix<Tint>> ListGen_int = UniversalStdVectorMatrixConversion<Tint,T>(ListGen);
+  MyMatrix<Tint> TheSpace_int = UniversalMatrixConversion<Tint,T>(TheSpace);
+  ThelperInt helper_int = ToInteger(helper);
+  RetMI_S<Tint, Tgroup> ret = LinearSpace_Stabilizer_KernelRing<Tint,Tgroup,ThelperInt>(ListGen_int, helper_int, TheSpace_int, os);
+  std::vector<MyMatrix<T>> LGen = UniversalStdVectorMatrixConversion<T,Tint>(ret.LGen);
+  return {ret.index, LGen};
+}
+
 
 template <typename T> struct Stab_RightCoset {
   std::vector<MyMatrix<T>> list_gen;
