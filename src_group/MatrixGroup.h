@@ -1360,7 +1360,7 @@ template <typename T> struct Stab_RightCoset {
 };
 
 template <typename T, typename Tgroup, typename Thelper>
-Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
+Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_KernelRing(
     std::vector<MyMatrix<T>> const &l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -1391,6 +1391,28 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
   os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
   return {std::move(l_gens_ret), coset};
+}
+
+
+template <typename T, typename Tgroup, typename Thelper>
+Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
+    std::vector<MyMatrix<T>> const &l_gens, Thelper const &helper,
+    MyMatrix<T> const &TheSpace, std::ostream &os) {
+  using Tint = typename Thelper::Tint;
+  using ThelperInt = typename Thelper::ThelperInt;
+  std::vector<MyMatrix<Tint>> l_gens_int = UniversalStdVectorMatrixConversion<Tint,T>(l_gens);
+  ThelperInt helper_int = ToInteger(helper);
+  MyMatrix<Tint> TheSpace_int = UniversalMatrixConversion<Tint,T>(TheSpace);
+  Stab_RightCoset<Tint> src =
+    LinearSpace_Stabilizer_RightCoset_KernelRing<Tint,Tgroup,ThelperInt>(l_gens_int, helper_int, TheSpace_int, os);
+  std::vector<MyMatrix<T>> list_gen = UniversalStdVectorMatrixConversion<T,Tint>(src.list_gen);
+  int n = src.coset_desc.n;
+  CosetDescription<T> coset_desc(n);
+  for (auto & l_coset: src.coset_desc.ListListCoset) {
+    std::vector<MyMatrix<T>> ListCoset = UniversalStdVectorMatrixConversion<T,Tint>(l_coset);
+    coset_desc.insert(ListCoset);
+  }
+  return {list_gen, coset_desc};
 }
 
 template <typename T, typename Tgroup, typename Thelper>
