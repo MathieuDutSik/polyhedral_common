@@ -1313,13 +1313,13 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_KernelRing(std::vector<MyMatrix<T>> co
     return ret.LGen;
   };
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before LinearSpace_StabilizerGen_Kernel\n";
+  os << "MAT_GRP: LinearSpace_Stabilizer_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
 #endif
   std::vector<MyMatrix<T>> ListGenRet1 =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           ListGen, helper, TheSpace, f_stab, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
+  os << "MAT_GRP: LinearSpace_Stabilizer_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
@@ -1378,13 +1378,13 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_KernelRing(
     return pair.first;
   };
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before LinearSpace_StabilizerGen_Kernel\n";
+  os << "MAT_GRP: LinearSpace_Stabilizer_RightCoset_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
 #endif
   std::vector<MyMatrix<T>> l_gens_ret =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           l_gens, helper, TheSpace, f_stab, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After LinearSpace_StabilizerGen_Kernel\n";
+  os << "MAT_GRP: LinearSpace_Stabilizer_RightCoset_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
   return {std::move(l_gens_ret), coset};
 }
@@ -1753,6 +1753,9 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
   using Tidx = typename Telt::Tidx;
   using DoubleCosetComputer = typename Tgroup::DoubleCosetComputer;
   using DccEntry = typename Tgroup::DccEntry;
+#ifdef DEBUG_MATRIX_GROUP
+  using TintGroup = typename Tgroup::Tint;
+#endif
   int n = helper.n;
   std::vector<DoubleCosetEntry<T>> entries;
   entries.push_back({IdentityMat<T>(n), Vmatr_gens});
@@ -1765,7 +1768,8 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #endif
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " |ListPermGens|=" << ListPermGens.size() << "\n";
+    TintGroup index = GRP.size() / eStab_perm.size();
+    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " index=" << index << " |ListPermGens|=" << ListPermGens.size() << "\n";
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP

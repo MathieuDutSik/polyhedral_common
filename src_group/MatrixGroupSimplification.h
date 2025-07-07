@@ -696,11 +696,6 @@ struct GenResult {
 
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct>
 GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b, Fcomplexity f_complexity, Fproduct f_product) {
-  using Tcomb = std::pair<Ttype, Tnorm>;
-  auto get_comb=[&](Ttype const& x) -> Tcomb {
-    Tnorm comp = f_complexity(x);
-    return {x, comp};
-  };
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
   Ttype const& a_dir = a.pair.first;
@@ -708,48 +703,45 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
   Ttype const& a_inv = a.pair.second;
   Ttype const& b_inv = b.pair.second;
   //
-  size_t choice = 0;
-  Ttype prod_gen = f_product(a_dir, b_dir);
-  Tcomb comb_ret = get_comb(prod_gen);
+  Ttype elt_dir, elt_inv;
   //
-  prod_gen = f_product(a_inv, b_dir);
-  Tcomb comb_gen = get_comb(prod_gen);
-  if (comb_gen.second < comb_ret.second) {
-    choice = 1;
-    comb_ret = comb_gen;
-  }
-  //
-  prod_gen = f_product(a_dir, b_inv);
-  comb_gen = get_comb(prod_gen);
-  if (comb_gen.second < comb_ret.second) {
-    choice = 2;
-    comb_ret = comb_gen;
-  }
-  //
-  prod_gen = f_product(a_inv, b_inv);
-  comb_gen = get_comb(prod_gen);
-  if (comb_gen.second < comb_ret.second) {
-    choice = 3;
-    comb_ret = comb_gen;
-  }
-  auto get_inv=[&]() -> Ttype {
-    if (choice == 0) {
-      return f_product(b_inv, a_inv);
+  elt_dir = f_product(a_dir, b_dir);
+  elt_inv = f_product(b_inv, a_inv);
+  auto iife=[&]() -> TcombPair<Ttype,Tnorm> {
+    Tnorm norm_dir = f_complexity(elt_dir);
+    Tnorm norm_inv = f_complexity(elt_inv);
+    if (norm_dir < norm_inv) {
+      std::pair<Ttype,Ttype> pair{elt_dir,elt_inv};
+      return {std::move(pair), norm_dir};
+    } else {
+      std::pair<Ttype,Ttype> pair{elt_inv,elt_dir};
+      return {std::move(pair), norm_inv};
     }
-    if (choice == 1) {
-      return f_product(b_inv, a_dir);
-    }
-    if (choice == 2) {
-      return f_product(b_dir, a_inv);
-    }
-    if (choice == 3) {
-      return f_product(b_dir, a_dir);
-    }
-    std::cerr << "SIMP: Wrong choice=" << choice << "\n";
-    throw TerminalException{1};
   };
-  std::pair<Ttype, Ttype> pair{comb_ret.first, get_inv()};
-  TcombPair<Ttype,Tnorm> cand{pair, comb_ret.second};
+  TcombPair<Ttype,Tnorm> cand = iife();
+  auto f_insert=[&](Ttype const& elt1, Ttype const& elt2) -> void {
+    Tnorm norm1 = f_complexity(elt1);
+    Tnorm norm2 = f_complexity(elt2);
+    if (norm1 < cand.norm) {
+      cand = {{elt1,elt2},norm1};
+    }
+    if (norm2 < cand.norm) {
+      cand = {{elt2,elt1},norm2};
+    }
+  };
+  //
+  elt_dir = f_product(a_inv, b_dir);
+  elt_inv = f_product(b_inv, a_dir);
+  f_insert(elt_dir, elt_inv);
+  //
+  elt_dir = f_product(a_dir, b_inv);
+  elt_inv = f_product(b_dir, a_inv);
+  f_insert(elt_dir, elt_inv);
+  //
+  elt_dir = f_product(a_inv, b_inv);
+  elt_inv = f_product(b_dir, a_dir);
+  f_insert(elt_dir, elt_inv);
+  //
   Tnorm const& a_norm = a.norm;
   Tnorm const& b_norm = b.norm;
   Tnorm const& cand_norm = cand.norm;
@@ -1195,6 +1187,9 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
       if (set_treated.find(nonce_pair) != set_treated.end()) {
         already_treated = true;
       } else {
+#ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
+        n_get_best_candidate +=1;
+#endif
         gen = f_reduce<Ttype,Tnorm,Fcomplexity,Fproduct>(a, b, f_complexity, f_product);
       }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
