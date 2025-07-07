@@ -1428,7 +1428,7 @@ std::optional<std::vector<Ttype>> ExhaustiveReductionComplexityKernel(std::vecto
     os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
     return result_V2;
 #else
-    return ExhaustiveReductionComplexityKernel_V1<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
+    return ExhaustiveReductionComplexityKernel_V2<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
 #endif
   };
   std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt = get_reduced();

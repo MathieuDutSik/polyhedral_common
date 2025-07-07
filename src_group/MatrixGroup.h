@@ -291,10 +291,6 @@ ToInteger(FiniteMatrixGroupHelper<T, Telt, TintGroup> const &helper) {
           std::move(MapV)};
 }
 
-
-
-
-
 // We need a procedure that not just transform the helper, but also
 // changes the type T to an integer type when at all possible.
 // ----

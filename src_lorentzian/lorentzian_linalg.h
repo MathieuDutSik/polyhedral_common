@@ -463,7 +463,7 @@ std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
-  std::vector<int> ListRowSelect = TMat_SelectRowCol(Subspace1).ListRowSelect;
+  std::vector<int> ListRowSelect = TMat_ListRowSelect(Subspace1);
   MyMatrix<T> Subspace1_red = SelectRow(Subspace1, ListRowSelect);
   MyMatrix<T> Subspace2_red = SelectRow(Subspace2, ListRowSelect);
   if (RankMat(Subspace2_red) != dim - 1) {
