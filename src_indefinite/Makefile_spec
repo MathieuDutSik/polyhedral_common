@@ -4,8 +4,8 @@
 #PROGRAM		= INDEF_FORM_GetOrbitRepresentative
 #PROGRAM		= INDEF_FORM_TestEquivalence
 #PROGRAM		= INDEF_FORM_TestEquivalenceVector
-#PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane
-PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane INDEF_FORM_AutomorphismGroup
+PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane
+#PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane INDEF_FORM_AutomorphismGroup
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

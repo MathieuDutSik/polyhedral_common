@@ -1870,7 +1870,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel(
 
 template <typename T, typename Tgroup, typename Thelper>
 std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
-LinearSpace_Stabilizer_DoubleCoset_Kernel(
+LinearSpace_Stabilizer_DoubleCoset_KernelRing(
     std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
     MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& Vmatr_gens, std::ostream &os) {
   std::pair<std::vector<MyMatrix<T>>, std::vector<DoubleCosetEntry<T>>> pair =
@@ -1881,6 +1881,25 @@ LinearSpace_Stabilizer_DoubleCoset_Kernel(
   }
   return {std::move(pair.first), std::move(l_dcs)};
 }
+
+template <typename T, typename Tgroup, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
+LinearSpace_Stabilizer_DoubleCoset_Kernel(
+    std::vector<MyMatrix<T>> const l_gens, Thelper const &helper,
+    MyMatrix<T> const &TheSpace, std::vector<MyMatrix<T>> const& Vmatr_gens, std::ostream &os) {
+  using Tint = typename Thelper::Tint;
+  using ThelperInt = typename Thelper::ThelperInt;
+  std::vector<MyMatrix<Tint>> l_gens_int = UniversalStdVectorMatrixConversion<Tint,T>(l_gens);
+  std::vector<MyMatrix<Tint>> Vmatr_gens_int = UniversalStdVectorMatrixConversion<Tint,T>(Vmatr_gens);
+  MyMatrix<Tint> TheSpace_int = UniversalMatrixConversion<Tint,T>(TheSpace);
+  ThelperInt helper_int = ToInteger(helper);
+  std::pair<std::vector<MyMatrix<Tint>>, std::vector<MyMatrix<Tint>>> pair_int =
+    LinearSpace_Stabilizer_DoubleCoset_KernelRing<Tint,Tgroup,ThelperInt>(l_gens_int, helper_int, TheSpace_int, Vmatr_gens_int, os);
+  std::vector<MyMatrix<T>> l_mat1 = UniversalStdVectorMatrixConversion<T,Tint>(pair_int.first);
+  std::vector<MyMatrix<T>> l_mat2 = UniversalStdVectorMatrixConversion<T,Tint>(pair_int.second);
+  return {l_mat1, l_mat2};
+}
+
 
 template <typename T, typename Tgroup, typename Thelper>
 RetMI_S<T,Tgroup> LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
