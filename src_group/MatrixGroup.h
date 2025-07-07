@@ -1767,6 +1767,10 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), beginning |GRP|=" << GRP.size() << " n_act=" << static_cast<size_t>(GRP.n_act()) << "\n";
 #endif
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
+#ifdef TRACK_INFO_MATRIX_GROUP
+    WriteGroupFileGAP("f_stab_double_cosets_GRPbig_gap", GRP);
+    WriteGroupFileGAP("f_stab_double_cosets_GRPsma_gap", eStab_perm);
+#endif
 #ifdef DEBUG_MATRIX_GROUP
     TintGroup index = GRP.size() / eStab_perm.size();
     os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " index=" << index << " |ListPermGens|=" << ListPermGens.size() << "\n";
