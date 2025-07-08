@@ -434,6 +434,9 @@ public:
   // The direct method since method1 appears to require more work.
   MyMatrix<T>
   ComputeInvariantSublattice_method2(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    MicrosecondTime time;
+#endif
     int n = Qmat.rows();
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
     std::vector<MyMatrix<T>> LGen;
@@ -441,8 +444,11 @@ public:
       MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
       LGen.push_back(eGen2);
     }
+#ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
+    os << "|COMB: ComputeInvariantSublattice_method2 / LGen|=" << time << "\n";
+#endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: ComputeInvariantSublattice_method2, we have LGen\n";
+    os << "COMB: ComputeInvariantSublattice_method2, we have |LGen|=" << LGen.size() << "\n";
 #endif
     MyMatrix<T> SublatticeRet = MatrixIntegral_GetInvariantSpace(n, LGen, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -2359,7 +2365,7 @@ private:
         SpanRepresentatives(eRepr);
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
+      os << "COMB: |ListOrbit|=" << ListOrbit.size() << " n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
 #endif
       ListOrbit.clear();
       for (auto &eRec : ListRecReprKplane) {

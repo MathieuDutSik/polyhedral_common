@@ -366,7 +366,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   auto terminate = [&](std::string const &msg) -> void {
     std::cerr << "LORLIN: G1=\n";
     WriteMatrix(std::cerr, G1);
@@ -394,7 +394,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   }
 #endif
   MyMatrix<T> Compl1 = SubspaceCompletionRational(Subspace1, dim);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   if (Compl1.rows() != 1) {
     terminate("Compl1 should be of dimension 1");
   }
@@ -405,21 +405,21 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   MyMatrix<T> eProd2 = Subspace2 * G2;
   MyVector<T> Vscal = Subspace1 * G1 * eVect1;
   std::optional<MyVector<T>> opt = SolutionMat(TransposedMat(eProd2), Vscal);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   if (!opt) {
     terminate("The solutioning failed");
   }
 #endif
   MyVector<T> const &V0 = *opt;
   MyMatrix<T> NSP = NullspaceTrMat(eProd2);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   if (NSP.rows() != 1) {
     terminate("NSP should be of dimension 1");
   }
 #endif
   MyVector<T> V1 = GetMatrixRow(NSP, 0);
   T eNorm_V1 = V1.dot(G2 * V1);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   if (eNorm_V1 != 0) {
     terminate(
         "The orthogonal space of Subspace2 should be an isotropic vector");
@@ -430,7 +430,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   // or scal0 = t scal1
   T scal0 = eNorm - V0.dot(G2 * V0);
   T scal1 = 2 * V0.dot(G2 * V1);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   if (scal1 == 0) {
     terminate("The coefficient scal1 should be non-zero");
   }
@@ -441,7 +441,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   MyMatrix<T> Trans1 = ConcatenateMatVec(Subspace1, eVect1);
   MyMatrix<T> Trans2 = ConcatenateMatVec(Subspace2, eVect2);
   MyMatrix<T> eEquiv = Inverse(Trans1) * Trans2;
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   MyMatrix<T> InvEquiv = Inverse(eEquiv);
   MyMatrix<T> G1_tr = InvEquiv * G1 * InvEquiv.transpose();
   if (G1_tr != G2) {
@@ -516,7 +516,7 @@ SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const &Amat,
   std::optional<MyVector<T>> opt = SolutionMat(TheMat, Bvect);
   MyVector<T> eSol_vect = unfold_opt(opt, "getting eSol_vect");
   MyMatrix<T> eSol_mat = f_getmat(eSol_vect);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   MyMatrix<T> SumMat =
       eSol_mat * Amat + Amat.transpose() * eSol_mat.transpose();
   if (Bmat != SumMat) {
@@ -530,7 +530,7 @@ SolutionSpecial<T> SpecialEquationSolving(MyMatrix<T> const &Amat,
   for (int u = 0; u < dimNSP; u++) {
     MyVector<T> eVect = GetMatrixRow(NSP, u);
     MyMatrix<T> eMat = f_getmat(eVect);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> SumMat2 = eMat * Amat + Amat.transpose() * eMat.transpose();
     if (!IsZeroMatrix(SumMat2)) {
       std::cerr << "LORLIN: Failed to find the correct solution 2\n";
@@ -588,6 +588,8 @@ public:
         dim(G1.rows()), rnk(Subspace1.rows()), os(_os) {
 #ifdef DEBUG_LORENTZIAN_LINALG
     os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, beginning\n";
+#endif
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     if (rnk != RankMat(Subspace1)) {
       std::cerr
           << "Inconsistent input: We should have Subspace1 of full rank\n";
@@ -604,7 +606,7 @@ public:
 #endif
     NSP1 = NullspaceTrMat(eProd1);
     NSP2 = NullspaceTrMat(eProd2);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> ProdMat1 = NSP1 * G1 * NSP1.transpose();
     if (!IsZeroMatrix(ProdMat1)) {
       std::cerr << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
@@ -649,6 +651,8 @@ public:
 #ifdef DEBUG_LORENTZIAN_LINALG
       os << "LORLIN: We have eVectCand2=" << StringVectorGAP(eVectCand2)
          << "\n";
+#endif
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
       MyVector<T> LScal1 = eProd1 * eVect1;
       MyVector<T> LScal2 = eProd2 * eVectCand2;
       if (LScal1 != LScal2) {
@@ -717,7 +721,7 @@ public:
           "ListEquiv_terms1\n";
 #endif
   }
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
   void check_transformation(MyMatrix<T> const &eEq) {
     MyMatrix<T> eEqInv = Inverse(eEq);
     MyMatrix<T> G1_tr = eEqInv * G1 * eEqInv.transpose();
@@ -758,7 +762,7 @@ public:
     os << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism, We have "
           "RetSol\n";
 #endif
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     check_transformation(RetSol);
 #endif
 #ifdef DEBUG_LORENTZIAN_LINALG
@@ -767,7 +771,7 @@ public:
     return RetSol;
   }
   std::vector<MyMatrix<T>> get_kernel_generating_set(T const &d) {
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     if (G1 != G2 || Subspace1 != Subspace2) {
       std::cerr << "LORLIN: We should have G1=G2 and Subspace1=Subspace2 in order for "
                    "kernel to make sense\n";
@@ -779,7 +783,7 @@ public:
     std::vector<MyMatrix<T>> ListEquiv_terms3;
     for (auto &eM : ListEquiv_terms2) {
       MyMatrix<T> eGen = IdentityMat<T>(dim) + eM / d;
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
       check_transformation(eGen);
 #endif
       ListEquiv_terms3.push_back(eGen);
@@ -825,7 +829,7 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat, 
   for (int u = 0; u < dimNSP; u++) {
     MyVector<T> eVect = GetMatrixRow(NSP, u);
     MyMatrix<T> Hmat = f_getmat(eVect);
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> SumMat = Hmat * Umat.transpose() + Umat * Hmat.transpose();
     if (!IsZeroMatrix(SumMat)) {
       std::cerr << "LORLIN: Failed to find the correct solution 2\n";

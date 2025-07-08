@@ -1768,6 +1768,8 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #endif
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
 #ifdef TRACK_INFO_MATRIX_GROUP
+    WriteGroupFile("f_stab_double_cosets_GRPbig_cpp", GRP);
+    WriteGroupFile("f_stab_double_cosets_GRPsma_cpp", eStab_perm);
     WriteGroupFileGAP("f_stab_double_cosets_GRPbig_gap", GRP);
     WriteGroupFileGAP("f_stab_double_cosets_GRPsma_gap", eStab_perm);
 #endif

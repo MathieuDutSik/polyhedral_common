@@ -145,6 +145,9 @@ MyMatrix<T>
 MatrixIntegral_GetInvariantSpace(int const &n,
                                  std::vector<MyMatrix<T>> const &LGen,
                                  [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+  MicrosecondTime time;
+#endif
   std::vector<MyMatrix<T>> LGenTot;
   for (auto &eGen : LGen) {
     LGenTot.push_back(eGen);
@@ -170,16 +173,19 @@ MatrixIntegral_GetInvariantSpace(int const &n,
     T NewDet = T_abs(DeterminantMat(NewSpace));
     if (NewDet == TheDet) {
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-      os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, NewSpace=\n";
+      os << "MATGRPBAS: MatrixIntegral_GetInvariantSpace, NewSpace=\n";
       WriteMatrix(os, NewSpace);
-      os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, returning after n_iter=" << iter << " TheDet=" << TheDet << "\n";
+      os << "MATGRPBAS: MatrixIntegral_GetInvariantSpace, returning after n_iter=" << iter << " TheDet=" << TheDet << "\n";
+#endif
+#ifdef TIMINGS_MATRIX_GROUP_BASIC
+      os << "|MATGRPBAS: MatrixIntegral_GetInvariantSpace|=" << time << "\n";
 #endif
       return NewSpace;
     }
     TheSpace = NewSpace;
     TheDet = NewDet;
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-    os << "MAT_GRP: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
+    os << "MATGRPBAS: MatrixIntegral_GetInvariantSpace, iter=" << iter << " TheDet=" << TheDet << "\n";
     iter += 1;
 #endif
   }
@@ -321,7 +327,7 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
                        const Fprod &f_prod, const Fterminate &f_terminate,
                        [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin of OrbitComputation_limit\n";
+  os << "MATGRPBAS: Begin of OrbitComputation_limit\n";
 #endif
   std::vector<T2> TheOrbit;
   std::unordered_map<T2, uint8_t> map;
@@ -341,7 +347,7 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
   while (true) {
     size_t len = TheOrbit.size();
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: OrbitComputation_limit start=" << start << " len=" << len
+    os << "MATGRPBAS: OrbitComputation_limit start=" << start << " len=" << len
        << "\n";
 #endif
     if (start == len) {
@@ -360,7 +366,7 @@ OrbitComputation_limit(std::vector<T1> const &ListGen, T2 const &a,
     start = len;
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: End of OrbitComputation_limit\n";
+  os << "MATGRPBAS: End of OrbitComputation_limit\n";
 #endif
   return TheOrbit;
 }
@@ -402,24 +408,24 @@ std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const&
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MAT_GRP: PreImageSubgroupOneStep, |eGRP|=" << eGRP.size() << " |ListPerm|=" << ListPerm.size() << "\n";
+  os << "MATGRPBAS: PreImageSubgroupOneStep, |eGRP|=" << eGRP.size() << " |ListPerm|=" << ListPerm.size() << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatr1 =
     permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(ListMatr, ListPerm, id_matr, eGRP);
 #ifdef TIMINGS_MATRIX_GROUP_BASIC
-  os << "|MAT_GRP: PreImageSubgroupOneStep, permutalib::PreImageSubgroup|=" << time << "\n";
+  os << "|MATGRPBAS: PreImageSubgroupOneStep, permutalib::PreImageSubgroup|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr1)=" << compute_complexity_listmat(ListMatr1) << "\n";
+  os << "MATGRPBAS: PreImageSubgroupOneStep, comp(ListMatr1)=" << compute_complexity_listmat(ListMatr1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatr2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr1, os);
 #ifdef TIMINGS_MATRIX_GROUP_BASIC
-  os << "|MAT_GRP: PreImageSubgroupOneStep, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
+  os << "|MATGRPBAS: PreImageSubgroupOneStep, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MAT_GRP: PreImageSubgroupOneStep, comp(ListMatr_ret)=" << compute_complexity_listmat(ListMatr2) << "\n";
+  os << "MATGRPBAS: PreImageSubgroupOneStep, comp(ListMatr2)=" << compute_complexity_listmat(ListMatr2) << "\n";
 #endif
-#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC
+#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC_DISABLE
   CheckGroupEquality<T,Tgroup>(ListMatr1, ListMatr2, os);
 #endif
   return ListMatr2;
@@ -446,14 +452,14 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   WriteGroupFileGAP("GRPsub_gap", eGRP);
 #endif
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MAT_GRP: PreImageSubgroup, beginning\n";
+  os << "MATGRPBAS: PreImageSubgroup, beginning\n";
 #endif
   std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
   size_t len_stab = l_grp.size() - 1;
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MAT_GRP: PreImageSubgroup, len_stab=" << len_stab << "\n";
+  os << "MATGRPBAS: PreImageSubgroup, len_stab=" << len_stab << "\n";
   for (size_t iGRP=0; iGRP<=len_stab; iGRP++) {
-    os << "MAT_GRP: PreImageSubgroup, iGRP=" << iGRP << "/" << len_stab << " |eGRP|=" << l_grp[iGRP].size() << "\n";
+    os << "MATGRPBAS: PreImageSubgroup, iGRP=" << iGRP << "/" << len_stab << " |eGRP|=" << l_grp[iGRP].size() << "\n";
   }
 #endif
   std::vector<MyMatrix<T>> LGenMatr = ListMatr;
@@ -461,7 +467,7 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   for (size_t u=0; u<len_stab; u++) {
     size_t idx = len_stab - 1 - u;
 #ifdef DEBUG_MATRIX_GROUP_BASIC
-    os << "MAT_GRP: PreImageSubgroup, len_stab=" << len_stab << " u=" << u << " idx=" << idx << "\n";
+    os << "MATGRPBAS: PreImageSubgroup, len_stab=" << len_stab << " u=" << u << " idx=" << idx << "\n";
 #endif
     LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx], os);
     if (idx > 0) {
