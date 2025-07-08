@@ -44,6 +44,10 @@
 #define TIMINGS_FULL_RANK_FACET_SET
 #endif
 
+#ifdef METHOD_COMPARISON
+#define METHOD_COMPARISON_SEARCH_POSITIVE_RELATION
+#endif
+
 template <typename T>
 std::optional<MyMatrix<T>> AffinizeSubspace(MyMatrix<T> const &NSP) {
   int TheDim = NSP.rows();
@@ -668,7 +672,7 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
   int nbCol = ListVect.cols();
   int dim_direct = nbRow - nbCol;
   int dim_dual = nbCol;
-#ifdef SANITY_CHECK_SEARCH_POSITIVE_RELATION
+#ifdef METHOD_COMPARISON_SEARCH_POSITIVE_RELATION
   // Relatively expensive checks to do
   PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect, os);
   PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect, os);

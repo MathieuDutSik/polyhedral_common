@@ -30,7 +30,10 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-#define SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
+#endif
+
+#ifdef METHOD_COMPARISON
+#define METHOD_COMPARISON_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
 #endif
 
 #ifdef TRACK_INFO
@@ -2365,13 +2368,16 @@ private:
         SpanRepresentatives(eRepr);
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: |ListOrbit|=" << ListOrbit.size() << " n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
+      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
 #endif
       ListOrbit.clear();
       for (auto &eRec : ListRecReprKplane) {
         ListOrbit.push_back(eRec.ePlane);
       }
     }
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+    os << "COMB: |ListOrbit|=" << ListOrbit.size() << "\n";
+#endif
     return ListOrbit;
   }
   std::vector<MyMatrix<Tint>>
@@ -2381,7 +2387,7 @@ private:
     // Double cosets method is more efficient in principle than right cosets.
     std::vector<MyMatrix<Tint>> LOrb =
       INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
-#ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
+#ifdef METHOD_COMPARISON_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
     std::vector<MyMatrix<Tint>> LOrbB =
       INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
     if (LOrbB.size() != LOrb.size()) {
