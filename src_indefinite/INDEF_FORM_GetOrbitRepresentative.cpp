@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     print_stderr_stdout_file(OutFile, f);
     std::cerr << "Normal termination of INDEF_FORM_GetOrbitRepresentative\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative\n";
+    std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative, runtime=" << time << "\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -58,8 +58,8 @@ struct PreImager_Finite {
     Telt ePermB(std::move(v));
     std::optional<MyMatrix<T>> opt = FindTransformationRing(EXTfaithful, EXTfaithful, ePermB);
     if (!opt) {
-      std::cerr << "MAT_GRP: matrix is rational but not integral, so no conversion possible\n";
-      std::cerr << "MAT_GRP: likely a bug since this error cannot occur for other code paths\n";
+      std::cerr << "MATGRP: matrix is rational but not integral, so no conversion possible\n";
+      std::cerr << "MATGRP: likely a bug since this error cannot occur for other code paths\n";
       throw TerminalException{1};
     }
     return *opt;
@@ -140,7 +140,7 @@ private:
 public:
   PreImager_General(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm, int const& dim) : inner(l_matr, l_perm, IdentityMat<T>(dim)) {
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "MAT_GRP: After building inner\n";
+    std::cerr << "MATGRP: After building inner\n";
 #endif
   }
   MyMatrix<T> pre_image_elt(Telt const& elt) const {
@@ -159,14 +159,14 @@ template <typename T, typename Telt, typename TintGroup> struct GeneralMatrixGro
   }
   PreImager pre_imager(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm, [[maybe_unused]] std::ostream& os) const {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: Before PreImager constructor\n";
+    os << "MATGRP: Before PreImager constructor\n";
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
     MicrosecondTime time;
 #endif
     PreImager result = PreImager(l_matr, l_perm, n);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "|MAT_GRP: GeneralMatrixGroupHelper::pre_imager|=" << time << "\n";
+    os << "|MATGRP: GeneralMatrixGroupHelper::pre_imager|=" << time << "\n";
 #endif
     return result;
   }
@@ -407,7 +407,7 @@ private:
 public:
   PartitionReduction(std::vector<MyMatrix<T>> const& ListMat, std::function<Telt(const MyMatrix<T>&)> const& f_get_perm_inp, Face const& face_inp, std::ostream& os) : partition(face_inp, os) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: PartitionReduction, |face_inp|=" << face_inp.size() << " / " << face_inp.count() << "\n";
+    os << "MATGRP: PartitionReduction, |face_inp|=" << face_inp.size() << " / " << face_inp.count() << "\n";
 #endif
     std::vector<Telt> list_gens;
     for (auto& eMat: ListMat) {
@@ -468,7 +468,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
   std::vector<Telt> ListPermGenProv;
   size_t nbGen = ListMatrGens.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_GeneratePermutationGroupA, Processing nbGen=" << nbGen << " generators\n";
+  os << "MATGRP: MatrixIntegral_GeneratePermutationGroupA, Processing nbGen=" << nbGen << " generators\n";
 #endif
   for (size_t iGen = 0; iGen < nbGen; iGen++) {
     MyMatrix<T> const &eMatrGen = ListMatrGens[iGen];
@@ -476,7 +476,7 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroupA(
     ListPermGenProv.emplace_back(std::move(eNewPerm));
   }
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_GeneratePermutationGroupA|=" << time << "\n";
 #endif
   return ListPermGenProv;
 }
@@ -500,7 +500,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   using PreImager = typename Thelper::PreImager;
   using TintGroup = typename Tgroup::Tint;
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_Stabilizer(has)\n";
+  os << "MATGRP: Beginning of MatrixIntegral_Stabilizer(has)\n";
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
   MicrosecondTime time;
@@ -508,36 +508,36 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
   TintGroup index = GRPperm.size() / eStab.size();
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), Stabilizer_OnSets|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_Stabilizer(has), Stabilizer_OnSets|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(has), index=" << index << "\n";
+  os << "MATGRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
+  os << "MATGRP: MatrixIntegral_Stabilizer(has), index=" << index << "\n";
 #endif
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   std::vector<MyMatrix<T>> LGen1;
   for (auto &eGen : eStab.SmallGeneratingSet()) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: MatrixIntegral_Stabilizer(has), before pre_image_elt\n";
+    os << "MATGRP: MatrixIntegral_Stabilizer(has), before pre_image_elt\n";
 #endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     LGen1.emplace_back(std::move(eMatr));
   }
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), PreImager|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_Stabilizer(has), PreImager|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
+  os << "MATGRP: MatrixIntegral_Stabilizer(has), comp(LGen1)=" << compute_complexity_listmat(LGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> LGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(LGen1, os);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   CheckGroupEquality<T,Tgroup>(LGen1, LGen2, os);
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
+  os << "MATGRP: MatrixIntegral_Stabilizer(has), comp(LGen2)=" << compute_complexity_listmat(LGen2) << "\n";
 #endif
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer(has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_Stabilizer(has), ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
 #endif
   return {index, LGen2};
 }
@@ -554,19 +554,19 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
                                      Thelper const &helper, Face const &eFace,
                                      std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_Stabilizer_RightCoset(has)\n";
+  os << "MATGRP: Begin MatrixIntegral_Stabilizer_RightCoset(has)\n";
 #endif
   using RightCosets = typename Tgroup::RightCosets;
   using PreImager = typename Thelper::PreImager;
   Tgroup eStab = GRPperm.Stabilizer_OnSets(eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
+  os << "MATGRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   for (auto &eGen : eStab.SmallGeneratingSet()) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eGen\n";
+    os << "MATGRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eGen\n";
 #endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen.emplace_back(std::move(eMatr));
@@ -578,7 +578,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
   RightCosets rc = GRPperm.right_cosets(eStab);
   for (auto &eCos : rc) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eCos\n";
+    os << "MATGRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eCos\n";
 #endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eCos);
     ListRightCoset.emplace_back(std::move(eMatr));
@@ -595,20 +595,20 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
                                     Thelper const &helper, Face const &eFace1,
                                     Face const &eFace2, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction(has)\n";
+  os << "MATGRP: Beginning of MatrixIntegral_RepresentativeAction(has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using PreImager = typename Thelper::PreImager;
   std::optional<Telt> opt = GRPperm.RepresentativeAction_OnSets(eFace1, eFace2);
   if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: Exit while loop with proof that no equivalence exists\n";
+    os << "MATGRP: Exit while loop with proof that no equivalence exists\n";
 #endif
     return {};
   }
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
+    os << "MATGRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
 #endif
   return pre_imager.pre_image_elt(*opt);
 }
@@ -663,7 +663,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_Stabilizer(!has)\n";
+  os << "MATGRP: Begin MatrixIntegral_Stabilizer(!has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
@@ -673,21 +673,21 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   Tgroup GRP(ListPermGens, len);
   Tgroup stab = GRP.Stabilizer_OnSets(f);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer, Stabilizer_OnSets|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_Stabilizer, Stabilizer_OnSets|=" << time << "\n";
 #endif
 
   TintGroup index = GRP.size() / stab.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
+  os << "MATGRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
 #endif
   Telt id_perm = stab.get_identity();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_Stabilizer(!has), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
+  os << "MATGRP: MatrixIntegral_Stabilizer(!has), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListGen =
     PreImageSubgroup<T, Tgroup>(ListMatrGens, ListPermGens, f_get_perm, id_matr, stab, os);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_Stabilizer, PreImageSubgroupAction|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_Stabilizer, PreImageSubgroupAction|=" << time << "\n";
 #endif
   return {index, ListGen};
 }
@@ -703,7 +703,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
                                      Thelper const &helper, Face const &eFace,
                                      [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_Stabilizer(!has)\n";
+  os << "MATGRP: Begin MatrixIntegral_Stabilizer(!has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
@@ -712,7 +712,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
       permutalib::StabilizerRightCosetMatrixPermSubset<Telt, MyMatrix<T>, TintGroup>(
           ListMatr, ListPermGens, id_matr, eFace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After StabilizerRightCosetMatrixPermSubset\n";
+  os << "MATGRP: After StabilizerRightCosetMatrixPermSubset\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP
   write_matrix_group(pair.first, "MatrixIntegral_Stabilizer_RightCoset_has_not_first");
@@ -731,7 +731,7 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
                                     Face const &eFace2,
                                     [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction(!has)\n";
+  os << "MATGRP: Beginning of MatrixIntegral_RepresentativeAction(!has)\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
@@ -740,7 +740,7 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
       permutalib::RepresentativeActionMatrixPermSubset<Telt, MyMatrix<T>, TintGroup>(
           ListMatr, ListPermGens, id_matr, eFace1, eFace2);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Ending of MatrixIntegral_RepresentativeAction 2\n";
+  os << "MATGRP: Ending of MatrixIntegral_RepresentativeAction 2\n";
 #endif
   return opt;
 }
@@ -792,7 +792,7 @@ std::optional<std::optional<MyMatrix<T>>> DirectSpaceOrbit_Equivalence(
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: start=" << start << " len=" << len << "\n";
+    os << "MATGRP: start=" << start << " len=" << len << "\n";
 #endif
     start = len;
   }
@@ -809,7 +809,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   int n = eSpace.rows();
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, We have ModSpace\n";
+  os << "MATGRP: DirectSpaceOrbit_Stabilizer, We have ModSpace\n";
 #endif
   // Tpair is a pair <Space, Repr>
   using Tpair = std::pair<MyMatrix<T>, MyMatrix<T>>;
@@ -822,7 +822,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   while (true) {
     size_t len = ListPair.size();
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, start=" << start << " len=" << len << "\n";
+    os << "MATGRP: DirectSpaceOrbit_Stabilizer, start=" << start << " len=" << len << "\n";
 #endif
     if (start == len) {
       break;
@@ -834,7 +834,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
 #endif
       for (auto &eMatrGen : ListMatrGen) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, jdx=" << jdx << " / " << ListMatrGen.size() << "\n";
+        os << "MATGRP: DirectSpaceOrbit_Stabilizer, jdx=" << jdx << " / " << ListMatrGen.size() << "\n";
         jdx += 1;
 #endif
         MyMatrix<T> eSpaceImg = ePair.first * eMatrGen;
@@ -860,7 +860,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
       }
     }
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, end of loop |ListPair|=" << ListPair.size() << "\n";
+    os << "MATGRP: DirectSpaceOrbit_Stabilizer, end of loop |ListPair|=" << ListPair.size() << "\n";
 #endif
     start = len;
   }
@@ -870,7 +870,7 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
   std::unordered_set<MyMatrix<T>> SetGen;
   size_t nPair = ListPair.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: DirectSpaceOrbit_Stabilizer, nPair=" << nPair << "\n";
+  os << "MATGRP: DirectSpaceOrbit_Stabilizer, nPair=" << nPair << "\n";
 #endif
   for (size_t iPair = 0; iPair < nPair; iPair++) {
     Tpair const &ePair = ListPair[iPair];
@@ -907,7 +907,7 @@ FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyVector<T> const &x, [[maybe_unused]] Thelper const &helper,
                   std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: FindingSmallOrbit (!has), start\n";
+  os << "MATGRP: FindingSmallOrbit (!has), start\n";
 #endif
   // No determining EXT, hard to find clever ideas.
   MyVector<Tmod> x_mod = ModuloReductionVector<T, Tmod>(x, TheMod);
@@ -930,7 +930,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyVector<T> const &a, Thelper const &helper,
                   std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: FindingSmallOrbit(has), start\n";
+  os << "MATGRP: FindingSmallOrbit(has), start\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using PreImager = typename Thelper::PreImager;
@@ -938,7 +938,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   // The critical number for the computation
   size_t n_limit = 60000;
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: FindingSmallOrbit, n_limit=" << n_limit << "\n";
+  os << "MATGRP: FindingSmallOrbit, n_limit=" << n_limit << "\n";
 #endif
   std::vector<MyMatrix<Tmod>> ListMatrGenMod =
         ModuloReductionStdVectorMatrix<T, Tmod>(ListMatrGen, TheMod);
@@ -991,7 +991,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
   std::vector<Tgroup> ListGroup = GRP.GetAscendingChain();
   size_t len_group = ListGroup.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: FindingSmallOrbit, len_group=" << len_group
+  os << "MATGRP: FindingSmallOrbit, len_group=" << len_group
      << " |GRP|=" << GRP.size() << "\n";
 #endif
   auto try_basis = [&](MyMatrix<T> const &TheBasis)
@@ -1003,12 +1003,12 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
         if (opt) {
           std::vector<MyVector<Tmod>> const &ListV = *opt;
 #ifdef DEBUG_MATRIX_GROUP
-          os << "MAT_GRP: FindingSmallOrbit, |ListV|=" << ListV.size() << "\n";
+          os << "MATGRP: FindingSmallOrbit, |ListV|=" << ListV.size() << "\n";
 #endif
           return ListV;
         }
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: FindingSmallOrbit, Too large size at i_row=" << i_row
+        os << "MATGRP: FindingSmallOrbit, Too large size at i_row=" << i_row
            << "\n";
 #endif
       }
@@ -1020,13 +1020,13 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     size_t jGroup = len_group - 1 - iGroup;
     Tgroup const &fGRP = ListGroup[jGroup];
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: FindingSmallOrbit, iGroup=" << iGroup
+    os << "MATGRP: FindingSmallOrbit, iGroup=" << iGroup
        << " |fGRP|=" << fGRP.size() << "\n";
 #endif
     std::vector<MyMatrix<T>> LMatr;
     for (auto &eGen : fGRP.SmallGeneratingSet()) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: FindingSmallOrbit(has)), before pre_image_elt for eGen\n";
+      os << "MATGRP: FindingSmallOrbit(has)), before pre_image_elt for eGen\n";
 #endif
       MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen);
       LMatr.emplace_back(std::move(eMat));
@@ -1085,7 +1085,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   T TotSize(1);
   for (int i = 0; i < n; i++)
     TotSize *= TheMod;
-  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod
+  os << "MATGRP: LinearSpace_ModStabilizer_Tmod, TheMod=" << TheMod
      << "  n=" << n << " TotSize=" << TotSize << "\n";
 #endif
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
@@ -1150,11 +1150,11 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
   };
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+  os << "MATGRP: LinearSpace_ModStabilizer_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
   ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+  os << "MATGRP: LinearSpace_ModStabilizer_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
   while (true) {
 #ifdef TIMINGS_MATRIX_GROUP
@@ -1162,11 +1162,11 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::optional<MyVector<T>> opt = IsNotStabilizing(ListMatrRet);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "|MAT_GRP: IsNotStabilizing|=" << time << "\n";
+    os << "|MATGRP: IsNotStabilizing|=" << time << "\n";
 #endif
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, Exiting the loop\n";
+      os << "MATGRP: LinearSpace_ModStabilizer_Tmod, Exiting the loop\n";
 #endif
       break;
     }
@@ -1175,7 +1175,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
         FindingSmallOrbit<T, Tmod, Tgroup, Thelper>(
             ListMatrRet, TheSpace, TheMod, V, helper, os);
 #ifdef TIMINGS_MATRIX_GROUP
-    os << "|MAT_GRP: FindingSmallOrbit|=" << time << "\n";
+    os << "|MATGRP: FindingSmallOrbit|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!opt_fso) {
@@ -1185,7 +1185,7 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
 #endif
     std::vector<MyVector<Tmod>> const &O = *opt_fso;
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
+    os << "MATGRP: LinearSpace_ModStabilizer_Tmod, |O|=" << O.size() << "\n";
 #endif
     Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
     std::function<Telt(MyMatrix<T> const&)> f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
@@ -1208,21 +1208,21 @@ LinearSpace_ModStabilizer_Tmod(std::vector<MyMatrix<T>> const &ListMatr,
     // as a disjoint union
     //
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
+    os << "MATGRP: LinearSpace_ModStabilizer_Tmod TheMod=" << TheMod
        << " |O|=" << O.size() << " |GRPwork|=" << GRPwork.size()
        << " |eFace|=" << eFace.count() << "\n";
 #endif
     ListMatrRet = f_stab(ListPermGens, GRPwork, eFace, pr.f_get_perm, ListMatrRet);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+    os << "MATGRP: LinearSpace_ModStabilizer_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
     ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+    os << "MATGRP: LinearSpace_ModStabilizer_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModStabilizer_Tmod |ListMatrRet|=" << ListMatrRet.size() << "\n";
+  os << "MATGRP: LinearSpace_ModStabilizer_Tmod |ListMatrRet|=" << ListMatrRet.size() << "\n";
 #endif
   return ListMatrRet;
 }
@@ -1255,7 +1255,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
     std::vector<MyMatrix<T>> const &ListGen, Thelper const &helper,
     MyMatrix<T> const &TheSpace, Fstab f_stab, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
+  os << "MATGRP: det(TheSpace)=" << DeterminantMat(TheSpace) << "\n";
 #endif
   RecSolutionIntMat<T> eCan(TheSpace);
   auto IsStabilizing = [&](std::vector<MyMatrix<T>> const &ListGen) -> bool {
@@ -1274,7 +1274,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   std::vector<T> eList = FactorsInt(LFact);
   int siz = eList.size();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_StabilizerGen_Kernel LFact=" << LFact
+  os << "MATGRP: LinearSpace_StabilizerGen_Kernel LFact=" << LFact
      << " siz=" << siz << "\n";
 #endif
   std::vector<MyMatrix<T>> ListGenRet = ListGen;
@@ -1291,7 +1291,7 @@ std::vector<MyMatrix<T>> LinearSpace_StabilizerGen_Kernel(
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsStabilizing(ListGenRet)) {
-    std::cerr << "MAT_GRP: Error in LinearSpace_Stabilizer_Kernel\n";
+    std::cerr << "MATGRP: Error in LinearSpace_Stabilizer_Kernel\n";
     throw TerminalException{1};
   }
 #endif
@@ -1310,33 +1310,33 @@ RetMI_S<T, Tgroup> LinearSpace_Stabilizer_KernelRing(std::vector<MyMatrix<T>> co
                     [[maybe_unused]] std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), before MatrixIntegral_Stabilizer\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_Kernel), before MatrixIntegral_Stabilizer\n";
 #endif
     RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatr, f_get_perm, GRP, helper, eFace, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_Kernel), after MatrixIntegral_Stabilizer\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_Kernel), after MatrixIntegral_Stabilizer\n";
 #endif
     total_index *= ret.index;
     return ret.LGen;
   };
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
+  os << "MATGRP: LinearSpace_Stabilizer_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
 #endif
   std::vector<MyMatrix<T>> ListGenRet1 =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           ListGen, helper, TheSpace, f_stab, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
+  os << "MATGRP: LinearSpace_Stabilizer_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
+  os << "MATGRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet1)=" << compute_complexity_listmat(ListGenRet1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListGenRet2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListGenRet1, os);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   CheckGroupEquality<T,Tgroup>(ListGenRet1, ListGenRet2, os);
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
+  os << "MATGRP: LinearSpace_Stabilizer_Kernel, comp(ListGenRet2)=" << compute_complexity_listmat(ListGenRet2) << "\n";
 #endif
   return {total_index, ListGenRet2};
 }
@@ -1374,24 +1374,24 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_KernelRing(
                     [[maybe_unused]] std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatr) -> std::vector<MyMatrix<T>> {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), beginning\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), beginning\n";
 #endif
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
     MatrixIntegral_Stabilizer_RightCoset<T, Tgroup, Thelper>(ListPermGens, ListMatr, GRP, helper, eFace, os);
     coset.insert(pair.second);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), after MatrixIntegral_Stabilizer_RightCoset\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_RightCoset_Kernel), after MatrixIntegral_Stabilizer_RightCoset\n";
 #endif
     return pair.first;
   };
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_RightCoset_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
+  os << "MATGRP: LinearSpace_Stabilizer_RightCoset_KernelRing: Before LinearSpace_StabilizerGen_Kernel\n";
 #endif
   std::vector<MyMatrix<T>> l_gens_ret =
       LinearSpace_StabilizerGen_Kernel<T, Tgroup, Thelper, decltype(f_stab)>(
           l_gens, helper, TheSpace, f_stab, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_Stabilizer_RightCoset_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
+  os << "MATGRP: LinearSpace_Stabilizer_RightCoset_KernelRing: After LinearSpace_StabilizerGen_Kernel\n";
 #endif
   return {std::move(l_gens_ret), coset};
 }
@@ -1427,38 +1427,38 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
                                 [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                                 std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
+  os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using PreImager = typename Thelper::PreImager;
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   std::vector<Telt> LGenSmall = eGRP.SmallGeneratingSet();
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |LGenSmall|=" << LGenSmall.size() << "\n";
+  os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(has) |LGenSmall|=" << LGenSmall.size() << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen1;
   for (auto &eGen : LGenSmall) {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), before pre_image_elt for eGen\n";
+    os << "MATGRP: MatrixIntegral_PreImageSubgroup(has), before pre_image_elt for eGen\n";
 #endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     ListMatrGen1.emplace_back(std::move(eMatr));
   }
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: |ListMatrGen1|=" << ListMatrGen1.size() << "\n";
+  os << "MATGRP: |ListMatrGen1|=" << ListMatrGen1.size() << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen1)=" << compute_complexity_listmat(ListMatrGen1) << "\n";
+  os << "MATGRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen1)=" << compute_complexity_listmat(ListMatrGen1) << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatrGen1, os);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   CheckGroupEquality<T,Tgroup>(ListMatrGen1, ListMatrGen2, os);
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen2)=" << compute_complexity_listmat(ListMatrGen2) << "\n";
+  os << "MATGRP: MatrixIntegral_PreImageSubgroup(has), comp(ListMatrGen2)=" << compute_complexity_listmat(ListMatrGen2) << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: |ListMatrGen2|=" << ListMatrGen2.size() << "\n";
+  os << "MATGRP: |ListMatrGen2|=" << ListMatrGen2.size() << "\n";
 #endif
   return ListMatrGen2;
 }
@@ -1472,14 +1472,14 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
                                 std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                                 std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
+  os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(!has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx n_act = ListPermGens[0].size();
   Tgroup GRP_build(ListPermGens, n_act);
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) |GRP_build|=" << GRP_build.size() << " |eGRP|=" << eGRP.size() << "\n";
+  os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(!has) |GRP_build|=" << GRP_build.size() << " |eGRP|=" << eGRP.size() << "\n";
   bool test = GRP_build.IsSubgroup(eGRP);
-  os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(!has) IsSubgroup=" << test << "\n";
+  os << "MATGRP: Begin MatrixIntegral_PreImageSubgroup(!has) IsSubgroup=" << test << "\n";
   if (false) {
     WriteGroupFile("GRP_build", GRP_build);
     WriteGroupFile("eGRP", eGRP);
@@ -1494,10 +1494,10 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
   std::vector<MyMatrix<T>> ListGen =
     PreImageSubgroup<T,Tgroup>(ListMatrGens, ListPermGens, f_get_perm, id_matr, eGRP, os);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: MatrixIntegral_PreImageSubgroup(!has), PreImageSubgroup|=" << time << "\n";
+  os << "|MATGRP: MatrixIntegral_PreImageSubgroup(!has), PreImageSubgroup|=" << time << "\n";
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen) << "\n";
+  os << "MATGRP: After PreImageSubgroup comp(ListGen1)=" << compute_complexity_listmat(ListGen) << "\n";
 #endif
   return ListGen;
 }
@@ -1529,9 +1529,9 @@ void TestPreImageSubgroup(Thelper const &helper,
   PreImager pre_imager = helper.pre_imager(ListMatrGen, ListPermGen, os);
   if (MatrPreImage.size() == 0) {
     if (OrigGRP.size() != 1) {
-      std::cerr << "MAT_GRP: Error, in context=" << context << "\n";
-      std::cerr << "MAT_GRP: If MatrPreImage is empty, then necessarily OrigGRP has to be trivial\n";
-      std::cerr << "MAT_GRP: Though that may not be sufficient in itself if the mapping is not an isomorphism\n";
+      std::cerr << "MATGRP: Error, in context=" << context << "\n";
+      std::cerr << "MATGRP: If MatrPreImage is empty, then necessarily OrigGRP has to be trivial\n";
+      std::cerr << "MATGRP: Though that may not be sufficient in itself if the mapping is not an isomorphism\n";
       throw TerminalException{1};
     }
   }
@@ -1542,9 +1542,9 @@ void TestPreImageSubgroup(Thelper const &helper,
   for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
     Telt ePerm = f_map_matr(ListMatrGen[i_gen]);
     if (ePerm != ListPermGen[i_gen]) {
-      std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
-      std::cerr << "MAT_GRP: i_gen=" << i_gen << "\n";
-      std::cerr << "MAT_GRP: Inconsistency with ListMatrGen / ListPermGen\n";
+      std::cerr << "MATGRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
+      std::cerr << "MATGRP: i_gen=" << i_gen << "\n";
+      std::cerr << "MATGRP: Inconsistency with ListMatrGen / ListPermGen\n";
       throw TerminalException{1};
     }
   }
@@ -1553,8 +1553,8 @@ void TestPreImageSubgroup(Thelper const &helper,
   for (auto & eMatrGen : MatrPreImage) {
     Telt ePermGen = f_map_matr(eMatrGen);
     if (ePermGen.size() != n_act) {
-      std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
-      std::cerr << "MAT_GRP: The obtained permutation is not of the right size\n";
+      std::cerr << "MATGRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
+      std::cerr << "MATGRP: The obtained permutation is not of the right size\n";
       throw TerminalException{1};
     }
     LGen.push_back(ePermGen);
@@ -1566,7 +1566,7 @@ void TestPreImageSubgroup(Thelper const &helper,
   for (auto & eGen: OrigGRP.SmallGeneratingSet()) {
     n_orig_gen += 1;
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: TestPreImageSubgroup, before pre_image_elt for eGen\n";
+    os << "MATGRP: TestPreImageSubgroup, before pre_image_elt for eGen\n";
 #endif
     MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
     Telt eGenB = f_map_matr(eMatr);
@@ -1580,23 +1580,23 @@ void TestPreImageSubgroup(Thelper const &helper,
   Tgroup GRPimgB(LGenB, n_act);
   if (GRPimg != OrigGRP) {
     Tgroup IntGRP = GRPimg.Intersection(OrigGRP);
-    std::cerr << "MAT_GRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
-    std::cerr << "MAT_GRP: n_orig_gen=" << n_orig_gen << " n_orig_gen_error=" << n_orig_gen_error << "\n";
-    std::cerr << "MAT_GRP: |GRPfull|=" << GRPfull.size() << "\n";
-    std::cerr << "MAT_GRP: |GRPimg|=" << GRPimg.size() << " |OrigGRP|=" << OrigGRP.size() << " |IntGRP|=" << IntGRP.size() << "\n";
-    std::cerr << "MAT_GRP: The image of the PreImage is not equal to the original group\n";
-    std::cerr << "MAT_GRP: This failing one basic check of correctness (this is not a complete\n";
-    std::cerr << "MAT_GRP: check if the morphism is not an isomorphism)\n";
-    std::cerr << "MAT_GRP: |GRPimgB|=" << GRPimgB.size() << "\n";
+    std::cerr << "MATGRP: Error detected in TestPreImageSubgroup, context=" << context << "\n";
+    std::cerr << "MATGRP: n_orig_gen=" << n_orig_gen << " n_orig_gen_error=" << n_orig_gen_error << "\n";
+    std::cerr << "MATGRP: |GRPfull|=" << GRPfull.size() << "\n";
+    std::cerr << "MATGRP: |GRPimg|=" << GRPimg.size() << " |OrigGRP|=" << OrigGRP.size() << " |IntGRP|=" << IntGRP.size() << "\n";
+    std::cerr << "MATGRP: The image of the PreImage is not equal to the original group\n";
+    std::cerr << "MATGRP: This failing one basic check of correctness (this is not a complete\n";
+    std::cerr << "MATGRP: check if the morphism is not an isomorphism)\n";
+    std::cerr << "MATGRP: |GRPimgB|=" << GRPimgB.size() << "\n";
     if (GRPimgB == OrigGRP) {
-      std::cerr << "MAT_GRP: GRPimgB is EQUAL to OrigGRP\n";
+      std::cerr << "MATGRP: GRPimgB is EQUAL to OrigGRP\n";
     } else {
-      std::cerr << "MAT_GRP: GRPimgB is NOT EQUAL to OrigGRP\n";
+      std::cerr << "MATGRP: GRPimgB is NOT EQUAL to OrigGRP\n";
     }
     if (GRPimgB == GRPimg) {
-      std::cerr << "MAT_GRP: GRPimgB is EQUAL to GRPimg\n";
+      std::cerr << "MATGRP: GRPimgB is EQUAL to GRPimg\n";
     } else {
-      std::cerr << "MAT_GRP: GRPimgB is NOT EQUAL to GRPimg\n";
+      std::cerr << "MATGRP: GRPimgB is NOT EQUAL to GRPimg\n";
     }
     std::string FileGRP = "AllGRP";
     std::ofstream os_grp(FileGRP);
@@ -1620,8 +1620,9 @@ struct ResultSimplificationDoubleCosets {
 
 template<typename T, typename Tgroup, typename Thelper>
 ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificationDoubleCoset(Thelper const& helper,
-                                                                                              typename Thelper::PreImager pre_imager,
-                                                                                              Tgroup GRP_U, Tgroup GRP_V,
+                                                                                              typename Thelper::PreImager const& pre_imager,
+                                                                                              Tgroup const& GRP_U,
+                                                                                              Tgroup const& GRP_V,
                                                                                               std::vector<MyMatrix<T>> const& ListMatr_U,
                                                                                               std::vector<MyMatrix<T>> const& ListMatr_V,
                                                                                               std::function<typename Tgroup::Telt(MyMatrix<T> const&)> const& f_get_perm,
@@ -1667,7 +1668,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
     MyMatrix<T> const& cos_matr = res_work.first.udv.d_cos_red;
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
     if (f_get_perm(cos_matr) != cos_perm_ret) {
-      std::cerr << "MAT_GRP: cos_matr is not as we expect\n";
+      std::cerr << "MATGRP: cos_matr is not as we expect\n";
       throw TerminalException{1};
     }
 #endif
@@ -1680,7 +1681,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   while(true) {
     size_t n_improv = 0;
     for (int i=0; i<n_iter; i++) {
-      os << "MAT_GRP: i=" << i << " / " << n_iter << " res_work.second=" << res_work.second << "\n";
+      os << "MATGRP: i=" << i << " / " << n_iter << " res_work.second=" << res_work.second << "\n";
       Telt rand_u = GRP_U.rand();
       Telt rand_v = GRP_V.rand();
       Telt elt_u_cand = rand_u * elt_u;
@@ -1691,7 +1692,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
         res_work = res_cand;
         elt_u = elt_u_cand;
         elt_v = elt_v_cand;
-        os << "MAT_GRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
+        os << "MATGRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
         WriteMatrix(os, res_work.first.udv.d_cos_red);
         if (res_work.second == absolute_minimum) {
           return get_final();
@@ -1771,7 +1772,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
                     std::function<Telt(MyMatrix<T> const&)> f_get_perm,
                     std::vector<MyMatrix<T>> const& ListMatrGens) -> std::vector<MyMatrix<T>> {
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), beginning |GRP|=" << GRP.size() << " n_act=" << static_cast<size_t>(GRP.n_act()) << "\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), beginning |GRP|=" << GRP.size() << " n_act=" << static_cast<size_t>(GRP.n_act()) << "\n";
 #endif
     Tgroup eStab_perm = GRP.Stabilizer_OnSets(eFace);
 #ifdef TRACK_INFO_MATRIX_GROUP
@@ -1782,15 +1783,15 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #endif
 #ifdef DEBUG_MATRIX_GROUP
     TintGroup index = GRP.size() / eStab_perm.size();
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " index=" << index << " |ListPermGens|=" << ListPermGens.size() << "\n";
-    os << "MAT_GRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), |eStab_perm|=" << eStab_perm.size() << " index=" << index << " |ListPermGens|=" << ListPermGens.size() << "\n";
+    os << "MATGRP: f_stab(LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel), comp(ListMatrGens)=" << compute_complexity_listmat(ListMatrGens) << "\n";
 #endif
 #ifdef TRACK_INFO_MATRIX_GROUP
     write_matrix_group(ListMatrGens, "LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel_f_stab");
 #endif
     PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens, os);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: We have pre_imager\n";
+    os << "MATGRP: We have pre_imager\n";
 #endif
     std::vector<MyMatrix<T>> eStab_matr = MatrixIntegral_PreImageSubgroup<T,Tgroup,Thelper>(ListPermGens, ListMatrGens, eStab_perm, helper, f_get_perm, os);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM_DISABLE
@@ -1799,7 +1800,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
     std::vector<MyMatrix<T>> eStab_matr_tot = Exhaust_get_total_generators(eStab_matr);
     DoubleCosetComputer dcc_v = GRP.double_coset_computer_v(eStab_perm);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: We have dcc_v\n";
+    os << "MATGRP: We have dcc_v\n";
 #endif
     Tidx siz_act = eFace.size();
     std::vector<DoubleCosetEntry<T>> new_entries;
@@ -1812,19 +1813,19 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
         Vmatr_conj.emplace_back(std::move(NewGen));
       }
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-      os << "MAT_GRP: We have Vmatr_conj\n";
+      os << "MATGRP: We have Vmatr_conj\n";
 #endif
       std::vector<Telt> Vperm_conj =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, std::function<Telt(MyMatrix<T> const&)>>(Vmatr_conj, helper, f_get_perm, os);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-      os << "MAT_GRP: We have Vperm_conj\n";
+      os << "MATGRP: We have Vperm_conj\n";
 #endif
       Tgroup Vgroup_conj = Tgroup(Vperm_conj, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
       bool test_is_sub = GRP.IsSubgroup(Vgroup_conj);
       if (!test_is_sub) {
-        std::cerr << "MAT_GRP: Vgroup_conj should be a subgroup of GRP\n";
-        std::cerr << "MAT_GRP: |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " |Vgroup_conj|=" << Vgroup_conj.size() << "\n";
+        std::cerr << "MATGRP: Vgroup_conj should be a subgroup of GRP\n";
+        std::cerr << "MATGRP: |GRP|=" << GRP.size() << " |eStab_perm|=" << eStab_perm.size() << " |Vgroup_conj|=" << Vgroup_conj.size() << "\n";
         throw TerminalException{1};
       }
 #endif
@@ -1840,13 +1841,13 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
       // So, S_new = v^{-1} S v
       std::vector<DccEntry> pre_span_de = dcc_v.double_cosets_and_stabilizers(Vgroup_conj);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |pre_span_de|=" << pre_span_de.size() << "\n";
+      os << "MATGRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, |pre_span_de|=" << pre_span_de.size() << "\n";
 #endif
       std::vector<DccEntry> span_de = pre_span_de;
       //      std::vector<DccEntry> span_de = simplify_span_de(Vgroup_conj, pre_span_de);
       for (auto & e_de: span_de) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
+        os << "MATGRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, before pre_image_elt for e_de.cos\n";
 #endif
         ResultSimplificationDoubleCosets<T, Telt> result = IterativeSimplificationDoubleCoset<T,Tgroup,Thelper>(helper,
                                                                                                                 pre_imager,
@@ -1863,13 +1864,13 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
         }
         MyMatrix<T> const& eCos = result.cos_matr;
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";
+        os << "MATGRP: LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel, comp(eCos)=" << compute_complexity_matrix(eCos) << " eCos=\n";
         WriteMatrix(os, eCos);
 #endif
         Tgroup Stab_perm(stab_gens, siz_act);
 #ifdef SANITY_CHECK_DOUBLE_COSET_ENUM
         if (!Vgroup_conj.IsSubgroup(Stab_perm)) {
-          std::cerr << "MAT_GRP: Vgroup_conj should contain Stab_perm as subgroup\n";
+          std::cerr << "MATGRP: Vgroup_conj should contain Stab_perm as subgroup\n";
           throw TerminalException{1};
         }
 #endif
@@ -1892,7 +1893,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
       }
     }
 #ifdef DEBUG_DOUBLE_COSET_ENUM
-    os << "MAT_GRP: We found |new_entries|=" << new_entries.size() << "\n";
+    os << "MATGRP: We found |new_entries|=" << new_entries.size() << "\n";
 #endif
     entries = new_entries;
     return eStab_matr;
@@ -1998,7 +1999,7 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
   CosetDescription<T> coset = pairB.coset_desc;
   coset.conjugate(Pmat_T);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Returning from LinearSpace_Stabilizer_RightCoset\n";
+  os << "MATGRP: Returning from LinearSpace_Stabilizer_RightCoset\n";
 #endif
   return {std::move(ListMatr_C), coset};
 }
@@ -2100,9 +2101,9 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   int n = TheSpace1.rows();
 #ifdef DEBUG_MATRIX_GROUP
   os << "------------------------------------------------------\n";
-  os << "MAT_GRP: NeedStabilizer=" << NeedStabilizer << "\n";
-  os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod << "\n";
-  os << "MAT_GRP: det(TheSpace1)=" << DeterminantMat(TheSpace1)
+  os << "MATGRP: NeedStabilizer=" << NeedStabilizer << "\n";
+  os << "MATGRP: LinearSpace_ModEquivalence_Tmod, TheMod=" << TheMod << "\n";
+  os << "MATGRP: det(TheSpace1)=" << DeterminantMat(TheSpace1)
      << " det(TheSpace2)=" << DeterminantMat(TheSpace2) << "\n";
 #endif
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
@@ -2110,11 +2111,11 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
   MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+  os << "MATGRP: LinearSpace_ModEquivalence_Tmod(A), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
   ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+  os << "MATGRP: LinearSpace_ModEquivalence_Tmod(B), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
   MyMatrix<T> eElt = IdentityMat<T>(n);
   Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
@@ -2157,7 +2158,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
     std::optional<MyVector<Tmod>> test2 = IsStabilizing(ListMatrRet);
     if (!test1 && !test2) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, eElt and GRPwork are "
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, eElt and GRPwork are "
             "correct. Exiting\n";
 #endif
       ResultTestModEquivalence<T> res{ListMatrRet, eElt};
@@ -2170,7 +2171,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       std::vector<MyVector<Tmod>> O =
         OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size()
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |O|=" << O.size()
          << "\n";
 #endif
       Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
@@ -2183,24 +2184,24 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       Face eFace1_pre = GetFace<T, Tmod>(O, TheSpace1workMod);
       Face eFace2_pre = GetFace<T, Tmod>(O, TheSpace2Mod);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|=" << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|=" << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1_pre|=" << eFace1_pre.size() << " / " << eFace1_pre.count() << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace2_pre|=" << eFace2_pre.size() << " / " << eFace2_pre.count() << "\n";
 #endif
       PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace1_pre, os);
       Face eFace1 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace1|=" << eFace1.size() << " / " << eFace1.count() << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace1|=" << eFace1.size() << " / " << eFace1.count() << "\n";
 #endif
       std::optional<Face> opt_face2 = pr.map_face_opt(eFace2_pre);
       if (!opt_face2) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: Exit as no eFace2 does not map correctly to the partition\n";
+        os << "MATGRP: Exit as no eFace2 does not map correctly to the partition\n";
 #endif
         return {};
       }
       Face const& eFace2 = TranslateFace(nbRow, *opt_face2);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod, |eFace2|=" << eFace2.size() << " / " << eFace2.count() << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod, |eFace2|=" << eFace2.size() << " / " << eFace2.count() << "\n";
 #endif
       std::vector<Telt> ListPermGens =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
@@ -2215,7 +2216,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: ModEquivalence 1 TheMod=" << TheMod << " |O|=" << O.size()
+      os << "MATGRP: ModEquivalence 1 TheMod=" << TheMod << " |O|=" << O.size()
          << " |GRPperm|=" << GRPperm.size() << " |eFace1|=" << eFace1.count()
          << " |eFace2|=" << eFace2.count() << "\n";
 #endif
@@ -2223,7 +2224,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
           MatrixIntegral_RepresentativeAction<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, GRPperm, helper, eFace1, eFace2, os);
       if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-        os << "MAT_GRP: Exit as no equivalence exixts\n";
+        os << "MATGRP: Exit as no equivalence exixts\n";
 #endif
         return {};
       }
@@ -2233,7 +2234,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
         std::optional<MyVector<Tmod>> test1 = IsEquiv(eElt);
         if (!test1) {
 #ifdef DEBUG_MATRIX_GROUP
-          os << "MAT_GRP: eElt and GRPwork are correct. Exiting\n";
+          os << "MATGRP: eElt and GRPwork are correct. Exiting\n";
 #endif
           ResultTestModEquivalence<T> res{std::move(ListMatrRet), std::move(eElt)};
           return res;
@@ -2242,11 +2243,11 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod(C), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod(D), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
     } else {
       MyVector<Tmod> const &V = *test2;
@@ -2255,7 +2256,7 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       std::vector<MyVector<Tmod>> O =
           OrbitComputation(ListMatrRetMod, V, TheAction, os);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: |O|=" << O.size() << "\n";
+      os << "MATGRP: |O|=" << O.size() << "\n";
 #endif
       Telt ePermS = Telt(SortingPerm<MyVector<Tmod>, Tidx>(O));
       std::function<Telt(MyMatrix<T> const&)> f_get_perm=[&](MyMatrix<T> const& eGen) -> Telt {
@@ -2266,25 +2267,25 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
       PartitionReduction<T, Telt> pr(ListMatrRet, f_get_perm, eFace2_pre, os);
       Face eFace2 = TranslateFace(nbRow, pr.face);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: We have eFace2\n";
+      os << "MATGRP: We have eFace2\n";
 #endif
       std::vector<Telt> ListPermGens =
         MatrixIntegral_GeneratePermutationGroupA<T, Telt, Thelper, decltype(f_get_perm)>(ListMatrRet, helper, pr.f_get_perm, os);
       size_t siz_act = eFace2.size();
       Tgroup GRPperm(ListPermGens, siz_act);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
+      os << "MATGRP: ModEquivalence 2 TheMod=" << TheMod << " |O|=" << O.size()
          << " |GRPperm|=" << GRPperm.size() << " |eFace2|=" << eFace2.count()
          << "\n";
 #endif
       RetMI_S<T,Tgroup> ret = MatrixIntegral_Stabilizer<T, Tgroup, Thelper>(ListPermGens, ListMatrRet, pr.f_get_perm, GRPperm, helper, eFace2, os);
       ListMatrRet = ret.LGen;
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod(E), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
       ListMatrRet = ExhaustiveReductionComplexityGroupMatrix(ListMatrRet, os);
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence_Tmod(F), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
+      os << "MATGRP: LinearSpace_ModEquivalence_Tmod(F), comp(ListMatrRet)=" << compute_complexity_listmat(ListMatrRet) << "\n";
 #endif
     }
   }
@@ -2323,8 +2324,8 @@ LinearSpace_Equivalence_KernelRing(std::vector<MyMatrix<T>> const &ListMatr,
   T LFact1 = LinearSpace_GetDivisor(TheSpace1);
   T LFact2 = LinearSpace_GetDivisor(TheSpace2);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LFact1 = " << LFact1 << "\n";
-  os << "MAT_GRP: LFact2 = " << LFact2 << "\n";
+  os << "MATGRP: LFact1 = " << LFact1 << "\n";
+  os << "MATGRP: LFact2 = " << LFact2 << "\n";
 #endif
   if (LFact1 != LFact2) {
     return {};
@@ -2355,7 +2356,7 @@ LinearSpace_Equivalence_KernelRing(std::vector<MyMatrix<T>> const &ListMatr,
             TheMod, os);
     if (!opt) {
 #ifdef DEBUG_MATRIX_GROUP
-      os << "MAT_GRP: LinearSpace_ModEquivalence failed so we exit here\n";
+      os << "MATGRP: LinearSpace_ModEquivalence failed so we exit here\n";
 #endif
       return {};
     }
@@ -2371,7 +2372,7 @@ LinearSpace_Equivalence_KernelRing(std::vector<MyMatrix<T>> const &ListMatr,
   }
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Before returning from LinearSpace_Equivalence_Kernel, retuning eElt\n";
+  os << "MATGRP: Before returning from LinearSpace_Equivalence_Kernel, retuning eElt\n";
 #endif
   return eElt;
 }
@@ -2385,15 +2386,15 @@ LinearSpace_Equivalence_Kernel(std::vector<MyMatrix<T>> const &ListMatr,
   using Tint = typename Thelper::Tint;
   using ThelperInt = typename Thelper::ThelperInt;
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of LinearSpace_Equivalence_Kernel\n";
-  os << "MAT_GRP: |ListMatr|=" << ListMatr.size() << "\n";
-  os << "MAT_GRP: Det(InSpace1)=" << DeterminantMat(InSpace1)
+  os << "MATGRP: Beginning of LinearSpace_Equivalence_Kernel\n";
+  os << "MATGRP: |ListMatr|=" << ListMatr.size() << "\n";
+  os << "MATGRP: Det(InSpace1)=" << DeterminantMat(InSpace1)
      << " Det(InSpace2)=" << DeterminantMat(InSpace2) << "\n";
 #endif
   FractionMatrix<T> eRec1 = RemoveFractionMatrixPlusCoeff(InSpace1);
   FractionMatrix<T> eRec2 = RemoveFractionMatrixPlusCoeff(InSpace2);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: eRec1.TheMult=" << eRec1.TheMult
+  os << "MATGRP: eRec1.TheMult=" << eRec1.TheMult
      << " eRec2.TheMult=" << eRec2.TheMult << "\n";
 #endif
   if (eRec1.TheMult != eRec2.TheMult)
@@ -2508,13 +2509,13 @@ Stab_RightCoset<T> LinPolytopeIntegral_Automorphism_RightCoset_Subspaces(
     ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
         "before LinearSpace_Stabilizer_RightCoset\n";
 #endif
   Stab_RightCoset<T> pair = LinearSpace_Stabilizer_RightCoset<T, Tgroup>(
       ListMatrGens, helper, LattToStab, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, after "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, after "
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGensB;
@@ -2566,13 +2567,13 @@ LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces(std::vector<MyMatrix<T>> 
     ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
         "before LinearSpace_Stabilizer_RightCoset\n";
 #endif
   std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> pair =
     LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
         "LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrStabGens;
@@ -2628,13 +2629,13 @@ LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer_Subspaces(std::vector<MyM
     ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas);
   MyMatrix<T> LattToStab = RemoveFractionMatrix(Inverse(eBasis));
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_RightCoset_Subspaces, "
         "before LinearSpace_Stabilizer_RightCoset\n";
 #endif
   std::pair<std::vector<MyMatrix<T>>,std::vector<DoubleCosetEntry<T>>> pair =
     LinearSpace_Stabilizer_DoubleCosetStabilizer<T, Tgroup>(ListMatrFullGens, helper, LattToStab, ListMatrVGens, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
+  os << "MATGRP: LinPolytopeIntegral_Automorphism_DoubleCoset_Subspaces, after "
         "LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrStabGens;
@@ -2672,9 +2673,9 @@ ConjugateListGeneratorsTestInt(MyMatrix<T> const &Pmat,
     MyMatrix<T> eGen2 = PmatInv * eGen1 * Pmat;
 #ifdef SANITY_CHECK_MATRIX_GROUP
     if (!IsIntegralMatrix(eGen2)) {
-      std::cerr << "MAT_GRP: Error in ConjugateListGeneratorsTestInt\n";
-      std::cerr << "MAT_GRP: The matrix eGen2 should be integral\n";
-      std::cerr << "MAT_GRP: eGen2=\n";
+      std::cerr << "MATGRP: Error in ConjugateListGeneratorsTestInt\n";
+      std::cerr << "MATGRP: The matrix eGen2 should be integral\n";
+      std::cerr << "MATGRP: eGen2=\n";
       WriteMatrix(std::cerr, eGen2);
       throw TerminalException{1};
     }
@@ -2757,7 +2758,7 @@ MatrixIntegral_Equivalence_General(std::vector<MyMatrix<T>> const &LGen1,
   MyMatrix<T> TheSpaceInv = Inverse(TheSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(TheSpaceInv)) {
-    std::cerr << "The matrix InvInvariantSpace should be integral\n";
+    std::cerr << "MATGRP: The matrix InvInvariantSpace should be integral\n";
     throw TerminalException{1};
   }
 #endif
@@ -2770,12 +2771,6 @@ MatrixIntegral_Equivalence_General(std::vector<MyMatrix<T>> const &LGen1,
   // Or TheSpaceInv g = Inverse(TheSpace * EquivRat)
   MyMatrix<T> TheSpaceImg = TheSpace * EquivRat;
   MyMatrix<T> TheSpaceImgInv = Inverse(TheSpaceImg);
-#ifdef SANITY_CHECK_MATRIX_GROUP
-  if (!IsIntegralMatrix(TheSpaceImgInv)) {
-    std::cerr << "The matrix TheSpaceImgInv should be integral\n";
-    throw TerminalException{1};
-  }
-#endif
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
   Thelper helper{n};
   std::optional<MyMatrix<T>> opt =
@@ -2825,7 +2820,7 @@ std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
-    std::cerr << "MAT_GRP: The matrix InvInvariantSpace should be integral\n";
+    std::cerr << "MATGRP: The matrix InvInvariantSpace should be integral\n";
     throw TerminalException{1};
   }
 #endif
@@ -2833,14 +2828,14 @@ std::vector<MyMatrix<T>> MatrixIntegral_RightCosets_General(
       ConjugateListGeneratorsTestInt(InvInvariantSpace, LGen1);
   Thelper helper{n};
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_RightCosets_General, before "
+  os << "MATGRP: MatrixIntegral_RightCosets_General, before "
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   Stab_RightCoset<T> stab_rightcoset =
       LinearSpace_Stabilizer_RightCoset<T, Tgroup, Thelper>(
           LGen2, helper, InvInvariantSpace, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_RightCosets_General, after "
+  os << "MATGRP: MatrixIntegral_RightCosets_General, after "
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   using Iter = typename CosetDescription<T>::const_iterator;
@@ -2866,45 +2861,45 @@ MatrixIntegral_DoubleCosets_General(
   using TintGroup = typename Tgroup::Tint;
   using Thelper = GeneralMatrixGroupHelper<T, Telt, TintGroup>;
 #ifdef DEBUG_MATRIX_GROUP_DISABLE
-  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, LGenG1=\n";
+  os << "MATGRP: MatrixIntegral_DoubleCosets_General, LGenG1=\n";
   WriteListMatrix(os, LGenG1);
-  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, LGenV1=\n";
+  os << "MATGRP: MatrixIntegral_DoubleCosets_General, LGenV1=\n";
   WriteListMatrix(os, LGenV1);
 #endif
   MyMatrix<T> InvariantSpace = MatrixIntegral_GetInvariantSpace(n, LGenG1, os);
   MyMatrix<T> InvInvariantSpace = Inverse(InvariantSpace);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: We have |InvariantSpace|=" << DeterminantMat(InvariantSpace) << "\n";
-  os << "MAT_GRP: We have InvariantSpace=\n";
+  os << "MATGRP: We have |InvariantSpace|=" << DeterminantMat(InvariantSpace) << "\n";
+  os << "MATGRP: We have InvariantSpace=\n";
   WriteMatrix(os, InvariantSpace);
-  os << "MAT_GRP: We have InvInvariantSpace=\n";
+  os << "MATGRP: We have InvInvariantSpace=\n";
   WriteMatrix(os, InvInvariantSpace);
 #endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
   if (!IsIntegralMatrix(InvInvariantSpace)) {
-    std::cerr << "MAT_GRP: The matrix InvInvariantSpace should be integral\n";
+    std::cerr << "MATGRP: The matrix InvInvariantSpace should be integral\n";
     throw TerminalException{1};
   }
 #endif
   std::vector<MyMatrix<T>> LGenG2 =
       ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenG1);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: We have LGenG2\n";
+  os << "MATGRP: We have LGenG2\n";
 #endif
   std::vector<MyMatrix<T>> LGenV2 =
       ConjugateListGeneratorsTestInt(InvInvariantSpace, LGenV1);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: We have LGenV2\n";
+  os << "MATGRP: We have LGenV2\n";
 #endif
   Thelper helper{n};
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, before "
+  os << "MATGRP: MatrixIntegral_DoubleCosets_General, before "
         "LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::pair<std::vector<MyMatrix<T>>,std::vector<MyMatrix<T>>> pair =
       LinearSpace_Stabilizer_DoubleCoset<T, Tgroup, Thelper>(LGenG2, helper, InvInvariantSpace, LGenV2, os);
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: MatrixIntegral_DoubleCosets_General, after "
+  os << "MATGRP: MatrixIntegral_DoubleCosets_General, after "
         "LinearSpace_Stabilizer_DoubleCoset\n";
 #endif
   std::vector<MyMatrix<T>> LGenRet;
@@ -3078,25 +3073,25 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_MATRIX_GROUP
-  os << "MAT_GRP: Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
-  os << "MAT_GRP: |EXT1_T|=" << EXT1_T.rows() << " |EXT2_T|=" << EXT2_T.rows() << "\n";
+  os << "MATGRP: Beginning of LinPolytopeIntegral_Isomorphism_Subspaces\n";
+  os << "MATGRP: |EXT1_T|=" << EXT1_T.rows() << " |EXT2_T|=" << EXT2_T.rows() << "\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> eBasis1 = GetZbasis(EXT1_T);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: GetZbasis1|=" << time << "\n";
+  os << "|MATGRP: GetZbasis1|=" << time << "\n";
 #endif
   MyMatrix<T> eBasis2 = GetZbasis(EXT2_T);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: GetZbasis2|=" << time << "\n";
+  os << "|MATGRP: GetZbasis2|=" << time << "\n";
 #endif
   MyMatrix<T> InvBasis1 = Inverse(eBasis1);
   MyMatrix<T> InvBasis2 = Inverse(eBasis2);
   MyMatrix<T> EXTbas1 = EXT1_T * InvBasis1;
   MyMatrix<T> EXTbas2 = EXT2_T * InvBasis2;
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: InvBasisX / EXTbasX|=" << time << "\n";
+  os << "|MATGRP: InvBasisX / EXTbasX|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_MATRIX_GROUP
   using Tidx = typename Telt::Tidx;
@@ -3110,13 +3105,13 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     }
   }
 # ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: RepresentVertexPermutationTest|=" << time << "\n";
+  os << "|MATGRP: RepresentVertexPermutationTest|=" << time << "\n";
 # endif
 #endif
   //
   MyMatrix<T> TheMatEquiv = FindTransformation(EXTbas1, EXTbas2, eEquiv);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: FindTransformation|=" << time << "\n";
+  os << "|MATGRP: FindTransformation|=" << time << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen;
   for (auto &eGen : ListMatrGens2) {
@@ -3124,22 +3119,22 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
     ListMatrGen.push_back(NewGen);
   }
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: ListMatrGen|=" << time << "\n";
+  os << "|MATGRP: ListMatrGen|=" << time << "\n";
 #endif
   FiniteMatrixGroupHelper<T, Telt, TintGroup> helper =
     ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(EXTbas2);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: helper|=" << time << "\n";
+  os << "|MATGRP: helper|=" << time << "\n";
 #endif
   MyMatrix<T> eLatt1 = Inverse(eBasis1) * TheMatEquiv;
   MyMatrix<T> eLatt2 = Inverse(eBasis2);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: eLattX|=" << time << "\n";
+  os << "|MATGRP: eLattX|=" << time << "\n";
 #endif
   std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup>(
       ListMatrGen, helper, eLatt1, eLatt2, os);
 #ifdef TIMINGS_MATRIX_GROUP
-  os << "|MAT_GRP: LinearSpace_Equivalence|=" << time << "\n";
+  os << "|MATGRP: LinearSpace_Equivalence|=" << time << "\n";
 #endif
   if (!opt)
     return {};

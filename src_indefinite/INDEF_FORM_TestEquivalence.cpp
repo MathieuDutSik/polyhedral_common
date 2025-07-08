@@ -83,7 +83,7 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_TestEquivalence\n";
+    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time << "\n";
     exit(e.eVal);
   }
   runtime(time);

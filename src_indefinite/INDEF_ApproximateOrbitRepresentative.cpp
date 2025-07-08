@@ -69,7 +69,7 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Normal termination of INDEF_ApproximateOrbitRepresentative\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_ApproximateOrbitRepresentative\n";
+    std::cerr << "Error in INDEF_ApproximateOrbitRepresentative runtime=" << time << "\n";
     exit(e.eVal);
   }
   runtime(time);

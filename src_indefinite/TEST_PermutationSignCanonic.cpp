@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     }
     std::cerr << "Normal termination of TestPermutationSignCanonic\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in TestPermutationSignCanonic\n";
+    std::cerr << "Error in TestPermutationSignCanonic, runtime=" << time << "\n";
     exit(e.eVal);
   }
   runtime(time);
