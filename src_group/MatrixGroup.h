@@ -80,7 +80,7 @@ template <typename T, typename Telt, typename TintGroup> struct FiniteMatrixGrou
   PreImager constant_pre_imager() const {
     return PreImager { EXTfaithful };
   }
-  PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm) const {
+  PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm, [[maybe_unused]] std::ostream& os) const {
     return constant_pre_imager();
   }
 };
@@ -126,7 +126,7 @@ template <typename T, typename Telt, typename TintGroup> struct FiniteIsotropicM
   PreImager constant_pre_imager() const {
     return PreImager(G, EXTfaithful);
   }
-  PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm) const {
+  PreImager pre_imager([[maybe_unused]] std::vector<MyMatrix<T>> const& l_matr, [[maybe_unused]] std::vector<Telt> const& l_perm, [[maybe_unused]] std::ostream& os) const {
     return constant_pre_imager();
   }
 };
@@ -157,11 +157,18 @@ template <typename T, typename Telt, typename TintGroup> struct GeneralMatrixGro
   int nbRow() const {
     return 0;
   }
-  PreImager pre_imager(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm) const {
+  PreImager pre_imager(std::vector<MyMatrix<T>> const& l_matr, std::vector<Telt> const& l_perm, [[maybe_unused]] std::ostream& os) const {
 #ifdef DEBUG_MATRIX_GROUP
-    std::cerr << "MAT_GRP: Before PreImager constructor\n";
+    os << "MAT_GRP: Before PreImager constructor\n";
 #endif
-    return PreImager(l_matr, l_perm, n);
+#ifdef TIMINGS_MATRIX_GROUP
+    MicrosecondTime time;
+#endif
+    PreImager result = PreImager(l_matr, l_perm, n);
+#ifdef TIMINGS_MATRIX_GROUP
+    os << "|MAT_GRP: GeneralMatrixGroupHelper::pre_imager|=" << time << "\n";
+#endif
+    return result;
   }
 };
 
@@ -489,7 +496,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
                           std::vector<MyMatrix<T>> const& ListMatr,
                           [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
                           Tgroup const &GRPperm, Thelper const &helper,
-                          Face const &eFace, [[maybe_unused]] std::ostream &os) {
+                          Face const &eFace, std::ostream &os) {
   using PreImager = typename Thelper::PreImager;
   using TintGroup = typename Tgroup::Tint;
 #ifdef DEBUG_MATRIX_GROUP
@@ -507,7 +514,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
   os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
   os << "MAT_GRP: MatrixIntegral_Stabilizer(has), index=" << index << "\n";
 #endif
-  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   std::vector<MyMatrix<T>> LGen1;
   for (auto &eGen : eStab.SmallGeneratingSet()) {
 #ifdef DEBUG_MATRIX_GROUP
@@ -545,7 +552,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
                                      std::vector<MyMatrix<T>> const& ListMatr,
                                      Tgroup const &GRPperm,
                                      Thelper const &helper, Face const &eFace,
-                                     [[maybe_unused]] std::ostream &os) {
+                                     std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_Stabilizer_RightCoset(has)\n";
 #endif
@@ -556,7 +563,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
   os << "MAT_GRP: |eStab|=" << eStab.size() << " |eFace|=" << eFace.count() << "\n";
 #endif
   std::vector<MyMatrix<T>> ListMatrGen;
-  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   for (auto &eGen : eStab.SmallGeneratingSet()) {
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eGen\n";
@@ -586,7 +593,7 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
                                     std::vector<MyMatrix<T>> const& ListMatr,
                                     Tgroup const &GRPperm,
                                     Thelper const &helper, Face const &eFace1,
-                                    Face const &eFace2, [[maybe_unused]] std::ostream &os) {
+                                    Face const &eFace2, std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Beginning of MatrixIntegral_RepresentativeAction(has)\n";
 #endif
@@ -599,7 +606,7 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
 #endif
     return {};
   }
-  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
 #ifdef DEBUG_MATRIX_GROUP
     os << "MAT_GRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
 #endif
@@ -1418,13 +1425,13 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
                                 std::vector<MyMatrix<T>> const& ListMatr,
                                 Tgroup const &eGRP, Thelper const &helper,
                                 [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm,
-                                [[maybe_unused]] std::ostream &os) {
+                                std::ostream &os) {
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |ListPermGens|=" << ListPermGens.size() << " |gen(eGRP)|=" << eGRP.GeneratorsOfGroup().size() << "\n";
 #endif
   using Telt = typename Tgroup::Telt;
   using PreImager = typename Thelper::PreImager;
-  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens);
+  PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
   std::vector<Telt> LGenSmall = eGRP.SmallGeneratingSet();
 #ifdef DEBUG_MATRIX_GROUP
   os << "MAT_GRP: Begin MatrixIntegral_PreImageSubgroup(has) |LGenSmall|=" << LGenSmall.size() << "\n";
@@ -1519,7 +1526,7 @@ void TestPreImageSubgroup(Thelper const &helper,
   using PreImager = typename Thelper::PreImager;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  PreImager pre_imager = helper.pre_imager(ListMatrGen, ListPermGen);
+  PreImager pre_imager = helper.pre_imager(ListMatrGen, ListPermGen, os);
   if (MatrPreImage.size() == 0) {
     if (OrigGRP.size() != 1) {
       std::cerr << "MAT_GRP: Error, in context=" << context << "\n";
@@ -1781,7 +1788,7 @@ LinearSpace_Stabilizer_DoubleCosetStabilizer_KernelRing(
 #ifdef TRACK_INFO_MATRIX_GROUP
     write_matrix_group(ListMatrGens, "LinearSpace_Stabilizer_DoubleCosetStabilizer_Kernel_f_stab");
 #endif
-    PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens);
+    PreImager pre_imager = helper.pre_imager(ListMatrGens, ListPermGens, os);
 #ifdef DEBUG_DOUBLE_COSET_ENUM
     os << "MAT_GRP: We have pre_imager\n";
 #endif
