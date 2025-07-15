@@ -1,0 +1,127 @@
+# Compiled Object files
+*.o
+*.obj
+*.elf
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Fortran module files
+*.mod
+*.smod
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Build directories
+build/
+cmake_build/
+_build/
+
+# CMake files
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+
+# Generated files
+*.generated.*
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+.project
+.cproject
+.settings/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# Log files
+*.log
+log_*
+error.log
+error_*.log
+err2
+out
+
+# Test and benchmark outputs
+CI_CONCLUSION
+
+# Input/output files with tilde backup
+*.h~
+*.cpp~
+*.g~
+*.in~
+*.nml~
+
+# Configuration and make files
+config.log
+config.status
+config.h
+configure
+autom4te.cache/
+
+# Package manager files
+conan.lock
+vcpkg_installed/
+
+# Profiling and debugging
+*.prof
+*.gcda
+*.gcno
+*.gcov
+gmon.out
+callgrind.out.*
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints/
+
+# Python cache (if any Python scripts)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archive files
+*.zip
+*.tar
+*.tar.gz
+*.tar.bz2
+*.7z
+
+# Specific to this project's structure
+# Submodule changes (track only the submodule reference)
+basic_common_cpp/
+
+# GAP computation files
+*.g
+!CI_tests/**/*.g
+!scripts/**/*.g
