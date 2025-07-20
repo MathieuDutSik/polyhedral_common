@@ -459,7 +459,7 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   The vector of Subspace1 / Subspace2 are no longer assumed independent
  */
 template <typename T>
-std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
+std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
@@ -474,6 +474,37 @@ std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
   if (Subspace1 * eEquiv != Subspace2)
     return {};
   return eEquiv;
+}
+
+
+// This addresses the problem, however in truth the conversion should happen
+// at a deeper level.
+template<typename T>
+inline typename std::enable_if<is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
+    MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
+    MyMatrix<T> const &Subspace2) {
+  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(G1, Subspace1, G2, Subspace2);
+}
+
+template<typename T>
+inline typename std::enable_if<!is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
+    MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
+    MyMatrix<T> const &Subspace2) {
+  using Tfield = typename overlying_field<T>::field_type;
+  MyMatrix<Tfield> G1_f = UniversalMatrixConversion<Tfield,T>(G1);
+  MyMatrix<Tfield> G2_f = UniversalMatrixConversion<Tfield,T>(G2);
+  MyMatrix<Tfield> Subspace1_f = UniversalMatrixConversion<Tfield,T>(Subspace1);
+  MyMatrix<Tfield> Subspace2_f = UniversalMatrixConversion<Tfield,T>(Subspace2);
+  std::optional<MyMatrix<Tfield>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(G1_f, Subspace1_f, G2_f, Subspace2_f);
+  if (opt) {
+    MyMatrix<Tfield> const& M_f = *opt;
+    MyMatrix<T> M = UniversalMatrixConversion<T,Tfield>(M_f);
+    return M;
+  } else {
+    return {};
+  }
 }
 
 template <typename T> struct SolutionSpecial {
