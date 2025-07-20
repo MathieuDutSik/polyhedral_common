@@ -48,7 +48,7 @@
 template <typename T, typename Telt>
 struct PreImager_Finite {
   MyMatrix<T> EXTfaithful;
-  MyMatrix<T> pre_image_elt(Telt const& elt) const {
+  MyMatrix<T> pre_image_elt(Telt const& elt, [[maybe_unused]] std::ostream& os) const {
     using Tidx = typename Telt::Tidx;
     Tidx nbRow_tidx = EXTfaithful.rows();
     std::vector<Tidx> v(nbRow_tidx);
@@ -64,6 +64,11 @@ struct PreImager_Finite {
     }
     return *opt;
   }
+#if defined SANITY_CHECK_MATRIX_GROUP || defined DEBUG_MATRIX_GROUP || defined TIMINGS_MATRIX_GROUP
+  std::string get_name() {
+    return "PreImager_Finite";
+  }
+#endif
 };
 
 template <typename T, typename Telt, typename TintGroup> struct FiniteMatrixGroupHelper {
@@ -93,7 +98,7 @@ struct PreImager_FiniteIsotropic {
   MyMatrix<T> EXTfaithful;
   PreImager_FiniteIsotropic(MyMatrix<T> const& _G, MyMatrix<T> const& _EXTfaithful) : G(_G), EXTfaithful(_EXTfaithful) {
   }
-  MyMatrix<T> pre_image_elt(Telt const& elt) const {
+  MyMatrix<T> pre_image_elt(Telt const& elt, [[maybe_unused]] std::ostream& os) const {
     MyMatrix<T> const &Subspace1 = EXTfaithful;
     int n_rows = Subspace1.rows();
     int n_cols = Subspace1.cols();
@@ -104,10 +109,21 @@ struct PreImager_FiniteIsotropic {
         Subspace2(i_row, i_col) = Subspace1(j_row, i_col);
       }
     }
+#ifdef DEBUG_MATRIX_GROUP
+    os << "MATGRP: PreImager_FiniteIsotropic::pre_image_elt, Subspace1=\n";
+    WriteMatrix(os, Subspace1);
+    os << "MATGRP: PreImager_FiniteIsotropic::pre_image_elt, Subspace2=\n";
+    WriteMatrix(os, Subspace2);
+#endif
     std::optional<MyMatrix<T>> opt =
       LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(G, Subspace1, G, Subspace2);
     return unfold_opt(opt, "The isotropic extension should work");
   }
+#if defined SANITY_CHECK_MATRIX_GROUP || defined DEBUG_MATRIX_GROUP || defined TIMINGS_MATRIX_GROUP
+  std::string get_name() {
+    return "PreImager_FiniteIsotropic";
+  }
+#endif
 };
 
 template <typename T, typename Telt, typename TintGroup> struct FiniteIsotropicMatrixGroupHelper {
@@ -143,10 +159,15 @@ public:
     std::cerr << "MATGRP: After building inner\n";
 #endif
   }
-  MyMatrix<T> pre_image_elt(Telt const& elt) const {
+  MyMatrix<T> pre_image_elt(Telt const& elt, [[maybe_unused]] std::ostream& os) const {
     std::optional<MyMatrix<T>> opt = inner.get_preimage(elt);
     return unfold_opt(opt, "The element elt should belong to the group");
   }
+#if defined SANITY_CHECK_MATRIX_GROUP || defined DEBUG_MATRIX_GROUP || defined TIMINGS_MATRIX_GROUP
+  std::string get_name() {
+    return "PreImager_General";
+  }
+#endif
 };
 
 template <typename T, typename Telt, typename TintGroup> struct GeneralMatrixGroupHelper {
@@ -520,7 +541,7 @@ MatrixIntegral_Stabilizer(std::vector<typename Tgroup::Telt> const &ListPermGens
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: MatrixIntegral_Stabilizer(has), before pre_image_elt\n";
 #endif
-    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen, os);
     LGen1.emplace_back(std::move(eMatr));
   }
 #ifdef TIMINGS_MATRIX_GROUP
@@ -568,7 +589,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eGen\n";
 #endif
-    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen, os);
     ListMatrGen.emplace_back(std::move(eMatr));
   }
 #ifdef TRACK_INFO_MATRIX_GROUP
@@ -580,7 +601,7 @@ MatrixIntegral_Stabilizer_RightCoset(std::vector<typename Tgroup::Telt> const &L
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: MatrixIntegral_Stabilizer_RightCoset(has), before pre_image_elt for eCos\n";
 #endif
-    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eCos);
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eCos, os);
     ListRightCoset.emplace_back(std::move(eMatr));
   }
   return {std::move(ListMatrGen), std::move(ListRightCoset)};
@@ -606,11 +627,24 @@ MatrixIntegral_RepresentativeAction(std::vector<typename Tgroup::Telt> const &Li
 #endif
     return {};
   }
+  Telt const& ePerm = *opt;
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MATGRP: MatrixIntegral_RepresentativeAction(has), ePerm=" << ePerm << "\n";
+#endif
   PreImager pre_imager = helper.pre_imager(ListMatr, ListPermGens, os);
 #ifdef DEBUG_MATRIX_GROUP
-    os << "MATGRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
+  os << "MATGRP: |ListMatr|=" << ListMatr.size() << " |ListPermGens|=" << ListPermGens.size() << " name=" << pre_imager.get_name() << "\n";
+  for (size_t iG=0; iG<ListMatr.size(); iG++) {
+    os << "MATGRP: iG=" << iG << " ePerm=" << ListPermGens[iG] << " eMatr=\n";
+    WriteMatrix(os, ListMatr[iG]);
+  }
+  os << "MATGRP: MatrixIntegral_RepresentativeAction(has), before pre_image_elt\n";
 #endif
-  return pre_imager.pre_image_elt(*opt);
+  std::optional<MyMatrix<T>> opt2 = pre_imager.pre_image_elt(ePerm, os);
+#ifdef DEBUG_MATRIX_GROUP
+  os << "MATGRP: MatrixIntegral_RepresentativeAction(has), after pre_image_elt\n";
+#endif
+  return opt2;
 }
 
 template<typename T, typename Tmod, typename Telt>
@@ -1028,7 +1062,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
 #ifdef DEBUG_MATRIX_GROUP
       os << "MATGRP: FindingSmallOrbit(has)), before pre_image_elt for eGen\n";
 #endif
-      MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen);
+      MyMatrix<T> eMat = pre_imager.pre_image_elt(eGen, os);
       LMatr.emplace_back(std::move(eMat));
     }
     MyMatrix<T> InvBasis = ComputeBasisInvariantSpace(LMatr, TheSpace, TheMod);
@@ -1441,7 +1475,7 @@ MatrixIntegral_PreImageSubgroup(std::vector<typename Tgroup::Telt> const &ListPe
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: MatrixIntegral_PreImageSubgroup(has), before pre_image_elt for eGen\n";
 #endif
-    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen, os);
     ListMatrGen1.emplace_back(std::move(eMatr));
   }
 #ifdef DEBUG_MATRIX_GROUP
@@ -1568,7 +1602,7 @@ void TestPreImageSubgroup(Thelper const &helper,
 #ifdef DEBUG_MATRIX_GROUP
     os << "MATGRP: TestPreImageSubgroup, before pre_image_elt for eGen\n";
 #endif
-    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen);
+    MyMatrix<T> eMatr = pre_imager.pre_image_elt(eGen, os);
     Telt eGenB = f_map_matr(eMatr);
     if (eGen != eGenB) {
       n_orig_gen_error += 1;
@@ -1649,7 +1683,7 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   Telt id = GRP_U.get_identity();
   auto get_result_reduction=[&](Telt const& x_u, Telt const& x_v) -> Tresult {
     Telt cos_perm_cand = x_u * cos_perm * x_v;
-    MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand);
+    MyMatrix<T> cos_matr_cand = pre_imager.pre_image_elt(cos_perm_cand, os);
     size_t max_iter = 1000;
     DoubleCosetSimplification<T> udv = ExhaustiveMatrixDoubleCosetSimplifications(cos_matr_cand, ListMatr_U, ListMatr_V, max_iter, os);
     T norm_cand = f_norm(udv.d_cos_red);
