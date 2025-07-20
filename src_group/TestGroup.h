@@ -89,6 +89,9 @@ void CheckSubgroupInclusion(std::vector<MyMatrix<T>> const& ListGRP, std::vector
 
 template <typename T, typename Tgroup>
 void CheckGroupEquality(std::vector<MyMatrix<T>> const& ListGens1, std::vector<MyMatrix<T>> const& ListGens2, [[maybe_unused]] std::ostream& os) {
+  if (ListGens1.size() == 0) {
+    return;
+  }
   int n = ListGens1[0].rows();
   T limit(10000);
   for (int N=2; N<=20; N++) {

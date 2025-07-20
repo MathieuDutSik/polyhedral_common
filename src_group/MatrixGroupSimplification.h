@@ -1039,6 +1039,9 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
 std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexityKernel_V2(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, std::ostream& os) {
+  if (ListM.size() <= 1) {
+    return ListM;
+  }
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION_DISABLE
   auto f_total_comp=[&](std::vector<TcombPair<Ttype,Tnorm>> const& ListM) -> Tnorm {
     Tnorm Tcomp(0);
