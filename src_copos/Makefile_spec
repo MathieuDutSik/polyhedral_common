@@ -1,5 +1,5 @@
-#PROGRAM		= CP_TestCopositivity
-PROGRAM		= CP_TestCompletePositivity
+PROGRAM		= CP_TestCopositivity
+#PROGRAM		= CP_TestCompletePositivity
 #PROGRAM		= CP_CopositiveMaxNorm
 
 OBJECTS		= $(PROGRAM:%=%.o)

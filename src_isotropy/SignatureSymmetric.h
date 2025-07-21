@@ -230,6 +230,15 @@ template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat, [[maybe
 #endif
 }
 
+template <typename T> bool IsPositiveSemidefinite(MyMatrix<T> const &SymMat, std::ostream& os) {
+  NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
+  MyMatrix<T> const& SymMat2 = NSP1.NonDegenerate;
+  DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);
+  if (NSP2.nbMinus > 0) {
+    return false;
+  }
+  return true;
+}
 
 // clang-format off
 #endif  //  SRC_LATT_SIGN_SIGNATURE_H_

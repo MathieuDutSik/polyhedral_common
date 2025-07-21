@@ -5487,7 +5487,6 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
   dd_LPSolve(lp, dd_choiceRedcheckAlgorithm, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
-    goto _L999;
   } else {
     for (j = 0; j < lp->d; j++) {
       certificate[j] = lp->sol[j];

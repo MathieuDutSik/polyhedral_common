@@ -8,6 +8,7 @@
 #include "MAT_MatrixInt.h"
 #include "POLY_LinearProgramming.h"
 #include "Positivity.h"
+#include "SignatureSymmetric.h"
 #include <string>
 #include <unordered_set>
 #include <utility>
@@ -1025,6 +1026,14 @@ CopositivityTestResult<Tint>
 TestCopositivity(MyMatrix<T> const &eSymmMat,
                  MyMatrix<Tint> const &InitialBasis, std::ostream &os) {
   int n = eSymmMat.rows();
+  if (TestCopositivityByPositivityCoeff(eSymmMat)) {
+    CopositivityTestResult<Tint> result{true, "positive coeff", {}};
+    return result;
+  }
+  if (IsPositiveSemidefinite(eSymmMat, os)) {
+    CopositivityTestResult<Tint> result{true, "positive semidefinite", {}};
+    return result;
+  }
 #ifdef DEBUG_COPOSITIVITY
   size_t nbCone = 0;
 #endif
