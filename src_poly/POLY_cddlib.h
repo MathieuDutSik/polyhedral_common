@@ -4485,7 +4485,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
       printf(
           "The %ld th row is linearity and redundancy checking is skipped.\n",
           itest);
-    goto _L99;
+    return answer;
   }
 
   /* Create an LP data for redundancy checking */
@@ -4499,7 +4499,6 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
   dd_LPSolve_data(lp, dd_choiceRedcheckAlgorithm, &err, data, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
-    goto _L999;
   } else {
     for (j = 0; j < lp->d; j++)
       certificate[j] = lp->sol[j];
@@ -4514,9 +4513,7 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
         fprintf(stdout, "==> %ld th row is redundant.\n", itest);
     }
   }
-_L999:
   dd_FreeLPData(lp);
-_L99:
   return answer;
 }
 
@@ -4542,7 +4539,7 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
       printf(
           "The %ld th row is linearity and redundancy checking is skipped.\n",
           itest);
-    goto _L99;
+    return answer;
   }
 
   /* Create an LP data for redundancy checking */
@@ -4558,7 +4555,6 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
   dd_LPSolve0(lp, dd_DualSimplex, &err, maxiter, os);
   if (err != dd_NoError) {
     *error = err;
-    goto _L999;
   } else {
     set_copy(*redset, lp->redset_extra);
     set_delelem(*redset, itest);
@@ -4578,9 +4574,7 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
         fprintf(stdout, "==> %ld th row is redundant.\n", itest);
     }
   }
-_L999:
   dd_FreeLPData(lp);
-_L99:
   return answer;
 }
 
@@ -5510,7 +5504,6 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
                 itest);
     }
   }
-_L999:
   dd_FreeLPData(lp);
   return answer;
 }

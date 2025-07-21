@@ -1715,7 +1715,9 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
   while(true) {
     size_t n_improv = 0;
     for (int i=0; i<n_iter; i++) {
+#ifdef DEBUG_DOUBLE_COSET_ENUM
       os << "MATGRP: i=" << i << " / " << n_iter << " res_work.second=" << res_work.second << "\n";
+#endif
       Telt rand_u = GRP_U.rand();
       Telt rand_v = GRP_V.rand();
       Telt elt_u_cand = rand_u * elt_u;
@@ -1726,8 +1728,10 @@ ResultSimplificationDoubleCosets<T, typename Tgroup::Telt> IterativeSimplificati
         res_work = res_cand;
         elt_u = elt_u_cand;
         elt_v = elt_v_cand;
+#ifdef DEBUG_DOUBLE_COSET_ENUM
         os << "MATGRP:   Now norm_work=" << res_work.second << " cos_matr_work=\n";
         WriteMatrix(os, res_work.first.udv.d_cos_red);
+#endif
         if (res_work.second == absolute_minimum) {
           return get_final();
         }
