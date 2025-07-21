@@ -428,7 +428,7 @@ FullNamelist StandardHeuristicDualDescriptionProgram_TS() {
 
 template <typename TintGroup>
 void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
-                  TheHeuristic<TintGroup> &eHeu, std::ostream &os) {
+                  TheHeuristic<TintGroup> &eHeu, [[maybe_unused]] std::ostream &os) {
   SingleBlock const& BlockHEU = eFull.get_block("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.get_string(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
