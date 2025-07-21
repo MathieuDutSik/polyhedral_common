@@ -19,6 +19,34 @@ case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 1
            name:="Dannenberg2", reply:=false);;
 
 
+ListCase_block1:=[case1, case2, case3, case4, case5];
+
+TheDir:="Examples_from_Alexander_Oertel";
+
+
+GetCases_90:=function()
+    local TheCommand, TheFileLS, ListFiles, ListCases, eFile, fFile, eMat, eCase;
+    TheFileLS:=Filename(DirectoryTemporary(), "LS_file");
+    TheCommand:=Concatenation("(cd ", TheDir, " && find . -name \"cop*\" > ", TheFileLS, ")");
+    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    ListFiles:=ReadTextFile(TheFileLS);
+    #
+    ListCases:=[];
+    for eFile in ListFiles
+    do
+      	fFile:=Concatenation(TheDir, "/", eFile);
+	Print("fFile=", fFile, "\n");
+        eMat:=ReadMatrixFile(fFile);
+        eCase:=rec(eMat:=eMat, reply:=true, name:=eFile);
+        Add(ListCases, eCase);
+    od;
+    return ListCases;
+end;
+
+ListCase_block2:=GetCases_90();
+
+ListCase:=Concatenation(ListCase_block1, ListCase_block2);
 
 
 TestCopositivity:=function(eCase)
@@ -48,20 +76,29 @@ TestCopositivity:=function(eCase)
 end;
 
 
-ListCase:=[case1, case2, case3, case4, case5];
+ProcessAllCases:=function()
+    local n_error, ListCaseError, i_case, eCase, test;
+    n_error:=0;
+    ListCaseError:=[];
+    i_case:=0;
+    for eCase in ListCase
+    do
+        i_case:=i_case + 1;
+        Print("TestCopositivity, i_case=", i_case, " name=", eCase.name, "\n");
+        test:=TestCopositivity(eCase);
+        if test=false then
+            n_error:=n_error + 1;
+            Add(ListCaseError, eCase);
+        fi;
+    od;
+    Print("n_case=", Length(ListCase), " n_error=", n_error, "\n");
+    return rec(n_error:=n_error, ListCaseError:=ListCaseError);
+end;
 
-n_error:=0;
-ListCaseError:=[];
-for eCase in ListCase
-do
-    test:=TestCopositivity(eCase);
-    if test=false then
-        n_error:=n_error + 1;
-        Add(ListCaseError, eCase);
-    fi;
-od;
-Print("n_case=", Length(ListCase), " n_error=", n_error, "\n");
-if n_error > 0 then
+RecResult:=ProcessAllCases();
+Print("RecResult.n_error=", RecResult.n_error, "\n");
+
+if RecResult.n_error > 0 then
     # Error case
     Print("Error case\n");
     GAP_EXIT_CODE(1);

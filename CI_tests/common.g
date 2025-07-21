@@ -130,6 +130,7 @@ ReadMatrixFile:=function(eFile)
     return TheMat;
 end;
 
+
 WriteListMatrixFile:=function(eFile, ListMat)
     local output, eMat;
     output:=OutputTextFile(eFile, true);
@@ -200,13 +201,14 @@ SaveDataToFile:=function(FileName, OBJ)
   CloseStream(output);
 end;
 
-ListFileDirectory:=function(TheDir)
-    local FileOUT, TheCommand, ListFiles, file, TheRead, len, TheReadRed;
-    FileOUT:=Filename(DirectoryTemporary(), "LSfile");
-    TheCommand:=Concatenation("ls ", TheDir, " > ", FileOUT);
-    Exec(TheCommand);
-    ListFiles:=[];
-    file := InputTextFile(FileOUT);
+ReadTextFile:=function(FileIn)
+    local ListLines, file, TheRead, len, TheReadRed;
+    ListLines:=[];
+    if IsExistingFile(FileIn)= false then
+        Print("ReadTextFile error, the file FileIn=", FileIn, " is missing\n");
+        Error("Correct your stuff");
+    fi;
+    file := InputTextFile(FileIn);
     while(true)
     do
         TheRead:=ReadLine(file);
@@ -215,14 +217,23 @@ ListFileDirectory:=function(TheDir)
         fi;
         len:=Length(TheRead);
         TheReadRed:=TheRead{[1..len-1]};
-        Add(ListFiles, TheReadRed);
+        Add(ListLines, TheReadRed);
     od;
     CloseStream(file);
-    RemoveFileIfExist(FileOUT);
-    return ListFiles;
+    return ListLines;
 end;
 
 
+
+ListFileDirectory:=function(TheDir)
+    local FileOUT, TheCommand, ListFiles;
+    FileOUT:=Filename(DirectoryTemporary(), "LSfile");
+    TheCommand:=Concatenation("ls ", TheDir, " > ", FileOUT);
+    Exec(TheCommand);
+    ListFiles:=ReadTextFile(FileOUT);
+    RemoveFileIfExist(FileOUT);
+    return ListFiles;
+end;
 
 ClassicalSporadicLattices:=function(TheName)
     local TheNameRed, dim, TheMat, ListPair, ePair, ListNames, ListGram, len, i;

@@ -29,7 +29,7 @@ RUN DEBIAN_FRONTEND="noninteractive" apt-get -y install tzdata
 # Install classic Ubuntu packages
 RUN apt-get install -y libgdbm-dev libsnappy-dev pkg-config rlwrap
 RUN apt-get install -y screen software-properties-common sudo unzip zlib1g-dev zsh
-RUN apt-get install -y wget emacs joe
+RUN apt-get install -y wget emacs joe valgrind
 RUN apt-get install -y g++ gcc
 RUN apt-get install -y git cmake make
 

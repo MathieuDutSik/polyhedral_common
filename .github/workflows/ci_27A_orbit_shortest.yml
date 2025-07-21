@@ -5,7 +5,7 @@ name: CI(27) of Orbit of shortest vectors
 on:
   # One time per month
   schedule:
-    - cron: "0 0 27 * *"
+    - cron: "0 0 27 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -108,7 +108,7 @@ jobs:
           pwd
           echo "After compilation of enumeration of orbits of shortest vectors"
 
-          cd CI_tests/27_OrbitShortestVector
+          cd CI_tests/27A_OrbitShortestVector
           ../../gap.sh < TestOrbitVector.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
