@@ -3135,10 +3135,14 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
   // Setting up the Control C event.
   ExitEvent = false;
   if (Get_InterceptCtrlC_statuc(eFull, std::cerr)) {
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     std::cerr << "RDD: Before submission of signal_callback_handler\n";
+#endif
     signal(SIGINT, signal_callback_handler);
   } else {
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
     std::cerr << "RDD: Do not capture the CtrlC event\n";
+#endif
   }
   //
   using TintGroup = typename Tgroup::Tint;
@@ -3178,7 +3182,9 @@ void MainFunctionSerialDualDesc(FullNamelist const &eFull, std::ostream &os) {
     throw TerminalException{1};
   };
   vectface TheOutput = get_vectface();
-  std::cerr << "|TheOutput|=" << TheOutput.size() << "\n";
+#ifdef DEBUG_RECURSIVE_DUAL_DESC
+  std::cerr << "RDD: |TheOutput|=" << TheOutput.size() << "\n";
+#endif
   //
   OutputFacets_file(EXT, GRP, TheOutput, AllArr.OutFile, AllArr.OutFormat,
                     std::cerr);

@@ -11,6 +11,10 @@
 #include <vector>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_HEURISTICS
+#endif
+
 //
 // Heuristic business
 //
@@ -428,7 +432,9 @@ void SetHeuristic(FullNamelist const &eFull, std::string const &NamelistEnt,
   SingleBlock const& BlockHEU = eFull.get_block("HEURISTIC");
   std::string NamelistEntFile = BlockHEU.get_string(NamelistEnt);
   if (NamelistEntFile != "unset.heu") {
+#ifdef DEBUG_HEURISTICS
     os << "NamelistEntFile for heuristic=" << NamelistEntFile << "\n";
+#endif
     IsExistingFileDie(NamelistEntFile);
     std::ifstream is(NamelistEntFile);
     try {
@@ -449,7 +455,9 @@ void SetThompsonSampling(FullNamelist const &eFull,
   SingleBlock const& BlockHEU = eFull.get_block("HEURISTIC");
   std::string const& NamelistEntFile = BlockHEU.get_string(NamelistEnt);
   if (NamelistEntFile != "unset.ts") {
+#ifdef DEBUG_HEURISTICS
     os << "NamelistEntFile for Thompson sampling=" << NamelistEntFile << "\n";
+#endif
     IsExistingFileDie(NamelistEntFile);
     try {
       FullNamelist eFullN = NAMELIST_ThompsonSamplingRuntime();
