@@ -58,7 +58,7 @@ jobs:
           sudo apt install -y libgmp-dev
           sudo apt install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt install -y libglpk-dev
-          sudo apt install -y autoconf autotools-dev libtool
+          sudo apt install -y autoconf automake autotools-dev libtool
           sudo apt install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt install -y openmpi-bin libopenmpi-dev
           sudo apt install -y autoconf autotools-dev libtool
@@ -114,9 +114,9 @@ jobs:
           ln -s gap-4.14.0/bin/gap.sh .
 
           # Downloading and installing PPL
-          wget -q https://www.bugseng.com/products/ppl/download/ftp/releases/1.2/ppl-1.2.tar.xz
-          tar xf ppl-1.2.tar.xz
-          cd ppl-1.2
+          git clone https://github.com/BUGSENG/PPL
+          cd PPL
+          autoreconf -i
           ./configure --prefix=$PPL_PATH && make && make install
           mkdir -p /home/runner/.local/bin/
           ln -s $PPL_PATH/bin/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
