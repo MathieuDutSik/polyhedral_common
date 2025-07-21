@@ -54,7 +54,6 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
-          sudo apt-get install -y autoconf autotools-dev libtool
 
       - name: Build test code
         run: |
