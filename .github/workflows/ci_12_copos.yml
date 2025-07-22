@@ -102,7 +102,7 @@ jobs:
           tar -xzf gap-4.14.0.tar.gz
           cd gap-4.14.0 && ./configure && make && cd ..
           pwd
-          ln -s gap-4.14.0/bin/gap.sh .
+          ln -s gap-4.14.0/gap gap.sh
 
       - name: Test copositivity software
         run: |
