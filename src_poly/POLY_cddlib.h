@@ -8762,6 +8762,7 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #ifdef DEBUG_CDD
     os << "CDD: Error is TooManyIterations, calling CDD_LinearProgramming_exact_V1\n";
 #endif
+    dd_FreeLPData(lp);
     return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
   }
 #ifdef DEBUG_CDD
@@ -8776,6 +8777,7 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #ifdef DEBUG_CDD
     os << "CDD: We have optB\n";
 #endif
+    dd_FreeLPData(lp);
     if (optB) {
 #ifdef DEBUG_CDD
       os << "CDD: The lifing of floating point solution went nicely\n";

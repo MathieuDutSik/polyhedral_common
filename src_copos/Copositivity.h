@@ -198,15 +198,6 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
       T eZ = Z[i];
       Lambda[i] = eZ / AII[i] + ListH[i];
       T eX_q = eNumber + Lambda[i] * AII[i];
-#ifdef SANITY_CHECK_COPOSITIVITY
-      mpz_class eDen = eX_q.get_den();
-      if (eDen > 1) {
-        std::cerr << "COP: eDen should be equal to 1\n";
-        std::cerr << "COP: eZ=" << eZ << "\n";
-        std::cerr << "COP: eX_q=" << eX_q << "\n";
-        throw TerminalException{1};
-      }
-#endif
       X(i) = UniversalScalarConversion<Tint, T>(eX_q);
     }
 #ifdef DEBUG_COPOSITIVITY
@@ -672,8 +663,8 @@ SingleTestStrictCopositivity(MyMatrix<T> const &eSymmMat,
 
 template <typename T, typename Tint>
 CopositivityTestResult<Tint> SingleTestCopositivity(MyMatrix<T> const &eSymmMat,
-                                              MyMatrix<Tint> const &TheBasis,
-                                              MyMatrix<T> const &eSymmMatB) {
+                                                    MyMatrix<Tint> const &TheBasis,
+                                                    MyMatrix<T> const &eSymmMatB) {
   int n = eSymmMat.rows();
   MyVector<Tint> eVectZero;
   for (int i = 0; i < n; i++)
@@ -709,21 +700,24 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
   MyMatrix<T> NSP = NullspaceMat(eSymmMat);
   int nbCol = NSP.cols();
   int nbNSP = NSP.rows();
-  if (nbNSP == 0)
+  if (nbNSP == 0) {
     return {true, "on the surface ok", eVectZero};
+  }
   MyMatrix<T> FAC(nbCol + 1, nbNSP + 1);
   for (int iCol = 0; iCol < nbCol; iCol++) {
-    FAC(iCol, 0) = 0;
-    for (int iNSP = 0; iNSP < nbNSP; iNSP++)
+    FAC(iCol, 0) = T(0);
+    for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
       FAC(iCol, iNSP + 1) = NSP(iNSP, iCol);
+    }
   }
   MyVector<T> ToBeMinimized(nbNSP + 1);
   ToBeMinimized(0) = 0;
   FAC(nbCol, 0) = -1;
   for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
-    T eSum = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
+    T eSum(0);
+    for (int iCol = 0; iCol < nbCol; iCol++) {
       eSum += NSP(iNSP, iCol);
+    }
     ToBeMinimized(iNSP + 1) = eSum;
     FAC(nbCol, iNSP + 1) = eSum;
   }
@@ -732,9 +726,10 @@ CopositivityTestResult<Tint> SearchByZeroInKernel(MyMatrix<T> const &eSymmMat,
     return {true, "on the surface ok", eVectZero};
   MyVector<T> eVect1(nbCol);
   for (int iCol = 0; iCol < nbCol; iCol++) {
-    T eSum = 0;
-    for (int iNSP = 0; iNSP < nbNSP; iNSP++)
+    T eSum(0);
+    for (int iNSP = 0; iNSP < nbNSP; iNSP++) {
       eSum += eSol.DirectSolution(iNSP) * NSP(iNSP, iCol);
+    }
     eVect1(iCol) = eSum;
   }
   MyVector<T> eVect2 = RemoveFractionVector(eVect1);
