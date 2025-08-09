@@ -1511,10 +1511,9 @@ LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat, std::ostream &os) 
     return false;
   };
   int max_runtime_second = 0;
-  std::optional<std::vector<Tout>> opt =
+  std::vector<Tout> l_obj =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
-  std::vector<Tout> l_obj = unfold_opt(opt, "Enumeration unexpectedly failed");
 
   std::unordered_set<MyMatrix<Tint>> s_gen;
   auto f_insert_gen = [&](MyMatrix<Tint> const &M) -> void {
@@ -1625,10 +1624,9 @@ LORENTZ_GetOrbitRepresentative_Kernel(MyMatrix<T> const &LorMat, T const &X,
     return false;
   };
   int max_runtime_second = 0;
-  std::optional<std::vector<Tout>> opt =
+  std::vector<Tout> l_obj =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
-  std::vector<Tout> l_obj = unfold_opt(opt, "Enumeration unexpectedly failed");
   if (X != 0) {
     std::cerr << "LORPERF: Some code needs to be written for one sign\n";
     std::cerr

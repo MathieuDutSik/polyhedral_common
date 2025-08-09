@@ -474,8 +474,7 @@ inline void serialize(Archive &ar, DatabaseEntry_Serial<Tobj, TadjO> &eRec,
 } // namespace boost::serialization
 
 template <typename Tdata, typename Fincorrect>
-std::optional<std::vector<
-    DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>>
+std::vector<DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>
 EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
                          int const &max_runtime_second) {
   using Tobj = typename Tdata::Tobj;
@@ -541,16 +540,13 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
       l_status[pos] = val_i;
     }
   };
-  bool test = compute_adjacency_serial<
+  (void)compute_adjacency_serial<
       Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
       decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
       decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
       decltype(f_repr), decltype(f_spann)>(
       max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
       f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
-  if (!test) {
-    return {};
-  }
   return l_obj;
 }
 

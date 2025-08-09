@@ -41,13 +41,8 @@ void process_A(FullNamelist const &eFull) {
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
-  std::optional<std::vector<Tout>> opt = EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+  std::vector<Tout> l_tot = EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
       data_func, f_incorrect, max_runtime_second);
-  if (!opt) {
-    std::cerr << "Failed to terminate the enumeration, which is abnormal\n";
-    throw TerminalException{1};
-  }
-  std::vector<Tout> const& l_tot = *opt;
   std::ofstream os_out(OutFile);
   bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
   if (result) {
