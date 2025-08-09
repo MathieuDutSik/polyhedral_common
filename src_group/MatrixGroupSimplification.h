@@ -1814,12 +1814,33 @@ struct DoubleCosetSimplification {
   MyMatrix<T> v_red; // The v_reduction element
 };
 
-
-// The double coset is U x V
 template<typename T>
-DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter, [[maybe_unused]] std::ostream& os) {
-  std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
-  std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
+T get_ellinfinity_norm_double_coset(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens) {
+  T norm(0);
+  auto f_process_mat=[&](MyMatrix<T> const& M) -> void {
+    int n_row = M.rows();
+    int n_col = M.cols();
+    for (int i_row=0; i_row<n_row; i_row++) {
+      for (int i_col=0; i_col<n_col; i_col++) {
+        T val = T_abs(M(i_row,i_col));
+        if (val > norm) {
+          norm = val;
+        }
+      }
+    }
+  };
+  f_process_mat(d_cos);
+  for (auto &eM: u_gens) {
+    f_process_mat(eM);
+  }
+  for (auto &eM: v_gens) {
+    f_process_mat(eM);
+  }
+  return norm;
+}
+
+template<typename T, typename Fcheck>
+std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplifications_Generic(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, Fcheck f_check, [[maybe_unused]] std::ostream& os) {
   int n_gens_u = u_gens_tot.size();
   int n_gens_v = v_gens_tot.size();
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
@@ -1848,8 +1869,7 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
     indices_v.push_back(i);
   }
 
-
-  auto f_search_uv=[&]() -> bool {
+  auto f_search_uv=[&]() -> std::optional<bool> {
     for (int u=0; u<n_gens_u; u++) {
       for (int v=0; v<n_gens_v; v++) {
         int u2 = indices_u[u];
@@ -1857,58 +1877,80 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
         MyMatrix<T> const& u_gen = u_gens_tot[u2];
         MyMatrix<T> const& v_gen = v_gens_tot[v2];
         MyMatrix<T> d_cos_cand = u_gen * d_cos_work * v_gen;
+        if (!f_check(d_cos_cand)) {
+          return {};
+        }
         T norm_cand = f_norm(d_cos_cand);
         if (norm_cand < norm_work) {
+          MyMatrix<T> u_gen_candidate = u_gen * u_red;
+          MyMatrix<T> v_gen_candidate = v_red * v_gen;
+          if (!f_check(u_gen_candidate) || !f_check(v_gen_candidate)) {
+            return {};
+          }
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
           os << "DCOS_SIMP: Improving with u2=" << u2 << " v2=" << v2 << " XXX u=" << u << " v=" << v << "\n";
 #endif
           d_cos_work = d_cos_cand;
           norm_work = norm_cand;
-          u_red = u_gen * u_red;
-          v_red = v_red * v_gen;
+          u_red = u_gen_candidate;
+          v_red = v_gen_candidate;
           return true;
         }
       }
     }
     return false;
   };
-  auto f_search_u=[&]() -> bool {
+  auto f_search_u=[&]() -> std::optional<bool> {
     for (int u=0; u<n_gens_u; u++) {
       int u2 = indices_u[u];
       MyMatrix<T> const& u_gen = u_gens_tot[u2];
       MyMatrix<T> d_cos_cand = u_gen * d_cos_work;
+      if (!f_check(d_cos_cand)) {
+        return {};
+      }
       T norm_cand = f_norm(d_cos_cand);
       if (norm_cand < norm_work) {
+        MyMatrix<T> u_gen_candidate = u_gen * u_red;
+        if (!f_check(u_gen_candidate)) {
+          return {};
+        }
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
         os << "DCOS_SIMP: Improving with u2=" << u2 << "\n";
 #endif
         d_cos_work = d_cos_cand;
         norm_work = norm_cand;
-        u_red = u_gen * u_red;
+        u_red = u_gen_candidate;
         return true;
       }
     }
     return false;
   };
-  auto f_search_v=[&]() -> bool {
+  auto f_search_v=[&]() -> std::optional<bool> {
     for (int v=0; v<n_gens_v; v++) {
       int v2 = indices_v[v];
       MyMatrix<T> const& v_gen = v_gens_tot[v2];
       MyMatrix<T> d_cos_cand = d_cos_work * v_gen;
+      if (!f_check(d_cos_cand)) {
+        return {};
+      }
       T norm_cand = f_norm(d_cos_cand);
       if (norm_cand < norm_work) {
+        MyMatrix<T> v_gen_candidate = v_red * v_gen;
+        if (!f_check(v_gen_candidate)) {
+          return {};
+        }
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
         os << "DCOS_SIMP: Improving with v2=" << v2 << "\n";
 #endif
         d_cos_work = d_cos_cand;
         norm_work = norm_cand;
-        v_red = v_red * v_gen;
+        v_red = v_gen_candidate;
         return true;
       }
     }
     return false;
   };
-  auto f_search=[&]() -> bool {
+  auto f_search=[&]() -> std::optional<bool> {
     int chosen_method = 3;
     f_random_transpose(indices_u);
     f_random_transpose(indices_v);
@@ -1916,19 +1958,28 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
       return f_search_uv();
     }
     if (chosen_method == 2) {
-      bool test_u = f_search_u();
-      if (test_u) {
+      std::optional<bool> test_u = f_search_u();
+      if (!test_u) {
+        return {};
+      }
+      if (*test_u) {
         return true;
       }
       return f_search_v();
     }
     if (chosen_method == 3) {
-      bool test_u = f_search_u();
-      if (test_u) {
+      std::optional<bool> test_u = f_search_u();
+      if (!test_u) {
+        return {};
+      }
+      if (*test_u) {
         return true;
       }
-      bool test_v = f_search_v();
-      if (test_v) {
+      std::optional<bool> test_v = f_search_v();
+      if (!test_v) {
+        return {};
+      }
+      if (*test_v) {
         return true;
       }
       return f_search_uv();
@@ -1937,24 +1988,149 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix
   };
   size_t n_iter = 0;
   while(true) {
-    bool test = f_search();
+    std::optional<bool> test = f_search();
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
     os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
 #endif
     if (!test) {
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications bound violation at n_iter=" << n_iter << "\n";
+#endif
+      return {};
+    }
+    if (!*test) {
+#ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
       os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(A)=" << n_iter << " norm_work=" << norm_work << "\n";
 #endif
-      return {u_red, d_cos_work, v_red};
+      return DoubleCosetSimplification<T>{u_red, d_cos_work, v_red};
     }
     if (n_iter == max_iter) {
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
       os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(B)=" << n_iter << " norm_work=" << norm_work << "\n";
 #endif
-      return {u_red, d_cos_work, v_red};
+      return DoubleCosetSimplification<T>{u_red, d_cos_work, v_red};
     }
     n_iter += 1;
   }
+}
+
+template<typename T, typename Tfinite>
+std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplifications_Tfinite(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, T const& max_val, std::ostream& os) {
+  int n = d_cos.rows();
+  if (u_gens_tot.size() == 0 && v_gens_tot.size() == 0) {
+    return DoubleCosetSimplification<T>{IdentityMat<T>(n), d_cos, IdentityMat<T>(n)};
+  }
+
+  // Doing basic conformity check
+  Tfinite max_poss_Tfinite = std::numeric_limits<Tfinite>::max() - 5;
+  T max_poss_T = UniversalScalarConversion<T,Tfinite>(max_poss_Tfinite);
+  // Add a factor 10, since if it is on the border, it will likely create an element of slightly larger
+  // l-infinity norm and thus we would have to rerun which this was expected all along.
+  // We need max_val**3 because we have products U X V.
+  // We have n * n again because of the double matrix product.
+  T worst_case = max_val * max_val * max_val * n * n * 10;
+  if (worst_case > max_poss_T) {
+    return {};
+  }
+
+  // Convert matrices to Tfinite
+  MyMatrix<Tfinite> d_cos_Tfinite = UniversalMatrixConversion<Tfinite,T>(d_cos);
+  std::vector<MyMatrix<Tfinite>> u_gens_tot_Tfinite = UniversalStdVectorMatrixConversion<Tfinite,T>(u_gens_tot);
+  std::vector<MyMatrix<Tfinite>> v_gens_tot_Tfinite = UniversalStdVectorMatrixConversion<Tfinite,T>(v_gens_tot);
+
+  // Determine the upper bound for checking
+  double max_poss_double = UniversalScalarConversion<double,Tfinite>(max_poss_Tfinite);
+  double max_val_double = cbrt(max_poss_double / (10 * n * n));
+  int64_t max_val_int64 = static_cast<int64_t>(max_val_double);
+  Tfinite max_val_Tfinite = UniversalScalarConversion<Tfinite,int64_t>(max_val_int64);
+
+  auto f_check=[&](MyMatrix<Tfinite> const& M) -> bool {
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        Tfinite val = T_abs(M(i,j));
+        if (val > max_val_Tfinite) {
+          return false;
+        }
+      }
+    }
+    return true;
+  };
+
+  // Run the algorithm using Tfinite
+  std::optional<DoubleCosetSimplification<Tfinite>> opt = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos_Tfinite, u_gens_tot_Tfinite, v_gens_tot_Tfinite, max_iter, f_check, os);
+  if (!opt) {
+    return {};
+  }
+
+  DoubleCosetSimplification<Tfinite> const& result = *opt;
+
+  // Convert back to T
+  DoubleCosetSimplification<T> result_T;
+  result_T.u_red = UniversalMatrixConversion<T,Tfinite>(result.u_red);
+  result_T.d_cos_red = UniversalMatrixConversion<T,Tfinite>(result.d_cos_red);
+  result_T.v_red = UniversalMatrixConversion<T,Tfinite>(result.v_red);
+
+  return result_T;
+}
+
+template<typename T>
+inline typename std::enable_if<!is_implementation_of_Z<T>::value,DoubleCosetSimplification<T>>::type ExhaustiveMatrixDoubleCosetSimplificationsInner(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, std::ostream& os) {
+  auto f_check=[&]([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+    return true;
+  };
+  std::optional<DoubleCosetSimplification<T>> opt = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
+  if (!opt) {
+    std::cerr << "SIMP: Unexpected bound violation in non-integer type ExhaustiveMatrixDoubleCosetSimplifications\n";
+    throw TerminalException{1};
+  }
+  return *opt;
+}
+
+/*
+  The reduction algorithm will decrease the L1 norm (and likely the related Linf norm).
+  Therefore, it makes sense to go into faster algorithmic when possible.
+  If that fails, we cleanly fail and use a slower algorithm.
+ */
+template<typename T>
+inline typename std::enable_if<is_implementation_of_Z<T>::value,DoubleCosetSimplification<T>>::type ExhaustiveMatrixDoubleCosetSimplificationsInner(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, std::ostream& os) {
+  T max_val = get_ellinfinity_norm_double_coset(d_cos, u_gens_tot, v_gens_tot);
+  // int8_t has some compilation problems.
+
+  // Trying int16_t
+  std::optional<DoubleCosetSimplification<T>> opt2 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int16_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  if (opt2) {
+    return *opt2;
+  }
+  // Trying int32_t
+  std::optional<DoubleCosetSimplification<T>> opt3 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int32_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  if (opt3) {
+    return *opt3;
+  }
+  // Trying int64_t
+  std::optional<DoubleCosetSimplification<T>> opt4 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int64_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  if (opt4) {
+    return *opt4;
+  }
+  // All fails, use the generic numeric
+  auto f_check=[&]([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+    return true;
+  };
+  std::optional<DoubleCosetSimplification<T>> opt_generic = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
+  if (!opt_generic) {
+    std::cerr << "SIMP: Unexpected bound violation in generic ExhaustiveMatrixDoubleCosetSimplifications\n";
+    throw TerminalException{1};
+  }
+  return *opt_generic;
+}
+
+// The double coset is U x V
+template<typename T>
+DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter, std::ostream& os) {
+  // Generate total generators (with inverses) once
+  std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
+  std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
+
+  return ExhaustiveMatrixDoubleCosetSimplificationsInner(d_cos, u_gens_tot, v_gens_tot, max_iter, os);
 }
 
 // clang-format off
