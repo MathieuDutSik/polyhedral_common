@@ -1793,9 +1793,39 @@ MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(MyMatrix<T> const& M,
 
 template<typename T>
 MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
-  MyMatrix<T> M_inv = Inverse(M);
-  MyMatrix<T> Mred_inv = ExhaustiveMatrixRightCosetSimplificationKernel(M_inv, list_mat);
-  return Inverse(Mred_inv);
+  int n = M.rows();
+  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+    T norm(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        norm += T_abs(Hin(i,j));
+      }
+    }
+    return norm;
+  };
+  MyMatrix<T> M_work = M;
+  T norm_work = f_norm(M);
+  while(true) {
+    int n_succ = 0;
+    for (auto & mat : list_mat) {
+      MyMatrix<T> M_cand = mat * M_work;
+      T norm_cand = f_norm(M_cand);
+      if (norm_cand < norm_work) {
+        M_work = M_cand;
+        norm_work = norm_cand;
+        n_succ += 1;
+      }
+    }
+    if (n_succ == 0) {
+      return M_work;
+    }
+  }
+}
+
+template<typename T>
+MyMatrix<T> ExhaustiveMatrixRightCosetSimplification(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+  return ExhaustiveMatrixRightCosetSimplificationKernel(M, list_mat_tot);
 }
 
 template<typename T>

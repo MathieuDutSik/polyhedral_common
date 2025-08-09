@@ -11,14 +11,14 @@
 #PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= LORENTZ_ReflectiveEdgewalk
 #PROGRAM		= LORENTZ_ComputeStabilizer_Vertex
-PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
+#PROGRAM		= LORENTZ_FundDomain_AllcockEdgewalk
 #PROGRAM		= LORENTZ_ComputeRoots_Vertex
 #PROGRAM		= COXDYN_FindExtensionsCoxMat
 #PROGRAM		= LORENTZ_SingleEdgewalk
 #PROGRAM		= COXDYN_GetFacetOneDomain
 #PROGRAM		= LORENTZ_MPI_PerfectLorentzian
 #PROGRAM		= LORENTZ_PERF_Isomorphism LORENTZ_PERF_Automorphism
-#PROGRAM		= LORENTZ_PERF_Isomorphism
+PROGRAM		= LORENTZ_PERF_Isomorphism
 #PROGRAM		= LORENTZ_PERF_Automorphism
 
 

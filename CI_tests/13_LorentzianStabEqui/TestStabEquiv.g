@@ -107,6 +107,7 @@ Equi_AllTests:=function()
         fi;
         iRec:=iRec + 1;
     od;
+    Print("Equi_AllTests, n_error=", n_error, "\n");
     return n_error;
 end;
 
@@ -128,6 +129,7 @@ Stab_AllTests:=function()
         fi;
         iRec:=iRec + 1;
     od;
+    Print("Stab_AllTests, n_error=", n_error, "\n");
     return n_error;
 end;
 
@@ -137,6 +139,7 @@ end;
 
 
 n_error:=AllTests();
+Print("n_error=", n_error, "\n");
 CI_Decision_Reset();
 if n_error > 0 then
     # Error case

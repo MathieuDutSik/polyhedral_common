@@ -1038,7 +1038,15 @@ private:
       os << "|COMB: INDEF_FORM_EquivalenceVector|=" << time << "\n";
 #endif
       if (opt) {
-        return opt;
+        MyMatrix<Tint> const& equiv = *opt;
+        std::vector<MyMatrix<Tint>> l_gen1 = approx1.GetApproximateGroup(os);
+        std::vector<MyMatrix<Tint>> l_gen1_red = ExhaustiveReductionComplexityGroupMatrix(l_gen1, os);
+        std::vector<MyMatrix<Tint>> l_gen2 = approx2.GetApproximateGroup(os);
+        std::vector<MyMatrix<Tint>> l_gen2_red = ExhaustiveReductionComplexityGroupMatrix(l_gen2, os);
+        size_t max_iter = 1000;
+        DoubleCosetSimplification<Tint> dcs = ExhaustiveMatrixDoubleCosetSimplifications(equiv, l_gen2_red, l_gen1_red, max_iter, os);
+        MyMatrix<Tint> const& equiv_red = dcs.d_cos_red;
+        return equiv_red;
       }
     }
     return {};

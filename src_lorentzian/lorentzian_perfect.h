@@ -2019,20 +2019,33 @@ LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
 #endif
       list_gen1.push_back(eGen_B);
     }
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: We have |list_gen1|=" << list_gen1.size() << "\n";
+#endif
     std::vector<MyMatrix<Tint>> list_gen_red1 = ExhaustiveReductionComplexityGroupMatrix(list_gen1, os);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: We have |list_gen_red1|=" << list_gen_red1.size() << "\n";
+#endif
     // Building an equivalence
     MyMatrix<Tint> const& eEquiv = res.equiv;
     // eEquiv * res1.Mred * eEquiv^T = res2.Mred
     MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: We have eEquivRet=\n";
+    WriteMatrix(os, eEquivRet);
+#endif
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
     f_test(eEquivRet);
 #endif
-    MyMatrix<Tint> eEquivRet2 = Inverse(eEquivRet);
-    MyMatrix<Tint> eEquivRet3 = ExhaustiveMatrixLeftCosetSimplification(eEquivRet2, list_gen_red1);
-#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-    f_test(eEquivRet3);
+    MyMatrix<Tint> eEquivRet_red = ExhaustiveMatrixRightCosetSimplification(eEquivRet, list_gen_red1);
+#ifdef DEBUG_LORENTZIAN_PERFECT
+    os << "LORPERF: We have eEquivRet_red=\n";
+    WriteMatrix(os, eEquivRet_red);
 #endif
-    return eEquivRet3;
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+    f_test(eEquivRet_red);
+#endif
+    return eEquivRet_red;
   }
   return {};
 }
