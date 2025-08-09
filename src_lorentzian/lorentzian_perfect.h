@@ -1483,6 +1483,34 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   return FullNamelist(ListBlock);
 }
 
+template <typename Tint, typename Telt, typename Tout>
+std::vector<MyMatrix<Tint>>
+LORENTZ_ExtractGeneratorsFromObjList(std::vector<Tout> const &l_obj) {
+  std::unordered_set<MyMatrix<Tint>> s_gen;
+  auto f_insert_gen = [&](MyMatrix<Tint> const &M) -> void {
+    if (!IsIdentity(M)) {
+      s_gen.insert(M);
+    }
+  };
+  for (auto &ent : l_obj) {
+    // Generators coming from the equivalences
+    for (auto &eAdj : ent.ListAdj) {
+      f_insert_gen(eAdj.x.eBigMat);
+    }
+    // Generators comoing from the stabilizers
+    for (auto &ePermGen : ent.x.GRP.SmallGeneratingSet()) {
+      MyMatrix<Tint> eMatrGen = RepresentVertexPermutation<Tint, Telt>(
+          ent.x.EXT, ent.x.EXT, ePermGen);
+      f_insert_gen(eMatrGen);
+    }
+  }
+  std::vector<MyMatrix<Tint>> l_gen;
+  for (auto &eGen : s_gen) {
+    l_gen.push_back(eGen);
+  }
+  return l_gen;
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat, std::ostream &os) {
@@ -1515,28 +1543,8 @@ LORENTZ_GetGeneratorsAutom_Reduced(MyMatrix<T> const &LorMat, std::ostream &os) 
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
 
-  std::unordered_set<MyMatrix<Tint>> s_gen;
-  auto f_insert_gen = [&](MyMatrix<Tint> const &M) -> void {
-    if (!IsIdentity(M)) {
-      s_gen.insert(M);
-    }
-  };
-  for (auto &ent : l_obj) {
-    // Generators coming from the equivalences
-    for (auto &eAdj : ent.ListAdj) {
-      f_insert_gen(eAdj.x.eBigMat);
-    }
-    // Generators comoing from the stabilizers
-    for (auto &ePermGen : ent.x.GRP.SmallGeneratingSet()) {
-      MyMatrix<Tint> eMatrGen = RepresentVertexPermutation<Tint, Telt>(
-          ent.x.EXT, ent.x.EXT, ePermGen);
-      f_insert_gen(eMatrGen);
-    }
-  }
-  std::vector<MyMatrix<Tint>> l_gen;
-  for (auto &eGen : s_gen) {
-    l_gen.push_back(eGen);
-  }
+  std::vector<MyMatrix<Tint>> l_gen = 
+      LORENTZ_ExtractGeneratorsFromObjList<Tint, Telt>(l_obj);
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORPERF: LORENTZ_GetGeneratorsAutom|=" << time << "\n";
 #endif
@@ -1868,8 +1876,15 @@ size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
   return hash_ret;
 }
 
+template<typename Tint>
+struct ResultEquivLorentzian {
+  MyMatrix<Tint> equiv;
+  std::vector<MyMatrix<Tint>> list_gen;
+};
+
+
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
+std::optional<ResultEquivLorentzian<Tint>>
 LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
                                         MyMatrix<T> const &LorMat2, std::ostream &os) {
 #ifdef TIMINGS_LORENTZIAN_PERFECT
@@ -1883,6 +1898,7 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
   }
   int n = LorMat1.rows();
   int dimEXT = n + 1;
+  using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
@@ -1898,6 +1914,8 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
   using Tdata = DataPerfectLorentzianFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
+  using TadjO = typename Tdata::TadjO;
+  using Tout = DatabaseEntry_Serial<Tobj, TadjO>;
   std::optional<MyMatrix<Tint>> opt;
   auto f_incorrect = [&](Tobj const &x) -> bool {
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -1929,7 +1947,8 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
     return false;
   };
   int max_runtime_second = 0;
-  (void)EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+  std::vector<Tout> l_obj =
+    EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
       data_func, f_incorrect, max_runtime_second);
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: After EnumerateAndStore_Serial function call\n";
@@ -1937,7 +1956,14 @@ LORENTZ_TestEquivalenceMatrices_Reduced(MyMatrix<T> const &LorMat1,
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORPERF: LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
 #endif
-  return opt;
+  std::vector<MyMatrix<Tint>> list_gen =
+      LORENTZ_ExtractGeneratorsFromObjList<Tint, Telt>(l_obj);
+  if (opt) {
+    MyMatrix<Tint> const& equiv = *opt;
+    ResultEquivLorentzian<Tint> res{equiv, list_gen};
+    return res;
+  }
+  return {};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1960,15 +1986,53 @@ LORENTZ_TestEquivalenceMatrices_Kernel(MyMatrix<T> const &LorMat1,
   os << "LORPERF: res2.Mred=\n";
   WriteMatrix(os, res2.Mred);
 #endif
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+  auto f_test=[&](MyMatrix<Tint> const& eEquivRet) -> void {
+    MyMatrix<T> eEquivRet_T = UniversalMatrixConversion<T,Tint>(eEquivRet);
+    MyMatrix<T> eProd = eEquivRet_T * LorMat1 * eEquivRet_T.transpose();
+    if (eProd != LorMat2) {
+      std::cerr << "LORPERF: LorMat1 should map to LorMat2\n";
+      throw TerminalException{1};
+    }
+  };
+#endif
   // We have res1.B * LorMat1 * res1.B^T = res1.Mred
   //     and res2.B * LorMat2 * res2.B^T = res2.Mred
-  std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices_Reduced<T,Tint,Tgroup>(res1.Mred, res2.Mred, os);
+  std::optional<ResultEquivLorentzian<Tint>> opt = LORENTZ_TestEquivalenceMatrices_Reduced<T,Tint,Tgroup>(res1.Mred, res2.Mred, os);
   if (opt) {
-    MyMatrix<Tint> const& eEquiv = *opt;
-    // eEquiv * res1.Mred * eEquiv^T = res2.Mred
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
+    MyMatrix<Tint> B1_inv = Inverse(res1.B);
+    ResultEquivLorentzian<Tint> const& res = *opt;
+    // Using the generators that we found. This is not the complete list
+    // but they are bona fide generators and so can be used to get a smaller
+    // equivalence.
+    std::vector<MyMatrix<Tint>> list_gen1;
+    for (auto & eGen: res.list_gen) {
+      MyMatrix<Tint> eGen_B = B1_inv * eGen * res1.B;
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+      MyMatrix<T> eGen_BT = UniversalMatrixConversion<T,Tint>(eGen_B);
+      MyMatrix<T> eProd = eGen_BT * LorMat1 * eGen_BT.transpose();
+      if (eProd != LorMat1) {
+        std::cerr << "LORPERF: eGen_B should preserve the LorMat1\n";
+        throw TerminalException{1};
+      }
+#endif
+      list_gen1.push_back(eGen_B);
+    }
+    std::vector<MyMatrix<Tint>> list_gen_red1 = ExhaustiveReductionComplexityGroupMatrix(list_gen1, os);
+    // Building an equivalence
+    MyMatrix<Tint> const& eEquiv = res.equiv;
+    // eEquiv * res1.Mred * eEquiv^T = res2.Mred
     MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
-    return eEquivRet;
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+    f_test(eEquivRet);
+#endif
+    MyMatrix<Tint> eEquivRet2 = Inverse(eEquivRet);
+    MyMatrix<Tint> eEquivRet3 = ExhaustiveMatrixLeftCosetSimplification(eEquivRet2, list_gen_red1);
+#ifdef SANITY_CHECK_LORENTZIAN_PERFECT
+    f_test(eEquivRet3);
+#endif
+    return eEquivRet3;
   }
   return {};
 }

@@ -2345,7 +2345,7 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
           os << "COMB: |list_cosets|=" << list_cosets.size() << "\n";
 #endif
-          std::vector<MyMatrix<T>> list_cosetsB = ExhaustiveMatrixCosetSimplifications(list_cosets, LGenStab_T);
+          std::vector<MyMatrix<T>> list_cosetsB = ExhaustiveMatrixRightCosetSimplifications(list_cosets, LGenStab_T);
           for (auto &eCos : list_cosetsB) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
             MyVector<Tint> eVectC =
