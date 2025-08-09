@@ -1046,6 +1046,12 @@ private:
         size_t max_iter = 1000;
         DoubleCosetSimplification<Tint> dcs = ExhaustiveMatrixDoubleCosetSimplifications(equiv, l_gen2_red, l_gen1_red, max_iter, os);
         MyMatrix<Tint> const& equiv_red = dcs.d_cos_red;
+#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
+        os << "COMB: INDEF_FORM_TestEquivalence_Kernel equiv=\n";
+        WriteMatrix(os, equiv);
+        os << "COMB: INDEF_FORM_TestEquivalence_Kernel equiv_red=\n";
+        WriteMatrix(os, equiv_red);
+#endif
         return equiv_red;
       }
     }
