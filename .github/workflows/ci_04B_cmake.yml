@@ -53,6 +53,19 @@ jobs:
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y autoconf autotools-dev libtool
 
+      - name: Install Eigen
+        run: |
+          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
+          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+          tar -xzf eigen-3.3.9.tar.gz
+          mkdir -p /home/runner/work/opt
+          cd eigen-3.3.9
+          mkdir build && cd build
+          cmake -DCMAKE_INSTALL_PREFIX=/home/runner/work/opt/eigen ..
+          make install
+          cd ../..
+          echo "After eigen-3.3.9 installation"
+
       - name: Build the code
         run: |
           ls
@@ -62,7 +75,7 @@ jobs:
           echo "After pwd"
 
           mkdir build && cd build
-          cmake ..
+          cmake -DCMAKE_PREFIX_PATH=/home/runner/work/opt/eigen ..
           make
 
 
