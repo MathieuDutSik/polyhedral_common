@@ -41,11 +41,11 @@ ENV_OPTIONS     = $(DUALDESC_COMPILATION_OPTIONS)
 COPTIONS        = -DDEBUG_CANONICAL_LIMITED_V2
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CLOCAL          = -I../src_basic -I../basic_common_cpp   -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_group -I../src_poly -I../permutalib/src -I.
-CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(MPI_INCLUDE_CPP) $(CDDLIB_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) -DEIGEN_NO_DEBUG
+CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(shell pkg-config --cflags ompi) $(CDDLIB_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) -DEIGEN_NO_DEBUG
 
 CTOTAL		= $(CHASHMAP) $(CLOCAL) $(CFLAGS) $(COPTIONS) $(ENV_OPTIONS)
 
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(MPI_LINK_CPP) $(CDDLIB_GMP_LINK) $(GLPK_LINK) $(NAUTY_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(BOOST_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP) $(CDDLIB_GMP_LINK) $(GLPK_LINK) $(NAUTY_LINK)
 
 
 %.o: %.cpp

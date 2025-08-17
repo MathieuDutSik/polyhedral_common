@@ -40,10 +40,10 @@ ENV GMP_CXX_LINK "-lgmp -lgmpxx"
 
 
 # BOOST
-RUN apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
+RUN apt-get install -y libboost-dev libboost-mpi-dev libopenmpi-dev libboost-serialization-dev openmpi-bin
 ENV BOOST_INCDIR "/usr/include"
 ENV BOOST_LINK "-lboost_serialization"
-
+ENV MPI_LINK_CPP "-lboost_mpi"
 
 # downloading eigen (no compiling needed)
 RUN mkdir -p /opt
@@ -67,13 +67,6 @@ ENV CDDLIB_PATH /opt/cddlib
 ENV CDDLIB_INCLUDE "-I$CDDLIB_PATH/include/cddlib"
 ENV CDDLIB_DOUBLE_LINK "-L$CDDLIB_PATH/lib  -lcdd -Wl,-rpath,$CDDLIB_PATH/lib"
 ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
-
-
-# openmpi
-RUN apt-get install -y openmpi-bin libopenmpi-dev
-ENV MPI_INCLUDE_CPP "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
-ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
-
 
 # nauty/traces
 ENV NAUTY_PATH /opt/nauty
@@ -99,7 +92,5 @@ RUN cd /opt/bliss/lib && unzip /GIT/polyhedral_common/basic_common_cpp/ExternalL
 RUN cd /opt/bliss/lib && cmake /opt/bliss/lib/bliss-0.77 && make
 RUN cd /opt/bliss/include && cp /opt/bliss/lib/bliss-0.77/src/*.hh .
 
-
 # Compiling polyhedral functionality
 RUN cd GIT/polyhedral_common && ./compile_docker.sh
-#RUN cd GIT/polyhedral_common && ./compile_dualdesc.sh

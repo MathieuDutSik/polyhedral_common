@@ -71,10 +71,10 @@ COPTIONS        = -DDEBUG -DSANITY_CHECK -DTIMINGS
 
 
 #CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH)
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(MPI_INCLUDE_CPP)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(MPI_LINK_CPP) $(BOOST_LINK) $(GLPK_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP) $(BOOST_LINK) $(GLPK_LINK)
 
 %.o: %.cpp
 	@echo

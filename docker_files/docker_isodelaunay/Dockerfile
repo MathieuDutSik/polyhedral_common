@@ -74,8 +74,8 @@ RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make al
 
 # openmpi
 RUN apt-get install -y openmpi-bin libopenmpi-dev
-ENV MPI_INCLUDE_CPP "-I/usr/lib/x86_64-linux-gnu/openmpi/include/"
-ENV MPI_LINK_CPP "-lmpi -lboost_mpi -lboost_serialization -lmpi_cxx"
+ENV MPI_INCLUDE_CPP $(pkg-config --cflags ompi-cxx)
+ENV MPI_LINK_CPP "$(pkg-config --libs ompi-cxx) -lboost_mpi -lboost_serialization"
 
 # GLPK
 RUN apt-get install -y libglpk-dev

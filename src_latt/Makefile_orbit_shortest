@@ -12,10 +12,10 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorent
 COPTIONS        =
 
 
-CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE) $(MPI_INCLUDE_CPP)
+CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(COPTIONS)
-LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(MPI_LINK_CPP) $(GLPK_LINK)
+LIBS		= -lm $(GMP_CXX_LINK) -pthread $(NAUTY_LINK) $(GLPK_LINK)
 
 %.o: %.cpp
 	@echo
