@@ -33,17 +33,19 @@ RUN apt-get install -y wget emacs joe valgrind
 RUN apt-get install -y g++ gcc
 RUN apt-get install -y git cmake make
 
+# openmpi
+RUN apt-get install -y openmpi-bin libopenmpi-dev
+
 # GMP
 RUN apt-get install -y libgmp-dev
 ENV GMP_INCDIR "/usr/include"
 ENV GMP_CXX_LINK "-lgmp -lgmpxx"
 
-
 # BOOST
 RUN apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
 ENV BOOST_INCDIR "/usr/include"
 ENV BOOST_LINK "-lboost_serialization"
-
+ENV MPI_LINK_CPP "-lboost_mpi"
 
 # downloading eigen (no compiling needed)
 RUN mkdir -p /opt
@@ -71,11 +73,6 @@ ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
 RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
-
-# openmpi
-RUN apt-get install -y openmpi-bin libopenmpi-dev
-ENV MPI_INCLUDE_CPP $(pkg-config --cflags ompi-cxx)
-ENV MPI_LINK_CPP "$(pkg-config --libs ompi-cxx) -lboost_mpi -lboost_serialization"
 
 # GLPK
 RUN apt-get install -y libglpk-dev
