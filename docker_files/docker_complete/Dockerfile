@@ -87,13 +87,14 @@ ENV CDDLIB_GMP_LINK "-L$CDDLIB_PATH/lib  -lcddgmp -Wl,-rpath,$CDDLIB_PATH/lib"
 
 
 # PPL
-RUN wget https://www.bugseng.com/products/ppl/download/ftp/releases/1.2/ppl-1.2.tar.gz
-RUN tar -vxzf ppl-1.2.tar.gz && cd ppl-1.2 && ./configure && make
+RUN git clone https://github.com/BUGSENG/PPL
+RUN cd PPL && autoreconf -i && ./configure && make
+RUN cd /bin && ln -s /PPL/demos/ppl_lcdd/ppl_lcdd
+
 
 # Downloading PPL and compiling it
 RUN wget https://support.hdfgroup.org/ftp/HDF5/releases/hdf5-1.12/hdf5-1.12.0/src/hdf5-1.12.0.tar.gz
 RUN tar -vxzf hdf5-1.12.0.tar.gz && cd hdf5-1.12.0 && ./configure --with-default-api-version=v18 --prefix=/opt/hdf5-1.12.0 && make && make install
-RUN cd /bin && ln -s /ppl-1.2/demos/ppl_lcdd/ppl_lcdd
 
 # downloading netcdf functionality and compiling it
 RUN apt-get install -y libcurl4-openssl-dev m4
@@ -127,20 +128,11 @@ RUN mkdir -p GIT
 RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git --recursive
 
 
-# libshort
-ENV LIBSHORT_PATH /opt/libshort
-ENV LIBSHORT_INCDIR "$LIBSHORT_PATH/include"
-ENV LIBSHORT_LINK "-L$LIBSHORT_PATH/lib -lshort -Wl,-rpath,$LIBSHORT_PATH/lib"
-RUN cd GIT/polyhedral_common/ExternalLib/LibShort  && make -f Makefile_lib && make -f Makefile_lib install
-
-
 # bliss
-ENV LIBBLISS_PATH /opt/bliss
-ENV LIBBLISS_INCDIR $LIBBLISS_PATH/include
-ENV LIBBLISS_LINK "-L$LIBBLISS_PATH/lib -lbliss -Wl,-rpath,$LIBBLISS_PATH/lib"
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss && mkdir build
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$LIBBLISS_PATH ..
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/bliss/build && make all install
+RUN cd GIT && git clone https://github.com/MathieuDutSik/bliss
+RUN cd GIT/bliss && mkdir build && cd build && cmake .. && make
+ENV LIBBLISS_INCDIR /GIT/bliss/src
+ENV LIBBLISS_LINK "-L/GIT/bliss/build -lbliss -Wl,-rpath,/GIT/bliss/build"
 
 
 # nauty/traces
