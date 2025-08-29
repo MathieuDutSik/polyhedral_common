@@ -12,7 +12,7 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tint_grp = mpz_class;
   using Tgroup = permutalib::Group<Telt, Tint_grp>;
-  return ComputePerfectLorentzian<T, Tint, Tgroup>(comm, eFull);
+  return ComputePerfectLorentzian_mpi<T, Tint, Tgroup>(comm, eFull);
 }
 
 template <typename T>

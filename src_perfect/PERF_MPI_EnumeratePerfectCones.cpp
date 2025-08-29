@@ -1,16 +1,18 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "PerfectEnumeration.h"
-#include "PerfectFormsMPI.h"
+#include "perfect_tspace_mpi.h"
 #include "Permutation.h"
 #include "Group.h"
-#include <boost/mpi/environment.hpp>
 // clang-format on
 
 template <typename T, typename Tint>
 void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  return EnumeratePerfectCones_MPI<T, Tint>(comm, eFull);
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using Tint_grp = mpz_class;
+  using Tgroup = permutalib::Group<Telt, Tint_grp>;
+  return ComputePerfectTspace_mpi<T, Tint, Tgroup>(comm, eFull);
 }
 
 template <typename T>
@@ -49,11 +51,11 @@ int main(int argc, char *argv[]) {
   }
   boost::mpi::communicator world;
   HumanTime time1;
-  
+
   try {
     std::cerr << "PERF_MPI_EnumeratePerfectCones: Starting" << std::endl;
-    FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT();
-    
+    FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE();
+
     if (argc != 2) {
       std::cerr << "Number of arguments = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -62,11 +64,11 @@ int main(int argc, char *argv[]) {
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
-    
+
     std::string eFileName = argv[1];
     std::cerr << "Reading namelist file: " << eFileName << std::endl;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    
+
     process_A(world, eFull);
     std::cerr << "Normal termination of PERF_MPI_EnumeratePerfectCones" << std::endl;
   } catch (TerminalException const &e) {

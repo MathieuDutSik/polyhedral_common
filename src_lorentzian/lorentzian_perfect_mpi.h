@@ -13,12 +13,12 @@
 #endif
 
 template <typename T, typename Tint, typename Tgroup>
-void ComputePerfectLorentzian(boost::mpi::communicator &comm,
-                              FullNamelist const &eFull) {
+void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
+                                  FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
-  os << "LORPERFMPI: ComputePerfectLorentzian, beginning\n";
+  os << "LORPERFMPI: ComputePerfectLorentzian_mpi, beginning\n";
 #endif
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
   SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
