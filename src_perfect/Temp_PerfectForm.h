@@ -2,14 +2,17 @@
 #ifndef SRC_PERFECT_TEMP_PERFECTFORM_H_
 #define SRC_PERFECT_TEMP_PERFECTFORM_H_
 
+// clang-format off>
 #include "MatrixGroup.h"
 #include "Parallel_Classes_Types.h"
+#include "PolytopeEquiStab.h"
 #include "Positivity.h"
 #include "Tspace_General.h"
 #include <map>
 #include <string>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_PERFECT_FORM
@@ -140,7 +143,7 @@ Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T, Tint> const &eNaked,
 template <typename T, typename Tint, typename Tgroup>
 SinglePerfect<T, Tint, Tgroup> GetPerfectCone(LinSpaceMatrix<T> const &LinSpa,
                                               MyMatrix<T> const &eGram,
-                                              Tshortest<T, int> const &RecSHV) {
+                                              Tshortest<T, Tint> const &RecSHV) {
   NakedPerfect<T, Tint> eNaked = GetNakedPerfectCone(LinSpa, eGram, RecSHV);
   Tgroup TheGRPshv = PERF_Automorphism(LinSpa, eGram, RecSHV.SHV);
   Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, TheGRPshv);
@@ -153,24 +156,24 @@ template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 PERF_TestEquivalence(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &ePerf1,
                      MyMatrix<T> const &ePerf2, MyMatrix<Tint> const &SHV1,
-                     MyMatrix<Tint> const &SHV2) {
+                     MyMatrix<Tint> const &SHV2, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx_value = int16_t;
   MyMatrix<T> T_SHV1 = UniversalMatrixConversion<T, Tint>(SHV1);
   MyMatrix<T> T_SHV2 = UniversalMatrixConversion<T, Tint>(SHV2);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1 =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV1, ePerf1,
-                                                     LinSpa.ListComm);
+                                                     LinSpa.ListComm, os);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2 =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV2, ePerf2,
-                                                     LinSpa.ListComm);
-  std::optional<Telt> eResEquiv =
-      GetEquivalenceAsymmetricMatrix<std::vector<T>, T, Telt>(WMat1, WMat2);
-  if (!eResEquiv) {
+                                                     LinSpa.ListComm, os);
+  std::optional<Telt> opt =
+    GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt, Tidx_value>(WMat1, WMat2, os);
+  if (!opt) {
     return {};
   }
-  MyMatrix<T> M3 =
-      RepresentVertexPermutation(T_SHV1, T_SHV2, eResEquiv.TheEquiv);
+  Telt const& TheEquiv = *opt;
+  MyMatrix<T> M3 = RepresentVertexPermutation(T_SHV1, T_SHV2, TheEquiv);
   if (IsIntegralMatrix(M3)) {
     MyMatrix<Tint> eMatEquiv = UniversalMatrixConversion<Tint, T>(M3);
     return eMatEquiv;
@@ -445,19 +448,19 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
   return Kernel_Flipping_Perfect(eRecShort, eMatIn, eMatDir, os);
 }
 
-template <typename T>
+template <typename T, typename Tint>
 MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
   while (true) {
-    Tshortest<T, int> RecSHV = T_ShortestVector<T, int>(ThePerfMat, os);
+    Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
     int nbShort = RecSHV.SHV.rows();
     MyMatrix<T> ScalMat(nbShort, nbMat);
     for (int iShort = 0; iShort < nbShort; iShort++) {
-      MyVector<int> eVectShort = RecSHV.SHV.row(iShort);
+      MyVector<Tint> eVectShort = RecSHV.SHV.row(iShort);
       for (int iMat = 0; iMat < nbMat; iMat++) {
-        T eNorm = EvaluationQuadForm<T, int>(LinSpa.ListMat[iMat], eVectShort);
+        T eNorm = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVectShort);
         ScalMat(iShort, iMat) = eNorm;
       }
     }
@@ -468,7 +471,7 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
     MyVector<T> eVect = eSelect.NSP.row(0);
     MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(LinSpa, eVect);
     MyMatrix<T> eMatRet =
-        Flipping_Perfect<T, int>(ThePerfMat, DirMat, os).first;
+        Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os).first;
     ThePerfMat = eMatRet;
   }
   return ThePerfMat;
@@ -476,12 +479,13 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
 
 template <typename T, typename Tint, typename Tgroup>
 Tgroup PERF_Automorphism(LinSpaceMatrix<T> const &LinSpa,
-                         MyMatrix<T> const &ePerf, MyMatrix<Tint> const &SHV) {
+                         MyMatrix<T> const &ePerf, MyMatrix<Tint> const &SHV,
+                         std::ostream& os) {
   using Tidx_value = int16_t;
   MyMatrix<T> T_SHV = UniversalMatrixConversion<T, Tint>(SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, ePerf,
-                                                     LinSpa.ListComm);
+                                                     LinSpa.ListComm, os);
   return GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup, Tidx_value>(
       WMat);
 }
@@ -560,17 +564,6 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
   return {hash};
 }
 
-template <typename T> struct DataLinSpa {
-  LinSpaceMatrix<T> LinSpa;
-  bool SavingPerfect;
-  bool FullDataInMemory;
-  std::string PrefixPerfect;
-  std::string PrefixPolyhedral;
-  bool ReturnAll;
-  mpz_class UpperLimitMethod4;
-  bool NeedCheckStabilization;
-};
-
 template <typename T, typename Tgroup, typename Fcorrect>
 std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,
@@ -613,7 +606,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
+SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &eData,
                               MyMatrix<T> const &Gram1,
                               MyMatrix<T> const &Gram2, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -624,10 +617,10 @@ SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
   MyMatrix<T> T_SHV2 = UniversalMatrixConversion<T, Tint>(RecSHV2.SHV);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat1 =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV1, Gram1,
-                                                     eData.LinSpa.ListComm);
+                                                     eData.LinSpa.ListComm, os);
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat2 =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV2, Gram2,
-                                                     eData.LinSpa.ListComm);
+                                                     eData.LinSpa.ListComm, os);
   std::optional<Telt> eResEquiv =
       GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
   if (!eResEquiv) {
@@ -683,9 +676,10 @@ SimplePerfect_TestEquivalence(DataLinSpa<T> const &eData,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const &eData,
+Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &eData,
                                 MyMatrix<T> const &Gram,
-                                Tshortest<T, Tint> const &RecSHV) {
+                                Tshortest<T, Tint> const &RecSHV,
+                                std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx_value = int16_t;
   //
@@ -726,7 +720,7 @@ Tgroup SimplePerfect_Stabilizer(DataLinSpa<T> const &eData,
   //
   WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
       GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, Gram,
-                                                     eData.LinSpa.ListComm);
+                                                     eData.LinSpa.ListComm, os);
   Tgroup GRPshv1 = GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat);
   if (IsCorrectGroup(GRPshv1))
     return GRPshv1;

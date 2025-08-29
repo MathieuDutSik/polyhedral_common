@@ -88,12 +88,12 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tdata, typename Tobj, typename TadjO>
-bool WriteFamilyObjects_MPI(boost::mpi::communicator const &comm, 
-                          Tdata const &data,
+bool WriteFamilyObjects_MPI([[maybe_unused]] boost::mpi::communicator const &comm, 
+                          [[maybe_unused]] Tdata const &data,
                           std::string const &OutFormat,
                           std::ostream &os_out,
                           std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_obj,
-                          std::ostream &os) {
+                          [[maybe_unused]] std::ostream &os) {
   if (OutFormat == "GAP") {
     os_out << "[";
     bool IsFirst = true;

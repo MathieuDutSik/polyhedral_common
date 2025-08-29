@@ -22,10 +22,6 @@ void process_B(boost::mpi::communicator &comm, FullNamelist const &eFull) {
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  if (arithmetic_Tint == "int32_t") {
-    using Tint = int32_t;
-    return process_C<T, Tint>(comm, eFull);
-  }
   std::cerr << "PERF_MPI_EnumeratePerfectCones B: Failed to find matching type for "
             << "arithmetic_Tint=" << arithmetic_Tint << "\n";
   std::cerr << "Available types: gmp_integer, int32_t\n";
