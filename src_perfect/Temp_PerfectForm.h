@@ -632,8 +632,6 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
                                 MyMatrix<T> const &eMat,
                                 Tshortest<T, Tint> const &RecSHV,
                                 std::ostream& os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx_value = int16_t;
   //
   // Functionality for checking quality of equivalences
   //

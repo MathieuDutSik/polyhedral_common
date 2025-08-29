@@ -11,6 +11,17 @@
 #include <vector>
 // clang-format on
 
+template <typename T> struct DataLinSpa {
+  LinSpaceMatrix<T> LinSpa;
+  bool SavingPerfect;
+  bool FullDataInMemory;
+  std::string PrefixPerfect;
+  std::string PrefixPolyhedral;
+  bool ReturnAll;
+  mpz_class UpperLimitMethod4;
+  bool NeedCheckStabilization;
+};
+
 template <typename T, typename Tint, typename Tgroup> struct ListPerfectForm {
 public:
   QueryEquivInfo IsPresentNoLock(int const &iOrbitStart,

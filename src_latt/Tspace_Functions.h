@@ -934,7 +934,6 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<T>>
 LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
                          MyMatrix<T> const &eMat, std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);

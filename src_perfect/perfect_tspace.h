@@ -11,6 +11,28 @@
 #include "hash_functions.h"
 // clang-format on
 
+void WriteEntryGAP(std::ostream &os, Face const &eFace) {
+  os << "[";
+  size_t len = eFace.size();
+  for (size_t i = 0; i < len; i++) {
+    if (i > 0)
+      os << ",";
+    os << (eFace[i] ? 1 : 0);
+  }
+  os << "]";
+}
+
+void WriteEntryPYTHON(std::ostream &os, Face const &eFace) {
+  os << "[";
+  size_t len = eFace.size();
+  for (size_t i = 0; i < len; i++) {
+    if (i > 0)
+      os << ",";
+    os << (eFace[i] ? 1 : 0);
+  }
+  os << "]";
+}
+
 template <typename T, typename Tint> struct PerfectTspaceEntry {
   MyMatrix<Tint> Gram;
   int incd;
@@ -195,6 +217,18 @@ void WriteEntryPYTHON(std::ostream &os, PerfectTspace_AdjO<Tint> const &adj) {
   os << "{\"eInc\":";
   WriteEntryPYTHON(os, adj.eInc);
   os << ", \"eBigMat\":" << StringMatrixPYTHON(adj.eBigMat) << "}";
+}
+
+template <typename T, typename Tint, typename Tgroup>
+void WriteDetailedEntryGAP(std::ostream &os_out,
+                           DataPerfectTspace<T, Tint, Tgroup> const& data,
+                           PerfectTspace_Obj<T, Tint, Tgroup> const &obj, 
+                           [[maybe_unused]] std::ostream& os) {
+  os_out << "rec(";
+  WriteEntryGAP(os_out, obj);
+  os_out << ", GRPsize:=" << obj.GRP.size();
+  os_out << ", n:=" << data.n;
+  os_out << ")";
 }
 
 
