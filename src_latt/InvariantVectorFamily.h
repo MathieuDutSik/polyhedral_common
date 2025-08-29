@@ -22,6 +22,10 @@
 #define DEBUG_INVARIANT_VECTOR_FAMILY
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+#endif
+
 /*
   We are considering here the enumeration of configurations of vectors for
   positive definite quadratic forms. There are many possible optimization
@@ -209,6 +213,24 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
       eMat, f_correct, os);
 }
 
+template <typename T>
+void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
+  int n_row = SHV.rows();
+  std::unordered_set<MyVector<T>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(SHV, i_row);
+    set.insert(V);
+  }
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = - GetMatrixRow(SHV, i_row);
+    if (set.count(V) == 0) {
+      std::cerr << "TSPACE: The vector V is missing from set\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
                                                   std::ostream &os) {
@@ -221,8 +243,12 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
       return true;
     return false;
   };
-  return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
       eMat, f_correct, os);
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  check_antipodality_mymatrix(SHV);
+#endif
+  return SHV;
 }
 
 template <typename T, typename Tint>

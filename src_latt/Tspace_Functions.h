@@ -719,6 +719,79 @@ public:
   }
 };
 
+template<typename T, typename Tgroup>
+struct Result_ComputeStabilizer_SHV {
+  using Telt = typename Tgroup::Telt;
+  std::optional<std::vector<MyMatrix<T>>> l_gens;
+  std::optional<std::pair<std::vector<Telt>, Tgroup>> perms_and_group;
+  std::vector<MyMatrix<T>> get_list_matrix(MyMatrix<T> const &SHV_T, MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa) const {
+    if (l_gens) {
+      return *l_gens;
+    }
+    if (perms_and_group) {
+      std::vector<MyMatrix<T>> LGenGlobStab_matr;
+      std::vector<Telt> const& LGenGlobStab_perm = perms_and_group->first;
+      for (auto &eGen : LGenGlobStab_perm) {
+        std::optional<MyMatrix<T>> opt =
+          is_corr_and_solve(eGen, SHV_T, eMat, LinSpa);
+        MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
+        LGenGlobStab_matr.push_back(eGenMatr);
+      }
+      return LGenGlobStab_matr;
+    }
+    std::cerr << "We did not generate l_gens / perms_and_group\n";
+    throw TerminalException{1};
+  }
+  std::vector<Telt> get_list_perms(MyMatrix<T> const &SHV_T) const {
+    if (l_gens) {
+      PermutationBuilder<T, Telt> builder(SHV_T);
+      std::vector<MyMatrix<T>> const& l_matr = *l_gens;
+      std::vector<Telt> LGenGlobStab_perm;
+      for (auto &eGen : l_matr) {
+        Telt ePerm = builder.get_permutation(eGen);
+        LGenGlobStab_perm.push_back(ePerm);
+      }
+      return LGenGlobStab_perm;
+    }
+    if (perms_and_group) {
+      return perms_and_group->first;
+    }
+    std::cerr << "We did not generate l_gens / perms_and_group\n";
+    throw TerminalException{1};
+  }
+  Tgroup get_perm_group(MyMatrix<T> const &SHV_T) const {
+    if (l_gens) {
+      PermutationBuilder<T, Telt> builder(SHV_T);
+      std::vector<MyMatrix<T>> const& l_matr = *l_gens;
+      std::vector<Telt> LGenGlobStab_perm;
+      for (auto &eGen : l_matr) {
+        Telt ePerm = builder.get_permutation(eGen);
+        LGenGlobStab_perm.push_back(ePerm);
+      }
+      int n_row = SHV_T.rows();
+      return Tgroup(LGenGlobStab_perm, n_row);
+    }
+    if (perms_and_group) {
+      return perms_and_group->second;
+    }
+    std::cerr << "We did not generate l_gens / perms_and_group\n";
+    throw TerminalException{1};
+  }
+};
+
+template<typename T, typename Tgroup>
+Result_ComputeStabilizer_SHV<T,Tgroup> get_from_gens(std::vector<MyMatrix<T>> const& l_gens) {
+  return {l_gens, {}};
+}
+
+template<typename T, typename Tgroup>
+Result_ComputeStabilizer_SHV<T,Tgroup> get_from_perms_and_group(std::pair<std::vector<typename Tgroup::Telt>, Tgroup> const& pair) {
+  return {{}, pair};
+}
+
+
+
+
 /*
   For a positive definite matrix in the T-space, we compute the group
   of transformations that preserves:
@@ -730,31 +803,19 @@ public:
   * Use of the subspaces to build commutting projectors which are stabilized.
   * If all else fails, use of the cosets.
  */
-template <typename T, typename Tint, typename Tgroup>
-std::vector<MyMatrix<T>>
-LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                         MyMatrix<T> const &eMat, std::ostream &os) {
+template <typename T, typename Tgroup>
+Result_ComputeStabilizer_SHV<T, Tgroup>
+LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
+                             MyMatrix<T> const &eMat,
+                             MyMatrix<T> const &SHV_T,
+                             std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using LeftCosets = typename Tgroup::LeftCosets;
   using Tfield = T;
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
-  int n_row = SHV.rows();
+  int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer n_row=" << n_row << "\n";
-  std::unordered_set<MyVector<Tint>> set;
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<Tint> V = GetMatrixRow(SHV, i_row);
-    set.insert(V);
-  }
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<Tint> V = - GetMatrixRow(SHV, i_row);
-    if (set.count(V) == 0) {
-      std::cerr << "TSPACE: The vector V is missing from set\n";
-      throw TerminalException{1};
-    }
-  }
 #endif
   std::vector<T> Vdiag(n_row, 0);
   std::vector<MyMatrix<T>> ListMat =
@@ -788,7 +849,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: LINSPA_ComputeStabilizer success of the direct approach\n";
 #endif
-    return *opt;
+    return get_from_gens<T,Tgroup>(*opt);
   }
   //
   // The direct approach failed, let us use the pt-wise-stab and the cosets for
@@ -858,15 +919,23 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
       break;
     }
   }
-  std::vector<MyMatrix<T>> LGenGlobStab_matr;
-  for (auto &eGen : LGenGlobStab_perm) {
-    std::optional<MyMatrix<T>> opt =
-        is_corr_and_solve(eGen, SHV_T, eMat, LinSpa);
-    MyMatrix<T> eGenMatr = unfold_opt(opt, "Failed to unfold");
-    LGenGlobStab_matr.push_back(eGenMatr);
-  }
-  return LGenGlobStab_matr;
+  std::pair<std::vector<typename Tgroup::Telt>, Tgroup> pair{std::move(LGenGlobStab_perm), std::move(GRPsub)};
+  return get_from_perms_and_group<T,Tgroup>(pair);
 }
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>>
+LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
+                         MyMatrix<T> const &eMat, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
+  return result.get_list_matrix(SHV_T, eMat, LinSpa);
+}
+
+
+
 
 /*
   For two positive definite matrices M1 find if it exists a transformation P
@@ -874,23 +943,20 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   * P M1 P^T = M2
   * P LinSpa.ListMat P^T  image is LinSpa.ListMat
 */
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
-                                 MyMatrix<T> const &eMat1,
-                                 MyMatrix<T> const &eMat2, std::ostream &os) {
+template <typename T, typename Tgroup>
+std::optional<MyMatrix<T>>
+LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
+                                     MyMatrix<T> const &eMat1,
+                                     MyMatrix<T> const &eMat2,
+                                     MyMatrix<T> const &SHV1_T,
+                                     MyMatrix<T> const &SHV2_T,
+                                     std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using LeftCosets = typename Tgroup::LeftCosets;
   //  using Tfield = T;
-  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
-  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
-  T det1 = DeterminantMat(eMat1);
-  T det2 = DeterminantMat(eMat2);
-  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
-  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
-  if (SHV1_T.rows() != SHV2_T.rows() || det1 != det2) {
+  if (SHV1_T.rows() != SHV2_T.rows()) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Exiting here at |SHV1| <> |SHV2|\n";
 #endif
@@ -938,11 +1004,10 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   }
 #endif
   if (is_stab_space(OneEquiv, LinSpa)) {
-    MyMatrix<Tint> OneEquiv_tint = UniversalMatrixConversion<Tint, T>(OneEquiv);
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Direct approach success, no need to go further\n";
 #endif
-    return OneEquiv_tint;
+    return OneEquiv;
   }
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: Equiv, Direct approach failure, computing stabilizer and iterating\n";
@@ -994,8 +1059,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
         get_mat_from_shv_perm(elt, SHV1_T, eMat1);
       MyMatrix<T> eProd_T = OneEquiv * eMatr;
       if (is_stab_space(eProd_T, LinSpa)) {
-        MyMatrix<Tint> eProd = UniversalMatrixConversion<Tint, T>(eProd_T);
-        return eProd;
+        return eProd_T;
       }
     }
     return {};
@@ -1055,7 +1119,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
 #endif
     if (p_sol.sol) {
       MyMatrix<T> const &Pmat_T = *p_sol.sol;
-      MyMatrix<Tint> Pmat = UniversalMatrixConversion<Tint, T>(Pmat_T);
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
       if (!f_exhaustive()) {
         std::cerr << "TSPACE: We found equiv with one method but the exhaustive does not\n";
@@ -1065,7 +1128,7 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
       os << "TSPACE: Equiv, before returning Pmat\n";
 #endif
-      return Pmat;
+      return Pmat_T;
     }
     if (!p_sol.new_gen) {
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
@@ -1087,6 +1150,32 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
 #endif
   }
 }
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
+                                 MyMatrix<T> const &eMat1,
+                                 MyMatrix<T> const &eMat2,
+                                 std::ostream &os) {
+  T det1 = DeterminantMat(eMat1);
+  T det2 = DeterminantMat(eMat2);
+  if (det1 != det2) {
+    return {};
+  }
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
+  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
+  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
+  std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<T> const& M_T = *opt;
+  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
+  return M;
+}
+
+
 
 /*
   Compute an invariant of the gram matrix
