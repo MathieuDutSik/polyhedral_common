@@ -606,78 +606,30 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &eData,
-                              MyMatrix<T> const &Gram1,
-                              MyMatrix<T> const &Gram2, std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx_value = int16_t;
-  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(Gram1, os);
-  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(Gram2, os);
-  MyMatrix<T> T_SHV1 = UniversalMatrixConversion<T, Tint>(RecSHV1.SHV);
-  MyMatrix<T> T_SHV2 = UniversalMatrixConversion<T, Tint>(RecSHV2.SHV);
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat1 =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV1, Gram1,
-                                                     eData.LinSpa.ListComm, os);
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat2 =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV2, Gram2,
-                                                     eData.LinSpa.ListComm, os);
-  std::optional<Telt> eResEquiv =
-      GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt>(WMat1, WMat2);
-  if (!eResEquiv) {
+SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
+                              MyMatrix<T> const &eMat1,
+                              MyMatrix<T> const &eMat2, std::ostream &os) {
+  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
+  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
+  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
+  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
+  //  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(Gram1, os);
+  //  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(Gram2, os);
+  //  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(RecSHV1.SHV);
+  //  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(RecSHV2.SHV);
+
+  std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
+  if (!opt) {
     return {};
   }
-  MyMatrix<T> M3 = RepresentVertexPermutation(T_SHV1, T_SHV2, *eResEquiv);
-  if (IsIntegralMatrix(M3)) {
-    MyMatrix<Tint> eMatEquiv = UniversalMatrixConversion<Tint, T>(M3);
-    return eMatEquiv;
-  }
-  std::vector<MyVector<T>> ListMatVect;
-  for (auto &eMat : eData.LinSpa.ListMat) {
-    MyVector<T> eVect = SymmetricMatrixToVector(eMat);
-    ListMatVect.push_back(eVect);
-  }
-  MyMatrix<T> ListMatVectB = MatrixFromVectorFamily(ListMatVect);
-  auto f_correct = [&](MyMatrix<T> const &M) -> bool {
-    if (!IsIntegralMatrix(M))
-      return false;
-    if (eData.NeedCheckStabilization) {
-      for (auto &eMat : eData.LinSpa.ListMat) {
-        MyMatrix<T> eProd = M * eMat * TransposedMat(M);
-        MyVector<T> eVect = SymmetricMatrixToVector(eProd);
-        std::optional<MyVector<T>> opt = SolutionMat(ListMatVectB, eVect);
-        if (!opt)
-          return false;
-      }
-    }
-    return true;
-  };
-  auto ConvertEquiv = [](std::optional<MyMatrix<T>> const &eEq)
-      -> std::optional<MyMatrix<Tint>> {
-    if (!eEq)
-      return {};
-    MyMatrix<Tint> eMat_I = UniversalMatrixConversion<Tint, T>(*eEq);
-    return eMat_I;
-  };
-  Tgroup GRP1 = GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat1);
-  if (GRP1.size() < eData.UpperLimitMethod4) {
-    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        T_SHV1, T_SHV2, GRP1, *eResEquiv, f_correct));
-  } else {
-    std::optional<MyMatrix<T>> fResEquiv =
-        LinPolytopeIntegral_Isomorphism_Method8(T_SHV1, T_SHV2, GRP1,
-                                                *eResEquiv);
-    if (!fResEquiv)
-      return {};
-    if (f_correct(*fResEquiv))
-      return ConvertEquiv(fResEquiv);
-    return ConvertEquiv(LinPolytopeIntegral_Isomorphism_Method4(
-        T_SHV1, T_SHV2, GRP1, *eResEquiv, f_correct));
-  }
+  MyMatrix<T> const& M_T = *opt;
+  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
+  return M;
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &eData,
-                                MyMatrix<T> const &Gram,
+Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
+                                MyMatrix<T> const &eMat,
                                 Tshortest<T, Tint> const &RecSHV,
                                 std::ostream& os) {
   using Telt = typename Tgroup::Telt;
@@ -685,52 +637,23 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &eData,
   //
   // Functionality for checking quality of equivalences
   //
-  std::vector<MyVector<T>> ListMatVect;
-  for (auto &eMat : eData.LinSpa.ListMat) {
-    MyVector<T> eVect = SymmetricMatrixToVector(eMat);
-    ListMatVect.push_back(eVect);
-  }
-  MyMatrix<T> ListMatVectB = MatrixFromVectorFamily(ListMatVect);
-  MyMatrix<T> T_SHV = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
-  auto f_correct = [&](MyMatrix<T> const &M) -> bool {
-    if (!IsIntegralMatrix(M))
-      return false;
-    if (eData.NeedCheckStabilization) {
-      for (auto &eMat : eData.LinSpa.ListMat) {
-        MyMatrix<T> eProd = M * eMat * TransposedMat(M);
-        MyVector<T> eVect = SymmetricMatrixToVector(eProd);
-        std::optional<MyVector<T>> opt = SolutionMat(ListMatVectB, eVect);
-        if (!opt)
-          return false;
-      }
+  MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
+  auto get_shv_t=[&]() -> MyMatrix<T> {
+    if (IsFullDimZbasis(SHVorig_T)) {
+      return SHVorig_T;
     }
-    return true;
+    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+    return UniversalMatrixConversion<T, Tint>(SHV);
   };
-  auto IsCorrectGroup = [&](Tgroup const &g) -> bool {
-    std::vector<Telt> LGen = g.GeneratorsOfGroup();
-    for (auto &eGen : LGen) {
-      MyMatrix<T> M = RepresentVertexPermutation(T_SHV, T_SHV, eGen);
-      if (!f_correct(M))
-        return false;
-    }
-    return true;
-  };
-  //
-  // Now the computation itself
-  //
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, Gram,
-                                                     eData.LinSpa.ListComm, os);
-  Tgroup GRPshv1 = GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup>(WMat);
-  if (IsCorrectGroup(GRPshv1))
-    return GRPshv1;
-  if (GRPshv1.size() < eData.UpperLimitMethod4) {
-    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv1, f_correct);
+  MyMatrix<T> SHV_T = get_shv_t();
+  Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
+  if (SHVorig_T == SHV_T) {
+    // This is the most likely scenario: The original
+    // SHVorig is
+    return result.get_perm_group(SHV_T);
   } else {
-    Tgroup GRPshv2 = LinPolytopeIntegral_Stabilizer_Method8(T_SHV, GRPshv1);
-    if (IsCorrectGroup(GRPshv2))
-      return GRPshv2;
-    return LinPolytopeIntegral_Stabilizer_Method4(T_SHV, GRPshv2, f_correct);
+    std::vector<MyMatrix<T>> l_matr = result.get_list_matrix(SHV_T, eMat, LinSpa);
+    return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHVorig_T);
   }
 }
 

@@ -720,6 +720,20 @@ public:
 };
 
 template<typename T, typename Tgroup>
+Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr, MyMatrix<T> const& SHV_T) {
+  using Telt = typename Tgroup::Telt;
+  PermutationBuilder<T, Telt> builder(SHV_T);
+  std::vector<Telt> LGenGlobStab_perm;
+  for (auto &eGen : l_matr) {
+    Telt ePerm = builder.get_permutation(eGen);
+    LGenGlobStab_perm.push_back(ePerm);
+  }
+  int n_row = SHV_T.rows();
+  return Tgroup(LGenGlobStab_perm, n_row);
+}
+
+
+template<typename T, typename Tgroup>
 struct Result_ComputeStabilizer_SHV {
   using Telt = typename Tgroup::Telt;
   std::optional<std::vector<MyMatrix<T>>> l_gens;
@@ -761,15 +775,8 @@ struct Result_ComputeStabilizer_SHV {
   }
   Tgroup get_perm_group(MyMatrix<T> const &SHV_T) const {
     if (l_gens) {
-      PermutationBuilder<T, Telt> builder(SHV_T);
       std::vector<MyMatrix<T>> const& l_matr = *l_gens;
-      std::vector<Telt> LGenGlobStab_perm;
-      for (auto &eGen : l_matr) {
-        Telt ePerm = builder.get_permutation(eGen);
-        LGenGlobStab_perm.push_back(ePerm);
-      }
-      int n_row = SHV_T.rows();
-      return Tgroup(LGenGlobStab_perm, n_row);
+      return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHV_T);
     }
     if (perms_and_group) {
       return perms_and_group->second;

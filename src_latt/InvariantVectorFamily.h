@@ -231,17 +231,23 @@ void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
 }
 
 
+template<typename Tint>
+bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
+  int n = M.cols();
+  if (RankMat(M) < n)
+    return false;
+  Tint indx = Int_IndexLattice(M);
+  if (T_NormGen(indx) == 1)
+    return true;
+  return false;
+}
+
+
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
                                                   std::ostream &os) {
-  int n = eMat.rows();
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
-    if (RankMat(M) < n)
-      return false;
-    Tint indx = Int_IndexLattice(M);
-    if (T_NormGen(indx) == 1)
-      return true;
-    return false;
+    return IsFullDimZbasis(M);
   };
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
       eMat, f_correct, os);
