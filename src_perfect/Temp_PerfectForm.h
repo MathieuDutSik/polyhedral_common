@@ -108,17 +108,6 @@ struct PerfEquivInfo {
   Face eInc;
 };
 
-template <typename T, typename Tint, typename Tgroup> struct SinglePerfect {
-  MyMatrix<T> eGram;
-  MyMatrix<Tint> SHV;
-  MyMatrix<T> PerfDomEXT;
-  Tgroup PerfDomGRP;
-  std::vector<std::vector<int>> ListBlock;
-  std::vector<PerfEquivInfo> ListEquivInfo;
-  int eStatus;
-  int eCons;
-};
-
 template <typename T, typename Tint, typename Tgroup>
 Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T, Tint> const &eNaked,
                                   Tgroup const &GRPshv) {
@@ -138,18 +127,6 @@ Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T, Tint> const &eNaked,
     ListGen.push_back(Telt(v));
   }
   return Tgroup(ListGen, nbBlock);
-}
-
-template <typename T, typename Tint, typename Tgroup>
-SinglePerfect<T, Tint, Tgroup> GetPerfectCone(LinSpaceMatrix<T> const &LinSpa,
-                                              MyMatrix<T> const &eGram,
-                                              Tshortest<T, Tint> const &RecSHV) {
-  NakedPerfect<T, Tint> eNaked = GetNakedPerfectCone(LinSpa, eGram, RecSHV);
-  Tgroup TheGRPshv = PERF_Automorphism(LinSpa, eGram, RecSHV.SHV);
-  Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, TheGRPshv);
-  return {
-      eGram, RecSHV.SHV, eNaked.PerfDomEXT, PerfDomGRP, eNaked.ListBlock, {},
-      0,     0};
 }
 
 struct QueryEquivInfo {
@@ -447,19 +424,6 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
   }
 }
 
-template <typename T, typename Tint, typename Tgroup>
-Tgroup PERF_Automorphism(LinSpaceMatrix<T> const &LinSpa,
-                         MyMatrix<T> const &ePerf, MyMatrix<Tint> const &SHV,
-                         std::ostream& os) {
-  using Tidx_value = int16_t;
-  MyMatrix<T> T_SHV = UniversalMatrixConversion<T, Tint>(SHV);
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV, ePerf,
-                                                     LinSpa.ListComm, os);
-  return GetStabilizerAsymmetricMatrix<std::vector<T>, Tgroup, Tidx_value>(
-      WMat);
-}
-
 template <typename T, typename Tint> struct SimplePerfect {
   MyMatrix<T> Gram;
 };
@@ -562,15 +526,6 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> const& M_T = *opt;
   MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
   return M;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-PERF_TestEquivalence(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &ePerf1,
-                     MyMatrix<T> const &ePerf2, std::ostream& os) {
-  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(ePerf1, os);
-  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(ePerf2, os);
-  return SimplePerfect_TestEquivalence<T,Tint,Tgroup>(LinSpa, ePerf1, ePerf2, RecSHV1, RecSHV2, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
