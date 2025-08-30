@@ -604,20 +604,27 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
   return GRPret;
 }
 
+template <typename T, typename Tint>
+MyMatrix<T> get_shv_t(MyMatrix<T> const& eMat, Tshortest<T, Tint> const &RecSHV, std::ostream& os) {
+  MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
+  if (IsFullDimZbasis(SHVorig_T)) {
+    return SHVorig_T;
+  }
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  return UniversalMatrixConversion<T, Tint>(SHV);
+}
+
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
                               MyMatrix<T> const &eMat1,
-                              MyMatrix<T> const &eMat2, std::ostream &os) {
-  MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
-  MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
-  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);
-  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(SHV2);
-  //  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(Gram1, os);
-  //  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(Gram2, os);
-  //  MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(RecSHV1.SHV);
-  //  MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(RecSHV2.SHV);
-
+                              MyMatrix<T> const &eMat2,
+                              Tshortest<T, Tint> const &RecSHV1,
+                              Tshortest<T, Tint> const &RecSHV2,
+                              std::ostream &os) {
+  MyMatrix<T> SHV1_T = get_shv_t(eMat1, RecSHV1, os);
+  MyMatrix<T> SHV2_T = get_shv_t(eMat2, RecSHV2, os);
   std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
   if (!opt) {
     return {};
@@ -636,14 +643,7 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   // Functionality for checking quality of equivalences
   //
   MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
-  auto get_shv_t=[&]() -> MyMatrix<T> {
-    if (IsFullDimZbasis(SHVorig_T)) {
-      return SHVorig_T;
-    }
-    MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
-    return UniversalMatrixConversion<T, Tint>(SHV);
-  };
-  MyMatrix<T> SHV_T = get_shv_t();
+  MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
   if (SHVorig_T == SHV_T) {
     // This is the most likely scenario: The original

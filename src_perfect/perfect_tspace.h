@@ -69,19 +69,6 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed, MyMatrix<T> const &Gram
   return robin_hood_hash_bytes(&h, sizeof(h), seed);
 }
 
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-TSPACE_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
-                      MyMatrix<T> const &Gram1,
-                      MyMatrix<T> const &Gram2,
-                      std::ostream &os) {
-  Tshortest<T, Tint> eRec1 = T_ShortestVector<T, Tint>(Gram1, os);
-  Tshortest<T, Tint> eRec2 = T_ShortestVector<T, Tint>(Gram2, os);
-
-  return PERF_TestEquivalence<T, Tint, Tgroup>(LinSpa, Gram1, Gram2,
-                                               eRec1.SHV, eRec2.SHV, os);
-}
-
 template <typename T, typename Tint>
 std::vector<PerfectTspace_AdjI<T, Tint>>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
@@ -131,8 +118,7 @@ struct DataPerfectTspaceFunc {
 
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     std::ostream &os = get_os();
-    std::optional<MyMatrix<Tint>> opt = TSPACE_TestEquivalence<T, Tint, Tgroup>(
-        data.LinSpa, x.Gram, y.Gram, os);
+    std::optional<MyMatrix<Tint>> opt = SimplePerfect_TestEquivalence<T, Tint, Tgroup>(data.LinSpa, x.Gram, y.Gram, x.RecSHV, x.RecSHV, os);
     if (!opt) {
       return {};
     }
