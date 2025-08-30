@@ -82,14 +82,6 @@ TSPACE_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
                                                eRec1.SHV, eRec2.SHV, os);
 }
 
-template <typename T, typename Tint, typename Tgroup>
-Tgroup TSPACE_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                               MyMatrix<T> const &Gram,
-                               std::ostream &os) {
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram, os);
-  return SimplePerfect_Stabilizer<T, Tint, Tgroup>(LinSpa, Gram, eRec, os);
-}
-
 template <typename T, typename Tint>
 std::vector<PerfectTspace_AdjI<T, Tint>>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
@@ -158,7 +150,7 @@ struct DataPerfectTspaceFunc {
 
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
-    x.GRP = TSPACE_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, os);
+    x.GRP = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
     return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, os);
   }
 
