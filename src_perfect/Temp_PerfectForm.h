@@ -152,36 +152,6 @@ SinglePerfect<T, Tint, Tgroup> GetPerfectCone(LinSpaceMatrix<T> const &LinSpa,
       0,     0};
 }
 
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-PERF_TestEquivalence(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &ePerf1,
-                     MyMatrix<T> const &ePerf2, MyMatrix<Tint> const &SHV1,
-                     MyMatrix<Tint> const &SHV2, std::ostream& os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx_value = int16_t;
-  MyMatrix<T> T_SHV1 = UniversalMatrixConversion<T, Tint>(SHV1);
-  MyMatrix<T> T_SHV2 = UniversalMatrixConversion<T, Tint>(SHV2);
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat1 =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV1, ePerf1,
-                                                     LinSpa.ListComm, os);
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat2 =
-      GetWeightMatrix_ListComm<false, T, Tidx_value>(T_SHV2, ePerf2,
-                                                     LinSpa.ListComm, os);
-  std::optional<Telt> opt =
-    GetEquivalenceAsymmetricMatrix<std::vector<T>, Telt, Tidx_value>(WMat1, WMat2, os);
-  if (!opt) {
-    return {};
-  }
-  Telt const& TheEquiv = *opt;
-  MyMatrix<T> M3 = RepresentVertexPermutation(T_SHV1, T_SHV2, TheEquiv);
-  if (IsIntegralMatrix(M3)) {
-    MyMatrix<Tint> eMatEquiv = UniversalMatrixConversion<Tint, T>(M3);
-    return eMatEquiv;
-  }
-  std::cerr << "Need to write some code here\n";
-  throw TerminalException{1};
-}
-
 struct QueryEquivInfo {
   bool result;
   int nbOrbit;
@@ -564,46 +534,6 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
   return {hash};
 }
 
-template <typename T, typename Tgroup, typename Fcorrect>
-std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method4(
-    MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,
-    typename Tgroup::Telt const &ePerm, Fcorrect f_correct) {
-  using Telt = typename Tgroup::Telt;
-  for (auto &fPerm : GRP1) {
-    Telt eEquivCand = fPerm * ePerm;
-    MyMatrix<T> eBigMat = FindTransformation(EXT1_T, EXT2_T, eEquivCand);
-    if (f_correct(eBigMat))
-      return eBigMat;
-  }
-  return {};
-}
-
-template <typename T, typename Tgroup, typename Fcorrect>
-Tgroup LinPolytopeIntegral_Stabilizer_Method4(MyMatrix<T> const &EXT_T,
-                                              Tgroup const &GRPisom,
-                                              Fcorrect f_correct) {
-  static_assert(
-      is_ring_field<T>::value,
-      "Requires T to be a field in LinPolytopeIntegral_Stabilizer_Method4");
-  using Telt = typename Tgroup::Telt;
-  int nbVert = EXT_T.rows();
-  std::vector<Telt> generatorList;
-  Tgroup GRPret(nbVert);
-  auto fInsert = [&](Telt const &ePerm) -> void {
-    bool test = GRPret.isin(ePerm);
-    if (!test) {
-      generatorList.push_back(ePerm);
-      GRPret = Tgroup(generatorList, nbVert);
-    }
-  };
-  for (auto &ePerm : GRPisom) {
-    MyMatrix<T> eBigMat = FindTransformation(EXT_T, EXT_T, ePerm);
-    if (f_correct(eBigMat))
-      fInsert(ePerm);
-  }
-  return GRPret;
-}
-
 template <typename T, typename Tint>
 MyMatrix<T> get_shv_t(MyMatrix<T> const& eMat, Tshortest<T, Tint> const &RecSHV, std::ostream& os) {
   MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
@@ -632,6 +562,15 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> const& M_T = *opt;
   MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
   return M;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+PERF_TestEquivalence(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &ePerf1,
+                     MyMatrix<T> const &ePerf2, std::ostream& os) {
+  Tshortest<T, Tint> RecSHV1 = T_ShortestVector<T, Tint>(ePerf1, os);
+  Tshortest<T, Tint> RecSHV2 = T_ShortestVector<T, Tint>(ePerf2, os);
+  return SimplePerfect_TestEquivalence<T,Tint,Tgroup>(LinSpa, ePerf1, ePerf2, RecSHV1, RecSHV2, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>

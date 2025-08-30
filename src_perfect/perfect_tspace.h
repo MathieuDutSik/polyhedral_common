@@ -60,7 +60,9 @@ struct DataPerfectTspace {
 };
 
 template <typename T, typename Tint>
-size_t ComputeInvariantPerfectTspace(size_t const &seed, MyMatrix<T> const &Gram,
+size_t ComputeInvariantPerfectTspace(size_t const &seed,
+                                     MyMatrix<T> const &Gram,
+                                     Tshortest<T, Tint> const &RecSHV,
                                     [[maybe_unused]] std::ostream &os) {
   std::ostringstream ostringstream;
   ostringstream << "Perfect_Tspace Gram=" << StringMatrixGAP(Gram);
@@ -113,7 +115,7 @@ struct DataPerfectTspaceFunc {
   }
 
   size_t f_hash(size_t const &seed, Tobj const &x) {
-    return ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, data.rddo.os);
+    return ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, x.RecSHV, data.rddo.os);
   }
 
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
