@@ -109,7 +109,7 @@ jobs:
 
       - name: Test Perfect Forms in T-spaces
         run: |
-          cd src_perfect && make -f Makefile_serial && cd ..
+          cd src_perfect && make -f Makefile_perfectenum && cd ..
           pwd
           echo "After compilation of PERF_SerialEnumeratePerfectCones"
 
