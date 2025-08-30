@@ -494,7 +494,8 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
     return ScalarProductQuadForm<T, Tint>(eG, V1, V2);
   };
   WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f);
-  size_t hash = GetInvariantWeightMatrix(WMat);
+  size_t seed = 1234;
+  size_t hash = GetInvariantWeightMatrix(seed, WMat);
   return {hash};
 }
 

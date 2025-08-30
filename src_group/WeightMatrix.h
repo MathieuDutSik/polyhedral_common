@@ -602,8 +602,7 @@ GetLocalInvariantWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 inline typename std::enable_if<is_totally_ordered<T>::value, size_t>::type
-GetInvariantWeightMatrix(
-    WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
+GetInvariantWeightMatrix(size_t const& seed, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
   static_assert(is_totally_ordered<T>::value,
                 "Requires T to be totally ordered");
   size_t nbVert = WMat.rows();
@@ -630,9 +629,14 @@ GetInvariantWeightMatrix(
     ListAtt[iWeight + nbWeight] = ListAttOff[jWeight];
     ListWeight_B[iWeight] = ListWeight[jWeight];
   }
+  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
+    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
+  };
   size_t hash1 = std::hash<std::vector<int>>()(ListAtt);
   size_t hash2 = std::hash<std::vector<T>>()(ListWeight_B);
-  size_t hash = hash1 + (hash2 << 6) + (hash2 >> 2);
+  size_t hash = seed;
+  combine_hash(hash, hash1);
+  combine_hash(hash, hash2);
   return hash;
 }
 

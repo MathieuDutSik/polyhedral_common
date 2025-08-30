@@ -8,7 +8,9 @@
 #include "POLY_lrslib.h"
 #include "Positivity.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "POLY_AdjacencyScheme.h"
 #include "hash_functions.h"
+#include "Tspace_Namelist.h"
 // clang-format on
 
 void WriteEntryGAP(std::ostream &os, Face const &eFace) {
@@ -65,7 +67,7 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
                                      Tshortest<T, Tint> const &RecSHV,
                                      std::ostream &os) {
   using Tidx_value = int16_t;
-  int n = eGram.rows();
+  size_t n = eGram.rows();
   MyMatrix<T> eG = eGram / RecSHV.eMin;
   int nbSHV = RecSHV.SHV.size();
 
@@ -85,7 +87,7 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
     return eSum;
   };
   WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
-  size_t hash = GetInvariantWeightMatrix(WMat);
+  size_t hash = GetInvariantWeightMatrix(seed, WMat);
   return hash;
 }
 
@@ -227,6 +229,53 @@ inline void serialize(Archive &ar, PerfectTspace_AdjO<Tint> &eRec,
   ar &make_nvp("eBigMat", eRec.eBigMat);
 }
 } // namespace boost::serialization
+
+FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // DATA
+  std::map<std::string, int> ListIntValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  std::map<std::string, std::string> ListStringValues1;
+  ListStringValues1["arithmetic_T"] = "gmp_rational";
+  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
+  ListStringValues1["OutFormat"] = "nothing";
+  ListStringValues1["OutFile"] = "unset.out";
+  ListStringValues1["FileDualDescription"] = "unset";
+  ListIntValues1["max_runtime_second"] = 0;
+  ListBoolValues1["ApplyStdUnitbuf"] = false;
+  SingleBlock BlockDATA;
+  BlockDATA.setListIntValues(ListIntValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  BlockDATA.setListStringValues(ListStringValues1);
+  ListBlock["DATA"] = BlockDATA;
+  // STORAGE
+  std::map<std::string, bool> ListBoolValues2;
+  std::map<std::string, std::string> ListStringValues2;
+  ListBoolValues2["Saving"] = false;
+  ListStringValues2["Prefix"] = "/irrelevant/";
+  SingleBlock BlockSTORAGE;
+  BlockSTORAGE.setListBoolValues(ListBoolValues2);
+  BlockSTORAGE.setListStringValues(ListStringValues2);
+  ListBlock["STORAGE"] = BlockSTORAGE;
+  // TSPACE
+  std::map<std::string, int> ListIntValues3;
+  std::map<std::string, std::string> ListStringValues3;
+  ListStringValues3["TypeTspace"] = "File";
+  ListStringValues3["FileLinSpa"] = "unset.linspa";
+  ListStringValues3["SuperMatMethod"] = "NotNeeded";
+  ListStringValues3["ListComm"] = "Trivial";
+  ListStringValues3["PtGroupMethod"] = "Trivial";
+  ListStringValues3["FileListSubspaces"] = "unset";
+  ListIntValues3["RealImagDim"] = 0;
+  ListIntValues3["RealImagSum"] = 0;
+  ListIntValues3["RealImagProd"] = 0;
+  SingleBlock BlockTSPACE;
+  BlockTSPACE.setListIntValues(ListIntValues3);
+  BlockTSPACE.setListStringValues(ListStringValues3);
+  ListBlock["TSPACE"] = BlockTSPACE;
+  // Merging all data
+  return FullNamelist(ListBlock);
+}
 
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_TSPACE_H_
