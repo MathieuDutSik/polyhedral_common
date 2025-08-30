@@ -25,7 +25,7 @@ GetFundamentalInfo:=function(d)
   return rec(eSum:=eSum, eProd:=eProd, IsCorrect:=IsCorrect);
 end;
 
-GetRecInfo:=function(d, n)
+GetRecInfo:=function(fProg, d, n)
     local FileNml, FileResult, output, eProg, TheCommand, U, is_correct, info;
     #
     FileNml:="PerfectForm.nml";
@@ -45,9 +45,8 @@ GetRecInfo:=function(d, n)
     AppendTo(output, " arithmetic_Tint=\"gmp_integer\"\n");
     AppendTo(output, " OutFormat=\"ObjectGAP\"\n");
     AppendTo(output, " OutFile=\"", FileResult, "\"\n");
-    AppendTo(output, " FileDualDescription=\"../../ExternalLib/DualDescriptionStandard.txt\"\n");
     AppendTo(output, " max_runtime_second=0\n");
-    AppendTo(output, " ApplyStdUnitbuf=F\n");
+    AppendTo(output, " ApplyStdUnitbuf=T\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&STORAGE\n");
@@ -68,7 +67,7 @@ GetRecInfo:=function(d, n)
     AppendTo(output, "/\n");
     CloseStream(output);
     #
-    eProg:="../../src_perfect/PERF_SerialEnumeratePerfectCones";
+    eProg:=Conatenation("../../src_perfect/", 
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     #
@@ -81,68 +80,47 @@ GetRecInfo:=function(d, n)
     return U;
 end;
 
-# Test cases for n=3 with various discriminants
-ListDiscriminants_n3:=[-3, -4, -7, -8, -11, -15, -19, -20, -23, -24];
-# Test cases for n=4 with discriminants -3, -4
-ListDiscriminants_n4:=[-3, -4];
+ListCases:=[];
 
-Print("Testing perfect forms for n=3\n");
-ListRec_n3:=[];
-for d in ListDiscriminants_n3
-do
-    Print("  ----------\n");
-    Print("Testing d=", d, " n=3\n");
-    U:=GetRecInfo(d, 3);
-    if U<>fail then
-        nb:=Length(U);
-        Print("d=", d, " n=3: Found ", nb, " perfect forms\n");
-        eRec:=rec(d:=d, n:=3, nb:=nb);
-        Add(ListRec_n3, eRec);
-    fi;
-od;
+Add(ListCases, rec(n:=3, d:=-3, n_perf:=1));
+Add(ListCases, rec(n:=3, d:=-4, n_perf:=2));
+Add(ListCases, rec(n:=3, d:=-7, n_perf:=3));
+Add(ListCases, rec(n:=3, d:=-8, n_perf:=5));
+Add(ListCases, rec(n:=3, d:=-11, n_perf:=8));
+Add(ListCases, rec(n:=3, d:=-15, n_perf:=34));
+Add(ListCases, rec(n:=3, d:=-19, n_perf:=43));
+Add(ListCases, rec(n:=3, d:=-20, n_perf:=69));
+Add(ListCases, rec(n:=3, d:=-23, n_perf:=204));
+Add(ListCases, rec(n:=3, d:=-24, n_perf:=158));
+Add(ListCases, rec(n:=4, d:=-3, n_perf:=2));
+Add(ListCases, rec(n:=4, d:=-4, n_perf:=4));
 
-Print("Testing perfect forms for n=4\n");
-ListRec_n4:=[];
-for d in ListDiscriminants_n4
-do
-    Print("  ----------\n");
-    Print("Testing d=", d, " n=4\n");
-    U:=GetRecInfo(d, 4);
-    if U<>fail then
-        nb:=Length(U);
-        Print("d=", d, " n=4: Found ", nb, " perfect forms\n");
-        eRec:=rec(d:=d, n:=4, nb:=nb);
-        Add(ListRec_n4, eRec);
-    fi;
-od;
 
-Print("Summary for n=3:\n");
-for eRec in ListRec_n3
-do
-    Print("d=", eRec.d, " nb=", eRec.nb, "\n");
-od;
+ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
 
-Print("Summary for n=4:\n");
-for eRec in ListRec_n4
-do
-    Print("d=", eRec.d, " nb=", eRec.nb, "\n");
-od;
 
-Print("Test enumeration of perfect forms in T-spaces completed\n");
+f_compute:=function()
+    local eCase, fProg;
+    for eCase in ListCases
+    do
+        for fProg in ListProg
+        do
+            eRec:=GetRecInfo(fProg, eCase.d, eCase.n);
+            if eRec.nb<>eCase.n_perf then
+                return false;
+            fi;
+        od;
+    od;
+    return true;
+end;
 
-# Create the CI_CONCLUSION file to indicate successful completion
-output:=OutputTextFile("CI_CONCLUSION", true);
-AppendTo(output, "CI test 30_PerfectFormTspace completed successfully\n");
-AppendTo(output, "Results summary:\n");
-AppendTo(output, "n=3 cases tested: ", Length(ListRec_n3), "\n");
-AppendTo(output, "n=4 cases tested: ", Length(ListRec_n4), "\n");
-AppendTo(output, "Total perfect forms enumerated:\n");
-for eRec in ListRec_n3
-do
-    AppendTo(output, "d=", eRec.d, " n=", eRec.n, " nb=", eRec.nb, "\n");
-od;
-for eRec in ListRec_n4
-do
-    AppendTo(output, "d=", eRec.d, " n=", eRec.n, " nb=", eRec.nb, "\n");
-od;
-CloseStream(output);
+
+
+test:=f_compute();
+CI_Decision_Reset();
+if test=false then
+    Print("Error case\n");
+else
+    Print("Normal case\n");
+    CI_Write_Ok();
+fi;
