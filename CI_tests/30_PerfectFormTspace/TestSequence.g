@@ -70,6 +70,7 @@ GetRecInfo:=function(fProg, d, n)
     #
     eProg:=Concatenation("../../src_perfect/", fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);
+    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     #
     if IsExistingFile(FileResult)=false then

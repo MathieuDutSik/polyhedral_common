@@ -969,9 +969,6 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
     return {};
   }
   int n_row = SHV1_T.rows();
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Equiv, n_row=" << n_row << " det=" << det1 << "\n";
-#endif
   std::vector<T> Vdiag1(n_row, 0), Vdiag2(n_row, 0);
   std::vector<MyMatrix<T>> ListMat1 =
       GetFamilyDiscMatrices(eMat1, LinSpa.ListComm, LinSpa.ListSubspaces);
@@ -1059,7 +1056,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
   os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-  auto f_exhaustive=[&]() -> std::optional<MyMatrix<Tint>> {
+  auto f_exhaustive=[&]() -> std::optional<MyMatrix<T>> {
     for (auto & elt: FullGRP1) {
       MyMatrix<T> eMatr =
         get_mat_from_shv_perm(elt, SHV1_T, eMat1);
