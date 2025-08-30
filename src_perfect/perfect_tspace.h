@@ -61,14 +61,32 @@ struct DataPerfectTspace {
 
 template <typename T, typename Tint>
 size_t ComputeInvariantPerfectTspace(size_t const &seed,
-                                     MyMatrix<T> const &Gram,
+                                     MyMatrix<T> const &eGram,
                                      Tshortest<T, Tint> const &RecSHV,
-                                    [[maybe_unused]] std::ostream &os) {
-  std::ostringstream ostringstream;
-  ostringstream << "Perfect_Tspace Gram=" << StringMatrixGAP(Gram);
-  std::string converted(ostringstream.str());
-  size_t h = std::hash<std::string>()(converted);
-  return robin_hood_hash_bytes(&h, sizeof(h), seed);
+                                     std::ostream &os) {
+  using Tidx_value = int16_t;
+  int n = eGram.rows();
+  MyMatrix<T> eG = eGram / RecSHV.eMin;
+  int nbSHV = RecSHV.SHV.size();
+
+  MyVector<T> V(n);
+  auto f1 = [&](size_t iRow) -> void {
+    for (size_t i=0; i<n; i++) {
+      T eSum(0);
+      for (size_t j=0; j<n; j++)
+        eSum += eG(i, j) * RecSHV.SHV(i, iRow);
+      V(i) = eSum;
+    }
+  };
+  auto f2 = [&](size_t jRow) -> T {
+    T eSum(0);
+    for (size_t i=0; i<n; i++)
+      eSum += V(i) * RecSHV.SHV(i, jRow);
+    return eSum;
+  };
+  WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
+  size_t hash = GetInvariantWeightMatrix(WMat);
+  return hash;
 }
 
 template <typename T, typename Tint>
