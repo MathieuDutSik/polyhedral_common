@@ -148,7 +148,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       LinSpaRet.ListComm = ReadListMatrixFile<T>(FileListComm);
       return;
     }
-    std::cerr << "Failed to find an option for ListComm that suits\n";
+    std::cerr << "TSPACE: Failed to find an option for ListComm that suits\n";
+    std::cerr << "TSPACE: ListComm=" << ListComm << "\n";
+    std::cerr << "TSPACE: Allowed options: Trivial, Use_realimag, File\n";
     throw TerminalException{1};
   };
   auto set_subspaces = [&]() -> void {
@@ -184,7 +186,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       LinSpaRet.PtStabGens = ReadListMatrixFile<T>(FilePtGroupGenerator);
       return;
     }
-    std::cerr << "Failed to find an option for PtGroupMethod that suits\n";
+    std::cerr << "TSPACE: Failed to find an option for PtGroupMethod that suits\n";
+    std::cerr << "TSPACE: PtGroupMethod=" << PtGroupMethod << "\n";
+    std::cerr << "TSPACE: Allowed options: Trivial, Compute, InvGroupInit, File\n";
     throw TerminalException{1};
   };
   auto set_is_bravais = [&]() -> void {
@@ -231,7 +235,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       LinSpaRet.SuperMat = ReadMatrixFile<T>(FileSuperMat);
       return;
     }
-    std::cerr << "Failed to find an option for SuperMatMethod that suits\n";
+    std::cerr << "TSPACE: Failed to find an option for SuperMatMethod that suits\n";
+    std::cerr << "TSPACE: SuperMatMethod=" << SuperMatMethod << "\n";
+    std::cerr << "TSPACE: Allowed options: NotNeeded, Compute, File\n";
     throw TerminalException{1};
   };
   auto get_linspace = [&]() -> LinSpaceMatrix<T> {
@@ -280,7 +286,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       std::string const& FileLinSpa = Blk.get_string("FileLinSpa");
       return ReadLinSpaceFile<T>(FileLinSpa, os);
     }
-    std::cerr << "Failed to find an option for TypeTspace that suits\n";
+    std::cerr << "TSPACE: Failed to find an option for TypeTspace that suits\n";
+    std::cerr << "TSPACE: TypeTspace=" << TypeTspace << "\n";
+    std::cerr << "TSPACE: Allowed options: Raw, InvGroup, ImagQuad, RealQuad\n";
     throw TerminalException{1};
   };
   LinSpaceMatrix<T> LinSpa = get_linspace();

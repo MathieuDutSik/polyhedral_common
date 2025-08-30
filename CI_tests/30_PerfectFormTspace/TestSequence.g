@@ -30,6 +30,7 @@ GetRecInfo:=function(fProg, d, n)
     #
     FileNml:="PerfectForm.nml";
     FileResult:="Result";
+    RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileResult);
     #
     info:=GetFundamentalInfo(d);
@@ -55,7 +56,7 @@ GetRecInfo:=function(fProg, d, n)
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");
-    AppendTo(output, " TypeTspace=\"RealImaginary\"\n");
+    AppendTo(output, " TypeTspace=\"ImagQuad\"\n");
     AppendTo(output, " FileLinSpa=\"unset.linspa\"\n");
     AppendTo(output, " SuperMatMethod=\"NotNeeded\"\n");
     AppendTo(output, " ListComm=\"Trivial\"\n");
@@ -67,12 +68,14 @@ GetRecInfo:=function(fProg, d, n)
     AppendTo(output, "/\n");
     CloseStream(output);
     #
-    eProg:=Conatenation("../../src_perfect/", 
+    eProg:=Concatenation("../../src_perfect/", fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     #
     if IsExistingFile(FileResult)=false then
-        Error("The output file is not existing. That qualifies as a fail");
+        Print("The output file is not existing. That qualifies as a fail\n");
+#        Print(NullMat(5));
+        return fail;
     fi;
     U:=ReadAsFunction(FileResult)();
     RemoveFile(FileNml);
@@ -100,12 +103,15 @@ ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"]
 
 
 f_compute:=function()
-    local eCase, fProg;
+    local eCase, fProg, eRec;
     for eCase in ListCases
     do
         for fProg in ListProg
         do
             eRec:=GetRecInfo(fProg, eCase.d, eCase.n);
+            if eRec=fail then
+                return false;
+            fi;
             if eRec.nb<>eCase.n_perf then
                 return false;
             fi;

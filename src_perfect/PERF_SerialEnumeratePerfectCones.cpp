@@ -52,20 +52,11 @@ void process_A(FullNamelist const &eFull) {
 
 template <typename T, typename Tint>
 void process_B(FullNamelist const &eFull) {
-  std::string arithmetic_Tgroup =
-      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tgroup");
-  if (arithmetic_Tgroup == "gmp_integer") {
-    using Tidx = uint32_t;
-    using Telt = permutalib::SingleSidedPerm<Tidx>;
-    using TintGroup = mpz_class;
-    using Tgroup = permutalib::Group<Telt, TintGroup>;
-    return process_A<T, Tint, Tgroup>(eFull);
-  }
-  std::cerr << "PERF_SerialEnumeratePerfectCones: Failed to find a matching type for "
-               "arithmetic_Tgroup="
-            << arithmetic_Tgroup << "\n";
-  std::cerr << "Available types: gmp_integer\n";
-  throw TerminalException{1};
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using TintGroup = mpz_class;
+  using Tgroup = permutalib::Group<Telt, TintGroup>;
+  return process_A<T, Tint, Tgroup>(eFull);
 }
 
 template <typename T>
@@ -111,7 +102,6 @@ int main(int argc, char *argv[]) {
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
-    using Tint = mpz_class;
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     process_D(eFull);
