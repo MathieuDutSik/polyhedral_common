@@ -229,7 +229,13 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     return pair.second;
   };
   auto insert_load = [&](Tobj const &x, bool const &is_treated) -> void {
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: Before f_hash\n";
+#endif
     size_t hash_hashmap = f_hash(seed_hashmap, x);
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: After f_hash\n";
+#endif
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {

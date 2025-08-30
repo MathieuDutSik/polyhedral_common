@@ -13,6 +13,10 @@
 #include "Tspace_Namelist.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_PERFECT_TSPACE
+#endif
+
 void WriteEntryGAP(std::ostream &os, Face const &eFace) {
   os << "[";
   size_t len = eFace.size();
@@ -66,28 +70,37 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
                                      MyMatrix<T> const &eGram,
                                      Tshortest<T, Tint> const &RecSHV,
                                      std::ostream &os) {
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, begin\n";
+#endif
   using Tidx_value = int16_t;
-  size_t n = eGram.rows();
+  int n = eGram.rows();
   MyMatrix<T> eG = eGram / RecSHV.eMin;
-  int nbSHV = RecSHV.SHV.size();
+  int nbSHV = RecSHV.SHV.rows();
 
   MyVector<T> V(n);
   auto f1 = [&](size_t iRow) -> void {
-    for (size_t i=0; i<n; i++) {
+    for (int i=0; i<n; i++) {
       T eSum(0);
-      for (size_t j=0; j<n; j++)
-        eSum += eG(i, j) * RecSHV.SHV(i, iRow);
+      for (int j=0; j<n; j++)
+        eSum += eG(i, j) * RecSHV.SHV(iRow, i);
       V(i) = eSum;
     }
   };
   auto f2 = [&](size_t jRow) -> T {
     T eSum(0);
-    for (size_t i=0; i<n; i++)
-      eSum += V(i) * RecSHV.SHV(i, jRow);
+    for (int i=0; i<n; i++)
+      eSum += V(i) * RecSHV.SHV(jRow, i);
     return eSum;
   };
   WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have WMat\n";
+#endif
   size_t hash = GetInvariantWeightMatrix(seed, WMat);
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash\n";
+#endif
   return hash;
 }
 
@@ -95,6 +108,9 @@ template <typename T, typename Tint>
 std::vector<PerfectTspace_AdjI<T, Tint>>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
                      std::ostream &os) {
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
+#endif
   Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram, os);
   int n = eRec.SHV.cols();
   int nbShort = eRec.SHV.rows() / 2;
@@ -241,6 +257,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   ListStringValues1["OutFormat"] = "nothing";
   ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
+  ListStringValues1["Prefix"] = "unset";
   ListIntValues1["max_runtime_second"] = 0;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;

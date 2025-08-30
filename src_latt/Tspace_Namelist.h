@@ -14,6 +14,10 @@
 #define DEBUG_TSPACE_NAMELIST
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_TSPACE_NAMELIST
+#endif
+
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
   std::map<std::string, std::string> ListStringValues1_doc;
   std::map<std::string, std::string> ListBoolValues1_doc;
@@ -311,8 +315,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   LinSpaceMatrix<T> LinSpa = get_linspace();
 #ifdef DEBUG_TSPACE_NAMELIST
-  os << "TSP: ReadTspace: |PtStabGens|=" << LinSpa.PtStabGens.size() << "\n";
-  os << "TSP: ReadTspace: |ListMat|=" << LinSpa.ListMat.size() << "\n";
+  os << "TSPACE: ReadTspace: |PtStabGens|=" << LinSpa.PtStabGens.size() << "\n";
+  os << "TSPACE: ReadTspace: |ListMat|=" << LinSpa.ListMat.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_TSPACE_NAMELIST
   for (auto &eGen : LinSpa.PtStabGens) {
     for (auto &eMat : LinSpa.ListMat) {
       MyMatrix<T> eMatImg = eGen * eMat * eGen.transpose();
