@@ -712,6 +712,12 @@ public:
     std::vector<Tidx> eList(n_row);
     for (int i_row = 0; i_row < n_row; i_row++) {
       MyVector<T> Vimg = M.transpose() * ListV[i_row];
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+      if (MapV.count(Vimg) == 0) {
+        std::cerr << "TSPACE: MapV should contain Vimg=" << StringVectorGAP(Vimg) << "\n";
+        throw TerminalException{1};
+      }
+#endif
       Tidx pos = MapV.at(Vimg);
       eList[i_row] = pos;
     }
