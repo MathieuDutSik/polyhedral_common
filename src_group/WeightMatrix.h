@@ -1646,49 +1646,6 @@ TestEquivalenceWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat1,
 }
 
 //
-// The asymmetric matrix code.
-//
-
-template <typename T, typename Tgroup, typename Tidx_value>
-Tgroup
-GetStabilizerAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const &WMatI) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  using Tgr = GraphListAdj;
-  WeightMatrix<true, T, Tidx_value> WMatO = WMatI.GetSymmetricWeightMatrix();
-  size_t nbSHV = WMatI.rows();
-  Tgroup GRP = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMatO);
-  std::vector<Telt> ListGenInput = GRP.GeneratorsOfGroup();
-  std::vector<Tidx> v(nbSHV);
-  std::vector<Telt> ListGen;
-  for (auto &eGen : ListGenInput) {
-    for (size_t iSHV = 0; iSHV < nbSHV; iSHV++)
-      v[iSHV] = OnPoints(iSHV, eGen);
-    ListGen.emplace_back(std::move(Telt(v)));
-  }
-  return Tgroup(ListGen, nbSHV);
-}
-
-template <typename T, typename Telt, typename Tidx_value>
-std::optional<Telt>
-GetEquivalenceAsymmetricMatrix(WeightMatrix<false, T, Tidx_value> const &WMat1,
-                               WeightMatrix<false, T, Tidx_value> const &WMat2,
-                               std::ostream &os) {
-  using Tidx = typename Telt::Tidx;
-  WeightMatrix<true, T, Tidx_value> WMatO1 = WMat1.GetSymmetricWeightMatrix();
-  WeightMatrix<true, T, Tidx_value> WMatO2 = WMat2.GetSymmetricWeightMatrix();
-  std::optional<Telt> eResEquiv =
-      TestEquivalenceWeightMatrix<T, Telt>(WMatO1, WMatO2, os);
-  if (!eResEquiv)
-    return {};
-  size_t nbSHV = WMat1.rows();
-  std::vector<Tidx> v(nbSHV);
-  for (size_t i = 0; i < nbSHV; i++)
-    v[i] = OnPoints(i, *eResEquiv);
-  return Telt(std::move(v));
-}
-
-//
 // PairOrbits as powerful invariants of subsets extracted from the group action
 // on pairs.
 //
