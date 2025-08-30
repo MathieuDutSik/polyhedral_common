@@ -2,7 +2,8 @@
 #PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
 #PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones
-PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
+#PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
+PROGRAM		= PERF_SerialEnumeratePerfectCones
 
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp

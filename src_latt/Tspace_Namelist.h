@@ -130,6 +130,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto set_listcomm = [&]() -> void {
     std::string const& ListComm = Blk.get_string("ListComm");
+#ifdef DEBUG_TSPACE_NAMELIST
+    os << "TSPACE: set_listcomm, ListComm=" << ListComm << "\n";
+#endif
     if (ListComm == "Trivial") {
       LinSpaRet.ListComm.clear();
       return;
@@ -162,8 +165,11 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto set_pt_stab = [&]() -> void {
     std::string PtGroupMethod = Blk.get_string("PtGroupMethod");
+#ifdef DEBUG_TSPACE_NAMELIST
+    os << "TSPACE: set_pt_stab, PtGroupMethod=" << PtGroupMethod << "\n";
+#endif
     if (PtGroupMethod == "Trivial") {
-      MyVector<T> eGen = -IdentityMat<T>(LinSpaRet.n);
+      MyMatrix<T> eGen = -IdentityMat<T>(LinSpaRet.n);
       LinSpaRet.PtStabGens = {eGen};
       return;
     }
@@ -192,11 +198,17 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     throw TerminalException{1};
   };
   auto set_is_bravais = [&]() -> void {
+#ifdef DEBUG_TSPACE_NAMELIST
+    os << "TSPACE: set_is_bravais\n";
+#endif
     LinSpaRet.isBravais = IsBravaisSpace(LinSpaRet.n, LinSpaRet.ListMat,
                                          LinSpaRet.PtStabGens, os);
   };
   auto set_supermat = [&]() -> void {
     std::string SuperMatMethod = Blk.get_string("SuperMatMethod");
+#ifdef DEBUG_TSPACE_NAMELIST
+    os << "TSPACE: set_supermat, SuperMatMethod=" << SuperMatMethod << "\n";
+#endif
     if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" &&
         TypeTspace != "InvGroup") {
       if (SuperMatMethod == "NotNeeded") {
@@ -241,10 +253,16 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     throw TerminalException{1};
   };
   auto get_linspace = [&]() -> LinSpaceMatrix<T> {
+#ifdef DEBUG_TSPACE_NAMELIST
+    os << "TSPACE: Beginning of get_linspace TypeTspace=" << TypeTspace << "\n";
+#endif
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
       int n = Blk.get_int("RealImagDim");
       int eSum = Blk.get_int("RealImagSum");
       int eProd = Blk.get_int("RealImagProd");
+#ifdef DEBUG_TSPACE_NAMELIST
+      os << "n=" << n << " eSum" << eSum << " eProd=" << eProd << "\n";
+#endif
       if (TypeTspace == "RealQuad")
         LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
       if (TypeTspace == "ImagQuad")
