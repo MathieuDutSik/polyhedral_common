@@ -34,19 +34,19 @@ void WriteEntryPYTHON(std::ostream &os, Face const &eFace) {
 }
 
 template <typename T, typename Tint> struct PerfectTspaceEntry {
-  MyMatrix<Tint> Gram;
+  MyMatrix<T> Gram;
   int incd;
 };
 
 template <typename T, typename Tint, typename Tgroup>
 struct PerfectTspace_Obj {
-  MyMatrix<Tint> Gram;
+  MyMatrix<T> Gram;
   Tgroup GRP;
 };
 
-template <typename Tint> struct PerfectTspace_AdjI {
+template <typename T, typename Tint> struct PerfectTspace_AdjI {
   Face eInc;
-  MyMatrix<Tint> Gram;
+  MyMatrix<T> Gram;
 };
 
 template <typename Tint> struct PerfectTspace_AdjO {
@@ -63,7 +63,7 @@ struct DataPerfectTspace {
 };
 
 template <typename T, typename Tint>
-size_t ComputeInvariantPerfectTspace(size_t const &seed, MyMatrix<Tint> const &Gram,
+size_t ComputeInvariantPerfectTspace(size_t const &seed, MyMatrix<T> const &Gram,
                                     [[maybe_unused]] std::ostream &os) {
   std::ostringstream ostringstream;
   ostringstream << "Perfect_Tspace Gram=" << StringMatrixGAP(Gram);
@@ -78,41 +78,35 @@ PerfectTspaceEntry<T, Tint> TSPACE_GetOnePerfect(LinSpaceMatrix<T> const &LinSpa
   MyMatrix<T> eGram = GetOnePerfectForm<T,Tint>(LinSpa, os);
   Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eGram, os);
   int incd = eRec.SHV.rows() / 2;
-  MyMatrix<Tint> Gram_int = UniversalMatrixConversion<Tint, T>(eGram);
-  return {Gram_int, incd};
+  return {eGram, incd};
 }
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 TSPACE_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
-                      MyMatrix<Tint> const &Gram1,
-                      MyMatrix<Tint> const &Gram2,
+                      MyMatrix<T> const &Gram1,
+                      MyMatrix<T> const &Gram2,
                       std::ostream &os) {
-  MyMatrix<T> Gram1_T = UniversalMatrixConversion<T, Tint>(Gram1);
-  MyMatrix<T> Gram2_T = UniversalMatrixConversion<T, Tint>(Gram2);
+  Tshortest<T, Tint> eRec1 = T_ShortestVector<T, Tint>(Gram1, os);
+  Tshortest<T, Tint> eRec2 = T_ShortestVector<T, Tint>(Gram2, os);
 
-  Tshortest<T, Tint> eRec1 = T_ShortestVector<T, Tint>(Gram1_T, os);
-  Tshortest<T, Tint> eRec2 = T_ShortestVector<T, Tint>(Gram2_T, os);
-
-  return PERF_TestEquivalence<T, Tint, Tgroup>(LinSpa, Gram1_T, Gram2_T,
+  return PERF_TestEquivalence<T, Tint, Tgroup>(LinSpa, Gram1, Gram2,
                                                eRec1.SHV, eRec2.SHV, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
 Tgroup TSPACE_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
-                               MyMatrix<Tint> const &Gram,
+                               MyMatrix<T> const &Gram,
                                std::ostream &os) {
-  MyMatrix<T> Gram_T = UniversalMatrixConversion<T, Tint>(Gram);
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram_T, os);
-  return SimplePerfect_Stabilizer<T, Tint, Tgroup>(LinSpa, Gram_T, eRec, os);
+  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram, os);
+  return SimplePerfect_Stabilizer<T, Tint, Tgroup>(LinSpa, Gram, eRec, os);
 }
 
 template <typename T, typename Tint>
-std::vector<PerfectTspace_AdjI<Tint>>
-TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const &Gram,
+std::vector<PerfectTspace_AdjI<T, Tint>>
+TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
                      std::ostream &os) {
-  MyMatrix<T> Gram_T = UniversalMatrixConversion<T, Tint>(Gram);
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram_T, os);
+  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram, os);
   int n = eRec.SHV.cols();
   int nbShort = eRec.SHV.rows() / 2;
   MyMatrix<Tint> SHVred(nbShort, n);
@@ -123,18 +117,17 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const &Gra
   MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T, Tint>(SHVred);
   vectface ListIncd = lrs::DualDescription_incd(ConeClassical);
 
-  std::vector<PerfectTspace_AdjI<Tint>> ListAdj;
+  std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
   for (auto &eIncd : ListIncd) {
     MyVector<T> eFacet = FindFacetInequality(ConeClassical, eIncd);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePairAdj =
-        Flipping_Perfect<T, Tint>(Gram_T, eMatDir, os);
+        Flipping_Perfect<T, Tint>(Gram, eMatDir, os);
 
     MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
     MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
-    MyMatrix<Tint> Gram_adj = UniversalMatrixConversion<Tint, T>(eMat3);
 
-    PerfectTspace_AdjI<Tint> eAdj{eIncd, Gram_adj};
+    PerfectTspace_AdjI<T, Tint> eAdj{eIncd, eMat3};
     ListAdj.push_back(eAdj);
   }
   return ListAdj;
@@ -144,7 +137,7 @@ template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectTspaceFunc {
   DataPerfectTspace<T, Tint, Tgroup> data;
   using Tobj = PerfectTspace_Obj<T, Tint, Tgroup>;
-  using TadjI = PerfectTspace_AdjI<Tint>;
+  using TadjI = PerfectTspace_AdjI<T, Tint>;
   using TadjO = PerfectTspace_AdjO<Tint>;
   std::ostream &get_os() { return data.rddo.os; }
 
@@ -180,7 +173,6 @@ struct DataPerfectTspaceFunc {
 
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
-    MyMatrix<T> Gram_T = UniversalMatrixConversion<T, Tint>(x.Gram);
     x.GRP = TSPACE_ComputeStabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, os);
     return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, os);
   }
@@ -239,8 +231,8 @@ inline void serialize(Archive &ar, PerfectTspace_Obj<T, Tint, Tgroup> &eRec,
   ar &make_nvp("Gram", eRec.Gram);
   ar &make_nvp("GRP", eRec.GRP);
 }
-template <class Archive, typename Tint>
-inline void serialize(Archive &ar, PerfectTspace_AdjI<Tint> &eRec,
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, PerfectTspace_AdjI<T, Tint> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("eInc", eRec.eInc);
   ar &make_nvp("Gram", eRec.Gram);
