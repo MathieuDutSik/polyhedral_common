@@ -449,7 +449,7 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
+std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
@@ -466,15 +466,15 @@ MyMatrix<T> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
     }
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
-    if (TheRank == nbMat)
-      break;
+    if (TheRank == nbMat) {
+      return {ThePerfMat, RecSHV};
+    }
     MyVector<T> eVect = eSelect.NSP.row(0);
     MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(LinSpa, eVect);
     MyMatrix<T> eMatRet =
         Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os).first;
     ThePerfMat = eMatRet;
   }
-  return ThePerfMat;
 }
 
 template <typename T, typename Tint, typename Tgroup>

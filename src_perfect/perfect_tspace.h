@@ -33,20 +33,17 @@ void WriteEntryPYTHON(std::ostream &os, Face const &eFace) {
   os << "]";
 }
 
-template <typename T, typename Tint> struct PerfectTspaceEntry {
-  MyMatrix<T> Gram;
-  int incd;
-};
-
 template <typename T, typename Tint, typename Tgroup>
 struct PerfectTspace_Obj {
   MyMatrix<T> Gram;
+  Tshortest<T, Tint> RecSHV;
   Tgroup GRP;
 };
 
 template <typename T, typename Tint> struct PerfectTspace_AdjI {
   Face eInc;
   MyMatrix<T> Gram;
+  Tshortest<T, Tint> RecSHV;
 };
 
 template <typename Tint> struct PerfectTspace_AdjO {
@@ -70,15 +67,6 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed, MyMatrix<T> const &Gram
   std::string converted(ostringstream.str());
   size_t h = std::hash<std::string>()(converted);
   return robin_hood_hash_bytes(&h, sizeof(h), seed);
-}
-
-template <typename T, typename Tint>
-PerfectTspaceEntry<T, Tint> TSPACE_GetOnePerfect(LinSpaceMatrix<T> const &LinSpa,
-                                                std::ostream &os) {
-  MyMatrix<T> eGram = GetOnePerfectForm<T,Tint>(LinSpa, os);
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eGram, os);
-  int incd = eRec.SHV.rows() / 2;
-  return {eGram, incd};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -121,13 +109,10 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
   for (auto &eIncd : ListIncd) {
     MyVector<T> eFacet = FindFacetInequality(ConeClassical, eIncd);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
-    std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePairAdj =
+    std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         Flipping_Perfect<T, Tint>(Gram, eMatDir, os);
 
-    MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
-    MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
-
-    PerfectTspace_AdjI<T, Tint> eAdj{eIncd, eMat3};
+    PerfectTspace_AdjI<T, Tint> eAdj{eIncd, pair.first, pair.second};
     ListAdj.push_back(eAdj);
   }
   return ListAdj;
@@ -143,8 +128,8 @@ struct DataPerfectTspaceFunc {
 
   Tobj f_init() {
     std::ostream &os = get_os();
-    PerfectTspaceEntry<T, Tint> eRec = TSPACE_GetOnePerfect<T, Tint>(data.LinSpa, os);
-    Tobj x{eRec.Gram, {}};
+    std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm<T,Tint>(data.LinSpa, os);
+    Tobj x{pair.first, pair.second, {}};
     return x;
   }
 
@@ -165,7 +150,7 @@ struct DataPerfectTspaceFunc {
   }
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
-    Tobj x_ret{y.Gram, {}};
+    Tobj x_ret{y.Gram, y.RecSHV, {}};
     MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.n);
     TadjO ret{y.eInc, eBigMat};
     return {x_ret, ret};
@@ -178,7 +163,7 @@ struct DataPerfectTspaceFunc {
   }
 
   Tobj f_adji_obj(TadjI const &x) {
-    Tobj x_ret{x.Gram, {}};
+    Tobj x_ret{x.Gram, x.RecSHV, {}};
     return x_ret;
   }
 };
