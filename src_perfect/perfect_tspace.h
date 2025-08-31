@@ -83,9 +83,19 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
                                                                  SHV_T,
                                                                  GRP, os);
   vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub);
-
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: |ListIncd|=" << ListIncd.size() << "\n";
+  os << "PERF_TSPACE: |eCone.PerfDomEXT|=" << eCone.PerfDomEXT.cols() << " / " << eCone.PerfDomEXT.rows() << "\n";
+  os << "PERF_TSPACE: rk(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT) << "\n";
+  size_t pos = 0;
+#endif
+
   for (auto &eIncd : ListIncd) {
+#ifdef DEBUG_PERFECT_TSPACE
+    os << "PERF_TSPACE: pos=" << pos << " eIncd=" << eIncd << "\n";
+    pos += 1;
+#endif
     MyVector<T> eFacet = FindFacetInequality(eCone.PerfDomEXT, eIncd);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =

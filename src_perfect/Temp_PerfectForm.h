@@ -169,8 +169,9 @@ RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
     int iSHV = ListBlock[iBlock][0];
     MyVector<T> eVect = GetMatrixRow(SHV_T, iSHV);
     AssignMatrixRow(SHVred, iBlock, eVect);
-    for (int iMat = 0; iMat < nbMat; iMat++)
+    for (int iMat = 0; iMat < nbMat; iMat++) {
       PerfDomEXT(iBlock, iMat) = RyshkovLoc(iSHV, iMat);
+    }
   }
   std::vector<Telt> l_gens;
   for (auto & eGen: GRP.GeneratorsOfGroup()) {
