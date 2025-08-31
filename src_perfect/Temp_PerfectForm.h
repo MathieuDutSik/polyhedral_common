@@ -390,22 +390,35 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
   using Tidx_value = int16_t;
   int n = eGram.rows();
   MyMatrix<T> eG = eGram / RecSHV.eMin;
-  int nbSHV = RecSHV.SHV.rows();
+  size_t n_row = RecSHV.SHV.rows();
+  int nbSHV = 2 * n_row;
 
   MyVector<T> V(n);
+  int iSign, jSign;
   auto f1 = [&](size_t iRow) -> void {
+    size_t iRowRed = iRow % n_row;
+    iSign = 1;
+    if (iRow >= n_row) {
+      iSign = -1;
+    }
     for (int i=0; i<n; i++) {
       T eSum(0);
       for (int j=0; j<n; j++)
-        eSum += eG(i, j) * RecSHV.SHV(iRow, i);
+        eSum += eG(i, j) * RecSHV.SHV(iRowRed, i);
       V(i) = eSum;
     }
   };
   auto f2 = [&](size_t jRow) -> T {
+    size_t jRowRed = jRow % n_row;
+    jSign = 1;
+    if (jRow >= n_row) {
+      jSign = -1;
+    }
     T eSum(0);
     for (int i=0; i<n; i++)
-      eSum += V(i) * RecSHV.SHV(jRow, i);
-    return eSum;
+      eSum += V(i) * RecSHV.SHV(jRowRed, i);
+    T fSum = eSum * (iSign * jSign);
+    return fSum;
   };
   WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
 #ifdef DEBUG_PERFECT_TSPACE
