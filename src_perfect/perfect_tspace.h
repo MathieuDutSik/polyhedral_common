@@ -65,44 +65,6 @@ struct DataPerfectTspace {
   std::ostream &get_os() { return rddo.os; }
 };
 
-template <typename T, typename Tint>
-size_t ComputeInvariantPerfectTspace(size_t const &seed,
-                                     MyMatrix<T> const &eGram,
-                                     Tshortest<T, Tint> const &RecSHV,
-                                     std::ostream &os) {
-#ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, begin\n";
-#endif
-  using Tidx_value = int16_t;
-  int n = eGram.rows();
-  MyMatrix<T> eG = eGram / RecSHV.eMin;
-  int nbSHV = RecSHV.SHV.rows();
-
-  MyVector<T> V(n);
-  auto f1 = [&](size_t iRow) -> void {
-    for (int i=0; i<n; i++) {
-      T eSum(0);
-      for (int j=0; j<n; j++)
-        eSum += eG(i, j) * RecSHV.SHV(iRow, i);
-      V(i) = eSum;
-    }
-  };
-  auto f2 = [&](size_t jRow) -> T {
-    T eSum(0);
-    for (int i=0; i<n; i++)
-      eSum += V(i) * RecSHV.SHV(jRow, i);
-    return eSum;
-  };
-  WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
-#ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have WMat\n";
-#endif
-  size_t hash = GetInvariantWeightMatrix(seed, WMat);
-#ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash\n";
-#endif
-  return hash;
-}
 
 template <typename T, typename Tint>
 std::vector<PerfectTspace_AdjI<T, Tint>>

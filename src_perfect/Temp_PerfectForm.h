@@ -380,6 +380,45 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 }
 
 template <typename T, typename Tint>
+size_t ComputeInvariantPerfectTspace(size_t const &seed,
+                                     MyMatrix<T> const &eGram,
+                                     Tshortest<T, Tint> const &RecSHV,
+                                     std::ostream &os) {
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, begin\n";
+#endif
+  using Tidx_value = int16_t;
+  int n = eGram.rows();
+  MyMatrix<T> eG = eGram / RecSHV.eMin;
+  int nbSHV = RecSHV.SHV.rows();
+
+  MyVector<T> V(n);
+  auto f1 = [&](size_t iRow) -> void {
+    for (int i=0; i<n; i++) {
+      T eSum(0);
+      for (int j=0; j<n; j++)
+        eSum += eG(i, j) * RecSHV.SHV(iRow, i);
+      V(i) = eSum;
+    }
+  };
+  auto f2 = [&](size_t jRow) -> T {
+    T eSum(0);
+    for (int i=0; i<n; i++)
+      eSum += V(i) * RecSHV.SHV(jRow, i);
+    return eSum;
+  };
+  WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have WMat\n";
+#endif
+  size_t hash = GetInvariantWeightMatrix(seed, WMat);
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash\n";
+#endif
+  return hash;
+}
+
+template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                  std::ostream &os) {
@@ -480,22 +519,9 @@ template <typename T, typename Tint> struct equiv_info<SimplePerfect<T, Tint>> {
 template <typename T, typename Tint>
 SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
                                                   std::ostream &os) {
-  using Tidx_value = int16_t;
-  int n = eGram.rows();
   Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram, os);
-  MyMatrix<T> eG = eGram / RecSHV.eMin;
-  int nbSHV = RecSHV.SHV.size();
-  MyVector<Tint> V1(n), V2(n);
-  auto f = [&](size_t i, size_t j) -> T {
-    for (int iCol = 0; iCol < n; iCol++) {
-      V1(i) = RecSHV.SHV(i, iCol);
-      V2(i) = RecSHV.SHV(j, iCol);
-    }
-    return ScalarProductQuadForm<T, Tint>(eG, V1, V2);
-  };
-  WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f);
   size_t seed = 1234;
-  size_t hash = GetInvariantWeightMatrix(seed, WMat);
+  size_t hash = ComputeInvariantPerfectTspace<T,Tint>(seed, eGram, RecSHV, os);
   return {hash};
 }
 
@@ -558,7 +584,7 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
   if (SHVorig_T == SHV_T) {
     // This is the most likely scenario: The original
-    // SHVorig is
+    // SHVorig is adequate
     return result.get_perm_group(SHV_T);
   } else {
     std::vector<MyMatrix<T>> l_matr = result.get_list_matrix(SHV_T, eMat, LinSpa);
