@@ -499,11 +499,27 @@ SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
   return {hash};
 }
 
+template<typename T, typename Tint>
+MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const& SHV) {
+  int dim = SHV.cols();
+  int nbSHV = SHV.rows();
+  MyMatrix<T> SHV_T(2 * nbSHV, dim);
+  for (int i_row=0; i_row<nbSHV; i_row++) {
+    for (int i=0; i<dim; i++) {
+      T val = UniversalScalarConversion<T,Tint>(SHV(i_row,i));
+      SHV_T(2*i_row  , i) = val;
+      SHV_T(2*i_row+1, i) = -val;
+    }
+  }
+  return SHV_T;
+}
+
+
 template <typename T, typename Tint>
 MyMatrix<T> get_shv_t(MyMatrix<T> const& eMat, Tshortest<T, Tint> const &RecSHV, std::ostream& os) {
   MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
-  if (IsFullDimZbasis(SHVorig_T)) {
-    return SHVorig_T;
+  if (IsFullDimZbasis(RecSHV.SHV)) {
+    return conversion_and_duplication<T,Tint>(RecSHV.SHV);
   }
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   return UniversalMatrixConversion<T, Tint>(SHV);
@@ -537,7 +553,7 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   //
   // Functionality for checking quality of equivalences
   //
-  MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
+  MyMatrix<T> SHVorig_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
   MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
   if (SHVorig_T == SHV_T) {

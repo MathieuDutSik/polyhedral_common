@@ -106,18 +106,19 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
 
 template <typename T, typename Tint>
 std::vector<PerfectTspace_AdjI<T, Tint>>
-TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &Gram,
-                     std::ostream &os) {
+TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
+                      MyMatrix<T> const &Gram,
+                      Tshortest<T, Tint> const &RecSHV,
+                      std::ostream &os) {
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
 #endif
-  Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(Gram, os);
-  int n = eRec.SHV.cols();
-  int nbShort = eRec.SHV.rows() / 2;
+  int n = RecSHV.SHV.cols();
+  int nbShort = RecSHV.SHV.rows() / 2;
   MyMatrix<Tint> SHVred(nbShort, n);
   for (int iShort = 0; iShort < nbShort; iShort++)
     for (int i = 0; i < n; i++)
-      SHVred(iShort, i) = eRec.SHV(2 * iShort, i);
+      SHVred(iShort, i) = RecSHV.SHV(2 * iShort, i);
 
   MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T, Tint>(SHVred);
   vectface ListIncd = lrs::DualDescription_incd(ConeClassical);
@@ -175,7 +176,7 @@ struct DataPerfectTspaceFunc {
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     x.GRP = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
-    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, os);
+    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, os);
   }
 
   Tobj f_adji_obj(TadjI const &x) {

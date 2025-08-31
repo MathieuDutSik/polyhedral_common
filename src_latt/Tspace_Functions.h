@@ -714,7 +714,12 @@ public:
       MyVector<T> Vimg = M.transpose() * ListV[i_row];
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
       if (MapV.count(Vimg) == 0) {
-        std::cerr << "TSPACE: MapV should contain Vimg=" << StringVectorGAP(Vimg) << "\n";
+        std::cerr << "TSPACE: MapV should contain i_row=" << i_row << " Vimg=" << StringVectorGAP(Vimg) << "\n";
+        std::cerr << "TSPACE: M=\n";
+        WriteMatrix(std::cerr, M);
+        for (int x_row = 0; x_row < n_row; x_row++) {
+          std::cerr << "TSPACE: x_row=" << i_row << " V=" << StringVectorGAP(ListV[x_row]) << "\n";
+        }
         throw TerminalException{1};
       }
 #endif
