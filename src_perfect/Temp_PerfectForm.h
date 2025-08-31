@@ -698,18 +698,18 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
 // A quadratic form is eutactic if the inverse of eGram can be expressed
 // as a positive linear combination of the outer products v ⊗ v of shortest vectors
 template <typename T>
-bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
+std::optional<MyVector<T>> IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::string const& eutacticity, std::ostream& os) {
 #ifdef DEBUG_PERFECT_FORM
   os << "PERFECT: IsEutactic, beginning\n";
 #endif
   int n = eGram.rows();
   if (eGram.cols() != n) {
     std::cerr << "Error: eGram must be square\n";
-    return false;
+    return {};
   }
   if (SHV_T.cols() != n) {
     std::cerr << "Error: SHV_T must have n columns\n";
-    return false;
+    return {};
   }
 
   int nbSHV = SHV_T.rows();
@@ -717,7 +717,7 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: No shortest vectors provided\n";
 #endif
-    return false;
+    return {};
   }
 
   // Dimension of the space of symmetric matrices
@@ -729,12 +729,7 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 
   // Compute the inverse of eGram
   MyMatrix<T> eGramInv;
-  try {
-    eGramInv = Inverse(eGram);
-  } catch (...) {
-    std::cerr << "Error: Cannot compute inverse of eGram\n";
-    return false;
-  }
+  eGramInv = Inverse(eGram);
 
   // Convert inverse to vector form
   MyVector<T> eGramInvVec = SymmetricMatrixToVector(eGramInv);
@@ -772,58 +767,22 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 
   // Check if the system is solvable
   MyMatrix<T> AugmentedMat = ConcatenateMatVec(OuterProductMatT, eGramInvVec);
-  int rankA = RankMat(OuterProductMatT);
-  int rankAug = RankMat(AugmentedMat);
 
 #ifdef DEBUG_PERFECT_FORM
+  int rankA = RankMat(OuterProductMatT);
+  int rankAug = RankMat(AugmentedMat);
   os << "PERFECT: rankA=" << rankA << " rankAug=" << rankAug << "\n";
 #endif
 
-  if (rankA != rankAug) {
-    // System is inconsistent - eGramInv cannot be expressed as linear combination
-#ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: System is inconsistent - not eutactic\n";
-#endif
-    return false;
-  }
-
   // Try to solve the system to get coefficients
-  std::optional<MyVector<T>> opt_coeffs = SolutionMatNonnegative(OuterProductMatT, eGramInvVec);
-
-  if (!opt_coeffs) {
-#ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: No nonnegative solution found - not eutactic\n";
-#endif
-    return false;
+  if (eutacticity == "Eutactic") {
+    return SolutionMatStrictlyPositive<T>(OuterProductMatT, eGramInvVec, os);
   }
-
-  MyVector<T> coeffs = *opt_coeffs;
-
-  // Check if all coefficients are positive (not just nonnegative)
-  bool all_positive = true;
-  T tolerance = T(1)/T(1000000); // Small tolerance for numerical errors
-
-  for (int i = 0; i < coeffs.size(); i++) {
-    if (coeffs(i) <= tolerance) {
-      all_positive = false;
-      break;
-    }
+  if (eutacticity == "WeaklyEutactic") {
+    return SolutionMatNonnegative<T>(OuterProductMatT, eGramInvVec, os);
   }
-
-#ifdef DEBUG_PERFECT_FORM
-  if (all_positive) {
-    os << "PERFECT: All coefficients are positive - the form is eutactic\n";
-    os << "PERFECT: Coefficients: ";
-    for (int i = 0; i < coeffs.size(); i++) {
-      os << coeffs(i) << " ";
-    }
-    os << "\n";
-  } else {
-    os << "PERFECT: Some coefficients are zero or negative - not eutactic\n";
-  }
-#endif
-
-  return all_positive;
+  std::cerr << "The input is not as expected\n";
+  throw TerminalException{1};
 }
 
 // Test if a quadratic form is perfect

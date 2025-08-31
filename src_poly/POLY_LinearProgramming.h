@@ -912,6 +912,10 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
   return {};
 }
 
+
+
+
+
 template <typename T>
 std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
                                                   MyVector<T> const &eVect,
@@ -919,6 +923,73 @@ std::optional<MyVector<T>> SolutionMatNonnegative(MyMatrix<T> const &ListVect,
   //  return SolutionMatNonnegative_Check(ListVect, eVect);
   return SolutionMatNonnegative_FailSafe(ListVect, eVect, os);
 }
+
+
+// We want
+// v = sum_i lambda_i v_i
+// with lambda_i > 0
+// Multiplying by a factor we get
+// mu v = sum_i lambda_i v_i
+// with lambda_i >= 1 and mu > 0
+// Define mu_i = lambda_i - 1.
+// We are then led to
+// mu v + sum_i mu_i (-v_i) = sum_i v_i
+
+template <typename T>
+std::optional<MyVector<T>> SolutionMatStrictlyPositive(MyMatrix<T> const &ListVect,
+                                                       MyVector<T> const &eVect,
+                                                       std::ostream &os) {
+  int nbVect = ListVect.rows();
+  int dim = ListVect.cols();
+  MyMatrix<T> ListVectNew(nbVect+1, dim);
+  MyVector<T> eVectNew(dim);
+  for (int i=0; i<dim; i++) {
+    ListVectNew(0, i) = eVect(i);
+    T eSum(0);
+    for (int iVect=0; iVect<nbVect; iVect++) {
+      ListVectNew(iVect+1, i) = - ListVect(iVect, i);
+      eSum += ListVect(iVect, i);
+    }
+    eVectNew(i) = eSum;
+  }
+  std::optional<MyVector<T>> opt = SolutionMatNonnegative(ListVectNew, eVectNew, os);
+  if (!opt) {
+    return {};
+  }
+  MyVector<T> const& V = *opt;
+  T mu = V(0);
+  if (mu == 0) {
+    std::cerr << "We should have mu > 0.\n";
+    throw TerminalException{1};
+  }
+  T one(1);
+  MyVector<T> eSol(nbVect);
+  for (int iVect=0; iVect<nbVect; iVect++) {
+    T mu_i = V(iVect+1);
+    T lambda_i = (mu_i + one) / mu;
+#ifdef DEBUG_LINEAR_PROGRAM
+    if (lambda_i <= 0) {
+      std::cerr << "LP: We should have lambda_i > 0\n";
+      throw TerminalException{1};
+    }
+#endif
+    eSol(iVect) = lambda_i;
+  }
+#ifdef DEBUG_LINEAR_PROGRAM
+  MyVector<T> SumVect = ZeroVector<T>(dim);
+  for (int iVect=0; iVect<nbVect; iVect++) {
+    MyVector<T> eRow = GetMatrixRow(ListVect, iVect);
+    SumVect += eSol(iVect) * eRow;
+  }
+  if (SumVect != eVect) {
+    std::cerr << "LP: eSol is not a solution of the system\n";
+    throw TerminalException{1};
+  }
+#endif
+  return eSol;
+}
+
+
 
 template <typename T>
 Face ComputeSkeletonClarkson(MyMatrix<T> const &FACinp, std::ostream &os) {
