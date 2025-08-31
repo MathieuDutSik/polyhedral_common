@@ -95,7 +95,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       SimplePerfect<T, Tint> ePERF = ListOrbit.GetRepresentative(eEntry);
       Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ePERF.Gram, os);
       NakedPerfect<T, Tint> eNaked =
-          GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV);
+        GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
       Tgroup GRPshv =
           SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData, ePERF.Gram, RecSHV);
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);

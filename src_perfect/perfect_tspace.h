@@ -66,31 +66,30 @@ struct DataPerfectTspace {
 };
 
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::vector<PerfectTspace_AdjI<T, Tint>>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
-                      MyMatrix<T> const &Gram,
+                      MyMatrix<T> const &eGram,
                       Tshortest<T, Tint> const &RecSHV,
+                      Tgroup const& GRP,
                       std::ostream &os) {
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
 #endif
-  int n = RecSHV.SHV.cols();
-  int nbShort = RecSHV.SHV.rows() / 2;
-  MyMatrix<Tint> SHVred(nbShort, n);
-  for (int iShort = 0; iShort < nbShort; iShort++)
-    for (int i = 0; i < n; i++)
-      SHVred(iShort, i) = RecSHV.SHV(2 * iShort, i);
+  MyMatrix<T> SHV_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
 
-  MyMatrix<T> ConeClassical = GetNakedPerfectConeClassical<T, Tint>(SHVred);
-  vectface ListIncd = lrs::DualDescription_incd(ConeClassical);
+  RyshkovGRP<T,Tgroup> eCone = GetNakedPerfectCone_GRP<T,Tgroup>(LinSpa,
+                                                                 eGram,
+                                                                 SHV_T,
+                                                                 GRP, os);
+  vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub);
 
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
   for (auto &eIncd : ListIncd) {
-    MyVector<T> eFacet = FindFacetInequality(ConeClassical, eIncd);
+    MyVector<T> eFacet = FindFacetInequality(eCone.PerfDomEXT, eIncd);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
-        Flipping_Perfect<T, Tint>(Gram, eMatDir, os);
+        Flipping_Perfect<T, Tint>(eGram, eMatDir, os);
 
     PerfectTspace_AdjI<T, Tint> eAdj{eIncd, pair.first, pair.second};
     ListAdj.push_back(eAdj);
@@ -138,7 +137,7 @@ struct DataPerfectTspaceFunc {
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     x.GRP = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
-    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, os);
+    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, x.GRP, os);
   }
 
   Tobj f_adji_obj(TadjI const &x) {

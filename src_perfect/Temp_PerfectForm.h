@@ -49,7 +49,8 @@ MyMatrix<T> GetNakedPerfectConeClassical(MyMatrix<Tint> const &M) {
 template <typename T, typename Tint>
 NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
                                           MyMatrix<T> const &eGram,
-                                          Tshortest<T, Tint> const &RecSHV) {
+                                          Tshortest<T, Tint> const &RecSHV,
+                                          std::ostream& os) {
   int nbSHV = RecSHV.SHV.rows();
   std::vector<int> ListPos(nbSHV);
   int nbMat = LinSpa.ListMat.size();
@@ -62,14 +63,14 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
       RyshkovLoc(iSHV, iMat) = eSum;
     }
   }
-  //  std::cerr << "RyshkovLoc=\n";
-  //  WriteMatrix(std::cerr, RyshkovLoc);
+  //  os << "RyshkovLoc=\n";
+  //  WriteMatrix(os, RyshkovLoc);
   int nbBlock = 0;
   std::vector<std::vector<int>> ListBlock;
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
     MyVector<T> eVec1 = GetMatrixRow(RyshkovLoc, iSHV);
     bool IsMatch = false;
-    for (int iBlock = 0; iBlock < nbBlock; iBlock++)
+    for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
       if (!IsMatch) {
         int jSHV = ListBlock[iBlock][0];
         MyVector<T> eVec2 = GetMatrixRow(RyshkovLoc, jSHV);
@@ -80,6 +81,7 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
           ListPos[iSHV] = iBlock;
         }
       }
+    }
     if (!IsMatch) {
       ListBlock.push_back({iSHV});
       ListPos[iSHV] = nbBlock;
@@ -87,8 +89,8 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
     }
   }
 #ifdef DEBUG_PERFECT_FORM
-  std::cerr << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV
-            << " nbMat=" << nbMat << "\n";
+  os << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV
+     << " nbMat=" << nbMat << "\n";
 #endif
   MyMatrix<T> PerfDomEXT(nbBlock, nbMat);
   MyMatrix<Tint> SHVred(nbBlock, n);
@@ -101,6 +103,92 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
   }
   return {eGram, RecSHV.SHV, SHVred, PerfDomEXT, ListBlock, ListPos};
 }
+
+
+template<typename T, typename Tgroup>
+struct RyshkovGRP {
+  MyMatrix<T> PerfDomEXT;
+  Tgroup GRPsub;
+};
+
+
+
+
+template <typename T, typename Tgroup>
+RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
+                                             MyMatrix<T> const &eGram,
+                                             MyMatrix<T> const& SHV_T,
+                                             Tgroup const& GRP,
+                                             std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int nbSHV = SHV_T.rows();
+  std::vector<int> ListPos(nbSHV);
+  int nbMat = LinSpa.ListMat.size();
+  int n = eGram.rows();
+  MyMatrix<T> RyshkovLoc(nbSHV, nbMat);
+  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
+    MyVector<T> eVect = GetMatrixRow(SHV_T, iSHV);
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      T eSum = EvaluationQuadForm<T, T>(LinSpa.ListMat[iMat], eVect);
+      RyshkovLoc(iSHV, iMat) = eSum;
+    }
+  }
+  //  os << "RyshkovLoc=\n";
+  //  WriteMatrix(os, RyshkovLoc);
+  int nbBlock = 0;
+  std::vector<std::vector<int>> ListBlock;
+  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
+    MyVector<T> eVec1 = GetMatrixRow(RyshkovLoc, iSHV);
+    bool IsMatch = false;
+    for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+      if (!IsMatch) {
+        int jSHV = ListBlock[iBlock][0];
+        MyVector<T> eVec2 = GetMatrixRow(RyshkovLoc, jSHV);
+        bool test = IsVectorPositiveMultiple(eVec1, eVec2);
+        if (test) {
+          IsMatch = true;
+          ListBlock[iBlock].push_back(iSHV);
+          ListPos[iSHV] = iBlock;
+        }
+      }
+    }
+    if (!IsMatch) {
+      ListBlock.push_back({iSHV});
+      ListPos[iSHV] = nbBlock;
+      nbBlock++;
+    }
+  }
+#ifdef DEBUG_PERFECT_FORM
+  os << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV
+     << " nbMat=" << nbMat << "\n";
+#endif
+  MyMatrix<T> PerfDomEXT(nbBlock, nbMat);
+  MyMatrix<T> SHVred(nbBlock, n);
+  for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+    int iSHV = ListBlock[iBlock][0];
+    MyVector<T> eVect = GetMatrixRow(SHV_T, iSHV);
+    AssignMatrixRow(SHVred, iBlock, eVect);
+    for (int iMat = 0; iMat < nbMat; iMat++)
+      PerfDomEXT(iBlock, iMat) = RyshkovLoc(iSHV, iMat);
+  }
+  std::vector<Telt> l_gens;
+  for (auto & eGen: GRP.GeneratorsOfGroup()) {
+    std::vector<Tidx> eList(nbBlock);
+    for (int iBlock=0; iBlock<nbBlock; iBlock++) {
+      Tidx iSHV = ListBlock[iBlock][0];
+      Tidx jSHV = eGen.at(iSHV);
+      Tidx jBlock = ListPos[jSHV];
+      eList[iBlock] = jBlock;
+    }
+    Telt eElt(eList);
+    l_gens.push_back(eElt);
+  }
+  Tgroup GRPsub(l_gens, nbBlock);
+  return {PerfDomEXT, GRPsub};
+}
+
+
 
 struct PerfEquivInfo {
   int iOrbit;
