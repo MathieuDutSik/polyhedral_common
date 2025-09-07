@@ -530,21 +530,37 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
 }
 
 template <typename T, typename Tint>
+MyMatrix<T> get_scal_mat(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> const& RecSHV) {
+  int nbMat = LinSpa.ListMat.size();
+  int nbShort = RecSHV.SHV.rows();
+  MyMatrix<T> ScalMat(nbShort, nbMat);
+  for (int iShort = 0; iShort < nbShort; iShort++) {
+    MyVector<Tint> eVectShort = RecSHV.SHV.row(iShort);
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      T eNorm = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVectShort);
+      ScalMat(iShort, iMat) = eNorm;
+    }
+  }
+  return ScalMat;
+}
+
+template <typename T, typename Tint>
+bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> const& RecSHV) {
+  int nbMat = LinSpa.ListMat.size();
+  MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
+  return RankMat(ScalMat) == nbMat;
+}
+
+
+
+template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
   while (true) {
     Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
-    int nbShort = RecSHV.SHV.rows();
-    MyMatrix<T> ScalMat(nbShort, nbMat);
-    for (int iShort = 0; iShort < nbShort; iShort++) {
-      MyVector<Tint> eVectShort = RecSHV.SHV.row(iShort);
-      for (int iMat = 0; iMat < nbMat; iMat++) {
-        T eNorm = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVectShort);
-        ScalMat(iShort, iMat) = eNorm;
-      }
-    }
+    MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
     if (TheRank == nbMat) {

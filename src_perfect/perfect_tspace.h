@@ -17,6 +17,11 @@
 #define DEBUG_PERFECT_TSPACE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_PERFECT_TSPACE
+#endif
+
+
 void WriteEntryGAP(std::ostream &os, Face const &eFace) {
   os << "[";
   size_t len = eFace.size();
@@ -77,12 +82,30 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
   os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
 #endif
   MyMatrix<T> SHV_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
+#ifdef SANITY_CHECK_PERFECT_TSPACE
+  if (!is_perfect_in_space(LinSpa, RecSHV)) {
+    std::cerr << "Error in input of TSPACE_GetAdjacencies, the input matrix is not perfect\n";
+    throw TerminalException{1};
+  }
+#endif
+#ifdef DEBUG_PERFECT_TSPACE
+  MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
+  os << "PERF_TSPACE: The ScalMat is the following\n";
+  WriteMatrix(os, ScalMat);
+  bool test = is_perfect_in_space<T,Tint>(LinSpa, RecSHV);
+  os << "PERF_TSPACE: RankMat(ScalMat)=" << RankMat(ScalMat) << " test=" << test << "\n";
+#endif
 
   RyshkovGRP<T,Tgroup> eCone = GetNakedPerfectCone_GRP<T,Tgroup>(LinSpa,
                                                                  eGram,
                                                                  SHV_T,
                                                                  GRP, os);
   vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub);
+#ifdef DEBUG_PERFECT_TSPACE
+  os << "PERF_TSPACE: The eCone.PerfDomEXT is the following\n";
+  WriteMatrix(os, eCone.PerfDomEXT);
+  os << "PERF_TSPACE: RankMat(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT) << "\n";
+#endif
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: |ListIncd|=" << ListIncd.size() << "\n";
@@ -100,6 +123,12 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         Flipping_Perfect<T, Tint>(eGram, eMatDir, os);
+#ifdef SANITY_CHECK_PERFECT_TSPACE
+    if (!is_perfect_in_space(LinSpa, pair.second)) {
+      std::cerr << "The matrix created by Flipping_Perfect is not perfect\n";
+      throw TerminalException{1};
+    }
+#endif
 
     PerfectTspace_AdjI<T, Tint> eAdj{eIncd, pair.first, pair.second};
     ListAdj.push_back(eAdj);
