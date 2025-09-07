@@ -224,11 +224,6 @@ struct QueryEquivInfo {
   PerfEquivInfo eEquiv;
 };
 
-template <typename T, typename Tint> struct RecShort {
-  std::function<bool(MyMatrix<T> const &)> IsAdmissible;
-  std::function<Tshortest<T, Tint>(MyMatrix<T> const &)> ShortestFunction;
-};
-
 template <typename Tint>
 bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
                       MyMatrix<Tint> const &TheSHVsma) {
@@ -255,9 +250,10 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
   return true;
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Fadmissible, typename Fshortest>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
-Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
+Kernel_Flipping_Perfect(Fadmissible f_admissible,
+                        Fshortest f_shortest,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                         [[maybe_unused]] std::ostream & os) {
   std::vector<MyMatrix<T>> ListMat;
@@ -277,7 +273,7 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 #ifdef DEBUG_FLIP
     os << "PERF: CALL ShortestFunction\n";
 #endif
-    Tshortest<T, Tint> RecSHV = eRecShort.ShortestFunction(eMat);
+    Tshortest<T, Tint> RecSHV = f_shortest(eMat);
     ListMat.push_back(eMat);
     ListShort.push_back(RecSHV);
     return RecSHV;
@@ -335,7 +331,7 @@ Kernel_Flipping_Perfect(RecShort<T, Tint> const &eRecShort,
 #ifdef DEBUG_FLIP
     os << "PERF: CALL IsAdmissible (Qupp)\n";
 #endif
-    bool test = eRecShort.IsAdmissible(Qupp);
+    bool test = f_admissible(Qupp);
 #ifdef DEBUG_FLIP
     iterLoop++;
     os << "iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
@@ -524,16 +520,13 @@ template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                  std::ostream &os) {
-  std::function<bool(MyMatrix<T> const &)> IsAdmissible =
-      [&os](MyMatrix<T> const &eMat) -> bool {
-        return IsPositiveDefinite<T>(eMat, os);
+  auto f_admissible=[&os](MyMatrix<T> const &eMat) -> bool {
+    return IsPositiveDefinite<T>(eMat, os);
   };
-  std::function<Tshortest<T, Tint>(MyMatrix<T> const &)> ShortestFunction =
-      [&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
+  auto f_shortest=[&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
     return T_ShortestVector<T, Tint>(eMat, os);
   };
-  RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
-  return Kernel_Flipping_Perfect(eRecShort, eMatIn, eMatDir, os);
+  return Kernel_Flipping_Perfect<T,Tint,decltype(f_admissible),decltype(f_shortest)>(f_admissible, f_shortest, eMatIn, eMatDir, os);
 }
 
 template <typename T, typename Tint>
@@ -783,127 +776,6 @@ std::optional<MyVector<T>> IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> cons
   }
   std::cerr << "The input is not as expected\n";
   throw TerminalException{1};
-}
-
-// Test if a quadratic form is perfect
-// A quadratic form is perfect if it is determined by its shortest vectors
-template <typename T>
-bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: IsPerfect, beginning\n";
-#endif
-  int n = eGram.rows();
-  if (eGram.cols() != n) {
-    std::cerr << "Error: eGram must be square\n";
-    return false;
-  }
-  if (SHV_T.cols() != n) {
-    std::cerr << "Error: SHV_T must have n columns\n";
-    return false;
-  }
-
-  int nbSHV = SHV_T.rows();
-  if (nbSHV == 0) {
-#ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: No shortest vectors provided\n";
-#endif
-    return false;
-  }
-
-  // Dimension of the space of symmetric matrices
-  int dimSymm = n * (n + 1) / 2;
-
-  // Number of degrees of freedom for a positive definite quadratic form
-  // This is dimSymm minus 1 (for scaling)
-  int dimQuadForm = dimSymm - 1;
-
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: n=" << n << " nbSHV=" << nbSHV << " dimQuadForm=" << dimQuadForm << "\n";
-#endif
-
-  // Create the system of equations from the constraint that
-  // all shortest vectors have the same length
-  // For each pair of shortest vectors v_i, v_j: v_i^T G v_i = v_j^T G v_j
-
-  // We need at least dimQuadForm independent constraints
-  int numConstraints = nbSHV - 1; // We can form nbSHV-1 independent constraints
-
-  if (numConstraints < dimQuadForm) {
-#ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: Not enough shortest vectors for perfect form\n";
-#endif
-    return false;
-  }
-
-  MyMatrix<T> ConstraintMat(numConstraints, dimSymm);
-
-  // Reference vector (first shortest vector)
-  MyVector<T> v0 = GetMatrixRow(SHV_T, 0);
-  MyMatrix<T> M0(n, n);
-  for (int u = 0; u < n; u++) {
-    for (int v = 0; v < n; v++) {
-      M0(u, v) = v0(u) * v0(v);
-    }
-  }
-  MyVector<T> V0 = SymmetricMatrixToVector(M0);
-
-  // Create constraint matrix
-  for (int iSHV = 1; iSHV < nbSHV; iSHV++) {
-    MyVector<T> vi = GetMatrixRow(SHV_T, iSHV);
-    MyMatrix<T> Mi(n, n);
-    for (int u = 0; u < n; u++) {
-      for (int v = 0; v < n; v++) {
-        Mi(u, v) = vi(u) * vi(v);
-      }
-    }
-    MyVector<T> Vi = SymmetricMatrixToVector(Mi);
-
-    // Constraint: V0 - Vi = 0 (same quadratic form value)
-    MyVector<T> constraint = V0 - Vi;
-    AssignMatrixRow(ConstraintMat, iSHV - 1, constraint);
-  }
-
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: ConstraintMat constructed, size: " << ConstraintMat.rows() << "x" << ConstraintMat.cols() << "\n";
-#endif
-
-  // Check if we have exactly the right number of independent constraints
-  int rank = RankMat(ConstraintMat);
-
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: constraint rank=" << rank << " dimQuadForm=" << dimQuadForm << "\n";
-#endif
-
-  bool is_perfect = (rank == dimQuadForm);
-
-#ifdef DEBUG_PERFECT_FORM
-  if (is_perfect) {
-    os << "PERFECT: The form is perfect\n";
-  } else {
-    os << "PERFECT: The form is NOT perfect\n";
-  }
-#endif
-
-  return is_perfect;
-}
-
-// Test if a quadratic form is extreme (both perfect and eutactic)
-template <typename T>
-bool IsExtreme(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: IsExtreme, beginning\n";
-#endif
-
-  bool perfect = IsPerfect(eGram, SHV_T, os);
-  bool eutactic = IsEutactic(eGram, SHV_T, os);
-
-  bool extreme = perfect && eutactic;
-
-#ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: perfect=" << perfect << " eutactic=" << eutactic << " extreme=" << extreme << "\n";
-#endif
-
-  return extreme;
 }
 
 // clang-format off

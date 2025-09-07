@@ -3,8 +3,8 @@
 #PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
-#PROGRAM		= PERF_SerialEnumeratePerfectCones
-PROGRAM		= IsEutactic
+PROGRAM		= PERF_SerialEnumeratePerfectCones
+#PROGRAM		= IsEutactic
 
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
@@ -28,6 +28,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(FLINT_INCLUDE) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(CDDLIB_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
+#CDEFS           = -DSANITY_CHECK -DTIMINGS -DDEBUG_PERFECT_TSPACE
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(LIBBLISS_LINK) $(FLINT_LINK) $(BOOST_LINK) $(GLPK_LINK) $(NAUTY_LINK) $(CDDLIB_GMP_LINK) $(shell pkg-config --libs ompi) $(MPI_LINK_CPP)

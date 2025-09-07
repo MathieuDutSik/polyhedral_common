@@ -59,8 +59,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   WriteVectorNoDim(os, eMatExpr);
 #endif
   //
-  std::function<bool(MyMatrix<T>)> IsAdmissible =
-      [&](MyMatrix<T> const &eMatI) -> bool {
+  auto f_admissible=[&](MyMatrix<T> const &eMatI) -> bool {
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: IsAdmissible eMatI=\n";
     WriteMatrix(os, eMatI);
@@ -72,15 +71,13 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 #endif
     return result.test;
   };
-  std::function<Tshortest<T, Tint>(MyMatrix<T>)> ShortestFunction =
-      [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
+  auto f_shortest=[&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: ShortestFunction eMatI=\n";
     WriteMatrix(os, eMatI);
 #endif
-    return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
+    return CopositiveShortestVector<T,Tint>(eMatI, InitialBasis, os);
   };
-  RecShort<T, Tint> eRecShort{IsAdmissible, ShortestFunction};
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
 #ifdef DEBUG_STRICT_POSITIVITY
   int nbIter = 0;
@@ -182,7 +179,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     os << "STR: Before KernelFlipping nbIter=" << nbIter << "\n";
 #endif
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePair =
-      Kernel_Flipping_Perfect<T, Tint>(eRecShort, SearchMatrix, eMatDir, os);
+      Kernel_Flipping_Perfect<T, Tint,decltype(f_admissible),decltype(f_shortest)>(f_admissible, f_shortest, SearchMatrix, eMatDir, os);
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
     os << "STR: NewMat=\n";
