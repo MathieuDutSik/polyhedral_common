@@ -867,6 +867,9 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   MyMatrix<T> SHV1_T = get_shv_t(eMat1, RecSHV1, os);
   MyMatrix<T> SHV2_T = get_shv_t(eMat2, RecSHV2, os);
+#ifdef DEBUG_PERFECT_REPR
+  os << "PERF: TestEquivalence, before LINSPA_TestEquivalenceGramMatrix_SHV\n";
+#endif
   std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
 #ifdef DEBUG_PERFECT_REPR
   os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1) << " det2=" << DeterminantMat(eMat2) << " opt.has_value()=" << opt.has_value() << "\n";

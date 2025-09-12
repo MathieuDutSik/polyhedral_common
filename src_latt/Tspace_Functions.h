@@ -986,6 +986,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
   std::vector<MyMatrix<T>> ListMat2 =
       GetFamilyDiscMatrices(eMat2, LinSpa.ListComm, LinSpa.ListSubspaces);
 #ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: Equiv, |ListComm|=" << LinSpa.ListComm.size() << " |ListSubspaces|=" << LinSpa.ListSubspaces.size() << "\n";
   os << "TSPACE: Equiv, |ListMat1|=" << ListMat1.size() << " |ListMat1|=" << ListMat1.size() << "\n";
 #endif
   std::optional<std::vector<Tidx>> opt1 =
