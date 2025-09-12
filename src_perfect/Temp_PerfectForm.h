@@ -19,6 +19,10 @@
 #define DEBUG_FLIP
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_FLIP
+#endif
+
 template <typename T, typename Tint> struct NakedPerfect {
   MyMatrix<T> eGram;
   MyMatrix<Tint> SHV;
@@ -287,13 +291,69 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
   }
 }
 
+// Memoization procedure. The computation with f_shortest is expensive
+// so keeping track of what has been computed is a good idea.
+// We are using the std::list for storing the data since it makes the
+// const& references stable when the ListShort gets extended.
+// This is a problem of std::vector that if you have a reference to an entry
+// and the std::vector gets extended then the reference may get invalidated
+// when we pass a threshold like 1, 2, 4, 8, 16. When we pass the threshold
+// the underlying vector gets deallocated and a newer larger gets
+// allocated.
+template<typename Fcomp, typename Tin, typename Tout>
+struct Memoization {
+  Fcomp f_comp;
+  std::vector<Tin> ListI;
+  std::list<Tout> ListO;
+  Memoization(Fcomp _f_comp) : f_comp(_f_comp) {
+  }
+  size_t get_index(Tin const& input) {
+    size_t len = ListI.size();
+    for (size_t i = 0; i < len; i++) {
+      if (ListI[i] == input) {
+        return i;
+      }
+    }
+    Tout output = f_comp(input);
+    ListI.push_back(input);
+    ListO.push_back(output);
+    return len;
+  }
+  Tout const& comp(Tin const& input) {
+    size_t index = get_index(input);
+    auto iter = ListO.cbegin();
+    for (size_t u=0; u<index; u++) {
+      iter++;
+    }
+    return *iter;
+  }
+};
+
+
+
+
+
+
 /*
   This is the code for given a form eMatIn, a direction of change eMatDir,
   to compute a coefficient lambda>0 such that eMatIn + lambda eMatDir has
   more shortest vector that eMatIn + epsilon eMatDir for epsilon infinitely
   small.
   ---
-  The specific algorithm is based on 
+  Two functions need to be provided on input:
+  + The f_admissible function that tells you whether you are in the admissible
+    domain or not.
+  + The f_shortest that returns the shortest vectors.
+  ---
+  There are two cases in which this routine is used:
+  + The perfect forms enumeration
+  + The copositive simplex algorithm
+  See "A simplex algorithm for rational cp-factorization" arXiv:1807.01382
+  ---
+  Those flipping algorithms tend to be more intricate than one would expect.
+  See the following for some example description:
+  + Algorithm 2 (page 8) in "A simplex algorithm for rational cp-factorization" arXiv:1807.01382
+  + Algorithm 2 (page 10) in "Enumerating perfect forms" arXiv:0901.1587
  */
 template <typename T, typename Tint, typename Fadmissible, typename Fshortest>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
@@ -301,36 +361,15 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
                         Fshortest f_shortest,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                         [[maybe_unused]] std::ostream & os) {
-  std::vector<MyMatrix<T>> ListMat;
-  std::list<Tshortest<T, Tint>> ListShort;
-  // Memoization procedure. The computation is
-  auto get_index=[&](MyMatrix<T> const &eMat) -> size_t {
-    size_t len = ListMat.size();
-    for (size_t i = 0; i < len; i++) {
-      if (ListMat[i] == eMat) {
-#ifdef DEBUG_FLIP
-        os << "PERF: Memoization success\n";
-#endif
-        return i;
-      }
-    }
-    Tshortest<T, Tint> RecSHV = f_shortest(eMat);
-    ListMat.push_back(eMat);
-    ListShort.push_back(RecSHV);
-    return len;
-  };
-  auto get_shv=[&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> const& {
-    size_t pos = get_index(eMat);
-    auto iter = ListShort.cbegin();
-    for (size_t u=0; u<pos; u++) {
-      iter++;
-    }
-    return *iter;
-  };
+  Memoization<Fadmissible,MyMatrix<T>,bool> memo_admissible(f_admissible);
+  Memoization<Fshortest,MyMatrix<T>,Tshortest<T, Tint>> memo_shortest(f_shortest);
 #ifdef DEBUG_FLIP
   os << "PERF: Kernel_Flipping_Perfect, case 1 (eMatIn)\n";
 #endif
-  Tshortest<T, Tint> const& RecSHVperf = get_shv(eMatIn);
+  Tshortest<T, Tint> const& RecSHVperf = memo_shortest.comp(eMatIn);
+  //
+  // Initial checks of the input
+  //
 #ifdef DEBUG_FLIP
   os << "Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV = RecSHVperf.SHV.rows();
@@ -370,6 +409,10 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   MyMatrix<T> ConeClassicalFace = GetNakedPerfectConeClassical<T>(SHVface);
   os << "RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace) << "\n";
 #endif
+  //
+  // Running the algorithm
+  // First loop where we find an interval where the solution may exist.
+  //
   T TheUpperBound = 1;
   T TheLowerBound = 0;
 #ifdef DEBUG_FLIP
@@ -380,13 +423,14 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
     os << "PERF: CALL IsAdmissible (Qupp)\n";
 #endif
-    bool test = f_admissible(Qupp);
+    bool test = memo_admissible.comp(Qupp);
 #ifdef DEBUG_FLIP
     iterLoop++;
     os << "iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
        << " TheLowerBound=" << TheLowerBound << " test=" << test << "\n";
 #endif
     if (!test) {
+      // We are outside, so reduce the range.
       TheUpperBound = (TheUpperBound + TheLowerBound) / 2;
     } else {
 #ifdef DEBUG_FLIP
@@ -394,7 +438,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       WriteMatrix(os, Qupp);
       os << "PERF: Kernel_Flipping_Perfect, case 2 (Qupp)\n";
 #endif
-      Tshortest<T, Tint> const& RecSHV = get_shv(Qupp);
+      Tshortest<T, Tint> const& RecSHV = memo_shortest.comp(Qupp);
 #ifdef DEBUG_FLIP
       os << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
       os << "ITER: RecSHV.SHV=\n";
@@ -410,8 +454,26 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       }
     }
   }
+#ifdef SANITY_CHECK_FLIP
+  {
+    MyMatrix<T> Qlow = eMatIn + TheLowerBound * eMatDir;
+    MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
+    if (!memo_admissible.comp(Qlow)) {
+      std::cerr << "PERF: We should have Qlow being admissible\n";
+      throw TerminalException{1};
+    }
+    if (!memo_admissible.comp(Qupp)) {
+      std::cerr << "PERF: We should have Qlow being admissible\n";
+      throw TerminalException{1};
+    }
+    
+  }
+#endif
+
+  // Now we must have Qlow / Qupp admissible
+  // and 
 #ifdef DEBUG_FLIP
-  os << "FIRST LOOP FINISHED TheUpperBound=" << TheUpperBound
+  os << "PERF: FIRST LOOP FINISHED TheUpperBound=" << TheUpperBound
      << " TheLowerBound=" << TheLowerBound << "\n";
 #endif
   while (true) {
@@ -424,11 +486,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 3 (Qlow)\n";
 #endif
-    Tshortest<T, Tint> const& RecSHVlow = get_shv(Qlow);
+    Tshortest<T, Tint> const& RecSHVlow = memo_shortest.comp(Qlow);
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 4 (Qupp)\n";
 #endif
-    Tshortest<T, Tint> const& RecSHVupp = get_shv(Qupp);
+    Tshortest<T, Tint> const& RecSHVupp = memo_shortest.comp(Qupp);
 #ifdef DEBUG_FLIP
     os << "PERF: RecSHVupp.eMin=" << RecSHVupp.eMin
        << " RecSHVlow.eMin=" << RecSHVlow.eMin << "\n";
@@ -442,8 +504,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     bool test1 = RecSHVupp.eMin == RecSHVperf.eMin;
     bool test2 = TestInclusionSHV(RecSHVperf.SHV, RecSHVlow.SHV);
 #ifdef DEBUG_FLIP
-    os << "PERF: RecSHVupp.eMin =" << RecSHVupp.eMin << "\n";
-    os << "PERF: RecSHVperf.eMin=" << RecSHVperf.eMin << "\n";
+    os << "PERF: RecSHVupp.eMin  = " << RecSHVupp.eMin << "\n";
+    os << "PERF: RecSHVperf.eMin = " << RecSHVperf.eMin << "\n";
     os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
 #endif
     if (test1) {
@@ -476,7 +538,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 5 (Qgamma)\n";
 #endif
-    Tshortest<T, Tint> const& RecSHVgamma = get_shv(Qgamma);
+    Tshortest<T, Tint> const& RecSHVgamma = memo_shortest.comp(Qgamma);
 #ifdef DEBUG_FLIP
     os << "|RecSHVgamma.SHV|=" << RecSHVgamma.SHV.rows() << "\n";
     WriteMatrix(os, RecSHVgamma.SHV);
