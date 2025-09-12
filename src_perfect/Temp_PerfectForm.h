@@ -366,18 +366,18 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
   os << "PERF: Kernel_Flipping_Perfect, case 1 (eMatIn)\n";
 #endif
-  Tshortest<T, Tint> const& RecSHVperf = memo_shortest.comp(eMatIn);
+  Tshortest<T, Tint> const& RecSHV_in = memo_shortest.comp(eMatIn);
   //
   // Initial checks of the input
   //
 #ifdef DEBUG_FLIP
   os << "Kernel_Flipping_Perfect : SHVinformation=\n";
-  int nbSHV = RecSHVperf.SHV.rows();
-  int n = RecSHVperf.SHV.cols();
+  int nbSHV = RecSHV_in.SHV.rows();
+  int n = RecSHV_in.SHV.cols();
   int nbZero_sumMat = 0;
   std::vector<int> ListScal(nbSHV);
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
-    MyVector<Tint> V = GetMatrixRow(RecSHVperf.SHV, iSHV);
+    MyVector<Tint> V = GetMatrixRow(RecSHV_in.SHV, iSHV);
     T sumMatIn = EvaluationQuadForm(eMatIn, V);
     T sumMatDir = EvaluationQuadForm(eMatDir, V);
     int eVal = 1;
@@ -396,7 +396,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
     if (ListScal[iSHV] == 0) {
       for (int i = 0; i < n; i++)
-        SHVface(idx, i) = RecSHVperf.SHV(iSHV, i);
+        SHVface(idx, i) = RecSHV_in.SHV(iSHV, i);
       idx++;
     }
   }
@@ -404,7 +404,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   WriteMatrix(os, SHVface);
   os << "nbZero_sumMat=" << nbZero_sumMat << "\n";
   MyMatrix<T> ConeClassicalInput =
-      GetNakedPerfectConeClassical<T>(RecSHVperf.SHV);
+      GetNakedPerfectConeClassical<T>(RecSHV_in.SHV);
   os << "RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput) << "\n";
   MyMatrix<T> ConeClassicalFace = GetNakedPerfectConeClassical<T>(SHVface);
   os << "RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace) << "\n";
@@ -419,11 +419,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   int iterLoop = 0;
 #endif
   while (true) {
-    MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "PERF: CALL IsAdmissible (Qupp)\n";
+    os << "PERF: CALL IsAdmissible (Q_upp)\n";
 #endif
-    bool test = memo_admissible.comp(Qupp);
+    bool test = memo_admissible.comp(Q_upp);
 #ifdef DEBUG_FLIP
     iterLoop++;
     os << "iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
@@ -434,17 +434,17 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       TheUpperBound = (TheUpperBound + TheLowerBound) / 2;
     } else {
 #ifdef DEBUG_FLIP
-      os << "PERF: Qupp=\n";
-      WriteMatrix(os, Qupp);
-      os << "PERF: Kernel_Flipping_Perfect, case 2 (Qupp)\n";
+      os << "PERF: Q_upp=\n";
+      WriteMatrix(os, Q_upp);
+      os << "PERF: Kernel_Flipping_Perfect, case 2 (Q_upp)\n";
 #endif
-      Tshortest<T, Tint> const& RecSHV = memo_shortest.comp(Qupp);
+      Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP
-      os << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
-      os << "ITER: RecSHV.SHV=\n";
-      WriteMatrix(os, RecSHV.SHV);
+      os << "ITER: RecSHV_upp.eMin=" << RecSHV_upp.eMin << "\n";
+      os << "ITER: RecSHV_upp.SHV=\n";
+      WriteMatrix(os, RecSHV_upp.SHV);
 #endif
-      if (RecSHV.eMin == RecSHVperf.eMin) {
+      if (RecSHV_upp.eMin == RecSHV_in.eMin) {
         T nLow = TheUpperBound;
         T nUpp = 2 * TheUpperBound;
         TheLowerBound = nLow;
@@ -456,121 +456,129 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   }
 #ifdef SANITY_CHECK_FLIP
   {
-    MyMatrix<T> Qlow = eMatIn + TheLowerBound * eMatDir;
-    MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
-    if (!memo_admissible.comp(Qlow)) {
+    MyMatrix<T> Q_low = eMatIn + TheLowerBound * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
+    if (!memo_admissible.comp(Q_low)) {
       std::cerr << "PERF: We should have Qlow being admissible\n";
       throw TerminalException{1};
     }
-    if (!memo_admissible.comp(Qupp)) {
+    if (!memo_admissible.comp(Q_upp)) {
       std::cerr << "PERF: We should have Qlow being admissible\n";
       throw TerminalException{1};
     }
-    
+    Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
+    if (RecSHV_upp.eMin >= RecSHV_in.eMin) {
+      std::cerr << "PERF: We should have RecSHV_upp.eMin < RecSHV_in.eMin\n";
+      throw TerminalException{1};
+    }
   }
 #endif
-
-  // Now we must have Qlow / Qupp admissible
-  // and 
+  //
+  // Second while loop
+  //
+  // Now we must have Q_low / Q_upp admissible
+  // and RecSHV_upp.eMin < RecSHV_in.eMin
 #ifdef DEBUG_FLIP
   os << "PERF: FIRST LOOP FINISHED TheUpperBound=" << TheUpperBound
      << " TheLowerBound=" << TheLowerBound << "\n";
 #endif
   while (true) {
 #ifdef DEBUG_FLIP
-    os << "Now TheUpperBound=" << TheUpperBound
-       << " TheLowerBound=" << TheLowerBound << "\n";
+    os << "PERF: Now TheLowerBound=" << TheLowerBound
+       << " TheUpperBound=" << TheUpperBound << "\n";
 #endif
-    MyMatrix<T> Qlow = eMatIn + TheLowerBound * eMatDir;
-    MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
+    MyMatrix<T> Q_low = eMatIn + TheLowerBound * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 3 (Qlow)\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 3 (Q_low / Q_upp)\n";
 #endif
-    Tshortest<T, Tint> const& RecSHVlow = memo_shortest.comp(Qlow);
+    Tshortest<T, Tint> const& RecSHV_low = memo_shortest.comp(Q_low);
+    Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 4 (Qupp)\n";
-#endif
-    Tshortest<T, Tint> const& RecSHVupp = memo_shortest.comp(Qupp);
-#ifdef DEBUG_FLIP
-    os << "PERF: RecSHVupp.eMin=" << RecSHVupp.eMin
-       << " RecSHVlow.eMin=" << RecSHVlow.eMin << "\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.eMin=" << RecSHV_low.eMin << " SHV_upp.eMin=" << RecSHV_upp.eMin << "\n";
     MyMatrix<T> ConeClassicalLow =
-        GetNakedPerfectConeClassical<T>(RecSHVlow.SHV);
+        GetNakedPerfectConeClassical<T>(RecSHV_low.SHV);
     os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow) << "\n";
     MyMatrix<T> ConeClassicalUpp =
-        GetNakedPerfectConeClassical<T>(RecSHVupp.SHV);
+        GetNakedPerfectConeClassical<T>(RecSHV_upp.SHV);
     os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp) << "\n";
 #endif
-    bool test1 = RecSHVupp.eMin == RecSHVperf.eMin;
-    bool test2 = TestInclusionSHV(RecSHVperf.SHV, RecSHVlow.SHV);
+    bool test1 = RecSHV_upp.eMin == RecSHV_in.eMin;
+#ifdef SANITY_CHECK_FLIP
+    if (RecSHV_upp.eMin > RecSHV_in.eMin) {
+      std::cerr << "PERF: The shortest vectors should be of the same norm or below the input\n";
+      throw TerminalException{1};
+    }
+#endif
+    bool test2 = TestInclusionSHV(RecSHV_in.SHV, RecSHV_low.SHV);
 #ifdef DEBUG_FLIP
-    os << "PERF: RecSHVupp.eMin  = " << RecSHVupp.eMin << "\n";
-    os << "PERF: RecSHVperf.eMin = " << RecSHVperf.eMin << "\n";
+    os << "PERF: RecSHV_upp.eMin  = " << RecSHV_upp.eMin << "\n";
+    os << "PERF: RecSHV_in.eMin = " << RecSHV_in.eMin << "\n";
     os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
 #endif
     if (test1) {
 #ifdef DEBUG_FLIP
-      os << "Return Qupp\n";
+      os << "PERF: Return Q_upp\n";
 #endif
-      return {std::move(Qupp), std::move(RecSHVupp)};
+      return {std::move(Q_upp), std::move(RecSHV_upp)};
     }
     if (!test2) {
 #ifdef DEBUG_FLIP
-      os << "Qperf=\n";
+      os << "PERF: Qperf=\n";
       WriteMatrix(os, eMatIn);
-      os << "Qlow=\n";
-      WriteMatrix(os, Qlow);
+      os << "PERF: Q_low=\n";
+      WriteMatrix(os, Q_low);
       //
-      os << "RecSHVperf.SHV=\n";
-      WriteMatrix(os, RecSHVperf.SHV);
-      os << "RecSHVlow.SHV=\n";
-      WriteMatrix(os, RecSHVlow.SHV);
-      os << "Return Qlow\n";
+      os << "PERF: RecSHV_in.SHV=\n";
+      WriteMatrix(os, RecSHV_in.SHV);
+      os << "PERF: RecSHV_low.SHV=\n";
+      WriteMatrix(os, RecSHV_low.SHV);
+      os << "PERF: Return Q_low\n";
 #endif
-      return {std::move(Qlow), std::move(RecSHVlow)};
+      return {std::move(Q_low), std::move(RecSHV_low)};
     }
     T TheGamma = (TheLowerBound + TheUpperBound) / 2;
-    MyMatrix<T> Qgamma = eMatIn + TheGamma * eMatDir;
+    MyMatrix<T> Q_gamma = eMatIn + TheGamma * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "Qgamma=\n";
-    WriteMatrix(os, Qgamma);
+    os << "PERF: Q_gamma=\n";
+    WriteMatrix(os, Q_gamma);
 #endif
 #ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 5 (Qgamma)\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 5 (Q_gamma)\n";
 #endif
-    Tshortest<T, Tint> const& RecSHVgamma = memo_shortest.comp(Qgamma);
+    Tshortest<T, Tint> const& RecSHV_gamma = memo_shortest.comp(Q_gamma);
 #ifdef DEBUG_FLIP
-    os << "|RecSHVgamma.SHV|=" << RecSHVgamma.SHV.rows() << "\n";
-    WriteMatrix(os, RecSHVgamma.SHV);
+    os << "|RecSHV_gamma.SHV|=" << RecSHV_gamma.SHV.rows() << "\n";
+    WriteMatrix(os, RecSHV_gamma.SHV);
     MyMatrix<T> ConeClassicalGamma =
-        GetNakedPerfectConeClassical<T>(RecSHVgamma.SHV);
-    os << "RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma) << "\n";
+        GetNakedPerfectConeClassical<T>(RecSHV_gamma.SHV);
+    os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma) << "\n";
 #endif
-    if (RecSHVgamma.eMin >= RecSHVperf.eMin) {
+    if (RecSHV_gamma.eMin >= RecSHV_in.eMin) {
       TheLowerBound = TheGamma;
     } else {
 #ifdef DEBUG_FLIP
-      os << "Assigning TheUpperBound to TheGamma=" << TheGamma << "\n";
+      os << "PERF: Assigning TheUpperBound to TheGamma=" << TheGamma << "\n";
 #endif
       TheUpperBound = TheGamma;
-      int nbRowGamma = RecSHVgamma.SHV.rows();
+      int nbRowGamma = RecSHV_gamma.SHV.rows();
       for (int iRowGamma = 0; iRowGamma < nbRowGamma; iRowGamma++) {
-        MyVector<Tint> eVectShort = GetMatrixRow(RecSHVgamma.SHV, iRowGamma);
+        MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRowGamma);
 #ifdef DEBUG_FLIP
-        os << "iRowGamma=" << iRowGamma << " / " << nbRowGamma
-           << " eVectShort=";
-        WriteVectorNoDim(os, eVectShort);
+        os << "PERF: iRowGamma=" << iRowGamma << " / " << nbRowGamma
+           << " V=";
+        WriteVectorNoDim(os, V);
 #endif
-        T rVal = EvaluationQuadForm<T, Tint>(eMatDir, eVectShort);
-        T qVal = EvaluationQuadForm<T, Tint>(eMatIn, eVectShort);
+        T rVal = EvaluationQuadForm<T, Tint>(eMatDir, V);
+        T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
         if (rVal < 0) {
-          T TheVal = (RecSHVperf.eMin - qVal) / rVal;
+          T TheVal = (RecSHV_in.eMin - qVal) / rVal;
           if (TheVal < TheUpperBound) {
 #ifdef DEBUG_FLIP
-            os << "iRowGamma=" << iRowGamma
+            os << "PERF: iRowGamma=" << iRowGamma
                << " Assigning TheUpperBound to TheVal=" << TheVal << "\n";
-            os << "rVal=" << rVal << " qVal=" << qVal
-               << " RecSHVperf.eMin=" << RecSHVperf.eMin << "\n";
+            os << "PERF: rVal=" << rVal << " qVal=" << qVal
+               << " RecSHV_in.eMin=" << RecSHV_in.eMin << "\n";
 #endif
             TheUpperBound = TheVal;
           }
