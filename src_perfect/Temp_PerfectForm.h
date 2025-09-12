@@ -251,22 +251,28 @@ bool TestInclusionSHV_quad(MyMatrix<Tint> const &TheSHVbig,
   int nbRowSma = TheSHVsma.rows();
   int nbRowBig = TheSHVbig.rows();
   int n = TheSHVsma.cols();
-  for (int iRowSma = 0; iRowSma < nbRowSma; iRowSma++) {
-    bool WeMatch = false;
-    for (int iRowBig = 0; iRowBig < nbRowBig; iRowBig++)
-      if (!WeMatch) {
-        int SumErr = 0;
-        for (int i = 0; i < n; i++) {
-          Tint eVal = TheSHVbig(iRowBig, i);
-          Tint fVal = TheSHVsma(iRowSma, i);
-          if (eVal != fVal)
-            SumErr++;
-        }
-        if (SumErr == 0)
-          WeMatch = true;
+  auto is_equal_vector=[&](int iRowSma, int iRowBig) -> bool {
+    for (int i = 0; i < n; i++) {
+      Tint const& eVal = TheSHVbig(iRowBig, i);
+      Tint const& fVal = TheSHVsma(iRowSma, i);
+      if (eVal != fVal) {
+        return false;
       }
-    if (!WeMatch)
+    }
+    return true;
+  };
+  auto is_small_vect_in_big=[&](int iRowSma) -> bool {
+    for (int iRowBig = 0; iRowBig < nbRowBig; iRowBig++) {
+      if (is_equal_vector(iRowSma, iRowBig)) {
+        return true;
+      }
+    }
+    return false;
+  };
+  for (int iRowSma = 0; iRowSma < nbRowSma; iRowSma++) {
+    if (!is_small_vect_in_big(iRowSma)) {
       return false;
+    }
   }
   return true;
 }
@@ -296,7 +302,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                         [[maybe_unused]] std::ostream & os) {
   std::vector<MyMatrix<T>> ListMat;
-  std::vector<Tshortest<T, Tint>> ListShort;
+  std::list<Tshortest<T, Tint>> ListShort;
   // Memoization procedure. The computation is
   auto get_index=[&](MyMatrix<T> const &eMat) -> size_t {
     size_t len = ListMat.size();
@@ -313,14 +319,18 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     ListShort.push_back(RecSHV);
     return len;
   };
-  auto get_shv=[&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
+  auto get_shv=[&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> const& {
     size_t pos = get_index(eMat);
-    return ListShort[pos];
+    auto iter = ListShort.cbegin();
+    for (size_t u=0; u<pos; u++) {
+      iter++;
+    }
+    return *iter;
   };
 #ifdef DEBUG_FLIP
   os << "PERF: Kernel_Flipping_Perfect, case 1 (eMatIn)\n";
 #endif
-  Tshortest<T, Tint> const RecSHVperf = get_shv(eMatIn);
+  Tshortest<T, Tint> const& RecSHVperf = get_shv(eMatIn);
 #ifdef DEBUG_FLIP
   os << "Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV = RecSHVperf.SHV.rows();
@@ -384,7 +394,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       WriteMatrix(os, Qupp);
       os << "PERF: Kernel_Flipping_Perfect, case 2 (Qupp)\n";
 #endif
-      Tshortest<T, Tint> RecSHV = get_shv(Qupp);
+      Tshortest<T, Tint> const& RecSHV = get_shv(Qupp);
 #ifdef DEBUG_FLIP
       os << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
       os << "ITER: RecSHV.SHV=\n";
@@ -414,11 +424,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 3 (Qlow)\n";
 #endif
-    Tshortest<T, Tint> RecSHVlow = get_shv(Qlow);
+    Tshortest<T, Tint> const& RecSHVlow = get_shv(Qlow);
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 4 (Qupp)\n";
 #endif
-    Tshortest<T, Tint> RecSHVupp = get_shv(Qupp);
+    Tshortest<T, Tint> const& RecSHVupp = get_shv(Qupp);
 #ifdef DEBUG_FLIP
     os << "PERF: RecSHVupp.eMin=" << RecSHVupp.eMin
        << " RecSHVlow.eMin=" << RecSHVlow.eMin << "\n";
@@ -466,7 +476,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 5 (Qgamma)\n";
 #endif
-    Tshortest<T, Tint> RecSHVgamma = get_shv(Qgamma);
+    Tshortest<T, Tint> const& RecSHVgamma = get_shv(Qgamma);
 #ifdef DEBUG_FLIP
     os << "|RecSHVgamma.SHV|=" << RecSHVgamma.SHV.rows() << "\n";
     WriteMatrix(os, RecSHVgamma.SHV);
