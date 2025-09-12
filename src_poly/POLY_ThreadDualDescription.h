@@ -311,36 +311,37 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   int eRank = EXTred.cols();
   WeightMatrix<true, T, Tidx_value> WMat;
   bool HaveWMat = false;
+  std::ostream& os = MProc.GetO(TheId);
   auto ComputeWMat = [&]() -> void {
     if (HaveWMat)
       return;
     WMat = std::move(GetWeightMatrix<T, Tidx_value>(EXTred));
     int nbWeight = WMat.GetWeightSize();
-    MProc.GetO(TheId) << "nbWeight=" << nbWeight << "\n";
+    os << "nbWeight=" << nbWeight << "\n";
   };
   int TheMinSize = TheBank.GetMinSize();
   size_t seed = 1236674444;
   if (TheMinSize != -1 && nbRow >= TheMinSize) {
     ComputeWMat();
-    size_t eValInv = GetInvariantWeightMatrix(seed, WMat);
+    size_t eValInv = GetInvariantWeightMatrix(seed, WMat, os);
     PolyhedralInv<T> eInv{nbRow, eValInv};
     PolyhedralEntry<T, Tgroup> eEnt{EXT, GRP, vectface(EXT.rows())};
     DataBank_ResultQuery<PolyhedralEntry<T, Tgroup>> eResBank =
-        TheBank.ProcessRequest(eEnt, eInv, MProc.GetO(TheId));
+        TheBank.ProcessRequest(eEnt, eInv, os);
     if (eResBank.test) {
-      MProc.GetO(TheId) << "Begin the use of bank data\n";
+      os << "Begin the use of bank data\n";
       vectface ListReprTrans(EXT.rows());
       Face eFaceImg(EXT.rows());
       for (auto const &eFace : eResBank.eEnt.ListFace) {
         OnFace_inplace(eFaceImg, eFace, eResBank.TheEquiv);
         ListReprTrans.push_back(eFaceImg);
       }
-      MProc.GetO(TheId) << "Before the orbit splitting |ListReprTrans|="
-                        << ListReprTrans.size() << "\n";
+      os << "Before the orbit splitting |ListReprTrans|="
+         << ListReprTrans.size() << "\n";
       Tgroup GRPconj = ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);
       vectface ListFaceRet = OrbitSplittingListOrbit(
-          GRPconj, GRP, ListReprTrans, MProc.GetO(TheId));
-      MProc.GetO(TheId) << "After the OrbitSplitting\n";
+          GRPconj, GRP, ListReprTrans, os);
+      os << "After the OrbitSplitting\n";
       return ListFaceRet;
     }
   }
@@ -354,8 +355,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   TheMap["rank"] = eRank;
   TheMap["delta"] = delta;
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
-  MProc.GetO(TheId) << "Not found in bank TheLevel=" << TheLevel
-                    << " ansSplit=" << ansSplit << "\n";
+  os << "Not found in bank TheLevel=" << TheLevel
+     << " ansSplit=" << ansSplit << "\n";
   //
   // The computations themselves
   //
@@ -372,8 +373,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     } else {
       ComputeWMat();
       ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-      MProc.GetO(TheId) << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows()
-                        << "\n";
+      os << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows()
+         << "\n";
       if (ansSymm == "yes")
         TheGRPrelevant =
             GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
@@ -384,10 +385,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       TheMap["groupsizerelevant"] = TheGRPrelevant.size();
       std::string ansGRP = HeuristicEvaluation(TheMap, AllArr.StabEquivFacet);
       Tint QuotSize = TheGRPrelevant.size() / GRP.size();
-      MProc.GetO(TheId) << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP
-                        << " |TheGRPrelevant|=" << TheGRPrelevant.size()
-                        << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize
-                        << "\n";
+      os << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP
+         << " |TheGRPrelevant|=" << TheGRPrelevant.size()
+         << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize
+         << "\n";
       mpz_class MaxAllowedUndone = eRank - 2;
       std::function<bool(SimpleOrbitFacetInv<T> const &,
                          SimpleOrbitFacetInv<T> const &)>
@@ -437,8 +438,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           SecondTime time;
           auto eReply =
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          MProc.GetO(TheId)
-              << "CLASSIC: After the test time = " << time << "\n";
+          os << "CLASSIC: After the test time = " << time << "\n";
           return eReply;
         };
       }
@@ -450,15 +450,13 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           SecondTime time;
           auto eReply =
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
-          MProc.GetO(TheId)
-              << "PARTITION: After the test time = " << time << "\n";
+          os << "PARTITION: After the test time = " << time << "\n";
           if (time.const_eval_int64() > 60) {
             //
             SecondTime time;
             auto eReplyB =
                 TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
-            MProc.GetO(TheId)
-                << "Second method (bliss) runtime = " << time << "\n";
+            os << "Second method (bliss) runtime = " << time << "\n";
           }
           return eReply;
         };
@@ -511,7 +509,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       bool DD_Memory = AllArr.DD_Memory;
       NewEnumerationWork<SimpleOrbitFacet<T, Tgroup>> ListOrbit(
           DD_Saving, DD_Memory, ePrefix, CompFCT, UpgradeBalinskiStat, fEquiv,
-          MProc.GetO(TheId));
+          os);
       mpz_class TotalNumberFacet = 0;
       auto FuncInsert = [&](Face const &eOrb, std::ostream &os) -> int {
         PairT_Tinv<SimpleOrbitFacet<T, Tgroup>> eRec = GetRecord(eOrb, os);
@@ -524,14 +522,14 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       if (nbPresentOrbit == 0) {
         std::string ansSamp =
             HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-        MProc.GetO(TheId) << "Before InitialFacetComputation ansSamp="
-                          << ansSamp << "\n";
+        os << "Before InitialFacetComputation ansSamp="
+           << ansSamp << "\n";
         vectface ListFace = DirectComputationInitialFacetSet(EXTred, ansSamp);
-        MProc.GetO(TheId) << " After InitialFacetComputation\n";
+        os << " After InitialFacetComputation\n";
         for (auto &eInc : ListFace) {
-          int RetVal = FuncInsert(eInc, MProc.GetO(TheId));
-          MProc.GetO(TheId) << "Inserting |eInc|=" << eInc.count()
-                            << " : RetVal=" << RetVal << "\n";
+          int RetVal = FuncInsert(eInc, os);
+          os << "Inserting |eInc|=" << eInc.count()
+             << " : RetVal=" << RetVal << "\n";
         }
       }
       std::atomic<int> nbSpannThread(0);
@@ -619,34 +617,34 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       std::vector<std::thread> ListThreads;
       SpannNewThread = [&]() -> void {
         int NewId = MProc.MPU_GetId();
-        MProc.GetO(TheId) << "SpannNewThread NewId=" << NewId << "\n";
+        os << "SpannNewThread NewId=" << NewId << "\n";
         if (NewId != -1) {
           ListThreads.push_back(std::thread(TreatDatabase, NewId));
           ListThreads[ListThreads.size() - 1].detach();
         }
       };
       int NbThr = MProc.MPU_NumberFree();
-      MProc.GetO(TheId) << "We have NbThr=" << NbThr << "\n";
+      os << "We have NbThr=" << NbThr << "\n";
       while (true) {
         bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
-        MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
+        os << "IsCompleteSpann=" << IsCompleteSpann << "\n";
         if (IsCompleteSpann) {
           WaitStuck(1, TheId);
         } else {
           for (int iThr = 0; iThr < NbThr; iThr++)
             SpannNewThread();
-          MProc.GetO(TheId) << "Before TreatDatabase\n";
+          os << "Before TreatDatabase\n";
           TreatDatabase(TheId);
-          MProc.GetO(TheId) << "After my own call to TreatDatabase\n";
+          os << "After my own call to TreatDatabase\n";
         }
         if (nbSpannThread == 0)
           break;
       }
       bool IsComplete = ListOrbit.GetCompleteStatus();
       int nbOrbitFacet = ListOrbit.GetNbEntry();
-      MProc.GetO(TheId) << "IsComplete=" << IsComplete << "\n";
-      MProc.GetO(TheId) << "TotalNumberFacet=" << TotalNumberFacet
-                        << "  nbOrbitFacet=" << nbOrbitFacet << "\n";
+      os << "IsComplete=" << IsComplete << "\n";
+      os << "TotalNumberFacet=" << TotalNumberFacet
+         << "  nbOrbitFacet=" << nbOrbitFacet << "\n";
       if (!IsComplete) {
         std::cerr << "Major error in the code. We should be complete now\n";
         throw TerminalException{1};
@@ -666,29 +664,28 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"] = elapsed_seconds;
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  MProc.GetO(TheId) << "elapsed_seconds = " << elapsed_seconds
-                    << " ansBank = " << ansBank << "\n";
+  os << "elapsed_seconds = " << elapsed_seconds
+     << " ansBank = " << ansBank << "\n";
   if (ansBank == "yes") {
-    MProc.GetO(TheId) << "BANK work, step 1\n";
+    os << "BANK work, step 1\n";
     PolyhedralEntry<T, Tgroup> eEntry{EXT, TheGRPrelevant, ListOrbitFaces};
-    MProc.GetO(TheId) << "BANK work, step 2\n";
+    os << "BANK work, step 2\n";
     PolyhedralEntry<T, Tgroup> eEntryCan =
-        CanonicalizationPolyEntry(eEntry, MProc.GetO(TheId));
-    MProc.GetO(TheId) << "BANK work, step 3\n";
+        CanonicalizationPolyEntry(eEntry, os);
+    os << "BANK work, step 3\n";
     size_t seed = 1236674444;
-    size_t eValInv = GetInvariantWeightMatrix(seed, WMat);
-    MProc.GetO(TheId) << "BANK work, step 4\n";
+    size_t eValInv = GetInvariantWeightMatrix(seed, WMat, os);
+    os << "BANK work, step 4\n";
     PolyhedralInv<T> eInv{nbRow, eValInv};
-    MProc.GetO(TheId) << "BANK work, step 5\n";
+    os << "BANK work, step 5\n";
     TheBank.InsertEntry(eEntryCan, eInv);
-    MProc.GetO(TheId) << "BANK work, step 6\n";
+    os << "BANK work, step 6\n";
   }
-  MProc.GetO(TheId) << "Bank entry processed\n";
+  os << "Bank entry processed\n";
   if (ansSymm == "yes") {
-    MProc.GetO(TheId) << "|TheGRPrelevant|=" << TheGRPrelevant.size()
-                      << " |GRP|=" << GRP.size() << "\n";
-    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces,
-                                   MProc.GetO(TheId));
+    os << "|TheGRPrelevant|=" << TheGRPrelevant.size()
+       << " |GRP|=" << GRP.size() << "\n";
+    return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListOrbitFaces, os);
   } else {
     return ListOrbitFaces;
   }

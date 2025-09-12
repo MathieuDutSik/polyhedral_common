@@ -18,12 +18,12 @@ void compute(std::string const& FileI, std::string const& OutFormat, std::ostrea
     CopositiveShortestVector<T, Tint>(eSymmMat, InitialBasis, std::cerr);
 
   if (OutFormat == "clear") {
-    os << "eMin=" << eSh.eMin << "\n";
+    os << "eMin=" << eSh.min << "\n";
     WriteMatrix(os, eSh.SHV);
     return;
   }
   if (OutFormat == "GAP") {
-    os << "return rec(eMin:=" << eSh.eMin << ", SHV:=";
+    os << "return rec(eMin:=" << eSh.min << ", SHV:=";
     WriteMatrixGAP(os, eSh.SHV);
     os << ");\n";
     return;

@@ -13,7 +13,7 @@
 // clang-format on
 
 template <typename T, typename Tint> struct Tshortest {
-  T eMin;
+  T min;
   MyMatrix<Tint> SHV;
 };
 

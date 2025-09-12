@@ -123,6 +123,9 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         Flipping_Perfect<T, Tint>(eGram, eMatDir, os);
+#ifdef DEBUG_PERFECT_TSPACE
+    os << "PERF_TSPACE: Result flipping pos=" << pos << " min=" << pair.second.min << " |SHV|=" << pair.second.SHV.rows() << " det=" << DeterminantMat(pair.first) << "\n";
+#endif
 #ifdef SANITY_CHECK_PERFECT_TSPACE
     if (!is_perfect_in_space(LinSpa, pair.second)) {
       std::cerr << "The matrix created by Flipping_Perfect is not perfect\n";
@@ -152,7 +155,11 @@ struct DataPerfectTspaceFunc {
   }
 
   size_t f_hash(size_t const &seed, Tobj const &x) {
-    return ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, x.RecSHV, data.rddo.os);
+    std::ostream &os = get_os();
+#ifdef DEBUG_PERFECT_TSPACE
+    os << "PERF_TSPACE: Before f_hash\n";
+#endif
+    return ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, x.RecSHV, os);
   }
 
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {

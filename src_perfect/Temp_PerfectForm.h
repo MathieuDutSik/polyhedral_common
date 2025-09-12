@@ -16,6 +16,7 @@
 
 #ifdef DEBUG
 #define DEBUG_PERFECT_FORM
+#define DEBUG_PERFECT_TSPACE_HASH
 #define DEBUG_FLIP
 #endif
 
@@ -361,6 +362,12 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
                         Fshortest f_shortest,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                         [[maybe_unused]] std::ostream & os) {
+#ifdef SANITY_CHECK_FLIP
+  if (f_admissible(eMatDir)) {
+    std::cerr << "PERF: If the direction of change belong to the space, then we are not going to find new vectors\n";
+    throw TerminalException{1};
+  }
+#endif
   Memoization<Fadmissible,MyMatrix<T>,bool> memo_admissible(f_admissible);
   Memoization<Fshortest,MyMatrix<T>,Tshortest<T, Tint>> memo_shortest(f_shortest);
 #ifdef DEBUG_FLIP
@@ -440,11 +447,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
       Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP
-      os << "ITER: RecSHV_upp.eMin=" << RecSHV_upp.eMin << "\n";
+      os << "ITER: RecSHV_upp.min=" << RecSHV_upp.min << "\n";
       os << "ITER: RecSHV_upp.SHV=\n";
       WriteMatrix(os, RecSHV_upp.SHV);
 #endif
-      if (RecSHV_upp.eMin == RecSHV_in.eMin) {
+      if (RecSHV_upp.min == RecSHV_in.min) {
         T nLow = TheUpperBound;
         T nUpp = 2 * TheUpperBound;
         TheLowerBound = nLow;
@@ -467,8 +474,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       throw TerminalException{1};
     }
     Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
-    if (RecSHV_upp.eMin >= RecSHV_in.eMin) {
-      std::cerr << "PERF: We should have RecSHV_upp.eMin < RecSHV_in.eMin\n";
+    if (RecSHV_upp.min >= RecSHV_in.min) {
+      std::cerr << "PERF: We should have RecSHV_upp.min < RecSHV_in.min\n";
       throw TerminalException{1};
     }
   }
@@ -477,7 +484,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // Second while loop
   //
   // Now we must have Q_low / Q_upp admissible
-  // and RecSHV_upp.eMin < RecSHV_in.eMin
+  // and RecSHV_upp.min < RecSHV_in.min
 #ifdef DEBUG_FLIP
   os << "PERF: FIRST LOOP FINISHED TheUpperBound=" << TheUpperBound
      << " TheLowerBound=" << TheLowerBound << "\n";
@@ -495,7 +502,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     Tshortest<T, Tint> const& RecSHV_low = memo_shortest.comp(Q_low);
     Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.eMin=" << RecSHV_low.eMin << " SHV_upp.eMin=" << RecSHV_upp.eMin << "\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.min=" << RecSHV_low.min << " SHV_upp.min=" << RecSHV_upp.min << "\n";
     MyMatrix<T> ConeClassicalLow =
         GetNakedPerfectConeClassical<T>(RecSHV_low.SHV);
     os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow) << "\n";
@@ -503,17 +510,17 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
         GetNakedPerfectConeClassical<T>(RecSHV_upp.SHV);
     os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp) << "\n";
 #endif
-    bool test1 = RecSHV_upp.eMin == RecSHV_in.eMin;
+    bool test1 = RecSHV_upp.min == RecSHV_in.min;
 #ifdef SANITY_CHECK_FLIP
-    if (RecSHV_upp.eMin > RecSHV_in.eMin) {
+    if (RecSHV_upp.min > RecSHV_in.min) {
       std::cerr << "PERF: The shortest vectors should be of the same norm or below the input\n";
       throw TerminalException{1};
     }
 #endif
     bool test2 = TestInclusionSHV(RecSHV_in.SHV, RecSHV_low.SHV);
 #ifdef DEBUG_FLIP
-    os << "PERF: RecSHV_upp.eMin = " << RecSHV_upp.eMin << "\n";
-    os << "PERF: RecSHV_in.eMin  = " << RecSHV_in.eMin << "\n";
+    os << "PERF: RecSHV_upp.min = " << RecSHV_upp.min << "\n";
+    os << "PERF: RecSHV_in.min  = " << RecSHV_in.min << "\n";
     os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
 #endif
     if (test1) {
@@ -554,7 +561,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
         GetNakedPerfectConeClassical<T>(RecSHV_gamma.SHV);
     os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma) << "\n";
 #endif
-    if (RecSHV_gamma.eMin >= RecSHV_in.eMin) {
+    if (RecSHV_gamma.min >= RecSHV_in.min) {
       TheLowerBound = TheGamma;
     } else {
 #ifdef DEBUG_FLIP
@@ -575,13 +582,13 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
         os << " rVal=" << rVal << " qVal=" << qVal << "\n";
 #endif
         if (rVal < 0) {
-          T TheVal = (RecSHV_in.eMin - qVal) / rVal;
+          T TheVal = (RecSHV_in.min - qVal) / rVal;
           if (TheVal < TheUpperBound) {
 #ifdef DEBUG_FLIP
             os << "PERF: iRowGamma=" << iRowGamma
                << " Assigning TheUpperBound to TheVal=" << TheVal << "\n";
             os << "PERF: rVal=" << rVal << " qVal=" << qVal
-               << " RecSHV_in.eMin=" << RecSHV_in.eMin << "\n";
+               << " RecSHV_in.min=" << RecSHV_in.min << "\n";
 #endif
             TheUpperBound = TheVal;
           }
@@ -596,14 +603,14 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
                                      MyMatrix<T> const &eGram,
                                      Tshortest<T, Tint> const &RecSHV,
                                      std::ostream &os) {
-#ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, begin\n";
-#endif
   using Tidx_value = int16_t;
   int n = eGram.rows();
-  MyMatrix<T> eG = eGram / RecSHV.eMin;
+  MyMatrix<T> eG = eGram / RecSHV.min;
   size_t n_row = RecSHV.SHV.rows();
   int nbSHV = 2 * n_row;
+#ifdef DEBUG_PERFECT_TSPACE_HASH
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, nbSHV=" << nbSHV << "\n";
+#endif
 
   MyVector<T> V(n);
   int iSign, jSign;
@@ -616,10 +623,14 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
     for (int i=0; i<n; i++) {
       T eSum(0);
       for (int j=0; j<n; j++)
-        eSum += eG(i, j) * RecSHV.SHV(iRowRed, i);
+        eSum += eG(i, j) * RecSHV.SHV(iRowRed, j);
       V(i) = eSum;
     }
   };
+#ifdef DEBUG_PERFECT_TSPACE_HASH
+  std::map<T,size_t> map_val;
+  std::map<T,size_t> map_abs_val;
+#endif
   auto f2 = [&](size_t jRow) -> T {
     size_t jRowRed = jRow % n_row;
     jSign = 1;
@@ -630,14 +641,31 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
     for (int i=0; i<n; i++)
       eSum += V(i) * RecSHV.SHV(jRowRed, i);
     T fSum = eSum * (iSign * jSign);
+#ifdef DEBUG_PERFECT_TSPACE_HASH
+    map_val[fSum] += 1;
+    T fSum_abs = T_abs(fSum);
+    map_abs_val[fSum_abs] += 1;
+#endif
     return fSum;
   };
   WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
-#ifdef DEBUG_PERFECT_TSPACE
+#ifdef DEBUG_PERFECT_TSPACE_HASH
+  int iter = 0;
+  for (auto & kv : map_val) {
+    os << "PERF_TSPACE: iter=" << iter << " val=" << kv.first << " mult=" << kv.second << "\n";
+    iter += 1;
+  }
+  int iter_abs = 0;
+  for (auto & kv : map_abs_val) {
+    os << "PERF_TSPACE: iter_abs=" << iter_abs << " val=" << kv.first << " mult=" << kv.second << "\n";
+    iter_abs += 1;
+  }
+#endif
+#ifdef DEBUG_PERFECT_TSPACE_HASH
   os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have WMat\n";
 #endif
-  size_t hash = GetInvariantWeightMatrix(seed, WMat);
-#ifdef DEBUG_PERFECT_TSPACE
+  size_t hash = GetInvariantWeightMatrix(seed, WMat, os);
+#ifdef DEBUG_PERFECT_TSPACE_HASH
   os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash\n";
 #endif
   return hash;
@@ -706,7 +734,7 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
 #ifdef DEBUG_INITIAL_PERFECT
-    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << RecSHV.eMin << " |SHV|=" << RecSHV.SHV.rows() << "\n";
+    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << RecSHV.min << " |SHV|=" << RecSHV.SHV.rows() << "\n";
 #endif
     if (TheRank == nbMat) {
 #ifdef DEBUG_INITIAL_PERFECT
