@@ -224,9 +224,30 @@ struct QueryEquivInfo {
   PerfEquivInfo eEquiv;
 };
 
+// Use a set, better asymptotics, but copy needed
 template <typename Tint>
-bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
-                      MyMatrix<Tint> const &TheSHVsma) {
+bool TestInclusionSHV_set(MyMatrix<Tint> const &TheSHVbig,
+                          MyMatrix<Tint> const &TheSHVsma) {
+  std::unordered_set<MyVector<Tint>> set_big;
+  int nbRowBig = TheSHVbig.rows();
+  for (int iRowBig = 0; iRowBig < nbRowBig; iRowBig++) {
+    MyVector<Tint> V = GetMatrixRow(TheSHVbig, iRowBig);
+    set_big.insert(V);
+  }
+  int nbRowSma = TheSHVsma.rows();
+  for (int iRowSma = 0; iRowSma < nbRowSma; iRowSma++) {
+    MyVector<Tint> V = GetMatrixRow(TheSHVsma, iRowSma);
+    if (set_big.count(V) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+// Use a quadratic algorithm. But not copy needed
+template <typename Tint>
+bool TestInclusionSHV_quad(MyMatrix<Tint> const &TheSHVbig,
+                           MyMatrix<Tint> const &TheSHVsma) {
   int nbRowSma = TheSHVsma.rows();
   int nbRowBig = TheSHVbig.rows();
   int n = TheSHVsma.cols();
@@ -250,6 +271,24 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
   return true;
 }
 
+template <typename Tint>
+bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
+                      MyMatrix<Tint> const &TheSHVsma) {
+  if (TheSHVbig.rows() > 100) {
+    return TestInclusionSHV_set(TheSHVbig, TheSHVsma);
+  } else {
+    return TestInclusionSHV_quad(TheSHVbig, TheSHVsma);
+  }
+}
+
+/*
+  This is the code for given a form eMatIn, a direction of change eMatDir,
+  to compute a coefficient lambda>0 such that eMatIn + lambda eMatDir has
+  more shortest vector that eMatIn + epsilon eMatDir for epsilon infinitely
+  small.
+  ---
+  The specific algorithm is based on 
+ */
 template <typename T, typename Tint, typename Fadmissible, typename Fshortest>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Kernel_Flipping_Perfect(Fadmissible f_admissible,
@@ -258,30 +297,30 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
                         [[maybe_unused]] std::ostream & os) {
   std::vector<MyMatrix<T>> ListMat;
   std::vector<Tshortest<T, Tint>> ListShort;
-  // Memoization procedure
-  auto RetrieveShortestDesc =
-      [&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
-    int len = ListMat.size();
-    for (int i = 0; i < len; i++) {
+  // Memoization procedure. The computation is
+  auto get_index=[&](MyMatrix<T> const &eMat) -> size_t {
+    size_t len = ListMat.size();
+    for (size_t i = 0; i < len; i++) {
       if (ListMat[i] == eMat) {
 #ifdef DEBUG_FLIP
         os << "PERF: Memoization success\n";
 #endif
-        return ListShort[i];
+        return i;
       }
     }
-#ifdef DEBUG_FLIP
-    os << "PERF: CALL ShortestFunction\n";
-#endif
     Tshortest<T, Tint> RecSHV = f_shortest(eMat);
     ListMat.push_back(eMat);
     ListShort.push_back(RecSHV);
-    return RecSHV;
+    return len;
+  };
+  auto get_shv=[&](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
+    size_t pos = get_index(eMat);
+    return ListShort[pos];
   };
 #ifdef DEBUG_FLIP
-  os << "PERF: RetrieveShortestDesc, case 1 (eMatIn)\n";
+  os << "PERF: Kernel_Flipping_Perfect, case 1 (eMatIn)\n";
 #endif
-  Tshortest<T, Tint> const RecSHVperf = RetrieveShortestDesc(eMatIn);
+  Tshortest<T, Tint> const RecSHVperf = get_shv(eMatIn);
 #ifdef DEBUG_FLIP
   os << "Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV = RecSHVperf.SHV.rows();
@@ -343,9 +382,9 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
       os << "PERF: Qupp=\n";
       WriteMatrix(os, Qupp);
-      os << "PERF: RetrieveShortestDesc, case 2 (Qupp)\n";
+      os << "PERF: Kernel_Flipping_Perfect, case 2 (Qupp)\n";
 #endif
-      Tshortest<T, Tint> RecSHV = RetrieveShortestDesc(Qupp);
+      Tshortest<T, Tint> RecSHV = get_shv(Qupp);
 #ifdef DEBUG_FLIP
       os << "ITER: RecSHV.eMin=" << RecSHV.eMin << "\n";
       os << "ITER: RecSHV.SHV=\n";
@@ -373,25 +412,30 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     MyMatrix<T> Qlow = eMatIn + TheLowerBound * eMatDir;
     MyMatrix<T> Qupp = eMatIn + TheUpperBound * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "PERF: RetrieveShortestDesc, case 3 (Qlow)\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 3 (Qlow)\n";
 #endif
-    Tshortest<T, Tint> RecSHVlow = RetrieveShortestDesc(Qlow);
+    Tshortest<T, Tint> RecSHVlow = get_shv(Qlow);
 #ifdef DEBUG_FLIP
-    os << "PERF: RetrieveShortestDesc, case 4 (Qupp)\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 4 (Qupp)\n";
 #endif
-    Tshortest<T, Tint> RecSHVupp = RetrieveShortestDesc(Qupp);
+    Tshortest<T, Tint> RecSHVupp = get_shv(Qupp);
 #ifdef DEBUG_FLIP
-    os << "RecSHVupp.eMin=" << RecSHVupp.eMin
+    os << "PERF: RecSHVupp.eMin=" << RecSHVupp.eMin
        << " RecSHVlow.eMin=" << RecSHVlow.eMin << "\n";
     MyMatrix<T> ConeClassicalLow =
         GetNakedPerfectConeClassical<T>(RecSHVlow.SHV);
-    os << "RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow) << "\n";
+    os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow) << "\n";
     MyMatrix<T> ConeClassicalUpp =
         GetNakedPerfectConeClassical<T>(RecSHVupp.SHV);
-    os << "RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp) << "\n";
+    os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp) << "\n";
 #endif
     bool test1 = RecSHVupp.eMin == RecSHVperf.eMin;
     bool test2 = TestInclusionSHV(RecSHVperf.SHV, RecSHVlow.SHV);
+#ifdef DEBUG_FLIP
+    os << "PERF: RecSHVupp.eMin =" << RecSHVupp.eMin << "\n";
+    os << "PERF: RecSHVperf.eMin=" << RecSHVperf.eMin << "\n";
+    os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
+#endif
     if (test1) {
 #ifdef DEBUG_FLIP
       os << "Return Qupp\n";
@@ -420,9 +464,9 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     WriteMatrix(os, Qgamma);
 #endif
 #ifdef DEBUG_FLIP
-    os << "PERF: RetrieveShortestDesc, case 5 (Qgamma)\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 5 (Qgamma)\n";
 #endif
-    Tshortest<T, Tint> RecSHVgamma = RetrieveShortestDesc(Qgamma);
+    Tshortest<T, Tint> RecSHVgamma = get_shv(Qgamma);
 #ifdef DEBUG_FLIP
     os << "|RecSHVgamma.SHV|=" << RecSHVgamma.SHV.rows() << "\n";
     WriteMatrix(os, RecSHVgamma.SHV);
