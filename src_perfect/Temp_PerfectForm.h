@@ -24,6 +24,7 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_FLIP
+#define SANITY_CHECK_INITIAL_PERFECT
 #endif
 
 template <typename T, typename Tint> struct NakedPerfect {
@@ -728,6 +729,9 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
   Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
+#ifdef SANITY_CHECK_INITIAL_PERFECT
+  T TheMin = RecSHV.min;
+#endif
 #ifdef DEBUG_INITIAL_PERFECT
   int iter = 0;
 #endif
@@ -762,6 +766,12 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
     auto pair = Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os);
     ThePerfMat = pair.first;
     RecSHV = pair.second;
+#ifdef SANITY_CHECK_INITIAL_PERFECT
+    if (RecSHV.min != TheMin) {
+      std::cerr << "PERF: The RecSHV minimum should remain invariant\n";
+      throw TerminalException{1};
+    }
+#endif
 #ifdef DEBUG_INITIAL_PERFECT
     iter += 1;
 #endif
