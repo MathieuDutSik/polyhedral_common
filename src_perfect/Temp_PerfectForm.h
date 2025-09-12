@@ -371,7 +371,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // Initial checks of the input
   //
 #ifdef DEBUG_FLIP
-  os << "Kernel_Flipping_Perfect : SHVinformation=\n";
+  os << "PERF: Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV = RecSHV_in.SHV.rows();
   int n = RecSHV_in.SHV.cols();
   int nbZero_sumMat = 0;
@@ -386,7 +386,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       eVal = 0;
     }
     ListScal[iSHV] = eVal;
-    os << "iSHV=" << iSHV << " V=";
+    os << "PERF: iSHV=" << iSHV << " V=";
     for (int i = 0; i < n; i++)
       os << V(i) << " ";
     os << "sumMatIn=" << sumMatIn << " sumMatDir=" << sumMatDir << "\n";
@@ -400,14 +400,14 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       idx++;
     }
   }
-  os << "SHVface=\n";
+  os << "PERF: SHVface=\n";
   WriteMatrix(os, SHVface);
-  os << "nbZero_sumMat=" << nbZero_sumMat << "\n";
+  os << "PERF: nbZero_sumMat=" << nbZero_sumMat << "\n";
   MyMatrix<T> ConeClassicalInput =
       GetNakedPerfectConeClassical<T>(RecSHV_in.SHV);
-  os << "RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput) << "\n";
+  os << "PERF: RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput) << "\n";
   MyMatrix<T> ConeClassicalFace = GetNakedPerfectConeClassical<T>(SHVface);
-  os << "RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace) << "\n";
+  os << "PERF: RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace) << "\n";
 #endif
   //
   // Running the algorithm
@@ -426,7 +426,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     bool test = memo_admissible.comp(Q_upp);
 #ifdef DEBUG_FLIP
     iterLoop++;
-    os << "iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
+    os << "PERF: iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
        << " TheLowerBound=" << TheLowerBound << " test=" << test << "\n";
 #endif
     if (!test) {
@@ -512,8 +512,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
     bool test2 = TestInclusionSHV(RecSHV_in.SHV, RecSHV_low.SHV);
 #ifdef DEBUG_FLIP
-    os << "PERF: RecSHV_upp.eMin  = " << RecSHV_upp.eMin << "\n";
-    os << "PERF: RecSHV_in.eMin = " << RecSHV_in.eMin << "\n";
+    os << "PERF: RecSHV_upp.eMin = " << RecSHV_upp.eMin << "\n";
+    os << "PERF: RecSHV_in.eMin  = " << RecSHV_in.eMin << "\n";
     os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
 #endif
     if (test1) {
@@ -522,7 +522,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
       return {std::move(Q_upp), std::move(RecSHV_upp)};
     }
-    if (!test2) {
+    if (!test2 && test1) {
 #ifdef DEBUG_FLIP
       os << "PERF: Qperf=\n";
       WriteMatrix(os, eMatIn);
@@ -564,13 +564,16 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       int nbRowGamma = RecSHV_gamma.SHV.rows();
       for (int iRowGamma = 0; iRowGamma < nbRowGamma; iRowGamma++) {
         MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRowGamma);
+        T rVal = EvaluationQuadForm<T, Tint>(eMatDir, V);
+        T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
 #ifdef DEBUG_FLIP
         os << "PERF: iRowGamma=" << iRowGamma << " / " << nbRowGamma
            << " V=";
-        WriteVectorNoDim(os, V);
+        for (int i=0; i<eMatIn.rows(); i++) {
+          os << " " << V(i);
+        }
+        os << " rVal=" << rVal << " qVal=" << qVal << "\n";
 #endif
-        T rVal = EvaluationQuadForm<T, Tint>(eMatDir, V);
-        T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
         if (rVal < 0) {
           T TheVal = (RecSHV_in.eMin - qVal) / rVal;
           if (TheVal < TheUpperBound) {
@@ -676,25 +679,62 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> con
 }
 
 
-
+/*
+  Finds a perfect form by starting from the super matrix of the space
+  and then doing some moves if that is not perfect.
+  ---
+  The direction of the movements are obtained by computing the
+  shortest vectors, getting the kernel.
+  The vector in the kernel gives direction of change.
+  However, if that direction is positive definite then we will not obtain
+  a new form. This scenario is explained in "Enumerating Perfect Forms" arXiv:0901.1587
+  ---
+  During the running of this test, the minimal norm of the matrix remains the same,
+  but the number of vectors attaining it is increasing.
+ */
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
+  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
+#ifdef DEBUG_INITIAL_PERFECT
+  int iter = 0;
+#endif
   while (true) {
-    Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
     MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
+#ifdef DEBUG_INITIAL_PERFECT
+    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << RecSHV.eMin << " |SHV|=" << RecSHV.SHV.rows() << "\n";
+#endif
     if (TheRank == nbMat) {
-      return {ThePerfMat, RecSHV};
+#ifdef DEBUG_INITIAL_PERFECT
+      os << "PERF: GetOnePerfectForm, returning at iter=" << iter << "\n";
+#endif
+      return {std::move(ThePerfMat), std::move(RecSHV)};
     }
-    MyVector<T> eVect = eSelect.NSP.row(0);
-    MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(LinSpa, eVect);
-    MyMatrix<T> eMatRet =
-        Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os).first;
-    ThePerfMat = eMatRet;
+    MyVector<T> V = eSelect.NSP.row(0);
+    auto iife_get_dir=[&]() -> MyMatrix<T> {
+      MyMatrix<T> M = LINSPA_GetMatrixInTspace(LinSpa, V);
+      if (IsPositiveDefinite<T>(M, os)) {
+        // For a positive definite matrix, we need to take the opposite
+        // because we need a direction outside of the cone.
+        return -M;
+      }
+      return M;
+    };
+    MyMatrix<T> DirMat = iife_get_dir();
+#ifdef DEBUG_INITIAL_PERFECT
+    os << "PERF: GetOnePerfectForm, iter=" << iter << " DirMat=\n";
+    WriteMatrix(os, DirMat);
+#endif
+    auto pair = Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os);
+    ThePerfMat = pair.first;
+    RecSHV = pair.second;
+#ifdef DEBUG_INITIAL_PERFECT
+    iter += 1;
+#endif
   }
 }
 
