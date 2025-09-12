@@ -638,6 +638,9 @@ GetInvariantWeightMatrix(size_t const& seed, WeightMatrix<is_symmetric, T, Tidx_
   };
   size_t hash1 = std::hash<std::vector<int>>()(ListAtt);
   size_t hash2 = std::hash<std::vector<T>>()(ListWeight_B);
+#ifdef DEBUG_WEIGHT_MATRIX
+  os << "WEIGHT: hash1=" << hash1 << " hash2=" << hash2 << "\n";
+#endif
   size_t hash = seed;
   combine_hash(hash, hash1);
   combine_hash(hash, hash2);

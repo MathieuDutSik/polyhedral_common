@@ -17,6 +17,8 @@
 #ifdef DEBUG
 #define DEBUG_PERFECT_FORM
 #define DEBUG_PERFECT_TSPACE_HASH
+#define DEBUG_INITIAL_PERFECT
+#define DEBUG_PERFECT_REPR
 #define DEBUG_FLIP
 #endif
 
@@ -666,7 +668,7 @@ size_t ComputeInvariantPerfectTspace(size_t const &seed,
 #endif
   size_t hash = GetInvariantWeightMatrix(seed, WMat, os);
 #ifdef DEBUG_PERFECT_TSPACE_HASH
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash\n";
+  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash, hash=" << hash << "\n";
 #endif
   return hash;
 }
@@ -866,6 +868,13 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> SHV1_T = get_shv_t(eMat1, RecSHV1, os);
   MyMatrix<T> SHV2_T = get_shv_t(eMat2, RecSHV2, os);
   std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
+#ifdef DEBUG_PERFECT_REPR
+  os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1) << " det2=" << DeterminantMat(eMat2) << " opt.has_value()=" << opt.has_value() << "\n";
+  os << "PERF: SHV1_T=\n";
+  WriteMatrix(os, SHV1_T);
+  os << "PERF: SHV2_T=\n";
+  WriteMatrix(os, SHV2_T);
+#endif
   if (!opt) {
     return {};
   }
