@@ -59,7 +59,7 @@ template <typename T, typename Tint>
 NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
                                           MyMatrix<T> const &eGram,
                                           Tshortest<T, Tint> const &RecSHV,
-                                          std::ostream& os) {
+                                          [[maybe_unused]] std::ostream& os) {
   int nbSHV = RecSHV.SHV.rows();
   std::vector<int> ListPos(nbSHV);
   int nbMat = LinSpa.ListMat.size();
@@ -115,7 +115,7 @@ RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
                                              MyMatrix<T> const &eGram,
                                              MyMatrix<T> const& SHV_T,
                                              Tgroup const& GRP,
-                                             std::ostream& os) {
+                                             [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int nbSHV = SHV_T.rows();
@@ -858,10 +858,6 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
 #ifdef DEBUG_PERFECT_REPR
   os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1) << " det2=" << DeterminantMat(eMat2) << " opt.has_value()=" << opt.has_value() << "\n";
-  os << "PERF: SHV1_T=\n";
-  WriteMatrix(os, SHV1_T);
-  os << "PERF: SHV2_T=\n";
-  WriteMatrix(os, SHV2_T);
 #endif
   if (!opt) {
     return {};

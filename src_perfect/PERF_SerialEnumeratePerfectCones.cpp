@@ -114,7 +114,5 @@ int main(int argc, char *argv[]) {
     std::cerr << "error: " << e.what() << "\n";
     exit(EXIT_FAILURE);
   }
-  std::cerr << "Elapsed time: " << time << "\n";
-  std::cerr << "Normal termination of PERF_SerialEnumeratePerfectCones\n";
-  return 0;
+  runtime(time);
 }

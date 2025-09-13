@@ -1048,9 +1048,9 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
   }
   Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " |GRPsub1|=" << GRPsub1.size() << "\n";
+  os << "TSPACE: Equiv, n_row=" << n_row << " |FullGRP1|=" << FullGRP1.size() << " |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
   auto f_get_group_size=[&]() -> size_t {
     size_t n_elt = 0;
     for (auto & elt: FullGRP1) {
@@ -1067,7 +1067,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
   size_t pos_equiv_grp = 0;
   os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
   auto f_exhaustive=[&]() -> std::optional<MyMatrix<T>> {
     for (auto & elt: FullGRP1) {
       MyMatrix<T> eMatr =
@@ -1134,7 +1134,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
 #endif
     if (p_sol.sol) {
       MyMatrix<T> const &Pmat_T = *p_sol.sol;
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
       if (!f_exhaustive()) {
         std::cerr << "TSPACE: We found equiv with one method but the exhaustive does not\n";
         throw TerminalException{1};
@@ -1146,7 +1146,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
       return Pmat_T;
     }
     if (!p_sol.new_gen) {
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
       if (f_exhaustive()) {
         std::cerr << "TSPACE: We found non-equiv with one method but the exhaustive does\n";
         throw TerminalException{1};
@@ -1159,7 +1159,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
     }
     LGenGlobStab1_perm.push_back(*p_sol.new_gen);
     GRPsub1 = Tgroup(LGenGlobStab1_perm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
+#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
     pos_equiv_grp += 1;
     os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size() << "\n";
 #endif
