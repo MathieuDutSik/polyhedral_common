@@ -2,6 +2,7 @@ Read("../common.g");
 
 
 AppendDelaunaySimplices:=true;
+AppendReflectiveDim45:=true;
 
 ListEXT:=[];
 
@@ -14,6 +15,12 @@ if AppendDelaunaySimplices then
         Append(ListEXT, OneBlock);
     od;
 fi;
+
+if AppendReflectiveDim45 then
+    OneBlock:=ReadAsFunction("ListSimpleRootSystem_4_56_X_5_47")();
+    Append(ListEXT, OneBlock);
+fi;
+
 
 
 TestCase_Automorphy:=function(EXT)
@@ -95,9 +102,11 @@ end;
 #
 
 n_error:=0;
-for EXT in ListEXT
+nEXT:=Length(ListEXT);
+for iEXT in [1..nEXT]
 do
-    Print("-------------------------------------------------------\n");
+    EXT:=ListEXT[iEXT];
+    Print("---------------------------------------- ", iEXT, "/", nEXT, " ", n_error, " ----------------------------------------\n");
     test:=TestCase_Automorphy(EXT);
     if test=false then
         n_error:=n_error+1;
