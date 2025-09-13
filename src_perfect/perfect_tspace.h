@@ -164,7 +164,7 @@ struct DataPerfectTspaceFunc {
 
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     std::ostream &os = get_os();
-    std::optional<MyMatrix<Tint>> opt = SimplePerfect_TestEquivalence<T, Tint, Tgroup>(data.LinSpa, x.Gram, y.Gram, x.RecSHV, x.RecSHV, os);
+    std::optional<MyMatrix<Tint>> opt = SimplePerfect_TestEquivalence<T, Tint, Tgroup>(data.LinSpa, x.Gram, y.Gram, x.RecSHV, y.RecSHV, os);
     if (!opt) {
       return {};
     }

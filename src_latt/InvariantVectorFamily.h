@@ -257,11 +257,13 @@ void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
 template<typename Tint>
 bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
   int n = M.cols();
-  if (RankMat(M) < n)
+  if (RankMat(M) < n) {
     return false;
+  }
   Tint indx = Int_IndexLattice(M);
-  if (T_NormGen(indx) == 1)
+  if (T_NormGen(indx) == 1) {
     return true;
+  }
   return false;
 }
 

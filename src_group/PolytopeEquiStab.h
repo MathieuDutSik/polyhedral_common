@@ -1289,6 +1289,32 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: Canonicalization_ListMat_Vdiag|=" << time << "\n";
 #endif
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  int n_ext = EXT.rows();
+  if (n_ext < 200) {
+    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, matrix of scalar product, n_ext=" << n_ext << "\n";
+    std::vector<Tidx> CanonicReordRev(n_ext);
+    for (int i=0; i<n_ext; i++) {
+      CanonicReordRev[CanonicReord[i]] = i;
+    }
+    MyMatrix<T> const& M = RemoveFractionMatrix(ListMat[0]);
+    std::vector<T> list_scal;
+    for (int i=0; i<n_ext; i++) {
+      for (int j=0; j<n_ext; j++) {
+        int i_img = CanonicReord[i];
+        int j_img = CanonicReord[j];
+        MyVector<T> V1 = GetMatrixRow(EXT, i_img);
+        MyVector<T> V2 = GetMatrixRow(EXT, j_img);
+        T scal = ScalarProductQuadForm(M, V1, V2);
+        list_scal.push_back(scal);
+        os << " " << scal;
+      }
+      os << "\n";
+    }
+    size_t hash = std::hash<std::vector<T>>()(list_scal);
+    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, hash=" << hash << "\n";
+  }
+#endif
   return CanonicReord;
 }
 
