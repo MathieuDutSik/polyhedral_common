@@ -27,6 +27,7 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
       return ExtractInvariantVectorFamilyZbasis<T, Tint>(GramMat, std::cerr);
     }
     std::cerr << "Failed to find a matching entry for choice\n";
+    std::cerr << "Possible choices: shortest, relevant_voronoi, filtered_relevant_voronoi, fullrank, spanning\n";
     throw TerminalException{1};
   };
   MyMatrix<Tint> M = f();
@@ -56,7 +57,7 @@ void process_C(std::string choice, std::string MatFile, std::string OutFile) {
 template <typename T>
 void process_B(std::string const &arithmetic_vec, std::string choice,
                std::string MatFile, std::string OutFile) {
-  if (arithmetic_vec == "mpz_integer") {
+  if (arithmetic_vec == "mpz_class") {
     using Tint = mpz_class;
     return process_C<T, Tint>(choice, MatFile, OutFile);
   }
@@ -67,7 +68,7 @@ void process_B(std::string const &arithmetic_vec, std::string choice,
 void process_A(std::string const &arithmetic_mat,
                std::string const &arithmetic_vec, std::string choice,
                std::string MatFile, std::string OutFile) {
-  if (arithmetic_mat == "mpq_rational") {
+  if (arithmetic_mat == "mpq_class") {
     using T = mpq_class;
     return process_B<T>(arithmetic_vec, choice, MatFile, OutFile);
   }
@@ -83,6 +84,11 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_GenerateCharacteristicVectorSet arithmetic_mat "
                    "arithmetic_vect choice [MaFilet] [OutFile]\n";
+      std::cerr << "\n";
+      std::cerr << "allowed choices:\n";
+      std::cerr << "arithmetic_mat: mpq_class\n";
+      std::cerr << "arithmetic_vect: mpz_class\n";
+      std::cerr << "choice: shortest, relevant_voronoi, filtered_relevant_voronoi, fullrank, spanning\n";
       return -1;
     }
     std::string arithmetic_mat = argv[1];

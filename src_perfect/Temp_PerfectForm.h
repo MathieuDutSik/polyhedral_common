@@ -850,6 +850,10 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
 #endif
 #ifdef DEBUG_PERFECT_REPR
   os << "PERF: TestEquivalence, before LINSPA_TestEquivalenceGramMatrix_SHV\n";
+  os << "PERF: TestEquivalence, eMat1=\n";
+  WriteMatrix(os, RemoveFractionMatrix(eMat1));
+  os << "PERF: TestEquivalence, eMat2=\n";
+  WriteMatrix(os, RemoveFractionMatrix(eMat2));
 #endif
   std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
 #ifdef DEBUG_PERFECT_REPR

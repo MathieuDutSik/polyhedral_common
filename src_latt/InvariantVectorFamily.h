@@ -245,12 +245,6 @@ bool has_duplication(MyMatrix<T> const &SHV) {
   return false;
 }
 
-
-
-
-
-
-
 template <typename T>
 void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
   if (!is_antipodal(SHV)) {
