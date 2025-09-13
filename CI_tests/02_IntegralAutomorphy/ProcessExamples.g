@@ -1,11 +1,20 @@
 Read("../common.g");
 
-ListFiles:=[];
-for n in [5..7]
-do
-    FileName:=Concatenation("../DATA/ClassificationSimplices", String(n));
-    Add(ListFiles, FileName);
-od;
+
+AppendDelaunaySimplices:=true;
+
+ListEXT:=[];
+
+if AppendDelaunaySimplices then
+    ListFiles:=[];
+    for n in [5..7]
+    do
+        FileName:=Concatenation("../DATA/ClassificationSimplices", String(n));
+        OneBlock:=ReadAsFunction(FileName)();
+        Append(ListEXT, OneBlock);
+    od;
+fi;
+
 
 TestCase_Automorphy:=function(EXT)
     local TmpDir, FileI, FileO, arith, eProg, TheCommand, TheGRP;
@@ -30,10 +39,11 @@ TestCase_Automorphy:=function(EXT)
 end;
 
 TestCase_Isomorphy:=function(EXT)
-    local n, P, EXT_img, TmpDir, File1, File2, FileO, arith, eProg, TheCommand, TheGRP;
+    local n, n_vert, P, EXT_img, TmpDir, File1, File2, FileO, arith, eProg, TheCommand, TheGRP;
     n:=Length(EXT[1]);
+    n_vert:=Length(EXT);
     P:=RandomIntegralUnimodularMatrix(n);
-    EXT_img:=EXT * P;
+    EXT_img:=Permuted(EXT * P, Random(SymmetricGroup(n_vert)));
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Test1.in");
     File2:=Filename(TmpDir, "Test2.in");
@@ -50,11 +60,13 @@ TestCase_Isomorphy:=function(EXT)
         Print("FileO does not exist\n");
         return false;
     fi;
-    TheGRP:=ReadAsFunction(FileO)();
+    result:=ReadAsFunction(FileO)();
     RemoveFileIfExist(File1);
     RemoveFileIfExist(File2);
     RemoveFileIfExist(FileO);
-    Print("|TheGRP|=", Order(TheGRP), "\n");
+    if result=fail then
+        return false;
+    fi;
     return true;
 end;
 
@@ -83,29 +95,28 @@ end;
 #
 
 n_error:=0;
-for eFile in ListFiles
+for EXT in ListEXT
 do
-    ListEXT:=ReadAsFunction(eFile)();
-    Print("eFile=", eFile, " |ListEXT|=", Length(ListEXT), "\n");
-    for EXT in ListEXT
-    do
-        test:=TestCase_Automorphy(EXT);
-        if test=false then
-            n_error:=n_error+1;
-        fi;
-        #
-        test:=TestCase_Isomorphy(EXT);
-        if test=false then
-            n_error:=n_error+1;
-        fi;
-        #
-        test:=TestCase_Automorphy_RightCoset(EXT);
-        if test=false then
-            n_error:=n_error+1;
-        fi;
-    od;
+    Print("-------------------------------------------------------\n");
+    test:=TestCase_Automorphy(EXT);
+    if test=false then
+        n_error:=n_error+1;
+    fi;
+    Print("----\n");
+    #
+    test:=TestCase_Isomorphy(EXT);
+    if test=false then
+        n_error:=n_error+1;
+    fi;
+    Print("----\n");
+    #
+    test:=TestCase_Automorphy_RightCoset(EXT);
+    if test=false then
+        n_error:=n_error+1;
+    fi;
 od;
-
+Print("-------------------------------------------------------\n");
+Print("n_error=", n_error, "\n");
 CI_Decision_Reset();
 if n_error > 0 then
     Print("Error case\n");
