@@ -33,11 +33,10 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   std::function<bool(size_t const &, size_t const &)>
       CompFCT = [](size_t const &x, size_t const &y) -> bool { return x < y; };
   std::function<void(TrivialBalinski &, SimplePerfect<T, Tint> const &,
-                     size_t const &, std::ostream &)>
+                     std::ostream &)>
       UpgradeBalinskiStat =
           []([[maybe_unused]] TrivialBalinski const &eStat,
              [[maybe_unused]] SimplePerfect<T, Tint> const &eEnt,
-             [[maybe_unused]] size_t const &eInv,
              [[maybe_unused]] std::ostream &os) -> void {};
   std::function<std::optional<MyMatrix<Tint>>(SimplePerfect<T, Tint> const &,
                                               SimplePerfect<T, Tint> const &)>

@@ -24,7 +24,7 @@ template <typename T> struct equiv_info {};
 template <typename T> struct DataBank_ResultQuery {
   typedef typename equiv_info<T>::equiv_type Tequiv;
   bool test;
-  T eEnt;
+  int iEntry;
   Tequiv TheEquiv;
 };
 

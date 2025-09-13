@@ -101,7 +101,7 @@ public:
     for (int iEntry = iEntryStart; iEntry < nbEntry; iEntry++) {
       size_t fInv = ListInv[iEntry];
       if (fInv == eInv) {
-        T fEnt = GetEntry(iEntry);
+        T const& fEnt = GetEntry(iEntry);
         std::optional<Tequiv> eEquiv = FctEquiv(fEnt, eEnt);
         if (eEquiv)
           return {iEntry, *eEquiv, nbEntry};
@@ -115,13 +115,12 @@ public:
     EquivInfo<Tequiv> eEquiv = IsPresentNoLock(0, eEnt, eInv);
     os << "DataBank.ProcessRequest, step 3\n";
     if (eEquiv.iEntry != -1) {
-      T fEnt = GetEntry(eEquiv.iEntry);
-      return {true, std::move(fEnt), eEquiv.TheEquiv};
+      return {true, eEquiv.iEntry, eEquiv.TheEquiv};
     }
     os << "DataBank.ProcessRequest, step 4\n";
-    return {false, {}, {}};
+    return {false, eEquiv.iEntry, {}};
   }
-  T GetEntry(int const &i) const {
+  T const& GetEntry(int const &i) const {
     if (FullDataInMemory)
       return ListDat[i];
     std::string FileSaveDAT =
@@ -129,7 +128,8 @@ public:
     std::ifstream isT(FileSaveDAT);
     T eEnt;
     isT >> eEnt;
-    return eEnt;
+    read_value.emplace(eEnt);
+    return *read_value;
   }
   int GetNbEntry() const { return nbEntry; }
   int GetMinSize() const { return MinSize; }
@@ -179,6 +179,7 @@ private:
   tbb::concurrent_vector<size_t> ListInv;
   int nbEntry;
   int MinSize;
+  std::optional<T> mutable read_value;
 };
 
 //
@@ -251,8 +252,7 @@ public:
   NewEnumerationWork(
       bool const &eSave, bool const &eMemory, std::string const &ePrefix,
       std::function<bool(size_t const &, size_t const &)> const &eCompFCT,
-      std::function<void(Tbalinski &, T const &, size_t const &,
-                         std::ostream &)> const &eUP,
+      std::function<void(Tbalinski &, T const &, std::ostream &)> const &eUP,
       std::function<std::optional<Tequiv>(T const &, T const &)> const &fEquiv,
       std::ostream &os)
       : ListPendingCases(
@@ -434,10 +434,7 @@ public:
     Tbalinski eStat;
     for (auto &iEntry : ListPendingCases) {
       T eEnt = GetRepresentative(iEntry);
-      size_t eInv = ListInv[iEntry];
-      //      os << "Before UpgradeBalinskiStat\n";
-      UpgradeBalinskiStat(eStat, eEnt, eInv, os);
-      //      os << "After UpgradeBalinskiStat\n";
+      UpgradeBalinskiStat(eStat, eEnt, os);
       if (eStat.final) {
         IsComplete = eStat.IsComplete;
         os << "Leaving with IsComplete=" << IsComplete << "\n";
@@ -568,7 +565,7 @@ private:
   std::set<int, std::function<bool(int const &, int const &)>> ListPendingCases;
   std::set<int> ListUnderConsideration;
   bool IsComplete;
-  std::function<void(Tbalinski &, T const &, size_t const &, std::ostream &)>
+  std::function<void(Tbalinski &, T const &, std::ostream &)>
       UpgradeBalinskiStat;
   std::function<std::optional<Tequiv>(T const &, T const &)> TestEquivalence;
 };
