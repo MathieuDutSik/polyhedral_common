@@ -77,11 +77,7 @@ int main(int argc, char *argv[]) {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
       }
-      if (arith == "mpq_integer") {
-        using Tint = mpz_class;
-        return process_A<Tint>(FileExt1, FileExt2, OutFormat, os);
-      }
-      std::cerr << "Failed to find a matching type for arith\n";
+      std::cerr << "Failed to find a matching type for arith. Allowed = mpz_class\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, process_B);

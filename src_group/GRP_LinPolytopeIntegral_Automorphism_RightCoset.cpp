@@ -106,16 +106,12 @@ int main(int argc, char *argv[]) {
     }
     //
     auto process_B = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
-        using Tint = mpz_class;
-        return process_A<Tint>(FileExt, OutFormat, os);
-      }
-      if (arith == "mpq_integer") {
+      if (arith == "mpz_class") {
         using Tint = mpz_class;
         return process_A<Tint>(FileExt, OutFormat, os);
       }
       std::cerr << "Failed to find a matching type for arith\n";
-      std::cerr << "arith=" << arith << " allowed = rational and mpq_integer\n";
+      std::cerr << "arith=" << arith << " allowed = mpz_class\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, process_B);

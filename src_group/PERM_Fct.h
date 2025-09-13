@@ -577,15 +577,15 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
     size_t i_row_img = ListIdx[i_row];
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
       Tfield eSum1(0);
-      for (size_t j_row = 0; j_row < n_cols; j_row++) {
-        eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
+      for (size_t j = 0; j < n_cols; j++) {
+        eSum1 += EXT1(i_row, j) * P(j, i_col);
       }
       std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!opt) {
+        // We fail because the image is not integral.
 #ifdef DEBUG_PERM_FCT
         os << "PERM: CheckEquivalence, opt=fail at UniversalScalarConversionCheck i_row=" << i_row << " i_col=" << i_col << "\n";
 #endif
-        // We fail because the image is not integral.
         return false;
       }
       T const& EXT1_img = *opt;
