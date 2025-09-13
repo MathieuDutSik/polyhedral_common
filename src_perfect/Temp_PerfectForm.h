@@ -73,29 +73,16 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
   }
   //  os << "RyshkovLoc=\n";
   //  WriteMatrix(os, RyshkovLoc);
-  int nbBlock = 0;
-  std::vector<std::vector<int>> ListBlock;
+  std::map<MyVector<T>, std::vector<int>> map;
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
-    MyVector<T> eVec1 = GetMatrixRow(RyshkovLoc, iSHV);
-    bool IsMatch = false;
-    for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
-      if (!IsMatch) {
-        int jSHV = ListBlock[iBlock][0];
-        MyVector<T> eVec2 = GetMatrixRow(RyshkovLoc, jSHV);
-        bool test = IsVectorPositiveMultiple(eVec1, eVec2);
-        if (test) {
-          IsMatch = true;
-          ListBlock[iBlock].push_back(iSHV);
-          ListPos[iSHV] = iBlock;
-        }
-      }
-    }
-    if (!IsMatch) {
-      ListBlock.push_back({iSHV});
-      ListPos[iSHV] = nbBlock;
-      nbBlock++;
-    }
+    MyVector<T> V = GetMatrixRow(RyshkovLoc, iSHV);
+    map[V].push_back(iSHV);
   }
+  std::vector<std::vector<int>> ListBlock;
+  for (auto & kv: map) {
+    ListBlock.push_back(kv.second);
+  }
+  int nbBlock = ListBlock.size();
 #ifdef DEBUG_PERFECT_FORM
   os << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV
      << " nbMat=" << nbMat << "\n";
