@@ -607,8 +607,9 @@ MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T> &EXT,
   size_t nbCol = EXT.cols();
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
     size_t pos = Vsubset[iRow];
-    for (size_t iCol = 0; iCol < nbCol; iCol++)
+    for (size_t iCol = 0; iCol < nbCol; iCol++) {
       M(eRank, iCol) = UniversalScalarConversion<Tfield, T>(EXT(pos, iCol));
+    }
   };
   SelectionRowCol<Tfield> TheSol =
       TMat_SelectRowCol_Kernel<Tfield>(Vsubset.size(), nbCol, f);
@@ -616,8 +617,9 @@ MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T> &EXT,
   MyMatrix<Tfield> M(nbCol, nbCol);
   for (size_t iRow = 0; iRow < nbCol; iRow++) {
     size_t pos = Vsubset[TheSol.ListRowSelect[iRow]];
-    for (size_t iCol = 0; iCol < nbCol; iCol++)
+    for (size_t iCol = 0; iCol < nbCol; iCol++) {
       M(iRow, iCol) = UniversalScalarConversion<Tfield, T>(EXT(pos, iCol));
+    }
   }
   return M;
 }

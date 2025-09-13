@@ -214,7 +214,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
 }
 
 template <typename T>
-void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
+bool is_antipodal(MyMatrix<T> const &SHV) {
   int n_row = SHV.rows();
   std::unordered_set<MyVector<T>> set;
   for (int i_row=0; i_row<n_row; i_row++) {
@@ -224,9 +224,38 @@ void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
   for (int i_row=0; i_row<n_row; i_row++) {
     MyVector<T> V = - GetMatrixRow(SHV, i_row);
     if (set.count(V) == 0) {
-      std::cerr << "TSPACE: The vector V is missing from set\n";
-      throw TerminalException{1};
+      return false;
     }
+  }
+  return true;
+}
+
+
+template <typename T>
+bool has_duplication(MyMatrix<T> const &SHV) {
+  int n_row = SHV.rows();
+  std::unordered_set<MyVector<T>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(SHV, i_row);
+    if (set.count(V) == 1) {
+      return true;
+    }
+    set.insert(V);
+  }
+  return false;
+}
+
+
+
+
+
+
+
+template <typename T>
+void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
+  if (!is_antipodal(SHV)) {
+    std::cerr << "TSPACE: The family SHV is not antipodal\n";
+    throw TerminalException{1};
   }
 }
 

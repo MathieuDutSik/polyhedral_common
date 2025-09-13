@@ -25,6 +25,7 @@
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_FLIP
 #define SANITY_CHECK_INITIAL_PERFECT
+#define SANITY_CHECK_PERFECT_REPR
 #endif
 
 template <typename T, typename Tint> struct NakedPerfect {
@@ -410,25 +411,25 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // Running the algorithm
   // First loop where we find an interval where the solution may exist.
   //
-  T TheUpperBound = 1;
-  T TheLowerBound = 0;
+  T bound_upp = 1;
+  T bound_low = 0;
 #ifdef DEBUG_FLIP
   int iterLoop = 0;
 #endif
   while (true) {
-    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
 #ifdef DEBUG_FLIP
     os << "PERF: CALL IsAdmissible (Q_upp)\n";
 #endif
     bool test = memo_admissible.comp(Q_upp);
 #ifdef DEBUG_FLIP
     iterLoop++;
-    os << "PERF: iterLoop=" << iterLoop << " TheUpperBound=" << TheUpperBound
-       << " TheLowerBound=" << TheLowerBound << " test=" << test << "\n";
+    os << "PERF: iterLoop=" << iterLoop << " bound_upp=" << bound_upp
+       << " bound_low=" << bound_low << " test=" << test << "\n";
 #endif
     if (!test) {
       // We are outside, so reduce the range.
-      TheUpperBound = (TheUpperBound + TheLowerBound) / 2;
+      bound_upp = (bound_upp + bound_low) / 2;
     } else {
 #ifdef DEBUG_FLIP
       os << "PERF: Q_upp=\n";
@@ -442,10 +443,10 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       WriteMatrix(os, RecSHV_upp.SHV);
 #endif
       if (RecSHV_upp.min == RecSHV_in.min) {
-        T nLow = TheUpperBound;
-        T nUpp = 2 * TheUpperBound;
-        TheLowerBound = nLow;
-        TheUpperBound = nUpp;
+        T nLow = bound_upp;
+        T nUpp = 2 * bound_upp;
+        bound_low = nLow;
+        bound_upp = nUpp;
       } else {
         break;
       }
@@ -453,8 +454,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   }
 #ifdef SANITY_CHECK_FLIP
   {
-    MyMatrix<T> Q_low = eMatIn + TheLowerBound * eMatDir;
-    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
+    MyMatrix<T> Q_low = eMatIn + bound_low * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
     if (!memo_admissible.comp(Q_low)) {
       std::cerr << "PERF: We should have Qlow being admissible\n";
       throw TerminalException{1};
@@ -476,16 +477,16 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // Now we must have Q_low / Q_upp admissible
   // and RecSHV_upp.min < RecSHV_in.min
 #ifdef DEBUG_FLIP
-  os << "PERF: FIRST LOOP FINISHED TheUpperBound=" << TheUpperBound
-     << " TheLowerBound=" << TheLowerBound << "\n";
+  os << "PERF: FIRST LOOP FINISHED bound_upp=" << bound_upp
+     << " bound_low=" << bound_low << "\n";
 #endif
   while (true) {
 #ifdef DEBUG_FLIP
-    os << "PERF: Now TheLowerBound=" << TheLowerBound
-       << " TheUpperBound=" << TheUpperBound << "\n";
+    os << "PERF: Now bound_low=" << bound_low
+       << " bound_upp=" << bound_upp << "\n";
 #endif
-    MyMatrix<T> Q_low = eMatIn + TheLowerBound * eMatDir;
-    MyMatrix<T> Q_upp = eMatIn + TheUpperBound * eMatDir;
+    MyMatrix<T> Q_low = eMatIn + bound_low * eMatDir;
+    MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
 #ifdef DEBUG_FLIP
     os << "PERF: Kernel_Flipping_Perfect, case 3 (Q_low / Q_upp)\n";
 #endif
@@ -534,7 +535,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
       return {std::move(Q_low), std::move(RecSHV_low)};
     }
-    T TheGamma = (TheLowerBound + TheUpperBound) / 2;
+    T TheGamma = (bound_low + bound_upp) / 2;
     MyMatrix<T> Q_gamma = eMatIn + TheGamma * eMatDir;
 #ifdef DEBUG_FLIP
     os << "PERF: Q_gamma=\n";
@@ -552,12 +553,12 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma) << "\n";
 #endif
     if (RecSHV_gamma.min >= RecSHV_in.min) {
-      TheLowerBound = TheGamma;
+      bound_low = TheGamma;
     } else {
 #ifdef DEBUG_FLIP
-      os << "PERF: Assigning TheUpperBound to TheGamma=" << TheGamma << "\n";
+      os << "PERF: Assigning bound_upp to TheGamma=" << TheGamma << "\n";
 #endif
-      TheUpperBound = TheGamma;
+      bound_upp = TheGamma;
       int nbRowGamma = RecSHV_gamma.SHV.rows();
       for (int iRowGamma = 0; iRowGamma < nbRowGamma; iRowGamma++) {
         MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRowGamma);
@@ -573,14 +574,14 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
         if (rVal < 0) {
           T TheVal = (RecSHV_in.min - qVal) / rVal;
-          if (TheVal < TheUpperBound) {
+          if (TheVal < bound_upp) {
 #ifdef DEBUG_FLIP
             os << "PERF: iRowGamma=" << iRowGamma
-               << " Assigning TheUpperBound to TheVal=" << TheVal << "\n";
+               << " Assigning bound_upp to TheVal=" << TheVal << "\n";
             os << "PERF: rVal=" << rVal << " qVal=" << qVal
                << " RecSHV_in.min=" << RecSHV_in.min << "\n";
 #endif
-            TheUpperBound = TheVal;
+            bound_upp = TheVal;
           }
         }
       }
@@ -829,6 +830,24 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
                               std::ostream &os) {
   MyMatrix<T> SHV1_T = get_shv_t(eMat1, RecSHV1, os);
   MyMatrix<T> SHV2_T = get_shv_t(eMat2, RecSHV2, os);
+#ifdef SANITY_CHECK_PERFECT_REPR
+  if (has_duplication(SHV1_T)) {
+    std::cerr << "PERF: SHV1 has duplication\n";
+    throw TerminalException{1};
+  }
+  if (has_duplication(SHV2_T)) {
+    std::cerr << "PERF: SHV2 has duplication\n";
+    throw TerminalException{1};
+  }
+  if (!is_antipodal(SHV1_T)) {
+    std::cerr << "PERF: SHV1 is not antipodal\n";
+    throw TerminalException{1};
+  }
+  if (!is_antipodal(SHV2_T)) {
+    std::cerr << "PERF: SHV2 is not antipodal\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef DEBUG_PERFECT_REPR
   os << "PERF: TestEquivalence, before LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
