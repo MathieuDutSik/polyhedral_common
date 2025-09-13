@@ -297,8 +297,11 @@ std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>
 IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                             const std::vector<Tidx> &CanonicReord1,
                             const std::vector<Tidx> &CanonicReord2,
-                            [[maybe_unused]] std::ostream &os) {
+                            std::ostream &os) {
   if (EXT1.rows() != EXT2.rows()) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "PES: IsomorphismFromCanonicReord, false by EXT1.rows()<>EXT2.rows()\n";
+#endif
     return {};
   }
   size_t nbRow = EXT1.rows();
@@ -313,8 +316,9 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT2, CanonicReord2);
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
   // Now testing the obtained mappings
-  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P, os);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, test=" << test << "\n";
 #endif
   if (!test) {
     // We fail the polytope equivalence

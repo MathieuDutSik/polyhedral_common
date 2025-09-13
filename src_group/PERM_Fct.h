@@ -567,30 +567,35 @@ ExtendPartialCanonicalization(const MyMatrix<T> &EXT,
 template <typename T, typename Tfield, typename Tidx>
 bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                       const std::vector<Tidx> &ListIdx,
-                      const MyMatrix<Tfield> &P) {
+                      const MyMatrix<Tfield> &P,
+                      [[maybe_unused]] std::ostream &os) {
   size_t n_rows = EXT1.rows();
   size_t n_cols = EXT1.cols();
   //
   // We are testing if EXT1 P = perm(EXT2)
-
-  MyVector<T> Vimg(n_cols);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
     size_t i_row_img = ListIdx[i_row];
     for (size_t i_col = 0; i_col < n_cols; i_col++) {
-      Tfield eSum1 = 0;
-      for (size_t j_row = 0; j_row < n_cols; j_row++)
+      Tfield eSum1(0);
+      for (size_t j_row = 0; j_row < n_cols; j_row++) {
         eSum1 += EXT1(i_row, j_row) * P(j_row, i_col);
+      }
       std::optional<T> opt = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!opt) {
+#ifdef DEBUG_PERM_FCT
+        os << "PERM: CheckEquivalence, opt=fail at UniversalScalarConversionCheck i_row=" << i_row << " i_col=" << i_col << "\n";
+#endif
         // We fail because the image is not integral.
         return false;
       }
-      T Img_EXT1 = *opt;
-      Vimg[i_col] = Img_EXT1;
-      //
-      T EXT2_map = EXT2(i_row_img, i_col);
-      if (Img_EXT1 != EXT2_map)
+      T const& EXT1_img = *opt;
+      T const& EXT2_map = EXT2(i_row_img, i_col);
+      if (EXT1_img != EXT2_map) {
+#ifdef DEBUG_PERM_FCT
+        os << "PERM: CheckEquivalence, EXT1_img=" << EXT1_img << " EXT2_map=" << EXT2_map << " i_row=" << i_row << " i_col=" << i_col << "\n";
+#endif
         return false;
+      }
     }
   }
   return true;
