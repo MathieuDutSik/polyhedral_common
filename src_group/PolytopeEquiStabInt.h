@@ -54,7 +54,7 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
     std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, threshold, os);
     std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, threshold, os);
     //
-    return IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+    return IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
@@ -492,7 +492,7 @@ template <typename T, typename Tgroup, typename Tval, typename Tidx_value>
 std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &ep,
     std::pair<MyMatrix<T>, WeightMatrix<true, Tval, Tidx_value>> const &fp,
-    [[maybe_unused]] std::ostream &os) {
+    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   using Tgr = GraphBitset;
@@ -531,8 +531,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord<T, Tfield, Tidx>(
-          ep.first, fp.first, eCanonicReord, fCanonicReord);
+      IsomorphismFromCanonicReord<T, Tfield, Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: IsomorphismFromCanonicReord|=" << time << "\n";
 #endif

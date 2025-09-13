@@ -134,8 +134,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
   // Computing the isomorphism
   using Tfield = typename overlying_field<Tint>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord<T, Tfield, Tidx>(
-          eConcat_T, fConcat_T, eCanonicReord, fCanonicReord);
+      IsomorphismFromCanonicReord<T, Tfield, Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord, os);
   if (!IsoInfo) {
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Failed isomorphism at the graph level\n";
