@@ -283,21 +283,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   BlockSTORAGE.setListStringValues(ListStringValues2);
   ListBlock["STORAGE"] = BlockSTORAGE;
   // TSPACE
-  std::map<std::string, int> ListIntValues3;
-  std::map<std::string, std::string> ListStringValues3;
-  ListStringValues3["TypeTspace"] = "File";
-  ListStringValues3["FileLinSpa"] = "unset.linspa";
-  ListStringValues3["SuperMatMethod"] = "NotNeeded";
-  ListStringValues3["ListComm"] = "Trivial";
-  ListStringValues3["PtGroupMethod"] = "Trivial";
-  ListStringValues3["FileListSubspaces"] = "unset";
-  ListIntValues3["RealImagDim"] = 0;
-  ListIntValues3["RealImagSum"] = 0;
-  ListIntValues3["RealImagProd"] = 0;
-  SingleBlock BlockTSPACE;
-  BlockTSPACE.setListIntValues(ListIntValues3);
-  BlockTSPACE.setListStringValues(ListStringValues3);
-  ListBlock["TSPACE"] = BlockTSPACE;
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
   return FullNamelist(ListBlock);
 }

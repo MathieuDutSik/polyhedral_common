@@ -1,23 +1,9 @@
-#PROGRAM		= InitialQuadPerfectMatrix
-#PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
-#PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs PERF_MPI_EnumeratePerfectCones
-#PROGRAM		= PERF_MPI_EnumeratePerfectCones
-#PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
-PROGRAM		= PERF_SerialEnumeratePerfectCones
-#PROGRAM		= IsEutactic
-
+PROGRAM		= CheckPerfectInput InitialQuadPerfectMatrix MakeInitial_FileMatrix PERF_MPI_EnumeratePerfectCones ComputePerfect IsEutactic MergePartialLogs PERF_SerialEnumeratePerfectCones Temp_PerfectMPI
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
-#CC		= icpc -std=c++17 -Wall -g -O2
-#CC		= clang++ -Weverything -std=c++17
-#CC		= clang++ -g -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
-#CC		= clang++ -O2 -Weverything -std=c++17 -DDEBUG
-#CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
-#CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
-#CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 CC		= g++ -std=c++17 -Wall -Wextra -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment
 

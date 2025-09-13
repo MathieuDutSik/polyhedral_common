@@ -14,7 +14,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "ComputePerfect [file.nml]\n";
       std::cerr << "With file.nml a namelist file\n";
-      NAMELIST_WriteNamelistFile(std::cerr, eFull, true);
+      eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     using Tidx = uint32_t;
@@ -25,7 +25,7 @@ int main(int argc, char *argv[]) {
     //
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    TreatPerfectLatticesEntry<T, Tint, Tgroup>(eFull);
+    TreatPerfectLatticesEntry<T, Tint, Tgroup>(eFull, std::cerr);
     std::cerr << "Completion of the program\n";
   } catch (TerminalException const &e) {
     exit(e.eVal);

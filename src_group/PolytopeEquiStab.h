@@ -43,8 +43,8 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_THRESHOLD_SCHEME
-#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_STAB
-#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
+//#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_STAB
+//#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
 #endif
 
 
@@ -296,7 +296,8 @@ template <typename T, typename Tfield, typename Tidx>
 std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>
 IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                             const std::vector<Tidx> &CanonicReord1,
-                            const std::vector<Tidx> &CanonicReord2) {
+                            const std::vector<Tidx> &CanonicReord2,
+                            [[maybe_unused]] std::ostream &os) {
   if (EXT1.rows() != EXT2.rows()) {
     return {};
   }
@@ -313,6 +314,8 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+#endif
   if (!test) {
     // We fail the polytope equivalence
     return {};
@@ -768,7 +771,7 @@ LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
     std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<T, Tidx>(EXT1, threshold, os);
     std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<T, Tidx>(EXT2, threshold, os);
-    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
@@ -1328,7 +1331,7 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
     std::vector<Tidx> CanonicReord2 =
     Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT2, ListMat2, Vdiag2,
                                                     threshold, os);
-    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2);
+    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC

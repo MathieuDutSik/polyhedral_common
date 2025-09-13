@@ -780,65 +780,30 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
 
 template <typename T, typename Tint> struct SimplePerfect {
   MyMatrix<T> Gram;
+  Tshortest<T, Tint> RecSHV;
 };
 
 template <typename T, typename Tint>
 std::istream &operator>>(std::istream &is, SimplePerfect<T, Tint> &obj) {
   MyMatrix<T> eG = ReadMatrix<T>(is);
-  obj = {eG};
+  MyMatrix<Tint> SHV = ReadMatrix<Tint>(is);
+  MyVector<Tint> V = GetMatrixRow(SHV, 0);
+  T min = EvaluationQuadForm<T,Tint>(eG, V);
+  Tshortest<T, Tint> RecSHV{min, SHV};
+  obj = {eG, RecSHV};
   return is;
 }
 
 template <typename T, typename Tint>
 std::ostream &operator<<(std::ostream &os, SimplePerfect<T, Tint> const &obj) {
   WriteMatrix(os, obj.Gram);
+  WriteMatrix(os, obj.RecSHV.SHV);
   return os;
 }
-
-template <typename T> struct SimplePerfectInv {
-  size_t hash;
-};
-
-template <typename T>
-bool operator==(SimplePerfectInv<T> const &x, SimplePerfectInv<T> const &y) {
-  return x.hash == y.hash;
-}
-
-template <typename T>
-std::istream &operator>>(std::istream &is, SimplePerfectInv<T> &obj) {
-  size_t hash;
-  is >> hash;
-  obj = {hash};
-  return is;
-}
-template <typename T>
-std::ostream &operator<<(std::ostream &os, SimplePerfectInv<T> const &obj) {
-  os << obj.hash;
-  return os;
-}
-
-template <typename T>
-bool operator<(SimplePerfectInv<T> const &x, SimplePerfectInv<T> const &y) {
-  return x.hash < y.hash;
-}
-
-template <typename T, typename Tint>
-struct invariant_info<SimplePerfect<T, Tint>> {
-  typedef SimplePerfectInv<T> invariant_type;
-};
 
 template <typename T, typename Tint> struct equiv_info<SimplePerfect<T, Tint>> {
   typedef MyMatrix<Tint> equiv_type;
 };
-
-template <typename T, typename Tint>
-SimplePerfectInv<T> ComputeInvariantSimplePerfect(MyMatrix<T> const &eGram,
-                                                  std::ostream &os) {
-  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram, os);
-  size_t seed = 1234;
-  size_t hash = ComputeInvariantPerfectTspace<T,Tint>(seed, eGram, RecSHV, os);
-  return {hash};
-}
 
 template<typename T, typename Tint>
 MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const& SHV) {

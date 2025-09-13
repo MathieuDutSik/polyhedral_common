@@ -20,38 +20,6 @@
 #include <vector>
 // clang-format on
 
-template <typename T> struct PolyhedralInv {
-  int dim;
-  size_t eVal;
-};
-
-template <typename T>
-std::istream &operator>>(std::istream &is, PolyhedralInv<T> &obj) {
-  int dim;
-  size_t eVal;
-  is >> dim;
-  is >> eVal;
-  //
-  obj = {dim, eVal};
-  return is;
-}
-
-template <typename T>
-std::ostream &operator<<(std::ostream &os, PolyhedralInv<T> const &obj) {
-  os << " " << obj.dim;
-  os << " " << obj.eVal;
-  return os;
-}
-
-template <typename T>
-bool operator==(PolyhedralInv<T> const &x, PolyhedralInv<T> const &y) {
-  if (x.dim != y.dim)
-    return false;
-  if (x.eVal != y.eVal)
-    return false;
-  return true;
-}
-
 //
 // PolyhedralEntry
 //
@@ -73,9 +41,9 @@ CanonicalizationPolyEntry(PolyhedralEntry<T, Tgroup> const &eEnt,
   using Tidx_value = int16_t;
   MyMatrix<T> EXTred = ColumnReduction(eEnt.EXT);
   WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrix<T, Tidx_value>(EXTred);
+    GetWeightMatrix<T, Tidx_value>(EXTred, os);
   os << "Canonicalization, we have WMat\n";
-  Tgroup GRPlin = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
+  Tgroup GRPlin = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size()
      << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
   if (GRPlin.size() == eEnt.GRP.size())
@@ -157,62 +125,6 @@ std::istream &operator>>(std::istream &is, SimpleOrbitFacet<T, Tgroup> &eEnt) {
 }
 
 //
-// SimpleOrbitFacetInv related defines
-//
-
-template <typename T> struct SimpleOrbitFacetInv {
-  int incd;
-  mpz_class eOrbitSize;
-  size_t eHash;
-};
-
-template <typename T>
-bool operator==(SimpleOrbitFacetInv<T> const &x,
-                SimpleOrbitFacetInv<T> const &y) {
-  if (x.incd != y.incd)
-    return false;
-  if (x.eOrbitSize != y.eOrbitSize)
-    return false;
-  return x.eHash == y.eHash;
-}
-
-template <typename T>
-std::istream &operator>>(std::istream &is, SimpleOrbitFacetInv<T> &obj) {
-  int incd;
-  mpz_class eOrbitSize;
-  size_t eHash;
-  is >> incd;
-  is >> eOrbitSize;
-  is >> eHash;
-  obj = {incd, eOrbitSize, eHash};
-  return is;
-}
-
-template <typename T>
-std::ostream &operator<<(std::ostream &os, SimpleOrbitFacetInv<T> const &obj) {
-  os << obj.incd << " ";
-  os << obj.eOrbitSize;
-  os << obj.eHash;
-  return os;
-}
-
-template <typename T>
-bool operator<(SimpleOrbitFacetInv<T> const &eOrb,
-               SimpleOrbitFacetInv<T> const &fOrb) {
-  // We prefer to treat small incidence first
-  if (eOrb.incd < fOrb.incd)
-    return true;
-  if (eOrb.incd > fOrb.incd)
-    return false;
-  // At equal incidence, it is best to treat first the large orbits
-  if (eOrb.eOrbitSize > fOrb.eOrbitSize)
-    return true;
-  if (eOrb.eOrbitSize < fOrb.eOrbitSize)
-    return false;
-  return eOrb.eHash < fOrb.eHash;
-}
-
-//
 // PolyhedralBalinski
 //
 
@@ -241,16 +153,6 @@ std::ostream &operator<<(std::ostream &os, PolyhedralBalinski const &obj) {
 //
 // template type mappings
 //
-
-template <typename T, typename Tgroup>
-struct invariant_info<PolyhedralEntry<T, Tgroup>> {
-  typedef PolyhedralInv<T> invariant_type;
-};
-
-template <typename T, typename Tgroup>
-struct invariant_info<SimpleOrbitFacet<T, Tgroup>> {
-  typedef SimpleOrbitFacetInv<T> invariant_type;
-};
 
 template <typename T, typename Tgroup>
 struct equiv_info<PolyhedralEntry<T, Tgroup>> {
@@ -282,11 +184,12 @@ FctsDataBank<PolyhedralEntry<T, Tgroup>> GetRec_FctsDataBank() {
              PolyhedralEntry<T, Tgroup> const &eRec2) -> std::optional<Telt> {
     MyMatrix<T> EXTred1 = ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2 = ColumnReduction(eRec2.EXT);
+    std::ostream& os = std::cerr;
     WeightMatrix<true, T, Tidx_value> WMat1 =
-        GetWeightMatrix<T, Tidx_value>(EXTred1);
+    GetWeightMatrix<T, Tidx_value>(EXTred1, os);
     WeightMatrix<true, T, Tidx_value> WMat2 =
-        GetWeightMatrix<T, Tidx_value>(EXTred2);
-    return TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2);
+    GetWeightMatrix<T, Tidx_value>(EXTred2, os);
+    return TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2, os);
   };
   std::function<int(PolyhedralEntry<T, Tgroup> const &)> fSize =
       [](PolyhedralEntry<T, Tgroup> const &eRec) -> int {
@@ -309,13 +212,13 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int nbRow = EXTred.rows();
   int eRank = EXTred.cols();
-  WeightMatrix<true, T, Tidx_value> WMat;
-  bool HaveWMat = false;
   std::ostream& os = MProc.GetO(TheId);
+  WeightMatrix<true, T, Tidx_value> WMat(os);
+  bool HaveWMat = false;
   auto ComputeWMat = [&]() -> void {
     if (HaveWMat)
       return;
-    WMat = std::move(GetWeightMatrix<T, Tidx_value>(EXTred));
+    WMat = std::move(GetWeightMatrix<T, Tidx_value>(EXTred, os));
     int nbWeight = WMat.GetWeightSize();
     os << "nbWeight=" << nbWeight << "\n";
   };
@@ -323,8 +226,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   size_t seed = 1236674444;
   if (TheMinSize != -1 && nbRow >= TheMinSize) {
     ComputeWMat();
-    size_t eValInv = GetInvariantWeightMatrix(seed, WMat, os);
-    PolyhedralInv<T> eInv{nbRow, eValInv};
+    size_t eInv = GetInvariantWeightMatrix(seed, WMat, os);
     PolyhedralEntry<T, Tgroup> eEnt{EXT, GRP, vectface(EXT.rows())};
     DataBank_ResultQuery<PolyhedralEntry<T, Tgroup>> eResBank =
         TheBank.ProcessRequest(eEnt, eInv, os);
@@ -339,10 +241,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       os << "Before the orbit splitting |ListReprTrans|="
          << ListReprTrans.size() << "\n";
       Tgroup GRPconj = ConjugateGroup(eResBank.eEnt.GRP, eResBank.TheEquiv);
-      vectface ListFaceRet = OrbitSplittingListOrbit(
+      return OrbitSplittingListOrbit(
           GRPconj, GRP, ListReprTrans, os);
-      os << "After the OrbitSplitting\n";
-      return ListFaceRet;
     }
   }
   Tgroup TheGRPrelevant;
@@ -369,17 +269,18 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       std::string ansProg =
           HeuristicEvaluation(TheMap, AllArr.DualDescriptionProgram);
       ansSymm = "no";
-      return DirectFacetOrbitComputation(EXTred, GRP, ansProg);
+      return DirectFacetOrbitComputation(EXTred, GRP, ansProg, os);
     } else {
       ComputeWMat();
       ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
       os << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows()
          << "\n";
-      if (ansSymm == "yes")
+      if (ansSymm == "yes") {
         TheGRPrelevant =
-            GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat);
-      else
+          GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+      } else {
         TheGRPrelevant = GRP;
+      }
       if (TheGRPrelevant.size() == GRP.size())
         ansSymm = "no";
       TheMap["groupsizerelevant"] = TheGRPrelevant.size();
@@ -390,17 +291,17 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
          << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize
          << "\n";
       mpz_class MaxAllowedUndone = eRank - 2;
-      std::function<bool(SimpleOrbitFacetInv<T> const &,
-                         SimpleOrbitFacetInv<T> const &)>
+      std::function<bool(size_t const &,
+                         size_t const &)>
           CompFCT =
-              [](SimpleOrbitFacetInv<T> const &x,
-                 SimpleOrbitFacetInv<T> const &y) -> bool { return x < y; };
+              [](size_t const &x,
+                 size_t const &y) -> bool { return x < y; };
       std::function<void(PolyhedralBalinski &,
                          SimpleOrbitFacet<T, Tgroup> const &,
-                         SimpleOrbitFacetInv<T> const &, std::ostream &)>
+                         size_t const &, std::ostream &)>
           UpgradeBalinskiStat = [&](PolyhedralBalinski &eStat,
                                     SimpleOrbitFacet<T, Tgroup> const &fEnt,
-                                    SimpleOrbitFacetInv<T> const &fInv,
+                                    size_t const &fInv,
                                     [[maybe_unused]] std::ostream &os) -> void {
         if (eStat.final)
           return;
@@ -444,7 +345,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       }
       if (ansGRP == "partition") {
         fEquiv =
-            [&TheGRPrelevant, &MProc, &TheId, &WMat](
+          [&TheGRPrelevant, &MProc, &WMat, &os](
                 SimpleOrbitFacet<T, Tgroup> const &x,
                 SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
           SecondTime time;
@@ -455,7 +356,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
             //
             SecondTime time;
             auto eReplyB =
-                TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr);
+              TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr, os);
             os << "Second method (bliss) runtime = " << time << "\n";
           }
           return eReply;
@@ -468,8 +369,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           Tint eOrbitSize = TheGRPrelevant.OrbitSize_OnSets(eOrb);
           SimpleOrbitFacet<T, Tgroup> eOrbF{eOrb};
           size_t eHash = GetLocalInvariantWeightMatrix(WMat, eOrb);
-          SimpleOrbitFacetInv<T> eInv{siz, eOrbitSize, eHash};
-          return {eOrbF, eInv};
+          return {eOrbF, eHash};
         };
       }
       if (ansGRP == "exhaustive") {
@@ -501,7 +401,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
           Tint OrbSize = TheGRPrelevant.size() / n_match;
           int siz = eOrb.count();
           SimpleOrbitFacet<T, Tgroup> eOrbF{eFaceMin};
-          SimpleOrbitFacetInv<T> eInv{siz, OrbSize, {}};
+          size_t eInv = 0;
           return {eOrbF, eInv};
         };
       }
@@ -524,7 +424,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
             HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
         os << "Before InitialFacetComputation ansSamp="
            << ansSamp << "\n";
-        vectface ListFace = DirectComputationInitialFacetSet(EXTred, ansSamp);
+        vectface ListFace = DirectComputationInitialFacetSet(EXTred, ansSamp, os);
         os << " After InitialFacetComputation\n";
         for (auto &eInc : ListFace) {
           int RetVal = FuncInsert(eInc, os);
@@ -588,7 +488,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
              << " |GRPred|=" << GRPred.size() << "\n";
           int iter = 0;
           for (auto &eOrbB : TheOutput) {
-            Face eFlip = ComputeFlipping(EXTred, eListI, eOrbB);
+            Face eFlip = ComputeFlipping(EXTred, eListI, eOrbB, os);
             os << " iter=" << iter << " |eFlip|=" << eFlip.count() << "\n";
             int eVal = FuncInsert(eFlip, MProc.GetO(MyId));
             os << " After FuncInsert\n";
@@ -674,9 +574,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
         CanonicalizationPolyEntry(eEntry, os);
     os << "BANK work, step 3\n";
     size_t seed = 1236674444;
-    size_t eValInv = GetInvariantWeightMatrix(seed, WMat, os);
+    size_t eInv = GetInvariantWeightMatrix(seed, WMat, os);
     os << "BANK work, step 4\n";
-    PolyhedralInv<T> eInv{nbRow, eValInv};
     os << "BANK work, step 5\n";
     TheBank.InsertEntry(eEntryCan, eInv);
     os << "BANK work, step 6\n";

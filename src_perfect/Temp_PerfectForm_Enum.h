@@ -28,36 +28,42 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
                            DataBank<PolyhedralEntry<T, Tgroup>> &TheBank,
                            DataLinSpa<T> const &eData,
                            PolyHeuristic<mpz_class> const &AllArr) {
-  std::function<bool(SimplePerfectInv<T> const &, SimplePerfectInv<T> const &)>
-      CompFCT = [](SimplePerfectInv<T> const &x,
-                   SimplePerfectInv<T> const &y) -> bool { return x < y; };
+  std::ostream& os = MProc.GetO(TheId);
+  size_t seed = 1235;
+  std::function<bool(size_t const &, size_t const &)>
+      CompFCT = [](size_t const &x, size_t const &y) -> bool { return x < y; };
   std::function<void(TrivialBalinski &, SimplePerfect<T, Tint> const &,
-                     SimplePerfectInv<T> const &, std::ostream &)>
+                     size_t const &, std::ostream &)>
       UpgradeBalinskiStat =
           []([[maybe_unused]] TrivialBalinski const &eStat,
              [[maybe_unused]] SimplePerfect<T, Tint> const &eEnt,
-             [[maybe_unused]] SimplePerfectInv<T> const &eInv,
+             [[maybe_unused]] size_t const &eInv,
              [[maybe_unused]] std::ostream &os) -> void {};
   std::function<std::optional<MyMatrix<Tint>>(SimplePerfect<T, Tint> const &,
                                               SimplePerfect<T, Tint> const &)>
       fEquiv =
           [&](SimplePerfect<T, Tint> const &x, SimplePerfect<T, Tint> const &y)
       -> std::optional<MyMatrix<Tint>> {
-    return SimplePerfect_TestEquivalence<T, Tint, Tgroup>(eData, x.Gram,
-                                                          y.Gram);
+    return SimplePerfect_TestEquivalence<T, Tint, Tgroup>(eData.LinSpa,
+                                                          x.Gram,
+                                                          y.Gram,
+                                                          x.RecSHV,
+                                                          y.RecSHV,
+                                                          os);
   };
   NewEnumerationWork<SimplePerfect<T, Tint>> ListOrbit(
       AllArr.DD_Saving, AllArr.DD_Memory, eData.PrefixPerfect, CompFCT,
-      UpgradeBalinskiStat, fEquiv, MProc.GetO(TheId));
+      UpgradeBalinskiStat, fEquiv, os);
   auto FuncInsert = [&](SimplePerfect<T, Tint> const &x,
                         std::ostream &os) -> int {
-    SimplePerfectInv<T> eInv = ComputeInvariantSimplePerfect<T, Tint>(x.Gram);
+    size_t eInv = ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, x.RecSHV, os);
     return ListOrbit.InsertEntry({x, eInv}, os);
   };
   int nbPresentOrbit = ListOrbit.GetNbEntry();
   if (nbPresentOrbit == 0) {
-    MyMatrix<T> eGram = GetOnePerfectForm(eData.LinSpa);
-    int RetVal = FuncInsert({eGram}, MProc.GetO(TheId));
+    std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm<T,Tint>(eData.LinSpa, os);
+    SimplePerfect<T, Tint> entry{pair.first, pair.second};
+    int RetVal = FuncInsert(entry, os);
     if (RetVal != -1) {
       std::cerr << "RetVal=" << RetVal << "\n";
       std::cerr << "The first orbit should definitely be new\n";
@@ -65,7 +71,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       throw TerminalException{1};
     }
   }
-  MProc.GetO(TheId) << "We have inserted eInc\n";
+  os << "We have inserted eInc\n";
   int nbSpannThread = 0;
   std::condition_variable cv;
   std::mutex mtx_cv;
@@ -97,7 +103,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
       Tgroup GRPshv =
-          SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData, ePERF.Gram, RecSHV);
+        SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData.LinSpa, ePERF.Gram, RecSHV, os);
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
                                                    IntToString(eEntry) + "/");
@@ -107,9 +113,9 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       for (auto &eOrbB : TheOutput) {
         MyVector<T> eVectOrb = FindFacetInequality(eNaked.PerfDomEXT, eOrbB);
         MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(eData.LinSpa, eVectOrb);
-        MyMatrix<T> NewPerf =
-            Flipping_Perfect<T, int>(ePERF.Gram, DirMat).first;
-        int eVal = FuncInsert({NewPerf}, os);
+        std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = Flipping_Perfect<T, Tint>(ePERF.Gram, DirMat, os);
+        SimplePerfect<T,Tint> entry{pair.first, pair.second};
+        int eVal = FuncInsert(entry, os);
         if (eVal == -1)
           cv.notify_one();
       }
@@ -125,16 +131,16 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   };
   int NbThr = MProc.MPU_NumberFree();
   std::vector<std::thread> ListThreads(NbThr);
-  MProc.GetO(TheId) << "We have NbThr=" << NbThr << "\n";
+  os << "We have NbThr=" << NbThr << "\n";
   while (true) {
     bool IsCompleteSpann = ListOrbit.GetCompleteStatus();
-    MProc.GetO(TheId) << "IsCompleteSpann=" << IsCompleteSpann << "\n";
+    os << "IsCompleteSpann=" << IsCompleteSpann << "\n";
     if (IsCompleteSpann) {
       WaitComplete(TheId);
     } else {
       for (int iThr = 0; iThr < NbThr; iThr++) {
         int NewId = MProc.MPU_GetId();
-        MProc.GetO(TheId) << "NewId=" << NewId << "\n";
+        os << "NewId=" << NewId << "\n";
         if (NewId != -1) {
           MProc.GetO(NewId) << "Before call to my_thread\n";
           ListThreads[iThr] = std::thread(CompSimplePerfectAdjacency, NewId,
@@ -143,13 +149,13 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
           ListThreads[iThr].detach();
         }
       }
-      CompSimplePerfectAdjacency(TheId, MProc.GetO(TheId));
+      CompSimplePerfectAdjacency(TheId, os);
     }
     if (nbSpannThread == 0)
       break;
   }
   bool IsComplete = ListOrbit.GetCompleteStatus();
-  MProc.GetO(TheId) << "IsComplete=" << IsComplete << "\n";
+  os << "IsComplete=" << IsComplete << "\n";
   if (!IsComplete) {
     std::cerr << "Major error in the code. We should be complete now\n";
     throw TerminalException{1};
@@ -210,15 +216,18 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT() {
   BlockBANK.setListBoolValues(ListBoolValues3);
   BlockBANK.setListStringValues(ListStringValues3);
   ListBlock["BANK"] = BlockBANK;
+  // TSPACE
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
   return FullNamelist(ListBlock);
 }
 
 template <typename T, typename Tint, typename Tgroup>
-void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
+void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   SingleBlock const& BlockBANK = eFull.get_block("BANK");
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
   SingleBlock const& BlockMETHOD = eFull.get_block("METHOD");
+  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   //
   bool BANK_Saving = BlockBANK.get_bool("Saving");
   bool BANK_Memory = BlockBANK.get_bool("FullDataInMemory");
@@ -236,9 +245,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull) {
   std::string OUTfile = BlockDATA.get_string("OUTfile");
   std::cerr << "OUTfile=" << OUTfile << "\n";
   //
-  std::ifstream LINSPAfs(LINSPAfile);
-  LinSpaceMatrix<T> LinSpa;
-  LINSPAfs >> LinSpa;
+  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   bool NeedCheckStabilization =
     BlockDATA.get_bool("NeedCheckStabilization");
   bool SavingPerfect = BlockDATA.get_bool("SavingPerfect");

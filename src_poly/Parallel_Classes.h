@@ -33,7 +33,6 @@
 // For example list of known double descriptions.
 template <typename T> struct DataBank {
   typedef typename equiv_info<T>::equiv_type Tequiv;
-  typedef typename invariant_info<T>::invariant_type Tinv;
 
 public:
   DataBank() {
@@ -76,7 +75,7 @@ public:
             ListDat.emplace_back(std::move(eEnt));
           //
           std::ifstream isI(FileSaveINV);
-          Tinv eInv;
+          size_t eInv;
           isI >> eInv;
           ListInv.push_back(eInv);
           //
@@ -98,9 +97,9 @@ public:
   DataBank(DataBank &&) = delete;
 
   EquivInfo<Tequiv> IsPresentNoLock(int const &iEntryStart, T const &eEnt,
-                                    Tinv const &eInv) const {
+                                    size_t const &eInv) const {
     for (int iEntry = iEntryStart; iEntry < nbEntry; iEntry++) {
-      Tinv fInv = ListInv[iEntry];
+      size_t fInv = ListInv[iEntry];
       if (fInv == eInv) {
         T fEnt = GetEntry(iEntry);
         std::optional<Tequiv> eEquiv = FctEquiv(fEnt, eEnt);
@@ -110,7 +109,7 @@ public:
     }
     return {-1, {}, nbEntry};
   }
-  DataBank_ResultQuery<T> ProcessRequest(T const &eEnt, Tinv const &eInv,
+  DataBank_ResultQuery<T> ProcessRequest(T const &eEnt, size_t const &eInv,
                                          std::ostream &os) {
     os << "DataBank.ProcessRequest, step 2\n";
     EquivInfo<Tequiv> eEquiv = IsPresentNoLock(0, eEnt, eInv);
@@ -140,7 +139,7 @@ public:
       ListEntry[iEntry] = GetEntry(iEntry);
     return ListEntry;
   }
-  void InsertEntry(T const &eEnt, Tinv const &eInv) {
+  void InsertEntry(T const &eEnt, size_t const &eInv) {
     EquivInfo<Tequiv> eEquiv = IsPresentNoLock(0, eEnt, eInv);
     if (eEquiv.iEntry == -1) {
       std::lock_guard<std::mutex> lk(mul);
@@ -177,7 +176,7 @@ private:
   std::string ThePrefix;
   std::mutex mul;
   tbb::concurrent_vector<T> ListDat;
-  tbb::concurrent_vector<Tinv> ListInv;
+  tbb::concurrent_vector<size_t> ListInv;
   int nbEntry;
   int MinSize;
 };
@@ -232,7 +231,6 @@ template <typename T> struct balinski_info {
 // Again the same Hack, we do not want to define constructor ()
 // So, we have to allow this.
 template <typename T> struct NewEnumerationWork {
-  typedef typename invariant_info<T>::invariant_type Tinv;
   typedef typename balinski_info<T>::balinski_type Tbalinski;
   typedef typename equiv_info<T>::equiv_type Tequiv;
 
@@ -252,8 +250,8 @@ public:
   // non-default constructor
   NewEnumerationWork(
       bool const &eSave, bool const &eMemory, std::string const &ePrefix,
-      std::function<bool(Tinv const &, Tinv const &)> const &eCompFCT,
-      std::function<void(Tbalinski &, T const &, Tinv const &,
+      std::function<bool(size_t const &, size_t const &)> const &eCompFCT,
+      std::function<void(Tbalinski &, T const &, size_t const &,
                          std::ostream &)> const &eUP,
       std::function<std::optional<Tequiv>(T const &, T const &)> const &fEquiv,
       std::ostream &os)
@@ -307,7 +305,7 @@ public:
           }
           //
           std::ifstream isI(FileSaveINV);
-          Tinv eInv;
+          size_t eInv;
           isI >> eInv;
           ListInv.push_back(eInv);
           //
@@ -436,7 +434,7 @@ public:
     Tbalinski eStat;
     for (auto &iEntry : ListPendingCases) {
       T eEnt = GetRepresentative(iEntry);
-      Tinv eInv = ListInv[iEntry];
+      size_t eInv = ListInv[iEntry];
       //      os << "Before UpgradeBalinskiStat\n";
       UpgradeBalinskiStat(eStat, eEnt, eInv, os);
       //      os << "After UpgradeBalinskiStat\n";
@@ -521,7 +519,7 @@ public:
     return eVect;
   }
 
-  Tinv GetInvariant(int const &i) const { return ListInv[i]; }
+  size_t GetInvariant(int const &i) const { return ListInv[i]; }
 
   T GetRepresentative(int const &i) const {
     if (FullDataInMemory) {
@@ -563,14 +561,14 @@ private:
   std::string ThePrefix;
   bool FullDataInMemory;
   tbb::concurrent_vector<T> ListDat;
-  tbb::concurrent_vector<Tinv> ListInv;
+  tbb::concurrent_vector<size_t> ListInv;
   std::vector<int> ListSta;
   int nbEntry;
   int nbEntryTreated;
   std::set<int, std::function<bool(int const &, int const &)>> ListPendingCases;
   std::set<int> ListUnderConsideration;
   bool IsComplete;
-  std::function<void(Tbalinski &, T const &, Tinv const &, std::ostream &)>
+  std::function<void(Tbalinski &, T const &, size_t const &, std::ostream &)>
       UpgradeBalinskiStat;
   std::function<std::optional<Tequiv>(T const &, T const &)> TestEquivalence;
 };

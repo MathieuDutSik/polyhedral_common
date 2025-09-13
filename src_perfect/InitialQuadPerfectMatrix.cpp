@@ -5,23 +5,21 @@
 #include "Temp_PerfectForm_Enum.h"
 // clang-format on
 
-typedef QuadField<mpq_class, 2> field;
-
 int main(int argc, char *argv[]) {
   try {
     int n;
     int i, j;
-    field eVal;
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "InitialPerfectMatrix n\n";
       return -1;
     }
-    using field = QuadField<mpq_class, 2>;
+    using T = mpq_class;
+    using Tint = mpz_class;
     sscanf(argv[1], "%d", &n);
-    LinSpaceMatrix<field> LinSpa = ComputeCanonicalSpace<field>(n);
-    MyMatrix<field> ThePerfMat = GetOnePerfectForm(LinSpa);
+    LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
+    MyMatrix<T> ThePerfMat = GetOnePerfectForm<T,Tint>(LinSpa, std::cerr).first;
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++)
         std::cout << " " << ThePerfMat(i, j);

@@ -19,8 +19,6 @@ template <typename Tequiv> struct EquivInfo {
   int nbEntryRelevant;
 };
 
-template <typename T> struct invariant_info {};
-
 template <typename T> struct equiv_info {};
 
 template <typename T> struct DataBank_ResultQuery {
@@ -37,9 +35,8 @@ template <typename T> struct FctsDataBank {
 };
 
 template <typename T> struct PairT_Tinv {
-  typedef typename invariant_info<T>::invariant_type Tinv;
   T x;
-  Tinv xInv;
+  size_t xInv;
 };
 
 // clang-format off
