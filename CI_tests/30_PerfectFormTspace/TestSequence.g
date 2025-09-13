@@ -86,18 +86,18 @@ end;
 
 ListCases:=[];
 
-Add(ListCases, rec(n:=3, d:=-3, n_perf:=1));
-Add(ListCases, rec(n:=3, d:=-4, n_perf:=2));
-Add(ListCases, rec(n:=3, d:=-7, n_perf:=3));
-Add(ListCases, rec(n:=3, d:=-8, n_perf:=5));
-Add(ListCases, rec(n:=3, d:=-11, n_perf:=8));
-Add(ListCases, rec(n:=3, d:=-15, n_perf:=34));
-Add(ListCases, rec(n:=3, d:=-19, n_perf:=43));
-Add(ListCases, rec(n:=3, d:=-20, n_perf:=69));
-Add(ListCases, rec(n:=3, d:=-23, n_perf:=204));
-Add(ListCases, rec(n:=3, d:=-24, n_perf:=158));
-Add(ListCases, rec(n:=4, d:=-3, n_perf:=2));
-Add(ListCases, rec(n:=4, d:=-4, n_perf:=4));
+Add(ListCases, rec(n:=3, d:=-3, n_perf:=2));
+Add(ListCases, rec(n:=3, d:=-4, n_perf:=1));
+Add(ListCases, rec(n:=3, d:=-7, n_perf:=2));
+Add(ListCases, rec(n:=3, d:=-8, n_perf:=2));
+Add(ListCases, rec(n:=3, d:=-11, n_perf:=12));
+Add(ListCases, rec(n:=3, d:=-15, n_perf:=90));
+Add(ListCases, rec(n:=3, d:=-19, n_perf:=157));
+Add(ListCases, rec(n:=3, d:=-20, n_perf:=212));
+Add(ListCases, rec(n:=3, d:=-23, n_perf:=870));
+Add(ListCases, rec(n:=3, d:=-24, n_perf:=596));
+Add(ListCases, rec(n:=4, d:=-3, n_perf:=5));
+Add(ListCases, rec(n:=4, d:=-4, n_perf:=2));
 
 
 ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
@@ -113,7 +113,7 @@ f_compute:=function()
             if eRec=fail then
                 return false;
             fi;
-            if eRec.nb<>eCase.n_perf then
+            if Length(eRec)<>eCase.n_perf then
                 return false;
             fi;
         od;
