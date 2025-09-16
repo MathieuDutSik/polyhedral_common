@@ -139,15 +139,18 @@ bool IsCompleteSystem(FundInvariantVectorFamily<Tint> const &fi, int n) {
 template <typename Tint>
 FundInvariantVectorFamily<Tint>
 ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostream&os) {
-  int n = M.cols();
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   os << "IVF: ComputeFundamentalInvariant, beginning\n";
   WriteMatrix(os, M);
 #endif
   MyVector<Tint> eVect = SmithNormalFormInvariant(M);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: ComputeFundamentalInvariant, We have eVect\n";
+#endif
+  int dim = eVect.size();
   int rank = 0;
   Tint index = 1;
-  for (int i = 0; i < n; i++) {
+  for (int i = 0; i < dim; i++) {
     Tint val = eVect(i);
     if (val != 0) {
       rank++;
@@ -155,6 +158,7 @@ ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostr
     }
   }
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
+  int n = M.cols();
   if (rank != RankMat(M)) {
     std::cerr << "Something is inconsistent here\n";
     throw TerminalException{1};
