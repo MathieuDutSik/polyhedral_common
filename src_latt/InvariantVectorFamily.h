@@ -138,8 +138,12 @@ bool IsCompleteSystem(FundInvariantVectorFamily<Tint> const &fi, int n) {
 
 template <typename Tint>
 FundInvariantVectorFamily<Tint>
-ComputeFundamentalInvariant(MyMatrix<Tint> const &M) {
+ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostream&os) {
   int n = M.cols();
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: ComputeFundamentalInvariant, beginning\n";
+  WriteMatrix(os, M);
+#endif
   MyVector<Tint> eVect = SmithNormalFormInvariant(M);
   int rank = 0;
   Tint index = 1;
@@ -150,7 +154,7 @@ ComputeFundamentalInvariant(MyMatrix<Tint> const &M) {
       index *= val;
     }
   }
-#ifdef DEBUG_IVF
+#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
   if (rank != RankMat(M)) {
     std::cerr << "Something is inconsistent here\n";
     throw TerminalException{1};
@@ -358,7 +362,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
-                            MyMatrix<Tint> const &ListVect) {
+                            MyMatrix<Tint> const &ListVect, std::ostream&os) {
   int n = GramMat.rows();
   std::map<T, std::vector<MyVector<Tint>>> map;
   std::vector<T> LineMat = GetLineVector(GramMat);
@@ -369,13 +373,28 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
     T norm = EvaluateLineVector(LineMat, V_T);
     map[norm].push_back(V);
   }
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: FilterByNorm, map built\n";
+#endif
   MyMatrix<Tint> SHV_ret(0, n);
   FundInvariantVectorFamily<Tint> fi_ret = TrivFundamentalInvariant<Tint>();
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  size_t pos = 0;
+#endif
   for (auto &kv : map) {
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    os << "IVF: FilterByNorm, pos=" << pos << " |kv.second|=" << kv.second.size() << "\n";
+#endif
     MyMatrix<Tint> BlkMat = MatrixFromVectorFamily(kv.second);
     MyMatrix<Tint> SHV_new = Concatenate(SHV_ret, BlkMat);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    os << "IVF: FilterByNorm, We have SHV_new\n";
+#endif
     FundInvariantVectorFamily<Tint> fi_new =
-        ComputeFundamentalInvariant(SHV_new);
+      ComputeFundamentalInvariant(SHV_new, os);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    os << "IVF: FilterByNorm, We have fi_new\n";
+#endif
     if (fi_new > fi_ret) {
       SHV_ret = SHV_new;
       fi_ret = fi_new;
@@ -383,6 +402,9 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
         return SHV_ret;
       }
     }
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+    pos += 1;
+#endif
   }
   std::cerr
       << "Failed to terminate and find a correct family for the filtration\n";

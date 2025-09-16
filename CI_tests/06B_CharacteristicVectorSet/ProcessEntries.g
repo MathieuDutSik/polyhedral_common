@@ -20,6 +20,7 @@ TestGeneration:=function(matrix, method)
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileMat);
     RemoveFile(FileOut);
+    Print("|U|=", Length(U), "\n");
     return true;
 end;
 
@@ -28,7 +29,7 @@ ListMethod:=["shortest", "relevant_voronoi", "filtered_relevant_voronoi", "fullr
 
 
 FullTest:=function()
-    local n_error, iRec, eRec, RecReply, method;
+    local iRec, eRec, result, i_meth, n_meth, method;
     iRec:=0;
     for eRec in ListRec
     do
