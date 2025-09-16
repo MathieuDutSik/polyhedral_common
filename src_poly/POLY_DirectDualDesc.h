@@ -495,7 +495,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
   eProg = "small_polytopes";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return SmallPolytope_Incidence(EXT);
+    return SmallPolytope_Incidence(EXT, os);
   // It applies to the field case or ring
   eProg = "lrs";
   ListProg.push_back(eProg);
@@ -572,7 +572,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   eProg = "small_polytopes";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return SmallPolytope_Ineq(EXT);
+    return SmallPolytope_Ineq(EXT, os);
   // lrs does not use divisions, so work even if not field.
   eProg = "lrs";
   ListProg.push_back(eProg);
@@ -648,7 +648,7 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
   eProg = "small_polytopes";
   ListProg.push_back(eProg);
   if (ansProg == eProg)
-    return SmallPolytope_FaceIneq(EXT, f_process);
+    return SmallPolytope_FaceIneq(EXT, f_process, os);
   // T can be a field or a ring here
   eProg = "lrs";
   ListProg.push_back(eProg);

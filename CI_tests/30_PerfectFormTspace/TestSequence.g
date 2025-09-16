@@ -104,16 +104,22 @@ ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"]
 
 
 f_compute:=function()
-    local eCase, fProg, eRec;
-    for eCase in ListCases
+    local n_case, i_case, eCase, fProg, eRec;
+    n_case:=Length(ListCases);
+    for i_case in [1..n_case]
     do
+        eCase:=ListCases[i_case];
+        Print("----------------------------------------------------------------------\n");
+        Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
         for fProg in ListProg
         do
             eRec:=GetRecInfo(fProg, eCase.d, eCase.n);
             if eRec=fail then
+                Print("Failing because eRec=fail\n");
                 return false;
             fi;
             if Length(eRec)<>eCase.n_perf then
+                Print("Enumeration, |eRec|=", Length(eRec), " n_perf=", eCase.n_perf, "\n");
                 return false;
             fi;
         od;

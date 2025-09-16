@@ -21,18 +21,6 @@
 #define DEBUG_FUNDAMENTAL_DELAUNAY
 #endif
 
-template <typename T, typename Tint>
-resultCVP<T, Tint>
-CVPVallentinProgram(MyMatrix<T> const &GramMat, MyVector<T> const &eV,
-                    std::string const &NameMeth, std::ostream &os) {
-  if (NameMeth == "SVexact")
-    return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
-  //  if (NameMeth == "SVdouble")
-  //    return CVPVallentinProgram_double<T, Tint>(GramMat, eV);
-  std::cerr << "No matching method found\n";
-  throw TerminalException{1};
-}
-
 template <typename T>
 MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
   MyVector<T> eVect(n);

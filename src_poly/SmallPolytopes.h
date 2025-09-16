@@ -17,6 +17,10 @@
 #define DEBUG_SMALL_POLYTOPE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_SMALL_POLYTOPE
+#endif
+
 template <typename T> vectface Simplicial_Incidence(MyMatrix<T> const &EXT) {
   int n = EXT.cols();
   Face f_full(n);
@@ -32,10 +36,10 @@ template <typename T> vectface Simplicial_Incidence(MyMatrix<T> const &EXT) {
 }
 
 template <typename T>
-vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
+vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream&os) {
   int n_ext = EXT.rows();
   MyMatrix<T> NSP = NullspaceMat(EXT);
-#ifdef DEBUG_SMALL_POLYTOPE
+#ifdef SANITY_CHECK_SMALL_POLYTOPE
   if (NSP.rows() != 1) {
     std::cerr << "The rank is incorrect\n";
     throw TerminalException{1};
@@ -52,9 +56,11 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
       V_z.push_back(i_ext);
   }
 #ifdef DEBUG_SMALL_POLYTOPE
-  std::cerr << "n_ext=" << n_ext << "\n";
-  std::cerr << "|V_p|=" << V_p.size() << " |V_m|=" << V_m.size()
-            << " |V_z|=" << V_z.size() << "\n";
+  os << "n_ext=" << n_ext << "\n";
+  os << "|V_p|=" << V_p.size() << " |V_m|=" << V_m.size()
+     << " |V_z|=" << V_z.size() << "\n";
+#endif
+#ifdef SANITY_CHECK_SMALL_POLYTOPE
   auto check = [&](Face const &f) -> void {
     CheckFacetInequality(EXT, f, "SmallPolytopes");
   };
@@ -69,8 +75,10 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
       f[x_p] = 0;
       f[x_m] = 0;
 #ifdef DEBUG_SMALL_POLYTOPE
-      std::cerr << "x_p=" << x_p << " x_m=" << x_m << " |f|=" << f.size()
-                << " / " << f.count() << "\n";
+      os << "x_p=" << x_p << " x_m=" << x_m << " |f|=" << f.size()
+         << " / " << f.count() << "\n";
+#endif
+#ifdef SANITY_CHECK_SMALL_POLYTOPE
       check(f);
 #endif
       vf.push_back(f);
@@ -80,8 +88,9 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
     Face f = f_full;
     f[x_z] = 0;
 #ifdef DEBUG_SMALL_POLYTOPE
-    std::cerr << "x_z=" << x_z << " |f|=" << f.size() << " / " << f.count()
-              << "\n";
+    os << "x_z=" << x_z << " |f|=" << f.size() << " / " << f.count() << "\n";
+#endif
+#ifdef SANITY_CHECK_SMALL_POLYTOPE
     check(f);
 #endif
     vf.push_back(f);
@@ -89,24 +98,24 @@ vectface NearSimplicial_Incidence(MyMatrix<T> const &EXT) {
   return vf;
 }
 
-template <typename T> vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT) {
+template <typename T> vectface SmallPolytope_Incidence(MyMatrix<T> const &EXT, std::ostream& os) {
 #ifdef DEBUG_SMALL_POLYTOPE
-  std::cerr << "SmallPolytope_Incidence, begin\n";
+  os << "SmallPolytope_Incidence, begin\n";
 #endif
   int n_row = EXT.rows();
   int n_col = EXT.cols();
   if (n_row == n_col)
     return Simplicial_Incidence(EXT);
   if (n_row == n_col + 1)
-    return NearSimplicial_Incidence(EXT);
+    return NearSimplicial_Incidence(EXT, os);
   std::cerr << "Unfortunately, there is no simple strategy for those higher "
                "incidence cases\n";
   throw TerminalException{1};
 }
 
-template <typename T> MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT) {
+template <typename T> MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT, std::ostream& os) {
   using Tint = typename SubsetRankOneSolver<T>::Tint;
-  vectface vf = SmallPolytope_Incidence(EXT);
+  vectface vf = SmallPolytope_Incidence(EXT, os);
   MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
   SubsetRankOneSolver<T> solver(EXT_int);
   size_t n_fac = EXT.rows();
@@ -124,15 +133,15 @@ template <typename T> MyMatrix<T> SmallPolytope_Ineq(MyMatrix<T> const &EXT) {
 }
 
 template <typename T, typename Fprocess>
-void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
+void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process, std::ostream& os) {
   int n_row = EXT.rows();
   int n_col = EXT.cols();
 #ifdef DEBUG_SMALL_POLYTOPE
-  std::cerr << "SmallPolytope_FaceIneq, n_row=" << n_row << " n_col=" << n_col
-            << "\n";
+  os << "SmallPolytope_FaceIneq, n_row=" << n_row << " n_col=" << n_col
+     << "\n";
 #endif
   using Tint = typename SubsetRankOneSolver<T>::Tint;
-  vectface vf = SmallPolytope_Incidence(EXT);
+  vectface vf = SmallPolytope_Incidence(EXT, os);
   MyMatrix<Tint> EXT_int = Get_EXT_int(EXT);
   SubsetRankOneSolver<T> solver(EXT_int);
   std::pair<Face, MyVector<T>> pair{Face(n_row), MyVector<T>(n_col)};
@@ -142,7 +151,7 @@ void SmallPolytope_FaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
       pair.second(i_col) = UniversalScalarConversion<T, Tint>(Vint(i_col));
     }
     pair.first = eFace;
-#ifdef DEBUG_SMALL_POLYTOPE
+#ifdef SANITY_CHECK_SMALL_POLYTOPE
     for (int i_row = 0; i_row < n_row; i_row++) {
       T scal(0);
       for (int i_col = 0; i_col < n_col; i_col++) {

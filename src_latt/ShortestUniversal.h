@@ -8,26 +8,6 @@
 // clang-format on
 
 template <typename T, typename Tint>
-resultCVP<T, Tint>
-CVPVallentinProgram_choice(MyMatrix<T> const &GramMat, MyVector<T> const &eV,
-                           std::string const &NameMeth, std::ostream &os) {
-  //
-  if (NameMeth == "SVexact") {
-    return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
-  }
-  //
-  std::cerr << "No matching method found\n";
-  throw TerminalException{1};
-}
-
-template <typename T, typename Tint>
-resultCVP<T, Tint> CVPVallentinProgram(MyMatrix<T> const &GramMat,
-                                       MyVector<T> const &eV,
-                                       std::ostream &os) {
-  return CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
-}
-
-template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
                              std::ostream &os) {
   return T_ShortVector_exact<T, Tint>(GramMat, MaxNorm, os);

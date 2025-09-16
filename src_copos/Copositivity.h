@@ -40,14 +40,6 @@ bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
   return true;
 }
 
-template <typename T> struct CopositivityInfoReduction {
-  MyMatrix<T> TheBasisReduced;
-  MyMatrix<T> eSymmMatReduced;
-  MyMatrix<T> Pmat;
-  std::vector<int> IdxVector;
-  std::vector<int> IdxColumn;
-};
-
 // #define DEBUG_UNDER_POS_COND
 
 // Given C >0 a >=0 and b>0 find the maximum

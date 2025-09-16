@@ -336,7 +336,7 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
                                     const MyMatrix<T> &GramMat2,
                                     const std::vector<Tidx> &CanonicReord1,
                                     const std::vector<Tidx> &CanonicReord2,
-                                    [[maybe_unused]] std::ostream &os) {
+                                    std::ostream &os) {
   size_t nbRow = EXT1.rows();
   // Building the combinatorial equivalence
   std::vector<Tidx> ListIdx(nbRow);
@@ -379,7 +379,7 @@ IsomorphismFromCanonicReord_GramMat(const MyMatrix<T> &EXT1,
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT2, CanonicReord2);
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
   // Now testing the obtained mappings
-  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P);
+  bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P, os);
   if (!test) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_TRACK_ISOMORPHISM
     os << "PES: We fail the polytope equivalence\n";
