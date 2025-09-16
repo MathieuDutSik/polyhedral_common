@@ -1,9 +1,9 @@
-name: CI(06) of Geometrically unique interior point
+name: CI(06A) of Geometrically unique interior point
 
 on:
   # One time per month
   schedule:
-    - cron: "0 0 6 * *"
+    - cron: "0 0 6 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -107,7 +107,7 @@ jobs:
           echo "After compilation of geometrical unique test code"
 
           # Running the test
-          cd CI_tests/06_GeometricallyUnique
+          cd CI_tests/06A_GeometricallyUnique
           tar -vxzf AllExamples.tar.gz
           ../../gap.sh < ProcessEntries.g
           if [ ! -f "CI_CONCLUSION" ]; then
