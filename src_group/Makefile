@@ -15,7 +15,7 @@ PROGRAM		= TEST_LinPolytope_Isomorphism TEST_LinPolytope_Automorphism \
 		  GRP_IsomorphismReduction GRP_GroupAverage_Matrix GRP_GroupAverage_Vector \
 		  GRP_LinearSpace_Stabilizer_DoubleCoset GRP_LinPolytopeIntegral_Automorphism_DoubleCoset \
 		  GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer \
-		  GRP_MatrixGroupPermSimplification
+		  GRP_MatrixGroupPermSimplification GRP_MatrixGroupPermSimplificationOnline
 
 
 OBJECTS		= $(PROGRAM:%=%.o)
