@@ -5,6 +5,9 @@
 // clang-format off
 #include "MatrixGroupSimplification.h"
 #include <stdexcept>
+#include <functional>
+#include <memory>
+#include <limits>
 // clang-format on
 
 // Online/incremental version of ExhaustiveReductionComplexityKernelInner_V2
@@ -191,6 +194,310 @@ public:
   // Get current generators as vector (alias for compatibility)
   std::vector<TcombPair<Ttype,Tnorm>> get_generators() const {
     return get_current_set();
+  }
+};
+
+// Hierarchical online reduction system that automatically switches between
+// int16_t -> int32_t -> int64_t -> T numerics when overflow occurs
+template<typename T>
+class OnlineHierarchicalMatrixReduction {
+private:
+  int n_;  // Matrix dimension
+  std::ostream& os;
+
+  // Type aliases for matrix-matrix pairs
+  using Ttype = std::pair<MyMatrix<T>, MyMatrix<T>>;
+  using Tnorm = T;
+
+  // Upper bounds for each numeric type
+  int16_t max_val_16_;
+  int32_t max_val_32_;
+  int64_t max_val_64_;
+
+  // Type aliases for function types
+  using f_complexity_16_t = std::function<int16_t(MyMatrix<int16_t> const&)>;
+  using f_product_16_t = std::function<MyMatrix<int16_t>(MyMatrix<int16_t> const&, MyMatrix<int16_t> const&)>;
+  using f_check_16_t = std::function<bool(MyMatrix<int16_t> const&)>;
+  
+  using f_complexity_32_t = std::function<int32_t(MyMatrix<int32_t> const&)>;
+  using f_product_32_t = std::function<MyMatrix<int32_t>(MyMatrix<int32_t> const&, MyMatrix<int32_t> const&)>;
+  using f_check_32_t = std::function<bool(MyMatrix<int32_t> const&)>;
+  
+  using f_complexity_64_t = std::function<int64_t(MyMatrix<int64_t> const&)>;
+  using f_product_64_t = std::function<MyMatrix<int64_t>(MyMatrix<int64_t> const&, MyMatrix<int64_t> const&)>;
+  using f_check_64_t = std::function<bool(MyMatrix<int64_t> const&)>;
+  
+  using f_complexity_T_t = std::function<Tnorm(MyMatrix<T> const&)>;
+  using f_product_T_t = std::function<MyMatrix<T>(MyMatrix<T> const&, MyMatrix<T> const&)>;
+  using f_check_T_t = std::function<bool(MyMatrix<T> const&)>;
+
+  // Online kernels for each numeric type
+  std::unique_ptr<OnlineExhaustiveReductionComplexityKernel<
+    MyMatrix<int16_t>, int16_t, f_complexity_16_t, f_product_16_t, f_check_16_t
+  >> kernel_16;
+
+  std::unique_ptr<OnlineExhaustiveReductionComplexityKernel<
+    MyMatrix<int32_t>, int32_t, f_complexity_32_t, f_product_32_t, f_check_32_t
+  >> kernel_32;
+
+  std::unique_ptr<OnlineExhaustiveReductionComplexityKernel<
+    MyMatrix<int64_t>, int64_t, f_complexity_64_t, f_product_64_t, f_check_64_t
+  >> kernel_64;
+
+  std::unique_ptr<OnlineExhaustiveReductionComplexityKernel<
+    MyMatrix<T>, Tnorm, f_complexity_T_t, f_product_T_t, f_check_T_t
+  >> kernel_T;
+
+  // Current active kernel (0=int16_t, 1=int32_t, 2=int64_t, 3=T)
+  int current_level_;
+
+  // Migrate from current level to next level
+  bool migrate_to_next_level() {
+    if (current_level_ >= 3) {
+      return false; // Already at highest level
+    }
+
+    os << "SIMP: Migrating from level " << current_level_ << " to level " << (current_level_ + 1) << "\n";
+
+    if (current_level_ == 0) {
+      // Migrate from int16_t to int32_t
+      auto current_set = kernel_16->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<int16_t> const& mat_16 = comb_pair.pair.first;
+        MyMatrix<int16_t> const& mat_inv_16 = comb_pair.pair.second;
+        MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_16);
+        MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_inv_16);
+        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
+        int32_t norm_32 = get_ell1_complexity_measure(mat_32);
+        TcombPair<MyMatrix<int32_t>, int32_t> comb_pair_32{pair_32, norm_32};
+        if (!kernel_32->insert_generator(comb_pair_32)) {
+          return false;
+        }
+      }
+      current_level_ = 1;
+    } else if (current_level_ == 1) {
+      // Migrate from int32_t to int64_t
+      auto current_set = kernel_32->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<int32_t> const& mat_32 = comb_pair.pair.first;
+        MyMatrix<int32_t> const& mat_inv_32 = comb_pair.pair.second;
+        MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_32);
+        MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_inv_32);
+        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
+        int64_t norm_64 = get_ell1_complexity_measure(mat_64);
+        TcombPair<MyMatrix<int64_t>, int64_t> comb_pair_64{pair_64, norm_64};
+        if (!kernel_64->insert_generator(comb_pair_64)) {
+          return false;
+        }
+      }
+      current_level_ = 2;
+    } else if (current_level_ == 2) {
+      // Migrate from int64_t to T
+      auto current_set = kernel_64->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<int64_t> const& mat_64 = comb_pair.pair.first;
+        MyMatrix<int64_t> const& mat_inv_64 = comb_pair.pair.second;
+        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(mat_64);
+        MyMatrix<T> mat_inv_T = UniversalMatrixConversion<T,int64_t>(mat_inv_64);
+        Ttype pair_T{mat_T, mat_inv_T};
+        Tnorm norm_T = get_ell1_complexity_measure(mat_T);
+        TcombPair<MyMatrix<T>, Tnorm> comb_pair_T{pair_T, norm_T};
+        if (!kernel_T->insert_generator(comb_pair_T)) {
+          return false;
+        }
+      }
+      current_level_ = 3;
+    }
+
+    return true;
+  }
+
+public:
+  OnlineHierarchicalMatrixReduction(int n, std::ostream& _os) : n_(n), os(_os), current_level_(0) {
+    // Calculate upper bounds for each numeric type
+    double max_poss_16 = static_cast<double>(std::numeric_limits<int16_t>::max());
+    double max_poss_32 = static_cast<double>(std::numeric_limits<int32_t>::max());
+    double max_poss_64 = static_cast<double>(std::numeric_limits<int64_t>::max());
+
+    max_val_16_ = static_cast<int16_t>(sqrt(max_poss_16 / (10 * n)));
+    max_val_32_ = static_cast<int32_t>(sqrt(max_poss_32 / (10 * n)));
+    max_val_64_ = static_cast<int64_t>(sqrt(max_poss_64 / (10 * n)));
+
+    os << "SIMP: Upper bounds: int16_t=" << max_val_16_
+       << ", int32_t=" << max_val_32_
+       << ", int64_t=" << max_val_64_ << "\n";
+
+    // Create function objects
+    f_complexity_16_t f_complexity_16 = [](MyMatrix<int16_t> const& M) -> int16_t {
+      return get_ell1_complexity_measure(M);
+    };
+    f_product_16_t f_product_16 = [](MyMatrix<int16_t> const& A, MyMatrix<int16_t> const& B) -> MyMatrix<int16_t> {
+      return A * B;
+    };
+    f_check_16_t f_check_16 = [this](MyMatrix<int16_t> const& M) -> bool {
+      for (int i = 0; i < n_; i++) {
+        for (int j = 0; j < n_; j++) {
+          int16_t val = T_abs(M(i,j));
+          if (val > max_val_16_) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    f_complexity_32_t f_complexity_32 = [](MyMatrix<int32_t> const& M) -> int32_t {
+      return get_ell1_complexity_measure(M);
+    };
+    f_product_32_t f_product_32 = [](MyMatrix<int32_t> const& A, MyMatrix<int32_t> const& B) -> MyMatrix<int32_t> {
+      return A * B;
+    };
+    f_check_32_t f_check_32 = [this](MyMatrix<int32_t> const& M) -> bool {
+      for (int i = 0; i < n_; i++) {
+        for (int j = 0; j < n_; j++) {
+          int32_t val = T_abs(M(i,j));
+          if (val > max_val_32_) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    f_complexity_64_t f_complexity_64 = [](MyMatrix<int64_t> const& M) -> int64_t {
+      return get_ell1_complexity_measure(M);
+    };
+    f_product_64_t f_product_64 = [](MyMatrix<int64_t> const& A, MyMatrix<int64_t> const& B) -> MyMatrix<int64_t> {
+      return A * B;
+    };
+    f_check_64_t f_check_64 = [this](MyMatrix<int64_t> const& M) -> bool {
+      for (int i = 0; i < n_; i++) {
+        for (int j = 0; j < n_; j++) {
+          int64_t val = T_abs(M(i,j));
+          if (val > max_val_64_) {
+            return false;
+          }
+        }
+      }
+      return true;
+    };
+
+    f_complexity_T_t f_complexity_T = [](MyMatrix<T> const& M) -> Tnorm {
+      return get_ell1_complexity_measure(M);
+    };
+    f_product_T_t f_product_T = [](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
+      return A * B;
+    };
+    f_check_T_t f_check_T = []([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+      return true; // No bounds checking for arbitrary precision
+    };
+
+    // Initialize all kernels
+    kernel_16 = std::make_unique<typename decltype(kernel_16)::element_type>(
+      f_complexity_16, f_product_16, f_check_16, os);
+    kernel_32 = std::make_unique<typename decltype(kernel_32)::element_type>(
+      f_complexity_32, f_product_32, f_check_32, os);
+    kernel_64 = std::make_unique<typename decltype(kernel_64)::element_type>(
+      f_complexity_64, f_product_64, f_check_64, os);
+    kernel_T = std::make_unique<typename decltype(kernel_T)::element_type>(
+      f_complexity_T, f_product_T, f_check_T, os);
+  }
+
+  // Insert a single matrix (compute inverse in T first)
+  bool insert_generator(MyMatrix<T> const& generator) {
+    // Compute inverse in T arithmetic first
+    MyMatrix<T> generator_inv = Inverse(generator);
+    return insert_generator_pair({generator, generator_inv});
+  }
+
+  // Insert a matrix pair 
+  bool insert_generator_pair(Ttype const& generator_pair) {
+    while (current_level_ <= 3) {
+      bool success = false;
+
+      if (current_level_ == 0) {
+        // Try int16_t
+        MyMatrix<int16_t> mat_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.first);
+        MyMatrix<int16_t> mat_inv_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.second);
+        std::pair<MyMatrix<int16_t>, MyMatrix<int16_t>> pair_16{mat_16, mat_inv_16};
+        int16_t norm_16 = get_ell1_complexity_measure(mat_16);
+        TcombPair<MyMatrix<int16_t>, int16_t> comb_pair_16{pair_16, norm_16};
+        success = kernel_16->insert_generator(comb_pair_16);
+      } else if (current_level_ == 1) {
+        // Try int32_t
+        MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.first);
+        MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.second);
+        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
+        int32_t norm_32 = get_ell1_complexity_measure(mat_32);
+        TcombPair<MyMatrix<int32_t>, int32_t> comb_pair_32{pair_32, norm_32};
+        success = kernel_32->insert_generator(comb_pair_32);
+      } else if (current_level_ == 2) {
+        // Try int64_t
+        MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.first);
+        MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.second);
+        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
+        int64_t norm_64 = get_ell1_complexity_measure(mat_64);
+        TcombPair<MyMatrix<int64_t>, int64_t> comb_pair_64{pair_64, norm_64};
+        success = kernel_64->insert_generator(comb_pair_64);
+      } else if (current_level_ == 3) {
+        // Use T
+        Tnorm norm_T = get_ell1_complexity_measure(generator_pair.first);
+        TcombPair<MyMatrix<T>, Tnorm> comb_pair_T{generator_pair, norm_T};
+        success = kernel_T->insert_generator(comb_pair_T);
+      }
+
+      if (success) {
+        return true;
+      } else {
+        // Migration needed
+        if (!migrate_to_next_level()) {
+          return false; // Failed at highest level
+        }
+      }
+    }
+    return false;
+  }
+
+  // Extract the final reduced generators (always in type T)
+  std::vector<MyMatrix<T>> get_reduced_generators() {
+    std::vector<MyMatrix<T>> result;
+
+    if (current_level_ == 0) {
+      auto current_set = kernel_16->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int16_t>(comb_pair.pair.first);
+        result.push_back(mat_T);
+      }
+    } else if (current_level_ == 1) {
+      auto current_set = kernel_32->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int32_t>(comb_pair.pair.first);
+        result.push_back(mat_T);
+      }
+    } else if (current_level_ == 2) {
+      auto current_set = kernel_64->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(comb_pair.pair.first);
+        result.push_back(mat_T);
+      }
+    } else if (current_level_ == 3) {
+      auto current_set = kernel_T->get_current_set();
+      for (auto const& comb_pair : current_set) {
+        result.push_back(comb_pair.pair.first);
+      }
+    }
+
+    return result;
+  }
+
+  // Get current level information
+  int get_current_level() const { return current_level_; }
+  size_t get_current_size() const {
+    if (current_level_ == 0) return kernel_16->size();
+    if (current_level_ == 1) return kernel_32->size();
+    if (current_level_ == 2) return kernel_64->size();
+    if (current_level_ == 3) return kernel_T->size();
+    return 0;
   }
 };
 
