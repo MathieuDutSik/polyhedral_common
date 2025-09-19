@@ -10,6 +10,15 @@
 #include <limits>
 // clang-format on
 
+template <typename T2, typename T1>
+std::pair<MyMatrix<T2>,MyMatrix<T2>>
+UniversalPairMatrixConversion(std::pair<MyMatrix<T1>,MyMatrix<T1>> const &pair) {
+  MyMatrix<T2> m1 = UniversalMatrixConversion<T2,T1>(pair.first);
+  MyMatrix<T2> m2 = UniversalMatrixConversion<T2,T1>(pair.second);
+  return {std::move(m1), std::move(m2)};
+}
+
+
 // Online/incremental version of ExhaustiveReductionComplexityKernelInner_V2
 // Allows generators to be inserted one by one rather than providing a complete list
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
@@ -263,11 +272,7 @@ private:
       // Migrate from int16_t to int32_t
       auto current_set = kernel_16->get_current_set();
       for (auto const& comb_pair : current_set) {
-        MyMatrix<int16_t> const& mat_16 = comb_pair.pair.first;
-        MyMatrix<int16_t> const& mat_inv_16 = comb_pair.pair.second;
-        MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_16);
-        MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_inv_16);
-        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
+        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32 = UniversalPairMatrixConversion<int32_t,int16_t>(comb_pair.pair);
         if (!kernel_32->insert_generator(pair_32)) {
           return false;
         }
@@ -277,11 +282,7 @@ private:
       // Migrate from int32_t to int64_t
       auto current_set = kernel_32->get_current_set();
       for (auto const& comb_pair : current_set) {
-        MyMatrix<int32_t> const& mat_32 = comb_pair.pair.first;
-        MyMatrix<int32_t> const& mat_inv_32 = comb_pair.pair.second;
-        MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_32);
-        MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_inv_32);
-        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
+        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64 = UniversalPairMatrixConversion<int64_t,int32_t>(comb_pair.pair);
         if (!kernel_64->insert_generator(pair_64)) {
           return false;
         }
@@ -291,11 +292,7 @@ private:
       // Migrate from int64_t to T
       auto current_set = kernel_64->get_current_set();
       for (auto const& comb_pair : current_set) {
-        MyMatrix<int64_t> const& mat_64 = comb_pair.pair.first;
-        MyMatrix<int64_t> const& mat_inv_64 = comb_pair.pair.second;
-        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(mat_64);
-        MyMatrix<T> mat_inv_T = UniversalMatrixConversion<T,int64_t>(mat_inv_64);
-        Ttype pair_T{mat_T, mat_inv_T};
+        Ttype pair_T = UniversalPairMatrixConversion<T,int64_t>(comb_pair.pair);
         if (!kernel_T->insert_generator(pair_T)) {
           return false;
         }
@@ -380,28 +377,22 @@ public:
     return insert_generator_pair({generator, generator_inv});
   }
 
-  // Insert a matrix pair 
+  // Insert a matrix pair
   bool insert_generator_pair(Ttype const& generator_pair) {
     while (current_level <= 3) {
       bool success = false;
 
       if (current_level == 0) {
         // Try int16_t
-        MyMatrix<int16_t> mat_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.first);
-        MyMatrix<int16_t> mat_inv_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.second);
-        std::pair<MyMatrix<int16_t>, MyMatrix<int16_t>> pair_16{mat_16, mat_inv_16};
+        std::pair<MyMatrix<int16_t>, MyMatrix<int16_t>> pair_16 = UniversalPairMatrixConversion<int16_t,T>(generator_pair);
         success = kernel_16->insert_generator(pair_16);
       } else if (current_level == 1) {
         // Try int32_t
-        MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.first);
-        MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.second);
-        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
+        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32 = UniversalPairMatrixConversion<int32_t,T>(generator_pair);
         success = kernel_32->insert_generator(pair_32);
       } else if (current_level == 2) {
         // Try int64_t
-        MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.first);
-        MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.second);
-        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
+        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64 = UniversalPairMatrixConversion<int64_t,T>(generator_pair);
         success = kernel_64->insert_generator(pair_64);
       } else if (current_level == 3) {
         // Use T

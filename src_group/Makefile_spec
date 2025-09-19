@@ -32,7 +32,8 @@
 #PROGRAM		= GRP_MatrixGroupSimplification GRP_MatrixGroupPermSimplification
 #PROGRAM		= GRP_MatrixGroupSimplification
 #PROGRAM		= GRP_MatrixGroupPermSimplificationOnline
-PROGRAM		= GRP_MatrixGroupPermSimplificationOnlineOpt
+#PROGRAM		= GRP_MatrixGroupPermSimplificationOnlineOpt
+PROGRAM		= GRP_MatrixGroupPermSimplificationOnline GRP_MatrixGroupPermSimplificationOnlineOpt
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
