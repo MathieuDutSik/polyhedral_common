@@ -1220,7 +1220,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #endif
           auto iter = map.find(ent);
           if (iter == map.end()) {
-            if (!f_check(ent.pair.first)) {
+            if (!f_check(ent.pair.first) || !f_check(ent.pair.second)) {
               return false;
             }
             new_elt.push_back(ent);
@@ -1458,7 +1458,19 @@ std::optional<std::vector<Ttype>> ExhaustiveReductionComplexity(std::vector<Ttyp
   return ExhaustiveReductionComplexityKernel<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListPair, f_complexity, f_product, f_check, os);
 }
 
-
+template<typename T>
+bool check_matrix_coefficients(MyMatrix<T> const& M, T const& bound) {
+  int n = M.rows();
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<n; j++) {
+      T val = T_abs(M(i,j));
+      if (val > bound) {
+        return false;
+      }
+    }
+  }
+  return true;
+}
 
 
 template<typename T>
@@ -1541,15 +1553,7 @@ std::optional<std::vector<MyMatrix<T>>> ExhaustiveReductionComplexityGroupMatrix
     return A * B;
   };
   auto f_check=[&](MyMatrix<Tfinite> const& M) -> bool {
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        Tfinite val = T_abs(M(i,j));
-        if (val > max_val_Tfinite) {
-          return false;
-        }
-      }
-    }
-    return true;
+    return check_matrix_coefficients(M, max_val_Tfinite);
   };
   std::optional<std::vector<MyMatrix<Tfinite>>> opt = ExhaustiveReductionComplexityKernel<MyMatrix<Tfinite>,Tfinite,decltype(f_complexity),decltype(f_product),decltype(f_check)>(ListPair_Tfinite, f_complexity, f_product, f_check, os);
   if (!opt) {
@@ -2092,15 +2096,7 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
   Tfinite max_val_Tfinite = UniversalScalarConversion<Tfinite,int64_t>(max_val_int64);
 
   auto f_check=[&](MyMatrix<Tfinite> const& M) -> bool {
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        Tfinite val = T_abs(M(i,j));
-        if (val > max_val_Tfinite) {
-          return false;
-        }
-      }
-    }
-    return true;
+    return check_matrix_coefficients(M, max_val_Tfinite);
   };
 
   // Run the algorithm using Tfinite

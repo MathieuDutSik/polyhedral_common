@@ -334,7 +334,7 @@ public:
     f_product_16_t f_product_16 = [](MyMatrix<int16_t> const& A, MyMatrix<int16_t> const& B) -> MyMatrix<int16_t> {
       return A * B;
     };
-    f_check_16_t f_check_16 = [&max_val_16](MyMatrix<int16_t> const& M) -> bool {
+    f_check_16_t f_check_16 = [this](MyMatrix<int16_t> const& M) -> bool {
       return check_matrix_coefficients(M, max_val_16);
     };
 
@@ -344,7 +344,7 @@ public:
     f_product_32_t f_product_32 = [](MyMatrix<int32_t> const& A, MyMatrix<int32_t> const& B) -> MyMatrix<int32_t> {
       return A * B;
     };
-    f_check_32_t f_check_32 = [&max_val_32](MyMatrix<int32_t> const& M) -> bool {
+    f_check_32_t f_check_32 = [this](MyMatrix<int32_t> const& M) -> bool {
       return check_matrix_coefficients(M, max_val_32);
     };
 
@@ -354,7 +354,7 @@ public:
     f_product_64_t f_product_64 = [](MyMatrix<int64_t> const& A, MyMatrix<int64_t> const& B) -> MyMatrix<int64_t> {
       return A * B;
     };
-    f_check_64_t f_check_64 = [&max_val_64](MyMatrix<int64_t> const& M) -> bool {
+    f_check_64_t f_check_64 = [this](MyMatrix<int64_t> const& M) -> bool {
       return check_matrix_coefficients(M, max_val_64);
     };
 
