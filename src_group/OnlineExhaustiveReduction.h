@@ -10,6 +10,11 @@
 #include <limits>
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+#endif
+
+
 template <typename T2, typename T1>
 std::pair<MyMatrix<T2>,MyMatrix<T2>>
 UniversalPairMatrixConversion(std::pair<MyMatrix<T1>,MyMatrix<T1>> const &pair) {
@@ -17,7 +22,6 @@ UniversalPairMatrixConversion(std::pair<MyMatrix<T1>,MyMatrix<T1>> const &pair) 
   MyMatrix<T2> m2 = UniversalMatrixConversion<T2,T1>(pair.second);
   return {std::move(m1), std::move(m2)};
 }
-
 
 // Online/incremental version of ExhaustiveReductionComplexityKernelInner_V2
 // Allows generators to be inserted one by one rather than providing a complete list
@@ -206,6 +210,9 @@ public:
   }
 };
 
+template<typename U>
+using PairMatrix = std::pair<MyMatrix<U>,MyMatrix<U>>;
+
 // Hierarchical online reduction system that automatically switches between
 // int16_t -> int32_t -> int64_t -> T numerics when overflow occurs
 template<typename T>
@@ -227,15 +234,15 @@ private:
   using f_complexity_16_t = std::function<int16_t(MyMatrix<int16_t> const&)>;
   using f_product_16_t = std::function<MyMatrix<int16_t>(MyMatrix<int16_t> const&, MyMatrix<int16_t> const&)>;
   using f_check_16_t = std::function<bool(MyMatrix<int16_t> const&)>;
-  
+
   using f_complexity_32_t = std::function<int32_t(MyMatrix<int32_t> const&)>;
   using f_product_32_t = std::function<MyMatrix<int32_t>(MyMatrix<int32_t> const&, MyMatrix<int32_t> const&)>;
   using f_check_32_t = std::function<bool(MyMatrix<int32_t> const&)>;
-  
+
   using f_complexity_64_t = std::function<int64_t(MyMatrix<int64_t> const&)>;
   using f_product_64_t = std::function<MyMatrix<int64_t>(MyMatrix<int64_t> const&, MyMatrix<int64_t> const&)>;
   using f_check_64_t = std::function<bool(MyMatrix<int64_t> const&)>;
-  
+
   using f_complexity_T_t = std::function<Tnorm(MyMatrix<T> const&)>;
   using f_product_T_t = std::function<MyMatrix<T>(MyMatrix<T> const&, MyMatrix<T> const&)>;
   using f_check_T_t = std::function<bool(MyMatrix<T> const&)>;
@@ -261,12 +268,11 @@ private:
   int current_level;
 
   // Migrate from current level to next level
-  bool migrate_to_next_level() {
-    if (current_level >= 3) {
-      return false; // Already at highest level
-    }
+  void migrate_to_next_level() {
 
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
     os << "SIMP: Migrating from level " << current_level << " to level " << (current_level + 1) << "\n";
+#endif
 
     if (current_level == 0) {
       // Migrate from int16_t to int32_t
@@ -274,7 +280,9 @@ private:
       for (auto const& comb_pair : current_set) {
         std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32 = UniversalPairMatrixConversion<int32_t,int16_t>(comb_pair.pair);
         if (!kernel_32->insert_generator(pair_32)) {
-          return false;
+          std::cerr << "ONL: The kernel_32.insert_generator failed. Unexpected.\n";
+          std::cerr << "ONL: Code needed for jumping by two or more levels\n";
+          throw TerminalException{1};
         }
       }
       current_level = 1;
@@ -284,7 +292,9 @@ private:
       for (auto const& comb_pair : current_set) {
         std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64 = UniversalPairMatrixConversion<int64_t,int32_t>(comb_pair.pair);
         if (!kernel_64->insert_generator(pair_64)) {
-          return false;
+          std::cerr << "ONL: The kernel_64.insert_generator failed. Unexpected.\n";
+          std::cerr << "ONL: Code needed for jumping by two levels\n";
+          throw TerminalException{1};
         }
       }
       current_level = 2;
@@ -294,13 +304,12 @@ private:
       for (auto const& comb_pair : current_set) {
         Ttype pair_T = UniversalPairMatrixConversion<T,int64_t>(comb_pair.pair);
         if (!kernel_T->insert_generator(pair_T)) {
-          return false;
+          std::cerr << "ONL: This should never happen\n";
+          throw TerminalException{1};
         }
       }
       current_level = 3;
     }
-
-    return true;
   }
 
 public:
@@ -314,9 +323,11 @@ public:
     max_val_32 = static_cast<int32_t>(sqrt(max_poss_32 / (10 * n)));
     max_val_64 = static_cast<int64_t>(sqrt(max_poss_64 / (10 * n)));
 
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
     os << "SIMP: Upper bounds: int16_t=" << max_val_16
        << ", int32_t=" << max_val_32
        << ", int64_t=" << max_val_64 << "\n";
+#endif
 
     // Create function objects
     f_complexity_16_t f_complexity_16 = [](MyMatrix<int16_t> const& M) -> int16_t {
@@ -371,44 +382,50 @@ public:
   }
 
   // Insert a single matrix (compute inverse in T first)
-  bool insert_generator(MyMatrix<T> const& generator) {
+  void insert_generator(MyMatrix<T> const& generator) {
     // Compute inverse in T arithmetic first
     MyMatrix<T> generator_inv = Inverse(generator);
     return insert_generator_pair({generator, generator_inv});
   }
 
-  // Insert a matrix pair
-  bool insert_generator_pair(Ttype const& generator_pair) {
-    while (current_level <= 3) {
-      bool success = false;
-
-      if (current_level == 0) {
-        // Try int16_t
-        std::pair<MyMatrix<int16_t>, MyMatrix<int16_t>> pair_16 = UniversalPairMatrixConversion<int16_t,T>(generator_pair);
-        success = kernel_16->insert_generator(pair_16);
-      } else if (current_level == 1) {
-        // Try int32_t
-        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32 = UniversalPairMatrixConversion<int32_t,T>(generator_pair);
-        success = kernel_32->insert_generator(pair_32);
-      } else if (current_level == 2) {
-        // Try int64_t
-        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64 = UniversalPairMatrixConversion<int64_t,T>(generator_pair);
-        success = kernel_64->insert_generator(pair_64);
-      } else if (current_level == 3) {
-        // Use T
-        success = kernel_T->insert_generator(generator_pair);
+  bool simple_insert_generator_pair(Ttype const& generator_pair) {
+    if (current_level == 0) {
+      // Try int16_t
+      std::optional<PairMatrix<int16_t>> opt = UniversalPairMatrixConversion<int16_t,T>(generator_pair);
+      if (!opt) {
+        return false;
       }
-
-      if (success) {
-        return true;
-      } else {
-        // Migration needed
-        if (!migrate_to_next_level()) {
-          return false; // Failed at highest level
-        }
+      return kernel_16->insert_generator(*opt);
+    } else if (current_level == 1) {
+      // Try int32_t
+      std::optional<PairMatrix<int32_t>> opt = UniversalPairMatrixConversion<int32_t,T>(generator_pair);
+      if (!opt) {
+        return false;
       }
+      return kernel_32->insert_generator(*opt);
+    } else if (current_level == 2) {
+      // Try int64_t
+      std::optional<PairMatrix<int64_t>> opt = UniversalPairMatrixConversion<int64_t,T>(generator_pair);
+      if (!opt) {
+        return false;
+      }
+      return kernel_64->insert_generator(*opt);
+    } else {
+      // Use T
+      return kernel_T->insert_generator(generator_pair);
     }
-    return false;
+  }
+
+
+  // Insert a matrix pair
+  void insert_generator_pair(Ttype const& generator_pair) {
+    while (true) {
+      bool test = simple_insert_generator_pair(generator_pair);
+      if (test) {
+        return;
+      }
+      migrate_to_next_level();
+    }
   }
 
   // Extract the final reduced generators (always in type T)
