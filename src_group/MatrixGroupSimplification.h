@@ -1014,7 +1014,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
         delete_entry(val);
       }
       for (auto & val : found_improv.list_insert) {
-        if (!f_check(val.pair.first)) {
+        if (!f_check(val.pair.first) || !f_check(val.pair.second)) {
           return {};
         }
         insert_entry(val);

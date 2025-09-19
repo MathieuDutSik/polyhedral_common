@@ -128,7 +128,7 @@ private:
         // want to avoid losing a generator when we switch to
         // another numerics.
         for (auto & val : found_improv.list_insert) {
-          if (!f_check(val.pair.first)) {
+          if (!f_check(val.pair.first) || !f_check(val.pair.second)) {
             return false;
           }
           insert_entry(val);
@@ -149,7 +149,7 @@ public:
 
   // Insert a new generator and run reduction
   bool insert_generator(TcombPair<Ttype,Tnorm> const& generator) {
-    if (!f_check(generator.pair.first)) {
+    if (!f_check(generator.pair.first) || !f_check(generator.pair.second)) {
       return false;
     }
 
@@ -210,9 +210,9 @@ private:
   using Tnorm = T;
 
   // Upper bounds for each numeric type
-  int16_t max_val_16_;
-  int32_t max_val_32_;
-  int64_t max_val_64_;
+  int16_t max_val_16;
+  int32_t max_val_32;
+  int64_t max_val_64;
 
   // Type aliases for function types
   using f_complexity_16_t = std::function<int16_t(MyMatrix<int16_t> const&)>;
@@ -249,17 +249,17 @@ private:
   >> kernel_T;
 
   // Current active kernel (0=int16_t, 1=int32_t, 2=int64_t, 3=T)
-  int current_level_;
+  int current_level;
 
   // Migrate from current level to next level
   bool migrate_to_next_level() {
-    if (current_level_ >= 3) {
+    if (current_level >= 3) {
       return false; // Already at highest level
     }
 
-    os << "SIMP: Migrating from level " << current_level_ << " to level " << (current_level_ + 1) << "\n";
+    os << "SIMP: Migrating from level " << current_level << " to level " << (current_level + 1) << "\n";
 
-    if (current_level_ == 0) {
+    if (current_level == 0) {
       // Migrate from int16_t to int32_t
       auto current_set = kernel_16->get_current_set();
       for (auto const& comb_pair : current_set) {
@@ -274,8 +274,8 @@ private:
           return false;
         }
       }
-      current_level_ = 1;
-    } else if (current_level_ == 1) {
+      current_level = 1;
+    } else if (current_level == 1) {
       // Migrate from int32_t to int64_t
       auto current_set = kernel_32->get_current_set();
       for (auto const& comb_pair : current_set) {
@@ -290,8 +290,8 @@ private:
           return false;
         }
       }
-      current_level_ = 2;
-    } else if (current_level_ == 2) {
+      current_level = 2;
+    } else if (current_level == 2) {
       // Migrate from int64_t to T
       auto current_set = kernel_64->get_current_set();
       for (auto const& comb_pair : current_set) {
@@ -306,26 +306,26 @@ private:
           return false;
         }
       }
-      current_level_ = 3;
+      current_level = 3;
     }
 
     return true;
   }
 
 public:
-  OnlineHierarchicalMatrixReduction(int n, std::ostream& _os) : n_(n), os(_os), current_level_(0) {
+  OnlineHierarchicalMatrixReduction(int n, std::ostream& _os) : n_(n), os(_os), current_level(0) {
     // Calculate upper bounds for each numeric type
     double max_poss_16 = static_cast<double>(std::numeric_limits<int16_t>::max());
     double max_poss_32 = static_cast<double>(std::numeric_limits<int32_t>::max());
     double max_poss_64 = static_cast<double>(std::numeric_limits<int64_t>::max());
 
-    max_val_16_ = static_cast<int16_t>(sqrt(max_poss_16 / (10 * n)));
-    max_val_32_ = static_cast<int32_t>(sqrt(max_poss_32 / (10 * n)));
-    max_val_64_ = static_cast<int64_t>(sqrt(max_poss_64 / (10 * n)));
+    max_val_16 = static_cast<int16_t>(sqrt(max_poss_16 / (10 * n)));
+    max_val_32 = static_cast<int32_t>(sqrt(max_poss_32 / (10 * n)));
+    max_val_64 = static_cast<int64_t>(sqrt(max_poss_64 / (10 * n)));
 
-    os << "SIMP: Upper bounds: int16_t=" << max_val_16_
-       << ", int32_t=" << max_val_32_
-       << ", int64_t=" << max_val_64_ << "\n";
+    os << "SIMP: Upper bounds: int16_t=" << max_val_16
+       << ", int32_t=" << max_val_32
+       << ", int64_t=" << max_val_64 << "\n";
 
     // Create function objects
     f_complexity_16_t f_complexity_16 = [](MyMatrix<int16_t> const& M) -> int16_t {
@@ -334,16 +334,8 @@ public:
     f_product_16_t f_product_16 = [](MyMatrix<int16_t> const& A, MyMatrix<int16_t> const& B) -> MyMatrix<int16_t> {
       return A * B;
     };
-    f_check_16_t f_check_16 = [this](MyMatrix<int16_t> const& M) -> bool {
-      for (int i = 0; i < n_; i++) {
-        for (int j = 0; j < n_; j++) {
-          int16_t val = T_abs(M(i,j));
-          if (val > max_val_16_) {
-            return false;
-          }
-        }
-      }
-      return true;
+    f_check_16_t f_check_16 = [&max_val_16](MyMatrix<int16_t> const& M) -> bool {
+      return check_matrix_coefficients(M, max_val_16);
     };
 
     f_complexity_32_t f_complexity_32 = [](MyMatrix<int32_t> const& M) -> int32_t {
@@ -352,16 +344,8 @@ public:
     f_product_32_t f_product_32 = [](MyMatrix<int32_t> const& A, MyMatrix<int32_t> const& B) -> MyMatrix<int32_t> {
       return A * B;
     };
-    f_check_32_t f_check_32 = [this](MyMatrix<int32_t> const& M) -> bool {
-      for (int i = 0; i < n_; i++) {
-        for (int j = 0; j < n_; j++) {
-          int32_t val = T_abs(M(i,j));
-          if (val > max_val_32_) {
-            return false;
-          }
-        }
-      }
-      return true;
+    f_check_32_t f_check_32 = [&max_val_32](MyMatrix<int32_t> const& M) -> bool {
+      return check_matrix_coefficients(M, max_val_32);
     };
 
     f_complexity_64_t f_complexity_64 = [](MyMatrix<int64_t> const& M) -> int64_t {
@@ -370,16 +354,8 @@ public:
     f_product_64_t f_product_64 = [](MyMatrix<int64_t> const& A, MyMatrix<int64_t> const& B) -> MyMatrix<int64_t> {
       return A * B;
     };
-    f_check_64_t f_check_64 = [this](MyMatrix<int64_t> const& M) -> bool {
-      for (int i = 0; i < n_; i++) {
-        for (int j = 0; j < n_; j++) {
-          int64_t val = T_abs(M(i,j));
-          if (val > max_val_64_) {
-            return false;
-          }
-        }
-      }
-      return true;
+    f_check_64_t f_check_64 = [&max_val_64](MyMatrix<int64_t> const& M) -> bool {
+      return check_matrix_coefficients(M, max_val_64);
     };
 
     f_complexity_T_t f_complexity_T = [](MyMatrix<T> const& M) -> Tnorm {
@@ -412,10 +388,10 @@ public:
 
   // Insert a matrix pair 
   bool insert_generator_pair(Ttype const& generator_pair) {
-    while (current_level_ <= 3) {
+    while (current_level <= 3) {
       bool success = false;
 
-      if (current_level_ == 0) {
+      if (current_level == 0) {
         // Try int16_t
         MyMatrix<int16_t> mat_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.first);
         MyMatrix<int16_t> mat_inv_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.second);
@@ -423,7 +399,7 @@ public:
         int16_t norm_16 = get_ell1_complexity_measure(mat_16);
         TcombPair<MyMatrix<int16_t>, int16_t> comb_pair_16{pair_16, norm_16};
         success = kernel_16->insert_generator(comb_pair_16);
-      } else if (current_level_ == 1) {
+      } else if (current_level == 1) {
         // Try int32_t
         MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.first);
         MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.second);
@@ -431,7 +407,7 @@ public:
         int32_t norm_32 = get_ell1_complexity_measure(mat_32);
         TcombPair<MyMatrix<int32_t>, int32_t> comb_pair_32{pair_32, norm_32};
         success = kernel_32->insert_generator(comb_pair_32);
-      } else if (current_level_ == 2) {
+      } else if (current_level == 2) {
         // Try int64_t
         MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.first);
         MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.second);
@@ -439,7 +415,7 @@ public:
         int64_t norm_64 = get_ell1_complexity_measure(mat_64);
         TcombPair<MyMatrix<int64_t>, int64_t> comb_pair_64{pair_64, norm_64};
         success = kernel_64->insert_generator(comb_pair_64);
-      } else if (current_level_ == 3) {
+      } else if (current_level == 3) {
         // Use T
         Tnorm norm_T = get_ell1_complexity_measure(generator_pair.first);
         TcombPair<MyMatrix<T>, Tnorm> comb_pair_T{generator_pair, norm_T};
@@ -462,25 +438,25 @@ public:
   std::vector<MyMatrix<T>> get_reduced_generators() {
     std::vector<MyMatrix<T>> result;
 
-    if (current_level_ == 0) {
+    if (current_level == 0) {
       auto current_set = kernel_16->get_current_set();
       for (auto const& comb_pair : current_set) {
         MyMatrix<T> mat_T = UniversalMatrixConversion<T,int16_t>(comb_pair.pair.first);
         result.push_back(mat_T);
       }
-    } else if (current_level_ == 1) {
+    } else if (current_level == 1) {
       auto current_set = kernel_32->get_current_set();
       for (auto const& comb_pair : current_set) {
         MyMatrix<T> mat_T = UniversalMatrixConversion<T,int32_t>(comb_pair.pair.first);
         result.push_back(mat_T);
       }
-    } else if (current_level_ == 2) {
+    } else if (current_level == 2) {
       auto current_set = kernel_64->get_current_set();
       for (auto const& comb_pair : current_set) {
         MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(comb_pair.pair.first);
         result.push_back(mat_T);
       }
-    } else if (current_level_ == 3) {
+    } else if (current_level == 3) {
       auto current_set = kernel_T->get_current_set();
       for (auto const& comb_pair : current_set) {
         result.push_back(comb_pair.pair.first);
@@ -491,13 +467,14 @@ public:
   }
 
   // Get current level information
-  int get_current_level() const { return current_level_; }
+  int get_current_level() const { return current_level; }
   size_t get_current_size() const {
-    if (current_level_ == 0) return kernel_16->size();
-    if (current_level_ == 1) return kernel_32->size();
-    if (current_level_ == 2) return kernel_64->size();
-    if (current_level_ == 3) return kernel_T->size();
-    return 0;
+    if (current_level == 0) return kernel_16->size();
+    if (current_level == 1) return kernel_32->size();
+    if (current_level == 2) return kernel_64->size();
+    if (current_level == 3) return kernel_T->size();
+    std::cerr << "ONL: We do not have the right level for OnlineExhaustiveReduction\n";
+    throw TerminalException{1};
   }
 };
 
