@@ -679,6 +679,19 @@ bool operator<(TcombPair<Ttype,Tnorm> const &a, TcombPair<Ttype,Tnorm> const &b)
   return a.pair.first < b.pair.first;
 }
 
+template<typename Ttype, typename Tnorm, typename Fcomplexity>
+TcombPair<Ttype,Tnorm> generate_comb_pair(std::pair<Ttype,Ttype> const& pair, Fcomplexity f_complexity) {
+  Tnorm norm1 = f_complexity(pair.first);
+  Tnorm norm2 = f_complexity(pair.second);
+  if (norm1 < norm1) {
+    return {pair, norm1};
+  } else {
+    std::pair<Ttype,Ttype> pair2{pair.second, pair.first};
+    return {std::move(pair2), norm2};
+  }
+}
+
+
 namespace std {
   template <typename Ttype, typename Tnorm>
   struct hash<TcombPair<Ttype,Tnorm>> {
@@ -694,6 +707,7 @@ struct GenResult {
   bool do_something;
 };
 
+
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct>
 GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b, Fcomplexity f_complexity, Fproduct f_product) {
   // Generate the possible ways to simplify the pair of elements.
@@ -707,18 +721,7 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
   //
   elt_dir = f_product(a_dir, b_dir);
   elt_inv = f_product(b_inv, a_inv);
-  auto iife=[&]() -> TcombPair<Ttype,Tnorm> {
-    Tnorm norm_dir = f_complexity(elt_dir);
-    Tnorm norm_inv = f_complexity(elt_inv);
-    if (norm_dir < norm_inv) {
-      std::pair<Ttype,Ttype> pair{elt_dir,elt_inv};
-      return {std::move(pair), norm_dir};
-    } else {
-      std::pair<Ttype,Ttype> pair{elt_inv,elt_dir};
-      return {std::move(pair), norm_inv};
-    }
-  };
-  TcombPair<Ttype,Tnorm> cand = iife();
+  TcombPair<Ttype,Tnorm> cand = generate_comb_pair<Ttype,Tnorm,Fcomplexity>({elt_dir, elt_inv}, f_complexity);
   auto f_insert=[&](Ttype const& elt1, Ttype const& elt2) -> void {
     Tnorm norm1 = f_complexity(elt1);
     Tnorm norm2 = f_complexity(elt2);
@@ -1390,20 +1393,15 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   return new_list_gens;
 }
 
+
+
+
 template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
 std::optional<std::vector<Ttype>> ExhaustiveReductionComplexityKernel(std::vector<std::pair<Ttype,Ttype>> const& ListPair, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, std::ostream& os) {
   std::unordered_set<TcombPair<Ttype,Tnorm>> SetComb;
   for (auto & ePair : ListPair) {
-    Tnorm norm_dir = f_complexity(ePair.first);
-    Tnorm norm_inv = f_complexity(ePair.second);
-    if (norm_dir < norm_inv) {
-      TcombPair<Ttype,Tnorm> pair1{ePair, norm_dir};
-      SetComb.insert(pair1);
-    } else {
-      std::pair<Ttype,Ttype> fPair{ePair.second, ePair.first};
-      TcombPair<Ttype,Tnorm> pair2{fPair, norm_inv};
-      SetComb.insert(pair2);
-    }
+    TcombPair<Ttype,Tnorm> comb = generate_comb_pair<Ttype,Tnorm,Fcomplexity>(ePair, f_complexity);
+    SetComb.insert(comb);
   }
   std::vector<TcombPair<Ttype,Tnorm>> ListComb;
   for (auto & eComb: SetComb) {
@@ -1586,6 +1584,7 @@ inline typename std::enable_if<!is_implementation_of_Z<T>::value,std::vector<MyM
  */
 template<typename T>
 inline typename std::enable_if<is_implementation_of_Z<T>::value,std::vector<MyMatrix<T>>>::type ExhaustiveReductionComplexityGroupMatrixInner(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, std::ostream& os) {
+  // The maximum of the L1 norms of the matrices of ListPair.
   T max_val = get_ellinfinity_norm(ListPair);
   // int8_t has some compilation problems.
 

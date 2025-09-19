@@ -148,16 +148,16 @@ public:
     : f_complexity(_f_complexity), f_product(_f_product), f_check(_f_check), os(_os) {}
 
   // Insert a new generator and run reduction
-  bool insert_generator(TcombPair<Ttype,Tnorm> const& generator) {
-    if (!f_check(generator.pair.first) || !f_check(generator.pair.second)) {
+  bool insert_generator(std::pair<Ttype, Ttype> const& pair) {
+    if (!f_check(pair.first) || !f_check(pair.second)) {
       return false;
     }
-
-    if (map.count(generator) == 1) {
+    TcombPair<Ttype,Tnorm> comb = generate_comb_pair<Ttype,Tnorm,Fcomplexity>(pair, f_complexity);
+    if (map.count(comb) == 1) {
       return true; // Already present
     }
 
-    insert_entry(generator);
+    insert_entry(comb);
     return run_reduction_pass();
   }
 
@@ -268,9 +268,7 @@ private:
         MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_16);
         MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,int16_t>(mat_inv_16);
         std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
-        int32_t norm_32 = get_ell1_complexity_measure(mat_32);
-        TcombPair<MyMatrix<int32_t>, int32_t> comb_pair_32{pair_32, norm_32};
-        if (!kernel_32->insert_generator(comb_pair_32)) {
+        if (!kernel_32->insert_generator(pair_32)) {
           return false;
         }
       }
@@ -284,9 +282,7 @@ private:
         MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_32);
         MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,int32_t>(mat_inv_32);
         std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
-        int64_t norm_64 = get_ell1_complexity_measure(mat_64);
-        TcombPair<MyMatrix<int64_t>, int64_t> comb_pair_64{pair_64, norm_64};
-        if (!kernel_64->insert_generator(comb_pair_64)) {
+        if (!kernel_64->insert_generator(pair_64)) {
           return false;
         }
       }
@@ -300,9 +296,7 @@ private:
         MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(mat_64);
         MyMatrix<T> mat_inv_T = UniversalMatrixConversion<T,int64_t>(mat_inv_64);
         Ttype pair_T{mat_T, mat_inv_T};
-        Tnorm norm_T = get_ell1_complexity_measure(mat_T);
-        TcombPair<MyMatrix<T>, Tnorm> comb_pair_T{pair_T, norm_T};
-        if (!kernel_T->insert_generator(comb_pair_T)) {
+        if (!kernel_T->insert_generator(pair_T)) {
           return false;
         }
       }
@@ -396,30 +390,22 @@ public:
         MyMatrix<int16_t> mat_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.first);
         MyMatrix<int16_t> mat_inv_16 = UniversalMatrixConversion<int16_t,T>(generator_pair.second);
         std::pair<MyMatrix<int16_t>, MyMatrix<int16_t>> pair_16{mat_16, mat_inv_16};
-        int16_t norm_16 = get_ell1_complexity_measure(mat_16);
-        TcombPair<MyMatrix<int16_t>, int16_t> comb_pair_16{pair_16, norm_16};
-        success = kernel_16->insert_generator(comb_pair_16);
+        success = kernel_16->insert_generator(pair_16);
       } else if (current_level == 1) {
         // Try int32_t
         MyMatrix<int32_t> mat_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.first);
         MyMatrix<int32_t> mat_inv_32 = UniversalMatrixConversion<int32_t,T>(generator_pair.second);
         std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32{mat_32, mat_inv_32};
-        int32_t norm_32 = get_ell1_complexity_measure(mat_32);
-        TcombPair<MyMatrix<int32_t>, int32_t> comb_pair_32{pair_32, norm_32};
-        success = kernel_32->insert_generator(comb_pair_32);
+        success = kernel_32->insert_generator(pair_32);
       } else if (current_level == 2) {
         // Try int64_t
         MyMatrix<int64_t> mat_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.first);
         MyMatrix<int64_t> mat_inv_64 = UniversalMatrixConversion<int64_t,T>(generator_pair.second);
         std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64{mat_64, mat_inv_64};
-        int64_t norm_64 = get_ell1_complexity_measure(mat_64);
-        TcombPair<MyMatrix<int64_t>, int64_t> comb_pair_64{pair_64, norm_64};
-        success = kernel_64->insert_generator(comb_pair_64);
+        success = kernel_64->insert_generator(pair_64);
       } else if (current_level == 3) {
         // Use T
-        Tnorm norm_T = get_ell1_complexity_measure(generator_pair.first);
-        TcombPair<MyMatrix<T>, Tnorm> comb_pair_T{generator_pair, norm_T};
-        success = kernel_T->insert_generator(comb_pair_T);
+        success = kernel_T->insert_generator(generator_pair);
       }
 
       if (success) {
