@@ -14,13 +14,29 @@
 #define DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
 #endif
 
+template<typename U>
+using PairMatrix = std::pair<MyMatrix<U>,MyMatrix<U>>;
+
 
 template <typename T2, typename T1>
-std::pair<MyMatrix<T2>,MyMatrix<T2>>
-UniversalPairMatrixConversion(std::pair<MyMatrix<T1>,MyMatrix<T1>> const &pair) {
+PairMatrix<T2> UniversalPairMatrixConversion(PairMatrix<T1> const &pair) {
   MyMatrix<T2> m1 = UniversalMatrixConversion<T2,T1>(pair.first);
   MyMatrix<T2> m2 = UniversalMatrixConversion<T2,T1>(pair.second);
   return {std::move(m1), std::move(m2)};
+}
+
+template <typename T2, typename T1>
+std::optional<PairMatrix<T2>> UniversalPairMatrixConversionCheck(PairMatrix<T1> const &pair) {
+  std::optional<MyMatrix<T2>> opt1 = UniversalMatrixConversionCheck<T2,T1>(pair.first);
+  if (!opt1) {
+    return {};
+  }
+  std::optional<MyMatrix<T2>> opt2 = UniversalMatrixConversionCheck<T2,T1>(pair.second);
+  if (!opt2) {
+    return {};
+  }
+  PairMatrix<T2> p{*opt1, *opt2};
+  return p;
 }
 
 // Online/incremental version of ExhaustiveReductionComplexityKernelInner_V2
@@ -210,9 +226,6 @@ public:
   }
 };
 
-template<typename U>
-using PairMatrix = std::pair<MyMatrix<U>,MyMatrix<U>>;
-
 // Hierarchical online reduction system that automatically switches between
 // int16_t -> int32_t -> int64_t -> T numerics when overflow occurs
 template<typename T>
@@ -391,21 +404,21 @@ public:
   bool simple_insert_generator_pair(Ttype const& generator_pair) {
     if (current_level == 0) {
       // Try int16_t
-      std::optional<PairMatrix<int16_t>> opt = UniversalPairMatrixConversion<int16_t,T>(generator_pair);
+      std::optional<PairMatrix<int16_t>> opt = UniversalPairMatrixConversionCheck<int16_t,T>(generator_pair);
       if (!opt) {
         return false;
       }
       return kernel_16->insert_generator(*opt);
     } else if (current_level == 1) {
       // Try int32_t
-      std::optional<PairMatrix<int32_t>> opt = UniversalPairMatrixConversion<int32_t,T>(generator_pair);
+      std::optional<PairMatrix<int32_t>> opt = UniversalPairMatrixConversionCheck<int32_t,T>(generator_pair);
       if (!opt) {
         return false;
       }
       return kernel_32->insert_generator(*opt);
     } else if (current_level == 2) {
       // Try int64_t
-      std::optional<PairMatrix<int64_t>> opt = UniversalPairMatrixConversion<int64_t,T>(generator_pair);
+      std::optional<PairMatrix<int64_t>> opt = UniversalPairMatrixConversionCheck<int64_t,T>(generator_pair);
       if (!opt) {
         return false;
       }
