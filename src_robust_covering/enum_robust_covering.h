@@ -256,6 +256,30 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
 
 
 
+template<typename T, typename Tint>
+T random_estimation_robust_covering(MyMatrix<T> const& GramMat, size_t n_iter, std::ostream & os) {
+  CVPSolver<T,Tint> solver(GramMat, os);
+  int dim = GramMat.rows();
+  T max_cov(0);
+  MyMatrix<T> eV(dim);
+  for (size_t iter=0; iter<n_iter; iter++) {
+    int denom = random() % 1000000000000000;
+    T denom_T(denom);
+    for (int i=0; i<dim; i++) {
+      int val = random() % denom;
+      T val_T(val);
+      eV(i) = val_T / denom_T;
+    }
+    ResultRobustClosest<T,Tint> rrc = compute_robust_closest<T,Tint>(solver, eV);
+    if (rrc.robust_minimum > max_cov) {
+      max_cov = rrc.robust_minimum;
+    }
+  }
+  return max_cov;
+}
+
+
+
 
 
 
