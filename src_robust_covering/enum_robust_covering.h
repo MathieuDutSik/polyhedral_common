@@ -3,14 +3,21 @@
 #define SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 
 
-/*
-  We want to enumerate the possible parallelepipeds
-  of fixed dimension.
-  
- */
+struct PartSolution {
+  int vert;
+  std::vector<int> l_dir;
+  Face full_set;
+};
+
 template<typename Tint>
-std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, int const& p) {
-  int miss_val = std::numeric_limits<int>::max();
+struct DataVect {
+  int n_vect;
+  std::vector<MyVector<Tint>> ListV;
+  std::unordered_map<MyVector<Tint>, int> map;
+}
+
+template<typename Tint>
+DataVect<Tint> get_data_vect(MyMatrix<Tint> const& M) {
   int n_vect = M.rows();
   std::vector<MyVector<Tint>> ListV;
   std::unordered_map<MyVector<Tint>, int> map;
@@ -19,26 +26,26 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, int const& p
     map[V] = i_vect;
     ListV.push_back(V);
   }
-  std::vector<MyMatrix<int>> ListMset;
-  for (int i=0; i<=p; i++) {
-    MyMatrix<int> Mset = BuildSet(i, 2);
-    ListMset.push(Mset);
-  }
-  struct PartSolution {
-    int vert;
-    std::vector<int> l_dir;
-    Face full_set;
-  };
+  return {n_vect, std::move(ListV), std::move(map)};
+}
 
+/*
+  We want to enumerate the possible parallelepipeds
+  of fixed dimension.
+  It is a simple tree search
+ */
+template<typename Tint, typename Finsert>
+void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Finsert f_insert) {
+  int miss_val = std::numeric_limits<int>::max();
 
   auto span_new_solution=[&](PartSolution const& psol, int const& newdir) -> std::optional<PartSolution> {
     Face new_set = psol.full_set;
-    MyVector<Tint> trans = ListV[newdir] - ListV[psol.vert];
+    MyVector<Tint> trans = dv.ListV[newdir] - dv.ListV[psol.vert];
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       if (psol.full_set[i_vect] == 1) {
-        MyVector<Tint> newV = ListV[i_vect] + trans;
-        auto iter = map.find(newV);
-        if (iter == map.end()) {
+        MyVector<Tint> newV = dv.ListV[i_vect] + trans;
+        auto iter = dv.map.find(newV);
+        if (iter == dv.map.end()) {
           return {};
         }
         int pos = *iter;
@@ -86,7 +93,6 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, int const& p
     return {prev_sol, l_sol, choice};
   };
   std::vector<OneLevel> l_levels{get_initial()};
-  std::vector<Face> l_face;
   int i_level = 0;
   auto GoUpNextInTree=[&]() -> bool {
     while(true) {
@@ -102,12 +108,12 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, int const& p
     }
   };
   auto NextInTree=[&]() -> bool {
+    int choice = l_levels[i_level].choice;
+    PartSolution const& psol = l_levels[i_level].l_sol[choice];
     if (i_level == p) {
-      l_face.push_back(l_levels[p].full_set);
+      f_insert(psol);
       return GoUpNextInTree();
     } else {
-      int choice = l_levels[i_level].choice;
-      PartSolution const& psol = l_levels[i_level].l_sol[choice];
       std::vector<PartSolution> new_sols = span_part_solution(psol);
       if (new_sols.size() == 0) {
         return GoUpNextInTree();
@@ -131,6 +137,39 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, int const& p
   }
   return l_face;
 }
+
+
+template<typename Tint>
+std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M) {
+  DataVect<Tint> dv = get_data_vect(M);
+  std::vector<Face> l_face;
+  int dim = M.cols();
+  int pow = 1;
+  for (int u=0; u<dim; u++) {
+    pow *= 2;
+  }
+  if (dv.n_vect < pow) {
+    // No point trying to enumerate when there are no solutions.
+    return l_face;
+  }
+  MyMatrix<Tint> Mdet(dim,dim);
+  auto f_insert=[&](PartSolution const& psol) -> void {
+    int e_vert = psol.vert;
+    for (int i=0; i<dim; i++) {
+      int f_vert = psol.l_dir[i];
+      for (int j=0; j<dim; j++) {
+        Mdet(i,j) = M(f_vert, j) - M(e_vert, j);
+      }
+    }
+    Tint det = Determinant(Mdet);
+    if (T_abs(det) == 1) {
+      l_face.push_back(psol.full_set);
+    }
+  };
+  kernel_enumerate_parallelepiped(dv, dim, f_insert);
+  return l_face;
+}
+
 
 
 
