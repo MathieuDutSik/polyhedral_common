@@ -2,6 +2,11 @@
 #ifndef SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 #define SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 
+// clang-format off
+#include "ShortestUniversal.h"
+// clang-format on
+
+
 
 struct PartSolution {
   int vert;
@@ -138,16 +143,20 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
   return l_face;
 }
 
+int pow_two(int dim) {
+  int pow = 1;
+  for (int u=0; u<dim; u++) {
+    pow *= 2;
+  }
+  return pow;
+}
 
 template<typename Tint>
 std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M) {
   DataVect<Tint> dv = get_data_vect(M);
   std::vector<Face> l_face;
   int dim = M.cols();
-  int pow = 1;
-  for (int u=0; u<dim; u++) {
-    pow *= 2;
-  }
+  int pow = pow_two(dim);
   if (dv.n_vect < pow) {
     // No point trying to enumerate when there are no solutions.
     return l_face;
@@ -168,6 +177,81 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M) {
   };
   kernel_enumerate_parallelepiped(dv, dim, f_insert);
   return l_face;
+}
+
+template<typename T, typename Tint>
+struct ResultRobustClosest {
+  T robust_minimum;
+  std::vector<MyMatrix<Tint>> list_parallelepipeds;
+};
+
+
+
+template<typename T, typename Tint>
+ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV) {
+  T min(0);
+  int n_iter = 0;
+  int dim = eV.size();
+  int pow = pow_two(dim);
+  MyMatrix<Tint> M_sol(pow, dim);
+  auto get_msol=[&](MyMatrix<Tint> const& Min, Face const& eFace) -> MyMatrix<Tint> {
+    int pos = 0;
+    for (int& vert: FaceToVector<int>(eFace)) {
+      for (int i=0; i<dim; i++) {
+        M_sol(pos, i) = Min(vert, i);
+      }
+      pos += 1;
+    }
+    return M_sol;
+  };
+  while(true) {
+    if (n_iter == 0) {
+      resultCVP<T, Tint> res_cvp = solve.SingleSolver(eV);
+      min = res_cvp.TheNorm;
+      std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect);
+      if (l_face.size() > 0) {
+        std::vector<MyMatrix<Tint>> list_parallelepipeds;
+        for (auto & eFace: l_face) {
+          list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
+        }
+        return {min, list_parallelepipeds};
+      }
+    } else {
+      min = (min * T(3)) / T(2);
+      std::vector<MyVector<Tint>> elist = soler.AtMostNormVectors(eV, min);
+      std::vector<T> l_norm;
+      for (auto & fV: elist) {
+        MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
+        T norm = EvaluationQuadForm(solver.GramMat, diff);
+        l_norm.push_back(norm);
+      }
+      MyMatrix<T> M = MatrixFromVectorFamily(elist);
+      std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect);
+      if (l_face.size() > 0) {
+        T eff_min = min + T(1);
+        std::vector<MyMatrix<Tint>> list_parallelepipeds;
+        for (auto & eFace: l_face) {
+          T local_max_norm(0);
+          for (int& vert: FaceToVector<int>(eFace)) {
+            if (l_norm[vert] > local_max_norm) {
+              local_max_norm = l_norm[vert];
+            }
+          }
+          MyMatrix<Tint> Mparall = get_msol(M, eFace);
+          if (local_max_norm < eff_min) {
+            list_parallelepipeds.clear();
+            eff_min = local_max_norm;
+            list_parallelepipeds.push_back(Mparall);
+          } else {
+            if (local_max_norm == eff_min) {
+              list_parallelepipeds.push_back(Mparall);
+            }
+          }
+        }
+        return {eff_min, list_parallelepipeds};
+      }
+    }
+  }
 }
 
 
