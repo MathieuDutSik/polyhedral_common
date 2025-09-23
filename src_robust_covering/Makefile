@@ -1,4 +1,4 @@
-PROGRAM		= GetConfiguration
+PROGRAM		= RandomEstimation
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

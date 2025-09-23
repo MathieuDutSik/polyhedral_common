@@ -115,7 +115,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     os << "|DEL: Processing TheCVP 2|=" << time << "\n";
 #endif
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
-    os << "|ListIneq_vect|=" << ListIneq_vect.size() << "\n";
+    os << "DEL: |ListIneq_vect|=" << ListIneq_vect.size() << "\n";
 #endif
   }
 }
@@ -185,9 +185,9 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   for (int iVert = 1; iVert < nbVert; iVert++) {
     T eNorm = get_sqr_dist(iVert);
     if (SquareRadius != eNorm) {
-      std::cerr << "SquareRadius=" << SquareRadius << "\n";
-      std::cerr << "eNorm=" << eNorm << "\n";
-      std::cerr << "Error in the Solutioning\n";
+      std::cerr << "DEL: SquareRadius=" << SquareRadius << "\n";
+      std::cerr << "DEL: eNorm=" << eNorm << "\n";
+      std::cerr << "DEL: Error in the Solutioning\n";
       throw TerminalException{1};
     }
   }
@@ -265,7 +265,7 @@ public:
     MyMatrix<T> NSP = NullspaceTrMat(Equa);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     if (NSP.rows() != 2) {
-      std::cerr << "Error in the computation of the kernel\n";
+      std::cerr << "DEL: Error in the computation of the kernel\n";
       throw TerminalException{1};
     }
 #endif
@@ -281,7 +281,7 @@ public:
           return;
         }
       }
-      std::cerr << "Failed to find a non-zero entry\n";
+      std::cerr << "DEL: Failed to find a non-zero entry\n";
       throw TerminalException{1};
     };
     get_point_direction();
@@ -504,6 +504,7 @@ struct ResultCov {
   T TheCov;
 };
 
+
 template<typename T>
 ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet, T TheCov) {
 
@@ -560,9 +561,6 @@ std::string to_stringGAP(ResultCov<T> const& x) {
     + ", TheDet:=" + std::to_string(x.TheDet)
     + ", TheCov:=" + std::to_string(x.TheCov) + ")";
 }
-
-
-
 
 
 // clang-format off
