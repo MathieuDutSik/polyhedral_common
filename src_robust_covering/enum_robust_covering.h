@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "ShortestUniversal.h"
+#include "FundamentalDelaunay.h"
 // clang-format on
 
 
@@ -19,7 +20,7 @@ struct DataVect {
   int n_vect;
   std::vector<MyVector<Tint>> ListV;
   std::unordered_map<MyVector<Tint>, int> map;
-}
+};
 
 template<typename Tint>
 DataVect<Tint> get_data_vect(MyMatrix<Tint> const& M) {
@@ -41,6 +42,7 @@ DataVect<Tint> get_data_vect(MyMatrix<Tint> const& M) {
  */
 template<typename Tint, typename Finsert>
 void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Finsert f_insert) {
+  int n_vect = dv.n_vect;
   int miss_val = std::numeric_limits<int>::max();
 
   auto span_new_solution=[&](PartSolution const& psol, int const& newdir) -> std::optional<PartSolution> {
@@ -53,7 +55,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
         if (iter == dv.map.end()) {
           return {};
         }
-        int pos = *iter;
+        int pos = iter->second;
         new_set[pos] = 1;
       }
     }
@@ -67,7 +69,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
     std::vector<PartSolution> list_sol;
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       if (psol.full_set[i_vect] == 0) {
-        std::option<PartSolution> opt = span_new_solution(psol, i_vect);
+        std::optional<PartSolution> opt = span_new_solution(psol, i_vect);
         if (opt) {
           list_sol.push_back(*opt);
         }
@@ -140,7 +142,6 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
       break;
     }
   }
-  return l_face;
 }
 
 int pow_two(int dim) {
@@ -170,7 +171,7 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M) {
         Mdet(i,j) = M(f_vert, j) - M(e_vert, j);
       }
     }
-    Tint det = Determinant(Mdet);
+    Tint det = DeterminantMat(Mdet);
     if (T_abs(det) == 1) {
       l_face.push_back(psol.full_set);
     }
@@ -206,7 +207,7 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
   };
   while(true) {
     if (n_iter == 0) {
-      resultCVP<T, Tint> res_cvp = solve.SingleSolver(eV);
+      resultCVP<T, Tint> res_cvp = solver.SingleSolver(eV);
       min = res_cvp.TheNorm;
       std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect);
       if (l_face.size() > 0) {
@@ -218,15 +219,15 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
       }
     } else {
       min = (min * T(3)) / T(2);
-      std::vector<MyVector<Tint>> elist = soler.AtMostNormVectors(eV, min);
+      std::vector<MyVector<Tint>> elist = solver.AtMostNormVectors(eV, min);
       std::vector<T> l_norm;
       for (auto & fV: elist) {
         MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
         T norm = EvaluationQuadForm(solver.GramMat, diff);
         l_norm.push_back(norm);
       }
-      MyMatrix<T> M = MatrixFromVectorFamily(elist);
-      std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect);
+      MyMatrix<Tint> M = MatrixFromVectorFamily(elist);
+      std::vector<Face> l_face = enumerate_parallelepiped(M);
       if (l_face.size() > 0) {
         T eff_min = min + T(1);
         std::vector<MyMatrix<Tint>> list_parallelepipeds;
@@ -261,7 +262,7 @@ T random_estimation_robust_covering(MyMatrix<T> const& GramMat, size_t n_iter, s
   CVPSolver<T,Tint> solver(GramMat, os);
   int dim = GramMat.rows();
   T max_cov(0);
-  MyMatrix<T> eV(dim);
+  MyVector<T> eV(dim);
   for (size_t iter=0; iter<n_iter; iter++) {
     int denom = random() % 1000000000000000;
     T denom_T(denom);

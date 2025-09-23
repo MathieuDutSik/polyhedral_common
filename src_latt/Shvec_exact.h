@@ -732,14 +732,16 @@ resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
 }
 
 template <typename T, typename Tint> struct CVPSolver {
-private:
+public:
   MyMatrix<T> const &GramMat;
+private:
   int dim;
   std::ostream &os;
   LLLreduction<T, Tint> eRec;
   MyMatrix<T> Q_T;
-  T_shvec_request<T> request;
-
+  // This entry is const in spirit but is indeed used by
+  // the code.
+  T_shvec_request<T> mutable request;
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
     : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
@@ -753,7 +755,7 @@ public:
         T_shvec_request<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
   }
   ResultShortest<Tint> ShortestAtDistance(MyVector<T> const &eV,
-                                          T const &TheNorm) {
+                                          T const &TheNorm) const {
     if (IsIntegralVector(eV)) {
       MyVector<Tint> eV_tint = UniversalVectorConversion<Tint, T>(eV);
       return {{}, eV_tint};
@@ -796,7 +798,7 @@ public:
     }
     return {shortest, {}};
   }
-  resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) {
+  resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) const {
     if (IsIntegralVector(eV)) {
       T TheNorm(0);
       MyMatrix<Tint> ListVect(1, dim);
@@ -839,7 +841,7 @@ public:
     return {TheNorm, std::move(ListClos)};
   }
   std::vector<MyVector<Tint>> FixedNormVectors(MyVector<T> const &eV,
-                                               T const &TheNorm) {
+                                               T const &TheNorm) const {
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
@@ -871,7 +873,7 @@ public:
     return ListVect;
   }
   std::vector<MyVector<Tint>> AtMostNormVectors(MyVector<T> const &eV,
-                                                T const &MaxNorm) {
+                                                T const &MaxNorm) const {
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);

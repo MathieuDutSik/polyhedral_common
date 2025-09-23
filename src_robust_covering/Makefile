@@ -1,4 +1,4 @@
-PROGRAM		= RandomEstimation
+PROGRAM		= Robust_RandomEstimation
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
@@ -11,7 +11,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../permutalib/src -I../src_latt -I../src_dualdesc -I../src_short -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph -I../src_comb -I../src_group -I../src_poly -I../src_isotropy -I../permutalib/src -I../src_latt -I../src_dualdesc -I../src_short -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 #CDEFS           = -DDEBUG_CANONIC -DTIMINGS
