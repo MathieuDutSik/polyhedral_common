@@ -42,7 +42,7 @@ void process_A(std::string const &arithmetic,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 7 && argc != 5) {
+    if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile] [OutFormat] [OutFile]\n";
