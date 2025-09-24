@@ -499,6 +499,7 @@ struct ResultCov {
   double CoveringRadius;
   double DeterminantLattice;
   double VolumeBall;
+  double TheCov_d;
   int TheDim;
   T TheDet;
   T TheCov;
@@ -547,16 +548,17 @@ ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet, T TheCov)
   };
   double VolumeBall = get_volume_ball();
   double CovDens = red * VolumeBall;
-  return {red, CovDens, TheCovRad, TheDetLattice, VolumeBall, TheDim, TheDet, TheCov};
+  return {red, CovDens, TheCovRad, TheDetLattice, VolumeBall, TheCov_d, TheDim, TheDet, TheCov};
 }
 
 template<typename T>
 std::string to_stringGAP(ResultCov<T> const& x) {
-  return "rec(CovDensityNormalized" + std::to_string(x.CovDensityNormalized)
+  return "rec(CovDensityNormalized:=" + std::to_string(x.CovDensityNormalized)
     + ", CovDensity:=" + std::to_string(x.CovDensity)
     + ", CoveringRadius:=" + std::to_string(x.CoveringRadius)
     + ", DeterminantLattice:=" + std::to_string(x.DeterminantLattice)
     + ", VolumeBall:=" + std::to_string(x.VolumeBall)
+    + ", TheCov_d:=" + std::to_string(x.TheCov_d)
     + ", TheDim:=" + std::to_string(x.TheDim)
     + ", TheDet:=" + std::to_string(x.TheDet)
     + ", TheCov:=" + std::to_string(x.TheCov) + ")";
