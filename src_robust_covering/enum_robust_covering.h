@@ -92,6 +92,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
     std::vector<PartSolution> l_sol;
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       Face full_set(n_vect);
+      full_set[i_vect] = 1;
       PartSolution esol{i_vect, {}, full_set};
       l_sol.push_back(esol);
     }
