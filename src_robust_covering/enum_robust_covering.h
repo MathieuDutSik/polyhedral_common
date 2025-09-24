@@ -147,7 +147,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
 #endif
       std::vector<PartSolution> new_sols = span_part_solution(psol);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   NextInTree, after span_part_solution\n";
+      os << "ROBUST:   NextInTree, after span_part_solution |new_sols|=" << new_sols.size() << "\n";
 #endif
       if (new_sols.size() == 0) {
         return GoUpNextInTree();
@@ -160,6 +160,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const& dv, int const& p, Fin
       } else {
         l_levels.push_back(new_level);
       }
+      i_level = new_i_level;
       return true;
     }
   };
@@ -226,7 +227,7 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST: compute_robust_closest, step 1\n";
 #endif
-  T min(0);
+  T min_search(0);
   int n_iter = 0;
   int dim = eV.size();
   int pow = pow_two(dim);
@@ -256,28 +257,33 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
 #ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   After solver.SingleSolver\n";
 #endif
-      min = res_cvp.TheNorm;
+      min_search = res_cvp.TheNorm;
       std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
       if (l_face.size() > 0) {
         std::vector<MyMatrix<Tint>> list_parallelepipeds;
         for (auto & eFace: l_face) {
           list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
         }
-        return {min, std::move(list_parallelepipeds)};
+        return {min_search, std::move(list_parallelepipeds)};
       }
     } else {
-      min = (min * T(3)) / T(2);
+      min_search = (min_search * T(3)) / T(2);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   Before solver.AtMostNormVectors\n";
 #endif
-      std::vector<MyVector<Tint>> elist = solver.AtMostNormVectors(eV, min);
+      std::vector<MyVector<Tint>> elist = solver.AtMostNormVectors(eV, min_search);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   After solver.AtMostNormVectors |elist|=" << elist.size() << "\n";
+      int i_fv = 0;
 #endif
       std::vector<T> l_norm;
       for (auto & fV: elist) {
         MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
         T norm = EvaluationQuadForm(solver.GramMat, diff);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   i_fv=" << i_fv << " norm=" << norm << "\n";
+        i_fv += 1;
+#endif
         l_norm.push_back(norm);
       }
       MyMatrix<Tint> M = MatrixFromVectorFamily(elist);
@@ -289,15 +295,26 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
       os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size() << "\n";
 #endif
       if (l_face.size() > 0) {
-        T eff_min = min + T(1);
+        T eff_min = min_search + T(1);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
+        int i_face = 0;
+#endif
         std::vector<MyMatrix<Tint>> list_parallelepipeds;
         for (auto & eFace: l_face) {
           T local_max_norm(0);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+          os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
+#endif
           for (int& vert: FaceToVector<int>(eFace)) {
             if (l_norm[vert] > local_max_norm) {
               local_max_norm = l_norm[vert];
             }
           }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+          os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
+          i_face += 1;
+#endif
           MyMatrix<Tint> Mparall = get_msol(M, eFace);
           if (local_max_norm < eff_min) {
             list_parallelepipeds.clear();
@@ -309,6 +326,9 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
             }
           }
         }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   eff_min=" << eff_min << "\n";
+#endif
         return {eff_min, std::move(list_parallelepipeds)};
       }
     }

@@ -58,7 +58,7 @@ int main(int argc, char *argv[]) {
     std::string arithmetic = argv[1];
     size_t n_iter = ParseScalar<size_t>(argv[2]);
     std::string MatFile = argv[3];
-    std::string OutFormat = "norms";
+    std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
     if (argc == 6) {
       OutFormat = argv[4];
