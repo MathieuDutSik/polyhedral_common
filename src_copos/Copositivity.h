@@ -47,7 +47,8 @@ bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
 // reduced form is a2 x + x^2 <= C2
 // polynomial is   x^2 + a2 x - C2 = 0
 //               a x^2 +  b x + c  = 0
-template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
+template <typename T, typename Tint>
+Tint FindLargest(T const &a, T const &b, T const &C) {
   T C2 = C / b;
   T a2 = a / b;
   double a2_doubl = UniversalScalarConversion<double, T>(a2);
@@ -61,8 +62,8 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
 #endif
   double delta = a2_doubl * a2_doubl + 4 * C2_doubl;
   double x1 = 0.5 * (-a2_doubl + sqrt(delta));
-  int eReturn = UniversalScalarConversion<int, double>(x1);
-  auto f = [&](int const &x) -> bool {
+  Tint eReturn = UniversalScalarConversion<Tint, double>(x1);
+  auto f = [&](Tint const &x) -> bool {
     T eDiff = C2 - a2 * x - x * x;
     if (eDiff >= 0)
       return true;
@@ -71,12 +72,15 @@ template <typename T> int FindLargest(T const &a, T const &b, T const &C) {
   while (true) {
     bool test1 = f(eReturn);
     bool test2 = f(eReturn + 1);
-    if (test1 && !test2)
+    if (test1 && !test2) {
       break;
-    if (!test1)
+    }
+    if (!test1) {
       eReturn--;
-    if (test2)
+    }
+    if (test2) {
       eReturn++;
+    }
   }
   return eReturn;
 }
@@ -240,10 +244,10 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
       if (eVal0 >= MaxNorm) {
         Zmax[i] = 0;
       } else {
-        T eVal1 = (eW + 2 * eH * Qii) / AII[i];
-        T eVal2 = Qii / (AII[i] * AII[i]);
+        T a = (eW + 2 * eH * Qii) / AII[i];
+        T b = Qii / (AII[i] * AII[i]);
         T C = MaxNorm - eVal0;
-        Zmax[i] = FindLargest(eVal1, eVal2, C);
+        Zmax[i] = FindLargest<T,Tint>(a, b, C);
       }
     }
 #ifdef DEBUG_COPOSITIVITY

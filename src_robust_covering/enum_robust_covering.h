@@ -7,6 +7,54 @@
 #include "FundamentalDelaunay.h"
 // clang-format on
 
+/*
+  The scheme is explained in
+  "New upper bound for lattice covering by spheres"
+  https://arxiv.org/pdf/2508.06446
+  ----
+  Given a lattice L, and a point x in L \otimes R,
+  we want to find the smallest radius r such that
+  the set of lattice points contains a parallelepiped
+  of volume 1.
+  The enumeration is done directly and that part is
+  fine.
+  That allow us to get the distance at a point x.
+  ----
+  What we want to do next is to compute the local
+  maximum. This is for sure going to be something
+  polyhedral.
+  If we have a random point in the lattice, then
+  there is a unique parallelohedron of volume 1
+  closest to the point x. And among all the vertices
+  of the polyhedron, there is just 1 that attains
+  the minimum.
+  ----
+  Now looking at the modelization:
+  + The basic combinatorial data is a parallelepiped P
+    and a vertex v of P that realize the maximum.
+    -
+    It is a very precise combinatorial data. This
+    is bad for the enumeration as it gets us a
+    combinatorial explosion. But there is no
+    alternative.
+  + A parallelepiped P and a vertex v defines a
+    set Ineq(P, v) by the inequalities
+    || x - v || <= || x - w || for w vertex of P.
+    -
+    The Ineq(P, v) is unbounded. The directions can
+    be obtained by the vertices adjacent to v.
+  + If the point is not random, then there are
+    several paralelepipeds that are contained.
+    -
+    And this creates some equalities.
+  + The definition of vertices has to take into
+    account both sources of inequalities.
+    -
+    When doing the switch, we of course have to
+    take into account 
+
+ */
+
 #ifdef DEBUG
 #define DEBUG_ENUM_ROBUST_COVERING
 #endif
