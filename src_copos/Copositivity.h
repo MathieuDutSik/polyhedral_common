@@ -42,17 +42,18 @@ bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
 
 // #define DEBUG_UNDER_POS_COND
 
-// Given C >0 a >=0 and b>0 find the maximum
-// value of x>=0 such that a x + b x^2 <= C
-// reduced form is a2 x + x^2 <= C2
-// polynomial is   x^2 + a2 x - C2 = 0
+// Given c > 0, a >= 0 and b > 0 find the maximum
+// value of x>=0 such that a x + b x^2 <= c
+// reduced form is a2 x + x^2 <= c2
+// polynomial is   x^2 + a2 x - c2 = 0
 //               a x^2 +  b x + c  = 0
 template <typename T, typename Tint>
 Tint FindLargest(T const &a, T const &b, T const &c) {
-  T c2 = c / b;
-  T a2 = a / b;
-  double a2_doubl = UniversalScalarConversion<double, T>(a2);
-  double c2_doubl = UniversalScalarConversion<double, T>(c2);
+  double a_d = UniversalScalarConversion<double, T>(a);
+  double b_d = UniversalScalarConversion<double, T>(b);
+  double c_d = UniversalScalarConversion<double, T>(c);
+  double a2_d = a_d / b_d;
+  double c2_d = c_d / b_d;
 #ifdef SANITY_CHECK_COPOSITIVITY
   if (b <= 0 || c <= 0) {
     std::cerr << "COP: b should be strictly positive. b=" << b << "\n";
@@ -60,11 +61,11 @@ Tint FindLargest(T const &a, T const &b, T const &c) {
     throw TerminalException{1};
   }
 #endif
-  double delta = a2_doubl * a2_doubl + 4 * c2_doubl;
-  double x1 = 0.5 * (-a2_doubl + sqrt(delta));
+  double delta = a2_d * a2_d + 4 * c2_d;
+  double x1 = 0.5 * (-a2_d + sqrt(delta));
   Tint eReturn = UniversalScalarConversion<Tint, double>(x1);
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = c2 - a2 * x - x * x;
+    T eDiff = c - a * x - b * x * x;
     if (eDiff >= 0)
       return true;
     return false;
