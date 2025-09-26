@@ -196,8 +196,7 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
         eNumber += TheBasisReord(j, i) * Lambda[j];
       T eFr = FractionalPart(-eNumber) / AII[i];
       ListH[i] = eFr;
-      T eZ = Z[i];
-      Lambda[i] = eZ / AII[i] + ListH[i];
+      Lambda[i] = Z[i] / AII[i] + ListH[i];
       T eX_q = eNumber + Lambda[i] * AII[i];
       X(i) = UniversalScalarConversion<Tint, T>(eX_q);
     }
@@ -231,8 +230,9 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
 #ifdef DEBUG_COPOSITIVITY
       os << "COP: Norm compute step 1\n";
 #endif
-      for (int j = i + 1; j < n; j++)
+      for (int j = i + 1; j < n; j++) {
         eW += 2 * eSymmMatC(i, j) * Lambda[j];
+      }
 #ifdef DEBUG_COPOSITIVITY
       os << "COP: Norm compute step 2\n";
 #endif
@@ -251,8 +251,8 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
       } else {
         T a = (eW + 2 * eH * Qii) / AII[i];
         T b = Qii / (AII[i] * AII[i]);
-        T C = MaxNorm - eVal0;
-        Zmax[i] = FindLargest<T,Tint>(a, b, C);
+        T c = MaxNorm - eVal0;
+        Zmax[i] = FindLargest<T,Tint>(a, b, c);
       }
     }
 #ifdef DEBUG_COPOSITIVITY
@@ -290,8 +290,9 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
 #ifdef DEBUG_COPOSITIVITY
         os << "COP: i=" << i << " Z[i]=" << Z[i] << "\n";
 #endif
-        for (int j = 0; j < i; j++)
+        for (int j = 0; j < i; j++) {
           Z[j] = 0;
+        }
         ComputeHXZmaxNorm(i + 1);
         return true;
       }
