@@ -48,38 +48,42 @@ bool TestCopositivityByPositivityCoeff(MyMatrix<T> const &eSymmMatB) {
 // polynomial is   x^2 + a2 x - C2 = 0
 //               a x^2 +  b x + c  = 0
 template <typename T, typename Tint>
-Tint FindLargest(T const &a, T const &b, T const &C) {
-  T C2 = C / b;
+Tint FindLargest(T const &a, T const &b, T const &c) {
+  T c2 = c / b;
   T a2 = a / b;
   double a2_doubl = UniversalScalarConversion<double, T>(a2);
-  double C2_doubl = UniversalScalarConversion<double, T>(C2);
+  double c2_doubl = UniversalScalarConversion<double, T>(c2);
 #ifdef SANITY_CHECK_COPOSITIVITY
-  if (b <= 0 || C <= 0) {
+  if (b <= 0 || c <= 0) {
     std::cerr << "COP: b should be strictly positive. b=" << b << "\n";
-    std::cerr << "COP: C should be strictly positive. C=" << C << "\n";
+    std::cerr << "COP: c should be strictly positive. c=" << c << "\n";
     throw TerminalException{1};
   }
 #endif
-  double delta = a2_doubl * a2_doubl + 4 * C2_doubl;
+  double delta = a2_doubl * a2_doubl + 4 * c2_doubl;
   double x1 = 0.5 * (-a2_doubl + sqrt(delta));
   Tint eReturn = UniversalScalarConversion<Tint, double>(x1);
   auto f = [&](Tint const &x) -> bool {
-    T eDiff = C2 - a2 * x - x * x;
+    T eDiff = c2 - a2 * x - x * x;
     if (eDiff >= 0)
       return true;
     return false;
   };
+  bool test1 = f(eReturn);
+  bool test2 = f(eReturn + 1);
   while (true) {
-    bool test1 = f(eReturn);
-    bool test2 = f(eReturn + 1);
     if (test1 && !test2) {
       break;
     }
     if (!test1) {
       eReturn--;
+      test2 = test1;
+      test1 = f(eReturn);
     }
     if (test2) {
       eReturn++;
+      test1 = test2;
+      test2 = f(eReturn + 1);
     }
   }
   return eReturn;
