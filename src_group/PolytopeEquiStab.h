@@ -1136,69 +1136,67 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
       TheEXT, ListMat, Vdiag, f, os);
 }
 
-template <typename T, typename Tfield, typename Tidx_value>
-size_t GetInvariant_ListMat_Vdiag_Tidx_value(
-    MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
-    std::vector<T> const &Vdiag, std::ostream &os) {
+template <bool is_symm, typename T, typename Tfield, typename Tidx_value>
+size_t GetInvariant_ListMat_Vdiag_Tidx_value_bool(size_t const& seed,
+                                                  MyMatrix<T> const &EXT,
+                                                  std::vector<MyMatrix<T>> const &ListMat,
+                                                  std::vector<T> const &Vdiag,
+                                                  std::ostream &os) {
+#ifdef TIMINGS_POLYTOPE_EQUI_STAB
+  HumanTime time;
+#endif
   int nbRow = EXT.rows();
-  auto get_wmat = [&]() -> WeightMatrix<true, std::vector<T>, Tidx_value> {
-    bool is_symm = is_family_symmmetric(ListMat);
-    if (is_symm) {
-      ListMatSymm_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
-      auto f1 = [&](size_t iRow) -> void { lms.f1(iRow); };
-      auto f2 = [&](size_t jRow) -> std::vector<T> { return lms.f2(jRow); };
-      return WeightMatrix<true, std::vector<T>, Tidx_value>(nbRow, f1, f2, os);
-    } else {
-      ListMat_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
-      auto f1 = [&](size_t iRow) -> void { lms.f1(iRow); };
-      auto f2 = [&](size_t jRow) -> std::vector<T> { return lms.f2(jRow); };
-      return WeightMatrix<true, std::vector<T>, Tidx_value>(2 * nbRow, f1, f2,
-                                                            os);
-    }
-  };
+  ListMatSymm_Vdiag_WeightMat lms(EXT, ListMat, Vdiag);
+  auto f1 = [&](size_t iRow) -> void { lms.f1(iRow); };
+  auto f2 = [&](size_t jRow) -> std::vector<T> { return lms.f2(jRow); };
+  WeightMatrix<is_symm, std::vector<T>, Tidx_value> WMat(nbRow, f1, f2, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  SecondTime time;
+  os << "|PES: WMat|=" << time << "\n";
 #endif
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMat = get_wmat();
-#ifdef TIMINGS_POLYTOPE_EQUI_STAB
-  os << "|PES: get_wmat|=" << time << "\n";
-#endif
-
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: ReorderingSetWeight|=" << time << "\n";
 #endif
-
-  size_t e_hash =
-      std::hash<WeightMatrix<true, std::vector<T>, Tidx_value>>()(WMat);
+  size_t hash = ComputeHashWeightMatrix_up_to_equiv(WMat, seed);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: hash|=" << time << "\n";
 #endif
-  return e_hash;
+  return hash;
+}
+
+template <typename T, typename Tfield, typename Tidx_value>
+size_t GetInvariant_ListMat_Vdiag_Tidx_value(size_t const& seed,
+                                             MyMatrix<T> const &EXT,
+                                             std::vector<MyMatrix<T>> const &ListMat,
+                                             std::vector<T> const &Vdiag,
+                                             std::ostream &os) {
+  bool is_symm = is_family_symmmetric(ListMat);
+  if (is_symm) {
+    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<true, T, Tfield, Tidx_value>(seed, EXT, ListMat, Vdiag, os);
+  } else {
+    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<false, T, Tfield, Tidx_value>(seed, EXT, ListMat, Vdiag, os);
+  }
 }
 
 template <typename T, typename Tfield>
-size_t GetInvariant_ListMat_Vdiag(MyMatrix<T> const &EXT,
+size_t GetInvariant_ListMat_Vdiag(size_t const& seed,
+                                  MyMatrix<T> const &EXT,
                                   std::vector<MyMatrix<T>> const &ListMat,
                                   std::vector<T> const &Vdiag,
                                   std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow / 2 + 1;
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(
-        EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint16_t>(
-        EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint16_t>(seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint32_t>(
-        EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint32_t>(seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(
-        EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(seed, EXT, ListMat, Vdiag, os);
   }
   std::cerr << "PES: Failed to find a matching type\n";
   throw TerminalException{1};

@@ -55,7 +55,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       UpgradeBalinskiStat, fEquiv, os);
   auto FuncInsert = [&](SimplePerfect<T, Tint> const &x,
                         std::ostream &os) -> int {
-    size_t eInv = ComputeInvariantPerfectTspace<T, Tint>(seed, x.Gram, x.RecSHV, os);
+    size_t eInv = SimplePerfect_Invariant<T,Tint>(seed, eData.LinSpa, x.Gram, x.RecSHV, os);
     return ListOrbit.InsertEntry({x, eInv}, os);
   };
   int nbPresentOrbit = ListOrbit.GetNbEntry();

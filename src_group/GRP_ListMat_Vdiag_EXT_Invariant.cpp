@@ -65,11 +65,11 @@ int main(int argc, char *argv[]) {
       Vdiag[i] = val;
     }
     //
-    size_t e_hash =
-        GetInvariant_ListMat_Vdiag<T, Tfield>(EXT, ListMat, Vdiag, std::cerr);
+    size_t seed = 15;
+    size_t hash = GetInvariant_ListMat_Vdiag<T, Tfield>(seed, EXT, ListMat, Vdiag, std::cerr);
     //
     std::ofstream os(argv[2]);
-    os << "return " << e_hash << ";\n";
+    os << "return " << hash << ";\n";
     std::cerr << "Normal termination of GRP_ListMat_Vdiag_EXT_Invariant\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_ListMat_Vdiag_EXT_Invariant\n";

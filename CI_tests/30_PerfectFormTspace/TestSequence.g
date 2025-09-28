@@ -42,29 +42,29 @@ GetRecInfo:=function(fProg, d, n)
     # Create the namelist file
     output:=OutputTextFile(FileNml, true);
     AppendTo(output, "&DATA\n");
-    AppendTo(output, " arithmetic_T=\"gmp_rational\"\n");
-    AppendTo(output, " arithmetic_Tint=\"gmp_integer\"\n");
-    AppendTo(output, " OutFormat=\"ObjectGAP\"\n");
-    AppendTo(output, " OutFile=\"", FileResult, "\"\n");
-    AppendTo(output, " max_runtime_second=0\n");
-    AppendTo(output, " ApplyStdUnitbuf=T\n");
+    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
+    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " OutFormat = \"ObjectGAP\"\n");
+    AppendTo(output, " OutFile = \"", FileResult, "\"\n");
+    AppendTo(output, " max_runtime_second = 0\n");
+    AppendTo(output, " ApplyStdUnitbuf = T\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&STORAGE\n");
-    AppendTo(output, " Saving=F\n");
-    AppendTo(output, " Prefix=\"/tmp/PerfectForm/\"\n");
+    AppendTo(output, " Saving = F\n");
+    AppendTo(output, " Prefix = \"/tmp/PerfectForm/\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");
-    AppendTo(output, " TypeTspace=\"ImagQuad\"\n");
-    AppendTo(output, " FileLinSpa=\"unset.linspa\"\n");
-    AppendTo(output, " SuperMatMethod=\"NotNeeded\"\n");
-    AppendTo(output, " ListComm=\"Use_realimag\"\n");
-    AppendTo(output, " PtGroupMethod=\"Trivial\"\n");
-    AppendTo(output, " FileListSubspaces=\"unset\"\n");
-    AppendTo(output, " RealImagDim=", n, "\n");
-    AppendTo(output, " RealImagSum=", info.eSum, "\n");
-    AppendTo(output, " RealImagProd=", info.eProd, "\n");
+    AppendTo(output, " TypeTspace = \"ImagQuad\"\n");
+    AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
+    AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
+    AppendTo(output, " ListComm = \"Use_realimag\"\n");
+    AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
+    AppendTo(output, " FileListSubspaces = \"unset\"\n");
+    AppendTo(output, " RealImagDim = ", n, "\n");
+    AppendTo(output, " RealImagSum = ", info.eSum, "\n");
+    AppendTo(output, " RealImagProd = ", info.eProd, "\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -100,7 +100,8 @@ Add(ListCases, rec(n:=4, d:=-3, n_perf:=5));
 Add(ListCases, rec(n:=4, d:=-4, n_perf:=2));
 
 
-ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
+#ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
+ListProg:=["PERF_SerialEnumeratePerfectCones"];
 
 
 f_compute:=function()

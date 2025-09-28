@@ -479,7 +479,7 @@ size_t ComputeHashWeightMatrix_up_to_equiv(
     Tidx_value pos = WMat.GetValue(iRow, iRow);
     ListAttDiag[pos]++;
   }
-  for (size_t iRow = 0; iRow < nbRow; iRow++)
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
     for (size_t jRow = 0;
          jRow < weightmatrix_last_idx<is_symmetric>(nbRow, iRow); jRow++) {
       if (iRow != jRow) {
@@ -487,6 +487,10 @@ size_t ComputeHashWeightMatrix_up_to_equiv(
         ListAttOff[pos]++;
       }
     }
+  }
+  //  std::cerr << "WM: ListWeight=" << StringStdVectorGAP(ListWeight) << "\n";
+  //  std::cerr << "WM: ListAttDiag=" << StringStdVectorGAP(ListAttDiag) << "\n";
+  //  std::cerr << "WM: ListAttOff=" << StringStdVectorGAP(ListAttOff) << "\n";
   size_t seed = seed_in;
   for (size_t iWei = 0; iWei < nbWei; iWei++) {
     if (ListAttDiag[iWei] > 0) {

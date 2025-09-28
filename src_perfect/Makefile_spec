@@ -2,8 +2,8 @@
 #PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs
 #PROGRAM		= CheckPerfectInput Temp_PerfectMPI MakeInitial_FileMatrix MergePartialLogs PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones
-PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
-#PROGRAM		= PERF_SerialEnumeratePerfectCones
+#PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
+PROGRAM		= PERF_SerialEnumeratePerfectCones
 #PROGRAM		= IsEutactic
 
 
@@ -30,8 +30,9 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
 #CDEFS           = -DDEBUG -DSANITY_CHECK
-CDEFS           = -DSANITY_CHECK
-#CDEFS           =
+#CDEFS           = -DSANITY_CHECK
+CDEFS           =
+#CDEFS           = -DDEBUG_ADJACENCY_SCHEME -DTIMINGS_ADJACENCY_SCHEME
 #CDEFS           = -DSANITY_CHECK -DTIMINGS -DDEBUG_PERFECT_TSPACE
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

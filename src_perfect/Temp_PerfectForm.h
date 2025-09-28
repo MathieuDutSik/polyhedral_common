@@ -318,11 +318,6 @@ struct Memoization {
   }
 };
 
-
-
-
-
-
 /*
   This is the code for given a form eMatIn, a direction of change eMatDir,
   to compute a coefficient lambda>0 such that eMatIn + lambda eMatDir has
@@ -408,8 +403,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // Running the algorithm
   // First loop where we find an interval where the solution may exist.
   //
-  T bound_upp = 1;
-  T bound_low = 0;
+  T bound_upp(1);
+  T bound_low(0);
 #ifdef DEBUG_FLIP
   int iterLoop = 0;
 #endif
@@ -584,79 +579,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       }
     }
   }
-}
-
-template <typename T, typename Tint>
-size_t ComputeInvariantPerfectTspace(size_t const &seed,
-                                     MyMatrix<T> const &eGram,
-                                     Tshortest<T, Tint> const &RecSHV,
-                                     std::ostream &os) {
-  using Tidx_value = int16_t;
-  int n = eGram.rows();
-  MyMatrix<T> eG = eGram / RecSHV.min;
-  size_t n_row = RecSHV.SHV.rows();
-  int nbSHV = 2 * n_row;
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, nbSHV=" << nbSHV << "\n";
-#endif
-
-  MyVector<T> V(n);
-  int iSign, jSign;
-  auto f1 = [&](size_t iRow) -> void {
-    size_t iRowRed = iRow % n_row;
-    iSign = 1;
-    if (iRow >= n_row) {
-      iSign = -1;
-    }
-    for (int i=0; i<n; i++) {
-      T eSum(0);
-      for (int j=0; j<n; j++)
-        eSum += eG(i, j) * RecSHV.SHV(iRowRed, j);
-      V(i) = eSum;
-    }
-  };
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-  std::map<T,size_t> map_val;
-  std::map<T,size_t> map_abs_val;
-#endif
-  auto f2 = [&](size_t jRow) -> T {
-    size_t jRowRed = jRow % n_row;
-    jSign = 1;
-    if (jRow >= n_row) {
-      jSign = -1;
-    }
-    T eSum(0);
-    for (int i=0; i<n; i++)
-      eSum += V(i) * RecSHV.SHV(jRowRed, i);
-    T fSum = eSum * (iSign * jSign);
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-    map_val[fSum] += 1;
-    T fSum_abs = T_abs(fSum);
-    map_abs_val[fSum_abs] += 1;
-#endif
-    return fSum;
-  };
-  WeightMatrix<true, T, Tidx_value> WMat(nbSHV, f1, f2, os);
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-  int iter = 0;
-  for (auto & kv : map_val) {
-    os << "PERF_TSPACE: iter=" << iter << " val=" << kv.first << " mult=" << kv.second << "\n";
-    iter += 1;
-  }
-  int iter_abs = 0;
-  for (auto & kv : map_abs_val) {
-    os << "PERF_TSPACE: iter_abs=" << iter_abs << " val=" << kv.first << " mult=" << kv.second << "\n";
-    iter_abs += 1;
-  }
-#endif
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have WMat\n";
-#endif
-  size_t hash = GetInvariantWeightMatrix(seed, WMat, os);
-#ifdef DEBUG_PERFECT_TSPACE_HASH
-  os << "PERF_TSPACE: ComputeInvariantPerfectTspace, We have hash, hash=" << hash << "\n";
-#endif
-  return hash;
 }
 
 template <typename T, typename Tint>
@@ -862,6 +784,16 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> const& M_T = *opt;
   MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
   return M;
+}
+
+template <typename T, typename Tint>
+size_t SimplePerfect_Invariant(size_t const &seed,
+                               LinSpaceMatrix<T> const &LinSpa,
+                               MyMatrix<T> const &eMat,
+                               Tshortest<T, Tint> const &RecSHV,
+                               std::ostream& os) {
+  MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
+  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>

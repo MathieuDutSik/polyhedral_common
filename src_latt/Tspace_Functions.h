@@ -183,18 +183,21 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
     return ListCoeffRev(i, j);
   };
   std::vector<MyVector<T>> ListEquations;
-  for (auto &eGen : ListGen)
-    for (int i = 0; i < n; i++)
+  for (auto &eGen : ListGen) {
+    for (int i = 0; i < n; i++) {
       for (int j = 0; j <= i; j++) {
         MyVector<T> TheEquation = ZeroVector<T>(nbCoeff);
         TheEquation(FuncPos(i, j)) += 1;
-        for (int k = 0; k < n; k++)
+        for (int k = 0; k < n; k++) {
           for (int l = 0; l < n; l++) {
             int pos = FuncPos(k, l);
             TheEquation(pos) += -eGen(i, k) * eGen(j, l);
           }
+        }
         ListEquations.push_back(TheEquation);
       }
+    }
+  }
   MyMatrix<T> MatEquations = MatrixFromVectorFamily(ListEquations);
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: Before call to NullspaceTrMat nbGen=" << ListGen.size()
@@ -951,8 +954,29 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   return result.get_list_matrix(SHV_T, eMat, LinSpa);
 }
 
+template <typename T>
+size_t LINSPA_Invariant_SHV(size_t const& seed,
+                            LinSpaceMatrix<T> const &LinSpa,
+                            MyMatrix<T> const &eMat,
+                            MyMatrix<T> const &SHV_T,
+                            std::ostream &os) {
+  using Tfield = typename overlying_field<T>::field_type;
+  int n_row = SHV_T.rows();
+  std::vector<T> Vdiag(n_row, 0);
+  std::vector<MyMatrix<T>> ListMat =
+      GetFamilyDiscMatrices(eMat, LinSpa.ListComm, LinSpa.ListSubspaces);
+  return GetInvariant_ListMat_Vdiag<T,Tfield>(seed, SHV_T, ListMat, Vdiag, os);
+}
 
-
+template <typename T, typename Tint>
+size_t LINSPA_Invariant(size_t const& seed,
+                        LinSpaceMatrix<T> const &LinSpa,
+                        MyMatrix<T> const &eMat,
+                        std::ostream &os) {
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
+  return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
+}
 
 /*
   For two positive definite matrices M1 find if it exists a transformation P

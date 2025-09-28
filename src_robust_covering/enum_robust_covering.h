@@ -51,7 +51,26 @@
     account both sources of inequalities.
     -
     When doing the switch, we of course have to
-    take into account 
+    take into account the nature of the inequality.
+    Hard combinatorics ahead.
+    -
+    However, this should not impact the definition
+    of the vertices. All the inequalities should have
+    equal weight there. Otherwise, we will reach a
+    contradiction at some point.
+  + So, what are the needed functions?
+    x Finding one initial vertex.
+    x From one vertex, finding the adjacent vertices.
+    x Finding stabilizer of vertices.
+    x Testing equivalence of vertices.
+  + What is the structure of the vertices?
+    x It has to contain all the parallelepiped in
+      which the vertex is contained.
+    x Together with the vertices that are at this distance.
+    x The collection of those vertices define
+      
+
+    make the 
 
  */
 
