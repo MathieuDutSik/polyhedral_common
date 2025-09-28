@@ -132,19 +132,15 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   };
   auto set_listcomm = [&]() -> void {
     std::string const& ListComm = Blk.get_string("ListComm");
+    LinSpaRet.ListComm.clear();
 #ifdef DEBUG_TSPACE_NAMELIST
     os << "TSPACE: set_listcomm, ListComm=" << ListComm << "\n";
 #endif
     if (ListComm == "Trivial") {
-      LinSpaRet.ListComm.clear();
+      // Nothing to insert in that case.
       return;
     }
     if (ListComm == "Use_realimag") {
-      if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad") {
-        std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
-        std::cerr << "But only RealQuad and ImagQuad are allowed\n";
-        throw TerminalException{1};
-      }
       int n = Blk.get_int("RealImagDim");
       int eSum_i = Blk.get_int("RealImagSum");
       int eProd_i = Blk.get_int("RealImagProd");
@@ -160,6 +156,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
         LinSpaRet.ListComm.push_back(Imultiplication);
         return;
       }
+      std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
+      std::cerr << "But only RealQuad and ImagQuad are allowed\n";
+      throw TerminalException{1};
     }
     if (ListComm == "File") {
       std::string const& FileListComm = Blk.get_string("FileListComm");

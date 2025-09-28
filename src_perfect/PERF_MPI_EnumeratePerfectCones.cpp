@@ -49,7 +49,6 @@ int main(int argc, char *argv[]) {
   HumanTime time1;
 
   try {
-    std::cerr << "PERF_MPI_EnumeratePerfectCones: Starting" << std::endl;
     FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE();
 
     if (argc != 2) {
@@ -62,13 +61,13 @@ int main(int argc, char *argv[]) {
     }
 
     std::string eFileName = argv[1];
-    std::cerr << "Reading namelist file: " << eFileName << std::endl;
+    std::cerr << "Reading namelist file: " << eFileName << "\n";
     NAMELIST_ReadNamelistFile(eFileName, eFull);
 
     process_A(world, eFull);
-    std::cerr << "Normal termination of PERF_MPI_EnumeratePerfectCones" << std::endl;
+    std::cerr << "Normal termination of PERF_MPI_EnumeratePerfectCones\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in PERF_MPI_EnumeratePerfectCones" << std::endl;
+    std::cerr << "Error in PERF_MPI_EnumeratePerfectCones\n";
     exit(e.eVal);
   }
   runtime(time1);
