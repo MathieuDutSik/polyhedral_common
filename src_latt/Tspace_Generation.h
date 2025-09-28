@@ -45,6 +45,32 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
 }
 
 template <typename T>
+MyMatrix<T> GetCommRealQuadratic(int n, T const &eSum, T const &eProd) {
+  MyMatrix<T> M;
+  // Need to write the code for the real quadratic.
+  // Maybe it is the same matrix as the one for the imaginary.
+  // We need to investigate.
+  std::cerr << "We need to code the GetCommRealQuadratic function\n";
+  throw TerminalException{1};
+
+  return M;
+}
+
+template <typename T>
+MyMatrix<T> GetCommImagQuadratic(int n, T const &eSum, T const &eProd) {
+  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2*n, 2*n);
+  for (int i=0; i<n; i++) {
+    Imultiplication(i, n+i) = 1;
+    Imultiplication(n+i, i) = -eProd;
+    Imultiplication(n+i, n+i) = eSum;
+  }
+  return Imultiplication;
+}
+
+
+
+
+template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
                                             T const &eProd) {
   std::vector<MyMatrix<T>> ListMat;

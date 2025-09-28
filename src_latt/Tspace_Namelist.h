@@ -145,8 +145,21 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
         std::cerr << "But only RealQuad and ImagQuad are allowed\n";
         throw TerminalException{1};
       }
-      // Do nothing in that case
-      return;
+      int n = Blk.get_int("RealImagDim");
+      int eSum_i = Blk.get_int("RealImagSum");
+      int eProd_i = Blk.get_int("RealImagProd");
+      T eSum = UniversalScalarConversion<T,int>(eSum_i);
+      T eProd = UniversalScalarConversion<T,int>(eProd_i);
+      if (TypeTspace == "RealQuad") {
+        MyMatrix<T> Imultiplication = GetCommRealQuadratic(n, eSum, eProd);
+        LinSpaRet.ListComm.push_back(Imultiplication);
+        return;
+      }
+      if (TypeTspace == "ImagQuad") {
+        MyMatrix<T> Imultiplication = GetCommImagQuadratic(n, eSum, eProd);
+        LinSpaRet.ListComm.push_back(Imultiplication);
+        return;
+      }
     }
     if (ListComm == "File") {
       std::string const& FileListComm = Blk.get_string("FileListComm");
@@ -260,15 +273,19 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #endif
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
       int n = Blk.get_int("RealImagDim");
-      int eSum = Blk.get_int("RealImagSum");
-      int eProd = Blk.get_int("RealImagProd");
+      int eSum_i = Blk.get_int("RealImagSum");
+      int eProd_i = Blk.get_int("RealImagProd");
+      T eSum = UniversalScalarConversion<T,int>(eSum_i);
+      T eProd = UniversalScalarConversion<T,int>(eProd_i);
 #ifdef DEBUG_TSPACE_NAMELIST
       os << "n=" << n << " eSum" << eSum << " eProd=" << eProd << "\n";
 #endif
-      if (TypeTspace == "RealQuad")
+      if (TypeTspace == "RealQuad") {
         LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
-      if (TypeTspace == "ImagQuad")
+      }
+      if (TypeTspace == "ImagQuad") {
         LinSpaRet = ComputeImagQuadraticSpace<T>(n, eSum, eProd);
+      }
       set_listcomm();
       set_subspaces();
       set_pt_stab();
