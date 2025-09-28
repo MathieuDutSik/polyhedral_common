@@ -556,6 +556,20 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
   return l_obj;
 }
 
+template <typename TadjO>
+std::vector<int> UniqueAdjacencies(std::vector<AdjO_Serial<TadjO>> const& ListAdj, int const& offset) {
+  std::set<int> set;
+  for (auto &eAdj : ListAdj) {
+    int new_val = eAdj.iOrb + offset;
+    set.insert(new_val);
+  }
+  std::vector<int> new_v;
+  for (auto & new_val: set) {
+    new_v.push_back(new_val);
+  }
+  return new_v;
+}
+
 template <typename Tdata, typename Tobj, typename TadjO>
 bool WriteFamilyObjects(
     Tdata const& data,
@@ -607,6 +621,7 @@ bool WriteFamilyObjects(
   }
   if (OutFormat == "ObjectFullAdjacencyGAP") {
     os_out << "return [";
+    // INCORRECT CODE
     size_t len = l_tot.size();
     for (size_t i = 0; i < len; i++) {
       if (i > 0)
@@ -636,21 +651,8 @@ bool WriteFamilyObjects(
       os_out << "rec(obj:=";
       WriteEntryGAP(os_out, l_tot[i]);
       os_out << ", LAdj:=";
-      std::set<int> set;
-      for (auto &eAdj : l_tot[i].ListAdj) {
-        int pos = eAdj.iOrb + 1;
-        set.insert(pos);
-      }
-      os_out << "[";
-      bool IsFirst = true;
-      for (auto &eAdj : set) {
-        if (!IsFirst) {
-          os_out << ",";
-        }
-        IsFirst = false;
-        os_out << eAdj;
-      }
-      os_out << "])";
+      std::vector<int> v = UniqueAdjacencies(l_tot[i].ListAdj, 1);
+      os_out << StringStdVectorGAP(v) << ")";
     }
     os_out << "];\n";
     return false;
@@ -664,75 +666,34 @@ bool WriteFamilyObjects(
       os_out << "{\"obj\":";
       WriteEntryPYTHON(os_out, l_tot[i]);
       os_out << ", \"LAdj\":";
-      std::set<int> set;
-      for (auto &eAdj : l_tot[i].ListAdj) {
-        int pos = eAdj.iOrb + 1;
-        set.insert(pos);
-      }
-      os_out << "[";
-      bool IsFirst = true;
-      for (auto &eAdj : set) {
-        if (!IsFirst) {
-          os_out << ",";
-        }
-        IsFirst = false;
-        os_out << eAdj;
-      }
-      os_out << "]}";
+      std::vector<int> v = UniqueAdjacencies(l_tot[i].ListAdj, 0);
+      os_out << StringStdVectorPYTHON(v) << "}";
     }
-    os_out << "];";
+    os_out << "]";
     return false;
   }
   if (OutFormat == "AdjacencyGAP") {
-    std::set<int> set;
     size_t len = l_tot.size();
     os_out << "return [";
     for (size_t i = 0; i < len; i++) {
       if (i > 0) {
         os_out << ",\n";
       }
-      set.clear();
-      for (auto &eAdj : l_tot[i].ListAdj) {
-        int pos = eAdj.iOrb + 1;
-        set.insert(pos);
-      }
-      os_out << "[";
-      bool IsFirst = true;
-      for (auto &eAdj : set) {
-        if (!IsFirst) {
-          os_out << ",";
-        }
-        IsFirst = false;
-        os_out << eAdj;
-      }
-      os_out << "]";
+      std::vector<int> v = UniqueAdjacencies(l_tot[i].ListAdj, 1);
+      os_out << StringStdVectorGAP(v);
     }
     os_out << "];\n";
     return false;
   }
   if (OutFormat == "AdjacencyPYTHON") {
-    std::set<int> set;
     size_t len = l_tot.size();
     os_out << "[";
     for (size_t i = 0; i < len; i++) {
       if (i > 0) {
         os_out << ",";
       }
-      set.clear();
-      for (auto &eAdj : l_tot[i].ListAdj) {
-        int pos = eAdj.iOrb + 1;
-        set.insert(pos);
-      }
-      os_out << "[";
-      bool IsFirst = true;
-      for (auto &eAdj : set) {
-        if (!IsFirst) {
-          os_out << ",";
-        }
-        IsFirst = false;
-        os_out << eAdj;
-      }
-      os_out << "]";
+      std::vector<int> v = UniqueAdjacencies(l_tot[i].ListAdj, 0);
+      os_out << StringStdVectorPYTHON(v);
     }
     os_out << "]";
     return false;

@@ -20,7 +20,6 @@
 
 SingleBlock SINGLEBLOCK_Get_Tspace_Description() {
   std::map<std::string, std::string> ListStringValues1_doc;
-  std::map<std::string, std::string> ListBoolValues1_doc;
   std::map<std::string, std::string> ListIntValues1_doc;
   ListStringValues1_doc["TypeTspace"] = "The possible type of T-space\n\
 InvGroup: The space of matrices invariant under a group\n   \
@@ -66,7 +65,6 @@ unset: If unset then the file is not needed\n\
 The filename used for reading the whole T-space";
   SingleBlock BlockTSPACE;
   BlockTSPACE.setListStringValues_doc(ListStringValues1_doc);
-  BlockTSPACE.setListBoolValues_doc(ListBoolValues1_doc);
   BlockTSPACE.setListIntValues_doc(ListIntValues1_doc);
   return BlockTSPACE;
 }

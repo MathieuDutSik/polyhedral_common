@@ -11,10 +11,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
   std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListIntValues1["n"] = 9;
@@ -24,10 +21,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
   BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
-  BlockDATA.setListDoubleValues(ListDoubleValues1);
   BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListListStringValues(ListListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
   return FullNamelist(ListBlock);
