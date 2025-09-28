@@ -419,26 +419,22 @@ template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
                                            CVPSolver<T, Tint> &solver,
                                            MyMatrix<Tint> const &ShvGraverBasis,
+                                           int const& target_ext,
+                                           int max_iter,
+                                           std::string method,
                                            std::ostream &os) {
-  int target_ext = 2 * GramMat.rows();
-  int max_iter = 10;
   MyMatrix<Tint> EXTret = FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
-  std::vector<std::string> l_method{"lp_cdd", "lp_cdd_min", "sampling",
-                                    "lrs_limited"};
-  size_t n_method = l_method.size();
   for (int iter = 0; iter < max_iter; iter++) {
-    size_t i_method = rand() % n_method;
-    std::string e_method = l_method[i_method];
     MyMatrix<T> EXTret_T = UniversalMatrixConversion<T, Tint>(EXTret);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
-    os << "iter=" << iter << "/" << max_iter << " e_method=" << e_method
+    os << "iter=" << iter << "/" << max_iter << " method=" << method
        << " |EXTret|=" << EXTret.rows() << "\n";
 #endif
-    vectface vf = DirectComputationInitialFacetSet<T>(EXTret_T, e_method, os);
+    vectface vf = DirectComputationInitialFacetSet<T>(EXTret_T, method, os);
 #ifdef DEBUG_FUNDAMENTAL_DELAUNAY
     os << "  |vf|=" << vf.size() << "\n";
 #endif
-    auto get_adj = [&]() -> MyMatrix<Tint> {
+    auto get_adj_cand = [&]() -> MyMatrix<Tint> {
       MyMatrix<Tint> EXTwork;
       int n_max = std::numeric_limits<int>::max();
       ;
@@ -453,10 +449,18 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
       }
       return EXTwork;
     };
-    EXTret = get_adj();
-    if (EXTret.rows() <= target_ext) {
-      return EXTret;
+    MyMatrix<Tint> EXTcand = get_adj_cand();
+    if (target_ext > 0) {
+      if (EXTcand.rows() <= target_ext) {
+        return EXTcand;
+      }
+    } else {
+      // If target_ext = 0, we terminate if the sampling does not give us anything better.
+      if (EXTcand.rows() >= EXTret.rows()) {
+        return EXTret;
+      }
     }
+    EXTret = EXTcand;
   }
   return EXTret;
 }

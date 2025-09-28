@@ -31,6 +31,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   MyMatrix<T> SHV;
   CVPSolver<T, Tint> solver;
   MyMatrix<Tint> ShvGraverBasis;
+  std::string choice_initial;
   RecordDualDescOperation<T, Tgroup> rddo;
 };
 
@@ -102,9 +103,9 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> const &eData,
-                         MyMatrix<Tint> const &EXT1, MyMatrix<Tint> const &EXT2,
-                         std::ostream &os) {
+Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
+                         MyMatrix<Tint> const &EXT1, MyMatrix<Tint> const &EXT2) {
+  std::ostream &os = eData.rddo.os;
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -521,6 +522,34 @@ inline void serialize(Archive &ar, Delaunay_Obj<Tint, Tgroup> &eRec,
 }
 } // namespace boost::serialization
 
+template <typename T, typename Tint, typename Tgroup>
+MyMatrix<Tint> FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
+  MyMatrix<T> const &GramMat = data.GramMat;
+  CVPSolver<T, Tint> &solver = data.solver;
+  MyMatrix<Tint> const &ShvGraverBasis = data.ShvGraverBasis;
+  std::string const& choice = data.choice_initial;
+  std::ostream &os = data.rddo.os;
+  if (choice == "direct") {
+    return FindDelaunayPolytope<T,Tint>(GramMat, solver, os);
+  }
+  if (choice == "simple_iter") {
+    int target_ext = 2 * GramMat.rows();
+    int max_iter = 10;
+    std::string method = "lp_cdd";
+    return FindDelaunayPolytope_random<T,Tint>(GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+  }
+  if (choice == "sampling") {
+    int target_ext = 0;
+    int max_iter = std::numeric_limits<int>::max();
+    std::string method = "sampling";
+    return FindDelaunayPolytope_random<T,Tint>(GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+  }
+  std::cerr << "Failed to find a relevant method for FindDelaunayPolytopeExtended\n";
+  std::cerr << "Allowed methods: direct, simple_iter, sampling\n";
+  throw TerminalException{1};
+}
+
+
 template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   DataLattice<T, Tint, Tgroup> data;
   using Tobj = Delaunay_Obj<Tint, Tgroup>;
@@ -532,8 +561,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
     data.rddo.os << "DEL_ENUM: DataLatticeFunc : f_init, OutFile="
                  << data.rddo.AllArr.OutFile << "\n";
 #endif
-    MyMatrix<Tint> EXT =
-        FindDelaunayPolytope<T, Tint>(data.GramMat, data.solver, data.rddo.os);
+    MyMatrix<Tint> EXT = FindDelaunayPolytopeExtended<T, Tint>(data);
     Tobj x{std::move(EXT), {}};
     return x;
   }
@@ -542,8 +570,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     std::optional<MyMatrix<Tint>> opt =
-        Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT,
-                                                  data.rddo.os);
+      Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT);
     if (!opt) {
       return {};
     }
@@ -668,6 +695,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["SVRfile"] = "unset.svr";
   ListStringValues1["OutFormat"] = "nothing";
   ListStringValues1["OutFile"] = "unset.out";
+  ListStringValues1["choice_initial"] = "direct";
   ListStringValues1["FileDualDescription"] = "unset";
   ListIntValues1["max_runtime_second"] = 0;
   ListBoolValues1["ApplyStdUnitbuf"] = false;
@@ -699,13 +727,14 @@ GetDataLattice(MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   MyMatrix<T> SHV(0, n);
   CVPSolver<T, Tint> solver(GramMat, os);
+  std::string choice_initial = "direct";
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OutFile << "\n";
 #endif
   return {
       n,      GramMat,        SHV,
-      solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+      solver, ShvGraverBasis, choice_initial, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -740,9 +769,10 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
   //
   CVPSolver<T, Tint> solver(GramMat, os);
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);
+  std::string choice_initial = BlockDATA.get_string("choice_initial");
   DataLattice<T, Tint, Tgroup> data{
       n,      GramMat,        SVR,
-      solver, ShvGraverBasis, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+      solver, ShvGraverBasis, choice_initial, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
   return data;
 }
 
