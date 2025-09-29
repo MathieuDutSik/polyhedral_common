@@ -160,7 +160,6 @@ struct DataPerfectTspaceFunc {
     os << "PERF_TSPACE: Before f_hash\n";
 #endif
     return SimplePerfect_Invariant<T,Tint>(seed, data.LinSpa, x.Gram, x.RecSHV, os);
-    //    return 0;
   }
 
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
