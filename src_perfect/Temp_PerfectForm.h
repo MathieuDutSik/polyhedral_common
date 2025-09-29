@@ -434,6 +434,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       WriteMatrix(os, RecSHV_upp.SHV);
 #endif
       if (RecSHV_upp.min == RecSHV_in.min) {
+        // That kind of scheme is rather primitive.
+        // However, the alternative is to write the equation det(xA + yB) = 0
+        // and to look for rational solutions. A little risky.
+        // For the Lorentzian stuff, things are easier as we have a quadratic
+        // form to consider. But there is no reason to have a general solution.
         T nLow = bound_upp;
         T nUpp = 2 * bound_upp;
         bound_low = nLow;
