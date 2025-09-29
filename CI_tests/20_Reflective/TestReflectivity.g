@@ -222,8 +222,8 @@ FullTest:=function()
     return n_error;
 end;
 
-#n_error:=FullTest();
-#Print("n_error=", n_error, "\n");
+n_error:=FullTest();
+Print("n_error=", n_error, "\n");
 
 CI_Decision_Reset();
 if n_error > 0 then
