@@ -198,7 +198,13 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
       os << "ADJ_SCH: process_singleEntry_AdjI Before f_repr idx=" << idx
          << "\n";
 #endif
+#ifdef TIMINGS_ADJACENCY_SCHEME
+      MicrosecondTime time_f_repr;
+#endif
       std::optional<TadjO> opt = f_repr(y, x_adjI, idx);
+#ifdef TIMINGS_ADJACENCY_SCHEME
+      os << "|ADJ_SCH: f_repr|=" << time_f_repr << "\n";
+#endif
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: process_singleEntry_AdjI After f_repr\n";
 #endif
@@ -209,7 +215,13 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
         return *opt;
       }
     }
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    MicrosecondTime time_f_spann;
+#endif
     std::pair<Tobj, TadjO> pair = f_spann(x_adjI, n_obj);
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: f_spann|=" << time_f_spann << "\n";
+#endif
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_singleEntry_AdjI after f_spann\n";
 #endif
@@ -225,7 +237,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     bool is_treated = false;
     f_save_status(n_obj, is_treated);
     undone.push_back(n_obj);
-    n_obj++;
+    n_obj += 1;
     return pair.second;
   };
   auto insert_load = [&](Tobj const &x, bool const &is_treated) -> void {
@@ -249,6 +261,9 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     return idx;
   };
   auto treat_one_entry = [&]() -> void {
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    MicrosecondTime time;
+#endif
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry beginning\n";
 #endif
@@ -256,16 +271,27 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry idx=" << idx << "\n";
 #endif
-    f_save_status(idx, true);
-    std::vector<TadjO> l_adj;
-    for (auto &y : f_adj(idx)) {
-      TadjO adj = process_singleEntry_AdjI(y);
-      l_adj.push_back(adj);
-    }
-#ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: treat_one_entry |l_adj|=" << l_adj.size() << "\n";
+    bool is_treated = true;
+    f_save_status(idx, is_treated);
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: get_undone_idx / f_save_status|=" << time << "\n";
 #endif
-    f_set_adj(idx, l_adj);
+    std::vector<TadjI> l_adj_i = f_adj(idx);
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: f_adj|=" << time << "\n";
+#endif
+    std::vector<TadjO> l_adj_o;
+    for (auto &adj_i : l_adj_i) {
+      TadjO adj_o = process_singleEntry_AdjI(adj_i);
+      l_adj_o.push_back(adj_o);
+    }
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: l_adj_o|=" << time << "\n";
+#endif
+#ifdef DEBUG_ADJACENCY_SCHEME
+    os << "ADJ_SCH: treat_one_entry |l_adj_o|=" << l_adj_o.size() << "\n";
+#endif
+    f_set_adj(idx, l_adj_o);
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry after f_set_adj\n";
 #endif
@@ -305,7 +331,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
   }
   while (true) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: early_termination=" << early_termination << "\n";
+    os << "ADJ_SCH: early_termination=" << early_termination << " n_obj=" << n_obj << " |undone|=" << undone.size() << "\n";
 #endif
     if (early_termination) {
 #ifdef DEBUG_ADJACENCY_SCHEME
