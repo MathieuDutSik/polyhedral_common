@@ -113,12 +113,14 @@ jobs:
           ln -s gap-4.14.0/gap gap.sh
 
           # Downloading and installing PPL
+          # We cannot do a "make install" since it requires doxygen, latex and a lot of other
+          # stuff that is not great for CI.
           git clone https://github.com/BUGSENG/PPL
           cd PPL
           autoreconf -i
-          ./configure --prefix=$PPL_PATH && make && make install
+          ./configure && make
           mkdir -p /home/runner/.local/bin/
-          ln -s $PPL_PATH/bin/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
+          ln -s /home/runner/PPL/./demos/ppl_lcdd/.libs/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
 
       - name: Test dual description using symmetries
         run: |

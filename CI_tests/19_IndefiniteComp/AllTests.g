@@ -2,11 +2,12 @@ Read("../common.g");
 Print("Beginning of AllTests\n");
 
 TestStab:=function(eList)
-    local eProg, eGram, FileIn, FileOut, TheCommand, U, eP;
+    local eProg, eGram, TmpDir, FileIn, FileOut, TheCommand, U, eP;
     eProg:="../../src_indefinite/INDEF_FORM_AutomorphismGroup";
     eGram:=GetGramMatrixFromList(eList);
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    TmpDir:=DirectoryTemporary();
+    FileIn:=Filename(TmpDir, "Test.in");
+    FileOut:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileIn, eGram);
     TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);
@@ -28,14 +29,15 @@ TestStab:=function(eList)
 end;
 
 TestEquiv:=function(eList)
-    local eProg, eGram1, eP, eGram2, FileM1, FileM2, FileOut, TheCommand, U;
+    local TmpDir, eProg, eGram1, eP, eGram2, FileM1, FileM2, FileOut, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_TestEquivalence";
     eGram1:=GetGramMatrixFromList(eList);
     eP:=RandomIntegralUnimodularMatrix(Length(eGram1));
     eGram2:=eP * eGram1 * TransposedMat(eP);
-    FileM1:=Filename(DirectoryTemporary(), "Mat1.in");
-    FileM2:=Filename(DirectoryTemporary(), "Mat2.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    FileM1:=Filename(TmpDir, "Mat1.in");
+    FileM2:=Filename(TmpDir, "Mat2.in");
+    FileOut:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileM1, eGram1);
     WriteMatrixFile(FileM2, eGram2);
     TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileOut);
@@ -64,10 +66,11 @@ TestEquiv:=function(eList)
 end;
 
 GetNrOrbitRepresentative:=function(eGram, Xnorm)
-    local eProg, FileM, FileOut, TheCommand, U;
+    local TmpDir, eProg, FileM, FileOut, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbitRepresentative";
-    FileM:=Filename(DirectoryTemporary(), "Mat.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    FileM:=Filename(TmpDir, "Mat.in");
+    FileOut:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileM, eGram);
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileOut);
     Exec(TheCommand);
@@ -111,10 +114,11 @@ TestOrbitRepresentative:=function(eList)
 end;
 
 GetNrOrbitIsotropic:=function(eGram, kDim, choice)
-    local eProg, FileM, FileOut, TheCommand, U;
+    local TmpDir, eProg, FileM, FileOut, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane";
-    FileM:=Filename(DirectoryTemporary(), "Mat.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
+    FileM:=Filename(TmpDir, "Mat.in");
+    FileOut:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileM, eGram);
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileOut);
     Exec(TheCommand);
