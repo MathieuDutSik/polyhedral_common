@@ -8785,8 +8785,9 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
       return *optB;
     }
+  } else {
+    dd_FreeLPData(lp);
   }
-  dd_FreeLPData(lp);
 #ifdef DEBUG_CDD
   os << "CDD: The lifting scheme failed, now using the direct approach\n";
 #endif
