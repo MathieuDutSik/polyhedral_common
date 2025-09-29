@@ -1,15 +1,15 @@
-# This dockerfile allows you to access to functionality of the IsoDelaunay
+# This dockerfile allows you to access to functionality of the Indefinite forms
 # domain for debugging.
 #
 # It is used in the following way:
 # ---Copy this "Dockerfile" to a directory, e.g. "docker".
 #    Do NOT rename the file.
 # ---Compile the dockerfile with the command
-#    docker build -t isodelaunay:build-env .
+#    docker build -t indefinite:build-env .
 # ---For building with no-cache option, use
-#    docker build --no-cache -t isodelaunay:build-env .
+#    docker build --no-cache -t indefinite:build-env .
 # ---Run the docker and access a bash by doing
-#    docker run -i -t isodelaunay:build-env /bin/bash
+#    docker run -i -t indefinite:build-env /bin/bash
 #
 # Ask Mathieu Dutour Sikiric (mathieu.dutour@gmail.com) for questions.
 
