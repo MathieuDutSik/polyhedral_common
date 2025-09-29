@@ -52,9 +52,7 @@ int main(int argc, char *argv[]) {
   boost::mpi::communicator world;
   HumanTime time1;
   try {
-    std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 1\n";
     FullNamelist eFull = NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN();
-    std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 2\n";
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
@@ -65,9 +63,7 @@ int main(int argc, char *argv[]) {
     }
     //
     std::string eFileName = argv[1];
-    std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 3\n";
     NAMELIST_ReadNamelistFile(eFileName, eFull);
-    std::cerr << "LORENTZ_MPI_PerfectLorentzian, step 4\n";
     process_A(world, eFull);
     std::cerr << "Normal termination of LORENTZ_MPI_PerfectLorentzian\n";
   } catch (TerminalException const &e) {
