@@ -2,14 +2,16 @@ Read("../common.g");
 Print("Beginning of AllTests\n");
 
 TestStab:=function(eList)
-    local eProg, eGram, TmpDir, FileIn, FileOut, TheCommand, U, eP;
+    local eProg, eGram, TmpDir, FileIn, FileOut, FileErr, TheCommand, U, eP;
+    Print("Running TestStab with INDEF_FORM_AutomorphismGroup\n");
     eProg:="../../src_indefinite/INDEF_FORM_AutomorphismGroup";
     eGram:=GetGramMatrixFromList(eList);
     TmpDir:=DirectoryTemporary();
     FileIn:=Filename(TmpDir, "Test.in");
     FileOut:=Filename(TmpDir, "Test.out");
+    FileErr:=GetFreeFile("Err_indef_form_autom_");
     WriteMatrixFile(FileIn, eGram);
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -29,7 +31,8 @@ TestStab:=function(eList)
 end;
 
 TestEquiv:=function(eList)
-    local TmpDir, eProg, eGram1, eP, eGram2, FileM1, FileM2, FileOut, TheCommand, U;
+    local TmpDir, eProg, eGram1, eP, eGram2, FileM1, FileM2, FileOut, FileErr, TheCommand, U;
+    Print("Running TestEquiv with INDEF_FORM_TestEquivalence\n");
     TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_TestEquivalence";
     eGram1:=GetGramMatrixFromList(eList);
@@ -38,9 +41,10 @@ TestEquiv:=function(eList)
     FileM1:=Filename(TmpDir, "Mat1.in");
     FileM2:=Filename(TmpDir, "Mat2.in");
     FileOut:=Filename(TmpDir, "Test.out");
+    FileErr:=GetFreeFile("Err_indef_form_equiv_");
     WriteMatrixFile(FileM1, eGram1);
     WriteMatrixFile(FileM2, eGram2);
-    TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -66,13 +70,15 @@ TestEquiv:=function(eList)
 end;
 
 GetNrOrbitRepresentative:=function(eGram, Xnorm)
-    local TmpDir, eProg, FileM, FileOut, TheCommand, U;
+    local TmpDir, eProg, FileM, FileOut, FileErr, TheCommand, U;
+    Print("Running GetNrOrbitRepresentative with INDEF_FORM_GetOrbitRepresentative\n");
     TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbitRepresentative";
     FileM:=Filename(TmpDir, "Mat.in");
     FileOut:=Filename(TmpDir, "Test.out");
+    FileErr:=GetFreeFile("Err_indef_form_orbit_repr_");
     WriteMatrixFile(FileM, eGram);
-    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -114,13 +120,15 @@ TestOrbitRepresentative:=function(eList)
 end;
 
 GetNrOrbitIsotropic:=function(eGram, kDim, choice)
-    local TmpDir, eProg, FileM, FileOut, TheCommand, U;
+    local TmpDir, eProg, FileM, FileOut, FileErr, TheCommand, U;
+    Print("Running GetNrOrbitIsotropic with INDEF_FORM_GetOrbit_IsotropicKplane\n");
     TmpDir:=DirectoryTemporary();
     eProg:="../../src_indefinite/INDEF_FORM_GetOrbit_IsotropicKplane";
     FileM:=Filename(TmpDir, "Mat.in");
     FileOut:=Filename(TmpDir, "Test.out");
+    FileErr:=GetFreeFile("Err_indef_form_nr_orbit_isotropic_");
     WriteMatrixFile(FileM, eGram);
-    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");

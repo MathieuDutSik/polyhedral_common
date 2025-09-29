@@ -223,7 +223,18 @@ ReadTextFile:=function(FileIn)
     return ListLines;
 end;
 
-
+GetFreeFile:=function(prefix)
+    local iFile, eFile;
+    iFile:=1;
+    while(true)
+    do
+        eFile:=Concatenation(prefix, String(iFile));
+        if IsExistingFile(eFile)=false then
+            return eFile;
+        fi;
+        iFile:=iFile + 1;
+    od;
+end;
 
 ListFileDirectory:=function(TheDir)
     local FileOUT, TheCommand, ListFiles;
