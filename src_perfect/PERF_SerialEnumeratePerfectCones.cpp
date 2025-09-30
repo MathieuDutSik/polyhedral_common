@@ -39,7 +39,6 @@ void process_A(FullNamelist const &eFull) {
   };
   std::vector<Tout> l_tot = EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
       data_func, f_incorrect, max_runtime_second);
-  
   auto f_print=[&](std::ostream& os_out) -> void {
     bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
     if (result) {

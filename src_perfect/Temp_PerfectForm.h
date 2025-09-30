@@ -406,7 +406,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   T bound_upp(1);
   T bound_low(0);
 #ifdef DEBUG_FLIP
-  int iterLoop = 0;
+  int iterLoop_first = 0;
 #endif
   while (true) {
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
@@ -415,13 +415,13 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
     bool test = memo_admissible.comp(Q_upp);
 #ifdef DEBUG_FLIP
-    iterLoop++;
-    os << "PERF: iterLoop=" << iterLoop << " bound_upp=" << bound_upp
+    iterLoop_first += 1;
+    os << "PERF: iterLoop_first=" << iterLoop_first << " bound_upp=" << bound_upp
        << " bound_low=" << bound_low << " test=" << test << "\n";
 #endif
     if (!test) {
       // We are outside, so reduce the range.
-      bound_upp = (bound_upp + bound_low) / 2;
+      bound_upp = get_mid_val(bound_low, bound_upp);
     } else {
 #ifdef DEBUG_FLIP
       os << "PERF: Q_upp=\n";
@@ -475,12 +475,14 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // and RecSHV_upp.min < RecSHV_in.min
 #ifdef DEBUG_FLIP
   os << "PERF: FIRST LOOP FINISHED bound_upp=" << bound_upp
-     << " bound_low=" << bound_low << "\n";
+     << " bound_low=" << bound_low << " iterLoop_first=" << iterLoop_first << "\n";
+  int iterLoop_second = 0;
 #endif
   while (true) {
 #ifdef DEBUG_FLIP
     os << "PERF: Now bound_low=" << bound_low
-       << " bound_upp=" << bound_upp << "\n";
+       << " bound_upp=" << bound_upp << " iterLoop_second=" << iterLoop_second << "\n";
+    iterLoop_second += 1;
 #endif
     MyMatrix<T> Q_low = eMatIn + bound_low * eMatDir;
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
@@ -489,7 +491,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
     Tshortest<T, Tint> const& RecSHV_low = memo_shortest.comp(Q_low);
     Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
     os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.min=" << RecSHV_low.min << " SHV_upp.min=" << RecSHV_upp.min << "\n";
     MyMatrix<T> ConeClassicalLow =
         GetNakedPerfectConeClassical<T>(RecSHV_low.SHV);
@@ -513,12 +515,12 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
     if (test1) {
 #ifdef DEBUG_FLIP
-      os << "PERF: Return Q_upp\n";
+      os << "PERF: Exit flip (return Q_upp) iterLoop_second=" << iterLoop_second << "\n";
 #endif
       return {std::move(Q_upp), std::move(RecSHV_upp)};
     }
     if (!test2 && test1) {
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
       os << "PERF: Qperf=\n";
       WriteMatrix(os, eMatIn);
       os << "PERF: Q_low=\n";
@@ -529,6 +531,9 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       os << "PERF: RecSHV_low.SHV=\n";
       WriteMatrix(os, RecSHV_low.SHV);
       os << "PERF: Return Q_low\n";
+#endif
+#ifdef DEBUG_FLIP
+      os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second << "\n";
 #endif
       return {std::move(Q_low), std::move(RecSHV_low)};
     }
@@ -556,24 +561,19 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       os << "PERF: Assigning bound_upp to TheGamma=" << TheGamma << "\n";
 #endif
       bound_upp = TheGamma;
-      int nbRowGamma = RecSHV_gamma.SHV.rows();
-      for (int iRowGamma = 0; iRowGamma < nbRowGamma; iRowGamma++) {
-        MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRowGamma);
+      int nbRow = RecSHV_gamma.SHV.rows();
+      for (int iRow = 0; iRow < nbRow; iRow++) {
+        MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRow);
         T rVal = EvaluationQuadForm<T, Tint>(eMatDir, V);
-        T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
 #ifdef DEBUG_FLIP
-        os << "PERF: iRowGamma=" << iRowGamma << " / " << nbRowGamma
-           << " V=";
-        for (int i=0; i<eMatIn.rows(); i++) {
-          os << " " << V(i);
-        }
-        os << " rVal=" << rVal << " qVal=" << qVal << "\n";
+        os << "PERF: iRow=" << iRow << " / " << nbRow << " V=" << StringVectorGAP(V) << "\n";
 #endif
         if (rVal < 0) {
+          T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
           T TheVal = (RecSHV_in.min - qVal) / rVal;
           if (TheVal < bound_upp) {
 #ifdef DEBUG_FLIP
-            os << "PERF: iRowGamma=" << iRowGamma
+            os << "PERF: iRow=" << iRow
                << " Assigning bound_upp to TheVal=" << TheVal << "\n";
             os << "PERF: rVal=" << rVal << " qVal=" << qVal
                << " RecSHV_in.min=" << RecSHV_in.min << "\n";
