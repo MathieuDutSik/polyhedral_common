@@ -1,6 +1,8 @@
 Read("../common.g");
 Print("Beginning Test enumeration of perfect forms in T-spaces\n");
 
+keep_err:=false;
+
 GetFundamentalInfo:=function(d)
   local res, IsCorrect, eSum, eProd, Dval, eQuot;
   res:=d mod 4;
@@ -25,11 +27,12 @@ GetFundamentalInfo:=function(d)
   return rec(eSum:=eSum, eProd:=eProd, IsCorrect:=IsCorrect);
 end;
 
-GetRecInfo:=function(fProg, d, n)
-    local FileNml, FileResult, output, eProg, TheCommand, U, is_correct, info;
+get_rec_info:=function(fProg, d, n, keep_error)
+    local FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
     FileNml:="PerfectForm.nml";
     FileResult:="Result";
+    FileErr:=GetFreeFile("PERF_enumeration_");
     RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileResult);
     #
@@ -70,6 +73,9 @@ GetRecInfo:=function(fProg, d, n)
     #
     eProg:=Concatenation("../../src_perfect/", fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);
+    if keep_error then
+        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
+    fi;
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     #
@@ -114,7 +120,7 @@ f_compute:=function()
         Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
         for fProg in ListProg
         do
-            eRec:=GetRecInfo(fProg, eCase.d, eCase.n);
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, keep_err);
             if eRec=fail then
                 Print("Failing because eRec=fail\n");
                 return false;

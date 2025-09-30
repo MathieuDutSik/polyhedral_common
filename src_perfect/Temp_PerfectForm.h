@@ -7,6 +7,7 @@
 #include "Parallel_Classes_Types.h"
 #include "PolytopeEquiStab.h"
 #include "Positivity.h"
+#include "fractions.h"
 #include "Tspace_General.h"
 #include <map>
 #include <string>
@@ -531,7 +532,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
       return {std::move(Q_low), std::move(RecSHV_low)};
     }
-    T TheGamma = (bound_low + bound_upp) / 2;
+    T TheGamma = get_mid_val(bound_low, bound_upp);
     MyMatrix<T> Q_gamma = eMatIn + TheGamma * eMatDir;
 #ifdef DEBUG_FLIP
     os << "PERF: Q_gamma=\n";
@@ -619,7 +620,6 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> con
   MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
   return RankMat(ScalMat) == nbMat;
 }
-
 
 /*
   Finds a perfect form by starting from the super matrix of the space
@@ -741,7 +741,6 @@ MyMatrix<T> get_shv_t(MyMatrix<T> const& eMat, Tshortest<T, Tint> const &RecSHV,
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   return UniversalMatrixConversion<T, Tint>(SHV);
 }
-
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>

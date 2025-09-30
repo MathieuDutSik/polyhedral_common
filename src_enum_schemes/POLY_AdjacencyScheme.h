@@ -256,7 +256,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     n_obj++;
   };
   auto get_undone_idx = [&]() -> size_t {
-    size_t idx = undone[undone.size() - 1];
+    size_t idx = undone[0];
+    undone[0] = undone[undone.size() - 1];
     undone.pop_back();
     return idx;
   };

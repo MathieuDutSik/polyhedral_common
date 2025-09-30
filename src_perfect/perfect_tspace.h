@@ -121,6 +121,7 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
 #endif
     MyVector<T> eFacet = FindFacetInequality(eCone.PerfDomEXT, eIncd);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
+    //    MyMatrix<T> eMatDirScal = ScalarCanonicalizationMatrix(eMatDir);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         Flipping_Perfect<T, Tint>(eGram, eMatDir, os);
 #ifdef DEBUG_PERFECT_TSPACE
@@ -145,6 +146,7 @@ struct DataPerfectTspaceFunc {
   using Tobj = PerfectTspace_Obj<T, Tint, Tgroup>;
   using TadjI = PerfectTspace_AdjI<T, Tint>;
   using TadjO = PerfectTspace_AdjO<Tint>;
+  std::vector<MyMatrix<Tint>> list_gen;
   std::ostream &get_os() { return data.rddo.os; }
 
   Tobj f_init() {

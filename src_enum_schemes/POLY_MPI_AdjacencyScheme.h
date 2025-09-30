@@ -458,7 +458,8 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     throw TerminalException{1};
   };
   auto get_undone_idx = [&]() -> size_t {
-    size_t idx = undone[undone.size() - 1];
+    size_t idx = undone[0];
+    undone[0] = undone[undone.size() - 1];
     undone.pop_back();
     return idx;
   };
