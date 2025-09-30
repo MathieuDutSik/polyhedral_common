@@ -352,7 +352,13 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #endif
       return false;
     }
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    MicrosecondTime time_treat;
+#endif
     treat_one_entry();
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: treat_one_entry|=" << time_treat << "\n";
+#endif
   }
 }
 

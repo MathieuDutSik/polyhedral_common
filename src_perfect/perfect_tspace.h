@@ -21,6 +21,10 @@
 #define SANITY_CHECK_PERFECT_TSPACE
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_PERFECT_TSPACE
+#endif
+
 
 void WriteEntryGAP(std::ostream &os, Face const &eFace) {
   os << "[";
@@ -78,10 +82,16 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
                       Tshortest<T, Tint> const &RecSHV,
                       Tgroup const& GRP,
                       std::ostream &os) {
+#ifdef TIMINGS_PERFECT_TSPACE
+  HumanTime time;
+#endif
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
 #endif
   MyMatrix<T> SHV_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
+#ifdef TIMINGS_PERFECT_TSPACE
+  os << "|PERF_TSPACE: GetAdj_shv_t|=" << time << "\n";
+#endif
 #ifdef SANITY_CHECK_PERFECT_TSPACE
   if (!is_perfect_in_space(LinSpa, RecSHV)) {
     std::cerr << "Error in input of TSPACE_GetAdjacencies, the input matrix is not perfect\n";
@@ -100,8 +110,14 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
                                                                  eGram,
                                                                  SHV_T,
                                                                  GRP, os);
+#ifdef TIMINGS_PERFECT_TSPACE
+  os << "|PERF_TSPACE: GetAdj_eCone|=" << time << "\n";
+#endif
   vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub);
-#ifdef DEBUG_PERFECT_TSPACE
+#ifdef TIMINGS_PERFECT_TSPACE
+  os << "|PERF_TSPACE: GetAdj_ListIncd|=" << time << "\n";
+#endif
+#ifdef DEBUG_PERFECT_TSPACE_DISABLE
   os << "PERF_TSPACE: The eCone.PerfDomEXT is the following\n";
   WriteMatrix(os, eCone.PerfDomEXT);
   os << "PERF_TSPACE: RankMat(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT) << "\n";
@@ -123,8 +139,14 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     // That seems to slow down things
     //    MyMatrix<T> eMatDirScal = ScalarCanonicalizationMatrix(eMatDir);
+#ifdef TIMINGS_PERFECT_TSPACE
+    HumanTime time_flip;
+#endif
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         Flipping_Perfect<T, Tint>(eGram, eMatDir, os);
+#ifdef TIMINGS_PERFECT_TSPACE
+    os << "|PERF_TSPACE: Flipping_Perfect|=" << time_flip << "\n";
+#endif
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: Result flipping pos=" << pos << " min=" << pair.second.min << " |SHV|=" << pair.second.SHV.rows() << " det=" << DeterminantMat(pair.first) << "\n";
 #endif
@@ -138,6 +160,9 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
     PerfectTspace_AdjI<T, Tint> eAdj{eIncd, pair.first, pair.second};
     ListAdj.push_back(eAdj);
   }
+#ifdef TIMINGS_PERFECT_TSPACE
+  os << "|PERF_TSPACE: GetAdj_ListAdj|=" << time << "\n";
+#endif
   return ListAdj;
 }
 

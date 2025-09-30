@@ -28,6 +28,10 @@
 #define SANITY_CHECK_PERFECT_REPR
 #endif
 
+#ifdef TIMINGS
+#define TIMINGS_PERFECT_FORM
+#endif
+
 template <typename T, typename Tint> struct NakedPerfect {
   MyMatrix<T> eGram;
   MyMatrix<Tint> SHV;
@@ -360,7 +364,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   //
   // Initial checks of the input
   //
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
   os << "PERF: Kernel_Flipping_Perfect : SHVinformation=\n";
   int nbSHV = RecSHV_in.SHV.rows();
   int n = RecSHV_in.SHV.cols();
@@ -407,29 +411,37 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   T bound_low(0);
 #ifdef DEBUG_FLIP
   int iterLoop_first = 0;
+  int n_shortest = 0;
 #endif
   while (true) {
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
 #ifdef DEBUG_FLIP
-    os << "PERF: CALL IsAdmissible (Q_upp)\n";
+    iterLoop_first += 1;
+    os << "PERF: iterLoop_first=" << iterLoop_first << " bound=" << bound_low
+       << " | " << bound_upp << "\n";
+#endif
+#ifdef TIMINGS_PERFECT_FORM
+    MicrosecondTime time_admissible;
 #endif
     bool test = memo_admissible.comp(Q_upp);
-#ifdef DEBUG_FLIP
-    iterLoop_first += 1;
-    os << "PERF: iterLoop_first=" << iterLoop_first << " bound_upp=" << bound_upp
-       << " bound_low=" << bound_low << " test=" << test << "\n";
+#ifdef TIMINGS_PERFECT_FORM
+    os << "|PERF: memo_admissible|=" << time_admissible << "\n";
 #endif
     if (!test) {
       // We are outside, so reduce the range.
       bound_upp = get_mid_val(bound_low, bound_upp);
     } else {
-#ifdef DEBUG_FLIP
-      os << "PERF: Q_upp=\n";
-      WriteMatrix(os, Q_upp);
-      os << "PERF: Kernel_Flipping_Perfect, case 2 (Q_upp)\n";
+#ifdef TIMINGS_PERFECT_FORM
+      MicrosecondTime time_shortest;
 #endif
       Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
+#ifdef TIMINGS_PERFECT_FORM
+      os << "|ITER: memo_shortest|=" << time_shortest << "\n";
+#endif
 #ifdef DEBUG_FLIP
+      n_shortest += 1;
+#endif
+#ifdef DEBUG_FLIP_DISABLE
       os << "ITER: RecSHV_upp.min=" << RecSHV_upp.min << "\n";
       os << "ITER: RecSHV_upp.SHV=\n";
       WriteMatrix(os, RecSHV_upp.SHV);
@@ -475,20 +487,17 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // and RecSHV_upp.min < RecSHV_in.min
 #ifdef DEBUG_FLIP
   os << "PERF: FIRST LOOP FINISHED bound_upp=" << bound_upp
-     << " bound_low=" << bound_low << " iterLoop_first=" << iterLoop_first << "\n";
+     << " bound_low=" << bound_low << " iterLoop_first=" << iterLoop_first << " n_shortest=" << n_shortest << "\n";
   int iterLoop_second = 0;
 #endif
   while (true) {
 #ifdef DEBUG_FLIP
-    os << "PERF: Now bound_low=" << bound_low
-       << " bound_upp=" << bound_upp << " iterLoop_second=" << iterLoop_second << "\n";
+    os << "PERF: -------------- iterLoop_second=" << iterLoop_second
+       << " bound=" << bound_low << " | " << bound_upp << " --------------\n";
     iterLoop_second += 1;
 #endif
     MyMatrix<T> Q_low = eMatIn + bound_low * eMatDir;
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
-#ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 3 (Q_low / Q_upp)\n";
-#endif
     Tshortest<T, Tint> const& RecSHV_low = memo_shortest.comp(Q_low);
     Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP_DISABLE
@@ -508,14 +517,19 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     }
 #endif
     bool test2 = TestInclusionSHV(RecSHV_in.SHV, RecSHV_low.SHV);
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
     os << "PERF: RecSHV_upp.min = " << RecSHV_upp.min << "\n";
     os << "PERF: RecSHV_in.min  = " << RecSHV_in.min << "\n";
     os << "PERF: test1=" << test1 << " test2=" << test2 << "\n";
 #endif
     if (test1) {
 #ifdef DEBUG_FLIP
-      os << "PERF: Exit flip (return Q_upp) iterLoop_second=" << iterLoop_second << "\n";
+      os << "PERF: Q_upp=\n";
+      WriteMatrix(os, Q_upp);
+#endif
+#ifdef DEBUG_FLIP
+      double coeff_d = UniversalScalarConversion<double,T>(bound_upp);
+      os << "PERF: Exit flip (return Q_upp) iterLoop_second=" << iterLoop_second << " coeff=" << bound_upp << " coeff_d=" << coeff_d << "\n";
 #endif
       return {std::move(Q_upp), std::move(RecSHV_upp)};
     }
@@ -533,21 +547,23 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       os << "PERF: Return Q_low\n";
 #endif
 #ifdef DEBUG_FLIP
-      os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second << "\n";
+      os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second << " coeff=" << bound_low << "\n";
 #endif
       return {std::move(Q_low), std::move(RecSHV_low)};
     }
     T TheGamma = get_mid_val(bound_low, bound_upp);
     MyMatrix<T> Q_gamma = eMatIn + TheGamma * eMatDir;
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
     os << "PERF: Q_gamma=\n";
     WriteMatrix(os, Q_gamma);
 #endif
 #ifdef DEBUG_FLIP
-    os << "PERF: Kernel_Flipping_Perfect, case 5 (Q_gamma)\n";
+    double TheGamma_d = UniversalScalarConversion<double,T>(TheGamma);
+    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma << " gamma_d=" << TheGamma_d << "\n";
+    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma << " bound_low=" << bound_low << " bound_upp=" << bound_upp << "\n";
 #endif
     Tshortest<T, Tint> const& RecSHV_gamma = memo_shortest.comp(Q_gamma);
-#ifdef DEBUG_FLIP
+#ifdef DEBUG_FLIP_DISABLE
     os << "|RecSHV_gamma.SHV|=" << RecSHV_gamma.SHV.rows() << "\n";
     WriteMatrix(os, RecSHV_gamma.SHV);
     MyMatrix<T> ConeClassicalGamma =
@@ -575,8 +591,6 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef DEBUG_FLIP
             os << "PERF: iRow=" << iRow
                << " Assigning bound_upp to TheVal=" << TheVal << "\n";
-            os << "PERF: rVal=" << rVal << " qVal=" << qVal
-               << " RecSHV_in.min=" << RecSHV_in.min << "\n";
 #endif
             bound_upp = TheVal;
           }
