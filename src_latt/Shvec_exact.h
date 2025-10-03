@@ -875,7 +875,6 @@ resultCVP<T, Tint> NearestVectors(MyMatrix<T> const &GramMat, MyVector<T> const 
   return solver.nearest_vectors(eV);
 }
 
-
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
                                                  const MyVector<T> &eV,
@@ -895,7 +894,7 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
 
 
 template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat, T const &MaxNorm,
+MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
                                    std::ostream &os) {
   int dim = GramMat.rows();
   if (dim == 1) {
@@ -958,12 +957,6 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
     (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm, f_insert);
   }
   return MatrixFromVectorFamilyDim(dim, ListVect);
-}
-
-template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
-                             std::ostream &os) {
-  return T_ShortVector_exact<T, Tint>(GramMat, MaxNorm, os);
 }
 
 template <typename T, typename Tint>
