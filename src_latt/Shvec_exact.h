@@ -33,8 +33,6 @@ const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
 const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4;
 const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
 const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
-const int STOP_COMPUTATION = 666;
-const int NORMAL_TERMINATION_COMPUTATION = 555;
 // clang-format off
 }  // namespace TempShvec_globals
 // clang-format on
@@ -242,8 +240,8 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
-                         Finsert f_insert, Fsetbound f_set_bound) {
+bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
+                          Finsert f_insert, Fsetbound f_set_bound) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
   int dim = request.dim;
@@ -285,7 +283,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   bool needs_new_bound = true;
   i = dim - 1;
   if (bound < 0) {
-    return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+    return true;
   }
   Trem(i) = bound;
   U(i) = 0;
@@ -320,7 +318,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
 #ifdef DEBUG_SHVEC
             std::cerr << "SHVEC: Exiting because x=0 and central run\n";
 #endif
-            return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+            return true;
           }
         }
         hVal = x_T(0) + C(0) + U(0);
@@ -360,7 +358,7 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
 #endif
         bool ret_val = f_insert(x, eNorm);
         if (!ret_val)
-          return TempShvec_globals::STOP_COMPUTATION;
+          return false;
       } else {
         i--;
         U(i) = 0;
@@ -373,14 +371,14 @@ int computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
     } else {
       i++;
       if (i == dim) {
-        return TempShvec_globals::NORMAL_TERMINATION_COMPUTATION;
+        return true;
       }
     }
   }
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-inline typename std::enable_if<is_ring_field<T>::value, int>::type
+inline typename std::enable_if<is_ring_field<T>::value, bool>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
@@ -391,7 +389,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-inline typename std::enable_if<!is_ring_field<T>::value, int>::type
+inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
 computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
@@ -411,7 +409,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
     T min_T = UniversalScalarConversion<T, Tfield>(min_Tfield);
     return f_insert(V, min_T);
   };
-  int retVal =
+  bool retVal =
       computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(
           request_field, bound_field, f_insert_field, f_set_bound);
 #ifdef DEBUG_SHVEC
@@ -421,7 +419,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 }
 
 template <typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<is_ring_field<T>::value, int>::type
+inline typename std::enable_if<is_ring_field<T>::value, bool>::type
 computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
   auto f_set_bound =
       [&](const T &eQuot, const T &eSum, [[maybe_unused]] const MyMatrix<T> &q,
@@ -435,7 +433,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 }
 
 template <typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<!is_ring_field<T>::value, int>::type
+inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
 computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
   auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,
@@ -493,9 +491,9 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
         return false;
       }
     };
-    int result =
+    bool result =
         computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
-    if (result == TempShvec_globals::NORMAL_TERMINATION_COMPUTATION) {
+    if (result) {
       break;
     }
   }
@@ -895,7 +893,7 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
-                                   std::ostream &os) {
+                             std::ostream &os) {
   int dim = GramMat.rows();
   if (dim == 1) {
     std::vector<MyVector<Tint>> ListVect;
