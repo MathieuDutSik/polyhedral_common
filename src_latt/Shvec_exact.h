@@ -340,7 +340,7 @@ bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
         hVal = x_T(0) + C(0) + U(0);
         eNorm = bound - Trem(0) + q(0, 0) * hVal * hVal;
 #ifdef SANITY_CHECK_SHVEC
-        T norm = 0;
+        T norm(0);
         for (int i2 = 0; i2 < dim; i2++)
           for (int j2 = 0; j2 < dim; j2++)
             norm += g(i2, j2) * (x_T(i2) + C(i2)) * (x_T(j2) + C(j2));
@@ -827,9 +827,9 @@ public:
     }
     return {TheNorm, std::move(ListClos)};
   }
-  std::vector<MyVector<Tint>> fixed_norm_vectors(MyVector<T> const &eV,
+  std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
                                                T const &TheNorm) const {
-    MyVector<T> cosetRed = -Q_T.transpose() * eV;
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
@@ -852,7 +852,7 @@ public:
     (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
     return ListVect;
   }
-  std::vector<MyVector<Tint>> at_most_norm_vectors(MyVector<T> const &eV,
+  std::vector<MyVector<Tint>> at_most_dist_vectors(MyVector<T> const &eV,
                                                    T const &MaxNorm) const {
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
@@ -897,19 +897,19 @@ resultCVP<T, Tint> NearestVectors(MyMatrix<T> const &GramMat, MyVector<T> const 
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
+std::vector<MyVector<Tint>> FindFixedDistVectors(const MyMatrix<T> &GramMat,
                                                  const MyVector<T> &eV,
                                                  const T &norm, std::ostream& os) {
   CVPSolver<T, Tint> solver(GramMat, os);
-  return solver.fixed_norm_vectors(eV, norm);
+  return solver.fixed_dist_vectors(eV, norm);
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
+std::vector<MyVector<Tint>> FindAtMostDistVectors(const MyMatrix<T> &GramMat,
                                                   const MyVector<T> &eV,
                                                   const T &norm, std::ostream& os) {
   CVPSolver<T, Tint> solver(GramMat, os);
-  return solver.at_most_norm_vectors(eV, norm);
+  return solver.at_most_dist_vectors(eV, norm);
 }
 
 

@@ -1817,7 +1817,7 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
         UniversalMatrixConversion<Tint, T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     std::vector<MyVector<Tint>> l_v =
-      FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm, os);
+      FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
     for (auto &e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
       std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, e_root);
@@ -1923,7 +1923,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
       MyMatrix<T> const &RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
       std::vector<MyVector<Tint>> l_v =
-        FindFixedNormVectors<T, Tint>(G_P, zeroVect, e_norm, os);
+        FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
 #ifdef DEBUG_EDGEWALK
       os << "EDGE: |l_v|=" << l_v.size() << "\n";
 #endif

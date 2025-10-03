@@ -36,7 +36,7 @@ void process(std::string const &choice, std::string const &FileGram,
       T norm = ParseScalar<T>(*opt_near);
       MyVector<T> fV = -eV;
       std::vector<MyVector<Tint>> ListVect =
-        FindAtMostNormVectors<T, Tint>(GramMat, fV, norm, std::cerr);
+        FindAtMostDistVectors<T, Tint>(GramMat, fV, norm, std::cerr);
       return MatrixFromVectorFamilyDim(n, ListVect);
     }
     std::optional<std::string> opt_fixed = get_postfix(choice, "fixed=");
@@ -44,7 +44,7 @@ void process(std::string const &choice, std::string const &FileGram,
       T norm = ParseScalar<T>(*opt_fixed);
       MyVector<T> fV = -eV;
       std::vector<MyVector<Tint>> ListVect =
-        FindFixedNormVectors<T, Tint>(GramMat, fV, norm, std::cerr);
+        FindFixedDistVectors<T, Tint>(GramMat, fV, norm, std::cerr);
       return MatrixFromVectorFamilyDim(n, ListVect);
     }
     std::cerr << "Failed to find a matching entry for choice=" << choice
