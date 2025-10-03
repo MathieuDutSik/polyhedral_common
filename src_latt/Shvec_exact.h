@@ -479,15 +479,16 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
         for (int j = 0; j < dim; j++)
           eNorm += request.gram_matrix(i, j) * C(i) * C(j);
       return eNorm;
-    }
-    T eMin = request.gram_matrix(0, 0);
-    for (int i = 1; i < dim; i++) {
-      T diag_val = request.gram_matrix(i, i);
-      if (eMin > diag_val) {
-        eMin = diag_val;
+    } else {
+      T eMin = request.gram_matrix(0, 0);
+      for (int i = 1; i < dim; i++) {
+        T diag_val = request.gram_matrix(i, i);
+        if (eMin > diag_val) {
+          eMin = diag_val;
+        }
       }
+      return eMin;
     }
-    return eMin;
   };
   T_shvec_info<T, Tint> info;
   info.minimum = get_minimum_atp();
@@ -829,7 +830,8 @@ public:
     }
     return {TheNorm, std::move(ListClos)};
   }
-  std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
+  template<typename Fins>
+  void fixed_dist_vectors_f(MyVector<T> const &eV, Fins f_ins,
                                                  T const &TheNorm) const {
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
@@ -837,7 +839,6 @@ public:
     request.coset = ePair.second;
     request.central = false;
     request.bound = TheNorm;
-    std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
         MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
@@ -847,11 +848,19 @@ public:
           throw TerminalException{1};
         }
 #endif
-        ListVect.emplace_back(std::move(x));
+        f_ins(x);
       }
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
+  }
+  std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
+                                                 T const &TheNorm) const {
+    std::vector<MyVector<Tint>> ListVect;
+    auto f_ins = [&](MyVector<Tint> const& x) -> void {
+      ListVect.push_back(x);
+    };
+    fixed_dist_vectors_f<decltype(f_ins)>(eV, f_ins, TheNorm);
     return ListVect;
   }
   std::vector<MyVector<Tint>> fixed_norm_vectors(T const &TheNorm) const {
