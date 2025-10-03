@@ -809,6 +809,8 @@ public:
     return {TheNorm, std::move(ListClos)};
   }
   resultCVP<T, Tint> shortest_vectors() const {
+    request.coset = ZeroVector<T>(dim);
+    request.central = true;
     T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
@@ -828,7 +830,7 @@ public:
     return {TheNorm, std::move(ListClos)};
   }
   std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
-                                               T const &TheNorm) const {
+                                                 T const &TheNorm) const {
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
@@ -841,6 +843,27 @@ public:
         MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
 #ifdef SANITY_CHECK_SHVEC
         if (TheNorm != comp_norm_diff(x, eV)) {
+          std::cerr << "Inconsistecy error in the norms\n";
+          throw TerminalException{1};
+        }
+#endif
+        ListVect.emplace_back(std::move(x));
+      }
+      return true;
+    };
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
+    return ListVect;
+  }
+  std::vector<MyVector<Tint>> fixed_norm_vectors(T const &TheNorm) const {
+    request.coset = ZeroVector<T>(dim);
+    request.central = true;
+    request.bound = TheNorm;
+    std::vector<MyVector<Tint>> ListVect;
+    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
+      if (min == TheNorm) {
+        MyVector<Tint> x = eRec.Pmat.transpose() * V;
+#ifdef SANITY_CHECK_SHVEC
+        if (TheNorm != comp_norm_vect(x)) {
           std::cerr << "Inconsistecy error in the norms\n";
           throw TerminalException{1};
         }
@@ -866,6 +889,26 @@ public:
       MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
 #ifdef SANITY_CHECK_SHVEC
       if (MaxNorm < comp_norm_diff(x, eV)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+#endif
+      ListVect.emplace_back(std::move(x));
+      return true;
+    };
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
+    return ListVect;
+  }
+  std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
+    request.coset = ZeroVector<T>(dim);
+    request.central = true;
+    request.bound = MaxNorm;
+    std::vector<MyVector<Tint>> ListVect;
+    auto f_insert = [&](const MyVector<Tint> &V,
+                        [[maybe_unused]] const T &min) -> bool {
+      MyVector<Tint> x = eRec.Pmat.transpose() * V;
+#ifdef SANITY_CHECK_SHVEC
+      if (MaxNorm < comp_norm_vect(x)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
       }
