@@ -3,7 +3,7 @@
 #define SRC_LORENTZIAN_VINBERG_H_
 
 // clang-format off
-#include "Shvec_exact_polytope.h"
+#include "Shvec_exact.h"
 #include "Indefinite_LLL.h"
 #include "Namelist.h"
 #include "POLY_DirectDualDesc.h"
