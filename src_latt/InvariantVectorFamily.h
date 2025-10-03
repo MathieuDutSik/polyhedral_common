@@ -41,42 +41,6 @@
 
  */
 
-template <typename T, typename Tint>
-MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
-                                         std::ostream &os) {
-#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
-  os << "IVF: Begining of ExtractInvariantVectorFamily\n";
-#endif
-#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  MicrosecondTime time;
-#endif
-  LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat, os);
-  MyMatrix<Tint> P_T = recLLL.Pmat.transpose();
-#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  os << "|IVF: LLL|=" << time << "\n";
-#endif
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
-  //
-  //  std::cerr << "eMat=\n";
-  //  WriteMatrix(std::cerr, eMat);
-  MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
-  MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm, os);
-#ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
-  os << "|IVF: T_ShortVector|=" << time << "\n";
-#endif
-  MyMatrix<Tint> SHV1_a = SHVall * recLLL.Pmat;
-  int nbRow = SHV1_a.rows();
-  int n = SHV1_a.cols();
-  MyMatrix<Tint> SHVret(2 * nbRow, n);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    for (int i = 0; i < n; i++)
-      SHVret(2 * iRow, i) = SHV1_a(iRow, i);
-    for (int i = 0; i < n; i++)
-      SHVret(2 * iRow + 1, i) = -SHV1_a(iRow, i);
-  }
-  return SHVret;
-}
-
 template <typename T, typename Tint> T GetMaxNorm(MyMatrix<T> const &eMat, std::ostream& os) {
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat, os);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
@@ -200,7 +164,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
       std::cerr << "Failed to find a relevant vector configuration\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> SHV_f = EnumerateVectorsFixedNorm<T, Tint>(eMat, norm, os);
+    MyMatrix<Tint> SHV_f = T_ShortVector_fixed<T, Tint>(eMat, norm, os);
     SHVret = Concatenate(SHVret, SHV_f);
     if (f_correct(SHVret))
       return SHVret;
@@ -418,12 +382,11 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
 
 /*
   See the paper "A canonical form for positive definite matrices"
+  It has to be coded 
  */
 /*
 template<typename T, typename Tint>
 MyMatrix<Tint> WellRoundedInvariantVectorFamily(MyMatrix<Tint> const& GramMat) {
-  T_shvec_info<T, Tint> info = computeMinimum_GramMat<T,Tint>(GramMat);
-  MyMatrix<Tint> SHV = MatrixFromVectorFamily(info.short_vectors);
 
 }
 */

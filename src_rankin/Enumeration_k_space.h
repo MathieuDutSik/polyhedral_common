@@ -122,13 +122,13 @@ template <typename T, typename Tint>
 T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k,
                                      std::ostream &os) {
   os << "RNK: UpperBoundRankinMinimalDeterminant k=" << k << "\n";
-  T_shvec_info<T, Tint> SHVmin = computeMinimum_GramMat<T, Tint>(TheGramMat);
-  T rNorm = SHVmin.minimum;
+  Tshortest<T, Tint> RecMin = T_ShortestVector<T,Tint>(TheGramMat, os);
+  T rNorm = RecMin.min;
   os << "RNK: UpperBoundRankinMinimalDeterminant rNorm=" << rNorm << "\n";
   if (k == 1) {
     return rNorm;
   }
-  MyVector<Tint> eVect = SHVmin.short_vectors[0];
+  MyVector<Tint> eVect = GetMatrixRow(RecMin.SHV, 0);
   os << "RNK: UpperBoundRankinMinimalDeterminant eVect=" << StringVector(eVect)
      << "\n";
   MyMatrix<T> TheProj =

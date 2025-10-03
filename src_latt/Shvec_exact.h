@@ -1001,30 +1001,6 @@ std::vector<MyVector<Tint>> FindAtMostDistVectors(const MyMatrix<T> &GramMat,
   return solver.at_most_dist_vectors(eV, norm);
 }
 
-
-
-
-
-
-
-// Compute the minimum and returns only half the vector matching it
-template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
-  int dim = gram_matrix.rows();
-  MyVector<T> coset = ZeroVector<T>(dim);
-  bool central = true;
-  T bound = 0;
-  //
-  FullGramInfo<T> request;
-  request.dim = dim;
-  request.coset = coset;
-  request.gram_matrix = gram_matrix;
-  request.bound = bound;
-  request.central = central;
-  //
-  return computeMinimum<T, Tint>(request);
-}
-
 // Returns half the vector below a specific bound.
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,

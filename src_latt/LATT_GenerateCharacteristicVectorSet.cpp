@@ -9,8 +9,8 @@ void process_C(std::string choice, std::string MatFile, std::string const& OutFo
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   auto f = [&]() -> MyMatrix<Tint> {
     if (choice == "shortest") {
-      T_shvec_info<T, Tint> info = computeMinimum_GramMat<T, Tint>(GramMat);
-      return MatrixFromVectorFamily(info.short_vectors);
+      Tshortest<T, Tint> rec = T_ShortestVector<T,Tint>(GramMat, std::cerr);
+      return rec.SHV;
     }
     if (choice == "relevant_voronoi") {
       return ComputeVoronoiRelevantVector<T, Tint>(GramMat, std::cerr);

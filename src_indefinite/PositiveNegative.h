@@ -23,7 +23,7 @@ INDEF_FORM_GetOrbitRepresentative_PosNeg(MyMatrix<T> const &Q, T const &X,
   using Tidx = typename Tgroup::Tidx;
   auto get_orbit_representatives =
       [&](MyMatrix<T> const &Qin) -> std::vector<MyVector<Tint>> {
-    MyMatrix<Tint> SHV = EnumerateVectorsFixedNorm<T, Tint>(Qin, X, os);
+    MyMatrix<Tint> SHV = T_ShortVector_fixed<T, Tint>(Qin, X, os);
 #ifdef DEBUG_POSITIVE_NEGATIVE_FORMS
     os << "POSNEG: |SHV|=" << SHV.rows() << "\n";
 #endif
