@@ -28,6 +28,10 @@
 #define DEBUG_VINBERG
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_VINBERG
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_VINBERG
 #endif
@@ -37,52 +41,26 @@ template <typename T, typename Tint, typename Fins>
 void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
                                const MyVector<T> &eV, const T &norm, Fins f_ins,
                                std::ostream &os) {
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
-  const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
-  const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
-  /*
-    We have GramMatRed = Pmat * GramMat * Pmat^T
-    G[x - eV] = norm
-    [x - eV] G [x - eV]^T = norm
-    [x - eV] Inv(Pmat) G_red Inv(Pmat)^T [x - eV]^T = norm
-    G_red[x Inv(Pmat) - eV Inv(Pmat)] = norm
-    So we resolve
-    G_red[y - eV_img] = norm
-    with y = x Inv(Pmat)   and   eV_img = eV Inv(Pmat)
-    and so x = y Pmat
-   */
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  MyMatrix<T> Gprod = Pmat_T * GramMat * Pmat_T.transpose();
-
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
-  //
+  CVPSolver<T, Tint> solver(GramMat, os);
 #ifdef DEBUG_VINBERG
   size_t n_iter = 0;
 #endif
-  auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
+  auto f_call=[&](MyVector<Tint> const& V_x) -> void {
 #ifdef DEBUG_VINBERG
     n_iter++;
 #endif
-    if (min == norm) {
-      MyVector<Tint> V_x = Pmat.transpose() * V_y;
-#ifdef DEBUG_VINBERG
-      MyVector<T> Vred = eV_img + UniversalVectorConversion<T, Tint>(V_y);
-      T norm_red = Vred.dot(GramMatRed * Vred);
-      MyVector<T> Vtot = eV + UniversalVectorConversion<T, Tint>(V_x);
-      T norm_tot = Vtot.dot(GramMat * Vtot);
-      if (norm_red != norm_tot || norm_tot != min) {
-        std::cerr << "different norms\n";
-        throw TerminalException{1};
-      }
-#endif
-      f_ins(V_x);
+#ifdef SANITY_CHECK_VINBERG
+    MyVector<T> Vtot = eV + UniversalVectorConversion<T, Tint>(V_x);
+    T norm_tot = Vtot.dot(GramMat * Vtot);
+    if (norm_tot != norm) {
+      std::cerr << "different norms\n";
+      throw TerminalException{1};
     }
-    return true;
+#endif
+    f_ins(V_x);
   };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
+  MyVector<T> eV_input = - eV;
+  solver.template fixed_dist_vectors_f<decltype(f_call)>(eV_input, f_call, norm);
 #ifdef DEBUG_VINBERG
   os << "n_iter=" << n_iter << "\n";
 #endif
