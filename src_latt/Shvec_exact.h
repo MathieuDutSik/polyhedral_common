@@ -25,19 +25,6 @@
 #define TIMINGS_SHVEC
 #endif
 
-namespace TempShvec_globals {
-const int TEMP_SHVEC_MODE_UNDEF = -1;
-const int TEMP_SHVEC_MODE_BOUND = 0;
-const int TEMP_SHVEC_MODE_SHORTEST_VECTORS = 1;
-const int TEMP_SHVEC_MODE_MINIMUM = 2;
-const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
-const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4;
-const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
-const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
-// clang-format off
-}  // namespace TempShvec_globals
-// clang-format on
-
 template <typename T> struct FullGramInfo {
   int dim;
   T bound;
@@ -52,8 +39,6 @@ struct ShvecInput {
   MyVector<T> coset;
   bool central;
 };
-
-
 
 template <typename T, typename Tint> struct T_shvec_info {
   std::vector<MyVector<Tint>> short_vectors;
@@ -580,32 +565,6 @@ ResultShortest<Tint> computeTestShortest(const FullGramInfo<T> &request) {
   (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
                                                f_insert);
   return {shortest, better_vector};
-}
-
-template <typename T>
-bool get_central(const MyVector<T> &coset, const int &mode) {
-  int dim = coset.size();
-  for (int i = 0; i < dim; i++) {
-    if (coset(i) != 0)
-      return false;
-  }
-  if (mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO)
-    return false;
-  return true;
-}
-
-template <typename T>
-FullGramInfo<T> initShvecReq(const MyMatrix<T> &gram_matrix,
-                                const MyVector<T> &coset, const T &bound,
-                                int mode) {
-  int dim = gram_matrix.rows();
-  FullGramInfo<T> request;
-  request.dim = dim;
-  request.coset = coset;
-  request.gram_matrix = gram_matrix;
-  request.bound = bound;
-  request.central = get_central(coset, mode);
-  return request;
 }
 
 template <typename T, typename Tint> struct CVPSolver {

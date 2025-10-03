@@ -14,6 +14,7 @@ set -e
 (cd src_perfect && make clean && make)
 (cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
+(cd src_rankin && make clean && make)
 #(cd src_poincare_polyhedron && make clean && make)
 #(cd src_indefinite && make clean && make)
 echo "Normal termination of compile.sh"

@@ -664,9 +664,12 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       }
     }
     //
-    int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-    FullGramInfo<T> request =
-        initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
+    FullGramInfo<T> request;
+    request.dim = dim;
+    request.coset = eV_img;
+    request.gram_matrix = RecLLL.GramMatRed;
+    request.bound = data.norm;
+    request.central = false;
     //
 #ifdef DEBUG_VINBERG
     size_t n_pass = 0;

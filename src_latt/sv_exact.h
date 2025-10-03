@@ -11,6 +11,45 @@ template <typename Tint> struct cvp_reduction_info {
   MyMatrix<Tint> P;
 };
 
+namespace TempShvec_globals {
+const int TEMP_SHVEC_MODE_UNDEF = -1;
+const int TEMP_SHVEC_MODE_BOUND = 0;
+const int TEMP_SHVEC_MODE_SHORTEST_VECTORS = 1;
+const int TEMP_SHVEC_MODE_MINIMUM = 2;
+const int TEMP_SHVEC_MODE_THETA_SERIES = 3;
+const int TEMP_SHVEC_MODE_VINBERG_ALGO = 4;
+const int TEMP_SHVEC_MODE_LORENTZIAN = 5;
+const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
+// clang-format off
+}  // namespace TempShvec_globals
+// clang-format on
+
+template <typename T>
+bool get_central(const MyVector<T> &coset, const int &mode) {
+  int dim = coset.size();
+  for (int i = 0; i < dim; i++) {
+    if (coset(i) != 0)
+      return false;
+  }
+  if (mode == TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO)
+    return false;
+  return true;
+}
+
+template <typename T>
+FullGramInfo<T> initShvecReq(const MyMatrix<T> &gram_matrix,
+                                const MyVector<T> &coset, const T &bound,
+                                int mode) {
+  int dim = gram_matrix.rows();
+  FullGramInfo<T> request;
+  request.dim = dim;
+  request.coset = coset;
+  request.gram_matrix = gram_matrix;
+  request.bound = bound;
+  request.central = get_central(coset, mode);
+  return request;
+}
+
 /*
   We apply the P reduction
   Gred = P G P^T
@@ -43,8 +82,6 @@ GetReducedShvecRequest(FullGramInfo<T> const &request, std::ostream& os) {
   return {std::move(request_ret), std::move(cvp_red)};
 }
 
-
-
 template <typename T, typename Tint>
 T_shvec_info<T, Tint>
 ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
@@ -56,7 +93,6 @@ ApplyReductionToShvecInfo(T_shvec_info<T, Tint> const &info,
   }
   return {std::move(short_vectors), info.minimum};
 }
-
 
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> T_computeShvec_Kernel(const FullGramInfo<T> &request,
@@ -142,7 +178,6 @@ T_shvec_info<T, Tint> T_computeShvec(const FullGramInfo<T> &request,
 #endif
   return info2;
 }
-
 
 // clang-format off
 #endif  // SRC_LATT_SV_EXACT_H_
