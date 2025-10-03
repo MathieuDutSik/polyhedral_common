@@ -8,7 +8,7 @@
 #else
 # include "NumberTheory.h"
 #endif
-#include "Shvec_exact.h"
+#include "sv_exact.h"
 // clang-format on
 
 [[noreturn]] void die_sv(std::string const &last_words) {
