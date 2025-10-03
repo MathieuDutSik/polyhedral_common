@@ -242,9 +242,9 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
                                            T const &MaxDet, std::ostream &os) {
   if (k == 1) {
     T bound = MaxDet;
-    T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
+    std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
     std::vector<MyMatrix<Tint>> RetList;
-    for (auto &eV : SHVmin.short_vectors) {
+    for (auto &eV : short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
       RetList.push_back(M);
     }
@@ -256,8 +256,8 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   // That is we have min(A)^k <= H(n) * MaxDet
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
   T bound = MaxKBound(upper, k, A);
-  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
-  for (auto &eV : SHVmin.short_vectors) {
+  std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
+  for (auto &eV : short_vectors) {
     VectorProjection<T, Tint> vp = GetVectorProjection(A, eV, os);
     T TheAskDet = MaxDet / vp.rNorm;
     std::vector<MyMatrix<Tint>> SpecEnum =
@@ -297,18 +297,17 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     T bound_search = bound * (1 + tol);
     os << "RNK: k=" << k << " bound=" << bound
        << " bound_search=" << bound_search << "\n";
-    T_shvec_info<T, Tint> SHVmin =
-        computeLevel_GramMat<T, Tint>(A, bound_search);
-    os << "RNK: |SHVmin.short_vectors|=" << SHVmin.short_vectors.size() << "\n";
+    std::vectors<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound_search, os);
+    os << "RNK: |short_vectors|=" << short_vectors.size() << "\n";
     std::vector<MyMatrix<Tint>> RetList;
-    for (auto &eV : SHVmin.short_vectors) {
+    for (auto &eV : short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
       RetList.push_back(M);
     }
     return {bound, RetList};
   }
   // We use the HermiteNormalForm
-  T DetMin = 0;
+  T DetMin(0);
   std::unordered_set<MyMatrix<Tint>> set_subspaces;
   auto f_insert = [&](MyMatrix<Tint> const &gLatt) -> void {
     MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
@@ -344,9 +343,9 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   os << "RNK: Rankin_k_minimum, step 3 upper=" << upper << "\n";
   T bound = MaxKBound(upper, k, A);
   os << "RNK: Rankin_k_minimum, step 4 bound=" << bound << "\n";
-  T_shvec_info<T, Tint> SHVmin = computeLevel_GramMat<T, Tint>(A, bound);
+  std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
   os << "RNK: Rankin_k_minimum, step 5\n";
-  for (auto &eV : SHVmin.short_vectors) {
+  for (auto &eV : short_vectors) {
     os << "RNK: eV, step 1\n";
     VectorProjection<T, Tint> vp = GetVectorProjection(A, eV, os);
     os << "RNK: eV, step 2\n";
