@@ -38,7 +38,7 @@ const int TEMP_SHVEC_MODE_HAN_TRAN = 6;
 }  // namespace TempShvec_globals
 // clang-format on
 
-template <typename T> struct T_shvec_request {
+template <typename T> struct FullGramInfo {
   int dim;
   T bound;
   MyVector<T> coset;
@@ -89,8 +89,8 @@ ReductionMod1vector(MyVector<T> const &V) {
   and x = (z - V_i) P
  */
 template <typename T, typename Tint>
-std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>>
-GetReducedShvecRequest(T_shvec_request<T> const &request, std::ostream& os) {
+std::pair<FullGramInfo<T>, cvp_reduction_info<Tint>>
+GetReducedShvecRequest(FullGramInfo<T> const &request, std::ostream& os) {
   int dim = request.dim;
   LLLreduction<T, Tint> eRec =
     LLLreducedBasisDual<T, Tint>(request.gram_matrix, os);
@@ -99,7 +99,7 @@ GetReducedShvecRequest(T_shvec_request<T> const &request, std::ostream& os) {
   MyVector<T> cosetRed = Q_T.transpose() * request.coset;
   std::pair<MyVector<Tint>, MyVector<T>> ePair =
       ReductionMod1vector<T, Tint>(cosetRed);
-  T_shvec_request<T> request_ret{dim, request.bound, ePair.second,
+  FullGramInfo<T> request_ret{dim, request.bound, ePair.second,
                                  eRec.GramMatRed, request.central};
   cvp_reduction_info<Tint> cvp_red{ePair.first, eRec.Pmat};
   return {std::move(request_ret), std::move(cvp_red)};
@@ -255,7 +255,7 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
+bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, const T &bound,
                           Finsert f_insert, Fsetbound f_set_bound) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
@@ -396,7 +396,7 @@ bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
+computeIt_Gen(const FullGramInfo<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (field case)\n";
@@ -407,7 +407,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
+computeIt_Gen(const FullGramInfo<T> &request, const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (ring case)\n";
@@ -415,7 +415,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
   using Tfield = typename overlying_field<T>::field_type;
   //
   Tfield bound_field = UniversalScalarConversion<Tfield, T>(bound);
-  T_shvec_request<Tfield> request_field{
+  FullGramInfo<Tfield> request_field{
       request.dim, UniversalScalarConversion<Tfield, T>(request.bound),
       UniversalVectorConversion<Tfield, T>(request.coset),
       UniversalMatrixConversion<Tfield, T>(request.gram_matrix),
@@ -436,7 +436,7 @@ computeIt_Gen(const T_shvec_request<T> &request, const T &bound,
 }
 
 template <typename T, typename Tint, typename Finsert>
-int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
+int computeIt_polytope(const FullGramInfo<T> &request, const T &bound,
                        const MyMatrix<T> &FAC, Finsert f_insert,
                        std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
@@ -508,7 +508,7 @@ int computeIt_polytope(const T_shvec_request<T> &request, const T &bound,
 
 template <typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
+computeIt(const FullGramInfo<T> &request, const T &bound, Finsert f_insert) {
   auto f_set_bound =
       [&](const T &eQuot, const T &eSum, [[maybe_unused]] const MyMatrix<T> &q,
           [[maybe_unused]] const MyVector<Tint> &x,
@@ -522,7 +522,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 
 template <typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
+computeIt(const FullGramInfo<T> &request, const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
   auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,
                          [[maybe_unused]] const MyMatrix<Tfield> &q,
@@ -537,7 +537,7 @@ computeIt(const T_shvec_request<T> &request, const T &bound, Finsert f_insert) {
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
+T_shvec_info<T, Tint> computeMinimum(const FullGramInfo<T> &request) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeMinimum, begin\n";
 #endif
@@ -596,7 +596,7 @@ template <typename Tint> struct ResultShortest {
 };
 
 template <typename T, typename Tint>
-ResultShortest<Tint> computeTestShortest(const T_shvec_request<T> &request) {
+ResultShortest<Tint> computeTestShortest(const FullGramInfo<T> &request) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeTestShortest, begin\n";
 #endif
@@ -634,11 +634,11 @@ bool get_central(const MyVector<T> &coset, const int &mode) {
 }
 
 template <typename T>
-T_shvec_request<T> initShvecReq(const MyMatrix<T> &gram_matrix,
+FullGramInfo<T> initShvecReq(const MyMatrix<T> &gram_matrix,
                                 const MyVector<T> &coset, const T &bound,
                                 int mode) {
   int dim = gram_matrix.rows();
-  T_shvec_request<T> request;
+  FullGramInfo<T> request;
   request.dim = dim;
   request.coset = coset;
   request.gram_matrix = gram_matrix;
@@ -648,7 +648,7 @@ T_shvec_request<T> initShvecReq(const MyMatrix<T> &gram_matrix,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec_Kernel(const T_shvec_request<T> &request,
+T_shvec_info<T, Tint> T_computeShvec_Kernel(const FullGramInfo<T> &request,
                                             int mode) {
   if (mode == TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS) {
     return computeMinimum<T, Tint>(request);
@@ -716,7 +716,7 @@ T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
   bool central = true;
   T bound = 0;
   //
-  T_shvec_request<T> request;
+  FullGramInfo<T> request;
   request.dim = dim;
   request.coset = coset;
   request.gram_matrix = gram_matrix;
@@ -734,7 +734,7 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
   MyVector<T> coset = ZeroVector<T>(dim);
   bool central = true;
   //
-  T_shvec_request<T> request;
+  FullGramInfo<T> request;
   request.dim = dim;
   request.coset = coset;
   request.gram_matrix = gram_matrix;
@@ -754,13 +754,13 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
+T_shvec_info<T, Tint> T_computeShvec(const FullGramInfo<T> &request,
                                      int mode,
                                      std::ostream &os) {
 #ifdef TIMINGS_SHVEC
   MicrosecondTime time;
 #endif
-  std::pair<T_shvec_request<T>, cvp_reduction_info<Tint>> ePair =
+  std::pair<FullGramInfo<T>, cvp_reduction_info<Tint>> ePair =
     GetReducedShvecRequest<T, Tint>(request, os);
 #ifdef TIMINGS_SHVEC
   os << "|SHVEC: GetReducedShvecRequest|=" << time << "\n";
@@ -787,7 +787,7 @@ private:
   MyMatrix<T> Q_T;
   // This entry is const in spirit but is indeed used by
   // the code.
-  T_shvec_request<T> mutable request;
+  FullGramInfo<T> mutable request;
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
     : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
@@ -798,7 +798,7 @@ public:
     MyVector<T> V_unset(dim);
     bool central = false;
     request =
-        T_shvec_request<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
+        FullGramInfo<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
   }
   T comp_norm_vect(MyVector<Tint> const& x) const {
     MyVector<T> eDiff(dim);
@@ -1059,7 +1059,7 @@ MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
   T bound = MaxNorm;
   int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
   MyVector<T> cosetVect = ZeroVector<T>(dim);
-  T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
+  FullGramInfo<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
   request.central = true;
   //
   T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, mode, os);
@@ -1089,7 +1089,7 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
   } else {
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
     MyVector<T> cosetVect = ZeroVector<T>(dim);
-    T_shvec_request<T> request =
+    FullGramInfo<T> request =
         initShvecReq(GramMat, cosetVect, SpecNorm, mode);
     request.central = true;
     //

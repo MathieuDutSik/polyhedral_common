@@ -665,7 +665,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     }
     //
     int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-    T_shvec_request<T> request =
+    FullGramInfo<T> request =
         initShvecReq<T>(RecLLL.GramMatRed, eV_img, data.norm, mode);
     //
 #ifdef DEBUG_VINBERG
@@ -677,6 +677,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
 #endif
       if (min == data.norm) {
         MyVector<Tint> x = data.shift_u + trans_P * V;
+#ifdef SANITY_CHECK_VINBERG
         MyVector<T> x_T = UniversalVectorConversion<T, Tint>(x);
         T norm = x_T.dot(Vtot.G_T * x_T);
         T k_T = UniversalScalarConversion<T, Tint>(k);
@@ -692,6 +693,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
             throw TerminalException{1};
           }
         }
+#endif
         list_root.emplace_back(std::move(x));
       }
       return true;

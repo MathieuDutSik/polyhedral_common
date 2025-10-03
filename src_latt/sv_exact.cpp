@@ -124,7 +124,7 @@ int main(int argc, char *argv[]) {
     //
     // Defining info and computing with it
     //
-    T_shvec_request<T> request =
+    FullGramInfo<T> request =
         initShvecReq(gram_matrix, cosetVect, bound, mode);
     std::cerr << "Before computeShvec mode=" << mode << "\n";
     T_shvec_info<T, Tint> info =
