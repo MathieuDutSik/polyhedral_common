@@ -348,8 +348,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
       for (int u = 0; u < n; u++) {
         T val = UniversalScalarConversion<T, int>(eVect[u]);
         eV(u) = val / 2;
-        resultCVP<T, Tint> result =
-            CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
+        resultCVP<T, Tint> result = NearestVectors<T, Tint>(GramMat, eV, os);
         if (result.ListVect.rows() == 2) {
           MyVector<Tint> Vins(n);
           for (int u = 0; u < n; u++) {

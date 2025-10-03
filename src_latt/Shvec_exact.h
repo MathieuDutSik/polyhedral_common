@@ -689,48 +689,6 @@ T_shvec_info<T, Tint> T_computeShvec(const T_shvec_request<T> &request,
   return info2;
 }
 
-template <typename T, typename Tint>
-resultCVP<T, Tint> CVPVallentinProgram_exact(MyMatrix<T> const &GramMat,
-                                             MyVector<T> const &eV,
-                                             std::ostream &os) {
-#ifdef TIMINGS_SHVEC
-  MicrosecondTime time;
-#endif
-  int dim = GramMat.rows();
-  MyVector<T> cosetVect = -eV;
-  if (IsIntegralVector(eV)) {
-    T TheNorm = 0;
-    MyMatrix<Tint> ListVect(1, dim);
-    for (int i = 0; i < dim; i++)
-      ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
-    return {TheNorm, ListVect};
-  }
-  // Following value of bound = 0 should not be used
-  T bound = 0;
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_SHORTEST_VECTORS;
-  T_shvec_request<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
-#ifdef TIMINGS_SHVEC
-  os << "|SHVEC: initShvecReq|=" << time << "\n";
-#endif
-  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, mode, os);
-#ifdef TIMINGS_SHVEC
-  os << "|SHVEC: T_computeShvec|=" << time << "\n";
-#endif
-  int nbVect = info.short_vectors.size();
-  MyMatrix<Tint> ListClos(nbVect, dim);
-  for (int iVect = 0; iVect < nbVect; iVect++)
-    for (int i = 0; i < dim; i++)
-      ListClos(iVect, i) = info.short_vectors[iVect](i);
-  MyVector<T> eDiff(dim);
-  for (int i = 0; i < dim; i++)
-    eDiff(i) = ListClos(0, i) - eV(i);
-  T TheNorm = EvaluationQuadForm<T, T>(GramMat, eDiff);
-#ifdef TIMINGS_SHVEC
-  os << "|SHVEC: paperwork|=" << time << "\n";
-#endif
-  return {TheNorm, std::move(ListClos)};
-}
-
 template <typename T, typename Tint> struct CVPSolver {
 public:
   MyMatrix<T> const &GramMat;
@@ -798,7 +756,7 @@ public:
     }
     return {shortest, {}};
   }
-  resultCVP<T, Tint> SingleSolver(MyVector<T> const &eV) const {
+  resultCVP<T, Tint> nearest_vectors(MyVector<T> const &eV) const {
     if (IsIntegralVector(eV)) {
       T TheNorm(0);
       MyMatrix<Tint> ListVect(1, dim);
@@ -821,7 +779,7 @@ public:
       }
     }
     T TheNorm = info.minimum;
-#ifdef DEBUG_SHVEC_DISABLE
+#ifdef SANITY_CHECK_SHVEC_DISABLE
     MyVector<T> eDiff(dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
       for (int i = 0; i < dim; i++)
@@ -831,16 +789,10 @@ public:
         throw TerminalException{1};
       }
     }
-    resultCVP<T, Tint> res =
-        CVPVallentinProgram_exact<T, Tint>(GramMat, eV, os);
-    if (res.TheNorm != TheNorm || res.ListVect.rows() != ListClos.rows()) {
-      std::cerr << "Inconsistecy error between the two methods\n";
-      throw TerminalException{1};
-    }
 #endif
     return {TheNorm, std::move(ListClos)};
   }
-  std::vector<MyVector<Tint>> FixedNormVectors(MyVector<T> const &eV,
+  std::vector<MyVector<Tint>> fixed_norm_vectors(MyVector<T> const &eV,
                                                T const &TheNorm) const {
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
@@ -857,7 +809,7 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
-#ifdef DEBUG_SHVEC
+#ifdef SANITY_CHECK_SHVEC
     MyVector<T> eDiff(dim);
     for (auto &eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
@@ -888,7 +840,7 @@ public:
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
-#ifdef DEBUG_SHVEC
+#ifdef SANITY_CHECK_SHVEC
     MyVector<T> eDiff(dim);
     for (auto &eVect : ListVect) {
       for (int i = 0; i < dim; i++) {
@@ -904,6 +856,33 @@ public:
     return ListVect;
   }
 };
+
+
+/*
+  The wisdom of applying LLL all the time can be discussed.
+  However, it usually improves the situation, so we do it.
+  ---
+  If the computation repeats itself with the same Gram matrix,
+  then building the CVPSolver should be the right approach.
+  ---
+  If we have plenty of Gram matrices to consider and computing
+  the DualLLL is not a good thing, then you have to write
+  specific code.
+ */
+template <typename T, typename Tint>
+resultCVP<T, Tint> NearestVectors(MyMatrix<T> const &GramMat, MyVector<T> const &eV, std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  return solver.nearest_vectors(eV);
+}
+
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
+                                                 const MyVector<T> &eV,
+                                                 const T &norm, std::ostream& os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  return solver.fixed_norm_vectors(eV, norm);
+}
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat, T const &MaxNorm,
@@ -969,31 +948,6 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
     (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm, f_insert);
   }
   return MatrixFromVectorFamilyDim(dim, ListVect);
-}
-
-template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
-                                                 const MyVector<T> &eV,
-                                                 const T &norm, std::ostream& os) {
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
-  const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
-  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
-  //
-  std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y, const T &min) -> bool {
-    if (min == norm) {
-      MyVector<Tint> V_x = Pmat.transpose() * V_y;
-      l_vect.emplace_back(std::move(V_x));
-    }
-    return true;
-  };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
-  return l_vect;
 }
 
 template <typename T, typename Tint>

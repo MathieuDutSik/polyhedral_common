@@ -82,7 +82,7 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
     // There has been an attempt to accelerate the computation by stopping
     // when we found a vector of norm lower than TheNorm. This turn out
     // badly as the number of iterations grow immensely.
-    resultCVP<T, Tint> TheCVP = solver.SingleSolver(eVect);
+    resultCVP<T, Tint> TheCVP = solver.nearest_vectors(eVect);
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|DEL: Computing TheCVP|=" << time << "\n";
 #endif
@@ -392,7 +392,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
       MyVector<T> eCenter(dim);
       for (int i = 0; i < dim; i++)
         eCenter(i) = eCP.eCent(i + 1);
-      resultCVP<T, Tint> reply = solver.SingleSolver(eCenter);
+      resultCVP<T, Tint> reply = solver.nearest_vectors(eCenter);
       if (reply.TheNorm == eCP.SquareRadius)
         return reply;
       for (int i = 0; i < dim; i++)

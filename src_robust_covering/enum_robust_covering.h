@@ -319,11 +319,11 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
 #endif
     if (n_iter == 0) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   Before solver.SingleSolver\n";
+      os << "ROBUST:   Before solver.nearest_vectors\n";
 #endif
-      resultCVP<T, Tint> res_cvp = solver.SingleSolver(eV);
+      resultCVP<T, Tint> res_cvp = solver.nearest_vectors(eV);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   After solver.SingleSolver\n";
+      os << "ROBUST:   After solver.nearest_vectors\n";
 #endif
       min_search = res_cvp.TheNorm;
       std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
