@@ -710,6 +710,20 @@ public:
     request =
         T_shvec_request<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
   }
+  T comp_norm_vect(MyVector<Tint> const& x) const {
+    MyVector<T> eDiff(dim);
+    for (int i = 0; i < dim; i++) {
+      eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
+    }
+    return EvaluationQuadForm<T, T>(GramMat, eDiff);
+  }
+  T comp_norm_diff(MyVector<Tint> const& x, MyVector<T> const& v) const {
+    MyVector<T> eDiff(dim);
+    for (int i = 0; i < dim; i++) {
+      eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - v(i);
+    }
+    return EvaluationQuadForm<T, T>(GramMat, eDiff);
+  }
   ResultShortest<Tint> ShortestAtDistance(MyVector<T> const &eV,
                                           T const &TheNorm) const {
     if (IsIntegralVector(eV)) {
@@ -725,12 +739,8 @@ public:
     if (res.better_vector) {
       MyVector<Tint> const &short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
-#ifdef DEBUG_SHVEC
-      MyVector<T> eDiff(dim);
-      for (int i = 0; i < dim; i++) {
-        eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
-      }
-      if (TheNorm <= EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+#ifdef SANITY_CHECK_SHVEC
+      if (TheNorm <= comp_norm_diff(x, eV)) {
         std::cerr << "The vector should be shorter\n";
         throw TerminalException{1};
       }
@@ -741,12 +751,8 @@ public:
     for (auto &short_vec : res.shortest) {
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
       shortest.push_back(x);
-#ifdef DEBUG_SHVEC
-      MyVector<T> eDiff(dim);
-      for (int i = 0; i < dim; i++) {
-        eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
-      }
-      if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+#ifdef SANITY_CHECK_SHVEC
+      if (TheNorm != comp_norm_diff(x, eV)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
       }
@@ -762,32 +768,46 @@ public:
         ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
       return {TheNorm, ListVect};
     }
-    MyVector<T> cosetRed = -Q_T.transpose() * eV;
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
+    T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
       MyVector<Tint> x =
           eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
+#ifdef SANITY_CHECK_SHVEC_DISABLE
+      if (TheNorm != comp_norm_diff(x, eV)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+#endif
       for (int i = 0; i < dim; i++) {
         ListClos(iVect, i) = x(i);
       }
     }
+    return {TheNorm, std::move(ListClos)};
+  }
+  resultCVP<T, Tint> shortest_vectors() const {
+    T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
     T TheNorm = info.minimum;
-#ifdef SANITY_CHECK_SHVEC_DISABLE
-    MyVector<T> eDiff(dim);
+    int nbVect = info.short_vectors.size();
+    MyMatrix<Tint> ListClos(nbVect, dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
-      for (int i = 0; i < dim; i++)
-        eDiff(i) = ListClos(iVect, i) - eV(i);
-      if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
+      MyVector<Tint> x = eRec.Pmat.transpose() * info.short_vectors[iVect];
+#ifdef SANITY_CHECK_SHVEC_DISABLE
+      if (TheNorm != comp_norm_vect(x)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
       }
-    }
 #endif
+      for (int i = 0; i < dim; i++) {
+        ListClos(iVect, i) = x(i);
+      }
+    }
     return {TheNorm, std::move(ListClos)};
   }
   std::vector<MyVector<Tint>> fixed_norm_vectors(MyVector<T> const &eV,
@@ -802,24 +822,17 @@ public:
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
         MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
+#ifdef SANITY_CHECK_SHVEC
+        if (TheNorm != comp_norm_diff(x, eV)) {
+          std::cerr << "Inconsistecy error in the norms\n";
+          throw TerminalException{1};
+        }
+#endif
         ListVect.emplace_back(std::move(x));
       }
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, TheNorm, f_insert);
-#ifdef SANITY_CHECK_SHVEC
-    MyVector<T> eDiff(dim);
-    for (auto &eVect : ListVect) {
-      for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarConversion<T, Tint>(eVect(i));
-        eDiff(i) = val - eV(i);
-      }
-      if (TheNorm != EvaluationQuadForm<T, T>(GramMat, eDiff)) {
-        std::cerr << "Inconsistecy error in the norms\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
     return ListVect;
   }
   std::vector<MyVector<Tint>> at_most_norm_vectors(MyVector<T> const &eV,
@@ -834,23 +847,16 @@ public:
     auto f_insert = [&](const MyVector<Tint> &V,
                         [[maybe_unused]] const T &min) -> bool {
       MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
+#ifdef SANITY_CHECK_SHVEC
+      if (MaxNorm < comp_norm_diff(x, eV)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+#endif
       ListVect.emplace_back(std::move(x));
       return true;
     };
     (void)computeIt<T, Tint, decltype(f_insert)>(request, MaxNorm, f_insert);
-#ifdef SANITY_CHECK_SHVEC
-    MyVector<T> eDiff(dim);
-    for (auto &eVect : ListVect) {
-      for (int i = 0; i < dim; i++) {
-        T val = UniversalScalarConversion<T, Tint>(eVect(i));
-        eDiff(i) = val - eV(i);
-      }
-      if (MaxNorm < EvaluationQuadForm<T, T>(GramMat, eDiff)) {
-        std::cerr << "Inconsistecy error in the norms\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
     return ListVect;
   }
 };
