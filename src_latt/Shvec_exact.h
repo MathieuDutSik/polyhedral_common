@@ -46,6 +46,15 @@ template <typename T> struct FullGramInfo {
   bool central;
 };
 
+template<typename T>
+struct ShvecInput {
+  T bound;
+  MyVector<T> coset;
+  bool central;
+};
+
+
+
 template <typename T, typename Tint> struct T_shvec_info {
   std::vector<MyVector<Tint>> short_vectors;
   T minimum;
@@ -708,51 +717,6 @@ T_shvec_info<T, Tint> T_computeShvec_Kernel(const FullGramInfo<T> &request,
   throw TerminalException{1};
 }
 
-// Compute the minimum and returns only half the vector matching it
-template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
-  int dim = gram_matrix.rows();
-  MyVector<T> coset = ZeroVector<T>(dim);
-  bool central = true;
-  T bound = 0;
-  //
-  FullGramInfo<T> request;
-  request.dim = dim;
-  request.coset = coset;
-  request.gram_matrix = gram_matrix;
-  request.bound = bound;
-  request.central = central;
-  //
-  return computeMinimum<T, Tint>(request);
-}
-
-// Returns half the vector below a specific bound.
-template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
-                                           T const &bound) {
-  int dim = gram_matrix.rows();
-  MyVector<T> coset = ZeroVector<T>(dim);
-  bool central = true;
-  //
-  FullGramInfo<T> request;
-  request.dim = dim;
-  request.coset = coset;
-  request.gram_matrix = gram_matrix;
-  request.bound = bound;
-  request.central = central;
-  //
-  T_shvec_info<T, Tint> info;
-  info.minimum = bound;
-  auto f_insert = [&](const MyVector<Tint> &V,
-                      [[maybe_unused]] const T &min) -> bool {
-    info.short_vectors.push_back(V);
-    return true;
-  };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
-                                               f_insert);
-  return info;
-}
-
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> T_computeShvec(const FullGramInfo<T> &request,
                                      int mode,
@@ -862,6 +826,7 @@ public:
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
+    request.central = false;
     T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
@@ -1035,6 +1000,55 @@ std::vector<MyVector<Tint>> FindAtMostDistVectors(const MyMatrix<T> &GramMat,
   CVPSolver<T, Tint> solver(GramMat, os);
   return solver.at_most_dist_vectors(eV, norm);
 }
+
+
+// Compute the minimum and returns only half the vector matching it
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
+  int dim = gram_matrix.rows();
+  MyVector<T> coset = ZeroVector<T>(dim);
+  bool central = true;
+  T bound = 0;
+  //
+  FullGramInfo<T> request;
+  request.dim = dim;
+  request.coset = coset;
+  request.gram_matrix = gram_matrix;
+  request.bound = bound;
+  request.central = central;
+  //
+  return computeMinimum<T, Tint>(request);
+}
+
+// Returns half the vector below a specific bound.
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
+                                           T const &bound) {
+  int dim = gram_matrix.rows();
+  MyVector<T> coset = ZeroVector<T>(dim);
+  bool central = true;
+  //
+  FullGramInfo<T> request;
+  request.dim = dim;
+  request.coset = coset;
+  request.gram_matrix = gram_matrix;
+  request.bound = bound;
+  request.central = central;
+  //
+  T_shvec_info<T, Tint> info;
+  info.minimum = bound;
+  auto f_insert = [&](const MyVector<Tint> &V,
+                      [[maybe_unused]] const T &min) -> bool {
+    info.short_vectors.push_back(V);
+    return true;
+  };
+  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
+                                               f_insert);
+  return info;
+}
+
+
+
 
 
 

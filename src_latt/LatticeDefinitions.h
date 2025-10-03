@@ -67,22 +67,6 @@ template <typename T, typename Tint> struct resultCVP {
   MyMatrix<Tint> ListVect;
 };
 
-template <typename T, typename Tint>
-bool operator==(resultCVP<T, Tint> const &x, resultCVP<T, Tint> const &y) {
-  if (x.TheNorm != y.TheNorm)
-    return false;
-  MyMatrix<Tint> ListVectSort1 = SortMatrix(x.ListVect);
-  MyMatrix<Tint> ListVectSort2 = SortMatrix(y.ListVect);
-  return ListVectSort1 == ListVectSort2;
-}
-
-template <typename T, typename Tint>
-bool operator!=(resultCVP<T, Tint> const &x, resultCVP<T, Tint> const &y) {
-  if (x == y)
-    return false;
-  return true;
-}
-
 template <typename Tint>
 void EnumerateOrbitPrimitiveVector(
     std::vector<MyMatrix<int>> const &ListMat, int const &pPrime,
