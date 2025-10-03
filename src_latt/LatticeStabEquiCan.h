@@ -6,7 +6,7 @@
 #include "InvariantVectorFamily.h"
 #include "MAT_MatrixInt.h"
 #include "MatrixGroup.h"
-#include "ShortestUniversal.h"
+#include "Shvec_exact.h"
 #include "PolytopeEquiStabInt.h"
 #include <utility>
 #include <string>

@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "POLY_Fundamental.h"
-#include "ShortestUniversal.h"
+#include "Shvec_exact.h"
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
 #include "SHORT_ShortestConfig.h"

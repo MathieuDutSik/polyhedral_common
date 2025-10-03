@@ -3,7 +3,7 @@
 #define SRC_SHORT_SHORT_SHORTESTCONFIGSTABEQUICANINV_H_
 
 // clang-format off
-#include "ShortestUniversal.h"
+#include "Shvec_exact.h"
 #include "LatticeStabEquiCan.h"
 // clang-format on
 

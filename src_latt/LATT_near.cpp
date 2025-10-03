@@ -10,7 +10,6 @@
 #endif
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
-#include "ShortestUniversal.h"
 #include "Shvec_exact.h"
 // clang-format on
 

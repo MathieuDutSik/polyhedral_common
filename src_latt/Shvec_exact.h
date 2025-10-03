@@ -1020,6 +1020,19 @@ std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
   return l_vect;
 }
 
+template <typename T, typename Tint>
+MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
+                             std::ostream &os) {
+  return T_ShortVector_exact<T, Tint>(GramMat, MaxNorm, os);
+}
+
+template <typename T, typename Tint>
+Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat, std::ostream &os) {
+  T MinNorm = MinimumDiagonal(eMat);
+  MyMatrix<Tint> TheSHVall = T_ShortVector<T, Tint>(eMat, MinNorm, os);
+  return SelectShortestVector(eMat, TheSHVall);
+}
+
 // clang-format off
 #endif  // SRC_LATT_SHVEC_EXACT_H_
 // clang-format on

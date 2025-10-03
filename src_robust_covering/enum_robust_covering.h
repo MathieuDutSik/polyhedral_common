@@ -3,7 +3,7 @@
 #define SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 
 // clang-format off
-#include "ShortestUniversal.h"
+#include "Shvec_exact.h"
 #include "FundamentalDelaunay.h"
 // clang-format on
 

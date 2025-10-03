@@ -3,7 +3,7 @@
 #define SRC_LATT_INVARIANTVECTORFAMILY_H_
 
 // clang-format off
-#include "ShortestUniversal.h"
+#include "Shvec_exact.h"
 #include "Positivity.h"
 #include "Timings.h"
 #include <set>
