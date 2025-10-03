@@ -148,7 +148,7 @@ template <typename T> int Infinitesimal_Ceil_V1(T const &a, T const &b) {
 #endif
   double a_doubl = UniversalScalarConversion<double, T>(a);
   double b_doubl = UniversalScalarConversion<double, T>(b);
-  double alpha = -sqrt(a_doubl) - epsilon + b_doubl;
+  double alpha = - sqrt(a_doubl) - epsilon + b_doubl;
   double eD1 = ceil(alpha);
   long int eD2 = lround(eD1);
   int eD3 = eD2;
@@ -184,15 +184,22 @@ Tint Infinitesimal_Floor(T const &a, T const &b) {
       return true;
     return false;
   };
+  bool test1 = f(eReturn);
+  bool test2 = f(eReturn + 1);
   while (true) {
-    bool test1 = f(eReturn);
-    bool test2 = f(eReturn + 1);
-    if (test1 && !test2)
+    if (test1 && !test2) {
       break;
-    if (!test1)
+    }
+    if (!test1) {
+      test2 = test1;
+      test1 = f(eReturn - 1);
       eReturn--;
-    if (test2)
+    }
+    if (test2) {
+      test1 = test2;
+      test2 = f(eReturn + 2);
       eReturn++;
+    }
   }
   return eReturn;
 }
@@ -226,15 +233,22 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
       return true;
     return false;
   };
+  bool test1 = f(eReturn - 1);
+  bool test2 = f(eReturn);
   while (true) {
-    bool test1 = f(eReturn - 1);
-    bool test2 = f(eReturn);
-    if (!test1 && test2)
+    if (!test1 && test2) {
       break;
-    if (test1)
+    }
+    if (test1) {
+      test2 = test1;
+      test1 = f(eReturn - 2);
       eReturn--;
-    if (!test2)
+    }
+    if (!test2) {
+      test1 = test2;
+      test2 = f(eReturn + 1);
       eReturn++;
+    }
   }
   return eReturn;
 }
@@ -251,6 +265,14 @@ bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
   MyVector<Tint> x(dim);
+  auto is_x_zero=[&]() -> bool {
+    for (int u=0; u<dim; u++) {
+      if (x(u) != 0) {
+        return false;
+      }
+    }
+    return true;
+  };
   MyVector<T> x_T(dim);
 #if defined SANITY_CHECK_SHVEC || defined DEBUG_SHVEC
   const MyMatrix<T> &g = request.gram_matrix;
@@ -308,13 +330,7 @@ bool computeIt_Gen_Kernel(const T_shvec_request<T> &request, const T &bound,
     if (x(i) <= Upper(i)) {
       if (i == 0) {
         if (central) {
-          j = dim - 1;
-          bool not_finished = false;
-          while (j >= 0 && !not_finished) {
-            not_finished = (x(j) != 0);
-            j--;
-          }
-          if (!not_finished) {
+          if (is_x_zero()) {
 #ifdef DEBUG_SHVEC
             std::cerr << "SHVEC: Exiting because x=0 and central run\n";
 #endif
@@ -458,7 +474,7 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
   const bool &central = request.central;
   auto get_minimum_atp = [&]() -> T {
     if (!central) {
-      T eNorm = 0;
+      T eNorm(0);
       for (int i = 0; i < dim; i++)
         for (int j = 0; j < dim; j++)
           eNorm += request.gram_matrix(i, j) * C(i) * C(j);
@@ -467,8 +483,9 @@ T_shvec_info<T, Tint> computeMinimum(const T_shvec_request<T> &request) {
     T eMin = request.gram_matrix(0, 0);
     for (int i = 1; i < dim; i++) {
       T diag_val = request.gram_matrix(i, i);
-      if (eMin > diag_val)
+      if (eMin > diag_val) {
         eMin = diag_val;
+      }
     }
     return eMin;
   };
@@ -713,7 +730,7 @@ public:
   T comp_norm_vect(MyVector<Tint> const& x) const {
     MyVector<T> eDiff(dim);
     for (int i = 0; i < dim; i++) {
-      eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - eV(i);
+      eDiff(i) = UniversalScalarConversion<T, Tint>(x(i));
     }
     return EvaluationQuadForm<T, T>(GramMat, eDiff);
   }
@@ -730,7 +747,7 @@ public:
       MyVector<Tint> eV_tint = UniversalVectorConversion<Tint, T>(eV);
       return {{}, eV_tint};
     }
-    MyVector<T> cosetRed = -Q_T.transpose() * eV;
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
@@ -779,7 +796,7 @@ public:
     for (int iVect = 0; iVect < nbVect; iVect++) {
       MyVector<Tint> x =
           eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
-#ifdef SANITY_CHECK_SHVEC_DISABLE
+#ifdef SANITY_CHECK_SHVEC
       if (TheNorm != comp_norm_diff(x, eV)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
@@ -798,7 +815,7 @@ public:
     MyMatrix<Tint> ListClos(nbVect, dim);
     for (int iVect = 0; iVect < nbVect; iVect++) {
       MyVector<Tint> x = eRec.Pmat.transpose() * info.short_vectors[iVect];
-#ifdef SANITY_CHECK_SHVEC_DISABLE
+#ifdef SANITY_CHECK_SHVEC
       if (TheNorm != comp_norm_vect(x)) {
         std::cerr << "Inconsistecy error in the norms\n";
         throw TerminalException{1};
