@@ -297,7 +297,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     T bound_search = bound * (1 + tol);
     os << "RNK: k=" << k << " bound=" << bound
        << " bound_search=" << bound_search << "\n";
-    std::vectors<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound_search, os);
+    std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound_search, os);
     os << "RNK: |short_vectors|=" << short_vectors.size() << "\n";
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : short_vectors) {

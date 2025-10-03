@@ -1003,15 +1003,15 @@ std::vector<MyVector<Tint>> FindAtMostDistVectors(const MyMatrix<T> &GramMat,
 
 // Returns half the vector below a specific bound.
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
+std::vector<MyVector<Tint>> computeLevel_GramMat(MyMatrix<T> const &GramMat,
                                                  T const &bound, std::ostream& os) {
   CVPSolver<T, Tint> solver(GramMat, os);
-  MyMatrix<Tint> mat_vect = solver.at_most_norm_vectors(bound);
-  int n_vect = mat_vect.rows() / 2;
+  std::vector<MyVector<Tint>> full_list = solver.at_most_norm_vectors(bound);
+  int n_vect = full_list.size() / 2;
   std::vector<MyVector<Tint>> short_vectors;
   for (int i_vect=0; i_vect<n_vect; i_vect++) {
     int pos = 2 * i_vect;
-    MyVector<Tint> V = GetMatrixRow(mat_vect, pos);
+    MyVector<Tint> V = full_list[pos];
     short_vectors.push_back(V);
   }
   return short_vectors;
