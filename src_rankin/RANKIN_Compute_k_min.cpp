@@ -5,10 +5,9 @@
 #include "Enumeration_k_space.h"
 // clang-format on
 
-template <typename T>
+template <typename T, typename Tint>
 void compute_rankin_k_min_kernel(int const &k, std::string const &eFile,
                                  std::string const &strTol) {
-  using Tint = int64_t;
   std::ifstream is(eFile);
   MyMatrix<T> A = ReadMatrix<T>(is);
   std::cerr << "A=\n";
@@ -23,13 +22,15 @@ void compute_rankin_k_min_kernel(int const &k, std::string const &eFile,
 
 void compute_k_min(std::string const &arithmetic, int const &k,
                    std::string const &eFile, std::string const &strTol) {
-  if (arithmetic == "rational") {
+  if (arithmetic == "gmp") {
     using T = mpq_class;
-    return compute_rankin_k_min_kernel<T>(k, eFile, strTol);
+    using Tint = mpz_class;
+    return compute_rankin_k_min_kernel<T,Tint>(k, eFile, strTol);
   }
   if (arithmetic == "double") {
     using T = double;
-    return compute_rankin_k_min_kernel<T>(k, eFile, strTol);
+    using Tint = int64_t;
+    return compute_rankin_k_min_kernel<T,Tint>(k, eFile, strTol);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};
