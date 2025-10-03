@@ -60,7 +60,7 @@ MyMatrix<Tint> EnumerateVectorsFixedNorm(MyMatrix<T> const &eMat, T const &norm,
   //  std::cerr << "eMat=\n";
   //  WriteMatrix(std::cerr, eMat);
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
-  MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm);
+  MyMatrix<Tint> SHVall = T_ShortVector_fixed<T, Tint>(eMatRed, norm, os);
 #ifdef TIMINGS_INVARIANT_VECTOR_FAMILY
   os << "|IVF: T_ShortVector|=" << time << "\n";
 #endif

@@ -846,7 +846,7 @@ public:
     }
     return {TheNorm, std::move(ListClos)};
   }
-  resultCVP<T, Tint> shortest_vectors() const {
+  Tshortest<T, Tint> shortest_vectors() const {
     request.coset = ZeroVector<T>(dim);
     request.central = true;
     T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
@@ -1002,6 +1002,11 @@ std::vector<MyVector<Tint>> FindAtMostDistVectors(const MyMatrix<T> &GramMat,
 }
 
 
+
+
+
+
+
 // Compute the minimum and returns only half the vector matching it
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> computeMinimum_GramMat(MyMatrix<T> const &gram_matrix) {
@@ -1055,74 +1060,25 @@ T_shvec_info<T, Tint> computeLevel_GramMat(MyMatrix<T> const &gram_matrix,
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector(MyMatrix<T> const &GramMat, T const &MaxNorm,
                              std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  std::vector<MyVector<Tint>> ListVect = solver.at_most_norm_vectors(MaxNorm);
   int dim = GramMat.rows();
-  if (dim == 1) {
-    std::vector<MyVector<Tint>> ListVect;
-    int idx = 1;
-    while (true) {
-      T norm = idx * idx * GramMat(0, 0);
-      if (norm > MaxNorm)
-        break;
-      MyVector<Tint> eVect1(1);
-      eVect1(0) = idx;
-      ListVect.emplace_back(std::move(eVect1));
-      idx++;
-    }
-    return MatrixFromVectorFamily(ListVect);
-  }
-  T bound = MaxNorm;
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
-  MyVector<T> cosetVect = ZeroVector<T>(dim);
-  FullGramInfo<T> request = initShvecReq(GramMat, cosetVect, bound, mode);
-  request.central = true;
-  //
-  T_shvec_info<T, Tint> info = T_computeShvec<T, Tint>(request, mode, os);
-  //
-  return MatrixFromVectorFamily(info.short_vectors);
-}
-
-template <typename T, typename Tint>
-MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
-                                   T const &SpecNorm) {
-  int dim = GramMat.rows();
-  std::vector<MyVector<Tint>> ListVect;
-  if (dim == 1) {
-    int idx = 1;
-    while (true) {
-      T norm = idx * idx * GramMat(0, 0);
-      if (norm == SpecNorm) {
-        MyVector<Tint> V(1);
-        V(0) = idx;
-        ListVect.emplace_back(std::move(V));
-        break;
-      }
-      if (norm > SpecNorm)
-        break;
-      idx++;
-    }
-  } else {
-    int mode = TempShvec_globals::TEMP_SHVEC_MODE_BOUND;
-    MyVector<T> cosetVect = ZeroVector<T>(dim);
-    FullGramInfo<T> request =
-        initShvecReq(GramMat, cosetVect, SpecNorm, mode);
-    request.central = true;
-    //
-    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
-      if (min == SpecNorm) {
-        ListVect.push_back(V);
-      }
-      return true;
-    };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm, f_insert);
-  }
   return MatrixFromVectorFamilyDim(dim, ListVect);
 }
 
 template <typename T, typename Tint>
-Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &eMat, std::ostream &os) {
-  T MinNorm = MinimumDiagonal(eMat);
-  MyMatrix<Tint> TheSHVall = T_ShortVector<T, Tint>(eMat, MinNorm, os);
-  return SelectShortestVector(eMat, TheSHVall);
+MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
+                                   T const &SpecNorm, std::ostream& os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(SpecNorm);
+  int dim = GramMat.rows();
+  return MatrixFromVectorFamilyDim(dim, ListVect);
+}
+
+template <typename T, typename Tint>
+Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &GramMat, std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  return solver.shortest_vectors();
 }
 
 // clang-format off

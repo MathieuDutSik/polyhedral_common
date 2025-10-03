@@ -11,6 +11,7 @@ set -e
 #(cd src_spectra && make clean && make)
 #(cd src_copos && make clean && make)
 #(cd src_ctype && make clean && make)
+(cd src_perfect && make clean && make)
 (cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
 #(cd src_poincare_polyhedron && make clean && make)
