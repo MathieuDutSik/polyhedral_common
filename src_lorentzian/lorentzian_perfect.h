@@ -287,7 +287,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
       if (TheOption == LORENTZIAN_PERFECT_OPTION_ISOTROP) {
         return solver.fixed_norm_vectors(eSol, eSquareDist);
       } else {
-        return solver.AtMostNormVectors(eSol, eSquareDist);
+        return solver.at_most_norm_vectors(eSol, eSquareDist);
       }
     };
     std::vector<MyVector<Tint>> LVect = iife_iele();

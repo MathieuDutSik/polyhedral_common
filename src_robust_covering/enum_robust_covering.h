@@ -337,11 +337,11 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
     } else {
       min_search = (min_search * T(3)) / T(2);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   Before solver.AtMostNormVectors\n";
+      os << "ROBUST:   Before solver.at_most_norm_vectors\n";
 #endif
-      std::vector<MyVector<Tint>> elist = solver.AtMostNormVectors(eV, min_search);
+      std::vector<MyVector<Tint>> elist = solver.at_most_norm_vectors(eV, min_search);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   After solver.AtMostNormVectors |elist|=" << elist.size() << "\n";
+      os << "ROBUST:   After solver.at_most_norm_vectors |elist|=" << elist.size() << "\n";
       int i_fv = 0;
 #endif
       std::vector<T> l_norm;

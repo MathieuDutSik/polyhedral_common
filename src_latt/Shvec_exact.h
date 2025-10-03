@@ -824,8 +824,8 @@ public:
 #endif
     return ListVect;
   }
-  std::vector<MyVector<Tint>> AtMostNormVectors(MyVector<T> const &eV,
-                                                T const &MaxNorm) const {
+  std::vector<MyVector<Tint>> at_most_norm_vectors(MyVector<T> const &eV,
+                                                   T const &MaxNorm) const {
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
@@ -883,6 +883,16 @@ std::vector<MyVector<Tint>> FindFixedNormVectors(const MyMatrix<T> &GramMat,
   CVPSolver<T, Tint> solver(GramMat, os);
   return solver.fixed_norm_vectors(eV, norm);
 }
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
+                                                  const MyVector<T> &eV,
+                                                  const T &norm, std::ostream& os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  return solver.at_most_norm_vectors(eV, norm);
+}
+
+
 
 template <typename T, typename Tint>
 MyMatrix<Tint> T_ShortVector_exact(MyMatrix<T> const &GramMat, T const &MaxNorm,
@@ -948,30 +958,6 @@ MyMatrix<Tint> T_ShortVector_fixed(MyMatrix<T> const &GramMat,
     (void)computeIt<T, Tint, decltype(f_insert)>(request, SpecNorm, f_insert);
   }
   return MatrixFromVectorFamilyDim(dim, ListVect);
-}
-
-template <typename T, typename Tint>
-std::vector<MyVector<Tint>> FindAtMostNormVectors(const MyMatrix<T> &GramMat,
-                                                  const MyVector<T> &eV,
-                                                  const T &norm, std::ostream& os) {
-  int mode = TempShvec_globals::TEMP_SHVEC_MODE_VINBERG_ALGO;
-  LLLreduction<T, Tint> RecLLL = LLLreducedBasis<T, Tint>(GramMat, os);
-  const MyMatrix<Tint> &Pmat = RecLLL.Pmat;
-  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(Pmat);
-  MyMatrix<T> PmatInv_T = Inverse(Pmat_T);
-  MyVector<T> eV_img = PmatInv_T.transpose() * eV;
-  const MyMatrix<T> &GramMatRed = RecLLL.GramMatRed;
-  T_shvec_request<T> request = initShvecReq<T>(GramMatRed, eV_img, norm, mode);
-  //
-  std::vector<MyVector<Tint>> l_vect;
-  auto f_insert = [&](const MyVector<Tint> &V_y,
-                      [[maybe_unused]] const T &min) -> bool {
-    MyVector<Tint> V_x = Pmat.transpose() * V_y;
-    l_vect.emplace_back(std::move(V_x));
-    return true;
-  };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, norm, f_insert);
-  return l_vect;
 }
 
 template <typename T, typename Tint>
