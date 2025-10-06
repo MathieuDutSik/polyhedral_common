@@ -102,7 +102,7 @@ jobs:
 
       - name: Test geometrically unique point
         run: |
-          cd src_poly && make -f Makefile_vector_set && cd ..
+          cd src_latt && make -f Makefile_vector_set && cd ..
           pwd
           echo "After compilation of generation of vector sets"
 
