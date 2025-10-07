@@ -375,12 +375,12 @@ computeIt_Gen(const FullGramInfo<T> &request,
 }
 
 template <typename T, typename Tint, typename Finsert>
-int computeIt_polytope(const FullGramInfo<T> &request,
-                       MyVector<T> const& coset,
-                       bool const& central,
-                       const T &bound,
-                       const MyMatrix<T> &FAC, Finsert f_insert,
-                       std::ostream &os) {
+bool computeIt_polytope(const FullGramInfo<T> &request,
+                        MyVector<T> const& coset,
+                        bool const& central,
+                        const T &bound,
+                        const MyMatrix<T> &FAC, Finsert f_insert,
+                        std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_rows = FAC.rows();
   int n_col = FAC.cols();
@@ -617,8 +617,6 @@ private:
   std::ostream &os;
   LLLreduction<T, Tint> eRec;
   MyMatrix<T> Q_T;
-  // This entry is const in spirit but is indeed used by
-  // the code.
   FullGramInfo<T> request;
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
