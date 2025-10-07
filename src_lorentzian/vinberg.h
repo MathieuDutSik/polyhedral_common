@@ -666,8 +666,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     //
     FullGramInfo<T> request;
     request.dim = dim;
-    request.coset = eV_img;
     request.gram_matrix = RecLLL.GramMatRed;
+    MyVector<T> const& coset = eV_img;
     bool central = false;
     //
 #ifdef DEBUG_VINBERG
@@ -700,7 +700,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       }
       return true;
     };
-    (void)computeIt_polytope<T, Tint, decltype(f_insert)>(request, central, data.norm,
+    (void)computeIt_polytope<T, Tint, decltype(f_insert)>(request, coset, central, data.norm,
                                                           FAC, f_insert, os);
 #ifdef DEBUG_VINBERG
     os << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";

@@ -27,7 +27,6 @@
 
 template <typename T> struct FullGramInfo {
   int dim;
-  MyVector<T> coset;
   MyMatrix<T> gram_matrix;
 };
 
@@ -193,6 +192,7 @@ Tint Infinitesimal_Ceil(T const &a, T const &b) {
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
+                          MyVector<T> const& C,
                           bool const& central,
                           const T &bound,
                           Finsert f_insert, Fsetbound f_set_bound) {
@@ -238,7 +238,6 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
       std::cerr << "   j=" << j << " q=" << q(i, j) << "\n";
 #endif
   }
-  const MyVector<T> &C = request.coset;
   bool needs_new_bound = true;
   i = dim - 1;
   if (bound < 0) {
@@ -334,18 +333,20 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request,
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
 computeIt_Gen(const FullGramInfo<T> &request,
+              MyVector<T> const& coset,
               bool const& central,
               const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (field case)\n";
 #endif
-  return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(request, central, bound, f_insert, f_set_bound);
+  return computeIt_Gen_Kernel<T, Tint, Finsert, Fsetbound>(request, coset, central, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
 computeIt_Gen(const FullGramInfo<T> &request,
+              MyVector<T> const& coset,
               bool const& central,
               const T &bound,
               Finsert f_insert, Fsetbound f_set_bound) {
@@ -357,8 +358,8 @@ computeIt_Gen(const FullGramInfo<T> &request,
   Tfield bound_field = UniversalScalarConversion<Tfield, T>(bound);
   FullGramInfo<Tfield> request_field{
       request.dim,
-      UniversalVectorConversion<Tfield, T>(request.coset),
       UniversalMatrixConversion<Tfield, T>(request.gram_matrix)};
+  MyVector<Tfield> coset_field = UniversalVectorConversion<Tfield, T>(coset);
   //
   auto f_insert_field = [&](const MyVector<Tint> &V,
                             const Tfield &min_Tfield) -> bool {
@@ -366,7 +367,7 @@ computeIt_Gen(const FullGramInfo<T> &request,
     return f_insert(V, min_T);
   };
   bool retVal =
-      computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(request_field, central, bound_field, f_insert_field, f_set_bound);
+    computeIt_Gen_Kernel<Tfield, Tint, decltype(f_insert_field), Fsetbound>(request_field, coset_field, central, bound_field, f_insert_field, f_set_bound);
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (ring case) exit\n";
 #endif
@@ -375,6 +376,7 @@ computeIt_Gen(const FullGramInfo<T> &request,
 
 template <typename T, typename Tint, typename Finsert>
 int computeIt_polytope(const FullGramInfo<T> &request,
+                       MyVector<T> const& coset,
                        bool const& central,
                        const T &bound,
                        const MyMatrix<T> &FAC, Finsert f_insert,
@@ -443,12 +445,16 @@ int computeIt_polytope(const FullGramInfo<T> &request,
       return;
     }
   };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, central, bound, f_insert, f_set_bound);
+  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, coset, central, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-computeIt(const FullGramInfo<T> &request, bool const& central, const T &bound, Finsert f_insert) {
+computeIt(const FullGramInfo<T> &request,
+          MyVector<T> const& coset,
+          bool const& central,
+          const T &bound,
+          Finsert f_insert) {
   auto f_set_bound =
       [&](const T &eQuot, const T &eSum, [[maybe_unused]] const MyMatrix<T> &q,
           [[maybe_unused]] const MyVector<Tint> &x,
@@ -456,12 +462,15 @@ computeIt(const FullGramInfo<T> &request, bool const& central, const T &bound, F
     upper = Infinitesimal_Floor<T, Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<T, Tint>(eQuot, eSum);
   };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, central, bound, f_insert, f_set_bound);
+  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, coset, central, bound, f_insert, f_set_bound);
 }
 
 template <typename T, typename Tint, typename Finsert>
 inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-computeIt(const FullGramInfo<T> &request, bool const& central, const T &bound, Finsert f_insert) {
+computeIt(const FullGramInfo<T> &request,
+          MyVector<T> const& coset,
+          bool const& central,
+          const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
   auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,
                          [[maybe_unused]] const MyMatrix<Tfield> &q,
@@ -471,13 +480,12 @@ computeIt(const FullGramInfo<T> &request, bool const& central, const T &bound, F
     upper = Infinitesimal_Floor<Tfield, Tint>(eQuot, eSum);
     lower = Infinitesimal_Ceil<Tfield, Tint>(eQuot, eSum);
   };
-  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, central, bound, f_insert, f_set_bound);
+  return computeIt_Gen<T, Tint, Finsert, decltype(f_set_bound)>(request, coset, central, bound, f_insert, f_set_bound);
 }
 
 template <typename T>
-T get_initial_minimum(const FullGramInfo<T> &request, bool const& central) {
+T get_initial_minimum(const FullGramInfo<T> &request, MyVector<T> const& C, bool const& central) {
   int dim = request.dim;
-  const MyVector<T> &C = request.coset;
   if (!central) {
     T eNorm(0);
     for (int i = 0; i < dim; i++)
@@ -497,12 +505,12 @@ T get_initial_minimum(const FullGramInfo<T> &request, bool const& central) {
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request, bool const& central) {
+T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request, MyVector<T> const& coset, bool const& central) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_minimum, begin\n";
 #endif
   std::vector<MyVector<Tint>> short_vectors;
-  T minimum = get_initial_minimum(request, central);
+  T minimum = get_initial_minimum(request, coset, central);
   while (true) {
 #ifdef DEBUG_SHVEC
     std::cerr << "SHVEC: Before computeIt (in compute_minimum while loop)\n";
@@ -520,7 +528,7 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request, bool const
         return false;
       }
     };
-    bool result = computeIt<T, Tint, decltype(f_insert)>(request, central, minimum, f_insert);
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, coset, central, minimum, f_insert);
     if (result) {
       break;
     }
@@ -529,12 +537,12 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request, bool const
 }
 
 template <typename T, typename Tint>
-T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, bool const& central, std::optional<size_t> const& limit) {
+T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, MyVector<T> const& coset, bool const& central, std::optional<size_t> const& limit) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_minimum_limit, begin\n";
 #endif
   std::vector<MyVector<Tint>> short_vectors;
-  T minimum = get_initial_minimum(request, central);
+  T minimum = get_initial_minimum(request, coset, central);
   while (true) {
 #ifdef DEBUG_SHVEC
     std::cerr << "SHVEC: Before computeIt (in compute_minimum_limit while loop)\n";
@@ -559,7 +567,7 @@ T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, bool
         return false;
       }
     };
-    bool result = computeIt<T, Tint, decltype(f_insert)>(request, central, minimum, f_insert);
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, coset, central, minimum, f_insert);
     if (result) {
       break;
     }
@@ -577,7 +585,7 @@ template <typename Tint> struct ResultShortest {
 };
 
 template <typename T, typename Tint>
-ResultShortest<Tint> compute_test_shortest(const FullGramInfo<T> &request, bool const& central, T const& bound) {
+ResultShortest<Tint> compute_test_shortest(const FullGramInfo<T> &request, MyVector<T> const& coset, bool const& central, T const& bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_test_shortest, begin\n";
 #endif
@@ -596,7 +604,7 @@ ResultShortest<Tint> compute_test_shortest(const FullGramInfo<T> &request, bool 
       return false;
     }
   };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, central, bound,
+  (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, bound,
                                                f_insert);
   return {shortest, better_vector};
 }
@@ -611,15 +619,14 @@ private:
   MyMatrix<T> Q_T;
   // This entry is const in spirit but is indeed used by
   // the code.
-  FullGramInfo<T> mutable request;
+  FullGramInfo<T> request;
 public:
   CVPSolver(MyMatrix<T> const &_GramMat, std::ostream &_os)
     : GramMat(_GramMat), dim(GramMat.rows()), os(_os),
       eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
-    MyVector<T> V_unset(dim);
-    request = FullGramInfo<T>{dim, V_unset, eRec.GramMatRed};
+    request = FullGramInfo<T>{dim, eRec.GramMatRed};
   }
   T comp_norm_vect(MyVector<Tint> const& x) const {
     MyVector<T> eDiff(dim);
@@ -644,8 +651,8 @@ public:
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
-    request.coset = ePair.second;
-    ResultShortest<Tint> res = compute_test_shortest<T, Tint>(request, TheNorm);
+    MyVector<T> const& coset = ePair.second;
+    ResultShortest<Tint> res = compute_test_shortest<T, Tint>(request, coset, TheNorm);
     if (res.better_vector) {
       MyVector<Tint> const &short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
@@ -681,9 +688,9 @@ public:
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
-    request.coset = ePair.second;
+    MyVector<T> const& coset = ePair.second;
     bool central = false;
-    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request, central);
+    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request, coset, central);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -713,9 +720,9 @@ public:
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
-    request.coset = ePair.second;
+    MyVector<T> const& coset = ePair.second;
     bool central = false;
-    T_shvec_info<T, Tint> info = compute_minimum_limit<T, Tint>(request, central, limit);
+    T_shvec_info<T, Tint> info = compute_minimum_limit<T, Tint>(request, coset, central, limit);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -735,9 +742,9 @@ public:
     return {TheNorm, std::move(ListClos)};
   }
   Tshortest<T, Tint> shortest_vectors() const {
-    request.coset = ZeroVector<T>(dim);
+    MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
-    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request, central);
+    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request, coset, central);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -761,7 +768,7 @@ public:
     MyVector<T> cosetRed = - Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
-    request.coset = ePair.second;
+    MyVector<T> const& coset = ePair.second;
     bool central = false;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
@@ -776,7 +783,7 @@ public:
       }
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, central, TheNorm, f_insert);
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, TheNorm, f_insert);
   }
   std::vector<MyVector<Tint>> fixed_dist_vectors(MyVector<T> const &eV,
                                                  T const &TheNorm) const {
@@ -788,7 +795,7 @@ public:
     return ListVect;
   }
   std::vector<MyVector<Tint>> fixed_norm_vectors(T const &TheNorm) const {
-    request.coset = ZeroVector<T>(dim);
+    MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
@@ -804,7 +811,7 @@ public:
       }
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, central, TheNorm, f_insert);
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, TheNorm, f_insert);
     return ListVect;
   }
   std::vector<MyVector<Tint>> at_most_dist_vectors(MyVector<T> const &eV,
@@ -812,7 +819,7 @@ public:
     MyVector<T> cosetRed = -Q_T.transpose() * eV;
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
-    request.coset = ePair.second;
+    MyVector<T> const& coset = ePair.second;
     bool central = false;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V,
@@ -827,11 +834,11 @@ public:
       ListVect.emplace_back(std::move(x));
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, central, MaxNorm, f_insert);
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, MaxNorm, f_insert);
     return ListVect;
   }
   std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
-    request.coset = ZeroVector<T>(dim);
+    MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V,
@@ -846,7 +853,7 @@ public:
       ListVect.emplace_back(std::move(x));
       return true;
     };
-    (void)computeIt<T, Tint, decltype(f_insert)>(request, central, MaxNorm, f_insert);
+    (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, MaxNorm, f_insert);
     return ListVect;
   }
 };
