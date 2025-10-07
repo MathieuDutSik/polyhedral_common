@@ -320,8 +320,9 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, const T &bound,
         n_vector++;
 #endif
         bool ret_val = f_insert(x, eNorm);
-        if (!ret_val)
+        if (!ret_val) {
           return false;
+        }
       } else {
         i--;
         U(i) = 0;
@@ -404,8 +405,9 @@ int computeIt_polytope(const FullGramInfo<T> &request, const T &bound,
     int len = 2 + i;
     MyMatrix<T> FACwork(n_rows, len);
     for (int i_row = 0; i_row < n_rows; i_row++) {
-      for (int i_col = 0; i_col < len; i_col++)
+      for (int i_col = 0; i_col < len; i_col++) {
         FACwork(i_row, i_col) = FAC(i_row, i_col);
+      }
       for (int i_col = len; i_col < n_col; i_col++) {
         FACwork(i_row, 0) += x(i_col - 1) * FAC(i_row, i_col);
       }
@@ -482,42 +484,44 @@ computeIt(const FullGramInfo<T> &request, const T &bound, Finsert f_insert) {
       request, bound, f_insert, f_set_bound);
 }
 
-template <typename T, typename Tint>
-T_shvec_info<T, Tint> computeMinimum(const FullGramInfo<T> &request) {
-#ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: computeMinimum, begin\n";
-#endif
+template <typename T>
+T get_initial_minimum(const FullGramInfo<T> &request) {
   int dim = request.dim;
   const MyVector<T> &C = request.coset;
   const bool &central = request.central;
-  auto get_minimum_atp = [&]() -> T {
-    if (!central) {
-      T eNorm(0);
-      for (int i = 0; i < dim; i++)
-        for (int j = 0; j < dim; j++)
-          eNorm += request.gram_matrix(i, j) * C(i) * C(j);
-      return eNorm;
-    } else {
-      T eMin = request.gram_matrix(0, 0);
-      for (int i = 1; i < dim; i++) {
-        T diag_val = request.gram_matrix(i, i);
-        if (eMin > diag_val) {
-          eMin = diag_val;
-        }
+  if (!central) {
+    T eNorm(0);
+    for (int i = 0; i < dim; i++)
+      for (int j = 0; j < dim; j++)
+        eNorm += request.gram_matrix(i, j) * C(i) * C(j);
+    return eNorm;
+  } else {
+    T eMin = request.gram_matrix(0, 0);
+    for (int i = 1; i < dim; i++) {
+      T diag_val = request.gram_matrix(i, i);
+      if (eMin > diag_val) {
+        eMin = diag_val;
       }
-      return eMin;
     }
-  };
+    return eMin;
+  }
+}
+
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request) {
+#ifdef DEBUG_SHVEC
+  std::cerr << "SHVEC: compute_minimum, begin\n";
+#endif
   T_shvec_info<T, Tint> info;
-  info.minimum = get_minimum_atp();
+  info.minimum = get_initial_minimum(request);
   while (true) {
 #ifdef DEBUG_SHVEC
-    std::cerr << "SHVEC: Before computeIt (in computeMinimum while loop)\n";
+    std::cerr << "SHVEC: Before computeIt (in compute_minimum while loop)\n";
 #endif
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == info.minimum) {
         info.short_vectors.push_back(V);
-        if (central) {
+        if (request.central) {
           info.short_vectors.push_back(-V);
         }
         return true;
@@ -527,14 +531,56 @@ T_shvec_info<T, Tint> computeMinimum(const FullGramInfo<T> &request) {
         return false;
       }
     };
-    bool result =
-        computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
     if (result) {
       break;
     }
   }
   return info;
 }
+
+template <typename T, typename Tint>
+T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, std::optional<size_t> const& limit) {
+#ifdef DEBUG_SHVEC
+  std::cerr << "SHVEC: compute_minimum, begin\n";
+#endif
+  T_shvec_info<T, Tint> info;
+  info.minimum = get_initial_minimum(request);
+  while (true) {
+#ifdef DEBUG_SHVEC
+    std::cerr << "SHVEC: Before computeIt (in compute_minimum while loop)\n";
+#endif
+    size_t n_iter = 0;
+    auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
+      if (min == info.minimum) {
+        info.short_vectors.push_back(V);
+        if (request.central) {
+          info.short_vectors.push_back(-V);
+        }
+        if (limit) {
+          size_t const& limit_val = *limit;
+          if (limit_val <= n_iter) {
+            return false;
+          }
+        }
+        return true;
+      } else {
+        info.short_vectors.clear();
+        info.minimum = min;
+        return false;
+      }
+    };
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
+    if (result) {
+      break;
+    }
+  }
+  return info;
+}
+
+
+
+
 
 template <typename Tint> struct ResultShortest {
   std::vector<MyVector<Tint>> shortest;
@@ -653,7 +699,39 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.central = false;
-    T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
+    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request);
+    T TheNorm = info.minimum;
+    int nbVect = info.short_vectors.size();
+    MyMatrix<Tint> ListClos(nbVect, dim);
+    for (int iVect = 0; iVect < nbVect; iVect++) {
+      MyVector<Tint> x =
+          eRec.Pmat.transpose() * (info.short_vectors[iVect] - ePair.first);
+#ifdef SANITY_CHECK_SHVEC
+      if (TheNorm != comp_norm_diff(x, eV)) {
+        std::cerr << "Inconsistecy error in the norms\n";
+        throw TerminalException{1};
+      }
+#endif
+      for (int i = 0; i < dim; i++) {
+        ListClos(iVect, i) = x(i);
+      }
+    }
+    return {TheNorm, std::move(ListClos)};
+  }
+  resultCVP<T, Tint> nearest_vectors_limit(MyVector<T> const &eV, std::optional<size_t> const& limit) const {
+    if (IsIntegralVector(eV)) {
+      T TheNorm(0);
+      MyMatrix<Tint> ListVect(1, dim);
+      for (int i = 0; i < dim; i++)
+        ListVect(0, i) = UniversalScalarConversion<Tint, T>(eV(i));
+      return {TheNorm, ListVect};
+    }
+    MyVector<T> cosetRed = - Q_T.transpose() * eV;
+    std::pair<MyVector<Tint>, MyVector<T>> ePair =
+        ReductionMod1vector<T, Tint>(cosetRed);
+    request.coset = ePair.second;
+    request.central = false;
+    T_shvec_info<T, Tint> info = compute_minimum_limit<T, Tint>(request, limit);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);
@@ -675,7 +753,7 @@ public:
   Tshortest<T, Tint> shortest_vectors() const {
     request.coset = ZeroVector<T>(dim);
     request.central = true;
-    T_shvec_info<T, Tint> info = computeMinimum<T, Tint>(request);
+    T_shvec_info<T, Tint> info = compute_minimum<T, Tint>(request);
     T TheNorm = info.minimum;
     int nbVect = info.short_vectors.size();
     MyMatrix<Tint> ListClos(nbVect, dim);

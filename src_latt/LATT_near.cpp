@@ -129,35 +129,11 @@ int main(int argc, char *argv[]) {
     }
 
     auto call_SV = [&](std::ostream &os) -> void {
-      if (arith == "rational") {
-        using T = Trat;
+      if (arith == "gmp") {
+        using T = mpq_class;
+        using Tint = mpz_class;
         return process<T, Tint>(choice, FileGram, FileVect, OutFormat, os);
       }
-      /*
-      if (arith == "Qsqrt5") {
-        using T = QuadField<Trat, 5>;
-        return process<T,T>(choice, FileGram, FileVect, OutFormat, os);
-      }
-      if (arith == "Qsqrt2") {
-        using T = QuadField<Trat, 2>;
-        return process<T,T>(choice, FileGram, FileVect, OutFormat, os);
-      }
-      std::optional<std::string> opt_realalgebraic =
-          get_postfix(arith, "RealAlgebraic=");
-      if (opt_realalgebraic) {
-        std::string FileAlgebraicField = *opt_realalgebraic;
-        if (!IsExistingFile(FileAlgebraicField)) {
-          std::cerr << "FileAlgebraicField=" << FileAlgebraicField
-                    << " is missing\n";
-          throw TerminalException{1};
-        }
-        HelperClassRealField<Trat> hcrf(FileAlgebraicField);
-        int const idx_real_algebraic_field = 1;
-        insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
-        using T = RealField<idx_real_algebraic_field>;
-        return process<T,T>(choice, FileGram, FileVect, OutFormat, os);
-      }
-      */
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";
       std::cerr << "Available possibilities: rational, Qsqrt5, Qsqrt2, "
