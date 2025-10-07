@@ -668,7 +668,6 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     request.dim = dim;
     request.coset = eV_img;
     request.gram_matrix = RecLLL.GramMatRed;
-    request.bound = data.norm;
     request.central = false;
     //
 #ifdef DEBUG_VINBERG

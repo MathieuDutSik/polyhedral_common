@@ -27,7 +27,6 @@
 
 template <typename T> struct FullGramInfo {
   int dim;
-  T bound;
   MyVector<T> coset;
   MyMatrix<T> gram_matrix;
   bool central;
@@ -206,8 +205,6 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, const T &bound,
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int i, j;
   int dim = request.dim;
-  // The value of bound is assumed to be correct.
-  // Thus the Trem values should be strictly positive.
   MyVector<Tint> Upper(dim);
   MyVector<T> Trem(dim);
   MyVector<T> U(dim);
@@ -363,7 +360,7 @@ computeIt_Gen(const FullGramInfo<T> &request, const T &bound,
   //
   Tfield bound_field = UniversalScalarConversion<Tfield, T>(bound);
   FullGramInfo<Tfield> request_field{
-      request.dim, UniversalScalarConversion<Tfield, T>(request.bound),
+      request.dim,
       UniversalVectorConversion<Tfield, T>(request.coset),
       UniversalMatrixConversion<Tfield, T>(request.gram_matrix),
       request.central};
@@ -588,15 +585,15 @@ template <typename Tint> struct ResultShortest {
 };
 
 template <typename T, typename Tint>
-ResultShortest<Tint> computeTestShortest(const FullGramInfo<T> &request) {
+ResultShortest<Tint> compute_test_shortest(const FullGramInfo<T> &request, T const& bound) {
 #ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: computeTestShortest, begin\n";
+  std::cerr << "SHVEC: compute_test_shortest, begin\n";
 #endif
   const bool &central = request.central;
   std::vector<MyVector<Tint>> shortest;
   std::optional<MyVector<Tint>> better_vector;
   auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
-    if (min == request.bound) {
+    if (min == bound) {
       shortest.push_back(V);
       if (central) {
         shortest.push_back(-V);
@@ -608,7 +605,7 @@ ResultShortest<Tint> computeTestShortest(const FullGramInfo<T> &request) {
       return false;
     }
   };
-  (void)computeIt<T, Tint, decltype(f_insert)>(request, request.bound,
+  (void)computeIt<T, Tint, decltype(f_insert)>(request, bound,
                                                f_insert);
   return {shortest, better_vector};
 }
@@ -630,11 +627,10 @@ public:
       eRec(LLLreducedBasisDual<T, Tint>(GramMat, os)) {
     MyMatrix<Tint> Q_i = Inverse(eRec.Pmat);
     Q_T = UniversalMatrixConversion<T, Tint>(Q_i);
-    T bound_unset = 0;
     MyVector<T> V_unset(dim);
     bool central = false;
     request =
-        FullGramInfo<T>{dim, bound_unset, V_unset, eRec.GramMatRed, central};
+        FullGramInfo<T>{dim, V_unset, eRec.GramMatRed, central};
   }
   T comp_norm_vect(MyVector<Tint> const& x) const {
     MyVector<T> eDiff(dim);
@@ -660,8 +656,7 @@ public:
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
-    request.bound = TheNorm;
-    ResultShortest<Tint> res = computeTestShortest<T, Tint>(request);
+    ResultShortest<Tint> res = compute_test_shortest<T, Tint>(request, TheNorm);
     if (res.better_vector) {
       MyVector<Tint> const &short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);
@@ -779,7 +774,6 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.central = false;
-    request.bound = TheNorm;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
         MyVector<Tint> x = eRec.Pmat.transpose() * (V - ePair.first);
@@ -807,7 +801,6 @@ public:
   std::vector<MyVector<Tint>> fixed_norm_vectors(T const &TheNorm) const {
     request.coset = ZeroVector<T>(dim);
     request.central = true;
-    request.bound = TheNorm;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
       if (min == TheNorm) {
@@ -832,7 +825,6 @@ public:
         ReductionMod1vector<T, Tint>(cosetRed);
     request.coset = ePair.second;
     request.central = false;
-    request.bound = MaxNorm;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V,
                         [[maybe_unused]] const T &min) -> bool {
@@ -852,7 +844,6 @@ public:
   std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
     request.coset = ZeroVector<T>(dim);
     request.central = true;
-    request.bound = MaxNorm;
     std::vector<MyVector<Tint>> ListVect;
     auto f_insert = [&](const MyVector<Tint> &V,
                         [[maybe_unused]] const T &min) -> bool {
