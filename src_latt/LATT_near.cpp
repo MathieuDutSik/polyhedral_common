@@ -73,13 +73,6 @@ void process(std::string const &choice, std::string const &FileGram,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-#ifdef OSCAR_USE_BOOST_GMP_BINDINGS
-    using Trat = boost::multiprecision::mpq_rational;
-    using Tint = boost::multiprecision::mpz_int;
-#else
-    using Trat = mpq_class;
-    using Tint = mpz_class;
-#endif
     if (argc != 5 && argc != 7) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
