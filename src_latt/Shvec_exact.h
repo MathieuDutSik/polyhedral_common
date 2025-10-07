@@ -512,50 +512,50 @@ T_shvec_info<T, Tint> compute_minimum(const FullGramInfo<T> &request) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: compute_minimum, begin\n";
 #endif
-  T_shvec_info<T, Tint> info;
-  info.minimum = get_initial_minimum(request);
+  std::vector<MyVector<Tint>> short_vectors;
+  T minimum = get_initial_minimum(request);
   while (true) {
 #ifdef DEBUG_SHVEC
     std::cerr << "SHVEC: Before computeIt (in compute_minimum while loop)\n";
 #endif
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
-      if (min == info.minimum) {
-        info.short_vectors.push_back(V);
+      if (min == minimum) {
+        short_vectors.push_back(V);
         if (request.central) {
-          info.short_vectors.push_back(-V);
+          short_vectors.push_back(-V);
         }
         return true;
       } else {
-        info.short_vectors.clear();
-        info.minimum = min;
+        short_vectors.clear();
+        minimum = min;
         return false;
       }
     };
-    bool result = computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, minimum, f_insert);
     if (result) {
       break;
     }
   }
-  return info;
+  return {short_vectors, minimum};
 }
 
 template <typename T, typename Tint>
 T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, std::optional<size_t> const& limit) {
 #ifdef DEBUG_SHVEC
-  std::cerr << "SHVEC: compute_minimum, begin\n";
+  std::cerr << "SHVEC: compute_minimum_limit, begin\n";
 #endif
-  T_shvec_info<T, Tint> info;
-  info.minimum = get_initial_minimum(request);
+  std::vector<MyVector<Tint>> short_vectors;
+  T minimum = get_initial_minimum(request);
   while (true) {
 #ifdef DEBUG_SHVEC
-    std::cerr << "SHVEC: Before computeIt (in compute_minimum while loop)\n";
+    std::cerr << "SHVEC: Before computeIt (in compute_minimum_limit while loop)\n";
 #endif
     size_t n_iter = 0;
     auto f_insert = [&](const MyVector<Tint> &V, const T &min) -> bool {
-      if (min == info.minimum) {
-        info.short_vectors.push_back(V);
+      if (min == minimum) {
+        short_vectors.push_back(V);
         if (request.central) {
-          info.short_vectors.push_back(-V);
+          short_vectors.push_back(-V);
         }
         if (limit) {
           size_t const& limit_val = *limit;
@@ -565,17 +565,17 @@ T_shvec_info<T, Tint> compute_minimum_limit(const FullGramInfo<T> &request, std:
         }
         return true;
       } else {
-        info.short_vectors.clear();
-        info.minimum = min;
+        short_vectors.clear();
+        minimum = min;
         return false;
       }
     };
-    bool result = computeIt<T, Tint, decltype(f_insert)>(request, info.minimum, f_insert);
+    bool result = computeIt<T, Tint, decltype(f_insert)>(request, minimum, f_insert);
     if (result) {
       break;
     }
   }
-  return info;
+  return {short_vectors, minimum};
 }
 
 
