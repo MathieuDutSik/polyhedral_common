@@ -9,10 +9,11 @@
 #PROGRAM		= TSPACE_Equivalence
 #PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
-PROGRAM		= LATT_MPI_ComputeDelaunay
+#PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
+PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
@@ -41,7 +42,7 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
-CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I../src_short -I../src_isotropy -I.
+CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_lorentzian -I../src_graph -I../permutalib/src -I../src_comb -I../src_poly -I../src_group -I../src_dualdesc -I../src_short -I../src_isotropy -I../src_enum_schemes -I.
 #COPTIONS        =
 #COPTIONS        = -DCHECK -DDEBUG -DTIMINGS
 #COPTIONS        = -DCHECK -DDEBUG_SHVEC -DTIMINGS
