@@ -18,8 +18,18 @@ case4:=rec(eMat:=[ [ 3, 4, 3, -3, -2 ], [ 4, 2, 0, 1, -2 ], [ 3, 0, 3, -1, -2 ],
 case5:=rec(eMat:=[ [ 100, -72, -59, 120 ], [ -72, 100, -60, -46 ], [ -59, -60, 100, -60 ], [ 120, -46, -60, 100 ] ],
            name:="Dannenberg2", reply:=false);;
 
+case6:=rec(eMat:=[
+[17, -91/5, 33/2, 38/3, -36/5],
+[91/5, 59/3, -53/4, 8, 33/4],
+[33/2, -53/4, 39/4, -13/2, 8],
+[38/3, 8, -13/2, 16/3, -13/3],
+[-36/5, 33/4, 8, -13/3, 1373628701/353935575]],
+           name:="Strekelj_Zalar_Construction_of_exceptional_copositive_matrices", reply:=true);
 
-ListCase_block1:=[case1, case2, case3, case4, case5];
+
+
+ListCase_block1:=[case1, case2, case3, case4, case5, case6];
+#ListCase_block1:=[case6];
 
 TheDir:="Examples_from_Alexander_Oertel";
 
@@ -47,6 +57,7 @@ end;
 ListCase_block2:=GetCases_90();
 
 ListCase:=Concatenation(ListCase_block1, ListCase_block2);
+#ListCase:=ListCase_block1;
 
 
 TestCopositivity:=function(eCase)

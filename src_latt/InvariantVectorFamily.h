@@ -167,7 +167,7 @@ MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
     MyMatrix<Tint> SHV_f = T_ShortVector_fixed<T, Tint>(eMat, norm, os);
     SHVret = Concatenate(SHVret, SHV_f);
     if (f_correct(SHVret))
-      return SHVret;
+      return matrix_duplication(SHVret);
     norm += incr;
   }
 }
@@ -201,6 +201,22 @@ bool is_antipodal(MyMatrix<T> const &SHV) {
   }
   return true;
 }
+
+template<typename T>
+MyMatrix<T> matrix_duplication(MyMatrix<T> const& SHV) {
+  int dim = SHV.cols();
+  int nbSHV = SHV.rows();
+  MyMatrix<T> SHV_T(2 * nbSHV, dim);
+  for (int i_row=0; i_row<nbSHV; i_row++) {
+    for (int i=0; i<dim; i++) {
+      T val = SHV(i_row,i);
+      SHV_T(2*i_row  , i) = val;
+      SHV_T(2*i_row+1, i) = -val;
+    }
+  }
+  return SHV_T;
+}
+
 
 
 template <typename T>
