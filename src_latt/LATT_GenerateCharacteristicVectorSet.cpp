@@ -31,6 +31,9 @@ void process_C(std::string choice, std::string MatFile, std::string const& OutFo
     throw TerminalException{1};
   };
   MyMatrix<Tint> M = f();
+#ifdef SANITY_CHECK
+  check_antipodality_mymatrix(M);
+#endif
   auto f_print=[&](std::ostream& osf) -> void {
     if (OutFormat == "norms") {
       int n_vect = M.rows();

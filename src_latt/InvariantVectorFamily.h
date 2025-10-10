@@ -197,7 +197,7 @@ ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostr
     throw TerminalException{1};
   }
   if (rank == n) {
-    Tint index_B = Int_IndexLattice(M);
+    Tint index_B = T_abs(Int_IndexLattice(M));
     if (index != index_B) {
       std::cerr << "index=" << index << " but index_B=" << index_B << "\n";
       throw TerminalException{1};
@@ -316,6 +316,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   std::vector<MyVector<Tint>> ListVect;
   BlockCppIterator blk(n, 2);
+  CVPSolver<T, Tint> solver(GramMat, os);
   for (auto &eVect : blk) {
     int sum = 0;
     for (auto &eVal : eVect) {
@@ -326,7 +327,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
       for (int u = 0; u < n; u++) {
         T val = UniversalScalarConversion<T, int>(eVect[u]);
         eV(u) = val / 2;
-        resultCVP<T, Tint> result = NearestVectors<T, Tint>(GramMat, eV, os);
+        resultCVP<T, Tint> result = solver.nearest_vectors(eV);
         if (result.ListVect.rows() == 2) {
           MyVector<Tint> Vins(n);
           for (int u = 0; u < n; u++) {
