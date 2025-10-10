@@ -710,6 +710,12 @@ public:
       ListV.push_back(eV);
       MapV[eV] = i_row_idx;
     }
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+    if (ListV.size() != MapV.size()) {
+      std::cerr << "TSPACE: PermutationBuilder, we have duplication |ListV|=" << ListV.size() << " |MapV|=" << MapV.size() << "\n";
+      throw TerminalException{1};
+    }
+#endif
   }
   Telt get_permutation(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
     std::vector<Tidx> eList(n_row);
@@ -742,7 +748,7 @@ public:
 };
 
 template<typename T, typename Tgroup>
-Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr, MyMatrix<T> const& SHV_T, [[maybe_unused]] std::ostream& os) {
+Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr, MyMatrix<T> const& SHV_T, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;

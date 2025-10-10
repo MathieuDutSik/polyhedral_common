@@ -98,7 +98,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       if (IsComplete)
         break;
       SimplePerfect<T, Tint> ePERF = ListOrbit.GetRepresentative(eEntry);
-      Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ePERF.Gram, os);
+      Tshortest<T, Tint> RecSHV = T_ShortestVectorHalf<T, Tint>(ePERF.Gram, os);
       NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
       Tgroup GRPshv =

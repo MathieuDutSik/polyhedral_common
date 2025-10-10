@@ -935,6 +935,16 @@ Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &GramMat, std::ostream &os
   return solver.shortest_vectors();
 }
 
+template <typename T, typename Tint>
+Tshortest<T, Tint> T_ShortestVectorHalf(MyMatrix<T> const &GramMat, std::ostream &os) {
+  Tshortest<T, Tint> RecSHV = T_ShortestVector<T,Tint>(GramMat, os);
+  return shortest_get_half(RecSHV);
+}
+
+
+
+
+
 // clang-format off
 #endif  // SRC_LATT_SHVEC_EXACT_H_
 // clang-format on

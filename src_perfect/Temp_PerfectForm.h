@@ -608,7 +608,7 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
     return IsPositiveDefinite<T>(eMat, os);
   };
   auto f_shortest=[&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
-    return T_ShortestVector<T, Tint>(eMat, os);
+    return T_ShortestVectorHalf<T, Tint>(eMat, os);
   };
   return Kernel_Flipping_Perfect<T,Tint,decltype(f_admissible),decltype(f_shortest)>(f_admissible, f_shortest, eMatIn, eMatDir, os);
 }
@@ -653,7 +653,7 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
                               std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
-  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(ThePerfMat, os);
+  Tshortest<T, Tint> RecSHV = T_ShortestVectorHalf<T, Tint>(ThePerfMat, os);
 #ifdef SANITY_CHECK_INITIAL_PERFECT
   T TheMin = RecSHV.min;
 #endif
