@@ -1902,9 +1902,9 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
     V_basic(i) = val_comm;
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "FindDiagramExtensions, step 3\n";
-#endif
   size_t n_diagram_considered = 0;
   size_t n_diagram_match = 0;
+#endif
   auto test_vector_and_insert = [&](const MyVector<T> &V) -> void {
     MyMatrix<T> Mtest(dim + 1, dim + 1);
     for (size_t i = 0; i < dim; i++)
@@ -1916,12 +1916,14 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
     }
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
     std::cerr << "Mtest built\n";
-#endif
     n_diagram_considered++;
+#endif
     bool test = CheckDiagram(Mtest, DS);
     if (test) {
       SetExtensions.insert(V);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
       n_diagram_match++;
+#endif
     }
   };
   // Adding just an A1, always works.

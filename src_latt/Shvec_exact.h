@@ -13,10 +13,12 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_SHVEC
+#define SANITY_CHECK_SHVEC_EXACT_POLYTOPE
 #endif
 
 #ifdef DEBUG
 #define DEBUG_SHVEC
+#define DEBUG_SHVEC_EXACT_POLYTOPE
 // #define DEBUG_SHVEC_VECTOR
 // #define DEBUG_SHVEC_MATRIX
 #endif
@@ -384,10 +386,14 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n_rows = FAC.rows();
   int n_col = FAC.cols();
+#ifdef SANITY_CHECK_SHVEC_EXACT_POLYTOPE
   if (n_col != request.dim + 1) {
-    std::cerr << "Error in the size of FAC\n";
+    std::cerr << "SHVEC: request.dim=" << request.dim << " |request.gram_matrix|=" << request.gram_matrix.rows() << "\n";
+    std::cerr << "SHVEC: n_col=" << n_col << " request.dim + 1=" << (request.dim + 1) << "\n";
+    std::cerr << "SHVEC: Error in the size of FAC\n";
     throw TerminalException{1};
   }
+#endif
 #ifdef DEBUG_SHVEC_EXACT_POLYTOPE
   std::cerr << "Beginning of computeIt_polytope\n";
 #endif

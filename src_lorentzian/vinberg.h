@@ -665,7 +665,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     }
     //
     FullGramInfo<T> request;
-    request.dim = dim;
+    request.dim = dim - 1; // Because GramMatRed is one dimension lower.
     request.gram_matrix = RecLLL.GramMatRed;
     MyVector<T> const& coset = eV_img;
     bool central = false;
