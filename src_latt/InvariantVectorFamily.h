@@ -100,6 +100,75 @@ bool IsCompleteSystem(FundInvariantVectorFamily<Tint> const &fi, int n) {
   return fi.index == 1;
 }
 
+
+template <typename T>
+bool is_antipodal(MyMatrix<T> const &SHV) {
+  int n_row = SHV.rows();
+  std::unordered_set<MyVector<T>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(SHV, i_row);
+    set.insert(V);
+  }
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = - GetMatrixRow(SHV, i_row);
+    if (set.count(V) == 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template<typename T>
+MyMatrix<T> matrix_duplication(MyMatrix<T> const& SHV) {
+  int dim = SHV.cols();
+  int nbSHV = SHV.rows();
+  MyMatrix<T> SHV_T(2 * nbSHV, dim);
+  for (int i_row=0; i_row<nbSHV; i_row++) {
+    for (int i=0; i<dim; i++) {
+      T val = SHV(i_row,i);
+      SHV_T(2*i_row  , i) = val;
+      SHV_T(2*i_row+1, i) = -val;
+    }
+  }
+  return SHV_T;
+}
+
+template <typename T>
+bool has_duplication(MyMatrix<T> const &SHV) {
+  int n_row = SHV.rows();
+  std::unordered_set<MyVector<T>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V = GetMatrixRow(SHV, i_row);
+    if (set.count(V) == 1) {
+      return true;
+    }
+    set.insert(V);
+  }
+  return false;
+}
+
+template <typename T>
+void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
+  if (!is_antipodal(SHV)) {
+    std::cerr << "TSPACE: The family SHV is not antipodal\n";
+    throw TerminalException{1};
+  }
+}
+
+
+template<typename Tint>
+bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
+  int n = M.cols();
+  if (RankMat(M) < n) {
+    return false;
+  }
+  Tint indx = Int_IndexLattice(M);
+  if (T_NormGen(indx) == 1) {
+    return true;
+  }
+  return false;
+}
+
 template <typename Tint>
 FundInvariantVectorFamily<Tint>
 ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostream&os) {
@@ -184,77 +253,6 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
   return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
       eMat, f_correct, os);
 }
-
-template <typename T>
-bool is_antipodal(MyMatrix<T> const &SHV) {
-  int n_row = SHV.rows();
-  std::unordered_set<MyVector<T>> set;
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<T> V = GetMatrixRow(SHV, i_row);
-    set.insert(V);
-  }
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<T> V = - GetMatrixRow(SHV, i_row);
-    if (set.count(V) == 0) {
-      return false;
-    }
-  }
-  return true;
-}
-
-template<typename T>
-MyMatrix<T> matrix_duplication(MyMatrix<T> const& SHV) {
-  int dim = SHV.cols();
-  int nbSHV = SHV.rows();
-  MyMatrix<T> SHV_T(2 * nbSHV, dim);
-  for (int i_row=0; i_row<nbSHV; i_row++) {
-    for (int i=0; i<dim; i++) {
-      T val = SHV(i_row,i);
-      SHV_T(2*i_row  , i) = val;
-      SHV_T(2*i_row+1, i) = -val;
-    }
-  }
-  return SHV_T;
-}
-
-
-
-template <typename T>
-bool has_duplication(MyMatrix<T> const &SHV) {
-  int n_row = SHV.rows();
-  std::unordered_set<MyVector<T>> set;
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<T> V = GetMatrixRow(SHV, i_row);
-    if (set.count(V) == 1) {
-      return true;
-    }
-    set.insert(V);
-  }
-  return false;
-}
-
-template <typename T>
-void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
-  if (!is_antipodal(SHV)) {
-    std::cerr << "TSPACE: The family SHV is not antipodal\n";
-    throw TerminalException{1};
-  }
-}
-
-
-template<typename Tint>
-bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
-  int n = M.cols();
-  if (RankMat(M) < n) {
-    return false;
-  }
-  Tint indx = Int_IndexLattice(M);
-  if (T_NormGen(indx) == 1) {
-    return true;
-  }
-  return false;
-}
-
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
