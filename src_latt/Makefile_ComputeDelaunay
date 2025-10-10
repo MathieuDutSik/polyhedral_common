@@ -1,4 +1,4 @@
-PROGRAM		= LATT_MPI_ComputeDelaunay
+PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
 
 OBJECTS		= $(PROGRAM:%=%.o)
 CC		= g++ -std=c++17 -Wall -Wextra -g -O3

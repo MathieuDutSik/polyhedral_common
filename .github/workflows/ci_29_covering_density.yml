@@ -1,4 +1,4 @@
-name: CI(22) of Enumeration of Delaunay polytopes
+name: CI(29) of Computation of lattice covering densities
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -111,8 +111,8 @@ jobs:
           cd src_latt && make -f Makefile_ComputeDelaunay && cd ..
           echo "After compilation of LATT_*_ComputeDelaunay"
 
-          cd CI_tests/22_EnumLatticeDelaunays
-          ../../gap.sh < TestDelaunay.g
+          cd CI_tests/29_CoveringPerfectDim9
+          ../../gap.sh < ComputeCoveringDensity.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
