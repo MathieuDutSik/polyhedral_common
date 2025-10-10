@@ -2,16 +2,16 @@ Read("../common.g");
 Print("Beginning TestDelaunayEnumeration\n");
 
 
-TestEnumeration:=function(eRec)
+TestComputation:=function(eRec)
     local n, TmpDir, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, is_correct;
     Print("TestEnumeration, beginning\n");
-    n:=Length(eRec.eG);
+    n:=Length(eRec.eMat);
     TmpDir:=DirectoryTemporary();
     FileIn:=Filename(TmpDir, "DelaunayEnum.in");
     FileNml:=Filename(TmpDir, "DelaunayEnum.nml");
     FileOut:=Filename(TmpDir, "DelaunayEnum.out");
     #
-    WriteMatrixFile(FileIn, eRec.eG);
+    WriteMatrixFile(FileIn, eRec.eMat);
     Print("TestEnumeration, FileIn created\n");
     #
     strOut:="&DATA\n";
@@ -49,7 +49,15 @@ TestEnumeration:=function(eRec)
     return rec(is_correct:=is_correct);
 end;
 
-ListRec:=ReadAsFunction("ListCases")();;
+eDir:="PerfectMatrices";
+ListFiles:=ListFileDirectory(eDir);
+ListRec:=[];
+for eFile in ListFiles
+do
+    fFile:=Concatenation(eDir, "/", eFile);
+    eMat:=ReadMatrixFile(fFile);
+    Add(ListRec, rec(eMat:=eMat, eFile:=eFile));
+od;
 
 
 FullTest:=function()
@@ -59,7 +67,7 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestEnumeration(eRec);
+        RecReply:=TestComputation(eRec);
         Print("RecReply(B)=", RecReply, "\n");
         if RecReply.is_correct=false then
             n_error:=n_error+1;
