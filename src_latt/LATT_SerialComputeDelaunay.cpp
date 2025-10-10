@@ -23,7 +23,7 @@ void process(std::string const& GramFile, std::string const& OutFormat, std::ost
   std::optional<DelaunayTesselation<Tint, Tgroup>> opt =
     EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(data_lattice, f_incorrect, max_runtime_second);
   DelaunayTesselation<Tint, Tgroup> DT = unfold_opt(opt, "The Delaunay tesselation");
-  WriteDelaunayTesselation(OutFormat, os_out, DT);
+  WriteDelaunayTesselation(OutFormat, os_out, GramMat, DT);
 }
 
 int main(int argc, char *argv[]) {
@@ -57,6 +57,7 @@ int main(int argc, char *argv[]) {
         return process<T,Tint,Tgroup>(GramFile, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Allowed arith: gmp\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(OutFile, f);

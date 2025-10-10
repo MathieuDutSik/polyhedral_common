@@ -468,16 +468,6 @@ void WriteEntryPYTHON(std::ostream &os_out,
   os_out << "]";
 }
 
-template <typename Tvert, typename Tgroup>
-void WriteGAPformat(DelaunayTesselation<Tvert, Tgroup> const &DT,
-                    std::string const &OutFile) {
-  //  using T = typename overlying_field<Tvert>::field_type;
-  std::ofstream os_out(OutFile);
-  os_out << "return ";
-  WriteEntryGAP(os_out, DT);
-  os_out << ";\n";
-}
-
 template <typename T, typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<Delaunay_AdjI<Tint>>>
 ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
@@ -617,8 +607,11 @@ DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_Seri
   return {l_dels};
 }
 
-template <typename Tvert, typename Tgroup>
-void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+template <typename T, typename Tvert, typename Tgroup>
+void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out, MyMatrix<T> const& GramMat, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+  if (OutFormat == "nothing") {
+    return;
+  }
   if (OutFormat == "GAP") {
     os_out << "return ";
     WriteEntryGAP(os_out, DT);
@@ -627,6 +620,23 @@ void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out
   }
   if (OutFormat == "PYTHON") {
     return WriteEntryPYTHON(os_out, DT);
+  }
+  if (OutFormat == "GAP_covering") {
+    T TheCovSqr(0);
+    for (auto & eDel : DT.l_dels) {
+      MyMatrix<Tvert> const& EXT = eDel.EXT;
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+      T SquareRadius = cp.SquareRadius;
+      if (SquareRadius > TheCovSqr) {
+        TheCovSqr = SquareRadius;
+      }
+    }
+    T TheDet = DeterminantMat(GramMat);
+    int TheDim = GramMat.rows();
+    ResultCov<T> x = ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCovSqr);
+    os_out << "return " << to_stringGAP(x) << ";\n";
+    return;
   }
   std::cerr << "DEL_ENUM: WriteDelaunayTesselation failed for OutFormat=" << OutFormat << "\n";
   throw TerminalException{1};

@@ -21,7 +21,7 @@ void WriteFamilyDelaunay_Mpi(
     boost::mpi::communicator &comm,
     MyMatrix<T> const& GramMat,
     std::string const &OutFormat,
-    std::string const &OutFile,
+    std::ostream& os_out,
     std::vector<DatabaseEntry_MPI<
         typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
         typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const &ListDel,
@@ -51,18 +51,19 @@ void WriteFamilyDelaunay_Mpi(
     if (i_proc_out == i_rank) {
       DelaunayTesselation<Tvert, Tgroup> DT =
           DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(l_ent);
-      WriteGAPformat(DT, OutFile);
+      os_out << "return ";
+      WriteEntryGAP(os_out, DT);
+      os_out << ";\n";
     }
     std::cerr << "The Delaunay tesselation has been written to file\n";
     return;
   }
   if (OutFormat == "RAW") {
-    std::ofstream OUTfs(OutFile);
     int nbDel = ListDel.size();
-    OUTfs << "nbDel=" << nbDel << "\n";
+    os_out << "nbDel=" << nbDel << "\n";
     for (int iDel = 0; iDel < nbDel; iDel++) {
-      OUTfs << "iDel=" << iDel << "/" << nbDel << "\n";
-      WriteMatrix(OUTfs, ListDel[iDel].x.EXT);
+      os_out << "iDel=" << iDel << "/" << nbDel << "\n";
+      WriteMatrix(os_out, ListDel[iDel].x.EXT);
     }
   }
   if (OutFormat == "GAP_Covering") {
@@ -78,18 +79,17 @@ void WriteFamilyDelaunay_Mpi(
     }
     int i_proc_out = 0;
     std::vector<T> l_ent = my_mpi_gather(comm, max_radius, i_proc_out);
-    T TheCov(0);
     if (i_proc_out == i_rank) {
-      T TheDet = DeterminantMat(GramMat);
       int TheDim = GramMat.rows();
+      T TheDet = DeterminantMat(GramMat);
+      T TheCov(0);
       for (auto & rad: l_ent) {
         if (rad > TheCov) {
           TheCov = rad;
         }
       }
-      std::ofstream OUTfs(OutFile);
       ResultCov<T> x = ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCov);
-      OUTfs << "return " << to_stringGAP(x) << ";\n";
+      os_out << "return " << to_stringGAP(x) << ";\n";
     }
     return;
   }
@@ -145,8 +145,11 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
 #endif
   //
   if (pair.first) {
-    WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, OutFile, pair.second,
-                                             os);
+    auto f=[&](std::ostream& os_out) -> void {
+      WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, os_out, pair.second,
+                                               os);
+    };
+    print_stderr_stdout_file(OutFile, f);
   } else {
     os << "MPI_DEL_ENUM: The enumeration did not finish\n";
   }
