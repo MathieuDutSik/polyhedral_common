@@ -734,15 +734,23 @@ public:
 };
 
 template<typename T, typename Tgroup>
-Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr, MyMatrix<T> const& SHV_T) {
+Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr, MyMatrix<T> const& SHV_T, [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
+  int n_row = SHV_T.rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  size_t pos = 0;
+  os << "TSPACE: get_perm_group_from_list_matrices n_row=" << n_row << "\n";
+#endif
   for (auto &eGen : l_matr) {
     Telt ePerm = builder.get_permutation(eGen);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: get_perm_group_from_list_matrices pos=" << pos << " ePerm=" << ePerm << "\n";
+    pos += 1;
+#endif
     LGenGlobStab_perm.push_back(ePerm);
   }
-  int n_row = SHV_T.rows();
   return Tgroup(LGenGlobStab_perm, n_row);
 }
 
@@ -787,10 +795,10 @@ struct Result_ComputeStabilizer_SHV {
     std::cerr << "We did not generate l_gens / perms_and_group\n";
     throw TerminalException{1};
   }
-  Tgroup get_perm_group(MyMatrix<T> const &SHV_T) const {
+  Tgroup get_perm_group(MyMatrix<T> const &SHV_T, std::ostream& os) const {
     if (l_gens) {
       std::vector<MyMatrix<T>> const& l_matr = *l_gens;
-      return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHV_T);
+      return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHV_T, os);
     }
     if (perms_and_group) {
       return perms_and_group->second;
@@ -836,7 +844,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   using Tfield = T;
   int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer n_row=" << n_row << "\n";
+  os << "TSPACE: LINSPA_ComputeStabilizer_SHV n_row=" << n_row << "\n";
 #endif
   std::vector<T> Vdiag(n_row, 0);
   std::vector<MyMatrix<T>> ListMat =
@@ -846,7 +854,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
       GetListGenAutomorphism_ListMat_Vdiag<T, Tfield, Tgroup>(SHV_T, ListMat,
                                                               Vdiag, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer |ListGen|=" << ListGen.size() << "\n";
+  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |ListGen|=" << ListGen.size() << "\n";
 #endif
   //
   // Try the direct strategy and hopes to be lucky
@@ -868,7 +876,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   std::optional<std::vector<MyMatrix<T>>> opt = get_generators();
   if (opt) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: LINSPA_ComputeStabilizer success of the direct approach\n";
+    os << "TSPACE: LINSPA_ComputeStabilizer_SHV success of the direct approach\n";
 #endif
     return get_from_gens<T,Tgroup>(*opt);
   }
@@ -883,7 +891,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   }
   Tgroup FullGRP(LGenPerm, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer |FullGRP|=" << FullGRP.size() << "\n";
+  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |FullGRP|=" << FullGRP.size() << "\n";
 #endif
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
@@ -893,7 +901,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   }
   Tgroup GRPsub(LGenGlobStab_perm, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer |GRPsub|=" << GRPsub.size() << "\n";
+  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |GRPsub|=" << GRPsub.size() << "\n";
 #endif
   auto try_upgrade = [&]() -> std::optional<Telt> {
     // We can use either the left or right cosets.
@@ -918,7 +926,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
         // GRPsub and that the coset of the GRPsub is also not necessarily the identity.
         if (!GRPsub.isin(eCosReprPerm)) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
-          os << "TSPACE: LINSPA_ComputeStabilizer Finding a new eCosReprPerm\n";
+          os << "TSPACE: LINSPA_ComputeStabilizer_SHV Finding a new eCosReprPerm\n";
 #endif
           return eCosReprPerm;
         }
@@ -933,7 +941,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
       LGenGlobStab_perm.push_back(*opt);
       GRPsub = Tgroup(LGenGlobStab_perm, n_row);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-      os << "TSPACE: LINSPA_ComputeStabilizer Now |GRPsub|=" << GRPsub.size()
+      os << "TSPACE: LINSPA_ComputeStabilizer_SHV Now |GRPsub|=" << GRPsub.size()
          << "\n";
 #endif
     } else {
@@ -951,6 +959,9 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: LINSPA_ComputeStabilizer, we have result\n";
+#endif
   return result.get_list_matrix(SHV_T, eMat, LinSpa);
 }
 

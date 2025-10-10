@@ -824,13 +824,22 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> SHVorig_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
   MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
+#ifdef DEBUG_PERFECT_FORM
+  os << "PERFECT: SimplePerfect_Stabilizer, we have result\n";
+#endif
   if (SHVorig_T == SHV_T) {
     // This is the most likely scenario: The original
     // SHVorig is adequate
-    return result.get_perm_group(SHV_T);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T == SHV_T\n";
+#endif
+    return result.get_perm_group(SHV_T, os);
   } else {
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T != SHV_T\n";
+#endif
     std::vector<MyMatrix<T>> l_matr = result.get_list_matrix(SHV_T, eMat, LinSpa);
-    return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHVorig_T);
+    return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHVorig_T, os);
   }
 }
 

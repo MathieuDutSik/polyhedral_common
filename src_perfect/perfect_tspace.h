@@ -210,6 +210,9 @@ struct DataPerfectTspaceFunc {
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     x.GRP = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
+#ifdef DEBUG_PERFECT_TSPACE
+    os << "PERF_TSPACE: After x.GRP set\n";
+#endif
     return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, x.GRP, os);
   }
 
