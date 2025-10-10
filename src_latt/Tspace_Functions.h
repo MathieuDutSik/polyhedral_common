@@ -711,7 +711,7 @@ public:
       MapV[eV] = i_row_idx;
     }
   }
-  Telt get_permutation(MyMatrix<T> const &M) {
+  Telt get_permutation(MyMatrix<T> const &M, [[maybe_unused]] std::ostream& os) {
     std::vector<Tidx> eList(n_row);
     for (int i_row = 0; i_row < n_row; i_row++) {
       MyVector<T> Vimg = M.transpose() * ListV[i_row];
@@ -729,7 +729,15 @@ public:
       Tidx pos = MapV.at(Vimg);
       eList[i_row] = pos;
     }
-    return Telt(eList);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPACE: get_permutation, n_row=" << n_row << " eList=[";
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      int val = eList[i_row];
+      os << " " << val;
+    }
+    os << " ]\n";
+#endif
+    return Telt(std::move(eList));
   }
 };
 
@@ -744,7 +752,7 @@ Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const& l_matr,
   os << "TSPACE: get_perm_group_from_list_matrices n_row=" << n_row << "\n";
 #endif
   for (auto &eGen : l_matr) {
-    Telt ePerm = builder.get_permutation(eGen);
+    Telt ePerm = builder.get_permutation(eGen, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: get_perm_group_from_list_matrices pos=" << pos << " ePerm=" << ePerm << "\n";
     pos += 1;
@@ -778,14 +786,14 @@ struct Result_ComputeStabilizer_SHV {
     std::cerr << "We did not generate l_gens / perms_and_group\n";
     throw TerminalException{1};
   }
-  std::vector<Telt> get_list_perms(MyMatrix<T> const &SHV_T) const {
+  std::vector<Telt> get_list_perms(MyMatrix<T> const &SHV_T, std::ostream& os) const {
     if (l_gens) {
       PermutationBuilder<T, Telt> builder(SHV_T);
       std::vector<MyMatrix<T>> const& l_matr = *l_gens;
       std::vector<Telt> LGenGlobStab_perm;
       for (auto &eGen : l_matr) {
-        Telt ePerm = builder.get_permutation(eGen);
-        LGenGlobStab_perm.push_back(ePerm);
+        Telt ePerm = builder.get_permutation(eGen, os);
+        LGenGlobStab_perm.emplace_back(std::move(ePerm));
       }
       return LGenGlobStab_perm;
     }
@@ -896,7 +904,7 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
-    Telt ePerm = builder.get_permutation(eGen);
+    Telt ePerm = builder.get_permutation(eGen, os);
     LGenGlobStab_perm.push_back(ePerm);
   }
   Tgroup GRPsub(LGenGlobStab_perm, n_row);
@@ -1078,7 +1086,7 @@ LINSPA_TestEquivalenceGramMatrix_SHV(LinSpaceMatrix<T> const &LinSpa,
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenGlobStab1_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
-    Telt ePerm = builder1.get_permutation(eGen);
+    Telt ePerm = builder1.get_permutation(eGen, os);
     LGenGlobStab1_perm.push_back(ePerm);
   }
   Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
