@@ -2071,9 +2071,11 @@ std::vector<MyVector<T>> FindDiagramExtensions(const MyMatrix<T> &M,
   std::vector<MyVector<T>> ListExtensions;
   for (auto &eEnt : SetExtensions)
     ListExtensions.push_back(eEnt);
+#ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "Stats : |ListExtensions|=" << ListExtensions.size()
             << " n_diagram_considered=" << n_diagram_considered
             << " n_diagram_match=" << n_diagram_match << "\n";
+#endif
   return ListExtensions;
 }
 

@@ -56,7 +56,7 @@ end;
 
 
 TestMat:=function(eMat)
-    local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B;
+    local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B, LGen, i;
     TheCan:=GetCanonicalForm(eMat);
     if TheCan=fail then
         return false;
@@ -66,7 +66,7 @@ TestMat:=function(eMat)
     LGen:=GeneratorsOfGroup(GRP);
     for iter in [1..10]
     do
-        Print("iMat=", iMat, " |eMat|=", Length(eMat), " iter=", iter, "\n");
+        Print("  |eMat|=", Length(eMat), " iter=", iter, "\n");
         len:=Random([1..2*n]);
         eP:=IdentityMat(n);
         for i in [1..len]
@@ -92,6 +92,7 @@ n_error:=0;
 for iMat in [1..Length(ListMat)]
 do
     eMat:=ListMat[iMat];
+    Print("iMat=", iMat, " |eMat|=", Length(eMat), "\n");
     test:=TestMat(eMat);
     if test=false then
         n_error:=n_error+1;
