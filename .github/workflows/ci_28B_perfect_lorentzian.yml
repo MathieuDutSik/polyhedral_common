@@ -1,4 +1,4 @@
-name: CI(28) of Wythoff H4
+name: CI(28B) of Enumeration of perfect lorentzian cones.
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,13 +7,13 @@ name: CI(28) of Wythoff H4
 on:
   # One time per month
   schedule:
-    - cron: "0 0 28 * *"
+    - cron: "0 0 28 2,4,6,8,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
 jobs:
   build-linux:
-    timeout-minutes: 120  # 2 hours
+    timeout-minutes: 30  # 1:30 hours
     runs-on: ubuntu-latest
     env:
       GMP_INCDIR: /usr/include
@@ -55,6 +55,7 @@ jobs:
           sudo apt-get install -y libglpk-dev
           sudo apt-get install -y autoconf autotools-dev libtool
           sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
+          sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - name: Build test code
         run: |
@@ -105,16 +106,16 @@ jobs:
           pwd
           ln -s gap-4.14.0/gap gap.sh
 
-      - name: Test dual description of WythoffH4
+      - name: Test enumeration of perfect cones in Lorentzian lattices
         run: |
-          cd src_dualdesc && make -f Makefile_serial_dualdesc && cd ..
-          echo "After compilation of Dual description code"
+          cd src_lorentzian && make -f Makefile_perfect_lorentzian && cd ..
+          pwd
+          echo "After compilation of LORENTZ_MPI_PerfectLorentzian"
 
-          cd CI_tests/28_WythoffH4
-          ../../gap.sh < TestWythoff.g
+          cd CI_tests/28B_LorentzianPerf
+          ../../gap.sh < TestPerfLorentzian.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
           fi
           cd ../..
-          echo "After the test of Wythoff dual description"
