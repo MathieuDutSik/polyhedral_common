@@ -1747,9 +1747,13 @@ MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyM
 template<typename T>
 std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const& list_V, std::vector<MyMatrix<T>> const& list_mat) {
   std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
-  std::vector<MyVector<T>> list_V_red;
+  std::set<MyVector<T>> set_V_red;
   for (auto& eV: list_V) {
     MyVector<T> eV_red = ExhaustiveVectorSimplificationKernel(eV, list_mat_tot);
+    set_V_red.insert(eV_red);
+  }
+  std::vector<MyVector<T>> list_V_red;
+  for (auto & eV_red: set_V_red) {
     list_V_red.push_back(eV_red);
   }
   return list_V_red;

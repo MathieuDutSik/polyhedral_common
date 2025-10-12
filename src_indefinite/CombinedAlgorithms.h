@@ -46,6 +46,17 @@ static const int INDEFINITE_FORM_FLAG = 92;
 static const int METHOD_GENERATION_RIGHT_COSETS = 49;
 static const int METHOD_GENERATION_DOUBLE_COSETS = 81;
 
+
+template <typename T, typename Tint>
+void check_equivalence(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& equiv, std::string const& context) {
+  MyMatrix<T> equiv_T = UniversalMatrixConversion<T, Tint>(equiv);
+  MyMatrix<T> prod = equiv_T * Q1 * equiv_T.transpose();
+  if (prod != Q2) {
+    std::cerr << "COMB: Q1 should map to Q2 via equiv. context=" << context << "\n";
+    throw TerminalException{1};
+  }
+}
+
 template <typename T, typename Tint> struct INDEF_FORM_GetVectorStructure {
 public:
   T eNorm;
@@ -811,12 +822,7 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
                                                               [[maybe_unused]] std::ostream& os) {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
   for (auto & eGen : GRPred) {
-    MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
-    MyMatrix<T> prod = eGen_T * eRec.QmatRed * eGen_T.transpose();
-    if (prod != eRec.QmatRed) {
-      std::cerr << "COMB: eGen should preserve eRec.QmatRed\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(eRec.QmatRed, eRec.QmatRed, eGen, "eGen / eRec.QmatRed");
   }
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
@@ -837,12 +843,7 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   for (auto &eGen : GRPfull) {
     MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
-    MyMatrix<T> eProd = eGenB_T * eRec.GramMatRed * eGenB_T.transpose();
-    if (eProd != eRec.GramMatRed) {
-      std::cerr << "COMB: eGenB should preserve eRec.GramMatRed\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenB, "eGenB / eRec.GramMatRed");
     std::vector<MyMatrix<Tint>> ListSpaces =
       f_get_list_spaces(eRec.PlaneExpr, sd, os);
     for (auto &eSpace : ListSpaces) {
@@ -903,12 +904,7 @@ private:
     std::vector<MyMatrix<Tint>> ListGenerators;
     auto f_insert = [&](MyMatrix<Tint> const &eGen) -> void {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
-      MyMatrix<T> prod = eGen_T * Qmat * eGen_T.transpose();
-      if (prod != Qmat) {
-        std::cerr << "COMB: eGen is not preserving Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, eGen, "Qmat / eGen");
 #endif
       ListGenerators.push_back(eGen);
     };
@@ -1136,12 +1132,7 @@ private:
     for (auto &eGen : get_stab()) {
       MyMatrix<Tint> NewGen = Binv * eGen * B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> NewGen_T = UniversalMatrixConversion<T, Tint>(NewGen);
-      MyMatrix<T> eProd = NewGen_T * Qmat * NewGen_T.transpose();
-      if (eProd != Qmat) {
-        std::cerr << "COMB: The matrix is not an equivalence for Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, NewGen, "Qmat / NewGen");
 #endif
       LGenFinal.push_back(NewGen);
     }
@@ -1228,21 +1219,11 @@ private:
     if (opt) {
       MyMatrix<Tint> const &eEquiv = *opt;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T, Tint>(eEquiv);
-      MyMatrix<T> eProd = eEquiv_T * QmatRed1 * eEquiv_T.transpose();
-      if (eProd != QmatRed2) {
-        std::cerr << "COMB: The matrix eEquiv is not an equivalence for QmatRed1 / QmatRed2\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(QmatRed1, QmatRed2, eEquiv, "QmatRed1 / QmatRed2 / eEquiv");
 #endif
       MyMatrix<Tint> NewEquiv = Inverse(res2.B) * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> NewEquiv_T = UniversalMatrixConversion<T, Tint>(NewEquiv);
-      MyMatrix<T> NewProd = NewEquiv_T * Qmat1 * NewEquiv_T.transpose();
-      if (NewProd != Qmat2) {
-        std::cerr << "COMB: The matrix NewEquiv is not an equivalence for Qmat1 / Qmat2\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat1, Qmat2, NewEquiv, "Qmat1 / Qmat2 / NewEquiv");
 #endif
       return NewEquiv;
     } else {
@@ -1319,12 +1300,7 @@ private:
     MyMatrix<Tint> TheEquiv =
         eRec2.FullBasisInv * TheEquivTest * eRec1.FullBasis;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T, Tint>(TheEquiv);
-    MyMatrix<T> eProd = TheEquiv_T * eRec1.GramMatRed * TheEquiv_T.transpose();
-    if (eProd != eRec2.GramMatRed) {
-      std::cerr << "COMB: This is not an equivalence\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(eRec1.GramMatRed, eRec2.GramMatRed, TheEquiv, "eRec1/eRec2.GramMatRed / TheEquiv");
     std::vector<MyMatrix<Tint>> ListSpaces1 =
       f_get_list_spaces(eRec1.PlaneExpr, sd, os);
     std::vector<MyMatrix<Tint>> ListSpaces2 =
@@ -1448,12 +1424,7 @@ private:
     }
     MyMatrix<Tint> const &TheRet = *optB;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> TheRet_T = UniversalMatrixConversion<T, Tint>(TheRet);
-    MyMatrix<T> eProdB = TheRet_T * Qmat1 * TheRet_T.transpose();
-    if (eProdB != Qmat2) {
-      std::cerr << "COMB: The redution matrix did not work as we expected it. Please debug\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(Qmat1, Qmat2, TheRet, "Qmat1 / Qmat2 / TheRet");
     MyMatrix<Tint> TheRetInv = Inverse(TheRet);
     MyMatrix<Tint> Plane1_imgB = Plane1 * TheRetInv;
     if (!TestEqualitySpaces(Plane1_imgB, Plane2)) {
@@ -1481,12 +1452,7 @@ private:
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eEquivRet_T = UniversalMatrixConversion<T,Tint>(eEquivRet);
-      MyMatrix<T> eProd = eEquivRet_T * Qmat1 * eEquivRet_T.transpose();
-      if (eProd != Qmat2) {
-        std::cerr << "COMB: Qmat1 should be mapped to Qmat2\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat1, Qmat2, eEquivRet, "Qmat1 / Qmat2 / eEquivRet");
       std::vector<MyMatrix<Tint>> ListSpaces1 =
         f_get_list_spaces(Plane1, sd, os);
       std::vector<MyMatrix<Tint>> ListSpaces2 =
@@ -1540,12 +1506,7 @@ private:
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T,Tint>(eGenRet);
-      MyMatrix<T> eProd = eGenRet_T * Qmat * eGenRet_T.transpose();
-      if (eProd != Qmat) {
-        std::cerr << "COMB: Qmat should be preserved by eGen\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, eGenRet, "Qmat / eGenRet");
       std::vector<MyMatrix<Tint>> ListSpaces =
         f_get_list_spaces(Plane, sd, os);
       for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
@@ -1582,11 +1543,7 @@ private:
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto &eGen : GRP2) {
-      MyMatrix<T> eProd = eGen * Qmat * eGen.transpose();
-      if (eProd != Qmat) {
-        std::cerr << "COMB: GRP2 does not preserve Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, eGen, "Qmat / GRP2");
       MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
       MyMatrix<T> ePlaneImg = ePlane_T * eGen;
       int k = ePlane.rows();
@@ -1605,11 +1562,7 @@ private:
         MatrixIntegral_RightCosets_General<T, Tgroup>(n, GRP2, os);
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto &eCos : ListRightCoset) {
-      MyMatrix<T> eProd = eCos * Qmat * eCos.transpose();
-      if (eProd != Qmat) {
-        std::cerr << "COMB: eCos is not preserving Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, eCos, "Qmat / eCos");
     }
 #endif
     return ListRightCoset;
@@ -1763,9 +1716,6 @@ private:
 #endif
     INDEF_FORM_GetVectorStructure<T, Tint> eRec(Qmat, v, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have eRec\n";
-#endif
-#ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: Before, GRP1 = INDEF_FORM_AutomorphismGroup, comp(eRec.GramMatRed)=" << compute_complexity_matrix(eRec.GramMatRed) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRP1 =
@@ -1784,12 +1734,7 @@ private:
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto &eMat : ret.LGen) {
-      MyMatrix<T> eMat_T = UniversalMatrixConversion<T, Tint>(eMat);
-      MyMatrix<T> eProd = eMat_T * Qmat * eMat_T.transpose();
-      if (eProd != Qmat) {
-        std::cerr << "COMB: The matrix eMat does not preserves Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Qmat, Qmat, eMat, "Qmat / eMat");
       MyVector<Tint> v_eMat = eMat.transpose() * v;
       if (v_eMat != v) {
         std::cerr << "COMB: The matrix eMat does not preserves v\n";
@@ -1892,12 +1837,7 @@ private:
     }
     MyMatrix<Tint> const &TheRet = *optB;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> TheRet_T = UniversalMatrixConversion<T, Tint>(TheRet);
-    MyMatrix<T> eProd = TheRet_T * Q1 * TheRet_T.transpose();
-    if (eProd != Q2) {
-      std::cerr << "COMB: The redution matrix did not work as we expected it. Please debug\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(Q1, Q2, TheRet, "Q1 / Q2 / TheRet");
     MyMatrix<Tint> TheRetInv = Inverse(TheRet);
     MyVector<Tint> v_TheRetInv = TheRetInv.transpose() * v1;
     if (v_TheRetInv != v2) {
@@ -1932,12 +1872,7 @@ private:
     for (auto &eGen : GRPfull) {
       MyMatrix<Tint> eGenB = FullBasisInv * eGen * FullBasis;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eGenB_T = UniversalMatrixConversion<T, Tint>(eGenB);
-      MyMatrix<T> eProd = eGenB_T * Q * eGenB_T.transpose();
-      if (eProd != Q) {
-        std::cerr << "COMB: eGenB should preserve Qmat\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Q, Q, eGenB, "Q / eGenB");
 #endif
       ListGenTot.push_back(eGenB);
     }
@@ -1982,12 +1917,7 @@ private:
     }
     MyMatrix<Tint> TheEquiv = Inverse(FullBasis2) * TheEquivTest * FullBasis1;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    MyMatrix<T> TheEquiv_T = UniversalMatrixConversion<T, Tint>(TheEquiv);
-    MyMatrix<T> eProd = TheEquiv_T * Q1 * TheEquiv_T.transpose();
-    if (eProd != Q2) {
-      std::cerr << "COMB: TheEquiv is not mapping Q1 to Q2\n";
-      throw TerminalException{1};
-    }
+    check_equivalence(Q1, Q2, TheEquiv, "Q1 / Q2 / TheEquiv");
 #endif
     return TheEquiv;
   }
@@ -2071,12 +2001,7 @@ private:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     SeqDims sd_ext = seq_dims_append_one(sd);
     for (auto & eGenRet: LGenRet) {
-      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T,Tint>(eGenRet);
-      MyMatrix<T> prod = eGenRet_T * eRec.GramMatRed * eGenRet_T.transpose();
-      if (prod != eRec.GramMatRed) {
-        std::cerr << "COMB: The generator eGen should preserve eRec.GramMatRed\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenRet, "eRec.GramMatRed / eGenRet");
       std::vector<MyMatrix<Tint>> ListSpaces =
         f_get_list_spaces(fPlane, sd_ext, os);
       for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
@@ -2503,12 +2428,7 @@ public:
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto & eGen : LGen) {
-      MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
-      MyMatrix<T> prod = eGen_T * Q * eGen_T.transpose();
-      if (prod != Q) {
-        std::cerr << "COMB: eGen does not preserve Q\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Q, Q, eGen, "Q / eGen");
       MyVector<Tint> v_img = eGen.transpose() * v;
       if (v_img != v) {
         std::cerr << "COMB: eGen does not preserve v\n";
@@ -2538,18 +2458,8 @@ public:
       MyMatrix<Tint> const& eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
-      MyMatrix<T> prod = eEquiv_T * res1.Mred * eEquiv_T.transpose();
-      if (prod != res2.Mred) {
-        std::cerr << "COMB: eEquiv is not an equivalence for res1.Mred / res2.Mred\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<T> eEquivRet_T = UniversalMatrixConversion<T,Tint>(eEquivRet);
-      MyMatrix<T> prodRet = eEquivRet_T * Q1 * eEquivRet_T.transpose();
-      if (prodRet != Q2) {
-        std::cerr << "COMB: eEquivRet is not an equivalence for Q1 / Q2\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(res1.Mred, res2.Mred, eEquiv, "res1.Mred / res2.Mred / eEquiv");
+      check_equivalence(Q1, Q2, eEquivRet, "Q1 / Q2 / eEquivRet");
 #endif
       return eEquivRet;
     }
@@ -2589,12 +2499,7 @@ public:
     for (auto & eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      MyMatrix<T> eGenRet_T = UniversalMatrixConversion<T, Tint>(eGenRet);
-      MyMatrix<T> eProd = eGenRet_T * Q * eGenRet_T.transpose();
-      if (eProd != Q) {
-        std::cerr << "COMB: eGenRet should preserve Q\n";
-        throw TerminalException{1};
-      }
+      check_equivalence(Q, Q, eGenRet, "Q / eGenRet");
 #endif
       LGenRet.push_back(eGenRet);
     }
