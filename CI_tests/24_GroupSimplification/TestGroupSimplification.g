@@ -3,20 +3,50 @@ Print("Beginning TestGroupSimplification\n");
 
 eDir:="BigExamples";
 
-TestSimplification:=function(eProg, eFile)
-    local FileOut, fFile, fProg, TheCommand, ListMatrix;
+PrintComplexity:=function(ListMatrix)
+    local n_matrix, max_coeff, sum_coeff, eMat, eLine, eVal, absVal;
+    n_matrix:=Length(ListMatrix);
+    max_coeff:=0;
+    sum_coeff:=0;
+    for eMat in ListMatrix
+    do
+        for eLine in eMat
+        do
+            for eVal in eLine
+            do
+                absVal:=eVal;
+                if eVal < 0 then
+                    absVal:=-eVal;
+                fi;
+                if absVal > max_coeff then
+                    max_coeff:=absVal;
+                fi;
+                sum_coeff:=sum_coeff + absVal;
+            od;
+        od;
+    od;
+    Print("    n_matrix=", n_matrix, " max_coeff=", max_coeff, " sum_coeff=", sum_coeff, "\n");
+end;
 
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
+
+
+TestSimplification:=function(eProg, eFile)
+    local TmpDir, FileOut, FileErr, fFile, fProg, TheCommand, ListMatrix;
+
+    TmpDir:=DirectoryTemporary();
+    FileOut:=Filename(TmpDir, "Test.out");
+    FileErr:=Filename(TmpDir, "Test.err");
     #
     fFile:=Concatenation(eDir, "/", eFile);
     fProg:=Concatenation("../../src_group/", eProg);
-    TheCommand:=Concatenation(fProg, " mpz_class ", fFile, " GAP ", FileOut);
+    TheCommand:=Concatenation(fProg, " mpz_class ", fFile, " GAP ", FileOut, " 2> ", FileErr);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     ListMatrix:=ReadAsFunction(FileOut)();
+    PrintComplexity(ListMatrix);
     RemoveFile(FileOut);
     return true;
 end;
@@ -29,8 +59,10 @@ FullTest:=function(eDir)
     n_error:=0;
     for eFile in ListFiles
     do
+        Print("eFile=", eFile, "\n");
         for eProg in ListProg
         do
+            Print("  eProg=", eProg, "\n");
             test:=TestSimplification(eProg, eFile);
             if test=false then
                 n_error:=n_error + 1;
