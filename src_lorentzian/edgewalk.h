@@ -1412,7 +1412,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   using Tidx = typename Telt::Tidx;
   CuspidalBank<T, Tint> cusp_bank;
   std::vector<int> l_status;
-  std::vector<FundDomainVertex_FullInfo<T, Tint, Tgroup>> l_orbit_vertices;
+  std::list<FundDomainVertex_FullInfo<T, Tint, Tgroup>> l_orbit_vertices;
 #ifdef TRACK_INFOS_LOG
   std::cout << "return [\n";
 #endif
@@ -1421,13 +1421,12 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 #endif
   auto func_insert_vertex =
       [&](FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull1) -> bool {
-    size_t len = l_orbit_vertices.size();
 #ifdef TIMINGS
     MicrosecondTime time;
 #endif
-    for (size_t i = 0; i < len; i++) {
-      const FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull2 =
-          l_orbit_vertices[i];
+    auto iter = l_orbit_vertices.begin();
+    while (iter != l_orbit_vertices.end()) {
+      const FundDomainVertex_FullInfo<T, Tint, Tgroup> &vertFull2 = *iter;
       if (vertFull1.hash == vertFull2.hash) {
         std::optional<MyMatrix<T>> equiv_opt =
             LORENTZ_TestEquivalence<T, Tint, Tgroup>(G, vertFull1, G, vertFull2,
@@ -1454,6 +1453,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           }
         }
       }
+      iter++;
     }
 #ifdef TIMINGS
     os << "|EDGE: func_insert_vertex(no iso)|=" << time << "\n";
@@ -1589,8 +1589,9 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
   }
   while (true) {
     bool IsFinished = true;
-    size_t len = l_status.size();
-    for (size_t i = 0; i < len; i++) {
+    size_t i = 0;
+    auto iter = l_orbit_vertices.begin();
+    while(iter != l_orbit_vertices.end()) {
       if (l_status[i] == 1) {
 #ifdef DEBUG_ENUM_PROCESS
         nbDone++;
@@ -1610,9 +1611,10 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         // references are invalidated) [23.2.4.3/1]
         //
         // The original problem originally took one week to debug.
-        FundDomainVertex_FullInfo<T, Tint, Tgroup> VertFullCp =
-            DirectCopy(l_orbit_vertices[i]);
-        bool test1 = insert_adjacent_vertices(VertFullCp);
+        //
+        // EDIT: Next change was to use a std::list.
+        const FundDomainVertex_FullInfo<T, Tint, Tgroup>&  VertFull = *iter;
+        bool test1 = insert_adjacent_vertices(VertFull);
         if (test1) {
 #ifdef DEBUG_ENUM_PROCESS
           os << "EDGE: Exiting after insert_adjacent_vertices\n";
@@ -1627,6 +1629,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           return;
         }
       }
+      iter++;
+      i++;
     }
     if (IsFinished) {
 #ifdef DEBUG_ENUM_PROCESS

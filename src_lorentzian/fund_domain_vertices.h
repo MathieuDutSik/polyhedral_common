@@ -374,30 +374,6 @@ get_full_info(FundDomainVertex<T, Tint> const &vert,
           method};
 }
 
-/*
-template <typename T, typename Tint, typename Tgroup>
-FundDomainVertex_FullInfo<T, Tint, Tgroup>
-get_fund_domain_full_info_noiso(MyMatrix<T> const &G,
-                                FundDomainVertex<T, Tint> const &vert) {
-  InitialComputation<T, Tint> ic = GetInitialComputation(G, vert);
-  std::string method = "extendedvectfamily";
-  ret_type<T, Tint, Tgroup> frec =
-      get_canonicalized_record<T, Tint, Tgroup>(ic.ListMat, ic.map_v);
-  return get_full_info(vert, frec, method);
-}
-*/
-
-template <typename T, typename Tint, typename Tgroup>
-FundDomainVertex_FullInfo<T, Tint, Tgroup>
-DirectCopy(FundDomainVertex_FullInfo<T, Tint, Tgroup> const &fdfi) {
-  return {fdfi.vert,
-          {fdfi.e_pair_char.first, fdfi.e_pair_char.second.DirectCopy()},
-          fdfi.hash,
-          fdfi.GRP1,
-          fdfi.GRP1_integral,
-          fdfi.method};
-}
-
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, MyMatrix<T>> ComputeSpanningSpace(MyMatrix<T> const &M, std::ostream& os) {
   MyMatrix<T> Orth = NullspaceIntTrMat(M);
