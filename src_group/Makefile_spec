@@ -31,9 +31,9 @@
 #PROGRAM		= GRP_LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer
 #PROGRAM		= GRP_MatrixGroupSimplification GRP_MatrixGroupPermSimplification
 #PROGRAM		= GRP_MatrixGroupSimplification
+#PROGRAM		= GRP_MatrixGroupSimplificationOnlineOpt
 #PROGRAM		= GRP_MatrixGroupPermSimplificationOnline
-#PROGRAM		= GRP_MatrixGroupPermSimplificationOnlineOpt
-PROGRAM		= GRP_MatrixGroupPermSimplificationOnline GRP_MatrixGroupPermSimplificationOnlineOpt
+PROGRAM		= GRP_MatrixGroupPermSimplificationOnline GRP_MatrixGroupSimplificationOnlineOpt
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -1,6 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
+#include "MatrixGroupSimplification.h"
 #include "OnlineExhaustiveReduction.h"
 #include "Permutation.h"
 // clang-format on
@@ -8,28 +9,61 @@
 template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
+  using Tidx = uint32_t;
+  using Telt = permutalib::SingleSidedPerm<Tidx>;
+  using Ttype = std::pair<MyMatrix<T>, Telt>;
+  using Tnorm = T;
+
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
   size_t n_gen = ListM.size();
 
-  if (n_gen == 0) {
-    std::cerr << "No generators found in input file\n";
-    return;
-  }
+  // Define the functions needed for the online algorithm
+  auto f_complexity=[&](Ttype const& pair) -> T {
+    return get_ell1_complexity_measure(pair.first);
+  };
+  auto f_product=[](Ttype const& p1, Ttype const& p2) -> Ttype {
+    return {p1.first * p2.first, p1.second * p2.second};
+  };
+  auto f_check=[&]([[maybe_unused]] Ttype const& p) -> bool {
+    return true;
+  };
 
-  int n = ListM[0].rows();
-  std::cerr << "Matrix dimension: " << n << "\n";
-
-  // Create the hierarchical online reduction system
-  OnlineHierarchicalMatrixReduction<T> hierarchical_reducer(n, std::cerr);
+  // Create the online reduction kernel
+  OnlineExhaustiveReductionComplexityKernel<Ttype, Tnorm, decltype(f_complexity), decltype(f_product), decltype(f_check)> online_kernel(f_complexity, f_product, f_check, std::cerr);
 
   // Insert generators one by one
-  std::cerr << "Inserting " << n_gen << " generators using hierarchical online reduction...\n";
+  std::cerr << "Inserting " << n_gen << " generators one by one...\n";
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
-    hierarchical_reducer.insert_generator(ListM[i_gen]);
+    Telt elt; // Default permutation element
+    Ttype pair{ListM[i_gen], elt};
+
+    // Create the TcombPair structure needed by the online kernel
+    auto f_invers = [](Ttype const& pair) -> Ttype {
+      return {Inverse(pair.first), Inverse(pair.second)};
+    };
+    Ttype pair_inv = f_invers(pair);
+    std::pair<Ttype,Ttype> pair_di{pair, pair_inv};
+
+    bool success = online_kernel.insert_generator(pair_di);
+    if (!success) {
+      std::cerr << "Failed to insert generator " << i_gen << "\n";
+      throw TerminalException{1};
+    }
+
+    if (i_gen % 10 == 9 || i_gen == n_gen - 1) {
+      std::cerr << "After inserting " << (i_gen + 1) << " generators: "
+                << "current set size = " << online_kernel.size()
+                << ", total complexity = " << online_kernel.get_total_complexity() << "\n";
+    }
   }
 
   // Extract the final reduced set
-  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_reduced_generators();
+  std::vector<TcombPair<Ttype, Tnorm>> final_set = online_kernel.get_current_set();
+  std::vector<MyMatrix<T>> ListMred;
+
+  for (auto const& comb_pair : final_set) {
+    ListMred.push_back(comb_pair.pair.first.first); // Extract the matrix from pair.first
+  }
 
   std::cerr << "Original generators: " << n_gen << ", Reduced generators: " << ListMred.size() << "\n";
 
@@ -54,13 +88,10 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] [FileMatrGroup]\n";
       std::cerr << "        [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] [FileMatrGroup]\n";
-      std::cerr << "\n";
-      std::cerr << "This is the optimized hierarchical online version that automatically\n";
-      std::cerr << "switches between int16_t -> int32_t -> int64_t -> T numerics\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] [FileMatrGroup]\n";
       std::cerr << "\n";
       std::cerr << "FileMatrGroup : The list of group generators as matrices\n";
       std::cerr << "OutFormat     : CPP or GAP\n";
@@ -90,9 +121,9 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);
-    std::cerr << "Normal termination of GRP_MatrixGroupPermSimplificationOnlineOpt\n";
+    std::cerr << "Normal termination of GRP_MatrixGroupSimplificationOnline\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in GRP_MatrixGroupPermSimplificationOnlineOpt\n";
+    std::cerr << "Error in GRP_MatrixGroupSimplificationOnline\n";
     exit(e.eVal);
   }
   runtime(time);
