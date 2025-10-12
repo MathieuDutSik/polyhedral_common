@@ -3,8 +3,8 @@ Print("Beginning TestGroupSimplification\n");
 
 eDir:="BigExamples";
 
-PrintComplexity:=function(ListMatrix)
-    local n_matrix, max_coeff, sum_coeff, eMat, eLine, eVal, absVal;
+PrintComplexity:=function(ListMatrix, n_space)
+    local n_matrix, max_coeff, sum_coeff, eMat, eLine, eVal, absVal, i;
     n_matrix:=Length(ListMatrix);
     max_coeff:=0;
     sum_coeff:=0;
@@ -25,45 +25,52 @@ PrintComplexity:=function(ListMatrix)
             od;
         od;
     od;
-    Print("    n_matrix=", n_matrix, " max_coeff=", max_coeff, " sum_coeff=", sum_coeff, "\n");
+    for i in [1..n_space]
+    do
+        Print(" ");
+    od;
+    Print("n_matrix=", n_matrix, " max_coeff=", max_coeff, " sum_coeff=", sum_coeff, "\n");
 end;
 
 
 
 TestSimplification:=function(eProg, eFile)
-    local TmpDir, FileOut, FileErr, fFile, fProg, TheCommand, ListMatrix;
+    local TmpDir, FileOut, fFile, fProg, TheCommand, ListMatrix;
 
     TmpDir:=DirectoryTemporary();
     FileOut:=Filename(TmpDir, "Test.out");
-    FileErr:=Filename(TmpDir, "Test.err");
     #
-    fFile:=Concatenation(eDir, "/", eFile);
     fProg:=Concatenation("../../src_group/", eProg);
-    TheCommand:=Concatenation(fProg, " mpz_class ", fFile, " GAP ", FileOut, " 2> ", FileErr);
+    TheCommand:=Concatenation(fProg, " mpz_class ", eFile, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
     ListMatrix:=ReadAsFunction(FileOut)();
-    PrintComplexity(ListMatrix);
+    PrintComplexity(ListMatrix, 7);
     RemoveFile(FileOut);
     return true;
 end;
 
 FullTest:=function(eDir)
-    local ListProg, ListFiles, n_error, eFile, eProg, test;
+    local ListProg, ListFiles, n_error, eFile, fFile, TheInput, eProg, test;
     ListProg:=["GRP_MatrixGroupSimplification", "GRP_MatrixGroupSimplificationOnline", "GRP_MatrixGroupSimplificationOnlineOpt"];
     ListFiles:=ListFileDirectory(eDir);
 
     n_error:=0;
     for eFile in ListFiles
     do
+        Print("================================\n");
         Print("eFile=", eFile, "\n");
+        fFile:=Concatenation(eDir, "/", eFile);
+        TheInput:=ReadListMatrixFile(fFile);
+        PrintComplexity(TheInput, 6);
         for eProg in ListProg
         do
+            Print("            -------------------\n");
             Print("  eProg=", eProg, "\n");
-            test:=TestSimplification(eProg, eFile);
+            test:=TestSimplification(eProg, fFile);
             if test=false then
                 n_error:=n_error + 1;
             fi;

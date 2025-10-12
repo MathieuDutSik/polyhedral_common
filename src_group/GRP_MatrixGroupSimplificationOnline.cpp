@@ -49,12 +49,6 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
       std::cerr << "Failed to insert generator " << i_gen << "\n";
       throw TerminalException{1};
     }
-
-    if (i_gen % 10 == 9 || i_gen == n_gen - 1) {
-      std::cerr << "After inserting " << (i_gen + 1) << " generators: "
-                << "current set size = " << online_kernel.size()
-                << ", total complexity = " << online_kernel.get_total_complexity() << "\n";
-    }
   }
 
   // Extract the final reduced set

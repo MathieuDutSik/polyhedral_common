@@ -100,9 +100,8 @@ end;
 
 
 
-ReadMatrixFile:=function(eFile)
-    local file, line, LStr, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
-    file:=InputTextFile(eFile);
+StreamMatrixFile:=function(file)
+    local line, LStr, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
     line:=ReadLineRed(file);
     LStr:=SplitString(line, " ");
     nbRow:=Int(LStr[1]);
@@ -126,9 +125,33 @@ ReadMatrixFile:=function(eFile)
         fi;
         Add(TheMat, eLine);
     od;
+    return TheMat;
+end;
+
+ReadMatrixFile:=function(eFile)
+    local file, TheMat;
+    file:=InputTextFile(eFile);
+    TheMat:=StreamMatrixFile(file);
     CloseStream(file);
     return TheMat;
 end;
+
+
+ReadListMatrixFile:=function(eFile)
+    local file, line, n_matrix, ListMat, iMat, TheMat;
+    file:=InputTextFile(eFile);
+    line:=ReadLineRed(file);
+    n_matrix:=Int(line);
+    ListMat:=[];
+    for iMat in [1..n_matrix]
+    do
+        TheMat:=StreamMatrixFile(file);
+        Add(ListMat, TheMat);
+    od;
+    CloseStream(file);
+    return ListMat;
+end;
+
 
 
 WriteListMatrixFile:=function(eFile, ListMat)
