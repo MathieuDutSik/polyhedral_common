@@ -191,8 +191,11 @@ public:
   }
 
   // Get current simplified set
-  std::vector<TcombPair<Ttype,Tnorm>> get_current_set() const {
-    return vect;
+  std::vector<TcombPair<Ttype,Tnorm>> get_current_set() {
+    std::vector<TcombPair<Ttype,Tnorm>> ret_vect = vect;
+    vect.clear();
+    map.clear();
+    return ret_vect;
   }
 
   // Get total complexity
@@ -222,9 +225,10 @@ public:
 
   // Get current generators as vector (alias for compatibility)
   std::vector<TcombPair<Ttype,Tnorm>> get_generators() const {
-    return get_current_set();
+    return vect;
   }
 };
+
 
 // Hierarchical online reduction system that automatically switches between
 // int16_t -> int32_t -> int64_t -> T numerics when overflow occurs
@@ -237,6 +241,9 @@ private:
   // Type aliases for matrix-matrix pairs
   using Ttype = std::pair<MyMatrix<T>, MyMatrix<T>>;
   using Tnorm = T;
+
+  template<typename Tin>
+  using Tinput = TcombPair<MyMatrix<Tin>,Tin>;
 
   // Upper bounds for each numeric type
   int16_t max_val_16;
@@ -280,6 +287,41 @@ private:
   // Current active kernel (0=int16_t, 1=int32_t, 2=int64_t, 3=T)
   int current_level;
 
+  template<typename Tin>
+  bool insert_level_32(std::vector<Tinput<Tin>> const& l_gen) {
+    for (auto const& comb_pair : l_gen) {
+      PairMatrix<int32_t> pair_32 = UniversalPairMatrixConversion<int32_t,Tin>(comb_pair.pair);
+      if (!kernel_32->insert_generator(pair_32)) {
+        kernel_32->clear();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template<typename Tin>
+  bool insert_level_64(std::vector<Tinput<Tin>> const& l_gen) {
+    for (auto const& comb_pair : l_gen) {
+      PairMatrix<int64_t> pair_64 = UniversalPairMatrixConversion<int64_t,Tin>(comb_pair.pair);
+      if (!kernel_64->insert_generator(pair_64)) {
+        kernel_64->clear();
+        return false;
+      }
+    }
+    return true;
+  }
+
+  template<typename Tin>
+  void insert_level_T(std::vector<Tinput<Tin>> const& l_gen) {
+    for (auto const& comb_pair : l_gen) {
+      Ttype pair_T = UniversalPairMatrixConversion<T,Tin>(comb_pair.pair);
+      if (!kernel_T->insert_generator(pair_T)) {
+        std::cerr << "ONL: This should never happen in infinite precision\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+
   // Migrate from current level to next level
   void migrate_to_next_level() {
 
@@ -288,39 +330,34 @@ private:
 #endif
 
     if (current_level == 0) {
-      // Migrate from int16_t to int32_t
-      auto current_set = kernel_16->get_current_set();
-      for (auto const& comb_pair : current_set) {
-        std::pair<MyMatrix<int32_t>, MyMatrix<int32_t>> pair_32 = UniversalPairMatrixConversion<int32_t,int16_t>(comb_pair.pair);
-        if (!kernel_32->insert_generator(pair_32)) {
-          std::cerr << "ONL: The kernel_32.insert_generator failed. Unexpected.\n";
-          std::cerr << "ONL: Code needed for jumping by two or more levels\n";
-          throw TerminalException{1};
-        }
+      // Migrate from int16_t to int32_t or int64_t or T
+      std::vector<Tinput<int16_t>> l_gen = kernel_16->get_current_set();
+      bool result1 = insert_level_32<int16_t>(l_gen);
+      if (result1) {
+        current_level = 1;
+        return;
       }
-      current_level = 1;
+      bool result2 = insert_level_64<int16_t>(l_gen);
+      if (result2) {
+        current_level = 2;
+        return;
+      }
+      insert_level_T<int16_t>(l_gen);
+      current_level = 3;
     } else if (current_level == 1) {
-      // Migrate from int32_t to int64_t
-      auto current_set = kernel_32->get_current_set();
-      for (auto const& comb_pair : current_set) {
-        std::pair<MyMatrix<int64_t>, MyMatrix<int64_t>> pair_64 = UniversalPairMatrixConversion<int64_t,int32_t>(comb_pair.pair);
-        if (!kernel_64->insert_generator(pair_64)) {
-          std::cerr << "ONL: The kernel_64.insert_generator failed. Unexpected.\n";
-          std::cerr << "ONL: Code needed for jumping by two levels\n";
-          throw TerminalException{1};
-        }
+      // Migrate from int32_t to int64_t or T
+      std::vector<Tinput<int32_t>> l_gen = kernel_32->get_current_set();
+      bool result1 = insert_level_64<int32_t>(l_gen);
+      if (result1) {
+        current_level = 2;
+        return;
       }
-      current_level = 2;
+      insert_level_T<int32_t>(l_gen);
+      current_level = 3;
     } else if (current_level == 2) {
       // Migrate from int64_t to T
-      auto current_set = kernel_64->get_current_set();
-      for (auto const& comb_pair : current_set) {
-        Ttype pair_T = UniversalPairMatrixConversion<T,int64_t>(comb_pair.pair);
-        if (!kernel_T->insert_generator(pair_T)) {
-          std::cerr << "ONL: This should never happen\n";
-          throw TerminalException{1};
-        }
-      }
+      std::vector<Tinput<int64_t>> l_gen = kernel_64->get_current_set();
+      insert_level_T<int64_t>(l_gen);
       current_level = 3;
     }
   }
@@ -424,7 +461,7 @@ public:
       }
       return kernel_64->insert_generator(*opt);
     } else {
-      // Use T
+      // Use T. infinite precision, cannot fail.
       return kernel_T->insert_generator(generator_pair);
     }
   }
@@ -474,7 +511,9 @@ public:
   }
 
   // Get current level information
-  int get_current_level() const { return current_level; }
+  int get_current_level() const {
+    return current_level;
+  }
   size_t get_current_size() const {
     if (current_level == 0) return kernel_16->size();
     if (current_level == 1) return kernel_32->size();
