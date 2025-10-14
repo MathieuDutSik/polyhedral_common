@@ -256,6 +256,17 @@ public:
   bool insert_generator(PairMatrix<Tfinite> const& M) {
     return inner.insert_generator(M);
   }
+  template<typename Tinput>
+  bool insert_generators_tinput(std::vector<TcombPair<MyMatrix<Tinput>,Tinput>> const& l_gen) {
+    for (auto const& comb_pair : l_gen) {
+      PairMatrix<Tfinite> pair = UniversalPairMatrixConversion<Tfinite,Tinput>(comb_pair.pair);
+      if (!insert_generator(pair)) {
+        clear();
+        return false;
+      }
+    }
+    return true;
+  }
   std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>> get_final_set() {
     return inner.get_final_set();
   }
@@ -302,6 +313,14 @@ public:
   }
   bool insert_generator(PairMatrix<T> const& pair) {
     return inner.insert_generator(pair);
+  }
+  template<typename Tinput>
+  bool insert_generators_tinput(std::vector<TcombPair<MyMatrix<Tinput>,Tinput>> const& l_gen) {
+    for (auto const& comb_pair : l_gen) {
+      PairMatrix<T> pair = UniversalPairMatrixConversion<T,Tinput>(comb_pair.pair);
+      insert_generator(pair);
+    }
+    return true;
   }
   std::vector<TcombPair<MyMatrix<T>, T>> get_final_set() {
     return inner.get_final_set();
@@ -354,41 +373,6 @@ private:
   std::unique_ptr<OnlineExhaustiveReductionComplexityMatrixFinite<int64_t>> kernel_64;
   OnlineExhaustiveReductionComplexityMatrixInfinite<T> kernel_T;
 
-  template<typename Tin>
-  bool insert_level_32(std::vector<Tinput<Tin>> const& l_gen) {
-    for (auto const& comb_pair : l_gen) {
-      PairMatrix<int32_t> pair_32 = UniversalPairMatrixConversion<int32_t,Tin>(comb_pair.pair);
-      if (!kernel_32->insert_generator(pair_32)) {
-        kernel_32->clear();
-        return false;
-      }
-    }
-    return true;
-  }
-
-  template<typename Tin>
-  bool insert_level_64(std::vector<Tinput<Tin>> const& l_gen) {
-    for (auto const& comb_pair : l_gen) {
-      PairMatrix<int64_t> pair_64 = UniversalPairMatrixConversion<int64_t,Tin>(comb_pair.pair);
-      if (!kernel_64->insert_generator(pair_64)) {
-        kernel_64->clear();
-        return false;
-      }
-    }
-    return true;
-  }
-
-  template<typename Tin>
-  void insert_level_T(std::vector<Tinput<Tin>> const& l_gen) {
-    for (auto const& comb_pair : l_gen) {
-      Ttype pair_T = UniversalPairMatrixConversion<T,Tin>(comb_pair.pair);
-      if (!kernel_T.insert_generator(pair_T)) {
-        std::cerr << "ONL: This should never happen in infinite precision\n";
-        throw TerminalException{1};
-      }
-    }
-  }
-
   // Migrate from current level to next level
   void migrate_to_next_level() {
 #ifdef DEBUG_ONLINE_SIMPLIFICATION_SHIFT_NUMERICS
@@ -398,32 +382,32 @@ private:
     if (current_level == 0) {
       // Migrate from int16_t to int32_t or int64_t or T
       std::vector<Tinput<int16_t>> l_gen = kernel_16->get_current_set();
-      bool result1 = insert_level_32<int16_t>(l_gen);
+      bool result1 = kernel_32->insert_generators_tinput<int16_t>(l_gen);
       if (result1) {
         current_level = 1;
         return;
       }
-      bool result2 = insert_level_64<int16_t>(l_gen);
+      bool result2 = kernel_64->insert_generators_tinput<int16_t>(l_gen);
       if (result2) {
         current_level = 2;
         return;
       }
-      insert_level_T<int16_t>(l_gen);
+      kernel_T.template insert_generators_tinput<int16_t>(l_gen);
       current_level = 3;
     } else if (current_level == 1) {
       // Migrate from int32_t to int64_t or T
       std::vector<Tinput<int32_t>> l_gen = kernel_32->get_current_set();
-      bool result1 = insert_level_64<int32_t>(l_gen);
+      bool result1 = kernel_64->insert_generators_tinput<int32_t>(l_gen);
       if (result1) {
         current_level = 2;
         return;
       }
-      insert_level_T<int32_t>(l_gen);
+      kernel_T.template insert_generators_tinput<int32_t>(l_gen);
       current_level = 3;
     } else if (current_level == 2) {
       // Migrate from int64_t to T
       std::vector<Tinput<int64_t>> l_gen = kernel_64->get_current_set();
-      insert_level_T<int64_t>(l_gen);
+      kernel_T.template insert_generators_tinput<int64_t>(l_gen);
       current_level = 3;
     }
   }
@@ -518,9 +502,7 @@ public:
     if (current_level == 0) return kernel_16->size();
     if (current_level == 1) return kernel_32->size();
     if (current_level == 2) return kernel_64->size();
-    if (current_level == 3) return kernel_T->size();
-    std::cerr << "ONL: We do not have the right level for OnlineExhaustiveReduction\n";
-    throw TerminalException{1};
+    return kernel_T.size();
   }
 };
 
