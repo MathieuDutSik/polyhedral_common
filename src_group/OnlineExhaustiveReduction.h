@@ -271,7 +271,7 @@ public:
     return inner.get_final_set();
   }
   template<typename T>
-  std::vector<MyMatrix<T>> get_final_matrix_t() {
+  std::vector<MyMatrix<T>> get_current_matrix_t() const {
     std::vector<MyMatrix<T>> ret_vect;
     const std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>>& vect = inner.get_current_set_ref();
     for (auto & pair: vect) {
@@ -325,7 +325,7 @@ public:
   std::vector<TcombPair<MyMatrix<T>, T>> get_final_set() {
     return inner.get_final_set();
   }
-  std::vector<MyMatrix<T>> get_final_matrix_t() {
+  std::vector<MyMatrix<T>> get_current_matrix_t() const {
     std::vector<MyMatrix<T>> ret_vect;
     const std::vector<TcombPair<MyMatrix<T>, T>>& vect = inner.get_current_set_ref();
     for (auto & pair: vect) {
@@ -482,15 +482,15 @@ public:
   }
 
   // Extract the final reduced generators (always in type T)
-  std::vector<MyMatrix<T>> get_final_set() {
+  std::vector<MyMatrix<T>> get_current_set() const {
     if (current_level == 0) {
-      return kernel_16->get_final_matrix_t<T>();
+      return kernel_16->get_current_matrix_t<T>();
     } else if (current_level == 1) {
-      return kernel_32->get_final_matrix_t<T>();
+      return kernel_32->get_current_matrix_t<T>();
     } else if (current_level == 2) {
-      return kernel_64->get_final_matrix_t<T>();
+      return kernel_64->get_current_matrix_t<T>();
     } else {
-      return kernel_T.get_final_matrix_t();
+      return kernel_T.get_current_matrix_t();
     }
   }
 
@@ -498,6 +498,7 @@ public:
   int get_current_level() const {
     return current_level;
   }
+
   size_t get_current_size() const {
     if (current_level == 0) return kernel_16->size();
     if (current_level == 1) return kernel_32->size();

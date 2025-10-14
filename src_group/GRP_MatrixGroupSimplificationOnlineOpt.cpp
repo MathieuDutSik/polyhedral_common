@@ -34,7 +34,7 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   }
 
   // Extract the final reduced set
-  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_final_set();
+  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_current_set();
 
   // Output the results
   if (OutFormat == "GAP") {
