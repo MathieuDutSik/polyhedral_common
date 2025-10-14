@@ -5,6 +5,10 @@
 #include "Permutation.h"
 // clang-format on
 
+#ifdef TRACK_INFO
+#define TRACK_INFO_SIZES
+#endif
+
 template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
@@ -24,10 +28,13 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   // Insert generators one by one
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     hierarchical_reducer.insert_generator(ListM[i_gen]);
+#ifdef TRACK_INFO_SIZES
+    
+#endif
   }
 
   // Extract the final reduced set
-  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_reduced_generators();
+  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_final_set();
 
   // Output the results
   if (OutFormat == "GAP") {

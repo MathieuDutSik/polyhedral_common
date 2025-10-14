@@ -1,4 +1,4 @@
-PROGRAM		= GRP_MatrixGroupSimplification GRP_MatrixGroupSimplificationOnline GRP_MatrixGroupSimplificationOnlineOpt
+PROGRAM		= GRP_MatrixGroupSimplificationOnlineOpt GRP_MatrixGroupSimplification GRP_MatrixGroupSimplificationOnline
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
