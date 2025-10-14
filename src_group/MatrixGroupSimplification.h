@@ -2,9 +2,12 @@
 #ifndef SRC_GROUP_MATRIXGROUPSIMPLIFICATION_H_
 #define SRC_GROUP_MATRIXGROUPSIMPLIFICATION_H_
 
+// clang-format off
+#include "MatrixGroupBasic.h"
 #include "MAT_Matrix.h"
 #include "PermutationElt.h"
 #include "Indefinite_LLL.h"
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_MATRIX_GROUP_SIMPLIFICATION

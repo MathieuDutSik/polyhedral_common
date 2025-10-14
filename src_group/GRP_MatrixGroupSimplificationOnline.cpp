@@ -13,7 +13,6 @@ template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
   using Ttype = std::pair<MyMatrix<T>, MyMatrix<T>>;
-  using Tnorm = T;
 
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
   size_t n_gen = ListM.size();
@@ -24,10 +23,20 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   // Insert generators one by one
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     MyMatrix<T> M = ListM[i_gen];
+#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
+    bool test = IsIntegralMatrix(M);
+    T det = DeterminantMat(M);
+    std::cerr << "i_gen=" << i_gen << " test=" << test << " det=" << det << "\n";
+#endif
     MyMatrix<T> Minv = Inverse(M);
     Ttype pair{M, Minv};
 
     (void)online_kernel.insert_generator(pair);
+
+#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
+    std::vector<MyMatrix<T>> l_gens = online_kernel.get_current_matrix_t();
+    std::cerr << "i_gen=" << i_gen << " " << compute_complexity_listmat(l_gens)	<< "\n";
+#endif
   }
 
   // Extract the final reduced set

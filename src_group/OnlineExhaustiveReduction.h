@@ -482,7 +482,7 @@ public:
   }
 
   // Extract the final reduced generators (always in type T)
-  std::vector<MyMatrix<T>> get_current_set() const {
+  std::vector<MyMatrix<T>> get_current_matrix_t() const {
     if (current_level == 0) {
       return kernel_16->get_current_matrix_t<T>();
     } else if (current_level == 1) {

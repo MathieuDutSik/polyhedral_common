@@ -6,7 +6,7 @@
 // clang-format on
 
 #ifdef TRACK_INFO
-#define TRACK_INFO_SIZES
+#define TRACK_INFO_ONLINE_INSERTION_SIZES
 #endif
 
 template <typename T>
@@ -28,13 +28,14 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   // Insert generators one by one
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     hierarchical_reducer.insert_generator(ListM[i_gen]);
-#ifdef TRACK_INFO_SIZES
-    
+#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
+    std::vector<MyMatrix<T>> l_gens = hierarchical_reducer.get_current_matrix_t();
+    std::cerr << "i_gen=" << i_gen << " " << compute_complexity_listmat(l_gens) << "\n";
 #endif
   }
 
   // Extract the final reduced set
-  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_current_set();
+  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_current_matrix_t();
 
   // Output the results
   if (OutFormat == "GAP") {

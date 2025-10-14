@@ -3,6 +3,7 @@
 #define SRC_GROUP_TESTGROUP_H_
 
 // clang-format off
+#include "COMB_Combinatorics_buildset.h"
 #include <algorithm>
 #include <unordered_map>
 #include <vector>

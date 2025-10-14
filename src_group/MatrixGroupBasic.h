@@ -8,7 +8,7 @@
 #include "MAT_MatrixMod.h"
 #include "ClassicLLL.h"
 #include "Timings.h"
-#include "TestGroup.h"
+#include "Group.h"
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -480,8 +480,6 @@ std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMa
   }
   return LGenMatr;
 }
-
-
 
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUPBASIC_H_
