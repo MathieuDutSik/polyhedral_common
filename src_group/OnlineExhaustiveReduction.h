@@ -191,12 +191,19 @@ public:
     return run_reduction_pass();
   }
 
-  // Get current simplified set
   std::vector<TcombPair<Ttype,Tnorm>> get_final_set() {
     std::vector<TcombPair<Ttype,Tnorm>> ret_vect = vect;
     vect.clear();
     map.clear();
     return ret_vect;
+  }
+
+  std::vector<TcombPair<Ttype,Tnorm>> get_current_set() const {
+    return vect;
+  }
+
+  const std::vector<TcombPair<Ttype,Tnorm>>& get_current_set_ref() const {
+    return vect;
   }
 
   // Get total complexity
@@ -223,11 +230,6 @@ public:
     map.clear();
     vect.clear();
   }
-
-  // Get current generators as vector (alias for compatibility)
-  std::vector<TcombPair<Ttype,Tnorm>> get_current_set() const {
-    return vect;
-  }
 };
 
 
@@ -252,10 +254,20 @@ public:
     }, _os) {
   }
   bool insert_generator(PairMatrix<Tfinite> const& M) {
-    inner.insert_generator(M);
+    return inner.insert_generator(M);
   }
   std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>> get_final_set() {
     return inner.get_final_set();
+  }
+  template<typename T>
+  std::vector<MyMatrix<T>> get_final_matrix_t() {
+    std::vector<MyMatrix<T>> ret_vect;
+    const std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>>& vect = inner.get_current_set_ref();
+    for (auto & pair: vect) {
+      MyMatrix<T> M = UniversalMatrixConversion<T,Tfinite>(pair.pair.first);
+      ret_vect.push_back(M);
+    }
+    return ret_vect;
   }
   std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>> get_current_set() const {
     return inner.get_current_set();
@@ -289,10 +301,18 @@ public:
     }, _os) {
   }
   bool insert_generator(PairMatrix<T> const& pair) {
-    inner.insert_generator(pair);
+    return inner.insert_generator(pair);
   }
   std::vector<TcombPair<MyMatrix<T>, T>> get_final_set() {
     return inner.get_final_set();
+  }
+  std::vector<MyMatrix<T>> get_final_matrix_t() {
+    std::vector<MyMatrix<T>> ret_vect;
+    const std::vector<TcombPair<MyMatrix<T>, T>>& vect = inner.get_current_set_ref();
+    for (auto & pair: vect) {
+      ret_vect.push_back(pair.pair.first);
+    }
+    return ret_vect;
   }
   std::vector<TcombPair<MyMatrix<T>, T>> get_current_set() const {
     return inner.get_current_set();
@@ -479,40 +499,17 @@ public:
 
   // Extract the final reduced generators (always in type T)
   std::vector<MyMatrix<T>> get_final_set() {
-    std::vector<MyMatrix<T>> result;
-
     if (current_level == 0) {
-      auto current_set = kernel_16->get_final_set();
-      for (auto const& comb_pair : current_set) {
-        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int16_t>(comb_pair.pair.first);
-        result.push_back(mat_T);
-      }
+      return kernel_16->get_final_matrix_t<T>();
     } else if (current_level == 1) {
-      auto current_set = kernel_32->get_final_set();
-      for (auto const& comb_pair : current_set) {
-        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int32_t>(comb_pair.pair.first);
-        result.push_back(mat_T);
-      }
+      return kernel_32->get_final_matrix_t<T>();
     } else if (current_level == 2) {
-      auto current_set = kernel_64->get_final_set();
-      for (auto const& comb_pair : current_set) {
-        MyMatrix<T> mat_T = UniversalMatrixConversion<T,int64_t>(comb_pair.pair.first);
-        result.push_back(mat_T);
-      }
-    } else if (current_level == 3) {
-      auto current_set = kernel_T.get_final_set();
-      for (auto const& comb_pair : current_set) {
-        result.push_back(comb_pair.pair.first);
-      }
+      return kernel_64->get_final_matrix_t<T>();
+    } else {
+      return kernel_T.get_final_matrix_t();
     }
-
-    return result;
   }
 
-
-
-
-  
   // Get current level information
   int get_current_level() const {
     return current_level;
