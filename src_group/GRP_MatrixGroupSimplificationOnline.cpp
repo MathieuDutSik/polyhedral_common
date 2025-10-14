@@ -3,60 +3,35 @@
 #include "NumberTheory.h"
 #include "MatrixGroupSimplification.h"
 #include "OnlineExhaustiveReduction.h"
-#include "Permutation.h"
 // clang-format on
+
+#ifdef TRACK_INFO
+#define	TRACK_INFO_ONLINE_INSERTION_SIZES
+#endif
 
 template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
-  using Tidx = uint32_t;
-  using Telt = permutalib::SingleSidedPerm<Tidx>;
-  using Ttype = std::pair<MyMatrix<T>, Telt>;
+  using Ttype = std::pair<MyMatrix<T>, MyMatrix<T>>;
   using Tnorm = T;
 
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
   size_t n_gen = ListM.size();
 
-  // Define the functions needed for the online algorithm
-  auto f_complexity=[&](Ttype const& pair) -> T {
-    return get_ell1_complexity_measure(pair.first);
-  };
-  auto f_product=[](Ttype const& p1, Ttype const& p2) -> Ttype {
-    return {p1.first * p2.first, p1.second * p2.second};
-  };
-  auto f_check=[&]([[maybe_unused]] Ttype const& p) -> bool {
-    return true;
-  };
-
   // Create the online reduction kernel
-  OnlineExhaustiveReductionComplexityKernel<Ttype, Tnorm, decltype(f_complexity), decltype(f_product), decltype(f_check)> online_kernel(f_complexity, f_product, f_check, std::cerr);
+  OnlineExhaustiveReductionComplexityMatrixInfinite<T> online_kernel(std::cerr);
 
   // Insert generators one by one
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
-    Telt elt; // Default permutation element
-    Ttype pair{ListM[i_gen], elt};
+    MyMatrix<T> M = ListM[i_gen];
+    MyMatrix<T> Minv = Inverse(M);
+    Ttype pair{M, Minv};
 
-    // Create the TcombPair structure needed by the online kernel
-    auto f_invers = [](Ttype const& pair) -> Ttype {
-      return {Inverse(pair.first), Inverse(pair.second)};
-    };
-    Ttype pair_inv = f_invers(pair);
-    std::pair<Ttype,Ttype> pair_di{pair, pair_inv};
-
-    bool success = online_kernel.insert_generator(pair_di);
-    if (!success) {
-      std::cerr << "Failed to insert generator " << i_gen << "\n";
-      throw TerminalException{1};
-    }
+    (void)online_kernel.insert_generator(pair);
   }
 
   // Extract the final reduced set
-  std::vector<TcombPair<Ttype, Tnorm>> final_set = online_kernel.get_current_set();
-  std::vector<MyMatrix<T>> ListMred;
-
-  for (auto const& comb_pair : final_set) {
-    ListMred.push_back(comb_pair.pair.first.first); // Extract the matrix from pair.first
-  }
+  std::vector<MyMatrix<T>> ListMred = online_kernel.get_current_matrix_t();
 
   // Output the results
   if (OutFormat == "GAP") {
