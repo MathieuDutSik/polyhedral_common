@@ -12,6 +12,7 @@
 
 #ifdef DEBUG
 #define DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+#define DEBUG_ONLINE_SIMPLIFICATION_SHIFT_NUMERICS
 #endif
 
 template<typename U>
@@ -324,8 +325,7 @@ private:
 
   // Migrate from current level to next level
   void migrate_to_next_level() {
-
-#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+#ifdef DEBUG_ONLINE_SIMPLIFICATION_SHIFT_NUMERICS
     os << "SIMP: Migrating from level " << current_level << " to level " << (current_level + 1) << "\n";
 #endif
 

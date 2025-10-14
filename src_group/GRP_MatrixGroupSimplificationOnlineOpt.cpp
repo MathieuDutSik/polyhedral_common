@@ -17,21 +17,17 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   }
 
   int n = ListM[0].rows();
-  std::cerr << "Matrix dimension: " << n << "\n";
 
   // Create the hierarchical online reduction system
   OnlineHierarchicalMatrixReduction<T> hierarchical_reducer(n, std::cerr);
 
   // Insert generators one by one
-  std::cerr << "Inserting " << n_gen << " generators using hierarchical online reduction...\n";
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     hierarchical_reducer.insert_generator(ListM[i_gen]);
   }
 
   // Extract the final reduced set
   std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_reduced_generators();
-
-  std::cerr << "Original generators: " << n_gen << ", Reduced generators: " << ListMred.size() << "\n";
 
   // Output the results
   if (OutFormat == "GAP") {

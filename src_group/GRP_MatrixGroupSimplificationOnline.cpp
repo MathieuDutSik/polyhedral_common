@@ -32,7 +32,6 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   OnlineExhaustiveReductionComplexityKernel<Ttype, Tnorm, decltype(f_complexity), decltype(f_product), decltype(f_check)> online_kernel(f_complexity, f_product, f_check, std::cerr);
 
   // Insert generators one by one
-  std::cerr << "Inserting " << n_gen << " generators one by one...\n";
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     Telt elt; // Default permutation element
     Ttype pair{ListM[i_gen], elt};
@@ -58,8 +57,6 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   for (auto const& comb_pair : final_set) {
     ListMred.push_back(comb_pair.pair.first.first); // Extract the matrix from pair.first
   }
-
-  std::cerr << "Original generators: " << n_gen << ", Reduced generators: " << ListMred.size() << "\n";
 
   // Output the results
   if (OutFormat == "GAP") {

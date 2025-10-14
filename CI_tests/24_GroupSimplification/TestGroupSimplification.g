@@ -45,13 +45,44 @@ TestSimplification:=function(eProg, eFile)
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
-        return false;
+        return rec(result:=false);
     fi;
     ListMatrix:=ReadAsFunction(FileOut)();
-    PrintComplexity(ListMatrix, 7);
     RemoveFile(FileOut);
+    return rec(result:=true, ListMatrix:=ListMatrix);
+end;
+
+TestFamilySimplification:=function(ListProg, eFile)
+    local TheInput, TmpDir, FileIn, TotalListMatrix, eProg, rec_result;
+    TheInput:=ReadListMatrixFile(eFile);
+    PrintComplexity(TheInput, 6);
+    TmpDir:=DirectoryTemporary();
+    FileIn:=Filename(TmpDir, "TotalListMatrix.in");
+    TotalListMatrix:=[];
+    for eProg in ListProg
+    do
+        Print("         ------------------\n");
+        rec_result:=TestSimplification(eProg, eFile);
+        if rec_result.result=false then
+            return false;
+        fi;
+        PrintComplexity(rec_result.ListMatrix, 6);
+        Append(TotalListMatrix, rec_result.ListMatrix);
+    od;
+    Print("         = - = - = - = - = - =\n");
+    eProg:=ListProg[1];
+    WriteListMatrixFile(FileIn, TotalListMatrix);
+    rec_result:=TestSimplification(eProg, FileIn);
+    if rec_result.result=false then
+        return false;
+    fi;
+    PrintComplexity(rec_result.ListMatrix, 6);
     return true;
 end;
+
+
+
+
 
 FullTest:=function(eDir)
     local ListProg, ListFiles, n_error, eFile, fFile, TheInput, eProg, test;
@@ -64,17 +95,10 @@ FullTest:=function(eDir)
         Print("================================\n");
         Print("eFile=", eFile, "\n");
         fFile:=Concatenation(eDir, "/", eFile);
-        TheInput:=ReadListMatrixFile(fFile);
-        PrintComplexity(TheInput, 6);
-        for eProg in ListProg
-        do
-            Print("            -------------------\n");
-            Print("  eProg=", eProg, "\n");
-            test:=TestSimplification(eProg, fFile);
-            if test=false then
-                n_error:=n_error + 1;
-            fi;
-        od;
+        test:=TestFamilySimplification(ListProg, fFile);
+        if test=false then
+            n_error:=n_error + 1;
+        fi;
     od;
     if n_error>0 then
         return false;
