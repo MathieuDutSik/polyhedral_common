@@ -183,6 +183,9 @@ public:
     os << "gen1=" << compute_complexity_matrix(pair.first) << " gen2=" << compute_complexity_matrix(pair.second) << "\n";
 #endif
     if (!f_check(pair.first) || !f_check(pair.second)) {
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+      os << "f_check fails at the beginning\n";
+#endif
       return false;
     }
     TcombPair<Ttype,Tnorm> comb = generate_comb_pair<Ttype,Tnorm,Fcomplexity>(pair, f_complexity);
@@ -283,6 +286,19 @@ public:
     }
     return ret_vect;
   }
+  void print_invariants(std::ostream& os_out) const {
+    size_t seed = 10;
+    const std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>>& vect = inner.get_current_set_ref();
+    std::vector<MyMatrix<Tfinite>> ret_vect;
+    os_out << "l_hash = [";
+    for (auto & pair: vect) {
+      MyMatrix<Tfinite> const& M = pair.pair.first;
+      size_t hash = matrix_type_independent_hash(M, seed);
+      os_out << " " << hash;
+      ret_vect.push_back(M);
+    }
+    os_out << " ] invs=" << compute_complexity_listmat(ret_vect) << "\n";
+  }
   std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>> get_current_set() const {
     return inner.get_current_set();
   }
@@ -335,6 +351,19 @@ public:
       ret_vect.push_back(pair.pair.first);
     }
     return ret_vect;
+  }
+  void print_invariants(std::ostream& os_out) const {
+    size_t seed = 10;
+    const std::vector<TcombPair<MyMatrix<T>, T>>& vect = inner.get_current_set_ref();
+    std::vector<MyMatrix<T>> ret_vect;
+    os_out << "l_hash = [";
+    for (auto & pair: vect) {
+      MyMatrix<T> const& M = pair.pair.first;
+      size_t hash = matrix_type_independent_hash(M, seed);
+      os_out << " " << hash;
+      ret_vect.push_back(M);
+    }
+    os_out << " ] invs=" << compute_complexity_listmat(ret_vect) << "\n";
   }
   std::vector<TcombPair<MyMatrix<T>, T>> get_current_set() const {
     return inner.get_current_set();
@@ -494,6 +523,18 @@ public:
       return kernel_64->get_current_matrix_t<T>();
     } else {
       return kernel_T.get_current_matrix_t();
+    }
+  }
+
+  void print_invariants(std::ostream& os_out) const {
+    if (current_level == 0) {
+      return kernel_16->print_invariants(os_out);
+    } else if (current_level == 1) {
+      return kernel_32->print_invariants(os_out);
+    } else if (current_level == 2) {
+      return kernel_64->print_invariants(os_out);
+    } else {
+      return kernel_T.print_invariants(os_out);
     }
   }
 

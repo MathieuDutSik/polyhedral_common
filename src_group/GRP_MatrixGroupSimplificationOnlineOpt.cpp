@@ -29,8 +29,8 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     hierarchical_reducer.insert_generator(ListM[i_gen]);
 #ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
-    std::vector<MyMatrix<T>> l_gens = hierarchical_reducer.get_current_matrix_t();
-    std::cerr << "i_gen=" << i_gen << " " << compute_complexity_listmat(l_gens) << "\n";
+    std::cerr << "i_gen=" << i_gen;
+    hierarchical_reducer.print_invariants(std::cerr);
 #endif
   }
 

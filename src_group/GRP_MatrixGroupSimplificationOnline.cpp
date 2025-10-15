@@ -34,8 +34,8 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
     (void)online_kernel.insert_generator(pair);
 
 #ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
-    std::vector<MyMatrix<T>> l_gens = online_kernel.get_current_matrix_t();
-    std::cerr << "i_gen=" << i_gen << " " << compute_complexity_listmat(l_gens)	<< "\n";
+    std::cerr << "i_gen=" << i_gen;
+    online_kernel.print_invariants(std::cerr);
 #endif
   }
 
