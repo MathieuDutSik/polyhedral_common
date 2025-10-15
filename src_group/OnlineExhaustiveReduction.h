@@ -299,6 +299,15 @@ public:
     }
     os_out << " ] invs=" << compute_complexity_listmat(ret_vect) << "\n";
   }
+  size_t type_independent_hash(size_t const& seed) const {
+    size_t ret_hash = seed;
+    const std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>>& vect = inner.get_current_set_ref();
+    for (auto & pair: vect) {
+      MyMatrix<Tfinite> const& M = pair.pair.first;
+      ret_hash = matrix_type_independent_hash(M, ret_hash);
+    }
+    return ret_hash;
+  }
   std::vector<TcombPair<MyMatrix<Tfinite>, Tfinite>> get_current_set() const {
     return inner.get_current_set();
   }
@@ -364,6 +373,15 @@ public:
       ret_vect.push_back(M);
     }
     os_out << " ] invs=" << compute_complexity_listmat(ret_vect) << "\n";
+  }
+  size_t type_independent_hash(size_t const& seed) const {
+    size_t ret_hash = seed;
+    const std::vector<TcombPair<MyMatrix<T>, T>>& vect = inner.get_current_set_ref();
+    for (auto & pair: vect) {
+      MyMatrix<T> const& M = pair.pair.first;
+      ret_hash = matrix_type_independent_hash(M, ret_hash);
+    }
+    return ret_hash;
   }
   std::vector<TcombPair<MyMatrix<T>, T>> get_current_set() const {
     return inner.get_current_set();
@@ -500,16 +518,39 @@ public:
       return kernel_T.insert_generator(generator_pair);
     }
   }
-
-
+  size_t type_independent_hash(size_t const& seed) const {
+    if (current_level == 0) {
+      return kernel_16->type_independent_hash(seed);
+    } else if (current_level == 1) {
+      return kernel_32->type_independent_hash(seed);
+    } else if (current_level == 2) {
+      return kernel_64->type_independent_hash(seed);
+    } else {
+      return kernel_T.type_independent_hash(seed);
+    }
+  }
   // Insert a matrix pair
   void insert_generator_pair(Ttype const& generator_pair) {
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+    size_t seed = 60;
+#endif
     while (true) {
       bool test = simple_insert_generator_pair(generator_pair);
       if (test) {
         return;
       }
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+      size_t hash1 = type_independent_hash(seed);
+#endif
       migrate_to_next_level();
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+      size_t hash2 = type_independent_hash(seed);
+      if (hash1 == hash2) {
+        os << "hash1 EQUALS hash2\n";
+      } else {
+        os << "hash1 does NOT equal hash2\n";
+      }
+#endif
     }
   }
 
