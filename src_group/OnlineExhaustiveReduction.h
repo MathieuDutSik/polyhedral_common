@@ -179,6 +179,9 @@ public:
 
   // Insert a new generator and run reduction
   bool insert_generator(std::pair<Ttype, Ttype> const& pair) {
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+    os << "gen1=" << compute_complexity_matrix(pair.first) << " gen2=" << compute_complexity_matrix(pair.second) << "\n";
+#endif
     if (!f_check(pair.first) || !f_check(pair.second)) {
       return false;
     }

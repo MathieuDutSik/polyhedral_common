@@ -26,7 +26,7 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
 #ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
     bool test = IsIntegralMatrix(M);
     T det = DeterminantMat(M);
-    std::cerr << "i_gen=" << i_gen << " test=" << test << " det=" << det << "\n";
+    //    std::cerr << "i_gen=" << i_gen << " test=" << test << " det=" << det << "\n";
 #endif
     MyMatrix<T> Minv = Inverse(M);
     Ttype pair{M, Minv};

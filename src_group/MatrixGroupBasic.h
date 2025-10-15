@@ -8,7 +8,6 @@
 #include "MAT_MatrixMod.h"
 #include "ClassicLLL.h"
 #include "Timings.h"
-#include "Group.h"
 #include <limits>
 #include <unordered_map>
 #include <unordered_set>
@@ -398,88 +397,6 @@ std::vector<T2> OrbitComputationSort(std::vector<T1> const &ListGen, T2 const &a
   return orb;
 }
 */
-
-
-
-
-template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> PreImageSubgroupOneStep(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
-#ifdef TIMINGS_MATRIX_GROUP_BASIC
-  MicrosecondTime time;
-#endif
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MATGRPBAS: PreImageSubgroupOneStep, |eGRP|=" << eGRP.size() << " |ListPerm|=" << ListPerm.size() << "\n";
-#endif
-  std::vector<MyMatrix<T>> ListMatr1 =
-    permutalib::PreImageSubgroup<Tgroup, MyMatrix<T>>(ListMatr, ListPerm, id_matr, eGRP);
-#ifdef TIMINGS_MATRIX_GROUP_BASIC
-  os << "|MATGRPBAS: PreImageSubgroupOneStep, permutalib::PreImageSubgroup|=" << time << "\n";
-#endif
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MATGRPBAS: PreImageSubgroupOneStep, comp(ListMatr1)=" << compute_complexity_listmat(ListMatr1) << "\n";
-#endif
-  std::vector<MyMatrix<T>> ListMatr2 = ExhaustiveReductionComplexityGroupMatrix<T>(ListMatr1, os);
-#ifdef TIMINGS_MATRIX_GROUP_BASIC
-  os << "|MATGRPBAS: PreImageSubgroupOneStep, ExhaustiveReductionComplexityGroupMatrix|=" << time << "\n";
-#endif
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MATGRPBAS: PreImageSubgroupOneStep, comp(ListMatr2)=" << compute_complexity_listmat(ListMatr2) << "\n";
-#endif
-#ifdef SANITY_CHECK_MATRIX_GROUP_BASIC_DISABLE
-  CheckGroupEquality<T,Tgroup>(ListMatr1, ListMatr2, os);
-#endif
-  return ListMatr2;
-}
-
-
-
-
-
-template<typename T, typename Tgroup>
-std::vector<MyMatrix<T>> PreImageSubgroup(std::vector<MyMatrix<T>> const& ListMatr, std::vector<typename Tgroup::Telt> const& ListPerm, std::function<typename Tgroup::Telt(MyMatrix<T> const&)> f_get_perm, MyMatrix<T> const& id_matr, Tgroup const& eGRP, std::ostream& os) {
-  using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
-  Telt id_perm = eGRP.get_identity();
-  Tidx len = id_perm.size();
-  Tgroup GRPbig(ListPerm, len);
-  if (GRPbig.size() == eGRP.size()) {
-    return ListMatr;
-  }
-#ifdef TRACK_INFO_MATRIX_GROUP_BASIC
-  WriteGroupFile("GRPbig", GRPbig);
-  WriteGroupFile("GRPsub", eGRP);
-  WriteGroupFileGAP("GRPbig_gap", GRPbig);
-  WriteGroupFileGAP("GRPsub_gap", eGRP);
-#endif
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MATGRPBAS: PreImageSubgroup, beginning\n";
-#endif
-  std::vector<Tgroup> l_grp = GRPbig.GetAscendingChainSubgroup(eGRP);
-  size_t len_stab = l_grp.size() - 1;
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-  os << "MATGRPBAS: PreImageSubgroup, len_stab=" << len_stab << "\n";
-  for (size_t iGRP=0; iGRP<=len_stab; iGRP++) {
-    os << "MATGRPBAS: PreImageSubgroup, iGRP=" << iGRP << "/" << len_stab << " |eGRP|=" << l_grp[iGRP].size() << "\n";
-  }
-#endif
-  std::vector<MyMatrix<T>> LGenMatr = ListMatr;
-  std::vector<Telt> LGenPerm = ListPerm;
-  for (size_t u=0; u<len_stab; u++) {
-    size_t idx = len_stab - 1 - u;
-#ifdef DEBUG_MATRIX_GROUP_BASIC
-    os << "MATGRPBAS: PreImageSubgroup, len_stab=" << len_stab << " u=" << u << " idx=" << idx << "\n";
-#endif
-    LGenMatr = PreImageSubgroupOneStep<T,Tgroup>(LGenMatr, LGenPerm, id_matr, l_grp[idx], os);
-    if (idx > 0) {
-      LGenPerm.clear();
-      for (auto & eMatr: LGenMatr) {
-        Telt ePerm = f_get_perm(eMatr);
-        LGenPerm.push_back(ePerm);
-      }
-    }
-  }
-  return LGenMatr;
-}
 
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUPBASIC_H_
