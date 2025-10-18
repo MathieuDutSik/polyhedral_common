@@ -1,6 +1,4 @@
-#PROGRAM		= DD_ConvertGAP_to_NC POLY_CheckCanonicalGAP POLY_NetcdfToGAP POLY_SerialDualDesc ConvertNC_to_NC_FB_FF Test_face Test_bool
 PROGRAM		= POLY_SerialDualDesc
-#PROGRAM		= POLY_RunTheBank
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

@@ -29,16 +29,16 @@ Add(ListRec, rec(prefix:="CUT_K7", n_orbit:=11));
 #Add(ListRec, rec(prefix:="CUT_K8", n_orbit:=147));
 
 FullTest:=function()
-    local iRec, eRec, test;
-    iRec:=0;
-    for eRec in ListRec
+    local iRec, eRec, nRec, test;
+    nRec:=Length(ListRec);
+    for iRec in [1..nRec]
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
+        eRec:=ListRec[iRec];
+        Print("iRec=", iRec, " / ", nRec, " prefix=", eRec.prefix, "\n");
         test:=TestDualDesc(eRec);
         if test=false then
             return false;
         fi;
-        iRec:=iRec + 1;
     od;
     return true;
 end;

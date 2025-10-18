@@ -459,7 +459,7 @@ bool is_method_supported(std::string const &prog) {
   return false;
 }
 
-void terminate_direct_dual_desc(std::string const& ansProg, std::vector<std::string> const& ListProg) {
+[[noreturn]] void terminate_direct_dual_desc(std::string const& ansProg, std::vector<std::string> const& ListProg) {
   std::cerr << "DDD: ERROR: No right program found with ansProg=" << ansProg << "\n";
   std::cerr << "DDD: List of authorized programs :";
   bool IsFirst = true;
