@@ -686,9 +686,11 @@ template<typename Ttype, typename Tnorm, typename Fcomplexity>
 TcombPair<Ttype,Tnorm> generate_comb_pair(std::pair<Ttype,Ttype> const& pair, Fcomplexity f_complexity) {
   Tnorm norm1 = f_complexity(pair.first);
   Tnorm norm2 = f_complexity(pair.second);
-  if (norm1 < norm1) {
+  if (norm1 < norm2) {
+    //    std::cerr << "generate_comb_pair, direct\n";
     return {pair, norm1};
   } else {
+    //    std::cerr << "generate_comb_pair, invers\n";
     std::pair<Ttype,Ttype> pair2{pair.second, pair.first};
     return {std::move(pair2), norm2};
   }

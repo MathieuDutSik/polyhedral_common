@@ -28,7 +28,7 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   // Insert generators one by one
   for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     hierarchical_reducer.insert_generator(ListM[i_gen]);
-#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
+#ifdef TRACK_INFO_ONLINE_INSERTION_SIZES_DISABLE
     std::cerr << "i_gen=" << i_gen;
     hierarchical_reducer.print_invariants(std::cerr);
 #endif

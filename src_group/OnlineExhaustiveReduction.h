@@ -69,17 +69,22 @@ private:
     }
   }
 
-  void insert_entry(TcombPair<Ttype,Tnorm> const& val) {
+  size_t insert_entry_noop(TcombPair<Ttype,Tnorm> const& val) {
     BlockInterval blk_int;
     auto result = map.insert({val, blk_int});
     if (!result.second) {
-      std::cerr << "SIMP: Entry is already present. Unexpected\n";
+      std::cerr << "ONL: Entry is already present. Unexpected\n";
       throw TerminalException{1};
     }
     auto iter = result.first;
     size_t pos = std::distance(map.begin(), iter);
     vect.insert(vect.begin() + pos, val);
+    return pos;
+  }
 
+  void insert_entry(TcombPair<Ttype,Tnorm> const& val) {
+    size_t pos = insert_entry_noop(val);
+    // Setting the untreated entries
     size_t n_entry = vect.size();
     size_t idx = 0;
     for (auto & kv: map) {
@@ -197,6 +202,18 @@ public:
     return run_reduction_pass();
   }
 
+  bool insert_generator_noop(std::pair<Ttype, Ttype> const& pair) {
+    if (!f_check(pair.first) || !f_check(pair.second)) {
+#ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
+      os << "f_check fails at the beginning\n";
+#endif
+      return false;
+    }
+    TcombPair<Ttype,Tnorm> comb = generate_comb_pair<Ttype,Tnorm,Fcomplexity>(pair, f_complexity);
+    (void)insert_entry_noop(comb);
+    return true;
+  }
+
   std::vector<TcombPair<Ttype,Tnorm>> get_final_set() {
     std::vector<TcombPair<Ttype,Tnorm>> ret_vect = vect;
     vect.clear();
@@ -266,7 +283,7 @@ public:
   bool insert_generators_tinput(std::vector<TcombPair<MyMatrix<Tinput>,Tinput>> const& l_gen) {
     for (auto const& comb_pair : l_gen) {
       PairMatrix<Tfinite> pair = UniversalPairMatrixConversion<Tfinite,Tinput>(comb_pair.pair);
-      if (!insert_generator(pair)) {
+      if (!inner.insert_generator_noop(pair)) {
         clear();
         return false;
       }
@@ -346,7 +363,7 @@ public:
   bool insert_generators_tinput(std::vector<TcombPair<MyMatrix<Tinput>,Tinput>> const& l_gen) {
     for (auto const& comb_pair : l_gen) {
       PairMatrix<T> pair = UniversalPairMatrixConversion<T,Tinput>(comb_pair.pair);
-      insert_generator(pair);
+      inner.insert_generator_noop(pair);
     }
     return true;
   }
@@ -541,10 +558,24 @@ public:
       }
 #ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
       size_t hash1 = type_independent_hash(seed);
+      std::vector<MyMatrix<T>> l_mat1 = get_current_matrix_t();
+      os << "ONL: Before, hash1=" << hash1 << " |l_mat1|=" << l_mat1.size() << "\n";
+      print_invariants(os);
+      //      os << "ONL: l_mat1(10)=\n";
+      //      WriteMatrix(os, l_mat1[10]);
+      //      os << "ONL: l_mat1(11)=\n";
+      //      WriteMatrix(os, l_mat1[11]);
 #endif
       migrate_to_next_level();
 #ifdef DEBUG_ONLINE_EXHAUSTIVE_REDUCTION
       size_t hash2 = type_independent_hash(seed);
+      std::vector<MyMatrix<T>> l_mat2 = get_current_matrix_t();
+      os << "ONL: After, hash2=" << hash2 << " |l_mat2|=" << l_mat2.size() << "\n";
+      print_invariants(os);
+      //      os << "ONL: l_mat2(10)=\n";
+      //      WriteMatrix(os, l_mat2[10]);
+      //      os << "ONL: l_mat2(11)=\n";
+      //      WriteMatrix(os, l_mat2[11]);
       if (hash1 == hash2) {
         os << "hash1 EQUALS hash2\n";
       } else {
