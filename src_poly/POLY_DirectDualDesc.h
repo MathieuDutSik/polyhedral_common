@@ -105,6 +105,12 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     FileO = prefix + suffix + ".ext";
     FileE = prefix + suffix + ".err";
   }
+  auto premature_ending=[&]() -> void {
+    std::cerr << "DDD: FileI = " << FileI << "\n";
+    std::cerr << "DDD: FileO = " << FileO << "\n";
+    std::cerr << "DDD: FileE = " << FileE << "\n";
+    throw TerminalException{1};
+  };
   {
     std::ofstream osI(FileI);
     if (eCommand == "normaliz") {
@@ -155,22 +161,17 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   os << "DDD: External program terminated\n";
 #endif
   if (iret1 != 0) {
-    std::cerr << "The program has not terminated correctly\n";
-    std::cerr << "FileI = " << FileI << "\n";
-    std::cerr << "FileO = " << FileO << "\n";
-    std::cerr << "FileE = " << FileE << "\n";
-    throw TerminalException{1};
+    std::cerr << "DDD: iret1=" << iret1 << "\n";
+    std::cerr << "DDD: The program has not terminated correctly\n";
+    premature_ending();
   }
   size_t n_facet = 0;
   size_t n_insert = 0;
   auto check_consistency = [&]() -> void {
     if (n_insert != n_facet) {
-      std::cerr << "Consistency error\n";
-      std::cerr << "n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
-      std::cerr << "FileI = " << FileI << "\n";
-      std::cerr << "FileO = " << FileO << "\n";
-      std::cerr << "FileE = " << FileE << "\n";
-      throw TerminalException{1};
+      std::cerr << "DDD: Consistency error\n";
+      std::cerr << "DDD: n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
+      premature_ending();
     }
   };
   //
@@ -256,11 +257,8 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   os << "DDD: FileI = " << FileI << "    FileO = " << FileO << "\n";
 #endif
   if (n_insert == 0) {
-    std::cerr << "We inserted zero entries\n";
-    std::cerr << "FileI = " << FileI << "\n";
-    std::cerr << "FileO = " << FileO << "\n";
-    std::cerr << "FileE = " << FileE << "\n";
-    throw TerminalException{1};
+    std::cerr << "DDD: We inserted zero entries\n";
+    premature_ending();
   }
   RemoveFileIfExist(FileI);
   RemoveFileIfExist(FileO);
@@ -461,6 +459,21 @@ bool is_method_supported(std::string const &prog) {
   return false;
 }
 
+void terminate_direct_dual_desc(std::string const& ansProg, std::vector<std::string> const& ListProg) {
+  std::cerr << "DDD: ERROR: No right program found with ansProg=" << ansProg << "\n";
+  std::cerr << "DDD: List of authorized programs :";
+  bool IsFirst = true;
+  for (auto &eP : ListProg) {
+    if (!IsFirst)
+      std::cerr << " ,";
+    IsFirst = false;
+    std::cerr << " " << eP;
+  }
+  std::cerr << "\n";
+  throw TerminalException{1};
+}
+
+
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
                                          std::string const &ansProg,
@@ -474,7 +487,7 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
 #ifdef USE_CDDLIB
     return cbased_cdd::DualDescription_incd(EXT);
 #else
-    std::cerr << "The code has been compiled without the CDDLIB library\n";
+    std::cerr << "DDD: The code has been compiled without the CDDLIB library\n";
     throw TerminalException{1};
 #endif
   }
@@ -532,21 +545,8 @@ vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
       return DualDescExternalProgramIncidence(EXT, "normaliz", os);
   }
   //
-  std::cerr << "ERROR in DirectFacetComputationIncidence\n";
-  std::cerr << "No right program found with ansProg=" << ansProg
-            << " or incorrect output\n";
-  std::cerr << "ERROR: No right program found with ansProg=" << ansProg
-            << " or incorrect output\n";
-  std::cerr << "List of authorized programs :";
-  bool IsFirst = true;
-  for (auto &eP : ListProg) {
-    if (!IsFirst)
-      std::cerr << " ,";
-    IsFirst = false;
-    std::cerr << " " << eP;
-  }
-  std::cerr << "\n";
-  throw TerminalException{1};
+  std::cerr << "DDD: ERROR in DirectFacetComputationIncidence\n";
+  terminate_direct_dual_desc(ansProg, ListProg);
 }
 
 template <typename T>
@@ -608,19 +608,8 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
       return DualDescExternalProgramIneq(EXT, "normaliz", os);
   }
   //
-  std::cerr << "ERROR in DirectFacetComputationInequalities\n";
-  std::cerr << "No right program found with ansProg=" << ansProg
-            << " or incorrect output\n";
-  std::cerr << "List of authorized programs :";
-  bool IsFirst = true;
-  for (auto &eP : ListProg) {
-    if (!IsFirst)
-      std::cerr << " ,";
-    IsFirst = false;
-    std::cerr << " " << eP;
-  }
-  std::cerr << "\n";
-  throw TerminalException{1};
+  std::cerr << "DDD: ERROR in DirectFacetComputationInequalities\n";
+  terminate_direct_dual_desc(ansProg, ListProg);
 }
 
 template <typename T, typename Fprocess>
@@ -684,19 +673,8 @@ void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
       return DualDescExternalProgramFaceIneq(EXT, "normaliz", f_process, os);
   }
   //
-  std::cerr << "ERROR in DirectFacetComputationFaceIneq\n";
-  std::cerr << "No right program found with ansProg=" << ansProg
-            << " or incorrect output\n";
-  std::cerr << "List of authorized programs :";
-  bool IsFirst = true;
-  for (auto &eP : ListProg) {
-    if (!IsFirst)
-      std::cerr << " ,";
-    IsFirst = false;
-    std::cerr << " " << eP;
-  }
-  std::cerr << "\n";
-  throw TerminalException{1};
+  std::cerr << "DDD: ERROR in DirectFacetComputationFaceIneq\n";
+  terminate_direct_dual_desc(ansProg, ListProg);
 }
 
 template <typename T, typename Tgroup>
