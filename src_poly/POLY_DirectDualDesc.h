@@ -478,6 +478,9 @@ template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
                                          std::string const &ansProg,
                                          std::ostream &os) {
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: DirectFacetComputationIncidence, ansProg=" << ansProg << "\n";
+#endif
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -553,6 +556,9 @@ template <typename T>
 MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
                                                std::string const &ansProg,
                                                std::ostream &os) {
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: DirectFacetComputationInequalities, ansProg=" << ansProg << "\n";
+#endif
   std::string eProg;
   std::vector<std::string> ListProg;
   //
@@ -616,6 +622,9 @@ template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     std::string const &ansProg,
                                     Fprocess f_process, std::ostream &os) {
+#ifdef DEBUG_DUAL_DESC
+  os << "DDD: DirectFacetComputationFaceIneq, ansProg=" << ansProg << "\n";
+#endif
   std::string eProg;
   std::vector<std::string> ListProg;
   //
