@@ -68,7 +68,6 @@
       which the vertex is contained.
     x Together with the vertices that are at this distance.
     x The collection of those vertices define
-      
 
     make the 
 
@@ -290,8 +289,8 @@ struct ResultRobustClosest {
 
 
 
-template<typename T, typename Tint>
-ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, [[maybe_unused]] std::ostream& os) {
+template<typename T, typename Tint, typename Finsert>
+void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, Finsert f_insert, [[maybe_unused]] std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST: compute_robust_closest, step 1\n";
 #endif
@@ -332,7 +331,10 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
         for (auto & eFace: l_face) {
           list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
         }
-        return {min_search, std::move(list_parallelepipeds)};
+        bool test = f_insert(min_search, list_parallelepipeds, list_parallelepipeds);
+        if (test) {
+          return;
+        }
       }
     } else {
       min_search = (min_search * T(3)) / T(2);
@@ -368,7 +370,8 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
         os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
         int i_face = 0;
 #endif
-        std::vector<MyMatrix<Tint>> list_parallelepipeds;
+        std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
+        std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
         for (auto & eFace: l_face) {
           T local_max_norm(0);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
@@ -384,25 +387,45 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
           i_face += 1;
 #endif
           MyMatrix<Tint> Mparall = get_msol(M, eFace);
+          tot_list_parallelepipeds.push_back(Mparall);
           if (local_max_norm < eff_min) {
-            list_parallelepipeds.clear();
+            list_min_parallelepipeds.clear();
             eff_min = local_max_norm;
-            list_parallelepipeds.push_back(Mparall);
+            list_min_parallelepipeds.push_back(Mparall);
           } else {
             if (local_max_norm == eff_min) {
-              list_parallelepipeds.push_back(Mparall);
+              list_min_parallelepipeds.push_back(Mparall);
             }
           }
         }
 #ifdef DEBUG_ENUM_ROBUST_COVERING
         os << "ROBUST:   eff_min=" << eff_min << "\n";
 #endif
-        return {eff_min, std::move(list_parallelepipeds)};
+        bool test = f_insert(eff_min, list_min_parallelepipeds, tot_list_parallelepipeds);
+        if (test) {
+          return;
+        }
       }
     }
     n_iter += 1;
   }
 }
+
+template<typename T, typename Tint>
+ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, [[maybe_unused]] std::ostream& os) {
+
+  ResultRobustClosest<T,Tint> result;
+  auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, [[maybe_unused]] std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
+    result = {min, list_min_parallelepipeds};
+    return true;
+  };
+  compute_robust_close_f(solver, eV, f_insert, os);
+  return result;
+}
+
+
+
+
 
 
 
