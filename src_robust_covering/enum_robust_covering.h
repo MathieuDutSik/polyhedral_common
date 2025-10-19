@@ -653,16 +653,6 @@ InitialVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, 
   }
 }
 
-
-
-
-
-
-
-
-
-
-
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 // clang-format on

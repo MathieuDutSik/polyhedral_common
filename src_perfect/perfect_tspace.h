@@ -68,7 +68,6 @@ template <typename Tint> struct PerfectTspace_AdjO {
 
 template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectTspace {
-  int n;
   LinSpaceMatrix<T> LinSpa;
   RecordDualDescOperation<T, Tgroup> rddo;
   std::ostream &get_os() { return rddo.os; }
@@ -202,7 +201,7 @@ struct DataPerfectTspaceFunc {
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
     Tobj x_ret{y.Gram, y.RecSHV, {}};
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.n);
+    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
     TadjO ret{y.eInc, eBigMat};
     return {x_ret, ret};
   }
@@ -258,7 +257,7 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   os_out << "rec(";
   WriteEntryGAP(os_out, obj);
   os_out << ", GRPsize:=" << obj.GRP.size();
-  os_out << ", n:=" << data.n;
+  os_out << ", n:=" << data.LinSpa.n;
   os_out << ")";
 }
 
