@@ -115,14 +115,16 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
         std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = Flipping_Perfect<T, Tint>(ePERF.Gram, DirMat, os);
         SimplePerfect<T,Tint> entry{pair.first, pair.second};
         int eVal = FuncInsert(entry, os);
-        if (eVal == -1)
+        if (eVal == -1) {
           cv.notify_one();
+        }
       }
       ListOrbit.SetEntryAsDone(eEntry, os);
-      nbWork++;
+      nbWork += 1;
     }
-    if (MyId != TheId)
+    if (MyId != TheId) {
       MProc.MPU_Terminate(MyId);
+    }
     nbSpannThread--;
     if (nbWork > 0) {
       cv.notify_all();

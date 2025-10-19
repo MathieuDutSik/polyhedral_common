@@ -406,7 +406,7 @@ public:
   void clear() {
     inner.clear();
   }
-  size_t size() {
+  size_t size() const {
     inner.size();
   }
 };
@@ -615,7 +615,7 @@ public:
     return current_level;
   }
 
-  size_t get_current_size() const {
+  size_t size() const {
     if (current_level == 0) return kernel_16->size();
     if (current_level == 1) return kernel_32->size();
     if (current_level == 2) return kernel_64->size();
