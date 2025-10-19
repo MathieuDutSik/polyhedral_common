@@ -150,12 +150,12 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
   os << "LP: Polytopization, After CDD_LinearProgramming\n";
 #endif
   if (!eSol.PrimalDefined) {
-    std::cerr << "The optimization resulted in a result whose primal is not "
-                 "defined\n";
-    std::cerr << "This likely means that the set of inequalities on input does "
-                 "not define\n";
-    std::cerr << "A full dimensional polytope, i.e. that the inequalitity "
-                 "together imply some equalities\n";
+    std::cerr << "LP: The optimization resulted in a result whose primal\n";
+    std::cerr << "LP: is not defined\n";
+    std::cerr << "LP: This likely means that the set of inequalities\n";
+    std::cerr << "LP: on input does not define\n";
+    std::cerr << "LP: A full dimensional polytope, i.e. that the inequalitity\n";
+    std::cerr << "LP: together imply some equalities\n";
     throw TerminalException{1};
   }
   MyVector<T> SolDir = eSol.DirectSolution;
@@ -169,8 +169,8 @@ MyMatrix<T> Polytopization(MyMatrix<T> const &EXT, std::ostream &os) {
         iColSelect = iCol;
     }
   if (iColSelect == -1) {
-    std::cerr << "Apparently, we did not find the column\n";
-    std::cerr << "Please solve error in Polytopization\n";
+    std::cerr << "LP: Apparently, we did not find the column\n";
+    std::cerr << "LP: Please solve error in Polytopization\n";
     throw TerminalException{1};
   }
   int iRowWrite = 0;
@@ -252,9 +252,9 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
     for (int iRow = 0; iRow < nbRow; iRow++) {
 #ifdef SANITY_CHECK_FIND_SINGLE_VERTEX
       if (EXT(iRow,0) != 1) {
-        std::cerr << "Kernel_FindSingleVertex, EXT=\n";
+        std::cerr << "LP: Kernel_FindSingleVertex, EXT=\n";
         WriteMatrix(std::cerr, EXT);
-        std::cerr << "The first entry should be equal to 1, iRow=" << iRow << "\n";
+        std::cerr << "LP: The first entry should be equal to 1, iRow=" << iRow << "\n";
         throw TerminalException{1};
       }
 #endif
@@ -277,7 +277,7 @@ Face Kernel_FindSingleVertex(MyMatrix<T> const &EXT, std::ostream &os) {
 #endif
 #ifdef SANITY_CHECK_FIND_SINGLE_VERTEX
       if (eSum < 0) {
-        std::cerr << "The obtained vertex violates facet iRow=" << iRow << "\n";
+        std::cerr << "LP: The obtained vertex violates facet iRow=" << iRow << "\n";
         throw TerminalException{1};
       }
 #endif
@@ -391,7 +391,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   MyVector<T> eFAC = FindFacetInequality(EXT, eFace);
   T scal = eVect.dot(eFAC);
   if (scal >= 0) {
-    std::cerr << "Faied to find a correct solution\n";
+    std::cerr << "LP: Failed to find a correct solution\n";
     throw TerminalException{1};
   }
 #endif
@@ -424,7 +424,7 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
   if (pos.has_internal_vector) {
     if (!pos.eTestExist) {
       if (!pos.InternalVector.has_value()) {
-        std::cerr << "There is an internal vector while eTestExist is true\n";
+        std::cerr << "LP: There is an internal vector while eTestExist is true\n";
         throw TerminalException{1};
       }
       MyVector<T> const &V = *pos.InternalVector;
@@ -433,14 +433,14 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
         for (int iCol = 0; iCol < nbCol; iCol++)
           eScal += V(iCol) * ListVect(iRow, iCol);
         if (eScal <= 0) {
-          std::cerr << "Error in SearchPositiveRelationSimple_DualMethod 1\n";
-          std::cerr << "We have eScal=" << eScal << "\n";
+          std::cerr << "LP: Error in SearchPositiveRelationSimple_DualMethod 1\n";
+          std::cerr << "LP: We have eScal=" << eScal << "\n";
           throw TerminalException{1};
         }
       }
     } else {
       if (pos.InternalVector.has_value()) {
-        std::cerr << "There is no internal vector while eTestExist is false\n";
+        std::cerr << "LP: There is no internal vector while eTestExist is false\n";
         throw TerminalException{1};
       }
     }
@@ -449,28 +449,28 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
   if (pos.has_relation) {
     if (!pos.eTestExist) {
       if (pos.TheRelat.has_value()) {
-        std::cerr
-            << "There is no relation for TheRelat while eTestExist is true\n";
+        std::cerr << "LP: There is no relation for TheRelat while eTestExist\n";
+        std::cerr << "LP: is true\n";
         throw TerminalException{1};
       }
     } else {
       if (!pos.TheRelat.has_value()) {
-        std::cerr
-            << "There is a relation for TheRelat while eTestExist is false\n";
+        std::cerr << "LP: There is a relation for TheRelat while eTestExist\n";
+        std::cerr << "LP: is false\n";
         throw TerminalException{1};
       }
       MyVector<T> const &V = *pos.TheRelat;
       T sumV(0);
       for (int iRow = 0; iRow < nbRow; iRow++) {
         if (V(iRow) < 0) {
-          std::cerr << "iRow=" << iRow << "\n";
-          std::cerr << "We have coeff=" << V(iRow) << " < 0\n";
+          std::cerr << "LP: iRow=" << iRow << "\n";
+          std::cerr << "LP: We have coeff=" << V(iRow) << " < 0\n";
           throw TerminalException{1};
         }
         sumV += V(iRow);
       }
       if (sumV == 0) {
-        std::cerr << "All the coefficient are 0, which is not allowed\n";
+        std::cerr << "LP: All the coefficient are 0, which is not allowed\n";
         throw TerminalException{1};
       }
       for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -478,12 +478,10 @@ void CheckResult_PositiveRelationSimple(MyMatrix<T> const &ListVect,
         for (int iRow = 0; iRow < nbRow; iRow++)
           eSum += V(iRow) * ListVect(iRow, iCol);
         if (eSum != 0) {
-          std::cerr << "CheckResult_PositiveRelationSimple : error checking "
-                       "TheRelat\n";
-          std::cerr << "CheckResult_PositiveRelationSimple : iCol=" << iCol
-                    << "\n";
-          std::cerr << "CheckResult_PositiveRelationSimple : We have eSum="
-                    << eSum << "\n";
+          std::cerr << "LP: CheckResult_PositiveRelationSimple : error\n";
+          std::cerr << "LP: checking TheRelat\n";
+          std::cerr << "LP: iCol=" << iCol << "\n";
+          std::cerr << "LP: We have eSum=" << eSum << "\n";
           WriteMatrixFile("CheckResult_PositiveRelationSimple", ListVect);
           throw TerminalException{1};
         }
@@ -544,19 +542,19 @@ SearchPositiveRelationSimple_DualMethod(MyMatrix<T> const &ListVect,
     }
     double max_V_d = UniversalScalarConversion<double, T>(max_V);
     double min_V_d = UniversalScalarConversion<double, T>(min_V);
-    std::cerr << "max_V_d=" << max_V_d << " min_V_d=" << min_V_d << "\n";
+    os << "LP: max_V_d=" << max_V_d << " min_V_d=" << min_V_d << "\n";
     for (int iCol = 0; iCol < nbCol; iCol++) {
       T eSum(0);
       for (int iRow = 0; iRow < nbRow; iRow++) {
         eSum += V(iRow) * ListVect(iRow, iCol);
       }
-      std::cerr << "iCol=" << iCol << " eSum=" << eSum
-                << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
+      os << "LP: iCol=" << iCol << " eSum=" << eSum
+         << " eMin(iRow)=" << eMinimize(iCol + 1) << "\n";
     }
 #endif
   }
   if (!IsDone) {
-    std::cerr << "Error. No value assigned\n";
+    std::cerr << "LP: Error. No value assigned\n";
     throw TerminalException{1};
   }
 #ifdef DEBUG_SEARCH_POSITIVE_RELATION
@@ -639,7 +637,7 @@ PosRelRes<T> SearchPositiveRelation(MyMatrix<T> const &ListVect,
     MyVector<T> TheRelat = ProductVectorMatrix(eVectRel, NSP);
     for (int iVect = 0; iVect < nbVect; iVect++) {
       if (TheRelat(iVect) < 0) {
-        std::cerr << "We have a clear and present error\n";
+        std::cerr << "LP: We have a clear and present error\n";
         throw TerminalException{1};
       }
     }
@@ -677,8 +675,9 @@ bool TestExistPositiveRelation(MyMatrix<T> const &ListVect, std::ostream &os) {
   PosRelRes<T> sol1 = SearchPositiveRelationSimple_Direct(ListVect, os);
   PosRelRes<T> sol2 = SearchPositiveRelationSimple_DualMethod(ListVect, os);
   if (sol1.eTestExist != sol2.eTestExist) {
-    std::cerr << "We get different result for Direct and DualMethod\n";
-    std::cerr << "Clearly not what we expected\n";
+    std::cerr << "LP: We get different result for Direct and DualMethod\n";
+    std::cerr << "LP: Clearly not what we expected\n";
+    throw TerminalException{1};
   }
 #endif
   auto get_solution = [&]() -> PosRelRes<T> {
@@ -792,21 +791,21 @@ GetSolutionMatNonnegativeComplete(MyMatrix<T> const &ListVect,
       MyVector<T> LScal = ListVect * V;
       for (int iVect = 0; iVect < nbVect; iVect++) {
         if (LScal(iVect) < 0) {
-          std::cerr << "LScal=" << StringVectorGAP(LScal) << "\n";
-          std::cerr << "Negative value at iVect=" << iVect
-                    << " LScal(iVect)=" << LScal(iVect) << "\n";
+          std::cerr << "LP: LScal=" << StringVectorGAP(LScal) << "\n";
+          std::cerr << "LP: Negative value at iVect=" << iVect << "\n";
+          std::cerr << "LP: LScal(iVect)=" << LScal(iVect) << "\n";
           throw TerminalException{1};
         }
       }
       T eScal = V.dot(eVect);
       if (eScal > 0) {
-        std::cerr << "eScal=" << eScal << "\n";
-        std::cerr << "The direction is not a counter example\n";
+        std::cerr << "LP: eScal=" << eScal << "\n";
+        std::cerr << "LP: The direction is not a counter example\n";
         throw TerminalException{1};
       }
       if (eScal == 0 && !SolNonnegative) {
-        std::cerr << "eScal = 0 and no Non-negative solution were found\n";
-        std::cerr << "Possibly a bug here\n";
+        std::cerr << "LP: eScal = 0 and no Non-negative solution were found\n";
+        std::cerr << "LP: Possibly a bug here\n";
         throw TerminalException{1};
       }
       return V;
@@ -826,11 +825,11 @@ SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
   std::optional<MyVector<T>> opt2 =
       SolutionMatNonnegative_LP(ListVect, eVect, os);
   if (opt1 && !opt2) {
-    std::cerr << "opt1 is defined but not opt2, incoherent\n";
+    std::cerr << "LP: opt1 is defined but not opt2, incoherent\n";
     throw TerminalException{1};
   }
   if (!opt1 && opt2) {
-    std::cerr << "opt1 is not defined but opt2 is, incoherent\n";
+    std::cerr << "LP: opt1 is not defined but opt2 is, incoherent\n";
     throw TerminalException{1};
   }
   if (!opt1 && !opt2)
@@ -838,18 +837,18 @@ SolutionMatNonnegative_Check(MyMatrix<T> const &ListVect,
   MyVector<T> const &V = *opt1;
   int nbRow = V.size();
   if (nbRow != ListVect.rows()) {
-    std::cerr << "Dimension incoherency\n";
+    std::cerr << "LP: Dimension incoherency\n";
     throw TerminalException{1};
   }
   for (int iRow = 0; iRow < nbRow; iRow++) {
     if (V(iRow) < 0) {
-      std::cerr << "V should be non-negative\n";
+      std::cerr << "LP: V should be non-negative\n";
       throw TerminalException{1};
     }
   }
   MyVector<T> prod = ListVect.transpose() * V;
   if (prod != eVect) {
-    std::cerr << "prod does not matcheVect\n";
+    std::cerr << "LP: prod does not matcheVect\n";
     throw TerminalException{1};
   }
   return V;
@@ -872,7 +871,7 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
     MyVector<T> const &V = *opt_LP;
     int nbRow = V.size();
     if (nbRow != ListVect.rows()) {
-      std::cerr << "Dimension incoherency\n";
+      std::cerr << "LP: Dimension incoherency\n";
       local_terminate();
     }
     bool HasError = false;
@@ -880,21 +879,21 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
       T val = V(iRow);
       if (val < 0) {
         double val_d = UniversalScalarConversion<double, T>(val);
-        std::cerr << "iRow=" << iRow << " val=" << val << " val_d=" << val_d
-                  << "\n";
+        std::cerr << "LP: iRow=" << iRow << "\n";
+        std::cerr << "LP: val=" << val << " val_d=" << val_d << "\n";
         HasError = true;
       }
     }
     MyVector<T> prod = ListVect.transpose() * V;
     if (prod != eVect) {
-      std::cerr << "prod does not matcheVect\n";
-      std::cerr << "|prod|=" << prod.rows() << " / " << prod.cols() << "\n";
-      std::cerr << "|eVect|=" << eVect.rows() << " / " << eVect.cols() << "\n";
+      std::cerr << "LP: prod does not matcheVect\n";
+      std::cerr << "LP: |prod|=" << prod.rows() << " / " << prod.cols() << "\n";
+      std::cerr << "LP: |eVect|=" << eVect.rows() << " / " << eVect.cols() << "\n";
       for (int iRow = 0; iRow < prod.rows(); iRow++) {
         double prod_d = UniversalScalarConversion<double, T>(prod(iRow, 0));
         double eVect_d = UniversalScalarConversion<double, T>(eVect(iRow, 0));
-        std::cerr << "iRow=" << iRow << " prod_d=" << prod_d
-                  << " eVect_d=" << eVect_d << "\n";
+        std::cerr << "LP: iRow=" << iRow << " prod_d=" << prod_d << "\n";
+        std::cerr << "LP: eVect_d=" << eVect_d << "\n";
       }
       HasError = true;
     }
@@ -906,7 +905,7 @@ SolutionMatNonnegative_FailSafe(MyMatrix<T> const &ListVect,
   std::optional<MyVector<T>> opt_V1 =
       SolutionMatNonnegative_Version1(ListVect, eVect, os);
   if (opt_V1) {
-    std::cerr << "opt_V1 is defined but not opt_LP, incoherent\n";
+    std::cerr << "LP: opt_V1 is defined but not opt_LP, incoherent\n";
     local_terminate();
   }
   return {};
@@ -959,7 +958,7 @@ std::optional<MyVector<T>> SolutionMatStrictlyPositive(MyMatrix<T> const &ListVe
   MyVector<T> const& V = *opt;
   T mu = V(0);
   if (mu == 0) {
-    std::cerr << "We should have mu > 0.\n";
+    std::cerr << "LP: We should have mu > 0.\n";
     throw TerminalException{1};
   }
   T one(1);
@@ -1037,7 +1036,6 @@ KernelLinearDeterminedByInequalitiesAndIndices_DualMeth(MyMatrix<T> const &FAC,
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC, os);
-  //  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
   if (!eRes.eTestExist) {
     MyMatrix<T> Spa = IdentityMat<T>(nbCol);
     Face f(nbRow);
@@ -1180,13 +1178,13 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
   };
   os << "After KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
   if (!test_equa(res_dual, res_dir_lp)) {
-    std::cerr << "res_dual and res_dir_lp are not equal\n";
+    std::cerr << "LP: res_dual and res_dir_lp are not equal\n";
     f_print_all();
     throw TerminalException{1};
   }
   os << "After test_equa1\n";
   if (!test_equa(res_dual, res_dir_lp_nsp)) {
-    std::cerr << "res_dual and res_dir_lp_nsp are not equal\n";
+    std::cerr << "LP: res_dual and res_dir_lp_nsp are not equal\n";
     f_print_all();
     throw TerminalException{1};
   }
@@ -1197,7 +1195,7 @@ KernelLinearDeterminedByInequalitiesAndIndices(MyMatrix<T> const &FAC,
         MyVector<T> eRow = GetMatrixRow(FAC, i_row);
         MyVector<T> Vscal = res.first * eRow;
         if (!IsZeroVector(Vscal)) {
-          std::cerr << "The vector Vscal is not zero\n";
+          std::cerr << "LP: The vector Vscal is not zero\n";
           throw TerminalException{1};
         }
       }
@@ -1286,7 +1284,6 @@ MyMatrix<T> KernelLinearDeterminedByInequalities(MyMatrix<T> const &FAC,
   int nbCol = FAC.cols();
   int nbRow = FAC.rows();
   PosRelRes<T> eRes = SearchPositiveRelationSimple_Direct(FAC, os);
-  //  std::cerr << "eRes.eTestExist=" << eRes.eTestExist << "\n";
   if (!eRes.eTestExist) {
     return IdentityMat<T>(nbCol);
   } else {
@@ -1370,8 +1367,8 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
   LpSolution<T> eSol =
       CDD_LinearProgramming(ListInequalities, ToBeMinimized, os);
   if (!eSol.PrimalDefined || !eSol.DualDefined) {
-    std::cerr << "Failed to find an interior point by linear programming\n";
-    std::cerr << "Maybe the cone is actually not full dimensional\n";
+    std::cerr << "LP: Failed to find an interior point by linear programming\n";
+    std::cerr << "LP: Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
   MyVector<T> eVect = eSol.DirectSolution;
@@ -1380,7 +1377,7 @@ MyVector<T> GetSpaceInteriorPoint_Basic(MyMatrix<T> const &FAC,
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScal(i_row);
     if (eScal <= 0) {
-      std::cerr << "We have eScal=" << eScal << " which should be positive\n";
+      std::cerr << "LP: We have eScal=" << eScal << " which should be positive\n";
       throw TerminalException{1};
     }
   }
@@ -1417,7 +1414,7 @@ bool TestCriterionNonDegenerate(
   }
   os << "LP: 2: TheSum=" << StringVectorGAP(TheSum) << "\n";
   if (!IsZeroVector(TheSum)) {
-    std::cerr << "The vector TheSum should be zero\n";
+    std::cerr << "LP: The vector TheSum should be zero\n";
     throw TerminalException{1};
   }
   std::vector<MyVector<T>> vect_incd1;
@@ -1437,7 +1434,7 @@ bool TestCriterionNonDegenerate(
     MyVector<T> eRow = GetMatrixRow(ListIneq, i_row);
     T scal = eRow.dot(DirectSolutionExt);
     if (scal < 0) {
-      std::cerr << "The scalar product is negative, which is not allowed\n";
+      std::cerr << "LP: The scalar product is negative, which is not allowed\n";
       throw TerminalException{1};
     }
     if (scal == 0) {
@@ -1487,11 +1484,11 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
     int len = FAC.rows();
     for (int i = 0; i < len; i++) {
       MyVector<T> eFAC = GetMatrixRow(FAC, i);
-      os << "i=" << i << " |eFAC|=" << eFAC.size() << " |retV|=" << Vret.size()
+      os << "LP: i=" << i << " |eFAC|=" << eFAC.size() << " |retV|=" << Vret.size()
          << "\n";
       T scal = eFAC.dot(Vret);
       if (scal <= 0) {
-        std::cerr << "We should have strictly positive scalar product\n";
+        std::cerr << "LP: We should have strictly positive scalar product\n";
         throw TerminalException{1};
       }
     }
@@ -1521,8 +1518,8 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   os << "LP: GGUIP, CDD_LinearProgramming, after\n";
 #endif
   if (!eSol.PrimalDefined || !eSol.DualDefined) {
-    std::cerr << "Failed to find an interior point by linear programming\n";
-    std::cerr << "Maybe the cone is actually not full dimensional\n";
+    std::cerr << "LP: Failed to find an interior point by linear programming\n";
+    std::cerr << "LP: Maybe the cone is actually not full dimensional\n";
     throw TerminalException{1};
   }
   bool is_non_degenerate =
@@ -1568,7 +1565,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
      << " |pair.first|=" << pair.first.rows() << " / " << pair.first.cols()
      << " RankMat(pair.first)=" << RankMat(pair.first) << "\n";
   if (pair.first.rows() == 0) {
-    std::cerr << "The dimension is 0 which is impossible\n";
+    std::cerr << "LP: The dimension is 0 which is impossible\n";
     throw TerminalException{1};
   }
 #endif
@@ -1615,7 +1612,7 @@ MyVector<T> GetGeometricallyUniqueInteriorPoint(MyMatrix<T> const &FAC,
   MyVector<T> V = NSP.transpose() * SolSubspace;
 #ifdef DEBUG_GEOMETRICALLY_UNIQUE
   if (V(0) <= 0) {
-    std::cerr << "The first coordinate should be strictly positive\n";
+    std::cerr << "LP: The first coordinate should be strictly positive\n";
     throw TerminalException{1};
   }
 #endif
@@ -1644,7 +1641,7 @@ MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
   for (int i_row = 0; i_row < FAC.rows(); i_row++) {
     T eScal = ListScal_FAC(i_row);
     if (eScal <= 0) {
-      std::cerr << "We have eScal=" << eScal << " which should be positive\n";
+      std::cerr << "LP: We have eScal=" << eScal << " which should be positive\n";
       throw TerminalException{1};
     }
   }
@@ -1652,7 +1649,7 @@ MyVector<T> GetSpaceInteriorPoint(MyMatrix<T> const &FAC,
   for (int i_row = 0; i_row < Equa.rows(); i_row++) {
     T eScal = ListScal_Equa(i_row);
     if (eScal != 0) {
-      std::cerr << "We have eScal=" << eScal << " which should be zero\n";
+      std::cerr << "LP: We have eScal=" << eScal << " which should be zero\n";
       throw TerminalException{1};
     }
   }
@@ -1667,7 +1664,7 @@ MyVector<T> GetSpaceInteriorPointFace(MyMatrix<T> const &FAC, Face const &f,
   int n = FAC.cols();
   int n_f = f.size();
   if (n_row != n_f) {
-    std::cerr << "FAC and f have incoherent lengths\n";
+    std::cerr << "LP: FAC and f have incoherent lengths\n";
     throw TerminalException{1};
   }
   int cnt = f.count();
@@ -1710,8 +1707,8 @@ EmbeddedPolytope<T> ComputeEmbeddedPolytope(MyMatrix<T> const &ListIneq,
   MyMatrix<T> FinalSpace = (LinSpa.transpose()) * NSP;
   std::optional<MyMatrix<T>> eRes = AffinizeSubspace(FinalSpace);
   if (!eRes) {
-    std::cerr << "Call to ComputeEmbeddedPolytope failed\n";
-    std::cerr << "Because the affinization operation failed\n";
+    std::cerr << "LP: Call to ComputeEmbeddedPolytope failed\n";
+    std::cerr << "LP: Because the affinization operation failed\n";
     throw TerminalException{1};
   }
   MyMatrix<T> FinalSpace_Aff = *eRes;
@@ -1725,8 +1722,8 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
   size_t n_rows = EXT.rows();
   if (dim == 2) {
     if (n_rows != 2) {
-      std::cerr << "SAMP: In dimension 2, the cone should have exactly\n";
-      std::cerr << "SAMP: two extreme rays\n";
+      std::cerr << "LP: In dimension 2, the cone should have exactly\n";
+      std::cerr << "LP: two extreme rays\n";
       throw TerminalException{1};
     }
     vectface vf_ret(2);
@@ -1741,11 +1738,11 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
   MicrosecondTime time;
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: Before Kernel_FindSingleVertex\n";
+  os << "LP: Before Kernel_FindSingleVertex\n";
 #endif
   Face eSet = Kernel_FindSingleVertex(EXT, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: Kernel_FindSingleVertex|=" << time << "\n";
+  os << "|LP: Kernel_FindSingleVertex|=" << time << "\n";
 #endif
   // Here we use a trick that the ColumnReduction will select the first column
   // and so will return a matrix that is polytopal
@@ -1754,31 +1751,31 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
   MyMatrix<T> EXTsel_pre2 = SelectColumn(EXTsel_pre1, l_cols);
   MyMatrix<T> EXTsel = SetIsobarycenter(EXTsel_pre2); // Essential step, selecting a subset offsets the isobarycenter.
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: SelectRow / SelectColumn / ColumnReductionSet|=" << time << "\n";
+  os << "|LP: SelectRow / SelectColumn / ColumnReductionSet|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: |EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
+  os << "LP: |EXTsel|=" << EXTsel.rows() << " / " << EXTsel.cols()
      << " rnk=" << RankMat(EXTsel) << "\n";
 #endif
 #ifdef SANITY_CHECK_FULL_RANK_FACET_SET
   if (!IsPolytopal(EXTsel)) {
-    std::cerr << "SAMP: The configuration EXTsel is not polytopal\n";
+    std::cerr << "LP: The configuration EXTsel is not polytopal\n";
     throw TerminalException{1};
   }
 #endif
   vectface ListRidge = Kernel_GetFullRankFacetSet(EXTsel, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: ListRidge|=" << time << "\n";
+  os << "|LP: ListRidge|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: We have ListRidge\n";
+  os << "LP: We have ListRidge\n";
 #endif
   SimplifiedFlippingFramework<T> RPLlift(EXT, eSet, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: FlippingFramework|=" << time << "\n";
+  os << "|LP: FlippingFramework|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: We have FlippingFramework\n";
+  os << "LP: We have FlippingFramework\n";
 #endif
   vectface vf_ret(n_rows);
   vf_ret.push_back(eSet);
@@ -1787,10 +1784,10 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
     vf_ret.push_back(eFace);
   }
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: vf_ret|=" << time << "\n";
+  os << "|LP: vf_ret|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: We have vf_ret\n";
+  os << "LP: We have vf_ret\n";
 #endif
 #ifdef SANITY_CHECK_FULL_RANK_FACET_SET
   MyMatrix<T> FACsamp(vf_ret.size(), dim);
@@ -1801,7 +1798,7 @@ vectface Kernel_GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
     pos++;
   }
   if (RankMat(FACsamp) != static_cast<int>(dim)) {
-    std::cerr << "SAMP: Failed to find a ful rank vector configuration\n";
+    std::cerr << "LP: Failed to find a ful rank vector configuration\n";
     throw TerminalException{1};
   }
 #endif
@@ -1815,28 +1812,47 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 #endif
   MyMatrix<T> EXT_B = ColumnReduction(EXT);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: ColumnReduction|=" << time << "\n";
+  os << "|LP: ColumnReduction|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: Before Polytopization\n";
+  os << "LP: Before Polytopization\n";
 #endif
   MyMatrix<T> EXT_C = Polytopization(EXT_B, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: Polytopization|=" << time << "\n";
+  os << "|LP: Polytopization|=" << time << "\n";
 #endif
   MyMatrix<T> EXT_D = SetIsobarycenter(EXT_C);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: SetIsobarycenter|=" << time << "\n";
+  os << "|LP: SetIsobarycenter|=" << time << "\n";
 #endif
 #ifdef DEBUG_FULL_RANK_FACET_SET
-  os << "SAMP: Before Kernel_GetFullRankFacetSet\n";
+  os << "LP: Before Kernel_GetFullRankFacetSet\n";
 #endif
   vectface vf = Kernel_GetFullRankFacetSet(EXT_D, os);
 #ifdef TIMINGS_FULL_RANK_FACET_SET
-  os << "|SAMP: Kernel_GetFullRankFacetSet|=" << time << "\n";
+  os << "|LP: Kernel_GetFullRankFacetSet|=" << time << "\n";
 #endif
   return vf;
 }
+
+/*
+  Testing if the cone defined by the inequalities is actually
+  a polytope.
+  That means finding that all the 
+ */
+template <typename T>
+bool is_bounded_polytope(MyMatrix<T> const& FAC, std::ostream &os) {
+  int dim = FAC.cols();
+  MyVector<T> IneqFund(dim);
+  IneqFund(0) = 1;
+  std::optional<MyVector<T>> opt = SolutionMatStrictlyPositive(FAC, IneqFund, os);
+  if (opt) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_LINEARPROGRAMMING_H_

@@ -411,9 +411,9 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
   }
 }
 
+// Find the robust closest minimum with the lambda expression.
 template<typename T, typename Tint>
 ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, [[maybe_unused]] std::ostream& os) {
-
   ResultRobustClosest<T,Tint> result;
   auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, [[maybe_unused]] std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
     result = {min, list_min_parallelepipeds};
@@ -422,12 +422,6 @@ ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solv
   compute_robust_close_f(solver, eV, f_insert, os);
   return result;
 }
-
-
-
-
-
-
 
 template<typename T, typename Tint>
 T random_estimation_robust_covering(MyMatrix<T> const& GramMat, size_t n_iter, std::ostream & os) {
@@ -456,6 +450,212 @@ T random_estimation_robust_covering(MyMatrix<T> const& GramMat, size_t n_iter, s
   }
   return max_cov;
 }
+
+
+
+
+template<typename Tint>
+struct GenericRobustM {
+  int index;
+  MyMatrix<Tint> M;
+  MyVector<Tint> v_short() const {
+    return GetMatrixRow(M, index);
+  }
+};
+
+
+
+
+
+template<typename T, typename Tint>
+struct ExtendedGenericRobustM {
+  T min;
+  bool is_correct;
+  GenericRobustM<Tint> robust_m;
+};
+
+
+
+template<typename T, typename Tint>
+ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyMatrix<T> const&G, MyVector<T> const& eV) {
+  T min(0);
+  int best_index = 0;
+  int n_ineq = M.rows();
+  size_t n_att = 0;
+  for (int index=0; index<n_ineq; index++) {
+    MyVector<Tint> fV = GetMatrixRow(M, index);
+    MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
+    T norm = EvaluationQuadForm(G, diff);
+    if (index == 0) {
+      min = norm;
+      best_index = index;
+      n_att = 1;
+    } else {
+      if (norm == min) {
+        n_att += 1;
+      } else {
+        if (norm < min) {
+          min = norm;
+          best_index = index;
+          n_att = 1;
+        }
+      }
+    }
+  }
+  bool is_correct = true;
+  if (n_att > 1) {
+    is_correct = false;
+  }
+  GenericRobustM<Tint> robust_m{best_index, M};
+  return {min, is_correct, robust_m};
+};
+
+template<typename T, typename Tint>
+struct InitialVoronoiData {
+  GenericRobustM<Tint> robust_m_min;
+  std::vector<GenericRobustM<Tint>> list_robust_m;
+  MyMatrix<T> FAC;
+};
+
+/*
+  We have G[x - v_short] <= G[x - v_long]
+  So,
+  -2 x G v_short + G[v_short] <= -2 x G v_long + G[v_long]
+  which gets
+  0 <= G[v_long] - G[v_short] + x ( 2 G (v_short - v_long))
+ */
+template<typename T, typename Tint>
+MyVector<T> get_ineq(MyMatrix<T> const& G, MyVector<Tint> const& v_short, MyVector<Tint> const& v_long) {
+  int dim = G.rows();
+  T norm_short = EvaluationQuadForm(G, v_short);
+  T norm_long = EvaluationQuadForm(G, v_long);
+  MyVector<Tint> diff = v_short - v_long;
+  MyVector<T> diff_T = UniversalVectorConversion<T,Tint>(diff);
+  MyVector<T> G_v = G * diff_T;
+  MyVector<T> ineq(1 + dim);
+  ineq(0) = norm_long - norm_short;
+  for (int i=0; i<dim; i++) {
+    ineq(1+i) = 2 * G_v(i);
+  }
+  return ineq;
+}
+
+template<typename T, typename Tint>
+void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, std::vector<MyVector<T>> & ListIneq) {
+  int n_row = robust_m.M.rows();
+  MyVector<Tint> v_short = robust_m.v_short();
+  for (int i=0; i<n_row; i++) {
+    if (i != robust_m.index) {
+      MyVector<Tint> v_long = GetMatrixRow(robust_m.M, i);
+      MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+      ListIneq.push_back(eIneq);
+    }
+  }
+}
+
+template<typename T, typename Tint>
+void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, MyVector<Tint> const& v_short, std::vector<MyVector<T>> & ListIneq) {
+  int n_row = robust_m.M.rows();
+  for (int i=0; i<n_row; i++) {
+    MyVector<Tint> v_long = GetMatrixRow(robust_m.M, i);
+    MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+    ListIneq.push_back(eIneq);
+  }
+}
+
+
+
+
+
+// Find the defining inequalities of a polytope.
+// It should fail and return None if the point eV is not generic enough.
+// Which should lead to an increase in randomness.
+template<typename T, typename Tint>
+std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
+  MyMatrix<T> const& G = solver.GramMat;
+  // Working variables
+  bool is_correct = true;
+  InitialVoronoiData<T,Tint> ivd;
+  // The lambda function.
+  auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
+    if (list_min_parallelepipeds.size() > 1) {
+      // Terminate the enumeration
+      is_correct = false;
+      return true;
+    }
+    std::vector<MyVector<T>> ListIneq;
+    MyMatrix<Tint> const& min_m = list_min_parallelepipeds[0];
+    ExtendedGenericRobustM<T, Tint> ext_robust_m_min = get_generic_robust_m(min_m, G, eV);
+    if (!ext_robust_m_min.is_correct) {
+      is_correct = false;
+      return true;
+    }
+    if (min == 0) {
+      is_correct = false;
+      return true;
+    }
+    GenericRobustM<Tint> const& robust_m_min = ext_robust_m_min.robust_m;
+    insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq);
+    MyVector<Tint> v_short = robust_m_min.v_short();
+    std::vector<GenericRobustM<Tint>> list_robust_m;
+    for (auto& eM: tot_list_parallelepipeds) {
+      if (eM != min_m) {
+        ExtendedGenericRobustM<T,Tint> ext_robust_m = get_generic_robust_m(eM, G, eV);
+        if (!ext_robust_m.is_correct) {
+          is_correct = false;
+          return true;
+        }
+        GenericRobustM<Tint> const& robust_m = ext_robust_m_min.robust_m;
+        if (ext_robust_m.min <= min) {
+          std::cerr << "ROBUST: The parallelepiped has an even lower minimum\n";
+          throw TerminalException{1};
+        }
+        insert_inner_ineqs_parallelepiped(robust_m, G, ListIneq);
+        insert_outer_ineqs_parallelepiped(robust_m, G, v_short, ListIneq);
+        list_robust_m.push_back(robust_m);
+      }
+    }
+    MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
+    bool test = is_bounded_polytope(FAC, os);
+    if (test) {
+      ivd = InitialVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC};
+      return true;
+    } else {
+      return false;
+    }
+    return true;
+  };
+  compute_robust_close_f(solver, eV, f_insert, os);
+  if (is_correct) {
+    return ivd;
+  } else {
+    return {};
+  }
+}
+
+template<typename T, typename Tint>
+InitialVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, std::ostream& os) {
+  int dim = solver.GramMat.rows();
+  int denom = 2;
+  MyVector<T> eV(dim);
+  while(true) {
+    T denom_T(denom);
+    for (int i=0; i<dim; i++) {
+      int val = random() % denom;
+      T val_T(val);
+      eV(i) = val_T / denom_T;
+    }
+    std::optional<InitialVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, eV, os);
+    if (opt) {
+      return *opt;
+    }
+    denom += 1;
+  }
+}
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-PROGRAM		= Robust_RandomEstimation
+PROGRAM		= Robust_RandomEstimation Robust_InitialVoronoiData
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
