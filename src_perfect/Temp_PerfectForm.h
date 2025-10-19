@@ -814,10 +814,10 @@ size_t SimplePerfect_Invariant(size_t const &seed,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
-                                MyMatrix<T> const &eMat,
-                                Tshortest<T, Tint> const &RecSHV,
-                                std::ostream& os) {
+std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
+                                                                        MyMatrix<T> const &eMat,
+                                                                        Tshortest<T, Tint> const &RecSHV,
+                                                                        std::ostream& os) {
   //
   // Functionality for checking quality of equivalences
   //
@@ -833,13 +833,18 @@ Tgroup SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T == SHV_T\n";
 #endif
-    return result.get_perm_group(SHV_T, os);
+    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa);
+    std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+    Tgroup GRP = result.get_perm_group(SHV_T, os);
+    return {GRP, l_matr};
   } else {
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T != SHV_T\n";
 #endif
-    std::vector<MyMatrix<T>> l_matr = result.get_list_matrix(SHV_T, eMat, LinSpa);
-    return get_perm_group_from_list_matrices<T,Tgroup>(l_matr, SHVorig_T, os);
+    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa);
+    std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+    Tgroup GRP = get_perm_group_from_list_matrices<T,Tgroup>(l_matr_t, SHVorig_T, os);
+    return {GRP, l_matr};
   }
 }
 

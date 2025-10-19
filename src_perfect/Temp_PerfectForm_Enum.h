@@ -102,7 +102,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       NakedPerfect<T, Tint> eNaked =
         GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
       Tgroup GRPshv =
-        SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData.LinSpa, ePERF.Gram, RecSHV, os);
+        SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData.LinSpa, ePERF.Gram, RecSHV, os).first;
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
                                                    IntToString(eEntry) + "/");

@@ -197,6 +197,7 @@ struct DataPerfectTspaceFunc {
       return {};
     }
     MyMatrix<Tint> eBigMat = *opt;
+    data.onl_gens.insert_generator(eBigMat);
     TadjO ret{y.eInc, eBigMat};
     return ret;
   }
@@ -210,7 +211,11 @@ struct DataPerfectTspaceFunc {
 
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
-    x.GRP = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
+    std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
+    x.GRP = pair.first;
+    for (auto & eGenMat: pair.second) {
+      data.onl_gens.insert_generator(eGenMat);
+    }
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: After x.GRP set\n";
 #endif
