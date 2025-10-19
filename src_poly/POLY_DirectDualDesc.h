@@ -109,6 +109,9 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     std::cerr << "DDD: FileI = " << FileI << "\n";
     std::cerr << "DDD: FileO = " << FileO << "\n";
     std::cerr << "DDD: FileE = " << FileE << "\n";
+    std::string order_b = "cat " + FileE;
+    int iret2 = system(order_b.c_str());
+    std::cerr << "DDD: iret2=" << iret2 << "\n";
     throw TerminalException{1};
   };
   {

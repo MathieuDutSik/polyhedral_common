@@ -10,7 +10,7 @@ name: CI(16) of dual description using symmetries
 on:
   # One time per month
   schedule:
-    - cron: "0 0 19 * *"
+    - cron: "0 0 20 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
