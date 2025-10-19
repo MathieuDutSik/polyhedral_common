@@ -28,7 +28,7 @@ void process_A(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, std::cerr);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   //
-  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, std::move(rddo)};
+  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, std::cerr), std::move(rddo)};
   using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

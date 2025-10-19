@@ -4,6 +4,7 @@
 
 // clang-format off
 #include "LatticeStabEquiCan.h"
+#include "OnlineExhaustiveReduction.h"
 #include "Temp_PerfectForm.h"
 #include "POLY_lrslib.h"
 #include "Positivity.h"
@@ -69,6 +70,7 @@ template <typename Tint> struct PerfectTspace_AdjO {
 template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectTspace {
   LinSpaceMatrix<T> LinSpa;
+  OnlineHierarchicalMatrixReduction<Tint> onl_gens;
   RecordDualDescOperation<T, Tgroup> rddo;
   std::ostream &get_os() { return rddo.os; }
 };

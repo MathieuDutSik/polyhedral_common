@@ -616,7 +616,7 @@ std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<
       }
     }
     MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-    bool test = is_bounded_polytope(FAC, os);
+    bool test = is_full_dimensional_bounded_polytope(FAC, os);
     if (test) {
       ivd = InitialVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC};
       return true;

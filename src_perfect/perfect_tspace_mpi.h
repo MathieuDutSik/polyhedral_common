@@ -51,7 +51,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
-  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, std::move(rddo)};
+  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, os), std::move(rddo)};
   using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

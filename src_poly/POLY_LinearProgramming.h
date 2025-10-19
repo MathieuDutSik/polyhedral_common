@@ -1838,10 +1838,31 @@ vectface GetFullRankFacetSet(const MyMatrix<T> &EXT, std::ostream &os) {
 /*
   Testing if the cone defined by the inequalities is actually
   a polytope.
-  That means finding that all the 
+  A polytope is bounded if and only if all the vertices of
+  the cone satisfy v[1] > 0 for v <> 0.
+  -------
+  Facts:
+  + Since the cone is full dimensional, we know that if there
+    if a vector in the cone then at least one of the inequality
+    is not equal to 0
+  ----
+  (A) If the linear form phi(v) = v[1] is a sum with strictly
+      positive coefficients of FAC, then we have that phi(v) > 0
+      for v <> 0. This is because one of the inequality in FAC
+      is strictly not matched.
+  (B) If there is no expression with strictly positive coefficient.
+      + If there is an expression with non-negative coefficients,
+        then there is a vector in the cone with phi(v) = 0.
+        And so that makes it unbounded.
+      + If there is no expression with non-negative coefficients,
+        then there is a vector v with phi(v) < 0. That does not
+        even define an unbounded polytope.
  */
 template <typename T>
-bool is_bounded_polytope(MyMatrix<T> const& FAC, std::ostream &os) {
+bool is_full_dimensional_bounded_polytope(MyMatrix<T> const& FAC, std::ostream &os) {
+  if (!IsFullDimensional(FAC, os)) {
+    return false;
+  }
   int dim = FAC.cols();
   MyVector<T> IneqFund(dim);
   IneqFund(0) = 1;
