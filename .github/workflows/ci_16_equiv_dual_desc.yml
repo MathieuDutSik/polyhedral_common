@@ -10,7 +10,7 @@ name: CI(16) of dual description using symmetries
 on:
   # One time per month
   schedule:
-    - cron: "0 0 20 * *"
+    - cron: "0 0 21 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -119,8 +119,15 @@ jobs:
           cd PPL
           autoreconf -i
           ./configure && make
+          echo "Build test code, step 1"
+          pwd
+          echo "Build test code, step 2"
           mkdir -p /home/runner/.local/bin/
-          ln -s /home/runner/PPL/./demos/ppl_lcdd/.libs/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
+          echo "Build test code, step 3"
+          echo $PATH
+          echo "Build test code, step 4"
+          ln -s /home/runner/PPL/demos/ppl_lcdd/.libs/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
+          echo "Build test code, step 5"
 
       - name: Test dual description using symmetries
         run: |

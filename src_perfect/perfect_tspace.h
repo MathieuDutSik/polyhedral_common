@@ -198,7 +198,7 @@ struct DataPerfectTspaceFunc {
     }
     MyMatrix<Tint> eBigMat = *opt;
     data.onl_gens.insert_generator(eBigMat);
-    os << "PERF_TSPACE: |onl_gens|=" << data.onl_gens.size() << "\n";
+    os << "PERF_TSPACE: A, |onl_gens|=" << data.onl_gens.size() << "\n";
     TadjO ret{y.eInc, eBigMat};
     return ret;
   }
@@ -217,7 +217,7 @@ struct DataPerfectTspaceFunc {
     for (auto & eGenMat: pair.second) {
       data.onl_gens.insert_generator(eGenMat);
     }
-    os << "PERF_TSPACE: |onl_gens|=" << data.onl_gens.size() << "\n";
+    os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: After x.GRP set\n";
 #endif
