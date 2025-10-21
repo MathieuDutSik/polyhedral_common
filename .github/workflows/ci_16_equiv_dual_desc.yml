@@ -10,7 +10,7 @@ name: CI(16) of dual description using symmetries
 on:
   # One time per month
   schedule:
-    - cron: "0 0 21 * *"
+    - cron: "0 0 22 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -115,19 +115,19 @@ jobs:
           # Downloading and installing PPL
           # We cannot do a "make install" since it requires doxygen, latex and a lot of other
           # stuff that is not great for CI.
+          cd /home/runner/
           git clone https://github.com/BUGSENG/PPL
           cd PPL
           autoreconf -i
           ./configure && make
-          echo "Build test code, step 1"
+          echo "After PPL compilation"
           pwd
-          echo "Build test code, step 2"
           mkdir -p /home/runner/.local/bin/
-          echo "Build test code, step 3"
+          echo "After directory creation"
           echo $PATH
-          echo "Build test code, step 4"
+          echo "After echo PATH"
           ln -s /home/runner/PPL/demos/ppl_lcdd/.libs/ppl_lcdd /home/runner/.local/bin/ppl_lcdd
-          echo "Build test code, step 5"
+          echo "After linking"
 
       - name: Test dual description using symmetries
         run: |

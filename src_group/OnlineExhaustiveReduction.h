@@ -238,20 +238,15 @@ public:
     return total_complexity;
   }
 
-  // Get number of generators
-  size_t size() const {
-    return vect.size();
-  }
-
-  // Check if empty
-  bool empty() const {
-    return vect.empty();
-  }
-
   // Clear all generators
   void clear() {
     map.clear();
     vect.clear();
+  }
+
+  // Get number of generators
+  size_t size() const {
+    return vect.size();
   }
 };
 
