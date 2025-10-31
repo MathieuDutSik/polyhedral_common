@@ -31,6 +31,11 @@ Tshortest<T,Tint> shortest_get_half(Tshortest<T,Tint> const& rec_shv) {
   return {rec_shv.min, std::move(SHV)};
 }
 
+template <typename T, typename Tint>
+Tshortest<T,Tint> apply_transformation(Tshortest<T,Tint> const& rec_shv, MyMatrix<Tint> const& P) {
+  MyMatrix<Tint> SHV = rec_shv.SHV * P;
+  return {rec_shv.min, SHV};
+}
 
 template <typename T, typename Tint>
 Tshortest<T, Tint> SelectShortestVector(MyMatrix<T> const &eMat,

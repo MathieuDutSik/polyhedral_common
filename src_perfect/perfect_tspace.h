@@ -56,6 +56,24 @@ struct PerfectTspace_Obj {
   Tgroup GRP;
 };
 
+template <typename T, typename Tint, typename Tgroup>
+void check_correctness(PerfectTspace_Obj<T,Tint,Tgroup> const& po) {
+  int n_row = po.RecSHV.SHV.rows();
+  T min = po.RecSHV.min;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = GetMatrixRow(po.RecSHV.SHV, i_row);
+    T norm = EvaluationQuadForm<T,Tint>(po.Gram, V);
+    if (min != norm) {
+      std::cerr << "PERF: inconsistency at i_row=" << i_row << "\n";
+      std::cerr << "PERF: norm=" << norm << " min=" << min << "\n";
+      throw TerminalException{1};
+    }
+  }
+}
+
+
+
+
 template <typename T, typename Tint> struct PerfectTspace_AdjI {
   Face eInc;
   MyMatrix<T> Gram;
@@ -74,6 +92,49 @@ struct DataPerfectTspace {
   RecordDualDescOperation<T, Tgroup> rddo;
   std::ostream &get_os() { return rddo.os; }
 };
+
+
+template <typename T, typename Tint>
+std::pair<MyMatrix<Tint>, MyMatrix<T>> get_reduced_gram(OnlineHierarchicalMatrixReduction<Tint> const& onl_gens, MyMatrix<T> const& g) {
+  std::vector<MyMatrix<Tint>> l_gens = onl_gens.get_current_matrix_t();
+  std::vector<MyMatrix<T>> l_gens_T = UniversalStdVectorMatrixConversion<T,Tint>(l_gens);
+  size_t n_gen = l_gens.size();
+  int n = g.rows();
+  auto norm=[&](MyMatrix<T> const& M) -> T {
+    T e_norm(0);
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        e_norm += T_abs(M(i,j));
+      }
+    }
+    return e_norm;
+  };
+  MyMatrix<Tint> P = IdentityMat<Tint>(n);
+  MyMatrix<T> g_ret = g;
+  T norm_ret = norm(g);
+  auto atp_improve=[&]() -> bool {
+    for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+      MyMatrix<T> const& egen = l_gens_T[i_gen];
+      MyMatrix<T> prod = egen * g_ret * egen.transpose();
+      T norm_atp = norm(prod);
+      if (norm_atp < norm_ret) {
+        norm_ret = norm_atp;
+        g_ret = prod;
+        P = l_gens[i_gen] * P;
+        return true;
+      }
+    }
+    return false;
+  };
+  while(1) {
+    bool test = atp_improve();
+    if (!test) {
+      break;
+    }
+  }
+  return {P, g_ret};
+}
+
 
 
 template <typename T, typename Tint, typename Tgroup>
@@ -198,28 +259,42 @@ struct DataPerfectTspaceFunc {
     }
     MyMatrix<Tint> eBigMat = *opt;
     data.onl_gens.insert_generator(eBigMat);
+#ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: A, |onl_gens|=" << data.onl_gens.size() << "\n";
+#endif
     TadjO ret{y.eInc, eBigMat};
     return ret;
   }
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
     Tobj x_ret{y.Gram, y.RecSHV, {}};
-    MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
+#ifdef DEBUG_PERFECT_TSPACE
+    check_correctness(x_ret);
+#endif
+    std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = get_reduced_gram(data.onl_gens, y.Gram);
+    MyMatrix<Tint> Pinv = Inverse(pair.first);
+    Tshortest<T,Tint> RecSHV = apply_transformation(y.RecSHV, Pinv);
+    Tobj x_reduced{pair.second, RecSHV, {}};
+#ifdef DEBUG_PERFECT_TSPACE
+    check_correctness(x_reduced);
+#endif
+    MyMatrix<Tint> eBigMat = Pinv;
     TadjO ret{y.eInc, eBigMat};
-    return {x_ret, ret};
+    return {x_reduced, ret};
   }
 
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair = SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV, os);
     x.GRP = pair.first;
+#ifdef DEBUG_PERFECT_TSPACE
+    os << "PERF_TSPACE: After x.GRP set\n";
+#endif
     for (auto & eGenMat: pair.second) {
       data.onl_gens.insert_generator(eGenMat);
     }
-    os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
 #ifdef DEBUG_PERFECT_TSPACE
-    os << "PERF_TSPACE: After x.GRP set\n";
+    os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
 #endif
     return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, x.GRP, os);
   }
