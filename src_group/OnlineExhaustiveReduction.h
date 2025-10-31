@@ -327,7 +327,7 @@ public:
     inner.clear();
   }
   size_t size() {
-    inner.size();
+    return inner.size();
   }
 };
 
@@ -402,7 +402,7 @@ public:
     inner.clear();
   }
   size_t size() const {
-    inner.size();
+    return inner.size();
   }
 };
 
