@@ -51,7 +51,13 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
-  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, os), std::move(rddo)};
+  bool keep_generators = true;
+  bool reduce_gram_matrix = true;
+  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa,
+                                          OnlineHierarchicalMatrixReduction<Tint>(n, os),
+                                          keep_generators,
+                                          reduce_gram_matrix,
+                                          std::move(rddo)};
   using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
@@ -74,7 +80,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
       bool result = WriteFamilyObjects_MPI<DataPerfectTspace<T, Tint, Tgroup>, Tobj, TadjO>(
           comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
-        std::cerr << "PERFTSPACEMPI: Failed to find a matching entry for OutFormat=" 
+        std::cerr << "PERFTSPACEMPI: Failed to find a matching entry for OutFormat="
                   << OutFormat << "\n";
         throw TerminalException{1};
       }
@@ -88,7 +94,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tdata, typename Tobj, typename TadjO>
-bool WriteFamilyObjects_MPI([[maybe_unused]] boost::mpi::communicator const &comm, 
+bool WriteFamilyObjects_MPI([[maybe_unused]] boost::mpi::communicator const &comm,
                           [[maybe_unused]] Tdata const &data,
                           std::string const &OutFormat,
                           std::ostream &os_out,

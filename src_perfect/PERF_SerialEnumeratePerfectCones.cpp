@@ -28,7 +28,13 @@ void process_A(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, std::cerr);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   //
-  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, std::cerr), std::move(rddo)};
+  bool keep_generators = false;
+  bool reduce_gram_matrix = false;
+  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa,
+                                          OnlineHierarchicalMatrixReduction<Tint>(n, std::cerr),
+                                          keep_generators,
+                                          reduce_gram_matrix,
+                                          std::move(rddo)};
   using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;

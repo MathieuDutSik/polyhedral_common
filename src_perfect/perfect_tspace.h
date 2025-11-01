@@ -89,6 +89,8 @@ template <typename T, typename Tint, typename Tgroup>
 struct DataPerfectTspace {
   LinSpaceMatrix<T> LinSpa;
   OnlineHierarchicalMatrixReduction<Tint> onl_gens;
+  bool keep_generators;
+  bool reduce_gram_matrix;
   RecordDualDescOperation<T, Tgroup> rddo;
   std::ostream &get_os() { return rddo.os; }
 };
@@ -258,10 +260,12 @@ struct DataPerfectTspaceFunc {
       return {};
     }
     MyMatrix<Tint> eBigMat = *opt;
-    data.onl_gens.insert_generator(eBigMat);
+    if (data.keep_generators) {
+      data.onl_gens.insert_generator(eBigMat);
 #ifdef DEBUG_PERFECT_TSPACE
-    os << "PERF_TSPACE: A, |onl_gens|=" << data.onl_gens.size() << "\n";
+      os << "PERF_TSPACE: A, |onl_gens|=" << data.onl_gens.size() << "\n";
 #endif
+    }
     TadjO ret{y.eInc, eBigMat};
     return ret;
   }
@@ -271,16 +275,22 @@ struct DataPerfectTspaceFunc {
 #ifdef DEBUG_PERFECT_TSPACE
     check_correctness(x_ret);
 #endif
-    std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = get_reduced_gram(data.onl_gens, y.Gram);
-    MyMatrix<Tint> Pinv = Inverse(pair.first);
-    Tshortest<T,Tint> RecSHV = apply_transformation(y.RecSHV, Pinv);
-    Tobj x_reduced{pair.second, RecSHV, {}};
+    if (data.reduce_gram_matrix) {
+      std::pair<MyMatrix<Tint>, MyMatrix<T>> pair = get_reduced_gram(data.onl_gens, y.Gram);
+      MyMatrix<Tint> Pinv = Inverse(pair.first);
+      Tshortest<T,Tint> RecSHV = apply_transformation(y.RecSHV, Pinv);
+      Tobj x_reduced{pair.second, RecSHV, {}};
 #ifdef DEBUG_PERFECT_TSPACE
-    check_correctness(x_reduced);
+      check_correctness(x_reduced);
 #endif
-    MyMatrix<Tint> eBigMat = Pinv;
-    TadjO ret{y.eInc, eBigMat};
-    return {x_reduced, ret};
+      MyMatrix<Tint> eBigMat = Pinv;
+      TadjO ret{y.eInc, eBigMat};
+      return {x_reduced, ret};
+    } else {
+      MyMatrix<Tint> eBigMat = IdentityMat<Tint>(data.LinSpa.n);
+      TadjO ret{y.eInc, eBigMat};
+      return {x_ret, ret};
+    }
   }
 
   std::vector<TadjI> f_adj(Tobj &x) {
@@ -290,8 +300,10 @@ struct DataPerfectTspaceFunc {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: After x.GRP set\n";
 #endif
-    for (auto & eGenMat: pair.second) {
-      data.onl_gens.insert_generator(eGenMat);
+    if (data.keep_generators) {
+      for (auto & eGenMat: pair.second) {
+        data.onl_gens.insert_generator(eGenMat);
+      }
     }
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
