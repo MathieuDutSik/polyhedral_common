@@ -108,8 +108,8 @@ inline void serialize(Archive &ar, AdjO_MPI<TadjO> &eRec,
   f_next() -> std::optional<std::pair<bool,Tobj>>: returns the entry
      to insert into the database together with its status. If a none
      if returned, then nothing else needs to be inserted.
-  f_insert(Tobj) -> bool : insert the new object.
-     If return true then early termination is triggered.
+  f_insert(Tobj) -> bool : insert the new object. If it returns true
+     then early termination is triggered.
   f_adji_obj(TadjI) -> Tobj: should return the created object from the
      input adjacency.
   f_idx_obj(size_t) -> Tobj: should return the object from the database.
