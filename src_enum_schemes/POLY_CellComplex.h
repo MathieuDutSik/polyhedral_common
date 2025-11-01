@@ -101,14 +101,15 @@ struct BoundSerial {
 
 
  */
-template<typename Tobj,typename Tequiv,typename Fn_treated,typename Fnext_input, typename Fnext_output,
-  typename Fgenerate,typename Fhash, typename Frepr>
+template<typename Tobj, typename Tequiv, typename Fn_treated, typename Fnext_input, typename Fnext_output,
+  typename Fgenerate, typename Fhash, typename Frepr, typename Finsert_obj, typename Fidx_obj,
+  typename Fspann, typename Fset_boundary_status>
 bool compute_next_level_serial(int const &max_time_second, bool const& compute_boundary,
                                fn_treated f_n_treated,
                                Fnext_input f_next_input, Fnext_output f_next_output,
                                Fgenerate f_generate, Fhash f_hash, Frepr f_repr,
-                               FinsertObj f_insert_obj, Fidx_obj f_idx_obj,
-                               Fspann f_spann, Finsert_boundary f_insert_boundary) {
+                               Finsert_obj f_insert_obj, Fidx_obj f_idx_obj,
+                               Fspann f_spann, Fset_boundary_status f_set_boundary_status) {
   SingletonTime start;
   size_t n_obj = 0;
   std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
@@ -184,69 +185,68 @@ bool compute_next_level_serial(int const &max_time_second, bool const& compute_b
       return false;
     }
   }
-
-
-
+  return true;
 }
 
 
+template<typename Tobj, typename Tequiv>
+struct ResultNextLevel {
+  std::vector<Tobj> l_obj;
+  std::vector<std::vector<BoundSerial<Tequiv>> l_bound;
+};
+
+
 template <typename Tdata, typename Fincorrect>
-std::vector<DatabaseEntry_Serial<typename Tdata::Tobj, typename Tdata::TadjO>>
-EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
-                         int const &max_runtime_second) {
+ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv> EnumerateAndStoreLevel_Serial(Tdata &data,
+                                                                                            std::vector<Tobj> const& l_input,
+                                                                                            Fincorrect f_incorrect,
+                                                                                            int const &max_runtime_second,
+                                                                                            bool const& compute_boundary) {
   using Tobj = typename Tdata::Tobj;
-  using TadjI = typename Tdata::TadjI;
+  using Tequiv = typename Tdata::Tequiv;
   using TadjO = typename Tdata::TadjO;
   using TadjO_work = AdjO_Serial<TadjO>;
   std::ostream &os = data.get_os();
-  auto f_init = [&]() -> Tobj { return data.f_init(); };
   auto f_hash = [&](size_t const &seed, Tobj const &x) -> size_t {
     return data.f_hash(seed, x);
   };
-  auto f_repr = [&](Tobj const &x, TadjI const &y,
-                    int const &i_orb) -> std::optional<TadjO_work> {
-    std::optional<TadjO> opt = data.f_repr(x, y);
-    if (opt) {
-      TadjO_work ret{*opt, i_orb};
-      return ret;
-    } else {
-      return {};
-    }
+  auto f_repr = [&](Tobj const &x, Tobj const &y) -> std::optional<Tequiv> {
+    return data.f_repr(x, y);
   };
-  auto f_spann = [&](TadjI const &x, int i_orb) -> std::pair<Tobj, TadjO_work> {
-    std::pair<Tobj, TadjO> pair = data.f_spann(x);
-    TadjO_work xo_work{pair.second, i_orb};
-    std::pair<Tobj, TadjO_work> pair_ret{pair.first, xo_work};
-    return pair_ret;
+  auto f_spann = [&](Tobj const &x) -> std::pair<Tobj, Tequiv> {
+    return data.f_spann(x);
   };
-  std::vector<DatabaseEntry_Serial<Tobj, TadjO>> l_obj;
-  std::vector<uint8_t> l_status;
+  std::vector<Tobj> l_obj;
+  std::vector<std::vector<BoundSerial<Tequiv>> ll_bound;
   auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
     Tobj &x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_set_adj = [&](int const &i_orb,
-                       std::vector<TadjO_work> const &ListAdj) -> void {
-    l_obj[i_orb].ListAdj = ListAdj;
+  auto f_idx_obj = [&](size_t const &idx) -> Tobj {
+    return l_obj[idx];
   };
-  auto f_adji_obj = [&](TadjI const &x) -> Tobj { return data.f_adji_obj(x); };
-  auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx].x; };
-  auto f_next = [&]() -> std::optional<std::pair<bool, Tobj>> { return {}; };
-  auto f_insert = [&](Tobj const &x) -> bool {
-    l_obj.push_back({x, {}});
-#ifdef DEBUG_ADJACENCY_SCHEME
+  auto f_n_treated = [&]() -> size_t {
+    return 0;
+  };
+  size_t n_input = l_input.size();
+  size_t pos = 0;
+  auto f_next_input = [&]() -> std::optional<Tobj> {
+    if (pos < n_input) {
+      pos += 1;
+      return l_input[pos - 1];
+    } else {
+      return {};
+    }
+  };
+  auto f_next_output = [&]() -> std::optional<Tobj> {
+    return {};
+  };
+  auto f_insert_obj = [&](Tobj const &x) -> bool {
+    l_obj.push_back(x);
+#ifdef DEBUG_CELL_SCHEME
     os << "ADJ_SCH: EnumerateAndStore_Serial: |l_obj|=" << l_obj.size() << "\n";
 #endif
     bool test = f_incorrect(x);
-#ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: EnumerateAndStore_Serial: test=" << test << "\n";
-    size_t n_sum = 0;
-    for (auto &status : l_status) {
-      n_sum += static_cast<size_t>(status);
-    }
-    os << "ADJ_SCH: EnumerateAndStore_Serial: |l_status|=" << l_status.size()
-       << " n_sum=" << n_sum << " test=" << test << "\n";
-#endif
     return test;
   };
   auto f_save_status = [&](size_t const &pos, bool const &val) -> void {
@@ -257,13 +257,18 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
       l_status[pos] = val_i;
     }
   };
-  (void)compute_adjacency_serial<
-      Tobj, TadjI, TadjO_work, decltype(f_next), decltype(f_insert),
-      decltype(f_adji_obj), decltype(f_idx_obj), decltype(f_save_status),
-      decltype(f_init), decltype(f_adj), decltype(f_set_adj), decltype(f_hash),
-      decltype(f_repr), decltype(f_spann)>(
-      max_runtime_second, f_next, f_insert, f_adji_obj, f_idx_obj,
-      f_save_status, f_init, f_adj, f_set_adj, f_hash, f_repr, f_spann, os);
+  auto f_set_boundary_status = [&](int const &i_orb, std::vector<BoundSerial<Tequiv>> const &l_bound) -> void {
+    ll_bound.push_back(l_bound);
+  };
+  (void)compute_next_level_serial<Tobj, Tequiv, decltype(f_n_treated), decltype(f_next_input),
+    decltype(f_next_output), decltype(f_generate), decltype(f_hash), decltype(f_repr),
+    decltype(f_insert_obj), decltype(f_idx_obj), decltype(f_spann), decltype(f_set_boundary_status)>
+    (max_time_second, compute_boundary,
+     f_n_treated,
+     f_next_input, f_next_output,
+     f_generate, f_hash, f_repr,
+     f_insert_obj, f_idx_obj,
+     f_spann, f_set_boundary_status);
   return l_obj;
 }
 
