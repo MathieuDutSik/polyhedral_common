@@ -8,7 +8,7 @@
 // clang-format on
 
 /*
-  The scheme is explained in
+  The motivation is explained in
   "New upper bound for lattice covering by spheres"
   https://arxiv.org/pdf/2508.06446
   ----
@@ -58,18 +58,37 @@
     of the vertices. All the inequalities should have
     equal weight there. Otherwise, we will reach a
     contradiction at some point.
+  + A mystery is why we need that, while for Delaunay
+    polytopes, it is nowhere near as complex. But,
+    I guess this is what it is. We encountered similar
+    situation when computing the Voronoi polytope for
+    polyhedral norms.
+  + The algorithm is to simply take a random point
+    and to determine in this point the corresponding cell.
+    x The cell data gives a set of defining inequalities.
+    x It also gives the objective function since we know
+      which point is realizing the maximum. But it is not
+      linear.
+  + The main object is thus the cell in question. It is
+    a nice combinatorial object to compute with.
   + So, what are the needed functions?
-    x Finding one initial vertex.
-    x From one vertex, finding the adjacent vertices.
-    x Finding stabilizer of vertices.
-    x Testing equivalence of vertices.
-  + What is the structure of the vertices?
-    x It has to contain all the parallelepiped in
-      which the vertex is contained.
-    x Together with the vertices that are at this distance.
-    x The collection of those vertices define
-
-    make the 
+    x Finding one initial cell.
+    x From one cell, finding the adjacent cells.
+    x Finding stabilizer of cell / equivalence.
+      We can use the geometrically unique center for computing
+      the center and testing equivalence.
+  + What is the structure of the cells?
+    x It contains a bunch of inequalities.
+    x They can be reduced by linear programming (Clarkson).
+    x The flipping is done via computing an adjacent point
+      checking if it shares a facet, or not.
+    x Add a facetness check for sanity check.
+    x There is iteration. But we have iteration for
+      Delaunay as well. So, maybe this is what to expect.
+  + Can we have a L-type theory?
+    x The vertices of the cells are defined in the same way
+      as the Delaunay center. Expressing that some distances
+      are equal lead to some numerical 
 
  */
 
@@ -290,7 +309,7 @@ struct ResultRobustClosest {
 
 
 template<typename T, typename Tint, typename Finsert>
-void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, Finsert f_insert, [[maybe_unused]] std::ostream& os) {
+void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, Finsert f_insert, std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST: compute_robust_closest, step 1\n";
 #endif
@@ -413,7 +432,7 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
 
 // Find the robust closest minimum with the lambda expression.
 template<typename T, typename Tint>
-ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, [[maybe_unused]] std::ostream& os) {
+ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
   ResultRobustClosest<T,Tint> result;
   auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, [[maybe_unused]] std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
     result = {min, list_min_parallelepipeds};
@@ -454,11 +473,13 @@ T random_estimation_robust_covering(MyMatrix<T> const& GramMat, size_t n_iter, s
 
 
 
+
+// A family of vectors with the index which is the farthest.
 template<typename Tint>
 struct GenericRobustM {
   int index;
   MyMatrix<Tint> M;
-  MyVector<Tint> v_short() const {
+  MyVector<Tint> v_long() const {
     return GetMatrixRow(M, index);
   }
 };
@@ -540,13 +561,14 @@ MyVector<T> get_ineq(MyMatrix<T> const& G, MyVector<Tint> const& v_short, MyVect
   return ineq;
 }
 
+// In a robust structure robust_m, the shortest vector
 template<typename T, typename Tint>
 void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, std::vector<MyVector<T>> & ListIneq) {
   int n_row = robust_m.M.rows();
-  MyVector<Tint> v_short = robust_m.v_short();
+  MyVector<Tint> v_long = robust_m.v_long();
   for (int i=0; i<n_row; i++) {
     if (i != robust_m.index) {
-      MyVector<Tint> v_long = GetMatrixRow(robust_m.M, i);
+      MyVector<Tint> v_short = GetMatrixRow(robust_m.M, i);
       MyVector<T> eIneq = get_ineq(G, v_short, v_long);
       ListIneq.push_back(eIneq);
     }
@@ -596,7 +618,7 @@ std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<
     }
     GenericRobustM<Tint> const& robust_m_min = ext_robust_m_min.robust_m;
     insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq);
-    MyVector<Tint> v_short = robust_m_min.v_short();
+    MyVector<Tint> v_short = robust_m_min.v_long(); // It is the shortest for the other structures!
     std::vector<GenericRobustM<Tint>> list_robust_m;
     for (auto& eM: tot_list_parallelepipeds) {
       if (eM != min_m) {
@@ -632,6 +654,11 @@ std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<
     return {};
   }
 }
+
+
+
+
+
 
 template<typename T, typename Tint>
 InitialVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, std::ostream& os) {

@@ -377,17 +377,9 @@ end;
 
 
 
-GetGramMatrixFromList:=function(eList)
-    local ListGram, entry, dim, GramMat, shift, eGram, locdim, u, v;
-    ListGram:=[];
-    for entry in eList
-    do
-        if IsString(entry) then
-            Add(ListGram, GetGramMatrixFromString(entry));
-        else
-            Add(ListGram, entry);
-        fi;
-    od;
+
+
+GetGramMatrixFromListGram:=function(ListGram)
     dim:=Sum(List(ListGram, Length));
     GramMat:=NullMat(dim, dim);
     shift:=0;
@@ -404,6 +396,21 @@ GetGramMatrixFromList:=function(eList)
         shift:=shift+locdim;
     od;
     return GramMat;
+end;
+
+
+GetGramMatrixFromList:=function(eList)
+    local ListGram, entry, dim, GramMat, shift, eGram, locdim, u, v;
+    ListGram:=[];
+    for entry in eList
+    do
+        if IsString(entry) then
+            Add(ListGram, GetGramMatrixFromString(entry));
+        else
+            Add(ListGram, entry);
+        fi;
+    od;
+    return GetGramMatrixFromListGram(ListGram);
 end;
 
 
