@@ -852,7 +852,7 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
     int m_ext = ppoly.EXT.rows();
     for (size_t j_facet=0; j_facet<m_facet; j_facet++) {
       if (ppoly.ppfi.l_FAC[j_facet] == TestFAC) {
-        if (set.size() != ppoly.ppfi.l_face[j_facet]) {
+        if (set.size() != ppoly.ppfi.l_face[j_facet].count()) {
           std::cerr << "ROBUST: Different incidence, so this is not what we expect\n";
           std::cerr << "ROBUST: Non-facetness is a big problem. Rethink the code if not a bug\n";
           throw TerminalException{1};
@@ -941,7 +941,29 @@ std::vector<PpolytopeVoronoiData<T,Tint>> compute_all_p_polytopes(DataLattice<T,
   return l_ppoly;
 }
 
-
+template<typename T, typename Tint, typename Tgroup>
+T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
+  std::vector<PpolytopeVoronoiData<T,Tint>> l_ppoly = compute_all_p_polytopes(eData);
+  T max_sqr_radius(0);
+  MyMatrix<T> const& GramMat = eData.GramMat;
+  int dim = GramMat.rows();
+  MyVector<T> diff(dim);
+  for (auto & ppoly: l_ppoly) {
+    MyVector<Tint> v_long = ppoly.robust_m_min.v_long();
+    MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
+    int n_ext = ppoly.EXT.rows();
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      for (int i=0; i<dim; i++) {
+        diff(i) = v_long_T(i) - ppoly.EXT(i_ext, i+1);
+      }
+      T norm = EvaluationQuadForm(GramMat, diff);
+      if (norm > max_sqr_radius) {
+        max_sqr_radius = norm;
+      }
+    }
+  }
+  return max_sqr_radius;
+}
 
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_

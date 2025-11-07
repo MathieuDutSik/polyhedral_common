@@ -62,7 +62,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> LGen = eGRP.GeneratorsOfGroup();
   for (auto &eGen : LGen) {
-    MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
+    MyMatrix<T> eMat = FindTransformation<T,Telt>(EXT_T, EXT_T, eGen);
     if (!IsIntegralMatrix(eMat))
       return false;
   }
@@ -127,7 +127,7 @@ bool is_affine_integral(MyMatrix<T> const& M) {
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>>
 Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
-                         MyMatrix<T> const &EXT1_T, MyMatrix<Tint> const &EXT2_T) {
+                         MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T) {
   std::ostream &os = eData.rddo.os;
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
@@ -159,7 +159,7 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     return {};
   }
   Telt const &eElt = *eRes;
-  MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eElt);
+  MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, eElt);
   if (is_affine_integral(MatEquiv_T)) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
@@ -178,7 +178,7 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   // way to encode that the want integrality only on the linear part.
   for (auto &eElt1 : GRP1) {
     Telt fElt = eElt1 * eElt;
-    MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, fElt);
+    MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, fElt);
     if (is_affine_integral(MatEquiv_T)) {
       return MatEquiv_T;
     }
@@ -226,7 +226,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     return {};
   }
   Telt const &eElt = *eRes;
-  MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eElt);
+  MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
 #ifdef DEBUG_DELAUNAY_ENUMERATION

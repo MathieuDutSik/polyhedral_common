@@ -1,4 +1,4 @@
-PROGRAM		= Robust_RandomEstimation Robust_InitialVoronoiData
+PROGRAM		= Robust_RandomEstimation Robust_InitialVoronoiData Robust_ExactRobustCoveringDensity
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
