@@ -9,7 +9,7 @@ template <typename T, typename Tint>
 void process_B(std::string const& MatFile, std::string const& OutFormat, std::string const& OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   CVPSolver<T,Tint> solver(GramMat, std::cerr);
-  InitialVoronoiData<T,Tint> ivd = initial_vertex_data<T,Tint>(solver, std::cerr);
+  PpolytopeVoronoiData<T,Tint> ivd = initial_vertex_data<T,Tint>(solver, std::cerr);
   auto f_print=[&](std::ostream& osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return ";
@@ -41,9 +41,9 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_InitialVoronoiData arithmetic [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "Robust_InitialVoronoiData arithmetic [MaFile]\n";
+      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
       std::cerr << "OutFormat: GAP\n";
@@ -59,9 +59,9 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     process_A(arithmetic, MatFile, OutFormat, OutFile);
-    std::cerr << "Normal termination of Robust_InitialVoronoiData\n";
+    std::cerr << "Normal termination of Robust_InitialPpolytopeVoronoiData\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in Robust_InitialVoronoiData\n";
+    std::cerr << "Error in Robust_InitialPpolytopeVoronoiData\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -12,6 +12,17 @@
   "New upper bound for lattice covering by spheres"
   https://arxiv.org/pdf/2508.06446
   ----
+  It is about parallelepipeds of determinant 1.
+  But this is a very specific case.
+  Other case to consider are Order-k Voronoi
+  polytopes.
+  ---
+  The technology applies as well.
+*/
+
+
+
+/*
   Given a lattice L, and a point x in L \otimes R,
   we want to find the smallest radius r such that
   the set of lattice points contains a parallelepiped
@@ -306,15 +317,128 @@ struct ResultRobustClosest {
   std::vector<MyMatrix<Tint>> list_parallelepipeds;
 };
 
+template<typename T, typename Tint>
+struct ResultDirectEnumeration {
+  T min;
+  std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
+  std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
+};
+
+template<typename T, typename Tint>
+std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::optional<T> & opt, std::ostream& os) {
+  int dim = eV.size();
+  int pow = pow_two(dim);
+  MyMatrix<Tint> M_sol(pow, dim);
+  T factor = T(3) / T(2);
+  auto get_msol=[&](MyMatrix<Tint> const& Min, Face const& eFace) -> MyMatrix<Tint> {
+    int pos = 0;
+    for (int& vert: FaceToVector<int>(eFace)) {
+      for (int i=0; i<dim; i++) {
+        M_sol(pos, i) = Min(vert, i);
+      }
+      pos += 1;
+    }
+    return M_sol;
+  };
+  if (opt) {
+    T const& min_search = *opt;
+    T new_val = min_search * factor;
+    opt = new_val;
+    std::vector<MyVector<Tint>> elist = solver.at_most_dist_vectors(eV, min_search);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST:   After solver.at_most_dist_vectors |elist|=" << elist.size() << "\n";
+#endif
+    std::vector<T> l_norm;
+    for (auto & fV: elist) {
+      MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
+      T norm = EvaluationQuadForm(solver.GramMat, diff);
+      l_norm.push_back(norm);
+    }
+    MyMatrix<Tint> M = MatrixFromVectorFamily(elist);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST:   Before enumerate_parallelepiped\n";
+#endif
+    std::vector<Face> l_face = enumerate_parallelepiped(M, os);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size() << "\n";
+#endif
+    if (l_face.size() > 0) {
+      T eff_min = min_search + T(1);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+      os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
+      int i_face = 0;
+#endif
+      std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
+      std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
+      for (auto & eFace: l_face) {
+        T local_max_norm(0);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
+#endif
+        for (int& vert: FaceToVector<int>(eFace)) {
+          if (l_norm[vert] > local_max_norm) {
+            local_max_norm = l_norm[vert];
+          }
+        }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
+        i_face += 1;
+#endif
+        MyMatrix<Tint> Mparall = get_msol(M, eFace);
+        tot_list_parallelepipeds.push_back(Mparall);
+        if (local_max_norm < eff_min) {
+          list_min_parallelepipeds.clear();
+          eff_min = local_max_norm;
+          list_min_parallelepipeds.push_back(Mparall);
+        } else {
+          if (local_max_norm == eff_min) {
+            list_min_parallelepipeds.push_back(Mparall);
+          }
+        }
+      }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+      os << "ROBUST:   eff_min=" << eff_min << "\n";
+#endif
+      ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
+      return rde;
+    } else {
+      return {};
+    }
+  } else {
+    resultCVP<T, Tint> res_cvp = solver.nearest_vectors(eV);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST:   After solver.nearest_vectors\n";
+#endif
+    T min = res_cvp.TheNorm;
+    opt = min;
+    std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
+    if (l_face.size() > 0) {
+      std::vector<MyMatrix<Tint>> list_parallelepipeds;
+      for (auto & eFace: l_face) {
+        list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
+      }
+      ResultDirectEnumeration<T,Tint> rde{min, list_parallelepipeds, list_parallelepipeds};
+      return rde;
+    } else {
+      return {};
+    }
+  }
+}
+
+
+
+
+
+
+
 
 
 template<typename T, typename Tint, typename Finsert>
 void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, Finsert f_insert, std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST: compute_robust_closest, step 1\n";
-#endif
-  T min_search(0);
   int n_iter = 0;
+#endif
   int dim = eV.size();
   int pow = pow_two(dim);
   MyMatrix<Tint> M_sol(pow, dim);
@@ -331,102 +455,20 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST: compute_robust_closest, step 2\n";
 #endif
+  std::optional<T> min_search;
   while(true) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST: compute_robust_closest, n_iter = " << n_iter << "\n";
+    os << "ROBUST: compute_robust_closest, step 3, n_iter=" << n_iter << "\n";
+    n_iter += 1;
 #endif
-    if (n_iter == 0) {
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   Before solver.nearest_vectors\n";
-#endif
-      resultCVP<T, Tint> res_cvp = solver.nearest_vectors(eV);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   After solver.nearest_vectors\n";
-#endif
-      min_search = res_cvp.TheNorm;
-      std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
-      if (l_face.size() > 0) {
-        std::vector<MyMatrix<Tint>> list_parallelepipeds;
-        for (auto & eFace: l_face) {
-          list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
-        }
-        bool test = f_insert(min_search, list_parallelepipeds, list_parallelepipeds);
-        if (test) {
-          return;
-        }
-      }
-    } else {
-      min_search = (min_search * T(3)) / T(2);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   Before solver.at_most_dist_vectors\n";
-#endif
-      std::vector<MyVector<Tint>> elist = solver.at_most_dist_vectors(eV, min_search);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   After solver.at_most_dist_vectors |elist|=" << elist.size() << "\n";
-      int i_fv = 0;
-#endif
-      std::vector<T> l_norm;
-      for (auto & fV: elist) {
-        MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
-        T norm = EvaluationQuadForm(solver.GramMat, diff);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-        os << "ROBUST:   i_fv=" << i_fv << " norm=" << norm << "\n";
-        i_fv += 1;
-#endif
-        l_norm.push_back(norm);
-      }
-      MyMatrix<Tint> M = MatrixFromVectorFamily(elist);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   Before enumerate_parallelepiped\n";
-#endif
-      std::vector<Face> l_face = enumerate_parallelepiped(M, os);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size() << "\n";
-#endif
-      if (l_face.size() > 0) {
-        T eff_min = min_search + T(1);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-        os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
-        int i_face = 0;
-#endif
-        std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
-        std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
-        for (auto & eFace: l_face) {
-          T local_max_norm(0);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-          os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
-#endif
-          for (int& vert: FaceToVector<int>(eFace)) {
-            if (l_norm[vert] > local_max_norm) {
-              local_max_norm = l_norm[vert];
-            }
-          }
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-          os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
-          i_face += 1;
-#endif
-          MyMatrix<Tint> Mparall = get_msol(M, eFace);
-          tot_list_parallelepipeds.push_back(Mparall);
-          if (local_max_norm < eff_min) {
-            list_min_parallelepipeds.clear();
-            eff_min = local_max_norm;
-            list_min_parallelepipeds.push_back(Mparall);
-          } else {
-            if (local_max_norm == eff_min) {
-              list_min_parallelepipeds.push_back(Mparall);
-            }
-          }
-        }
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-        os << "ROBUST:   eff_min=" << eff_min << "\n";
-#endif
-        bool test = f_insert(eff_min, list_min_parallelepipeds, tot_list_parallelepipeds);
-        if (test) {
-          return;
-        }
+    std::optional<ResultDirectEnumeration<T,Tint>> opt = compute_and_enumerate_structures(solver, eV, min_search, os);
+    if (opt) {
+      ResultDirectEnumeration<T,Tint> const& rde = *opt;
+      bool test = f_insert(rde);
+      if (test) {
+        return;
       }
     }
-    n_iter += 1;
   }
 }
 
@@ -434,8 +476,8 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
 template<typename T, typename Tint>
 ResultRobustClosest<T,Tint> compute_robust_closest(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
   ResultRobustClosest<T,Tint> result;
-  auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, [[maybe_unused]] std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
-    result = {min, list_min_parallelepipeds};
+  auto f_insert=[&](ResultDirectEnumeration<T,Tint> const& rde) {
+    result = {rde.min, rde.list_min_parallelepipeds};
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
@@ -532,10 +574,11 @@ ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyM
 };
 
 template<typename T, typename Tint>
-struct InitialVoronoiData {
+struct PpolytopeVoronoiData {
   GenericRobustM<Tint> robust_m_min;
   std::vector<GenericRobustM<Tint>> list_robust_m;
   MyMatrix<T> FAC;
+  std::vector<MyVector<T>> EXT;
 };
 
 /*
@@ -561,7 +604,7 @@ MyVector<T> get_ineq(MyMatrix<T> const& G, MyVector<Tint> const& v_short, MyVect
   return ineq;
 }
 
-// In a robust structure robust_m, the shortest vector
+// In a robust structure robust_m, the longest vector
 template<typename T, typename Tint>
 void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, std::vector<MyVector<T>> & ListIneq) {
   int n_row = robust_m.M.rows();
@@ -575,16 +618,59 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
   }
 }
 
+// The farthest vector of the robust structure has to be farther from the v_short (which is the farthest of
+// the best one)
 template<typename T, typename Tint>
 void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, MyVector<Tint> const& v_short, std::vector<MyVector<T>> & ListIneq) {
-  int n_row = robust_m.M.rows();
-  for (int i=0; i<n_row; i++) {
-    MyVector<Tint> v_long = GetMatrixRow(robust_m.M, i);
-    MyVector<T> eIneq = get_ineq(G, v_short, v_long);
-    ListIneq.push_back(eIneq);
-  }
+  MyVector<Tint> v_long = robust_m.v_long();
+  MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+  ListIneq.push_back(eIneq);
 }
 
+
+template<typename T>
+std::vector<MyVector<T>> get_p_polytope_vertices(MyMatrix<T> const& FAC, std::ostream& os) {
+  std::string ansProg = "lrs";
+  MyMatrix<T> EXTbig = DirectFacetComputationInequalities(FAC, ansProg, os);
+  int n_ext = EXTbig.rows();
+  int dim = EXTbig.cols() - 1;
+  std::vector<MyVector<T>> EXT;
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    MyVector<T> v = GetMatrixRow(EXTbig, i_ext);
+    if (v(0) <= 0) {
+      std::cerr << "We should have v(0) > 0, because we expect to have a polytope\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> eEXT(dim);
+    for (int i=0; i<dim; i++) {
+      eEXT(i) = v(i+1) / v(0);
+    }
+    EXT.push_back(eEXT);
+  }
+  return EXT;
+}
+
+template<typename T, typename Tint>
+std::optional<std::vector<MyVector<T>>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tint> const& solver, MyMatrix<T> const& FAC, MyVector<Tint> const& v_short, std::ostream& os) {
+  std::vector<MyVector<T>> EXT = get_p_polytope_vertices(FAC, os);
+  MyMatrix<T> const& GramMat = solver.GramMat;
+  MyVector<T> v_short_T = UniversalVectorConversion<T,Tint>(v_short);
+  for (auto & eEXT: EXT) {
+    MyVector<T> diff = eEXT - v_short_T;
+    T norm = EvaluationQuadForm(GramMat, diff);
+    std::optional<T> opt = norm;
+    std::optional<ResultDirectEnumeration<T,Tint>> opt_rde = compute_and_enumerate_structures(solver, eEXT, opt, os);
+    if (!opt_rde) {
+      std::cerr << "ROBUST: get_p_polytope_vertices_and_test_them failed. We should have one\n";
+      throw TerminalException{1};
+    }
+    ResultDirectEnumeration<T,Tint> const& rde = *opt_rde;
+    if (rde.min < norm) {
+      return {};
+    }
+  }
+  return EXT;
+}
 
 
 
@@ -593,13 +679,16 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
 template<typename T, typename Tint>
-std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
+std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
   MyMatrix<T> const& G = solver.GramMat;
   // Working variables
   bool is_correct = true;
-  InitialVoronoiData<T,Tint> ivd;
+  PpolytopeVoronoiData<T,Tint> ppoly;
   // The lambda function.
-  auto f_insert=[&](T const& min, std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds, std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds) {
+  auto f_insert=[&](ResultDirectEnumeration<T,Tint> const& rde) {
+    T const& min = rde.min;
+    std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds = rde.list_min_parallelepipeds;
+    std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds = rde.tot_list_parallelepipeds;
     if (list_min_parallelepipeds.size() > 1) {
       // Terminate the enumeration
       is_correct = false;
@@ -639,17 +728,20 @@ std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<
     }
     MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
     bool test = is_full_dimensional_bounded_polytope(FAC, os);
-    if (test) {
-      ivd = InitialVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC};
-      return true;
-    } else {
+    if (!test) {
       return false;
     }
+    std::optional<std::vector<MyVector<T>>> opt_ext = get_p_polytope_vertices_and_test_them<T,Tint>(solver, FAC, v_short, os);
+    if (!opt_ext) {
+      return false;
+    }
+    std::vector<MyVector<T>> const& EXT = *opt_ext;
+    ppoly = PpolytopeVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC, EXT};
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
   if (is_correct) {
-    return ivd;
+    return ppoly;
   } else {
     return {};
   }
@@ -661,7 +753,7 @@ std::optional<InitialVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<
 
 
 template<typename T, typename Tint>
-InitialVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, std::ostream& os) {
+PpolytopeVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, std::ostream& os) {
   int dim = solver.GramMat.rows();
   int denom = 2;
   MyVector<T> eV(dim);
@@ -672,7 +764,7 @@ InitialVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, 
       T val_T(val);
       eV(i) = val_T / denom_T;
     }
-    std::optional<InitialVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, eV, os);
+    std::optional<PpolytopeVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, eV, os);
     if (opt) {
       return *opt;
     }
