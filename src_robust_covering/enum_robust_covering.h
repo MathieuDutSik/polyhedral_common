@@ -280,12 +280,12 @@ int pow_two(int dim) {
 template<typename Tint>
 std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, std::ostream& os) {
   DataVect<Tint> dv = get_data_vect(M);
-  std::vector<Face> l_face;
+  std::unordered_set<Face> set_face;
   int dim = M.cols();
   int pow = pow_two(dim);
   if (dv.n_vect < pow) {
     // No point trying to enumerate when there are no solutions.
-    return l_face;
+    return {};
   }
   MyMatrix<Tint> Mdet(dim,dim);
   auto f_insert=[&](PartSolution const& psol) -> void {
@@ -298,7 +298,7 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, std::ostream
     }
     Tint det = DeterminantMat(Mdet);
     if (T_abs(det) == 1) {
-      l_face.push_back(psol.full_set);
+      set_face.insert(psol.full_set);
     }
   };
 #ifdef DEBUG_ENUM_ROBUST_COVERING
@@ -308,6 +308,10 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const& M, std::ostream
 #ifdef DEBUG_ENUM_ROBUST_COVERING
   os << "ROBUST:   After kernel_enumerate_parallelepiped\n";
 #endif
+  std::vector<Face> l_face;
+  for (auto & eFace: set_face) {
+    l_face.push_back(eFace);
+  }
   return l_face;
 }
 
@@ -364,7 +368,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
 #endif
     if (l_face.size() > 0) {
       T eff_min = min_search + T(1);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
       int i_face = 0;
 #endif
@@ -372,7 +376,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
       std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
       for (auto & eFace: l_face) {
         T local_max_norm(0);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_ROBUST_COVERING
         os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
 #endif
         for (int& vert: FaceToVector<int>(eFace)) {
@@ -380,7 +384,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
             local_max_norm = l_norm[vert];
           }
         }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_ROBUST_COVERING
         os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
         i_face += 1;
 #endif
@@ -396,7 +400,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
           }
         }
       }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   eff_min=" << eff_min << "\n";
 #endif
       ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
