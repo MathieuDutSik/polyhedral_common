@@ -346,7 +346,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
     opt = new_val;
     std::vector<MyVector<Tint>> elist = solver.at_most_dist_vectors(eV, min_search);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST:   After solver.at_most_dist_vectors |elist|=" << elist.size() << "\n";
+    os << "ROBUST:   After solver.at_most_dist_vectors min_search=" << min_search << " |elist|=" << elist.size() << "\n";
 #endif
     std::vector<T> l_norm;
     for (auto & fV: elist) {
@@ -745,6 +745,13 @@ PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMa
 template<typename T, typename Tint>
 std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::ostream& os) {
   MyMatrix<T> const& G = solver.GramMat;
+  if (IsIntegralVector(eV)) {
+    // Nothing cam be done here
+    return {};
+  }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+  os << "ROBUST: initial_vertex_data_test_ev eV=" << StringVectorGAP(eV) << "\n";
+#endif
   // Working variables
   bool is_correct = true;
   PpolytopeVoronoiData<T,Tint> ppoly;
@@ -826,9 +833,14 @@ PpolytopeVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver
   while(true) {
     T denom_T(denom);
     for (int i=0; i<dim; i++) {
-      int val = random() % denom;
+      int val1 = random();
+      int val = val1 % denom;
       T val_T(val);
-      eV(i) = val_T / denom_T;
+      T quot = val_T / denom_T;
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+      os << "ROBUST: initial_vertex_data i=" << i << " val_T=" << val_T << " val1=" << val1 << " val=" << val << " quot=" << quot << "\n";
+#endif
+      eV(i) = quot;
     }
     std::optional<PpolytopeVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, eV, os);
     if (opt) {

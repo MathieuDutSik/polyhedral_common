@@ -54,12 +54,12 @@ void process_A(std::string const &arithmetic,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 6 && argc != 4) {
+    if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity arithmetic [MaFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity arithmetic [MaFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
       std::cerr << "OutFormat: GAP\n";
@@ -75,9 +75,9 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     process_A(arithmetic, MatFile, OutFormat, OutFile);
-    std::cerr << "Normal termination of Robust_InitialPpolytopeVoronoiData\n";
+    std::cerr << "Normal termination of Robust_ExactRobustCoveringDensity\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in Robust_InitialPpolytopeVoronoiData\n";
+    std::cerr << "Error in Robust_ExactRobustCoveringDensity\n";
     exit(e.eVal);
   }
   runtime(time);
