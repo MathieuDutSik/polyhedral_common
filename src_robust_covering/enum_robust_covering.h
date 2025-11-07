@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "Shvec_exact.h"
-#include "FundamentalDelaunay.h"
+#include "LatticeDelaunay.h"
 // clang-format on
 
 /*
@@ -439,26 +439,10 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
   os << "ROBUST: compute_robust_closest, step 1\n";
   int n_iter = 0;
 #endif
-  int dim = eV.size();
-  int pow = pow_two(dim);
-  MyMatrix<Tint> M_sol(pow, dim);
-  auto get_msol=[&](MyMatrix<Tint> const& Min, Face const& eFace) -> MyMatrix<Tint> {
-    int pos = 0;
-    for (int& vert: FaceToVector<int>(eFace)) {
-      for (int i=0; i<dim; i++) {
-        M_sol(pos, i) = Min(vert, i);
-      }
-      pos += 1;
-    }
-    return M_sol;
-  };
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-  os << "ROBUST: compute_robust_closest, step 2\n";
-#endif
   std::optional<T> min_search;
   while(true) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST: compute_robust_closest, step 3, n_iter=" << n_iter << "\n";
+    os << "ROBUST: compute_robust_closest, step 2, n_iter=" << n_iter << "\n";
     n_iter += 1;
 #endif
     std::optional<ResultDirectEnumeration<T,Tint>> opt = compute_and_enumerate_structures(solver, eV, min_search, os);
@@ -573,12 +557,22 @@ ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyM
   return {min, is_correct, robust_m};
 };
 
+
+template<typename T>
+struct PpolytopeFacetIncidence {
+  std::vector<Face> l_face;
+  std::vector<MyVector<T>> l_FAC;
+  std::vector<MyVector<T>> l_Iso;
+};
+
 template<typename T, typename Tint>
 struct PpolytopeVoronoiData {
   GenericRobustM<Tint> robust_m_min;
   std::vector<GenericRobustM<Tint>> list_robust_m;
   MyMatrix<T> FAC;
-  std::vector<MyVector<T>> EXT;
+  MyMatrix<T> EXT;
+  MyVector<T> eIso;
+  PpolytopeFacetIncidence<T> ppfi;
 };
 
 /*
@@ -651,7 +645,7 @@ std::vector<MyVector<T>> get_p_polytope_vertices(MyMatrix<T> const& FAC, std::os
 }
 
 template<typename T, typename Tint>
-std::optional<std::vector<MyVector<T>>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tint> const& solver, MyMatrix<T> const& FAC, MyVector<Tint> const& v_short, std::ostream& os) {
+std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tint> const& solver, MyMatrix<T> const& FAC, MyVector<Tint> const& v_short, std::ostream& os) {
   std::vector<MyVector<T>> EXT = get_p_polytope_vertices(FAC, os);
   MyMatrix<T> const& GramMat = solver.GramMat;
   MyVector<T> v_short_T = UniversalVectorConversion<T,Tint>(v_short);
@@ -669,11 +663,81 @@ std::optional<std::vector<MyVector<T>>> get_p_polytope_vertices_and_test_them(CV
       return {};
     }
   }
-  return EXT;
+  int n_ext = EXT.size();
+  int dim = GramMat.cols();
+  MyMatrix<T> EXTret(n_ext, dim+1);
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    EXTret(i_ext, 0) = 1;
+    for (int i=0; i<dim; i++) {
+      EXTret(i_ext, i+1) = EXT[i_ext](i);
+    }
+  }
+  return EXTret;
 }
 
-
-
+template<typename T>
+PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT) {
+  int n_ext = EXT.rows();
+  int dim = EXT.cols();
+  int dim_ext = dim - 1;
+  auto get_face=[&](MyVector<T> const& eFAC) -> Face {
+    Face f(n_ext);
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      T scal(0);
+      for (int i=0; i<dim; i++) {
+        scal += eFAC(i) * EXT(i_ext, i);
+      }
+      if (scal != 0) {
+        f[i_ext] = 1;
+      }
+    }
+    return f;
+  };
+  auto get_iso_facet=[&](Face const& f) -> std::optional<MyVector<T>> {
+    int cnt = f.count();
+    if (cnt < dim_ext) {
+      return {};
+    }
+    MyMatrix<T> EXTincd(cnt, dim);
+    int pos = 0;
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      if (f[i_ext] == 1) {
+        for (int i=0; i<dim; i++) {
+          EXTincd(pos, i) = EXT(i_ext, i);
+        }
+        pos += 1;
+      }
+    }
+    if (RankMat(EXTincd) != dim_ext) {
+      return {};
+    }
+    MyVector<T> eIso = Isobarycenter(EXT);
+    return eIso;
+  };
+  int n_fac = FAC.rows();
+  using Tpair = std::pair<MyVector<T>, MyVector<T>>;
+  std::unordered_map<Face, Tpair> map;
+  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    MyVector<T> eFAC = GetMatrixRow(FAC, i_fac);
+    MyVector<T> fFAC = ScalarCanonicalizationVector(eFAC);
+    Face f = get_face(fFAC);
+    std::optional<MyVector<T>> opt = get_iso_facet(f);
+    if (opt) {
+      MyVector<T> const& eIso = *opt;
+      Tpair pair{fFAC, eIso};
+      map[f] = pair;
+    }
+  }
+  std::vector<Face> l_face;
+  std::vector<MyVector<T>> l_FAC;
+  std::vector<MyVector<T>> l_Iso;
+  for (auto & kv: map) {
+    l_face.push_back(kv.first);
+    l_FAC.push_back(kv.second.first);
+    l_Iso.push_back(kv.second.second);
+  }
+  return {l_face, l_FAC, l_Iso};
+}
 
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
@@ -731,12 +795,14 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     if (!test) {
       return false;
     }
-    std::optional<std::vector<MyVector<T>>> opt_ext = get_p_polytope_vertices_and_test_them<T,Tint>(solver, FAC, v_short, os);
+    std::optional<MyMatrix<T>> opt_ext = get_p_polytope_vertices_and_test_them<T,Tint>(solver, FAC, v_short, os);
     if (!opt_ext) {
       return false;
     }
-    std::vector<MyVector<T>> const& EXT = *opt_ext;
-    ppoly = PpolytopeVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC, EXT};
+    MyMatrix<T> const& EXT = *opt_ext;
+    MyVector<T> eIso = Isobarycenter(EXT);
+    PpolytopeFacetIncidence<T> ppfi = get_p_polytope_incidence(FAC, EXT);
+    ppoly = PpolytopeVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC, EXT, eIso, ppfi};
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
@@ -771,6 +837,111 @@ PpolytopeVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver
     denom += 1;
   }
 }
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData, PpolytopeVoronoiData<T,Tint> const& pvd) {
+  std::ostream &os = eData.rddo.os;
+  CVPSolver<T,Tint> const& solver = eData.solver;
+  auto get_adj_p_polytope=[&](MyVector<T> const& TestFAC, MyVector<T> const& x, std::unordered_set<MyVector<T>> const& set) -> std::optional<PpolytopeVoronoiData<T,Tint>> {
+    std::optional<PpolytopeVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, x, os);
+    if (!opt) {
+      return {};
+    }
+    PpolytopeVoronoiData<T,Tint> const& ppoly = *opt;
+    size_t m_facet = ppoly.ppfi.l_FAC.size();
+    int m_ext = ppoly.EXT.rows();
+    for (size_t j_facet=0; j_facet<m_facet; j_facet++) {
+      if (ppoly.ppfi.l_FAC[j_facet] == TestFAC) {
+        if (set.size() != ppoly.ppfi.l_face[j_facet]) {
+          std::cerr << "ROBUST: Different incidence, so this is not what we expect\n";
+          std::cerr << "ROBUST: Non-facetness is a big problem. Rethink the code if not a bug\n";
+          throw TerminalException{1};
+        }
+        for (int j_ext=0; j_ext<m_ext; j_ext++) {
+          if (ppoly.ppfi.l_face[j_facet][j_ext] == 1) {
+            MyVector<T> fEXT = GetMatrixRow(ppoly.EXT, j_ext);
+            if (set.count(fEXT) == 0) {
+              std::cerr << "ROBUST: Vertex is not contained in the facet.\n";
+              std::cerr << "ROBUST: Non-facetness is a big problem. Rethink the code if not a bug\n";
+              throw TerminalException{1};
+            }
+          }
+        }
+        return ppoly;
+      }
+    }
+    return {};
+  };
+  auto get_adj=[&](Face const& f, MyVector<T> const& eFAC, MyVector<T> const& eIso) -> PpolytopeVoronoiData<T,Tint> {
+    std::unordered_set<MyVector<T>> set;
+    int n_ext = pvd.EXT.rows();
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      if (f[i_ext] == 1) {
+        MyVector<T> eEXT = GetMatrixRow(pvd.EXT, i_ext);
+        set.insert(eEXT);
+      }
+    }
+    MyVector<T> TestFAC = - eFAC;
+    MyVector<T> delta_x = eIso - pvd.eIso;
+    T factor(1);
+    while(true) {
+      MyVector<T> x = eIso + factor * delta_x;
+      std::optional<PpolytopeVoronoiData<T,Tint>> opt = get_adj_p_polytope(TestFAC, x, set);
+      if (opt) {
+        return *opt;
+      }
+      factor = factor / 2;
+    }
+  };
+  std::vector<PpolytopeVoronoiData<T,Tint>> l_adj;
+  size_t n_facet = pvd.ppfi.l_FAC.size();
+  for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
+    PpolytopeVoronoiData<T,Tint> eAdj = get_adj(pvd.ppfi.l_face[i_facet], pvd.ppfi.l_FAC[i_facet], pvd.ppfi.l_Iso[i_facet]);
+    l_adj.push_back(eAdj);
+  }
+  return l_adj;
+}
+
+
+
+
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PpolytopeVoronoiData<T,Tint>> compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
+  std::ostream &os = eData.rddo.os;
+  CVPSolver<T,Tint> const& solver = eData.solver;
+  std::vector<PpolytopeVoronoiData<T,Tint>> l_ppoly;
+  PpolytopeVoronoiData<T,Tint> ppoly = initial_vertex_data(solver, os);
+  l_ppoly.push_back(ppoly);
+  auto f_insert=[&](PpolytopeVoronoiData<T,Tint> const& f_ppoly) -> void {
+    for (auto & e_ppoly: l_ppoly) {
+      std::optional<MyMatrix<T>> opt_equiv = Polytope_TestEquivalence<T,Tint,Tgroup>(eData, e_ppoly.EXT, f_ppoly.EXT);
+      if (opt_equiv.has_value()) {
+        return;
+      }
+    }
+    l_ppoly.push_back(f_ppoly);
+  };
+  size_t start = 0;
+  while(true) {
+    size_t len = l_ppoly.size();
+    for (size_t i_ppoly=start; i_ppoly<len; i_ppoly++) {
+      std::vector<PpolytopeVoronoiData<T,Tint>> l_adj = find_adjacent_p_polytopes(eData, l_ppoly[i_ppoly]);
+      for (auto & eAdj: l_adj) {
+        f_insert(eAdj);
+      }
+    }
+    if (len == l_ppoly.size()) {
+      break;
+    }
+    start = len;
+  }
+  return l_ppoly;
+}
+
+
 
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_

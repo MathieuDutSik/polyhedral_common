@@ -101,6 +101,94 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
   return GRPlatt;
 }
 
+template <typename T>
+bool is_affine_integral(MyMatrix<T> const& M) {
+  int dim = M.rows() - 1;
+  for (int i=0; i<dim; i++) {
+    for (int j=0; j<dim; j++) {
+      T val = M(i+1, j+1);
+      if (!IsInteger(val)) {
+        return false;
+      }
+    }
+  }
+  for (int i=0; i<dim; i++) {
+    T val = M(i+1, 0);
+    if (val != 0) {
+      return false;
+    }
+  }
+  if (M(0,0) != 1) {
+    return false;
+  }
+  return true;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<T>>
+Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
+                         MyMatrix<T> const &EXT1_T, MyMatrix<Tint> const &EXT2_T) {
+  std::ostream &os = eData.rddo.os;
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
+  using Telt = typename Tgroup::Telt;
+  using Tgr = GraphListAdj;
+  using Tidx_value = int16_t;
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Begin Delaunay_TestEquivalence\n";
+#endif
+  //
+  // Now extending by adding more vectors.
+  //
+  WeightMatrix<true, T, Tidx_value> WMat1 =
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat,
+                                                eData.SHV, os);
+  WeightMatrix<true, T, Tidx_value> WMat2 =
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat,
+                                                eData.SHV, os);
+  std::optional<Telt> eRes =
+      TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
+  if (!eRes) {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 1 with false\n";
+#endif
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+#endif
+    return {};
+  }
+  Telt const &eElt = *eRes;
+  MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, eElt);
+  if (is_affine_integral(MatEquiv_T)) {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
+#endif
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+#endif
+    return MatEquiv_T;
+  }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Trying other strategies\n";
+#endif
+  Tgroup GRP1 =
+      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
+  // We iterate over the group elements since we do not have yet have a
+  // way to encode that the want integrality only on the linear part.
+  for (auto &eElt1 : GRP1) {
+    Telt fElt = eElt1 * eElt;
+    MyMatrix<T> MatEquiv_T = FindTransformation(EXT1_T, EXT2_T, fElt);
+    if (is_affine_integral(MatEquiv_T)) {
+      return MatEquiv_T;
+    }
+  }
+  return {};
+}
+
+
+
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
