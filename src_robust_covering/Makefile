@@ -17,7 +17,8 @@ CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_commo
 #CDEFS           = -DDEBUG_CANONIC -DTIMINGS
 #CDEFS           = -DCHECK_SHVEC
 #CDEFS           =
-CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING
+#CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING
+CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING -DDEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
