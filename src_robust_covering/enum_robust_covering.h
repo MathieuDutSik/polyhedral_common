@@ -614,13 +614,20 @@ MyVector<T> get_ineq(MyMatrix<T> const& G, MyVector<Tint> const& v_short, MyVect
 
 // In a robust structure robust_m, the longest vector
 template<typename T, typename Tint>
-void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, std::vector<MyVector<T>> & ListIneq) {
+void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, std::vector<MyVector<T>> & ListIneq, [[maybe_unused]] std::ostream& os) {
   int n_row = robust_m.M.rows();
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+  os << "ROBUST:   insert_inner_ineqs_parallelepiped, M=\n";
+  WriteMatrix(os, robust_m.M);
+#endif
   MyVector<Tint> v_long = robust_m.v_long();
   for (int i=0; i<n_row; i++) {
     if (i != robust_m.index) {
       MyVector<Tint> v_short = GetMatrixRow(robust_m.M, i);
       MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+      os << "ROBUST:   insert_inner_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << " i=" << i << " index=" << robust_m.index << "\n";
+#endif
       ListIneq.push_back(eIneq);
     }
   }
@@ -629,15 +636,15 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
 // The farthest vector of the robust structure has to be farther from the v_short (which is the farthest of
 // the best one)
 template<typename T, typename Tint>
-void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, MyVector<Tint> const& v_short, std::vector<MyVector<T>> & ListIneq) {
+void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyMatrix<T> const& G, MyVector<Tint> const& v_short, std::vector<MyVector<T>> & ListIneq, [[maybe_unused]] std::ostream& os) {
   MyVector<Tint> v_long = robust_m.v_long();
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-  std::cerr << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short=" << StringVector(v_short) << "\n";
-  std::cerr << "ROBUST:   insert_outer_ineqs_parallelepiped, v_long=" << StringVector(v_long) << "\n";
+  os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short=" << StringVector(v_short) << "\n";
+  os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_long=" << StringVector(v_long) << "\n";
 #endif
   MyVector<T> eIneq = get_ineq(G, v_short, v_long);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-  std::cerr << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(eIneq) << "\n";
+  os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << "\n";
 #endif
   ListIneq.push_back(eIneq);
 }
@@ -799,6 +806,7 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds = rde.list_min_parallelepipeds;
     std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds = rde.tot_list_parallelepipeds;
 #ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "-----------------------------------------------------------------------------------------------\n";
     os << "ROBUST:   initial_vertex_data_test_ev, |list_min_parallelepipeds|=" << list_min_parallelepipeds.size() << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size() << " min=" << min << "\n";
 #endif
     if (list_min_parallelepipeds.size() > 1) {
@@ -840,7 +848,7 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     os << "ROBUST:   initial_vertex_data_test_ev, robust_m_min, index=" << robust_m_min.index << " M=\n";
     WriteMatrix(os, robust_m_min.M);
 #endif
-    insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq);
+    insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq, os);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST:   initial_vertex_data_test_ev, Initial FAC=\n";
     WriteMatrix(os, MatrixFromVectorFamily(ListIneq));
@@ -873,8 +881,8 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
           std::cerr << "ROBUST: The parallelepiped has an even lower minimum\n";
           throw TerminalException{1};
         }
-        insert_inner_ineqs_parallelepiped(robust_m, G, ListIneq);
-        insert_outer_ineqs_parallelepiped(robust_m, G, v_short, ListIneq);
+        insert_inner_ineqs_parallelepiped(robust_m, G, ListIneq, os);
+        insert_outer_ineqs_parallelepiped(robust_m, G, v_short, ListIneq, os);
         list_robust_m.push_back(robust_m);
       }
     }
@@ -882,10 +890,8 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 2\n";
 #endif
     MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
     os << "ROBUST:   initial_vertex_data_test_ev, |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
-#endif
-#ifdef DEBUG_ENUM_ROBUST_COVERING
     MyMatrix<T> EXTbig = DirectFacetComputationInequalities(FAC, "lrs", os);
     os << "ROBUST:   initial_vertex_data_test_ev, EXTbig=\n";
     WriteMatrix(os, EXTbig);
@@ -987,13 +993,13 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
   CVPSolver<T,Tint> const& solver = eData.solver;
   int dim = eData.GramMat.rows();
   auto get_adj_p_polytope=[&](MyVector<T> const& TestFAC, MyVector<T> const& x, std::unordered_set<MyVector<T>> const& set) -> std::optional<PpolytopeVoronoiData<T,Tint>> {
-#ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST: get_adj_p_polytope x=" << StringVector(x) << "\n";
-#endif
     MyVector<T> x_red(dim);
     for (int i=0; i<dim; i++) {
       x_red(i) = x(i + 1);
     }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST: get_adj_p_polytope x_red=" << StringVector(x_red) << "\n";
+#endif
     std::optional<PpolytopeVoronoiData<T,Tint>> opt = initial_vertex_data_test_ev(solver, x_red, os);
     if (!opt) {
       return {};
@@ -1041,7 +1047,7 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
     MyVector<T> TestFAC = - eFAC;
     MyVector<T> delta_x = eIso - pvd.eIso;
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST: get_adj, eIso=" << StringVector(eIso) << " pvd.eIso=" << StringVector(pvd.eIso) << "\n";
+    os << "ROBUST: get_adj, eIso=" << StringVector(eIso) << " pvd.eIso=" << StringVector(pvd.eIso) << " delta_x=" << delta_x << "\n";
 #endif
     T factor(1);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
