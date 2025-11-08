@@ -375,7 +375,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
 #endif
     if (l_face.size() > 0) {
       T eff_min = min_search + T(1);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
       os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
       int i_face = 0;
 #endif
@@ -383,7 +383,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
       std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
       for (auto & eFace: l_face) {
         T local_max_norm(0);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
         os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
 #endif
         for (int& vert: FaceToVector<int>(eFace)) {
@@ -391,7 +391,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
             local_max_norm = l_norm[vert];
           }
         }
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
         os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
         i_face += 1;
 #endif
@@ -407,7 +407,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
           }
         }
       }
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
       os << "ROBUST:   eff_min=" << eff_min << "\n";
 #endif
       ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
@@ -700,10 +700,15 @@ std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tin
 }
 
 template<typename T>
-PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT) {
+PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMatrix<T> const& EXT, [[maybe_unused]] std::ostream& os) {
   int n_ext = EXT.rows();
   int dim = EXT.cols();
   int dim_ext = dim - 1;
+#ifdef DEBUG_ENUM_ROBUST_COVERING_INCIDENCE
+  os << "ROBUST: get_p_polytope_incidence n_ext=" << n_ext << " dim=" << dim << " dim_ext=" << dim_ext << " EXT=\n";
+  WriteMatrix(os, EXT);
+  os << "ROBUST: get_p_polytope_incidence rank=" << RankMat(EXT) << "\n";
+#endif
   auto get_face=[&](MyVector<T> const& eFAC) -> Face {
     Face f(n_ext);
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
@@ -711,7 +716,7 @@ PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMa
       for (int i=0; i<dim; i++) {
         scal += eFAC(i) * EXT(i_ext, i);
       }
-      if (scal != 0) {
+      if (scal == 0) {
         f[i_ext] = 1;
       }
     }
@@ -735,19 +740,28 @@ PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMa
     if (RankMat(EXTincd) != dim_ext) {
       return {};
     }
-    MyVector<T> eIso = Isobarycenter(EXT);
+    MyVector<T> eIso = Isobarycenter(EXTincd);
     return eIso;
   };
   int n_fac = FAC.rows();
+#ifdef DEBUG_ENUM_ROBUST_COVERING_INCIDENCE
+  os << "ROBUST: get_p_polytope_incidence n_fac=" << n_fac << "\n";
+#endif
   using Tpair = std::pair<MyVector<T>, MyVector<T>>;
   std::unordered_map<Face, Tpair> map;
   for (int i_fac=0; i_fac<n_fac; i_fac++) {
     MyVector<T> eFAC = GetMatrixRow(FAC, i_fac);
     MyVector<T> fFAC = ScalarCanonicalizationVector(eFAC);
     Face f = get_face(fFAC);
+#ifdef DEBUG_ENUM_ROBUST_COVERING_INCIDENCE
+    os << "ROBUST: get_p_polytope_incidence i_fac=" << i_fac << " eFAC=" << StringVector(eFAC) << " fFAC=" << StringVector(fFAC) << " f=" << f << "\n";
+#endif
     std::optional<MyVector<T>> opt = get_iso_facet(f);
     if (opt) {
       MyVector<T> const& eIso = *opt;
+#ifdef DEBUG_ENUM_ROBUST_COVERING_INCIDENCE
+      os << "ROBUST: get_p_polytope_incidence eIso=" << StringVector(eIso) << "\n";
+#endif
       Tpair pair{fFAC, eIso};
       map[f] = pair;
     }
@@ -909,10 +923,14 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     }
     MyMatrix<T> const& EXT = *opt_ext;
     MyVector<T> eIso = Isobarycenter(EXT);
-    PpolytopeFacetIncidence<T> ppfi = get_p_polytope_incidence(FAC, EXT);
+    PpolytopeFacetIncidence<T> ppfi = get_p_polytope_incidence(FAC, EXT, os);
     ppoly = PpolytopeVoronoiData<T,Tint>{robust_m_min, list_robust_m, FAC, EXT, eIso, ppfi};
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: initial_vertex_data_test_ev, successful end\n";
+    os << "ROBUST: initial_vertex_data_test_ev, EXT=\n";
+    WriteMatrix(os, EXT);
+    os << "ROBUST: initial_vertex_data_test_ev, FAC=\n";
+    WriteMatrix(os, MatrixFromVectorFamily(ppfi.l_FAC));
 #endif
     return true;
   };
@@ -943,8 +961,8 @@ PpolytopeVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver
       T quot = val_T / denom_T;
       eV(i) = quot;
     }
-    //    eV(0) = T(7) / T(12);
-    //    eV(1) = T(7) / T(13);
+    eV(0) = T(7) / T(12);
+    eV(1) = T(7) / T(13);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: initial_vertex_data, before initial_vertex_data_test_ev, eV=" << StringVectorGAP(eV) << " denom=" << denom << "\n";
 #endif
@@ -970,7 +988,7 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
   int dim = eData.GramMat.rows();
   auto get_adj_p_polytope=[&](MyVector<T> const& TestFAC, MyVector<T> const& x, std::unordered_set<MyVector<T>> const& set) -> std::optional<PpolytopeVoronoiData<T,Tint>> {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST: find_adjacent_p_polytopes x=" << StringVector(x) << "\n";
+    os << "ROBUST: get_adj_p_polytope x=" << StringVector(x) << "\n";
 #endif
     MyVector<T> x_red(dim);
     for (int i=0; i<dim; i++) {
@@ -983,6 +1001,9 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
     PpolytopeVoronoiData<T,Tint> const& ppoly = *opt;
     size_t m_facet = ppoly.ppfi.l_FAC.size();
     int m_ext = ppoly.EXT.rows();
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST: get_adj_p_polytope m_facet=" << m_facet << " m_ext=" << m_ext << "\n";
+#endif
     for (size_t j_facet=0; j_facet<m_facet; j_facet++) {
       if (ppoly.ppfi.l_FAC[j_facet] == TestFAC) {
         if (set.size() != ppoly.ppfi.l_face[j_facet].count()) {
@@ -1003,6 +1024,9 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
         return ppoly;
       }
     }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST: get_adj_p_polytope, Failed to find a correct adjacent cone\n";
+#endif
     return {};
   };
   auto get_adj=[&](Face const& f, MyVector<T> const& eFAC, MyVector<T> const& eIso) -> PpolytopeVoronoiData<T,Tint> {
@@ -1016,9 +1040,19 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
     }
     MyVector<T> TestFAC = - eFAC;
     MyVector<T> delta_x = eIso - pvd.eIso;
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST: get_adj, eIso=" << StringVector(eIso) << " pvd.eIso=" << StringVector(pvd.eIso) << "\n";
+#endif
     T factor(1);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    size_t n_iter = 0;
+#endif
     while(true) {
       MyVector<T> x = eIso + factor * delta_x;
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+      os << "ROBUST: get_adj, n_iter=" << n_iter << " factor=" << factor << "\n";
+      n_iter += 1;
+#endif
       std::optional<PpolytopeVoronoiData<T,Tint>> opt = get_adj_p_polytope(TestFAC, x, set);
       if (opt) {
         return *opt;
@@ -1029,6 +1063,9 @@ std::vector<PpolytopeVoronoiData<T,Tint>> find_adjacent_p_polytopes(DataLattice<
   std::vector<PpolytopeVoronoiData<T,Tint>> l_adj;
   size_t n_facet = pvd.ppfi.l_FAC.size();
   for (size_t i_facet=0; i_facet<n_facet; i_facet++) {
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST: find_adjacent_p_polytopes i_facet=" << i_facet << " / " << n_facet << "\n";
+#endif
     PpolytopeVoronoiData<T,Tint> eAdj = get_adj(pvd.ppfi.l_face[i_facet], pvd.ppfi.l_FAC[i_facet], pvd.ppfi.l_Iso[i_facet]);
     l_adj.push_back(eAdj);
   }
