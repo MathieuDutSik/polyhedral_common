@@ -538,7 +538,7 @@ struct ExtendedGenericRobustM {
 
 
 template<typename T, typename Tint>
-ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyMatrix<T> const&G, MyVector<T> const& eV) {
+ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyMatrix<T> const&G, MyVector<T> const& eV, [[maybe_unused]] std::ostream& os) {
   T max(0);
   int best_index = 0;
   int n_ineq = M.rows();
@@ -547,6 +547,10 @@ ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyM
     MyVector<Tint> fV = GetMatrixRow(M, index);
     MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
     T norm = EvaluationQuadForm(G, diff);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    double norm_d = UniversalScalarConversion<double,T>(norm);
+    os << "ROBUST:   get_generic_robust_m, index=" << index << " fV=" << StringVector(fV) << " norm=" << norm << " norm_d=" << norm_d << "\n";
+#endif
     if (index == 0) {
       max = norm;
       best_index = index;
@@ -567,6 +571,10 @@ ExtendedGenericRobustM<T,Tint> get_generic_robust_m(MyMatrix<Tint> const& M, MyM
   if (n_att > 1) {
     is_correct = false;
   }
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+  double max_d = UniversalScalarConversion<double,T>(max);
+  os << "ROBUST:   get_generic_robust_m, best_index=" << best_index << " max=" << max << " max_d=" << max_d << "\n";
+#endif
   GenericRobustM<Tint> robust_m{best_index, M};
   return {max, is_correct, robust_m};
 };
@@ -579,6 +587,71 @@ struct PpolytopeFacetIncidence {
   std::vector<MyVector<T>> l_Iso;
 };
 
+/*
+  The data structure for the P-polytope:
+  (A) The parallelepiped realizing the minimum.
+  (B) The list of other parallelepipeds being
+  used to define the structure.
+  (C) Other bureaucratic stuff: EXT, FAC, Iso, incidence, ...
+  ----
+  The problems is that if we add some more parallelepipeds
+  to the structure and they define additional inequalities
+  Therefore, the construction of the P-polytope is not
+  canonical. In particular, this makes the decomposition
+  not face-to-face.
+  ----
+  If a polytope is correct, that is the function is well defined
+  over it and the vertices are fine, then we know that
+  we can use it to compute the robust covering density.
+  And that works whether it is good or whether it is very refined
+  for no particular reason. It just works.
+  ----
+  Canonicality question: Is there a notion of canonical maximal
+  decomposition?
+  * In the A2 case, we have something that we clearly
+  expect to be the canonical P-polytope: The inner triangle
+  formed by two vertices and a center of a Delaunay polytope.
+  (Figure 1 of https://arxiv.org/pdf/2508.06446).
+  * One facet comes from setting the farthest vertex of the
+  parallelepiped. Two facets come from having two parallelepiped
+  giving a better parallelepiped. Both of those inequalities
+  are perfectly normal and we expect them to define facets.
+  * Could it be that we have just those inequalities? What may
+  be true in A2 may not be in general.
+  * So, only the inequalities of parallelepipeds which are not
+  minimal specifying which vertex are the farthest actually
+  creates our troubles.
+  * This implies at a minimum that we should keep track of
+  the origin of the facets.
+  ----
+  If we do not have canonicality, can we look for boundaries
+  that are not real ones? That is the ones that after removal
+  will still guarantee that we are ok, that is that the
+  vertices have their norm determinedby the minimal
+  parallelepiped.
+  Sure, that is possible. But, in a canonical way? Not
+  guaranteed at all.
+  If we drop a facet, we should actually drop the whole
+  parallelepiped. That is the only way that makes sense.
+  So, the only facet that are candidates for removal are
+  the ones that are inner facet of cells for which the outer
+  inequalities do not define a facet.
+  But of course, removal is not guaranteed to work:
+  (A) The outer inequality might become a facet defining
+      inequality.
+  (B) The vertices might not be at the right distance.
+  So inequality removal is absolutely not guarenteed to be
+  possible. It is also possible to have inequality removal
+  that are path dependent. No reason to think it cannot
+  occur.
+  ----
+  If we do not have canonicity, can we ensure that if we have
+  a facet, then what we have on the other side is still just
+  one P-domain?
+  If we accept that there can be facet from inner inequalities
+  which are not defining inequalities 
+  ----
+ */
 template<typename T, typename Tint>
 struct PpolytopeVoronoiData {
   GenericRobustM<Tint> robust_m_min;
@@ -642,11 +715,17 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
   os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short=" << StringVector(v_short) << "\n";
   os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_long=" << StringVector(v_long) << "\n";
 #endif
-  MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+  if (v_short != v_long) {
+    MyVector<T> eIneq = get_ineq(G, v_short, v_long);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-  os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << "\n";
+    os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << "\n";
 #endif
-  ListIneq.push_back(eIneq);
+    ListIneq.push_back(eIneq);
+  } else {
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+    os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short=" << StringVector(v_short) << "\n";
+#endif
+  }
 }
 
 
@@ -822,7 +901,7 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
 #endif
     std::vector<MyVector<T>> ListIneq;
     MyMatrix<Tint> const& min_m = list_min_parallelepipeds[0];
-    ExtendedGenericRobustM<T, Tint> ext_robust_m_min = get_generic_robust_m(min_m, G, eV);
+    ExtendedGenericRobustM<T, Tint> ext_robust_m_min = get_generic_robust_m(min_m, G, eV, os);
     if (!ext_robust_m_min.is_correct) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
       os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by !ext_robust_m_min.is_correct\n";
@@ -860,10 +939,15 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     std::vector<GenericRobustM<Tint>> list_robust_m;
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 1\n";
+    size_t i_m = 0;
 #endif
     for (auto& eM: tot_list_parallelepipeds) {
       if (eM != min_m) {
-        ExtendedGenericRobustM<T,Tint> ext_robust_m = get_generic_robust_m(eM, G, eV);
+#ifdef DEBUG_ENUM_ROBUST_COVERING
+        os << "ROBUST:   ------------------------- " << i_m << " ------------------------\n";
+        i_m += 1;
+#endif
+        ExtendedGenericRobustM<T,Tint> ext_robust_m = get_generic_robust_m(eM, G, eV, os);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
         os << "ROBUST:   initial_vertex_data_test_ev, ext_robust_m.robust_m, index=" << ext_robust_m.robust_m.index << " M=\n";
         WriteMatrix(os, ext_robust_m.robust_m.M);
