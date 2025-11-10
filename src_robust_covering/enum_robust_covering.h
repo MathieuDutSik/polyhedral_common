@@ -682,7 +682,7 @@ MyVector<T> get_ineq(MyMatrix<T> const& G, MyVector<Tint> const& v_short, MyVect
   for (int i=0; i<dim; i++) {
     ineq(1 + i) = 2 * G_v(i);
   }
-  return ineq;
+  return ScalarCanonicalizationVector(ineq);
 }
 
 // In a robust structure robust_m, the longest vector
@@ -699,7 +699,7 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
       MyVector<Tint> v_short = GetMatrixRow(robust_m.M, i);
       MyVector<T> eIneq = get_ineq(G, v_short, v_long);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-      os << "ROBUST:   insert_inner_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << " i=" << i << " index=" << robust_m.index << "\n";
+      os << "ROBUST:   insert_inner_ineqs_parallelepiped, eIneq=" << StringVector(eIneq) << " i=" << i << " index=" << robust_m.index << "\n";
 #endif
       ListIneq.push_back(eIneq);
     }
@@ -718,7 +718,7 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const& robust_m, MyM
   if (v_short != v_long) {
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
-    os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(ScalarCanonicalizationVector(eIneq)) << "\n";
+    os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq=" << StringVector(eIneq) << "\n";
 #endif
     ListIneq.push_back(eIneq);
   } else {
