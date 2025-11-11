@@ -99,7 +99,7 @@ jobs:
 
       - name: Test group simplification code
         run: |
-          cd src_latt && make -f Makefile_group_simplification && cd ..
+          cd src_group && make -f Makefile_group_simplification && cd ..
           echo "After compilation of group simplification code"
 
           cd CI_tests/24_GroupSimplification
