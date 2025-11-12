@@ -593,19 +593,20 @@ struct PpolytopeFacetIncidence {
   (B) The list of other parallelepipeds being
   used to define the structure.
   (C) Other bureaucratic stuff: EXT, FAC, Iso, incidence, ...
-  ----
+  ---- FUNDAMENTAL PROBLEM
   The problems is that if we add some more parallelepipeds
   to the structure and they define additional inequalities
   Therefore, the construction of the P-polytope is not
   canonical. In particular, this makes the decomposition
-  not face-to-face.
+  not face-to-face. It is not a purely linear theory like
+  L-type.
   ----
   If a polytope is correct, that is the function is well defined
   over it and the vertices are fine, then we know that
   we can use it to compute the robust covering density.
   And that works whether it is good or whether it is very refined
   for no particular reason. It just works.
-  ----
+  ---- CANONICITY ----
   Canonicality question: Is there a notion of canonical maximal
   decomposition?
   * In the A2 case, we have something that we clearly
@@ -623,7 +624,11 @@ struct PpolytopeFacetIncidence {
   creates our troubles.
   * This implies at a minimum that we should keep track of
   the origin of the facets.
-  ----
+  * At a minimum we can define a canonical domain to be one
+  for which (P, v) is the optimal solution. This is canonic.
+  It just might not be convex or connected and can be difficult
+  to compute.
+  ---- CONSIDERATION 
   If we do not have canonicality, can we look for boundaries
   that are not real ones? That is the ones that after removal
   will still guarantee that we are ok, that is that the
@@ -649,7 +654,70 @@ struct PpolytopeFacetIncidence {
   a facet, then what we have on the other side is still just
   one P-domain?
   If we accept that there can be facet from inner inequalities
-  which are not defining inequalities 
+  which are not defining inequalities. If we do not have
+  canonicity, then a lot of very bad things can occur:
+  * We could have face-to-face and that when an over covering
+  because we go over the limits and never see that we match
+  with another object.
+  * Face-to-face is absolutely not guaranteed. Because basically
+  everything can happen.
+  * We can define some
+  ---- THE GENERALIZED POLYTOPE ----
+  Define for a parallelepiped P, the function
+  Define f(x,y) = || x - y ||^2
+  Then the generalized polytope Can(P,v) in question will be:
+  phi_P(x) = max_{y vertex of P} f(x,y)
+  So phi_P(x) >= f(x,y)
+  So if the optimal configuration is (P,v) then the domain
+  that we want is
+  f(x,v) < phi_Q(x) for all parallelepipeds Q != P.
+  If we select for each of the point in Q a specific
+  point Q_v then the set of inequalities
+  f(x,v) < f(x, Q_v).
+  This is a smaller object because f(x, Q_v) <= phi_Q(x).
+  But it is a polytope. But Can(P, v) is not necessarily
+  connected.
+  What algorithms can we write:
+  * The P-polytope as defined by a best (P, v) but also
+  some other parallelepipeds (P_i, v_i) with the best
+  are kind of useful. But the big problem is that we
+  cannot use all of the P_i in the choice since that
+  break the P-polytope further and further. That is
+  the original source of the problem.
+  * But the P-polytopes have the advantage of being
+  polytopes and so computable. So, somehow we have to
+  use them.
+  * So, if we take a generic point x, we find the
+  minimum (P_min, v_min). Then we list the neighboring
+  parallelepipeds P_i and vertices v_i.
+    + If the P_i are far away, then all those
+      inequalities are redundant.
+  * Now what other vertices w_i of the polytope of P_i
+    could so:
+    + For a far away P_i the inequality between w_i
+    and v_i being the best can split the domain, even
+    if very far.
+    + So, over the polytope P we define the additional
+    f(x, v) <= f(x, w_i) and f(x, v_i) < f(x, w_i),
+    and f(x, v_i) < f(x,v) [Because otherwise this
+                            is covered by the preceding]
+    + If the additional polytope is non-empty, then
+    it has to be added to the structure. But it is
+    strictly an union. No convexity here.
+    + So, we have a non-deterministic algorithm
+  ---- HOW TO MANAGE THE POLYTOPE UNIONS ----
+  The decomposition as an union of polytope is not
+  unique. So, it cannot be used for testing equivalence
+  What can we do in the database:
+  * Store all the vertices.
+  * Store the facets that are opened to the outer world.
+  * The family of polytopes making the decomposition.
+  [ How does that help? unsure ]
+  * The adjacencies between vertices.
+  ---- THE L-TYPE THEORY SIDE ----
+  Here is what we have:
+  * Each vertex is defined like for Delaunay.
+  * The adjacent vertices should 
   ----
  */
 template<typename T, typename Tint>
