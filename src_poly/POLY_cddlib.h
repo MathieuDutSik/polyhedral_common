@@ -8068,6 +8068,7 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
   return ListIdx;
 }
 
+
 template <typename T>
 std::vector<int>
 RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,

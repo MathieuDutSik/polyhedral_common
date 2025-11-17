@@ -711,13 +711,27 @@ struct PpolytopeFacetIncidence {
   What can we do in the database:
   * Store all the vertices.
   * Store the facets that are opened to the outer world.
+    x If we want to have a canonical description then things
+    become fairly complicated:
+      + If the facets are really facet like for polytopes,
+      then storing them is fine.
+      + Otherwise, if we want canonicity we have to decompose
+      the facets and this could become pretty complicated. It
+      is a recursive construction.
+      + We cannot escape this recursive construction. Because
+      just to test equality, it does not suffice to have the list
+      of vertices and facets by incidence.
+    x On the other hand, having the union by a group of facets
+    has its usefulness.
   * The family of polytopes making the decomposition.
   [ How does that help? unsure ]
   * The adjacencies between vertices.
+  * For each vertex keep track of the vectors realizing
+  the equality.
   ---- THE L-TYPE THEORY SIDE ----
   Here is what we have:
   * Each vertex is defined like for Delaunay.
-  * The adjacent vertices should 
+  * The adjacent vertices should give the defining equalities.
   ----
  */
 template<typename T, typename Tint>

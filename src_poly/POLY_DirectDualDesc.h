@@ -621,6 +621,15 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   terminate_direct_dual_desc(ansProg, ListProg);
 }
 
+template <typename T>
+MyMatrix<T> DirectDualDescription(MyMatrix<T> const &EXT,
+                                  std::ostream &os) {
+  std::string ansProg = "lrs";
+  return DirectFacetComputationInequalities(EXT, ansProg, os);
+}
+
+
+
 template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     std::string const &ansProg,
