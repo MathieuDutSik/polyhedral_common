@@ -1874,6 +1874,60 @@ bool is_full_dimensional_bounded_polytope(MyMatrix<T> const& FAC, std::ostream &
   }
 }
 
+/*
+  So, EXT1 / EXT2.
+  A separator is done as f(v1) >= 1 for x in EXT1 and f(v2) <= -1 for x in EXT2.
+  We write f(x) = sum_i a_i x_i
+  We minimize sum_i |a_i|
+ */
+template<typename T>
+bool has_empty_intersection(MyMatrix<T> const& EXT1, MyMatrix<T> const& EXT2, std::ostream &os) {
+  int dim = EXT1.cols();
+  MyVector<T> v_z = ZeroVector<T>(1 + 2*dim);
+  std::vector<MyVector<T>> list_v;
+  // Inequalities f(v1) >= 1 or 0 <= -1 + f(v1)
+  for (int i1=0; i1<EXT1.rows(); i1++) {
+    MyVector<T> v = v_z;
+    v(0) = -1;
+    for (int i=0; i<dim; i++) {
+      v(i+1) = EXT1(i1, i);
+    }
+    list_v.push_back(v);
+  }
+  // Inequalities f(v2) <= -1 or 0 <= -1 - f(v2)
+  for (int i2=0; i2<EXT2.rows(); i2++) {
+    MyVector<T> v = v_z;
+    v(0) = -1;
+    for (int i=0; i<dim; i++) {
+      v(i+1) = -EXT2(i2, i);
+    }
+    list_v.push_back(v);
+  }
+  // Add a_i <= b_i and -a_i <= b_i
+  // or 0 <= -a_i + b_i and 0 <= a_i + b_i
+  for (int i=0; i<dim; i++) {
+    MyVector<T> v1 = v_z;
+    v1(1 + i) = -1;
+    v1(1 + 2*i) = 1;
+    MyVector<T> v2 = v_z;
+    v2(1 + i) = 1;
+    v2(1 + 2*i) = 1;
+    list_v.push_back(v1);
+    list_v.push_back(v2);
+  }
+  MyMatrix<T> FAC = MatrixFromVectorFamily(list_v);
+  MyVector<T> eMinimize = v_z;
+  for (int i=0; i<dim; i++) {
+    eMinimize(1 + 2*i) = 1;
+  }
+  LpSolution<T> eSol = CDD_LinearProgramming(FAC, eMinimize, os);
+  if (!eSol.PrimalDefined || !eSol.DualDefined) {
+    return false;
+  }
+  return true;
+}
+
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_LINEARPROGRAMMING_H_

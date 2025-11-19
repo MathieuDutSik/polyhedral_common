@@ -105,7 +105,7 @@ template<typename Tobj, typename Tequiv, typename Fn_treated, typename Fnext_inp
   typename Fgenerate, typename Fhash, typename Frepr, typename Finsert_obj, typename Fidx_obj,
   typename Fspann, typename Fset_boundary_status>
 bool compute_next_level_serial(int const &max_time_second, bool const& compute_boundary,
-                               fn_treated f_n_treated,
+                               Fn_treated f_n_treated,
                                Fnext_input f_next_input, Fnext_output f_next_output,
                                Fgenerate f_generate, Fhash f_hash, Frepr f_repr,
                                Finsert_obj f_insert_obj, Fidx_obj f_idx_obj,
