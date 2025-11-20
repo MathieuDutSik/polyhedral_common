@@ -3,6 +3,8 @@
 #define SRC_ROBUST_COVERING_GENERALIZED_POLYTOPES_H_
 
 // clang-format off
+#include "GRAPH_BitsetType.h"
+#include "GRAPH_GraphicalBasic.h"
 #include "POLY_LinearProgramming.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Fundamental.h"
@@ -73,12 +75,12 @@ struct SinglePolytope {
   MyMatrix<T> EXT;
   MyMatrix<T> FAC;
   vectface facets;
-}
+};
 
 template<typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const& FACinput, std::ostream& os) {
   std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACinput, os);
-  MyMatrix<T> FAC = SelectRow(FACcand, ListIrred);
+  MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   int n_fac = FAC.rows();
   int n_ext = EXT.rows();
@@ -103,7 +105,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const& FACinput, std::ost
 template<typename T>
 struct GeneralizedPolytope {
   SinglePolytope<T> polytopes;
-}
+};
 
 template<typename T>
 bool check_pairwise_intersection(GeneralizedPolytope<T> const& gp, std::ostream& os) {
@@ -121,7 +123,7 @@ bool check_pairwise_intersection(GeneralizedPolytope<T> const& gp, std::ostream&
 }
 
 template<typename T>
-std::unordered_map<MyVector<T>, size_t> get_map_total_vertices(GeneralizedPolytope<T> const& gp, std::ostream& os) {
+std::unordered_map<MyVector<T>, size_t> get_map_total_vertices(GeneralizedPolytope<T> const& gp, [[maybe_unused]] std::ostream& os) {
   std::unordered_map<MyVector<T>, size_t> map_total_vertices;
   size_t pos = 1;
   for (auto & polytope: gp.polytopes) {
@@ -145,7 +147,6 @@ std::unordered_map<MyVector<T>, size_t> get_map_total_vertices(GeneralizedPolyto
 
 template<typename T>
 size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const& gp, std::ostream& os) {
-  size_t n_polytope = gp.polytopes.size();
   // Determine all the vertices
   std::unordered_map<MyVector<T>, size_t> map_total_vertices = get_map_total_vertices(gp, os);
   size_t n_ext_tot = map_total_vertices.size();
@@ -161,7 +162,7 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const& gp, std::ost
     size_t i_polytope = n_polytope_ins;
     int n_ext = polytope.EXT.rows();
     int n_fac = polytope.FAC.rows();
-    for (int i_fac=0; i_ext<n_ext; i_ext++) {
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
       Face fac = polytope.facets[i_fac];
       MyVector<T> eFAC = GetMatrixRow(polytope.FAC, i_fac);
       MyVector<T> fFAC = ScalarCanonicalizationVector(eFAC);
@@ -197,7 +198,7 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const& gp, std::ost
       }
     }
     for (auto & f_del: l_delete) {
-      map_faces.delete(f_del);
+      map_faces.remove(f_del);
     }
     gp.polytopes.remove(i_polytope_delete);
     n_polytope_ins -= 1;
@@ -243,7 +244,6 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const& gp, std::ost
     return generate_single_polytope(FACcand, os);
   };
   auto look_for_merge=[&]() -> bool {
-    size_t n_polytope = n_polytope_ins;
     for (auto & kv: map_faces) {
       if (kv.second.size() > 2) {
         std::cerr << "GP: That scenario should never happen\n";
@@ -326,7 +326,7 @@ MyMatrix<T> get_fac_subspace(MyMatrix<T> const& FAC, int const& i_fac, MyMatrix<
   for (int j_fac=0; j_fac<n_fac; j_fac++) {
     if (i_fac != j_fac) {
       MyVector<T> v = GetMatrixRow(FAC, j_fac);
-      MyVector<T> eLine = rec.NSP * v;
+      MyVector<T> eLine = NSP * v;
       for (int i=0; i<dim-1; i++) {
         FACsub(pos, i) = eLine(i);
       }
@@ -341,9 +341,6 @@ MyMatrix<T> get_fac_subspace(MyMatrix<T> const& FAC, int const& i_fac, MyMatrix<
 // Two generalized polytopes are adjacent if they share a facet
 template<typename T>
 std::vector<GeneralizedPolytope<T>> connected_components_decomposition(GeneralizedPolytope<T> const& gp, std::ostream& os) {
-  int dim = gp.polytopes[0].FAC.cols();
-  //  std::unordered_map<MyVector<T>, size_t> map_total_vertices = get_map_total_vertices(gp, os);
-
   struct TrackInfo {
     size_t i_polytope;
     int sign;
@@ -368,6 +365,7 @@ std::vector<GeneralizedPolytope<T>> connected_components_decomposition(Generaliz
       rec.l_ti.push_back(ti);
     }
   }
+  size_t n_polytopes = gp.polytopes.size();
   GraphBitset GR(n_polytopes);
   for (auto & kv: full_track) {
     std::vector<TrackInfo> & l_ti = kv.second.l_ti;
@@ -404,16 +402,16 @@ std::vector<GeneralizedPolytope<T>> connected_components_decomposition(Generaliz
 template<typename T>
 GeneralizedPolytope<T> intersection_generalized_polytope(GeneralizedPolytope<T> const& gp1, GeneralizedPolytope<T> const& gp2, std::ostream& os) {
   size_t n_polytope1 = gp1.polytopes.size();
-  size_t n_polytope2 = gp1.polytopes.size();
+  size_t n_polytope2 = gp2.polytopes.size();
   std::vector<SinglePolytope<T>> polytopes;
   for (size_t i1=0; i1<n_polytope1; i1++) {
     for (size_t i2=0; i2<n_polytope2; i2++) {
       MyMatrix<T> const& FAC1 = gp1.polytopes[i1].FAC;
-      MyMatrix<T> const& FAC2 = gp1.polytopes[i2].FAC;
+      MyMatrix<T> const& FAC2 = gp2.polytopes[i2].FAC;
       MyMatrix<T> FAC = Concatenate(FAC1, FAC2);
       bool test = IsFullDimensional(FAC, os);
       if (test) {
-        polytopes.push_back(generate_single_polytope(FACcand, os));
+        polytopes.push_back(generate_single_polytope(FAC, os));
       }
     }
   }
@@ -421,13 +419,13 @@ GeneralizedPolytope<T> intersection_generalized_polytope(GeneralizedPolytope<T> 
 }
 
 template<typename T>
-bool is_contained_p_vert(SinglePolytope<T> const& p, MyVector<T> const& eEXT, std::ostream& os) {
-  int dim = p_big.FAC.cols();
-  int n_fac = p_big.FAC.rows();
+bool is_contained_p_vert(SinglePolytope<T> const& p, MyVector<T> const& eEXT, [[maybe_unused]] std::ostream& os) {
+  int dim = p.FAC.cols();
+  int n_fac = p.FAC.rows();
   for (int i_fac=0; i_fac<n_fac; i_fac++) {
     T scal(0);
     for (int i=0; i<dim; i++) {
-      scal += FAC(i_fac, i) * eEXT(i);
+      scal += p.FAC(i_fac, i) * eEXT(i);
     }
     if (scal < 0) {
       return false;
@@ -522,7 +520,7 @@ GeneralizedPolytope<T> difference_gp_gp(GeneralizedPolytope<T> const& gp1, Gener
 }
 
 template<typename T>
-struct DataFacet {
+struct DataFacetPlusMinus {
   MyMatrix<T> NSP;
   GeneralizedPolytope<T> gp_plus;
   GeneralizedPolytope<T> gp_minus;
@@ -530,31 +528,31 @@ struct DataFacet {
 
 template<typename T>
 struct BoundaryGeneralizedPolytope {
-  std::unordered_map<MyVector<T>, DataFacet<T>> full_data_facets;
+  std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
 };
 
 template<typename T>
 BoundaryGeneralizedPolytope<T> find_generalized_polytope_boundary(GeneralizedPolytope<T> const& gp, std::ostream& os) {
-  std::unordered_map<MyVector<T>, DataFacet> full_data_facets;
+  std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
   for (size_t i=0; i<gp.polytopes.size(); i++) {
     int n_fac = gp.polytopes[i].FAC.rows();
     for (int i_fac=0; i_fac<n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
-      DataFacet& rec = full_data_facets[pair.first];
+      DataFacetPlusMinus<T>& rec = full_data_facets[pair.first];
       if (rec.NSP.rows() == 0) {
         rec.NSP = NullspaceVec(eFAC);
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i].FAC, i_fac, rec.NSP);
       SinglePolytope<T> sp = generate_single_polytope(FAC, os);
       if (pair.second == 1) {
-        gp_plus.polytopes.push_back(sp);
+        rec.gp_plus.polytopes.push_back(sp);
       } else {
-        gp_minus.polytopes.push_back(sp);
+        rec.gp_minus.polytopes.push_back(sp);
       }
     }
   }
-  ListFacetGeneralizedPolytope<T> return_val;
+  BoundaryGeneralizedPolytope<T> return_val;
   for (auto & kv: full_data_facets) {
     GeneralizedPolytope<T> diff_p_m = difference_gp_gp(kv.second.gp_plus, kv.second.gp_minus, os);
     GeneralizedPolytope<T> diff_m_p = difference_gp_gp(kv.second.gp_minus, kv.second.gp_plus, os);
@@ -572,7 +570,7 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> & bnd, 
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
       if (bnd.full_data_facets.count(pair.first) == 1) {
-        DataFacet<T>& df = bnd.full_data_facets[pair.first];
+        DataFacetPlusMinus<T>& df = bnd.full_data_facets[pair.first];
         MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i].FAC, i_fac, df.NSP);
         SinglePolytope<T> sp = generate_single_polytope(FAC, os);
         if (pair.second == 1) {

@@ -3,6 +3,7 @@
 #define SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
 
 // clang-format off
+#include "generalized_polytopes.h"
 #include "Shvec_exact.h"
 #include "LatticeDelaunay.h"
 // clang-format on
