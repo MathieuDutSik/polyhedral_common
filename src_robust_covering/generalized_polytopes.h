@@ -420,27 +420,43 @@ GeneralizedPolytope<T> intersection_generalized_polytope(GeneralizedPolytope<T> 
   return {polytopes};
 }
 
+template<typename T>
+bool is_contained_p_vert(SinglePolytope<T> const& p, MyVector<T> const& eEXT, std::ostream& os) {
+  int dim = p_big.FAC.cols();
+  int n_fac = p_big.FAC.rows();
+  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    T scal(0);
+    for (int i=0; i<dim; i++) {
+      scal += FAC(i_fac, i) * eEXT(i);
+    }
+    if (scal < 0) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+template<typename T>
+bool is_interior_gp_vert(GeneralizedPolytope<T> const& gp, MyVector<T> const& eEXT, std::ostream& os) {
+  for (size_t i_polytope=0; i_polytope<gp.polytopes.size(); i_polytope++) {
+    bool test = is_contained_p_vert(gp.polytopes[i_polytope], eEXT, os);
+    if (test) {
+      return true;
+    }
+  }
+  return false;
+}
+
+
 // Tests whether p_sma is contained in p_big.
 template<typename T>
 bool is_contained_p_p(SinglePolytope<T> const& p_big, SinglePolytope<T> const& p_sma, std::ostream& os) {
-  int dim = p_big.FAC.cols();
-  auto is_interior=[&](MyVector<T> const& x) -> bool {
-    int n_fac = p_big.FAC.rows();
-    for (int i_fac=0; i_fac<n_fac; i_fac++) {
-      T scal(0);
-      for (int i=0; i<dim; i++) {
-        scal += p_big.FAC(i_fac, i) * x(i);
-      }
-      if (scal < 0) {
-        return false;
-      }
-    }
-    return true;
-  };
   int n_ext = p_sma.EXT.rows();
   for (int i_ext=0; i_ext<n_ext; i_ext++) {
     MyVector<T> eEXT = GetMatrixRow(p_sma.EXT, i_ext);
-    if (!is_interior(eEXT)) {
+    bool test = is_contained_p_vert(p_big, eEXT, os);
+    if (!test) {
       return false;
     }
   }
@@ -518,7 +534,7 @@ struct BoundaryGeneralizedPolytope {
 };
 
 template<typename T>
-ListFacetGeneralizedPolytope<T> find_generalized_polytope_boundary(GeneralizedPolytope<T> const& gp, std::ostream& os) {
+BoundaryGeneralizedPolytope<T> find_generalized_polytope_boundary(GeneralizedPolytope<T> const& gp, std::ostream& os) {
   std::unordered_map<MyVector<T>, DataFacet> full_data_facets;
   for (size_t i=0; i<gp.polytopes.size(); i++) {
     int n_fac = gp.polytopes[i].FAC.rows();
@@ -578,7 +594,47 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> & bnd, 
   }
 }
 
-
+template<typename T>
+std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const& gp, BoundaryGeneralizedPolytope<T> const& bnd, std::ostream& os) {
+  int dim = gp.polytopes[0].FAC.cols();
+  std::unordered_set<MyVector<T>> set_vertices;
+  for (size_t i=0; i<gp.polytopes.size(); i++) {
+    int n_ext = gp.polytopes[i].EXT.rows();
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      MyVector<T> eEXT = GetMatrixRow(gp.polytopes[i].EXT, i_ext);
+      set_vertices.insert(eEXT);
+    }
+  }
+  std::vector<MyVector<T>> l_vertices;
+  for (auto & eEXT: set_vertices) {
+    std::vector<MyVector<T>> l_fac;
+    for (auto & kv: bnd.full_data_facets) {
+      MyVector<T> const& eFAC = kv.first;
+      T scal(0);
+      for (int i=0; i<dim; i++) {
+        scal += eFAC(i) * eEXT(i);
+      }
+      if (scal == 0) {
+        std::optional<MyVector<T>> opt = SolutionMat(kv.second.NSP, eEXT);
+        if (!opt) {
+          std::cerr << "GP: It should be in the subspace\n";
+          throw TerminalException{1};
+        }
+        MyVector<T> const& eEXTred = *opt;
+        bool test1 = is_interior_gp_vert(kv.second.gp_minus, eEXTred, os);
+        bool test2 = is_interior_gp_vert(kv.second.gp_plus, eEXTred, os);
+        if (test1 || test2) {
+          l_fac.push_back(eFAC);
+        }
+      }
+    }
+    int rnk = RankMat(MatrixFromVectorFamily(l_fac));
+    if (rnk == dim - 1) {
+      l_vertices.push_back(eEXT);
+    }
+  }
+  return l_vertices;
+}
 
 
 
