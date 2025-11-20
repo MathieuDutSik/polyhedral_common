@@ -420,10 +420,48 @@ GeneralizedPolytope<T> intersection_generalized_polytope(GeneralizedPolytope<T> 
   return {polytopes};
 }
 
+// Tests whether p_sma is contained in p_big.
+template<typename T>
+bool is_contained_p_p(SinglePolytope<T> const& p_big, SinglePolytope<T> const& p_sma, std::ostream& os) {
+  int dim = p_big.FAC.cols();
+  auto is_interior=[&](MyVector<T> const& x) -> bool {
+    int n_fac = p_big.FAC.rows();
+    for (int i_fac=0; i_fac<n_fac; i_fac++) {
+      T scal(0);
+      for (int i=0; i<dim; i++) {
+        scal += p_big.FAC(i_fac, i) * x(i);
+      }
+      if (scal < 0) {
+        return false;
+      }
+    }
+    return true;
+  };
+  int n_ext = p_sma.EXT.rows();
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    MyVector<T> eEXT = GetMatrixRow(p_sma.EXT, i_ext);
+    if (!is_interior(eEXT)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
 // Computes p1 - p2.
 template<typename T>
 GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const& p1, SinglePolytope<T> const& p2, std::ostream& os) {
   std::vector<SinglePolytope<T>> new_polytopes;
+  MyMatrix<T> FACconcat = Concatenate(p1.FAC, p2.FAC);
+  if (!IsFullDimensional(FACconcat, os)) {
+    // early termination
+    new_polytopes.push_back(p1);
+    return {new_polytopes};
+  }
+  if (is_contained_p_p(p2, p1, os)) {
+    // p1 totally contained in p2. Returning empty
+    return {new_polytopes};
+  }
   int n_fac2 = p2.FAC.rows();
   std::vector<MyVector<T>> l_ineq;
   for (int i_fac1=0; i_fac1<p1.FAC.rows(); i_fac1++) {
