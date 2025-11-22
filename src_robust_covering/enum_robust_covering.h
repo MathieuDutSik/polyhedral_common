@@ -664,8 +664,10 @@ struct PpolytopeFacetIncidence {
   everything can happen.
   * We can define some
   ---- THE GENERALIZED POLYTOPE ----
+  [ Generalized polytopes are unions of polytopes see the
+    other file ]
   Define for a parallelepiped P, the function
-  Define f(x,y) = || x - y ||^2
+  f(x,y) = || x - y ||^2
   Then the generalized polytope Can(P,v) in question will be:
   phi_P(x) = max_{y vertex of P} f(x,y)
   So phi_P(x) >= f(x,y)
@@ -675,60 +677,99 @@ struct PpolytopeFacetIncidence {
   If we select for each of the point in Q a specific
   point Q_v then the set of inequalities
   f(x,v) < f(x, Q_v).
-  This is a smaller object because f(x, Q_v) <= phi_Q(x).
+  What about this object:
+  * It will be smaller because f(x, Q_v) <= phi_Q(x).
+  * It will be bigger because we select a finite set
+    of point.
   But it is a polytope. But Can(P, v) is not necessarily
-  connected.
+  connected. It will be an union of polytopes.
+
+  But some features need to be addressed:
+  * Can we find from the start enough vertices so that
+    the generated P-polytope will actually be smaller.
+  * Test that a P-polytope is indeed correct, that is
+    all the points inside of it have (P, v) as minimum.
+    That does not say that it could not be extended.
+  * Testing for each point on the boundary whether
+    it can be extended.
+
+  Starting with enough points:
+  * Can we get an upper bound on the relevant distances?
+    + If we select a parallelepiped P, compute the maximum
+      pairwise distance between the vertices. Then that give
+      us an upper bound.
+    + For the A2 the distance is about (2/3)^2. So, that seems
+      overall reasonable.
+  * But we need to determine a diameter of the P-polytope.
+    + The covering radius could help.
+    + Does that really matter?
+      - We could compute an initial set of points so that it
+        is bounded.
+      - From the list of vertices, we get some upper bound.
+      - Then use that upper bound for getting a global
+        upper bound.
+
+  Testing correctness of the P-polytope:
+  * Checking that the vertices are correct. But it is
+    only indicative.
+  * It seems, that we cannot avoid having the upper bound
+    as a fundamental piece of the proof that it is correct.
+
   What algorithms can we write:
   * The P-polytope as defined by a best (P, v) but also
-  some other parallelepipeds (P_i, v_i) with the best
-  are kind of useful. But the big problem is that we
-  cannot use all of the P_i in the choice since that
-  break the P-polytope further and further. That is
-  the original source of the problem.
+    some other parallelepipeds (P_i, v_i) with the best
+    are kind of useful. But the big problem is that we
+    cannot use all of the P_i in the choice since that
+    break the P-polytope further and further. That is
+    the original source of the problem.
   * But the P-polytopes have the advantage of being
-  polytopes and so computable. So, somehow we have to
-  use them.
+    polytopes and so computable. So, somehow we have to
+    use them.
   * So, if we take a generic point x, we find the
-  minimum (P_min, v_min). Then we list the neighboring
-  parallelepipeds P_i and vertices v_i.
+    minimum (P_min, v_min). Then we list the neighboring
+    parallelepipeds P_i and vertices v_i.
     + If the P_i are far away, then all those
       inequalities are redundant.
   * Now what other vertices w_i of the polytope of P_i
     could so:
     + For a far away P_i the inequality between w_i
-    and v_i being the best can split the domain, even
-    if very far.
+      and v_i being the best can split the domain, even
+      if very far.
     + So, over the polytope P we define the additional
-    f(x, v) <= f(x, w_i) and f(x, v_i) < f(x, w_i),
-    and f(x, v_i) < f(x,v) [Because otherwise this
+      f(x, v) <= f(x, w_i) and f(x, v_i) < f(x, w_i),
+      and f(x, v_i) < f(x,v) [Because otherwise this
                             is covered by the preceding]
     + If the additional polytope is non-empty, then
-    it has to be added to the structure. But it is
-    strictly an union. No convexity here.
-    + So, we have a non-deterministic algorithm
-  ---- HOW TO MANAGE THE POLYTOPE UNIONS ----
-  The decomposition as an union of polytope is not
-  unique. So, it cannot be used for testing equivalence
-  What can we do in the database:
-  * Store all the vertices.
-  * Store the facets that are opened to the outer world.
-    x If we want to have a canonical description then things
-    become fairly complicated:
-      + If the facets are really facet like for polytopes,
-      then storing them is fine.
-      + Otherwise, if we want canonicity we have to decompose
-      the facets and this could become pretty complicated. It
-      is a recursive construction.
-      + We cannot escape this recursive construction. Because
-      just to test equality, it does not suffice to have the list
-      of vertices and facets by incidence.
-    x On the other hand, having the union by a group of facets
-    has its usefulness.
-  * The family of polytopes making the decomposition.
-  [ How does that help? unsure ]
-  * The adjacencies between vertices.
-  * For each vertex keep track of the vectors realizing
-  the equality.
+      it has to be added to the structure. But it is
+      strictly an union. No convexity here. It is a
+      generalized polytope.
+    + So, we can potentially generate the object.
+
+  How to build the generelized polytope:
+  * Compute the upper bound, generate a correct
+    initial P-polytope.
+  * If a parallelepiped has vertices v_i, w_i and
+    f(x,v) >= f(x,v_i) with f(x,v) <= f(w_i) is meaningful.
+    Then this implies that the inequality
+    f(x,v) <= f(x,v_i) is a facet defining inequality.
+  * The inequality from the (P,v) are hard one that cannot
+    be changed. They are not something we can pass over.
+    Those are the hard facets.
+  * Possible algorithm:
+    + Generate the boundary of the polytope.
+    + Determine the hard facets. Have it ready to be
+      removed from insertion, at the start or later in the
+      process.
+    + For each open facet, consider all the possibilities w_i
+      of replacing equalities by
+      f(x,v_i) <= f(x,v) <= f(x,w_i)
+    + We need to keep t
+
+
+  ---- GENERATION OF THE GENERALIZED VORONOI POLYTOPE ----
+  So, what we can do:
+  * Compute a random point x. Compute best (P,v),
+    the farthest vector for a family and the 
   ---- THE L-TYPE THEORY SIDE ----
   Here is what we have:
   * Each vertex is defined like for Delaunay.
