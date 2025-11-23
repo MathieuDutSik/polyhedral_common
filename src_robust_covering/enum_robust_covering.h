@@ -1077,6 +1077,44 @@ T get_upper_bound_covering(CVPSolver<T,Tint> const& solver, std::ostream& os) {
   return upper_bound;
 }
 
+template<typename T>
+T get_upper_bound_ext(MyMatrix<T> const& GramMat, MyMatrix<T> const& EXT) {
+  int n = GramMat.rows();
+  int n_ext = EXT.rows();
+  MyVector<T> diff(n);
+  T upper_bound(0);
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    for (int j_ext=i_ext+1; j_ext<n_ext; j_ext++) {
+      for (int i=0; i<n; i++) {
+        diff(i) = EXT(i_ext, i+1) - EXT(j_ext, i+1);
+        T norm = EvaluationQuadForm(GramMat, diff);
+        if (norm > upper_bound) {
+          upper_bound = norm;
+        }
+      }
+    }
+  }
+  return upper_bound;
+}
+
+/*
+  combined
+  upper_bound <= (sqrt(bound1) + sqrt(bound2) )^2
+    <= bound1 + bound2 + 2 sqrt(bound1 * bound2)
+  If bound1 <= bound2 We bound it by
+    bound1 + 3 bound2
+ */
+template<typename T>
+T combine_two_bounds(T const& bound1, T const& bound2) {
+  if (bound1 <= bound2) {
+    T upper_bound = bound1 + 3 * bound2;
+    return upper_bound;
+  } else {
+    T upper_bound = 3 * bound1 + bound2;
+    return upper_bound;
+  }
+}
+
 
 
 // Find the defining inequalities of a polytope.
@@ -1096,7 +1134,7 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
   bool is_correct = true;
   PpolytopeVoronoiData<T,Tint> ppoly;
   // The lambda function.
-  auto f_insert=[&](ResultDirectEnumeration<T,Tint> const& rde) {
+  auto f_insert=[&](ResultDirectEnumeration<T,Tint> const& rde) -> bool {
     T const& min = rde.min;
     std::vector<MyMatrix<Tint>> const& list_min_parallelepipeds = rde.list_min_parallelepipeds;
     std::vector<MyMatrix<Tint>> const& tot_list_parallelepipeds = rde.tot_list_parallelepipeds;
@@ -1189,26 +1227,6 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
     os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 2\n";
 #endif
     MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
-    os << "ROBUST:   initial_vertex_data_test_ev, |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
-    MyMatrix<T> EXTbig = DirectFacetComputationInequalities(FAC, "lrs", os);
-    os << "ROBUST:   initial_vertex_data_test_ev, EXTbig=\n";
-    WriteMatrix(os, EXTbig);
-    int n_fac = FAC.rows();
-    int n_ext_big = EXTbig.rows();
-    for (int i_fac=0; i_fac<n_fac; i_fac++) {
-      for (int i_ext_big=0; i_ext_big<n_ext_big; i_ext_big++) {
-        T scal(0);
-        for (int i=0; i<FAC.cols(); i++) {
-          scal += FAC(i_fac, i) * EXTbig(i_ext_big, i);
-        }
-        if (scal < 0) {
-          std::cerr << "Incorrect vertices\n";
-          throw TerminalException{1};
-        }
-      }
-    }
-#endif
     bool test = is_full_dimensional_bounded_polytope(FAC, os);
     if (!test) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
