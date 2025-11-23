@@ -324,6 +324,46 @@ struct ResultRobustClosest {
 };
 
 template<typename T, typename Tint>
+T compute_upper_bound_mat(MyMatrix<T> const& GramMat, MyMatrix<Tint> const& M) {
+  int n_ent = M.rows();
+  T upper_value(0);
+  for (int i_ent=0; i_ent<n_ent; i_ent++) {
+    for (int j_ent=i_ent+1; j_ent<n_ent; j_ent++) {
+      MyMatrix<Tint> v1 = GetMatrixRow(M, i_ent);
+      MyMatrix<Tint> v2 = GetMatrixRow(M, j_ent);
+      MyMatrix<Tint> diff = v1 - v2;
+      T norm = EvaluationQuadForm(GramMat, diff);
+      if (norm > upper_value) {
+        upper_value = norm;
+      }
+    }
+  }
+  return upper_value;
+}
+
+
+template<typename T, typename Tint>
+T compute_upper_bound_rrc(MyMatrix<T> const& GramMat, ResultRobustClosest<T,Tint> const& rrc) {
+  T upper_value(0);
+  for (auto &M: rrc.list_parallelepipeds) {
+    T value = compute_upper_bound_mat(GramMat, M);
+    if (value == 0) {
+      std::cerr << "ROBUST: The value should be non-zero\n";
+      throw TerminalException{1};
+    }
+    if (upper_value == 0) {
+      // Done at first step
+      upper_value = value;
+    } else {
+      if (value < upper_value) {
+        upper_value = value;
+      }
+    }
+  }
+  return upper_value;
+}
+
+template<typename T, typename Tint>
 struct ResultDirectEnumeration {
   T min;
   std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
@@ -763,13 +803,17 @@ struct PpolytopeFacetIncidence {
     + For each open facet, consider all the possibilities w_i
       of replacing equalities by
       f(x,v_i) <= f(x,v) <= f(x,w_i)
-    + We need to keep t
+    + The boundary keeps track of what remains. To avoid
+      abstraction leakage, we could have a function that takes
+      the boundary and returns an interior point. Then the
+      interior point can give you the i_polytope and the i_face.
+    + All the inequalities being generated are of the form
+      f(x,v) <=/>= f(x,w)
+      This is somewhat important as it means that if an
+      inequality in two different forms, then they correspond
+      to the same vector w.
+    +
 
-
-  ---- GENERATION OF THE GENERALIZED VORONOI POLYTOPE ----
-  So, what we can do:
-  * Compute a random point x. Compute best (P,v),
-    the farthest vector for a family and the 
   ---- THE L-TYPE THEORY SIDE ----
   Here is what we have:
   * Each vertex is defined like for Delaunay.
@@ -987,6 +1031,54 @@ PpolytopeFacetIncidence<T> get_p_polytope_incidence(MyMatrix<T> const& FAC, MyMa
   return {l_face, l_FAC, l_Iso};
 }
 
+
+template<typename T>
+MyVector<T> get_random_vector(int denom, int dim) {
+  MyVector<T> eV(dim);
+  T denom_T(denom);
+  for (int i=0; i<dim; i++) {
+    int val1 = random();
+    int val = val1 % denom;
+    T val_T(val);
+    T quot = val_T / denom_T;
+    eV(i) = quot;
+  }
+  return eV;
+}
+
+
+
+template<typename T, typename Tint>
+T get_upper_bound_covering(CVPSolver<T,Tint> const& solver, std::ostream& os) {
+  int denom = 2;
+  int dim = solver.GramMat.rows();
+  T upper_bound(0);
+  int iter = 0;
+  int max_iter = 10;
+  while(true) {
+    MyVector<T> eV = get_random_vector<T>(denom, dim);
+    if (!IsIntegralVector(eV)) {
+      ResultRobustClosest<T,Tint> rrc = compute_robust_closest<T,Tint>(solver, eV, os);
+      T value = compute_upper_bound_rrc(solver.GramMat, rrc);
+      if (upper_bound == 0) {
+        // First step
+        upper_bound = value;
+      } else {
+        if (value < upper_bound) {
+          upper_bound = value;
+          iter += 1;
+        }
+      }
+    }
+    if (iter == max_iter) {
+      break;
+    }
+  }
+  return upper_bound;
+}
+
+
+
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
@@ -1089,7 +1181,6 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
           std::cerr << "ROBUST: The parallelepiped has an even lower minimum\n";
           throw TerminalException{1};
         }
-        insert_inner_ineqs_parallelepiped(robust_m, G, ListIneq, os);
         insert_outer_ineqs_parallelepiped(robust_m, G, v_short, ListIneq, os);
         list_robust_m.push_back(robust_m);
       }
@@ -1158,23 +1249,12 @@ std::optional<PpolytopeVoronoiData<T,Tint>> initial_vertex_data_test_ev(CVPSolve
 
 
 
-
-
-
 template<typename T, typename Tint>
 PpolytopeVoronoiData<T,Tint> initial_vertex_data(CVPSolver<T,Tint> const& solver, std::ostream& os) {
   int dim = solver.GramMat.rows();
   int denom = 2;
-  MyVector<T> eV(dim);
   while(true) {
-    T denom_T(denom);
-    for (int i=0; i<dim; i++) {
-      int val1 = random();
-      int val = val1 % denom;
-      T val_T(val);
-      T quot = val_T / denom_T;
-      eV(i) = quot;
-    }
+    MyVector<T> eV = get_random_vector<T>(denom, dim);
     eV(0) = T(7) / T(12);
     eV(1) = T(7) / T(13);
 #ifdef DEBUG_ENUM_ROBUST_COVERING

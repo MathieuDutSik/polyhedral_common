@@ -480,7 +480,7 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const& p1, SinglePolytop
   std::vector<SinglePolytope<T>> new_polytopes;
   MyMatrix<T> FACconcat = Concatenate(p1.FAC, p2.FAC);
   if (!IsFullDimensional(FACconcat, os)) {
-    // early termination
+    // p2 is not contained in p1, so returning just p1.
     new_polytopes.push_back(p1);
     return {new_polytopes};
   }
@@ -596,7 +596,7 @@ std::optional<MyVector<T>> get_interior_point_bnd(BoundaryGeneralizedPolytope<T>
       if (opt2) {
         return *opt2;
       }
-      std::cerr << "GP: the size should be non-zero\n";
+      std::cerr << "GP: the size should be non-zero. Since otherwise, it should be removed from the list\n";
       throw TerminalException{1};
     };
     std::optional<MyVector<T>> opt = get_opt();
