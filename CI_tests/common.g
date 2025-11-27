@@ -380,6 +380,7 @@ end;
 
 
 GetGramMatrixFromListGram:=function(ListGram)
+    local dim, GramMat, shift, eGram, locdim, u, v;
     dim:=Sum(List(ListGram, Length));
     GramMat:=NullMat(dim, dim);
     shift:=0;

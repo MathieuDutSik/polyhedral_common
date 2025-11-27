@@ -370,6 +370,12 @@ struct ResultDirectEnumeration {
   std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
 };
 
+struct CombinedComputeEnumerateStructures {
+  T norm;
+  std::optional<ResultDirectEnumeration<T,Tint>> rde;
+};
+
+
 template<typename T, typename Tint>
 std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::optional<T> & opt, std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
