@@ -710,8 +710,9 @@ MyVector<Tint> GetShortVectorSpecified(MyMatrix<T> const &M,
         V(i) = eNear_i;
       }
       T eVal = EvaluationQuadForm(M, V);
-      if (eVal < MaxNorm)
+      if (eVal < MaxNorm) {
         return V;
+      }
     }
     eMult++;
   }
