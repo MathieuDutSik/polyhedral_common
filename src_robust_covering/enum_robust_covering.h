@@ -370,6 +370,7 @@ struct ResultDirectEnumeration {
   std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
 };
 
+template<typename T, typename Tint>
 struct CombinedComputeEnumerateStructures {
   T norm;
   std::optional<ResultDirectEnumeration<T,Tint>> rde;
@@ -1112,13 +1113,48 @@ T get_upper_bound_ext(MyMatrix<T> const& GramMat, MyMatrix<T> const& EXT) {
  */
 template<typename T>
 T combine_two_bounds(T const& bound1, T const& bound2) {
-  if (bound1 <= bound2) {
-    T upper_bound = bound1 + 3 * bound2;
-    return upper_bound;
-  } else {
-    T upper_bound = 3 * bound1 + bound2;
-    return upper_bound;
+  auto test_correctness=[&](T const& val) -> bool {
+    // Correct if sqrt(bound1) + sqrt(bound2) <= sqrt(val)
+    // Equivalent to bound1 + bound2 + 2 sqrt(bound1 bound2) <= val
+    // Equivalent to 2 sqrt(bound1 bound2) <= val - bound1 - bound2
+    // Equivalent to 4 bound1 bound2 <= (val - bound1 - bound2)^2
+    if (val < 0) {
+      // Should not occur really.
+      return false;
+    }
+    T delta = val - bound1 - bound2;
+    if (delta < 0) {
+      return false;
+    }
+    T val1 = 4 * bound1 * bound2;
+    T val2 = delta * delta;
+    if (val1 <= val2) {
+      return true;
+    } else {
+      return false;
+    }
+  };
+  T low(0);
+  T upp(1);
+  while(true) {
+    bool test_low = test_correctness(low);
+    bool test_upp = test_correctness(upp);
+    if (!test_low && test_upp) {
+      break;
+    }
+    low += 1;
+    upp += 1;
   }
+  for (int i=0; i<6; i++) {
+    T mid = (low + upp) / 2;
+    bool test_mid = test_correctness(mid);
+    if (test_mid) {
+      upp = mid;
+    } else {
+      low = mid;
+    }
+  }
+  return upp;
 }
 
 

@@ -1,4 +1,7 @@
-PROGRAM		= CheckPerfectInput InitialQuadPerfectMatrix MakeInitial_FileMatrix PERF_MPI_EnumeratePerfectCones ComputePerfect IsEutactic MergePartialLogs PERF_SerialEnumeratePerfectCones Temp_PerfectMPI
+PROGRAM		= CheckPerfectInput InitialQuadPerfectMatrix MakeInitial_FileMatrix PERF_MPI_EnumeratePerfectCones IsEutactic MergePartialLogs PERF_SerialEnumeratePerfectCones Temp_PerfectMPI
+
+# REquire TBB to compile
+#PROGRAM		= ComputePerfect
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

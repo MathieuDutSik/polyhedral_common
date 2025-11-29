@@ -70,7 +70,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<Tint> const% SHV,
+Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<T> const& SHV,
                                  MyMatrix<Tint> const &EXT, std::ostream &os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
