@@ -3276,13 +3276,13 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP,
 }
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP) {
+vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXT.cols();
   PolyHeuristicSerial<TintGroup> AllArr =
-      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   return DualDescriptionRecordFullDim<T, Tgroup>(EXTred, GRP, rddo);
 }
 

@@ -177,7 +177,7 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa,
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetAdj_eCone|=" << time << "\n";
 #endif
-  vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub);
+  vectface ListIncd = DualDescriptionStandard<T,Tgroup>(eCone.PerfDomEXT, eCone.GRPsub, os);
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetAdj_ListIncd|=" << time << "\n";
 #endif

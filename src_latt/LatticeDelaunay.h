@@ -70,8 +70,8 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
-                           MyMatrix<Tint> const &EXT, std::ostream &os) {
+Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<Tint> const% SHV,
+                                 MyMatrix<Tint> const &EXT, std::ostream &os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
 #endif
@@ -82,10 +82,10 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
   // Now extending with the SHV vector set
   //
   WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, eData.GramMat, eData.SHV,
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, GramMat, SHV,
                                                 os);
   int nbVert = EXT_T.rows();
-  int nbSHV = eData.SHV.rows();
+  int nbSHV = SHV.rows();
   Face eFace(nbVert + nbSHV);
   for (int iVert = 0; iVert < nbVert; iVert++)
     eFace[iVert] = 1;
@@ -99,6 +99,12 @@ Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
   os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
 #endif
   return GRPlatt;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
+                           MyMatrix<Tint> const &EXT, std::ostream &os) {
+  return Delaunay_StabilizerKernel<T,Tint,Tgroup>(eData.GramMat, eData.SHV, EXT, os);
 }
 
 template <typename T>

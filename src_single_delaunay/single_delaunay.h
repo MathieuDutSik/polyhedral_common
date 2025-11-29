@@ -464,7 +464,12 @@ SingleDeleunay<T,Tint> flip_evolution(SingleDelaunay<T,Tint> const& sd, MyMatrix
 
 
 template<typename T, typename Tint, typename Tgroup>
-Tgroup sd_get_group(
+Tgroup sd_get_group(SingleDelaunay<T,Tint> const& sd, std::ostream& os) {
+  MyMatrix<T> GramMat = sd_get_gram_matrix(sd.QuadFunc);
+  int n = GramMat.rows();
+  MyMatrix<Tint> SHV(0, n);
+  return Delaunay_StabilizerKernel(GramMat, SHV, sd.EXT, os);
+}
 
 
 
@@ -473,9 +478,89 @@ Tgroup sd_get_group(
   This is a scheme for given a polytope
   Thi
  */
-template<typename T, typename Tint>
-std::vector<MyMatrix<T>> 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<T>> sd_get_orbit_directions(SingleDelaunay<T,Tint> const& sd, Tgroup const& g, std::vector<MyMatrix<T>> const& basis_dir, std::ostream& os) {
+  int np1 = sd.QuadFunc.rows();
+  int n_dir = basis_dir.size();
+  int n_ext = sd.EXT.rows();
+  auto get_ext_evals=[&](MyMatrix<T> const& M) -> MyVector<T> {
+    MyVector<T> V(n_ext);
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      MyVector<T> eEXT = GetMatrixRow(sd.EXT, i_ext);
+      T val = EvaluationQuadForm(basis_dir[i_dir], eEXT);
+      V(i_ext) = val;
+    }
+    return V;
+  };
+  MyMatrix<T> ValMatrix(n_ext, n_dir);
+  for (int i_dir=0; i_dir<n_dir; i_dir++) {
+    MyVector<T> V = get_ext_evals(basis_dir[i_dir]);
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      ValMatrix(i_ext, i_dir) = V(i_ext);
+    }
+  }
+#ifdef DEBUG_SINGLE_DELAUNAY
+  int rnk = RankMat(ValMatrix);
+  int expect_dim = n_dir - 1;
+  if (rnk != expect_dim) {
+    std::cerr << "SD: Not the expected dimension\n";
+    throw TerminalException{1};
+  }
+  MyMatrix<T> NSP_int = NullspaceTrMat(ValMatrix);
+  if (NSP_int.rows() != 1) {
+    std::cerr << "SD: The NSP_int should be of dimension 1\n";
+    throw TerminalException{1};
+  }
+#endif
+  auto get_direction=[&](Face const& eFace) -> MyMatrix<T> {
+    MyMatrix<T> SelMat = SelectRow(ValMatrix, eFace);
+    MyMatrix<T> NSP = NullspaceTrMat(SelMat);
+    if (NSP.rows() != 2) {
+      std::cerr << "SD: The NSP should be of dimension 2\n";
+      throw TerminalException{1};
+    }
+    for (int i=0; i<2; i++) {
+      MyMatrix<T> QuadFunc = ZeroMatrix<T>(np1, np1);
+      for (int i_dir=0; i_dir<n_dir; i_dir++) {
+        QuadFunc += NSP(i, i_dir) * basis_dir[i_dir];
+      }
+      MyVector<T> val_ext = get_ext_evals(QuadFunc);
+      T min_val = val_ext.minCoeff();
+      T max_val = val_ext.maxCoeff();
+      if (min_val < 0 && max_val > 0) {
+        std::cerr << "SD: That case should not occur\n";
+      }
+      if (min_val == 0) {
+        // Values are between 0 and max_val. Fine
+        return QuadFunc;
+      }
+      if (max_val == 0) {
+        // Values are between minval and 0. Taking the opposite.
+        return -QuadFunc;
+      }
+    }
+    std::cerr << "SD: Failed to find a direction\n";
+    throw TerminalException{1};
+  };
+  vectface vf = DualDescriptionStandard<T,Tgroup>(ValMatrix, g, os);
+  std::vector<MyMatrix<T>> list_orbit_dir;
+  for (auto & eFace: vf) {
+    list_orbit_dir.push_back(get_direction(eFace));
+  }
+  return list_orbit_dir;
+}
 
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<SingleDelaunay<T,Tint>> sd_get_orbit_adjacent_delaunays(SingleDelaunay<T,Tint> const& sd, std::vector<MyMatrix<T>> const& basis_dir, std::ostream& os) {
+  Tgroup grp = sd_get_group(sd, os);
+  std::vector<MyMatrix<T>> list_orbit_dir = sd_get_orbit_directions(sd, grp, basis_dir, os);
+  std::vector<SingleDelaunay<T,Tint>> list_adjacent;
+  for (auto & dir_mat: list_orbit_dir) {
+    list_adjacent.push_back(flip_evolution(sd, dir_mat, os));
+  }
+  return list_adjacent;
+}
 
 
 
@@ -483,4 +568,3 @@ std::vector<MyMatrix<T>>
 // clang-format off
 #endif  // SRC_SINGLE_DELAUNAY_ADJACENCY_SCHEME_H_
 // clang-format on
-
