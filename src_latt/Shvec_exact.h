@@ -841,6 +841,57 @@ public:
     (void)computeIt<T, Tint, decltype(f_insert)>(request, coset, central, MaxNorm, f_insert);
     return ListVect;
   }
+  resultCVP<T, Tint> increase_distance_vectors(MyVector<T> const &eV, std::optional<T> const& opt_norm) const {
+    if (!opt_norm) {
+      return nearest_vectors(eV);
+    }
+    int n = eV.size();
+    T n_T = T(n);
+    T factor = T(1) + T(1) / n_T;
+    T previous_norm = *opt_norm;
+    T eff_norm = previous_norm * factor;
+    while(true) {
+      std::vector<MyVector<Tint>> ListV = at_most_dist_vectors(eV, eff_norm);
+      std::vector<MyVector<Tint>> list_previous;
+      std::vector<MyVector<Tint>> list_above;
+      T above_norm(0);
+      for (auto & fV: ListV) {
+        T norm = comp_norm(fV, eV);
+        if (norm <= previous_norm) {
+          list_previous.push_back(fV);
+        } else {
+          if (above_norm == 0 || norm < above_norm) {
+            list_above.clear();
+            list_above.push_back(fV);
+            above_norm = norm;
+          } else {
+            if (norm == above_norm) {
+              list_above.push_back(fV);
+            }
+          }
+        }
+      }
+      if (above_norm != T(0)) {
+        int n_vect = list_previous.size() + list_above.size();
+        MyMatrix<Tint> ListVect(n_vect, n);
+        int pos = 0;
+        auto f_insert=[&](MyVector<Tint> const& v) -> void {
+          for (int i=0; i<n; i++) {
+            ListVect(pos, i) = v(i);
+          }
+          pos++;
+        };
+        for (auto & fV: list_previous) {
+          f_insert(fV);
+        }
+        for (auto & fV: list_above) {
+          f_insert(fV);
+        }
+        return {above_norm, ListVect};
+      }
+      eff_norm = eff_norm * factor;
+    }
+  }
   std::vector<MyVector<Tint>> at_most_norm_vectors(T const &MaxNorm) const {
     MyVector<T> coset = ZeroVector<T>(dim);
     bool central = true;
