@@ -378,7 +378,7 @@ struct CombinedComputeEnumerateStructures {
 
 
 template<typename T, typename Tint>
-std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::optional<T> & opt, std::ostream& os) {
+CombinedComputeEnumerateStructures<T,Tint> compute_and_enumerate_structures(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::optional<T> const& opt, std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
   os << "ROBUST:   compute_and_enumerate_structures, beginning, eV=" << StringVector(eV) << "\n";
 #endif
@@ -401,8 +401,7 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
   };
   if (opt) {
     T const& min_search = *opt;
-    T new_val = min_search * factor;
-    opt = new_val;
+    T new_norm = min_search * factor;
     std::vector<MyVector<Tint>> elist = solver.at_most_dist_vectors(eV, min_search);
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
     os << "ROBUST:   After solver.at_most_dist_vectors min_search=" << min_search << " |elist|=" << elist.size() << "\n";
@@ -459,7 +458,8 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
       os << "ROBUST:   eff_min=" << eff_min << "\n";
 #endif
       ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
-      return rde;
+      CombinedComputeEnumerateStructures<T,Tint> cces{new_norm, rde};
+      return cces;
     } else {
       return {};
     }
@@ -469,7 +469,6 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
     os << "ROBUST:   After solver.nearest_vectors\n";
 #endif
     T min = res_cvp.TheNorm;
-    opt = min;
     std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
     if (l_face.size() > 0) {
       std::vector<MyMatrix<Tint>> list_parallelepipeds;
@@ -477,7 +476,8 @@ std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(
         list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
       }
       ResultDirectEnumeration<T,Tint> rde{min, list_parallelepipeds, list_parallelepipeds};
-      return rde;
+      CombinedComputeEnumerateStructures<T,Tint> cces{min, rde};
+      return cces;
     } else {
       return {};
     }
@@ -504,12 +504,13 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
     os << "ROBUST: compute_robust_close_f, step 2, n_iter=" << n_iter << "\n";
     n_iter += 1;
 #endif
-    std::optional<ResultDirectEnumeration<T,Tint>> opt = compute_and_enumerate_structures(solver, eV, min_search, os);
+    CombinedComputeEnumerateStructures<T,Tint> cces = compute_and_enumerate_structures(solver, eV, min_search, os);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: compute_robust_close_f, After compute_and_enumerate_structures\n";
 #endif
-    if (opt) {
-      ResultDirectEnumeration<T,Tint> const& rde = *opt;
+    min_search = cces.norm;
+    if (cces.rde) {
+      ResultDirectEnumeration<T,Tint> const& rde = *cces.rde;
       bool test = f_insert(rde);
       if (test) {
         return;
@@ -938,13 +939,12 @@ std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tin
     MyVector<T> diff = eEXT - v_short_T;
     T norm = EvaluationQuadForm(GramMat, diff);
     std::optional<T> opt = norm;
-    std::optional<ResultDirectEnumeration<T,Tint>> opt_rde = compute_and_enumerate_structures(solver, eEXT, opt, os);
-    if (!opt_rde) {
+    CombinedComputeEnumerateStructures<T,Tint> cces = compute_and_enumerate_structures(solver, eEXT, opt, os);
+    if (!cces.rde) {
       std::cerr << "ROBUST: get_p_polytope_vertices_and_test_them failed. We should have one\n";
       throw TerminalException{1};
     }
-    ResultDirectEnumeration<T,Tint> const& rde = *opt_rde;
-    if (rde.min < norm) {
+    if (cces.norm < norm) {
       return {};
     }
   }
