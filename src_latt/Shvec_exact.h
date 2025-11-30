@@ -856,7 +856,7 @@ public:
       std::vector<MyVector<Tint>> list_above;
       T above_norm(0);
       for (auto & fV: ListV) {
-        T norm = comp_norm(fV, eV);
+        T norm = comp_norm_diff(fV, eV);
         if (norm <= previous_norm) {
           list_previous.push_back(fV);
         } else {

@@ -371,14 +371,7 @@ struct ResultDirectEnumeration {
 };
 
 template<typename T, typename Tint>
-struct CombinedComputeEnumerateStructures {
-  T norm;
-  std::optional<ResultDirectEnumeration<T,Tint>> rde;
-};
-
-
-template<typename T, typename Tint>
-CombinedComputeEnumerateStructures<T,Tint> compute_and_enumerate_structures(CVPSolver<T,Tint> const& solver, MyVector<T> const& eV, std::optional<T> const& opt, std::ostream& os) {
+std::optional<ResultDirectEnumeration<T,Tint>> compute_and_enumerate_structures(MyMatrix<T> const& GramMat, resultCVP<T,Tint> const& res_cvp, MyVector<T> const& eV, std::ostream& os) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
   os << "ROBUST:   compute_and_enumerate_structures, beginning, eV=" << StringVector(eV) << "\n";
 #endif
@@ -388,7 +381,6 @@ CombinedComputeEnumerateStructures<T,Tint> compute_and_enumerate_structures(CVPS
   os << "ROBUST:   compute_and_enumerate_structures, dim=" << dim << " pow=" << pow << "\n";
 #endif
   MyMatrix<Tint> M_sol(pow, dim);
-  T factor = T(3) / T(2);
   auto get_msol=[&](MyMatrix<Tint> const& Min, Face const& eFace) -> MyMatrix<Tint> {
     int pos = 0;
     for (int& vert: FaceToVector<int>(eFace)) {
@@ -399,88 +391,65 @@ CombinedComputeEnumerateStructures<T,Tint> compute_and_enumerate_structures(CVPS
     }
     return M_sol;
   };
-  if (opt) {
-    T const& min_search = *opt;
-    T new_norm = min_search * factor;
-    std::vector<MyVector<Tint>> elist = solver.at_most_dist_vectors(eV, min_search);
+  int n_vect = res_cvp.ListVect.rows();
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-    os << "ROBUST:   After solver.at_most_dist_vectors min_search=" << min_search << " |elist|=" << elist.size() << "\n";
+  os << "ROBUST:   After solver.at_most_dist_vectors res_cvp.TheNorm=" << res_cvp.TheNorm << " |ListVect|=" << n_vect << "\n";
 #endif
-    std::vector<T> l_norm;
-    for (auto & fV: elist) {
-      MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
-      T norm = EvaluationQuadForm(solver.GramMat, diff);
-      l_norm.push_back(norm);
-    }
-    MyMatrix<Tint> M = MatrixFromVectorFamily(elist);
+  std::vector<T> l_norm;
+  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+    MyVector<Tint> fV = GetMatrixRow(res_cvp.ListVect, i_vect);
+    MyVector<T> diff = UniversalVectorConversion<T,Tint>(fV) - eV;
+    T norm = EvaluationQuadForm(GramMat, diff);
+    l_norm.push_back(norm);
+  }
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-    os << "ROBUST:   Before enumerate_parallelepiped\n";
+  os << "ROBUST:   Before enumerate_parallelepiped\n";
 #endif
-    std::vector<Face> l_face = enumerate_parallelepiped(M, os);
+  std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-    os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size() << "\n";
+  os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size() << "\n";
 #endif
-    if (l_face.size() > 0) {
-      T eff_min = min_search + T(1);
+  if (l_face.size() > 0) {
+    T eff_min = res_cvp.TheNorm + T(1);
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-      os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
-      int i_face = 0;
+    os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
+    int i_face = 0;
 #endif
-      std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
-      std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
-      for (auto & eFace: l_face) {
-        T local_max_norm(0);
+    std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
+    std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
+    for (auto & eFace: l_face) {
+      T local_max_norm(0);
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-        os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
+      os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
 #endif
-        for (int& vert: FaceToVector<int>(eFace)) {
-          if (l_norm[vert] > local_max_norm) {
-            local_max_norm = l_norm[vert];
-          }
+      for (int& vert: FaceToVector<int>(eFace)) {
+        if (l_norm[vert] > local_max_norm) {
+          local_max_norm = l_norm[vert];
         }
+      }
 #ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-        os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
-        i_face += 1;
+      os << "ROBUST:   i_face=" << i_face << " local_max_norm=" << local_max_norm << "\n";
+      i_face += 1;
 #endif
-        MyMatrix<Tint> Mparall = get_msol(M, eFace);
-        tot_list_parallelepipeds.push_back(Mparall);
-        if (local_max_norm < eff_min) {
-          list_min_parallelepipeds.clear();
-          eff_min = local_max_norm;
+      MyMatrix<Tint> Mparall = get_msol(res_cvp.ListVect, eFace);
+      tot_list_parallelepipeds.push_back(Mparall);
+      if (local_max_norm < eff_min) {
+        list_min_parallelepipeds.clear();
+        eff_min = local_max_norm;
+        list_min_parallelepipeds.push_back(Mparall);
+      } else {
+        if (local_max_norm == eff_min) {
           list_min_parallelepipeds.push_back(Mparall);
-        } else {
-          if (local_max_norm == eff_min) {
-            list_min_parallelepipeds.push_back(Mparall);
-          }
         }
       }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-      os << "ROBUST:   eff_min=" << eff_min << "\n";
-#endif
-      ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
-      CombinedComputeEnumerateStructures<T,Tint> cces{new_norm, rde};
-      return cces;
-    } else {
-      return {};
     }
+#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+    os << "ROBUST:   eff_min=" << eff_min << "\n";
+#endif
+    ResultDirectEnumeration<T,Tint> rde{eff_min, list_min_parallelepipeds, tot_list_parallelepipeds};
+    return rde;
   } else {
-    resultCVP<T, Tint> res_cvp = solver.nearest_vectors(eV);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-    os << "ROBUST:   After solver.nearest_vectors\n";
-#endif
-    T min = res_cvp.TheNorm;
-    std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
-    if (l_face.size() > 0) {
-      std::vector<MyMatrix<Tint>> list_parallelepipeds;
-      for (auto & eFace: l_face) {
-        list_parallelepipeds.push_back(get_msol(res_cvp.ListVect, eFace));
-      }
-      ResultDirectEnumeration<T,Tint> rde{min, list_parallelepipeds, list_parallelepipeds};
-      CombinedComputeEnumerateStructures<T,Tint> cces{min, rde};
-      return cces;
-    } else {
-      return {};
-    }
+    return {};
   }
 }
 
@@ -498,19 +467,20 @@ void compute_robust_close_f(CVPSolver<T,Tint> const& solver, MyVector<T> const& 
   os << "ROBUST: compute_robust_close_f, step 1\n";
   int n_iter = 0;
 #endif
-  std::optional<T> min_search;
+  std::optional<T> opt_norm;
   while(true) {
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: compute_robust_close_f, step 2, n_iter=" << n_iter << "\n";
     n_iter += 1;
 #endif
-    CombinedComputeEnumerateStructures<T,Tint> cces = compute_and_enumerate_structures(solver, eV, min_search, os);
+    resultCVP<T, Tint> res_cvp = solver.increase_distance_vectors(eV, opt_norm);
+    std::optional<ResultDirectEnumeration<T,Tint>> opt_rde = compute_and_enumerate_structures(solver.GramMat, res_cvp, eV, os);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: compute_robust_close_f, After compute_and_enumerate_structures\n";
 #endif
-    min_search = cces.norm;
-    if (cces.rde) {
-      ResultDirectEnumeration<T,Tint> const& rde = *cces.rde;
+    opt_norm = res_cvp.TheNorm;
+    if (opt_rde) {
+      ResultDirectEnumeration<T,Tint> const& rde = *opt_rde;
       bool test = f_insert(rde);
       if (test) {
         return;
@@ -938,14 +908,12 @@ std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(CVPSolver<T,Tin
   for (auto & eEXT: EXT) {
     MyVector<T> diff = eEXT - v_short_T;
     T norm = EvaluationQuadForm(GramMat, diff);
-    std::optional<T> opt = norm;
-    CombinedComputeEnumerateStructures<T,Tint> cces = compute_and_enumerate_structures(solver, eEXT, opt, os);
-    if (!cces.rde) {
+    std::vector<MyVector<Tint>> ListVect = solver.at_most_dist_vectors(eEXT, norm);
+    resultCVP<T,Tint> res_cvp{norm, MatrixFromVectorFamily(ListVect)};
+    std::optional<ResultDirectEnumeration<T,Tint>> opt_rde = compute_and_enumerate_structures(solver.GramMat, res_cvp, eEXT, os);
+    if (!opt_rde) {
       std::cerr << "ROBUST: get_p_polytope_vertices_and_test_them failed. We should have one\n";
       throw TerminalException{1};
-    }
-    if (cces.norm < norm) {
-      return {};
     }
   }
   int n_ext = EXT.size();
