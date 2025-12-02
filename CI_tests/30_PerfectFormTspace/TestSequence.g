@@ -24,8 +24,36 @@ GetFundamentalInfo:=function(d)
     eProd:=eQuot;
     IsCorrect:=true;
   fi;
-  return rec(eSum:=eSum, eProd:=eProd, IsCorrect:=IsCorrect);
+  if d < 0 then
+      type_tspace:="ImagQuad";
+  else
+      type_tspace:="RealQuad";
+  fi;
+  return rec(eSum:=eSum, eProd:=eProd, IsCorrect:=IsCorrect, type_tspace:=type_tspace);
 end;
+
+CorrectnessRealQuadratic:=function(eSum, eProd)
+  local TheDiscriminant, ListMult, pos, TheRes;
+  if eSum=0 then
+    TheDiscriminant:=-eProd;
+  else
+    TheDiscriminant:=eSum*eSum -4*eProd;
+  fi;
+  TheRes:=TheDiscriminant mod 4;
+  if TheDiscriminant<=0 then
+    Print("The Field is not real quadratic, impossible to work\n");
+    return false;
+  fi;
+  ListMult:=List(Collected(FactorsInt(TheDiscriminant)), x->x[2]);
+  pos:=First(ListMult, x->x mod 2=0);
+  if pos<>fail then
+    Print("TheDiscriminant=", TheDiscriminant, "\n");
+    Print("The Discriminant has a square factor, illegal\n");
+    return false;
+  fi;
+  return true;
+end;
+
 
 get_rec_info:=function(fProg, d, n, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
@@ -60,7 +88,7 @@ get_rec_info:=function(fProg, d, n, keep_error)
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");
-    AppendTo(output, " TypeTspace = \"ImagQuad\"\n");
+    AppendTo(output, " TypeTspace = \"", info.type_tspace, "\"\n");
     AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
     AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
     AppendTo(output, " ListComm = \"Use_realimag\"\n");
@@ -85,26 +113,54 @@ get_rec_info:=function(fProg, d, n, keep_error)
         return fail;
     fi;
     U:=ReadAsFunction(FileResult)();
-#    RemoveFile(FileErr);
-#    RemoveFile(FileNml);
-#    RemoveFile(FileResult);
+    RemoveFile(FileErr);
+    RemoveFile(FileNml);
+    RemoveFile(FileResult);
     return U;
 end;
 
+
+
+
+
 ListCases:=[];
 
-Add(ListCases, rec(n:=3, d:=-3, n_perf:=2));
-Add(ListCases, rec(n:=3, d:=-4, n_perf:=1));
-Add(ListCases, rec(n:=3, d:=-7, n_perf:=2));
-Add(ListCases, rec(n:=3, d:=-8, n_perf:=2));
-Add(ListCases, rec(n:=3, d:=-11, n_perf:=12));
-Add(ListCases, rec(n:=3, d:=-15, n_perf:=90));
-Add(ListCases, rec(n:=3, d:=-19, n_perf:=157));
-Add(ListCases, rec(n:=3, d:=-20, n_perf:=212));
-Add(ListCases, rec(n:=3, d:=-23, n_perf:=870));
-Add(ListCases, rec(n:=3, d:=-24, n_perf:=596));
-Add(ListCases, rec(n:=4, d:=-3, n_perf:=5));
-Add(ListCases, rec(n:=4, d:=-4, n_perf:=2));
+insert_imag_examples:=function()
+    # The examples in the paper
+    # Herbert Gangl, Paul Gunnells, Jonathan Hanke, Achill Schürmann, Mathieu Dutour Sikirić, Dan Yasaki,
+    # On the cohomology of linear groups over imaginary quadratic fields, preprint at arxiv:1307.1165,
+    # Journal of Pure and Applied Algebra 220-7 (2016) 2564--2589
+    # Preprint: https://arxiv.org/abs/1307.1165
+    Add(ListCases, rec(n:=3, d:=-3, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-4, n_perf:=1));
+    Add(ListCases, rec(n:=3, d:=-7, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-8, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-11, n_perf:=12));
+    Add(ListCases, rec(n:=3, d:=-15, n_perf:=90));
+    Add(ListCases, rec(n:=3, d:=-19, n_perf:=157));
+    Add(ListCases, rec(n:=3, d:=-20, n_perf:=212));
+    Add(ListCases, rec(n:=3, d:=-23, n_perf:=870));
+    Add(ListCases, rec(n:=3, d:=-24, n_perf:=596));
+    Add(ListCases, rec(n:=4, d:=-3, n_perf:=5));
+    Add(ListCases, rec(n:=4, d:=-4, n_perf:=2));
+end;
+
+insert_real_examples:=function(n, MaxDisc)
+    local MinDisc, d, info, test;
+    MinDisc:=2;
+    for d in [MinDisc..MaxDisc]
+    do
+        info:=GetFundamentalInfo(d);
+        test:=CorrectnessRealQuadratic(info.eSum, info.eProd);
+        if info.IsCorrect and test then
+            Add(ListCases, rec(n:=n, d:=d));
+        fi;
+    od;
+end;
+
+#insert_imag_examples();
+insert_real_examples(3, 10);
+
 
 
 #ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
@@ -126,9 +182,11 @@ f_compute:=function()
                 Print("Failing because eRec=fail\n");
                 return false;
             fi;
-            if Length(eRec)<>eCase.n_perf then
-                Print("Enumeration, |eRec|=", Length(eRec), " n_perf=", eCase.n_perf, "\n");
-                return false;
+            if IsBound(eCase.n_perf) then
+                if Length(eRec)<>eCase.n_perf then
+                    Print("Enumeration, |eRec|=", Length(eRec), " n_perf=", eCase.n_perf, "\n");
+                    return false;
+                fi;
             fi;
         od;
     od;
