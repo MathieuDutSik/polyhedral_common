@@ -28,11 +28,12 @@ GetFundamentalInfo:=function(d)
 end;
 
 get_rec_info:=function(fProg, d, n, keep_error)
-    local FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
+    local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
-    FileNml:="PerfectForm.nml";
-    FileResult:="Result";
-    FileErr:=GetFreeFile("PERF_enumeration_");
+    strRun:=Concatenation("_", String(n), "_", String(d));
+    FileNml:=Concatenation("PerfectForm", strRun , ".nml");
+    FileResult:=Concatenation("Result", strRun);
+    FileErr:=Concatenation("ERR_enumeration", strRun);
     RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileResult);
     #
@@ -81,12 +82,12 @@ get_rec_info:=function(fProg, d, n, keep_error)
     #
     if IsExistingFile(FileResult)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
-#        Print(NullMat(5));
         return fail;
     fi;
     U:=ReadAsFunction(FileResult)();
-    RemoveFile(FileNml);
-    RemoveFile(FileResult);
+#    RemoveFile(FileErr);
+#    RemoveFile(FileNml);
+#    RemoveFile(FileResult);
     return U;
 end;
 

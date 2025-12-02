@@ -13,16 +13,19 @@ NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix
-
-
 CFLAGS 		= -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -I$(GMP_INCDIR)
+
+#CDEFS           = -DDEBUG -DTIMINGS
+CDEFS           =
+
+CTOTAL          = $(CLOCAL) $(CFLAGS) $(CDEFS)
 
 LIBS		= -lm -pthread $(GMP_CXX_LINK)
 
 %.o: %.cpp
 	@echo
 	@echo compile $<
-	$(CC) $(OUTPUTFLAG) $@ $(CLOCAL) $(CFLAGS) $(NOLINKFLAG) $<
+	$(CC) $(OUTPUTFLAG) $@ $(CTOTAL) $(NOLINKFLAG) $<
 
 all:	$(PROGRAM)
 

@@ -69,10 +69,12 @@ RUN cd GIT && git clone https://github.com/MathieuDutSik/polyhedral_common.git -
 # nauty/traces
 ENV NAUTY_PATH /opt/nauty
 ENV NAUTY_INCLUDE "-I$NAUTY_PATH/include"
-ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty_shared -Wl,-rpath,$NAUTY_PATH/lib"
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty && mkdir build
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH ..
-RUN cd GIT/polyhedral_common/basic_common_cpp/ExternalLib/nauty/build && make all install
+ENV NAUTY_LINK "-L$NAUTY_PATH/lib -lnauty -Wl,-rpath,$NAUTY_PATH/lib"
+ENV CFLAGS "-g"
+RUN mkdir -p GIT
+RUN cd GIT && git clone https://github.com/MathieuDutSik/nauty
+RUN cd GIT/nauty && ./configure --prefix=/opt/nauty
+RUN cd GIT/nauty && make && make install
 
 # GLPK
 RUN apt-get install -y libglpk-dev
