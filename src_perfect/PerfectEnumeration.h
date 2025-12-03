@@ -3,12 +3,15 @@
 #define SRC_PERFECT_PERFECTENUMERATION_H_
 
 #include "Namelist.h"
+#include "SystemNamelist.h"
 #include <map>
 #include <string>
 #include <vector>
 
 FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   std::map<std::string, int> ListIntValues1;
   std::map<std::string, std::string> ListStringValues1;
@@ -18,7 +21,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT() {
   ListIntValues1["MaxNumberFlyingMessage"] = 100;
   ListIntValues1["MaxIncidenceTreating"] = 45 + 20;
   ListIntValues1["MaxStoredUnsentMatrices"] = 1000;
-  //  ListStringValues1["PrefixDataSave"]="Output_";
   SingleBlock BlockDATA;
   BlockDATA.setListIntValues(ListIntValues1);
   BlockDATA.setListStringValues(ListStringValues1);
