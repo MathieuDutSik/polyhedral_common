@@ -726,8 +726,8 @@ struct unlimited_request {
   }
 };
 
-bool ApplyStdUnitbuf(FullNamelist const &eFull) {
-  SingleBlock BlockSYSTEM = eFull.get_block("SYSTEM");
+bool ApplyStdUnitbuf(FullNamelist const &eFull, std::string const& block_name) {
+  SingleBlock BlockSYSTEM = eFull.get_block(block_name);
   bool result = BlockSYSTEM.get_bool("ApplyStdUnitbuf");
   return result;
 }
@@ -739,7 +739,7 @@ get_mpi_log_stream(boost::mpi::communicator &comm, FullNamelist const &eFull) {
   std::string FileLog =
       "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::unique_ptr<std::ofstream> os = std::make_unique<std::ofstream>(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
+  if (ApplyStdUnitbuf(eFull, "SYSTEM")) {
     *os << std::unitbuf;
     *os << "Apply UnitBuf\n";
   } else {

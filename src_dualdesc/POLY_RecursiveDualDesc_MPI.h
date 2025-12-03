@@ -698,7 +698,7 @@ void MPI_MainFunctionDualDesc(boost::mpi::communicator &comm,
       "log_" + std::to_string(n_proc) + "_" + std::to_string(i_rank);
   std::cerr << "We have moved. See the log in FileLog=" << FileLog << "\n";
   std::ofstream os(FileLog);
-  if (ApplyStdUnitbuf(eFull)) {
+  if (ApplyStdUnitbuf(eFull, "DATA")) {
     os << std::unitbuf;
     os << "Apply UnitBuf\n";
   } else {

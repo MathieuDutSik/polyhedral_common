@@ -8,16 +8,19 @@ TestEnumeration:=function(eRec)
     RemoveFileIfExist(FileNml);
     RemoveFileIfExist(FileOut);
     #
-    strOut:="&DATA\n";
-    strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
-    strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
-    strOut:=Concatenation(strOut, " OutFormat = \"NumberGAP\"\n");
-    strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
-    strOut:=Concatenation(strOut, " n = ", String(eRec.n), "\n");
+    strOut:="&SYSTEM\n";
     strOut:=Concatenation(strOut, " max_runtime_second = 0\n");
     strOut:=Concatenation(strOut, " ApplyStdUnitbuf = T\n");
     strOut:=Concatenation(strOut, " Saving = F\n");
     strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
+    strOut:=Concatenation(strOut, " OUTfile = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"NumberGAP\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&DATA\n");
+    strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
+    strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
+    strOut:=Concatenation(strOut, " n = ", String(eRec.n), "\n");
     strOut:=Concatenation(strOut, "/\n");
     #
     WriteStringFile(FileNml, strOut);

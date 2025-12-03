@@ -21,18 +21,18 @@ get_rec_info:=function(fProg, d, n, keep_error)
     #
     # Create the namelist file
     output:=OutputTextFile(FileNml, true);
+    AppendTo(output, "&SYSTEM\n");
+    AppendTo(output, " max_runtime_second = 0\n");
+    AppendTo(output, " ApplyStdUnitbuf = T\n");
+    AppendTo(output, " Saving = F\n");
+    AppendTo(output, " Prefix = \"/tmp/PerfectForm/\"\n");
+    AppendTo(output, " OUTfile = \"", FileResult, "\"\n");
+    AppendTo(output, " OutFormat = \"ObjectGAP\"\n");
+    AppendTo(output, "/\n");
+    AppendTo(output, "\n");
     AppendTo(output, "&DATA\n");
     AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
     AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
-    AppendTo(output, " OutFormat = \"ObjectGAP\"\n");
-    AppendTo(output, " OutFile = \"", FileResult, "\"\n");
-    AppendTo(output, " max_runtime_second = 0\n");
-    AppendTo(output, " ApplyStdUnitbuf = T\n");
-    AppendTo(output, "/\n");
-    AppendTo(output, "\n");
-    AppendTo(output, "&STORAGE\n");
-    AppendTo(output, " Saving = F\n");
-    AppendTo(output, " Prefix = \"/tmp/PerfectForm/\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");

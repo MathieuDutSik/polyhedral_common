@@ -79,7 +79,7 @@ LLLreduction<Tmat, Tint> LLLreducedBasis(MyMatrix<Tmat> const &GramMat, [[maybe_
 #ifdef DEBUG_CLASSIC_LLL
     os << "LLL: k=" << k << " l=" << l << " mue(k,l)=" << mue(k,l) << "\n";
 #endif
-    if (1 < mue(k, l) * 2 || mue(k, l) * 2 < -1) {
+    if (Tfield(1) < mue(k, l) * 2 || mue(k, l) * 2 < Tfield(-1)) {
       Tint q = UniversalNearestScalarInteger<Tint, Tfield>(mue(k, l));
       Tmat q_T = UniversalScalarConversion<Tmat, Tint>(q);
 #ifdef DEBUG_CLASSIC_LLL

@@ -1,14 +1,17 @@
-&DATA
- arithmetic_T = "gmp_rational"
- arithmetic_Tint = "gmp_integer"
-! OutFormat = "NumberGAP"
- OutFormat = "ObjectGAP"
- OutFile = "Result"
- FileDualDescription = "unset"
+&SYSTEM
  max_runtime_second = 0
  ApplyStdUnitbuf = T
  Saving = T
  Prefix = "./DATA/"
+ OUTfile = "Result"
+! OutFormat = "NumberGAP"
+ OutFormat = "ObjectGAP"
+/
+
+&DATA
+ arithmetic_T = "gmp_rational"
+ arithmetic_Tint = "gmp_integer"
+ FileDualDescription = "unset"
  CVPmethod = "SVexact"
 /
 
