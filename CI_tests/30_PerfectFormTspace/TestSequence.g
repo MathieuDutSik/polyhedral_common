@@ -3,58 +3,6 @@ Print("Beginning Test enumeration of perfect forms in T-spaces\n");
 
 keep_err:=false;
 
-GetFundamentalInfo:=function(d)
-  local res, IsCorrect, eSum, eProd, Dval, eQuot, type_tspace;
-  res:=d mod 4;
-  IsCorrect:=false;
-  eSum:=0;
-  eProd:=0;
-  if res=0 then
-    eSum:=0;
-    eProd:=-d/4;
-    Dval:=-eProd;
-    IsCorrect:=true;
-    if IsInt((Dval-1)/4)=true or IsInt(Dval/4)=true then
-      IsCorrect:=false;
-    fi;
-  fi;
-  if res=1 then
-    eQuot:=(1-d)/4;
-    eSum:=1;
-    eProd:=eQuot;
-    IsCorrect:=true;
-  fi;
-  if d < 0 then
-      type_tspace:="ImagQuad";
-  else
-      type_tspace:="RealQuad";
-  fi;
-  return rec(eSum:=eSum, eProd:=eProd, IsCorrect:=IsCorrect, type_tspace:=type_tspace);
-end;
-
-CorrectnessRealQuadratic:=function(eSum, eProd)
-  local TheDiscriminant, ListMult, pos, TheRes;
-  if eSum=0 then
-    TheDiscriminant:=-eProd;
-  else
-    TheDiscriminant:=eSum*eSum -4*eProd;
-  fi;
-  TheRes:=TheDiscriminant mod 4;
-  if TheDiscriminant<=0 then
-    Print("eSum=", eSum, " eProd=", eProd, " The Field is not real quadratic, impossible to work\n");
-    return false;
-  fi;
-  ListMult:=List(Collected(FactorsInt(TheDiscriminant)), x->x[2]);
-  pos:=First(ListMult, x->x mod 2=0);
-  if pos<>fail then
-    Print("TheDiscriminant=", TheDiscriminant, "\n");
-    Print("The Discriminant has a square factor, illegal\n");
-    return false;
-  fi;
-  return true;
-end;
-
-
 get_rec_info:=function(fProg, d, n, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
