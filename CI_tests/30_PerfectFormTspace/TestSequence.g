@@ -131,7 +131,7 @@ insert_extensive_imag_examples_part2:=function()
 end;
 
 insert_extensive_imag_examples_part3:=function()
-    Add(ListCases, rec(n:=3, d:=-27));
+    Add(ListCases, rec(n:=3, d:=-27, n_perf:=1201));
     Add(ListCases, rec(n:=3, d:=-31, n_pref:=3953));
 end;
 

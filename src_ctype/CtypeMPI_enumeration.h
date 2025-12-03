@@ -7,6 +7,7 @@
 #include "CtypeMPI_types.h"
 #include "POLY_MPI_AdjacencyScheme.h"
 #include "Namelist.h"
+#include "SystemNamelist.h"
 #include "hash_functions.h"
 #include "rational.h"
 #include "sparse-map/include/tsl/sparse_map.h"
@@ -25,22 +26,16 @@ struct DataCtype {
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["OutFormat"] = "nothing";
-  ListStringValues1["OutFile"] = "unset.out";
   ListIntValues1["n"] = -1;
-  ListIntValues1["max_runtime_second"] = 0;
-  ListBoolValues1["ApplyStdUnitbuf"] = false;
-  ListBoolValues1["Saving"] = false;
-  ListStringValues1["Prefix"] = "/irrelevant/";
   SingleBlock BlockDATA;
   BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
   BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
   // Merging all data
@@ -190,8 +185,9 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
 template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
                                   FullNamelist const &eFull) {
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  bool ApplyStdUnitbuf = BlockDATA.get_bool("ApplyStdUnitbuf");
+  bool ApplyStdUnitbuf = BlockSYSTEM.get_bool("ApplyStdUnitbuf");
   int i_rank = comm.rank();
   int n_proc = comm.size();
   std::string FileLog =
@@ -204,15 +200,15 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
     os << "Do not apply UnitBuf\n";
   }
   //
-  bool STORAGE_Saving = BlockDATA.get_bool("Saving");
-  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
+  bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
   int n = BlockDATA.get_int("n");
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   DataCtype data{n, os};

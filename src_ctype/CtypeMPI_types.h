@@ -2,6 +2,8 @@
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
+#define USE_CDDLIB
+
 // clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Combinatorics.h"
