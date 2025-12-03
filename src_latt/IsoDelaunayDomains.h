@@ -8,6 +8,7 @@
 #include "Positivity.h"
 #include "LatticeDelaunay.h"
 #include "Tspace_General.h"
+#include "SystemNamelist.h"
 #include <string>
 #include <vector>
 #include <unordered_map>
@@ -1753,26 +1754,18 @@ FlippingLtype(DelaunayTesselation<Tvert, Tgroup> const &ListOrbitDelaunay,
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["OutFormat"] = "nothing";
-  ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
   ListStringValues1["CommonGramMat"] = "unset";
-  ListIntValues1["max_runtime_second"] = 0;
-  ListBoolValues1["ApplyStdUnitbuf"] = false;
-  ListBoolValues1["Saving"] = false;
-  ListStringValues1["Prefix"] = "/irrelevant/";
   ListStringValues1["CVPmethod"] = "SVexact";
   SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
   BlockDATA.setListDoubleValues(ListDoubleValues1);
   BlockDATA.setListStringValues(ListStringValues1);
   BlockDATA.setListListStringValues(ListListStringValues1);

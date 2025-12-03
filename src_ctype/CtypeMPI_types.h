@@ -2,6 +2,8 @@
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
+// The USE_CDDLIB is needed so that the include with POLY_c_cddlib.h is effective.
+// This is needed so that cbased_cdd is available.
 #define USE_CDDLIB
 
 // clang-format off

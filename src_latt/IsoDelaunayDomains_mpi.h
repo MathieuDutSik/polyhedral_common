@@ -18,21 +18,22 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
   SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   int dimEXT = LinSpa.n + 1;
   //
-  bool STORAGE_Saving = BlockDATA.get_bool("Saving");
-  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
+  bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: max_runtime_second=" << max_runtime_second << "\n";
 #endif
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
 #ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif
