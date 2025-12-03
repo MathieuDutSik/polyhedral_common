@@ -1,9 +1,9 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
-#include "NumberTheoryBoostCppInt.h"
-#include "NumberTheoryBoostGmpInt.h"
-#include "NumberTheoryCommon.h"
 #include "NumberTheoryGmp.h"
+#include "NumberTheoryBoostGmpInt.h"
+#include "NumberTheoryBoostCppInt.h"
+#include "NumberTheoryCommon.h"
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
