@@ -14,6 +14,7 @@
 #include "Timings.h"
 #include "POLY_GAP.h"
 #include "Balinski_basic.h"
+#include "ClassicLLL.h"
 #include "Databank.h"
 #include "PERM_Fct.h"
 #include "basic_datafile.h"
@@ -38,6 +39,7 @@
 // #define DEBUG_CANONICAL_LIMITED
 #define DEBUG_RECURSIVE_DUAL_DESC
 #define DEBUG_INSERT
+#define DEBUG_REDUCTION
 #endif
 
 // #define MURMUR_HASH
@@ -3211,6 +3213,14 @@ DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   std::string DD_Prefix = "totally_irrelevant_second";
   //
   MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<T> EXT2 = ReduceVectorFamily(EXTred, "direct", os).first;
+#ifdef DEBUG_REDUCTION
+  os << "RDD: DualDescriptionStandard_A, EXTred=\n";
+  WriteMatrix(os, EXTred);
+  os << "RDD: DualDescriptionStandard_A, EXT2=\n";
+  WriteMatrix(os, EXT2);
+#endif
+  //
   MyMatrix<Text_int> EXTred_int = Get_EXT_int(EXTred);
   Tbank TheBank(BANK_Saving, BANK_Prefix, os);
   std::map<std::string, TintGroup> TheMap =
@@ -3279,11 +3289,19 @@ template <typename T, typename Tgroup>
 vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> EXTred = ColumnReduction(EXT);
-  int dimEXT = EXT.cols();
+  MyMatrix<T> EXT2 = ReduceVectorFamily(EXTred, "direct", os).first;
+#ifdef DEBUG_REDUCTION
+  os << "RDD: DualDescriptionStandard_B, EXTred=\n";
+  WriteMatrix(os, EXTred);
+  os << "RDD: DualDescriptionStandard_B, EXT2=\n";
+  WriteMatrix(os, EXT2);
+#endif
+  //
+  int dimEXT = EXTred.cols();
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
-  return DualDescriptionRecordFullDim<T, Tgroup>(EXTred, GRP, rddo);
+  return DualDescriptionRecordFullDim<T, Tgroup>(EXT2, GRP, rddo);
 }
 
 // clang-format off

@@ -4,7 +4,7 @@ Print("Beginning Test enumeration of perfect forms in T-spaces\n");
 keep_err:=false;
 
 GetFundamentalInfo:=function(d)
-  local res, IsCorrect, eSum, eProd, Dval, eQuot;
+  local res, IsCorrect, eSum, eProd, Dval, eQuot, type_tspace;
   res:=d mod 4;
   IsCorrect:=false;
   eSum:=0;
@@ -41,7 +41,7 @@ CorrectnessRealQuadratic:=function(eSum, eProd)
   fi;
   TheRes:=TheDiscriminant mod 4;
   if TheDiscriminant<=0 then
-    Print("The Field is not real quadratic, impossible to work\n");
+    Print("eSum=", eSum, " eProd=", eProd, " The Field is not real quadratic, impossible to work\n");
     return false;
   fi;
   ListMult:=List(Collected(FactorsInt(TheDiscriminant)), x->x[2]);
@@ -105,7 +105,7 @@ get_rec_info:=function(fProg, d, n, keep_error)
     if keep_error then
         TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
     fi;
-    Print("TheCommand=", TheCommand, "\n");
+    Print("keep_error=", keep_error, " TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
     #
     if IsExistingFile(FileResult)=false then
@@ -151,6 +151,7 @@ insert_real_examples:=function(n, MaxDisc)
     for d in [MinDisc..MaxDisc]
     do
         info:=GetFundamentalInfo(d);
+        Print("info=", info, " d=", d, "\n");
         test:=CorrectnessRealQuadratic(info.eSum, info.eProd);
         if info.IsCorrect and test then
             Add(ListCases, rec(n:=n, d:=d));
@@ -158,8 +159,42 @@ insert_real_examples:=function(n, MaxDisc)
     od;
 end;
 
+insert_extensive_imag_examples_part1:=function()
+    Add(ListCases, rec(n:=2, d:=-3));
+    Add(ListCases, rec(n:=2, d:=-4));
+    Add(ListCases, rec(n:=2, d:=-7));
+    Add(ListCases, rec(n:=2, d:=-8));
+    Add(ListCases, rec(n:=2, d:=-11));
+    Add(ListCases, rec(n:=2, d:=-15));
+    Add(ListCases, rec(n:=2, d:=-19));
+    Add(ListCases, rec(n:=2, d:=-20));
+    Add(ListCases, rec(n:=2, d:=-23));
+    Add(ListCases, rec(n:=2, d:=-24));
+    Add(ListCases, rec(n:=4, d:=-7));
+    Add(ListCases, rec(n:=4, d:=-8));
+end;
+
+insert_extensive_imag_examples_part2:=function()
+    # Too slow it seems to run
+    Add(ListCases, rec(n:=4, d:=-11));
+    Add(ListCases, rec(n:=4, d:=-15));
+    Add(ListCases, rec(n:=4, d:=-19));
+    Add(ListCases, rec(n:=4, d:=-20));
+end;
+
+insert_extensive_imag_examples_part3:=function()
+#    Add(ListCases, rec(n:=3, d:=-27));
+    Add(ListCases, rec(n:=3, d:=-31));
+    Add(ListCases, rec(n:=3, d:=-32));
+end;
+
+
+
 #insert_imag_examples();
-insert_real_examples(3, 10);
+#insert_real_examples(3, 10);
+#insert_extensive_imag_examples_part1();
+#insert_extensive_imag_examples_part2();
+insert_extensive_imag_examples_part3();
 
 
 
@@ -187,6 +222,8 @@ f_compute:=function()
                     Print("Enumeration, |eRec|=", Length(eRec), " n_perf=", eCase.n_perf, "\n");
                     return false;
                 fi;
+            else
+                Print("Number of perfect forms found=", Length(eRec), "\n");
             fi;
         od;
     od;
