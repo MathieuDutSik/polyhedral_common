@@ -8,6 +8,7 @@
 #include "PolytopeEquiStabInt.h"
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
+#include "SystemNamelist.h"
 #include "fractions.h"
 #include <limits>
 #include <map>
@@ -1452,33 +1453,18 @@ struct DataPerfectLorentzianFunc {
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["LorMatFile"] = "unset.gram";
   ListStringValues1["Option"] = "unset";
-  ListStringValues1["OutFormat"] = "nothing";
-  ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["FileDualDescription"] = "unset";
-  ListIntValues1["max_runtime_second"] = 0;
-  ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
   BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
-  // STORAGE
-  std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, std::string> ListStringValues2;
-  ListBoolValues2["Saving"] = false;
-  ListStringValues2["Prefix"] = "/irrelevant/";
-  SingleBlock BlockSTORAGE;
-  BlockSTORAGE.setListBoolValues(ListBoolValues2);
-  BlockSTORAGE.setListStringValues(ListStringValues2);
-  ListBlock["STORAGE"] = BlockSTORAGE;
   // Merging all data
   return FullNamelist(ListBlock);
 }

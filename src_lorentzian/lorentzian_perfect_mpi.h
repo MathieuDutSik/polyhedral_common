@@ -20,14 +20,14 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: ComputePerfectLorentzian_mpi, beginning\n";
 #endif
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
   //
-  bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
-  std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");
+  bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: max_runtime_second=" << max_runtime_second << "\n";
 #endif
@@ -59,8 +59,8 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
     }
   }
   //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif
