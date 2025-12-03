@@ -104,22 +104,22 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
   std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
   int dimEXT = GramMat.rows() + 1;
-  SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
   //
-  bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
-  std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");
+  bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second << "\n";
 #endif

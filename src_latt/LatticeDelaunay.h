@@ -10,6 +10,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "GraverBasis.h"
+#include "SystemNamelist.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -787,9 +788,9 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
 
 FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, double> ListDoubleValues1;
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, std::vector<std::string>> ListListStringValues1;
@@ -797,28 +798,13 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["GRAMfile"] = "unset.gram";
   ListStringValues1["SVRfile"] = "unset.svr";
-  ListStringValues1["OutFormat"] = "nothing";
-  ListStringValues1["OutFile"] = "unset.out";
   ListStringValues1["choice_initial"] = "direct";
   ListStringValues1["FileDualDescription"] = "unset";
-  ListIntValues1["max_runtime_second"] = 0;
-  ListBoolValues1["ApplyStdUnitbuf"] = false;
   SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
   BlockDATA.setListDoubleValues(ListDoubleValues1);
   BlockDATA.setListStringValues(ListStringValues1);
   BlockDATA.setListListStringValues(ListListStringValues1);
   ListBlock["DATA"] = BlockDATA;
-  // STORAGE
-  std::map<std::string, bool> ListBoolValues2;
-  std::map<std::string, std::string> ListStringValues2;
-  ListBoolValues2["Saving"] = false;
-  ListStringValues2["Prefix"] = "/irrelevant/";
-  SingleBlock BlockSTORAGE;
-  BlockSTORAGE.setListBoolValues(ListBoolValues2);
-  BlockSTORAGE.setListStringValues(ListStringValues2);
-  ListBlock["STORAGE"] = BlockSTORAGE;
   // Merging all data
   return FullNamelist(ListBlock);
 }
