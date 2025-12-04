@@ -3,7 +3,7 @@
  ApplyStdUnitbuf = T
  Saving = F
  Prefix = "/irrelevant/"
- OUTfile = "Result"
+ OutFile = "Result"
  OutFormat = "NumberGAP"
 /
 

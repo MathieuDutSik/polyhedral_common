@@ -3,7 +3,7 @@
  ApplyStdUnitbuf = T
  Saving = T
  Prefix = "./DATA/"
- OUTfile = "Result"
+ OutFile = "Result"
 ! OutFormat = "NumberGAP"
  OutFormat = "ObjectGAP"
 /

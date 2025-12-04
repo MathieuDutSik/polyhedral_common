@@ -14,7 +14,7 @@ TestGroupSkeleton:=function(eRec)
     strOut:=Concatenation(strOut, " FACfile = \"", eRec.FileExt, "\"\n");
     strOut:=Concatenation(strOut, " EXTfile = \"unset.ext\"\n");
     strOut:=Concatenation(strOut, " GRPfile = \"", eRec.FileGrp, "\"\n");
-    strOut:=Concatenation(strOut, " OUTfile =\"", FileResultOut, "\"\n");
+    strOut:=Concatenation(strOut, " OutFile =\"", FileResultOut, "\"\n");
     strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
     strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
     strOut:=Concatenation(strOut, " method_final = \"all\"\n");

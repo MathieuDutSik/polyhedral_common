@@ -13,7 +13,7 @@ TestEnumeration:=function(eRec)
     strOut:=Concatenation(strOut, " ApplyStdUnitbuf = T\n");
     strOut:=Concatenation(strOut, " Saving = F\n");
     strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
-    strOut:=Concatenation(strOut, " OUTfile = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
     strOut:=Concatenation(strOut, " OutFormat = \"NumberGAP\"\n");
     strOut:=Concatenation(strOut, "/\n");
     strOut:=Concatenation(strOut, "\n");

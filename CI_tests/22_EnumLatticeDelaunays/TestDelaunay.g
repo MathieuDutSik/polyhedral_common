@@ -12,19 +12,19 @@ TestEnumeration:=function(eRec)
     #
     WriteMatrixFile(FileIn, eRec.eG);
     #
-    strOut:="&DATA\n";
+    strOut:="&SYSTEM\n";
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
+    strOut:=Concatenation(strOut, " Saving = F\n");
+    strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&DATA\n");
     strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
     strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
     strOut:=Concatenation(strOut, " GRAMfile = \"", FileIn, "\"\n");
     strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
-    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
-    strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
-    strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
-    strOut:=Concatenation(strOut, "/\n");
-    strOut:=Concatenation(strOut, "\n");
-    strOut:=Concatenation(strOut, "&STORAGE\n");
-    strOut:=Concatenation(strOut, " Saving = F\n");
-    strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
     strOut:=Concatenation(strOut, "/\n");
     #
     WriteStringFile(FileNml, strOut);
