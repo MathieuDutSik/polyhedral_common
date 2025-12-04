@@ -7,7 +7,7 @@ name: CI(30) of Perfect Forms in T-spaces
 on:
   # One time per month
   schedule:
-    - cron: "0 0 2 * *"
+    - cron: "0 0 5 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -106,7 +106,7 @@ jobs:
           pwd
           ln -s gap-4.14.0/gap gap.sh
 
-      - name: Test Perfect Forms in T-spaces
+      - name: Test enumeration of perfect forms in T-spaces
         run: |
           cd src_perfect && make -f Makefile_perfectenum && cd ..
           pwd

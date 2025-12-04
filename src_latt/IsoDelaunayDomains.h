@@ -346,7 +346,7 @@ std::vector<FullAdjInfo<T>> ComputeDefiningIneqIsoDelaunayDomain(
         BuildVoronoiIneqPreCompute<T, Tvert>(DT.l_dels[i_del].EXT, os);
     ContainerMatrix<Tvert> cont(DT.l_dels[i_del].EXT);
     auto get_ineq = [&](int const &i_adj) -> MyVector<T> {
-      Delaunay_AdjO<Tvert> adj = DT.l_dels[i_del].ListAdj[i_adj];
+      Delaunay_AdjO<Tvert> const& adj = DT.l_dels[i_del].ListAdj[i_adj];
       int j_del = adj.iOrb;
       MyMatrix<Tvert> EXTadj = DT.l_dels[j_del].EXT * adj.eBigMat;
       int len = EXTadj.rows();

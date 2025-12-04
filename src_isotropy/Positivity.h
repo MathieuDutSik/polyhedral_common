@@ -769,8 +769,8 @@ template <typename T> std::vector<T> GetLineVector(MyMatrix<T> const &M) {
 
 template <typename T>
 T EvaluateLineVector(std::vector<T> const &V_mat, MyVector<T> const &V) {
-  T sum = 0;
-  T pSum = 0;
+  T sum(0);
+  T pSum(0);
   int n = V.size();
   size_t pos = 0;
   for (int i = 0; i < n; i++) {
@@ -787,8 +787,8 @@ T EvaluateLineVector(std::vector<T> const &V_mat, MyVector<T> const &V) {
 template <typename T>
 T EvaluateLineVectorShift(std::vector<T> const &V_mat, MyVector<T> const &V,
                           int shift) {
-  T sum = 0;
-  T pSum = 0;
+  T sum(0);
+  T pSum(0);
   int n = V.size();
   size_t pos = 0;
   for (int i = shift; i < n; i++) {
