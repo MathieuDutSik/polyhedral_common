@@ -11,6 +11,10 @@
 #define DEBUG_ISO_DELAUNAY_DOMAINS_MPI
 #endif
 
+#ifdef DISABLE_DEBUG_ISO_DELAUNAY_DOMAINS_MPI
+#undef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
+#endif
+
 
 template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,

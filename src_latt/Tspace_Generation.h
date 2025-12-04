@@ -10,6 +10,10 @@
 #define DEBUG_TSPACE_GENERATION
 #endif
 
+#ifdef DISABLE_DEBUG_TSPACE_GENERATION
+#undef DEBUG_TSPACE_GENERATION
+#endif
+
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;
   for (int i = 0; i < n; i++)

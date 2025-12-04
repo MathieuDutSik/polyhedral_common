@@ -109,6 +109,10 @@
 #define DEBUG_ENUM_ROBUST_COVERING
 #endif
 
+#ifdef DISABLE_DEBUG_ENUM_ROBUST_COVERING
+#undef DEBUG_ENUM_ROBUST_COVERING
+#endif
+
 struct PartSolution {
   int vert;
   std::vector<int> l_dir;

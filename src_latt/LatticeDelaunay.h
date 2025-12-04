@@ -26,6 +26,10 @@
 #define DEBUG_DELAUNAY_ENUMERATION
 #endif
 
+#ifdef DISABLE_DEBUG_DELAUNAY_ENUMERATION
+#undef DEBUG_DELAUNAY_ENUMERATION
+#endif
+
 template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   int n;
   MyMatrix<T> GramMat;

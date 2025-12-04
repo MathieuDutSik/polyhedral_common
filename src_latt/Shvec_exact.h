@@ -23,6 +23,14 @@
 // #define DEBUG_SHVEC_MATRIX
 #endif
 
+#ifdef DISABLE_DEBUG_SHVEC
+#undef DEBUG_SHVEC
+#endif
+
+#ifdef DISABLE_DEBUG_SHVEC_EXACT_POLYTOPE
+#undef DEBUG_SHVEC_EXACT_POLYTOPE
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_SHVEC
 #endif

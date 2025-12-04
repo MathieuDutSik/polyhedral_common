@@ -15,6 +15,10 @@
 #define DEBUG_MPI_DELAUNAY_ENUMERATION
 #endif
 
+#ifdef DISABLE_DEBUG_MPI_DELAUNAY_ENUMERATION
+#undef DEBUG_MPI_DELAUNAY_ENUMERATION
+#endif
+
 
 template <typename T, typename Tvert, typename Tgroup>
 void WriteFamilyDelaunay_Mpi(

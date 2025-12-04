@@ -14,6 +14,10 @@
 #define DEBUG_INDEX_APPROX_CANONICAL
 #endif
 
+#ifdef DISABLE_DEBUG_INDEX_APPROX_CANONICAL
+#undef DEBUG_INDEX_APPROX_CANONICAL
+#endif
+
 template <typename T, typename Tint>
 ResultReduction<T, Tint> CanonicalizationPermutationSigns(MyMatrix<T> const &M,
                                                           std::ostream &os) {

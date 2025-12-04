@@ -33,6 +33,14 @@
 #define DEBUG_ENUM_PROCESS
 #endif
 
+#ifdef DISABLE_DEBUG_EDGEWALK
+#undef DEBUG_EDGEWALK
+#endif
+
+#ifdef DISABLE_DEBUG_ENUM_PROCESS
+#undef DEBUG_ENUM_PROCESS
+#endif
+
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA

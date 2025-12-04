@@ -35,6 +35,10 @@
 #define DEBUG_CDD
 #endif
 
+#ifdef DISABLE_DEBUG_CDD
+#undef DEBUG_CDD
+#endif
+
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_CDD
 #endif

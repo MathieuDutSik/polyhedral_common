@@ -21,6 +21,10 @@
 #define DEBUG_FUNDAMENTAL_DELAUNAY
 #endif
 
+#ifdef DISABLE_DEBUG_FUNDAMENTAL_DELAUNAY
+#undef DEBUG_FUNDAMENTAL_DELAUNAY
+#endif
+
 template <typename T>
 MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
   MyVector<T> eVect(n);

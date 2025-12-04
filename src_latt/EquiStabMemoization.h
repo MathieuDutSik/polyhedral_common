@@ -54,6 +54,10 @@
 #define DEBUG_EQUI_STAB_MEMOIZATION
 #endif
 
+#ifdef DISABLE_DEBUG_EQUI_STAB_MEMOIZATION
+#undef DEBUG_EQUI_STAB_MEMOIZATION
+#endif
+
 template <typename T, typename Tint>
 void IDENTITY_OBJECT(stc<MyMatrix<T>> const &x, MyMatrix<Tint> &equiv) {
   int n = x.val.rows();

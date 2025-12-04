@@ -12,6 +12,10 @@
 #define DEBUG_POSITIVE_NEGATIVE_FORMS
 #endif
 
+#ifdef DISABLE_DEBUG_POSITIVE_NEGATIVE_FORMS
+#undef DEBUG_POSITIVE_NEGATIVE_FORMS
+#endif
+
 // In some contexts, we need to deal with positive-definite or negative-definite
 // matrices.
 
