@@ -20,6 +20,7 @@
 
 #ifdef DEBUG
 #define DEBUG_ISO_DELAUNAY_DOMAIN
+#define DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
 #endif
 
 #ifdef DISABLE_DEBUG_ISO_DELAUNAY_DOMAIN
@@ -85,6 +86,11 @@ size_t ComputeInvariantDelaunayTessellation(
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+  std::unordered_map<int, size_t> map_vert;
+  std::unordered_map<TintGroup, size_t> map_ord_grp;
+#endif
+
   for (auto &e_del : DT.l_dels) {
     std::map<size_t, size_t> map_siz;
     for (auto &eAdj : e_del.ListAdj) {
@@ -92,8 +98,14 @@ size_t ComputeInvariantDelaunayTessellation(
       map_siz[siz] += 1;
     }
     size_t hash_del = 123;
-    size_t hash1 = std::hash<int>()(e_del.EXT.rows());
-    size_t hash2 = std::hash<TintGroup>()(e_del.GRP.order());
+    int n_ext = e_del.EXT.rows();
+    TintGroup ord_grp = e_del.GRP.order();
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+    map_vert[n_ext] += 1;
+    map_ord_grp[ord_grp] += 1;
+#endif
+    size_t hash1 = std::hash<int>()(n_ext);
+    size_t hash2 = std::hash<TintGroup>()(ord_grp);
     combine_hash(hash_del, hash1);
     combine_hash(hash_del, hash2);
     for (auto &kv : map_siz) {
@@ -102,6 +114,18 @@ size_t ComputeInvariantDelaunayTessellation(
     }
     map[hash_del] += 1;
   }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+  std::string str_vert = "ISODEL: map_vert =";
+  for (auto & kv: map_vert) {
+    str_vert += " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+  }
+  std::string str_ord_grp = "ISODEL: map_ord_grp =";
+  for (auto & kv: map_ord_grp) {
+    str_ord_grp += " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+  }
+  os << str_vert << "\n";
+  os << str_ord_grp << "\n";
+#endif
   size_t hash_ret = seed;
   for (auto &kv : map) {
     combine_hash(hash_ret, kv.first);
@@ -1788,6 +1812,7 @@ template <typename T, typename Tint, typename Tgroup> struct IsoDelaunayDomain {
   DelaunayTesselation<Tint, Tgroup> DT;
   int nbIneq;
   MyMatrix<T> GramMat;
+  MyMatrix<T> SHV_T;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1872,18 +1897,27 @@ inline void serialize(Archive &ar, IsoDelaunayDomain_AdjO<T, Tint> &eRec,
 template <typename T, typename Tint, typename Tgroup>
 size_t ComputeInvariantIsoDelaunayDomain(
     [[maybe_unused]] DataIsoDelaunayDomains<T, Tint, Tgroup> &data,
-    size_t const &seed, DelaunayTesselation<Tint, Tgroup> const &DT) {
+    size_t const &seed, DelaunayTesselation<Tint, Tgroup> const &DT,
+    [[maybe_unused]] std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   std::map<size_t, size_t> map_delaunays;
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+  std::unordered_map<size_t, size_t> map_vert;
+  std::unordered_map<TintGroup, size_t> map_ord_grp;
+#endif
   size_t seed_delaunay = 10;
   for (auto &eDel : DT.l_dels) {
     size_t hash = seed_delaunay;
     size_t hash_nVert = eDel.EXT.rows();
-    TintGroup order = eDel.GRP.size();
-    size_t hash_grp = std::hash<TintGroup>()(order);
+    TintGroup ord_grp = eDel.GRP.size();
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+    map_vert[hash_nVert] += 1;
+    map_ord_grp[ord_grp] += 1;
+#endif
+    size_t hash_grp = std::hash<TintGroup>()(ord_grp);
     combine_hash(hash, hash_nVert);
     combine_hash(hash, hash_grp);
     std::map<size_t, size_t> map_facesiz;
@@ -1897,6 +1931,18 @@ size_t ComputeInvariantIsoDelaunayDomain(
     }
     map_delaunays[hash] += 1;
   }
+#ifdef DEBUG_ISO_DELAUNAY_DOMAIN_PRESENTATION
+  std::string str_vert = "ISODEL: map_vert =";
+  for (auto & kv: map_vert) {
+    str_vert += " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+  }
+  std::string str_ord_grp = "ISODEL: map_ord_grp =";
+  for (auto & kv: map_ord_grp) {
+    str_ord_grp += " [" + std::to_string(kv.first) + "," + std::to_string(kv.second) + "]";
+  }
+  os << str_vert << "\n";
+  os << str_ord_grp << "\n";
+#endif
   size_t hash_ret = seed;
   for (auto &kv : map_delaunays) {
     combine_hash(hash_ret, kv.first);
@@ -1908,11 +1954,14 @@ size_t ComputeInvariantIsoDelaunayDomain(
 template <typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain<T, Tint, Tgroup>
 GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  std::ostream& os = data.rddo.os;
   DelaunayTesselation<Tint, Tgroup> DT =
       GetInitialGenericDelaunayTesselation(data);
   std::pair<int, MyMatrix<T>> pair =
-      GetInteriorGramMatrix(data.LinSpa, DT, data.rddo.os);
-  return {std::move(DT), pair.first, std::move(pair.second)};
+      GetInteriorGramMatrix(data.LinSpa, DT, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(pair.second, os);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  return {std::move(DT), pair.first, std::move(pair.second), std::move(SHV_T)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1966,11 +2015,11 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   std::vector<int> ListIrred =
     cdd::RedundancyReductionClarkson(FAC_extend, os);
   int nbIneq = FAC.rows();
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(ent.DT_gram.GramMat, os);
+  MyMatrix<T> const& SHV_T = ent.DT_gram.SHV_T;
   os_out << ", n_ineq:=" << nbIneq;
   os_out << ", n_irred:=" << ListIrred.size();
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
-  os_out << ", n_shv:=" << SHV.rows();
+  os_out << ", n_shv:=" << SHV_T.rows();
   //
   MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
   int n_row = EXT.rows();
@@ -2055,23 +2104,45 @@ struct DataIsoDelaunayDomainsFunc {
     return x;
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
-    return ComputeInvariantIsoDelaunayDomain<T, Tint, Tgroup>(data, seed,
-                                                              x.DT_gram.DT);
+    std::ostream &os = data.rddo.os;
+    int method = 2;
+    if (method == 1) {
+      // That method does not seem to work very well
+      // because it can happen that many triangulations have all Delaunays
+      // being simplices with trivial stabilizer. Those would have exactly
+      // the same hash invariant.
+      return ComputeInvariantIsoDelaunayDomain<T, Tint, Tgroup>(data, seed,
+                                                                x.DT_gram.DT, os);
+    }
+    if (method == 2) {
+      return LINSPA_Invariant_SHV<T>(seed,
+                                     data.LinSpa,
+                                     x.DT_gram.GramMat,
+                                     x.DT_gram.SHV_T, os);
+    }
+    std::cerr << "No valid method for computing the hash\n";
+    throw TerminalException{1};
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    data.rddo.os << "ISODEL: f_repr, before LINSPA_TestEquivalenceGramMatrix\n";
+    data.rddo.os << "ISODEL: f_repr, before LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
-    std::optional<MyMatrix<Tint>> opt =
-        LINSPA_TestEquivalenceGramMatrix<T, Tint, Tgroup>(
-            data.LinSpa, x.DT_gram.GramMat, y.DT_gram.GramMat, data.rddo.os);
+    std::optional<MyMatrix<T>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+            data.LinSpa,
+            x.DT_gram.GramMat,
+            y.DT_gram.GramMat,
+            x.DT_gram.SHV_T,
+            y.DT_gram.SHV_T,
+            data.rddo.os);
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
-    data.rddo.os << "ISODEL: f_repr, after LINSPA_TestEquivalenceGramMatrix\n";
+    data.rddo.os << "ISODEL: f_repr, after LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
     if (!opt) {
       return {};
     }
-    MyMatrix<Tint> const &eBigMat = *opt;
+    MyMatrix<T> const &eBigMat_T = *opt;
+    MyMatrix<Tint> eBigMat = UniversalMatrixConversion<Tint,T>(eBigMat_T);
     TadjO ret{y.V, eBigMat};
     return ret;
   }
@@ -2227,6 +2298,8 @@ struct DataIsoDelaunayDomainsFunc {
 #endif
         std::pair<int, MyMatrix<T>> pair =
             GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+        MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(pair.second, os);
+        MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
 #endif
@@ -2234,7 +2307,7 @@ struct DataIsoDelaunayDomainsFunc {
         os << "ISODEL: After GetInteriorGramMatrix\n";
 #endif
         IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
-            std::move(DTadj), pair.first, std::move(pair.second)};
+          std::move(DTadj), pair.first, std::move(pair.second), std::move(SHV_T)};
         TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
         l_adj.push_back(eAdj);
       }

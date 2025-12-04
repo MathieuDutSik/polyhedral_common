@@ -194,7 +194,11 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     std::vector<size_t> &vect = indices_by_hash[hash];
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: process_singleEntry_AdjI hash=" << hash
-       << " |vect|=" << vect.size() << "\n";
+       << " |vect|=" << vect.size()
+       << " |indices_by_hash|=" << indices_by_hash.size() << "\n";
+#endif
+#ifdef TIMINGS_ADJACENCY_SCHEME
+      MicrosecondTime time_f_insert_conclusion;
 #endif
     for (auto &idx : vect) {
       Tobj y = f_idx_obj(idx);
@@ -213,12 +217,18 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
       os << "ADJ_SCH: process_singleEntry_AdjI After f_repr\n";
 #endif
       if (opt) {
+#ifdef TIMINGS_ADJACENCY_SCHEME
+        os << "|ADJ_SCH: process_singleEntry_AdjI succ|=" << time_f_insert_conclusion << "\n";
+#endif
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: process_singleEntry_AdjI Find an equivalence\n";
 #endif
         return *opt;
       }
     }
+#ifdef TIMINGS_ADJACENCY_SCHEME
+    os << "|ADJ_SCH: process_singleEntry_AdjI fail|=" << time_f_insert_conclusion << "\n";
+#endif
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time_f_spann;
 #endif

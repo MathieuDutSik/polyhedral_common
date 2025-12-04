@@ -12,8 +12,6 @@
 #undef DEBUG_CLASSIC_LLL
 #endif
 
-
-
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_CLASSIC_LLL
 #endif
