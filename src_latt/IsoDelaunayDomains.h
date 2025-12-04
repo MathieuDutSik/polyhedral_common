@@ -424,12 +424,24 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
                       std::ostream &os) {
   int n = LinSpa.n;
   int dimSpace = LinSpa.ListMat.size();
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time_interior;
+#endif
   std::vector<FullAdjInfo<T>> ListIneq =
       ComputeDefiningIneqIsoDelaunayDomain<T, Tvert, Tgroup>(
           DT, LinSpa.ListLineMat, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    os << "|ISODEL: InteriorGramMat, ComputeDefiningIneqIsoDelaunayDomain|=" << time_interior << "\n";
+#endif
   MyMatrix<T> FAC = GetFACineq(ListIneq);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+    os << "|ISODEL: InteriorGramMat, GetFACineq|=" << time_interior << "\n";
+#endif
   int nbIneq = FAC.rows();
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: InteriorGramMat, GetGeometricallyUniqueInteriorPoint|=" << time_interior << "\n";
+#endif
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
   for (int u = 0; u < dimSpace; u++) {
     RetMat += ThePt(u) * LinSpa.ListMat[u];
