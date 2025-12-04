@@ -15,6 +15,10 @@
 #define DEBUG_PRIMAL_DUAL
 #endif
 
+#ifdef DISABLE_DEBUG_PRIMAL_DUAL
+#undef DEBUG_PRIMAL_DUAL
+#endif
+
 template <typename T, typename Fdual>
 MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
                                                    Fdual f_dual,

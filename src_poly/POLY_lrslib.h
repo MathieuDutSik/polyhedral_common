@@ -41,6 +41,10 @@
 #define DEBUG_LRSLIB
 #endif
 
+#ifdef DISABLE_DEBUG_LRSLIB
+#undef DEBUG_LRSLIB
+#endif
+
 namespace lrs {
 // some #defines and global variables from the original lrs code
 namespace globals {

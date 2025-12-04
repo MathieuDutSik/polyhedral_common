@@ -13,6 +13,10 @@
 #define DEBUG_GRAVER_BASIS
 #endif
 
+#ifdef DISABLE_DEBUG_GRAVER_BASIS
+#undef DEBUG_GRAVER_BASIS
+#endif
+
 // A Graver basis is a set of vectors that can be used to
 // optimize solution to an optimization problem:
 // * It does not have to be optimal in any way.

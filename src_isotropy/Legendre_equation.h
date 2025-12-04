@@ -18,6 +18,10 @@
 #define DEBUG_LEGENDRE
 #endif
 
+#ifdef DISABLE_DEBUG_LEGENDRE
+#undef DEBUG_LEGENDRE
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_LEGENDRE
 #endif

@@ -15,6 +15,10 @@
 #define DEBUG_STRICT_POSITIVITY
 #endif
 
+#ifdef DISABLE_DEBUG_STRICT_POSITIVITY
+#undef DEBUG_STRICT_POSITIVITY
+#endif
+
 template <typename T, typename Tint> struct TestStrictPositivity {
   bool result;
   MyMatrix<Tint> RealizingFamily;

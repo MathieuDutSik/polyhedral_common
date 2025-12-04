@@ -21,6 +21,10 @@
 #define DEBUG_GROUP
 #endif
 
+#ifdef DISABLE_DEBUG_GROUP
+#undef DEBUG_GROUP
+#endif
+
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_GROUP_FCT
 #endif

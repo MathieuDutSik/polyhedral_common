@@ -1,7 +1,8 @@
 Read("../common.g");
 Print("Beginning Test enumeration of L-type domains in perfect forms in T-spaces\n");
 
-keep_err:=false;
+#keep_err:=false;
+keep_err:=true;
 
 get_rec_info:=function(fProg, d, n, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;

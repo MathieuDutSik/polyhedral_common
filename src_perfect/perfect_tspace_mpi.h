@@ -12,6 +12,10 @@
 #define DEBUG_PERFECT_TSPACE_MPI
 #endif
 
+#ifdef DISABLE_DEBUG_PERFECT_TSPACE_MPI
+#undef DEBUG_PERFECT_TSPACE_MPI
+#endif
+
 template <typename T, typename Tint, typename Tgroup>
 void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
                              FullNamelist const &eFull) {

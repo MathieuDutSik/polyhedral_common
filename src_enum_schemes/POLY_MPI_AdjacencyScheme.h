@@ -12,6 +12,10 @@
 #define DEBUG_MPI_ADJACENCY_SCHEME
 #endif
 
+#ifdef DISABLE_DEBUG_MPI_ADJACENCY_SCHEME
+#undef DEBUG_MPI_ADJACENCY_SCHEME
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_MPI_ADJACENCY_SCHEME
 #endif
@@ -169,7 +173,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   int n_obj = 0; // The number of objects generated
   // The map from the hash to the list of indices
   std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
-  std::vector<size_t> undone; // The undone indices
+  std::vector<size_t> notdone; // The notdone indices
   //
   // The entries of AdjI / AdjO
   //
@@ -267,7 +271,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     if (test) {
       send_early_termination();
     }
-    undone.push_back(n_obj);
+    notdone.push_back(n_obj);
     vect.push_back(n_obj);
     f_save_status(n_obj, false);
     n_obj++;
@@ -287,7 +291,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
-      undone.push_back(n_obj);
+      notdone.push_back(n_obj);
     }
     n_obj++;
   };
@@ -364,18 +368,18 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
       return 0;
     }
-    if (undone.size() > 0 && max_time_second == 0) {
+    if (notdone.size() > 0 && max_time_second == 0) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
-      os << "MPI_ADJ_SCH: the_nonce=0, because undone.size() > 0 && "
+      os << "MPI_ADJ_SCH: the_nonce=0, because notdone.size() > 0 && "
             "max_time_second == 0\n";
 #endif
       return 0;
     }
-    if (undone.size() > 0 && max_time_second > 0 &&
+    if (notdone.size() > 0 && max_time_second > 0 &&
         si(start) < max_time_second) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
       os << "MPI_ADJ_SCH: max_time_second=" << max_time_second
-         << " si(start)=" << si(start) << " |undone|=" << undone.size() << "\n";
+         << " si(start)=" << si(start) << " |notdone|=" << notdone.size() << "\n";
       os << "MPI_ADJ_SCH: the_nonce=0, because max_time_second > 0 && si(start) < "
             "max_time_second\n";
 #endif
@@ -457,10 +461,10 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     std::cerr << "The tag e_tag=" << e_tag << " is not matching\n";
     throw TerminalException{1};
   };
-  auto get_undone_idx = [&]() -> size_t {
-    size_t idx = undone[0];
-    undone[0] = undone[undone.size() - 1];
-    undone.pop_back();
+  auto get_notdone_idx = [&]() -> size_t {
+    size_t idx = notdone[0];
+    notdone[0] = notdone[notdone.size() - 1];
+    notdone.pop_back();
     return idx;
   };
   auto process_one_entry_obj = [&]() -> bool {
@@ -470,7 +474,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     int time_start = si(start);
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
     os << "MPI_ADJ_SCH: process_one_entry_obj, begin\n";
-    os << "MPI_ADJ_SCH: process_one_entry_obj |undone|=" << undone.size() << " Before \n";
+    os << "MPI_ADJ_SCH: process_one_entry_obj |notdone|=" << notdone.size() << " Before \n";
     os << "MPI_ADJ_SCH: process_one_entry_obj time_start=" << time_start << " max_time_second=" << max_time_second << "\n";
 #endif
     if (max_time_second > 0 && time_start > max_time_second) {
@@ -479,12 +483,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
       return false;
     }
-    if (undone.size() == 0) {
+    if (notdone.size() == 0) {
       return false;
     }
-    size_t idx = get_undone_idx();
+    size_t idx = get_notdone_idx();
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
-    os << "MPI_ADJ_SCH: process_one_entry_obj |undone|=" << undone.size() << " After idx=" << idx << "\n";
+    os << "MPI_ADJ_SCH: process_one_entry_obj |notdone|=" << notdone.size() << " After idx=" << idx << "\n";
 #endif
     int idx_i = static_cast<int>(idx);
     f_save_status(idx, true);
@@ -644,7 +648,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
       os_out << "MPI_ADJ_SCH: status index=" << ent.first << " value=("
              << ent.second.first << " | " << ent.second.second.size() << ")\n";
     }
-    os_out << "MPI_ADJ_SCH: status |undone|=" << undone.size() << "\n";
+    os_out << "MPI_ADJ_SCH: status |notdone|=" << notdone.size() << "\n";
     os_out << "MPI_ADJ_SCH: |buffer_entriesAdjI|="
            << buffer_entriesAdjI.get_unsent_size() << "\n";
     os_out << "MPI_ADJ_SCH: |buffer_entriesAdjO|="
@@ -723,7 +727,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
   os << "MPI_ADJ_SCH: compute_adjacency_mpi, start : n_obj=" << n_obj
-     << " n_undone=" << undone.size() << "\n";
+     << " n_notdone=" << notdone.size() << "\n";
 #endif
   size_t n_orb_max = 0, n_orb_loc = n_obj;
   all_reduce(comm, n_orb_loc, n_orb_max, boost::mpi::maximum<size_t>());
@@ -832,7 +836,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
   }
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
   os << "MPI_ADJ_SCH: compute_adjacency_mpi, end : n_obj=" << n_obj
-     << " n_undone=" << undone.size() << "\n";
+     << " n_notdone=" << notdone.size() << "\n";
   os << "MPI_ADJ_SCH: compute_adjacency_mpi, early_termination=" << early_termination << "\n";
 #endif
   if (early_termination) {
@@ -842,12 +846,12 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     // We terminate early so by definition the enumeration is partial
     return false;
   } else {
-    size_t n_undone_max = 0, n_undone_loc = undone.size();
-    all_reduce(comm, n_undone_loc, n_undone_max, boost::mpi::maximum<size_t>());
-    bool FinalResult = n_undone_max == 0;
+    size_t n_notdone_max = 0, n_notdone_loc = notdone.size();
+    all_reduce(comm, n_notdone_loc, n_notdone_max, boost::mpi::maximum<size_t>());
+    bool FinalResult = n_notdone_max == 0;
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
-    os << "MPI_ADJ_SCH: compute_adjacency_mpi, n_undone_max=" << n_undone_max
-       << " n_undone_loc=" << n_undone_loc << "\n";
+    os << "MPI_ADJ_SCH: compute_adjacency_mpi, n_notdone_max=" << n_notdone_max
+       << " n_notdone_loc=" << n_notdone_loc << "\n";
     os << "MPI_ADJ_SCH: compute_adjacency_mpi, FinalResult=" << FinalResult << "\n";
 #endif
     return FinalResult;

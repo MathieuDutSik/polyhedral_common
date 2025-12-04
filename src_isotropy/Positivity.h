@@ -24,6 +24,10 @@
 #define DEBUG_POSITIVITY
 #endif
 
+#ifdef DISABLE_DEBUG_POSITIVITY
+#undef DEBUG_POSITIVITY
+#endif
+
 template <typename T> T MinimumDiagonal(MyMatrix<T> const &eMat) {
   int n = eMat.rows();
   T MinNorm = eMat(0, 0);

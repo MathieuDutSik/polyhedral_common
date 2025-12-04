@@ -12,6 +12,10 @@
 #define DEBUG_EUTACTICITY
 #endif
 
+#ifdef DISABLE_DEBUG_EUTACTICITY
+#undef DEBUG_EUTACTICITY
+#endif
+
 // Test if a quadratic form is eutactic
 // A quadratic form is eutactic if the inverse of eGram can be expressed
 // as a positive linear combination of the outer products v ⊗ v of shortest vectors

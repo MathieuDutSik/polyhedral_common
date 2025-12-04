@@ -18,6 +18,10 @@
 #define DEBUG_ADJACENCY_SCHEME
 #endif
 
+#ifdef DISABLE_DEBUG_ADJACENCY_SCHEME
+#undef DEBUG_ADJACENCY_SCHEME
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_ADJACENCY_SCHEME
 #endif
@@ -113,11 +117,11 @@
   ---(For example a good f_init could be obtained by an initial random walk).
   ---Therefore, we would have a std::map<size_t, ....> encoding the unused
   entries by complexity.
-  ---Each node should have a value of first undone entry. We should also have
+  ---Each node should have a value of first notdone entry. We should also have
   something global.
   ---If node A and B have level X but B passes to X+1, in order to upgrade the
   global value, we need to know that there is no other node at X. So this
-  forces having a std::vector<size_t> first_undone(m_proc)
+  forces having a std::vector<size_t> first_notdone(m_proc)
   ---Any change of a node own level has to be followed by the emission to all
   nodes of the new level.
   ---
@@ -180,7 +184,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
   SingletonTime start;
   size_t n_obj = 0;
   std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
-  std::vector<size_t> undone;
+  std::vector<size_t> notdone;
   bool early_termination = false;
   auto process_singleEntry_AdjI = [&](TadjI const &x_adjI) -> TadjO {
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -236,7 +240,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     }
     bool is_treated = false;
     f_save_status(n_obj, is_treated);
-    undone.push_back(n_obj);
+    notdone.push_back(n_obj);
     n_obj += 1;
     return pair.second;
   };
@@ -251,14 +255,14 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     if (!is_treated) {
-      undone.push_back(n_obj);
+      notdone.push_back(n_obj);
     }
     n_obj++;
   };
-  auto get_undone_idx = [&]() -> size_t {
-    size_t idx = undone[0];
-    undone[0] = undone[undone.size() - 1];
-    undone.pop_back();
+  auto get_notdone_idx = [&]() -> size_t {
+    size_t idx = notdone[0];
+    notdone[0] = notdone[notdone.size() - 1];
+    notdone.pop_back();
     return idx;
   };
   auto treat_one_entry = [&]() -> void {
@@ -268,14 +272,14 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry beginning\n";
 #endif
-    size_t idx = get_undone_idx();
+    size_t idx = get_notdone_idx();
 #ifdef DEBUG_ADJACENCY_SCHEME
     os << "ADJ_SCH: treat_one_entry idx=" << idx << "\n";
 #endif
     bool is_treated = true;
     f_save_status(idx, is_treated);
 #ifdef TIMINGS_ADJACENCY_SCHEME
-    os << "|ADJ_SCH: get_undone_idx / f_save_status|=" << time << "\n";
+    os << "|ADJ_SCH: get_notdone_idx / f_save_status|=" << time << "\n";
 #endif
     std::vector<TadjI> l_adj_i = f_adj(idx);
 #ifdef TIMINGS_ADJACENCY_SCHEME
@@ -332,7 +336,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
   }
   while (true) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-    os << "ADJ_SCH: early_termination=" << early_termination << " n_obj=" << n_obj << " |undone|=" << undone.size() << "\n";
+    size_t n_done = n_obj - notdone.size();
+    os << "ADJ_SCH: early_termination=" << early_termination << " n_obj=" << n_obj << " n_done=" << n_done << "\n";
 #endif
     if (early_termination) {
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -340,9 +345,9 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #endif
       return false;
     }
-    if (undone.size() == 0) {
+    if (notdone.size() == 0) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "ADJ_SCH: returning true due to |undone| = 0\n";
+      os << "ADJ_SCH: returning true due to n_notdone = 0\n";
 #endif
       return true;
     }

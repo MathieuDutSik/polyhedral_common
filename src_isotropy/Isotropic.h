@@ -19,6 +19,10 @@
 #define DEBUG_ISOTROPIC
 #endif
 
+#ifdef DISABLE_DEBUG_ISOTROPIC
+#undef DEBUG_ISOTROPIC
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_ISOTROPIC
 #endif

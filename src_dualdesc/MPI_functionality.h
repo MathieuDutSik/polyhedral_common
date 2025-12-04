@@ -24,6 +24,10 @@
 #define DEBUG_MPI_FCT
 #endif
 
+#ifdef DISABLE_DEBUG_MPI_FCT
+#undef DEBUG_MPI_FCT
+#endif
+
 template <typename T>
 inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
 my_mpi_gather(boost::mpi::communicator &comm, T const &x, int const &i_proc) {

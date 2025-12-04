@@ -12,6 +12,10 @@
 #define DEBUG_ORBIT_ENUMERATION
 #endif
 
+#ifdef DISABLE_DEBUG_ORBIT_ENUMERATION
+#undef DEBUG_ORBIT_ENUMERATION
+#endif
+
 /*
   Algorithm for generating orbits of subsets.
   ---The minimal algorithm is a tree search that passes through all lexicographically minimal elements.

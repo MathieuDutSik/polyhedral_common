@@ -18,6 +18,10 @@
 #define DEBUG_PERM_FCT
 #endif
 
+#ifdef DISABLE_DEBUG_PERM_FCT
+#undef DEBUG_PERM_FCT
+#endif
+
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_PERM_FCT
 #endif

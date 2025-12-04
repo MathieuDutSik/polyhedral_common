@@ -22,6 +22,10 @@ template <typename T> struct ResultDetMin {
 #define DEBUG_DETERMINANT_MINIMIZATION
 #endif
 
+#ifdef DISABLE_DEBUG_DETERMINANT_MINIMIZATION
+#undef DEBUG_DETERMINANT_MINIMIZATION
+#endif
+
 template <typename T> struct ResultNullspaceMod {
   int dimNSP;
   MyMatrix<T> BasisTot;

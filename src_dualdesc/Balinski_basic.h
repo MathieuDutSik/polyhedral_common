@@ -14,6 +14,10 @@
 #define DEBUG_BALINSKI
 #endif
 
+#ifdef DISABLE_DEBUG_BALINSKI
+#undef DEBUG_BALINSKI
+#endif
+
 template <typename Tint> struct UndoneOrbitInfo {
   size_t nbOrbitDone;
   Tint nbUndone;

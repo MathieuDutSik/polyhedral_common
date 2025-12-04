@@ -14,6 +14,10 @@
 #define DEBUG_DATABANK
 #endif
 
+#ifdef DISABLE_DEBUG_DATABANK
+#undef DEBUG_DATABANK
+#endif
+
 size_t get_matching_power(size_t const &val) {
   size_t pow = 1;
   size_t pos = 0;

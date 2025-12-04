@@ -24,6 +24,10 @@
 #define DEBUG_DUAL_DESC
 #endif
 
+#ifdef DISABLE_DEBUG_DUAL_DESC
+#undef DEBUG_DUAL_DESC
+#endif
+
 #ifdef KEY_VALUE
 #define KEY_VALUE_DUAL_DESC
 #endif

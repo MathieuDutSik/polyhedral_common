@@ -42,6 +42,18 @@
 #define DEBUG_REDUCTION
 #endif
 
+#ifdef DISABLE_DEBUG_RECURSIVE_DUAL_DESC
+#undef DEBUG_RECURSIVE_DUAL_DESC
+#endif
+
+#ifdef DISABLE_DEBUG_INSERT
+#undef DEBUG_INSERT
+#endif
+
+#ifdef DISABLE_DEBUG_REDUCTION
+#undef DEBUG_REDUCTION
+#endif
+
 // #define MURMUR_HASH
 // #define ROBIN_HOOD_HASH
 #define SUBSET_HASH

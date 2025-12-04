@@ -15,6 +15,10 @@
 #define DEBUG_WEIGHT_MATRIX_LIMITED
 #endif
 
+#ifdef DISABLE_DEBUG_WEIGHT_MATRIX_LIMITED
+#undef DEBUG_WEIGHT_MATRIX_LIMITED
+#endif
+
 template <bool is_symmetric_impl, typename T_impl> struct WeightMatrixLimited {
 public:
   static const bool is_symmetric = is_symmetric_impl;

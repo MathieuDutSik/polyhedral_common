@@ -19,6 +19,10 @@
 #define DEBUG_QUATERNARY
 #endif
 
+#ifdef DISABLE_DEBUG_QUATERNARY
+#undef DEBUG_QUATERNARY
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_QUATERNARY
 #endif

@@ -43,6 +43,10 @@
 #define DEBUG_WEIGHT_MATRIX
 #endif
 
+#ifdef DISABLE_DEBUG_WEIGHT_MATRIX
+#undef DEBUG_WEIGHT_MATRIX
+#endif
+
 #ifdef TIMINGS
 #define TIMINGS_WEIGHT_MATRIX
 #endif

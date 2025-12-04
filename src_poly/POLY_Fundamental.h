@@ -19,6 +19,10 @@
 #define DEBUG_POLY_FUNDAMENTAL
 #endif
 
+#ifdef DISABLE_DEBUG_POLY_FUNDAMENTAL
+#undef DEBUG_POLY_FUNDAMENTAL
+#endif
+
 template <typename T>
 MyMatrix<T> SelectRow(MyMatrix<T> const &TheMat, Face const &eList) {
   int nbRowRed = eList.count();
