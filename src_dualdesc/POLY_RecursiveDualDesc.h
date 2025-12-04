@@ -2711,7 +2711,7 @@ This is needed of RealAlgebraic is selected";
       "The file containing the coordinate of the output file";
   ListStringValues1_doc["GRPfile"] =
       "The file containing the symmetry group used in the computation";
-  ListStringValues1_doc["OUTfile"] =
+  ListStringValues1_doc["OutFile"] =
       "The file containing the output of the result";
   ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible values:\n\
@@ -3050,7 +3050,7 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   std::string BANK_Prefix = BlockBANK.get_string("Prefix");
   AllArr.BANK_Prefix = BANK_Prefix;
   //
-  std::string OutFile = BlockDATA.get_string("OUTfile");
+  std::string OutFile = BlockDATA.get_string("OutFile");
   AllArr.OutFile = OutFile;
   //
   bool DeterministicRuntime =

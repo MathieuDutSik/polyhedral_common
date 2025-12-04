@@ -8,21 +8,21 @@
 
 template <typename T, typename Tint, typename Tgroup>
 void process_A(FullNamelist const &eFull) {
+  using TintGroup = typename Tgroup::Tint;
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
   int n = LinSpa.n;
   int dimEXT = n * (n + 1) / 2;
   //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
-  //
-  std::string STORAGE_Prefix = BlockDATA.get_string("Prefix");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
   //
-  using TintGroup = typename Tgroup::Tint;
   std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, std::cerr);

@@ -26,7 +26,7 @@ The directory prefix where data files should be saved. Only relevant if Saving =
 There is some randomness in several algorithms. With DeterministicRuntime:\n\
 T: If you run the program again you will get exactly the same result (good for debugging)\n\
 F: Running the program again will get you something different";
-  ListStringValues1_doc["OUTfile"] = "Default: unset.out\n\
+  ListStringValues1_doc["OutFile"] = "Default: unset.out\n\
 The file path for the output results";
   ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible values:\n\

@@ -702,7 +702,7 @@ This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
   ListStringValues1_doc["GRPfile"] =
       "The symmetry group used for the computation. It is a permutation group "
       "acting on the facets";
-  ListStringValues1_doc["OUTfile"] = "The output file for the computation";
+  ListStringValues1_doc["OutFile"] = "The output file for the computation";
   ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
 Only GAP so far is provided.";
   ListStringValues1_doc["method_spann"] = "Default: LinearProgramming\n\
@@ -896,10 +896,10 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
     LevSearch = nbCol - 2;
   }
   //
-  std::string OUTfile = BlockPROC.get_string("OUTfile");
+  std::string OutFile = BlockPROC.get_string("OutFile");
   std::string OutFormat = BlockPROC.get_string("OutFormat");
 #ifdef DEBUG_POLY_KSKELETTON
-  os << "SKEL: OUTfile=" << OUTfile << " OutFormat=" << OutFormat << "\n";
+  os << "SKEL: OutFile=" << OutFile << " OutFormat=" << OutFormat << "\n";
 #endif
   //
   std::vector<vectface> TheOutput =
@@ -909,7 +909,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   auto f_print=[&](std::ostream& os_out) -> void {
     OutputFaces_stream(TheOutput, os_out, OutFormat);
   };
-  print_stderr_stdout_file(OUTfile, f_print);
+  print_stderr_stdout_file(OutFile, f_print);
   //
   SingleBlock const& BlockGROUP = eFull.get_block("GROUP");
   bool ComputeAutGroup = BlockGROUP.get_bool("ComputeAutGroup");

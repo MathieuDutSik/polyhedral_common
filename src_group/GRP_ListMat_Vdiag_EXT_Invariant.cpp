@@ -15,10 +15,10 @@ int main(int argc, char *argv[]) {
     if (argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant [INfile] [OUTfile]\n";
+      std::cerr << "GRP_ListMat_Vdiag_EXT_Invariant [INfile] [OutFile]\n";
       std::cerr << "\n";
-      std::cerr << "INfile    : The file containing the group\n";
-      std::cerr << "OUTfile   : The file containing the hash\n";
+      std::cerr << "InFile    : The file containing the group\n";
+      std::cerr << "OutFile   : The file containing the hash\n";
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS

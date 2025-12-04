@@ -609,7 +609,7 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
   std::map<std::string, std::string> ListStringValues1;
   ListStringValues1["EXTfile"] = "unset.ext";
   ListStringValues1["GRPfile"] = "unset.grp";
-  ListStringValues1["OUTfile"] = "unset.out";
+  ListStringValues1["OutFile"] = "unset.out";
   SingleBlock BlockDATA;
   BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
@@ -670,8 +670,8 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
   std::string GRPfile = BlockDATA.get_string("GRPfile");
   IsExistingFileDie(GRPfile);
   std::cerr << "GRPfile=" << GRPfile << "\n";
-  std::string OUTfile = BlockDATA.get_string("OUTfile");
-  std::cerr << "OUTfile=" << OUTfile << "\n";
+  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::cerr << "OutFile=" << OutFile << "\n";
   std::ifstream EXTfs(EXTfile);
   MyMatrix<T> EXT = ReadMatrix<T>(EXTfs);
   std::ifstream GRPfs(GRPfile);
@@ -707,7 +707,7 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
       MProc, TheId, TheBank, EXT, GRP, AllArr, DD_Prefix, TheLevel);
   std::cerr << "We now have TheOutput\n";
   //
-  std::ofstream OUTfs(OUTfile);
+  std::ofstream OUTfs(OutFile);
   VectVectInt_Magma_Print(OUTfs, TheOutput);
   //
 }

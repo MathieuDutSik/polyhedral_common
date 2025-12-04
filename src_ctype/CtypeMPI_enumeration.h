@@ -208,7 +208,7 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
   std::cerr << "max_runtime_second=" << max_runtime_second << "\n";
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
-  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
   std::cerr << "OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 
   DataCtype data{n, os};

@@ -60,7 +60,7 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
   }
   //
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
-  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

@@ -26,7 +26,7 @@ get_rec_info:=function(fProg, d, n, keep_error)
     AppendTo(output, " ApplyStdUnitbuf = T\n");
     AppendTo(output, " Saving = F\n");
     AppendTo(output, " Prefix = \"/tmp/PerfectForm/\"\n");
-    AppendTo(output, " OUTfile = \"", FileResult, "\"\n");
+    AppendTo(output, " OutFile = \"", FileResult, "\"\n");
     AppendTo(output, " OutFormat = \"ObjectGAP\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
@@ -137,11 +137,11 @@ end;
 
 
 
-#insert_imag_examples();
+insert_imag_examples();
 #insert_real_examples(3, 10);
 #insert_extensive_imag_examples_part1();
 #insert_extensive_imag_examples_part2();
-insert_extensive_imag_examples_part3();
+#insert_extensive_imag_examples_part3();
 
 
 

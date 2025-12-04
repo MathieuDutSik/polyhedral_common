@@ -176,7 +176,7 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT() {
   std::map<std::string, bool> ListBoolValues1;
   std::map<std::string, std::string> ListStringValues1;
   ListStringValues1["LinSpaFile"] = "unset.gram";
-  ListStringValues1["OUTfile"] = "unset.out";
+  ListStringValues1["OutFile"] = "unset.out";
   ListBoolValues1["SavingPerfect"] = false;
   ListBoolValues1["NeedCheckStabilization"] = false;
   ListBoolValues1["FullDataInMemory"] = true;
@@ -243,8 +243,8 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   std::string LINSPAfile = BlockDATA.get_string("LinSpaFile");
   IsExistingFileDie(LINSPAfile);
   std::cerr << "LINSPAfile=" << LINSPAfile << "\n";
-  std::string OUTfile = BlockDATA.get_string("OUTfile");
-  std::cerr << "OUTfile=" << OUTfile << "\n";
+  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::cerr << "OutFile=" << OutFile << "\n";
   //
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   bool NeedCheckStabilization =
@@ -335,7 +335,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   std::cerr << "We now have ListDel\n";
   //
   if (ReturnAll) {
-    std::ofstream OUTfs(OUTfile);
+    std::ofstream OUTfs(OutFile);
     int nbPerf = LPerf.size();
     OUTfs << "nbPerf=" << nbPerf << "\n";
     for (int iPerf = 0; iPerf < nbPerf; iPerf++) {

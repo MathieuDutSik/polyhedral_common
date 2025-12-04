@@ -20,8 +20,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "or\n";
       std::cerr << "GRP_ListMat_Vdiag_EXT_Isomorphism [FileI]\n";
       std::cerr << "\n";
-      std::cerr << "INfile    : The file containing the group\n";
-      std::cerr << "OUTfile   : The file containing the two pairs\n";
+      std::cerr << "FileI    : The file containing the group\n";
+      std::cerr << "FileO   : The file containing the two pairs\n";
       return -1;
     }
 #ifdef OSCAR_USE_BOOST_GMP_BINDINGS

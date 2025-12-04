@@ -33,7 +33,7 @@ void ComputeLatticeIsoDelaunayDomains_MPI(boost::mpi::communicator &comm,
   os << "ISODELMPI: max_runtime_second=" << max_runtime_second << "\n";
 #endif
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
-  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_ISO_DELAUNAY_DOMAINS_MPI
   os << "ISODELMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

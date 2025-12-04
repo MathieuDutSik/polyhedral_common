@@ -832,6 +832,7 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
                                               PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
                                               std::ostream& os) {
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
 
   std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
@@ -849,8 +850,8 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
   os << "DEL_ENUM: |SVR|=" << SVR.rows() << "\n";
 #endif
   //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

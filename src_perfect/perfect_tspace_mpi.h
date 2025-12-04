@@ -21,24 +21,24 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   os << "PERFTSPACEMPI: ComputePerfectTspace_mpi, beginning\n";
 #endif
   SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockSTORAGE = eFull.get_block("STORAGE");
+  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
   //
-  bool STORAGE_Saving = BlockSTORAGE.get_bool("Saving");
-  std::string STORAGE_Prefix = BlockSTORAGE.get_string("Prefix");
-  CreateDirectory(STORAGE_Prefix);
-  //
-  int max_runtime_second = BlockDATA.get_int("max_runtime_second");
+  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_PERFECT_TSPACE_MPI
   os << "PERFTSPACEMPI: max_runtime_second=" << max_runtime_second << "\n";
 #endif
+  bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
+  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
+  CreateDirectory(STORAGE_Prefix);
+  //
   SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
 #ifdef DEBUG_PERFECT_TSPACE_MPI
   os << "PERFTSPACEMPI: LinSpa dimension=" << LinSpa.n << "\n";
 #endif
   //
-  std::string OutFormat = BlockDATA.get_string("OutFormat");
-  std::string OutFile = BlockDATA.get_string("OutFile");
+  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_PERFECT_TSPACE_MPI
   os << "PERFTSPACEMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

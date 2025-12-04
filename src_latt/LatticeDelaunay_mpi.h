@@ -115,7 +115,7 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   CreateDirectory(STORAGE_Prefix);
   //
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
-  std::string OutFile = BlockSYSTEM.get_string("OUTfile");
+  std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
   std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
 #endif

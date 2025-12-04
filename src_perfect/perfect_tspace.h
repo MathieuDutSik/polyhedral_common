@@ -389,7 +389,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   ListStringValues1["arithmetic_T"] = "gmp_rational";
   ListStringValues1["arithmetic_Tint"] = "gmp_integer";
   ListStringValues1["FileDualDescription"] = "unset";
-  ListStringValues1["Prefix"] = "unset";
   SingleBlock BlockDATA;
   BlockDATA.setListStringValues(ListStringValues1);
   ListBlock["DATA"] = BlockDATA;
