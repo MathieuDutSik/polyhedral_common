@@ -90,20 +90,20 @@ set_canonical_examples:=function()
 end;
 
 set_dim2_examples:=function()
-    Add(ListCases, rec(n:=2, d:=-3));
-    Add(ListCases, rec(n:=2, d:=-4));
-    Add(ListCases, rec(n:=2, d:=-7));
-    Add(ListCases, rec(n:=2, d:=-8));
-    Add(ListCases, rec(n:=2, d:=-11));
-    Add(ListCases, rec(n:=2, d:=-15));
-    Add(ListCases, rec(n:=2, d:=-19));
-    Add(ListCases, rec(n:=2, d:=-20));
-    Add(ListCases, rec(n:=2, d:=-23));
-    Add(ListCases, rec(n:=2, d:=-24));
+    Add(ListCases, rec(n:=2, d:=-3, n_domains:=2));
+    Add(ListCases, rec(n:=2, d:=-4, n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, n_domains:=19));
+    Add(ListCases, rec(n:=2, d:=-8, n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, n_domains:=292));
+    Add(ListCases, rec(n:=2, d:=-15, n_domains:=171));
+    Add(ListCases, rec(n:=2, d:=-19, n_domains:=829));
+    Add(ListCases, rec(n:=2, d:=-20, n_domains:=61));
+    Add(ListCases, rec(n:=2, d:=-23, n_domains:=578));
+    Add(ListCases, rec(n:=2, d:=-24, n_domains:=86));
 end;
 
-set_canonical_examples();
-#set_dim2_examples();
+#set_canonical_examples();
+set_dim2_examples();
 
 
 
