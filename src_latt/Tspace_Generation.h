@@ -81,7 +81,8 @@ MyMatrix<T> GetCommImagQuadratic(int n, T const &eSum, T const &eProd) {
 
 template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
-                                            T const &eProd) {
+                                            T const &eProd,
+                                            std::ostream& os) {
   std::vector<MyMatrix<T>> ListMat;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
@@ -113,12 +114,14 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
-  return BuildLinSpace(SuperMat, ListMat, {eComm});
+  std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
+  return BuildLinSpace(SuperMat, ListMatRet, {eComm});
 }
 
 template <typename T>
 LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
-                                            T const &eProd) {
+                                            T const &eProd,
+                                            std::ostream& os) {
   std::vector<MyMatrix<T>> ListMat;
   T Discriminant = eSum * eSum - 4 * eProd;
   if (Discriminant >= 0) {
@@ -139,7 +142,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
       //
       eMat(n + i, n + j) = eProd;
       eMat(n + j, n + i) = eProd;
-      ListMat.push_back(eMat);
+      MyMatrix<T> fMat = RemoveFractionMatrix(eMat);
+      ListMat.push_back(fMat);
     }
   for (int i = 0; i < n - 1; i++)
     for (int j = i + 1; j < n; j++) {
@@ -151,16 +155,16 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
       eMat(i, n + j) = -1;
       ListMat.push_back(eMat);
     }
-  MyMatrix<T> SuperMat(2 * n, 2 * n);
-  ZeroAssignation(SuperMat);
+  MyMatrix<T> SuperMat_pre = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
-    SuperMat(i, i) = 1;
+    SuperMat_pre(i, i) = 1;
     T eVal = eSum / 2;
-    SuperMat(n + i, i) = eVal;
-    SuperMat(i, n + i) = eVal;
+    SuperMat_pre(n + i, i) = eVal;
+    SuperMat_pre(i, n + i) = eVal;
     //
-    SuperMat(n + i, n + i) = eProd;
+    SuperMat_pre(n + i, n + i) = eProd;
   }
+  MyMatrix<T> SuperMat = RemoveFractionMatrix(SuperMat_pre);
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
@@ -168,7 +172,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     eComm(n + i, i) = -eProd;
     eComm(n + i, n + i) = eSum;
   }
-  return BuildLinSpace(SuperMat, ListMat, {eComm});
+  std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
+  return BuildLinSpace(SuperMat, ListMatRet, {eComm});
 }
 
 // clang-format off

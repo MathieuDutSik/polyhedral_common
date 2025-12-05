@@ -284,10 +284,10 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       os << "n=" << n << " eSum" << eSum << " eProd=" << eProd << "\n";
 #endif
       if (TypeTspace == "RealQuad") {
-        LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd);
+        LinSpaRet = ComputeRealQuadraticSpace<T>(n, eSum, eProd, os);
       }
       if (TypeTspace == "ImagQuad") {
-        LinSpaRet = ComputeImagQuadraticSpace<T>(n, eSum, eProd);
+        LinSpaRet = ComputeImagQuadraticSpace<T>(n, eSum, eProd, os);
       }
       set_listcomm();
       set_subspaces();

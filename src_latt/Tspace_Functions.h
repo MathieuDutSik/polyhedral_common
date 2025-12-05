@@ -258,6 +258,10 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
           BigMat, ListComm,  ListSubspaces, PtStab};
 }
 
+
+
+
+
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
@@ -509,7 +513,7 @@ GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa, int c
  */
 template <typename T>
 std::vector<MyMatrix<T>>
-IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat) {
+IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat, std::ostream& os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
     std::cerr << "TSPACE: We have n_mat=0\n";
@@ -536,6 +540,33 @@ IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat) {
   }
   MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
   MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+  int dim_space = BigMat_renorm.rows();
+  MyMatrix<T> sol_mat(dim_space,dim_space);
+  for (int i=0; i<dim_space; i++) {
+    MyVector<T> V = GetMatrixRow(BigMat, i);
+    std::optional<MyVector<T>> opt = SolutionMat(BigMat_renorm, V);
+    if (!opt) {
+      std::cerr << "TSP_FCT: IntegralSaturationSpace, no solution at i=" << i << "\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> const& V2 = *opt;
+    AssignMatrixRow(sol_mat, i, V2);
+  }
+  if (!IsIntegralMatrix(sol_mat)) {
+    std::cerr << "TSP_FCT: BigMat=\n";
+    WriteMatrix(std::cerr, BigMat);
+    std::cerr << "TSP_FCT: BigMat_renorm=\n";
+    WriteMatrix(std::cerr, BigMat_renorm);
+    std::cerr << "TSP_FCT: sol_mat=\n";
+    WriteMatrix(std::cerr, sol_mat);
+    std::cerr << "TSP_FCT: IntegralSaturationSpace, The matrix sol_mat should be integral\n";
+    throw TerminalException{1};
+  }
+# ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSP_FCT: IntegralSaturationSpace, det=" << DeterminantMat(sol_mat) << "\n";
+# endif
+#endif
   if (BigMat_renorm.rows() != n_mat) {
     std::cerr << "TSPACE: Incoherence in the dimensions\n";
     throw TerminalException{1};

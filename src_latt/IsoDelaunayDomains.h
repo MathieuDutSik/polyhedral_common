@@ -2159,7 +2159,7 @@ struct DataIsoDelaunayDomainsFunc {
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     std::ostream &os = data.rddo.os;
-    int method = 2;
+    int method = 1;
     if (method == 1) {
       // That method does not seem to work very well
       // because it can happen that many triangulations have all Delaunays
