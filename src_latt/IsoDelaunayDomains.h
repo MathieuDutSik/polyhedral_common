@@ -1893,7 +1893,6 @@ template <class Archive, typename T, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, IsoDelaunayDomain<T, Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("DT", eRec.DT);
-  ar &make_nvp("nbIneq", eRec.nbIneq);
   ar &make_nvp("GramMat", eRec.GramMat);
 }
 } // namespace boost::serialization
@@ -2009,6 +2008,10 @@ size_t ComputeInvariantIsoDelaunayDomain(
 template <typename T, typename Tint, typename Tgroup>
 IsoDelaunayDomain<T, Tint, Tgroup>
 GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
+  if (!is_integrally_saturated_matrix_space(data.LinSpa.ListMat)) {
+    std::cerr << "ISODEL: The space should be integral and fully span it\n";
+    throw TerminalException{1};
+  }
   std::ostream& os = data.rddo.os;
   DelaunayTesselation<Tint, Tgroup> DT =
       GetInitialGenericDelaunayTesselation(data);
@@ -2159,7 +2162,7 @@ struct DataIsoDelaunayDomainsFunc {
   }
   size_t f_hash(size_t const &seed, Tobj const &x) {
     std::ostream &os = data.rddo.os;
-    int method = 1;
+    int method = 2;
     if (method == 1) {
       // That method does not seem to work very well
       // because it can happen that many triangulations have all Delaunays
@@ -2374,7 +2377,15 @@ struct DataIsoDelaunayDomainsFunc {
     return l_adj;
   }
   Tobj f_adji_obj(TadjI const &x) { return {x.DT_gram, {}, {}}; }
-  size_t f_complexity(Tobj const &x) { return x.nbIneq; }
+  size_t f_complexity([[maybe_unused]] Tobj const &x) {
+    // It is not clear what we could put. The total number of
+    // inequality could be one. But actually the number after reduction
+    // by redundancy would be the true metric.
+    // But on the other hand, that number is actually not really a complexity.
+    // It just tells that the computation last longer but there is no
+    // exponential increase in complexity. It is not a dual description.
+    return 0;
+  }
 };
 
 template <typename T, typename Tint, typename Tgroup>
