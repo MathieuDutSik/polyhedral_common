@@ -842,24 +842,43 @@ std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpace
   Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
 #ifdef DEBUG_PERFECT_FORM
   os << "PERFECT: SimplePerfect_Stabilizer, we have result\n";
+  os << "PERFECT: SimplePerfect_Stabilizer |SHVorig_T|=" << SHVorig_T.rows() << " |SHV_T|=" << SHV_T.rows() << "\n";
 #endif
-  if (SHVorig_T == SHV_T) {
+  if (TestEqualityMatrix(SHVorig_T, SHV_T)) {
     // This is the most likely scenario: The original
     // SHVorig is adequate
 #ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T == SHV_T\n";
+    os << "PERFECT: SimplePerfect_Stabilizer(A), Case SHVorig_T == SHV_T\n";
 #endif
-    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa);
+    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa, os);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(A), We have l_matr_t\n";
+#endif
     std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(A), We have l_matr\n";
+#endif
     Tgroup GRP = result.get_perm_group(SHV_T, os);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(A), We have GRP\n";
+#endif
     return {GRP, l_matr};
   } else {
 #ifdef DEBUG_PERFECT_FORM
-    os << "PERFECT: SimplePerfect_Stabilizer, Case SHVorig_T != SHV_T\n";
+    os << "PERFECT: SimplePerfect_Stabilizer(B), Case SHVorig_T != SHV_T\n";
 #endif
-    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa);
+    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa, os);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(B), We have l_matr_t\n";
+#endif
     std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(B), We have l_matr\n";
+#endif
     Tgroup GRP = get_perm_group_from_list_matrices<T,Tgroup>(l_matr_t, SHVorig_T, os);
+#ifdef DEBUG_PERFECT_FORM
+    os << "PERFECT: SimplePerfect_Stabilizer(B), We have GRP\n";
+#endif
     return {GRP, l_matr};
   }
 }

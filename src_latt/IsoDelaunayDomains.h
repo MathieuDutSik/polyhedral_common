@@ -141,7 +141,7 @@ BuildVoronoiIneqPreCompute(MyMatrix<Tvert> const &EXT,
   int n = EXT.cols() - 1;
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(EXT_T);
-  std::vector<int> ListRowSelect = eSelect.ListRowSelect;
+  std::vector<int> const& ListRowSelect = eSelect.ListRowSelect;
   Face f_basis(EXT_T.rows());
   for (auto &eIdx : ListRowSelect) {
     f_basis[eIdx] = 1;

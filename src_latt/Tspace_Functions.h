@@ -778,7 +778,7 @@ struct Result_ComputeStabilizer_SHV {
   using Telt = typename Tgroup::Telt;
   std::optional<std::vector<MyMatrix<T>>> l_gens;
   std::optional<std::pair<std::vector<Telt>, Tgroup>> perms_and_group;
-  std::vector<MyMatrix<T>> get_list_matrix(MyMatrix<T> const &SHV_T, MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa) const {
+  std::vector<MyMatrix<T>> get_list_matrix(MyMatrix<T> const &SHV_T, MyMatrix<T> const &eMat, LinSpaceMatrix<T> const &LinSpa, [[maybe_unused]] std::ostream &os) const {
     if (l_gens) {
       return *l_gens;
     }
