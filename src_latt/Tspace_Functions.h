@@ -980,7 +980,7 @@ LINSPA_ComputeStabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_TSPACE_FUNCTIONS
   os << "TSPACE: LINSPA_ComputeStabilizer, we have result\n";
 #endif
-  return result.get_list_matrix(SHV_T, eMat, LinSpa);
+  return result.get_list_matrix(SHV_T, eMat, LinSpa, os);
 }
 
 template <typename T>

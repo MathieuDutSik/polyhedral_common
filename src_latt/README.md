@@ -1,7 +1,12 @@
 Lattice based computation
 =========================
 
-The functions in this subdirectory allow computing with lattices
+The functions in this subdirectory allow computing with lattices. But a more restrictive description is that
+we do the following in this directory:
+  * Computing equivalence, stabilizer of positive definite quadratic forms.
+  * Computing set of shortest vectors.
+  * Computing in T-spaces of quadratic forms.
+  * Computing Delaunay polytopes and Iso-Delaunay domains.
 
 General references of the lattice:
   * A. Schürmann, Computational geometry of positive definite quadratic forms. Polyhedral reduction theories, algorithms and applications. American Mathematical Society, xvi+162 pp.

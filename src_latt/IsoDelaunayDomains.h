@@ -418,12 +418,9 @@ MyMatrix<T> GetFACineq(std::vector<FullAdjInfo<T>> const &ListIneq) {
 }
 
 template <typename T, typename Tvert, typename Tgroup>
-std::pair<int, MyMatrix<T>>
-GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
-                      DelaunayTesselation<Tvert, Tgroup> const &DT,
-                      std::ostream &os) {
-  int n = LinSpa.n;
-  int dimSpace = LinSpa.ListMat.size();
+MyMatrix<T> get_list_ineq(LinSpaceMatrix<T> const &LinSpa,
+                          DelaunayTesselation<Tvert, Tgroup> const &DT,
+                          std::ostream &os) {
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   MicrosecondTime time_interior;
 #endif
@@ -431,23 +428,48 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
       ComputeDefiningIneqIsoDelaunayDomain<T, Tvert, Tgroup>(
           DT, LinSpa.ListLineMat, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: InteriorGramMat, ComputeDefiningIneqIsoDelaunayDomain|=" << time_interior << "\n";
+  os << "|ISODEL: get_list_ineq, ComputeDefiningIneqIsoDelaunayDomain|=" << time_interior << "\n";
 #endif
   MyMatrix<T> FAC = GetFACineq(ListIneq);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: InteriorGramMat, GetFACineq|=" << time_interior << "\n";
+  os << "|ISODEL: get_list_ineq, GetFACineq|=" << time_interior << "\n";
 #endif
-  int nbIneq = FAC.rows();
+  return FAC;
+}
+
+template <typename T>
+MyMatrix<T> get_interior_gram_matrix_lp(LinSpaceMatrix<T> const &LinSpa,
+                                        MyMatrix<T> const& FAC,
+                                        std::ostream &os) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time;
+#endif
+  int n = LinSpa.n;
+  int dimSpace = LinSpa.ListMat.size();
   MyVector<T> ThePt = GetGeometricallyUniqueInteriorPoint(FAC, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-  os << "|ISODEL: InteriorGramMat, GetGeometricallyUniqueInteriorPoint|=" << time_interior << "\n";
+  os << "|ISODEL: get_interior_gram_matrix_lp, GetGeometricallyUniqueInteriorPoint|=" << time << "\n";
 #endif
   MyMatrix<T> RetMat = ZeroMatrix<T>(n, n);
   for (int u = 0; u < dimSpace; u++) {
     RetMat += ThePt(u) * LinSpa.ListMat[u];
   }
-#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
+  return RetMat;
+}
+
+template <typename T>
+MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
+                                         MyMatrix<T> const& FAC,
+                                         std::ostream &os) {
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  MicrosecondTime time;
+#endif
+  int n = LinSpa.n;
+  int dimSpace = LinSpa.ListMat.size();
   MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: get_interior_gram_matrix_lrs, DirectFacetComputationInequalities|=" << time << "\n";
+#endif
   int n_row = EXT.rows();
   MyMatrix<T> SumMatExtRay = ZeroMatrix<T>(n, n);
   for (int i_row = 0; i_row < n_row; i_row++) {
@@ -456,6 +478,7 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
       RayMat += EXT(i_row, u) * LinSpa.ListMat[u];
     }
     SumMatExtRay += RemoveFractionMatrix(RayMat);
+#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
     DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(RayMat, os);
     if (DiagInfo.nbMinus > 0) {
       std::cerr
@@ -463,10 +486,33 @@ GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
       std::cerr << "This is not allowed\n";
       throw TerminalException{1};
     }
-  }
-  RetMat = SumMatExtRay;
 #endif
-  return {nbIneq, std::move(RetMat)};
+  }
+#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
+  os << "|ISODEL: get_interior_gram_matrix_lrs, SumMatExtRay|=" << time << "\n";
+#endif
+  return SumMatExtRay;
+}
+
+
+
+
+template <typename T, typename Tvert, typename Tgroup>
+MyMatrix<T> GetInteriorGramMatrix(LinSpaceMatrix<T> const &LinSpa,
+                      DelaunayTesselation<Tvert, Tgroup> const &DT,
+                      std::ostream &os) {
+  MyMatrix<T> FAC = get_list_ineq<T,Tvert,Tgroup>(LinSpa, DT, os);
+  return get_interior_gram_matrix_lp(LinSpa, FAC, os);
+}
+
+template <typename T, typename Tvert, typename Tgroup>
+std::pair<MyMatrix<T>,MyMatrix<T>> GetInteriorGramMatrices(LinSpaceMatrix<T> const &LinSpa,
+                                                           DelaunayTesselation<Tvert, Tgroup> const &DT,
+                                                           std::ostream &os) {
+  MyMatrix<T> FAC = get_list_ineq<T,Tvert,Tgroup>(LinSpa, DT, os);
+  MyMatrix<T> Mat1 = get_interior_gram_matrix_lp(LinSpa, FAC, os);
+  MyMatrix<T> Mat2 = get_interior_gram_matrix_lrs(LinSpa, FAC, os);
+  return {std::move(Mat1), std::move(Mat2)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -1822,7 +1868,6 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
 
 template <typename T, typename Tint, typename Tgroup> struct IsoDelaunayDomain {
   DelaunayTesselation<Tint, Tgroup> DT;
-  int nbIneq;
   MyMatrix<T> GramMat;
   MyMatrix<T> SHV_T;
 };
@@ -1832,7 +1877,6 @@ void WriteEntryGAP(std::ostream &os_out,
                    IsoDelaunayDomain<T, Tint, Tgroup> const &ent) {
   os_out << "rec(DT:=";
   WriteEntryGAP(os_out, ent.DT);
-  os_out << ", nbIneq:=" << ent.nbIneq;
   os_out << ", GramMat:=" << StringMatrixGAP(ent.GramMat) << ")";
 }
 
@@ -1841,7 +1885,6 @@ void WriteEntryPYTHON(std::ostream &os_out,
                       IsoDelaunayDomain<T, Tint, Tgroup> const &ent) {
   os_out << "{\"DT\":";
   WriteEntryPYTHON(os_out, ent.DT);
-  os_out << ", \"nbIneq\":" << ent.nbIneq;
   os_out << ", \"GramMat\":" << StringMatrixPYTHON(ent.GramMat) << "}";
 }
 
@@ -1969,11 +2012,10 @@ GetInitialIsoDelaunayDomain(DataIsoDelaunayDomains<T, Tint, Tgroup> &data) {
   std::ostream& os = data.rddo.os;
   DelaunayTesselation<Tint, Tgroup> DT =
       GetInitialGenericDelaunayTesselation(data);
-  std::pair<int, MyMatrix<T>> pair =
-      GetInteriorGramMatrix(data.LinSpa, DT, os);
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(pair.second, os);
+  MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DT, os);
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
-  return {std::move(DT), pair.first, std::move(pair.second), std::move(SHV_T)};
+  return {std::move(DT), std::move(M), std::move(SHV_T)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -2308,9 +2350,8 @@ struct DataIsoDelaunayDomainsFunc {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: After FlippingLtype\n";
 #endif
-        std::pair<int, MyMatrix<T>> pair =
-            GetInteriorGramMatrix(data.LinSpa, DTadj, os);
-        MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(pair.second, os);
+        MyMatrix<T> M = GetInteriorGramMatrix(data.LinSpa, DTadj, os);
+        MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(M, os);
         MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
         os << "|ISODEL: s_adj, GetInteriorGramMatrix|=" << time_s_adj << "\n";
@@ -2319,7 +2360,7 @@ struct DataIsoDelaunayDomainsFunc {
         os << "ISODEL: After GetInteriorGramMatrix\n";
 #endif
         IsoDelaunayDomain<T, Tint, Tgroup> IsoDelAdj{
-          std::move(DTadj), pair.first, std::move(pair.second), std::move(SHV_T)};
+          std::move(DTadj), std::move(M), std::move(SHV_T)};
         TadjI eAdj{eRecIneq.eIneq, IsoDelAdj};
         l_adj.push_back(eAdj);
       }
