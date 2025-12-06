@@ -4,7 +4,7 @@ Print("Beginning Test enumeration of L-type domains in perfect forms in T-spaces
 #keep_err:=false;
 keep_err:=true;
 
-get_rec_info:=function(fProg, d, n, keep_error)
+get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
     strRun:=Concatenation("_", String(n), "_", String(d));
@@ -40,7 +40,7 @@ get_rec_info:=function(fProg, d, n, keep_error)
     AppendTo(output, " TypeTspace = \"", info.type_tspace, "\"\n");
     AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
     AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
-    AppendTo(output, " ListComm = \"Use_realimag\"\n");
+    AppendTo(output, " ListComm = \"", comm_choice, "\"\n");
     AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
     AppendTo(output, " FileListSubspaces = \"unset\"\n");
     AppendTo(output, " RealImagDim = ", n, "\n");
@@ -77,33 +77,37 @@ ListCases:=[];
 set_canonical_examples:=function()
     Add(ListCases, rec(n:=3, d:=-3));
     Add(ListCases, rec(n:=3, d:=-4));
-    Add(ListCases, rec(n:=3, d:=-7));
-    Add(ListCases, rec(n:=3, d:=-8));
-    Add(ListCases, rec(n:=3, d:=-11));
-    Add(ListCases, rec(n:=3, d:=-15));
-    Add(ListCases, rec(n:=3, d:=-19));
-    Add(ListCases, rec(n:=3, d:=-20));
-    Add(ListCases, rec(n:=3, d:=-23));
-    Add(ListCases, rec(n:=3, d:=-24));
-    Add(ListCases, rec(n:=4, d:=-3));
-    Add(ListCases, rec(n:=4, d:=-4));
 end;
 
 set_dim2_examples:=function()
-    Add(ListCases, rec(n:=2, d:=-3, n_domains:=1));
-    Add(ListCases, rec(n:=2, d:=-4, n_domains:=1));
-    Add(ListCases, rec(n:=2, d:=-7, n_domains:=16));
-    Add(ListCases, rec(n:=2, d:=-8, n_domains:=5));
-    Add(ListCases, rec(n:=2, d:=-11, n_domains:=58));
-    Add(ListCases, rec(n:=2, d:=-15, n_domains:=127));
-    Add(ListCases, rec(n:=2, d:=-19, n_domains:=198));
-    Add(ListCases, rec(n:=2, d:=-20, n_domains:=61));
-    Add(ListCases, rec(n:=2, d:=-23, n_domains:=343));
-    Add(ListCases, rec(n:=2, d:=-24, n_domains:=86));
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Use_realimag", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Use_realimag", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Use_realimag", n_domains:=16));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Use_realimag", n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Use_realimag", n_domains:=58));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Use_realimag", n_domains:=127));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Use_realimag", n_domains:=198));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Use_realimag", n_domains:=61));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Use_realimag", n_domains:=343));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Use_realimag", n_domains:=86));
 end;
 
-set_canonical_examples();
+set_dim2_nocomm_examples:=function()
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Trivial", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Trivial", n_domains:=1));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Trivial", n_domains:=11));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Trivial", n_domains:=5));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Trivial", n_domains:=35));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Trivial", n_domains:=74));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Trivial", n_domains:=112));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Trivial", n_domains:=43));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Trivial", n_domains:=190));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Trivial", n_domains:=61));
+end;
+
+#set_canonical_examples();
 #set_dim2_examples();
+set_dim2_nocomm_examples();
 
 
 
@@ -120,7 +124,7 @@ f_compute:=function()
         Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
         for fProg in ListProg
         do
-            eRec:=get_rec_info(fProg, eCase.d, eCase.n, keep_err);
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, keep_err);
             if eRec=fail then
                 Print("Failing because eRec=fail\n");
                 return false;

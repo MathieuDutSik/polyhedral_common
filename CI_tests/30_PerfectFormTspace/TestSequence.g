@@ -3,7 +3,7 @@ Print("Beginning Test enumeration of perfect forms in T-spaces\n");
 
 keep_err:=false;
 
-get_rec_info:=function(fProg, d, n, keep_error)
+get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     local strRun, FileNml, FileResult, FileErr, output, eProg, TheCommand, U, is_correct, info;
     #
     strRun:=Concatenation("_", String(n), "_", String(d));
@@ -39,7 +39,7 @@ get_rec_info:=function(fProg, d, n, keep_error)
     AppendTo(output, " TypeTspace = \"", info.type_tspace, "\"\n");
     AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
     AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
-    AppendTo(output, " ListComm = \"Use_realimag\"\n");
+    AppendTo(output, " ListComm = \"", comm_choice, "\"\n");
     AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
     AppendTo(output, " FileListSubspaces = \"unset\"\n");
     AppendTo(output, " RealImagDim = ", n, "\n");
@@ -79,19 +79,42 @@ insert_imag_examples:=function()
     # On the cohomology of linear groups over imaginary quadratic fields, preprint at arxiv:1307.1165,
     # Journal of Pure and Applied Algebra 220-7 (2016) 2564--2589
     # Preprint: https://arxiv.org/abs/1307.1165
-    Add(ListCases, rec(n:=3, d:=-3, n_perf:=2));
-    Add(ListCases, rec(n:=3, d:=-4, n_perf:=1));
-    Add(ListCases, rec(n:=3, d:=-7, n_perf:=2));
-    Add(ListCases, rec(n:=3, d:=-8, n_perf:=2));
-    Add(ListCases, rec(n:=3, d:=-11, n_perf:=12));
-    Add(ListCases, rec(n:=3, d:=-15, n_perf:=90));
-    Add(ListCases, rec(n:=3, d:=-19, n_perf:=157));
-    Add(ListCases, rec(n:=3, d:=-20, n_perf:=212));
-    Add(ListCases, rec(n:=3, d:=-23, n_perf:=870));
-    Add(ListCases, rec(n:=3, d:=-24, n_perf:=596));
-    Add(ListCases, rec(n:=4, d:=-3, n_perf:=5));
-    Add(ListCases, rec(n:=4, d:=-4, n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Use_realimag", n_perf:=1));
+    Add(ListCases, rec(n:=3, d:=-7, comm_choice:="Use_realimag", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-8, comm_choice:="Use_realimag", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-11, comm_choice:="Use_realimag", n_perf:=12));
+    Add(ListCases, rec(n:=3, d:=-15, comm_choice:="Use_realimag", n_perf:=90));
+    Add(ListCases, rec(n:=3, d:=-19, comm_choice:="Use_realimag", n_perf:=157));
+    Add(ListCases, rec(n:=3, d:=-20, comm_choice:="Use_realimag", n_perf:=212));
+    Add(ListCases, rec(n:=3, d:=-23, comm_choice:="Use_realimag", n_perf:=870));
+    Add(ListCases, rec(n:=3, d:=-24, comm_choice:="Use_realimag", n_perf:=596));
+    Add(ListCases, rec(n:=4, d:=-3, comm_choice:="Use_realimag", n_perf:=5));
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Use_realimag", n_perf:=2));
 end;
+
+
+insert_imag_nocomm_examples:=function()
+    # The examples in the paper
+    # Herbert Gangl, Paul Gunnells, Jonathan Hanke, Achill Schürmann, Mathieu Dutour Sikirić, Dan Yasaki,
+    # On the cohomology of linear groups over imaginary quadratic fields, preprint at arxiv:1307.1165,
+    # Journal of Pure and Applied Algebra 220-7 (2016) 2564--2589
+    # Preprint: https://arxiv.org/abs/1307.1165
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Trivial", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Trivial", n_perf:=1));
+    Add(ListCases, rec(n:=3, d:=-7, comm_choice:="Trivial", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-8, comm_choice:="Trivial", n_perf:=2));
+    Add(ListCases, rec(n:=3, d:=-11, comm_choice:="Trivial", n_perf:=12));
+    Add(ListCases, rec(n:=3, d:=-15, comm_choice:="Trivial", n_perf:=59));
+    Add(ListCases, rec(n:=3, d:=-19, comm_choice:="Trivial", n_perf:=93));
+    Add(ListCases, rec(n:=3, d:=-20, comm_choice:="Trivial", n_perf:=120));
+    Add(ListCases, rec(n:=3, d:=-23, comm_choice:="Trivial", n_perf:=460));
+    Add(ListCases, rec(n:=3, d:=-24, comm_choice:="Trivial", n_perf:=315));
+    Add(ListCases, rec(n:=4, d:=-3, comm_choice:="Trivial", n_perf:=5));
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Trivial"));
+end;
+
+
 
 insert_real_examples:=function(n, MaxDisc)
     local MinDisc, d, info, test;
@@ -102,42 +125,43 @@ insert_real_examples:=function(n, MaxDisc)
         Print("info=", info, " d=", d, "\n");
         test:=CorrectnessRealQuadratic(info.eSum, info.eProd);
         if info.IsCorrect and test then
-            Add(ListCases, rec(n:=n, d:=d));
+            Add(ListCases, rec(n:=n, d:=d, comm_choice:="Use_realimag"));
         fi;
     od;
 end;
 
 insert_extensive_imag_examples_part1:=function()
-    Add(ListCases, rec(n:=2, d:=-3));
-    Add(ListCases, rec(n:=2, d:=-4));
-    Add(ListCases, rec(n:=2, d:=-7));
-    Add(ListCases, rec(n:=2, d:=-8));
-    Add(ListCases, rec(n:=2, d:=-11));
-    Add(ListCases, rec(n:=2, d:=-15));
-    Add(ListCases, rec(n:=2, d:=-19));
-    Add(ListCases, rec(n:=2, d:=-20));
-    Add(ListCases, rec(n:=2, d:=-23));
-    Add(ListCases, rec(n:=2, d:=-24));
-    Add(ListCases, rec(n:=4, d:=-7));
-    Add(ListCases, rec(n:=4, d:=-8));
+    Add(ListCases, rec(n:=2, d:=-3, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-4, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-7, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-8, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-11, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-15, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-19, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-20, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-23, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=4, d:=-7, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=4, d:=-8, comm_choice:="Use_realimag"));
 end;
 
 insert_extensive_imag_examples_part2:=function()
     # Too slow it seems to run
-    Add(ListCases, rec(n:=4, d:=-11));
-    Add(ListCases, rec(n:=4, d:=-15));
-    Add(ListCases, rec(n:=4, d:=-19));
-    Add(ListCases, rec(n:=4, d:=-20));
+    Add(ListCases, rec(n:=4, d:=-11, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=4, d:=-15, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=4, d:=-19, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=4, d:=-20, comm_choice:="Use_realimag"));
 end;
 
 insert_extensive_imag_examples_part3:=function()
-    Add(ListCases, rec(n:=3, d:=-27, n_perf:=1201));
-    Add(ListCases, rec(n:=3, d:=-31, n_pref:=3953));
+    Add(ListCases, rec(n:=3, d:=-27, comm_choice:="Use_realimag", n_perf:=1201));
+    Add(ListCases, rec(n:=3, d:=-31, comm_choice:="Use_realimag", n_pref:=3953));
 end;
 
 
 
-insert_imag_examples();
+#insert_imag_examples();
+insert_imag_nocomm_examples();
 #insert_real_examples(3, 10);
 #insert_extensive_imag_examples_part1();
 #insert_extensive_imag_examples_part2();
@@ -159,7 +183,7 @@ f_compute:=function()
         Print("i_case=", i_case, "/", n_case, " eCase=", eCase, "\n");
         for fProg in ListProg
         do
-            eRec:=get_rec_info(fProg, eCase.d, eCase.n, keep_err);
+            eRec:=get_rec_info(fProg, eCase.d, eCase.n, eCase.comm_choice, keep_err);
             if eRec=fail then
                 Print("Failing because eRec=fail\n");
                 return false;
