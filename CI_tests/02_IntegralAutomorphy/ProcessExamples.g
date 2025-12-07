@@ -21,7 +21,36 @@ if AppendReflectiveDim45 then
     Append(ListEXT, OneBlock);
 fi;
 
-
+GeneratorsPreservePolytope:=function(TheGRP,EXT)
+    local gens, BasisExt, i, j, ImageExt, Mb, Mi, A;
+    BasisEXT:=[EXT[1]];
+    BasisIndices:=[1];
+    n:=Length(EXT[1]);
+    i:=1;
+    for i in [2..n] do
+        for j in [1..Length(EXT)] do
+            M:=Concatenation(BasisEXT,[EXT[j]]);
+            if RankMat(M)=Length(BasisEXT)+1 then
+                BasisEXT[i]:=EXT[j];
+                BasisIndices[i]:=j;
+                break;
+            fi;
+        od;
+    od;
+    gens:=GeneratorsOfGroup(TheGRP);
+    for g in gens do
+        ImageIndices:=List(BasisIndices, i -> i^g);
+        ImageEXT := List(ImageIndices, i -> EXT[i]);
+        Mb:=TransposedMat(BasisEXT);
+        Mi:=TransposedMat(ImageEXT);
+        A:=Mi*Inverse(Mb);
+        if ForAll(Flat(A), x -> x = Int(x)) then
+            return true;
+        else
+            return false;
+        fi;
+    od;
+end;
 
 TestCase_Automorphy:=function(EXT)
     local TmpDir, FileI, FileO, arith, eProg, TheCommand, TheGRP;
