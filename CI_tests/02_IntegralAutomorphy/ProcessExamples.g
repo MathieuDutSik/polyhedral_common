@@ -31,25 +31,27 @@ GeneratorsPreservePolytope:=function(TheGRP,EXT)
         for j in [1..Length(EXT)] do
             M:=Concatenation(BasisEXT,[EXT[j]]);
             if RankMat(M)=Length(BasisEXT)+1 then
-                BasisEXT[i]:=EXT[j];
-                BasisIndices[i]:=j;
+                Add(BasisEXT, EXT[j]);
+                Add(BasisIndices, j);
                 break;
             fi;
         od;
     od;
     gens:=GeneratorsOfGroup(TheGRP);
+    gensCheck:=[];
     for g in gens do
         ImageIndices:=List(BasisIndices, i -> i^g);
         ImageEXT := List(ImageIndices, i -> EXT[i]);
         Mb:=TransposedMat(BasisEXT);
         Mi:=TransposedMat(ImageEXT);
         A:=Mi*Inverse(Mb);
-        if ForAll(Flat(A), x -> x = Int(x)) then
-            return true;
+        if ForAll(Flat(A), x -> x=Int(x)) then
+            continue;
         else
             return false;
         fi;
     od;
+    return true;
 end;
 
 TestCase_Automorphy:=function(EXT)
