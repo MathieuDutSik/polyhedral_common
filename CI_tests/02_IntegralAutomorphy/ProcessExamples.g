@@ -70,6 +70,9 @@ TestCase_Automorphy:=function(EXT)
     TheGRP:=ReadAsFunction(FileO)();
     RemoveFileIfExist(FileI);
     RemoveFileIfExist(FileO);
+    if not GeneratorsPreservePolytope(TheGRP,EXT) then
+        return false;
+    fi;
     Print("|TheGRP|=", Order(TheGRP), "\n");
     return true;
 end;
