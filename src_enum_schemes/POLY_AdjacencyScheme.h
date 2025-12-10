@@ -198,7 +198,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
        << " |indices_by_hash|=" << indices_by_hash.size() << "\n";
 #endif
 #ifdef TIMINGS_ADJACENCY_SCHEME
-      MicrosecondTime time_f_insert_conclusion;
+    MicrosecondTime time_f_insert_conclusion;
 #endif
     for (auto &idx : vect) {
       Tobj y = f_idx_obj(idx);
@@ -218,7 +218,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #endif
       if (opt) {
 #ifdef TIMINGS_ADJACENCY_SCHEME
-        os << "|ADJ_SCH: process_singleEntry_AdjI succ|=" << time_f_insert_conclusion << "\n";
+        os << "|ADJ_SCH: process_singleEntry_AdjI succ|="
+           << time_f_insert_conclusion << "\n";
 #endif
 #ifdef DEBUG_ADJACENCY_SCHEME
         os << "ADJ_SCH: process_singleEntry_AdjI Find an equivalence\n";
@@ -227,7 +228,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
       }
     }
 #ifdef TIMINGS_ADJACENCY_SCHEME
-    os << "|ADJ_SCH: process_singleEntry_AdjI fail|=" << time_f_insert_conclusion << "\n";
+    os << "|ADJ_SCH: process_singleEntry_AdjI fail|="
+       << time_f_insert_conclusion << "\n";
 #endif
 #ifdef TIMINGS_ADJACENCY_SCHEME
     MicrosecondTime time_f_spann;
@@ -347,7 +349,8 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
   while (true) {
 #ifdef DEBUG_ADJACENCY_SCHEME
     size_t n_done = n_obj - notdone.size();
-    os << "ADJ_SCH: early_termination=" << early_termination << " n_obj=" << n_obj << " n_done=" << n_done << "\n";
+    os << "ADJ_SCH: early_termination=" << early_termination
+       << " n_obj=" << n_obj << " n_done=" << n_done << "\n";
 #endif
     if (early_termination) {
 #ifdef DEBUG_ADJACENCY_SCHEME
@@ -498,7 +501,7 @@ void WriteEntryGAP(std::ostream &os_out,
 
 template <typename Tobj, typename TadjO>
 void WriteEntryPYTHON(std::ostream &os_out,
-                   DatabaseEntry_Serial<Tobj, TadjO> const &dat_entry) {
+                      DatabaseEntry_Serial<Tobj, TadjO> const &dat_entry) {
   os_out << "{\"x\":";
   WriteEntryPYTHON(os_out, dat_entry.x);
   os_out << ", \"ListAdj\":[";
@@ -605,14 +608,16 @@ EnumerateAndStore_Serial(Tdata &data, Fincorrect f_incorrect,
 }
 
 template <typename TadjO>
-std::vector<int> UniqueAdjacencies(std::vector<AdjO_Serial<TadjO>> const& ListAdj, int const& offset) {
+std::vector<int>
+UniqueAdjacencies(std::vector<AdjO_Serial<TadjO>> const &ListAdj,
+                  int const &offset) {
   std::set<int> set;
   for (auto &eAdj : ListAdj) {
     int new_val = eAdj.iOrb + offset;
     set.insert(new_val);
   }
   std::vector<int> new_v;
-  for (auto & new_val: set) {
+  for (auto &new_val : set) {
     new_v.push_back(new_val);
   }
   return new_v;
@@ -620,9 +625,7 @@ std::vector<int> UniqueAdjacencies(std::vector<AdjO_Serial<TadjO>> const& ListAd
 
 template <typename Tdata, typename Tobj, typename TadjO>
 bool WriteFamilyObjects(
-    Tdata const& data,
-    std::string const &OutFormat,
-    std::ostream& os_out,
+    Tdata const &data, std::string const &OutFormat, std::ostream &os_out,
     std::vector<DatabaseEntry_Serial<Tobj, TadjO>> const &l_tot,
     std::ostream &os) {
   if (OutFormat == "nothing") {

@@ -493,8 +493,9 @@ size_t ComputeHashWeightMatrix_up_to_equiv(
     }
   }
   //  std::cerr << "WM: ListWeight=" << StringStdVectorGAP(ListWeight) << "\n";
-  //  std::cerr << "WM: ListAttDiag=" << StringStdVectorGAP(ListAttDiag) << "\n";
-  //  std::cerr << "WM: ListAttOff=" << StringStdVectorGAP(ListAttOff) << "\n";
+  //  std::cerr << "WM: ListAttDiag=" << StringStdVectorGAP(ListAttDiag) <<
+  //  "\n"; std::cerr << "WM: ListAttOff=" << StringStdVectorGAP(ListAttOff) <<
+  //  "\n";
   size_t seed = seed_in;
   for (size_t iWei = 0; iWei < nbWei; iWei++) {
     if (ListAttDiag[iWei] > 0) {
@@ -610,8 +611,9 @@ GetLocalInvariantWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 inline typename std::enable_if<is_totally_ordered<T>::value, size_t>::type
-GetInvariantWeightMatrix(size_t const& seed, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat,
-                         [[maybe_unused]] std::ostream& os) {
+GetInvariantWeightMatrix(size_t const &seed,
+                         WeightMatrix<is_symmetric, T, Tidx_value> const &WMat,
+                         [[maybe_unused]] std::ostream &os) {
   static_assert(is_totally_ordered<T>::value,
                 "Requires T to be totally ordered");
   size_t nbVert = WMat.rows();
@@ -639,7 +641,9 @@ GetInvariantWeightMatrix(size_t const& seed, WeightMatrix<is_symmetric, T, Tidx_
     ListWeight_B[iWeight] = ListWeight[jWeight];
   }
 #ifdef DEBUG_WEIGHT_MATRIX
-  os << "WEIGHT: nbVert=" << nbVert << " ListAtt=" << StringStdVectorGAP(ListAtt) << " ListWeight_B=" << StringStdVectorGAP(ListWeight_B) << "\n";
+  os << "WEIGHT: nbVert=" << nbVert
+     << " ListAtt=" << StringStdVectorGAP(ListAtt)
+     << " ListWeight_B=" << StringStdVectorGAP(ListWeight_B) << "\n";
 #endif
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
@@ -661,7 +665,8 @@ GetInvariantWeightMatrix(size_t const& seed, WeightMatrix<is_symmetric, T, Tidx_
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrix(
-    std::ostream &os_out, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
+    std::ostream &os_out,
+    WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
   size_t siz = WMat.GetWeightSize();
   size_t nbRow = WMat.rows();
   os_out << "nbRow=" << nbRow << "  Weights=[";
@@ -689,7 +694,8 @@ void PrintWeightedMatrix(
 
 template <bool is_symmetric, typename T, typename Tidx_value>
 void PrintWeightedMatrixGAP(
-    std::ostream &os_out, WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
+    std::ostream &os_out,
+    WeightMatrix<is_symmetric, T, Tidx_value> const &WMat) {
   std::vector<T> const &ListWeight = WMat.GetWeight();
   size_t nbRow = WMat.rows();
   os_out << "[";

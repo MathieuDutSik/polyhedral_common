@@ -50,7 +50,7 @@ template <typename T> struct DDA {
 };
 
 template <typename T>
-DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT, std::ostream& os) {
+DDA<T> DualDescriptionAdjacencies(MyMatrix<T> const &TheEXT, std::ostream &os) {
   dd_polyhedradata<T> *poly;
   dd_matrixdata<T> *M;
   dd_ErrorType err;

@@ -8,13 +8,13 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const &QFile, std::string const& PlaneFile, std::string const& choice,
-             std::string const &OutFormat,
+void process(std::string const &QFile, std::string const &PlaneFile,
+             std::string const &choice, std::string const &OutFormat,
              std::ostream &os_out) {
   MyMatrix<T> Qmat = ReadMatrixFile<T>(QFile);
   MyMatrix<Tint> Plane = ReadMatrixFile<Tint>(PlaneFile);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
-  auto f_get=[&]() -> std::vector<MyMatrix<Tint>> {
+  auto f_get = [&]() -> std::vector<MyMatrix<Tint>> {
     if (choice == "plane") {
       return comb.INDEF_FORM_Stabilizer_IsotropicKplane(Qmat, Plane);
     }
@@ -45,9 +45,11 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] [choice]\n";
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] "
+                   "[choice]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] [choice] [OutFormat] "
+      std::cerr << "INDEF_FORM_AutomorphismGroup [arith] [QFile] [PlaneFile] "
+                   "[choice] [OutFormat] "
                    "[OutFile]\n";
       throw TerminalException{1};
     }
@@ -70,7 +72,8 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T, Tint, Tgroup>(QFile, PlaneFile, choice, OutFormat, os);
+        return process<T, Tint, Tgroup>(QFile, PlaneFile, choice, OutFormat,
+                                        os);
       }
       std::cerr << "Failed to find matching type for arith\n";
       throw TerminalException{1};
@@ -78,7 +81,8 @@ int main(int argc, char *argv[]) {
     print_stderr_stdout_file(OutFile, f);
     std::cerr << "Normal termination of INDEF_FORM_StabilizerIsotropicPlane\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_StabilizerIsotropicPlane, runtime=" << time << "\n";
+    std::cerr << "Error in INDEF_FORM_StabilizerIsotropicPlane, runtime="
+              << time << "\n";
     exit(e.eVal);
   }
   runtime(time);

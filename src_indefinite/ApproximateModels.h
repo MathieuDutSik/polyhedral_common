@@ -79,8 +79,9 @@ MyMatrix<Tint> INDEF_FORM_Eichler_Transvection(MyMatrix<T> const &Qmat,
                                                MyVector<Tint> const &f,
                                                MyVector<Tint> const &x) {
   if (!INDEF_FORM_IsEven(Qmat)) {
-    std::cerr << "MODEL: The lattice Qmat should be even in order to define the "
-                 "Eichler transvection\n";
+    std::cerr
+        << "MODEL: The lattice Qmat should be even in order to define the "
+           "Eichler transvection\n";
     throw TerminalException{1};
   }
   int n = Qmat.rows();
@@ -248,17 +249,15 @@ template <typename T> bool is_eichler_canonical(MyMatrix<T> const &Qmat) {
   return true;
 }
 
-template<typename T>
-MyVector<T> VectorModulo1(MyVector<T> const& V) {
+template <typename T> MyVector<T> VectorModulo1(MyVector<T> const &V) {
   int n = V.size();
   MyVector<T> Vret(n);
-  for (int u=0; u<n; u++) {
-    T floor = UniversalFloorScalarInteger<T,T>(V(u));
+  for (int u = 0; u < n; u++) {
+    T floor = UniversalFloorScalarInteger<T, T>(V(u));
     Vret(u) = V(u) - floor;
   }
   return Vret;
 }
-
 
 /*
   Dualities and action of the automorphism group on the disciminant.
@@ -337,14 +336,15 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
     std::unordered_map<MyVector<T>, size_t> MapClassesRed;
     MyMatrix<T> QmatInv = Inverse(Qmat);
     for (size_t i = 0; i < ListClassesExt.size(); i++) {
-      MyVector<T> eClass_T = UniversalVectorConversion<T,Tint>(ListClassesExt[i]);
+      MyVector<T> eClass_T =
+          UniversalVectorConversion<T, Tint>(ListClassesExt[i]);
       MyVector<T> Qinv_eClass_T = QmatInv * eClass_T;
       MyVector<T> redV = VectorModulo1<T>(Qinv_eClass_T);
       ListClassesRed.push_back(redV);
       MapClassesRed[redV] = i + 1;
     }
     auto GetPositionNextGen = [&](MyVector<Tint> const &eVect) -> size_t {
-      MyVector<T> eVect_T = UniversalVectorConversion<T,Tint>(eVect);
+      MyVector<T> eVect_T = UniversalVectorConversion<T, Tint>(eVect);
       MyVector<T> Qinv_eVect_T = QmatInv * eVect_T;
       MyVector<T> redV = VectorModulo1<T>(Qinv_eVect_T);
       size_t pos = MapClassesRed[redV];
@@ -372,15 +372,16 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
         MyMatrix<T> eMatrGen_T = UniversalMatrixConversion<T, Tint>(eMatrGen);
         MyMatrix<T> prod = eMatrGen_T * Qmat * eMatrGen_T.transpose();
         if (prod != Qmat) {
-          std::cerr << "MODEL: The Matrix is not preserving the quadratic form\n";
+          std::cerr
+              << "MODEL: The Matrix is not preserving the quadratic form\n";
           throw TerminalException{1};
         }
 #endif
         MyVector<Tint> x_eM = eMatrGen * eClassExt;
         Tidx pos = GetPositionNextGen(x_eM);
 #ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-        os << "MODEL: SetListClassesOrbitwise, i_class=" << i_class << " pos=" << static_cast<int>(pos)
-           << "\n";
+        os << "MODEL: SetListClassesOrbitwise, i_class=" << i_class
+           << " pos=" << static_cast<int>(pos) << "\n";
         i_class += 1;
         int &val = status[pos];
         if (val == 1) {
@@ -511,7 +512,8 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       FuncInsert(ExpandGenerator(GetRightMultiplication(eGen)));
     }
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: GetApproximateGroup : After SL2Z, |ListGenerators|=" << ListGenerators.size() << "\n";
+    os << "MODEL: GetApproximateGroup : After SL2Z, |ListGenerators|="
+       << ListGenerators.size() << "\n";
 #endif
     // Now looking at the isotropic vectors, generating the Eichler
     // transvections
@@ -522,7 +524,8 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       MyVector<T> eProd = Qmat * eVect_T;
       MyMatrix<T> BasisOrth = NullspaceIntVect(eProd);
 #ifdef DEBUG_APPROXIMATE_MODELS
-      os << "MODEL: GetApproximateGroup : |BasisOrth|=" << BasisOrth.rows() << " / " << BasisOrth.cols() << "\n";
+      os << "MODEL: GetApproximateGroup : |BasisOrth|=" << BasisOrth.rows()
+         << " / " << BasisOrth.cols() << "\n";
 #endif
       for (int i = 0; i < BasisOrth.rows(); i++) {
         MyVector<T> eOrth_T = GetMatrixRow(BasisOrth, i);
@@ -531,7 +534,8 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
       }
     }
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: GetApproximateGroup : After transvections, |ListGenerators|=" << ListGenerators.size() << "\n";
+    os << "MODEL: GetApproximateGroup : After transvections, |ListGenerators|="
+       << ListGenerators.size() << "\n";
 #endif
 #ifdef TIMINGS_APPROXIMATE_MODELS
     os << "|MODEL: GetApproximateGroup|=" << time << "\n";
@@ -803,26 +807,26 @@ INDEF_FORM_EichlerCriterion_TwoHyperplanesEven(MyMatrix<T> const &Qmat) {
           GetCoveringOrbitRepresentatives, GetOneOrbitRepresentative};
 }
 
-template<typename T>
-bool INDEF_FORM_IsU(MyMatrix<T> const& Qmat) {
+template <typename T> bool INDEF_FORM_IsU(MyMatrix<T> const &Qmat) {
   if (Qmat.rows() != 2) {
     return false;
   }
-  if (Qmat(0,0) == 0 && Qmat(1,1) == 0) {
+  if (Qmat(0, 0) == 0 && Qmat(1, 1) == 0) {
     return true;
   }
   return false;
 }
 
-template<typename T, typename Tint>
-std::vector<MyMatrix<Tint>> INDEF_FORM_AutU([[maybe_unused]] MyMatrix<T> const& eQ) {
-  MyMatrix<Tint> M1 = ZeroMatrix<Tint>(2,2);
-  M1(1,0) = 1;
-  M1(0,1) = 1;
-  MyMatrix<Tint> M2 = ZeroMatrix<Tint>(2,2);
-  M2(0,0) = -1;
-  M2(1,1) = -1;
-  std::vector<MyMatrix<Tint>> LGen{M1,M2};
+template <typename T, typename Tint>
+std::vector<MyMatrix<Tint>>
+INDEF_FORM_AutU([[maybe_unused]] MyMatrix<T> const &eQ) {
+  MyMatrix<Tint> M1 = ZeroMatrix<Tint>(2, 2);
+  M1(1, 0) = 1;
+  M1(0, 1) = 1;
+  MyMatrix<Tint> M2 = ZeroMatrix<Tint>(2, 2);
+  M2(0, 0) = -1;
+  M2(1, 1) = -1;
+  std::vector<MyMatrix<Tint>> LGen{M1, M2};
   return LGen;
 }
 
@@ -855,7 +859,8 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
   std::vector<MyMatrix<T>> ListQ;
   std::vector<size_t> ListPosIdx;
   std::vector<size_t> ListUIdx;
-  auto f_insert_aut=[&](std::vector<MyMatrix<Tint>> const& LGen, std::vector<size_t> const& eConn) -> void {
+  auto f_insert_aut = [&](std::vector<MyMatrix<Tint>> const &LGen,
+                          std::vector<size_t> const &eConn) -> void {
     size_t dim = eConn.size();
     for (auto &eGen : LGen) {
       MyMatrix<Tint> eBigGen = IdentityMat<Tint>(n);
@@ -888,14 +893,14 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
     if (test_pn) {
       ListPosIdx.push_back(iConn);
       std::vector<MyMatrix<Tint>> LGen =
-        INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(eQ, os);
+          INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(eQ, os);
       f_insert_aut(LGen, eConn);
     }
     // The test of U matrix
     bool test_u = INDEF_FORM_IsU(eQ);
     if (test_u) {
       ListUIdx.push_back(iConn);
-      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutU<T,Tint>(eQ);
+      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutU<T, Tint>(eQ);
       f_insert_aut(LGen, eConn);
     }
   }
@@ -916,7 +921,11 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
     S = P
     R = P^{-1}
    */
-  auto f_insert_isom=[&](std::vector<size_t> ListIdx, std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> const& f_isom) -> void {
+  auto f_insert_isom =
+      [&](std::vector<size_t> ListIdx,
+          std::function<std::optional<MyMatrix<Tint>>(
+              MyMatrix<T> const &, MyMatrix<T> const &)> const &f_isom)
+      -> void {
     size_t nbConnRed = ListIdx.size();
     for (size_t iConnRed = 0; iConnRed < nbConnRed; iConnRed++) {
       size_t iConn = ListIdx[iConnRed];
@@ -948,11 +957,17 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
       }
     }
   };
-  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> f_isom_pn=[&](MyMatrix<T> const& eQ, MyMatrix<T> const& fQ) -> std::optional<MyMatrix<Tint>> {
+  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T> const &,
+                                              MyMatrix<T> const &)>
+      f_isom_pn = [&](MyMatrix<T> const &eQ,
+                      MyMatrix<T> const &fQ) -> std::optional<MyMatrix<Tint>> {
     return INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(eQ, fQ, os);
   };
-  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T>const&,MyMatrix<T>const&)> f_isom_u=[&](MyMatrix<T> const& eQ, MyMatrix<T> const& fQ) -> std::optional<MyMatrix<Tint>> {
-    if (eQ(1,0) != fQ(1,0)) {
+  std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T> const &,
+                                              MyMatrix<T> const &)>
+      f_isom_u = [&](MyMatrix<T> const &eQ,
+                     MyMatrix<T> const &fQ) -> std::optional<MyMatrix<Tint>> {
+    if (eQ(1, 0) != fQ(1, 0)) {
       return {};
     }
     return IdentityMat<Tint>(2);
@@ -1315,25 +1330,30 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
         "LinearSpace_Stabilizer_RightCoset\n";
 #endif
   Stab_RightCoset<T> stab_right_coset =
-      LinearSpace_Stabilizer_RightCoset<T, Tgroup, Thelper>(
-          ListGen_T, helper, er.Embed_T, os);
+      LinearSpace_Stabilizer_RightCoset<T, Tgroup, Thelper>(ListGen_T, helper,
+                                                            er.Embed_T, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
-  os << "MODEL: INDEF_FORM_GetApproximateModel |cosets|=" << stab_right_coset.coset_desc.total_size() << "\n";
+  os << "MODEL: INDEF_FORM_GetApproximateModel |cosets|="
+     << stab_right_coset.coset_desc.total_size() << "\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, After "
         "LinearSpace_Stabilizer_RightCoset\n";
-  os << "MODEL: INDEF_FORM_GetApproximateModel, |Embed_T|=" << DeterminantMat(er.Embed_T) << "\n";
+  os << "MODEL: INDEF_FORM_GetApproximateModel, |Embed_T|="
+     << DeterminantMat(er.Embed_T) << "\n";
   os << "MODEL: INDEF_FORM_GetApproximateModel, Embed_T=\n";
   WriteMatrix(os, er.Embed_T);
 #endif
 #ifdef DEBUG_APPROXIMATE_MODELS_DISABLE
-  auto f_terminate=[&]([[maybe_unused]] MyMatrix<T> const& eSpace) -> bool {
+  auto f_terminate = [&]([[maybe_unused]] MyMatrix<T> const &eSpace) -> bool {
     return false;
   };
   T TheMod = LinearSpace_GetDivisor(er.Embed_T);
-  std::optional<std::vector<MyMatrix<T>>> opt = DirectSpaceOrbit_Stabilizer<T,decltype(f_terminate)>(ListGen_T, er.Embed_T, TheMod, f_terminate, os);
+  std::optional<std::vector<MyMatrix<T>>> opt =
+      DirectSpaceOrbit_Stabilizer<T, decltype(f_terminate)>(
+          ListGen_T, er.Embed_T, TheMod, f_terminate, os);
   if (opt) {
-    std::vector<MyMatrix<T>> const& LGen = *opt;
-    os << "MODEL: INDEF_FORM_GetApproximateModel, |LGen|=" << LGen.size() << "\n";
+    std::vector<MyMatrix<T>> const &LGen = *opt;
+    os << "MODEL: INDEF_FORM_GetApproximateModel, |LGen|=" << LGen.size()
+       << "\n";
   } else {
     std::cerr << "The run did not return which is unexpected\n";
     throw TerminalException{1};
@@ -1362,7 +1382,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   os << "MODEL: We have ListGenerators\n";
 #endif
   std::vector<MyMatrix<Tint>> GRPeasy =
-    GetEasyIsometries<T, Tint, Tgroup>(er.QmatEichler, os);
+      GetEasyIsometries<T, Tint, Tgroup>(er.QmatEichler, os);
   approx.SetListClassesOrbitwise(GRPeasy, os);
   InternalApproxCase<T, Tint> iac{Qmat, er, ListCoset, ListGenerators, approx};
   std::shared_ptr<InternalApproxCase<T, Tint>> shr_ptr =
@@ -1371,14 +1391,16 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
   os << "MODEL: We have shr_ptr\n";
 #endif
 
-  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>, T, std::ostream&)>
-      get_vector_representatives =
-          [=](MyVector<Tint> const &eRepr,
-              [[maybe_unused]] T const &X, [[maybe_unused]] std::ostream& os) -> std::vector<MyVector<Tint>> {
+  std::function<std::vector<MyVector<Tint>>(MyVector<Tint>, T, std::ostream &)>
+      get_vector_representatives = [=](MyVector<Tint> const &eRepr,
+                                       [[maybe_unused]] T const &X,
+                                       [[maybe_unused]] std::ostream &os)
+      -> std::vector<MyVector<Tint>> {
     std::vector<MyVector<Tint>> ListV;
-    std::vector<MyMatrix<Tint>> const& ListCoset = shr_ptr->ListCoset;
+    std::vector<MyMatrix<Tint>> const &ListCoset = shr_ptr->ListCoset;
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: get_vector_representatives |ListCoset|=" << ListCoset.size() << "\n";
+    os << "MODEL: get_vector_representatives |ListCoset|=" << ListCoset.size()
+       << "\n";
 #endif
     for (auto &eCos : ListCoset) {
       MyVector<Tint> fRepr = eCos.transpose() * eRepr;
@@ -1425,11 +1447,14 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
 #endif
     T Xscal = X * shr_ptr->er.scal;
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: GetCoveringOrbitRepresentatives 3: er.scal=" << shr_ptr->er.scal << " Xscal=" << Xscal << "\n";
+    os << "MODEL: GetCoveringOrbitRepresentatives 3: er.scal="
+       << shr_ptr->er.scal << " Xscal=" << Xscal << "\n";
 #endif
-    std::vector<MyVector<Tint>> ListReprRed = shr_ptr->approx.GetCoveringOrbitRepresentatives(Xscal, os);
+    std::vector<MyVector<Tint>> ListReprRed =
+        shr_ptr->approx.GetCoveringOrbitRepresentatives(Xscal, os);
 #ifdef DEBUG_APPROXIMATE_MODELS
-    os << "MODEL: GetCoveringOrbitRepresentatives 3: |ListReprRed|=" << ListReprRed.size() << "\n";
+    os << "MODEL: GetCoveringOrbitRepresentatives 3: |ListReprRed|="
+       << ListReprRed.size() << "\n";
 #endif
     std::vector<MyVector<Tint>> ListRepr;
     for (auto &eRepr : ListReprRed) {
@@ -1460,7 +1485,8 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
        << "\n";
 #endif
     MyVector<Tint> const &eRepr = *opt;
-    std::vector<MyVector<Tint>> ListV = get_vector_representatives(eRepr, X, os);
+    std::vector<MyVector<Tint>> ListV =
+        get_vector_representatives(eRepr, X, os);
     if (ListV.size() > 0) {
       return ListV[0];
     }

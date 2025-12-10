@@ -45,7 +45,7 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
 #ifdef DEBUG_VINBERG
   size_t n_iter = 0;
 #endif
-  auto f_call=[&](MyVector<Tint> const& V_x) -> void {
+  auto f_call = [&](MyVector<Tint> const &V_x) -> void {
 #ifdef DEBUG_VINBERG
     n_iter++;
 #endif
@@ -59,8 +59,9 @@ void ComputeSphericalSolutions(const MyMatrix<T> &GramMat,
 #endif
     f_ins(V_x);
   };
-  MyVector<T> eV_input = - eV;
-  solver.template fixed_dist_vectors_f<decltype(f_call)>(eV_input, f_call, norm);
+  MyVector<T> eV_input = -eV;
+  solver.template fixed_dist_vectors_f<decltype(f_call)>(eV_input, f_call,
+                                                         norm);
 #ifdef DEBUG_VINBERG
   os << "n_iter=" << n_iter << "\n";
 #endif
@@ -667,7 +668,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
     FullGramInfo<T> request;
     request.dim = dim - 1; // Because GramMatRed is one dimension lower.
     request.gram_matrix = RecLLL.GramMatRed;
-    MyVector<T> const& coset = eV_img;
+    MyVector<T> const &coset = eV_img;
     bool central = false;
     //
 #ifdef DEBUG_VINBERG
@@ -700,8 +701,8 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
       }
       return true;
     };
-    (void)computeIt_polytope<T, Tint, decltype(f_insert)>(request, coset, central, data.norm,
-                                                          FAC, f_insert, os);
+    (void)computeIt_polytope<T, Tint, decltype(f_insert)>(
+        request, coset, central, data.norm, FAC, f_insert, os);
 #ifdef DEBUG_VINBERG
     os << "n_pass=" << n_pass << " |list_root|=" << list_root.size() << "\n";
 #endif
@@ -995,7 +996,8 @@ bool is_FundPoly_LRS(const VinbergTot<T, Tint> &Vtot,
   os << "|VIN: is_FundPoly_LRS|=" << time << "\n";
 #endif
 #ifdef DEBUG_VINBERG
-  os << "VIN: IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter << "\n";
+  os << "VIN: IsFiniteCovolume=" << IsFiniteCovolume << " n_iter=" << n_iter
+     << "\n";
   os << "VIN: norm multiplicities =";
   for (auto &kv : map)
     os << " [" << kv.first << "," << kv.second << "]";
@@ -1553,15 +1555,15 @@ FullNamelist NAMELIST_GetStandard_VINBERG() {
 
 template <typename T, typename Tint>
 void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string const &FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   TestLorentzianity(G, os);
   //
   std::string OptionNorms = BlockPROC.get_string("OptionNorms");
   std::string DualDescProg = BlockPROC.get_string("DualDescProg");
   bool ReflectivityEarlyTermination =
-    BlockPROC.get_bool("ReflectivityEarlyTermination");
+      BlockPROC.get_bool("ReflectivityEarlyTermination");
   MyMatrix<Tint> G_i = UniversalMatrixConversion<Tint, T>(G);
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   std::vector<Tint> root_lengths;
@@ -1594,7 +1596,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   //
   std::string OutFormat = BlockPROC.get_string("OutFormat");
   std::string FileOut = BlockPROC.get_string("FileOut");
-  auto f_print=[&](std::ostream& os_out) -> void {
+  auto f_print = [&](std::ostream &os_out) -> void {
     Print_DataReflectionGroup(data, OutFormat, os_out);
   };
   print_stderr_stdout_file(FileOut, f_print);

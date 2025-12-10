@@ -20,8 +20,8 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
   os << "LORPERFMPI: ComputePerfectLorentzian_mpi, beginning\n";
 #endif
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   //
   bool STORAGE_Saving = BlockSYSTEM.get_bool("Saving");
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
@@ -46,7 +46,8 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
     if (TheOption_str == "total") {
       return LORENTZIAN_PERFECT_OPTION_TOTAL;
     }
-    std::cerr << "Failed to find a matching entry for TheOption_str=" << TheOption_str << " allowed: total, isotropic\n";
+    std::cerr << "Failed to find a matching entry for TheOption_str="
+              << TheOption_str << " allowed: total, isotropic\n";
     throw TerminalException{1};
   };
   int TheOption = get_option();
@@ -85,7 +86,8 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
-  os << "LORPERFMPI: We now have max_runtime_second=" << max_runtime_second << "\n";
+  os << "LORPERFMPI: We now have max_runtime_second=" << max_runtime_second
+     << "\n";
   os << "LORPERFMPI: We now have IsFinished=" << pair.first << "\n";
   os << "LORPERFMPI: We now have |ListPerfect|=" << pair.second.size() << "\n";
 #endif
@@ -94,10 +96,15 @@ void ComputePerfectLorentzian_mpi(boost::mpi::communicator &comm,
 #ifdef DEBUG_LORENTZIAN_PERFECT_MPI
     os << "LORPERFMPI: Doing some output\n";
 #endif
-    auto f_print=[&](std::ostream& os_out) -> void {
-      bool result = WriteFamilyObjects_MPI<DataPerfectLorentzian<T, Tint, Tgroup>, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
+    auto f_print = [&](std::ostream &os_out) -> void {
+      bool result =
+          WriteFamilyObjects_MPI<DataPerfectLorentzian<T, Tint, Tgroup>, Tobj,
+                                 TadjO>(comm, data, OutFormat, os_out,
+                                        pair.second, os);
       if (result) {
-        std::cerr	<< "LORPERFMPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+        std::cerr
+            << "LORPERFMPI: Failed to find a matching entry for OutFormat="
+            << OutFormat << "\n";
         throw TerminalException{1};
       }
     };

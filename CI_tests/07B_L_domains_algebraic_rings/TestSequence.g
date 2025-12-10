@@ -75,8 +75,9 @@ end;
 ListCases:=[];
 
 set_canonical_examples:=function()
-    Add(ListCases, rec(n:=3, d:=-3));
-    Add(ListCases, rec(n:=3, d:=-4));
+    Add(ListCases, rec(n:=4, d:=-4, comm_choice:="Use_realimag"));
+    Add(ListCases, rec(n:=3, d:=-3, comm_choice:="Use_realimag", n_domains:=23413));
+    Add(ListCases, rec(n:=3, d:=-4, comm_choice:="Use_realimag", n_domains:=206));
 end;
 
 set_dim2_examples:=function()
@@ -105,9 +106,9 @@ set_dim2_nocomm_examples:=function()
     Add(ListCases, rec(n:=2, d:=-24, comm_choice:="Trivial", n_domains:=61));
 end;
 
-#set_canonical_examples();
+set_canonical_examples();
 #set_dim2_examples();
-set_dim2_nocomm_examples();
+#set_dim2_nocomm_examples();
 
 
 

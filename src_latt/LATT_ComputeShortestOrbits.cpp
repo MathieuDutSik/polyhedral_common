@@ -12,9 +12,9 @@ template <typename Tgroup, typename T, typename Tint>
 void compute_orbit_basis(std::string const &FileM, std::string const &OutFormat,
                          std::ostream &os) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(FileM);
-  MyMatrix<Tint> SHV = T_ShortestVector<T,Tint>(GramMat, std::cerr).SHV;
+  MyMatrix<Tint> SHV = T_ShortestVector<T, Tint>(GramMat, std::cerr).SHV;
   std::vector<MyMatrix<Tint>> ListGen =
-    ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, std::cerr);
+      ArithmeticAutomorphismGroup<T, Tint, Tgroup>(GramMat, std::cerr);
   vectface vf = EnumerateOrbitBasis<Tgroup, Tint>(SHV, ListGen, std::cerr);
   if (OutFormat == "GAP") {
     os << "return rec(SHV:=";

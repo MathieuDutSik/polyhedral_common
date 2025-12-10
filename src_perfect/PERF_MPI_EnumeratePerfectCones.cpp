@@ -17,25 +17,29 @@ void process_C(boost::mpi::communicator &comm, FullNamelist const &eFull) {
 
 template <typename T>
 void process_B(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  std::string arithmetic_Tint = GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
+  std::string arithmetic_Tint =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
   if (arithmetic_Tint == "gmp_integer") {
     using Tint = mpz_class;
     return process_C<T, Tint>(comm, eFull);
   }
-  std::cerr << "PERF_MPI_EnumeratePerfectCones B: Failed to find matching type for "
-            << "arithmetic_Tint=" << arithmetic_Tint << "\n";
+  std::cerr
+      << "PERF_MPI_EnumeratePerfectCones B: Failed to find matching type for "
+      << "arithmetic_Tint=" << arithmetic_Tint << "\n";
   std::cerr << "Available types: gmp_integer, int32_t\n";
   throw TerminalException{1};
 }
 
 void process_A(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  std::string arithmetic_T = GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
+  std::string arithmetic_T =
+      GetNamelistStringEntry(eFull, "DATA", "arithmetic_T");
   if (arithmetic_T == "gmp_rational") {
     using T = mpq_class;
     return process_B<T>(comm, eFull);
   }
-  std::cerr << "PERF_MPI_EnumeratePerfectCones A: Failed to find matching type for "
-            << "arithmetic_T=" << arithmetic_T << "\n";
+  std::cerr
+      << "PERF_MPI_EnumeratePerfectCones A: Failed to find matching type for "
+      << "arithmetic_T=" << arithmetic_T << "\n";
   std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }

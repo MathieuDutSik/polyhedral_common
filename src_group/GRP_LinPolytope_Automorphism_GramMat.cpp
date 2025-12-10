@@ -131,7 +131,7 @@ int main(int argc, char *argv[]) {
       FileOut = argv[5];
     }
     //
-    auto f=[&](std::ostream& os_out) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       full_process_B<Tgroup>(arith, eFileEXT, eFileGram, OutFormat, os_out);
     };
     print_stderr_stdout_file(FileOut, f);

@@ -33,8 +33,8 @@ void process_C(std::string const &FileMatrix, std::string const &OutFormat,
   MyMatrix<T> LorMat = ReadMatrixFile<T>(FileMatrix);
   std::vector<MyMatrix<Tint>> l_gen =
       LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(LorMat, std::cerr);
-  for (auto &eGen: l_gen) {
-    MyMatrix<T> eGen_T = UniversalMatrixConversion<T,Tint>(eGen);
+  for (auto &eGen : l_gen) {
+    MyMatrix<T> eGen_T = UniversalMatrixConversion<T, Tint>(eGen);
     MyMatrix<T> prod = eGen_T * LorMat * eGen_T.transpose();
     if (prod != LorMat) {
       std::cerr << "The matrix does not preserve the lorentzian matrix\n";

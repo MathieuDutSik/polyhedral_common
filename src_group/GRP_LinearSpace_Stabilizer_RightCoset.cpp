@@ -12,7 +12,8 @@ int main(int argc, char *argv[]) {
     if (argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinearSpace_Stabilizer_RightCoset [GRP_file] [SPA_file] [OUT_file]\n";
+      std::cerr << "GRP_LinearSpace_Stabilizer_RightCoset [GRP_file] "
+                   "[SPA_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA_file    : The file containing the space\n";
@@ -64,7 +65,8 @@ int main(int argc, char *argv[]) {
     os << "), ListCos:=";
     f_print(RightCoset);
     os << ");\n";
-    std::cerr << "Normal termination of GRP_LinearSpace_Stabilizer_RightCoset\n";
+    std::cerr
+        << "Normal termination of GRP_LinearSpace_Stabilizer_RightCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinearSpace_Stabilizer_RightCoset\n";
     exit(e.eVal);

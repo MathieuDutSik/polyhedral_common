@@ -37,14 +37,14 @@ int main(int argc, char *argv[]) {
     }
     std::string FileNML = argv[1];
     NAMELIST_ReadNamelistFile(FileNML, eFull);
-    SingleBlock const& BlockPROC = eFull.get_block("PROC");
+    SingleBlock const &BlockPROC = eFull.get_block("PROC");
     //
     std::string FileI = BlockPROC.get_string("FileI");
     std::string FileO = BlockPROC.get_string("FileO");
     bool TestPairwiseIntersection =
-      BlockPROC.get_bool("TestPairwiseIntersection");
+        BlockPROC.get_bool("TestPairwiseIntersection");
     bool BreakConnectedComponents =
-      BlockPROC.get_bool("BreakConnectedComponents");
+        BlockPROC.get_bool("BreakConnectedComponents");
     //
     // Reading the polyhedral cones.
     //

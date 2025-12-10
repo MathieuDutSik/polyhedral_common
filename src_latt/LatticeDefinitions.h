@@ -18,21 +18,22 @@ template <typename T, typename Tint> struct Tshortest {
 };
 
 template <typename T, typename Tint>
-Tshortest<T,Tint> shortest_get_half(Tshortest<T,Tint> const& rec_shv) {
+Tshortest<T, Tint> shortest_get_half(Tshortest<T, Tint> const &rec_shv) {
   int n_row = rec_shv.SHV.rows();
   int n_col = rec_shv.SHV.cols();
   int n_row2 = n_row / 2;
   MyMatrix<Tint> SHV(n_row2, n_col);
-  for (int i_row2=0; i_row2<n_row2; i_row2++) {
-    for (int i_col=0; i_col<n_col; i_col++) {
-      SHV(i_row2, i_col) = rec_shv.SHV(2*i_row2, i_col);
+  for (int i_row2 = 0; i_row2 < n_row2; i_row2++) {
+    for (int i_col = 0; i_col < n_col; i_col++) {
+      SHV(i_row2, i_col) = rec_shv.SHV(2 * i_row2, i_col);
     }
   }
   return {rec_shv.min, std::move(SHV)};
 }
 
 template <typename T, typename Tint>
-Tshortest<T,Tint> apply_transformation(Tshortest<T,Tint> const& rec_shv, MyMatrix<Tint> const& P) {
+Tshortest<T, Tint> apply_transformation(Tshortest<T, Tint> const &rec_shv,
+                                        MyMatrix<Tint> const &P) {
   MyMatrix<Tint> SHV = rec_shv.SHV * P;
   return {rec_shv.min, SHV};
 }

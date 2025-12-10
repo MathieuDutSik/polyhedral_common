@@ -51,7 +51,8 @@ template <typename T> struct DiagSymMat {
 
 template <typename T>
 DiagSymMat<T>
-DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat, [[maybe_unused]] std::ostream& os) {
+DiagonalizeNonDegenerateSymmetricMatrix(MyMatrix<T> const &SymMat,
+                                        [[maybe_unused]] std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n = SymMat.rows();
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
@@ -157,7 +158,8 @@ NSPreduction<T> NullspaceReduction(MyMatrix<T> const &SymMat) {
 }
 
 template <typename T>
-DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat, std::ostream& os) {
+DiagSymMat<T> DiagonalizeSymmetricMatrix(MyMatrix<T> const &SymMat,
+                                         std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n1 = SymMat.rows();
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
@@ -204,9 +206,10 @@ template <typename T> bool IsPositiveDefinite_V1(MyMatrix<T> const &eMat) {
   return true;
 }
 
-template <typename T> bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat, std::ostream& os) {
+template <typename T>
+bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat, std::ostream &os) {
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
-  MyMatrix<T> const& SymMat2 = NSP1.NonDegenerate;
+  MyMatrix<T> const &SymMat2 = NSP1.NonDegenerate;
   if (SymMat2.rows() < SymMat.rows()) {
     return false;
   }
@@ -217,7 +220,9 @@ template <typename T> bool IsPositiveDefinite_V2(MyMatrix<T> const &SymMat, std:
   return true;
 }
 
-template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat, [[maybe_unused]] std::ostream& os) {
+template <typename T>
+bool IsPositiveDefinite(MyMatrix<T> const &SymMat,
+                        [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_SIGNATURE_SYMMETRIC
   MicrosecondTime time;
   bool test1 = IsPositiveDefinite_V1(SymMat);
@@ -225,7 +230,8 @@ template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat, [[maybe
   bool test2 = IsPositiveDefinite_V2(SymMat, os);
   os << "|SIGN: IsPositiveDefinite (V2)|=" << time << "\n";
   if (test1 != test2) {
-    std::cerr << "The test of positive definiteness gave different result for different method\n";
+    std::cerr << "The test of positive definiteness gave different result for "
+                 "different method\n";
     throw TerminalException{1};
   }
   return test1;
@@ -234,9 +240,10 @@ template <typename T> bool IsPositiveDefinite(MyMatrix<T> const &SymMat, [[maybe
 #endif
 }
 
-template <typename T> bool IsPositiveSemidefinite(MyMatrix<T> const &SymMat, std::ostream& os) {
+template <typename T>
+bool IsPositiveSemidefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
-  MyMatrix<T> const& SymMat2 = NSP1.NonDegenerate;
+  MyMatrix<T> const &SymMat2 = NSP1.NonDegenerate;
   DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);
   if (NSP2.nbMinus > 0) {
     return false;

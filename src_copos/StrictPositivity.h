@@ -63,7 +63,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   WriteVectorNoDim(os, eMatExpr);
 #endif
   //
-  auto f_admissible=[&](MyMatrix<T> const &eMatI) -> bool {
+  auto f_admissible = [&](MyMatrix<T> const &eMatI) -> bool {
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: IsAdmissible eMatI=\n";
     WriteMatrix(os, eMatI);
@@ -75,12 +75,12 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 #endif
     return result.test;
   };
-  auto f_shortest=[&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
+  auto f_shortest = [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: ShortestFunction eMatI=\n";
     WriteMatrix(os, eMatI);
 #endif
-    return CopositiveShortestVector<T,Tint>(eMatI, InitialBasis, os);
+    return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
   };
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
 #ifdef DEBUG_STRICT_POSITIVITY
@@ -93,7 +93,7 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     Tshortest<T, Tint> RecSHV =
         CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
-      GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV, os);
+        GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV, os);
     int nbBlock = eNaked.ListBlock.size();
 
     T ScalMat = MatrixScalarProduct(SearchMatrix, eMat);
@@ -160,8 +160,8 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     MyVector<T> eMatVect = SymmetricMatrixToVector(eMat);
     Face eFace = FindViolatedFace(ConeClassical, eMatVect, os);
 #ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: eFace.count=" << eFace.count()
-       << " eFace.size=" << eFace.size() << "\n";
+    os << "STR: eFace.count=" << eFace.count() << " eFace.size=" << eFace.size()
+       << "\n";
     os << "STR: Before FindFacetInequality nbIter=" << nbIter << "\n";
     os << "STR: RankMat(ConeClassical)=" << RankMat(ConeClassical) << "\n";
 #endif
@@ -183,7 +183,9 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     os << "STR: Before KernelFlipping nbIter=" << nbIter << "\n";
 #endif
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePair =
-      Kernel_Flipping_Perfect<T, Tint,decltype(f_admissible),decltype(f_shortest)>(f_admissible, f_shortest, SearchMatrix, eMatDir, os);
+        Kernel_Flipping_Perfect<T, Tint, decltype(f_admissible),
+                                decltype(f_shortest)>(
+            f_admissible, f_shortest, SearchMatrix, eMatDir, os);
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
     os << "STR: NewMat=\n";
@@ -213,7 +215,7 @@ void WriteStrictPositivityResult(
     } else {
       os_out << "Certificate of non strict completely positive matrix:\n";
       os_out << "Following matrix has negative scalar product with eMat and is "
-            "copositive:\n";
+                "copositive:\n";
       WriteMatrix(os_out, StrictPos.CertificateNonStrictlyPositive);
     }
     return;
@@ -233,7 +235,7 @@ void WriteStrictPositivityResult(
       os_out << "]";
     } else {
       os_out << ", Certificate:="
-         << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
+             << StringMatrixGAP(StrictPos.CertificateNonStrictlyPositive);
     }
     os_out << ");\n";
     return;
@@ -248,18 +250,20 @@ void WriteStrictPositivityResult(
           os_out << ",";
         T eVal = StrictPos.ListCoeff(iBlock);
         MyVector<Tint> V = GetMatrixRow(StrictPos.RealizingFamily, iBlock);
-        os_out << "{\"val\":" << eVal << ", \"V\":" << StringVectorPYTHON(V) << "}";
+        os_out << "{\"val\":" << eVal << ", \"V\":" << StringVectorPYTHON(V)
+               << "}";
       }
       os_out << "]";
     } else {
       os_out << ", \"Certificate\":"
-         << StringMatrixPYTHON(StrictPos.CertificateNonStrictlyPositive);
+             << StringMatrixPYTHON(StrictPos.CertificateNonStrictlyPositive);
     }
     os_out << "}\n";
     return;
   }
-  std::cerr << "STR: WriteStrictPositivityResult: Failed to find a matching entry "
-               "for output\n";
+  std::cerr
+      << "STR: WriteStrictPositivityResult: Failed to find a matching entry "
+         "for output\n";
   throw TerminalException{1};
 }
 

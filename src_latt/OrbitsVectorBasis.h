@@ -24,11 +24,10 @@
 #define TIMINGS_ORBITS_VECTOR_BASIS
 #endif
 
-template<typename T>
-bool is_canonical(MyVector<T> const& V) {
+template <typename T> bool is_canonical(MyVector<T> const &V) {
   int n = V.size();
-  for (int i=0; i<n; i++) {
-    T const& val = V(i);
+  for (int i = 0; i < n; i++) {
+    T const &val = V(i);
     if (val != 0) {
       return val > 0;
     }
@@ -37,22 +36,20 @@ bool is_canonical(MyVector<T> const& V) {
   throw TerminalException{1};
 }
 
-template<typename T>
-void canonicalize_sign_vector(MyVector<T> & V) {
+template <typename T> void canonicalize_sign_vector(MyVector<T> &V) {
   int n = V.size();
-  for (int i=0; i<n; i++) {
-    T const& val = V(i);
+  for (int i = 0; i < n; i++) {
+    T const &val = V(i);
     if (val != 0) {
       if (val < 0) {
-        for (int j=i; j<n; j++) {
-          V(j) = - V(j);
+        for (int j = i; j < n; j++) {
+          V(j) = -V(j);
         }
       }
       return;
     }
   }
 }
-
 
 template <typename Tgroup, typename Tint>
 vectface EnumerateOrbitBasis(MyMatrix<Tint> const &SHV,

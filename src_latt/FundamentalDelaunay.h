@@ -423,8 +423,7 @@ template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
                                            CVPSolver<T, Tint> &solver,
                                            MyMatrix<Tint> const &ShvGraverBasis,
-                                           int const& target_ext,
-                                           int max_iter,
+                                           int const &target_ext, int max_iter,
                                            std::string method,
                                            std::ostream &os) {
   MyMatrix<Tint> EXTret = FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
@@ -459,7 +458,8 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
         return EXTcand;
       }
     } else {
-      // If target_ext = 0, we terminate if the sampling does not give us anything better.
+      // If target_ext = 0, we terminate if the sampling does not give us
+      // anything better.
       if (EXTcand.rows() >= EXTret.rows()) {
         return EXTret;
       }
@@ -471,7 +471,8 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
 
 template <typename T>
 std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
-                                            MyVector<T> const &TheCenter, std::ostream& os) {
+                                            MyVector<T> const &TheCenter,
+                                            std::ostream &os) {
   int n = GramMat.rows();
   MyVector<T> TheCenterRed(n);
   for (int i = 0; i < n; i++)
@@ -500,8 +501,7 @@ std::vector<MyMatrix<T>> CharacterizingPair(MyMatrix<T> const &GramMat,
   return {Mat1, Mat2};
 }
 
-template<typename T>
-struct ResultCov {
+template <typename T> struct ResultCov {
   double CovDensityNormalized;
   double CovDensity;
   double CoveringRadius;
@@ -513,42 +513,42 @@ struct ResultCov {
   T TheCov;
 };
 
+template <typename T>
+ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet,
+                                                 T TheCov) {
 
-template<typename T>
-ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet, T TheCov) {
-
-  double TheCov_d = UniversalScalarConversion<double,T>(TheCov);
+  double TheCov_d = UniversalScalarConversion<double, T>(TheCov);
   double TheCovRad = std::sqrt(TheCov_d);
-  double TheDet_d = UniversalScalarConversion<double,T>(TheDet);
+  double TheDet_d = UniversalScalarConversion<double, T>(TheDet);
   double TheDetLattice = std::sqrt(TheDet_d);
   //
   double val = 1.0;
-  for (int i=0; i<TheDim; i++) {
+  for (int i = 0; i < TheDim; i++) {
     val *= TheCov_d;
   }
   double quot = val / TheDet_d;
   double red = std::sqrt(quot);
   //
-  auto get_volume_ball=[&]() -> double {
+  auto get_volume_ball = [&]() -> double {
     double pi = 2 * std::acos(0);
     int res = TheDim % 2;
     if (res == 0) {
       int half_d = TheDim / 2;
       double powpi = 1.0;
       double fact = 1.0;
-      for (int i=1; i<=half_d; i++) {
+      for (int i = 1; i <= half_d; i++) {
         powpi *= pi;
         fact *= i;
       }
       return powpi / fact;
     } else {
-      int half_d = (TheDim - 1)/2;
+      int half_d = (TheDim - 1) / 2;
       double powpi = 1.0;
-      for (int i=1; i<=half_d; i++) {
+      for (int i = 1; i <= half_d; i++) {
         powpi *= pi;
       }
       double fact = 1.0;
-      for (int i=0; i<=half_d; i++) {
+      for (int i = 0; i <= half_d; i++) {
         fact *= (0.5 + i);
       }
       return powpi / fact;
@@ -556,22 +556,21 @@ ResultCov<T> ComputeCoveringDensityFromDimDetCov(int TheDim, T TheDet, T TheCov)
   };
   double VolumeBall = get_volume_ball();
   double CovDens = red * VolumeBall;
-  return {red, CovDens, TheCovRad, TheDetLattice, VolumeBall, TheCov_d, TheDim, TheDet, TheCov};
+  return {red,      CovDens, TheCovRad, TheDetLattice, VolumeBall,
+          TheCov_d, TheDim,  TheDet,    TheCov};
 }
 
-template<typename T>
-std::string to_stringGAP(ResultCov<T> const& x) {
-  return "rec(CovDensityNormalized:=" + std::to_string(x.CovDensityNormalized)
-    + ", CovDensity:=" + std::to_string(x.CovDensity)
-    + ", CoveringRadius:=" + std::to_string(x.CoveringRadius)
-    + ", DeterminantLattice:=" + std::to_string(x.DeterminantLattice)
-    + ", VolumeBall:=" + std::to_string(x.VolumeBall)
-    + ", TheCov_d:=" + std::to_string(x.TheCov_d)
-    + ", TheDim:=" + std::to_string(x.TheDim)
-    + ", TheDet:=" + std::to_string(x.TheDet)
-    + ", TheCov:=" + std::to_string(x.TheCov) + ")";
+template <typename T> std::string to_stringGAP(ResultCov<T> const &x) {
+  return "rec(CovDensityNormalized:=" + std::to_string(x.CovDensityNormalized) +
+         ", CovDensity:=" + std::to_string(x.CovDensity) +
+         ", CoveringRadius:=" + std::to_string(x.CoveringRadius) +
+         ", DeterminantLattice:=" + std::to_string(x.DeterminantLattice) +
+         ", VolumeBall:=" + std::to_string(x.VolumeBall) +
+         ", TheCov_d:=" + std::to_string(x.TheCov_d) +
+         ", TheDim:=" + std::to_string(x.TheDim) +
+         ", TheDet:=" + std::to_string(x.TheDet) +
+         ", TheCov:=" + std::to_string(x.TheCov) + ")";
 }
-
 
 // clang-format off
 #endif  // SRC_LATT_FUNDAMENTALDELAUNAY_H_

@@ -67,31 +67,32 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   };
   bool DoRecur = IsRecursive();
 #ifdef DEBUG_SAMPLING_FACET
-  os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur << " nbOper=" << nbOper << "\n";
+  os << "SAMP: dim=" << dim << "  len=" << len << " DoRecur=" << DoRecur
+     << " nbOper=" << nbOper << "\n";
 #endif
   //
   // The database and the functionality
   //
   std::unordered_map<size_t, Face> map_done; // no ordering
-  std::map<size_t, Face> map_undone; // ordering is important.
-  auto get_vectface=[&]() -> vectface {
+  std::map<size_t, Face> map_undone;         // ordering is important.
+  auto get_vectface = [&]() -> vectface {
     vectface ListFace(EXT.rows());
-    for (auto & kv: map_done) {
+    for (auto &kv : map_done) {
       ListFace.push_back(kv.second);
     }
-    for (auto & kv: map_undone) {
+    for (auto &kv : map_undone) {
       ListFace.push_back(kv.second);
     }
 #ifdef DEBUG_SAMPLING_FACET
     os << "SAMP: ListFace=";
-    for (auto & eFace: ListFace) {
+    for (auto &eFace : ListFace) {
       os << eFace.count() << " ";
     }
     os << "\n";
 #endif
     return ListFace;
   };
-  auto func_insert=[&](Face const& f) -> void {
+  auto func_insert = [&](Face const &f) -> void {
     size_t incd = f.count();
     if (map_done.count(incd) == 1) {
       // already present
@@ -103,19 +104,19 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     }
     map_undone[incd] = f;
   };
-  auto set_as_done=[&](Face const& f) -> void {
+  auto set_as_done = [&](Face const &f) -> void {
     size_t incd = f.count();
     map_undone.erase(incd);
     map_done[incd] = f;
   };
-  auto get_undone=[&]() -> vectface {
+  auto get_undone = [&]() -> vectface {
     vectface vf_undone(EXT.rows());
-    for (auto & kv: map_undone) {
+    for (auto &kv : map_undone) {
       vf_undone.push_back(kv.second);
     }
     return vf_undone;
   };
-  auto get_nbcase=[&]() -> size_t {
+  auto get_nbcase = [&]() -> size_t {
     return map_done.size() + map_undone.size();
   };
   //
@@ -161,13 +162,13 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #endif
       get_vectface();
     }
-    for (auto & eFace : vf_undone) {
+    for (auto &eFace : vf_undone) {
       set_as_done(eFace);
       size_t nbCaseBefore = get_nbcase();
       nbOper++;
       MyMatrix<T> EXTred = SelectRow(EXT, eFace);
       vectface ListRidge =
-        Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbOper, os);
+          Kernel_DUALDESC_SamplingFacetProcedure(EXTred, eOption, nbOper, os);
       SimplifiedFlippingFramework<T> sff(EXT, eFace, os);
       for (auto &eRidge : ListRidge) {
         Face eFlip = sff.FlipFace(eRidge);

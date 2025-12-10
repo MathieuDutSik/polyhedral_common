@@ -7,8 +7,8 @@
 #include "Parallel_Classes_Types.h"
 #include "PolytopeEquiStab.h"
 #include "Positivity.h"
-#include "fractions.h"
 #include "Tspace_General.h"
+#include "fractions.h"
 #include <map>
 #include <string>
 #include <utility>
@@ -79,7 +79,7 @@ template <typename T, typename Tint>
 NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
                                           MyMatrix<T> const &eGram,
                                           Tshortest<T, Tint> const &RecSHV,
-                                          [[maybe_unused]] std::ostream& os) {
+                                          [[maybe_unused]] std::ostream &os) {
   int nbSHV = RecSHV.SHV.rows();
   std::vector<int> ListPos(nbSHV);
   int nbMat = LinSpa.ListMat.size();
@@ -101,9 +101,9 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
   }
   std::vector<std::vector<int>> ListBlock;
   int i_block = 0;
-  for (auto & kv: map) {
+  for (auto &kv : map) {
     ListBlock.push_back(kv.second);
-    for (auto & iSHV: kv.second) {
+    for (auto &iSHV : kv.second) {
       ListPos[iSHV] = i_block;
     }
     i_block += 1;
@@ -125,22 +125,16 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
   return {eGram, RecSHV.SHV, SHVred, PerfDomEXT, ListBlock, ListPos};
 }
 
-
-template<typename T, typename Tgroup>
-struct RyshkovGRP {
+template <typename T, typename Tgroup> struct RyshkovGRP {
   MyMatrix<T> PerfDomEXT;
   Tgroup GRPsub;
 };
 
-
-
-
 template <typename T, typename Tgroup>
-RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
-                                             MyMatrix<T> const &eGram,
-                                             MyMatrix<T> const& SHV_T,
-                                             Tgroup const& GRP,
-                                             [[maybe_unused]] std::ostream& os) {
+RyshkovGRP<T, Tgroup>
+GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
+                        MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+                        Tgroup const &GRP, [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int nbSHV = SHV_T.rows();
@@ -164,9 +158,9 @@ RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
   }
   std::vector<std::vector<int>> ListBlock;
   int i_block = 0;
-  for (auto & kv: map) {
+  for (auto &kv : map) {
     ListBlock.push_back(kv.second);
-    for (auto & iSHV: kv.second) {
+    for (auto &iSHV : kv.second) {
       ListPos[iSHV] = i_block;
     }
     i_block += 1;
@@ -187,9 +181,9 @@ RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
     }
   }
   std::vector<Telt> l_gens;
-  for (auto & eGen: GRP.GeneratorsOfGroup()) {
+  for (auto &eGen : GRP.GeneratorsOfGroup()) {
     std::vector<Tidx> eList(nbBlock);
-    for (int iBlock=0; iBlock<nbBlock; iBlock++) {
+    for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
       Tidx iSHV = ListBlock[iBlock][0];
       Tidx jSHV = eGen.at(iSHV);
       Tidx jBlock = ListPos[jSHV];
@@ -201,8 +195,6 @@ RyshkovGRP<T,Tgroup> GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
   Tgroup GRPsub(l_gens, nbBlock);
   return {PerfDomEXT, GRPsub};
 }
-
-
 
 struct PerfEquivInfo {
   int iOrbit;
@@ -264,17 +256,17 @@ bool TestInclusionSHV_quad(MyMatrix<Tint> const &TheSHVbig,
   int nbRowSma = TheSHVsma.rows();
   int nbRowBig = TheSHVbig.rows();
   int n = TheSHVsma.cols();
-  auto is_equal_vector=[&](int iRowSma, int iRowBig) -> bool {
+  auto is_equal_vector = [&](int iRowSma, int iRowBig) -> bool {
     for (int i = 0; i < n; i++) {
-      Tint const& eVal = TheSHVbig(iRowBig, i);
-      Tint const& fVal = TheSHVsma(iRowSma, i);
+      Tint const &eVal = TheSHVbig(iRowBig, i);
+      Tint const &fVal = TheSHVsma(iRowSma, i);
       if (eVal != fVal) {
         return false;
       }
     }
     return true;
   };
-  auto is_small_vect_in_big=[&](int iRowSma) -> bool {
+  auto is_small_vect_in_big = [&](int iRowSma) -> bool {
     for (int iRowBig = 0; iRowBig < nbRowBig; iRowBig++) {
       if (is_equal_vector(iRowSma, iRowBig)) {
         return true;
@@ -309,14 +301,12 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
 // when we pass a threshold like 1, 2, 4, 8, 16. When we pass the threshold
 // the underlying vector gets deallocated and a newer larger gets
 // allocated.
-template<typename Fcomp, typename Tin, typename Tout>
-struct Memoization {
+template <typename Fcomp, typename Tin, typename Tout> struct Memoization {
   Fcomp f_comp;
   std::vector<Tin> ListI;
   std::list<Tout> ListO;
-  Memoization(Fcomp _f_comp) : f_comp(_f_comp) {
-  }
-  size_t get_index(Tin const& input) {
+  Memoization(Fcomp _f_comp) : f_comp(_f_comp) {}
+  size_t get_index(Tin const &input) {
     size_t len = ListI.size();
     for (size_t i = 0; i < len; i++) {
       if (ListI[i] == input) {
@@ -328,10 +318,10 @@ struct Memoization {
     ListO.push_back(output);
     return len;
   }
-  Tout const& comp(Tin const& input) {
+  Tout const &comp(Tin const &input) {
     size_t index = get_index(input);
     auto iter = ListO.cbegin();
-    for (size_t u=0; u<index; u++) {
+    for (size_t u = 0; u < index; u++) {
       iter++;
     }
     return *iter;
@@ -356,27 +346,29 @@ struct Memoization {
   ---
   Those flipping algorithms tend to be more intricate than one would expect.
   See the following for some example description:
-  + Algorithm 2 (page 8) in "A simplex algorithm for rational cp-factorization" arXiv:1807.01382
+  + Algorithm 2 (page 8) in "A simplex algorithm for rational cp-factorization"
+  arXiv:1807.01382
   + Algorithm 2 (page 10) in "Enumerating perfect forms" arXiv:0901.1587
  */
 template <typename T, typename Tint, typename Fadmissible, typename Fshortest>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
-Kernel_Flipping_Perfect(Fadmissible f_admissible,
-                        Fshortest f_shortest,
+Kernel_Flipping_Perfect(Fadmissible f_admissible, Fshortest f_shortest,
                         MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
-                        [[maybe_unused]] std::ostream & os) {
+                        [[maybe_unused]] std::ostream &os) {
 #ifdef SANITY_CHECK_FLIP
   if (f_admissible(eMatDir)) {
-    std::cerr << "PERF: If the direction of change belong to the space, then we are not going to find new vectors\n";
+    std::cerr << "PERF: If the direction of change belong to the space, then "
+                 "we are not going to find new vectors\n";
     throw TerminalException{1};
   }
 #endif
-  Memoization<Fadmissible,MyMatrix<T>,bool> memo_admissible(f_admissible);
-  Memoization<Fshortest,MyMatrix<T>,Tshortest<T, Tint>> memo_shortest(f_shortest);
+  Memoization<Fadmissible, MyMatrix<T>, bool> memo_admissible(f_admissible);
+  Memoization<Fshortest, MyMatrix<T>, Tshortest<T, Tint>> memo_shortest(
+      f_shortest);
 #ifdef DEBUG_FLIP
   os << "PERF: Kernel_Flipping_Perfect, case 1 (eMatIn)\n";
 #endif
-  Tshortest<T, Tint> const& RecSHV_in = memo_shortest.comp(eMatIn);
+  Tshortest<T, Tint> const &RecSHV_in = memo_shortest.comp(eMatIn);
   //
   // Initial checks of the input
   //
@@ -415,9 +407,11 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   os << "PERF: nbZero_sumMat=" << nbZero_sumMat << "\n";
   MyMatrix<T> ConeClassicalInput =
       GetNakedPerfectConeClassical<T>(RecSHV_in.SHV);
-  os << "PERF: RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput) << "\n";
+  os << "PERF: RankMat(ConeClassicalInput)=" << RankMat(ConeClassicalInput)
+     << "\n";
   MyMatrix<T> ConeClassicalFace = GetNakedPerfectConeClassical<T>(SHVface);
-  os << "PERF: RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace) << "\n";
+  os << "PERF: RankMat(ConeClassicalFace)=" << RankMat(ConeClassicalFace)
+     << "\n";
 #endif
   //
   // Running the algorithm
@@ -450,7 +444,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #ifdef TIMINGS_PERFECT_FORM
       MicrosecondTime time_shortest;
 #endif
-      Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
+      Tshortest<T, Tint> const &RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef TIMINGS_PERFECT_FORM
       os << "|ITER: memo_shortest|=" << time_shortest << "\n";
 #endif
@@ -489,7 +483,7 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       std::cerr << "PERF: We should have Qlow being admissible\n";
       throw TerminalException{1};
     }
-    Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
+    Tshortest<T, Tint> const &RecSHV_upp = memo_shortest.comp(Q_upp);
     if (RecSHV_upp.min >= RecSHV_in.min) {
       std::cerr << "PERF: We should have RecSHV_upp.min < RecSHV_in.min\n";
       throw TerminalException{1};
@@ -503,7 +497,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
   // and RecSHV_upp.min < RecSHV_in.min
 #ifdef DEBUG_FLIP
   os << "PERF: FIRST LOOP FINISHED bound_upp=" << bound_upp
-     << " bound_low=" << bound_low << " iterLoop_first=" << iterLoop_first << " n_shortest=" << n_shortest << "\n";
+     << " bound_low=" << bound_low << " iterLoop_first=" << iterLoop_first
+     << " n_shortest=" << n_shortest << "\n";
   int iterLoop_second = 0;
 #endif
   while (true) {
@@ -514,21 +509,25 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
 #endif
     MyMatrix<T> Q_low = eMatIn + bound_low * eMatDir;
     MyMatrix<T> Q_upp = eMatIn + bound_upp * eMatDir;
-    Tshortest<T, Tint> const& RecSHV_low = memo_shortest.comp(Q_low);
-    Tshortest<T, Tint> const& RecSHV_upp = memo_shortest.comp(Q_upp);
+    Tshortest<T, Tint> const &RecSHV_low = memo_shortest.comp(Q_low);
+    Tshortest<T, Tint> const &RecSHV_upp = memo_shortest.comp(Q_upp);
 #ifdef DEBUG_FLIP_DISABLE
-    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.min=" << RecSHV_low.min << " SHV_upp.min=" << RecSHV_upp.min << "\n";
+    os << "PERF: Kernel_Flipping_Perfect, case 4 SHV_low.min=" << RecSHV_low.min
+       << " SHV_upp.min=" << RecSHV_upp.min << "\n";
     MyMatrix<T> ConeClassicalLow =
         GetNakedPerfectConeClassical<T>(RecSHV_low.SHV);
-    os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow) << "\n";
+    os << "PERF: RankMat(ConeClassicalLow)=" << RankMat(ConeClassicalLow)
+       << "\n";
     MyMatrix<T> ConeClassicalUpp =
         GetNakedPerfectConeClassical<T>(RecSHV_upp.SHV);
-    os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp) << "\n";
+    os << "PERF: RankMat(ConeClassicalUpp)=" << RankMat(ConeClassicalUpp)
+       << "\n";
 #endif
     bool test1 = RecSHV_upp.min == RecSHV_in.min;
 #ifdef SANITY_CHECK_FLIP
     if (RecSHV_upp.min > RecSHV_in.min) {
-      std::cerr << "PERF: The shortest vectors should be of the same norm or below the input\n";
+      std::cerr << "PERF: The shortest vectors should be of the same norm or "
+                   "below the input\n";
       throw TerminalException{1};
     }
 #endif
@@ -544,8 +543,9 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       WriteMatrix(os, Q_upp);
 #endif
 #ifdef DEBUG_FLIP
-      double coeff_d = UniversalScalarConversion<double,T>(bound_upp);
-      os << "PERF: Exit flip (return Q_upp) iterLoop_second=" << iterLoop_second << " coeff=" << bound_upp << " coeff_d=" << coeff_d << "\n";
+      double coeff_d = UniversalScalarConversion<double, T>(bound_upp);
+      os << "PERF: Exit flip (return Q_upp) iterLoop_second=" << iterLoop_second
+         << " coeff=" << bound_upp << " coeff_d=" << coeff_d << "\n";
 #endif
       return {std::move(Q_upp), std::move(RecSHV_upp)};
     }
@@ -563,7 +563,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
       os << "PERF: Return Q_low\n";
 #endif
 #ifdef DEBUG_FLIP
-      os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second << " coeff=" << bound_low << "\n";
+      os << "PERF: Exit flip (return Q_low) iterLoop_second=" << iterLoop_second
+         << " coeff=" << bound_low << "\n";
 #endif
       return {std::move(Q_low), std::move(RecSHV_low)};
     }
@@ -574,17 +575,20 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
     WriteMatrix(os, Q_gamma);
 #endif
 #ifdef DEBUG_FLIP
-    double TheGamma_d = UniversalScalarConversion<double,T>(TheGamma);
-    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma << " gamma_d=" << TheGamma_d << "\n";
-    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma << " bound_low=" << bound_low << " bound_upp=" << bound_upp << "\n";
+    double TheGamma_d = UniversalScalarConversion<double, T>(TheGamma);
+    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma
+       << " gamma_d=" << TheGamma_d << "\n";
+    os << "PERF: Kernel_Flipping_Perfect, gamma=" << TheGamma
+       << " bound_low=" << bound_low << " bound_upp=" << bound_upp << "\n";
 #endif
-    Tshortest<T, Tint> const& RecSHV_gamma = memo_shortest.comp(Q_gamma);
+    Tshortest<T, Tint> const &RecSHV_gamma = memo_shortest.comp(Q_gamma);
 #ifdef DEBUG_FLIP_DISABLE
     os << "|RecSHV_gamma.SHV|=" << RecSHV_gamma.SHV.rows() << "\n";
     WriteMatrix(os, RecSHV_gamma.SHV);
     MyMatrix<T> ConeClassicalGamma =
         GetNakedPerfectConeClassical<T>(RecSHV_gamma.SHV);
-    os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma) << "\n";
+    os << "PERF: RankMat(ConeClassicalGamma)=" << RankMat(ConeClassicalGamma)
+       << "\n";
 #endif
     if (RecSHV_gamma.min >= RecSHV_in.min) {
       bound_low = TheGamma;
@@ -598,7 +602,8 @@ Kernel_Flipping_Perfect(Fadmissible f_admissible,
         MyVector<Tint> V = GetMatrixRow(RecSHV_gamma.SHV, iRow);
         T rVal = EvaluationQuadForm<T, Tint>(eMatDir, V);
 #ifdef DEBUG_FLIP
-        os << "PERF: iRow=" << iRow << " / " << nbRow << " V=" << StringVectorGAP(V) << "\n";
+        os << "PERF: iRow=" << iRow << " / " << nbRow
+           << " V=" << StringVectorGAP(V) << "\n";
 #endif
         if (rVal < 0) {
           T qVal = EvaluationQuadForm<T, Tint>(eMatIn, V);
@@ -620,17 +625,20 @@ template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
                  std::ostream &os) {
-  auto f_admissible=[&os](MyMatrix<T> const &eMat) -> bool {
+  auto f_admissible = [&os](MyMatrix<T> const &eMat) -> bool {
     return IsPositiveDefinite<T>(eMat, os);
   };
-  auto f_shortest=[&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
+  auto f_shortest = [&os](MyMatrix<T> const &eMat) -> Tshortest<T, Tint> {
     return T_ShortestVectorHalf<T, Tint>(eMat, os);
   };
-  return Kernel_Flipping_Perfect<T,Tint,decltype(f_admissible),decltype(f_shortest)>(f_admissible, f_shortest, eMatIn, eMatDir, os);
+  return Kernel_Flipping_Perfect<T, Tint, decltype(f_admissible),
+                                 decltype(f_shortest)>(f_admissible, f_shortest,
+                                                       eMatIn, eMatDir, os);
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> get_scal_mat(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> const& RecSHV) {
+MyMatrix<T> get_scal_mat(LinSpaceMatrix<T> const &LinSpa,
+                         Tshortest<T, Tint> const &RecSHV) {
   int nbMat = LinSpa.ListMat.size();
   int nbShort = RecSHV.SHV.rows();
   MyMatrix<T> ScalMat(nbShort, nbMat);
@@ -645,9 +653,10 @@ MyMatrix<T> get_scal_mat(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> con
 }
 
 template <typename T, typename Tint>
-bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> const& RecSHV) {
+bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
+                         Tshortest<T, Tint> const &RecSHV) {
   int nbMat = LinSpa.ListMat.size();
-  MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
+  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, RecSHV);
   return RankMat(ScalMat) == nbMat;
 }
 
@@ -659,14 +668,15 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa, Tshortest<T, Tint> con
   shortest vectors, getting the kernel.
   The vector in the kernel gives direction of change.
   However, if that direction is positive definite then we will not obtain
-  a new form. This scenario is explained in "Enumerating Perfect Forms" arXiv:0901.1587
+  a new form. This scenario is explained in "Enumerating Perfect Forms"
+  arXiv:0901.1587
   ---
-  During the running of this test, the minimal norm of the matrix remains the same,
-  but the number of vectors attaining it is increasing.
+  During the running of this test, the minimal norm of the matrix remains the
+  same, but the number of vectors attaining it is increasing.
  */
 template <typename T, typename Tint>
-std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa,
-                              std::ostream &os) {
+std::pair<MyMatrix<T>, Tshortest<T, Tint>>
+GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
   int nbMat = LinSpa.ListMat.size();
   MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
   Tshortest<T, Tint> RecSHV = T_ShortestVectorHalf<T, Tint>(ThePerfMat, os);
@@ -677,11 +687,12 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
   int iter = 0;
 #endif
   while (true) {
-    MyMatrix<T> ScalMat = get_scal_mat<T,Tint>(LinSpa, RecSHV);
+    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, RecSHV);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
 #ifdef DEBUG_INITIAL_PERFECT
-    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << RecSHV.min << " |SHV|=" << RecSHV.SHV.rows() << "\n";
+    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << RecSHV.min
+       << " |SHV|=" << RecSHV.SHV.rows() << "\n";
 #endif
     if (TheRank == nbMat) {
 #ifdef DEBUG_INITIAL_PERFECT
@@ -690,7 +701,7 @@ std::pair<MyMatrix<T>, Tshortest<T, Tint>> GetOnePerfectForm(LinSpaceMatrix<T> c
       return {std::move(ThePerfMat), std::move(RecSHV)};
     }
     MyVector<T> V = eSelect.NSP.row(0);
-    auto iife_get_dir=[&]() -> MyMatrix<T> {
+    auto iife_get_dir = [&]() -> MyMatrix<T> {
       MyMatrix<T> M = LINSPA_GetMatrixInTspace(LinSpa, V);
       if (IsPositiveDefinite<T>(M, os)) {
         // For a positive definite matrix, we need to take the opposite
@@ -729,7 +740,7 @@ std::istream &operator>>(std::istream &is, SimplePerfect<T, Tint> &obj) {
   MyMatrix<T> eG = ReadMatrix<T>(is);
   MyMatrix<Tint> SHV = ReadMatrix<Tint>(is);
   MyVector<Tint> V = GetMatrixRow(SHV, 0);
-  T min = EvaluationQuadForm<T,Tint>(eG, V);
+  T min = EvaluationQuadForm<T, Tint>(eG, V);
   Tshortest<T, Tint> RecSHV{min, SHV};
   obj = {eG, RecSHV};
   return is;
@@ -746,40 +757,37 @@ template <typename T, typename Tint> struct equiv_info<SimplePerfect<T, Tint>> {
   typedef MyMatrix<Tint> equiv_type;
 };
 
-template<typename T, typename Tint>
-MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const& SHV) {
+template <typename T, typename Tint>
+MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const &SHV) {
   int dim = SHV.cols();
   int nbSHV = SHV.rows();
   MyMatrix<T> SHV_T(2 * nbSHV, dim);
-  for (int i_row=0; i_row<nbSHV; i_row++) {
-    for (int i=0; i<dim; i++) {
-      T val = UniversalScalarConversion<T,Tint>(SHV(i_row,i));
-      SHV_T(2*i_row  , i) = val;
-      SHV_T(2*i_row+1, i) = -val;
+  for (int i_row = 0; i_row < nbSHV; i_row++) {
+    for (int i = 0; i < dim; i++) {
+      T val = UniversalScalarConversion<T, Tint>(SHV(i_row, i));
+      SHV_T(2 * i_row, i) = val;
+      SHV_T(2 * i_row + 1, i) = -val;
     }
   }
   return SHV_T;
 }
 
-
 template <typename T, typename Tint>
-MyMatrix<T> get_shv_t(MyMatrix<T> const& eMat, Tshortest<T, Tint> const &RecSHV, std::ostream& os) {
+MyMatrix<T> get_shv_t(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &RecSHV,
+                      std::ostream &os) {
   MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
   if (IsFullDimZbasis(RecSHV.SHV)) {
-    return conversion_and_duplication<T,Tint>(RecSHV.SHV);
+    return conversion_and_duplication<T, Tint>(RecSHV.SHV);
   }
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   return UniversalMatrixConversion<T, Tint>(SHV);
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
-                              MyMatrix<T> const &eMat1,
-                              MyMatrix<T> const &eMat2,
-                              Tshortest<T, Tint> const &RecSHV1,
-                              Tshortest<T, Tint> const &RecSHV2,
-                              std::ostream &os) {
+std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
+    LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
+    MyMatrix<T> const &eMat2, Tshortest<T, Tint> const &RecSHV1,
+    Tshortest<T, Tint> const &RecSHV2, std::ostream &os) {
   MyMatrix<T> SHV1_T = get_shv_t(eMat1, RecSHV1, os);
   MyMatrix<T> SHV2_T = get_shv_t(eMat2, RecSHV2, os);
 #ifdef SANITY_CHECK_PERFECT_REPR
@@ -807,42 +815,47 @@ SimplePerfect_TestEquivalence(LinSpaceMatrix<T> const &LinSpa,
   os << "PERF: TestEquivalence, eMat2=\n";
   WriteMatrix(os, RemoveFractionMatrix(eMat2));
 #endif
-  std::optional<MyMatrix<T>> opt = LINSPA_TestEquivalenceGramMatrix_SHV<T,Tgroup>(LinSpa, eMat1, eMat2, SHV1_T, SHV2_T, os);
+  std::optional<MyMatrix<T>> opt =
+      LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(LinSpa, eMat1, eMat2,
+                                                      SHV1_T, SHV2_T, os);
 #ifdef DEBUG_PERFECT_REPR
-  os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1) << " det2=" << DeterminantMat(eMat2) << " opt.has_value()=" << opt.has_value() << "\n";
+  os << "PERF: TestEquivalence, det1=" << DeterminantMat(eMat1)
+     << " det2=" << DeterminantMat(eMat2)
+     << " opt.has_value()=" << opt.has_value() << "\n";
 #endif
   if (!opt) {
     return {};
   }
-  MyMatrix<T> const& M_T = *opt;
+  MyMatrix<T> const &M_T = *opt;
   MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
   return M;
 }
 
 template <typename T, typename Tint>
-size_t SimplePerfect_Invariant(size_t const &seed,
-                               LinSpaceMatrix<T> const &LinSpa,
-                               MyMatrix<T> const &eMat,
-                               Tshortest<T, Tint> const &RecSHV,
-                               std::ostream& os) {
+size_t
+SimplePerfect_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
+                        MyMatrix<T> const &eMat,
+                        Tshortest<T, Tint> const &RecSHV, std::ostream &os) {
   MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
   return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
-                                                                        MyMatrix<T> const &eMat,
-                                                                        Tshortest<T, Tint> const &RecSHV,
-                                                                        std::ostream& os) {
+std::pair<Tgroup, std::vector<MyMatrix<Tint>>>
+SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
+                         MyMatrix<T> const &eMat,
+                         Tshortest<T, Tint> const &RecSHV, std::ostream &os) {
   //
   // Functionality for checking quality of equivalences
   //
-  MyMatrix<T> SHVorig_T = conversion_and_duplication<T,Tint>(RecSHV.SHV);
+  MyMatrix<T> SHVorig_T = conversion_and_duplication<T, Tint>(RecSHV.SHV);
   MyMatrix<T> SHV_T = get_shv_t(eMat, RecSHV, os);
-  Result_ComputeStabilizer_SHV<T,Tgroup> result = LINSPA_ComputeStabilizer_SHV<T,Tgroup>(LinSpa, eMat, SHV_T, os);
+  Result_ComputeStabilizer_SHV<T, Tgroup> result =
+      LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T, os);
 #ifdef DEBUG_PERFECT_FORM
   os << "PERFECT: SimplePerfect_Stabilizer, we have result\n";
-  os << "PERFECT: SimplePerfect_Stabilizer |SHVorig_T|=" << SHVorig_T.rows() << " |SHV_T|=" << SHV_T.rows() << "\n";
+  os << "PERFECT: SimplePerfect_Stabilizer |SHVorig_T|=" << SHVorig_T.rows()
+     << " |SHV_T|=" << SHV_T.rows() << "\n";
 #endif
   if (TestEqualityMatrix(SHVorig_T, SHV_T)) {
     // This is the most likely scenario: The original
@@ -850,11 +863,13 @@ std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpace
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(A), Case SHVorig_T == SHV_T\n";
 #endif
-    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa, os);
+    std::vector<MyMatrix<T>> l_matr_t =
+        result.get_list_matrix(SHV_T, eMat, LinSpa, os);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(A), We have l_matr_t\n";
 #endif
-    std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+    std::vector<MyMatrix<Tint>> l_matr =
+        UniversalStdVectorMatrixConversion<Tint, T>(l_matr_t);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(A), We have l_matr\n";
 #endif
@@ -867,15 +882,18 @@ std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpace
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), Case SHVorig_T != SHV_T\n";
 #endif
-    std::vector<MyMatrix<T>> l_matr_t = result.get_list_matrix(SHV_T, eMat, LinSpa, os);
+    std::vector<MyMatrix<T>> l_matr_t =
+        result.get_list_matrix(SHV_T, eMat, LinSpa, os);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), We have l_matr_t\n";
 #endif
-    std::vector<MyMatrix<Tint>> l_matr = UniversalStdVectorMatrixConversion<Tint,T>(l_matr_t);
+    std::vector<MyMatrix<Tint>> l_matr =
+        UniversalStdVectorMatrixConversion<Tint, T>(l_matr_t);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), We have l_matr\n";
 #endif
-    Tgroup GRP = get_perm_group_from_list_matrices<T,Tgroup>(l_matr_t, SHVorig_T, os);
+    Tgroup GRP =
+        get_perm_group_from_list_matrices<T, Tgroup>(l_matr_t, SHVorig_T, os);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), We have GRP\n";
 #endif
@@ -885,9 +903,12 @@ std::pair<Tgroup, std::vector<MyMatrix<Tint>>> SimplePerfect_Stabilizer(LinSpace
 
 // Test if a quadratic form is eutactic
 // A quadratic form is eutactic if the inverse of eGram can be expressed
-// as a positive linear combination of the outer products v ⊗ v of shortest vectors
+// as a positive linear combination of the outer products v ⊗ v of shortest
+// vectors
 template <typename T>
-std::optional<MyVector<T>> IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::string const& eutacticity, std::ostream& os) {
+std::optional<MyVector<T>>
+IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+           std::string const &eutacticity, std::ostream &os) {
 #ifdef DEBUG_PERFECT_FORM
   os << "PERFECT: IsEutactic, beginning\n";
 #endif
@@ -913,7 +934,8 @@ std::optional<MyVector<T>> IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> cons
   int dimSymm = n * (n + 1) / 2;
 
 #ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: n=" << n << " nbSHV=" << nbSHV << " dimSymm=" << dimSymm << "\n";
+  os << "PERFECT: n=" << n << " nbSHV=" << nbSHV << " dimSymm=" << dimSymm
+     << "\n";
 #endif
 
   // Compute the inverse of eGram
@@ -947,11 +969,13 @@ std::optional<MyVector<T>> IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> cons
   }
 
 #ifdef DEBUG_PERFECT_FORM
-  os << "PERFECT: OuterProductMat constructed, size: " << OuterProductMat.rows() << "x" << OuterProductMat.cols() << "\n";
+  os << "PERFECT: OuterProductMat constructed, size: " << OuterProductMat.rows()
+     << "x" << OuterProductMat.cols() << "\n";
 #endif
 
   // Solve the linear system: OuterProductMat^T * coeffs = eGramInvVec
-  // We want to find coefficients such that eGramInv = sum(coeffs[i] * v_i ⊗ v_i)
+  // We want to find coefficients such that eGramInv = sum(coeffs[i] * v_i ⊗
+  // v_i)
   MyMatrix<T> OuterProductMatT = TransposedMat(OuterProductMat);
 
   // Check if the system is solvable

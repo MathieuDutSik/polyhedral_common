@@ -4,8 +4,9 @@
 #include "Copositivity.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void compute(std::string const& FileI, std::string const& OutFormat, std::ostream& os_out) {
+template <typename T, typename Tint>
+void compute(std::string const &FileI, std::string const &OutFormat,
+             std::ostream &os_out) {
   std::cerr << "Reading input\n";
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   std::cerr << "eSymmMat=\n";
@@ -14,11 +15,10 @@ void compute(std::string const& FileI, std::string const& OutFormat, std::ostrea
   MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
   //
   CopositivityTestResult<Tint> eResult =
-    TestStrictCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
+      TestStrictCopositivity<T, Tint>(eSymmMat, InitialBasis, std::cerr);
   //
   WriteCopositivityTestResult(os_out, OutFormat, eResult);
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -28,7 +28,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestStrictCopositivity [arith] [DATASYMM]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_TestStrictCopositivity [arith] [DATASYMM] [OutFormat] [OutFile]\n";
+      std::cerr << "CP_TestStrictCopositivity [arith] [DATASYMM] [OutFormat] "
+                   "[OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: The chosen arithmetic\n";
       std::cerr << "DATASYMM: The input data of the symmetric matrix\n";
@@ -55,7 +56,7 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return compute<T,Tint>(FileI, OutFormat, os);
+        return compute<T, Tint>(FileI, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith\n";
       throw TerminalException{1};

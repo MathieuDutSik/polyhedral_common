@@ -4,13 +4,12 @@
 #include "PolytopeEquiStab.h"
 // clang-format on
 
-template<typename T>
-void test_canonic(MyMatrix<T> const& EXT, size_t threshold) {
+template <typename T>
+void test_canonic(MyMatrix<T> const &EXT, size_t threshold) {
   MyMatrix<T> EXT_can = LinPolytope_CanonicForm<T>(EXT, threshold, std::cerr);
   std::cerr << "-----------------------------------------------------\n";
   //
-  auto get_random_equivalent =
-    [](MyMatrix<T> const &eMat) -> MyMatrix<T> {
+  auto get_random_equivalent = [](MyMatrix<T> const &eMat) -> MyMatrix<T> {
     int nbRow = eMat.rows();
     int n = eMat.cols();
     std::vector<int> ePerm = RandomPermutation<int>(nbRow);
@@ -28,8 +27,10 @@ void test_canonic(MyMatrix<T> const& EXT, size_t threshold) {
   for (int i_iter = 0; i_iter < n_iter; i_iter++) {
     std::cerr << "i_iter=" << i_iter << " / " << n_iter << "\n";
     MyMatrix<T> EXT2 = get_random_equivalent(EXT);
-    MyMatrix<T> EXT2_can = LinPolytope_CanonicForm<T>(EXT2, threshold, std::cerr);
-    std::cerr << "------------------------------------------------------------\n";
+    MyMatrix<T> EXT2_can =
+        LinPolytope_CanonicForm<T>(EXT2, threshold, std::cerr);
+    std::cerr
+        << "------------------------------------------------------------\n";
     if (!TestEqualityMatrix(EXT_can, EXT2_can)) {
       std::cerr << "Inconsistency in the canonical code\n";
       std::cerr << "EXT_Can=\n";
@@ -40,9 +41,6 @@ void test_canonic(MyMatrix<T> const& EXT, size_t threshold) {
     }
   }
 }
-
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;

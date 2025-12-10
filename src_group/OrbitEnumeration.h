@@ -18,18 +18,19 @@
 
 /*
   Algorithm for generating orbits of subsets.
-  ---The minimal algorithm is a tree search that passes through all lexicographically minimal elements.
-  ---The canonical form uses the canonical form but does a storing of generated data,
-  and so we do not do an ordered enumeration.
+  ---The minimal algorithm is a tree search that passes through all
+  lexicographically minimal elements.
+  ---The canonical form uses the canonical form but does a storing of generated
+  data, and so we do not do an ordered enumeration.
 
   Input:
   ---GRP: The permutation group acting on the elements.
-  ---f_extensible: This function should be passed just once for each orbit representative:
-     ---It receives a vector as input (and it can anything it wants with it like storing it).
+  ---f_extensible: This function should be passed just once for each orbit
+  representative:
+     ---It receives a vector as input (and it can anything it wants with it like
+  storing it).
      ---It returns true if it is extensible to a bigger cell.
  */
-
-
 
 /*
   We are iterating by finding the minimal orbit.
@@ -37,7 +38,8 @@
   This is a tree search.
  */
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
+void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible,
+                                    [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx miss_val = std::numeric_limits<Tidx>::max();
@@ -126,7 +128,7 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible,
       if (is_representative_minimal(w)) {
 #ifdef DEBUG_ORBIT_ENUMERATION
         os << "OE: w =";
-        for (auto & val : w) {
+        for (auto &val : w) {
           os << " " << static_cast<int>(val);
         }
         os << "\n";
@@ -201,7 +203,8 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible,
 }
 
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
+void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
+                                    [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx n = GRP.n_act();
@@ -215,10 +218,10 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
   // Generating all the elements
   std::vector<std::vector<Tidx>> list_prev;
   bool is_first = true;
-  while(true) {
+  while (true) {
     if (is_first) {
       vectface vf = DecomposeOrbitPoint_Full(GRP);
-      for (auto & eFace : vf) {
+      for (auto &eFace : vf) {
         std::vector<Tidx> v;
         boost::dynamic_bitset<>::size_type aRow = eFace.find_first();
         v.push_back(aRow);
@@ -229,12 +232,12 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
       is_first = false;
     } else {
       std::unordered_set<std::vector<Tidx>> set_new;
-      for (auto & v : list_prev) {
+      for (auto &v : list_prev) {
         Face f_face(n);
-        for (auto & val : v) {
+        for (auto &val : v) {
           f_face[val] = 1;
         }
-        for (Tidx u=0; u<n; u++) {
+        for (Tidx u = 0; u < n; u++) {
           if (f_face[u] == 0) {
             Face fins = f_face;
             fins[u] = 1;
@@ -245,7 +248,7 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
         }
       }
       list_prev.clear();
-      for (auto & v : set_new) {
+      for (auto &v : set_new) {
         if (f_extensible(v)) {
           list_prev.push_back(v);
         }
@@ -255,18 +258,19 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
       return;
     }
   }
-
 }
 
 template <typename Tgroup, typename Fextensible>
-void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible, [[maybe_unused]] std::ostream& os) {
+void SubsetOrbitEnumeration(Tgroup const &GRP, Fextensible f_extensible,
+                            [[maybe_unused]] std::ostream &os) {
   if (GRP.size() > 80000) {
-    return SubsetOrbitEnumeration_canform<Tgroup,Fextensible>(GRP, f_extensible, os);
+    return SubsetOrbitEnumeration_canform<Tgroup, Fextensible>(
+        GRP, f_extensible, os);
   } else {
-    return SubsetOrbitEnumeration_minimal<Tgroup,Fextensible>(GRP, f_extensible, os);
+    return SubsetOrbitEnumeration_minimal<Tgroup, Fextensible>(
+        GRP, f_extensible, os);
   }
 }
-
 
 // clang-format off
 #endif  // SRC_GROUP_GRP_ORBITENUMERATION_H_

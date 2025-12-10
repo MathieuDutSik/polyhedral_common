@@ -45,7 +45,8 @@
 
  */
 
-template <typename T, typename Tint> T GetMaxNorm(MyMatrix<T> const &eMat, std::ostream& os) {
+template <typename T, typename Tint>
+T GetMaxNorm(MyMatrix<T> const &eMat, std::ostream &os) {
   LLLreduction<T, Tint> recLLL = LLLreducedBasis<T, Tint>(eMat, os);
   MyMatrix<T> Pmat_T = UniversalMatrixConversion<T, Tint>(recLLL.Pmat);
   MyMatrix<T> eMatRed = Pmat_T * eMat * TransposedMat(Pmat_T);
@@ -67,7 +68,7 @@ template <typename T> T GetSmallestIncrement(MyMatrix<T> const &eMat) {
 }
 
 template <typename T, typename Tint>
-std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat, std::ostream& os) {
+std::set<T> GetSetNormConsider(MyMatrix<T> const &eMat, std::ostream &os) {
   T incr = GetSmallestIncrement(eMat);
   T MaxNorm = GetMaxNorm<T, Tint>(eMat, os);
   std::set<T> AllowedNorms;
@@ -104,17 +105,15 @@ bool IsCompleteSystem(FundInvariantVectorFamily<Tint> const &fi, int n) {
   return fi.index == 1;
 }
 
-
-template <typename T>
-bool is_antipodal(MyMatrix<T> const &SHV) {
+template <typename T> bool is_antipodal(MyMatrix<T> const &SHV) {
   int n_row = SHV.rows();
   std::unordered_set<MyVector<T>> set;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> V = GetMatrixRow(SHV, i_row);
     set.insert(V);
   }
-  for (int i_row=0; i_row<n_row; i_row++) {
-    MyVector<T> V = - GetMatrixRow(SHV, i_row);
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    MyVector<T> V = -GetMatrixRow(SHV, i_row);
     if (set.count(V) == 0) {
       return false;
     }
@@ -122,26 +121,24 @@ bool is_antipodal(MyMatrix<T> const &SHV) {
   return true;
 }
 
-template<typename T>
-MyMatrix<T> matrix_duplication(MyMatrix<T> const& SHV) {
+template <typename T> MyMatrix<T> matrix_duplication(MyMatrix<T> const &SHV) {
   int dim = SHV.cols();
   int nbSHV = SHV.rows();
   MyMatrix<T> SHV_T(2 * nbSHV, dim);
-  for (int i_row=0; i_row<nbSHV; i_row++) {
-    for (int i=0; i<dim; i++) {
-      T val = SHV(i_row,i);
-      SHV_T(2*i_row  , i) = val;
-      SHV_T(2*i_row+1, i) = -val;
+  for (int i_row = 0; i_row < nbSHV; i_row++) {
+    for (int i = 0; i < dim; i++) {
+      T val = SHV(i_row, i);
+      SHV_T(2 * i_row, i) = val;
+      SHV_T(2 * i_row + 1, i) = -val;
     }
   }
   return SHV_T;
 }
 
-template <typename T>
-bool has_duplication(MyMatrix<T> const &SHV) {
+template <typename T> bool has_duplication(MyMatrix<T> const &SHV) {
   int n_row = SHV.rows();
   std::unordered_set<MyVector<T>> set;
-  for (int i_row=0; i_row<n_row; i_row++) {
+  for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> V = GetMatrixRow(SHV, i_row);
     if (set.count(V) == 1) {
       return true;
@@ -151,17 +148,14 @@ bool has_duplication(MyMatrix<T> const &SHV) {
   return false;
 }
 
-template <typename T>
-void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
+template <typename T> void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
   if (!is_antipodal(SHV)) {
     std::cerr << "TSPACE: The family SHV is not antipodal\n";
     throw TerminalException{1};
   }
 }
 
-
-template<typename Tint>
-bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
+template <typename Tint> bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
   int n = M.cols();
   if (RankMat(M) < n) {
     return false;
@@ -175,7 +169,8 @@ bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
 
 template <typename Tint>
 FundInvariantVectorFamily<Tint>
-ComputeFundamentalInvariant(MyMatrix<Tint> const &M,  [[maybe_unused]] std::ostream&os) {
+ComputeFundamentalInvariant(MyMatrix<Tint> const &M,
+                            [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   os << "IVF: ComputeFundamentalInvariant, beginning\n";
   WriteMatrix(os, M);
@@ -264,8 +259,9 @@ MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
   auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
     return IsFullDimZbasis(M);
   };
-  MyMatrix<Tint> SHV = ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
-      eMat, f_correct, os);
+  MyMatrix<Tint> SHV =
+      ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(eMat,
+                                                                 f_correct, os);
 #ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
   check_antipodality_mymatrix(SHV);
 #endif
@@ -348,7 +344,7 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
-                            MyMatrix<Tint> const &ListVect, std::ostream&os) {
+                            MyMatrix<Tint> const &ListVect, std::ostream &os) {
   int n = GramMat.rows();
   std::map<T, std::vector<MyVector<Tint>>> map;
   std::vector<T> LineMat = GetLineVector(GramMat);
@@ -369,7 +365,8 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
 #endif
   for (auto &kv : map) {
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
-    os << "IVF: FilterByNorm, pos=" << pos << " |kv.second|=" << kv.second.size() << "\n";
+    os << "IVF: FilterByNorm, pos=" << pos
+       << " |kv.second|=" << kv.second.size() << "\n";
 #endif
     MyMatrix<Tint> BlkMat = MatrixFromVectorFamily(kv.second);
     MyMatrix<Tint> SHV_new = Concatenate(SHV_ret, BlkMat);
@@ -377,7 +374,7 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
     os << "IVF: FilterByNorm, We have SHV_new\n";
 #endif
     FundInvariantVectorFamily<Tint> fi_new =
-      ComputeFundamentalInvariant(SHV_new, os);
+        ComputeFundamentalInvariant(SHV_new, os);
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
     os << "IVF: FilterByNorm, We have fi_new\n";
 #endif
@@ -401,7 +398,7 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
 
 /*
   See the paper "A canonical form for positive definite matrices"
-  It has to be coded 
+  It has to be coded
  */
 /*
 template<typename T, typename Tint>

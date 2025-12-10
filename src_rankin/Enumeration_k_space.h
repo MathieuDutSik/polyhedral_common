@@ -122,7 +122,7 @@ template <typename T, typename Tint>
 T UpperBoundRankinMinimalDeterminant(MyMatrix<T> const &TheGramMat, int k,
                                      std::ostream &os) {
   os << "RNK: UpperBoundRankinMinimalDeterminant k=" << k << "\n";
-  Tshortest<T, Tint> RecMin = T_ShortestVector<T,Tint>(TheGramMat, os);
+  Tshortest<T, Tint> RecMin = T_ShortestVector<T, Tint>(TheGramMat, os);
   T rNorm = RecMin.min;
   os << "RNK: UpperBoundRankinMinimalDeterminant rNorm=" << rNorm << "\n";
   if (k == 1) {
@@ -242,7 +242,8 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
                                            T const &MaxDet, std::ostream &os) {
   if (k == 1) {
     T bound = MaxDet;
-    std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
+    std::vector<MyVector<Tint>> short_vectors =
+        computeLevel_GramMat<T, Tint>(A, bound, os);
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : short_vectors) {
       MyMatrix<Tint> M = MatrixFromVector(eV);
@@ -256,7 +257,8 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
   // That is we have min(A)^k <= H(n) * MaxDet
   T upper = GetUpperBoundHermitePower<T>(k) * MaxDet;
   T bound = MaxKBound(upper, k, A);
-  std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
+  std::vector<MyVector<Tint>> short_vectors =
+      computeLevel_GramMat<T, Tint>(A, bound, os);
   for (auto &eV : short_vectors) {
     VectorProjection<T, Tint> vp = GetVectorProjection(A, eV, os);
     T TheAskDet = MaxDet / vp.rNorm;
@@ -297,7 +299,8 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     T bound_search = bound * (1 + tol);
     os << "RNK: k=" << k << " bound=" << bound
        << " bound_search=" << bound_search << "\n";
-    std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound_search, os);
+    std::vector<MyVector<Tint>> short_vectors =
+        computeLevel_GramMat<T, Tint>(A, bound_search, os);
     os << "RNK: |short_vectors|=" << short_vectors.size() << "\n";
     std::vector<MyMatrix<Tint>> RetList;
     for (auto &eV : short_vectors) {
@@ -343,7 +346,8 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
   os << "RNK: Rankin_k_minimum, step 3 upper=" << upper << "\n";
   T bound = MaxKBound(upper, k, A);
   os << "RNK: Rankin_k_minimum, step 4 bound=" << bound << "\n";
-  std::vector<MyVector<Tint>> short_vectors = computeLevel_GramMat<T, Tint>(A, bound, os);
+  std::vector<MyVector<Tint>> short_vectors =
+      computeLevel_GramMat<T, Tint>(A, bound, os);
   os << "RNK: Rankin_k_minimum, step 5\n";
   for (auto &eV : short_vectors) {
     os << "RNK: eV, step 1\n";

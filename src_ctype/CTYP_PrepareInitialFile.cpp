@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
     //
     // Parsing the input
     //
-    SingleBlock const& BlDATA = eFull.get_block("DATA");
+    SingleBlock const &BlDATA = eFull.get_block("DATA");
     size_t n = BlDATA.get_int("n");
     size_t n_vect = std::pow(2, n) - 1;
     size_t NprocInput = BlDATA.get_int("NprocInput");
@@ -99,8 +99,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutputType=" << OutputType << "\n";
       throw TerminalException{1};
     }
-    bool ApplyCanonicalization =
-      BlDATA.get_bool("ApplyCanonicalization");
+    bool ApplyCanonicalization = BlDATA.get_bool("ApplyCanonicalization");
     //
     // Creating the netcdf output files.
     //

@@ -50,13 +50,15 @@ static const int INDEFINITE_FORM_FLAG = 92;
 static const int METHOD_GENERATION_RIGHT_COSETS = 49;
 static const int METHOD_GENERATION_DOUBLE_COSETS = 81;
 
-
 template <typename T, typename Tint>
-void check_equivalence(MyMatrix<T> const& Q1, MyMatrix<T> const& Q2, MyMatrix<Tint> const& equiv, std::string const& context) {
+void check_equivalence(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
+                       MyMatrix<Tint> const &equiv,
+                       std::string const &context) {
   MyMatrix<T> equiv_T = UniversalMatrixConversion<T, Tint>(equiv);
   MyMatrix<T> prod = equiv_T * Q1 * equiv_T.transpose();
   if (prod != Q2) {
-    std::cerr << "COMB: Q1 should map to Q2 via equiv. context=" << context << "\n";
+    std::cerr << "COMB: Q1 should map to Q2 via equiv. context=" << context
+              << "\n";
     throw TerminalException{1};
   }
 }
@@ -143,10 +145,11 @@ public:
       MicrosecondTime time;
 #endif
       std::optional<MyMatrix<T>> opt =
-          LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
-              Qmat, Subspace1, Qmat, Subspace2);
+          LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(Qmat, Subspace1,
+                                                            Qmat, Subspace2);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
-      os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1|=" << time << "\n";
+      os << "|COMB: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1|=" << time
+         << "\n";
 #endif
       MyMatrix<T> RetMat = unfold_opt(
           opt, "opt should be something because NSP.rows = RankMat(NSP)");
@@ -226,7 +229,8 @@ public:
       AssignMatrixRow(RetMat_red, u, gV);
     }
     if (RetMat_red != eEndoRed_T) {
-      std::cerr << "COMB: RetMat_red restricted to the nullspace is not the original eEndoRed\n";
+      std::cerr << "COMB: RetMat_red restricted to the nullspace is not the "
+                   "original eEndoRed\n";
       throw TerminalException{1};
     }
   }
@@ -246,7 +250,8 @@ public:
       throw TerminalException{1};
     }
 #endif
-    MyMatrix<T> PreNSP_T = SublatticeBasisReduction(NullspaceIntTrMat(eProd), os);
+    MyMatrix<T> PreNSP_T =
+        SublatticeBasisReduction(NullspaceIntTrMat(eProd), os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_Rec_IsotropicKplane, eProd=\n";
     WriteMatrix(os, eProd);
@@ -303,7 +308,9 @@ public:
   //
 
   // Lift mapping. The sublattice in argument is supposed to help doing that.
-  MyMatrix<T> LiftToFullAutomorphism(MyMatrix<Tint> const& eGenRed, MyMatrix<T> const& HelpingSublattice) const {
+  MyMatrix<T>
+  LiftToFullAutomorphism(MyMatrix<Tint> const &eGenRed,
+                         MyMatrix<T> const &HelpingSublattice) const {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 1\n";
 #endif
@@ -311,11 +318,13 @@ public:
     MyMatrix<T> Subspace1 = NSP_T * HelpingSublatticeInv;
     MyMatrix<T> eGenRed_T = UniversalMatrixConversion<T, Tint>(eGenRed);
     MyMatrix<T> Subspace2 = eGenRed_T * Subspace1;
-    MyMatrix<T> QmatRed = HelpingSublattice * Qmat * HelpingSublattice.transpose();
+    MyMatrix<T> QmatRed =
+        HelpingSublattice * Qmat * HelpingSublattice.transpose();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 2\n";
 #endif
-    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(QmatRed, Subspace1, QmatRed, Subspace2, os);
+    LORENTZ_ExtendOrthogonalIsotropicIsomorphism<T> TheRec(
+        QmatRed, Subspace1, QmatRed, Subspace2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
     os << "COMB: LiftToFullAutomorphism, step 3\n";
 #endif
@@ -327,7 +336,8 @@ public:
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     //    os << "COMB: HelpingSublattice=\n";
     //    WriteMatrix(os, HelpingSublattice);
-    //    os << "COMB: |HelpingSublattice|=" << DeterminantMat(HelpingSublattice) << "\n";
+    //    os << "COMB: |HelpingSublattice|=" <<
+    //    DeterminantMat(HelpingSublattice) << "\n";
     check_generator(eGenRed, eGen2);
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
@@ -340,8 +350,8 @@ public:
   // For the computed lift of the matrix group. There is no theoretical
   // guarantee that the lift exists, but so far it has always happened.
   // Of course what we want is the smallest sublattice
-  MyMatrix<T>
-  ComputeInvariantSublattice_method1(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
+  MyMatrix<T> ComputeInvariantSublattice_method1(
+      std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     size_t max_possval = std::numeric_limits<size_t>::max();
     int n = Qmat.rows();
     size_t n_gen = GRPmatr.size();
@@ -351,7 +361,7 @@ public:
     Face AlreadySolved(n_gen);
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
     MyMatrix<T> SublatticeInv = IdentityMat<T>(n);
-    while(true) {
+    while (true) {
       std::vector<size_t> list_pos;
       std::vector<size_t> list_idx;
       std::vector<MyMatrix<T>> list_lattice;
@@ -360,7 +370,7 @@ public:
       size_t found_pos = max_possval;
       //
       std::vector<MyMatrix<T>> already_done;
-      for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+      for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
         if (AlreadySolved[i_gen] == 1) {
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
@@ -375,17 +385,19 @@ public:
         }
       }
       size_t pos = 0;
-      for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+      for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
         if (AlreadySolved[i_gen] == 0) {
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
           std::vector<MyMatrix<T>> LGen = already_done;
           LGen.push_back(eGen3);
-          MyMatrix<T> SubSublatt = MatrixIntegral_GetInvariantSpace(n, LGen, os);
+          MyMatrix<T> SubSublatt =
+              MatrixIntegral_GetInvariantSpace(n, LGen, os);
           T det = T_abs(DeterminantMat(SubSublatt));
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-          os << "COMB: ComputeInvariantSublattice_method1, i_gen=" << i_gen << " |LGen|=" << LGen.size() << " det=" << det << "\n";
+          os << "COMB: ComputeInvariantSublattice_method1, i_gen=" << i_gen
+             << " |LGen|=" << LGen.size() << " det=" << det << "\n";
 #endif
           list_pos.push_back(pos);
           list_idx.push_back(i_gen);
@@ -394,7 +406,8 @@ public:
           pos += 1;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
           if (det > 1) {
-            std::cerr << "COMB: The determinant should be lower or equal to 1\n";
+            std::cerr
+                << "COMB: The determinant should be lower or equal to 1\n";
             throw TerminalException{1};
           }
 #endif
@@ -408,13 +421,15 @@ public:
         }
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: ComputeInvariantSublattice_method1, max_det=" << max_det << " found_pos=" << found_pos << "\n";
+      os << "COMB: ComputeInvariantSublattice_method1, max_det=" << max_det
+         << " found_pos=" << found_pos << "\n";
 #endif
       if (found_pos == max_possval) {
-        // No new lattice found. This means that the lattice is actually preserving everything.
+        // No new lattice found. This means that the lattice is actually
+        // preserving everything.
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
         RecSolutionIntMat<T> eCan(Sublattice);
-        for (auto & eGenRed: GRPmatr) {
+        for (auto &eGenRed : GRPmatr) {
           MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
           MyMatrix<T> Sublattice_img = Sublattice * eGen;
           if (!eCan.is_containing_m(Sublattice_img)) {
@@ -428,10 +443,11 @@ public:
         Sublattice = list_lattice[found_pos] * Sublattice;
         SublatticeInv = Inverse(Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-        os << "COMB: ComputeInvariantSublattice_method1, Det(Sublattice)=" << DeterminantMat(Sublattice) << "\n";
+        os << "COMB: ComputeInvariantSublattice_method1, Det(Sublattice)="
+           << DeterminantMat(Sublattice) << "\n";
 #endif
         Face NewAlreadySolved(n_gen);
-        for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+        for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
           MyMatrix<Tint> eGen1 = GRPmatr[i_gen];
           MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
           MyMatrix<T> eGen3 = SublatticeInv * eGen2 * Sublattice;
@@ -439,7 +455,8 @@ public:
             NewAlreadySolved[i_gen] = 1;
           } else {
             if (AlreadySolved[i_gen] == 1) {
-              std::cerr << "COMB: We have !NewAlreadySolved but we have AlreaadySolve so that is a bug\n";
+              std::cerr << "COMB: We have !NewAlreadySolved but we have "
+                           "AlreaadySolve so that is a bug\n";
               throw TerminalException{1};
             }
           }
@@ -450,15 +467,15 @@ public:
   }
 
   // The direct method since method1 appears to require more work.
-  MyMatrix<T>
-  ComputeInvariantSublattice_method2(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
+  MyMatrix<T> ComputeInvariantSublattice_method2(
+      std::vector<MyMatrix<Tint>> const &GRPmatr) const {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
     int n = Qmat.rows();
     MyMatrix<T> Sublattice = IdentityMat<T>(n);
     std::vector<MyMatrix<T>> LGen;
-    for (auto & eGen1 : GRPmatr) {
+    for (auto &eGen1 : GRPmatr) {
       MyMatrix<T> eGen2 = LiftToFullAutomorphism(eGen1, Sublattice);
       LGen.push_back(eGen2);
     }
@@ -466,11 +483,13 @@ public:
     os << "|COMB: ComputeInvariantSublattice_method2 / LGen|=" << time << "\n";
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: ComputeInvariantSublattice_method2, we have |LGen|=" << LGen.size() << "\n";
+    os << "COMB: ComputeInvariantSublattice_method2, we have |LGen|="
+       << LGen.size() << "\n";
 #endif
     MyMatrix<T> SublatticeRet = MatrixIntegral_GetInvariantSpace(n, LGen, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: ComputeInvariantSublattice_method2, Det(SublatticeRet)=" << DeterminantMat(SublatticeRet) << "\n";
+    os << "COMB: ComputeInvariantSublattice_method2, Det(SublatticeRet)="
+       << DeterminantMat(SublatticeRet) << "\n";
 #endif
     return SublatticeRet;
   }
@@ -482,39 +501,44 @@ public:
 
   // Computes integral kernel relevant to the subspace
   // Nice to know would be to understand the structure of the group.
-  std::vector<MyMatrix<T>> ComputeRelevantKernel(MyMatrix<T> const& Sublattice) const {
-    return GetOrthogonalTotallyIsotropicKernelSubspace<T,Tint>(Qmat, NSP_T, Sublattice, os);
+  std::vector<MyMatrix<T>>
+  ComputeRelevantKernel(MyMatrix<T> const &Sublattice) const {
+    return GetOrthogonalTotallyIsotropicKernelSubspace<T, Tint>(Qmat, NSP_T,
+                                                                Sublattice, os);
   }
 
   // We use the sublattice to map the group GRPmatr to higher dimension.
-  std::vector<MyMatrix<T>>
-  MapOrthogonalSublatticeGroupUsingSublattice(std::vector<MyMatrix<Tint>> const &GRPmatr, MyMatrix<T> const& Sublattice) const {
+  std::vector<MyMatrix<T>> MapOrthogonalSublatticeGroupUsingSublattice(
+      std::vector<MyMatrix<Tint>> const &GRPmatr,
+      MyMatrix<T> const &Sublattice) const {
     std::vector<MyMatrix<T>> ListGens;
     //    int n = Qmat.rows();
     //    MyMatrix<T> IdMat = IdentityMat
-    for (auto & eGenRed: GRPmatr) {
+    for (auto &eGenRed : GRPmatr) {
       MyMatrix<T> eGen = LiftToFullAutomorphism(eGenRed, Sublattice);
       ListGens.push_back(eGen);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: MapOrthogonalSublatticeGroupUsingSublattice, after lifts\n";
 #endif
-    for (auto & eGen: ComputeRelevantKernel(Sublattice)) {
+    for (auto &eGen : ComputeRelevantKernel(Sublattice)) {
       ListGens.push_back(eGen);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: MapOrthogonalSublatticeGroupUsingSublattice, after kernel gens\n";
+    os << "COMB: MapOrthogonalSublatticeGroupUsingSublattice, after kernel "
+          "gens\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     RecSolutionIntMat<T> eCan(Sublattice);
     size_t i_gen = 0;
-    for (auto & eGen : ListGens) {
+    for (auto &eGen : ListGens) {
       // We expect the lifted automorphism to preserve the lattice.
-      // This is because first it should exist and second the reduction of the coefficients
-      // should make the algorithm work.
+      // This is because first it should exist and second the reduction of the
+      // coefficients should make the algorithm work.
       MyMatrix<T> Sublattice_img = Sublattice * eGen;
       if (!eCan.is_containing_m(Sublattice_img)) {
-        std::cerr << "COMB: i_gen=" << i_gen << " |GRPmatr|=" << GRPmatr.size() << " |ListGens|=" << ListGens.size() << "\n";
+        std::cerr << "COMB: i_gen=" << i_gen << " |GRPmatr|=" << GRPmatr.size()
+                  << " |ListGens|=" << ListGens.size() << "\n";
         std::cerr << "COMB: The sublattice should be preserved\n";
         throw TerminalException{1};
       }
@@ -524,16 +548,11 @@ public:
     return ListGens;
   }
 
-
-  std::vector<MyMatrix<T>>
-  MapOrthogonalSublatticeGroup(std::vector<MyMatrix<Tint>> const &GRPmatr) const {
+  std::vector<MyMatrix<T>> MapOrthogonalSublatticeGroup(
+      std::vector<MyMatrix<Tint>> const &GRPmatr) const {
     MyMatrix<T> Sublattice = ComputeInvariantSublattice(GRPmatr);
     return MapOrthogonalSublatticeGroupUsingSublattice(GRPmatr, Sublattice);
   }
-
-
-
-
 };
 
 /*
@@ -587,11 +606,11 @@ struct SeqDims {
   std::vector<size_t> dims;
 };
 
-SeqDims seq_dims_reduced(SeqDims const& sd, int const& k) {
+SeqDims seq_dims_reduced(SeqDims const &sd, int const &k) {
   size_t k_s = static_cast<size_t>(k);
   std::vector<size_t> dims;
   size_t sum_dim = 0;
-  for (auto & edim: sd.dims) {
+  for (auto &edim : sd.dims) {
     if (sum_dim + edim > k_s) {
       size_t n_dim = k_s - sum_dim;
       dims.push_back(n_dim);
@@ -608,17 +627,18 @@ SeqDims seq_dims_reduced(SeqDims const& sd, int const& k) {
   throw TerminalException{1};
 }
 
-SeqDims seq_dims_append_one(SeqDims const& sd) {
+SeqDims seq_dims_append_one(SeqDims const &sd) {
   std::vector<size_t> dims = sd.dims;
   dims.push_back(1);
   SeqDims sd_ext{dims};
   return sd_ext;
 }
 
-void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os) {
+void write_seq_dims(SeqDims const &sd, std::string const &name,
+                    std::ostream &os) {
   os << "COMB: SeqDims " << name << "=[ ";
   bool IsFirst = true;
-  for (auto & edim: sd.dims) {
+  for (auto &edim : sd.dims) {
     if (!IsFirst) {
       os << " | ";
     }
@@ -628,44 +648,48 @@ void write_seq_dims(SeqDims const& sd, std::string const& name, std::ostream& os
   os << " ]\n";
 }
 
-SeqDims seq_dims_plane(int const& k) {
+SeqDims seq_dims_plane(int const &k) {
   std::vector<size_t> dims{static_cast<size_t>(k)};
   return SeqDims{dims};
 }
 
-SeqDims seq_dims_flag(int const& k) {
+SeqDims seq_dims_flag(int const &k) {
   std::vector<size_t> dims;
-  for (int i=0; i<k; i++) {
+  for (int i = 0; i < k; i++) {
     dims.push_back(1);
   }
   return SeqDims{dims};
 }
 
-int k_dim(SeqDims const& sd) {
+int k_dim(SeqDims const &sd) {
   size_t sum = 0;
-  for (auto & val : sd.dims) {
+  for (auto &val : sd.dims) {
     sum += val;
   }
   return static_cast<int>(sum);
 }
 
-template<typename Tint>
-std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const& sd, [[maybe_unused]] std::ostream& os) {
+template <typename Tint>
+std::vector<MyMatrix<Tint>>
+f_get_list_spaces(MyMatrix<Tint> const &ListVect, SeqDims const &sd,
+                  [[maybe_unused]] std::ostream &os) {
   size_t n_case = sd.dims.size();
   int dim = ListVect.cols();
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-  os << "COMB: f_get_list_spaces, n_case=" << n_case << " dim=" << dim << " n_rows=" << ListVect.rows() << "\n";
+  os << "COMB: f_get_list_spaces, n_case=" << n_case << " dim=" << dim
+     << " n_rows=" << ListVect.rows() << "\n";
   os << "COMB: f_get_list_spaces, ListVect=\n";
   WriteMatrix(os, ListVect);
 #endif
   std::vector<MyMatrix<Tint>> ListSpaces;
-  for (size_t i_case=0; i_case<n_case; i_case++) {
+  for (size_t i_case = 0; i_case < n_case; i_case++) {
     int sum_dim = 0;
-    for (size_t u=0; u<=i_case; u++) {
+    for (size_t u = 0; u <= i_case; u++) {
       sum_dim += sd.dims[u];
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS_DISABLE
-    os << "COMB: f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim << "\n";
+    os << "COMB: f_get_list_spaces, i_case=" << i_case << " sum_dim=" << sum_dim
+       << "\n";
 #endif
     MyMatrix<Tint> eSpace(sum_dim, dim);
     for (int u = 0; u < sum_dim; u++) {
@@ -679,24 +703,24 @@ std::vector<MyMatrix<Tint>> f_get_list_spaces(MyMatrix<Tint> const &ListVect, Se
 }
 
 template <typename T>
-std::vector<MyMatrix<T>> GetAutomorphismOfFlag(SeqDims const& sd) {
+std::vector<MyMatrix<T>> GetAutomorphismOfFlag(SeqDims const &sd) {
   size_t n_case = sd.dims.size();
   std::vector<int> starts;
   int pos = 0;
-  for (auto& edim : sd.dims) {
+  for (auto &edim : sd.dims) {
     starts.push_back(pos);
     pos += edim;
   }
   int n = pos;
   std::vector<MyMatrix<T>> LGen;
-  for (size_t i_case=0; i_case<n_case; i_case++) {
+  for (size_t i_case = 0; i_case < n_case; i_case++) {
     int start = starts[i_case];
     int dim = sd.dims[i_case];
-    for (auto & eGen: GeneralLinearGroup<T>(dim)) {
+    for (auto &eGen : GeneralLinearGroup<T>(dim)) {
       MyMatrix<T> TheMat = IdentityMat<T>(n);
-      for (int i=0; i<dim; i++) {
-        for (int j=0; j<dim; j++) {
-          TheMat(i+start, j+start) = eGen(i,j);
+      for (int i = 0; i < dim; i++) {
+        for (int j = 0; j < dim; j++) {
+          TheMat(i + start, j + start) = eGen(i, j);
         }
       }
       LGen.push_back(TheMat);
@@ -777,7 +801,7 @@ ExtendIsometryGroup(std::vector<MyMatrix<T>> const &GRPmatr, int const &p,
 template <typename T>
 std::vector<MyMatrix<T>>
 ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
-                               int const &p, int const &n, SeqDims const& sd) {
+                               int const &p, int const &n, SeqDims const &sd) {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
   if (p + k_dim(sd) != n) {
     std::cerr << "COMB: ExtendIsometryGroup_Triangular, the dimension of sd\n";
@@ -807,7 +831,7 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
   }
   for (int i = 0; i < p; i++) {
     int idx = p;
-    for (auto& edim : sd.dims) {
+    for (auto &edim : sd.dims) {
       MyMatrix<T> NewMat = IdentityMat<T>(n);
       NewMat(i, idx) = 1;
       ListGens.push_back(NewMat);
@@ -820,25 +844,28 @@ ExtendIsometryGroup_Triangular(std::vector<MyMatrix<T>> const &GRPmatr,
 // Extend the isometry group which should preserve
 // the eRec.QmatRed
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatrix<Tint>> const& GRPred,
-                                                              INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
-                                                              SeqDims const& sd,
-                                                              [[maybe_unused]] std::ostream& os) {
+std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(
+    std::vector<MyMatrix<Tint>> const &GRPred,
+    INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec, SeqDims const &sd,
+    [[maybe_unused]] std::ostream &os) {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-  for (auto & eGen : GRPred) {
+  for (auto &eGen : GRPred) {
     check_equivalence(eRec.QmatRed, eRec.QmatRed, eGen, "eGen / eRec.QmatRed");
   }
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: EIG_IO, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
-  os << "COMB: EIG_IO, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
+  os << "COMB: EIG_IO, We have |GRPred|=" << GRPred.size()
+     << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
+  os << "COMB: EIG_IO, We have dimCompl=" << eRec.dimCompl
+     << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
   //  os << "COMB: EIG_IO, we have GRPred=\n";
   //  WriteListMatrix(os, GRPred);
 #endif
   std::vector<MyMatrix<Tint>> GRPfull =
-    ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
+      ExtendIsometryGroup_Triangular(GRPred, eRec.dimCompl, eRec.the_dim, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: EIG_IO, We have |GRPfull|=" << GRPfull.size() << " eRec.the_dim=" << eRec.the_dim << "\n";
+  os << "COMB: EIG_IO, We have |GRPfull|=" << GRPfull.size()
+     << " eRec.the_dim=" << eRec.the_dim << "\n";
   //  os << "COMB: EIG_IO, we have GRPfull=\n";
   //  WriteListMatrix(os, GRPfull);
 #endif
@@ -847,9 +874,10 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
   for (auto &eGen : GRPfull) {
     MyMatrix<Tint> eGenB = eRec.FullBasisInv * eGen * eRec.FullBasis;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenB, "eGenB / eRec.GramMatRed");
+    check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenB,
+                      "eGenB / eRec.GramMatRed");
     std::vector<MyMatrix<Tint>> ListSpaces =
-      f_get_list_spaces(eRec.PlaneExpr, sd, os);
+        f_get_list_spaces(eRec.PlaneExpr, sd, os);
     for (auto &eSpace : ListSpaces) {
       MyMatrix<Tint> eSpaceImg = eSpace * eGenB;
       if (!TestEqualitySpaces(eSpaceImg, eSpace)) {
@@ -861,11 +889,14 @@ std::vector<MyMatrix<Tint>> ExtendIsometryGroup_IsotropicOrth(std::vector<MyMatr
     ListGenTot.push_back(eGenB);
   }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: EIG_IO, we have ListGensTot, comp=" << compute_complexity_listmat(ListGenTot) << "\n";
+  os << "COMB: EIG_IO, we have ListGensTot, comp="
+     << compute_complexity_listmat(ListGenTot) << "\n";
 #endif
-  std::vector<MyMatrix<Tint>>  ListGenRet = ExhaustiveReductionComplexityGroupMatrix<Tint>(ListGenTot, os);
+  std::vector<MyMatrix<Tint>> ListGenRet =
+      ExhaustiveReductionComplexityGroupMatrix<Tint>(ListGenTot, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-  os << "COMB: EIG_IO, we have ListGensRet, comp=" << compute_complexity_listmat(ListGenRet) << "\n";
+  os << "COMB: EIG_IO, we have ListGensRet, comp="
+     << compute_complexity_listmat(ListGenRet) << "\n";
 #endif
   return ListGenRet;
 }
@@ -892,14 +923,16 @@ private:
     os << "COMB: AttackScheme, eBlock.h=" << eBlock.h << "\n";
 #endif
     if (eBlock.h == 0) {
-      std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(mat, os);
+      std::vector<MyMatrix<Tint>> LGen =
+          INDEF_FORM_AutomorphismGroup_PosNeg<T, Tint, Tgroup>(mat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: INDEF_FORM_AutomorphismGroup_PosNeg|=" << time << "\n";
 #endif
       return LGen;
     }
     if (eBlock.h == 1) {
-      std::vector<MyMatrix<Tint>> LGen = LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(mat, os);
+      std::vector<MyMatrix<Tint>> LGen =
+          LORENTZ_GetGeneratorsAutom<T, Tint, Tgroup>(mat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: LORENTZ_GetGeneratorsAutom|=" << time << "\n";
 #endif
@@ -944,7 +977,8 @@ private:
     for (auto &eGen : list_gen2) {
       f_insert(eGen);
     }
-    std::vector<MyVector<Tint>> the_cover = approx.GetCoveringOrbitRepresentatives(X, os);
+    std::vector<MyVector<Tint>> the_cover =
+        approx.GetCoveringOrbitRepresentatives(X, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif
@@ -975,7 +1009,8 @@ private:
     AttackScheme<T> eBlock1 = INDEF_FORM_GetAttackScheme(Qmat1, os);
     AttackScheme<T> eBlock2 = INDEF_FORM_GetAttackScheme(Qmat2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_TestEquivalence_Kernel, eBlock1.h=" << eBlock1.h << " eBlock2.h=" << eBlock2.h << "\n";
+    os << "COMB: INDEF_FORM_TestEquivalence_Kernel, eBlock1.h=" << eBlock1.h
+       << " eBlock2.h=" << eBlock2.h << "\n";
 #endif
     if (eBlock1.h != eBlock2.h) {
       return {};
@@ -983,7 +1018,8 @@ private:
     MyMatrix<T> const &mat1 = eBlock1.mat;
     MyMatrix<T> const &mat2 = eBlock2.mat;
     if (eBlock1.h == 0) {
-      std::optional<MyMatrix<Tint>> opt = INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(mat1, mat2, os);
+      std::optional<MyMatrix<Tint>> opt =
+          INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(mat1, mat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: INDEF_FORM_TestEquivalence_PosNeg|=" << time << "\n";
 #endif
@@ -994,7 +1030,8 @@ private:
       std::vector<MyMatrix<T>> pair_mat{mat1, mat2};
       write_matrix_group(pair_mat, "input_lorentz_test_equivalence_matrices");
 #endif
-      std::optional<MyMatrix<Tint>> opt = LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
+      std::optional<MyMatrix<Tint>> opt =
+          LORENTZ_TestEquivalenceMatrices<T, Tint, Tgroup>(mat1, mat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: LORENTZ_TestEquivalenceMatrices|=" << time << "\n";
 #endif
@@ -1029,7 +1066,8 @@ private:
     os << "|COMB: GetCoveringOrbitRepresentatives|=" << time << "\n";
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_TestEquivalence_Kernel |ListCand2|=" << ListCand2.size() << "\n";
+    os << "COMB: INDEF_FORM_TestEquivalence_Kernel |ListCand2|="
+       << ListCand2.size() << "\n";
 #endif
     for (auto &v2 : ListCand2) {
       std::optional<MyMatrix<Tint>> opt =
@@ -1038,14 +1076,18 @@ private:
       os << "|COMB: INDEF_FORM_EquivalenceVector|=" << time << "\n";
 #endif
       if (opt) {
-        MyMatrix<Tint> const& equiv = *opt;
+        MyMatrix<Tint> const &equiv = *opt;
         std::vector<MyMatrix<Tint>> l_gen1 = approx1.GetApproximateGroup(os);
-        std::vector<MyMatrix<Tint>> l_gen1_red = ExhaustiveReductionComplexityGroupMatrix(l_gen1, os);
+        std::vector<MyMatrix<Tint>> l_gen1_red =
+            ExhaustiveReductionComplexityGroupMatrix(l_gen1, os);
         std::vector<MyMatrix<Tint>> l_gen2 = approx2.GetApproximateGroup(os);
-        std::vector<MyMatrix<Tint>> l_gen2_red = ExhaustiveReductionComplexityGroupMatrix(l_gen2, os);
+        std::vector<MyMatrix<Tint>> l_gen2_red =
+            ExhaustiveReductionComplexityGroupMatrix(l_gen2, os);
         size_t max_iter = 1000;
-        DoubleCosetSimplification<Tint> dcs = ExhaustiveMatrixDoubleCosetSimplifications(equiv, l_gen2_red, l_gen1_red, max_iter, os);
-        MyMatrix<Tint> const& equiv_red = dcs.d_cos_red;
+        DoubleCosetSimplification<Tint> dcs =
+            ExhaustiveMatrixDoubleCosetSimplifications(
+                equiv, l_gen2_red, l_gen1_red, max_iter, os);
+        MyMatrix<Tint> const &equiv_red = dcs.d_cos_red;
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: INDEF_FORM_TestEquivalence_Kernel equiv=\n";
         WriteMatrix(os, equiv);
@@ -1078,11 +1120,11 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
       os << "COMB: dimension 1, producing 1 generator\n";
 #endif
-      MyMatrix<Tint> eGen = - IdentityMat<Tint>(dim);
+      MyMatrix<Tint> eGen = -IdentityMat<Tint>(dim);
       return {eGen};
     }
     ResultReduction<T, Tint> ResRed =
-      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat, os);
+        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(ResRed)|=" << time << "\n";
 #endif
@@ -1094,10 +1136,14 @@ private:
     MyMatrix<Tint> const &B = ResRed.B;
     MyMatrix<Tint> Binv = Inverse(B);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Qmat)=" << compute_complexity_matrix(Qmat) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(ResRed.B)=" << compute_complexity_matrix(ResRed.B) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Binv)=" << compute_complexity_matrix(Binv) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(QmatRed)=" << compute_complexity_matrix(QmatRed) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Qmat)="
+       << compute_complexity_matrix(Qmat) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(ResRed.B)="
+       << compute_complexity_matrix(ResRed.B) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(Binv)="
+       << compute_complexity_matrix(Binv) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, comp(QmatRed)="
+       << compute_complexity_matrix(QmatRed) << "\n";
 #endif
     auto get_stab = [&]() -> std::vector<MyMatrix<Tint>> {
       std::optional<std::vector<MyMatrix<Tint>>> opt =
@@ -1141,7 +1187,8 @@ private:
       LGenFinal.push_back(NewGen);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have comp(LGenFinal)=" << compute_complexity_listmat(LGenFinal) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_FullDim, We have comp(LGenFinal)="
+       << compute_complexity_listmat(LGenFinal) << "\n";
 #endif
     return LGenFinal;
   }
@@ -1160,16 +1207,18 @@ private:
     int dim = Qmat1.rows();
     if (dim == 0) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 0 dimensional, all isomorphic\n";
+      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 0 dimensional, all "
+            "isomorphic\n";
 #endif
       MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
       return eGen;
     }
     if (dim == 1) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 1 dimensional, trivial to resolve\n";
+      os << "COMB: INDEF_FORM_TestEquivalence_FullDim, 1 dimensional, trivial "
+            "to resolve\n";
 #endif
-      if (Qmat1(0,0) == Qmat2(0,0)) {
+      if (Qmat1(0, 0) == Qmat2(0, 0)) {
         MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
         return eGen;
       } else {
@@ -1177,12 +1226,12 @@ private:
       }
     }
     ResultReduction<T, Tint> res1 =
-      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat1, os);
+        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat1, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat1)|=" << time << "\n";
 #endif
     ResultReduction<T, Tint> res2 =
-      ApproxCanonicalIndefiniteForm<T, Tint>(Qmat2, os);
+        ApproxCanonicalIndefiniteForm<T, Tint>(Qmat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     os << "|COMB: ApproxCanonicalIndefiniteForm(Qmat2)|=" << time << "\n";
 #endif
@@ -1223,7 +1272,8 @@ private:
     if (opt) {
       MyMatrix<Tint> const &eEquiv = *opt;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      check_equivalence(QmatRed1, QmatRed2, eEquiv, "QmatRed1 / QmatRed2 / eEquiv");
+      check_equivalence(QmatRed1, QmatRed2, eEquiv,
+                        "QmatRed1 / QmatRed2 / eEquiv");
 #endif
       MyMatrix<Tint> NewEquiv = Inverse(res2.B) * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
@@ -1238,7 +1288,8 @@ private:
   // Specific functions f_stab, f_equiv
   //
   std::vector<MyMatrix<Tint>>
-  f_stab(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec, SeqDims const& sd) {
+  f_stab(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
+         SeqDims const &sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -1255,18 +1306,22 @@ private:
     write_seq_dims(sd, "sd(f_stab)", os);
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: Before, GRPred = INDEF_FORM_AutomorphismGroup, comp(eRec.QmatRed)=" << compute_complexity_matrix(eRec.QmatRed) << "\n";
+    os << "COMB: Before, GRPred = INDEF_FORM_AutomorphismGroup, "
+          "comp(eRec.QmatRed)="
+       << compute_complexity_matrix(eRec.QmatRed) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRPred =
         INDEF_FORM_AutomorphismGroup(eRec.QmatRed);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_stab, We have |GRPred|=" << GRPred.size() << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
-    os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
+    os << "COMB: f_stab, We have |GRPred|=" << GRPred.size()
+       << " |QmatRed|=" << eRec.QmatRed.rows() << "\n";
+    os << "COMB: f_stab, We have dimCompl=" << eRec.dimCompl
+       << " the_dim=" << eRec.the_dim << " k=" << eRec.PlaneExpr.rows() << "\n";
     //    os << "COMB: f_stab, we have GRPred=\n";
     //    WriteListMatrix(os, GRPred);
 #endif
     std::vector<MyMatrix<Tint>> ListGenTot =
-      ExtendIsometryGroup_IsotropicOrth(GRPred, eRec, sd, os);
+        ExtendIsometryGroup_IsotropicOrth(GRPred, eRec, sd, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab, We have ListGenTot\n";
 #endif
@@ -1278,7 +1333,7 @@ private:
   std::optional<MyMatrix<Tint>>
   f_equiv(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec1,
           INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec2,
-          [[maybe_unused]] SeqDims const& sd) {
+          [[maybe_unused]] SeqDims const &sd) {
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
     MicrosecondTime time;
 #endif
@@ -1304,11 +1359,12 @@ private:
     MyMatrix<Tint> TheEquiv =
         eRec2.FullBasisInv * TheEquivTest * eRec1.FullBasis;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    check_equivalence(eRec1.GramMatRed, eRec2.GramMatRed, TheEquiv, "eRec1/eRec2.GramMatRed / TheEquiv");
+    check_equivalence(eRec1.GramMatRed, eRec2.GramMatRed, TheEquiv,
+                      "eRec1/eRec2.GramMatRed / TheEquiv");
     std::vector<MyMatrix<Tint>> ListSpaces1 =
-      f_get_list_spaces(eRec1.PlaneExpr, sd, os);
+        f_get_list_spaces(eRec1.PlaneExpr, sd, os);
     std::vector<MyMatrix<Tint>> ListSpaces2 =
-      f_get_list_spaces(eRec2.PlaneExpr, sd, os);
+        f_get_list_spaces(eRec2.PlaneExpr, sd, os);
     MyMatrix<Tint> TheEquivInv = Inverse(TheEquiv);
     for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
       MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
@@ -1358,7 +1414,7 @@ private:
   }
   size_t INDEF_FORM_Invariant_IsotropicKstuff_Kernel(
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
-    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Qmat, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
     MyMatrix<Tint> PlaneRed = Plane * Binv;
     return INDEF_FORM_Invariant_IsotropicKstuff_Reduced(res.Mred, PlaneRed, sd);
@@ -1442,25 +1498,26 @@ private:
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2,
       SeqDims const &sd) {
-    ResultReduction<T, Tint> res1 = IndefiniteReduction<T,Tint>(Qmat1, os);
+    ResultReduction<T, Tint> res1 = IndefiniteReduction<T, Tint>(Qmat1, os);
     MyMatrix<Tint> B1_inv = Inverse(res1.B);
     MyMatrix<Tint> Plane1_red = Plane1 * B1_inv;
     //
-    ResultReduction<T, Tint> res2 = IndefiniteReduction<T,Tint>(Qmat2, os);
+    ResultReduction<T, Tint> res2 = IndefiniteReduction<T, Tint>(Qmat2, os);
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
     MyMatrix<Tint> Plane2_red = Plane2 * B2_inv;
     //
     std::optional<MyMatrix<Tint>> opt =
-      INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(res1.Mred, res2.Mred, Plane1_red, Plane2_red, sd);
+        INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(
+            res1.Mred, res2.Mred, Plane1_red, Plane2_red, sd);
     if (opt) {
-      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> const &eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       check_equivalence(Qmat1, Qmat2, eEquivRet, "Qmat1 / Qmat2 / eEquivRet");
       std::vector<MyMatrix<Tint>> ListSpaces1 =
-        f_get_list_spaces(Plane1, sd, os);
+          f_get_list_spaces(Plane1, sd, os);
       std::vector<MyMatrix<Tint>> ListSpaces2 =
-        f_get_list_spaces(Plane2, sd, os);
+          f_get_list_spaces(Plane2, sd, os);
       MyMatrix<Tint> TheEquivInv = Inverse(eEquivRet);
       for (size_t iSpace = 0; iSpace < ListSpaces1.size(); iSpace++) {
         MyMatrix<Tint> eSpace1_img = ListSpaces1[iSpace] * TheEquivInv;
@@ -1487,9 +1544,11 @@ private:
     os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, We have GRP2\n";
 #endif
     int n = Qmat.rows();
-    RetMI_S<Tint,Tgroup> ret = MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
+    RetMI_S<Tint, Tgroup> ret =
+        MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, index=" << ret.index << "\n";
+    os << "COMB: INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced, index="
+       << ret.index << "\n";
 #endif
     return ret.LGen;
   }
@@ -1497,22 +1556,23 @@ private:
       MyMatrix<T> const &Qmat, MyMatrix<Tint> const &Plane, SeqDims const &sd) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
-      std::cerr << "COMB: Right now INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel requires Qmat to be full dimensional\n";
+      std::cerr
+          << "COMB: Right now INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel "
+             "requires Qmat to be full dimensional\n";
       throw TerminalException{1};
     }
-    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Qmat, os);
     MyMatrix<Tint> B_inv = Inverse(res.B);
     MyMatrix<Tint> Plane_red = Plane * B_inv;
     //
     std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(res.Mred, Plane_red, sd);
+        INDEF_FORM_Stabilizer_IsotropicKstuff_Reduced(res.Mred, Plane_red, sd);
     std::vector<MyMatrix<Tint>> LGenRet;
-    for (auto & eGen : LGen) {
+    for (auto &eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       check_equivalence(Qmat, Qmat, eGenRet, "Qmat / eGenRet");
-      std::vector<MyMatrix<Tint>> ListSpaces =
-        f_get_list_spaces(Plane, sd, os);
+      std::vector<MyMatrix<Tint>> ListSpaces = f_get_list_spaces(Plane, sd, os);
       for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
         MyMatrix<Tint> const &eSpace = ListSpaces[iSpace];
         MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRet;
@@ -1532,7 +1592,8 @@ private:
                                                  SeqDims const &sd) {
     // We have the following groups:
     // -- H1 The group stabilizing ePlane (which is integral)
-    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
+    // -- G the group stabilizing ePlane^{perp} and its mapping to the full
+    // group
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
@@ -1577,20 +1638,21 @@ private:
                                                 SeqDims const &sd) {
     int n = Qmat.rows();
     if (RankMat(Qmat) != n) {
-      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat to be full dimensional\n";
+      std::cerr << "COMB: Right now INDEF_FORM_StabilizerVector requires Qmat "
+                   "to be full dimensional\n";
       throw TerminalException{1};
     }
     // Apply the indefinite reduction algorithm
-    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Qmat, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
-    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(res.B);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(res.B);
     MyMatrix<T> B_Tinv = Inverse(B_T);
     //
     MyMatrix<Tint> ePlaneRed = ePlane * Binv;
     std::vector<MyMatrix<T>> LCos =
-      INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(res.Mred, ePlaneRed, sd);
+        INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(res.Mred, ePlaneRed, sd);
     std::vector<MyMatrix<T>> LCosRet;
-    for (auto & eCos : LCos) {
+    for (auto &eCos : LCos) {
       MyMatrix<T> eCosRet = B_Tinv * eCos * B_T;
       LCosRet.push_back(eCosRet);
     }
@@ -1615,8 +1677,8 @@ private:
           throw TerminalException{1};
         }
 #endif
-        for (size_t u=0; u<ListGroupedRepr.size(); u++) {
-          MyVector<Tint> const& eRepr = ListGroupedRepr[u][0];
+        for (size_t u = 0; u < ListGroupedRepr.size(); u++) {
+          MyVector<Tint> const &eRepr = ListGroupedRepr[u][0];
           std::optional<MyMatrix<Tint>> opt =
               INDEF_FORM_EquivalenceVector(Q, Q, eRepr, fRepr);
           if (opt) {
@@ -1630,13 +1692,13 @@ private:
         f_insert(eVect);
       }
       std::vector<MyVector<Tint>> ListRepr;
-      for (auto & eGroupedRepr : ListGroupedRepr) {
+      for (auto &eGroupedRepr : ListGroupedRepr) {
         T min_norm(0);
         MyVector<Tint> ChosenRepr;
         bool IsFirst = true;
-        for (auto & eRepr : eGroupedRepr) {
+        for (auto &eRepr : eGroupedRepr) {
           T norm(0);
-          for (int i=0; i<n; i++) {
+          for (int i = 0; i < n; i++) {
             norm += T_abs(eRepr(i));
           }
           if (IsFirst) {
@@ -1655,7 +1717,8 @@ private:
       return ListRepr;
     };
     if (eBlock.h == 0) {
-      std::vector<MyVector<Tint>> LRepr = INDEF_FORM_GetOrbitRepresentative_PosNeg<T, Tint, Tgroup>(Q, X, os);
+      std::vector<MyVector<Tint>> LRepr =
+          INDEF_FORM_GetOrbitRepresentative_PosNeg<T, Tint, Tgroup>(Q, X, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: INDEF_FORM_GetOrbitRepresentative_PosNeg|=" << time << "\n";
 #endif
@@ -1699,7 +1762,8 @@ private:
     os << "COMB: GetCoveringOrbitRepresentatives, |ListGenApprox|="
        << ListGenApprox.size() << "\n";
 #endif
-    std::vector<MyVector<Tint>> ListCandSimp = ExhaustiveVectorSimplifications(ListCand, ListGenApprox);
+    std::vector<MyVector<Tint>> ListCandSimp =
+        ExhaustiveVectorSimplifications(ListCand, ListGenApprox);
 
     std::vector<MyVector<Tint>> ListRepr = orbit_decomposition(ListCandSimp);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
@@ -1711,7 +1775,8 @@ private:
   INDEF_FORM_StabilizerVector_Reduced(MyMatrix<T> const &Qmat,
                                       MyVector<Tint> const &v) {
     if (RankMat(Qmat) != Qmat.rows()) {
-      std::cerr << "COMB: Right now the matrix Qmat should be full dimensional\n";
+      std::cerr
+          << "COMB: Right now the matrix Qmat should be full dimensional\n";
       throw TerminalException{1};
     }
     int n = Qmat.rows();
@@ -1720,7 +1785,9 @@ private:
 #endif
     INDEF_FORM_GetVectorStructure<T, Tint> eRec(Qmat, v, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: Before, GRP1 = INDEF_FORM_AutomorphismGroup, comp(eRec.GramMatRed)=" << compute_complexity_matrix(eRec.GramMatRed) << "\n";
+    os << "COMB: Before, GRP1 = INDEF_FORM_AutomorphismGroup, "
+          "comp(eRec.GramMatRed)="
+       << compute_complexity_matrix(eRec.GramMatRed) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRP1 =
         INDEF_FORM_AutomorphismGroup(eRec.GramMatRed);
@@ -1731,10 +1798,11 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_StabilizerVector_Reduced, We have GRP2_T\n";
 #endif
-    RetMI_S<Tint,Tgroup> ret =
+    RetMI_S<Tint, Tgroup> ret =
         MatrixIntegral_Stabilizer_General<T, Tint, Tgroup>(n, GRP2_T, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, index=" << ret.index << "\n";
+    os << "COMB: INDEF_FORM_StabilizerVector_Reduced, index=" << ret.index
+       << "\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     for (auto &eMat : ret.LGen) {
@@ -1753,24 +1821,23 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_StabilizerVector_NotReduced(MyMatrix<T> const &Q,
-                              MyVector<Tint> const &v) {
-    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+                                         MyVector<Tint> const &v) {
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Q, os);
     MyMatrix<Tint> Binv = Inverse(res.B);
     //
     MyVector<Tint> vRed = Binv.transpose() * v;
     std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_StabilizerVector_Reduced(res.Mred, vRed);
+        INDEF_FORM_StabilizerVector_Reduced(res.Mred, vRed);
     std::vector<MyMatrix<Tint>> LGenRet;
-    for (auto & eGen : LGen) {
+    for (auto &eGen : LGen) {
       MyMatrix<Tint> eGenRet = Binv * eGen * res.B;
       LGenRet.push_back(eGenRet);
     }
     return LGenRet;
   }
-  std::optional<MyMatrix<Tint>>
-  INDEF_FORM_EquivalenceVector_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
-                                       MyVector<Tint> const &v1,
-                                       MyVector<Tint> const &v2) {
+  std::optional<MyMatrix<Tint>> INDEF_FORM_EquivalenceVector_Reduced(
+      MyMatrix<T> const &Q1, MyMatrix<T> const &Q2, MyVector<Tint> const &v1,
+      MyVector<Tint> const &v2) {
     if (INDEF_FORM_InvariantVector(Q1, v1, os) !=
         INDEF_FORM_InvariantVector(Q2, v2, os)) {
       return {};
@@ -1820,7 +1887,9 @@ private:
     }
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: Before, GRP1_A = INDEF_FORM_AutomorphismGroup, comp(eRec1.GramMatRed)=" << compute_complexity_matrix(eRec1.GramMatRed) << "\n";
+    os << "COMB: Before, GRP1_A = INDEF_FORM_AutomorphismGroup, "
+          "comp(eRec1.GramMatRed)="
+       << compute_complexity_matrix(eRec1.GramMatRed) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> GRP1_A =
         INDEF_FORM_AutomorphismGroup(eRec1.GramMatRed);
@@ -1881,12 +1950,15 @@ private:
       ListGenTot.push_back(eGenB);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, returning comp(ListGenTot)=" << compute_complexity_listmat(ListGenTot) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup_Reduced, returning "
+          "comp(ListGenTot)="
+       << compute_complexity_listmat(ListGenTot) << "\n";
 #endif
     return ListGenTot;
   }
   std::optional<MyMatrix<Tint>>
-  INDEF_FORM_TestEquivalence_Reduced(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2) {
+  INDEF_FORM_TestEquivalence_Reduced(MyMatrix<T> const &Q1,
+                                     MyMatrix<T> const &Q2) {
     int n = Q1.rows();
     MyMatrix<T> NSP1_T = SublatticeBasisReduction(NullspaceIntMat(Q1), os);
     MyMatrix<Tint> NSP1 = UniversalMatrixConversion<Tint, T>(NSP1_T);
@@ -1928,9 +2000,9 @@ private:
   // v should be an isotropic vector of eRec.QmatRed,
   // Returns a subgroup stabilizing the isotropic vector v in eRec.
   // The code below returns the full stabilizer, but it is not really
-  std::vector<MyMatrix<Tint>> f_stab_plane_v(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const& eRec,
-                                             MyVector<Tint> const& v,
-                                             SeqDims const& sd) {
+  std::vector<MyMatrix<Tint>>
+  f_stab_plane_v(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
+                 MyVector<Tint> const &v, SeqDims const &sd) {
     int n = eRec.GramMatRed.rows();
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     T eNorm = EvaluationQuadForm<T, Tint>(eRec.QmatRed, v);
@@ -1943,17 +2015,19 @@ private:
     // First part: Mapping v to -v
     LGenRet.push_back(-IdentityMat<Tint>(n));
     // Second part: the mapping to v to v.
-    std::vector<MyMatrix<Tint>> LGen2 = INDEF_FORM_StabilizerVector_NotReduced(eRec.QmatRed, v);
+    std::vector<MyMatrix<Tint>> LGen2 =
+        INDEF_FORM_StabilizerVector_NotReduced(eRec.QmatRed, v);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_plane_v, We have LGen2\n";
 #endif
-    for (auto & eGen2 : ExtendIsometryGroup_IsotropicOrth(LGen2, eRec, sd, os)) {
+    for (auto &eGen2 : ExtendIsometryGroup_IsotropicOrth(LGen2, eRec, sd, os)) {
       LGenRet.push_back(eGen2);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_stab_plane_v, step 1\n";
     os << "COMB: f_stab_plane_v, |v|=" << v.size() << "\n";
-    os << "COMB: f_stab_plane_v, |eRec.TheCompl|=" << eRec.TheCompl.rows() << " / " << eRec.TheCompl.cols() << "\n";
+    os << "COMB: f_stab_plane_v, |eRec.TheCompl|=" << eRec.TheCompl.rows()
+       << " / " << eRec.TheCompl.cols() << "\n";
 #endif
     // Third part: The mappings from v to v + v_iso
     MyVector<Tint> v_full = eRec.TheCompl.transpose() * v;
@@ -1976,7 +2050,7 @@ private:
     os << "COMB: f_stab_plane_v, step 5\n";
     os << "COMB: f_stab_plane_v, FullBasis=";
     WriteMatrix(os, FullBasis);
-    MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T,Tint>(FullBasis);
+    MyMatrix<T> FullBasis_T = UniversalMatrixConversion<T, Tint>(FullBasis);
     MyMatrix<T> eProd = FullBasis_T * eRec.GramMatRed * FullBasis_T.transpose();
     os << "COMB: f_stab_plane_v, eProd=";
     WriteMatrix(os, eProd);
@@ -1988,7 +2062,7 @@ private:
     WriteMatrix(os, FullBasisInv);
 #endif
     int k = eRec.Plane.rows();
-    for (int iK=0; iK<k; iK++) {
+    for (int iK = 0; iK < k; iK++) {
       MyMatrix<Tint> eGenBasis = IdentityMat<Tint>(n);
       eGenBasis(k, iK) = 1;
       MyMatrix<Tint> eGen = FullBasisInv * eGenBasis * FullBasis;
@@ -2004,10 +2078,11 @@ private:
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
     SeqDims sd_ext = seq_dims_append_one(sd);
-    for (auto & eGenRet: LGenRet) {
-      check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenRet, "eRec.GramMatRed / eGenRet");
+    for (auto &eGenRet : LGenRet) {
+      check_equivalence(eRec.GramMatRed, eRec.GramMatRed, eGenRet,
+                        "eRec.GramMatRed / eGenRet");
       std::vector<MyMatrix<Tint>> ListSpaces =
-        f_get_list_spaces(fPlane, sd_ext, os);
+          f_get_list_spaces(fPlane, sd_ext, os);
       for (size_t iSpace = 0; iSpace < ListSpaces.size(); iSpace++) {
         MyMatrix<Tint> const &eSpace = ListSpaces[iSpace];
         MyMatrix<Tint> eSpace_img = ListSpaces[iSpace] * eGenRet;
@@ -2023,12 +2098,13 @@ private:
 #endif
     return LGenRet;
   }
-  std::vector<MyMatrix<T>> f_double_cosets(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const& eRec,
-                                           MyVector<Tint> const& v,
-                                           SeqDims const& sd) {
+  std::vector<MyMatrix<T>>
+  f_double_cosets(INDEF_FORM_Rec_IsotropicKplane<T, Tint> const &eRec,
+                  MyVector<Tint> const &v, SeqDims const &sd) {
     // We have the following groups:
     // -- H1 The group stabilizing ePlane (which is integral)
-    // -- G the group stabilizing ePlane^{perp} and its mapping to the full group
+    // -- G the group stabilizing ePlane^{perp} and its mapping to the full
+    // group
     //    (which is rational)
     // -- The intersection H = G \cap GL_n(Z)
     // The right cosets that are computed are the ones of G / H.
@@ -2092,7 +2168,8 @@ private:
     //
     std::vector<MyMatrix<Tint>> GRP_G_plane = f_stab(eRec, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have comp(GRP_G_plane)=" << compute_complexity_listmat(GRP_G_plane) << "\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_G_plane)="
+       << compute_complexity_listmat(GRP_G_plane) << "\n";
 #endif
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     write_seq_dims(sd, "sd(f_double_cosets)", os);
@@ -2101,28 +2178,36 @@ private:
 #endif
     std::vector<MyMatrix<Tint>> GRP_V_plane = f_stab_plane_v(eRec, v, sd);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have comp(GRP_V_plane)=" << compute_complexity_listmat(GRP_V_plane) << "\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_V_plane)="
+       << compute_complexity_listmat(GRP_V_plane) << "\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    CheckSubgroupInclusion<Tint,Tgroup>(GRP_G_plane, GRP_V_plane, os);
+    CheckSubgroupInclusion<Tint, Tgroup>(GRP_G_plane, GRP_V_plane, os);
 #endif
     MyMatrix<T> Sublattice = eRec.ComputeInvariantSublattice(GRP_G_plane);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, Sublattice=\n";
     WriteMatrix(os, Sublattice);
 #endif
-    std::vector<MyMatrix<T>> GRP_G = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_G_plane, Sublattice);
+    std::vector<MyMatrix<T>> GRP_G =
+        eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_G_plane,
+                                                         Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have comp(GRP_G)=" << compute_complexity_listmat(GRP_G) << "\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_G)="
+       << compute_complexity_listmat(GRP_G) << "\n";
 #endif
-    // Computation below should succeed because GRP_V_plane is a subgroup of GRP_G_plane
-    std::vector<MyMatrix<T>> GRP_V = eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_V_plane, Sublattice);
+    // Computation below should succeed because GRP_V_plane is a subgroup of
+    // GRP_G_plane
+    std::vector<MyMatrix<T>> GRP_V =
+        eRec.MapOrthogonalSublatticeGroupUsingSublattice(GRP_V_plane,
+                                                         Sublattice);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: f_double_cosets, we have comp(GRP_V)=" << compute_complexity_listmat(GRP_V) << "\n";
+    os << "COMB: f_double_cosets, we have comp(GRP_V)="
+       << compute_complexity_listmat(GRP_V) << "\n";
 #endif
     int n = eRec.Qmat.rows();
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
-      MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
+        MatrixIntegral_DoubleCosets_General<T, Tgroup>(n, GRP_G, GRP_V, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: f_double_cosets, we have pair\n";
 #endif
@@ -2130,7 +2215,7 @@ private:
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Method(MyMatrix<T> const &Qmat, int k,
-                                             int const& method_generation,
+                                             int const &method_generation,
                                              SeqDims const &sd) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_GetOrbit_IsotropicKstuff_Method, beginning\n";
@@ -2158,7 +2243,7 @@ private:
       auto get_planeinv = [&](MyMatrix<Tint> const &Plane) -> PlaneInv {
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
         int dim = Plane.rows();
-        for (int i=0; i<dim; i++) {
+        for (int i = 0; i < dim; i++) {
           MyVector<Tint> V = GetMatrixRow(Plane, i);
           if (EvaluationQuadForm<T, Tint>(Qmat, V) != 0) {
             std::cerr << "COMB: V is not isotropic\n";
@@ -2166,7 +2251,8 @@ private:
           }
         }
 #endif
-        size_t eInv = INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd2);
+        size_t eInv =
+            INDEF_FORM_Invariant_IsotropicKstuff_Reduced(Qmat, Plane, sd2);
         return {Plane, eInv};
       };
       std::vector<PlaneInv> ListRecReprKplane;
@@ -2174,7 +2260,7 @@ private:
       size_t n_over_generation = 0;
       size_t n_insert = 0;
 #endif
-      auto fInsert = [&](MyMatrix<Tint> const& fPlane) -> void {
+      auto fInsert = [&](MyMatrix<Tint> const &fPlane) -> void {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         n_insert += 1;
 #endif
@@ -2182,8 +2268,9 @@ private:
         for (auto &eRecReprKplane : ListRecReprKplane) {
           if (eRecReprKplane.eInv == fRecReprKplane.eInv) {
             std::optional<MyMatrix<Tint>> opt =
-              INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(Qmat, Qmat, eRecReprKplane.ePlane,
-                                                             fRecReprKplane.ePlane, sd2);
+                INDEF_FORM_Equivalence_IsotropicKstuff_Reduced(
+                    Qmat, Qmat, eRecReprKplane.ePlane, fRecReprKplane.ePlane,
+                    sd2);
             if (opt) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
               n_over_generation += 1;
@@ -2195,59 +2282,59 @@ private:
         ListRecReprKplane.push_back(fRecReprKplane);
       };
       auto SpanRepresentatives = [&](MyMatrix<Tint> const &ePlane) {
-        // Some possible improvement. Use the double cosets
-        // The double coset consists in splitting an orbit x G as
-        // y1 H \cup ..... yN H
-        // Or in other words G = \cup_i Stab(x) y_i H
-        // This is the canonical stuff.
-        //
-        // The groups being used.
-        // G = group of rational transformation preserving L = S^{perp}
-        //     and acting integrally on it.
-        // Stab({S, x}) = Integral transformations preserving {L, x}
-        //     considered as plane or flag and extended to acting integrally
-        //     on L in the same way as G.
-        // H = group of integral transformations preserving the big lattice
-        //     and preserving L.
-        //
-        // The first method is to compute the cosets for the group G in
-        // G_int. This can be computed quite efficiently with the stabilizer
-        // algorithm. The spanned objects are then tested for equivalence.
-        // That method is reasonable, but slow.
-        //
-        // What could be done?
-        // * Get a correct computation of the initial set to consider.
-        //   Right now, it works by kind of chance since we compute
-        //   only for k=1 and k=2.
-        // * So, we need to have a good strategy for computing the
-        //   The problem is to compute the orbits of the vectors.
-        // * The computation can be done in the space S^{perp}.
-        // * From the computation in the group of the space S^{perp}
-        //   We can get the orbits for the space L and the group
-        //   that is an extension G_{ext} of this one.
-        // * We can compute the stabilizer in the space S^{perp} which
-        //   we need just above anyway. We extend it and then we have the
-        //   Stab_{ext} group by the same process as above.
-        // * This is what the double coset is supposed to enter into the
-        //   picture.
-        // * The group G is G_ext. The group U is Stab_{ext} and V is
-        //   G_{ext} \cap GL(L).
-        // * So, that fits with the scheme of the Stabilizer_RightCoset.
-        //   When the computation is started, the group V is not known
-        //   and V is computed at the same time as the double cosets are.
-        // * So, the designs seems relatively clear, but what we would
-        //   need is sensible examples. Those have to be finite groups
-        //   - The lattice simplices are good examples, since they have
-        //     some sequence of stabilizers.
-        //   - The fundamental domains of reflective lorentzian groups.
-        //   - The full group and the arithmetic group are always clear.
-        //   - For the other group we can take a cyclic group generated
-        //     by a random permutation.
-        //  All, in all, that looks like a reasonable stretgy for
-        //  debugging the scheme.
-        // * Now our mystery: How to compute the list of orbits up to the
-        //   relevant isometry group. This is we compute the isometries for
-        //   QmatRed
+      // Some possible improvement. Use the double cosets
+      // The double coset consists in splitting an orbit x G as
+      // y1 H \cup ..... yN H
+      // Or in other words G = \cup_i Stab(x) y_i H
+      // This is the canonical stuff.
+      //
+      // The groups being used.
+      // G = group of rational transformation preserving L = S^{perp}
+      //     and acting integrally on it.
+      // Stab({S, x}) = Integral transformations preserving {L, x}
+      //     considered as plane or flag and extended to acting integrally
+      //     on L in the same way as G.
+      // H = group of integral transformations preserving the big lattice
+      //     and preserving L.
+      //
+      // The first method is to compute the cosets for the group G in
+      // G_int. This can be computed quite efficiently with the stabilizer
+      // algorithm. The spanned objects are then tested for equivalence.
+      // That method is reasonable, but slow.
+      //
+      // What could be done?
+      // * Get a correct computation of the initial set to consider.
+      //   Right now, it works by kind of chance since we compute
+      //   only for k=1 and k=2.
+      // * So, we need to have a good strategy for computing the
+      //   The problem is to compute the orbits of the vectors.
+      // * The computation can be done in the space S^{perp}.
+      // * From the computation in the group of the space S^{perp}
+      //   We can get the orbits for the space L and the group
+      //   that is an extension G_{ext} of this one.
+      // * We can compute the stabilizer in the space S^{perp} which
+      //   we need just above anyway. We extend it and then we have the
+      //   Stab_{ext} group by the same process as above.
+      // * This is what the double coset is supposed to enter into the
+      //   picture.
+      // * The group G is G_ext. The group U is Stab_{ext} and V is
+      //   G_{ext} \cap GL(L).
+      // * So, that fits with the scheme of the Stabilizer_RightCoset.
+      //   When the computation is started, the group V is not known
+      //   and V is computed at the same time as the double cosets are.
+      // * So, the designs seems relatively clear, but what we would
+      //   need is sensible examples. Those have to be finite groups
+      //   - The lattice simplices are good examples, since they have
+      //     some sequence of stabilizers.
+      //   - The fundamental domains of reflective lorentzian groups.
+      //   - The full group and the arithmetic group are always clear.
+      //   - For the other group we can take a cyclic group generated
+      //     by a random permutation.
+      //  All, in all, that looks like a reasonable stretgy for
+      //  debugging the scheme.
+      // * Now our mystery: How to compute the list of orbits up to the
+      //   relevant isometry group. This is we compute the isometries for
+      //   QmatRed
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: SpanRepresentatives, beginning\n";
 #endif
@@ -2257,9 +2344,10 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListOrbitF|=" << ListOrbitF.size() << "\n";
 #endif
-        auto get_right_cosets=[&]() -> std::vector<MyMatrix<T>> {
+        auto get_right_cosets = [&]() -> std::vector<MyMatrix<T>> {
           if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
-            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane, sd1);
+            return INDEF_FORM_RightCosets_IsotropicKstuff_Reduced(Qmat, ePlane,
+                                                                  sd1);
           } else {
             return {};
           }
@@ -2268,16 +2356,18 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |ListRightCosets|=" << ListRightCosets.size() << "\n";
 #endif
-        std::vector<MyMatrix<Tint>> LGenStab = INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Qmat, ePlane, sd1);
+        std::vector<MyMatrix<Tint>> LGenStab =
+            INDEF_FORM_Stabilizer_IsotropicKstuff_Kernel(Qmat, ePlane, sd1);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
         os << "COMB: |LGenStab|=" << LGenStab.size() << "\n";
 #endif
-        std::vector<MyMatrix<T>> LGenStab_T = UniversalStdVectorMatrixConversion<T,Tint>(LGenStab);
+        std::vector<MyMatrix<T>> LGenStab_T =
+            UniversalStdVectorMatrixConversion<T, Tint>(LGenStab);
         MyMatrix<Tint> Embed = eRec.TheCompl * eRec.NSP;
         for (auto &eVect : ListOrbitF) {
           MyVector<Tint> eVectB = Embed.transpose() * eVect;
           MyVector<T> eVectB_T = UniversalVectorConversion<T, Tint>(eVectB);
-          auto get_cosets=[&]() -> std::vector<MyMatrix<T>> {
+          auto get_cosets = [&]() -> std::vector<MyMatrix<T>> {
             if (method_generation == METHOD_GENERATION_RIGHT_COSETS) {
               return ListRightCosets;
             } else {
@@ -2288,17 +2378,20 @@ private:
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
           os << "COMB: |list_cosets|=" << list_cosets.size() << "\n";
 #endif
-          std::vector<MyMatrix<T>> list_cosetsB = ExhaustiveMatrixRightCosetSimplifications(list_cosets, LGenStab_T);
+          std::vector<MyMatrix<T>> list_cosetsB =
+              ExhaustiveMatrixRightCosetSimplifications(list_cosets,
+                                                        LGenStab_T);
           for (auto &eCos : list_cosetsB) {
             MyVector<T> eVectC_T = eCos.transpose() * eVectB_T;
             MyVector<Tint> eVectC =
-              UniversalVectorConversion<Tint, T>(eVectC_T);
+                UniversalVectorConversion<Tint, T>(eVectC_T);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
             //            os << "COMB: LGenStab=\n";
             //            WriteListMatrix(os, LGenStab);
             os << "COMB: eVectC=" << StringVectorGAP(eVectC) << "\n";
 #endif
-            MyVector<Tint> eVectD = ExhaustiveVectorSimplification(eVectC, LGenStab);
+            MyVector<Tint> eVectD =
+                ExhaustiveVectorSimplification(eVectC, LGenStab);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
             os << "COMB: eVectD=" << StringVectorGAP(eVectD) << "\n";
 #endif
@@ -2311,7 +2404,8 @@ private:
         SpanRepresentatives(eRepr);
       }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-      os << "COMB: n_over_generation = " << n_over_generation << " n_insert=" << n_insert << "\n";
+      os << "COMB: n_over_generation = " << n_over_generation
+         << " n_insert=" << n_insert << "\n";
 #endif
       ListOrbit.clear();
       for (auto &eRec : ListRecReprKplane) {
@@ -2326,28 +2420,28 @@ private:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_GetOrbit_IsotropicKstuff_Kernel(MyMatrix<T> const &Qmat, int k,
                                              SeqDims const &sd) {
-    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(Qmat, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Qmat, os);
     // Double cosets method is more efficient in principle than right cosets.
     std::vector<MyMatrix<Tint>> LOrb =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
+        INDEF_FORM_GetOrbit_IsotropicKstuff_Method(
+            res.Mred, k, METHOD_GENERATION_DOUBLE_COSETS, sd);
 #ifdef METHOD_COMPARISON_INDEFINITE_COMBINED_ALGORITHMS_ISOTROPIC
     std::vector<MyMatrix<Tint>> LOrbB =
-      INDEF_FORM_GetOrbit_IsotropicKstuff_Method(res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
+        INDEF_FORM_GetOrbit_IsotropicKstuff_Method(
+            res.Mred, k, METHOD_GENERATION_RIGHT_COSETS, sd);
     if (LOrbB.size() != LOrb.size()) {
-      std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|=" << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
+      std::cerr << "COMB: Inconsistencies in the computation methods |LOrb|="
+                << LOrb.size() << " |LOrbB|=" << LOrbB.size() << "\n";
       throw TerminalException{1};
     }
 #endif
     std::vector<MyMatrix<Tint>> LOrbRet;
-    for (auto & eOrb : LOrb) {
+    for (auto &eOrb : LOrb) {
       MyMatrix<Tint> eOrbRet = eOrb * res.B;
       LOrbRet.push_back(eOrbRet);
     }
     return LOrbRet;
   }
-
-
-
 
 public:
   IndefiniteCombinedAlgo(std::ostream &_os) : os(_os) {}
@@ -2366,15 +2460,15 @@ public:
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
     SeqDims sd = seq_dims_plane(Plane1.rows());
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, sd);
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Qmat1, Qmat2, Plane1,
+                                                         Plane2, sd);
   }
   std::optional<MyMatrix<Tint>> INDEF_FORM_Equivalence_IsotropicKflag(
       MyMatrix<T> const &Qmat1, MyMatrix<T> const &Qmat2,
       MyMatrix<Tint> const &Plane1, MyMatrix<Tint> const &Plane2) {
     SeqDims sd = seq_dims_flag(Plane1.rows());
-    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(
-        Qmat1, Qmat2, Plane1, Plane2, sd);
+    return INDEF_FORM_Equivalence_IsotropicKstuff_Kernel(Qmat1, Qmat2, Plane1,
+                                                         Plane2, sd);
   }
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_Stabilizer_IsotropicKplane(MyMatrix<T> const &Q,
@@ -2412,26 +2506,25 @@ public:
   }
   std::vector<MyVector<Tint>>
   INDEF_FORM_GetOrbitRepresentative(MyMatrix<T> const &Q, T const &X) {
-    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Q, os);
     std::vector<MyVector<Tint>> LRepr =
-      INDEF_FORM_GetOrbitRepresentative_Reduced(res.Mred, X);
+        INDEF_FORM_GetOrbitRepresentative_Reduced(res.Mred, X);
     std::vector<MyVector<Tint>> LReprRet;
-    for (auto & eRepr : LRepr) {
+    for (auto &eRepr : LRepr) {
       MyVector<Tint> eReprRet = res.B.transpose() * eRepr;
       LReprRet.push_back(eReprRet);
     }
     return LReprRet;
   }
   std::vector<MyMatrix<Tint>>
-  INDEF_FORM_StabilizerVector(MyMatrix<T> const &Q,
-                              MyVector<Tint> const &v) {
+  INDEF_FORM_StabilizerVector(MyMatrix<T> const &Q, MyVector<Tint> const &v) {
     std::vector<MyMatrix<Tint>> LGen =
-      INDEF_FORM_StabilizerVector_NotReduced(Q, v);
+        INDEF_FORM_StabilizerVector_NotReduced(Q, v);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_StabilizerVector, We have LGen\n";
 #endif
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-    for (auto & eGen : LGen) {
+    for (auto &eGen : LGen) {
       check_equivalence(Q, Q, eGen, "Q / eGen");
       MyVector<Tint> v_img = eGen.transpose() * v;
       if (v_img != v) {
@@ -2449,20 +2542,21 @@ public:
   INDEF_FORM_EquivalenceVector(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
                                MyVector<Tint> const &v1,
                                MyVector<Tint> const &v2) {
-    ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
+    ResultReduction<T, Tint> res1 = IndefiniteReduction<T, Tint>(Q1, os);
     MyMatrix<Tint> B1_inv = Inverse(res1.B);
-    ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
+    ResultReduction<T, Tint> res2 = IndefiniteReduction<T, Tint>(Q2, os);
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
     //
     MyVector<Tint> v1_red = B1_inv.transpose() * v1;
     MyVector<Tint> v2_red = B2_inv.transpose() * v2;
-    std::optional<MyMatrix<Tint>> opt =
-      INDEF_FORM_EquivalenceVector_Reduced(res1.Mred, res2.Mred, v1_red, v2_red);
+    std::optional<MyMatrix<Tint>> opt = INDEF_FORM_EquivalenceVector_Reduced(
+        res1.Mred, res2.Mred, v1_red, v2_red);
     if (opt) {
-      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> const &eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
-      check_equivalence(res1.Mred, res2.Mred, eEquiv, "res1.Mred / res2.Mred / eEquiv");
+      check_equivalence(res1.Mred, res2.Mred, eEquiv,
+                        "res1.Mred / res2.Mred / eEquiv");
       check_equivalence(Q1, Q2, eEquivRet, "Q1 / Q2 / eEquivRet");
 #endif
       return eEquivRet;
@@ -2472,35 +2566,42 @@ public:
   std::vector<MyMatrix<Tint>>
   INDEF_FORM_AutomorphismGroup(MyMatrix<T> const &Q) {
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, start, comp(Q)=" << compute_complexity_matrix(Q) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, start, comp(Q)="
+       << compute_complexity_matrix(Q) << "\n";
 #endif
     if (Q.rows() == 0) {
       MyMatrix<Tint> eGen = IdentityMat<Tint>(0);
       return {eGen};
     }
     if (Q.rows() == 1) {
-      MyMatrix<Tint> eGen = - IdentityMat<Tint>(1);
+      MyMatrix<Tint> eGen = -IdentityMat<Tint>(1);
       return {eGen};
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_AutomorphismGroup, start |Q|=" << Q.rows() << "\n";
 #endif
-    ResultReduction<T,Tint> res = IndefiniteReduction<T,Tint>(Q, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(Q, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: INDEF_FORM_AutomorphismGroup, We have res\n";
 #endif
     MyMatrix<Tint> B_inv = Inverse(res.B);
     //
-    std::vector<MyMatrix<Tint>> LGen = INDEF_FORM_AutomorphismGroup_Reduced(res.Mred);
+    std::vector<MyMatrix<Tint>> LGen =
+        INDEF_FORM_AutomorphismGroup_Reduced(res.Mred);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.B)=" << compute_complexity_matrix(res.B) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.Mred)=" << compute_complexity_matrix(res.Mred) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(Q)=" << compute_complexity_matrix(Q) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(B_inv)=" << compute_complexity_matrix(B_inv) << "\n";
-    os << "COMB: INDEF_FORM_AutomorphismGroup, We have comp(LGen)=" << compute_complexity_listmat(LGen) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.B)="
+       << compute_complexity_matrix(res.B) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(res.Mred)="
+       << compute_complexity_matrix(res.Mred) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(Q)="
+       << compute_complexity_matrix(Q) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(B_inv)="
+       << compute_complexity_matrix(B_inv) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, We have comp(LGen)="
+       << compute_complexity_listmat(LGen) << "\n";
 #endif
     std::vector<MyMatrix<Tint>> LGenRet;
-    for (auto & eGen : LGen) {
+    for (auto &eGen : LGen) {
       MyMatrix<Tint> eGenRet = B_inv * eGen * res.B;
 #ifdef SANITY_CHECK_INDEFINITE_COMBINED_ALGORITHMS
       check_equivalence(Q, Q, eGenRet, "Q / eGenRet");
@@ -2508,11 +2609,14 @@ public:
       LGenRet.push_back(eGenRet);
     }
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRet)=" << compute_complexity_listmat(LGenRet) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRet)="
+       << compute_complexity_listmat(LGenRet) << "\n";
 #endif
-    std::vector<MyMatrix<Tint>>  LGenRetB = ExhaustiveReductionComplexityGroupMatrix<Tint>(LGenRet, os);
+    std::vector<MyMatrix<Tint>> LGenRetB =
+        ExhaustiveReductionComplexityGroupMatrix<Tint>(LGenRet, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
-    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRetB)=" << compute_complexity_listmat(LGenRetB) << "\n";
+    os << "COMB: INDEF_FORM_AutomorphismGroup, comp(LGenRetB)="
+       << compute_complexity_listmat(LGenRetB) << "\n";
 #endif
     return LGenRetB;
   }
@@ -2523,7 +2627,7 @@ public:
       return eGen;
     }
     if (Q1.rows() == 1) {
-      if (Q1(0,0) != Q2(0,0)) {
+      if (Q1(0, 0) != Q2(0, 0)) {
         return {};
       }
       MyMatrix<Tint> eGen = IdentityMat<Tint>(1);
@@ -2535,8 +2639,8 @@ public:
     os << "COMB: Q2=\n";
     WriteMatrix(os, Q2);
 #endif
-    ResultReduction<T,Tint> res1 = IndefiniteReduction<T,Tint>(Q1, os);
-    ResultReduction<T,Tint> res2 = IndefiniteReduction<T,Tint>(Q2, os);
+    ResultReduction<T, Tint> res1 = IndefiniteReduction<T, Tint>(Q1, os);
+    ResultReduction<T, Tint> res2 = IndefiniteReduction<T, Tint>(Q2, os);
 #ifdef DEBUG_INDEFINITE_COMBINED_ALGORITHMS
     os << "COMB: res1.Mred=\n";
     WriteMatrix(os, res1.Mred);
@@ -2546,9 +2650,9 @@ public:
     MyMatrix<Tint> B2_inv = Inverse(res2.B);
     //
     std::optional<MyMatrix<Tint>> opt =
-      INDEF_FORM_TestEquivalence_Reduced(res1.Mred, res2.Mred);
+        INDEF_FORM_TestEquivalence_Reduced(res1.Mred, res2.Mred);
     if (opt) {
-      MyMatrix<Tint> const& eEquiv = *opt;
+      MyMatrix<Tint> const &eEquiv = *opt;
       MyMatrix<Tint> eEquivRet = B2_inv * eEquiv * res1.B;
       return eEquivRet;
     }

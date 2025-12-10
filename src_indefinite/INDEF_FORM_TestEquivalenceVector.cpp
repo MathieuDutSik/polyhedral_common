@@ -8,13 +8,15 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const& FileM, std::string const &FileV1, std::string const &FileV2,
-             std::string const &OutFormat, std::ostream &os_out) {
+void process(std::string const &FileM, std::string const &FileV1,
+             std::string const &FileV2, std::string const &OutFormat,
+             std::ostream &os_out) {
   MyMatrix<T> Q = ReadMatrixFile<T>(FileM);
   MyMatrix<Tint> v1 = ReadVectorFile<Tint>(FileV1);
   MyMatrix<Tint> v2 = ReadVectorFile<Tint>(FileV2);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
-  std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_EquivalenceVector(Q, Q, v1, v2);
+  std::optional<MyMatrix<Tint>> opt =
+      comb.INDEF_FORM_EquivalenceVector(Q, Q, v1, v2);
   if (OutFormat == "PYTHON") {
     if (opt) {
       WriteMatrixPYTHON(os_out, *opt);
@@ -42,9 +44,11 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] [FileV2]\n";
+      std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] "
+                   "[FileV2]\n";
       std::cerr << "or\n";
-      std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] [FileV2] [OutFormat] [OutFile]\n";
+      std::cerr << "INDEF_FORM_TestEquivalenceVector [arith] [FileM] [FileV1] "
+                   "[FileV2] [OutFormat] [OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -75,7 +79,8 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time << "\n";
+    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time
+              << "\n";
     exit(e.eVal);
   }
   runtime(time);

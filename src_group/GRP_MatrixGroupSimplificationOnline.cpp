@@ -6,7 +6,7 @@
 // clang-format on
 
 #ifdef TRACK_INFO
-#define	TRACK_INFO_ONLINE_INSERTION_SIZES
+#define TRACK_INFO_ONLINE_INSERTION_SIZES
 #endif
 
 template <typename T>
@@ -26,7 +26,8 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
 #ifdef TRACK_INFO_ONLINE_INSERTION_SIZES
     bool test = IsIntegralMatrix(M);
     T det = DeterminantMat(M);
-    //    std::cerr << "i_gen=" << i_gen << " test=" << test << " det=" << det << "\n";
+    //    std::cerr << "i_gen=" << i_gen << " test=" << test << " det=" << det
+    //    << "\n";
 #endif
     MyMatrix<T> Minv = Inverse(M);
     Ttype pair{M, Minv};
@@ -63,10 +64,12 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] "
+                   "[FileMatrGroup]\n";
       std::cerr << "        [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnline [Arith] "
+                   "[FileMatrGroup]\n";
       std::cerr << "\n";
       std::cerr << "FileMatrGroup : The list of group generators as matrices\n";
       std::cerr << "OutFormat     : CPP or GAP\n";

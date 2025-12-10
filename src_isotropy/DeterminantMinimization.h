@@ -240,7 +240,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
       };
       bool DoSomething = false;
       //
-      // Lemma 4 is eminently equivariant and do not depend a choice. Apply it if possible.
+      // Lemma 4 is eminently equivariant and do not depend a choice. Apply it
+      // if possible.
       //
       bool apply_lemma4 = true;
       if (apply_lemma4) {
@@ -276,7 +277,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
       bool apply_lemma5 = true;
       if (apply_lemma5) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-        os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i << "\n";
+        os << "DETMIN: d_mult_i=" << d_mult_i << " v_mult_i=" << v_mult_i
+           << "\n";
 #endif
         if (d_mult_i < v_mult_i && !DoSomething) {
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
@@ -300,8 +302,9 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
             for (int j = 0; j < dimNSPB; j++) {
               T res = ResInt(Qw(i, j), p_sqr);
               if (res != 0) {
-                std::cerr << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * "
-                  "p as expected\n";
+                std::cerr
+                    << "Qw[1..dimNSPB][1..dimNSPB] is not divisible by p * "
+                       "p as expected\n";
                 throw TerminalException{1};
               }
             }
@@ -327,7 +330,7 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
       }
       //
       // Lemma 6 also applies a nullspace reduction. So, same as Lemma 5.
-      // 
+      //
       bool apply_lemma6 = true;
       if (apply_lemma6) {
         // Apply Lemma 6
@@ -354,7 +357,8 @@ ResultDetMin<T> DeterminantMinimization(MyMatrix<T> const &Q,
           DoSomethingGlobal = true;
           int dec = 2 * (n - d_mult_i) - n;
 #ifdef DEBUG_DETERMINANT_MINIMIZATION
-          os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec << "\n";
+          os << "DETMIN: Before v_mult_i=" << v_mult_i << " dec=" << dec
+             << "\n";
           os << "DETMIN: After  det(Qw)=" << DeterminantMat(Qw)
              << " det(U)=" << DeterminantMat(U) << "\n";
 #endif

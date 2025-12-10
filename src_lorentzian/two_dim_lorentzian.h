@@ -57,8 +57,8 @@ Promised(const MyMatrix<T> &G, const T &M, const MyVector<Tint> &r,
          const MyVector<Tint> &l) {
   MyVector<Tint> m = r + l;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: Promised G=" << G(0, 0) << "," << G(1, 0) << "," << G(1, 1)
-            << " M=" << M << "\n";
+  std::cerr << "TWODIMLOR: Promised G=" << G(0, 0) << "," << G(1, 0) << ","
+            << G(1, 1) << " M=" << M << "\n";
 #endif
 #ifdef SANITY_CHECK_TWO_DIM_LORENTZIAN
   T norm_rr = eval_quad(G, r);
@@ -70,27 +70,29 @@ Promised(const MyMatrix<T> &G, const T &M, const MyVector<Tint> &r,
   Tint det = det_two(r, l);
   if (det != 1) {
     std::cerr << "TWODIMLOR: det=" << det << "\n";
-    std::cerr << "TWODIMLOR: The configuration of vectors should satisfy det(r,l) = 1\n";
+    std::cerr << "TWODIMLOR: The configuration of vectors should satisfy "
+                 "det(r,l) = 1\n";
     throw TerminalException{1};
   }
   T norm_ll = eval_quad(G, l);
   if (norm_ll > M) {
     std::cerr << "TWODIMLOR: norm_ll=" << norm_ll << " M=" << M << "\n";
-    std::cerr << "TWODIMLOR: l must not lie in the interior of the norm M hyperbola in S, "
+    std::cerr << "TWODIMLOR: l must not lie in the interior of the norm M "
+                 "hyperbola in S, "
                  "that is its norm must not go above M\n";
     throw TerminalException{1};
   }
 #endif
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: Promised : r=" << r << " l=" << l << " |l|=" << eval_quad(G, l)
-            << " det=" << det_two(r, l) << "\n";
+  std::cerr << "TWODIMLOR: Promised : r=" << r << " l=" << l
+            << " |l|=" << eval_quad(G, l) << " det=" << det_two(r, l) << "\n";
 #endif
   T norm_mm = eval_quad(G, m);
   T scal_mr = eval_scal(G, m, r);
   if (norm_mm <= M || scal_mr < 0) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "TWODIMLOR: Promised : Branching at Go Right norm_mm=" << norm_mm
-              << " scal_mr=" << scal_mr << "\n";
+    std::cerr << "TWODIMLOR: Promised : Branching at Go Right norm_mm="
+              << norm_mm << " scal_mr=" << scal_mr << "\n";
 #endif
     return Promised(G, M, r, m);
   }
@@ -138,7 +140,8 @@ MyVector<Tint> Canonical(const MyMatrix<T> &G, const T &M,
   T scal3 = eval_quad(G, l);
   T e_ent = scal1 * scal1 - scal2 * (scal3 - M);
   if (e_ent < 0) {
-    std::cerr << "TWODIMLOR: We cannot compute square root of a negative number\n";
+    std::cerr
+        << "TWODIMLOR: We cannot compute square root of a negative number\n";
     throw TerminalException{1};
   }
   Tint low_sqrt_tint = LowerSquareRoot<T, Tint>(e_ent);
@@ -205,7 +208,8 @@ NotPromised(const MyMatrix<T> &G, const T &M, MyVector<Tint> r,
             MyVector<Tint> l) {
   T scal_rr = eval_quad(G, r);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: NotPromised : scal_rr=" << scal_rr << " M=" << M << "\n";
+  std::cerr << "TWODIMLOR: NotPromised : scal_rr=" << scal_rr << " M=" << M
+            << "\n";
 #endif
   if (scal_rr <= M) {
     std::pair<MyVector<Tint>, MyVector<Tint>> e_pair = Promised(G, M, r, l);
@@ -258,8 +262,8 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
   MyVector<Tint> r = r1;
   MyVector<Tint> l = l1;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: First : Anisotropic r=" << StringVectorGAP(r) << " / "
-            << StringVectorGAP(l) << "\n";
+  std::cerr << "TWODIMLOR: First : Anisotropic r=" << StringVectorGAP(r)
+            << " / " << StringVectorGAP(l) << "\n";
 #endif
   std::vector<T> A_vect = get_char_mat(r, l);
   while (true) {
@@ -271,8 +275,8 @@ Anisotropic(const MyMatrix<T> &G, const T &M, MyVector<Tint> r0,
     l = pair.second;
     l = Canonical(G, M, r, l);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-    std::cerr << "TWODIMLOR: Now : Anisotropic r=" << StringVectorGAP(r) << " / "
-              << StringVectorGAP(l) << "\n";
+    std::cerr << "TWODIMLOR: Now : Anisotropic r=" << StringVectorGAP(r)
+              << " / " << StringVectorGAP(l) << "\n";
     std::cerr << "TWODIMLOR: After canonical\n";
 #endif
     if (A_vect == get_char_mat(r, l)) {
@@ -340,8 +344,7 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T> &G) {
   }
 }
 
-template <typename T>
-bool has_isotropic_factorization(MyMatrix<T> const &G) {
+template <typename T> bool has_isotropic_factorization(MyMatrix<T> const &G) {
   if (G.rows() == 1) {
     return true;
   }
@@ -359,9 +362,6 @@ bool has_isotropic_factorization(MyMatrix<T> const &G) {
     return false;
   }
 }
-
-
-
 
 /*
   The matrix is written as
@@ -451,35 +451,37 @@ std::vector<MyVector<T>> GetBasisIsotropicVectors(MyMatrix<T> const &G) {
 }
 
 template <typename T>
-std::vector<MyVector<T>> GetBasisIsotropicVectors_reduced(MyMatrix<T> const &G) {
+std::vector<MyVector<T>>
+GetBasisIsotropicVectors_reduced(MyMatrix<T> const &G) {
   std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors(G);
   std::vector<MyVector<T>> LIsoRed;
-  for (auto & eIso : LIso) {
+  for (auto &eIso : LIso) {
     MyVector<T> eIso2 = RemoveFractionVector(eIso);
     LIsoRed.push_back(eIso2);
   }
   return LIsoRed;
 }
 
-
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> OneDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
+std::vector<MyMatrix<Tint>>
+OneDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
   if (G.rows() != 1) {
     std::cerr << "TWODIMLOR: The matrix should be 1 dimensional\n";
     throw TerminalException{1};
   }
-  MyMatrix<Tint> eGen = - IdentityMat<Tint>(1);
+  MyMatrix<Tint> eGen = -IdentityMat<Tint>(1);
   return {eGen};
 }
 
 template <typename T, typename Tint>
-std::vector<MyMatrix<Tint>> TwoDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
+std::vector<MyMatrix<Tint>>
+TwoDimIsotropic_AutomGenerator(MyMatrix<T> const &G) {
   std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors_reduced(G);
   MyMatrix<T> Mstart = MatrixFromVectorFamily(LIso);
   MyMatrix<T> Mstart_inv = Inverse(Mstart);
-  MyMatrix<T> Mend(2,2);
+  MyMatrix<T> Mend(2, 2);
   std::vector<MyMatrix<Tint>> LGen;
-  auto f_insert=[&](MyMatrix<T> const& eGen) -> void {
+  auto f_insert = [&](MyMatrix<T> const &eGen) -> void {
     if (!IsIntegralMatrix(eGen)) {
       return;
     }
@@ -487,22 +489,22 @@ std::vector<MyMatrix<Tint>> TwoDimIsotropic_AutomGenerator(MyMatrix<T> const &G)
     if (prod != G) {
       return;
     }
-    MyMatrix<Tint> eGen_i = UniversalMatrixConversion<Tint,T>(eGen);
+    MyMatrix<Tint> eGen_i = UniversalMatrixConversion<Tint, T>(eGen);
     LGen.push_back(eGen_i);
   };
   MyMatrix<int> Mchoice = BuildSet(3, 2);
   int n_choice = Mchoice.rows();
-  for (int i_choice=0; i_choice<n_choice; i_choice++) {
+  for (int i_choice = 0; i_choice < n_choice; i_choice++) {
     int idx1 = 0;
     int idx2 = 1;
     if (Mchoice(i_choice, 0) == 1) {
       idx1 = 1;
       idx2 = 0;
     }
-    int sign1 = 2*Mchoice(i_choice,1) - 1;
-    int sign2 = 2*Mchoice(i_choice,2) - 1;
+    int sign1 = 2 * Mchoice(i_choice, 1) - 1;
+    int sign2 = 2 * Mchoice(i_choice, 2) - 1;
     //
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < 2; i++) {
       Mend(0, i) = sign1 * LIso[idx1](i);
       Mend(1, i) = sign2 * LIso[idx2](i);
     }
@@ -517,12 +519,14 @@ std::vector<MyMatrix<Tint>> TwoDimIsotropic_AutomGenerator(MyMatrix<T> const &G)
 }
 
 template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> OneDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1, MyMatrix<T> const& LorMat2) {
+std::optional<MyMatrix<Tint>>
+OneDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1,
+                                MyMatrix<T> const &LorMat2) {
   if (LorMat1.rows() != 1) {
     std::cerr << "The matrix LorMat1 should be 1 dimensional\n";
     throw TerminalException{1};
   }
-  if (LorMat1(0,0) != LorMat2(0,0)) {
+  if (LorMat1(0, 0) != LorMat2(0, 0)) {
     return {};
   }
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(1);
@@ -530,7 +534,9 @@ std::optional<MyMatrix<Tint>> OneDimIsotropic_TestEquivalence(MyMatrix<T> const 
 }
 
 template <typename T, typename Tint>
-std::optional<MyMatrix<Tint>> TwoDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1, MyMatrix<T> const& LorMat2) {
+std::optional<MyMatrix<Tint>>
+TwoDimIsotropic_TestEquivalence(MyMatrix<T> const &LorMat1,
+                                MyMatrix<T> const &LorMat2) {
   if (LorMat1.rows() != LorMat2.rows()) {
     return {};
   }
@@ -538,7 +544,8 @@ std::optional<MyMatrix<Tint>> TwoDimIsotropic_TestEquivalence(MyMatrix<T> const 
     return {};
   }
   if (LorMat1.rows() != 2 || !has_isotropic_factorization(LorMat1)) {
-    std::cerr << "The matrix LorMat1 should be a 2 dimensional with an isotropic factorization\n";
+    std::cerr << "The matrix LorMat1 should be a 2 dimensional with an "
+                 "isotropic factorization\n";
     throw TerminalException{1};
   }
   std::vector<MyVector<T>> LIso1 = GetBasisIsotropicVectors_reduced(LorMat1);
@@ -546,13 +553,13 @@ std::optional<MyMatrix<Tint>> TwoDimIsotropic_TestEquivalence(MyMatrix<T> const 
   MyMatrix<T> MatIso1 = MatrixFromVectorFamily(LIso1);
   MyMatrix<T> MatIso1_inv = Inverse(MatIso1);
   MyMatrix<T> MatIso2 = MatrixFromVectorFamily(LIso2);
-  MyMatrix<T> Mend(2,2);
+  MyMatrix<T> Mend(2, 2);
   if (T_abs(DeterminantMat(MatIso1)) != T_abs(DeterminantMat(MatIso2))) {
     return {};
   }
-  // Looking for a matrix P that x1 P = x2 for x1 / x2 isotropic vectors of LorMat1 / LorMat2.
-  // Then we will have P M2 P^T = M1
-  auto is_correct=[&](MyMatrix<T> const& eGen) -> bool {
+  // Looking for a matrix P that x1 P = x2 for x1 / x2 isotropic vectors of
+  // LorMat1 / LorMat2. Then we will have P M2 P^T = M1
+  auto is_correct = [&](MyMatrix<T> const &eGen) -> bool {
     if (!IsIntegralMatrix(eGen)) {
       return false;
     }
@@ -564,33 +571,29 @@ std::optional<MyMatrix<Tint>> TwoDimIsotropic_TestEquivalence(MyMatrix<T> const 
   };
   MyMatrix<int> Mchoice = BuildSet(3, 2);
   int n_choice = Mchoice.rows();
-  for (int i_choice=0; i_choice<n_choice; i_choice++) {
+  for (int i_choice = 0; i_choice < n_choice; i_choice++) {
     int idx1 = 0;
     int idx2 = 1;
     if (Mchoice(i_choice, 0) == 1) {
       idx1 = 1;
       idx2 = 0;
     }
-    int sign1 = 2*Mchoice(i_choice,1) - 1;
-    int sign2 = 2*Mchoice(i_choice,2) - 1;
+    int sign1 = 2 * Mchoice(i_choice, 1) - 1;
+    int sign2 = 2 * Mchoice(i_choice, 2) - 1;
     //
-    for (int i=0; i<2; i++) {
+    for (int i = 0; i < 2; i++) {
       Mend(0, i) = sign1 * LIso2[idx1](i);
       Mend(1, i) = sign2 * LIso2[idx2](i);
     }
     MyMatrix<T> eGen = MatIso1_inv * Mend;
     if (is_correct(eGen)) {
       MyMatrix<T> eGen_inv = Inverse(eGen);
-      MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(eGen_inv);
+      MyMatrix<Tint> P = UniversalMatrixConversion<Tint, T>(eGen_inv);
       return P;
     }
   }
   return {};
 }
-
-
-
-
 
 /*
   F is the factorization with each row representing one term of the
@@ -601,7 +604,8 @@ template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: EnumerateVectorFixedNorm_Factorization M=" << M << " F=\n";
+  std::cerr << "TWODIMLOR: EnumerateVectorFixedNorm_Factorization M=" << M
+            << " F=\n";
   WriteMatrix(std::cerr, F);
 #endif
   MyVector<T> v1(2);
@@ -666,43 +670,44 @@ EnumerateVectorFixedNorm_Factorization(MyMatrix<T> const &F, T const &M) {
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>>
 TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
-  auto get_list_vect=[&]() -> std::vector<MyVector<Tint>> {
+  auto get_list_vect = [&]() -> std::vector<MyVector<Tint>> {
     if (M == 0) {
       std::vector<MyVector<T>> LIso = GetBasisIsotropicVectors_reduced(F);
       std::vector<MyVector<Tint>> LIso_final;
-      for (auto & eIso : LIso) {
-        MyVector<Tint> eIso1_int = UniversalVectorConversion<Tint,T>(eIso);
-        MyVector<Tint> eIso2_int = - eIso1_int;
+      for (auto &eIso : LIso) {
+        MyVector<Tint> eIso1_int = UniversalVectorConversion<Tint, T>(eIso);
+        MyVector<Tint> eIso2_int = -eIso1_int;
         LIso_final.push_back(eIso1_int);
         LIso_final.push_back(eIso2_int);
       }
       return LIso_final;
     }
-    return EnumerateVectorFixedNorm_Factorization<T,Tint>(F, M);
+    return EnumerateVectorFixedNorm_Factorization<T, Tint>(F, M);
   };
   std::vector<MyVector<Tint>> ListVect = get_list_vect();
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   std::cerr << "TWODIMLOR: |ListVect|=" << ListVect.size() << "\n";
 #endif
   std::unordered_set<MyVector<Tint>> SetVect;
-  for (auto & eV : ListVect) {
+  for (auto &eV : ListVect) {
     SetVect.insert(eV);
   }
   // In reality it is the full set, but we do not want to use that fact
-  std::vector<MyMatrix<Tint>> ListGen = TwoDimIsotropic_AutomGenerator<T,Tint>(F);
-  auto get_orbit=[&](MyVector<Tint> const& v) -> std::vector<MyVector<Tint>> {
+  std::vector<MyMatrix<Tint>> ListGen =
+      TwoDimIsotropic_AutomGenerator<T, Tint>(F);
+  auto get_orbit = [&](MyVector<Tint> const &v) -> std::vector<MyVector<Tint>> {
     std::vector<MyVector<Tint>> TheOrb;
     std::unordered_set<MyVector<Tint>> set;
-    auto f_insert=[&](MyVector<Tint> const& w) -> void {
+    auto f_insert = [&](MyVector<Tint> const &w) -> void {
       TheOrb.push_back(w);
       set.insert(w);
     };
     f_insert(v);
     size_t pos_start = 0;
-    while(true) {
+    while (true) {
       size_t pos_end = TheOrb.size();
-      for (size_t pos=pos_start; pos<pos_end; pos++) {
-        for (auto & eGen : ListGen) {
+      for (size_t pos = pos_start; pos < pos_end; pos++) {
+        for (auto &eGen : ListGen) {
           MyVector<Tint> ImgV = eGen.transpose() * TheOrb[pos];
           if (set.count(ImgV) == 0) {
             f_insert(ImgV);
@@ -717,7 +722,7 @@ TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
     return TheOrb;
   };
   std::vector<MyVector<Tint>> ListRepr;
-  while(true) {
+  while (true) {
     auto iter = SetVect.begin();
     if (iter == SetVect.end()) {
       break;
@@ -725,7 +730,7 @@ TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
     MyVector<Tint> eV = *iter;
     ListRepr.push_back(eV);
     std::vector<MyVector<Tint>> eOrb = get_orbit(eV);
-    for (auto & fV : eOrb) {
+    for (auto &fV : eOrb) {
       SetVect.erase(fV);
     }
   }
@@ -734,8 +739,6 @@ TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
 #endif
   return ListRepr;
 }
-
-
 
 /*
   We are happy for the purpose of this code to have only an upper bound of the
@@ -793,7 +796,8 @@ AnisotropicComplete(const MyMatrix<T> &G, const T &M) {
   MyVector<Tint> l_A = GetTwoComplement(r);
   MyVector<Tint> l_B = Canonical(G, M, r, l_A);
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
-  std::cerr << "TWODIMLOR: r=" << r << "  l_A=" << l_A << " l_B=" << l_B << "\n";
+  std::cerr << "TWODIMLOR: r=" << r << "  l_A=" << l_A << " l_B=" << l_B
+            << "\n";
 #endif
   return Anisotropic(G, M, r, l_B);
 }

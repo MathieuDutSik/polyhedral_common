@@ -1206,7 +1206,8 @@ public:
     Tgroup eStabB = GRP.Stabilizer_OnSets(face_can);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" + std::to_string(ord2) + "_-_";
+    std::string eFile = "GrpAndSubA_" + std::to_string(ord1) + "_" +
+                        std::to_string(ord2) + "_-_";
     std::string fFile = FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
@@ -1253,7 +1254,8 @@ public:
     Tgroup eStabB = GRP.Stabilizer_OnSets(pair.first);
     Tint ord1 = GRP.size();
     Tint ord2 = eStabB.size();
-    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" + std::to_string(ord2) + "_-_";
+    std::string eFile = "GrpAndSubB_" + std::to_string(ord1) + "_" +
+                        std::to_string(ord2) + "_-_";
     std::string fFile = FindAvailableFileFromPrefix(eFile);
     std::ofstream os(fFile);
     WriteGroup(os, eStabB);
@@ -2167,8 +2169,9 @@ private:
 };
 
 template <typename Tint, typename T, typename Tgroup>
-std::map<std::string, Tint>
-ComputeInitialMap(const MyMatrix<T> &EXT, const Tgroup &GRP, int const& dimEXT) {
+std::map<std::string, Tint> ComputeInitialMap(const MyMatrix<T> &EXT,
+                                              const Tgroup &GRP,
+                                              int const &dimEXT) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   std::map<std::string, Tint> TheMap;
@@ -2209,8 +2212,8 @@ void DUALDESC_AdjacencyDecomposition_and_insert(
     Fdd &f_dd, std::string const &ePrefix, std::ostream &os) {
   using Tint = typename Tgroup::Tint;
   CheckTermination<Tgroup>(AllArr);
-  std::map<std::string, Tint> TheMap =
-      ComputeInitialMap<Tint, T, Tgroup>(df.FF.EXT_face, df.Stab, AllArr.dimEXT);
+  std::map<std::string, Tint> TheMap = ComputeInitialMap<Tint, T, Tgroup>(
+      df.FF.EXT_face, df.Stab, AllArr.dimEXT);
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
 #ifdef TIMINGS_RECURSIVE_DUAL_DESC
@@ -2450,12 +2453,14 @@ Kernel_DUALDESC_AdjacencyDecomposition(
   };
   size_t nr_orbit = RPL.FuncNumberOrbit();
 #ifdef TRACK_RUN
-  os << "RDD: Kernel_DUALDESC_AdjacencyDecomposition nr_orbit=" << nr_orbit << "\n";
+  os << "RDD: Kernel_DUALDESC_AdjacencyDecomposition nr_orbit=" << nr_orbit
+     << "\n";
 #endif
   if (nr_orbit == 0) {
     std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
 #ifdef TRACK_RUN
-    os << "RDD: ansSamp=" << ansSamp << " |EXT|=" << bb.EXT.rows() << "/" << bb.EXT.cols() << "\n";
+    os << "RDD: ansSamp=" << ansSamp << " |EXT|=" << bb.EXT.rows() << "/"
+       << bb.EXT.cols() << "\n";
 #endif
     vectface vf = DirectComputationInitialFacetSet(bb.EXT, ansSamp, os);
 #ifdef TRACK_RUN
@@ -2465,7 +2470,7 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     for (auto &face : vf) {
       map[face.count()] += 1;
     }
-    for (auto & kv: map) {
+    for (auto &kv : map) {
       os << "(" << kv.first << "," << kv.second << ") ";
     }
     os << "\n";
@@ -2859,9 +2864,9 @@ vectface ReadFacets(std::string const &Format, std::string const &File,
 }
 
 template <typename T>
-void OutputFacets_stream(const MyMatrix<T> &EXT,
-                         const vectface &TheOutput, std::ostream& os_out,
-                         const std::string &OutFormat, std::ostream &os) {
+void OutputFacets_stream(const MyMatrix<T> &EXT, const vectface &TheOutput,
+                         std::ostream &os_out, const std::string &OutFormat,
+                         std::ostream &os) {
   if (OutFormat == "Magma") {
     os_out << "return ";
     VectVectInt_Magma_Print(os_out, TheOutput);
@@ -2914,11 +2919,12 @@ void OutputFacets_stream(const MyMatrix<T> &EXT,
 
 template <typename T, typename Tgroup>
 void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
-                       const vectface &TheOutput, std::string const& OutFile,
+                       const vectface &TheOutput, std::string const &OutFile,
                        const std::string &OutFormat, std::ostream &os) {
   if (OutFormat == "BankEntry") {
     if (OutFile == "stderr" || OutFile == "stdout") {
-      std::cerr << "For BankEntry, we do not allow writing to stderr / stdout\n";
+      std::cerr
+          << "For BankEntry, we do not allow writing to stderr / stdout\n";
       throw TerminalException{1};
     }
     size_t n_rows = EXT.rows();
@@ -2939,23 +2945,21 @@ void OutputFacets_file(const MyMatrix<T> &EXT, Tgroup const &GRP,
     Write_BankEntry(OutFile, eP.first, eP.second);
     return;
   }
-  auto f_print=[&](std::ostream& os_out) -> void {
+  auto f_print = [&](std::ostream &os_out) -> void {
     OutputFacets_stream(EXT, TheOutput, os_out, OutFormat, os);
   };
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-
-
 template <typename T> MyMatrix<T> GetEXT_from_efull(FullNamelist const &eFull) {
   SingleBlock BlockDATA = eFull.get_block("DATA");
-  std::string const& EXTfile = BlockDATA.get_string("EXTfile");
+  std::string const &EXTfile = BlockDATA.get_string("EXTfile");
   return ReadMatrixFile<T>(EXTfile);
 }
 
 std::string GetNumericalType(FullNamelist const &eFull) {
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  std::string const& NumericalType = BlockDATA.get_string("NumericalType");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  std::string const &NumericalType = BlockDATA.get_string("NumericalType");
   std::vector<std::string> Ltype{"safe_rational", "rational", "cpp_rational",
                                  "mpq_rational",  "Qsqrt2",   "Qsqrt5",
                                  "RealAlgebraic"};
@@ -3052,9 +3056,9 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
                                  PolyHeuristicSerial<Tint> &AllArr,
                                  std::ostream &os) {
   //
-  SingleBlock const& BlockMETHOD = eFull.get_block("METHOD");
-  SingleBlock const& BlockBANK = eFull.get_block("BANK");
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockMETHOD = eFull.get_block("METHOD");
+  SingleBlock const &BlockBANK = eFull.get_block("BANK");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   //
   bool BANK_Saving = BlockBANK.get_bool("Saving");
   AllArr.BANK_Saving = BANK_Saving;
@@ -3065,8 +3069,7 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   std::string OutFile = BlockDATA.get_string("OutFile");
   AllArr.OutFile = OutFile;
   //
-  bool DeterministicRuntime =
-    BlockDATA.get_bool("DeterministicRuntime");
+  bool DeterministicRuntime = BlockDATA.get_bool("DeterministicRuntime");
   if (!DeterministicRuntime) {
     unsigned seed = get_random_seed();
     srand(seed);
@@ -3080,7 +3083,7 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   AllArr.port = port;
   //
   std::string bank_parallelization_method =
-    BlockDATA.get_string("bank_parallelization_method");
+      BlockDATA.get_string("bank_parallelization_method");
   AllArr.bank_parallelization_method = bank_parallelization_method;
   //
   SetHeuristic(eFull, "SplittingHeuristicFile", AllArr.Splitting, os);
@@ -3108,11 +3111,10 @@ void UpdateHeuristicSerial_eFull(FullNamelist const &eFull,
   AllArr.max_runtime = max_runtime;
   //
   bool AdvancedTerminationCriterion =
-    BlockDATA.get_bool("AdvancedTerminationCriterion");
+      BlockDATA.get_bool("AdvancedTerminationCriterion");
   AllArr.AdvancedTerminationCriterion = AdvancedTerminationCriterion;
   //
-  bool SimpleExchangeScheme =
-    BlockDATA.get_bool("SimpleExchangeScheme");
+  bool SimpleExchangeScheme = BlockDATA.get_bool("SimpleExchangeScheme");
   AllArr.SimpleExchangeScheme = SimpleExchangeScheme;
   //
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -3267,10 +3269,10 @@ DualDescriptionRecordFullDim(const MyMatrix<T> &EXT, const Tgroup &GRP,
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
   int rnk = RankMat(EXT);
   if (rnk != EXT.cols()) {
-    std::cerr
-        << "RDD: For DualDescriptionRecordFullDim we should have rnk = EXT.cols()\n";
-    std::cerr << "RDD: rnk=" << rnk << " |EXR|=" << EXT.rows() << " / " << EXT.cols()
-              << "\n";
+    std::cerr << "RDD: For DualDescriptionRecordFullDim we should have rnk = "
+                 "EXT.cols()\n";
+    std::cerr << "RDD: rnk=" << rnk << " |EXR|=" << EXT.rows() << " / "
+              << EXT.cols() << "\n";
     throw TerminalException{1};
   }
   if (!IsSymmetryGroupOfPolytope(EXT, GRP)) {
@@ -3298,7 +3300,8 @@ vectface DualDescriptionRecord(const MyMatrix<T> &EXT, const Tgroup &GRP,
 }
 
 template <typename T, typename Tgroup>
-vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP, std::ostream& os) {
+vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
+                                 std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<T> EXT2 = ReduceVectorFamily(EXTred, "direct", os).first;

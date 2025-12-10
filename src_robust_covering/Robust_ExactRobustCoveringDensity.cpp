@@ -8,7 +8,8 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process_B(std::string const& MatFile, std::string const& OutFormat, std::string const& OutFile) {
+void process_B(std::string const &MatFile, std::string const &OutFormat,
+               std::string const &OutFile) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
@@ -17,16 +18,16 @@ void process_B(std::string const& MatFile, std::string const& OutFormat, std::st
   //
   int dimEXT = GramMat.rows() + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   DataLattice<T, Tint, Tgroup> eData =
-    GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
+      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
 
   T sqr_dist = compute_square_robust_covering_radius(eData);
 
   T det = DeterminantMat(GramMat);
   int dim = GramMat.rows();
   ResultCov<T> rc = ComputeCoveringDensityFromDimDetCov(dim, det, sqr_dist);
-  auto f_print=[&](std::ostream& osf) -> void {
+  auto f_print = [&](std::ostream &osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return ";
       osf << to_stringGAP(rc);
@@ -40,12 +41,12 @@ void process_B(std::string const& MatFile, std::string const& OutFormat, std::st
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-void process_A(std::string const &arithmetic,
-               std::string MatFile, std::string OutFormat, std::string OutFile) {
+void process_A(std::string const &arithmetic, std::string MatFile,
+               std::string OutFormat, std::string OutFile) {
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
-    return process_B<T,Tint>(MatFile, OutFormat, OutFile);
+    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
   throw TerminalException{1};
@@ -57,7 +58,8 @@ int main(int argc, char *argv[]) {
     if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_ExactRobustCoveringDensity arithmetic [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_ExactRobustCoveringDensity arithmetic [MaFile] "
+                   "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "Robust_ExactRobustCoveringDensity arithmetic [MaFile]\n";
       std::cerr << "allowed choices:\n";

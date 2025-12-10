@@ -33,7 +33,8 @@ int main(int argc, char *argv[]) {
     T MaxNorm = MaxNorm_i;
     //
     std::vector<MyVector<Tint>> LVect =
-        EnumerateShortVectorInCone_UnderPositivityCond<T, Tint>(eSymmMat, TheBasis, MaxNorm, std::cerr);
+        EnumerateShortVectorInCone_UnderPositivityCond<T, Tint>(
+            eSymmMat, TheBasis, MaxNorm, std::cerr);
     std::cerr << "|LVect|=" << LVect.size() << "\n";
     for (auto &eVect : LVect) {
       std::cerr << "eVect=";

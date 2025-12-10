@@ -35,7 +35,8 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   }
 
   // Extract the final reduced set
-  std::vector<MyMatrix<T>> ListMred = hierarchical_reducer.get_current_matrix_t();
+  std::vector<MyMatrix<T>> ListMred =
+      hierarchical_reducer.get_current_matrix_t();
 
   // Output the results
   if (OutFormat == "GAP") {
@@ -58,13 +59,17 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] "
+                   "[FileMatrGroup]\n";
       std::cerr << "        [OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] [FileMatrGroup]\n";
+      std::cerr << "GRP_MatrixGroupPermSimplificationOnlineOpt [Arith] "
+                   "[FileMatrGroup]\n";
       std::cerr << "\n";
-      std::cerr << "This is the optimized hierarchical online version that automatically\n";
-      std::cerr << "switches between int16_t -> int32_t -> int64_t -> T numerics\n";
+      std::cerr << "This is the optimized hierarchical online version that "
+                   "automatically\n";
+      std::cerr
+          << "switches between int16_t -> int32_t -> int64_t -> T numerics\n";
       std::cerr << "\n";
       std::cerr << "FileMatrGroup : The list of group generators as matrices\n";
       std::cerr << "OutFormat     : CPP or GAP\n";
@@ -94,7 +99,8 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);
-    std::cerr << "Normal termination of GRP_MatrixGroupSimplificationOnlineOpt\n";
+    std::cerr
+        << "Normal termination of GRP_MatrixGroupSimplificationOnlineOpt\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_MatrixGroupSimplificationOnlineOpt\n";
     exit(e.eVal);

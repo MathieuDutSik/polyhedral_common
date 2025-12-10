@@ -91,9 +91,9 @@ int main(int argc, char *argv[]) {
       }
       if (NumericalType == "RealAlgebraic") {
         using T_rat = mpq_class;
-        SingleBlock const& BlockDATA = eFull.get_block("DATA");
+        SingleBlock const &BlockDATA = eFull.get_block("DATA");
         std::string FileAlgebraicField =
-          BlockDATA.get_string("FileAlgebraicField");
+            BlockDATA.get_string("FileAlgebraicField");
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";

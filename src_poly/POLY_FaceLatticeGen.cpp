@@ -11,8 +11,8 @@
 
 template <typename Tgroup>
 void MainFunctionFaceLattice(FullNamelist const &eFull) {
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string const& arith = BlockPROC.get_string("Arithmetic");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string const &arith = BlockPROC.get_string("Arithmetic");
   if (arith == "safe_rational") {
     using T = Rational<SafeInt64>;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
@@ -47,7 +47,8 @@ void MainFunctionFaceLattice(FullNamelist const &eFull) {
     using T = RealField<idx_real_algebraic_field>;
     return MainFunctionFaceLattice_A<T, Tgroup>(eFull, std::cerr);
   }
-  std::cerr << "Failed to find a matching arithmetic for arith=" << arith << "\n";
+  std::cerr << "Failed to find a matching arithmetic for arith=" << arith
+            << "\n";
   throw TerminalException{1};
 }
 

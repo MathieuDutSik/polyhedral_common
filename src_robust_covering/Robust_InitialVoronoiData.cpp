@@ -6,11 +6,13 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process_B(std::string const& MatFile, std::string const& OutFormat, std::string const& OutFile) {
+void process_B(std::string const &MatFile, std::string const &OutFormat,
+               std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
-  CVPSolver<T,Tint> solver(GramMat, std::cerr);
-  PpolytopeVoronoiData<T,Tint> ivd = initial_vertex_data<T,Tint>(solver, std::cerr);
-  auto f_print=[&](std::ostream& osf) -> void {
+  CVPSolver<T, Tint> solver(GramMat, std::cerr);
+  PpolytopeVoronoiData<T, Tint> ivd =
+      initial_vertex_data<T, Tint>(solver, std::cerr);
+  auto f_print = [&](std::ostream &osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return ";
       WriteMatrix(osf, ivd.FAC);
@@ -24,12 +26,12 @@ void process_B(std::string const& MatFile, std::string const& OutFormat, std::st
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-void process_A(std::string const &arithmetic,
-               std::string MatFile, std::string OutFormat, std::string OutFile) {
+void process_A(std::string const &arithmetic, std::string MatFile,
+               std::string OutFormat, std::string OutFile) {
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
-    return process_B<T,Tint>(MatFile, OutFormat, OutFile);
+    return process_B<T, Tint>(MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
   throw TerminalException{1};
@@ -41,7 +43,8 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile] "
+                   "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile]\n";
       std::cerr << "allowed choices:\n";

@@ -23,7 +23,7 @@ int main(int argc, char *argv[]) {
     //
     std::ofstream os(argv[2]);
     LLLreduction<mpq_class, mpz_class> recLLL =
-      LLLreducedBasis<mpq_class, mpz_class>(GramMat, std::cerr);
+        LLLreducedBasis<mpq_class, mpz_class>(GramMat, std::cerr);
     os << "return rec(GramMat:=";
     WriteMatrixGAP(os, recLLL.GramMatRed);
     os << ", Pmat:=";

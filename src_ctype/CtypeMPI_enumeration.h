@@ -62,7 +62,7 @@ void WriteEntryGAP(std::ostream &os_out,
 }
 
 void WriteEntryPYTHON(std::ostream &os_out,
-                   [[maybe_unused]] IsoEdgeDomain_AdjO const &_x) {
+                      [[maybe_unused]] IsoEdgeDomain_AdjO const &_x) {
   os_out << "{}";
 }
 
@@ -93,14 +93,15 @@ void WriteEntryGAP(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
 
 template <typename Tint>
 void WriteDetailedEntryGAP(std::ostream &os_out,
-                           [[maybe_unused]] DataCtype const& data,
+                           [[maybe_unused]] DataCtype const &data,
                            IsoEdgeDomain_Obj<Tint> const &entry,
                            [[maybe_unused]] std::ostream &os) {
   WriteEntryGAP(os_out, entry);
 }
 
 template <typename Tint>
-void WriteEntryPYTHON(std::ostream &os_out, IsoEdgeDomain_Obj<Tint> const &entry) {
+void WriteEntryPYTHON(std::ostream &os_out,
+                      IsoEdgeDomain_Obj<Tint> const &entry) {
   os_out << "{\"Ctype\":";
   WriteMatrixPYTHON(os_out, entry.ctype_arr.eMat);
   os_out << ", \"struct_info\":={";
@@ -185,8 +186,8 @@ template <typename T, typename Tint, typename Tgroup> struct DataCtypeFunc {
 template <typename T, typename Tint, typename Tgroup>
 void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
                                   FullNamelist const &eFull) {
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   bool ApplyStdUnitbuf = BlockSYSTEM.get_bool("ApplyStdUnitbuf");
   int i_rank = comm.rank();
   int n_proc = comm.size();
@@ -220,10 +221,12 @@ void ComputeLatticeIsoEdgeDomains(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_fct, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
   if (pair.first) {
-    auto f_print=[&](std::ostream& os_out) -> void {
-      bool result = WriteFamilyObjects_MPI<DataCtype, Tobj, TadjO>(comm, data, OutFormat, os_out, pair.second, os);
+    auto f_print = [&](std::ostream &os_out) -> void {
+      bool result = WriteFamilyObjects_MPI<DataCtype, Tobj, TadjO>(
+          comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
-        std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+        std::cerr << "CTYP_MPI: Failed to find a matching entry for OutFormat="
+                  << OutFormat << "\n";
         throw TerminalException{1};
       }
     };

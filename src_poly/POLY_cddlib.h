@@ -1950,7 +1950,8 @@ template <typename T> void dd_SetLinearity(dd_matrixdata<T> *M, char *line) {
 }
 
 template <typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err,
+                                      size_t const &maxiter, std::ostream &os) {
   dd_rowrange i;
   dd_colrange j;
 
@@ -1977,9 +1978,9 @@ dd_polyhedradata<T> *dd_DDMatrix2Poly(dd_matrixdata<T> *M, dd_ErrorType *err, si
 }
 
 template <typename T>
-dd_polyhedradata<T> *dd_DDMatrix2Poly2(dd_matrixdata<T> *M,
-                                       dd_RowOrderType horder,
-                                       dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+dd_polyhedradata<T> *
+dd_DDMatrix2Poly2(dd_matrixdata<T> *M, dd_RowOrderType horder,
+                  dd_ErrorType *err, size_t const &maxiter, std::ostream &os) {
   dd_rowrange i;
   dd_colrange j;
 
@@ -3143,7 +3144,8 @@ void dd_SelectCrissCrossPivot(dd_rowrange m_size, dd_colrange d_size, T **A,
 
 template <typename T>
 void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
-                        data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
+                        data_temp_simplex<T> *data, size_t const &maxiter,
+                        std::ostream &os) {
   switch (lp->objective) {
   case dd_LPmax:
     dd_CrissCrossMaximize(lp, err, data, maxiter, os);
@@ -3161,8 +3163,8 @@ void dd_CrissCrossSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_DualSimplexSolve(dd_lpdata<T> *lp, dd_ErrorType *err,
-                         data_temp_simplex<T> *data,
-                         size_t const& maxiter, std::ostream& os) {
+                         data_temp_simplex<T> *data, size_t const &maxiter,
+                         std::ostream &os) {
   bool localdebug = false;
   if (localdebug)
     std::cout << "Running dd_DualSimplexSolve\n";
@@ -3535,8 +3537,8 @@ _L99:
 
 template <typename T>
 void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                            data_temp_simplex<T> *data,
-                            size_t const& maxiter, [[maybe_unused]] std::ostream& os) {
+                            data_temp_simplex<T> *data, size_t const &maxiter,
+                            [[maybe_unused]] std::ostream &os) {
   dd_colrange j;
   *err = dd_NoError;
   for (j = 1; j <= lp->d; j++)
@@ -3552,8 +3554,8 @@ void dd_DualSimplexMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_DualSimplexMaximize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                            data_temp_simplex<T> *data,
-                            size_t const& maxiter, std::ostream& os)
+                            data_temp_simplex<T> *data, size_t const &maxiter,
+                            std::ostream &os)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3569,7 +3571,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
 
   unsigned int rseed = 1;
 #ifdef DEBUG_CDD
-  os << "CDD: Beginning of dd_DualSimplexMaximize with maxiter=" << maxiter << "\n";
+  os << "CDD: Beginning of dd_DualSimplexMaximize with maxiter=" << maxiter
+     << "\n";
 #endif
   // r value assigned designed to create segfault in case it is not set later
   r = -40000;
@@ -3662,7 +3665,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     if (maxiter != 0) {
       if (n_iter == maxiter) {
 #ifdef DEBUG_CDD
-        os << "CDD: Exiting from dd_DualSimplexMaximize at maxiter=" << maxiter << " (too many iterations)\n";
+        os << "CDD: Exiting from dd_DualSimplexMaximize at maxiter=" << maxiter
+           << " (too many iterations)\n";
 #endif
         lp->LPS = dd_TooManyIterations;
         break;
@@ -3752,7 +3756,8 @@ _L99:
 
 template <typename T>
 void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
+                           data_temp_simplex<T> *data, size_t const &maxiter,
+                           std::ostream &os) {
   dd_colrange j;
 
   *err = dd_NoError;
@@ -3771,8 +3776,8 @@ void dd_CrissCrossMinimize(dd_lpdata<T> *lp, dd_ErrorType *err,
 
 template <typename T>
 void dd_CrissCrossMaximize(dd_lpdata<T> *lp, dd_ErrorType *err,
-                           data_temp_simplex<T> *data,
-                           size_t const& maxiter, std::ostream& os)
+                           data_temp_simplex<T> *data, size_t const &maxiter,
+                           std::ostream &os)
 /*
 When LP is inconsistent then lp->re returns the evidence row.
 When LP is dual-inconsistent then lp->se returns the evidence column.
@@ -3823,7 +3828,8 @@ When LP is dual-inconsistent then lp->se returns the evidence column.
     if (maxiter != 0) {
       if (n_iter == maxiter) {
 #ifdef DEBUG_CDD
-        os << "CDD: Exiting from dd_CrissCrossMaximize at maxiter=" << maxiter << " (too many iterations)\n";
+        os << "CDD: Exiting from dd_CrissCrossMaximize at maxiter=" << maxiter
+           << " (too many iterations)\n";
 #endif
         lp->LPS = dd_TooManyIterations;
         break;
@@ -3884,7 +3890,7 @@ void dd_SetSolutions(dd_rowrange m_size, dd_colrange d_size, T **A, T **Ts,
                      dd_rowrange objrow, dd_colrange rhscol,
                      dd_LPStatusType LPS, T &optvalue, T *sol, T *dsol,
                      dd_rowset posset, dd_rowrange re, dd_colrange se,
-                     dd_rowindex bflag, [[maybe_unused]] std::ostream& os)
+                     dd_rowindex bflag, [[maybe_unused]] std::ostream &os)
 /*
 Assign the solution vectors to sol,dsol,*optvalue after solving
 the LP.
@@ -3980,7 +3986,6 @@ the LP.
       std::cout << "SetSolutions: LP is dual inconsistent.\n";
     break;
   }
-
 }
 
 template <typename T>
@@ -4061,7 +4066,7 @@ template <typename T> dd_lpdata<double> *dd_LPgmp2LPf(dd_lpdata<T> *lp) {
 template <typename T>
 inline bool dd_LPSolve_data(dd_lpdata<T> *lp, dd_LPSolverType solver,
                             dd_ErrorType *err, data_temp_simplex<T> *data,
-                            size_t const& maxiter, std::ostream& os)
+                            size_t const &maxiter, std::ostream &os)
 /*
 The current version of dd_LPSolve that solves an LP with floating-arithmetics
 first and then with the specified arithimetics if it is GMP.
@@ -4101,7 +4106,8 @@ When LP is dual-inconsistent then *se returns the evidence column.
 }
 
 template <typename T>
-bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err,
+                size_t const &maxiter, std::ostream &os) {
 #ifdef DEBUG_CDD
   os << "CDD: dd_LPSolve, maxiter=" << maxiter << "\n";
 #endif
@@ -4112,7 +4118,8 @@ bool dd_LPSolve(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, siz
 }
 
 template <typename T>
-bool dd_LPSolve0(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err, size_t const& maxiter, std::ostream& os)
+bool dd_LPSolve0(dd_lpdata<T> *lp, dd_LPSolverType solver, dd_ErrorType *err,
+                 size_t const &maxiter, std::ostream &os)
 /*
 The original version of dd_LPSolve that solves an LP with specified
 arithimetics.
@@ -4445,7 +4452,8 @@ dd_lpdata<T> *dd_CreateLP_V_SRedundancy(dd_matrixdata<T> *M,
 
 template <typename T>
 bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
-                  dd_ErrorType *error, data_temp_simplex<T> *data, size_t const& maxiter, std::ostream& os) {
+                  dd_ErrorType *error, data_temp_simplex<T> *data,
+                  size_t const &maxiter, std::ostream &os) {
   /* Checks whether the row itest is redundant for the representation.
      All linearity rows are not checked and considered NONredundant.
      This code works for both H- and V-representations.  A certificate is
@@ -4524,7 +4532,8 @@ bool dd_Redundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
 template <typename T>
 bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
                            T *certificate, dd_rowset *redset,
-                           dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+                           dd_ErrorType *error, size_t const &maxiter,
+                           std::ostream &os) {
   /* This uses the same LP construction as dd_Redundant.  But, while it is
      checking the redundancy of itest, it also tries to find some other variable
      that are redundant (i.e. forced to be nonnegative).  This is expensive as
@@ -4583,7 +4592,8 @@ bool dd_RedundantExtensive(dd_matrixdata<T> *M, dd_rowrange itest,
 }
 
 template <typename T>
-dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+dd_rowset dd_RedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
+                           size_t const &maxiter, std::ostream &os) {
   dd_rowrange i, m;
   dd_rowset redset;
   dd_matrixdata<T> *Mcopy;
@@ -4619,7 +4629,8 @@ _L99:
 
 template <typename T>
 bool dd_MatrixRedundancyRemove(dd_matrixdata<T> **M, dd_rowset *redset,
-                               dd_rowindex *newpos, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+                               dd_rowindex *newpos, dd_ErrorType *error,
+                               size_t const &maxiter, std::ostream &os) {
   /* It returns the set of all redundant rows.  This should be called after all
      implicit linearity are recognized with dd_MatrixCanonicalizeLinearity.
   */
@@ -4730,7 +4741,8 @@ _L99:
 
 template <typename T>
 bool dd_SRedundant(dd_matrixdata<T> *M, dd_rowrange itest, T *certificate,
-                   dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+                   dd_ErrorType *error, size_t const &maxiter,
+                   std::ostream &os) {
   /* Checks whether the row itest is strongly redundant for the representation.
      A row is strongly redundant in H-representation if every point in
      the polyhedron satisfies it with strict inequality.
@@ -4861,7 +4873,8 @@ _L99:
 }
 
 template <typename T>
-dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+dd_rowset dd_SRedundantRows(dd_matrixdata<T> *M, dd_ErrorType *error,
+                            size_t const &maxiter, std::ostream &os) {
   dd_rowrange i, m;
   dd_colrange d;
   dd_rowset redset;
@@ -4900,7 +4913,7 @@ _L99:
 
 template <typename T>
 dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
-                                      size_t const& maxiter, std::ostream &os) {
+                                      size_t const &maxiter, std::ostream &os) {
 #ifdef DEBUG_CDD
   os << "CDD: dd_RedundantRowsViaShooting, step 1 *error=" << *error << "\n";
 #endif
@@ -5124,7 +5137,8 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 template <typename T>
 dd_rowset
 dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
-                                  std::vector<int> const &BlockBelong, size_t const& maxiter, std::ostream& os) {
+                                  std::vector<int> const &BlockBelong,
+                                  size_t const &maxiter, std::ostream &os) {
   dd_rowrange i, m, ired;
   dd_colrange j, k, d;
   T *shootdir;
@@ -5346,7 +5360,8 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
 }
 
 template <typename T>
-dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+dd_setfamily *dd_Matrix2Adjacency(dd_matrixdata<T> *M, dd_ErrorType *error,
+                                  size_t const &maxiter, std::ostream &os) {
   /* This is to generate the (facet) graph of a polyheron (H) V-represented by M
      using LPs. Since it does not use the representation conversion, it should
      work for a large scale problem.
@@ -5386,8 +5401,8 @@ _L999:
 }
 
 template <typename T>
-dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M,
-                                      dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+dd_setfamily *dd_Matrix2WeakAdjacency(dd_matrixdata<T> *M, dd_ErrorType *error,
+                                      size_t const &maxiter, std::ostream &os) {
   /* This is to generate the weak-adjacency (facet) graph of a polyheron (H)
      V-represented by M using LPs. Since it does not use the representation
      conversion, it should work for a large scale problem.
@@ -5429,7 +5444,7 @@ _L999:
 template <typename T>
 bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
                           T *certificate, dd_ErrorType *error,
-                          size_t const& maxiter, std::ostream& os)
+                          size_t const &maxiter, std::ostream &os)
 /* 092 */
 {
   /* Checks whether the row itest is implicit linearity for the representation.
@@ -5514,7 +5529,7 @@ bool dd_ImplicitLinearity(dd_matrixdata<T> *M, dd_rowrange itest,
 template <typename T>
 void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
                                 dd_rowset *imp_linrows, dd_ErrorType *error,
-                                size_t const& maxiter, std::ostream& os)
+                                size_t const &maxiter, std::ostream &os)
 /* 092 */
 {
   /* Checks whether the matrix M constains any implicit linearity at all.
@@ -5635,10 +5650,8 @@ _L999:
 }
 
 template <typename T>
-dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
-                                   dd_ErrorType *error,
-                                   size_t const& maxiter, std::ostream& os)
-{
+dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M, dd_ErrorType *error,
+                                   size_t const &maxiter, std::ostream &os) {
   dd_colrange d;
   dd_rowset imp_linset;
   T *cvec; /* certificate */
@@ -5659,9 +5672,8 @@ dd_rowset dd_ImplicitLinearityRows(dd_matrixdata<T> *M,
 template <typename T>
 bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
                                     dd_rowset *impl_linset, dd_rowindex *newpos,
-                                    dd_ErrorType *error,
-                                    size_t const& maxiter, std::ostream& os)
-{
+                                    dd_ErrorType *error, size_t const &maxiter,
+                                    std::ostream &os) {
   /* This is to recongnize all implicit linearities, and put all linearities at
      the top of the matrix.    All implicit linearities will be returned by
      *impl_linset.
@@ -5710,7 +5722,8 @@ bool dd_MatrixCanonicalizeLinearity(dd_matrixdata<T> **M,
 template <typename T>
 bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
                            dd_rowset *redset, dd_rowindex *newpos,
-                           dd_ErrorType *error, size_t const& maxiter, std::ostream& os) {
+                           dd_ErrorType *error, size_t const &maxiter,
+                           std::ostream &os) {
   /* This is to find a canonical representation of a matrix *M by
      recognizing all implicit linearities and all redundancies.
      All implicit linearities will be returned by *impl_linset and
@@ -5738,7 +5751,8 @@ bool dd_MatrixCanonicalize(dd_matrixdata<T> **M, dd_rowset *impl_linset,
       revpos[k] = i; /* inverse of *newpos[] */
   }
 
-  success = dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error, maxiter, os);
+  success =
+      dd_MatrixRedundancyRemove(M, &redset1, &newpos1, error, maxiter, os);
 
   if (!success)
     goto _L99;
@@ -5764,7 +5778,8 @@ _L99:
 
 template <typename T>
 bool dd_ExistsRestrictedFace(dd_matrixdata<T> *M, dd_rowset R, dd_rowset S,
-                             dd_ErrorType *err, size_t const& maxiter, std::ostream& os)
+                             dd_ErrorType *err, size_t const &maxiter,
+                             std::ostream &os)
 /* 0.94 */
 {
   /* This function checkes if there is a point that satifies all the constraints
@@ -5910,7 +5925,7 @@ void dd_BasisStatusMaximize(dd_rowrange m_size, dd_colrange d_size, T **A,
                             dd_colindex nbindex, dd_rowrange re, dd_colrange se,
                             dd_colrange *nse, long *pivots, bool *found,
                             bool *LPScorrect, data_temp_simplex<T> *data,
-                            std::ostream & os)
+                            std::ostream &os)
 /*  This is just to check whether the status LPS of the basis given by
 nbindex with extra certificates se or re is correct.  It is done
 by recomputing the basis inverse matrix T.  It does not solve the LP
@@ -6057,7 +6072,7 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
                             dd_colindex nbindex, dd_rowrange re, dd_colrange se,
                             dd_colrange *nse, long *pivots, bool *found,
                             bool *LPScorrect, data_temp_simplex<T> *data,
-                            std::ostream & os) {
+                            std::ostream &os) {
   dd_colrange j;
 
   for (j = 1; j <= d_size; j++)
@@ -6077,7 +6092,7 @@ void dd_BasisStatusMinimize(dd_rowrange m_size, dd_colrange d_size, T **A,
 
 template <typename T>
 void dd_BasisStatus(dd_lpdata<double> *lpf, dd_lpdata<T> *lp, bool *LPScorrect,
-                    data_temp_simplex<T> *data, std::ostream& os) {
+                    data_temp_simplex<T> *data, std::ostream &os) {
   int i;
   dd_colrange se, j;
   bool basisfound;
@@ -7808,7 +7823,8 @@ template <typename T> void dd_InitialDataSetup(dd_conedata<T> *cone) {
 }
 
 template <typename T>
-bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err,
+                       size_t const &maxiter, std::ostream &os) {
   bool answer = false;
 
   *err = dd_NoError;
@@ -7841,7 +7857,8 @@ bool dd_CheckEmptiness(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t cons
 }
 
 template <typename T>
-bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err,
+                          size_t const &maxiter, std::ostream &os) {
   dd_conedata<T> *cone = nullptr;
   bool found = false;
 
@@ -7877,7 +7894,8 @@ bool dd_DoubleDescription(dd_polyhedradata<T> *poly, dd_ErrorType *err, size_t c
 
 template <typename T>
 bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
-                           dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+                           dd_ErrorType *err, size_t const &maxiter,
+                           std::ostream &os) {
   dd_conedata<T> *cone = nullptr;
   bool found = false;
 
@@ -7914,7 +7932,8 @@ bool dd_DoubleDescription2(dd_polyhedradata<T> *poly, dd_RowOrderType horder,
 
 template <typename T>
 bool dd_DDInputAppend(dd_polyhedradata<T> **poly, dd_matrixdata<T> *M,
-                      dd_ErrorType *err, size_t const& maxiter, std::ostream& os) {
+                      dd_ErrorType *err, size_t const &maxiter,
+                      std::ostream &os) {
   /* This is imcomplete.  It simply solves the problem from scratch.  */
 
   if ((*poly)->child != nullptr)
@@ -8072,7 +8091,6 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
   return ListIdx;
 }
 
-
 template <typename T>
 std::vector<int>
 RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
@@ -8084,7 +8102,8 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   size_t maxiter = 0;
-  dd_rowset redset = dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong, maxiter, os);
+  dd_rowset redset =
+      dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong, maxiter, os);
   if (err != dd_NoError) {
     std::cerr << "RedundancyReductionClarksonBlocks internal CDD error\n";
     throw TerminalException{1};
@@ -8102,8 +8121,9 @@ RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
 
 template <typename T>
 std::pair<MyMatrix<T>, Face>
-KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(
-    MyMatrix<T> const &FAC, size_t const& maxiter, std::ostream &os) {
+KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const &FAC,
+                                                        size_t const &maxiter,
+                                                        std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
@@ -8238,7 +8258,8 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
     if (FACred.rows() > 0) {
       size_t maxiter = 0;
       std::pair<MyMatrix<T>, Face> pair_loc =
-        KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred, maxiter, os);
+          KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(FACred,
+                                                                  maxiter, os);
       os << "CDD: pair_loc.first=\n";
       WriteMatrix(os, pair_loc.first);
     }
@@ -8276,7 +8297,7 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
 }
 
 template <typename T>
-MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream& os) {
+MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbCol = TheEXT.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
@@ -8293,7 +8314,7 @@ MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream& os) {
 }
 
 template <typename T>
-vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream& os) {
+vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
@@ -8309,7 +8330,8 @@ vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream& os) {
 }
 
 template <typename T, typename Fprocess>
-void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process, std::ostream& os) {
+void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process,
+                             std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
@@ -8507,25 +8529,24 @@ std::optional<LpSolution<T>> GetLpSolutionFromLpData(
   return eSol;
 }
 
-template<typename T>
-bool is_lifting_possible(cdd::dd_lpdata<T> *lp) {
+template <typename T> bool is_lifting_possible(cdd::dd_lpdata<T> *lp) {
   if (lp->LPS != cdd::dd_Optimal) {
-    // If we do not have an optimal solution, then we cannot have a configuration
-    // of inequalities that get us the optimal vertex.
+    // If we do not have an optimal solution, then we cannot have a
+    // configuration of inequalities that get us the optimal vertex.
     return false;
   }
   cdd::dd_colrange j, d = lp->d;
   for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
     if (idx <= 0) {
-      // A negative index means that we do not have a full configuration of vectors
-      // and so the solution of the linear system strategy will not work.
+      // A negative index means that we do not have a full configuration of
+      // vectors and so the solution of the linear system strategy will not
+      // work.
       return false;
     }
   }
   return true;
 }
-
 
 template <typename T, typename Tfloat>
 std::optional<LpSolution<T>>
@@ -8552,7 +8573,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   for (j = 1; j < d; j++) {
     long idx = lp->nbindex[j + 1];
 #ifdef DEBUG_CDD_DISABLE
-    os << "CDD: j=" << static_cast<int>(j) << "/" << static_cast<int>(d) << " idx=" << static_cast<int>(idx) << " |EXT|=" << EXT.rows() << " / " << EXT.cols() << "\n";
+    os << "CDD: j=" << static_cast<int>(j) << "/" << static_cast<int>(d)
+       << " idx=" << static_cast<int>(idx) << " |EXT|=" << EXT.rows() << " / "
+       << EXT.cols() << "\n";
 #endif
     V(j - 1) = EXT(idx - 1, 0);
     for (i = 0; i < d - 1; i++) {
@@ -8667,9 +8690,9 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 }
 
 template <typename T>
-LpSolution<T>
-CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
-                               std::ostream &os) {
+LpSolution<T> CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT,
+                                             MyVector<T> const &eVect,
+                                             std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   cdd::dd_ErrorType error = cdd::dd_NoError;
   cdd::dd_matrixdata<T> *M;
@@ -8695,7 +8718,7 @@ CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #ifdef DEBUG_CDD
     if (is_lifting_possible(lp)) {
       std::optional<LpSolution<T>> optB =
-        LiftFloatingPointSolution(EXT, eVect, lp, os);
+          LiftFloatingPointSolution(EXT, eVect, lp, os);
       if (optB) {
         LpSolution<T> const &eSolB = *optB;
         if (eSolB.OptimalValue != eSolA.OptimalValue) {
@@ -8703,23 +8726,27 @@ CDD_LinearProgramming_exact_V1(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
           throw TerminalException{1};
         }
         if (eSolA.DualSolution != eSolB.DualSolution) {
-          std::cerr << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution)
-                    << "\n";
-          std::cerr << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution)
-                    << "\n";
+          std::cerr << "CDD: DualSolution(A)="
+                    << StringVector(eSolA.DualSolution) << "\n";
+          std::cerr << "CDD: DualSolution(B)="
+                    << StringVector(eSolB.DualSolution) << "\n";
           throw TerminalException{1};
         }
         if (eSolA.DirectSolution != eSolB.DirectSolution) {
-          std::cerr << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
-                    << "\n";
-          std::cerr << "CDD_ DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
-                    << "\n";
+          std::cerr << "CDD: DirectSolution(A)="
+                    << StringVector(eSolA.DirectSolution) << "\n";
+          std::cerr << "CDD_ DirectSolution(B)="
+                    << StringVector(eSolB.DirectSolution) << "\n";
           throw TerminalException{1};
         }
-        os << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution) << "\n";
-        os << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution) << "\n";
-        os << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution) << "\n";
-        os << "CDD: DirectSolution(B)=" << StringVector(eSolB.DirectSolution) << "\n";
+        os << "CDD: DualSolution(A)=" << StringVector(eSolA.DualSolution)
+           << "\n";
+        os << "CDD: DualSolution(B)=" << StringVector(eSolB.DualSolution)
+           << "\n";
+        os << "CDD: DirectSolution(A)=" << StringVector(eSolA.DirectSolution)
+           << "\n";
+        os << "CDD: DirectSolution(B)=" << StringVector(eSolB.DirectSolution)
+           << "\n";
       } else {
         std::cerr << "CDD: We should have been able to lift the solution\n";
         throw TerminalException{1};
@@ -8766,7 +8793,8 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 #endif
   if (lp->LPS == cdd::dd_TooManyIterations) {
 #ifdef DEBUG_CDD
-    os << "CDD: Error is TooManyIterations, calling CDD_LinearProgramming_exact_V1\n";
+    os << "CDD: Error is TooManyIterations, calling "
+          "CDD_LinearProgramming_exact_V1\n";
 #endif
     dd_FreeLPData(lp);
     return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
@@ -8779,7 +8807,7 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     os << "CDD: is_lifting_possible = true\n";
 #endif
     std::optional<LpSolution<T>> optB =
-      LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
+        LiftFloatingPointSolution<T, Tfloat>(EXT, eVect, lp, os);
 #ifdef DEBUG_CDD
     os << "CDD: We have optB\n";
 #endif
@@ -8800,7 +8828,9 @@ CDD_LinearProgramming_exact_V2(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
 }
 
 template <typename T>
-LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT, MyVector<T> const &eVect, std::ostream &os) {
+LpSolution<T> CDD_LinearProgramming(MyMatrix<T> const &EXT,
+                                    MyVector<T> const &eVect,
+                                    std::ostream &os) {
   if (EXT.cols() < 4) {
     return CDD_LinearProgramming_exact_V1(EXT, eVect, os);
   }

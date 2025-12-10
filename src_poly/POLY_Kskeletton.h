@@ -30,7 +30,6 @@
 #define TIMINGS_POLY_KSKELETTON
 #endif
 
-
 template <typename T>
 MyVector<T> SumMatrixLineSubset(MyMatrix<T> const &eMat, Face const &eList) {
   int nbCol = eMat.cols();
@@ -454,7 +453,8 @@ EnumerationFaces_Ffinal(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
                                           decltype(f_final)>(
         TheGRP, FAC, LevSearch, f_spann, f_final, ComputeTotalNumberFaces, os);
   }
-  std::cerr << "We failed to find a matching method_spann=" << method_spann << "\n";
+  std::cerr << "We failed to find a matching method_spann=" << method_spann
+            << "\n";
   throw TerminalException{1};
 }
 
@@ -485,7 +485,8 @@ EnumerationFaces(Tgroup const &TheGRP, MyMatrix<T> const &FAC,
     return EnumerationFaces_Ffinal(TheGRP, FAC, EXT, LevSearch, method_spann,
                                    f_final, ComputeTotalNumberFaces, os);
   }
-  std::cerr << "We failed to find a matching method_final=" << method_final << "\n";
+  std::cerr << "We failed to find a matching method_final=" << method_final
+            << "\n";
   throw TerminalException{1};
 }
 
@@ -517,10 +518,10 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
       }
     }
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(TestMat);
-    MyMatrix<T> const& NSP = eSelect.NSP;
+    MyMatrix<T> const &NSP = eSelect.NSP;
     int nbEqua = NSP.rows();
     std::vector<int> eCand, eCandCompl;
-    auto f_test=[&](int const& kRow) -> bool {
+    auto f_test = [&](int const &kRow) -> bool {
       for (int iEqua = 0; iEqua < nbEqua; iEqua++) {
         T eSum(0);
         for (int iCol = 0; iCol < nbCol; iCol++) {
@@ -577,7 +578,7 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
     if (eResult.eTestExist) {
       MyVector<T> const &V = *eResult.TheRelat;
       for (int iElt = 0; iElt < nbEltCompl; iElt++) {
-        T const& eVal = V(iElt);
+        T const &eVal = V(iElt);
         if (eVal > 0) {
           eVectCand[eCandCompl[iElt]] = 1;
         }
@@ -615,7 +616,7 @@ void PrintListOrb_GAP(std::ostream &os_out,
       os_out << ",";
     }
     os_out << "[";
-    std::vector<int> const& eOrb = ListOrb[iOrb];
+    std::vector<int> const &eOrb = ListOrb[iOrb];
     size_t len = eOrb.size();
     for (size_t i = 0; i < len; i++) {
       if (i > 0) {
@@ -658,8 +659,8 @@ void PrintListListOrb_IntGAP(std::ostream &os_out,
   os_out << "];\n";
 }
 
-void OutputFaces_stream(const std::vector<vectface> &TheOutput, std::ostream &os_out,
-                      const std::string &OutFormat) {
+void OutputFaces_stream(const std::vector<vectface> &TheOutput,
+                        std::ostream &os_out, const std::string &OutFormat) {
   if (OutFormat == "GAP") {
     os_out << "return ";
     os_out << "[";
@@ -841,14 +842,14 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
 }
 
 template <typename T, typename Tgroup>
-void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
+void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: Reading PROC\n";
 #endif
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string const& FACfile = BlockPROC.get_string("FACfile");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string const &FACfile = BlockPROC.get_string("FACfile");
   MyMatrix<T> FAC = ReadMatrixFile<T>(FACfile);
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: |FAC|=" << FAC.rows() << " / " << FAC.cols() << "\n";
@@ -866,8 +867,7 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
   //
   std::string method_spann = BlockPROC.get_string("method_spann");
   std::string method_final = BlockPROC.get_string("method_final");
-  bool ComputeTotalNumberFaces =
-    BlockPROC.get_bool("ComputeTotalNumberFaces");
+  bool ComputeTotalNumberFaces = BlockPROC.get_bool("ComputeTotalNumberFaces");
 #ifdef DEBUG_POLY_KSKELETTON
   os << "SKEL: method_final=" << method_final << "\n";
   os << "SKEL: method_spann=" << method_spann << "\n";
@@ -910,12 +910,12 @@ void MainFunctionFaceLattice_A(FullNamelist const &eFull, std::ostream& os) {
       EnumerationFaces(GRP, FAC, EXT, LevSearch, method_spann, method_final,
                        ComputeTotalNumberFaces, os);
   //
-  auto f_print=[&](std::ostream& os_out) -> void {
+  auto f_print = [&](std::ostream &os_out) -> void {
     OutputFaces_stream(TheOutput, os_out, OutFormat);
   };
   print_stderr_stdout_file(OutFile, f_print);
   //
-  SingleBlock const& BlockGROUP = eFull.get_block("GROUP");
+  SingleBlock const &BlockGROUP = eFull.get_block("GROUP");
   bool ComputeAutGroup = BlockGROUP.get_bool("ComputeAutGroup");
   if (ComputeAutGroup) {
     //    using Tgr = GraphBitset;

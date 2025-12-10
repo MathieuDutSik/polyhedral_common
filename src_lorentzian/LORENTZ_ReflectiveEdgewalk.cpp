@@ -8,18 +8,20 @@
 #include "edgewalk.h"
 // clang-format on
 
-
-template<typename T, typename Tint>
-void process(std::string const& MatFile, std::string const& OutFormat, std::ostream& os_out) {
+template <typename T, typename Tint>
+void process(std::string const &MatFile, std::string const &OutFormat,
+             std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
   MyMatrix<T> LorMat = ReadMatrixFile<T>(MatFile);
   //
-  ResultEdgewalk<T,Tint> re = StandardEdgewalkAnalysis<T,Tint,Tgroup>(LorMat, std::cerr);
+  ResultEdgewalk<T, Tint> re =
+      StandardEdgewalkAnalysis<T, Tint, Tgroup>(LorMat, std::cerr);
   bool ComputeAllSimpleRoots = true;
-  PrintResultEdgewalk(LorMat, re, os_out, OutFormat, ComputeAllSimpleRoots, std::cerr);
+  PrintResultEdgewalk(LorMat, re, os_out, OutFormat, ComputeAllSimpleRoots,
+                      std::cerr);
 }
 
 int main(int argc, char *argv[]) {
@@ -29,7 +31,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "LORENTZ_ReflectiveEdgewalk [arith] [MatFile]\n";
       std::cerr << "     or\n";
-      std::cerr << "LORENTZ_ReflectiveEdgewalk [arith] [MatFile] [OutFormat] [OutFile]\n";
+      std::cerr << "LORENTZ_ReflectiveEdgewalk [arith] [MatFile] [OutFormat] "
+                   "[OutFile]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -40,11 +43,11 @@ int main(int argc, char *argv[]) {
       OutFormat = argv[3];
       OutFile = argv[4];
     }
-    auto f=[&](std::ostream& os_out) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(MatFile, OutFormat, os_out);
+        return process<T, Tint>(MatFile, OutFormat, os_out);
       }
       std::cerr << "Failed to find matching entry for arith=" << arith << "\n";
       throw TerminalException{1};

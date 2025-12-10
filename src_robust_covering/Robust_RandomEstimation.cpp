@@ -6,14 +6,16 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void process_B(size_t const& n_iter, std::string const& MatFile, std::string const& OutFormat, std::string const& OutFile) {
+void process_B(size_t const &n_iter, std::string const &MatFile,
+               std::string const &OutFormat, std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
 
-  T sqr_dist = random_estimation_robust_covering<T,Tint>(GramMat, n_iter, std::cerr);
+  T sqr_dist =
+      random_estimation_robust_covering<T, Tint>(GramMat, n_iter, std::cerr);
   T det = DeterminantMat(GramMat);
   int dim = GramMat.rows();
   ResultCov<T> rc = ComputeCoveringDensityFromDimDetCov(dim, det, sqr_dist);
-  auto f_print=[&](std::ostream& osf) -> void {
+  auto f_print = [&](std::ostream &osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return ";
       osf << to_stringGAP(rc);
@@ -27,13 +29,13 @@ void process_B(size_t const& n_iter, std::string const& MatFile, std::string con
   print_stderr_stdout_file(OutFile, f_print);
 }
 
-void process_A(std::string const &arithmetic,
-               size_t const& n_iter,
-               std::string MatFile, std::string OutFormat, std::string OutFile) {
+void process_A(std::string const &arithmetic, size_t const &n_iter,
+               std::string MatFile, std::string OutFormat,
+               std::string OutFile) {
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
-    return process_B<T,Tint>(n_iter, MatFile, OutFormat, OutFile);
+    return process_B<T, Tint>(n_iter, MatFile, OutFormat, OutFile);
   }
   std::cerr << "process_A failure: No matching entry for arithmetic_mat\n";
   throw TerminalException{1};
@@ -45,7 +47,8 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile] "
+                   "[OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
       std::cerr << "Robust_RandomEstimation arithmetic n_iter [MaFile]\n";
       std::cerr << "allowed choices:\n";

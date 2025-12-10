@@ -43,21 +43,23 @@ std::optional<MyMatrix<Tint>> SHORT_TestEquivalence(MyMatrix<Tint> const &M1,
                                                     std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M1, os);
   ShortIso<T, Tint> eRec2 = SHORT_GetInformation<T, Tint>(M2, os);
-  return ArithmeticEquivalence_inner<T,Tint>(eRec1.GramMat, eRec1.SHVdisc, eRec2.GramMat, eRec2.SHVdisc, os);
+  return ArithmeticEquivalence_inner<T, Tint>(eRec1.GramMat, eRec1.SHVdisc,
+                                              eRec2.GramMat, eRec2.SHVdisc, os);
 }
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
                                                 std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
-  return ArithmeticAutomorphismGroup_inner<T,Tint, Tgroup>(eRec1.GramMat, eRec1.SHVdisc, os);
+  return ArithmeticAutomorphismGroup_inner<T, Tint, Tgroup>(eRec1.GramMat,
+                                                            eRec1.SHVdisc, os);
 }
 
 template <typename T, typename Tint>
-MyMatrix<Tint> SHORT_Canonicalize(MyMatrix<Tint> const &M,
-                                  std::ostream &os) {
+MyMatrix<Tint> SHORT_Canonicalize(MyMatrix<Tint> const &M, std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
-  Canonic_PosDef<T, Tint> eRec2 = ComputeCanonicalForm_inner<T, Tint>(eRec1.GramMat, eRec1.SHVdisc, os);
+  Canonic_PosDef<T, Tint> eRec2 =
+      ComputeCanonicalForm_inner<T, Tint>(eRec1.GramMat, eRec1.SHVdisc, os);
   MyMatrix<Tint> BasisInv = Inverse(eRec2.Basis);
   MyMatrix<Tint> M_can = M * BasisInv;
   return M_can;

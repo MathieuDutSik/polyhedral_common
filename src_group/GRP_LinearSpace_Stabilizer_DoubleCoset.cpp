@@ -12,7 +12,8 @@ int main(int argc, char *argv[]) {
     if (argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinearSpace_Stabilizer_DoubleCoset [GRP_file] [SPA_file] [VGRP_file] [OUT_file]\n";
+      std::cerr << "GRP_LinearSpace_Stabilizer_DoubleCoset [GRP_file] "
+                   "[SPA_file] [VGRP_file] [OUT_file]\n";
       std::cerr << "\n";
       std::cerr << "GRP_file    : The file containing the group\n";
       std::cerr << "SPA_file    : The file containing the space\n";
@@ -40,7 +41,8 @@ int main(int argc, char *argv[]) {
     int n = eLatt.rows();
     GeneralMatrixGroupHelper<T, Telt, TintGroup> helper{n};
     std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>> pair =
-      LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrGen, helper, eLatt, V_gens, std::cerr);
+        LinearSpace_Stabilizer_DoubleCoset<T, Tgroup>(ListMatrGen, helper,
+                                                      eLatt, V_gens, std::cerr);
     //
     std::ofstream os(OUT_file);
     os << "return rec(GRPmatr:=Group(";
@@ -48,7 +50,8 @@ int main(int argc, char *argv[]) {
     os << "), ListCos:=";
     WriteListMatrixGAP(os, pair.second);
     os << ");\n";
-    std::cerr << "Normal termination of GRP_LinearSpace_Stabilizer_DoubleCoset\n";
+    std::cerr
+        << "Normal termination of GRP_LinearSpace_Stabilizer_DoubleCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinearSpace_Stabilizer_DoubleCoset\n";
     exit(e.eVal);

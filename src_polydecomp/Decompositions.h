@@ -134,7 +134,8 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
   // Computing the isomorphism
   using Tfield = typename overlying_field<Tint>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord<T, Tfield, Tidx>(eConcat_T, fConcat_T, eCanonicReord, fCanonicReord, os);
+      IsomorphismFromCanonicReord<T, Tfield, Tidx>(
+          eConcat_T, fConcat_T, eCanonicReord, fCanonicReord, os);
   if (!IsoInfo) {
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "Failed isomorphism at the graph level\n";
@@ -168,7 +169,8 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   MyMatrix<Tint> P = M * G;
   MyMatrix<Tint> Spann;
   MyMatrix<Tint> Concat = M;
-  MyMatrix<Tint> NSP = SublatticeBasisReduction(NullspaceIntMat(TransposedMat(P)), os);
+  MyMatrix<Tint> NSP =
+      SublatticeBasisReduction(NullspaceIntMat(TransposedMat(P)), os);
   if (NSP.rows() > 0) {
     MyMatrix<Tint> Gres = -NSP * G * NSP.transpose();
     MyMatrix<T> Gres_T = UniversalMatrixConversion<T, Tint>(Gres);
@@ -909,7 +911,8 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
   std::cerr << "|DECOMP: SetFAC|=" << time << "\n";
 #endif
 #ifdef DEBUG_POLYHEDRAL_DECOMPOSITIONS
-  std::cerr << "DECOMP: SetFAC n_size1=" << n_size1 << " |SetFAC|=" << SetFAC.size() << "\n";
+  std::cerr << "DECOMP: SetFAC n_size1=" << n_size1
+            << " |SetFAC|=" << SetFAC.size() << "\n";
 #endif
   // Building the FAC matrix
   int n_fac_final = SetFAC.size();

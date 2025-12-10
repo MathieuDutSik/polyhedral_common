@@ -1871,8 +1871,9 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig) {
   lrs_free_dat(Q);
 }
 
-template<typename T, typename Ftrig, typename Ffacet>
-void Kernel_Simplices_Facets_cond(MyMatrix<T> const& EXT, Ftrig const& f_trig, Ffacet const& f_facet) {
+template <typename T, typename Ftrig, typename Ffacet>
+void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
+                                  Ffacet const &f_facet) {
   lrs_dic<T> *P;
   lrs_dat<T> *Q;
   initLRS(EXT, P, Q);
@@ -1905,8 +1906,6 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const& EXT, Ftrig const& f_trig, F
   lrs_free_dic(P, Q);
   lrs_free_dat(Q);
 }
-
-
 
 template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det(0);
@@ -1966,7 +1965,8 @@ template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
 }
 
 // Gets the triangulation and the facets at the same time.
-template <typename T> std::pair<vectface,vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
+template <typename T>
+std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
   vectface vf_trig(nbRow);
   vectface vf_facet(nbRow);
@@ -1985,8 +1985,8 @@ template <typename T> std::pair<vectface,vectface> GetTriangulationFacet(MyMatri
     vf_trig.push_back(trig);
     return true;
   };
-  auto f_facet=[&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-               [[maybe_unused]] T *out) -> bool {
+  auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
+                     [[maybe_unused]] T *out) -> bool {
     set_face(P, Q, col, facet);
     vf_facet.push_back(facet);
     return true;
@@ -2026,7 +2026,7 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   T eScal;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-               [[maybe_unused]] T *out) -> void {
+                     [[maybe_unused]] T *out) -> void {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
@@ -2042,8 +2042,9 @@ template <typename T> MyMatrix<T> DualDescription(MyMatrix<T> const &EXT) {
   int nbColRed = nbCol - shift;
   std::vector<MyVector<T>> ListVect;
   MyVector<T> V(nbColRed);
-  auto f_facet = [&]([[maybe_unused]] lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q,
-               [[maybe_unused]] int const &col, T *out) -> void {
+  auto f_facet = [&]([[maybe_unused]] lrs_dic<T> *P,
+                     [[maybe_unused]] lrs_dat<T> *Q,
+                     [[maybe_unused]] int const &col, T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
@@ -2062,7 +2063,8 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   T eScal;
-  auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col, T *out) -> void {
+  auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
+                     T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     set_face(P, Q, col, pair.first);
@@ -2081,7 +2083,7 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
   int nbFound = 0;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
-               [[maybe_unused]] T *out) -> bool {
+                     [[maybe_unused]] T *out) -> bool {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
     nbFound++;
@@ -2108,7 +2110,7 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
   Tring eScal;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
-               [[maybe_unused]] Tring *out) -> void {
+                     [[maybe_unused]] Tring *out) -> void {
     set_face(P, Q, col, face);
     ListIncd.push_back(face);
   };
@@ -2135,8 +2137,8 @@ MyMatrix<T> DualDescription_reduction(MyMatrix<T> const &EXT) {
   std::vector<MyVector<T>> ListVect;
   MyVector<T> V(nbColRed);
   auto f_facet = [&]([[maybe_unused]] lrs_dic<Tring> *P,
-               [[maybe_unused]] lrs_dat<Tring> *Q,
-               [[maybe_unused]] int const &col, Tring *out) -> void {
+                     [[maybe_unused]] lrs_dat<Tring> *Q,
+                     [[maybe_unused]] int const &col, Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       V(i) = out[i + shift];
     ListVect.push_back(V);
@@ -2165,7 +2167,7 @@ void DualDescriptionFaceIneq_reduction(MyMatrix<T> const &EXT,
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
   Tring eScal;
   auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
-               Tring *out) -> void {
+                     Tring *out) -> void {
     for (int i = 0; i < nbColRed; i++)
       pair.second(i) = out[i + shift];
     set_face(P, Q, col, pair.first);

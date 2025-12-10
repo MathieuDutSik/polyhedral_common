@@ -420,9 +420,8 @@ void PrintDoubleCosetCasesTestProblem(
 }
 
 template <typename Tgroup, typename Tface_orbitsize>
-void PrintAllRawDoubleCosetEntries(
-    Tgroup const &BigGRP, Tgroup const &SmaGRP,
-    const Tface_orbitsize &ListFaceOrbitsize) {
+void PrintAllRawDoubleCosetEntries(Tgroup const &BigGRP, Tgroup const &SmaGRP,
+                                   const Tface_orbitsize &ListFaceOrbitsize) {
   using Tint = typename Tgroup::Tint;
   size_t nbOrbit = ListFaceOrbitsize.size();
   std::string strSizeV = std::to_string(SmaGRP.size());
@@ -432,7 +431,8 @@ void PrintAllRawDoubleCosetEntries(
     Face const &f = pair.first;
     Tgroup eStab = BigGRP.Stabilizer_OnSets(f);
     std::string strSizeU = std::to_string(eStab.size());
-    std::string Prefix = "RawDoubleCoset_" + strSizeG + "_" + strSizeU + "_" + strSizeV + "_-_";
+    std::string Prefix =
+        "RawDoubleCoset_" + strSizeG + "_" + strSizeU + "_" + strSizeV + "_-_";
     std::string FileOut = FindAvailableFileFromPrefix(Prefix);
     std::ofstream os(FileOut);
     WriteGroup(os, BigGRP);
@@ -440,9 +440,6 @@ void PrintAllRawDoubleCosetEntries(
     WriteGroup(os, SmaGRP);
   }
 }
-
-
-
 
 template <typename Tgroup, typename Tface_orbitsize, typename Fterminal>
 vectface DoubleCosetDescription_Representation_Block(
@@ -622,7 +619,7 @@ vectface DoubleCosetDescription_DoubleCoset_Block(
     if (f_terminal())
       break;
     Tint const &TotalSize = pair.second;
-    auto get_stab=[&]() -> Tgroup {
+    auto get_stab = [&]() -> Tgroup {
       if (TotalSize < BigGRP.size()) {
         // Non-trivial stabilizer, we recompute.
         return BigGRP.Stabilizer_OnSets(eSet);
@@ -632,32 +629,38 @@ vectface DoubleCosetDescription_DoubleCoset_Block(
       }
     };
     Tgroup eStab = get_stab();
-    for (auto & eCos : dcc_u.double_cosets(eStab)) {
+    for (auto &eCos : dcc_u.double_cosets(eStab)) {
       Face eSetRepr = OnFace(eSet, eCos);
       eListSma.push_back(eSetRepr);
     }
 #ifdef DEBUG_DOUBLE_COSET
     Tint ord = BigGRP.size() / eStab.size();
     if (TotalSize != ord) {
-      std::cerr << "We have TotalSize=" << TotalSize << " but ord=" << ord << " maybe inconsistent database\n";
+      std::cerr << "We have TotalSize=" << TotalSize << " but ord=" << ord
+                << " maybe inconsistent database\n";
       throw TerminalException{1};
     }
     Tint sum_size = 0;
     std::vector<Face> LRepr;
-    for (auto & eCos : dcc_u.double_cosets(eStab)) {
+    for (auto &eCos : dcc_u.double_cosets(eStab)) {
       Face eSetRepr = OnFace(eSet, eCos);
       LRepr.push_back(eSetRepr);
       sum_size += SmaGRP.OrbitSize_OnSets(eSetRepr);
     }
     if (TotalSize != sum_size) {
-      std::cerr << "We have TotalSize=" << TotalSize << " but sum_size=" << sum_size << " therefore double coset problem\n";
+      std::cerr << "We have TotalSize=" << TotalSize
+                << " but sum_size=" << sum_size
+                << " therefore double coset problem\n";
       throw TerminalException{1};
     }
-    for (size_t i_repr=0; i_repr<LRepr.size(); i_repr++) {
-      for (size_t j_repr=i_repr+1; j_repr<LRepr.size(); j_repr++) {
-        std::optional<Telt> opt = SmaGRP.RepresentativeAction_OnSets(LRepr[i_repr], LRepr[j_repr]);
+    for (size_t i_repr = 0; i_repr < LRepr.size(); i_repr++) {
+      for (size_t j_repr = i_repr + 1; j_repr < LRepr.size(); j_repr++) {
+        std::optional<Telt> opt =
+            SmaGRP.RepresentativeAction_OnSets(LRepr[i_repr], LRepr[j_repr]);
         if (opt) {
-          std::cerr << "Found an equivalence between orbit representative i_repr=" << i_repr << " and j_repr=" << j_repr << "\n";
+          std::cerr
+              << "Found an equivalence between orbit representative i_repr="
+              << i_repr << " and j_repr=" << j_repr << "\n";
           std::cerr << "That should not happen\n";
           throw TerminalException{1};
         }
@@ -776,7 +779,8 @@ OrbitSplittingListOrbitKernel_spec(Tgroup const &BigGRP, Tgroup const &SmaGRP,
   };
   vectface eListSma = get_split();
 #ifdef DEBUG_DOUBLE_COSET
-  os << "DCOS: |eListBig|=" << ListFaceOrbitsize.size() << " |eListSma|=" << eListSma.size() << "\n";
+  os << "DCOS: |eListBig|=" << ListFaceOrbitsize.size()
+     << " |eListSma|=" << eListSma.size() << "\n";
 #endif
 #ifdef TIMINGS_DOUBLE_COSET
   os << "|DCOS: OrbitSplittingListOrbitKernel_spec|=" << time << "\n";
@@ -884,7 +888,8 @@ vectface OrbitSplittingListOrbit(Tgroup const &BigGRP, Tgroup const &SmaGRP,
 template <typename Tgroup>
 void OrbitSplittingPerfectFacet(Tgroup const &BigGRP, Tgroup const &SmaGRP,
                                 const vectface &eListBig, std::ostream &os2,
-                                std::ostream &os3, [[maybe_unused]] std::ostream &os_err) {
+                                std::ostream &os3,
+                                [[maybe_unused]] std::ostream &os_err) {
   using Tint = typename Tgroup::Tint;
   using Telt = typename Tgroup::Telt;
 #ifdef DEBUG_DOUBLE_COSET

@@ -19,7 +19,7 @@
 
 template <typename T, typename Tint>
 std::vector<TypePerfectExch<Tint>>
-GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
+GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream &os) {
   MyMatrix<T> eMat_T = UniversalMatrixConversion<T, Tint>(eObjIn.eMat);
   Tshortest<T, Tint> eRec = T_ShortestVector<T, Tint>(eMat_T, os);
   int n = eRec.SHV.cols();
@@ -40,9 +40,10 @@ GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
       Vexpand(i) = eFacet(i) / Wvect(i);
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePairAdj =
-      Flipping_Perfect<T, Tint>(eMat_T, eMatDir, os);
+        Flipping_Perfect<T, Tint>(eMat_T, eMatDir, os);
     int incd = ePairAdj.second.SHV.rows() / 2;
-    MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
+    MyMatrix<T> eMat2 =
+        ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
     MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
     MyMatrix<Tint> eMat4 = UniversalMatrixConversion<Tint, T>(eMat3);
     TypePerfectExch<Tint> RecMat{incd, eMat4};
@@ -52,24 +53,26 @@ GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
 }
 
 template <typename T, typename Tint>
-void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist const &eFull) {
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm,
+                               FullNamelist const &eFull) {
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   int n = BlockDATA.get_int("n");
   int MaxNumberFlyingMessage = BlockDATA.get_int("MaxNumberFlyingMessage");
   int MaxIncidenceTreating = BlockDATA.get_int("MaxIncidenceTreating");
   int MaxStoredUnsentMatrices = BlockDATA.get_int("MaxStoredUnsentMatrices");
-  
+
   int irank = comm.rank();
   int size = comm.size();
   std::string eFileO = "LOG_" + std::to_string(irank);
   std::ofstream os(eFileO);
-  os << "PERF_MPI_EnumeratePerfectCones: Initial log entry for rank " << irank << std::endl;
-  
+  os << "PERF_MPI_EnumeratePerfectCones: Initial log entry for rank " << irank
+     << std::endl;
+
   // Initialize the MPI communication structures
   static int tag_new_form = 37;
   std::vector<boost::mpi::request> ListRequest(MaxNumberFlyingMessage);
   std::vector<int> RequestStatus(MaxNumberFlyingMessage, 0);
-  
+
   auto GetFreeIndex = [&]() -> int {
     for (int u = 0; u < MaxNumberFlyingMessage; u++) {
       if (RequestStatus[u] == 0)
@@ -86,13 +89,13 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
     }
     return -1;
   };
-  
+
   // Data structures for managing perfect forms
   std::unordered_map<TypePerfectExch<Tint>, int> ListCasesDone;
   std::unordered_map<TypePerfectExch<Tint>, int> ListCasesNotDone;
   std::vector<PairExch<Tint>> ListMatrixUnsent;
   int idxMatrixCurrent = 0;
-  
+
   auto fInsert = [&](PairExch<Tint> const &ePair) -> void {
     TypePerfectExch<Tint> ePerfect = ePair.ePerfect;
     auto it1 = ListCasesDone.find(ePerfect);
@@ -106,17 +109,18 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
       return;
     }
     ListCasesNotDone[ePerfect] = idxMatrixCurrent;
-    os << "Inserting new perfect form " << ePerfect 
-       << " idxMatrix=" << idxMatrixCurrent << " from " << ePair.eIndex << " END" << std::endl;
+    os << "Inserting new perfect form " << ePerfect
+       << " idxMatrix=" << idxMatrixCurrent << " from " << ePair.eIndex
+       << " END" << std::endl;
     idxMatrixCurrent++;
   };
-  
+
   auto fSendMatrix = [&](PairExch<Tint> const &ePair, int const &u) -> void {
     int res = IntegerDiscriminantInvariant(ePair.ePerfect.eMat, size);
     ListRequest[u] = comm.isend(res, tag_new_form, ePair);
     RequestStatus[u] = 1;
   };
-  
+
   auto ClearUnsentAsPossible = [&]() -> void {
     int pos = ListMatrixUnsent.size() - 1;
     while (true) {
@@ -130,7 +134,7 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
       pos--;
     }
   };
-  
+
   auto fInsertUnsent = [&](PairExch<Tint> const &ePair) -> void {
     int res = IntegerDiscriminantInvariant(ePair.ePerfect.eMat, size);
     if (res == irank) {
@@ -142,7 +146,7 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
       }
     }
   };
-  
+
   auto GetNextUndone = [&]() -> boost::optional<TypePerfectExch<Tint>> {
     auto it = ListCasesNotDone.begin();
     if (it != ListCasesNotDone.end()) {
@@ -150,13 +154,13 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
     }
     return {};
   };
-  
+
   auto SetMatrixAsDone = [&](TypePerfectExch<Tint> const &TheMat) -> void {
     int idxMatrix = ListCasesNotDone.at(TheMat);
     ListCasesNotDone.erase(TheMat);
     ListCasesDone[TheMat] = idxMatrix;
   };
-  
+
   // Initialize with identity matrix for dimension n
   if (irank == 0) {
     MyMatrix<Tint> IdentMat = IdentityMat<Tint>(n);
@@ -166,9 +170,9 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
     PairExch<Tint> ePair{eRecMat, eIndex};
     fInsert(ePair);
   }
-  
+
   os << "Starting main enumeration loop" << std::endl;
-  
+
   // Main enumeration loop
   while (true) {
     // Check for incoming messages
@@ -186,16 +190,18 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
         boost::optional<TypePerfectExch<Tint>> eReq = GetNextUndone();
         if (eReq) {
           SetMatrixAsDone(*eReq);
-          
-          os << "Processing perfect form with " << eReq->incd << " shortest vectors" << std::endl;
-          
+
+          os << "Processing perfect form with " << eReq->incd
+             << " shortest vectors" << std::endl;
+
           // Compute adjacent perfect forms
           std::vector<TypePerfectExch<Tint>> ListAdjacentObject =
               GetAdjacentObjects<T, Tint>(*eReq, os);
-          
+
           int nbAdjacent = ListAdjacentObject.size();
-          os << "Found " << nbAdjacent << " adjacent perfect forms END" << std::endl;
-          
+          os << "Found " << nbAdjacent << " adjacent perfect forms END"
+             << std::endl;
+
           int iAdj = 0;
           for (auto &eObj : ListAdjacentObject) {
             if (eObj.incd <= MaxIncidenceTreating) {
@@ -208,25 +214,28 @@ void EnumeratePerfectCones_MPI(boost::mpi::communicator &comm, FullNamelist cons
         }
       }
     }
-    
+
     ClearUnsentAsPossible();
-    
+
     // Check termination condition
     if (ListCasesNotDone.empty() && ListMatrixUnsent.empty()) {
       // Signal completion to other processes
       comm.barrier();
       break;
     }
-    
+
     // Periodic progress report
     if (idxMatrixCurrent % 100 == 0) {
-      std::cerr << "Rank " << irank << ": processed " << ListCasesDone.size() 
-                << " forms, " << ListCasesNotDone.size() << " pending" << std::endl;
+      std::cerr << "Rank " << irank << ": processed " << ListCasesDone.size()
+                << " forms, " << ListCasesNotDone.size() << " pending"
+                << std::endl;
     }
   }
-  
-  os << "Completed enumeration. Total forms found: " << ListCasesDone.size() << std::endl;
-  std::cerr << "Rank " << irank << " completed with " << ListCasesDone.size() << " perfect forms" << std::endl;
+
+  os << "Completed enumeration. Total forms found: " << ListCasesDone.size()
+     << std::endl;
+  std::cerr << "Rank " << irank << " completed with " << ListCasesDone.size()
+            << " perfect forms" << std::endl;
 }
 
 // clang-format off

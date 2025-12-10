@@ -8,29 +8,30 @@
 // clang-format on
 
 template <typename Tint>
-void process_A(std::string const &FileExt, std::string const& FileGrpV,
+void process_A(std::string const &FileExt, std::string const &FileGrpV,
                std::string const &OutFormat, std::ostream &os_out) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using Tgroup = permutalib::Group<Telt, Tint>;
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
-  MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield,Tint>(EXT);
+  MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GrpV = ReadGroupFile<Tgroup>(FileGrpV);
   //
   std::pair<Tgroup, std::vector<PairCosetStabGens<Telt>>> pair =
-    LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer<Tint, Tgroup>(EXT, GrpV, std::cerr);
-  Tgroup const& GrpU = pair.first;
+      LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer<Tint, Tgroup>(
+          EXT, GrpV, std::cerr);
+  Tgroup const &GrpU = pair.first;
   std::vector<Telt> l_dcs;
-  for (auto & eDCS : pair.second) {
+  for (auto &eDCS : pair.second) {
     std::cerr << "eDCS.cos=" << eDCS.cos << "\n";
     std::unordered_set<Telt> set_cos;
-    for (auto & x_u : GrpU) {
+    for (auto &x_u : GrpU) {
       Telt p = x_u * eDCS.cos;
       set_cos.insert(p);
     }
-    auto check_stab=[&](Telt const& y) {
-      for (auto & x : set_cos) {
+    auto check_stab = [&](Telt const &y) {
+      for (auto &x : set_cos) {
         Telt x_y = x * y;
         if (set_cos.count(x_y) != 1) {
           std::cerr << "set_cos should contain the x_y\n";
@@ -38,14 +39,15 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
         }
       }
     };
-    for (auto & gen : eDCS.stab_gens) {
+    for (auto &gen : eDCS.stab_gens) {
       check_stab(gen);
     }
     l_dcs.push_back(eDCS.cos);
   }
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup const& GRP = pair.first;
-  auto get_perms_as_string = [&](std::vector<Telt> const &l_elt) -> std::string {
+  Tgroup const &GRP = pair.first;
+  auto get_perms_as_string =
+      [&](std::vector<Telt> const &l_elt) -> std::string {
     std::string strGAPperm = "[";
     bool IsFirst = true;
     for (auto &eElt : l_elt) {
@@ -63,7 +65,7 @@ void process_A(std::string const &FileExt, std::string const& FileGrpV,
   }
   if (OutFormat == "RecGAP") {
     std::string strGAPgroupMatr =
-      "Group(" + get_matrs_as_string(EXT, GRP.GeneratorsOfGroup()) + ")";
+        "Group(" + get_matrs_as_string(EXT, GRP.GeneratorsOfGroup()) + ")";
     std::string strCosetMatr = get_matrs_as_string(EXT_field, l_dcs);
     std::string strCosetPerm = get_perms_as_string(l_dcs);
     os_out << "return rec(GAPperm:=" << GRP.GapString()
@@ -86,10 +88,12 @@ int main(int argc, char *argv[]) {
     if (argc != 4 && argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith [EXT] [GRP_V] "
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith "
+                   "[EXT] [GRP_V] "
                    "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith [EXT] [GRP_V]\n";
+      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset arith "
+                   "[EXT] [GRP_V]\n";
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
@@ -133,7 +137,8 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, process_B);
-    std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
+    std::cerr << "Normal termination of "
+                 "GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytopeIntegral_Automorphism_DoubleCoset\n";
     exit(e.eVal);

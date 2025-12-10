@@ -15,8 +15,8 @@ void process(std::string const &File1, std::string const &File2,
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::optional<MyMatrix<Tint>> opt = comb.INDEF_FORM_TestEquivalence(Q1, Q2);
   if (opt) {
-    MyMatrix<Tint> const& eEquiv = *opt;
-    MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T,Tint>(eEquiv);
+    MyMatrix<Tint> const &eEquiv = *opt;
+    MyMatrix<T> eEquiv_T = UniversalMatrixConversion<T, Tint>(eEquiv);
     MyMatrix<T> prod = eEquiv_T * Q1 * eEquiv_T.transpose();
     if (prod != Q2) {
       std::cerr << "Q1 is not mapped to Q2\n";
@@ -83,7 +83,8 @@ int main(int argc, char *argv[]) {
     //
     std::cerr << "Normal termination of INDEF_FORM_TestEquivalence\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time << "\n";
+    std::cerr << "Error in INDEF_FORM_TestEquivalence, runtime=" << time
+              << "\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -15,7 +15,7 @@ void process(std::string const &MatFile, std::string const &XnormStr,
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyVector<Tint>> l_repr =
       comb.INDEF_FORM_GetOrbitRepresentative(Qmat, Xnorm);
-  for (auto & e_repr: l_repr) {
+  for (auto &e_repr : l_repr) {
     T norm = EvaluationQuadForm(Qmat, e_repr);
     if (norm != Xnorm) {
       std::cerr << "Wrong norm. norm=" << norm << " Xnorm=" << Xnorm << "\n";
@@ -83,7 +83,8 @@ int main(int argc, char *argv[]) {
     print_stderr_stdout_file(OutFile, f);
     std::cerr << "Normal termination of INDEF_FORM_GetOrbitRepresentative\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative, runtime=" << time << "\n";
+    std::cerr << "Error in INDEF_FORM_GetOrbitRepresentative, runtime=" << time
+              << "\n";
     exit(e.eVal);
   }
   runtime(time);

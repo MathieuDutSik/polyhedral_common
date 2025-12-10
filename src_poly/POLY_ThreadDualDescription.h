@@ -28,12 +28,11 @@ template <typename T, typename Tgroup> struct PolyhedralEntry {
   MyMatrix<T> EXT;
   Tgroup GRP;
   vectface ListFace;
-  PolyhedralEntry() {
-  }
-  PolyhedralEntry(const PolyhedralEntry<T,Tgroup>& x) : EXT(x.EXT), GRP(x.GRP), ListFace(x.ListFace.clone()) {
-  }
-  PolyhedralEntry(MyMatrix<T> const& _EXT, Tgroup const& _GRP, vectface&& vf) : EXT(_EXT), GRP(_GRP), ListFace(std::move(vf)) {
-  }
+  PolyhedralEntry() {}
+  PolyhedralEntry(const PolyhedralEntry<T, Tgroup> &x)
+      : EXT(x.EXT), GRP(x.GRP), ListFace(x.ListFace.clone()) {}
+  PolyhedralEntry(MyMatrix<T> const &_EXT, Tgroup const &_GRP, vectface &&vf)
+      : EXT(_EXT), GRP(_GRP), ListFace(std::move(vf)) {}
 };
 
 // We only want the full symmetry in the entry.
@@ -47,9 +46,10 @@ CanonicalizationPolyEntry(PolyhedralEntry<T, Tgroup> const &eEnt,
   using Tidx_value = int16_t;
   MyMatrix<T> EXTred = ColumnReduction(eEnt.EXT);
   WeightMatrix<true, T, Tidx_value> WMat =
-    GetWeightMatrix<T, Tidx_value>(EXTred, os);
+      GetWeightMatrix<T, Tidx_value>(EXTred, os);
   os << "Canonicalization, we have WMat\n";
-  Tgroup GRPlin = GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+  Tgroup GRPlin =
+      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
   os << "Canonicalization, GRPlin.size=" << GRPlin.size()
      << " eEnt.GRP.size=" << eEnt.GRP.size() << "\n";
   if (GRPlin.size() == eEnt.GRP.size()) {
@@ -57,7 +57,7 @@ CanonicalizationPolyEntry(PolyhedralEntry<T, Tgroup> const &eEnt,
   }
   os << "|eEnt.ListFace|=" << eEnt.ListFace.size() << "\n";
   WeightMatrix<true, int, Tidx_value> WMatInt =
-    WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(GRPlin, os);
+      WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(GRPlin, os);
   os << "We have WMatInt\n";
   struct Local {
     Face eFace;
@@ -197,11 +197,11 @@ FctsDataBank<PolyhedralEntry<T, Tgroup>> GetRec_FctsDataBank() {
              PolyhedralEntry<T, Tgroup> const &eRec2) -> std::optional<Telt> {
     MyMatrix<T> EXTred1 = ColumnReduction(eRec1.EXT);
     MyMatrix<T> EXTred2 = ColumnReduction(eRec2.EXT);
-    std::ostream& os = std::cerr;
+    std::ostream &os = std::cerr;
     WeightMatrix<true, T, Tidx_value> WMat1 =
-    GetWeightMatrix<T, Tidx_value>(EXTred1, os);
+        GetWeightMatrix<T, Tidx_value>(EXTred1, os);
     WeightMatrix<true, T, Tidx_value> WMat2 =
-    GetWeightMatrix<T, Tidx_value>(EXTred2, os);
+        GetWeightMatrix<T, Tidx_value>(EXTred2, os);
     return TestEquivalenceWeightMatrix<T, Telt>(WMat1, WMat2, os);
   };
   std::function<int(PolyhedralEntry<T, Tgroup> const &)> fSize =
@@ -225,7 +225,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int nbRow = EXTred.rows();
   int eRank = EXTred.cols();
-  std::ostream& os = MProc.GetO(TheId);
+  std::ostream &os = MProc.GetO(TheId);
   WeightMatrix<true, T, Tidx_value> WMat(os);
   bool HaveWMat = false;
   auto ComputeWMat = [&]() -> void {
@@ -244,7 +244,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     DataBank_ResultQuery<PolyhedralEntry<T, Tgroup>> eResBank =
         TheBank.ProcessRequest(eEnt, eInv, os);
     if (eResBank.test) {
-      PolyhedralEntry<T, Tgroup> const& eEnt = TheBank.GetEntry(eResBank.iEntry);
+      PolyhedralEntry<T, Tgroup> const &eEnt =
+          TheBank.GetEntry(eResBank.iEntry);
       os << "Begin the use of bank data\n";
       vectface ListReprTrans(EXT.rows());
       Face eFaceImg(EXT.rows());
@@ -255,9 +256,9 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       os << "Before the orbit splitting |ListReprTrans|="
          << ListReprTrans.size() << "\n";
       Tgroup GRPconj = ConjugateGroup(eEnt.GRP, eResBank.TheEquiv);
-      FaceOrbitsizeGrpContainer ListFaceOrbitsizes(GRPconj, std::move(ListReprTrans));
-      return OrbitSplittingListOrbit(
-          GRPconj, GRP, ListFaceOrbitsizes, os);
+      FaceOrbitsizeGrpContainer ListFaceOrbitsizes(GRPconj,
+                                                   std::move(ListReprTrans));
+      return OrbitSplittingListOrbit(GRPconj, GRP, ListFaceOrbitsizes, os);
     }
   }
   Tgroup TheGRPrelevant;
@@ -270,8 +271,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   TheMap["rank"] = eRank;
   TheMap["delta"] = delta;
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
-  os << "Not found in bank TheLevel=" << TheLevel
-     << " ansSplit=" << ansSplit << "\n";
+  os << "Not found in bank TheLevel=" << TheLevel << " ansSplit=" << ansSplit
+     << "\n";
   //
   // The computations themselves
   //
@@ -288,11 +289,10 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
     } else {
       ComputeWMat();
       ansSymm = HeuristicEvaluation(TheMap, AllArr.AdditionalSymmetry);
-      os << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows()
-         << "\n";
+      os << "ansSymm=" << ansSymm << "   |EXT|=" << EXT.rows() << "\n";
       if (ansSymm == "yes") {
         TheGRPrelevant =
-          GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+            GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
       } else {
         TheGRPrelevant = GRP;
       }
@@ -303,17 +303,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       Tint QuotSize = TheGRPrelevant.size() / GRP.size();
       os << "ansSymm=" << ansSymm << " ansGRP=" << ansGRP
          << " |TheGRPrelevant|=" << TheGRPrelevant.size()
-         << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize
-         << "\n";
+         << " |GRP|=" << GRP.size() << " QuotSize=" << QuotSize << "\n";
       mpz_class MaxAllowedUndone = eRank - 2;
-      std::function<bool(size_t const &,
-                         size_t const &)>
-          CompFCT =
-              [](size_t const &x,
-                 size_t const &y) -> bool { return x < y; };
+      std::function<bool(size_t const &, size_t const &)> CompFCT =
+          [](size_t const &x, size_t const &y) -> bool { return x < y; };
       std::function<void(PolyhedralBalinski &,
-                         SimpleOrbitFacet<T, Tgroup> const &,
-                         std::ostream &)>
+                         SimpleOrbitFacet<T, Tgroup> const &, std::ostream &)>
           UpgradeBalinskiStat = [&](PolyhedralBalinski &eStat,
                                     SimpleOrbitFacet<T, Tgroup> const &fEnt,
                                     [[maybe_unused]] std::ostream &os) -> void {
@@ -359,9 +354,9 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       }
       if (ansGRP == "partition") {
         fEquiv =
-          [&TheGRPrelevant, &WMat, &os](
-                SimpleOrbitFacet<T, Tgroup> const &x,
-                SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
+            [&TheGRPrelevant, &WMat,
+             &os](SimpleOrbitFacet<T, Tgroup> const &x,
+                  SimpleOrbitFacet<T, Tgroup> const &y) -> std::optional<Telt> {
           SecondTime time;
           auto eReply =
               TheGRPrelevant.RepresentativeAction_OnSets(x.eRepr, y.eRepr);
@@ -370,7 +365,7 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
             //
             SecondTime time;
             auto eReplyB =
-              TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr, os);
+                TestEquivalenceSubset<T, Telt>(WMat, x.eRepr, y.eRepr, os);
             os << "Second method (bliss) runtime = " << time << "\n";
           }
           return eReply;
@@ -434,14 +429,14 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       if (nbPresentOrbit == 0) {
         std::string ansSamp =
             HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
-        os << "Before InitialFacetComputation ansSamp="
-           << ansSamp << "\n";
-        vectface ListFace = DirectComputationInitialFacetSet(EXTred, ansSamp, os);
+        os << "Before InitialFacetComputation ansSamp=" << ansSamp << "\n";
+        vectface ListFace =
+            DirectComputationInitialFacetSet(EXTred, ansSamp, os);
         os << " After InitialFacetComputation\n";
         for (auto &eInc : ListFace) {
           int RetVal = FuncInsert(eInc, os);
-          os << "Inserting |eInc|=" << eInc.count()
-             << " : RetVal=" << RetVal << "\n";
+          os << "Inserting |eInc|=" << eInc.count() << " : RetVal=" << RetVal
+             << "\n";
         }
       }
       std::atomic<int> nbSpannThread(0);
@@ -576,11 +571,12 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
       std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
   TheMap["time"] = elapsed_seconds;
   std::string ansBank = HeuristicEvaluation(TheMap, AllArr.BankSave);
-  os << "elapsed_seconds = " << elapsed_seconds
-     << " ansBank = " << ansBank << "\n";
+  os << "elapsed_seconds = " << elapsed_seconds << " ansBank = " << ansBank
+     << "\n";
   if (ansBank == "yes") {
     os << "BANK work, step 1\n";
-    PolyhedralEntry<T, Tgroup> eEntry{EXT, TheGRPrelevant, ListOrbitFaces.clone()};
+    PolyhedralEntry<T, Tgroup> eEntry{EXT, TheGRPrelevant,
+                                      ListOrbitFaces.clone()};
     os << "BANK work, step 2\n";
     PolyhedralEntry<T, Tgroup> eEntryCan =
         CanonicalizationPolyEntry(eEntry, os);
@@ -596,7 +592,8 @@ vectface DUALDESC_THR_AdjacencyDecomposition(
   if (ansSymm == "yes") {
     os << "|TheGRPrelevant|=" << TheGRPrelevant.size()
        << " |GRP|=" << GRP.size() << "\n";
-    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(TheGRPrelevant, std::move(ListOrbitFaces));
+    FaceOrbitsizeGrpContainer ListFaceOrbitsizes(TheGRPrelevant,
+                                                 std::move(ListOrbitFaces));
     return OrbitSplittingListOrbit(TheGRPrelevant, GRP, ListFaceOrbitsizes, os);
   } else {
     return ListOrbitFaces;
@@ -653,7 +650,7 @@ FullNamelist NAMELIST_GetStandard_TEMP_THREADED_ADM() {
 
 template <typename T, typename Tgroup>
 void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
-  SingleBlock const& BlockBANK = eFull.get_block("BANK");
+  SingleBlock const &BlockBANK = eFull.get_block("BANK");
   bool BANK_Saving = BlockBANK.get_bool("Saving");
   bool BANK_Memory = BlockBANK.get_bool("FullDataInMemory");
   std::string BANK_Prefix = BlockBANK.get_string("Prefix");
@@ -663,7 +660,7 @@ void MainFunctionComputeDualDesc(FullNamelist const &eFull) {
                                                BANK_Prefix, recFct);
   //
   std::cerr << "Reading DATA\n";
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string EXTfile = BlockDATA.get_string("EXTfile");
   IsExistingFileDie(EXTfile);
   std::cerr << "EXTfile=" << EXTfile << "\n";

@@ -65,7 +65,7 @@ template <typename T> MyMatrix<T> AnLattice(int const &n) {
 }
 
 template <typename T>
-MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat, std::ostream& os) {
+MyVector<T> GetPositiveNormVector(MyMatrix<T> const &SymMat, std::ostream &os) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat, os);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
   MyMatrix<T> const &RedMat = DiagInfo.RedMat;
@@ -136,7 +136,8 @@ GetIntegralVector_family(std::vector<MyVector<Ttest>> const &ListVect,
 }
 
 template <typename T>
-std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M, std::ostream& os) {
+std::vector<MyVector<T>> GetPositiveDirections_diag(MyMatrix<T> const &M,
+                                                    std::ostream &os) {
   int n = M.rows();
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M, os);
   MyMatrix<T> const &Transform = DiagInfo.Transform;
@@ -312,10 +313,9 @@ template <typename T, typename Tint> struct ApproxIterator {
 //   terminate all the time.
 // * The diagonalization using eigenvectors of the matrix,.
 template <typename T, typename Tint>
-MyVector<Tint> GetIntegralVector_allmeth_V2(MyMatrix<T> const &M,
-                                            T const &CritNorm,
-                                            bool const &StrictIneq,
-                                            std::ostream &os) {
+MyVector<Tint>
+GetIntegralVector_allmeth_V2(MyMatrix<T> const &M, T const &CritNorm,
+                             bool const &StrictIneq, std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralVector_allmeth_V2: Beginning\n";
 #endif
@@ -436,12 +436,13 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
   MyMatrix<T> res_Mred;
   if (test_isotropic_fine) {
     bool look_for_isotropic = true;
-    ResultIndefiniteLLL<T, Tint> res = ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
+    ResultIndefiniteLLL<T, Tint> res =
+        ComputeReductionIndefinite<T, Tint>(M, look_for_isotropic, os);
     res_Xisotrop = res.Xisotrop;
     res_B = res.B;
     res_Mred = res.Mred;
   } else {
-    ResultReduction<T, Tint> res = IndefiniteReduction<T,Tint>(M, os);
+    ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(M, os);
     res_B = res.B;
     res_Mred = res.Mred;
   }
@@ -488,7 +489,8 @@ GetIntegralVector_allmeth(MyMatrix<T> const &M, T const &CritNorm,
     std::cerr << "But they should be equal\n";
     throw TerminalException{1};
   }
-  os << "POS: GetIntegralVector_allmeth: We have V2=" << StringVectorGAP(V2) << "\n";
+  os << "POS: GetIntegralVector_allmeth: We have V2=" << StringVectorGAP(V2)
+     << "\n";
 #endif
   return V2;
 }
@@ -502,7 +504,8 @@ MyVector<Tint> GetIntegralPositiveVector_allmeth(MyMatrix<T> const &M,
   os << "POS: GetIntegralPositiveVector_allmeth: before "
         "GetIntegralVector_allmeth\n";
 #endif
-  MyVector<Tint> V = GetIntegralVector_allmeth<T, Tint>(M, CritNorm, StrictIneq, os);
+  MyVector<Tint> V =
+      GetIntegralVector_allmeth<T, Tint>(M, CritNorm, StrictIneq, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetIntegralPositiveVector_allmeth: We have V\n";
 #endif
@@ -521,7 +524,8 @@ MyVector<Tint> GetShortIntegralVector(MyMatrix<T> const &M, T const &CritNorm,
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortIntegralVector: before GetIntegralVector_allmeth\n";
 #endif
-  MyVector<Tint> V = GetIntegralVector_allmeth<T, Tint>(Mwork, CritNormWork, StrictIneq, os);
+  MyVector<Tint> V =
+      GetIntegralVector_allmeth<T, Tint>(Mwork, CritNormWork, StrictIneq, os);
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortIntegralVector: We have V\n";
 #endif
@@ -667,9 +671,8 @@ MyVector<Tint> INDEFINITE_GetShortPositiveVector(MyMatrix<T> const &M,
 }
 
 template <typename T>
-std::vector<MyVector<T>>
-GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat,
-                           std::ostream &os) {
+std::vector<MyVector<T>> GetSetNegativeOrZeroVector(MyMatrix<T> const &SymMat,
+                                                    std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetSetNegativeOrZeroVector: beginning\n";
 #endif

@@ -27,12 +27,12 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<Tint>> ListSHV =
         ReadListConfigurationShortestVector<Tint>(FileIn);
     std::unordered_set<MyMatrix<Tint>> set;
-    for (auto & SHV : ListSHV) {
-      MyMatrix<Tint> SHV_can = SHORT_Canonicalize<T,Tint>(SHV, std::cerr);
+    for (auto &SHV : ListSHV) {
+      MyMatrix<Tint> SHV_can = SHORT_Canonicalize<T, Tint>(SHV, std::cerr);
       set.insert(SHV_can);
     }
     std::vector<MyMatrix<Tint>> v;
-    for (auto & fSHV : set) {
+    for (auto &fSHV : set) {
       v.push_back(fSHV);
     }
     //

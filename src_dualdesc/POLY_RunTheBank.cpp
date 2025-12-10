@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
     using Tval = TripleStore<Tgroup>;
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     //
-    SingleBlock const& BlockPROC = eFull.get_block("PROC");
+    SingleBlock const &BlockPROC = eFull.get_block("PROC");
     bool Saving = BlockPROC.get_bool("Saving");
     std::string SavingPrefix = BlockPROC.get_string("Prefix");
     int port_i = BlockPROC.get_int("port");

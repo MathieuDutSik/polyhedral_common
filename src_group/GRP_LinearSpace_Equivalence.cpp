@@ -44,8 +44,9 @@ int main(int argc, char *argv[]) {
     //
     int n = eLatt2.rows();
     Thelper helper{n};
-    std::optional<MyMatrix<T>> opt = LinearSpace_Equivalence<T, Tgroup, Thelper>(
-        ListMatrGen, helper, eLatt1, eLatt2, std::cerr);
+    std::optional<MyMatrix<T>> opt =
+        LinearSpace_Equivalence<T, Tgroup, Thelper>(ListMatrGen, helper, eLatt1,
+                                                    eLatt2, std::cerr);
     //
     {
       std::ofstream os(OUT_file);

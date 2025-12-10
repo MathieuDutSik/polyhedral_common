@@ -677,16 +677,16 @@ Face ComputeFlipping(MyMatrix<T> const &EXT, Face const &OneInc,
   return TheFram.FlipFace(sInc);
 }
 
-template <typename T>
-struct SimplifiedFlippingFramework {
+template <typename T> struct SimplifiedFlippingFramework {
   using Tint = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> TheEXT;
   MyMatrix<Tint> TheEXT_int;
   FlippingFramework<T> TheFram;
-  SimplifiedFlippingFramework(MyMatrix<T> const& EXT, Face const& OneInc, std::ostream& os) : TheEXT(ColumnReduction(EXT)), TheEXT_int(Get_EXT_int(TheEXT)), TheFram(TheEXT, TheEXT_int, OneInc, os) {}
-  Face FlipFace(Face const& sInc) {
-    return TheFram.FlipFace(sInc);
-  }
+  SimplifiedFlippingFramework(MyMatrix<T> const &EXT, Face const &OneInc,
+                              std::ostream &os)
+      : TheEXT(ColumnReduction(EXT)), TheEXT_int(Get_EXT_int(TheEXT)),
+        TheFram(TheEXT, TheEXT_int, OneInc, os) {}
+  Face FlipFace(Face const &sInc) { return TheFram.FlipFace(sInc); }
 };
 
 MyMatrix<int> VectfaceAsMatrix(vectface const &vf) {

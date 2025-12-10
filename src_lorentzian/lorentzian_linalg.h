@@ -28,8 +28,9 @@
 #define TIMINGS_LORENTZIAN_LINALG
 #endif
 
-template<typename T>
-std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G, std::ostream& os) {
+template <typename T>
+std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const &G,
+                                               std::ostream &os) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G, os);
   if (DiagInfo.nbZero != 0) {
     std::string reason_non_lorentzian = "matrix has non-zero kernel";
@@ -38,7 +39,9 @@ std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G, std::ostrea
   int nbMinus = DiagInfo.nbMinus;
   int nbPlus = DiagInfo.nbPlus;
   if (nbMinus != 1) {
-    std::string reason_non_lorentzian = "Signature is (" + std::to_string(nbMinus) + "," + std::to_string(nbPlus) + ") but it should be (1,n)";
+    std::string reason_non_lorentzian =
+        "Signature is (" + std::to_string(nbMinus) + "," +
+        std::to_string(nbPlus) + ") but it should be (1,n)";
     return reason_non_lorentzian;
   }
   return {};
@@ -47,7 +50,8 @@ std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const& G, std::ostrea
 /*
   A few linear algebra stuff used for the lorentzian computations
  */
-template <typename T> void TestLorentzianity(MyMatrix<T> const &G, std::ostream& os) {
+template <typename T>
+void TestLorentzianity(MyMatrix<T> const &G, std::ostream &os) {
   std::optional<std::string> opt = ReasonNonLorentzian(G, os);
   if (opt) {
     std::cerr << "LORLIN: G=\n";
@@ -293,7 +297,8 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   };
   MyVector<T> selVect = get_random_vect();
 #ifdef DEBUG_LORENTZIAN_LINALG
-  os << "LORLIN: Random splitting vector selVect=" << StringVectorGAP(selVect) << "\n";
+  os << "LORLIN: Random splitting vector selVect=" << StringVectorGAP(selVect)
+     << "\n";
 #endif
   int n_vect = l_vect.size() / 2;
   MyMatrix<Tfield> EXT(n_vect, 1 + dimSpace);
@@ -380,8 +385,8 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
     WriteMatrix(std::cerr, Subspace1);
     std::cerr << "LORLIN: Subspace2=\n";
     WriteMatrix(std::cerr, Subspace2);
-    std::cerr << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Basis: " << msg
-              << "\n";
+    std::cerr << "LORLIN: LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Basis: "
+              << msg << "\n";
     throw TerminalException{1};
   };
   if (Subspace1.rows() != dim - 1 || Subspace2.rows() != dim - 1) {
@@ -463,7 +468,8 @@ MyMatrix<T> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Basis(
   The vector of Subspace1 / Subspace2 are no longer assumed independent
  */
 template <typename T>
-std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
+std::optional<MyMatrix<T>>
+LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   int dim = G1.rows();
@@ -480,31 +486,37 @@ std::optional<MyMatrix<T>> LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Ker
   return eEquiv;
 }
 
-
 // This addresses the problem, however in truth the conversion should happen
 // at a deeper level.
-template<typename T>
-inline typename std::enable_if<is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+template <typename T>
+inline typename std::enable_if<is_ring_field<T>::value,
+                               std::optional<MyMatrix<T>>>::type
 LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
-  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(G1, Subspace1, G2, Subspace2);
+  return LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
+      G1, Subspace1, G2, Subspace2);
 }
 
-template<typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+template <typename T>
+inline typename std::enable_if<!is_ring_field<T>::value,
+                               std::optional<MyMatrix<T>>>::type
 LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
   using Tfield = typename overlying_field<T>::field_type;
-  MyMatrix<Tfield> G1_f = UniversalMatrixConversion<Tfield,T>(G1);
-  MyMatrix<Tfield> G2_f = UniversalMatrixConversion<Tfield,T>(G2);
-  MyMatrix<Tfield> Subspace1_f = UniversalMatrixConversion<Tfield,T>(Subspace1);
-  MyMatrix<Tfield> Subspace2_f = UniversalMatrixConversion<Tfield,T>(Subspace2);
-  std::optional<MyMatrix<Tfield>> opt = LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(G1_f, Subspace1_f, G2_f, Subspace2_f);
+  MyMatrix<Tfield> G1_f = UniversalMatrixConversion<Tfield, T>(G1);
+  MyMatrix<Tfield> G2_f = UniversalMatrixConversion<Tfield, T>(G2);
+  MyMatrix<Tfield> Subspace1_f =
+      UniversalMatrixConversion<Tfield, T>(Subspace1);
+  MyMatrix<Tfield> Subspace2_f =
+      UniversalMatrixConversion<Tfield, T>(Subspace2);
+  std::optional<MyMatrix<Tfield>> opt =
+      LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
+          G1_f, Subspace1_f, G2_f, Subspace2_f);
   if (opt) {
-    MyMatrix<Tfield> const& M_f = *opt;
-    MyMatrix<T> M = UniversalMatrixConversion<T,Tfield>(M_f);
+    MyMatrix<Tfield> const &M_f = *opt;
+    MyMatrix<T> M = UniversalMatrixConversion<T, Tfield>(M_f);
     return M;
   } else {
     return {};
@@ -644,18 +656,21 @@ public:
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
     MyMatrix<T> ProdMat1 = NSP1 * G1 * NSP1.transpose();
     if (!IsZeroMatrix(ProdMat1)) {
-      std::cerr << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
+      std::cerr
+          << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
       throw TerminalException{1};
     }
     MyMatrix<T> ProdMat2 = NSP2 * G2 * NSP2.transpose();
     if (!IsZeroMatrix(ProdMat2)) {
-      std::cerr << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
+      std::cerr
+          << "LORLIN: Inconsistent input: ProdMat1 should be equal to zero\n";
       throw TerminalException{1};
     }
     MyMatrix<T> SMat1 = Subspace1 * G1 * Subspace1.transpose();
     MyMatrix<T> SMat2 = Subspace2 * G2 * Subspace2.transpose();
     if (SMat1 != SMat2) {
-      std::cerr << "LORLIN: Inconsistent input: SMat1 should be equal to SMat2\n";
+      std::cerr
+          << "LORLIN: Inconsistent input: SMat1 should be equal to SMat2\n";
       throw TerminalException{1};
     }
 #endif
@@ -808,7 +823,8 @@ public:
   std::vector<MyMatrix<T>> get_kernel_generating_set(T const &d) {
 #ifdef SANITY_CHECK_LORENTZIAN_LINALG
     if (G1 != G2 || Subspace1 != Subspace2) {
-      std::cerr << "LORLIN: We should have G1=G2 and Subspace1=Subspace2 in order for "
+      std::cerr << "LORLIN: We should have G1=G2 and Subspace1=Subspace2 in "
+                   "order for "
                    "kernel to make sense\n";
       throw TerminalException{1};
     }
@@ -827,12 +843,11 @@ public:
   }
 };
 
-
-
 // Resolution of B = H U^T + U H^T
 // 0      = sum_k h_{ik} u_{jk} + u_{ik} h_{jk}
 template <typename T>
-std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat, std::ostream& os) {
+std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat,
+                                                       std::ostream &os) {
   int dim = Umat.rows();
   MyMatrix<T> TheMat = ZeroMatrix<T>(dim * dim, dim * dim);
   auto f = [&](int i, int j) -> int { return i + dim * j; };
@@ -876,18 +891,12 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat, 
   return BasisIntegralKernel;
 }
 
-
-
-
-
-
-
 /*
   We have a subspace NSP, which is the orthogonal of an isotrop subspace for Q.
   Sublattice is a sublattice which restricted to R \otimes NSP is exactly NSP.
   ---
-  We are looking for the group of isometries of the full space that are isometries
-  for Q and when restricted to NSP are the identity.
+  We are looking for the group of isometries of the full space that are
+  isometries for Q and when restricted to NSP are the identity.
   ---
   Analysis of the problem:
   * By inverting the Sublattice, we can make sure that we are in Z^n.
@@ -904,8 +913,10 @@ std::vector<MyMatrix<T>> IntegralKernelSpecialEquation(MyMatrix<T> const &Umat, 
   * The group being generated is actually commutative. The generators
     correspond to the generator of the integral kernel.
   */
-template<typename T, typename Tint>
-std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T> const& Q, MyMatrix<T> const& NSP, MyMatrix<T> const& Sublattice, std::ostream &os) {
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(
+    MyMatrix<T> const &Q, MyMatrix<T> const &NSP, MyMatrix<T> const &Sublattice,
+    std::ostream &os) {
   int dim = Q.rows();
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 1, Sublattice=\n";
@@ -932,9 +943,9 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 6\n";
 #endif
-  MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint,T>(eProd2);
+  MyMatrix<Tint> eProd3 = UniversalMatrixConversion<Tint, T>(eProd2);
   MyMatrix<Tint> IsotropSpace = NullspaceIntTrMat(eProd3);
-  MyMatrix<T> IsotropSpace_T = UniversalMatrixConversion<T,Tint>(IsotropSpace);
+  MyMatrix<T> IsotropSpace_T = UniversalMatrixConversion<T, Tint>(IsotropSpace);
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 7\n";
 #endif
@@ -958,12 +969,13 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 10\n";
 #endif
-  std::vector<MyMatrix<T>> BasisIntegralKernel = IntegralKernelSpecialEquation(U, os);
+  std::vector<MyMatrix<T>> BasisIntegralKernel =
+      IntegralKernelSpecialEquation(U, os);
 #ifdef DEBUG_LORENTZIAN_LINALG
   os << "LORLIN: TotIsoKernSubspace, step 11\n";
 #endif
   std::vector<MyMatrix<T>> ListGens;
-  for (auto & eVectBasis: BasisIntegralKernel) {
+  for (auto &eVectBasis : BasisIntegralKernel) {
 #ifdef DEBUG_LORENTZIAN_LINALG
     os << "LORLIN: TotIsoKernSubspace, loop, step 1\n";
 #endif
@@ -1001,12 +1013,11 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(MyMatrix<T>
     ListGens.push_back(eGen2);
   }
 #ifdef DEBUG_LORENTZIAN_LINALG
-  os << "LORLIN: TotIsoKernSubspace, step 12 |ListGens|=" << ListGens.size() << "\n";
+  os << "LORLIN: TotIsoKernSubspace, step 12 |ListGens|=" << ListGens.size()
+     << "\n";
 #endif
   return ListGens;
 }
-
-
 
 /*
   For a dimension N, we want to find all the possible integers k such that there
@@ -1139,7 +1150,8 @@ bool is_infinite_order(MyMatrix<T> const &M, size_t const &max_finite_order) {
 }
 
 template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
-  LorentzianFinitenessGroupTester(MyMatrix<T> const &_G, std::ostream& _os) : G(_G), os(_os) {
+  LorentzianFinitenessGroupTester(MyMatrix<T> const &_G, std::ostream &_os)
+      : G(_G), os(_os) {
     int dim = G.rows();
     T dim_T = dim;
     std::vector<T> V = GetIntegralMatricesPossibleOrders<T>(dim_T);
@@ -1158,7 +1170,8 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
       WriteMatrix(std::cerr, eP_T);
       std::cerr << "LORLIN: G_img=";
       WriteMatrix(std::cerr, G_img);
-      std::cerr << "LORLIN: The matrix eP should leave the quadratic form invariant\n";
+      std::cerr << "LORLIN: The matrix eP should leave the quadratic form "
+                   "invariant\n";
       throw TerminalException{1};
     }
 #endif
@@ -1212,7 +1225,7 @@ private:
   MyMatrix<Tint> InvariantBasis;
   size_t max_finite_order;
   bool is_finite;
-  std::ostream& os;
+  std::ostream &os;
 };
 
 // clang-format off

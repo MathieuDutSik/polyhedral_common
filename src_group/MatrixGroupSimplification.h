@@ -34,14 +34,14 @@
 #define METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
 #endif
 
-template<typename T>
-std::string compute_complexity_matrix(MyMatrix<T> const& mat) {
+template <typename T>
+std::string compute_complexity_matrix(MyMatrix<T> const &mat) {
   int n = mat.rows();
   T ell1(0);
   T ellinfinity(0);
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      T val = mat(i,j);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      T val = mat(i, j);
       T abs_val = T_abs(val);
       ell1 += abs_val;
       if (abs_val > ellinfinity) {
@@ -49,11 +49,13 @@ std::string compute_complexity_matrix(MyMatrix<T> const& mat) {
       }
     }
   }
-  return "(ell1=" + std::to_string(ell1) + ", ellinf=" + std::to_string(ellinfinity) + ")";
+  return "(ell1=" + std::to_string(ell1) +
+         ", ellinf=" + std::to_string(ellinfinity) + ")";
 }
 
-template<typename T>
-std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat) {
+template <typename T>
+std::string
+compute_complexity_listmat(std::vector<MyMatrix<T>> const &list_mat) {
   if (list_mat.size() == 0) {
     return "zero generators";
   }
@@ -61,12 +63,12 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
   size_t n_mat = list_mat.size();
   T ell1_global(0);
   T ellinfinite_global(0);
-  for (auto & e_mat: list_mat) {
+  for (auto &e_mat : list_mat) {
     T ell1(0);
     T ellinfinity(0);
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        T val = e_mat(i,j);
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        T val = e_mat(i, j);
         T abs_val = T_abs(val);
         ell1 += abs_val;
         if (abs_val > ellinfinity) {
@@ -79,39 +81,43 @@ std::string compute_complexity_listmat(std::vector<MyMatrix<T>> const& list_mat)
       ellinfinite_global = ellinfinity;
     }
   }
-  return "(n_gen=" + std::to_string(n_mat) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+  return "(n_gen=" + std::to_string(n_mat) +
+         ", ell1_global=" + std::to_string(ell1_global) +
+         ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
 }
 
-template<bool always_equal>
-std::string compute_complexity_listseq(std::vector<permutalib::SequenceType<always_equal>> const& list_seq) {
+template <bool always_equal>
+std::string compute_complexity_listseq(
+    std::vector<permutalib::SequenceType<always_equal>> const &list_seq) {
   size_t n_seq = list_seq.size();
   size_t ell1_global = 0;
   size_t ellinfinite_global = 0;
-  for (auto & seq: list_seq) {
-    std::vector<int64_t> const& ListIdx = seq.getVect();
+  for (auto &seq : list_seq) {
+    std::vector<int64_t> const &ListIdx = seq.getVect();
     size_t len = ListIdx.size();
     ell1_global += len;
     if (ellinfinite_global < len) {
       ellinfinite_global = len;
     }
   }
-  return "(n_seq=" + std::to_string(n_seq) + ", ell1_global=" + std::to_string(ell1_global) + ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
+  return "(n_seq=" + std::to_string(n_seq) +
+         ", ell1_global=" + std::to_string(ell1_global) +
+         ", ellinfinity=" + std::to_string(ellinfinite_global) + ")";
 }
 
-template<typename T>
-struct ComplexityMeasure {
+template <typename T> struct ComplexityMeasure {
   T ell1;
   T ellinfinity;
 };
 
-template<typename T>
-ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const& M) {
+template <typename T>
+ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const &M) {
   int n = M.rows();
   T ell1(0);
   T ellinfinity(0);
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      T val = M(i,j);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      T val = M(i, j);
       T abs_val = T_abs(val);
       ell1 += abs_val;
       if (abs_val > ellinfinity) {
@@ -122,13 +128,12 @@ ComplexityMeasure<T> get_complexity_measure(MyMatrix<T> const& M) {
   return {ell1, ellinfinity};
 }
 
-template<typename T>
-T get_ell1_complexity_measure(MyMatrix<T> const& M) {
+template <typename T> T get_ell1_complexity_measure(MyMatrix<T> const &M) {
   int n = M.rows();
   T ell1(0);
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      T val = M(i,j);
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      T val = M(i, j);
       T abs_val = T_abs(val);
       ell1 += abs_val;
     }
@@ -136,9 +141,9 @@ T get_ell1_complexity_measure(MyMatrix<T> const& M) {
   return ell1;
 }
 
-void print_vector_val(std::vector<size_t> const& V, std::ostream& os) {
+void print_vector_val(std::vector<size_t> const &V, std::ostream &os) {
   os << "[";
-  for (size_t u=0; u<V.size(); u++) {
+  for (size_t u = 0; u < V.size(); u++) {
     if (u > 0) {
       os << ",";
     }
@@ -153,13 +158,11 @@ struct Interval {
   size_t end;
 };
 
-
 // A collection of intervals.
 // The list of intervals is ascending.
 struct BlockInterval {
   std::vector<Interval> intervals;
-  BlockInterval() {
-  }
+  BlockInterval() {}
   void insert_interval(size_t start, size_t end) {
     if (start < end) {
       Interval interval{start, end};
@@ -170,7 +173,7 @@ struct BlockInterval {
     if (intervals.size() == 0) {
       return {};
     }
-    Interval& interval = intervals[0];
+    Interval &interval = intervals[0];
     size_t val = interval.start;
     interval.start += 1;
     if (interval.start == interval.end) {
@@ -178,10 +181,10 @@ struct BlockInterval {
     }
     return val;
   }
-  void print(std::ostream& os) const {
+  void print(std::ostream &os) const {
     size_t n_intervals = intervals.size();
     os << "SIMP: symbolic: ";
-    for (size_t i_int=0; i_int<n_intervals; i_int++) {
+    for (size_t i_int = 0; i_int < n_intervals; i_int++) {
       if (i_int > 0) {
         os << ", ";
       }
@@ -191,16 +194,14 @@ struct BlockInterval {
     }
     os << "\n";
   }
-  size_t n_intervals() const {
-    return intervals.size();
-  }
+  size_t n_intervals() const { return intervals.size(); }
   bool contains(size_t x) const {
     size_t low = 0;
     size_t high = intervals.size();
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
-      const Interval& iv = intervals[mid];
+      const Interval &iv = intervals[mid];
 
       if (x < iv.start) {
         high = mid;
@@ -216,7 +217,7 @@ struct BlockInterval {
   // Used only for debugging purposes
   bool contains_direct(size_t x) const {
     size_t n_intervals = intervals.size();
-    for (size_t i_int=0; i_int<n_intervals; i_int++) {
+    for (size_t i_int = 0; i_int < n_intervals; i_int++) {
       if (intervals[i_int].start <= x && x < intervals[i_int].end) {
         return true;
       }
@@ -227,12 +228,12 @@ struct BlockInterval {
   void test_correctness() const {
     size_t n_intervals = intervals.size();
     // Checking that the intervals are increasing
-    for (size_t i=1; i<n_intervals; i++) {
-      if (intervals[i-1].end > intervals[i].start) {
+    for (size_t i = 1; i < n_intervals; i++) {
+      if (intervals[i - 1].end > intervals[i].start) {
         std::cerr << "The intervals are overlapping\n";
         throw TerminalException{1};
       }
-      if (intervals[i-1].end == intervals[i].start) {
+      if (intervals[i - 1].end == intervals[i].start) {
         std::cerr << "The intervals should be merged\n";
         throw TerminalException{1};
       }
@@ -241,14 +242,13 @@ struct BlockInterval {
 
   std::vector<size_t> list_indices() const {
     std::vector<size_t> indices;
-    for (auto & interval : intervals) {
-      for (size_t u=interval.start; u<interval.end; u++) {
+    for (auto &interval : intervals) {
+      for (size_t u = interval.start; u < interval.end; u++) {
         indices.push_back(u);
       }
     }
     return indices;
   }
-
 
   // Remove an entry from the BlockInterval,
   // and shift the positions. This corresponds to a removal
@@ -263,18 +263,20 @@ struct BlockInterval {
     }
     size_t low = 0;
     size_t high = n_intervals;
-    //#define DEBUG_REMOVE_ENTRY_AND_SHIFT
+    // #define DEBUG_REMOVE_ENTRY_AND_SHIFT
 #ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
-    std::cerr << "SIMP: ------------------- START remove_entry_and_shift_inner -------------------\n";
+    std::cerr << "SIMP: ------------------- START remove_entry_and_shift_inner "
+                 "-------------------\n";
     std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
 #endif
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
 #ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
-      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid
+                << "\n";
 #endif
-      Interval& iv = intervals[mid];
+      Interval &iv = intervals[mid];
 
       if (x < iv.start) {
 #ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
@@ -292,13 +294,14 @@ struct BlockInterval {
 #endif
         // x is in [start, end)
         iv.end -= 1;
-        size_t start_shift = mid + 1;;
+        size_t start_shift = mid + 1;
+        ;
         if (iv.start == iv.end) {
           intervals.erase(intervals.begin() + mid);
           start_shift = mid;
           n_intervals -= 1;
         }
-        for (size_t u=start_shift; u<n_intervals; u++) {
+        for (size_t u = start_shift; u < n_intervals; u++) {
           intervals[u].start -= 1;
           intervals[u].end -= 1;
         }
@@ -308,10 +311,12 @@ struct BlockInterval {
 #ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
     std::cerr << "SIMP: case 4, low=" << low << "\n";
 #endif
-    auto iife_first_interval=[&]() -> size_t {
+    auto iife_first_interval = [&]() -> size_t {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
       if (low >= intervals.size()) {
-        std::cerr << "SIMP: out of range access, low=" << low << " |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+        std::cerr << "SIMP: out of range access, low=" << low
+                  << " |intervals|=" << intervals.size()
+                  << " n_intervals=" << n_intervals << "\n";
         std::cerr << "SIMP: x=" << x << "\n";
         print(std::cerr);
         throw TerminalException{1};
@@ -330,15 +335,15 @@ struct BlockInterval {
 #ifdef DEBUG_REMOVE_ENTRY_AND_SHIFT
     std::cerr << "SIMP: case 4, index=" << index << "\n";
 #endif
-    for (size_t u=index; u<n_intervals; u++) {
+    for (size_t u = index; u < n_intervals; u++) {
       intervals[u].start -= 1;
       intervals[u].end -= 1;
     }
     // Merge the needed intervals if possible.
     if (index > 0) {
-      if (intervals[index-1].end == intervals[index].start) {
+      if (intervals[index - 1].end == intervals[index].start) {
         // Merging both intervals
-        intervals[index-1].end = intervals[index].end;
+        intervals[index - 1].end = intervals[index].end;
         intervals.erase(intervals.begin() + index);
       }
     }
@@ -348,7 +353,7 @@ struct BlockInterval {
   }
 
   // Calling the function and checking it
-  void remove_entry_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+  void remove_entry_and_shift(size_t x, [[maybe_unused]] std::ostream &os) {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
@@ -356,7 +361,7 @@ struct BlockInterval {
     remove_entry_and_shift_inner(x);
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
-    for (auto & y : indices_bef) {
+    for (auto &y : indices_bef) {
       if (y < x) {
         indices_aft_expected.push_back(y);
       }
@@ -379,13 +384,13 @@ struct BlockInterval {
       print_vector_val(indices_aft_expected, os);
       os << "SIMP: indices_aft_real: ";
       print_vector_val(indices_aft_real, os);
-      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (A)\n";
+      std::cerr
+          << "SIMP: indices_aft_expected does not match indices_aft_real (A)\n";
       throw TerminalException{1};
     }
     test_correctness();
 #endif
   }
-
 
   // Add one entry at a position and shift.
   // This corresponds to an insertion in the map.
@@ -396,12 +401,12 @@ struct BlockInterval {
       intervals.push_back(iv);
       return;
     }
-    if (x == intervals[n_intervals-1].end) {
-      intervals[n_intervals-1].end += 1;
+    if (x == intervals[n_intervals - 1].end) {
+      intervals[n_intervals - 1].end += 1;
       return;
     }
-    if (x > intervals[n_intervals-1].end) {
-      Interval iv{x, x+1};
+    if (x > intervals[n_intervals - 1].end) {
+      Interval iv{x, x + 1};
       intervals.push_back(iv);
       return;
     }
@@ -414,9 +419,10 @@ struct BlockInterval {
     while (low < high) {
       size_t mid = low + (high - low) / 2;
 #ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
-      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid
+                << "\n";
 #endif
-      Interval& iv = intervals[mid];
+      Interval &iv = intervals[mid];
 
       if (x < iv.start) {
 #ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
@@ -434,8 +440,9 @@ struct BlockInterval {
 #endif
         // x is in [start, end)
         iv.end += 1;
-        size_t start_shift = mid + 1;;
-        for (size_t u=start_shift; u<n_intervals; u++) {
+        size_t start_shift = mid + 1;
+        ;
+        for (size_t u = start_shift; u < n_intervals; u++) {
           intervals[u].start += 1;
           intervals[u].end += 1;
         }
@@ -446,7 +453,7 @@ struct BlockInterval {
     std::cerr << "SIMP: Case 4 low=" << low << "\n";
 #endif
     // x should be outside of the intervals.
-    auto iife_first_interval=[&]() -> size_t {
+    auto iife_first_interval = [&]() -> size_t {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
       if (low >= intervals.size()) {
         std::cerr << "SIMP: out of range access. low=" << low << "\n";
@@ -468,12 +475,12 @@ struct BlockInterval {
 #ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
     std::cerr << "SIMP: Case 4 index=" << index << "\n";
 #endif
-    Interval new_iv{x, x+1};
+    Interval new_iv{x, x + 1};
     intervals.insert(intervals.begin() + index, new_iv);
 #ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
     std::cerr << "SIMP: Case 4 |intervals|=" << intervals.size() << "\n";
 #endif
-    for (size_t u=index + 1; u<n_intervals + 1; u++) {
+    for (size_t u = index + 1; u < n_intervals + 1; u++) {
 #ifdef DEBUG_INSERT_ENTRY_AND_SHIFT
       std::cerr << "SIMP: Case 4 u=" << u << "\n";
 #endif
@@ -482,7 +489,7 @@ struct BlockInterval {
     }
   }
 
-  void insert_entry_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+  void insert_entry_and_shift(size_t x, [[maybe_unused]] std::ostream &os) {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
@@ -491,7 +498,7 @@ struct BlockInterval {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
     indices_aft_expected.push_back(x);
-    for (auto & y : indices_bef) {
+    for (auto &y : indices_bef) {
       if (y < x) {
         indices_aft_expected.push_back(y);
       }
@@ -515,7 +522,8 @@ struct BlockInterval {
       print_vector_val(indices_aft_expected, os);
       os << "SIMP: indices_aft_real: ";
       print_vector_val(indices_aft_real, os);
-      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (B)\n";
+      std::cerr
+          << "SIMP: indices_aft_expected does not match indices_aft_real (B)\n";
       throw TerminalException{1};
     }
     test_correctness();
@@ -530,18 +538,20 @@ struct BlockInterval {
     if (n_intervals == 0) {
       return;
     }
-    //#define DEBUG_NOINSERT_AND_SHIFT
+    // #define DEBUG_NOINSERT_AND_SHIFT
 #ifdef DEBUG_NOINSERT_AND_SHIFT
-    std::cerr << "SIMP: ------------------- START noinsert_and_shift_inner -------------------\n";
+    std::cerr << "SIMP: ------------------- START noinsert_and_shift_inner "
+                 "-------------------\n";
     std::cerr << "SIMP: low=" << low << " high=" << high << "\n";
 #endif
 
     while (low < high) {
       size_t mid = low + (high - low) / 2;
 #ifdef DEBUG_NOINSERT_AND_SHIFT
-      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid << "\n";
+      std::cerr << "SIMP: low=" << low << " high=" << high << " mid=" << mid
+                << "\n";
 #endif
-      Interval& iv = intervals[mid];
+      Interval &iv = intervals[mid];
 
       if (x < iv.start) {
 #ifdef DEBUG_NOINSERT_AND_SHIFT
@@ -563,7 +573,7 @@ struct BlockInterval {
           std::cerr << "SIMP: Case 3.1\n";
 #endif
           // First element in the list
-          for (size_t u=mid; u<n_intervals; u++) {
+          for (size_t u = mid; u < n_intervals; u++) {
             intervals[u].start += 1;
             intervals[u].end += 1;
           }
@@ -574,7 +584,7 @@ struct BlockInterval {
           std::cerr << "SIMP: Case 3.2\n";
 #endif
           // Last element in the list
-          for (size_t u=mid+1; u<n_intervals; u++) {
+          for (size_t u = mid + 1; u < n_intervals; u++) {
             intervals[u].start += 1;
             intervals[u].end += 1;
           }
@@ -585,13 +595,14 @@ struct BlockInterval {
 #endif
         // Break down the interval in two places.
         size_t end = iv.end;
-        Interval new_iv{x + 1, end+1};
+        Interval new_iv{x + 1, end + 1};
         iv.end = x;
         intervals.insert(intervals.begin() + mid + 1, new_iv);
 #ifdef DEBUG_NOINSERT_AND_SHIFT
-        std::cerr << "SIMP: Case 3.3, |intervals|=" << intervals.size() << " n_intervals=" << n_intervals << "\n";
+        std::cerr << "SIMP: Case 3.3, |intervals|=" << intervals.size()
+                  << " n_intervals=" << n_intervals << "\n";
 #endif
-        for (size_t u=mid + 2; u<n_intervals + 1; u++) {
+        for (size_t u = mid + 2; u < n_intervals + 1; u++) {
           intervals[u].start += 1;
           intervals[u].end += 1;
         }
@@ -602,7 +613,7 @@ struct BlockInterval {
     std::cerr << "SIMP: Case 4\n";
 #endif
     // x should be outside of the intervals.
-    auto iife_first_interval=[&]() -> size_t {
+    auto iife_first_interval = [&]() -> size_t {
       if (x < intervals[low].start) {
         return low;
       }
@@ -616,13 +627,13 @@ struct BlockInterval {
 #ifdef DEBUG_NOINSERT_AND_SHIFT
     std::cerr << "SIMP: Case 4, index=" << index << "\n";
 #endif
-    for (size_t u=index; u<n_intervals; u++) {
+    for (size_t u = index; u < n_intervals; u++) {
       intervals[u].start += 1;
       intervals[u].end += 1;
     }
   }
 
-  void noinsert_and_shift(size_t x, [[maybe_unused]] std::ostream& os) {
+  void noinsert_and_shift(size_t x, [[maybe_unused]] std::ostream &os) {
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<Interval> saved_intervals = intervals;
     std::vector<size_t> indices_bef = list_indices();
@@ -630,7 +641,7 @@ struct BlockInterval {
     noinsert_and_shift_inner(x);
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     std::vector<size_t> indices_aft_expected;
-    for (auto & y : indices_bef) {
+    for (auto &y : indices_bef) {
       if (y < x) {
         indices_aft_expected.push_back(y);
       }
@@ -654,33 +665,35 @@ struct BlockInterval {
       print_vector_val(indices_aft_expected, os);
       os << "SIMP: indices_aft_real: ";
       print_vector_val(indices_aft_real, os);
-      std::cerr << "SIMP: indices_aft_expected does not match indices_aft_real (C)\n";
+      std::cerr
+          << "SIMP: indices_aft_expected does not match indices_aft_real (C)\n";
       throw TerminalException{1};
     }
     test_correctness();
 #endif
   }
-
 };
 
-template<typename Ttype, typename Tnorm>
-struct TcombPair {
+template <typename Ttype, typename Tnorm> struct TcombPair {
   std::pair<Ttype, Ttype> pair;
   Tnorm norm;
 };
 
-template<typename Ttype, typename Tnorm>
-bool operator==(TcombPair<Ttype,Tnorm> const &x, TcombPair<Ttype,Tnorm> const &y) {
+template <typename Ttype, typename Tnorm>
+bool operator==(TcombPair<Ttype, Tnorm> const &x,
+                TcombPair<Ttype, Tnorm> const &y) {
   return x.pair.first == y.pair.first;
 }
 
-template<typename Ttype, typename Tnorm>
-bool operator!=(TcombPair<Ttype,Tnorm> const &x, TcombPair<Ttype,Tnorm> const &y) {
+template <typename Ttype, typename Tnorm>
+bool operator!=(TcombPair<Ttype, Tnorm> const &x,
+                TcombPair<Ttype, Tnorm> const &y) {
   return x.pair.first != y.pair.first;
 }
 
-template<typename Ttype, typename Tnorm>
-bool operator<(TcombPair<Ttype,Tnorm> const &a, TcombPair<Ttype,Tnorm> const &b) {
+template <typename Ttype, typename Tnorm>
+bool operator<(TcombPair<Ttype, Tnorm> const &a,
+               TcombPair<Ttype, Tnorm> const &b) {
   if (a.norm < b.norm) {
     return true;
   }
@@ -690,57 +703,58 @@ bool operator<(TcombPair<Ttype,Tnorm> const &a, TcombPair<Ttype,Tnorm> const &b)
   return a.pair.first < b.pair.first;
 }
 
-template<typename Ttype, typename Tnorm, typename Fcomplexity>
-TcombPair<Ttype,Tnorm> generate_comb_pair(std::pair<Ttype,Ttype> const& pair, Fcomplexity f_complexity) {
+template <typename Ttype, typename Tnorm, typename Fcomplexity>
+TcombPair<Ttype, Tnorm> generate_comb_pair(std::pair<Ttype, Ttype> const &pair,
+                                           Fcomplexity f_complexity) {
   Tnorm norm1 = f_complexity(pair.first);
   Tnorm norm2 = f_complexity(pair.second);
   if (norm1 < norm2) {
     return {pair, norm1};
   } else {
-    std::pair<Ttype,Ttype> pair2{pair.second, pair.first};
+    std::pair<Ttype, Ttype> pair2{pair.second, pair.first};
     return {std::move(pair2), norm2};
   }
 }
 
-
 namespace std {
-  template <typename Ttype, typename Tnorm>
-  struct hash<TcombPair<Ttype,Tnorm>> {
-    std::size_t operator()(const TcombPair<Ttype,Tnorm> &x) const {
-      return std::hash<Ttype>()(x.pair.first);
-    }
-  };
-}
+template <typename Ttype, typename Tnorm> struct hash<TcombPair<Ttype, Tnorm>> {
+  std::size_t operator()(const TcombPair<Ttype, Tnorm> &x) const {
+    return std::hash<Ttype>()(x.pair.first);
+  }
+};
+} // namespace std
 
-template<typename Ttype, typename Tnorm>
-struct GenResult {
-  std::array<TcombPair<Ttype,Tnorm>, 2> l_ent;
+template <typename Ttype, typename Tnorm> struct GenResult {
+  std::array<TcombPair<Ttype, Tnorm>, 2> l_ent;
   bool do_something;
 };
 
-
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct>
-GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype,Tnorm> const& b, Fcomplexity f_complexity, Fproduct f_product) {
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Fproduct>
+GenResult<Ttype, Tnorm> f_reduce(TcombPair<Ttype, Tnorm> const &a,
+                                 TcombPair<Ttype, Tnorm> const &b,
+                                 Fcomplexity f_complexity, Fproduct f_product) {
   // Generate the possible ways to simplify the pair of elements.
   // and select the one with the smallest norm
-  Ttype const& a_dir = a.pair.first;
-  Ttype const& b_dir = b.pair.first;
-  Ttype const& a_inv = a.pair.second;
-  Ttype const& b_inv = b.pair.second;
+  Ttype const &a_dir = a.pair.first;
+  Ttype const &b_dir = b.pair.first;
+  Ttype const &a_inv = a.pair.second;
+  Ttype const &b_inv = b.pair.second;
   //
   Ttype elt_dir, elt_inv;
   //
   elt_dir = f_product(a_dir, b_dir);
   elt_inv = f_product(b_inv, a_inv);
-  TcombPair<Ttype,Tnorm> cand = generate_comb_pair<Ttype,Tnorm,Fcomplexity>({elt_dir, elt_inv}, f_complexity);
-  auto f_insert=[&](Ttype const& elt1, Ttype const& elt2) -> void {
+  TcombPair<Ttype, Tnorm> cand = generate_comb_pair<Ttype, Tnorm, Fcomplexity>(
+      {elt_dir, elt_inv}, f_complexity);
+  auto f_insert = [&](Ttype const &elt1, Ttype const &elt2) -> void {
     Tnorm norm1 = f_complexity(elt1);
     Tnorm norm2 = f_complexity(elt2);
     if (norm1 < cand.norm) {
-      cand = {{elt1,elt2},norm1};
+      cand = {{elt1, elt2}, norm1};
     }
     if (norm2 < cand.norm) {
-      cand = {{elt2,elt1},norm2};
+      cand = {{elt2, elt1}, norm2};
     }
   };
   //
@@ -756,11 +770,11 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
   elt_inv = f_product(b_dir, a_dir);
   f_insert(elt_dir, elt_inv);
   //
-  Tnorm const& a_norm = a.norm;
-  Tnorm const& b_norm = b.norm;
-  Tnorm const& cand_norm = cand.norm;
+  Tnorm const &a_norm = a.norm;
+  Tnorm const &b_norm = b.norm;
+  Tnorm const &cand_norm = cand.norm;
   bool do_something = true;
-  auto get_pair=[&]() -> std::array<TcombPair<Ttype,Tnorm>, 2> {
+  auto get_pair = [&]() -> std::array<TcombPair<Ttype, Tnorm>, 2> {
     if (cand_norm < a_norm && cand_norm < b_norm) {
       if (a_norm < b_norm) {
         return {a, cand};
@@ -783,10 +797,8 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
   return {get_pair(), do_something};
 }
 
-
 // The ordering of the operations between V1 and V2 are different
 // Therefore, the final size of the output may differ.
-
 
 // The tool for simplifying a list of generators.
 // The transformations being applied are Tietze transformations.
@@ -825,32 +837,37 @@ GenResult<Ttype,Tnorm> f_reduce(TcombPair<Ttype,Tnorm> const& a, TcombPair<Ttype
 //   + Removal of one element from the list
 //   + Insert an element at a specified position (and shift the intervals).
 //   + Iterating: We only need one function:
-//     Access to the first element of the list (returns an std::optional<size_t>)
-//     and remove it.
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
-std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexityKernelInner_V2(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, std::ostream& os) {
+//     Access to the first element of the list (returns an
+//     std::optional<size_t>) and remove it.
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Fproduct, typename Fcheck>
+std::optional<std::vector<TcombPair<Ttype, Tnorm>>>
+ExhaustiveReductionComplexityKernelInner_V2(
+    std::vector<TcombPair<Ttype, Tnorm>> const &ListM, Fcomplexity f_complexity,
+    Fproduct f_product, Fcheck f_check, std::ostream &os) {
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   NanosecondTime time_total;
 #endif
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  os << "SIMP: ExhaustiveReductionComplexityKernelInner_V2, |ListM|=" << ListM.size() << "\n";
+  os << "SIMP: ExhaustiveReductionComplexityKernelInner_V2, |ListM|="
+     << ListM.size() << "\n";
 #endif
-  std::map<TcombPair<Ttype,Tnorm>, BlockInterval> map;
+  std::map<TcombPair<Ttype, Tnorm>, BlockInterval> map;
   size_t n_matrix = ListM.size();
-  for (auto & eM: ListM) {
+  for (auto &eM : ListM) {
     BlockInterval blk_int;
     map[eM] = blk_int;
   }
   size_t index = 0;
-  for (auto & kv: map) {
-    BlockInterval & blk_int = kv.second;
+  for (auto &kv : map) {
+    BlockInterval &blk_int = kv.second;
     blk_int.insert_interval(index + 1, n_matrix);
     index += 1;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  auto get_complexity=[&]() -> Tnorm {
+  auto get_complexity = [&]() -> Tnorm {
     Tnorm total_complexity(0);
-    for (auto & kv: map) {
+    for (auto &kv : map) {
       total_complexity += kv.first.norm;
     }
     return total_complexity;
@@ -860,16 +877,17 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   // We need a vector since the map is not random access.
   // That is using iterators and advancing them has complexity O(n) for
   // the map but O(1) for the vector.
-  std::vector<TcombPair<Ttype,Tnorm>> vect;
-  for (auto & kv: map) {
+  std::vector<TcombPair<Ttype, Tnorm>> vect;
+  for (auto &kv : map) {
     vect.push_back(kv.first);
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-  auto check_map_vect=[&](std::string const& context) -> void {
+  auto check_map_vect = [&](std::string const &context) -> void {
     size_t index = 0;
-    for (auto & kv: map) {
+    for (auto &kv : map) {
       if (kv.first != vect[index]) {
-        std::cerr << "SIMP: Error in map/vect at index=" << index << " context=" << context << "\n";
+        std::cerr << "SIMP: Error in map/vect at index=" << index
+                  << " context=" << context << "\n";
         throw TerminalException{1};
       }
       index += 1;
@@ -884,35 +902,37 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   size_t i_search = 0;
 #endif
   struct FoundImprov {
-    std::vector<TcombPair<Ttype,Tnorm>> list_delete;
-    std::vector<TcombPair<Ttype,Tnorm>> list_insert;
+    std::vector<TcombPair<Ttype, Tnorm>> list_delete;
+    std::vector<TcombPair<Ttype, Tnorm>> list_insert;
   };
-  auto f_search=[&]() -> std::optional<FoundImprov> {
+  auto f_search = [&]() -> std::optional<FoundImprov> {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     size_t n_reduce_calls = 0;
     size_t idx1 = 0;
 #endif
-    for (auto & kv: map) {
-      TcombPair<Ttype,Tnorm> const& x1 = kv.first;
-      BlockInterval & blk_int = kv.second;
-      while(true) {
+    for (auto &kv : map) {
+      TcombPair<Ttype, Tnorm> const &x1 = kv.first;
+      BlockInterval &blk_int = kv.second;
+      while (true) {
         std::optional<size_t> opt = blk_int.get_first();
         if (opt) {
           size_t idx2 = *opt;
-          TcombPair<Ttype,Tnorm> const& x2 = vect[idx2];
+          TcombPair<Ttype, Tnorm> const &x2 = vect[idx2];
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
           n_reduce_calls += 1;
 #endif
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
           n_get_best_candidate += 1;
 #endif
-          GenResult<Ttype,Tnorm> gen = f_reduce<Ttype,Tnorm,Fcomplexity,Fproduct>(x1, x2, f_complexity, f_product);
+          GenResult<Ttype, Tnorm> gen =
+              f_reduce<Ttype, Tnorm, Fcomplexity, Fproduct>(
+                  x1, x2, f_complexity, f_product);
           if (gen.do_something) {
             bool x1_attained = false;
             bool x2_attained = false;
-            std::vector<TcombPair<Ttype,Tnorm>> list_delete;
-            std::vector<TcombPair<Ttype,Tnorm>> list_insert;
-            for (auto & ent : gen.l_ent) {
+            std::vector<TcombPair<Ttype, Tnorm>> list_delete;
+            std::vector<TcombPair<Ttype, Tnorm>> list_insert;
+            for (auto &ent : gen.l_ent) {
               bool is_x1 = ent == x1;
               bool is_x2 = ent == x2;
               if (is_x1) {
@@ -959,7 +979,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   //
   // Update the data structure of map/vect
   //
-  auto delete_entry=[&](TcombPair<Ttype,Tnorm> const& val) -> void {
+  auto delete_entry = [&](TcombPair<Ttype, Tnorm> const &val) -> void {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val should be present in order to get the position\n";
@@ -972,18 +992,19 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
     std::string context = "delete_entry_at_" + std::to_string(pos);
     check_map_vect(context);
 #endif
-    for (auto & kv : map) {
-      BlockInterval & blk_int = kv.second;
+    for (auto &kv : map) {
+      BlockInterval &blk_int = kv.second;
       blk_int.remove_entry_and_shift(pos, os);
     }
   };
-  auto insert_entry=[&](TcombPair<Ttype,Tnorm> const& val) -> void {
+  auto insert_entry = [&](TcombPair<Ttype, Tnorm> const &val) -> void {
     BlockInterval blk_int;
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION
     auto iter_deb = map.find(val);
     if (iter_deb != map.end()) {
       size_t pos_deb = std::distance(map.begin(), iter_deb);
-      std::cerr << "SIMP: insert_entry, entry val already at position " << pos_deb << "\n";
+      std::cerr << "SIMP: insert_entry, entry val already at position "
+                << pos_deb << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -1001,8 +1022,8 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #endif
     size_t n_entry = vect.size();
     size_t idx = 0;
-    for (auto & kv: map) {
-      BlockInterval & blk_int = kv.second;
+    for (auto &kv : map) {
+      BlockInterval &blk_int = kv.second;
       if (idx < pos) {
         blk_int.insert_entry_and_shift(pos, os);
       } else {
@@ -1017,17 +1038,17 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   };
 
   // Now iterating looking for improvements.
-  while(true) {
+  while (true) {
     std::optional<FoundImprov> opt = f_search();
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
     i_search += 1;
 #endif
     if (opt) {
       FoundImprov found_improv = *opt;
-      for (auto & val : found_improv.list_delete) {
+      for (auto &val : found_improv.list_delete) {
         delete_entry(val);
       }
-      for (auto & val : found_improv.list_insert) {
+      for (auto &val : found_improv.list_insert) {
         if (!f_check(val.pair.first) || !f_check(val.pair.second)) {
           return {};
         }
@@ -1045,73 +1066,87 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   double delta_d = static_cast<double>(delta);
   double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
   double avg_cost_best = delta_d / n_get_best_candidate_d;
-  os << "|SIMP: ExhaustiveReductionComplexityKernel, avg(f_get_best_candidate)|=" << avg_cost_best << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel, "
+        "avg(f_get_best_candidate)|="
+     << avg_cost_best << "\n";
   os << "|SIMP: ExhaustiveReductionComplexityKernel|=" << delta << "\n";
 #endif
   return vect;
 }
 
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
-std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexityKernel_V2(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, std::ostream& os) {
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Fproduct, typename Fcheck>
+std::optional<std::vector<TcombPair<Ttype, Tnorm>>>
+ExhaustiveReductionComplexityKernel_V2(
+    std::vector<TcombPair<Ttype, Tnorm>> const &ListM, Fcomplexity f_complexity,
+    Fproduct f_product, Fcheck f_check, std::ostream &os) {
   if (ListM.size() <= 1) {
     return ListM;
   }
 #ifdef SANITY_CHECK_MATRIX_GROUP_SIMPLIFICATION_DISABLE
-  auto f_total_comp=[&](std::vector<TcombPair<Ttype,Tnorm>> const& ListM) -> Tnorm {
+  auto f_total_comp =
+      [&](std::vector<TcombPair<Ttype, Tnorm>> const &ListM) -> Tnorm {
     Tnorm Tcomp(0);
-    for (auto & eM : ListM) {
+    for (auto &eM : ListM) {
       Tcomp += f_complexity(eM.pair.first);
     }
     return Tcomp;
   };
   Tnorm curr_total_comp = f_total_comp(ListM);
-# ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity(start)=" << curr_total_comp << "\n";
-# endif
-  std::vector<TcombPair<Ttype,Tnorm>> ListMwork = ListM;
+#endif
+  std::vector<TcombPair<Ttype, Tnorm>> ListMwork = ListM;
   size_t n_iter = 0;
-  while(true) {
-    std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt = ExhaustiveReductionComplexityKernelInner_V2<Ttype,Tnorm,Fcomplexity,Fproduct>(ListMwork, f_complexity, f_product, f_check, os);
+  while (true) {
+    std::optional<std::vector<TcombPair<Ttype, Tnorm>>> opt =
+        ExhaustiveReductionComplexityKernelInner_V2<Ttype, Tnorm, Fcomplexity,
+                                                    Fproduct>(
+            ListMwork, f_complexity, f_product, f_check, os);
     if (!opt) {
       return {};
     }
     ListMwork = *opt;
     Tnorm new_total_comp = f_total_comp(ListMwork);
-# ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    os << "SIMP: new_total_comp=" << new_total_comp << " curr_total_comp=" << curr_total_comp << "\n";
-# endif
+#ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
+    os << "SIMP: new_total_comp=" << new_total_comp
+       << " curr_total_comp=" << curr_total_comp << "\n";
+#endif
     if (new_total_comp == curr_total_comp) {
       return ListMwork;
     }
     if (n_iter == 1) {
-      std::cerr << "SIMP: The second call did not improve and that is unexpected\n";
+      std::cerr
+          << "SIMP: The second call did not improve and that is unexpected\n";
       throw TerminalException{1};
     }
     curr_total_comp = new_total_comp;
     n_iter += 1;
   }
 #else
-  return ExhaustiveReductionComplexityKernelInner_V2<Ttype,Tnorm,Fcomplexity,Fproduct>(ListM, f_complexity, f_product, f_check, os);
+  return ExhaustiveReductionComplexityKernelInner_V2<Ttype, Tnorm, Fcomplexity,
+                                                     Fproduct>(
+      ListM, f_complexity, f_product, f_check, os);
 #endif
 }
 
-
-
-
-
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
-std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexityKernel_V1(std::vector<TcombPair<Ttype,Tnorm>> const& ListM, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, [[maybe_unused]] std::ostream& os) {
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Fproduct, typename Fcheck>
+std::optional<std::vector<TcombPair<Ttype, Tnorm>>>
+ExhaustiveReductionComplexityKernel_V1(
+    std::vector<TcombPair<Ttype, Tnorm>> const &ListM, Fcomplexity f_complexity,
+    Fproduct f_product, Fcheck f_check, [[maybe_unused]] std::ostream &os) {
   if (ListM.size() <= 1) {
     return ListM;
   }
   size_t miss_val = std::numeric_limits<size_t>::max();
-  std::map<TcombPair<Ttype,Tnorm>, size_t> map;
+  std::map<TcombPair<Ttype, Tnorm>, size_t> map;
   size_t nonce = 0;
-  for (auto & eM: ListM) {
+  for (auto &eM : ListM) {
     map[eM] = nonce;
     nonce += 1;
   }
-  std::unordered_set<std::pair<size_t,size_t>> set_treated;
+  std::unordered_set<std::pair<size_t, size_t>> set_treated;
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   NanosecondTime time_total;
 #endif
@@ -1122,7 +1157,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
   size_t n_get_best_candidate = 0;
 #endif
-  auto erase_entry=[&](TcombPair<Ttype,Tnorm> const& val) -> void {
+  auto erase_entry = [&](TcombPair<Ttype, Tnorm> const &val) -> void {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to be removed\n";
@@ -1130,7 +1165,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
     }
     map.erase(iter);
   };
-  auto get_pos=[&](TcombPair<Ttype,Tnorm> const& val) -> size_t {
+  auto get_pos = [&](TcombPair<Ttype, Tnorm> const &val) -> size_t {
     auto iter = map.find(val);
     if (iter == map.end()) {
       std::cerr << "SIMP: val shoulf be present in order to get the position\n";
@@ -1140,13 +1175,13 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
     return distance;
   };
   Tnorm total_complexity(0);
-  for (auto & kv: map) {
+  for (auto &kv : map) {
     total_complexity += kv.first.norm;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity=" << total_complexity << "\n";
 #endif
-  auto look_for_simplification=[&]() -> bool {
+  auto look_for_simplification = [&]() -> bool {
     // Iterating over the elements and looking for simplifications.
     //
     // The iterators are unstable, so everytime we change the state,
@@ -1157,7 +1192,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
     // cases separately.
     size_t u = 0;
     size_t v = 1;
-    auto increment_uv=[&]() -> bool {
+    auto increment_uv = [&]() -> bool {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
       os << "SIMP: Starting increment_uv with u=" << u << " v=" << v << "\n";
 #endif
@@ -1175,42 +1210,49 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
     size_t pos = 0;
     os << "SIMP: starting with the following matrices\n";
-    for (auto & kv: map) {
-      os << "SIMP: pos=" << pos << " nonce=" << kv.second << " norm=" << kv.first.second << " eM=\n";
+    for (auto &kv : map) {
+      os << "SIMP: pos=" << pos << " nonce=" << kv.second
+         << " norm=" << kv.first.second << " eM=\n";
       WriteMatrix(os, kv.first.first);
       pos += 1;
     }
 #endif
-    while(true) {
+    while (true) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-      os << "SIMP: " << u << " / " << v << " n_operation=" << n_operation << " |set|=" << map.size() << " |set_treated|=" << set_treated.size() << " i_run=" << i_run << "\n";
+      os << "SIMP: " << u << " / " << v << " n_operation=" << n_operation
+         << " |set|=" << map.size() << " |set_treated|=" << set_treated.size()
+         << " i_run=" << i_run << "\n";
 #endif
       auto iter1 = map.begin();
       std::advance(iter1, u);
-      TcombPair<Ttype,Tnorm> a = iter1->first;
+      TcombPair<Ttype, Tnorm> a = iter1->first;
       size_t nonce_a = iter1->second;
       //
       auto iter2 = map.begin();
       std::advance(iter2, v);
-      TcombPair<Ttype,Tnorm> b = iter2->first;
+      TcombPair<Ttype, Tnorm> b = iter2->first;
       size_t nonce_b = iter2->second;
       std::pair<size_t, size_t> nonce_pair{nonce_a, nonce_b};
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-      os << "SIMP:   Complexities, a.second=" << a.second << " b.second=" << b.second << "\n";
+      os << "SIMP:   Complexities, a.second=" << a.second
+         << " b.second=" << b.second << "\n";
 #endif
       //
       bool already_treated = false;
-      GenResult<Ttype,Tnorm> gen{{}, false};
+      GenResult<Ttype, Tnorm> gen{{}, false};
       if (set_treated.find(nonce_pair) != set_treated.end()) {
         already_treated = true;
       } else {
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
-        n_get_best_candidate +=1;
+        n_get_best_candidate += 1;
 #endif
-        gen = f_reduce<Ttype,Tnorm,Fcomplexity,Fproduct>(a, b, f_complexity, f_product);
+        gen = f_reduce<Ttype, Tnorm, Fcomplexity, Fproduct>(a, b, f_complexity,
+                                                            f_product);
       }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-      os << "SIMP:   do_something=" << gen.do_something << " already_treated=" << already_treated << " |set_treated|=" << set_treated.size() << "\n";
+      os << "SIMP:   do_something=" << gen.do_something
+         << " already_treated=" << already_treated
+         << " |set_treated|=" << set_treated.size() << "\n";
 #endif
       if (gen.do_something) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
@@ -1223,11 +1265,11 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
         WriteMatrix(os, b.first);
 #endif
         std::vector<size_t> att;
-        std::vector<TcombPair<Ttype,Tnorm>> new_elt;
+        std::vector<TcombPair<Ttype, Tnorm>> new_elt;
         size_t min_distance = miss_val;
         bool a_attained = false;
         bool b_attained = false;
-        for (auto & ent: gen.l_ent) {
+        for (auto &ent : gen.l_ent) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
           os << "SIMP:  ent.comp=" << ent.second << " elt.eM=\n";
           WriteMatrix(os, ent.first);
@@ -1268,7 +1310,7 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
         os << "SIMP:  |new_elt|=" << new_elt.size() << "\n";
 #endif
-        for (auto & elt: new_elt) {
+        for (auto &elt : new_elt) {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
           os << "SIMP:  elt.comp=" << elt.second << " elt.eM=\n";
           WriteMatrix(os, elt.first);
@@ -1284,19 +1326,21 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
           os << "SIMP:  Scenario A\n";
 #endif
-          // This scenario occurs if the new found generators are already present
-          // Two scenarios
+          // This scenario occurs if the new found generators are already
+          // present Two scenarios
           if (!a_attained) {
             // a was removed,
-            if (u == map.size()) { // This can happen if a and b are removed and there is nothing after.
+            if (u == map.size()) { // This can happen if a and b are removed and
+                                   // there is nothing after.
               break;
             }
             if (u == map.size() - 1) {
-              // This can happen if a is removed but either b or something is after and that is it.
-              // So, no more operation possible
+              // This can happen if a is removed but either b or something is
+              // after and that is it. So, no more operation possible
               break;
             }
-            // Left u to the same value as if u remains the same, we are in the next element.
+            // Left u to the same value as if u remains the same, we are in the
+            // next element.
             v = u + 1; // This is a valid position, continuing
           } else {
             // a still exists
@@ -1309,12 +1353,14 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
                 break;
               }
             } else {
-              // No change in value of v, but since b is dropped, we go to the next one.
+              // No change in value of v, but since b is dropped, we go to the
+              // next one.
             }
           }
         } else {
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
-          os << "SIMP:  Scenario B, |new_elt|=" << new_elt.size() << " min_distance_bis=" << min_distance_bis << "\n";
+          os << "SIMP:  Scenario B, |new_elt|=" << new_elt.size()
+             << " min_distance_bis=" << min_distance_bis << "\n";
 #endif
           // We have a new generator, adjusting accordingly.
           if (!a_attained) {
@@ -1333,7 +1379,8 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
           } else {
             size_t pos_a = get_pos(a);
             if (pos_a < min_distance_bis) {
-              v = min_distance_bis; // Setting up to where we are and incrementing.
+              v = min_distance_bis; // Setting up to where we are and
+                                    // incrementing.
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
               os << "SIMP:   setup B(1)\n";
 #endif
@@ -1351,7 +1398,8 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
           }
         }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-        os << "SIMP:   a/b_attained=" << a_attained << "/" << b_attained << " min_distance_bis=" << min_distance_bis << "\n";
+        os << "SIMP:   a/b_attained=" << a_attained << "/" << b_attained
+           << " min_distance_bis=" << min_distance_bis << "\n";
 #endif
       } else {
         if (!already_treated) {
@@ -1369,18 +1417,18 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
     return true;
   };
 
-
-  while(true) {
+  while (true) {
     bool test = look_for_simplification();
     if (!test) {
       return {};
     }
     Tnorm new_complexity(0);
-    for (auto & kv: map) {
+    for (auto &kv : map) {
       new_complexity += kv.first.norm;
     }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
-    os << "SIMP: total_complexity=" << total_complexity << " new_complexity=" << new_complexity << "\n";
+    os << "SIMP: total_complexity=" << total_complexity
+       << " new_complexity=" << new_complexity << "\n";
 #endif
     if (total_complexity == new_complexity) {
       break;
@@ -1390,8 +1438,8 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
 #endif
     total_complexity = new_complexity;
   }
-  std::vector<TcombPair<Ttype,Tnorm>> new_list_gens;
-  for (auto & kv: map) {
+  std::vector<TcombPair<Ttype, Tnorm>> new_list_gens;
+  for (auto &kv : map) {
     new_list_gens.push_back(kv.first);
   }
 #ifdef TIMINGS_MATRIX_GROUP_SIMPLIFICATION
@@ -1399,80 +1447,94 @@ std::optional<std::vector<TcombPair<Ttype,Tnorm>>> ExhaustiveReductionComplexity
   double delta_d = static_cast<double>(delta);
   double n_get_best_candidate_d = static_cast<double>(n_get_best_candidate);
   double avg_cost_best = delta_d / n_get_best_candidate_d;
-  os << "|SIMP: ExhaustiveReductionComplexityKernel, avg(f_get_best_candidate)|=" << avg_cost_best << "\n";
+  os << "|SIMP: ExhaustiveReductionComplexityKernel, "
+        "avg(f_get_best_candidate)|="
+     << avg_cost_best << "\n";
 #endif
   return new_list_gens;
 }
 
-
-
-
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Fproduct, typename Fcheck>
-std::optional<std::vector<Ttype>> ExhaustiveReductionComplexityKernel(std::vector<std::pair<Ttype,Ttype>> const& ListPair, Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check, std::ostream& os) {
-  std::unordered_set<TcombPair<Ttype,Tnorm>> SetComb;
-  for (auto & ePair : ListPair) {
-    TcombPair<Ttype,Tnorm> comb = generate_comb_pair<Ttype,Tnorm,Fcomplexity>(ePair, f_complexity);
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Fproduct, typename Fcheck>
+std::optional<std::vector<Ttype>> ExhaustiveReductionComplexityKernel(
+    std::vector<std::pair<Ttype, Ttype>> const &ListPair,
+    Fcomplexity f_complexity, Fproduct f_product, Fcheck f_check,
+    std::ostream &os) {
+  std::unordered_set<TcombPair<Ttype, Tnorm>> SetComb;
+  for (auto &ePair : ListPair) {
+    TcombPair<Ttype, Tnorm> comb =
+        generate_comb_pair<Ttype, Tnorm, Fcomplexity>(ePair, f_complexity);
     SetComb.insert(comb);
   }
-  std::vector<TcombPair<Ttype,Tnorm>> ListComb;
-  for (auto & eComb: SetComb) {
+  std::vector<TcombPair<Ttype, Tnorm>> ListComb;
+  for (auto &eComb : SetComb) {
     ListComb.push_back(eComb);
   }
-  auto get_reduced=[&]() -> std::optional<std::vector<TcombPair<Ttype,Tnorm>>> {
+  auto get_reduced =
+      [&]() -> std::optional<std::vector<TcombPair<Ttype, Tnorm>>> {
 #ifdef METHOD_COMPARISON_MATRIX_GROUP_SIMPLIFICATION
     MicrosecondTime time;
-    std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt1 = ExhaustiveReductionComplexityKernel_V1<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
+    std::optional<std::vector<TcombPair<Ttype, Tnorm>>> opt1 =
+        ExhaustiveReductionComplexityKernel_V1<Ttype, Tnorm, Fcomplexity,
+                                               Fproduct, Fcheck>(
+            ListComb, f_complexity, f_product, f_check, os);
     if (!opt1) {
       return {};
     }
-    std::vector<TcombPair<Ttype,Tnorm>> const& result_V1 = *opt1;
-    os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time << " |result_V1|=" << result_V1.size() << "\n";
-    std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt2 = ExhaustiveReductionComplexityKernel_V2<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
+    std::vector<TcombPair<Ttype, Tnorm>> const &result_V1 = *opt1;
+    os << "|SIMP: ExhaustiveReductionComplexityKernel_V1|=" << time
+       << " |result_V1|=" << result_V1.size() << "\n";
+    std::optional<std::vector<TcombPair<Ttype, Tnorm>>> opt2 =
+        ExhaustiveReductionComplexityKernel_V2<Ttype, Tnorm, Fcomplexity,
+                                               Fproduct, Fcheck>(
+            ListComb, f_complexity, f_product, f_check, os);
     if (!opt2) {
       return {};
     }
-    std::vector<TcombPair<Ttype,Tnorm>> const& result_V2 = *opt2;
-    os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time << " |result_V2|=" << result_V2.size() << "\n";
+    std::vector<TcombPair<Ttype, Tnorm>> const &result_V2 = *opt2;
+    os << "|SIMP: ExhaustiveReductionComplexityKernel_V2|=" << time
+       << " |result_V2|=" << result_V2.size() << "\n";
     return result_V2;
 #else
-    return ExhaustiveReductionComplexityKernel_V2<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListComb, f_complexity, f_product, f_check, os);
+    return ExhaustiveReductionComplexityKernel_V2<Ttype, Tnorm, Fcomplexity,
+                                                  Fproduct, Fcheck>(
+        ListComb, f_complexity, f_product, f_check, os);
 #endif
   };
-  std::optional<std::vector<TcombPair<Ttype,Tnorm>>> opt = get_reduced();
+  std::optional<std::vector<TcombPair<Ttype, Tnorm>>> opt = get_reduced();
   if (!opt) {
     return {};
   }
-  std::vector<TcombPair<Ttype,Tnorm>> const& l_ent = *opt;
+  std::vector<TcombPair<Ttype, Tnorm>> const &l_ent = *opt;
   std::vector<Ttype> l_ent_ret;
-  for (auto &ent: l_ent) {
+  for (auto &ent : l_ent) {
     l_ent_ret.push_back(ent.pair.first);
   }
   return l_ent_ret;
 }
 
-
-
-
-
-
-
-template<typename Ttype, typename Tnorm, typename Fcomplexity, typename Finvers, typename Fproduct, typename Fcheck>
-std::optional<std::vector<Ttype>> ExhaustiveReductionComplexity(std::vector<Ttype> const& ListM, Fcomplexity f_complexity, Finvers f_invers, Fproduct f_product, Fcheck f_check, std::ostream& os) {
-  std::vector<std::pair<Ttype,Ttype>> ListPair;
-  for (auto & eM : ListM) {
+template <typename Ttype, typename Tnorm, typename Fcomplexity,
+          typename Finvers, typename Fproduct, typename Fcheck>
+std::optional<std::vector<Ttype>> ExhaustiveReductionComplexity(
+    std::vector<Ttype> const &ListM, Fcomplexity f_complexity, Finvers f_invers,
+    Fproduct f_product, Fcheck f_check, std::ostream &os) {
+  std::vector<std::pair<Ttype, Ttype>> ListPair;
+  for (auto &eM : ListM) {
     Ttype eM_inv = f_invers(eM);
-    std::pair<Ttype,Ttype> pair{eM, eM_inv};
+    std::pair<Ttype, Ttype> pair{eM, eM_inv};
     ListPair.push_back(pair);
   }
-  return ExhaustiveReductionComplexityKernel<Ttype,Tnorm,Fcomplexity,Fproduct,Fcheck>(ListPair, f_complexity, f_product, f_check, os);
+  return ExhaustiveReductionComplexityKernel<Ttype, Tnorm, Fcomplexity,
+                                             Fproduct, Fcheck>(
+      ListPair, f_complexity, f_product, f_check, os);
 }
 
-template<typename T>
-bool check_matrix_coefficients(MyMatrix<T> const& M, T const& bound) {
+template <typename T>
+bool check_matrix_coefficients(MyMatrix<T> const &M, T const &bound) {
   int n = M.rows();
-  for (int i=0; i<n; i++) {
-    for (int j=0; j<n; j++) {
-      T val = T_abs(M(i,j));
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < n; j++) {
+      T val = T_abs(M(i, j));
       if (val > bound) {
         return false;
       }
@@ -1481,50 +1543,59 @@ bool check_matrix_coefficients(MyMatrix<T> const& M, T const& bound) {
   return true;
 }
 
-
-template<typename T>
-std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix_Generic(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, std::ostream& os) {
-  auto f_complexity=[&](MyMatrix<T> const& M) -> T {
+template <typename T>
+std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix_Generic(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
+    std::ostream &os) {
+  auto f_complexity = [&](MyMatrix<T> const &M) -> T {
     return get_ell1_complexity_measure(M);
   };
-  auto f_product=[&](MyMatrix<T> const& A, MyMatrix<T> const& B) -> MyMatrix<T> {
-    return A * B;
-  };
-  auto f_check=[&]([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+  auto f_product = [&](MyMatrix<T> const &A,
+                       MyMatrix<T> const &B) -> MyMatrix<T> { return A * B; };
+  auto f_check = [&]([[maybe_unused]] MyMatrix<T> const &M) -> bool {
     return true;
   };
-  std::optional<std::vector<MyMatrix<T>>> opt = ExhaustiveReductionComplexityKernel<MyMatrix<T>,T,decltype(f_complexity),decltype(f_product),decltype(f_check)>(ListPair, f_complexity, f_product, f_check, os);
+  std::optional<std::vector<MyMatrix<T>>> opt =
+      ExhaustiveReductionComplexityKernel<
+          MyMatrix<T>, T, decltype(f_complexity), decltype(f_product),
+          decltype(f_check)>(ListPair, f_complexity, f_product, f_check, os);
   if (!opt) {
-    std::cerr << "SIMP: Out of bound for ExhaustiveReductionComplexityGroupMatrix_Generic. Impossible\n";
+    std::cerr
+        << "SIMP: Out of bound for "
+           "ExhaustiveReductionComplexityGroupMatrix_Generic. Impossible\n";
     throw TerminalException{1};
   }
   return *opt;
 }
 
-template<typename T>
-T get_ellinfinity_norm(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair) {
+template <typename T>
+T get_ellinfinity_norm(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair) {
   T norm(0);
-  auto f_process_mat=[&](MyMatrix<T> const& M) -> void {
+  auto f_process_mat = [&](MyMatrix<T> const &M) -> void {
     int n_row = M.rows();
     int n_col = M.cols();
-    for (int i_row=0; i_row<n_row; i_row++) {
-      for (int i_col=0; i_col<n_col; i_col++) {
-        T val = T_abs(M(i_row,i_col));
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      for (int i_col = 0; i_col < n_col; i_col++) {
+        T val = T_abs(M(i_row, i_col));
         if (val > norm) {
           norm = val;
         }
       }
     }
   };
-  for (auto &ePair: ListPair) {
+  for (auto &ePair : ListPair) {
     f_process_mat(ePair.first);
     f_process_mat(ePair.second);
   }
   return norm;
 }
 
-template<typename T, typename Tfinite>
-std::optional<std::vector<MyMatrix<T>>> ExhaustiveReductionComplexityGroupMatrix_Tfinite(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, T const& max_val, std::ostream& os) {
+template <typename T, typename Tfinite>
+std::optional<std::vector<MyMatrix<T>>>
+ExhaustiveReductionComplexityGroupMatrix_Tfinite(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
+    T const &max_val, std::ostream &os) {
   if (ListPair.size() == 0) {
     std::vector<MyMatrix<T>> l_ret;
     return l_ret;
@@ -1534,83 +1605,96 @@ std::optional<std::vector<MyMatrix<T>>> ExhaustiveReductionComplexityGroupMatrix
   //
   int n = ListPair[0].first.rows();
   Tfinite max_poss_Tfinite = std::numeric_limits<Tfinite>::max() - 5;
-  T max_poss_T = UniversalScalarConversion<T,Tfinite>(max_poss_Tfinite);
-  // Add a factor 10, since if it is on the border, it will likely create an element of slightly large
-  // l-infinity norm and thus we would have to rerun which this was expected all along.
+  T max_poss_T = UniversalScalarConversion<T, Tfinite>(max_poss_Tfinite);
+  // Add a factor 10, since if it is on the border, it will likely create an
+  // element of slightly large l-infinity norm and thus we would have to rerun
+  // which this was expected all along.
   T worst_case = max_val * max_val * n * 10;
   if (worst_case > max_poss_T) {
     return {};
   }
   std::vector<std::pair<MyMatrix<Tfinite>, MyMatrix<Tfinite>>> ListPair_Tfinite;
-  for (auto & ePair: ListPair) {
-    MyMatrix<Tfinite> M1 = UniversalMatrixConversion<Tfinite,T>(ePair.first);
-    MyMatrix<Tfinite> M2 = UniversalMatrixConversion<Tfinite,T>(ePair.second);
+  for (auto &ePair : ListPair) {
+    MyMatrix<Tfinite> M1 = UniversalMatrixConversion<Tfinite, T>(ePair.first);
+    MyMatrix<Tfinite> M2 = UniversalMatrixConversion<Tfinite, T>(ePair.second);
     std::pair<MyMatrix<Tfinite>, MyMatrix<Tfinite>> pair{M1, M2};
     ListPair_Tfinite.push_back(pair);
   }
   //
   // Determine the upper bound
   //
-  double max_poss_double = UniversalScalarConversion<double,Tfinite>(max_poss_Tfinite);
+  double max_poss_double =
+      UniversalScalarConversion<double, Tfinite>(max_poss_Tfinite);
   double max_val_double = sqrt(max_poss_double / (10 * n));
   int64_t max_val_int64 = static_cast<int64_t>(max_val_double);
-  Tfinite max_val_Tfinite = UniversalScalarConversion<Tfinite,int64_t>(max_val_int64);
-  auto f_complexity=[&](MyMatrix<Tfinite> const& M) -> Tfinite {
+  Tfinite max_val_Tfinite =
+      UniversalScalarConversion<Tfinite, int64_t>(max_val_int64);
+  auto f_complexity = [&](MyMatrix<Tfinite> const &M) -> Tfinite {
     return get_ell1_complexity_measure(M);
   };
-  auto f_product=[&](MyMatrix<Tfinite> const& A, MyMatrix<Tfinite> const& B) -> MyMatrix<Tfinite> {
+  auto f_product = [&](MyMatrix<Tfinite> const &A,
+                       MyMatrix<Tfinite> const &B) -> MyMatrix<Tfinite> {
     return A * B;
   };
-  auto f_check=[&](MyMatrix<Tfinite> const& M) -> bool {
+  auto f_check = [&](MyMatrix<Tfinite> const &M) -> bool {
     return check_matrix_coefficients(M, max_val_Tfinite);
   };
-  std::optional<std::vector<MyMatrix<Tfinite>>> opt = ExhaustiveReductionComplexityKernel<MyMatrix<Tfinite>,Tfinite,decltype(f_complexity),decltype(f_product),decltype(f_check)>(ListPair_Tfinite, f_complexity, f_product, f_check, os);
+  std::optional<std::vector<MyMatrix<Tfinite>>> opt =
+      ExhaustiveReductionComplexityKernel<
+          MyMatrix<Tfinite>, Tfinite, decltype(f_complexity),
+          decltype(f_product), decltype(f_check)>(
+          ListPair_Tfinite, f_complexity, f_product, f_check, os);
   if (!opt) {
     return {};
   }
-  std::vector<MyMatrix<Tfinite>> const& l_mat = *opt;
-  std::vector<MyMatrix<T>> l_mat_ret = UniversalStdVectorMatrixConversion<T,Tfinite>(l_mat);
+  std::vector<MyMatrix<Tfinite>> const &l_mat = *opt;
+  std::vector<MyMatrix<T>> l_mat_ret =
+      UniversalStdVectorMatrixConversion<T, Tfinite>(l_mat);
   return l_mat_ret;
 }
 
-
-
-
-
-
-
-template<typename T>
-inline typename std::enable_if<!is_implementation_of_Z<T>::value,std::vector<MyMatrix<T>>>::type ExhaustiveReductionComplexityGroupMatrixInner(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, std::ostream& os) {
+template <typename T>
+inline typename std::enable_if<!is_implementation_of_Z<T>::value,
+                               std::vector<MyMatrix<T>>>::type
+ExhaustiveReductionComplexityGroupMatrixInner(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
+    std::ostream &os) {
   return ExhaustiveReductionComplexityGroupMatrix_Generic(ListPair, os);
 }
 
-
-
-
-
 /*
-  The reduction algorithm will decrease the L1 norm (and likely the related Linf norm).
-  Therefore, it makes sense to go into faster algorithmic when possible.
+  The reduction algorithm will decrease the L1 norm (and likely the related Linf
+  norm). Therefore, it makes sense to go into faster algorithmic when possible.
   If that fails, we cleanly fail and use a slower algorithm.
  */
-template<typename T>
-inline typename std::enable_if<is_implementation_of_Z<T>::value,std::vector<MyMatrix<T>>>::type ExhaustiveReductionComplexityGroupMatrixInner(std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const& ListPair, std::ostream& os) {
+template <typename T>
+inline typename std::enable_if<is_implementation_of_Z<T>::value,
+                               std::vector<MyMatrix<T>>>::type
+ExhaustiveReductionComplexityGroupMatrixInner(
+    std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
+    std::ostream &os) {
   // The maximum of the L1 norms of the matrices of ListPair.
   T max_val = get_ellinfinity_norm(ListPair);
   // int8_t has some compilation problems.
 
   // Trying int16_t
-  std::optional<std::vector<MyMatrix<T>>> opt2 = ExhaustiveReductionComplexityGroupMatrix_Tfinite<T,int16_t>(ListPair, max_val, os);
+  std::optional<std::vector<MyMatrix<T>>> opt2 =
+      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int16_t>(ListPair,
+                                                                   max_val, os);
   if (opt2) {
     return *opt2;
   }
   // Trying int32_t
-  std::optional<std::vector<MyMatrix<T>>> opt3 = ExhaustiveReductionComplexityGroupMatrix_Tfinite<T,int32_t>(ListPair, max_val, os);
+  std::optional<std::vector<MyMatrix<T>>> opt3 =
+      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int32_t>(ListPair,
+                                                                   max_val, os);
   if (opt3) {
     return *opt3;
   }
   // Trying int64_t
-  std::optional<std::vector<MyMatrix<T>>> opt4 = ExhaustiveReductionComplexityGroupMatrix_Tfinite<T,int64_t>(ListPair, max_val, os);
+  std::optional<std::vector<MyMatrix<T>>> opt4 =
+      ExhaustiveReductionComplexityGroupMatrix_Tfinite<T, int64_t>(ListPair,
+                                                                   max_val, os);
   if (opt4) {
     return *opt4;
   }
@@ -1618,97 +1702,92 @@ inline typename std::enable_if<is_implementation_of_Z<T>::value,std::vector<MyMa
   return ExhaustiveReductionComplexityGroupMatrix_Generic(ListPair, os);
 }
 
-
-
-
-template<typename T>
-std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const& ListM, std::ostream& os) {
+template <typename T>
+std::vector<MyMatrix<T>>
+ExhaustiveReductionComplexityGroupMatrix(std::vector<MyMatrix<T>> const &ListM,
+                                         std::ostream &os) {
 #ifdef TRACK_INFO_MATRIX_GROUP_SIMPLIFICATION
   write_matrix_group(ListM, "Call_to_ExhaustiveReductionComplexityGroupMatrix");
 #endif
   std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> ListPair;
-  for (auto & eM : ListM) {
+  for (auto &eM : ListM) {
     MyMatrix<T> eM_inv = Inverse(eM);
-    std::pair<MyMatrix<T>,MyMatrix<T>> pair{eM, eM_inv};
+    std::pair<MyMatrix<T>, MyMatrix<T>> pair{eM, eM_inv};
     ListPair.push_back(pair);
   }
   return ExhaustiveReductionComplexityGroupMatrixInner<T>(ListPair, os);
 }
 
-
-
-
-
-
-
-
-
-
-std::vector<permutalib::SequenceType<false>> ExhaustiveReductionComplexitySequences(std::vector<permutalib::SequenceType<false>> const& ListS, std::ostream& os) {
+std::vector<permutalib::SequenceType<false>>
+ExhaustiveReductionComplexitySequences(
+    std::vector<permutalib::SequenceType<false>> const &ListS,
+    std::ostream &os) {
   using Tseq = permutalib::SequenceType<false>;
-  auto f_complexity=[&](Tseq const& x) -> size_t {
-    return x.complexity();
-  };
-  auto f_invers=[&](Tseq const& x) -> Tseq {
-    return Inverse(x);
-  };
-  auto f_product=[&](Tseq const& x, Tseq const& y) -> Tseq {
-    return x * y;
-  };
-  auto f_check=[&]([[maybe_unused]] Tseq const& x) -> bool {
-    return true;
-  };
-  std::optional<std::vector<permutalib::SequenceType<false>>> opt = ExhaustiveReductionComplexity<Tseq,size_t,decltype(f_complexity),decltype(f_invers),decltype(f_product),decltype(f_check)>(ListS, f_complexity, f_invers, f_product, f_check, os);
+  auto f_complexity = [&](Tseq const &x) -> size_t { return x.complexity(); };
+  auto f_invers = [&](Tseq const &x) -> Tseq { return Inverse(x); };
+  auto f_product = [&](Tseq const &x, Tseq const &y) -> Tseq { return x * y; };
+  auto f_check = [&]([[maybe_unused]] Tseq const &x) -> bool { return true; };
+  std::optional<std::vector<permutalib::SequenceType<false>>> opt =
+      ExhaustiveReductionComplexity<Tseq, size_t, decltype(f_complexity),
+                                    decltype(f_invers), decltype(f_product),
+                                    decltype(f_check)>(
+          ListS, f_complexity, f_invers, f_product, f_check, os);
   if (!opt) {
-    std::cerr << "SIMP: We should never reach that stage in ExhaustiveReductionComplexitySequences\n";
+    std::cerr << "SIMP: We should never reach that stage in "
+                 "ExhaustiveReductionComplexitySequences\n";
     throw TerminalException{1};
   }
   return *opt;
 }
 
-template<typename T, typename Telt>
-std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> ExhaustiveReductionComplexityGroupMatrixPerm(std::vector<MyMatrix<T>> const& ListM, std::vector<Telt> const& ListPerm, std::ostream& os) {
+template <typename T, typename Telt>
+std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>>
+ExhaustiveReductionComplexityGroupMatrixPerm(
+    std::vector<MyMatrix<T>> const &ListM, std::vector<Telt> const &ListPerm,
+    std::ostream &os) {
   using Ttype = std::pair<MyMatrix<T>, Telt>;
-  auto f_complexity=[&](Ttype const& pair) -> T {
+  auto f_complexity = [&](Ttype const &pair) -> T {
     return get_ell1_complexity_measure(pair.first);
   };
-  auto f_invers=[](Ttype const& pair) -> Ttype {
+  auto f_invers = [](Ttype const &pair) -> Ttype {
     return {Inverse(pair.first), Inverse(pair.second)};
   };
-  auto f_product=[](Ttype const& p1, Ttype const& p2) -> Ttype {
+  auto f_product = [](Ttype const &p1, Ttype const &p2) -> Ttype {
     return {p1.first * p2.first, p1.second * p2.second};
   };
-  auto f_check=[&]([[maybe_unused]] Ttype const& p) -> bool {
-    return true;
-  };
+  auto f_check = [&]([[maybe_unused]] Ttype const &p) -> bool { return true; };
   std::vector<Ttype> ListPair;
   size_t n_gen = ListM.size();
-  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+  for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     Ttype pair{ListM[i_gen], ListPerm[i_gen]};
     ListPair.push_back(pair);
   }
-  std::optional<std::vector<Ttype>> opt = ExhaustiveReductionComplexity<Ttype,T,decltype(f_complexity),decltype(f_invers),decltype(f_product),decltype(f_check)>(ListPair, f_complexity, f_invers, f_product, f_check, os);
+  std::optional<std::vector<Ttype>> opt =
+      ExhaustiveReductionComplexity<Ttype, T, decltype(f_complexity),
+                                    decltype(f_invers), decltype(f_product),
+                                    decltype(f_check)>(
+          ListPair, f_complexity, f_invers, f_product, f_check, os);
   if (!opt) {
-    std::cerr << "SIMP: We should never reach that stage in ExhaustiveReductionComplexityGroupMatrixPerm\n";
+    std::cerr << "SIMP: We should never reach that stage in "
+                 "ExhaustiveReductionComplexityGroupMatrixPerm\n";
     throw TerminalException{1};
   }
-  std::vector<Ttype> const& RetPair = *opt;
+  std::vector<Ttype> const &RetPair = *opt;
   std::vector<MyMatrix<T>> RetListM;
   std::vector<Telt> RetListPerm;
   size_t n_gen_ret = RetPair.size();
-  for (size_t i_gr=0; i_gr<n_gen_ret; i_gr++) {
+  for (size_t i_gr = 0; i_gr < n_gen_ret; i_gr++) {
     RetListM.push_back(RetPair[i_gr].first);
     RetListPerm.push_back(RetPair[i_gr].second);
   }
   return {RetListM, RetListPerm};
 }
 
-
-
-template<typename T>
-std::vector<MyMatrix<T>> Exhaust_get_total_generators(std::vector<MyMatrix<T>> const& list_mat) {
+template <typename T>
+std::vector<MyMatrix<T>>
+Exhaust_get_total_generators(std::vector<MyMatrix<T>> const &list_mat) {
   std::vector<MyMatrix<T>> list_tot;
-  for (auto & eMat: list_mat) {
+  for (auto &eMat : list_mat) {
     MyMatrix<T> eMat_inv = Inverse(eMat);
     list_tot.push_back(eMat);
     list_tot.push_back(eMat_inv);
@@ -1719,21 +1798,23 @@ std::vector<MyMatrix<T>> Exhaust_get_total_generators(std::vector<MyMatrix<T>> c
 /*
   Apply a number of exhaustive tricks in order to reduce the size of the vector
  */
-template<typename T>
-MyVector<T> ExhaustiveVectorSimplificationKernel(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
+template <typename T>
+MyVector<T>
+ExhaustiveVectorSimplificationKernel(MyVector<T> const &V,
+                                     std::vector<MyMatrix<T>> const &list_mat) {
   int n = V.size();
-  auto f_norm=[&](MyVector<T> const& v) -> T {
+  auto f_norm = [&](MyVector<T> const &v) -> T {
     T norm(0);
-    for (int i=0; i<n; i++) {
+    for (int i = 0; i < n; i++) {
       norm += T_abs(v(i));
     }
     return norm;
   };
   MyVector<T> V_work = V;
   T norm_work = f_norm(V);
-  while(true) {
+  while (true) {
     int n_succ = 0;
-    for (auto & mat : list_mat) {
+    for (auto &mat : list_mat) {
       MyVector<T> V_cand = mat.transpose() * V_work;
       T norm_cand = f_norm(V_cand);
       if (norm_cand < norm_work) {
@@ -1748,23 +1829,28 @@ MyVector<T> ExhaustiveVectorSimplificationKernel(MyVector<T> const& V, std::vect
   }
 }
 
-template<typename T>
-MyVector<T> ExhaustiveVectorSimplification(MyVector<T> const& V, std::vector<MyMatrix<T>> const& list_mat) {
-  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+template <typename T>
+MyVector<T>
+ExhaustiveVectorSimplification(MyVector<T> const &V,
+                               std::vector<MyMatrix<T>> const &list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot =
+      Exhaust_get_total_generators(list_mat);
   return ExhaustiveVectorSimplificationKernel(V, list_mat_tot);
 }
 
-
-template<typename T>
-std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const& list_V, std::vector<MyMatrix<T>> const& list_mat) {
-  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+template <typename T>
+std::vector<MyVector<T>>
+ExhaustiveVectorSimplifications(std::vector<MyVector<T>> const &list_V,
+                                std::vector<MyMatrix<T>> const &list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot =
+      Exhaust_get_total_generators(list_mat);
   std::set<MyVector<T>> set_V_red;
-  for (auto& eV: list_V) {
+  for (auto &eV : list_V) {
     MyVector<T> eV_red = ExhaustiveVectorSimplificationKernel(eV, list_mat_tot);
     set_V_red.insert(eV_red);
   }
   std::vector<MyVector<T>> list_V_red;
-  for (auto & eV_red: set_V_red) {
+  for (auto &eV_red : set_V_red) {
     list_V_red.push_back(eV_red);
   }
   return list_V_red;
@@ -1777,23 +1863,24 @@ std::vector<MyVector<T>> ExhaustiveVectorSimplifications(std::vector<MyVector<T>
   ---
   This is a right coset
  */
-template<typename T>
-MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
+template <typename T>
+MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(
+    MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
   int n = M.rows();
-  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
     T norm(0);
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        norm += T_abs(Hin(i,j));
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        norm += T_abs(Hin(i, j));
       }
     }
     return norm;
   };
   MyMatrix<T> M_work = M;
   T norm_work = f_norm(M);
-  while(true) {
+  while (true) {
     int n_succ = 0;
-    for (auto & mat : list_mat) {
+    for (auto &mat : list_mat) {
       MyMatrix<T> M_cand = M_work * mat;
       T norm_cand = f_norm(M_cand);
       if (norm_cand < norm_work) {
@@ -1808,24 +1895,24 @@ MyMatrix<T> ExhaustiveMatrixRightCosetSimplificationKernel(MyMatrix<T> const& M,
   }
 }
 
-
-template<typename T>
-MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
+template <typename T>
+MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(
+    MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
   int n = M.rows();
-  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
     T norm(0);
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        norm += T_abs(Hin(i,j));
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        norm += T_abs(Hin(i, j));
       }
     }
     return norm;
   };
   MyMatrix<T> M_work = M;
   T norm_work = f_norm(M);
-  while(true) {
+  while (true) {
     int n_succ = 0;
-    for (auto & mat : list_mat) {
+    for (auto &mat : list_mat) {
       MyMatrix<T> M_cand = mat * M_work;
       T norm_cand = f_norm(M_cand);
       if (norm_cand < norm_work) {
@@ -1840,54 +1927,57 @@ MyMatrix<T> ExhaustiveMatrixLeftCosetSimplificationKernel(MyMatrix<T> const& M, 
   }
 }
 
-template<typename T>
-MyMatrix<T> ExhaustiveMatrixRightCosetSimplification(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
-  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+template <typename T>
+MyMatrix<T> ExhaustiveMatrixRightCosetSimplification(
+    MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot =
+      Exhaust_get_total_generators(list_mat);
   return ExhaustiveMatrixRightCosetSimplificationKernel(M, list_mat_tot);
 }
 
-template<typename T>
-MyMatrix<T> ExhaustiveMatrixLeftCosetSimplification(MyMatrix<T> const& M, std::vector<MyMatrix<T>> const& list_mat) {
-  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+template <typename T>
+MyMatrix<T> ExhaustiveMatrixLeftCosetSimplification(
+    MyMatrix<T> const &M, std::vector<MyMatrix<T>> const &list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot =
+      Exhaust_get_total_generators(list_mat);
   return ExhaustiveMatrixLeftCosetSimplificationKernel(M, list_mat_tot);
 }
 
-
-
-template<typename T>
-std::vector<MyMatrix<T>> ExhaustiveMatrixRightCosetSimplifications(std::vector<MyMatrix<T>> const& list_cos, std::vector<MyMatrix<T>> const& list_mat) {
-  std::vector<MyMatrix<T>> list_mat_tot = Exhaust_get_total_generators(list_mat);
+template <typename T>
+std::vector<MyMatrix<T>> ExhaustiveMatrixRightCosetSimplifications(
+    std::vector<MyMatrix<T>> const &list_cos,
+    std::vector<MyMatrix<T>> const &list_mat) {
+  std::vector<MyMatrix<T>> list_mat_tot =
+      Exhaust_get_total_generators(list_mat);
   std::vector<MyMatrix<T>> list_cos_red;
-  for (auto& eCos: list_cos) {
-    MyMatrix<T> eCos_red = ExhaustiveMatrixRightCosetSimplificationKernel(eCos, list_mat_tot);
+  for (auto &eCos : list_cos) {
+    MyMatrix<T> eCos_red =
+        ExhaustiveMatrixRightCosetSimplificationKernel(eCos, list_mat_tot);
     list_cos_red.push_back(eCos_red);
   }
   return list_cos_red;
 }
 
-
-
-
-
 /*
   The result of the simplification algorithm for double cosets
  */
-template<typename T>
-struct DoubleCosetSimplification {
-  MyMatrix<T> u_red; // The u reduction element
+template <typename T> struct DoubleCosetSimplification {
+  MyMatrix<T> u_red;     // The u reduction element
   MyMatrix<T> d_cos_red; // The reduced coset
-  MyMatrix<T> v_red; // The v_reduction element
+  MyMatrix<T> v_red;     // The v_reduction element
 };
 
-template<typename T>
-T get_ellinfinity_norm_double_coset(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens) {
+template <typename T>
+T get_ellinfinity_norm_double_coset(MyMatrix<T> const &d_cos,
+                                    std::vector<MyMatrix<T>> const &u_gens,
+                                    std::vector<MyMatrix<T>> const &v_gens) {
   T norm(0);
-  auto f_process_mat=[&](MyMatrix<T> const& M) -> void {
+  auto f_process_mat = [&](MyMatrix<T> const &M) -> void {
     int n_row = M.rows();
     int n_col = M.cols();
-    for (int i_row=0; i_row<n_row; i_row++) {
-      for (int i_col=0; i_col<n_col; i_col++) {
-        T val = T_abs(M(i_row,i_col));
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      for (int i_col = 0; i_col < n_col; i_col++) {
+        T val = T_abs(M(i_row, i_col));
         if (val > norm) {
           norm = val;
         }
@@ -1895,28 +1985,33 @@ T get_ellinfinity_norm_double_coset(MyMatrix<T> const& d_cos, std::vector<MyMatr
     }
   };
   f_process_mat(d_cos);
-  for (auto &eM: u_gens) {
+  for (auto &eM : u_gens) {
     f_process_mat(eM);
   }
-  for (auto &eM: v_gens) {
+  for (auto &eM : v_gens) {
     f_process_mat(eM);
   }
   return norm;
 }
 
-template<typename T, typename Fcheck>
-std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplifications_Generic(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, Fcheck f_check, [[maybe_unused]] std::ostream& os) {
+template <typename T, typename Fcheck>
+std::optional<DoubleCosetSimplification<T>>
+ExhaustiveMatrixDoubleCosetSimplifications_Generic(
+    MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
+    std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
+    Fcheck f_check, [[maybe_unused]] std::ostream &os) {
   int n_gens_u = u_gens_tot.size();
   int n_gens_v = v_gens_tot.size();
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-  os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications |u_gens_tot|=" << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
+  os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications |u_gens_tot|="
+     << u_gens_tot.size() << " |v_gens_tot|=" << v_gens_tot.size() << "\n";
 #endif
   int n = d_cos.rows();
-  auto f_norm=[&](MyMatrix<T> const& Hin) -> T {
+  auto f_norm = [&](MyMatrix<T> const &Hin) -> T {
     T norm(0);
-    for (int i=0; i<n; i++) {
-      for (int j=0; j<n; j++) {
-        norm += T_abs(Hin(i,j));
+    for (int i = 0; i < n; i++) {
+      for (int j = 0; j < n; j++) {
+        norm += T_abs(Hin(i, j));
       }
     }
     return norm;
@@ -1926,21 +2021,21 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
   MyMatrix<T> d_cos_work = d_cos;
   T norm_work = f_norm(d_cos);
   std::vector<int> indices_u;
-  for (int i=0; i<n_gens_u; i++) {
+  for (int i = 0; i < n_gens_u; i++) {
     indices_u.push_back(i);
   }
   std::vector<int> indices_v;
-  for (int i=0; i<n_gens_v; i++) {
+  for (int i = 0; i < n_gens_v; i++) {
     indices_v.push_back(i);
   }
 
-  auto f_search_uv=[&]() -> std::optional<bool> {
-    for (int u=0; u<n_gens_u; u++) {
-      for (int v=0; v<n_gens_v; v++) {
+  auto f_search_uv = [&]() -> std::optional<bool> {
+    for (int u = 0; u < n_gens_u; u++) {
+      for (int v = 0; v < n_gens_v; v++) {
         int u2 = indices_u[u];
         int v2 = indices_v[v];
-        MyMatrix<T> const& u_gen = u_gens_tot[u2];
-        MyMatrix<T> const& v_gen = v_gens_tot[v2];
+        MyMatrix<T> const &u_gen = u_gens_tot[u2];
+        MyMatrix<T> const &v_gen = v_gens_tot[v2];
         MyMatrix<T> d_cos_cand = u_gen * d_cos_work * v_gen;
         if (!f_check(d_cos_cand)) {
           return {};
@@ -1953,7 +2048,8 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
             return {};
           }
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-          os << "DCOS_SIMP: Improving with u2=" << u2 << " v2=" << v2 << " XXX u=" << u << " v=" << v << "\n";
+          os << "DCOS_SIMP: Improving with u2=" << u2 << " v2=" << v2
+             << " XXX u=" << u << " v=" << v << "\n";
 #endif
           d_cos_work = d_cos_cand;
           norm_work = norm_cand;
@@ -1965,10 +2061,10 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
     }
     return false;
   };
-  auto f_search_u=[&]() -> std::optional<bool> {
-    for (int u=0; u<n_gens_u; u++) {
+  auto f_search_u = [&]() -> std::optional<bool> {
+    for (int u = 0; u < n_gens_u; u++) {
       int u2 = indices_u[u];
-      MyMatrix<T> const& u_gen = u_gens_tot[u2];
+      MyMatrix<T> const &u_gen = u_gens_tot[u2];
       MyMatrix<T> d_cos_cand = u_gen * d_cos_work;
       if (!f_check(d_cos_cand)) {
         return {};
@@ -1990,10 +2086,10 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
     }
     return false;
   };
-  auto f_search_v=[&]() -> std::optional<bool> {
-    for (int v=0; v<n_gens_v; v++) {
+  auto f_search_v = [&]() -> std::optional<bool> {
+    for (int v = 0; v < n_gens_v; v++) {
       int v2 = indices_v[v];
-      MyMatrix<T> const& v_gen = v_gens_tot[v2];
+      MyMatrix<T> const &v_gen = v_gens_tot[v2];
       MyMatrix<T> d_cos_cand = d_cos_work * v_gen;
       if (!f_check(d_cos_cand)) {
         return {};
@@ -2015,7 +2111,7 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
     }
     return false;
   };
-  auto f_search=[&]() -> std::optional<bool> {
+  auto f_search = [&]() -> std::optional<bool> {
     int chosen_method = 3;
     f_random_transpose(indices_u);
     f_random_transpose(indices_v);
@@ -2052,26 +2148,33 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
     return false;
   };
   size_t n_iter = 0;
-  while(true) {
+  while (true) {
     std::optional<bool> test = f_search();
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-    os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter=" << n_iter << " norm_work=" << norm_work << "\n";
+    os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_iter="
+       << n_iter << " norm_work=" << norm_work << "\n";
 #endif
     if (!test) {
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications bound violation at n_iter=" << n_iter << "\n";
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications bound "
+            "violation at n_iter="
+         << n_iter << "\n";
 #endif
       return {};
     }
     if (!*test) {
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(A)=" << n_iter << " norm_work=" << norm_work << "\n";
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications "
+            "n_final_iter(A)="
+         << n_iter << " norm_work=" << norm_work << "\n";
 #endif
       return DoubleCosetSimplification<T>{u_red, d_cos_work, v_red};
     }
     if (n_iter == max_iter) {
 #ifdef DEBUG_MATRIX_DOUBLE_COSET_SIMPLIFICATION
-      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications n_final_iter(B)=" << n_iter << " norm_work=" << norm_work << "\n";
+      os << "DCOS_SIMP: ExhaustiveMatrixDoubleCosetSimplifications "
+            "n_final_iter(B)="
+         << n_iter << " norm_work=" << norm_work << "\n";
 #endif
       return DoubleCosetSimplification<T>{u_red, d_cos_work, v_red};
     }
@@ -2079,115 +2182,154 @@ std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplific
   }
 }
 
-template<typename T, typename Tfinite>
-std::optional<DoubleCosetSimplification<T>> ExhaustiveMatrixDoubleCosetSimplifications_Tfinite(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, T const& max_val, std::ostream& os) {
+template <typename T, typename Tfinite>
+std::optional<DoubleCosetSimplification<T>>
+ExhaustiveMatrixDoubleCosetSimplifications_Tfinite(
+    MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
+    std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
+    T const &max_val, std::ostream &os) {
   int n = d_cos.rows();
   if (u_gens_tot.size() == 0 && v_gens_tot.size() == 0) {
-    return DoubleCosetSimplification<T>{IdentityMat<T>(n), d_cos, IdentityMat<T>(n)};
+    return DoubleCosetSimplification<T>{IdentityMat<T>(n), d_cos,
+                                        IdentityMat<T>(n)};
   }
 
   // Doing basic conformity check
   Tfinite max_poss_Tfinite = std::numeric_limits<Tfinite>::max() - 5;
-  T max_poss_T = UniversalScalarConversion<T,Tfinite>(max_poss_Tfinite);
-  // Add a factor 10, since if it is on the border, it will likely create an element of slightly larger
-  // l-infinity norm and thus we would have to rerun which this was expected all along.
-  // We need max_val**3 because we have products U X V.
-  // We have n * n again because of the double matrix product.
+  T max_poss_T = UniversalScalarConversion<T, Tfinite>(max_poss_Tfinite);
+  // Add a factor 10, since if it is on the border, it will likely create an
+  // element of slightly larger l-infinity norm and thus we would have to rerun
+  // which this was expected all along. We need max_val**3 because we have
+  // products U X V. We have n * n again because of the double matrix product.
   T worst_case = max_val * max_val * max_val * n * n * 10;
   if (worst_case > max_poss_T) {
     return {};
   }
 
   // Convert matrices to Tfinite
-  MyMatrix<Tfinite> d_cos_Tfinite = UniversalMatrixConversion<Tfinite,T>(d_cos);
-  std::vector<MyMatrix<Tfinite>> u_gens_tot_Tfinite = UniversalStdVectorMatrixConversion<Tfinite,T>(u_gens_tot);
-  std::vector<MyMatrix<Tfinite>> v_gens_tot_Tfinite = UniversalStdVectorMatrixConversion<Tfinite,T>(v_gens_tot);
+  MyMatrix<Tfinite> d_cos_Tfinite =
+      UniversalMatrixConversion<Tfinite, T>(d_cos);
+  std::vector<MyMatrix<Tfinite>> u_gens_tot_Tfinite =
+      UniversalStdVectorMatrixConversion<Tfinite, T>(u_gens_tot);
+  std::vector<MyMatrix<Tfinite>> v_gens_tot_Tfinite =
+      UniversalStdVectorMatrixConversion<Tfinite, T>(v_gens_tot);
 
   // Determine the upper bound for checking
-  double max_poss_double = UniversalScalarConversion<double,Tfinite>(max_poss_Tfinite);
+  double max_poss_double =
+      UniversalScalarConversion<double, Tfinite>(max_poss_Tfinite);
   double max_val_double = cbrt(max_poss_double / (10 * n * n));
   int64_t max_val_int64 = static_cast<int64_t>(max_val_double);
-  Tfinite max_val_Tfinite = UniversalScalarConversion<Tfinite,int64_t>(max_val_int64);
+  Tfinite max_val_Tfinite =
+      UniversalScalarConversion<Tfinite, int64_t>(max_val_int64);
 
-  auto f_check=[&](MyMatrix<Tfinite> const& M) -> bool {
+  auto f_check = [&](MyMatrix<Tfinite> const &M) -> bool {
     return check_matrix_coefficients(M, max_val_Tfinite);
   };
 
   // Run the algorithm using Tfinite
-  std::optional<DoubleCosetSimplification<Tfinite>> opt = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos_Tfinite, u_gens_tot_Tfinite, v_gens_tot_Tfinite, max_iter, f_check, os);
+  std::optional<DoubleCosetSimplification<Tfinite>> opt =
+      ExhaustiveMatrixDoubleCosetSimplifications_Generic(
+          d_cos_Tfinite, u_gens_tot_Tfinite, v_gens_tot_Tfinite, max_iter,
+          f_check, os);
   if (!opt) {
     return {};
   }
 
-  DoubleCosetSimplification<Tfinite> const& result = *opt;
+  DoubleCosetSimplification<Tfinite> const &result = *opt;
 
   // Convert back to T
   DoubleCosetSimplification<T> result_T;
-  result_T.u_red = UniversalMatrixConversion<T,Tfinite>(result.u_red);
-  result_T.d_cos_red = UniversalMatrixConversion<T,Tfinite>(result.d_cos_red);
-  result_T.v_red = UniversalMatrixConversion<T,Tfinite>(result.v_red);
+  result_T.u_red = UniversalMatrixConversion<T, Tfinite>(result.u_red);
+  result_T.d_cos_red = UniversalMatrixConversion<T, Tfinite>(result.d_cos_red);
+  result_T.v_red = UniversalMatrixConversion<T, Tfinite>(result.v_red);
 
   return result_T;
 }
 
-template<typename T>
-inline typename std::enable_if<!is_implementation_of_Z<T>::value,DoubleCosetSimplification<T>>::type ExhaustiveMatrixDoubleCosetSimplificationsInner(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, std::ostream& os) {
-  auto f_check=[&]([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+template <typename T>
+inline typename std::enable_if<!is_implementation_of_Z<T>::value,
+                               DoubleCosetSimplification<T>>::type
+ExhaustiveMatrixDoubleCosetSimplificationsInner(
+    MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
+    std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
+    std::ostream &os) {
+  auto f_check = [&]([[maybe_unused]] MyMatrix<T> const &M) -> bool {
     return true;
   };
-  std::optional<DoubleCosetSimplification<T>> opt = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
+  std::optional<DoubleCosetSimplification<T>> opt =
+      ExhaustiveMatrixDoubleCosetSimplifications_Generic(
+          d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
   if (!opt) {
-    std::cerr << "SIMP: Unexpected bound violation in non-integer type ExhaustiveMatrixDoubleCosetSimplifications\n";
+    std::cerr << "SIMP: Unexpected bound violation in non-integer type "
+                 "ExhaustiveMatrixDoubleCosetSimplifications\n";
     throw TerminalException{1};
   }
   return *opt;
 }
 
 /*
-  The reduction algorithm will decrease the L1 norm (and likely the related Linf norm).
-  Therefore, it makes sense to go into faster algorithmic when possible.
+  The reduction algorithm will decrease the L1 norm (and likely the related Linf
+  norm). Therefore, it makes sense to go into faster algorithmic when possible.
   If that fails, we cleanly fail and use a slower algorithm.
  */
-template<typename T>
-inline typename std::enable_if<is_implementation_of_Z<T>::value,DoubleCosetSimplification<T>>::type ExhaustiveMatrixDoubleCosetSimplificationsInner(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens_tot, std::vector<MyMatrix<T>> const& v_gens_tot, size_t const& max_iter, std::ostream& os) {
+template <typename T>
+inline typename std::enable_if<is_implementation_of_Z<T>::value,
+                               DoubleCosetSimplification<T>>::type
+ExhaustiveMatrixDoubleCosetSimplificationsInner(
+    MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
+    std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
+    std::ostream &os) {
   T max_val = get_ellinfinity_norm_double_coset(d_cos, u_gens_tot, v_gens_tot);
   // int8_t has some compilation problems.
 
   // Trying int16_t
-  std::optional<DoubleCosetSimplification<T>> opt2 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int16_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  std::optional<DoubleCosetSimplification<T>> opt2 =
+      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int16_t>(
+          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
   if (opt2) {
     return *opt2;
   }
   // Trying int32_t
-  std::optional<DoubleCosetSimplification<T>> opt3 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int32_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  std::optional<DoubleCosetSimplification<T>> opt3 =
+      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int32_t>(
+          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
   if (opt3) {
     return *opt3;
   }
   // Trying int64_t
-  std::optional<DoubleCosetSimplification<T>> opt4 = ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T,int64_t>(d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
+  std::optional<DoubleCosetSimplification<T>> opt4 =
+      ExhaustiveMatrixDoubleCosetSimplifications_Tfinite<T, int64_t>(
+          d_cos, u_gens_tot, v_gens_tot, max_iter, max_val, os);
   if (opt4) {
     return *opt4;
   }
   // All fails, use the generic numeric
-  auto f_check=[&]([[maybe_unused]] MyMatrix<T> const& M) -> bool {
+  auto f_check = [&]([[maybe_unused]] MyMatrix<T> const &M) -> bool {
     return true;
   };
-  std::optional<DoubleCosetSimplification<T>> opt_generic = ExhaustiveMatrixDoubleCosetSimplifications_Generic(d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
+  std::optional<DoubleCosetSimplification<T>> opt_generic =
+      ExhaustiveMatrixDoubleCosetSimplifications_Generic(
+          d_cos, u_gens_tot, v_gens_tot, max_iter, f_check, os);
   if (!opt_generic) {
-    std::cerr << "SIMP: Unexpected bound violation in generic ExhaustiveMatrixDoubleCosetSimplifications\n";
+    std::cerr << "SIMP: Unexpected bound violation in generic "
+                 "ExhaustiveMatrixDoubleCosetSimplifications\n";
     throw TerminalException{1};
   }
   return *opt_generic;
 }
 
 // The double coset is U x V
-template<typename T>
-DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(MyMatrix<T> const& d_cos, std::vector<MyMatrix<T>> const& u_gens, std::vector<MyMatrix<T>> const& v_gens, size_t const& max_iter, std::ostream& os) {
+template <typename T>
+DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(
+    MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens,
+    std::vector<MyMatrix<T>> const &v_gens, size_t const &max_iter,
+    std::ostream &os) {
   // Generate total generators (with inverses) once
   std::vector<MyMatrix<T>> u_gens_tot = Exhaust_get_total_generators(u_gens);
   std::vector<MyMatrix<T>> v_gens_tot = Exhaust_get_total_generators(v_gens);
 
-  return ExhaustiveMatrixDoubleCosetSimplificationsInner(d_cos, u_gens_tot, v_gens_tot, max_iter, os);
+  return ExhaustiveMatrixDoubleCosetSimplificationsInner(
+      d_cos, u_gens_tot, v_gens_tot, max_iter, os);
 }
 
 // clang-format off

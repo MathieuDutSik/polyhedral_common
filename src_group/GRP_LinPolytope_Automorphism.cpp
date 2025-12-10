@@ -162,7 +162,7 @@ int main(int argc, char *argv[]) {
       FileGRP = argv[4];
     }
     //
-    auto f=[&](std::ostream& os_out) {
+    auto f = [&](std::ostream &os_out) {
       full_process_B<Tgroup>(arith, FileEXT, OutFormat, os_out);
     };
     print_stderr_stdout_file(FileGRP, f);

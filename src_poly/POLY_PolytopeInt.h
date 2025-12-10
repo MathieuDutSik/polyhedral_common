@@ -15,7 +15,8 @@
 
 template <typename T, typename Tint, typename Finsert>
 void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                                 Finsert f_insert, [[maybe_unused]] std::ostream &os) {
+                                 Finsert f_insert,
+                                 [[maybe_unused]] std::ostream &os) {
   int nbVert = EXT.rows();
   int n = EXT.cols();
   int dim = n - 1;

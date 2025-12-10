@@ -55,10 +55,9 @@
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_THRESHOLD_SCHEME
-//#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_STAB
-//#define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
+// #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_STAB
+// #define SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
 #endif
-
 
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_STAB = 1000;
 static const size_t THRESHOLD_USE_SUBSET_SCHEME_CANONIC = 1000;
@@ -104,7 +103,7 @@ TestEquivalenceSubset(WeightMatrix<true, T, Tidx_value> const &WMat,
       TestEquivalenceWeightMatrix_norenorm_perm<int, Telt>(WMat1, WMat2, os);
   if (!test)
     return {};
-  Telt const& eElt = *test;
+  Telt const &eElt = *test;
   std::vector<Tidx> eList(n);
   for (size_t i = 0; i < n; i++) {
     Tidx eVal = OnPoints(i, eElt);
@@ -233,7 +232,8 @@ Treturn FCT_EXT_Qinput(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
   size_t nbRow = TheEXT.rows();
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr << "PES: Error in FCT_EXT_Qinput due to too small coefficient range\n";
+    std::cerr
+        << "PES: Error in FCT_EXT_Qinput due to too small coefficient range\n";
     std::cerr << "PES: nbRow=" << nbRow
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
@@ -312,7 +312,8 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                             std::ostream &os) {
   if (EXT1.rows() != EXT2.rows()) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-    os << "PES: IsomorphismFromCanonicReord, false by EXT1.rows()<>EXT2.rows()\n";
+    os << "PES: IsomorphismFromCanonicReord, false by "
+          "EXT1.rows()<>EXT2.rows()\n";
 #endif
     return {};
   }
@@ -425,8 +426,8 @@ WeightMatrix<true, T, Tidx_value>
 GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
                       std::ostream &os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
-  auto f = [&](size_t nbRow, auto f1, auto f2,
-               [[maybe_unused]] auto f1tr, [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
+  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
+               [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
@@ -451,7 +452,8 @@ GetSimpleWeightMatrix(MyMatrix<T> const &TheEXT, MyMatrix<T> const &Qinput,
     return FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(TheEXT, Qinput, f);
   }
 #endif
-  std::cerr << "PES: Failed to find matching numeric in GetSimpleWeightMatrix\n";
+  std::cerr
+      << "PES: Failed to find matching numeric in GetSimpleWeightMatrix\n";
   throw TerminalException{1};
 }
 
@@ -460,8 +462,7 @@ WeightMatrix<true, T, Tidx_value> GetWeightMatrix(MyMatrix<T> const &TheEXT,
                                                   std::ostream &os) {
   using Treturn = WeightMatrix<true, T, Tidx_value>;
   auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
-               [[maybe_unused]] auto f2tr,
-               [[maybe_unused]] auto f3,
+               [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrix<true, T, Tidx_value>(nbRow, f1, f2, os);
@@ -495,8 +496,8 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
                                                     size_t max_offdiag,
                                                     std::ostream &os) {
   using Treturn = WeightMatrixLimited<true, T>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr, [[maybe_unused]] auto f2tr,
-               [[maybe_unused]] auto f3,
+  auto f = [&](size_t nbRow, auto f1, auto f2, [[maybe_unused]] auto f1tr,
+               [[maybe_unused]] auto f2tr, [[maybe_unused]] auto f3,
                [[maybe_unused]] auto f4, [[maybe_unused]] auto f5,
                [[maybe_unused]] bool is_symm) -> Treturn {
     return WeightMatrixLimited<true, T>(nbRow, f1, f2, max_offdiag, os);
@@ -507,25 +508,27 @@ WeightMatrixLimited<true, T> GetWeightMatrixLimited(MyMatrix<T> const &TheEXT,
 
 template <typename Tvalue, typename Tgroup, typename Tidx_value, typename F1,
           typename F2, typename F1tr, typename F2tr, typename F3, typename F4>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3,
-                                                                 F4 f4, bool is_symm,
-                                                                 std::ostream &os) {
+std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
+           bool is_symm, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: f_for_stab: nbRow=" << nbRow << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME_STAB
-     << "\n";
+  os << "PES: f_for_stab: nbRow=" << nbRow
+     << " threshold=" << THRESHOLD_USE_SUBSET_SCHEME_STAB << "\n";
 #endif
-  auto f_heuristic=[&]() -> std::vector<std::vector<Tidx>> {
+  auto f_heuristic = [&]() -> std::vector<std::vector<Tidx>> {
     if (is_symm) {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, true>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     } else {
-      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
+      return GetStabilizerWeightMatrix_Heuristic<Tvalue, Tidx, false>(
+          nbRow, f1, f2, f1tr, f2tr, f3, f4, os);
     }
   };
-  auto f_kernel=[&]() -> std::vector<std::vector<Tidx>> {
+  auto f_kernel = [&]() -> std::vector<std::vector<Tidx>> {
     if (is_symm) {
       WeightMatrix<true, Tvalue, Tidx_value> WMat(nbRow, f1, f2, os);
       return GetStabilizerWeightMatrix_Kernel<Tvalue, Tgr, Tidx, Tidx_value,
@@ -538,8 +541,8 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F
   };
 #ifdef SANITY_CHECK_THRESHOLD_SCHEME
   std::vector<Tgroup> LGrp;
-  for (int i=0; i<2; i++) {
-    auto iife=[&]() -> std::vector<std::vector<Tidx>> {
+  for (int i = 0; i < 2; i++) {
+    auto iife = [&]() -> std::vector<std::vector<Tidx>> {
       if (i == 0) {
         return f_heuristic();
       } else {
@@ -549,7 +552,7 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F
     std::vector<std::vector<Tidx>> LGen1 = iife();
     std::vector<Telt> LGen2;
     Tidx n_act = 0;
-    for (auto & eGen1 : LGen1) {
+    for (auto &eGen1 : LGen1) {
       n_act = eGen1.size();
       Telt eGen2(eGen1);
       LGen2.push_back(eGen2);
@@ -558,7 +561,8 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> f_for_stab(size_t nbRow, F
     LGrp.push_back(eGrp);
   }
   if (LGrp[0] != LGrp[1]) {
-    std::cerr << "PES: The groups computed from the different scheme are not coherent\n";
+    std::cerr << "PES: The groups computed from the different scheme are not "
+                 "coherent\n";
     throw TerminalException{1};
   }
 #endif
@@ -581,11 +585,12 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
   HumanTime time;
 #endif
   using Treturn = std::vector<std::vector<Tidx>>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
-               [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
-    return f_for_stab<T, Tgroup, Tidx_value, decltype(f1), decltype(f2), decltype(f1tr), decltype(f2tr),
-                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4,
-                                                  is_symm, os);
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
+               auto f4, [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
+    return f_for_stab<T, Tgroup, Tidx_value, decltype(f1), decltype(f2),
+                      decltype(f1tr), decltype(f2tr), decltype(f3),
+                      decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, is_symm,
+                                    os);
   };
   Treturn ListGen =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
@@ -636,21 +641,26 @@ Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT, std::ostream &os) {
 }
 
 template <typename Tvalue, typename Tidx, typename Tidx_value, typename F1,
-          typename F2, typename F1tr, typename F2tr, typename F3, typename F4, typename F5>
-std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4, F5 f5,
-                                bool is_symm, size_t threshold, std::ostream &os) {
+          typename F2, typename F1tr, typename F2tr, typename F3, typename F4,
+          typename F5>
+std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr,
+                                F2tr f2tr, F3 f3, F4 f4, F5 f5, bool is_symm,
+                                size_t threshold, std::ostream &os) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold << " is_symm=" << is_symm << "\n";
+  os << "PES: f_for_canonic: nbRow=" << nbRow << " threshold=" << threshold
+     << " is_symm=" << is_symm << "\n";
 #endif
   //  using Tgr = GraphBitset;
   using Tgr = GraphListAdj;
   if (nbRow > threshold) {
     if (is_symm) {
-      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
-        .first;
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, true>(
+                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
+          .first;
     } else {
-      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
-        .first;
+      return GetGroupCanonicalizationVector_Heuristic<Tvalue, Tidx, false>(
+                 nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, os)
+          .first;
     }
   } else {
     if (is_symm) {
@@ -670,17 +680,20 @@ std::vector<Tidx> f_for_canonic(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr
 }
 
 template <typename T, typename Tidx, typename Tidx_value>
-std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat, size_t threshold, std::ostream &os) {
+std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(
+    MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat, size_t threshold,
+    std::ostream &os) {
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
 
   using Treturn = std::vector<Tidx>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4, auto f5,
-               bool is_symm) -> Treturn {
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
+               auto f4, auto f5, bool is_symm) -> Treturn {
     return f_for_canonic<T, Tidx, Tidx_value, decltype(f1), decltype(f2),
-                         decltype(f1tr), decltype(f2tr),
-                         decltype(f3), decltype(f4), decltype(f5)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, threshold, os);
+                         decltype(f1tr), decltype(f2tr), decltype(f3),
+                         decltype(f4), decltype(f5)>(
+        nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, threshold, os);
   };
   std::vector<Tidx> CanonicOrd =
       FCT_EXT_Qinput<T, Tidx, Treturn, decltype(f)>(EXT, GramMat, f);
@@ -691,20 +704,27 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat_Tidx_value(MyMatrix<T> con
 }
 
 template <typename T, typename Tidx>
-std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat, size_t threshold, std::ostream &os) {
+std::vector<Tidx>
+LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT,
+                                    MyMatrix<T> const &GramMat,
+                                    size_t threshold, std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow / 2 + 1;
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint8_t>(EXT, GramMat, threshold, os);
+    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint8_t>(
+        EXT, GramMat, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint16_t>(EXT, GramMat, threshold, os);
+    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint16_t>(
+        EXT, GramMat, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint32_t>(EXT, GramMat, threshold, os);
+    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint32_t>(
+        EXT, GramMat, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint64_t>(EXT, GramMat, threshold, os);
+    return LinPolytope_CanonicOrdering_GramMat_Tidx_value<T, Tidx, uint64_t>(
+        EXT, GramMat, threshold, os);
   }
   std::cerr << "PES: Failed to find a match for Tidx_value\n";
   throw TerminalException{1};
@@ -712,10 +732,12 @@ std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(MyMatrix<T> const &EXT, My
 
 template <typename T, typename Tidx>
 std::vector<Tidx> LinPolytope_CanonicOrdering(MyMatrix<T> const &EXT,
-                                              size_t threshold, std::ostream &os) {
+                                              size_t threshold,
+                                              std::ostream &os) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   MyMatrix<T> Qmat = GetQmatrix(EXTred, os);
-  return LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXTred, Qmat, threshold, os);
+  return LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXTred, Qmat, threshold,
+                                                      os);
 }
 
 template <typename T, typename Tidx>
@@ -726,7 +748,8 @@ MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const &EXT,
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
-  std::vector<Tidx> CanonicOrd = LinPolytope_CanonicOrdering<T, Tidx>(EXT, threshold, os);
+  std::vector<Tidx> CanonicOrd =
+      LinPolytope_CanonicOrdering<T, Tidx>(EXT, threshold, os);
   MyMatrix<T> EXTreord(n_rows, n_cols);
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
     size_t j_row = CanonicOrd[i_row];
@@ -744,7 +767,8 @@ MyMatrix<T> LinPolytope_CanonicForm_Tidx(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold, std::ostream &os) {
+MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold,
+                                    std::ostream &os) {
   size_t n_rows = EXT.rows();
   if (n_rows < size_t(std::numeric_limits<uint8_t>::max()))
     return LinPolytope_CanonicForm_Tidx<T, uint8_t>(EXT, threshold, os);
@@ -756,12 +780,15 @@ MyMatrix<T> LinPolytope_CanonicForm(MyMatrix<T> const &EXT, size_t threshold, st
   if (n_rows < size_t(std::numeric_limits<uint64_t>::max()))
     return LinPolytope_CanonicForm_Tidx<T, uint64_t>(EXT, threshold, os);
 #endif
-  std::cerr << "PES: LinPolytope_CanonicForm : Failed to find matching numeric\n";
+  std::cerr
+      << "PES: LinPolytope_CanonicForm : Failed to find matching numeric\n";
   throw TerminalException{1};
 }
 
 template <typename T>
-void check_iso_info_coherence(std::optional<T> const& IsoInfo1, std::optional<T> const& IsoInfo2, std::string const& context) {
+void check_iso_info_coherence(std::optional<T> const &IsoInfo1,
+                              std::optional<T> const &IsoInfo2,
+                              std::string const &context) {
   if (!IsoInfo1 && IsoInfo2) {
     std::cerr << "PES: IsoInfo1 fails to find isomorphism, but IsoInfo2 does\n";
     std::cerr << "PES: context=" << context << "\n";
@@ -774,8 +801,6 @@ void check_iso_info_coherence(std::optional<T> const& IsoInfo1, std::optional<T>
   }
 }
 
-
-
 template <typename T, typename Tidx>
 std::optional<std::vector<Tidx>>
 LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
@@ -784,14 +809,20 @@ LinPolytope_Isomorphism(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   if (EXT1.rows() != EXT2.rows()) {
     return {};
   }
-  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
-    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<T, Tidx>(EXT1, threshold, os);
-    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<T, Tidx>(EXT2, threshold, os);
-    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
+  auto f_eval = [&](size_t threshold)
+      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+    std::vector<Tidx> CanonicReord1 =
+        LinPolytope_CanonicOrdering<T, Tidx>(EXT1, threshold, os);
+    std::vector<Tidx> CanonicReord2 =
+        LinPolytope_CanonicOrdering<T, Tidx>(EXT2, threshold, os);
+    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(
+        EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
   check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytope_Isomorphism");
 #endif
   if (!IsoInfo)
@@ -810,15 +841,24 @@ std::optional<std::vector<Tidx>> LinPolytope_Isomorphism_GramMat(
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: |EXT1|=" << EXT1.rows() << " |EXT2|=" << EXT2.rows() << "\n";
 #endif
-  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
-    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1, GramMat1, threshold, os);
-    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2, GramMat2, threshold, os);
-    return IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(EXT1, GramMat1, EXT2, GramMat2, CanonicReord1, CanonicReord2, os);
+  auto f_eval = [&](size_t threshold)
+      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+    std::vector<Tidx> CanonicReord1 =
+        LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1, GramMat1, threshold,
+                                                     os);
+    std::vector<Tidx> CanonicReord2 =
+        LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2, GramMat2, threshold,
+                                                     os);
+    return IsomorphismFromCanonicReord_GramMat<T, Tfield, Tidx>(
+        EXT1, GramMat1, EXT2, GramMat2, CanonicReord1, CanonicReord2, os);
   };
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytope_Isomorphism_GramMat");
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B,
+                           "LinPolytope_Isomorphism_GramMat");
 #endif
   if (!IsoInfo)
     return {};
@@ -992,7 +1032,8 @@ DataMapping<Tidx> ExtendPartialAutomorphism(
     MyMatrix<Tfield> eMat_F = UniversalMatrixConversion<Tfield, T>(eMat);
     MyMatrix<Tfield> eProd = P * eMat_F * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat_F)) {
-      std::cerr << "PES: The matrix P should preserve the matrices at this point\n";
+      std::cerr
+          << "PES: The matrix P should preserve the matrices at this point\n";
       throw TerminalException{1};
     }
   }
@@ -1096,12 +1137,13 @@ Treturn FCT_ListMat_Vdiag(MyMatrix<T> const &EXT,
   bool is_symm = is_family_symmmetric(ListMat);
   size_t nbRow = EXT.rows();
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-  os << "PES: FCT_ListMat_Vdiag: is_symm=" << is_symm << " nbRow=" << nbRow << "\n";
+  os << "PES: FCT_ListMat_Vdiag: is_symm=" << is_symm << " nbRow=" << nbRow
+     << "\n";
 #endif
   size_t max_val = std::numeric_limits<Tidx>::max();
   if (nbRow > max_val) {
-    std::cerr
-        << "PES: Error in FCT_ListMat_Vdiag due to too small coefficient range\n";
+    std::cerr << "PES: Error in FCT_ListMat_Vdiag due to too small coefficient "
+                 "range\n";
     std::cerr << "PES: nbRow=" << nbRow
               << " std::numeric_limits<Tidx>::max()=" << max_val << "\n";
     throw TerminalException{1};
@@ -1149,11 +1191,10 @@ GetWeightMatrix_ListMat_Vdiag(MyMatrix<T> const &TheEXT,
 }
 
 template <bool is_symm, typename T, typename Tfield, typename Tidx_value>
-size_t GetInvariant_ListMat_Vdiag_Tidx_value_bool(size_t const& seed,
-                                                  MyMatrix<T> const &EXT,
-                                                  std::vector<MyMatrix<T>> const &ListMat,
-                                                  std::vector<T> const &Vdiag,
-                                                  std::ostream &os) {
+size_t GetInvariant_ListMat_Vdiag_Tidx_value_bool(
+    size_t const &seed, MyMatrix<T> const &EXT,
+    std::vector<MyMatrix<T>> const &ListMat, std::vector<T> const &Vdiag,
+    std::ostream &os) {
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   HumanTime time;
 #endif
@@ -1177,45 +1218,52 @@ size_t GetInvariant_ListMat_Vdiag_Tidx_value_bool(size_t const& seed,
 }
 
 template <typename T, typename Tfield, typename Tidx_value>
-size_t GetInvariant_ListMat_Vdiag_Tidx_value(size_t const& seed,
-                                             MyMatrix<T> const &EXT,
-                                             std::vector<MyMatrix<T>> const &ListMat,
-                                             std::vector<T> const &Vdiag,
-                                             std::ostream &os) {
+size_t GetInvariant_ListMat_Vdiag_Tidx_value(
+    size_t const &seed, MyMatrix<T> const &EXT,
+    std::vector<MyMatrix<T>> const &ListMat, std::vector<T> const &Vdiag,
+    std::ostream &os) {
   bool is_symm = is_family_symmmetric(ListMat);
   if (is_symm) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<true, T, Tfield, Tidx_value>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<true, T, Tfield,
+                                                      Tidx_value>(
+        seed, EXT, ListMat, Vdiag, os);
   } else {
-    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<false, T, Tfield, Tidx_value>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value_bool<false, T, Tfield,
+                                                      Tidx_value>(
+        seed, EXT, ListMat, Vdiag, os);
   }
 }
 
 template <typename T, typename Tfield>
-size_t GetInvariant_ListMat_Vdiag(size_t const& seed,
-                                  MyMatrix<T> const &EXT,
+size_t GetInvariant_ListMat_Vdiag(size_t const &seed, MyMatrix<T> const &EXT,
                                   std::vector<MyMatrix<T>> const &ListMat,
                                   std::vector<T> const &Vdiag,
                                   std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow / 2 + 1;
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint8_t>(
+        seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint16_t>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint16_t>(
+        seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint32_t>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint32_t>(
+        seed, EXT, ListMat, Vdiag, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(seed, EXT, ListMat, Vdiag, os);
+    return GetInvariant_ListMat_Vdiag_Tidx_value<T, Tfield, uint64_t>(
+        seed, EXT, ListMat, Vdiag, os);
   }
   std::cerr << "PES: Failed to find a matching type\n";
   throw TerminalException{1};
 }
 
 template <typename T, typename Tfield, typename Tgroup, typename Tidx_value>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
+std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+GetListGenAutomorphism_ListMat_Vdiag_Tidx_value(
     MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
     std::vector<T> const &Vdiag, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
@@ -1229,11 +1277,12 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_Lis
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
 #endif
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4,
-               [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
+               auto f4, [[maybe_unused]] auto f5, bool is_symm) -> Treturn {
     return f_for_stab<std::vector<T>, Tgroup, Tidx_value, decltype(f1),
                       decltype(f2), decltype(f1tr), decltype(f2tr),
-                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, is_symm, os);
+                      decltype(f3), decltype(f4)>(nbRow, f1, f2, f1tr, f2tr, f3,
+                                                  f4, is_symm, os);
   };
   Treturn ListGen = FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(
       EXT, ListMat, Vdiag, f, os);
@@ -1244,9 +1293,11 @@ std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_Lis
 }
 
 template <typename T, typename Tfield, typename Tgroup>
-std::vector<std::vector<typename Tgroup::Telt::Tidx>> GetListGenAutomorphism_ListMat_Vdiag(
-    MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
-    std::vector<T> const &Vdiag, std::ostream &os) {
+std::vector<std::vector<typename Tgroup::Telt::Tidx>>
+GetListGenAutomorphism_ListMat_Vdiag(MyMatrix<T> const &EXT,
+                                     std::vector<MyMatrix<T>> const &ListMat,
+                                     std::vector<T> const &Vdiag,
+                                     std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_val_poss = nbRow * nbRow / 2 + 1;
   if (max_val_poss < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
@@ -1287,11 +1338,12 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
   SecondTime time;
 #endif
   using Treturn = std::vector<Tidx>;
-  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3, auto f4, auto f5,
-               [[maybe_unused]] bool is_symm) -> Treturn {
-    return f_for_canonic<std::vector<T>, Tidx, Tidx_value, decltype(f1), decltype(f2),
-                         decltype(f1tr), decltype(f2tr), decltype(f3), decltype(f4),
-                         decltype(f5)>(nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, threshold, os);
+  auto f = [&](size_t nbRow, auto f1, auto f2, auto f1tr, auto f2tr, auto f3,
+               auto f4, auto f5, [[maybe_unused]] bool is_symm) -> Treturn {
+    return f_for_canonic<std::vector<T>, Tidx, Tidx_value, decltype(f1),
+                         decltype(f2), decltype(f1tr), decltype(f2tr),
+                         decltype(f3), decltype(f4), decltype(f5)>(
+        nbRow, f1, f2, f1tr, f2tr, f3, f4, f5, is_symm, threshold, os);
   };
   Treturn CanonicReord =
       FCT_ListMat_Vdiag<T, Tfield, Tidx, Treturn, decltype(f)>(EXT, ListMat,
@@ -1302,15 +1354,17 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   int n_ext = EXT.rows();
   if (n_ext < 200) {
-    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, matrix of scalar product, n_ext=" << n_ext << "\n";
+    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, matrix of scalar "
+          "product, n_ext="
+       << n_ext << "\n";
     std::vector<Tidx> CanonicReordRev(n_ext);
-    for (int i=0; i<n_ext; i++) {
+    for (int i = 0; i < n_ext; i++) {
       CanonicReordRev[CanonicReord[i]] = i;
     }
-    MyMatrix<T> const& M = RemoveFractionMatrix(ListMat[0]);
+    MyMatrix<T> const &M = RemoveFractionMatrix(ListMat[0]);
     std::vector<T> list_scal;
-    for (int i=0; i<n_ext; i++) {
-      for (int j=0; j<n_ext; j++) {
+    for (int i = 0; i < n_ext; i++) {
+      for (int j = 0; j < n_ext; j++) {
         int i_img = CanonicReord[i];
         int j_img = CanonicReord[j];
         MyVector<T> V1 = GetMatrixRow(EXT, i_img);
@@ -1322,30 +1376,34 @@ std::vector<Tidx> Canonicalization_ListMat_Vdiag_Tidx_value(
       os << "\n";
     }
     size_t hash = std::hash<std::vector<T>>()(list_scal);
-    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, hash=" << hash << "\n";
+    os << "PES: Canonicalization_ListMat_Vdiag_Tidx_value, hash=" << hash
+       << "\n";
   }
 #endif
   return CanonicReord;
 }
 
 template <typename T, typename Tfield, typename Tidx>
-std::vector<Tidx>
-Canonicalization_ListMat_Vdiag(MyMatrix<T> const &EXT,
-                               std::vector<MyMatrix<T>> const &ListMat,
-                               std::vector<T> const &Vdiag, size_t threshold, std::ostream &os) {
+std::vector<Tidx> Canonicalization_ListMat_Vdiag(
+    MyMatrix<T> const &EXT, std::vector<MyMatrix<T>> const &ListMat,
+    std::vector<T> const &Vdiag, size_t threshold, std::ostream &os) {
   size_t nbRow = EXT.rows();
   size_t max_poss_val = nbRow * nbRow / 2 + 1;
   if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint8_t>(EXT, ListMat, Vdiag, threshold, os);
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint8_t>(
+        EXT, ListMat, Vdiag, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint16_t>(EXT, ListMat, Vdiag, threshold, os);
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint16_t>(
+        EXT, ListMat, Vdiag, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint32_t>(EXT, ListMat, Vdiag, threshold, os);
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint32_t>(
+        EXT, ListMat, Vdiag, threshold, os);
   }
   if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(EXT, ListMat, Vdiag, threshold, os);
+    return Canonicalization_ListMat_Vdiag_Tidx_value<T, Tfield, Tidx, uint64_t>(
+        EXT, ListMat, Vdiag, threshold, os);
   }
   std::cerr << "PES: No matching type for Tidx_value\n";
   throw TerminalException{1};
@@ -1364,19 +1422,24 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
   SecondTime time;
 #endif
   size_t nbRow = EXT1.rows();
-  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+  auto f_eval = [&](size_t threshold)
+      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
     std::vector<Tidx> CanonicReord1 =
-    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT1, ListMat1, Vdiag1,
-                                                    threshold, os);
+        Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT1, ListMat1, Vdiag1,
+                                                        threshold, os);
     std::vector<Tidx> CanonicReord2 =
-    Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT2, ListMat2, Vdiag2,
-                                                    threshold, os);
-    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
+        Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT2, ListMat2, Vdiag2,
+                                                        threshold, os);
+    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(
+        EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_CANONIC
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B, "TestEquivalence_ListMat_Vdiag_Tidx_value");
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B,
+                           "TestEquivalence_ListMat_Vdiag_Tidx_value");
 #endif
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
   os << "PES: We have IsoInfo\n";
@@ -1409,7 +1472,8 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
     MyMatrix<Tfield> eProd = P * eMat1 * TransposedMat(P);
     if (!TestEqualityMatrix(eProd, eMat2)) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
-      os << "PES: Not equiv from TestEqualityMatrix from iMat=" << iMat << "/" << nMat << "\n";
+      os << "PES: Not equiv from TestEqualityMatrix from iMat=" << iMat << "/"
+         << nMat << "\n";
 #endif
       return {};
     }

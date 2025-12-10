@@ -4,14 +4,15 @@
 #include "StrictPositivity.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void compute(std::string const& FileI, std::string const& OutFormat, std::ostream & os) {
+template <typename T, typename Tint>
+void compute(std::string const &FileI, std::string const &OutFormat,
+             std::ostream &os) {
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   //
   MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
   TestStrictPositivity<T, Tint> StrictPos =
-    TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis,
-                                            std::cerr);
+      TestingAttemptStrictPositivity<T, Tint>(eSymmMat, InitialBasis,
+                                              std::cerr);
   WriteStrictPositivityResult(os, OutFormat, StrictPos);
 }
 
@@ -23,7 +24,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CP_TestCompletePositivity [arith] [eMat]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_TestCompletePositivity [arith] [eMat] [OutFormat] [OutFile]\n";
+      std::cerr
+          << "CP_TestCompletePositivity [arith] [eMat] [OutFormat] [OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: The chosen arithmetic\n";
       std::cerr << "eMat: the symmetric matrix which we want to test\n";
@@ -50,9 +52,10 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return compute<T,Tint>(FileI, OutFormat, os_out);
+        return compute<T, Tint>(FileI, OutFormat, os_out);
       }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
       throw TerminalException{1};
     };
     //

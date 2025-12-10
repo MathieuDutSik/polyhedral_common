@@ -32,7 +32,8 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
   for (size_t iMat = 0; iMat < nMat; iMat++) {
     std::pair<size_t, size_t> pair_stab{iMat, miss_val};
     list_cases.push_back(pair_stab);
-    (void)ArithmeticAutomorphismGroup<T, Tint,Tgroup>(ListMat[iMat], std::cerr);
+    (void)ArithmeticAutomorphismGroup<T, Tint, Tgroup>(ListMat[iMat],
+                                                       std::cerr);
     std::cerr << "STAB: iMat=" << iMat << "\n";
     for (size_t jMat = iMat + 1; jMat < nMat; jMat++) {
       std::cerr << "EQUI: Before iMat=" << iMat << " jMat=" << jMat << "\n";
@@ -62,7 +63,7 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
       return *opt;
     } else {
       std::vector<MyMatrix<Tint>> ListGen =
-        ArithmeticAutomorphismGroup<T, Tint, Tgroup>(eMat, std::cerr);
+          ArithmeticAutomorphismGroup<T, Tint, Tgroup>(eMat, std::cerr);
       database.insert_stab(eMat, ListGen);
       return ListGen;
     }

@@ -19,13 +19,10 @@
 #undef DEBUG_MPI_DELAUNAY_ENUMERATION
 #endif
 
-
 template <typename T, typename Tvert, typename Tgroup>
 void WriteFamilyDelaunay_Mpi(
-    boost::mpi::communicator &comm,
-    MyMatrix<T> const& GramMat,
-    std::string const &OutFormat,
-    std::ostream& os_out,
+    boost::mpi::communicator &comm, MyMatrix<T> const &GramMat,
+    std::string const &OutFormat, std::ostream &os_out,
     std::vector<DatabaseEntry_MPI<
         typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
         typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const &ListDel,
@@ -43,7 +40,8 @@ void WriteFamilyDelaunay_Mpi(
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
       DelaunayTesselation<Tvert, Tgroup> DT =
-          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(l_ent);
+          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(
+              l_ent);
       check_delaunay_tessellation(DT, os);
     }
     std::cerr << "The Delaunay tesselation passed the adjacency check\n";
@@ -54,7 +52,8 @@ void WriteFamilyDelaunay_Mpi(
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
       DelaunayTesselation<Tvert, Tgroup> DT =
-          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(l_ent);
+          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(
+              l_ent);
       os_out << "return ";
       WriteEntryGAP(os_out, DT);
       os_out << ";\n";
@@ -72,9 +71,9 @@ void WriteFamilyDelaunay_Mpi(
   }
   if (OutFormat == "GAP_Covering") {
     T max_radius(0);
-    for (auto & eDel : ListDel) {
-      MyMatrix<Tvert> const& EXT = eDel.x.EXT;
-      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+    for (auto &eDel : ListDel) {
+      MyMatrix<Tvert> const &EXT = eDel.x.EXT;
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
       CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
       T SquareRadius = cp.SquareRadius;
       if (SquareRadius > max_radius) {
@@ -87,12 +86,13 @@ void WriteFamilyDelaunay_Mpi(
       int TheDim = GramMat.rows();
       T TheDet = DeterminantMat(GramMat);
       T TheCov(0);
-      for (auto & rad: l_ent) {
+      for (auto &rad : l_ent) {
         if (rad > TheCov) {
           TheCov = rad;
         }
       }
-      ResultCov<T> x = ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCov);
+      ResultCov<T> x =
+          ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCov);
       os_out << "return " << to_stringGAP(x) << ";\n";
     }
     return;
@@ -104,12 +104,12 @@ void WriteFamilyDelaunay_Mpi(
 
 template <typename T, typename Tint, typename Tgroup>
 void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
-                             FullNamelist const &eFull) {
+                                 FullNamelist const &eFull) {
   using TintGroup = typename Tgroup::Tint;
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
   std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
   int dimEXT = GramMat.rows() + 1;
@@ -121,19 +121,21 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
-  std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  std::cerr << "MPI_DEL_ENUM: OutFormat=" << OutFormat << " OutFile=" << OutFile
+            << "\n";
 #endif
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_MPI_DELAUNAY_ENUMERATION
-  std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second << "\n";
+  std::cerr << "MPI_DEL_ENUM: max_runtime_second=" << max_runtime_second
+            << "\n";
 #endif
   //
-  std::string FileDualDesc =
-    BlockDATA.get_string("FileDualDescription");
+  std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          os);
-  DataLattice<T, Tint, Tgroup> data = get_data_lattice<T,Tint,Tgroup>(eFull, AllArr, os);
+  DataLattice<T, Tint, Tgroup> data =
+      get_data_lattice<T, Tint, Tgroup>(eFull, AllArr, os);
   using Tdata = DataLatticeFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
@@ -149,9 +151,9 @@ void ComputeDelaunayPolytope_MPI(boost::mpi::communicator &comm,
 #endif
   //
   if (pair.first) {
-    auto f=[&](std::ostream& os_out) -> void {
-      WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, os_out, pair.second,
-                                               os);
+    auto f = [&](std::ostream &os_out) -> void {
+      WriteFamilyDelaunay_Mpi<T, Tint, Tgroup>(comm, GramMat, OutFormat, os_out,
+                                               pair.second, os);
     };
     print_stderr_stdout_file(OutFile, f);
   } else {

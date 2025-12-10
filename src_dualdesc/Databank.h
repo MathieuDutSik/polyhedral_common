@@ -204,7 +204,7 @@ public:
 template <typename T> T read_data(boost::asio::ip::tcp::socket &socket) {
   boost::asio::streambuf buf;
   boost::asio::read_until(socket, buf, "\n");
-  const char* raw_data = static_cast<const char*>(buf.data().data());
+  const char *raw_data = static_cast<const char *>(buf.data().data());
   std::string data(raw_data, buf.size());
   T data_o;
   std::stringstream iss(data);

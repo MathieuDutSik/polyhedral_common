@@ -8,7 +8,8 @@ template <typename T>
 void process(std::string const &FileMatrGroup, std::string const &OutFormat,
              std::ostream &os_out) {
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
-  std::vector<MyMatrix<T>> ListMred = ExhaustiveReductionComplexityGroupMatrix<T>(ListM, std::cerr);
+  std::vector<MyMatrix<T>> ListMred =
+      ExhaustiveReductionComplexityGroupMatrix<T>(ListM, std::cerr);
   //
   if (OutFormat == "GAP") {
     os_out << "return ";
@@ -43,7 +44,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "Arith         : mpq_class / mpz_class\n";
       std::cerr << "FileMatrGroup : The file containing the list of matrices\n";
       std::cerr << "OutFormat     : Optional parameter GAP / CPP\n";
-      std::cerr << "FileOut       : File where to write the simplified matrices\n";
+      std::cerr
+          << "FileOut       : File where to write the simplified matrices\n";
       return -1;
     }
     //
@@ -65,7 +67,8 @@ int main(int argc, char *argv[]) {
         using T = mpz_class;
         return process<T>(FileMatrGroup, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching arith. Allowed is mpq_class / mpz_class\n";
+      std::cerr << "Failed to find a matching arith. Allowed is mpq_class / "
+                   "mpz_class\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, f);

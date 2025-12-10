@@ -11,9 +11,10 @@ template <typename T>
 void process(std::string const &eFileI, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  std::pair<vectface,vectface> pair = lrs::GetTriangulationFacet(EXT);
+  std::pair<vectface, vectface> pair = lrs::GetTriangulationFacet(EXT);
   if (OutFormat == "TrigFacets") {
-    os << "return rec(trigs:=" << StringVectfaceGAP(pair.first) << ", facets:=" << StringVectfaceGAP(pair.second) << ");\n";
+    os << "return rec(trigs:=" << StringVectfaceGAP(pair.first)
+       << ", facets:=" << StringVectfaceGAP(pair.second) << ");\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";

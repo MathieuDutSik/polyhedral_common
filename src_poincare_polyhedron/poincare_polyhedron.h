@@ -962,7 +962,8 @@ AdjacencyInfo<T> GetMissingFacetMatchingElement_DD(
       f_set(i_ext);
   }
   size_t count = f_insert_svg.count();
-  os << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext << "\n";
+  os << "We have f_insert_svg |f_insert_svg|=" << count << " n_ext=" << n_ext
+     << "\n";
   os << "|PP: f_insert_svg|=" << time << "\n";
   if (count == 0) {
     auto get_iRidge = [&](size_t iFace, Face const &f1) -> size_t {
@@ -1521,14 +1522,16 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
       os << "|PP: ai|=" << time << "\n";
       bool result2 = insert_generator(ai.ListMiss);
       os << "|PP: insert_generator|=" << time << "\n";
-      os << "f_coherency_update, insert_generator : result2=" << result2 << "\n";
+      os << "f_coherency_update, insert_generator : result2=" << result2
+         << "\n";
       if (result2)
         return true;
       std::vector<CombElt<T>> ListMiss = GenerateTypeIIneighbors(se, ai, os);
       os << "|PP: GenerateTypeIIneighbors|=" << time << "\n";
       bool result3 = insert_generator(ListMiss);
       os << "|PP: insert_generator|=" << time << "\n";
-      os << "PP: f_coherency_update, insert_generator : result3=" << result3 << "\n";
+      os << "PP: f_coherency_update, insert_generator : result3=" << result3
+         << "\n";
       if (result3)
         return true;
     }
@@ -1685,25 +1688,23 @@ Whether to generate new elements from vertex matchings";
 }
 
 RecOption ReadInitialData(FullNamelist const &eFull) {
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string method_adjacent =
-    BlockPROC.get_string("method_adjacent");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string method_adjacent = BlockPROC.get_string("method_adjacent");
   std::string eCommand_DD = BlockPROC.get_string("eCommand_DD");
   std::string PrefixSave = BlockPROC.get_string("PrefixSave");
-  std::string FileDataPoincare =
-    BlockPROC.get_string("FileDataPoincare");
+  std::string FileDataPoincare = BlockPROC.get_string("FileDataPoincare");
   std::string FileO = BlockPROC.get_string("FileO");
   std::string Arithmetic = BlockPROC.get_string("Arithmetic");
   std::string Approach = BlockPROC.get_string("Approach");
   std::string MethodMissingI = BlockPROC.get_string("MethodMissingI");
   std::string MethodVertexMatching =
-    BlockPROC.get_string("MethodVertexMatching");
+      BlockPROC.get_string("MethodVertexMatching");
   int n_iter_max = BlockPROC.get_int("n_iter_max");
   int n_expand = BlockPROC.get_int("n_expand");
   bool ComputeStabilizerPermutation =
-    BlockPROC.get_bool("ComputeStabilizerPermutation");
+      BlockPROC.get_bool("ComputeStabilizerPermutation");
   bool ComputeGroupPresentation =
-    BlockPROC.get_bool("ComputeGroupPresentation");
+      BlockPROC.get_bool("ComputeGroupPresentation");
   return {method_adjacent,
           eCommand_DD,
           PrefixSave,

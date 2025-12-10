@@ -189,13 +189,11 @@ int main(int argc, char *argv[]) {
   //
   // Parsing the input file
   //
-  SingleBlock const& BlDATA = eFull.get_block("DATA");
+  SingleBlock const &BlDATA = eFull.get_block("DATA");
   //  int n=BlDATA.ListIntValues.at("n");
   int n = BlDATA.get_int("n");
-  int MaxNumberFlyingMessage =
-    BlDATA.get_int("MaxNumberFlyingMessage");
-  size_t MaxStoredUnsentMatrices =
-    BlDATA.get_int("MaxStoredUnsentMatrices");
+  int MaxNumberFlyingMessage = BlDATA.get_int("MaxNumberFlyingMessage");
+  size_t MaxStoredUnsentMatrices = BlDATA.get_int("MaxStoredUnsentMatrices");
   int MaxRunTimeSecond = BlDATA.get_int("MaxRunTimeSecond");
   size_t MpiBufferSize = BlDATA.get_int("MpiBufferSize");
   int TimeForDeclaringItOver = BlDATA.get_int("TimeForDeclaringItOver");

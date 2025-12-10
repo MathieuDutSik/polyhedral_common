@@ -49,10 +49,11 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   }
   if (OutFormat == "RecGAP") {
     std::string strGAPgroup =
-      "Group(" + get_matrs_as_string(EXT,  GRP.GeneratorsOfGroup()) + ")";
+        "Group(" + get_matrs_as_string(EXT, GRP.GeneratorsOfGroup()) + ")";
     std::string strCoset = get_matrs_as_string(EXT, pair.second);
     os_out << "return rec(GAPperm:=" << GRP.GapString()
-           << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset << ");";
+           << ", GAPmatr:=" << strGAPgroup << ", ListCoset:=" << strCoset
+           << ");";
     return;
   }
   if (OutFormat == "Oscar") {
@@ -69,10 +70,12 @@ int main(int argc, char *argv[]) {
     if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT] "
-                   "[OutFormat] [FileOut]\n";
+      std::cerr
+          << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT] "
+             "[OutFormat] [FileOut]\n";
       std::cerr << "or\n";
-      std::cerr << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT]\n";
+      std::cerr
+          << "GRP_LinPolytopeIntegral_Automorphism_RightCoset arith [EXT]\n";
       std::cerr << "\n";
       std::cerr << "         ------ arith -------\n";
       std::cerr << "\n";
@@ -115,7 +118,8 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileOut, process_B);
-    std::cerr << "Normal termination of GRP_LinPolytopeIntegral_Automorphism_RightCoset\n";
+    std::cerr << "Normal termination of "
+                 "GRP_LinPolytopeIntegral_Automorphism_RightCoset\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in GRP_LinPolytopeIntegral_Automorphism_RightCoset\n";
     exit(e.eVal);

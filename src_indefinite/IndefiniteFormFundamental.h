@@ -9,7 +9,8 @@ template <typename T> struct AttackScheme {
 };
 
 template <typename T>
-AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const &Qmat, std::ostream& os) {
+AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const &Qmat,
+                                           std::ostream &os) {
   DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Qmat, os);
   int nbPlus = DiagInfo.nbPlus;
   int nbMinus = DiagInfo.nbMinus;
@@ -71,7 +72,8 @@ template <typename T> struct hash<INDEF_InvariantQ<T>> {
 }  // namespace std
 // clang-format on
 
-template <typename T> size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat, std::ostream& os) {
+template <typename T>
+size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat, std::ostream &os) {
   int n = Qmat.rows();
   MyMatrix<T> NSP = SublatticeBasisReduction(NullspaceIntMat(Qmat), os);
   MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP, n);
@@ -120,7 +122,7 @@ template <typename T> struct hash<INDEF_InvariantQV<T>> {
 
 template <typename T, typename Tint>
 size_t INDEF_FORM_InvariantVector(MyMatrix<T> const &Qmat,
-                                  MyVector<Tint> const &v, std::ostream& os) {
+                                  MyVector<Tint> const &v, std::ostream &os) {
   int eRank = RankMat(Qmat);
   T eNorm = EvaluationQuadForm<T, Tint>(Qmat, v);
   MyVector<T> v_T = UniversalVectorConversion<T, Tint>(v);
@@ -160,7 +162,8 @@ template <> struct hash<InvariantIsotropic> {
 
 template <typename T, typename Tint>
 size_t INDEF_FORM_Invariant_IsotropicKplane_Raw(MyMatrix<T> const &Qmat,
-                                                MyMatrix<Tint> const &ePlane, std::ostream& os) {
+                                                MyMatrix<Tint> const &ePlane,
+                                                std::ostream &os) {
   int k = ePlane.rows();
   MyMatrix<T> ePlane_T = UniversalMatrixConversion<T, Tint>(ePlane);
   MyMatrix<T> eProd = ePlane_T * Qmat;

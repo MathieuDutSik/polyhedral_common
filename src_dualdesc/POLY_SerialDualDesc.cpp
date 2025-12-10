@@ -90,8 +90,9 @@ int main(int argc, char *argv[]) {
       }
       if (NumericalType == "RealAlgebraic") {
         using T_rat = mpq_class;
-        SingleBlock const& BlockDATA = eFull.get_block("DATA");
-        std::string FileAlgebraicField = BlockDATA.get_string("FileAlgebraicField");
+        SingleBlock const &BlockDATA = eFull.get_block("DATA");
+        std::string FileAlgebraicField =
+            BlockDATA.get_string("FileAlgebraicField");
         if (!IsExistingFile(FileAlgebraicField)) {
           std::cerr << "FileAlgebraicField=" << FileAlgebraicField
                     << " is missing\n";
@@ -113,7 +114,8 @@ int main(int argc, char *argv[]) {
     std::cerr << "Error in POLY_SerialDualDesc\n";
     exit(e.eVal);
   } catch (RuntimeException const &e) {
-    std::cerr << "The maximum runtime has been reached, exiting POLY_SerialDualDesc\n";
+    std::cerr << "The maximum runtime has been reached, exiting "
+                 "POLY_SerialDualDesc\n";
     // exit(e.eVal);
   }
   runtime(time1);

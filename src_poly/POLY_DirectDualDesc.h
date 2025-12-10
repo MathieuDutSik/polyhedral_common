@@ -109,7 +109,7 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     FileO = prefix + suffix + ".ext";
     FileE = prefix + suffix + ".err";
   }
-  auto premature_ending=[&]() -> void {
+  auto premature_ending = [&]() -> void {
     std::cerr << "DDD: FileI = " << FileI << "\n";
     std::cerr << "DDD: FileO = " << FileO << "\n";
     std::cerr << "DDD: FileE = " << FileE << "\n";
@@ -177,7 +177,8 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   auto check_consistency = [&]() -> void {
     if (n_insert != n_facet) {
       std::cerr << "DDD: Consistency error\n";
-      std::cerr << "DDD: n_insert=" << n_insert << " n_facet=" << n_facet << "\n";
+      std::cerr << "DDD: n_insert=" << n_insert << " n_facet=" << n_facet
+                << "\n";
       premature_ending();
     }
   };
@@ -423,8 +424,7 @@ void DualDescExternalProgramFaceIneq(MyMatrix<T> const &EXT,
   DualDescExternalProgramGeneral(EXT, f_insert, eCommand, os);
 }
 
-template <typename T>
-bool is_method_supported(std::string const &prog) {
+template <typename T> bool is_method_supported(std::string const &prog) {
   if (prog == "cdd_cbased") {
 #ifdef USE_CDDLIB
     return true;
@@ -466,8 +466,11 @@ bool is_method_supported(std::string const &prog) {
   return false;
 }
 
-[[noreturn]] void terminate_direct_dual_desc(std::string const& ansProg, std::vector<std::string> const& ListProg) {
-  std::cerr << "DDD: ERROR: No right program found with ansProg=" << ansProg << "\n";
+[[noreturn]] void
+terminate_direct_dual_desc(std::string const &ansProg,
+                           std::vector<std::string> const &ListProg) {
+  std::cerr << "DDD: ERROR: No right program found with ansProg=" << ansProg
+            << "\n";
   std::cerr << "DDD: List of authorized programs :";
   bool IsFirst = true;
   for (auto &eP : ListProg) {
@@ -479,7 +482,6 @@ bool is_method_supported(std::string const &prog) {
   std::cerr << "\n";
   throw TerminalException{1};
 }
-
 
 template <typename T>
 vectface DirectFacetComputationIncidence(MyMatrix<T> const &EXT,
@@ -626,13 +628,10 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-MyMatrix<T> DirectDualDescription(MyMatrix<T> const &EXT,
-                                  std::ostream &os) {
+MyMatrix<T> DirectDualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
   std::string ansProg = "lrs";
   return DirectFacetComputationInequalities(EXT, ansProg, os);
 }
-
-
 
 template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
@@ -728,9 +727,10 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   }
   vectface TheOutput = OrbitSplittingSet(ListIncd, GRP);
 #ifdef KEY_VALUE_DUAL_DESC
-  os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_" << EXT.cols()
-     << "_" << GRP.size() << "_" << ansProg << "_" << ListIncd.size() << "_"
-     << TheOutput.size() << ") VALUE=(" << time_total << ")\n";
+  os << "DDD: KEY=(DirectFacetOrbitComputation_" << EXT.rows() << "_"
+     << EXT.cols() << "_" << GRP.size() << "_" << ansProg << "_"
+     << ListIncd.size() << "_" << TheOutput.size() << ") VALUE=(" << time_total
+     << ")\n";
 #endif
   return TheOutput;
 }
@@ -778,7 +778,9 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 }
 
 template <typename T>
-std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT, std::string const& ansProg, std::ostream& os) {
+std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT,
+                                                    std::string const &ansProg,
+                                                    std::ostream &os) {
   std::vector<std::pair<Face, MyVector<T>>> ListFacet;
   auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
     ListFacet.push_back(pair_face);
@@ -792,15 +794,16 @@ std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT, std:
   int crit_quant = dim - 1;
   size_t crit_quant_s = crit_quant;
   std::vector<int> ListIrred;
-  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+  for (int i_ext = 0; i_ext < n_ext; i_ext++) {
     std::vector<MyVector<T>> ListIncd;
-    for (auto & eFacet: ListFacet) {
+    for (auto &eFacet : ListFacet) {
       if (eFacet.first[i_ext] == 1) {
         ListIncd.push_back(eFacet.second);
       }
     }
 #ifdef DEBUG_DUAL_DESC
-    os << "DDD: redundancy, i_ext=" << i_ext << " |ListIncd|=" << ListIncd.size() << "\n";
+    os << "DDD: redundancy, i_ext=" << i_ext
+       << " |ListIncd|=" << ListIncd.size() << "\n";
 #endif
     if (ListIncd.size() >= crit_quant_s) {
       MyMatrix<T> MatIncd = MatrixFromVectorFamily(ListIncd);
@@ -818,8 +821,6 @@ std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT, std:
 #endif
   return ListIrred;
 }
-
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

@@ -471,7 +471,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   }
 }
 
-
 template <typename T>
 int GetPositionAntipodal(std::vector<MyVector<T>> const &ListVect,
                          MyVector<T> const &eVect) {
@@ -492,7 +491,8 @@ int KissingNumberUpperBound(int const &n) {
   if (n <= 16) {
     return ListVal[n];
   }
-  std::cerr << "The dimension is too large for use to give the kissing number\n";
+  std::cerr
+      << "The dimension is too large for use to give the kissing number\n";
   throw TerminalException{1};
 }
 
@@ -502,7 +502,8 @@ template <typename Tint> struct SHVreduced {
 };
 
 template <typename Tint>
-SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV, std::ostream& os) {
+SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
+                                              std::ostream &os) {
   int n = eSHV.rows();
   int nbVect = eSHV.cols();
   using Tfield = typename overlying_field<Tint>::field_type;

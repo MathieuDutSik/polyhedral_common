@@ -13,12 +13,14 @@ void process(std::string const &FileMatrGroup, std::string const &OutFormat,
   std::vector<MyMatrix<T>> ListM = ReadListMatrixFile<T>(FileMatrGroup);
   size_t n_gen = ListM.size();
   std::vector<Telt> ListPerm;
-  for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+  for (size_t i_gen = 0; i_gen < n_gen; i_gen++) {
     Telt elt;
     ListPerm.push_back(elt);
   }
-  std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> retpair = ExhaustiveReductionComplexityGroupMatrixPerm<T,Telt>(ListM, ListPerm, std::cerr);
-  std::vector<MyMatrix<T>> const& ListMred = retpair.first;
+  std::pair<std::vector<MyMatrix<T>>, std::vector<Telt>> retpair =
+      ExhaustiveReductionComplexityGroupMatrixPerm<T, Telt>(ListM, ListPerm,
+                                                            std::cerr);
+  std::vector<MyMatrix<T>> const &ListMred = retpair.first;
   //
   if (OutFormat == "GAP") {
     os_out << "return ";

@@ -6,17 +6,17 @@
 #include "Group.h"
 // clang-format on
 
-template <typename T, typename Tint>
-void process_A(FullNamelist const &eFull) {
+template <typename T, typename Tint> void process_A(FullNamelist const &eFull) {
   using Tidx = uint32_t;
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
 
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
-  LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
+  SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
+  LinSpaceMatrix<T> LinSpa =
+      ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
   int dimEXT = LinSpa.n + 1;
   //
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
@@ -30,7 +30,8 @@ void process_A(FullNamelist const &eFull) {
       Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
                                                          std::cerr);
 
-  DataIsoDelaunayDomains<T, Tint, Tgroup> data = get_data_isodelaunay_domains<T,Tint,Tgroup>(eFull, AllArr, std::cerr);
+  DataIsoDelaunayDomains<T, Tint, Tgroup> data =
+      get_data_isodelaunay_domains<T, Tint, Tgroup>(eFull, AllArr, std::cerr);
   //
   using Tdata = DataIsoDelaunayDomainsFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
@@ -40,18 +41,19 @@ void process_A(FullNamelist const &eFull) {
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
-  std::vector<Tout> l_tot = EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
-      data_func, f_incorrect, max_runtime_second);
+  std::vector<Tout> l_tot =
+      EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
+          data_func, f_incorrect, max_runtime_second);
   std::ofstream os_out(OutFile);
   bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
   if (result) {
-    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";
+    std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat
+              << "\n";
     throw TerminalException{1};
   }
 }
 
-template <typename T>
-void process_B(FullNamelist const &eFull) {
+template <typename T> void process_B(FullNamelist const &eFull) {
   std::string arithmetic_Tint =
       GetNamelistStringEntry(eFull, "DATA", "arithmetic_Tint");
   if (arithmetic_Tint == "gmp_integer") {
@@ -73,13 +75,11 @@ void process_C(FullNamelist const &eFull) {
     return process_B<T>(eFull);
   }
   std::cerr << "LATT_SerialLattice_IsoDelaunayDomain A: Failed to find a "
-	       "matching type for arithmetic_T="
+               "matching type for arithmetic_T="
             << arithmetic_T << "\n";
   std::cerr << "Available types: gmp_rational\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time;

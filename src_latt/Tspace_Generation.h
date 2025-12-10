@@ -50,11 +50,11 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
 
 template <typename T>
 MyMatrix<T> GetCommRealQuadratic(int n, T const &eSum, T const &eProd) {
-  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2*n, 2*n);
-  for (int i=0; i<n; i++) {
-    Imultiplication(i, n+i) = 1;
-    Imultiplication(n+i, i) = -eProd;
-    Imultiplication(n+i, n+i) = eSum;
+  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2 * n, 2 * n);
+  for (int i = 0; i < n; i++) {
+    Imultiplication(i, n + i) = 1;
+    Imultiplication(n + i, i) = -eProd;
+    Imultiplication(n + i, n + i) = eSum;
   }
   // Need to write the code for the real quadratic.
   // Maybe it is the same matrix as the one for the imaginary.
@@ -67,22 +67,18 @@ MyMatrix<T> GetCommRealQuadratic(int n, T const &eSum, T const &eProd) {
 
 template <typename T>
 MyMatrix<T> GetCommImagQuadratic(int n, T const &eSum, T const &eProd) {
-  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2*n, 2*n);
-  for (int i=0; i<n; i++) {
-    Imultiplication(i, n+i) = 1;
-    Imultiplication(n+i, i) = -eProd;
-    Imultiplication(n+i, n+i) = eSum;
+  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2 * n, 2 * n);
+  for (int i = 0; i < n; i++) {
+    Imultiplication(i, n + i) = 1;
+    Imultiplication(n + i, i) = -eProd;
+    Imultiplication(n + i, n + i) = eSum;
   }
   return Imultiplication;
 }
 
-
-
-
 template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
-                                            T const &eProd,
-                                            std::ostream& os) {
+                                            T const &eProd, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
@@ -120,8 +116,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
 
 template <typename T>
 LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
-                                            T const &eProd,
-                                            std::ostream& os) {
+                                            T const &eProd, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat;
   T Discriminant = eSum * eSum - 4 * eProd;
   if (Discriminant >= 0) {

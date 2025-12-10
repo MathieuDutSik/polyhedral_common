@@ -38,21 +38,17 @@
 //     database, so nothing particular.
 // * The function is then
 
-template<typename TintGroup>
-struct PolyHeuristicDecomposition {
+template <typename TintGroup> struct PolyHeuristicDecomposition {
   TheHeuristic<TintGroup> Splitting;
   TheHeuristic<TintGroup> InitialFacetSet;
 };
-
-
 
 // The equivalence:
 // * The matrix getting the equivalence.
 // * The f corresponding to the facet.
 // * The corresponding orbit, if i_orbit = miss_val then
 //   the orbit is not already known.
-template<typename T>
-struct DecompositionEquiv {
+template <typename T> struct DecompositionEquiv {
   Face f;
   std::option<std::pair<i_orbit, MyMatrix<T>>> index_mat;
 };
@@ -61,39 +57,38 @@ struct DecompositionEquiv {
 // * The list of vertices.
 // * vf: The triangulation of the object
 // * ListEquiv: The list of transformation mapping to the adjacent domains.
-template<typename T, typename Tgroup>
-struct ComponentDecomposition {
+template <typename T, typename Tgroup> struct ComponentDecomposition {
   MyMatrix<T> EXT;
   Tgroup GRPperm;
   vectface vf_trig;
-  std::vector<DecompositionEquiv<T,Tint>> ListEquiv;
+  std::vector<DecompositionEquiv<T, Tint>> ListEquiv;
 };
 
-template<typename T>
-MyMatrix<T> GetFacetIso(MyMatrix<T> const& EXT, Face const& f) {
+template <typename T>
+MyMatrix<T> GetFacetIso(MyMatrix<T> const &EXT, Face const &f) {
   int nbCol = EXT.cols();
   MyVector<T> eVect = Isobarycenter(EXT);
   MyMatrix<T> EXTret(f.count() + 1, nbCol);
   int iRow = 0;
-  for (auto & eRow : FaceToVector<int>(f)) {
-    for (int iCol=0; iCol<nbCol; iCol++) {
+  for (auto &eRow : FaceToVector<int>(f)) {
+    for (int iCol = 0; iCol < nbCol; iCol++) {
       EXTret(iRow, iCol) = EXT(eRow, iCol);
     }
     iRow += 1;
   }
-  for (int iCol=0; iCol<nbCol; iCol++) {
+  for (int iCol = 0; iCol < nbCol; iCol++) {
     EXTret(iRow, iCol) = eVect(iCol);
   }
   return EXTret;
 }
 
-vectface vf_add_one_included_vertex(vectface const& vf) {
+vectface vf_add_one_included_vertex(vectface const &vf) {
   size_t n = vf.get_n();
-  vectface vf_ret(n+1);
-  Face fnew(n+1);
+  vectface vf_ret(n + 1);
+  Face fnew(n + 1);
   fnew[n] = 1;
-  for (auto & eFace : vf) {
-    for (size_t i=0; i<n; i++) {
+  for (auto &eFace : vf) {
+    for (size_t i = 0; i < n; i++) {
       fnew[i] = eFace[i];
     }
     vf_ret.push_back(fnew);
@@ -101,25 +96,24 @@ vectface vf_add_one_included_vertex(vectface const& vf) {
   return vf_ret;
 }
 
-Face face_add_one_included_vertex(Face const& eFace) {
+Face face_add_one_included_vertex(Face const &eFace) {
   size_t n = eFace.size();
   Face fnew(n + 1);
   fnew[n] = 1;
-  for (size_t i=0; i<n; i++) {
+  for (size_t i = 0; i < n; i++) {
     fnew[i] = eFace[i];
   }
   return fnew;
 }
 
-template<typename Tgroup>
-Tgroup group_add_one_vertex(Tgroup const& GRP) {
+template <typename Tgroup> Tgroup group_add_one_vertex(Tgroup const &GRP) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   Tidx n_act = GRP.n_act();
   std::vector<Telt> ListGen;
-  for (auto & eGen : GRP.GeneratorsOfGroup()) {
+  for (auto &eGen : GRP.GeneratorsOfGroup()) {
     std::vector<Tidx> eList(n_act + 1);
-    for (Tidx i=0; i<n_act; i++) {
+    for (Tidx i = 0; i < n_act; i++) {
       eList[i] = eGen.at(i);
     }
     eList[n_act] = n_act;
@@ -129,8 +123,12 @@ Tgroup group_add_one_vertex(Tgroup const& GRP) {
   return Tgroup(ListGen, n_act + 1);
 }
 
-template<typename T, typename Tgroup>
-MyMatrix<T> get_transformation(MyMatrix<T> const& EXTfull, MyMatrix<T> const& EXT, MyVector<T> const& eVect, ComponentDecomposition<T, Tgroup> const& cd_adj, ComponentDecomposition<T, Tgroup> const& cd, Face const& f, MyMatrix<T> const& P) {
+template <typename T, typename Tgroup>
+MyMatrix<T> get_transformation(MyMatrix<T> const &EXTfull,
+                               MyMatrix<T> const &EXT, MyVector<T> const &eVect,
+                               ComponentDecomposition<T, Tgroup> const &cd_adj,
+                               ComponentDecomposition<T, Tgroup> const &cd,
+                               Face const &f, MyMatrix<T> const &P) {
   //
   // The polytopes and their containers to find the indiced
   //
@@ -145,7 +143,7 @@ MyMatrix<T> get_transformation(MyMatrix<T> const& EXTfull, MyMatrix<T> const& EX
   int siz = f.count();
   MyMatrix<T> EXTfull1(siz + 1, nbColFull);
   MyMatrix<T> EXTfull2(siz + 1, nbColFull);
-  for (int i=0; i<siz; i++) {
+  for (int i = 0; i < siz; i++) {
     MyVector<T> V1 = GetMatrixRow(cd_EXT, i);
     std::optional<size_t> opt1 = ContEXT.GetIdx_v(V1);
     size_t pos1 = unfold_opt(opt1, "cd_EXT should be contained in EXT");
@@ -153,7 +151,8 @@ MyMatrix<T> get_transformation(MyMatrix<T> const& EXTfull, MyMatrix<T> const& EX
     AssignMatrixRow(EXTfull1, i, V2);
     //
     std::optional<size_t> opt2 = Cont_cd_adjEXTimg.GetIdx_v(V1);
-    size_t pos2 = unfold_opt(opt2, "cd_EXT should be contained in cd_adjEXTimg");
+    size_t pos2 =
+        unfold_opt(opt2, "cd_EXT should be contained in cd_adjEXTimg");
     MyVector<T> V3 = GetMatrixRow(cd_adj.EXT, pos2);
     std::optional<size_t> opt3 = ContEXT.GetIdx_v(V3);
     size_t pos3 = unfold_opt(opt3, "cd_adj.eXT should be contained in EXT");
@@ -168,39 +167,44 @@ MyMatrix<T> get_transformation(MyMatrix<T> const& EXTfull, MyMatrix<T> const& EX
   return FindTransformationId(EXTfull2, EXTfull1);
 }
 
-
-template<typename T, typename Tgroup>
-std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T> const& EXT, Tgroup const& GRP,
-                                                                     PolyHeuristicDecomposition<typename Tgroup::Tint> const& AllArr, std::ostream& os) {
+template <typename T, typename Tgroup>
+std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
+    MyMatrix<T> const &EXT, Tgroup const &GRP,
+    PolyHeuristicDecomposition<typename Tgroup::Tint> const &AllArr,
+    std::ostream &os) {
   using TintGroup = typename Tgroup::Tint;
-  std::map<std::string, TintGroup> TheMap = ComputeInitialMap(EXT, GRP, AllArr.dimEXT);
+  std::map<std::string, TintGroup> TheMap =
+      ComputeInitialMap(EXT, GRP, AllArr.dimEXT);
   std::vector<ComponentDecomposition<T>> l_comp_decomp;
   std::string ansSplit = HeuristicEvaluation(TheMap, AllArr.Splitting);
   if (ansSplit != "split") {
     std::pair<vectface, vectface> pair = GetTriangulationFacet(EXT);
     vectface ListOrbFacet = OrbitSplittingSet(pair.second, GRP);
-    std::vector<DecompositionEquiv<T,Tint>> ListEquiv;
-    for (auto & f : ListOrbFacet) {
+    std::vector<DecompositionEquiv<T, Tint>> ListEquiv;
+    for (auto &f : ListOrbFacet) {
       DecompositionEquiv<T> de{f, {}};
       ListEquiv.push_back(de);
     }
-    ComponentDecomposition<T,Tgroup> cd{EXT, GRP, pair.first, ListEquiv};
-    std::vector<ComponentDecomposition<T,Tgroup>> vect_cd{cd};
+    ComponentDecomposition<T, Tgroup> cd{EXT, GRP, pair.first, ListEquiv};
+    std::vector<ComponentDecomposition<T, Tgroup>> vect_cd{cd};
     return vect_cd;
   }
   //
   // Decomposition the space
   // We have to deal with:
-  // * The complexity of the different indices from the subcomponents (hence the pairIdx)
-  // * We decompose the faces into smaller ones. The problem is that we need to have the
-  //   faces matching. And if we have decomposed one side but the opposite is not decomposed
-  //   then we have a problem. Therefore, the decomposition has to use only intrinsic
-  //   information
+  // * The complexity of the different indices from the subcomponents (hence the
+  // pairIdx)
+  // * We decompose the faces into smaller ones. The problem is that we need to
+  // have the
+  //   faces matching. And if we have decomposed one side but the opposite is
+  //   not decomposed then we have a problem. Therefore, the decomposition has
+  //   to use only intrinsic information
   //   - The number of rays.
   //   - The dimension.
   //   - The size of the automorphism group.
-  // * The above problem being addressed, we need anyway to compute the mapping from a
-  //   component of a facet to a 
+  // * The above problem being addressed, we need anyway to compute the mapping
+  // from a
+  //   component of a facet to a
   //
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
@@ -216,13 +220,15 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   };
   std::map<pairIdx, size_t> map_pair;
   std::vector<pairIdx> vect_pair;
-  auto f_insert_pair_idx=[&](size_t const& i_facet, size_t const& i_orbit) -> void {
+  auto f_insert_pair_idx = [&](size_t const &i_facet,
+                               size_t const &i_orbit) -> void {
     pairIdx pi{i_facet, i_orbit};
     size_t len = vect_pair.size();
     map_pair[pi] = len + 1;
     vect_pair.push_back(pi);
   };
-  auto get_idx_from_pair=[&](size_t const& i_facet, size_t const& i_orbit) -> size_t {
+  auto get_idx_from_pair = [&](size_t const &i_facet,
+                               size_t const &i_orbit) -> size_t {
     pairIdx pi{i_facet, i_orbit};
     size_t pos = map_pair[pi];
     if (pos == 0) {
@@ -234,7 +240,7 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   //
   // The returned data
   //
-  std::vector<ComponentDecomposition<T,Tgroup>> vec_cd;
+  std::vector<ComponentDecomposition<T, Tgroup>> vec_cd;
   //
   // The array of data corresponding to the facet
   //
@@ -245,7 +251,7 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   vectface vf_facet(nbRow);
   std::vector<size_t> list_siz_n_orbit;
   std::vector<size_t> list_shift_n_orbit;
-  auto f_insert_direct=[&](Face const& f) -> void {
+  auto f_insert_direct = [&](Face const &f) -> void {
     Tgroup eStab1 = GRP.Stabilizer_OnSets(f);
     Tgroup eStab2 = ReducedGroupActionAddPtFace(eStab1, f);
     MyMatrix<T> EXT1 = SelectRow(EXT, f);
@@ -267,46 +273,51 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
   std::vector<std::vector<FacetEntry>> ll_facetentry;
 
   size_t n_done = 0;
-  while(true) {
+  while (true) {
     size_t len = list_stab2.len();
-    for (size_t pos=n_done; pos<len; pos++) {
+    for (size_t pos = n_done; pos < len; pos++) {
       Face facet = vf_facet[pos];
       Tgroup eStab2 = list_stab2[pos];
       MyMatrix<T> EXT1 = list_EXT1[pos];
       MyMatrix<T> EXT2 = list_EXT2[pos];
       ContainerMatrix<T> ContEXT2(EXT2);
-      std::vector<ComponentDecomposition<T,Tgroup>> local_vec_cd = get_full_decomposition(EXT2, eStab2, AllArr, os);
+      std::vector<ComponentDecomposition<T, Tgroup>> local_vec_cd =
+          get_full_decomposition(EXT2, eStab2, AllArr, os);
       size_t n_orbit = local_vec_cd.size();
       int nbVect = EXT1.rows();
       list_siz_n_orbit.push_back(n_comp);
       list_shift_n_orbit.push_back(vec_cd.size());
-      for (size_t i_orbit=0; i_orbit<n_orbit; i_orbit++) {
+      for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
         f_insert_pair_idx(pos, i_orbit);
       }
       vectface vf_facet(nbRow);
-      for (auto & ecd : local_vec_cd) {
+      for (auto &ecd : local_vec_cd) {
         vectface vf_trig = vf_add_one_included_vertex(ecd.vf_trig);
         MyMatrix<T> EXTcomp = GetFacetIso(EXT, facet);
         Tgroup GRPperm = group_add_one_vertex(ecd.GRPperm);
         std::vector<DecompositionEquiv<T>> ListEquiv;
-        for (auto & equiv : ecd.ListEquiv) {
+        for (auto &equiv : ecd.ListEquiv) {
           Face f = vf_add_one_included_vertex(equiv.f);
-          auto iife_equiv=[&]() -> std::optional<std::pair<size_t, MyMatrix<T>>> {
+          auto iife_equiv =
+              [&]() -> std::optional<std::pair<size_t, MyMatrix<T>>> {
             if (equiv) {
-              std::pair<size_t, MyMatrix<T>> const& pair = *equiv;
-              size_t const& j_orbit = pair.first;
-              MyMatrix<T> const& P = pair.second;
-              ComponentDecomposition<T,Tgroup> const& cd_adj = local_vec_cd[j_orbit];
-              MyMatrix<T> P_final = get_transformation(EXT1, EXT2, eVect, cd_adj, ecd, equiv.f, P);
+              std::pair<size_t, MyMatrix<T>> const &pair = *equiv;
+              size_t const &j_orbit = pair.first;
+              MyMatrix<T> const &P = pair.second;
+              ComponentDecomposition<T, Tgroup> const &cd_adj =
+                  local_vec_cd[j_orbit];
+              MyMatrix<T> P_final = get_transformation(EXT1, EXT2, eVect,
+                                                       cd_adj, ecd, equiv.f, P);
               size_t j_orbit_final = get_idx_from_pair(pos, j_orbit);
               std::pair<size_t, MyMatrix<T>> pair_final{j_orbit_final, P_final};
               return pair_final;
             } else {
               Face new_facet(nbRow);
-              for (auto & val : FaceToVector<size_t>(equiv.f)) {
+              for (auto &val : FaceToVector<size_t>(equiv.f)) {
                 MyVector<T> V1 = GetMatrixRow(ecd.EXT, val);
                 std::optional<size_t> opt1 = ContEXT2.GetIdx_v(V1);
-                size_t pos1 = unfold_opt(opt1, "ecd.EXT should be contained in EXT2");
+                size_t pos1 =
+                    unfold_opt(opt1, "ecd.EXT should be contained in EXT2");
                 new_facet[pos1] = 1;
               }
               vf_facet.push_back(new_facet);
@@ -318,13 +329,14 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
           ListEquiv.push_back(de);
         }
         Face f(facet.count() + 1);
-        for (size_t u=0; u<facet.count(); u++) {
+        for (size_t u = 0; u < facet.count(); u++) {
           f[u] = 1;
         }
         DecompositionEquiv<T> de{f, {}};
         ListEquiv.push_back(de);
         //
-        ComponentDecomposition<T,Tgroup> fcd{EXTcomp, GRPperm, vf_trig, ListEquiv};
+        ComponentDecomposition<T, Tgroup> fcd{EXTcomp, GRPperm, vf_trig,
+                                              ListEquiv};
         vec_cd.push_back(fcd);
       }
       //
@@ -335,13 +347,7 @@ std::vector<ComponentDecomposition<T,Tgroup>> get_full_decomposition(MyMatrix<T>
       break;
     }
   }
-
-
-
-  
 }
-
-
 
 // clang-format off
 #endif  // SRC_DUALDESC_POLY_EQUIVARIANTTRIANGULATION_H_

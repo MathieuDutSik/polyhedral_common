@@ -101,7 +101,7 @@ public:
     for (int iEntry = iEntryStart; iEntry < nbEntry; iEntry++) {
       size_t fInv = ListInv[iEntry];
       if (fInv == eInv) {
-        T const& fEnt = GetEntry(iEntry);
+        T const &fEnt = GetEntry(iEntry);
         std::optional<Tequiv> eEquiv = FctEquiv(fEnt, eEnt);
         if (eEquiv)
           return {iEntry, *eEquiv, nbEntry};
@@ -120,7 +120,7 @@ public:
     os << "DataBank.ProcessRequest, step 4\n";
     return {false, eEquiv.iEntry, {}};
   }
-  T const& GetEntry(int const &i) const {
+  T const &GetEntry(int const &i) const {
     if (FullDataInMemory)
       return ListDat[i];
     std::string FileSaveDAT =

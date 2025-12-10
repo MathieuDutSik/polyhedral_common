@@ -82,7 +82,8 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
 #ifdef DEBUG_PERM_FCT
     if (iRowImg >= EXT2.rows()) {
       std::cerr << "PERM: iRowImg is at a too high index\n";
-      std::cerr << "PERM: iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows() << "\n";
+      std::cerr << "PERM: iRowImg=" << iRowImg << " |EXT2|=" << EXT2.rows()
+                << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -283,9 +284,10 @@ FindMatrixTransformationTest_Generic(size_t nbRow, size_t nbCol, F1 f1, F2 f2,
       }
       if (eSum != 0) {
 #ifdef DEBUG_PERM_FCT
-        std::cerr << "PERM: eSum=" << eSum << " iRow=" << iRow << " iCol=" << iCol
-                  << "\n";
-        std::cerr << "PERM: FindMatrixTransformationTest_Generic, exit false 2\n";
+        std::cerr << "PERM: eSum=" << eSum << " iRow=" << iRow
+                  << " iCol=" << iCol << "\n";
+        std::cerr
+            << "PERM: FindMatrixTransformationTest_Generic, exit false 2\n";
 #endif
         return {};
       }
@@ -421,7 +423,8 @@ RepresentVertexPermutationTest(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
       std::optional<T> optA = UniversalScalarConversionCheck<T, Tfield>(eSum1);
       if (!optA) {
 #ifdef TIMINGS_PERM_FCT
-        std::cerr << "|PERM: RepresentVertexPermutationTest 1|=" << time << "\n";
+        std::cerr << "|PERM: RepresentVertexPermutationTest 1|=" << time
+                  << "\n";
 #endif
         // We fail because the image is not integral.
         return {};
@@ -588,15 +591,19 @@ bool CheckEquivalence(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
       if (!opt) {
         // We fail because the image is not integral.
 #ifdef DEBUG_PERM_FCT
-        os << "PERM: CheckEquivalence, opt=fail at UniversalScalarConversionCheck i_row=" << i_row << " i_col=" << i_col << "\n";
+        os << "PERM: CheckEquivalence, opt=fail at "
+              "UniversalScalarConversionCheck i_row="
+           << i_row << " i_col=" << i_col << "\n";
 #endif
         return false;
       }
-      T const& EXT1_img = *opt;
-      T const& EXT2_map = EXT2(i_row_img, i_col);
+      T const &EXT1_img = *opt;
+      T const &EXT2_map = EXT2(i_row_img, i_col);
       if (EXT1_img != EXT2_map) {
 #ifdef DEBUG_PERM_FCT
-        os << "PERM: CheckEquivalence, EXT1_img=" << EXT1_img << " EXT2_map=" << EXT2_map << " i_row=" << i_row << " i_col=" << i_col << "\n";
+        os << "PERM: CheckEquivalence, EXT1_img=" << EXT1_img
+           << " EXT2_map=" << EXT2_map << " i_row=" << i_row
+           << " i_col=" << i_col << "\n";
 #endif
         return false;
       }
@@ -771,20 +778,15 @@ MyMatrix<T> FindTransformation_f(MyMatrix<T> const &EXT1,
 template <typename T>
 MyMatrix<T> FindTransformationId(MyMatrix<T> const &EXT1,
                                  MyMatrix<T> const &EXT2) {
-  auto f=[&](int pos) -> int {
-    return pos;
-  };
+  auto f = [&](int pos) -> int { return pos; };
   return FindTransformation_f(EXT1, EXT2, f);
 }
-
-
-
-
 
 template <typename T, typename Telt>
 MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                                Telt const &ePerm) {
-  static_assert(is_ring_field<T>::value, "FindTransformation requires the ring to be a field");
+  static_assert(is_ring_field<T>::value,
+                "FindTransformation requires the ring to be a field");
 #ifdef DEBUG_PERM_FCT
   size_t sizPerm = ePerm.size();
   size_t sizEXT = EXT1.rows();
@@ -800,25 +802,25 @@ MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 }
 
 template <typename T, typename Telt>
-inline typename std::enable_if<is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+inline typename std::enable_if<is_ring_field<T>::value,
+                               std::optional<MyMatrix<T>>>::type
 FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                        Telt const &ePerm) {
   MyMatrix<T> M = FindTransformation(EXT1, EXT2, ePerm);
   return M;
 }
 
-
 template <typename T, typename Telt>
-inline typename std::enable_if<!is_ring_field<T>::value, std::optional<MyMatrix<T>>>::type
+inline typename std::enable_if<!is_ring_field<T>::value,
+                               std::optional<MyMatrix<T>>>::type
 FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                        Telt const &ePerm) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXT1_field = UniversalMatrixConversion<Tfield, T>(EXT1);
   MyMatrix<Tfield> EXT2_field = UniversalMatrixConversion<Tfield, T>(EXT2);
   MyMatrix<Tfield> M_field = FindTransformation(EXT1_field, EXT2_field, ePerm);
-  return UniversalMatrixConversionCheck<T,Tfield>(M_field);
+  return UniversalMatrixConversionCheck<T, Tfield>(M_field);
 }
-
 
 template <typename T, typename Tidx>
 std::optional<MyMatrix<T>>

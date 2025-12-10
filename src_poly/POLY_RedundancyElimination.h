@@ -26,7 +26,8 @@
 
 // Fairly expensive function. But useful for debugging
 template <typename T>
-std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream & os) {
+std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M,
+                                            std::ostream &os) {
   MyMatrix<T> Mred = ColumnReduction(M);
   MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
   int n_row = Mred.rows();
@@ -49,7 +50,8 @@ std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream &
   return TheSel;
 }
 
-template <typename T> MyMatrix<T> GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream& os) {
+template <typename T>
+MyMatrix<T> GetNonRedundant_CDD(const MyMatrix<T> &M, std::ostream &os) {
   return SelectRow(M, Kernel_GetNonRedundant_CDD(M, os));
 }
 
@@ -60,7 +62,8 @@ template <typename T> struct FacetizationInfo {
 
 template <typename T>
 FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
-                                     MyMatrix<T> const &BoundingFac, [[maybe_unused]] std::ostream &os) {
+                                     MyMatrix<T> const &BoundingFac,
+                                     [[maybe_unused]] std::ostream &os) {
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
@@ -453,8 +456,8 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
   vectface vf = DecomposeOrbitPoint(GRP, work);
   size_t n_orbit = vf.size();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "n_rows=" << n_rows << " n_cols=" << n_cols
-     << " |GRP|=" << GRP.size() << " n_orbit=" << n_orbit << "\n";
+  os << "n_rows=" << n_rows << " n_cols=" << n_cols << " |GRP|=" << GRP.size()
+     << " n_orbit=" << n_orbit << "\n";
 #endif
   Face status_orbit(n_orbit);
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++)

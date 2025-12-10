@@ -17,13 +17,10 @@
 const size_t seed_partition = 10;
 const size_t seed_hashmap = 20;
 
-
-template<typename Tequiv>
-struct BoundSerial {
+template <typename Tequiv> struct BoundSerial {
   size_t i_orb;
   Tequiv eq;
 };
-
 
 /*
   We want to implement a fully remplatized system for
@@ -93,7 +90,8 @@ struct BoundSerial {
   ---Lambda f_spann for getting the object
      auto f_spann(Tobj const& x) -> std::pair<Tobj,Tequiv>;
   ---Lambda f_set_boundary_status for setting the boundary and status
-     auto f_set_boundary_status(size_t const&idx, std::vector<BoundEquiv<Tequiv>> const& bound) -> void;
+     auto f_set_boundary_status(size_t const&idx,
+  std::vector<BoundEquiv<Tequiv>> const& bound) -> void;
 
 
 
@@ -101,32 +99,35 @@ struct BoundSerial {
 
 
  */
-template<typename Tobj, typename Tequiv, typename Fn_treated, typename Fnext_input, typename Fnext_output,
-  typename Fgenerate, typename Fhash, typename Frepr, typename Finsert_obj, typename Fidx_obj,
-  typename Fspann, typename Fset_boundary_status>
-bool compute_next_level_serial(int const &max_time_second, bool const& compute_boundary,
-                               Fn_treated f_n_treated,
-                               Fnext_input f_next_input, Fnext_output f_next_output,
-                               Fgenerate f_generate, Fhash f_hash, Frepr f_repr,
+template <typename Tobj, typename Tequiv, typename Fn_treated,
+          typename Fnext_input, typename Fnext_output, typename Fgenerate,
+          typename Fhash, typename Frepr, typename Finsert_obj,
+          typename Fidx_obj, typename Fspann, typename Fset_boundary_status>
+bool compute_next_level_serial(int const &max_time_second,
+                               bool const &compute_boundary,
+                               Fn_treated f_n_treated, Fnext_input f_next_input,
+                               Fnext_output f_next_output, Fgenerate f_generate,
+                               Fhash f_hash, Frepr f_repr,
                                Finsert_obj f_insert_obj, Fidx_obj f_idx_obj,
-                               Fspann f_spann, Fset_boundary_status f_set_boundary_status) {
+                               Fspann f_spann,
+                               Fset_boundary_status f_set_boundary_status) {
   SingletonTime start;
   size_t n_obj = 0;
   std::unordered_map<size_t, std::vector<size_t>> indices_by_hash;
   //
   // Loading what as already been done.
   //
-  auto insert_load=[&](Tobj const& x) -> void {
+  auto insert_load = [&](Tobj const &x) -> void {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     vect.push_back(n_obj);
     n_obj++;
   };
-  auto load_output=[&]() -> void {
-    while(true) {
+  auto load_output = [&]() -> void {
+    while (true) {
       std::optional<Tobj> opt = f_next_output();
       if (*opt) {
-        Tobj const& x = *opt;
+        Tobj const &x = *opt;
         insert_load(x);
       } else {
         break;
@@ -137,14 +138,14 @@ bool compute_next_level_serial(int const &max_time_second, bool const& compute_b
   //
   // Accessing entries
   //
-  auto f_get_equiv=[&](Tobj const& x) -> BoundSerial<Tequiv> {
+  auto f_get_equiv = [&](Tobj const &x) -> BoundSerial<Tequiv> {
     size_t hash_hashmap = f_hash(seed_hashmap, x);
     std::vector<size_t> &vect = indices_by_hash[hash_hashmap];
     for (auto &idx : vect) {
       Tobj y = f_idx_obj(idx);
       std::optional<Tequiv> opt = f_repr(y, x);
       if (opt) {
-        Tequiv const& eq = *opt;
+        Tequiv const &eq = *opt;
         BoundSerial<Tequiv> bnd{idx, eq};
         return bnd;
       }
@@ -158,10 +159,10 @@ bool compute_next_level_serial(int const &max_time_second, bool const& compute_b
   //
   // Treat entries
   //
-  auto treat_entry=[&](size_t const& idx, Tobj const& x) -> void {
+  auto treat_entry = [&](size_t const &idx, Tobj const &x) -> void {
     std::vector<Tobj> l_elt = f_generate(x);
     std::vector<BoundSerial<Tequiv>> l_bound;
-    for (auto & y: l_elt) {
+    for (auto &y : l_elt) {
       BoundSerial<Tequiv> bnd = f_get_equiv(y);
       if (compute_boundary) {
         l_bound.push(bnd);
@@ -170,17 +171,18 @@ bool compute_next_level_serial(int const &max_time_second, bool const& compute_b
     f_set_boundary_status(idx, l_bound);
   };
   size_t n_treated = f_n_treated();
-  while(true) {
+  while (true) {
     std::optional<Tobj> opt = f_next_input();
     if (*opt) {
-      Tobj const& obj = *opt;
+      Tobj const &obj = *opt;
       treat_entry(n_treated, obj);
     } else {
       break;
     }
     if (max_time_second > 0 && si(start) > max_time_second) {
 #ifdef DEBUG_ADJACENCY_SCHEME
-      os << "CELL_SCH: returning false due to si(start) > max_time_second > 0\n";
+      os << "CELL_SCH: returning false due to si(start) > max_time_second > "
+            "0\n";
 #endif
       return false;
     }
@@ -188,20 +190,17 @@ bool compute_next_level_serial(int const &max_time_second, bool const& compute_b
   return true;
 }
 
-
-template<typename Tobj, typename Tequiv>
-struct ResultNextLevel {
+template <typename Tobj, typename Tequiv> struct ResultNextLevel {
   std::vector<Tobj> l_obj;
-  std::vector<std::vector<BoundSerial<Tequiv>> l_bound;
+  std::vector < std::vector<BoundSerial<Tequiv>> l_bound;
 };
 
-
 template <typename Tdata, typename Fincorrect>
-ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv> EnumerateAndStoreLevel_Serial(Tdata &data,
-                                                                                            std::vector<Tobj> const& l_input,
-                                                                                            Fincorrect f_incorrect,
-                                                                                            int const &max_runtime_second,
-                                                                                            bool const& compute_boundary) {
+ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv>
+EnumerateAndStoreLevel_Serial(Tdata &data, std::vector<Tobj> const &l_input,
+                              Fincorrect f_incorrect,
+                              int const &max_runtime_second,
+                              bool const &compute_boundary) {
   using Tobj = typename Tdata::Tobj;
   using Tequiv = typename Tdata::Tequiv;
   using TadjO = typename Tdata::TadjO;
@@ -217,17 +216,13 @@ ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv> EnumerateAndStoreL
     return data.f_spann(x);
   };
   std::vector<Tobj> l_obj;
-  std::vector<std::vector<BoundSerial<Tequiv>> ll_bound;
+  std::vector < std::vector<BoundSerial<Tequiv>> ll_bound;
   auto f_adj = [&](int const &i_orb) -> std::vector<TadjI> {
     Tobj &x = l_obj[i_orb].x;
     return data.f_adj(x);
   };
-  auto f_idx_obj = [&](size_t const &idx) -> Tobj {
-    return l_obj[idx];
-  };
-  auto f_n_treated = [&]() -> size_t {
-    return 0;
-  };
+  auto f_idx_obj = [&](size_t const &idx) -> Tobj { return l_obj[idx]; };
+  auto f_n_treated = [&]() -> size_t { return 0; };
   size_t n_input = l_input.size();
   size_t pos = 0;
   auto f_next_input = [&]() -> std::optional<Tobj> {
@@ -238,9 +233,7 @@ ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv> EnumerateAndStoreL
       return {};
     }
   };
-  auto f_next_output = [&]() -> std::optional<Tobj> {
-    return {};
-  };
+  auto f_next_output = [&]() -> std::optional<Tobj> { return {}; };
   auto f_insert_obj = [&](Tobj const &x) -> bool {
     l_obj.push_back(x);
 #ifdef DEBUG_CELL_SCHEME
@@ -257,21 +250,21 @@ ResultNextLevel<typename Tdata::Tobj, typename Tdata::Tequiv> EnumerateAndStoreL
       l_status[pos] = val_i;
     }
   };
-  auto f_set_boundary_status = [&](int const &i_orb, std::vector<BoundSerial<Tequiv>> const &l_bound) -> void {
+  auto f_set_boundary_status =
+      [&](int const &i_orb,
+          std::vector<BoundSerial<Tequiv>> const &l_bound) -> void {
     ll_bound.push_back(l_bound);
   };
-  (void)compute_next_level_serial<Tobj, Tequiv, decltype(f_n_treated), decltype(f_next_input),
-    decltype(f_next_output), decltype(f_generate), decltype(f_hash), decltype(f_repr),
-    decltype(f_insert_obj), decltype(f_idx_obj), decltype(f_spann), decltype(f_set_boundary_status)>
-    (max_time_second, compute_boundary,
-     f_n_treated,
-     f_next_input, f_next_output,
-     f_generate, f_hash, f_repr,
-     f_insert_obj, f_idx_obj,
-     f_spann, f_set_boundary_status);
+  (void)compute_next_level_serial<
+      Tobj, Tequiv, decltype(f_n_treated), decltype(f_next_input),
+      decltype(f_next_output), decltype(f_generate), decltype(f_hash),
+      decltype(f_repr), decltype(f_insert_obj), decltype(f_idx_obj),
+      decltype(f_spann), decltype(f_set_boundary_status)>(
+      max_time_second, compute_boundary, f_n_treated, f_next_input,
+      f_next_output, f_generate, f_hash, f_repr, f_insert_obj, f_idx_obj,
+      f_spann, f_set_boundary_status);
   return l_obj;
 }
-
 
 // clang-format off
 #endif  // SRC_ENUM_SCHEMES_POLY_CELLCOMPLEX_H_

@@ -106,7 +106,7 @@ template <typename T>
 bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
                                  MyVector<T> const &eVect,
                                  LpSolution<T> const &eSol,
-                                 [[maybe_unused]] std::ostream& os) {
+                                 [[maybe_unused]] std::ostream &os) {
   int nbRow = EXT.rows();
   int nbCol = EXT.cols();
   MyVector<T> V(nbCol - 1);
@@ -124,14 +124,17 @@ bool CheckDualSolutionGetOptimal(MyMatrix<T> const &EXT,
   for (int iCol = 0; iCol < nbCol - 1; iCol++) {
     if (V(iCol) != 0) {
 #ifdef DEBUG_LINEAR_PROGRAMMING_FUND
-      os << "LPFUND: Returning false as the vector V is not zero at coordinate iCol=" << iCol << "\n";
+      os << "LPFUND: Returning false as the vector V is not zero at coordinate "
+            "iCol="
+         << iCol << "\n";
 #endif
       return false;
     }
   }
   if (objDual != eSol.OptimalValue) {
 #ifdef DEBUG_LINEAR_PROGRAMMING_FUND
-    os << "LPFUND: Returning false as objDual=" << objDual << " eSol.OptimnalValue=" << eSol.OptimalValue << "\n";
+    os << "LPFUND: Returning false as objDual=" << objDual
+       << " eSol.OptimnalValue=" << eSol.OptimalValue << "\n";
 #endif
     return false;
   }

@@ -4,20 +4,20 @@
 #include "Copositivity.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void compute(std::string const& FileI, std::string const& strMaxNorm, std::string const& OutFormat, std::ostream& os_out) {
+template <typename T, typename Tint>
+void compute(std::string const &FileI, std::string const &strMaxNorm,
+             std::string const &OutFormat, std::ostream &os_out) {
   MyMatrix<T> eSymmMat = ReadMatrixFile<T>(FileI);
   T MaxNorm = ParseScalar<T>(strMaxNorm);
   //
   MyMatrix<Tint> InitialBasis = IdentityMat<Tint>(eSymmMat.rows());
   //
   CopositivityEnumResult<Tint> CopoRes =
-    EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis,
-                                            MaxNorm, std::cerr);
+      EnumerateCopositiveShortVector<T, Tint>(eSymmMat, InitialBasis, MaxNorm,
+                                              std::cerr);
   //
   WriteCopositivityEnumResult(os_out, OutFormat, eSymmMat, CopoRes);
 }
-
 
 int main(int argc, char *argv[]) {
   HumanTime time1;
@@ -27,8 +27,9 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "CP_CopositiveMaxNorm [arith] [DATASYMM] [MaxNorm]\n";
       std::cerr << "or\n";
-      std::cerr << "CP_CopositiveMaxNorm [arith] [DATASYMM] [MaxNorm] [OutFormat] "
-                   "[OutFile]\n";
+      std::cerr
+          << "CP_CopositiveMaxNorm [arith] [DATASYMM] [MaxNorm] [OutFormat] "
+             "[OutFile]\n";
       std::cerr << "\n";
       std::cerr << "arith: The arithmetic being used\n";
       std::cerr << "DATASYMM: The symmetric matrix on input\n";
@@ -57,9 +58,10 @@ int main(int argc, char *argv[]) {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return compute<T,Tint>(FileI, strMaxNorm, OutFormat, os_out);
+        return compute<T, Tint>(FileI, strMaxNorm, OutFormat, os_out);
       }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
       throw TerminalException{1};
     };
     //

@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
     MyMatrix<T> eMat = ReadMatrixFile<T>(FileGram);
     std::vector<MyMatrix<T>> ListGen =
         LINSPA_ComputeStabilizer<T, Tint, Tgroup>(LinSpa, eMat, std::cerr);
-    auto f=[&](std::ostream& os_out) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       write_group(ListGen, OutFormat, os_out);
     };
     print_stderr_stdout_file(FileOut, f);

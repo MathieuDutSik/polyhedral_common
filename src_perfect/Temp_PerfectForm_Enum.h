@@ -28,10 +28,10 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
                            DataBank<PolyhedralEntry<T, Tgroup>> &TheBank,
                            DataLinSpa<T> const &eData,
                            PolyHeuristic<mpz_class> const &AllArr) {
-  std::ostream& os = MProc.GetO(TheId);
+  std::ostream &os = MProc.GetO(TheId);
   size_t seed = 1235;
-  std::function<bool(size_t const &, size_t const &)>
-      CompFCT = [](size_t const &x, size_t const &y) -> bool { return x < y; };
+  std::function<bool(size_t const &, size_t const &)> CompFCT =
+      [](size_t const &x, size_t const &y) -> bool { return x < y; };
   std::function<void(TrivialBalinski &, SimplePerfect<T, Tint> const &,
                      std::ostream &)>
       UpgradeBalinskiStat =
@@ -43,24 +43,22 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       fEquiv =
           [&](SimplePerfect<T, Tint> const &x, SimplePerfect<T, Tint> const &y)
       -> std::optional<MyMatrix<Tint>> {
-    return SimplePerfect_TestEquivalence<T, Tint, Tgroup>(eData.LinSpa,
-                                                          x.Gram,
-                                                          y.Gram,
-                                                          x.RecSHV,
-                                                          y.RecSHV,
-                                                          os);
+    return SimplePerfect_TestEquivalence<T, Tint, Tgroup>(
+        eData.LinSpa, x.Gram, y.Gram, x.RecSHV, y.RecSHV, os);
   };
   NewEnumerationWork<SimplePerfect<T, Tint>> ListOrbit(
       AllArr.DD_Saving, AllArr.DD_Memory, eData.PrefixPerfect, CompFCT,
       UpgradeBalinskiStat, fEquiv, os);
   auto FuncInsert = [&](SimplePerfect<T, Tint> const &x,
                         std::ostream &os) -> int {
-    size_t eInv = SimplePerfect_Invariant<T,Tint>(seed, eData.LinSpa, x.Gram, x.RecSHV, os);
+    size_t eInv = SimplePerfect_Invariant<T, Tint>(seed, eData.LinSpa, x.Gram,
+                                                   x.RecSHV, os);
     return ListOrbit.InsertEntry({x, eInv}, os);
   };
   int nbPresentOrbit = ListOrbit.GetNbEntry();
   if (nbPresentOrbit == 0) {
-    std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm<T,Tint>(eData.LinSpa, os);
+    std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
+        GetOnePerfectForm<T, Tint>(eData.LinSpa, os);
     SimplePerfect<T, Tint> entry{pair.first, pair.second};
     int RetVal = FuncInsert(entry, os);
     if (RetVal != -1) {
@@ -100,9 +98,10 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       SimplePerfect<T, Tint> ePERF = ListOrbit.GetRepresentative(eEntry);
       Tshortest<T, Tint> RecSHV = T_ShortestVectorHalf<T, Tint>(ePERF.Gram, os);
       NakedPerfect<T, Tint> eNaked =
-        GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
-      Tgroup GRPshv =
-        SimplePerfect_Stabilizer<T, Tint, Tgroup>(eData.LinSpa, ePERF.Gram, RecSHV, os).first;
+          GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
+      Tgroup GRPshv = SimplePerfect_Stabilizer<T, Tint, Tgroup>(
+                          eData.LinSpa, ePERF.Gram, RecSHV, os)
+                          .first;
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
                                                    IntToString(eEntry) + "/");
@@ -112,8 +111,9 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       for (auto &eOrbB : TheOutput) {
         MyVector<T> eVectOrb = FindFacetInequality(eNaked.PerfDomEXT, eOrbB);
         MyMatrix<T> DirMat = LINSPA_GetMatrixInTspace(eData.LinSpa, eVectOrb);
-        std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = Flipping_Perfect<T, Tint>(ePERF.Gram, DirMat, os);
-        SimplePerfect<T,Tint> entry{pair.first, pair.second};
+        std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
+            Flipping_Perfect<T, Tint>(ePERF.Gram, DirMat, os);
+        SimplePerfect<T, Tint> entry{pair.first, pair.second};
         int eVal = FuncInsert(entry, os);
         if (eVal == -1) {
           cv.notify_one();
@@ -224,11 +224,11 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT() {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
-  SingleBlock const& BlockBANK = eFull.get_block("BANK");
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockMETHOD = eFull.get_block("METHOD");
-  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
+void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream &os) {
+  SingleBlock const &BlockBANK = eFull.get_block("BANK");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockMETHOD = eFull.get_block("METHOD");
+  SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
   //
   bool BANK_Saving = BlockBANK.get_bool("Saving");
   bool BANK_Memory = BlockBANK.get_bool("FullDataInMemory");
@@ -247,15 +247,13 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   std::cerr << "OutFile=" << OutFile << "\n";
   //
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
-  bool NeedCheckStabilization =
-    BlockDATA.get_bool("NeedCheckStabilization");
+  bool NeedCheckStabilization = BlockDATA.get_bool("NeedCheckStabilization");
   bool SavingPerfect = BlockDATA.get_bool("SavingPerfect");
   bool FullDataInMemory = BlockDATA.get_bool("FullDataInMemory");
   bool ReturnAll = BlockDATA.get_bool("ReturnAll");
   std::string PrefixPerfect = BlockDATA.get_string("PrefixPerfect");
   CreateDirectory(PrefixPerfect);
-  std::string PrefixPolyhedral =
-    BlockMETHOD.get_string("PrefixPolyhedral");
+  std::string PrefixPolyhedral = BlockMETHOD.get_string("PrefixPolyhedral");
   CreateDirectory(PrefixPolyhedral);
   int UpperLimitMethod4 = BlockMETHOD.get_int("UpperLimitMethod4");
   std::string CVPmethod = BlockMETHOD.get_string("CVPmethod");
@@ -277,8 +275,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   //
   PolyHeuristic<mpz_class> AllArr = AllStandardHeuristic<mpz_class>();
   //
-  std::string HeuSplitFile =
-    BlockMETHOD.get_string("SplittingHeuristicFile");
+  std::string HeuSplitFile = BlockMETHOD.get_string("SplittingHeuristicFile");
   if (HeuSplitFile != "unset.heu") {
     IsExistingFileDie(HeuSplitFile);
     std::ifstream SPLITfs(HeuSplitFile);
@@ -286,7 +283,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   }
   //
   std::string AddiSymmFile =
-    BlockMETHOD.get_string("AdditionalSymmetryHeuristicFile");
+      BlockMETHOD.get_string("AdditionalSymmetryHeuristicFile");
   if (AddiSymmFile != "unset.heu") {
     IsExistingFileDie(AddiSymmFile);
     std::ifstream SYMMfs(AddiSymmFile);
@@ -294,7 +291,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   }
   //
   std::string DualDescFile =
-    BlockMETHOD.get_string("DualDescriptionHeuristicFile");
+      BlockMETHOD.get_string("DualDescriptionHeuristicFile");
   if (DualDescFile != "unset.heu") {
     IsExistingFileDie(DualDescFile);
     std::ifstream DDfs(DualDescFile);
@@ -302,7 +299,7 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   }
   //
   std::string StabEquivFile =
-    BlockMETHOD.get_string("StabEquivFacetHeuristicFile");
+      BlockMETHOD.get_string("StabEquivFacetHeuristicFile");
   if (StabEquivFile != "unset.heu") {
     IsExistingFileDie(StabEquivFile);
     std::ifstream STEQfs(StabEquivFile);
@@ -310,15 +307,14 @@ void TreatPerfectLatticesEntry(FullNamelist const &eFull, std::ostream& os) {
   }
   //
   std::string MethodFacetFile =
-    BlockMETHOD.get_string("MethodInitialFacetSetFile");
+      BlockMETHOD.get_string("MethodInitialFacetSetFile");
   if (MethodFacetFile != "unset.heu") {
     IsExistingFileDie(MethodFacetFile);
     std::ifstream MIFSfs(MethodFacetFile);
     AllArr.InitialFacetSet = ReadHeuristic<mpz_class>(MIFSfs);
   }
   //
-  std::string BankSaveFile =
-    BlockBANK.get_string("BankSaveHeuristicFile");
+  std::string BankSaveFile = BlockBANK.get_string("BankSaveHeuristicFile");
   if (BankSaveFile != "unset.heu") {
     IsExistingFileDie(BankSaveFile);
     std::ifstream BANKfs(BankSaveFile);

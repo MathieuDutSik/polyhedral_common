@@ -13,8 +13,8 @@ void process(std::string const &MatFile, std::string const &OutFormat,
   MyMatrix<T> Qmat = ReadMatrixFile<T>(MatFile);
   IndefiniteCombinedAlgo<T, Tint, Tgroup> comb(std::cerr);
   std::vector<MyMatrix<Tint>> l_gen = comb.INDEF_FORM_AutomorphismGroup(Qmat);
-  for (auto & e_gen : l_gen) {
-    MyMatrix<T> e_gen_T = UniversalMatrixConversion<T,Tint>(e_gen);
+  for (auto &e_gen : l_gen) {
+    MyMatrix<T> e_gen_T = UniversalMatrixConversion<T, Tint>(e_gen);
     MyMatrix<T> prod = e_gen_T * Qmat * e_gen_T.transpose();
     if (prod != Qmat) {
       std::cerr << "The matrix is not preserving the space\n";
@@ -72,7 +72,8 @@ int main(int argc, char *argv[]) {
     print_stderr_stdout_file(OutFile, f);
     std::cerr << "Normal termination of INDEF_FORM_AutomorphismGroup\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in INDEF_FORM_AutomorphismGroup, runtime=" << time << "\n";
+    std::cerr << "Error in INDEF_FORM_AutomorphismGroup, runtime=" << time
+              << "\n";
     exit(e.eVal);
   }
   runtime(time);

@@ -54,16 +54,23 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   if (EXT1.rows() != EXT2.rows()) {
     return {};
   }
-  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
-    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, threshold, os);
-    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, threshold, os);
+  auto f_eval = [&](size_t threshold)
+      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+    std::vector<Tidx> CanonicReord1 =
+        LinPolytope_CanonicOrdering<Tint, Tidx>(EXT1, threshold, os);
+    std::vector<Tidx> CanonicReord2 =
+        LinPolytope_CanonicOrdering<Tint, Tidx>(EXT2, threshold, os);
     //
-    return IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(EXT1, EXT2, CanonicReord1, CanonicReord2, os);
+    return IsomorphismFromCanonicReord<Tint, Tfield, Tidx>(
+        EXT1, EXT2, CanonicReord1, CanonicReord2, os);
   };
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytopeIntegral_Isomorphism");
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo_B =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B,
+                           "LinPolytopeIntegral_Isomorphism");
 #endif
   if (!IsoInfo)
     return {};
@@ -90,18 +97,30 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
   }
   MyMatrix<T> EXT1_T = UniversalMatrixConversion<T, Tint>(EXT1);
   MyMatrix<T> EXT2_T = UniversalMatrixConversion<T, Tint>(EXT2);
-  auto f_eval=[&](size_t threshold) -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> {
-    std::vector<Tidx> CanonicReord1 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1_T, GramMat1, threshold, os);
-    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
-    std::vector<Tidx> CanonicReord2 = LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2_T, GramMat2, threshold, os);
-    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =\n";
-    return IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
+  auto f_eval = [&](size_t threshold)
+      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> {
+    std::vector<Tidx> CanonicReord1 =
+        LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT1_T, GramMat1,
+                                                     threshold, os);
+    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+    //    = = = = = = = = = = = = =\n";
+    std::vector<Tidx> CanonicReord2 =
+        LinPolytope_CanonicOrdering_GramMat<T, Tidx>(EXT2_T, GramMat2,
+                                                     threshold, os);
+    //    os << "= = = = = = = = = = = = = = = = = = = = = = = = = = = = = = = =
+    //    = = = = = = = = = = = = =\n";
+    return IsomorphismFromCanonicReord_GramMat<T, T, Tidx>(
+        EXT1_T, GramMat1, EXT2_T, GramMat2, CanonicReord1, CanonicReord2, os);
   };
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo = f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);
 #ifdef SANITY_CHECK_THRESHOLD_SUBSET_SCHEME_INT_CANONIC
-  //  os << "---------------------------------------------------------------------------\n";
-  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B = f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
-  check_iso_info_coherence(IsoInfo, IsoInfo_B, "LinPolytopeIntegral_Isomorphism_GramMat");
+  //  os <<
+  //  "---------------------------------------------------------------------------\n";
+  std::optional<std::pair<std::vector<Tidx>, MyMatrix<T>>> IsoInfo_B =
+      f_eval(THRESHOLD_USE_SUBSET_SCHEME_TEST_CANONIC);
+  check_iso_info_coherence(IsoInfo, IsoInfo_B,
+                           "LinPolytopeIntegral_Isomorphism_GramMat");
 #endif
   if (!IsoInfo)
     return {};
@@ -138,23 +157,24 @@ LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT,
 template <typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
 LinPolytopeIntegral_Automorphism_DoubleCoset(const MyMatrix<Tint> &EXT,
-                                             Tgroup const& GrpV,
+                                             Tgroup const &GrpV,
                                              std::ostream &os) {
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(EXT_T, GRPisom, GrpV, os);
+  return LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(EXT_T, GRPisom,
+                                                            GrpV, os);
 }
 
 template <typename Tint, typename Tgroup>
 std::pair<Tgroup, std::vector<PairCosetStabGens<typename Tgroup::Telt>>>
-LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer(const MyMatrix<Tint> &EXT,
-                                                       Tgroup const& GrpV,
-                                                       std::ostream &os) {
+LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer(
+    const MyMatrix<Tint> &EXT, Tgroup const &GrpV, std::ostream &os) {
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(EXT_T, GRPisom, GrpV, os);
+  return LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(
+      EXT_T, GRPisom, GrpV, os);
 }
 
 template <typename Tint, typename Tidx_value>
@@ -535,7 +555,8 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
 #endif
   using Tfield = typename overlying_field<T>::field_type;
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
-      IsomorphismFromCanonicReord<T, Tfield, Tidx>(ep.first, fp.first, eCanonicReord, fCanonicReord, os);
+      IsomorphismFromCanonicReord<T, Tfield, Tidx>(
+          ep.first, fp.first, eCanonicReord, fCanonicReord, os);
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB_INT
   os << "|PES: IsomorphismFromCanonicReord|=" << time << "\n";
 #endif

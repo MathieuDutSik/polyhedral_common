@@ -13,7 +13,7 @@ void process(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> Q1 = ReadMatrixFile<T>(FileI);
   //
-  auto f_print=[&](MyMatrix<T> const& Qinp) -> void {
+  auto f_print = [&](MyMatrix<T> const &Qinp) -> void {
     T det1 = DeterminantMat(Qinp);
     ResultDetMin<T> res = DeterminantMinimization(Qinp, true, std::cerr);
     T det2 = DeterminantMat(res.Mred);
@@ -43,15 +43,17 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
-      std::cerr
-          << "LATT_Automorphyreduction arithmetic [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_Automorphyreduction arithmetic [FileI] [OutFormat] "
+                   "[FileO]\n";
       std::cerr << "or\n";
       std::cerr << "LATT_AutomorphyReduction arithmetic [FileI]\n";
       std::cerr << "or\n";
-      std::cerr << "Determining if two matrices are equivalent and computing the automorphism group\n";
+      std::cerr << "Determining if two matrices are equivalent and computing "
+                   "the automorphism group\n";
       std::cerr << "are tough problems. Two tools may help:\n";
       std::cerr << "* The equivalence for the inverse may be easier\n";
-      std::cerr << "* The determinant may be reduceable and the problem easier to solve for the reduced form\n";
+      std::cerr << "* The determinant may be reduceable and the problem easier "
+                   "to solve for the reduced form\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -90,7 +92,8 @@ int main(int argc, char *argv[]) {
       }
       */
 
-      std::cerr << "Failed to find matching type for arith. Possibilities: rational\n";
+      std::cerr << "Failed to find matching type for arith. Possibilities: "
+                   "rational\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);

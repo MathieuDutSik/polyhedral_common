@@ -19,7 +19,8 @@ int main(int argc, char *argv[]) {
     using Tint = mpz_class;
     sscanf(argv[1], "%d", &n);
     LinSpaceMatrix<T> LinSpa = ComputeCanonicalSpace<T>(n);
-    MyMatrix<T> ThePerfMat = GetOnePerfectForm<T,Tint>(LinSpa, std::cerr).first;
+    MyMatrix<T> ThePerfMat =
+        GetOnePerfectForm<T, Tint>(LinSpa, std::cerr).first;
     for (i = 0; i < n; i++) {
       for (j = 0; j < n; j++)
         std::cout << " " << ThePerfMat(i, j);

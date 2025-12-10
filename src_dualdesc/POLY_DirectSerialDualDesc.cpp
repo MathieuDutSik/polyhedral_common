@@ -13,7 +13,8 @@
 // clang-format on
 
 template <typename T, typename Tidx>
-void Process_EXT(MyMatrix<T> const& EXT, std::string const& GRPfile, std::string const& OutFormat, std::string const& OutFile) {
+void Process_EXT(MyMatrix<T> const &EXT, std::string const &GRPfile,
+                 std::string const &OutFormat, std::string const &OutFile) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
@@ -21,14 +22,14 @@ void Process_EXT(MyMatrix<T> const& EXT, std::string const& GRPfile, std::string
   MyMatrix<T> EXTred = ColumnReduction(EXT);
   int dimEXT = EXTred.cols();
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   vectface TheOutput = DualDescriptionStandard(EXTred, GRP, AllArr, std::cerr);
-  OutputFacets_file(EXTred, GRP, TheOutput, OutFile,
-                    OutFormat, std::cerr);
+  OutputFacets_file(EXTred, GRP, TheOutput, OutFile, OutFormat, std::cerr);
 }
 
 template <typename T>
-void Process(std::string const& EXTfile, std::string const& GRPfile, std::string const& OutFormat, std::string const& OutFile) {
+void Process(std::string const &EXTfile, std::string const &GRPfile,
+             std::string const &OutFormat, std::string const &OutFile) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(EXTfile);
   //
   if (size_t(EXT.rows()) < std::numeric_limits<uint8_t>::max())
@@ -51,7 +52,8 @@ int main(int argc, char *argv[]) {
     if (argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "POLY_DirectSerialDualDesc [arith] [EXTfile] [GRPfile] [OutFormat] [OutFile]\n";
+      std::cerr << "POLY_DirectSerialDualDesc [arith] [EXTfile] [GRPfile] "
+                   "[OutFormat] [OutFile]\n";
       return -1;
     }
     std::string arith = argv[1];
@@ -87,7 +89,8 @@ int main(int argc, char *argv[]) {
         using T = QuadField<Trat, 2>;
         return Process<T>(EXTfile, GRPfile, OutFormat, OutFile);
       }
-      std::cerr << "Failed to find a matching type entry arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching type entry arith=" << arith
+                << "\n";
       throw TerminalException{1};
     };
     f();

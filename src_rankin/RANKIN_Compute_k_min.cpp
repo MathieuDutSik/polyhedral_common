@@ -25,12 +25,12 @@ void compute_k_min(std::string const &arithmetic, int const &k,
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
-    return compute_rankin_k_min_kernel<T,Tint>(k, eFile, strTol);
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
   if (arithmetic == "double") {
     using T = double;
     using Tint = int64_t;
-    return compute_rankin_k_min_kernel<T,Tint>(k, eFile, strTol);
+    return compute_rankin_k_min_kernel<T, Tint>(k, eFile, strTol);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};

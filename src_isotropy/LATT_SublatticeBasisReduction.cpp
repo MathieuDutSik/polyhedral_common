@@ -8,7 +8,8 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 4 && argc != 2) {
-      std::cerr << "LATT_SublatticeBasisReduction [FileI] [OutFormat] [FileO]\n";
+      std::cerr
+          << "LATT_SublatticeBasisReduction [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr << "LATT_SublatticeBasisReduction [FileI]\n";
       std::cerr << "or\n";

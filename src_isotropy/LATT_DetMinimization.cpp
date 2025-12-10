@@ -75,7 +75,8 @@ int main(int argc, char *argv[]) {
       }
       */
 
-      std::cerr << "Failed to find matching type for arith. Possibilities: rational\n";
+      std::cerr << "Failed to find matching type for arith. Possibilities: "
+                   "rational\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);

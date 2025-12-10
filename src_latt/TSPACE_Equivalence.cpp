@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
     std::optional<MyMatrix<Tint>> opt =
         LINSPA_TestEquivalenceGramMatrix<T, Tint, Tgroup>(LinSpa, eMat1, eMat2,
                                                           std::cerr);
-    auto f=[&](std::ostream& os_out) -> void {
+    auto f = [&](std::ostream &os_out) -> void {
       write_result(opt, OutFormat, os_out);
     };
     print_stderr_stdout_file(FileOut, f);

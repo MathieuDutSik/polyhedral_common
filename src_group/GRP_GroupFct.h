@@ -159,14 +159,16 @@ void WriteGroup(std::ostream &os, Tgroup const &TheGRP) {
   }
 }
 
-template<typename Tgroup>
-void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const& GRP, Face const& f1, Face const& f2) {
+template <typename Tgroup>
+void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const &GRP,
+                                                Face const &f1,
+                                                Face const &f2) {
   std::string prefix = "RepresentativeAction_OnSets_GRP_f1_f2_idx";
   std::string FileOut = FindAvailableFileFromPrefix(prefix);
   std::ofstream os(FileOut);
   WriteGroup(os, GRP);
-  auto f_print=[&](Face const& f) -> void {
-    for (size_t i=0; i<f.size(); i++) {
+  auto f_print = [&](Face const &f) -> void {
+    for (size_t i = 0; i < f.size(); i++) {
       os << " " << f[i];
     }
     os << "\n";
@@ -174,7 +176,6 @@ void PrintRepresentativeAction_OnSets_GRP_f1_f2(Tgroup const& GRP, Face const& f
   f_print(f1);
   f_print(f2);
 }
-
 
 template <typename Tgroup> std::string StringGroup(Tgroup const &TheGRP) {
   using Telt = typename Tgroup::Telt;
@@ -250,7 +251,7 @@ void WriteGroupGAP(std::ostream &os, Tgroup const &TheGRP) {
 }
 
 template <typename Tgroup>
-void WriteGroupFileGAP(std::string const& eFile, Tgroup const &TheGRP) {
+void WriteGroupFileGAP(std::string const &eFile, Tgroup const &TheGRP) {
   std::ofstream osf(eFile);
   WriteGroupGAP(osf, TheGRP);
 }
@@ -1041,12 +1042,12 @@ FindContainingOrbit(Tgroup const &GRP_ext, Face const &set1, Face const &set2) {
 // This is a remake of the "Partition<Tidx>" in partition.h of
 // permutalib. But that code is super sensitive and we do not
 // want to manipulate it.
-template<typename Telt>
-struct PartitionStorage {
+template <typename Telt> struct PartitionStorage {
 private:
   using Tidx = typename Telt::Tidx;
+
 public:
-  std::ostream& os;
+  std::ostream &os;
   // The list of points in the list
   std::vector<Tidx> points;
   // The indices of the first points.
@@ -1066,7 +1067,7 @@ public:
   std::vector<Tidx> scratch2;
   std::vector<Tidx> scratch3;
   std::vector<Tidx> scratch4;
-  PartitionStorage(Face const& f, std::ostream& _os) : os(_os) {
+  PartitionStorage(Face const &f, std::ostream &_os) : os(_os) {
     size_t siz_in = f.count();
     size_t siz_out = f.size() - siz_in;
     firsts.push_back(0);
@@ -1094,7 +1095,7 @@ public:
     points = std::vector<Tidx>(n_elt);
     cellno = std::vector<Tidx>(n_elt);
     cellpos = std::vector<Tidx>(n_elt);
-    for (Tidx i=0; i<n_elt; i++) {
+    for (Tidx i = 0; i < n_elt; i++) {
       if (f[i] == 1) {
         points[pos_in] = i;
         cellno[i] = cell_in;
@@ -1112,14 +1113,14 @@ public:
     scratch3 = std::vector<Tidx>(n_elt, 0);
     scratch4 = std::vector<Tidx>(n_elt);
   }
-  bool RefinePartitionByElement(Telt const& g) {
-    for (Tidx ipart=0; ipart<n_part; ipart++) {
-      for (Tidx j=0; j<n_part; j++) {
+  bool RefinePartitionByElement(Telt const &g) {
+    for (Tidx ipart = 0; ipart < n_part; ipart++) {
+      for (Tidx j = 0; j < n_part; j++) {
         scratch1[j] = 0;
       }
       Tidx pos_first = firsts[ipart];
       Tidx len = lengths[ipart];
-      for (Tidx u=0; u<len; u++) {
+      for (Tidx u = 0; u < len; u++) {
         Tidx x = points[pos_first + u];
         Tidx y = g.at(x);
         Tidx i_cell = cellno[y];
@@ -1130,23 +1131,23 @@ public:
         scratch1[i_cell] = n_belong;
       }
       Tidx n_part_more = 0;
-      for (Tidx i_cell=0; i_cell<n_part; i_cell++) {
+      for (Tidx i_cell = 0; i_cell < n_part; i_cell++) {
         Tidx siz_part = scratch1[i_cell];
         if (siz_part != 0 && siz_part != lengths[i_cell]) {
           Tidx len = lengths[i_cell];
           Tidx first = firsts[i_cell];
           Tidx siz_out_part = len - siz_part;
-          for (Tidx i=0; i<siz_part; i++) {
+          for (Tidx i = 0; i < siz_part; i++) {
             Tidx x = scratch2[first + i];
             Tidx pos = cellpos[x];
             scratch3[pos] = 1;
           }
-          for (Tidx i=0; i<len; i++) {
+          for (Tidx i = 0; i < len; i++) {
             scratch4[i] = points[first + i];
           }
           Tidx pos_in = 0;
           Tidx pos_out = 0;
-          for (Tidx u=0; u<len; u++) {
+          for (Tidx u = 0; u < len; u++) {
             Tidx x = scratch4[u];
             if (scratch3[u] == 1) {
               points[first + pos_in] = x;
@@ -1163,7 +1164,7 @@ public:
           lengths[i_cell] = siz_part;
           lengths.push_back(siz_out_part);
           firsts.push_back(firsts[i_cell] + siz_part);
-          for (Tidx u=0; u<len; u++) {
+          for (Tidx u = 0; u < len; u++) {
             scratch3[u] = 0;
           }
           n_part_more += 1;
@@ -1176,10 +1177,10 @@ public:
     }
     return true;
   }
-  void RefinePartitionByListElt(std::vector<Telt> const& list_gen) {
-    while(true) {
+  void RefinePartitionByListElt(std::vector<Telt> const &list_gen) {
+    while (true) {
       bool IsFinished = true;
-      for (auto & e_gen: list_gen) {
+      for (auto &e_gen : list_gen) {
         bool test = RefinePartitionByElement(e_gen);
         if (!test) {
           IsFinished = false;
@@ -1190,12 +1191,12 @@ public:
       }
     }
   }
-  Face map_face(Face const& f) const {
+  Face map_face(Face const &f) const {
 #ifdef SANITY_CHECK_GROUP_FCT
     std::vector<Tidx> n_occur(n_part, 0);
 #endif
     Face fret(n_part);
-    for (Tidx i=0; i<n_elt; i++) {
+    for (Tidx i = 0; i < n_elt; i++) {
       if (f[i] == 1) {
         Tidx i_cell = cellno[i];
 #ifdef SANITY_CHECK_GROUP_FCT
@@ -1205,7 +1206,7 @@ public:
       }
     }
 #ifdef SANITY_CHECK_GROUP_FCT
-    for (Tidx i_part=0; i_part<n_part; i_part++) {
+    for (Tidx i_part = 0; i_part < n_part; i_part++) {
       if (n_occur[i_part] != 0 && n_occur[i_part] != lengths[i_part]) {
         std::cerr << "The size is not what we expect\n";
         throw TerminalException{1};
@@ -1214,26 +1215,26 @@ public:
 #endif
     return fret;
   }
-  std::optional<Face> map_face_opt(Face const& f) const {
+  std::optional<Face> map_face_opt(Face const &f) const {
     std::vector<Tidx> n_occur(n_part, 0);
     Face fret(n_part);
-    for (Tidx i=0; i<n_elt; i++) {
+    for (Tidx i = 0; i < n_elt; i++) {
       if (f[i] == 1) {
         Tidx i_cell = cellno[i];
         n_occur[i_cell] += 1;
         fret[i_cell] = 1;
       }
     }
-    for (Tidx i_part=0; i_part<n_part; i_part++) {
+    for (Tidx i_part = 0; i_part < n_part; i_part++) {
       if (n_occur[i_part] != 0 && n_occur[i_part] != lengths[i_part]) {
         return {};
       }
     }
     return fret;
   }
-  Telt map_permutation(Telt const& g) const {
+  Telt map_permutation(Telt const &g) const {
     std::vector<Tidx> eList(n_part);
-    for (Tidx i_cell=0; i_cell<n_part; i_cell++) {
+    for (Tidx i_cell = 0; i_cell < n_part; i_cell++) {
       Tidx x = points[firsts[i_cell]];
       Tidx y = g.at(x);
       Tidx j_cell = cellno[y];
@@ -1242,8 +1243,6 @@ public:
     return Telt(eList);
   }
 };
-
-
 
 // clang-format off
 #endif  // SRC_GROUP_GRP_GROUPFCT_H_

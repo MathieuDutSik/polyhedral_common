@@ -2,8 +2,8 @@
 #ifndef SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 #define SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 
-// The USE_CDDLIB is needed so that the include with POLY_c_cddlib.h is effective.
-// This is needed so that cbased_cdd is available.
+// The USE_CDDLIB is needed so that the include with POLY_c_cddlib.h is
+// effective. This is needed so that cbased_cdd is available.
 #define USE_CDDLIB
 
 // clang-format off
@@ -776,8 +776,8 @@ CTYP_GetConeInformation(TypeCtypeExch<T> const &TheCtypeArr, std::ostream &os) {
 #endif
     if (h2 != h)
       return false;
-      //
-      // We have the 7-uple.
+    //
+    // We have the 7-uple.
 #ifdef PRINT_GET_ADJ
     nb_match++;
 #endif
@@ -928,7 +928,7 @@ TypeCtypeExch<T> CTYP_GetCTypeFromGramMat(MyMatrix<T> const &eG,
     if (esum > 0) {
       for (int i = 0; i < n; i++)
         Vmid(i, 0) = M(i_row, i) / 2;
-      resultCVP<T, T> result = NearestVectors<T,T>(eG, Vmid, os);
+      resultCVP<T, T> result = NearestVectors<T, T>(eG, Vmid, os);
       int n_closest = result.ListVect.rows();
       if (n_closest != 2) {
         std::cerr << "n_closest=" << n_closest << "\n";

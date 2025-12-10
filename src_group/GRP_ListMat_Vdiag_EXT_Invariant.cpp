@@ -66,7 +66,8 @@ int main(int argc, char *argv[]) {
     }
     //
     size_t seed = 15;
-    size_t hash = GetInvariant_ListMat_Vdiag<T, Tfield>(seed, EXT, ListMat, Vdiag, std::cerr);
+    size_t hash = GetInvariant_ListMat_Vdiag<T, Tfield>(seed, EXT, ListMat,
+                                                        Vdiag, std::cerr);
     //
     std::ofstream os(argv[2]);
     os << "return " << hash << ";\n";

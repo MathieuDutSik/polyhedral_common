@@ -18,9 +18,11 @@
 
 // Test if a quadratic form is eutactic
 // A quadratic form is eutactic if the inverse of eGram can be expressed
-// as a positive linear combination of the outer products v ⊗ v of shortest vectors
+// as a positive linear combination of the outer products v ⊗ v of shortest
+// vectors
 template <typename T>
-bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
+bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+                std::ostream &os) {
 #ifdef DEBUG_EUTACTICITY
   os << "EUTACTIC: IsEutactic, beginning\n";
 #endif
@@ -46,7 +48,8 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
   int dimSymm = n * (n + 1) / 2;
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: n=" << n << " nbSHV=" << nbSHV << " dimSymm=" << dimSymm << "\n";
+  os << "EUTACTIC: n=" << n << " nbSHV=" << nbSHV << " dimSymm=" << dimSymm
+     << "\n";
 #endif
 
   // Compute the inverse of eGram
@@ -85,11 +88,13 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
   }
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: OuterProductMat constructed, size: " << OuterProductMat.rows() << "x" << OuterProductMat.cols() << "\n";
+  os << "EUTACTIC: OuterProductMat constructed, size: "
+     << OuterProductMat.rows() << "x" << OuterProductMat.cols() << "\n";
 #endif
 
   // Solve the linear system: OuterProductMat^T * coeffs = eGramInvVec
-  // We want to find coefficients such that eGramInv = sum(coeffs[i] * v_i ⊗ v_i)
+  // We want to find coefficients such that eGramInv = sum(coeffs[i] * v_i ⊗
+  // v_i)
   MyMatrix<T> OuterProductMatT = TransposedMat(OuterProductMat);
 
   // Check if the system is solvable
@@ -102,7 +107,8 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 #endif
 
   if (rankA != rankAug) {
-    // System is inconsistent - eGramInv cannot be expressed as linear combination
+    // System is inconsistent - eGramInv cannot be expressed as linear
+    // combination
 #ifdef DEBUG_EUTACTICITY
     os << "EUTACTIC: System is inconsistent - not eutactic\n";
 #endif
@@ -110,7 +116,8 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
   }
 
   // Try to solve the system to get coefficients
-  std::optional<MyVector<T>> opt_coeffs = SolutionMatNonnegative(OuterProductMatT, eGramInvVec);
+  std::optional<MyVector<T>> opt_coeffs =
+      SolutionMatNonnegative(OuterProductMatT, eGramInvVec);
 
   if (!opt_coeffs) {
 #ifdef DEBUG_EUTACTICITY
@@ -123,7 +130,7 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 
   // Check if all coefficients are positive (not just nonnegative)
   bool all_positive = true;
-  T tolerance = T(1)/T(1000000); // Small tolerance for numerical errors
+  T tolerance = T(1) / T(1000000); // Small tolerance for numerical errors
 
   for (int i = 0; i < coeffs.size(); i++) {
     if (coeffs(i) <= tolerance) {
@@ -151,7 +158,8 @@ bool IsEutactic(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream
 // Test if a quadratic form is perfect
 // A quadratic form is perfect if it is determined by its shortest vectors
 template <typename T>
-bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
+bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+               std::ostream &os) {
 #ifdef DEBUG_EUTACTICITY
   os << "EUTACTIC: IsPerfect, beginning\n";
 #endif
@@ -173,7 +181,7 @@ bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream&
     return false;
   }
 
-  // Dimension of the space of symmetric matrices  
+  // Dimension of the space of symmetric matrices
   int dimSymm = n * (n + 1) / 2;
 
   // Number of degrees of freedom for a positive definite quadratic form
@@ -181,7 +189,8 @@ bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream&
   int dimQuadForm = dimSymm - 1;
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: n=" << n << " nbSHV=" << nbSHV << " dimQuadForm=" << dimQuadForm << "\n";
+  os << "EUTACTIC: n=" << n << " nbSHV=" << nbSHV
+     << " dimQuadForm=" << dimQuadForm << "\n";
 #endif
 
   // Create the system of equations from the constraint that
@@ -227,14 +236,16 @@ bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream&
   }
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: ConstraintMat constructed, size: " << ConstraintMat.rows() << "x" << ConstraintMat.cols() << "\n";
+  os << "EUTACTIC: ConstraintMat constructed, size: " << ConstraintMat.rows()
+     << "x" << ConstraintMat.cols() << "\n";
 #endif
 
   // Check if we have exactly the right number of independent constraints
   int rank = RankMat(ConstraintMat);
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: constraint rank=" << rank << " dimQuadForm=" << dimQuadForm << "\n";
+  os << "EUTACTIC: constraint rank=" << rank << " dimQuadForm=" << dimQuadForm
+     << "\n";
 #endif
 
   bool is_perfect = (rank == dimQuadForm);
@@ -252,7 +263,8 @@ bool IsPerfect(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream&
 
 // Test if a quadratic form is extreme (both perfect and eutactic)
 template <typename T>
-bool IsExtreme(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream& os) {
+bool IsExtreme(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+               std::ostream &os) {
 #ifdef DEBUG_EUTACTICITY
   os << "EUTACTIC: IsExtreme, beginning\n";
 #endif
@@ -263,7 +275,8 @@ bool IsExtreme(MyMatrix<T> const &eGram, MyMatrix<T> const& SHV_T, std::ostream&
   bool extreme = perfect && eutactic;
 
 #ifdef DEBUG_EUTACTICITY
-  os << "EUTACTIC: perfect=" << perfect << " eutactic=" << eutactic << " extreme=" << extreme << "\n";
+  os << "EUTACTIC: perfect=" << perfect << " eutactic=" << eutactic
+     << " extreme=" << extreme << "\n";
 #endif
 
   return extreme;

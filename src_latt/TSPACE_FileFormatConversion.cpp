@@ -32,8 +32,9 @@ int main(int argc, char *argv[]) {
     //
     NAMELIST_ReadNamelistFile(TspaceNamelistFile, eFull);
     //
-    SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
-    LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
+    SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
+    LinSpaceMatrix<T> LinSpa =
+        ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
     WriteLinSpaceFile(FILEOUT, LinSpa);
     std::cerr << "Normal termination of LATT_ConvertTspace\n";
   } catch (TerminalException const &e) {

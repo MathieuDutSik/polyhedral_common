@@ -298,7 +298,7 @@ bool EvaluationConnectednessCriterion_Kernel(
     } else {
       if (!f_recur(x))
         return insert_pfr(x, false);
-        // Looking at the facets and maybe we can so conclude
+      // Looking at the facets and maybe we can so conclude
 #ifdef DEBUG_BALINSKI
       os << "BAL: After the f_recur\n";
 #endif

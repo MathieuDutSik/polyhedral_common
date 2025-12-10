@@ -4,17 +4,19 @@
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
-template<typename T, typename Tint>
-void ComputeCanonical(std::string const& FileI, std::string const& OutFormat, std::ostream& os) {
+template <typename T, typename Tint>
+void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
+                      std::ostream &os) {
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
-  Canonic_PosDef<T, Tint> RetF =
-    ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+  Canonic_PosDef<T, Tint> RetF = ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
   if (OutFormat == "CPP") {
     WriteMatrix(os, RetF.Mat);
     return;
   }
   if (OutFormat == "PYTHON") {
-    os << "{\"Basis\":" << StringMatrixPYTHON(RetF.Basis) << ", \"SHV\":" << StringMatrixPYTHON(TransposedMat(RetF.SHV)) << ", \"eG\":" << StringMatrixPYTHON(RetF.Mat) << "}\n";
+    os << "{\"Basis\":" << StringMatrixPYTHON(RetF.Basis)
+       << ", \"SHV\":" << StringMatrixPYTHON(TransposedMat(RetF.SHV))
+       << ", \"eG\":" << StringMatrixPYTHON(RetF.Mat) << "}\n";
     return;
   }
   if (OutFormat == "GAP") {
@@ -36,8 +38,6 @@ void ComputeCanonical(std::string const& FileI, std::string const& OutFormat, st
   std::cerr << "Failed to find a matching entry\n";
   throw TerminalException{1};
 }
-
-
 
 int main(int argc, char *argv[]) {
   HumanTime time;
@@ -62,11 +62,11 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     //
-    auto f=[&](std::ostream& os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return ComputeCanonical<T,Tint>(FileI, OutFormat, os);
+        return ComputeCanonical<T, Tint>(FileI, OutFormat, os);
       }
       std::cerr << "Failed to find a matching entry for arith\n";
       throw TerminalException{1};

@@ -18,14 +18,14 @@
 
 template <typename T, typename Tint, typename Tgroup>
 void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
-                             FullNamelist const &eFull) {
+                              FullNamelist const &eFull) {
   std::unique_ptr<std::ofstream> os_ptr = get_mpi_log_stream(comm, eFull);
   std::ostream &os = *os_ptr;
 #ifdef DEBUG_PERFECT_TSPACE_MPI
   os << "PERFTSPACEMPI: ComputePerfectTspace_mpi, beginning\n";
 #endif
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
   //
   int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
 #ifdef DEBUG_PERFECT_TSPACE_MPI
@@ -35,7 +35,7 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
   CreateDirectory(STORAGE_Prefix);
   //
-  SingleBlock const& BlockTSPACE = eFull.get_block("TSPACE");
+  SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa = ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
 #ifdef DEBUG_PERFECT_TSPACE_MPI
   os << "PERFTSPACEMPI: LinSpa dimension=" << LinSpa.n << "\n";
@@ -44,7 +44,8 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
 #ifdef DEBUG_PERFECT_TSPACE_MPI
-  os << "PERFTSPACEMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile << "\n";
+  os << "PERFTSPACEMPI: OutFormat=" << OutFormat << " OutFile=" << OutFile
+     << "\n";
 #endif
   //
   int n = LinSpa.n;
@@ -52,16 +53,15 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   using TintGroup = typename Tgroup::Tint;
   std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
   PolyHeuristicSerial<TintGroup> AllArr =
-      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT, os);
+      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
+                                                         os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   //
   bool keep_generators = true;
   bool reduce_gram_matrix = true;
-  DataPerfectTspace<T, Tint, Tgroup> data{LinSpa,
-                                          OnlineHierarchicalMatrixReduction<Tint>(n, os),
-                                          keep_generators,
-                                          reduce_gram_matrix,
-                                          std::move(rddo)};
+  DataPerfectTspace<T, Tint, Tgroup> data{
+      LinSpa, OnlineHierarchicalMatrixReduction<Tint>(n, os), keep_generators,
+      reduce_gram_matrix, std::move(rddo)};
   using Tdata = DataPerfectTspaceFunc<T, Tint, Tgroup>;
   Tdata data_func{std::move(data)};
   using Tobj = typename Tdata::Tobj;
@@ -71,21 +71,25 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
   std::pair<bool, std::vector<Tout>> pair = EnumerateAndStore_MPI<Tdata>(
       comm, data_func, STORAGE_Prefix, STORAGE_Saving, max_runtime_second);
 #ifdef DEBUG_PERFECT_TSPACE_MPI
-  os << "PERFTSPACEMPI: We now have max_runtime_second=" << max_runtime_second << "\n";
+  os << "PERFTSPACEMPI: We now have max_runtime_second=" << max_runtime_second
+     << "\n";
   os << "PERFTSPACEMPI: We now have IsFinished=" << pair.first << "\n";
-  os << "PERFTSPACEMPI: We now have |ListPerfect|=" << pair.second.size() << "\n";
+  os << "PERFTSPACEMPI: We now have |ListPerfect|=" << pair.second.size()
+     << "\n";
 #endif
   //
   if (pair.first) {
 #ifdef DEBUG_PERFECT_TSPACE_MPI
     os << "PERFTSPACEMPI: Doing some output\n";
 #endif
-    auto f_print=[&](std::ostream& os_out) -> void {
-      bool result = WriteFamilyObjects_MPI<DataPerfectTspace<T, Tint, Tgroup>, Tobj, TadjO>(
+    auto f_print = [&](std::ostream &os_out) -> void {
+      bool result = WriteFamilyObjects_MPI<DataPerfectTspace<T, Tint, Tgroup>,
+                                           Tobj, TadjO>(
           comm, data, OutFormat, os_out, pair.second, os);
       if (result) {
-        std::cerr << "PERFTSPACEMPI: Failed to find a matching entry for OutFormat="
-                  << OutFormat << "\n";
+        std::cerr
+            << "PERFTSPACEMPI: Failed to find a matching entry for OutFormat="
+            << OutFormat << "\n";
         throw TerminalException{1};
       }
     };
@@ -98,12 +102,12 @@ void ComputePerfectTspace_mpi(boost::mpi::communicator &comm,
 }
 
 template <typename Tdata, typename Tobj, typename TadjO>
-bool WriteFamilyObjects_MPI([[maybe_unused]] boost::mpi::communicator const &comm,
-                          [[maybe_unused]] Tdata const &data,
-                          std::string const &OutFormat,
-                          std::ostream &os_out,
-                          std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_obj,
-                          [[maybe_unused]] std::ostream &os) {
+bool WriteFamilyObjects_MPI(
+    [[maybe_unused]] boost::mpi::communicator const &comm,
+    [[maybe_unused]] Tdata const &data, std::string const &OutFormat,
+    std::ostream &os_out,
+    std::vector<DatabaseEntry_MPI<Tobj, TadjO>> const &l_obj,
+    [[maybe_unused]] std::ostream &os) {
   if (OutFormat == "GAP") {
     os_out << "[";
     bool IsFirst = true;
@@ -133,7 +137,6 @@ bool WriteFamilyObjects_MPI([[maybe_unused]] boost::mpi::communicator const &com
   }
   return true;
 }
-
 
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_TSPACE_MPI_H_

@@ -7,22 +7,26 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process(std::string const& GramFile, std::string const& OutFormat, std::ostream& os_out) {
+void process(std::string const &GramFile, std::string const &OutFormat,
+             std::ostream &os_out) {
   using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GramFile);
 
   int dimEXT = GramMat.rows() + 1;
   PolyHeuristicSerial<TintGroup> AllArr =
-    AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, std::cerr);
   DataLattice<T, Tint, Tgroup> data_lattice =
-    GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
-  auto f_incorrect = [&]([[maybe_unused]] Delaunay_Obj<Tint, Tgroup> const &x) -> bool {
+      GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
+  auto f_incorrect =
+      [&]([[maybe_unused]] Delaunay_Obj<Tint, Tgroup> const &x) -> bool {
     return false;
   };
   int max_runtime_second = 0;
   std::optional<DelaunayTesselation<Tint, Tgroup>> opt =
-    EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(data_lattice, f_incorrect, max_runtime_second);
-  DelaunayTesselation<Tint, Tgroup> DT = unfold_opt(opt, "The Delaunay tesselation");
+      EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
+          data_lattice, f_incorrect, max_runtime_second);
+  DelaunayTesselation<Tint, Tgroup> DT =
+      unfold_opt(opt, "The Delaunay tesselation");
   WriteDelaunayTesselation(OutFormat, os_out, GramMat, DT);
 }
 
@@ -38,7 +42,8 @@ int main(int argc, char *argv[]) {
       std::cerr << "This program is used as\n";
       std::cerr << "LATT_SerialComputeDelaunay [arith] [GramFile]\n";
       std::cerr << "     or\n";
-      std::cerr << "LATT_SerialComputeDelaunay [arith] [GramFile] [OutFormat] [OutFile]\n";
+      std::cerr << "LATT_SerialComputeDelaunay [arith] [GramFile] [OutFormat] "
+                   "[OutFile]\n";
       return -1;
     }
     std::string arith = argv[1];
@@ -50,13 +55,14 @@ int main(int argc, char *argv[]) {
       OutFile = argv[4];
     }
     //
-    auto f=[&](std::ostream & os) -> void {
+    auto f = [&](std::ostream &os) -> void {
       if (arith == "gmp") {
         using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint,Tgroup>(GramFile, OutFormat, os);
+        return process<T, Tint, Tgroup>(GramFile, OutFormat, os);
       }
-      std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
+      std::cerr << "Failed to find a matching entry for arith=" << arith
+                << "\n";
       std::cerr << "Allowed arith: gmp\n";
       throw TerminalException{1};
     };

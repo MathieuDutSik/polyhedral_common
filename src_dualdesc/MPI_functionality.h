@@ -730,7 +730,7 @@ struct unlimited_request {
   }
 };
 
-bool ApplyStdUnitbuf(FullNamelist const &eFull, std::string const& block_name) {
+bool ApplyStdUnitbuf(FullNamelist const &eFull, std::string const &block_name) {
   SingleBlock BlockSYSTEM = eFull.get_block(block_name);
   bool result = BlockSYSTEM.get_bool("ApplyStdUnitbuf");
   return result;

@@ -47,7 +47,8 @@ GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
   int n = GramMat.rows();
   CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
   MyVector<T> TheCenter = eCP.eCent;
-  std::vector<MyMatrix<T>> CharPair = CharacterizingPair(GramMat, TheCenter, os);
+  std::vector<MyMatrix<T>> CharPair =
+      CharacterizingPair(GramMat, TheCenter, os);
   MyMatrix<T> Qmat = CharPair[0];
   int nbVect = SHV.rows();
   int nbVert = EXT.rows();
@@ -67,7 +68,7 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> LGen = eGRP.GeneratorsOfGroup();
   for (auto &eGen : LGen) {
-    MyMatrix<T> eMat = FindTransformation<T,Telt>(EXT_T, EXT_T, eGen);
+    MyMatrix<T> eMat = FindTransformation<T, Telt>(EXT_T, EXT_T, eGen);
     if (!IsIntegralMatrix(eMat))
       return false;
   }
@@ -75,7 +76,8 @@ bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
 }
 
 template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<T> const& SHV,
+Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const &GramMat,
+                                 MyMatrix<T> const &SHV,
                                  MyMatrix<Tint> const &EXT, std::ostream &os) {
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
@@ -87,8 +89,7 @@ Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<T> const& 
   // Now extending with the SHV vector set
   //
   WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, GramMat, SHV,
-                                                os);
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, GramMat, SHV, os);
   int nbVert = EXT_T.rows();
   int nbSHV = SHV.rows();
   Face eFace(nbVert + nbSHV);
@@ -109,27 +110,27 @@ Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const& GramMat, MyMatrix<T> const& 
 template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
                            MyMatrix<Tint> const &EXT, std::ostream &os) {
-  return Delaunay_StabilizerKernel<T,Tint,Tgroup>(eData.GramMat, eData.SHV, EXT, os);
+  return Delaunay_StabilizerKernel<T, Tint, Tgroup>(eData.GramMat, eData.SHV,
+                                                    EXT, os);
 }
 
-template <typename T>
-bool is_affine_integral(MyMatrix<T> const& M) {
+template <typename T> bool is_affine_integral(MyMatrix<T> const &M) {
   int dim = M.rows() - 1;
-  for (int i=0; i<dim; i++) {
-    for (int j=0; j<dim; j++) {
-      T val = M(i+1, j+1);
+  for (int i = 0; i < dim; i++) {
+    for (int j = 0; j < dim; j++) {
+      T val = M(i + 1, j + 1);
       if (!IsInteger(val)) {
         return false;
       }
     }
   }
-  for (int i=0; i<dim; i++) {
-    T val = M(i+1, 0);
+  for (int i = 0; i < dim; i++) {
+    T val = M(i + 1, 0);
     if (val != 0) {
       return false;
     }
   }
-  if (M(0,0) != 1) {
+  if (M(0, 0) != 1) {
     return false;
   }
   return true;
@@ -170,7 +171,7 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     return {};
   }
   Telt const &eElt = *eRes;
-  MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, eElt);
+  MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXT1_T, EXT2_T, eElt);
   if (is_affine_integral(MatEquiv_T)) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
@@ -189,7 +190,7 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   // way to encode that the want integrality only on the linear part.
   for (auto &eElt1 : GRP1) {
     Telt fElt = eElt1 * eElt;
-    MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, fElt);
+    MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXT1_T, EXT2_T, fElt);
     if (is_affine_integral(MatEquiv_T)) {
       return MatEquiv_T;
     }
@@ -197,13 +198,11 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   return {};
 }
 
-
-
-
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
-                         MyMatrix<Tint> const &EXT1, MyMatrix<Tint> const &EXT2) {
+                         MyMatrix<Tint> const &EXT1,
+                         MyMatrix<Tint> const &EXT2) {
   std::ostream &os = eData.rddo.os;
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   MicrosecondTime time;
@@ -237,7 +236,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     return {};
   }
   Telt const &eElt = *eRes;
-  MyMatrix<T> MatEquiv_T = FindTransformation<T,Telt>(EXT1_T, EXT2_T, eElt);
+  MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXT1_T, EXT2_T, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
     MyMatrix<Tint> MatEquiv_I = UniversalMatrixConversion<Tint, T>(MatEquiv_T);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
@@ -504,10 +503,11 @@ void WriteEntryGAP(std::ostream &os_out,
 }
 
 template <typename Tvert, typename Tint, typename Tgroup>
-void WriteDetailedEntryGAP(std::ostream &os_out,
-                           [[maybe_unused]] DataLattice<Tvert, Tint, Tgroup> const& data,
-                           DelaunayTesselation<Tvert, Tgroup> const &DT,
-                           [[maybe_unused]] std::ostream& os) {
+void WriteDetailedEntryGAP(
+    std::ostream &os_out,
+    [[maybe_unused]] DataLattice<Tvert, Tint, Tgroup> const &data,
+    DelaunayTesselation<Tvert, Tgroup> const &DT,
+    [[maybe_unused]] std::ostream &os) {
   WriteEntryGAP(os_out, DT);
 }
 
@@ -534,7 +534,7 @@ void WriteEntryPYTHON(std::ostream &os_out,
         }
         IsFirst = false;
         str_ret += "[";
-        for (int i_vert=0; i_vert<n_vert; i_vert++) {
+        for (int i_vert = 0; i_vert < n_vert; i_vert++) {
           if (i_vert > 0) {
             str_ret += ",";
           }
@@ -612,32 +612,35 @@ inline void serialize(Archive &ar, Delaunay_Obj<Tint, Tgroup> &eRec,
 } // namespace boost::serialization
 
 template <typename T, typename Tint, typename Tgroup>
-MyMatrix<Tint> FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
+MyMatrix<Tint>
+FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
   MyMatrix<T> const &GramMat = data.GramMat;
   CVPSolver<T, Tint> &solver = data.solver;
   MyMatrix<Tint> const &ShvGraverBasis = data.ShvGraverBasis;
-  std::string const& choice = data.choice_initial;
+  std::string const &choice = data.choice_initial;
   std::ostream &os = data.rddo.os;
   if (choice == "direct") {
-    return FindDelaunayPolytope<T,Tint>(GramMat, solver, os);
+    return FindDelaunayPolytope<T, Tint>(GramMat, solver, os);
   }
   if (choice == "simple_iter") {
     int target_ext = 2 * GramMat.rows();
     int max_iter = 10;
     std::string method = "lp_cdd";
-    return FindDelaunayPolytope_random<T,Tint>(GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+    return FindDelaunayPolytope_random<T, Tint>(
+        GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
   }
   if (choice == "sampling") {
     int target_ext = 0;
     int max_iter = std::numeric_limits<int>::max();
     std::string method = "sampling";
-    return FindDelaunayPolytope_random<T,Tint>(GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
+    return FindDelaunayPolytope_random<T, Tint>(
+        GramMat, solver, ShvGraverBasis, target_ext, max_iter, method, os);
   }
-  std::cerr << "Failed to find a relevant method for FindDelaunayPolytopeExtended\n";
+  std::cerr
+      << "Failed to find a relevant method for FindDelaunayPolytopeExtended\n";
   std::cerr << "Allowed methods: direct, simple_iter, sampling\n";
   throw TerminalException{1};
 }
-
 
 template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   DataLattice<T, Tint, Tgroup> data;
@@ -659,7 +662,7 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
   }
   std::optional<TadjO> f_repr(Tobj const &x, TadjI const &y) {
     std::optional<MyMatrix<Tint>> opt =
-      Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT);
+        Delaunay_TestEquivalence<T, Tint, Tgroup>(data, x.EXT, y.EXT);
     if (!opt) {
       return {};
     }
@@ -689,7 +692,8 @@ template <typename T, typename Tint, typename Tgroup> struct DataLatticeFunc {
 };
 
 template <typename T, typename Tvert, typename Tgroup>
-DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_Serial(
+DelaunayTesselation<Tvert, Tgroup>
+DelaunayTesselation_From_DatabaseEntries_Serial(
     std::vector<DatabaseEntry_Serial<
         typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
         typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const &l_ent) {
@@ -707,7 +711,9 @@ DelaunayTesselation<Tvert, Tgroup> DelaunayTesselation_From_DatabaseEntries_Seri
 }
 
 template <typename T, typename Tvert, typename Tgroup>
-void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out, MyMatrix<T> const& GramMat, DelaunayTesselation<Tvert, Tgroup> const& DT) {
+void WriteDelaunayTesselation(std::string const &OutFormat,
+                              std::ostream &os_out, MyMatrix<T> const &GramMat,
+                              DelaunayTesselation<Tvert, Tgroup> const &DT) {
   if (OutFormat == "nothing") {
     return;
   }
@@ -722,9 +728,9 @@ void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out
   }
   if (OutFormat == "GAP_covering") {
     T TheCovSqr(0);
-    for (auto & eDel : DT.l_dels) {
-      MyMatrix<Tvert> const& EXT = eDel.EXT;
-      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tvert>(EXT);
+    for (auto &eDel : DT.l_dels) {
+      MyMatrix<Tvert> const &EXT = eDel.EXT;
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
       CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
       T SquareRadius = cp.SquareRadius;
       if (SquareRadius > TheCovSqr) {
@@ -733,14 +739,15 @@ void WriteDelaunayTesselation(std::string const& OutFormat, std::ostream& os_out
     }
     T TheDet = DeterminantMat(GramMat);
     int TheDim = GramMat.rows();
-    ResultCov<T> x = ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCovSqr);
+    ResultCov<T> x =
+        ComputeCoveringDensityFromDimDetCov<T>(TheDim, TheDet, TheCovSqr);
     os_out << "return " << to_stringGAP(x) << ";\n";
     return;
   }
-  std::cerr << "DEL_ENUM: WriteDelaunayTesselation failed for OutFormat=" << OutFormat << "\n";
+  std::cerr << "DEL_ENUM: WriteDelaunayTesselation failed for OutFormat="
+            << OutFormat << "\n";
   throw TerminalException{1};
 }
-
 
 template <typename T, typename Tint, typename Tgroup, typename Fincorrect>
 std::optional<DelaunayTesselation<Tint, Tgroup>>
@@ -763,15 +770,15 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
         "EnumerateAndStore_Serial\n";
 #endif
   bool is_incorrect = false;
-  auto f_incorrect_bis=[&](Tobj const& x) -> bool {
+  auto f_incorrect_bis = [&](Tobj const &x) -> bool {
     bool test = f_incorrect(x);
     if (test) {
       is_incorrect = true;
     }
     return test;
   };
-  Tout result = EnumerateAndStore_Serial<Tdata>(
-      data_func, f_incorrect_bis, max_runtime_second);
+  Tout result = EnumerateAndStore_Serial<Tdata>(data_func, f_incorrect_bis,
+                                                max_runtime_second);
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: EnumerationDelaunayPolytopes, after "
         "EnumerateAndStore_Serial\n";
@@ -786,7 +793,7 @@ EnumerationDelaunayPolytopes(DataLattice<T, Tint, Tgroup> &data,
   os << "DEL_ENUM: EnumerationDelaunayPolytopes: opt match\n";
 #endif
   DelaunayTesselation<Tint, Tgroup> DT =
-    DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(result);
+      DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(result);
   return DT;
 }
 
@@ -826,17 +833,22 @@ GetDataLattice(MyMatrix<T> const &GramMat,
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OutFile << "\n";
 #endif
-  return {
-      n,      GramMat,        SHV,
-      solver, ShvGraverBasis, choice_initial, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+  return {n,
+          GramMat,
+          SHV,
+          solver,
+          ShvGraverBasis,
+          choice_initial,
+          RecordDualDescOperation<T, Tgroup>(AllArr, os)};
 }
 
 template <typename T, typename Tint, typename Tgroup>
-DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
-                                              PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
-                                              std::ostream& os) {
-  SingleBlock const& BlockDATA = eFull.get_block("DATA");
-  SingleBlock const& BlockSYSTEM = eFull.get_block("SYSTEM");
+DataLattice<T, Tint, Tgroup>
+get_data_lattice(FullNamelist const &eFull,
+                 PolyHeuristicSerial<typename Tgroup::Tint> &AllArr,
+                 std::ostream &os) {
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
 
   std::string GRAMfile = BlockDATA.get_string("GRAMfile");
   MyMatrix<T> GramMat = ReadMatrixFile<T>(GRAMfile);
@@ -866,8 +878,13 @@ DataLattice<T, Tint, Tgroup> get_data_lattice(FullNamelist const &eFull,
   MyMatrix<Tint> ShvGraverBasis = GetGraverBasis<T, Tint>(GramMat);
   std::string choice_initial = BlockDATA.get_string("choice_initial");
   DataLattice<T, Tint, Tgroup> data{
-      n,      GramMat,        SVR,
-      solver, ShvGraverBasis, choice_initial, RecordDualDescOperation<T, Tgroup>(AllArr, os)};
+      n,
+      GramMat,
+      SVR,
+      solver,
+      ShvGraverBasis,
+      choice_initial,
+      RecordDualDescOperation<T, Tgroup>(AllArr, os)};
   return data;
 }
 

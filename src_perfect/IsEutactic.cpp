@@ -9,11 +9,13 @@
 // clang-format on
 
 template <typename T, typename Tint>
-void compute_eutacticity_kernel(std::string const &eFile, std::string const &eutacticity) {
+void compute_eutacticity_kernel(std::string const &eFile,
+                                std::string const &eutacticity) {
   MyMatrix<T> eGram = ReadMatrixFile<T>(eFile);
   Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram, std::cerr);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(RecSHV.SHV);
-  std::optional<MyVector<T>> opt = IsEutactic(eGram, SHV_T, eutacticity, std::cerr);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
+  std::optional<MyVector<T>> opt =
+      IsEutactic(eGram, SHV_T, eutacticity, std::cerr);
   if (opt) {
     std::cerr << "The matrix is " << eutacticity << "\n";
   } else {
@@ -27,7 +29,7 @@ void compute_eutacticity(std::string const &arithmetic,
   if (arithmetic == "gmp") {
     using T = mpq_class;
     using Tint = mpz_class;
-    return compute_eutacticity_kernel<T,Tint>(eFile, eutacticity);
+    return compute_eutacticity_kernel<T, Tint>(eFile, eutacticity);
   }
   std::cerr << "Failed to find a matching arithmetic\n";
   throw TerminalException{1};

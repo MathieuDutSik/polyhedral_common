@@ -43,7 +43,8 @@ int main(int argc, char *argv[]) {
     std::vector<MyMatrix<T>> ListMat = ReadListMatrixFile<T>(FileListMat);
 
     std::vector<MyMatrix<Tint>> ListGen =
-      ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, std::cerr);
+        ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat,
+                                                             std::cerr);
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {

@@ -113,7 +113,7 @@ template <typename T> struct SublattInfos {
 template <typename T, typename Tint>
 SublattInfos<T> ComputeSublatticeInfos(MyMatrix<T> const &G,
                                        std::vector<T> const &l_norms,
-                                       std::ostream& os) {
+                                       std::ostream &os) {
   std::unordered_map<T, MyMatrix<T>> map_norm_latt;
   for (auto &e_norm : l_norms) {
     MyMatrix<T> Latt_pre = ComputeLattice_LN(G, e_norm);
@@ -350,8 +350,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
   os << "|EDGE: ComputePossibleExtensions|=" << time << "\n";
 #endif
 #ifdef DEBUG_EDGEWALK
-  os << "EDGE: DetermineRootsCuspidalCase : |l_extension|=" << l_extension.size()
-     << "\n";
+  os << "EDGE: DetermineRootsCuspidalCase : |l_extension|="
+     << l_extension.size() << "\n";
 #endif
   std::vector<RootCandidateCuspidal> l_candidates;
   for (auto &e_extension : l_extension) {
@@ -368,8 +368,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
     }
   }
 #ifdef DEBUG_EDGEWALK
-  os << "EDGE: DetermineRootsCuspidalCase : |l_candidates|=" << l_candidates.size()
-     << "\n";
+  os << "EDGE: DetermineRootsCuspidalCase : |l_candidates|="
+     << l_candidates.size() << "\n";
 #endif
 #ifdef TIMINGS
   os << "|EDGE: l_candidates|=" << time << "\n";
@@ -396,8 +396,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
 #endif
 #ifdef DEBUG_EDGEWALK
   for (auto &x : l_candidates) {
-    os << "EDGE: x : sign=" << x.sign << " quant=" << x.quant << " norm=" << x.e_norm
-       << " v=" << StringVectorGAP(x.v) << "\n";
+    os << "EDGE: x : sign=" << x.sign << " quant=" << x.quant
+       << " norm=" << x.e_norm << " v=" << StringVectorGAP(x.v) << "\n";
   }
 #endif
   std::vector<MyVector<Tint>> l_ui_ret = l_ui;
@@ -422,8 +422,8 @@ DetermineRootsCuspidalCase(SublattInfos<T> const &si,
     }
   }
 #ifdef DEBUG_EDGEWALK
-  os << "EDGE: DetermineRootsCuspidalCase, exiting |l_ui_ret|=" << l_ui_ret.size()
-     << "\n";
+  os << "EDGE: DetermineRootsCuspidalCase, exiting |l_ui_ret|="
+     << l_ui_ret.size() << "\n";
 #endif
 #ifdef TIMINGS
   os << "|EDGE: l_ui_ret|=" << time << "\n";
@@ -464,7 +464,8 @@ std::vector<MyVector<Tint>> DetermineRootsCuspidalCase_Memoized(
           l_ui_ret.push_back(Vret);
         }
 #ifdef DEBUG_EDGEWALK
-        os << "EDGE: DetermineRootsCuspidalCase_Memoized, find some isomorphism\n";
+        os << "EDGE: DetermineRootsCuspidalCase_Memoized, find some "
+              "isomorphism\n";
 #endif
 #ifdef TIMINGS
         os << "|EDGE: query(succ)|=" << time << "\n";
@@ -680,7 +681,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   std::vector<Possible_Extension<T>> l_extension =
       ComputePossibleExtensions(G, l_ui, l_norms, only_spherical);
 #ifdef DEBUG_EDGEWALK
-  os << "EDGE: EdgewalkProcedure : |l_extension|=" << l_extension.size() << "\n";
+  os << "EDGE: EdgewalkProcedure : |l_extension|=" << l_extension.size()
+     << "\n";
 #endif
 #ifdef TIMINGS
   os << "|EDGE: l_extension|=" << time << "\n";
@@ -746,7 +748,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     MicrosecondTime timeA;
 #endif
 #ifdef DEBUG_EDGEWALK
-    os << "EDGE: ---- get_sing_comp_anisotropic, e_norm=" << e_norm << " -----\n";
+    os << "EDGE: ---- get_sing_comp_anisotropic, e_norm=" << e_norm
+       << " -----\n";
 #endif
     MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
     MyMatrix<T> Basis_ProjP_LN = get_basis_projp_ln(Latt);
@@ -979,8 +982,8 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
         if (eSol) {
           MyVector<Tint> v_i = UniversalVectorConversion<Tint, T>(v_T);
 #ifdef DEBUG_EDGEWALK
-          os << "EDGE: get_next_isotropic. Returning v_i=" << StringVectorGAP(v_i)
-             << "\n";
+          os << "EDGE: get_next_isotropic. Returning v_i="
+             << StringVectorGAP(v_i) << "\n";
 #endif
           return v_i;
         }
@@ -1003,8 +1006,9 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
     T e_norm = e_extension.e_norm;
     T res_norm = e_extension.res_norm;
 #ifdef DEBUG_EDGEWALK
-    os << "EDGE: ------ u_component=" << StringVectorGAP(e_extension.u_component)
-       << " norm=" << e_norm << " res_norm=" << res_norm << " ----------\n";
+    os << "EDGE: ------ u_component="
+       << StringVectorGAP(e_extension.u_component) << " norm=" << e_norm
+       << " res_norm=" << res_norm << " ----------\n";
 #endif
 
     std::optional<MyVector<Tint>> opt_v = get_next(e_extension);
@@ -1281,10 +1285,11 @@ template <typename T, typename Tint>
 void PrintResultEdgewalk(MyMatrix<T> const &G,
                          ResultEdgewalk<T, Tint> const &re,
                          std::ostream &os_out, const std::string &OutFormat,
-                         bool const &ComputeAllSimpleRoots, [[maybe_unused]] std::ostream& os) {
+                         bool const &ComputeAllSimpleRoots,
+                         [[maybe_unused]] std::ostream &os) {
   std::vector<T> l_norms = get_list_norms(G, re);
   size_t n_orbit_vertices = re.l_orbit_vertices.size();
-  auto f_compute_root=[&]() -> bool {
+  auto f_compute_root = [&]() -> bool {
     if (!ComputeAllSimpleRoots) {
       return false;
     }
@@ -1304,7 +1309,8 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
   os << "EDGE: We write l_norms\n";
   if (re.EarlyTerminationIfNotReflective) {
     if (re.reason_non_reflective) {
-      os << "EDGE: reason of non-reflectivity=" << *re.reason_non_reflective << "\n";
+      os << "EDGE: reason of non-reflectivity=" << *re.reason_non_reflective
+         << "\n";
     } else {
       os << "EDGE: It is actually reflective\n";
     }
@@ -1449,7 +1455,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
           bool test = f_isom(UniversalMatrixConversion<Tint, T>(*equiv_opt));
           if (test) {
 #ifdef DEBUG_ENUM_PROCESS
-            os << "EDGE: Exiting at f_isom in LORENTZ_TestEquivalence, return true\n";
+            os << "EDGE: Exiting at f_isom in LORENTZ_TestEquivalence, return "
+                  "true\n";
 #endif
             return true;
           } else {
@@ -1572,7 +1579,8 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
       bool test = func_insert_vertex(fVertFull);
       if (test) {
 #ifdef DEBUG_ENUM_PROCESS
-        os << "EDGE: Exiting at func_insert_vertex in insert_adjacent_vertices\n";
+        os << "EDGE: Exiting at func_insert_vertex in "
+              "insert_adjacent_vertices\n";
 #endif
         return true;
       }
@@ -1599,7 +1607,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
     bool IsFinished = true;
     size_t i = 0;
     auto iter = l_orbit_vertices.begin();
-    while(iter != l_orbit_vertices.end()) {
+    while (iter != l_orbit_vertices.end()) {
       if (l_status[i] == 1) {
 #ifdef DEBUG_ENUM_PROCESS
         nbDone++;
@@ -1621,7 +1629,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
         // The original problem originally took one week to debug.
         //
         // EDIT: Next change was to use a std::list.
-        const FundDomainVertex_FullInfo<T, Tint, Tgroup>&  VertFull = *iter;
+        const FundDomainVertex_FullInfo<T, Tint, Tgroup> &VertFull = *iter;
         bool test1 = insert_adjacent_vertices(VertFull);
         if (test1) {
 #ifdef DEBUG_ENUM_PROCESS
@@ -1655,7 +1663,7 @@ void LORENTZ_RunEdgewalkAlgorithm_Kernel(
 template <typename T, typename Tint, typename Tgroup>
 ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
     SublattInfos<T> const &si, FundDomainVertex<T, Tint> const &eVert,
-    bool const& EarlyTerminationIfNotReflective,
+    bool const &EarlyTerminationIfNotReflective,
     TheHeuristic<Tint> const &HeuristicIdealStabEquiv,
     TheHeuristic<Tint> const &HeuristicTryTerminateDualDescription,
     std::ostream &os) {
@@ -1672,7 +1680,7 @@ ResultEdgewalk<T, Tint> LORENTZ_RunEdgewalkAlgorithm(
   MyMatrix<Tint> IdMat = IdentityMat<Tint>(dim);
   std::optional<std::string> reason_non_reflective;
   LorentzianFinitenessGroupTester<T, Tint> group_tester =
-    LorentzianFinitenessGroupTester<T, Tint>(G, os);
+      LorentzianFinitenessGroupTester<T, Tint>(G, os);
   int nonew_nbdone = 0;
   size_t n_simple_roots = 0;
   auto f_try_terminate = [&]() -> bool {
@@ -1829,7 +1837,7 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
         UniversalMatrixConversion<Tint, T>(Latt_i_Orth);
     MyMatrix<T> G_P = Latt_i_Orth * G * Latt_i_Orth.transpose();
     std::vector<MyVector<Tint>> l_v =
-      FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
+        FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
     for (auto &e_v : l_v) {
       MyVector<Tint> e_root = Latt_i_Orth_tint.transpose() * e_v;
       std::optional<MyVector<Tint>> opt = SolutionIntMat(NSP_tint, e_root);
@@ -1927,7 +1935,8 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
 #endif
       MyMatrix<T> const &Latt = si.map_norm_latt.at(e_norm);
       MyMatrix<T> Latt_inter_NSP_pre = IntersectionLattice(Latt, NSP);
-      MyMatrix<T> Latt_inter_NSP = SublatticeBasisReduction(Latt_inter_NSP_pre, os);
+      MyMatrix<T> Latt_inter_NSP =
+          SublatticeBasisReduction(Latt_inter_NSP_pre, os);
       LatticeProjectionFramework<T> fr(G, Subspace, Latt_inter_NSP);
       MapIdxFr[e_norm] = pos;
       ListFr.push_back(fr);
@@ -1935,7 +1944,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
       MyMatrix<T> const &RelBasis = fr.BasisProj;
       MyMatrix<T> G_P = RelBasis * G * RelBasis.transpose();
       std::vector<MyVector<Tint>> l_v =
-        FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
+          FindFixedDistVectors<T, Tint>(G_P, zeroVect, e_norm, os);
 #ifdef DEBUG_EDGEWALK
       os << "EDGE: |l_v|=" << l_v.size() << "\n";
 #endif
@@ -2051,7 +2060,7 @@ MyVector<T> GetOneVertex(SublattInfos<T> const &si, bool const &ApplyReduction,
   MyMatrix<T> const &G = si.G;
   std::vector<T> const &l_norms = si.l_norms;
   ResultReduction<T, Tint> ResRed =
-    IndefiniteReduction_opt<T, Tint>(G, ApplyReduction, os);
+      IndefiniteReduction_opt<T, Tint>(G, ApplyReduction, os);
   /*
     We have ResRed.B and ResRed.Mred    with Mred = B * G * B^T
   */
@@ -2085,30 +2094,34 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
     MyMatrix<Tint> MatRoot = ReadMatrix<Tint>(is);
     return {RemoveFractionVector(gen), MatRoot};
   }
-  auto iife_get_vertex=[&]() -> MyVector<T> {
+  auto iife_get_vertex = [&]() -> MyVector<T> {
     if (OptionInitialVertex == "FileVertex") {
       return ReadVectorFile<T>(FileInitialVertex);
     }
     if (OptionInitialVertex == "vinberg") {
-      return GetOneVertex<T, Tint, Tgroup>(
-        si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, os);
+      return GetOneVertex<T, Tint, Tgroup>(si, ApplyReduction, DualDescProg,
+                                           EarlyTerminationIfNotReflective, os);
     }
     if (OptionInitialVertex == "isotropic_vinberg") {
       std::optional<MyVector<T>> opt = FindIsotropic(si.G, os);
       if (opt) {
         return *opt;
       }
-      return GetOneVertex<T, Tint, Tgroup>(
-        si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective, os);
+      return GetOneVertex<T, Tint, Tgroup>(si, ApplyReduction, DualDescProg,
+                                           EarlyTerminationIfNotReflective, os);
     }
     std::cerr << "Failed to find a matching entry in get_initial_vertex\n";
     std::cerr << "OptionInitialVertex=" << OptionInitialVertex << "\n";
     std::cerr << "AllowedOptions:\n";
-    std::cerr << "* FileVertex: The vertex in a file, the matching roots computed internally\n";
-    std::cerr << "* FileVertexRoots: The vertex and the roots in a file, useful for debugging\n";
+    std::cerr << "* FileVertex: The vertex in a file, the matching roots "
+                 "computed internally\n";
+    std::cerr << "* FileVertexRoots: The vertex and the roots in a file, "
+                 "useful for debugging\n";
     std::cerr << "* vinberg: initial vertex found by Vinberg algorithm\n";
-    std::cerr << "* isotropic_vinberg: initial vertex an isotropic vector if the form is\n";
-    std::cerr << "  isotropic. If the form is anisotropic, then Vinberg algorithm is used\n";
+    std::cerr << "* isotropic_vinberg: initial vertex an isotropic vector if "
+                 "the form is\n";
+    std::cerr << "  isotropic. If the form is anisotropic, then Vinberg "
+                 "algorithm is used\n";
     throw TerminalException{1};
   };
   MyVector<T> gen = iife_get_vertex();
@@ -2117,7 +2130,8 @@ get_initial_vertex(SublattInfos<T> const &si, bool const &ApplyReduction,
 }
 
 template <typename T, typename Tint, typename Tgroup>
-ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostream& os) {
+ResultEdgewalk<T, Tint> StandardEdgewalkAnalysis(MyMatrix<T> const &G,
+                                                 std::ostream &os) {
   std::optional<std::string> opt = ReasonNonLorentzian(G, os);
   bool EarlyTerminationIfNotReflective = true;
   if (opt) {
@@ -2159,20 +2173,17 @@ ResultEdgewalk<T,Tint> StandardEdgewalkAnalysis(MyMatrix<T> const& G, std::ostre
   }
 }
 
-
-
-
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string const& FileLorMat = BlockPROC.get_string("FileLorMat");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string const &FileLorMat = BlockPROC.get_string("FileLorMat");
   MyMatrix<T> G = ReadMatrixFile<T>(FileLorMat);
   TestLorentzianity(G, os);
   //
   std::string OptionNorms = BlockPROC.get_string("OptionNorms");
   std::string DualDescProg = BlockPROC.get_string("DualDescProg");
   bool EarlyTerminationIfNotReflective =
-    BlockPROC.get_bool("EarlyTerminationIfNotReflective");
+      BlockPROC.get_bool("EarlyTerminationIfNotReflective");
   bool ApplyReduction = BlockPROC.get_bool("ApplyReduction");
   std::vector<T> l_norms = get_initial_list_norms<T, Tint>(G, OptionNorms, os);
   SublattInfos<T> si = ComputeSublatticeInfos<T, Tint>(G, l_norms, os);
@@ -2181,13 +2192,13 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
 #endif
   //
   std::string FileHeuristicIdealStabEquiv =
-    BlockPROC.get_string("FileHeuristicIdealStabEquiv");
+      BlockPROC.get_string("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv =
       GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
   //
   std::string FileHeuristicTryTerminateDualDescription =
-    BlockPROC.get_string("FileHeuristicTryTerminateDualDescription");
+      BlockPROC.get_string("FileHeuristicTryTerminateDualDescription");
   TheHeuristic<Tint> HeuristicTryTerminateDualDescription =
       GetHeuristicTryTerminateDualDescription<Tint>();
   ReadHeuristicFileCond(FileHeuristicTryTerminateDualDescription,
@@ -2196,8 +2207,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
   auto print_result_edgewalk = [&](ResultEdgewalk<T, Tint> const &re) -> void {
     std::string OutFormat = BlockPROC.get_string("OutFormat");
     std::string FileOut = BlockPROC.get_string("FileOut");
-    bool ComputeAllSimpleRoots =
-      BlockPROC.get_bool("ComputeAllSimpleRoots");
+    bool ComputeAllSimpleRoots = BlockPROC.get_bool("ComputeAllSimpleRoots");
 #ifdef DEBUG_EDGEWALK
     os << "EDGE: OutFormat=" << OutFormat << " FileOut=" << FileOut
        << " ComputeAllSimpleRoots=" << ComputeAllSimpleRoots << "\n";
@@ -2208,10 +2218,8 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
     print_stderr_stdout_file(FileOut, f_print);
   };
   //
-  std::string OptionInitialVertex =
-    BlockPROC.get_string("OptionInitialVertex");
-  std::string FileInitialVertex =
-    BlockPROC.get_string("FileInitialVertex");
+  std::string OptionInitialVertex = BlockPROC.get_string("OptionInitialVertex");
+  std::string FileInitialVertex = BlockPROC.get_string("FileInitialVertex");
   try {
     FundDomainVertex<T, Tint> eVert = get_initial_vertex<T, Tint, Tgroup>(
         si, ApplyReduction, DualDescProg, EarlyTerminationIfNotReflective,
@@ -2232,7 +2240,7 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
 #endif
     std::optional<std::string> reason_non_reflective{e.reason};
     ResultEdgewalk<T, Tint> re{
-      {}, {}, EarlyTerminationIfNotReflective, reason_non_reflective};
+        {}, {}, EarlyTerminationIfNotReflective, reason_non_reflective};
     print_result_edgewalk(re);
   }
 #ifdef DEBUG_EDGEWALK
@@ -2243,15 +2251,15 @@ void MainFunctionEdgewalk(FullNamelist const &eFull, std::ostream &os) {
 template <typename T, typename Tint, typename Tgroup>
 void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
                                       std::ostream &os) {
-  SingleBlock const& BlockPROC = eFull.get_block("PROC");
-  std::string const& FileLorMat1 = BlockPROC.get_string("FileLorMat1");
-  std::string const& FileLorMat2 = BlockPROC.get_string("FileLorMat2");
+  SingleBlock const &BlockPROC = eFull.get_block("PROC");
+  std::string const &FileLorMat1 = BlockPROC.get_string("FileLorMat1");
+  std::string const &FileLorMat2 = BlockPROC.get_string("FileLorMat2");
   MyMatrix<T> G1 = ReadMatrixFile<T>(FileLorMat1);
   MyMatrix<T> G2 = ReadMatrixFile<T>(FileLorMat2);
   TestLorentzianity(G1, os);
   TestLorentzianity(G2, os);
   std::string FileHeuristicIdealStabEquiv =
-    BlockPROC.get_string("FileHeuristicIdealStabEquiv");
+      BlockPROC.get_string("FileHeuristicIdealStabEquiv");
   TheHeuristic<Tint> HeuristicIdealStabEquiv =
       GetHeuristicIdealStabEquiv<Tint>();
   ReadHeuristicFileCond(FileHeuristicIdealStabEquiv, HeuristicIdealStabEquiv);
