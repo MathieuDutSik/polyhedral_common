@@ -23,31 +23,27 @@ fi;
 
 GeneratorsPreservePolytope:=function(TheGRP,EXT)
     local gens, BasisExt, i, j, ImageExt, Mb, Mi, A;
-    BasisEXT:=[EXT[1]];
-    BasisIndices:=[1];
+    BasisEXT:=[];
+    BasisIndices:=[];
     n:=Length(EXT[1]);
-    i:=1;
-    for i in [2..n] do
-        for j in [1..Length(EXT)] do
-            M:=Concatenation(BasisEXT,[EXT[j]]);
-            if RankMat(M)=Length(BasisEXT)+1 then
-                Add(BasisEXT, EXT[j]);
-                Add(BasisIndices, j);
-                break;
-            fi;
-        od;
+    for i in [1..Length(EXT)] do
+        M:=Concatenation(BasisEXT,[EXT[i]]);
+        if RankMat(M)=Length(BasisEXT)+1 then
+            Add(BasisEXT, EXT[i]);
+            Add(BasisIndices, i);
+        fi;
+        if Length(BasisEXT)=n then
+            break;
+        fi;
     od;
     gens:=GeneratorsOfGroup(TheGRP);
-    gensCheck:=[];
     for g in gens do
         ImageIndices:=List(BasisIndices, i -> i^g);
         ImageEXT := List(ImageIndices, i -> EXT[i]);
         Mb:=TransposedMat(BasisEXT);
         Mi:=TransposedMat(ImageEXT);
         A:=Mi*Inverse(Mb);
-        if ForAll(Flat(A), x -> x=Int(x)) then
-            continue;
-        else
+        if ForAll(Flat(A), x -> x=Int(x))=false then
             return false;
         fi;
     od;
