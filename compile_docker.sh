@@ -8,7 +8,6 @@ set -e
 (cd src_short && make clean && make)
 (cd src_dualdesc && make clean && make)
 (cd src_sparse_solver && make clean && make)
-(cd src_spectra && make clean && make)
 (cd src_copos && make clean && make)
 (cd src_isotropy && make clean && make)
 (cd src_lorentzian && make clean && make)
