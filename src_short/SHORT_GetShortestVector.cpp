@@ -26,8 +26,8 @@ int main(int argc, char *argv[]) {
     std::ifstream is(argv[1]);
     MyMatrix<T> M = ReadMatrix<T>(is);
     //
-    Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(M, std::cerr);
-    int nbRow = RecSHV.SHV.rows();
+    Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(M, std::cerr);
+    int nbRow = rec_shv.SHV.rows();
     std::cerr << "nbRow=" << nbRow << "\n";
     std::cerr << "Normal termination of the SHORT_GetShortestVector\n";
   } catch (TerminalException const &e) {

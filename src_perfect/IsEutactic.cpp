@@ -12,8 +12,8 @@ template <typename T, typename Tint>
 void compute_eutacticity_kernel(std::string const &eFile,
                                 std::string const &eutacticity) {
   MyMatrix<T> eGram = ReadMatrixFile<T>(eFile);
-  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eGram, std::cerr);
-  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(RecSHV.SHV);
+  Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(eGram, std::cerr);
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(rec_shv.SHV);
   std::optional<MyVector<T>> opt =
       IsEutactic(eGram, SHV_T, eutacticity, std::cerr);
   if (opt) {
