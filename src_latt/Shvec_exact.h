@@ -1014,8 +1014,8 @@ Tshortest<T, Tint> T_ShortestVector(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint>
 Tshortest<T, Tint> T_ShortestVectorHalf(MyMatrix<T> const &GramMat,
                                         std::ostream &os) {
-  Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(GramMat, os);
-  return shortest_get_half(RecSHV);
+  Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(GramMat, os);
+  return shortest_get_half(rec_shv);
 }
 
 // clang-format off

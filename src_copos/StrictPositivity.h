@@ -90,10 +90,10 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
 #ifdef DEBUG_STRICT_POSITIVITY
     nbIter++;
 #endif
-    Tshortest<T, Tint> RecSHV =
+    Tshortest<T, Tint> rec_shv =
         CopositiveShortestVector<T, Tint>(SearchMatrix, InitialBasis, os);
     NakedPerfect<T, Tint> eNaked =
-        GetNakedPerfectCone(LinSpa, SearchMatrix, RecSHV, os);
+        GetNakedPerfectCone(LinSpa, SearchMatrix, rec_shv, os);
     int nbBlock = eNaked.ListBlock.size();
 
     T ScalMat = MatrixScalarProduct(SearchMatrix, eMat);

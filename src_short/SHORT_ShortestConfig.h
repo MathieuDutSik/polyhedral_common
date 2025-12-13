@@ -362,14 +362,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         os << "Before computation of T_ShortestVector\n";
         WriteMatrix(os, eMatSec);
 #endif
-        Tshortest<T, Tint> RecSHV = T_ShortestVector<T, Tint>(eMatSec, os);
+        Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(eMatSec, os);
 #ifdef DEBUG_SHORTEST_CONFIG
         os << " After computation of T_ShortestVector\n";
 #endif
-        int nbRow = RecSHV.SHV.rows();
+        int nbRow = rec_shv.SHV.rows();
         std::vector<MyVector<Tint>> SHV(nbRow);
         for (int iRow = 0; iRow < nbRow; iRow++) {
-          MyVector<Tint> eVect = GetMatrixRow(RecSHV.SHV, iRow);
+          MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iRow);
           SHV[iRow] = eVect;
         }
         std::vector<MyVector<Tint>> SetSHV = VectorAsSet(SHV);
@@ -378,8 +378,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           eRes.eCase = 6;
           eRes.reply = true;
           eRes.replyCone = true;
-          eRes.SHV = RecSHV.SHV;
-          eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
+          eRes.SHV = rec_shv.SHV;
+          eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
           eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
           os << "RETURN case 6\n";
@@ -411,8 +411,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.eCase = 7;
               eRes.reply = false;
               eRes.replyCone = true;
-              eRes.SHV = RecSHV.SHV;
-              eRes.SHVclean = SHORT_CleanAntipodality(RecSHV.SHV);
+              eRes.SHV = rec_shv.SHV;
+              eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
               eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
               os << "RETURN case 7\n";

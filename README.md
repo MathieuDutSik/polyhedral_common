@@ -21,11 +21,15 @@ Since this repository uses submodules, the cloning command is
 $ git clone https://github.com/MathieuDutSik/polyhedral_common --recursive
 ```
 
+If you cloned but forgot to put the `--recursive` then run `./init.sh`.
+
+
 In order to update the submodule the command is
 ```sh
 $ git submodule update --remote
 ```
 
+Which is available in `update.sh`.
 
 Compilation
 -----------

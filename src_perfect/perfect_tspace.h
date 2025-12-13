@@ -55,16 +55,16 @@ void WriteEntryPYTHON(std::ostream &os, Face const &eFace) {
 
 template <typename T, typename Tint, typename Tgroup> struct PerfectTspace_Obj {
   MyMatrix<T> Gram;
-  Tshortest<T, Tint> RecSHV;
+  Tshortest<T, Tint> rec_shv;
   Tgroup GRP;
 };
 
 template <typename T, typename Tint, typename Tgroup>
 void check_correctness(PerfectTspace_Obj<T, Tint, Tgroup> const &po) {
-  int n_row = po.RecSHV.SHV.rows();
-  T min = po.RecSHV.min;
+  int n_row = po.rec_shv.SHV.rows();
+  T min = po.rec_shv.min;
   for (int i_row = 0; i_row < n_row; i_row++) {
-    MyVector<Tint> V = GetMatrixRow(po.RecSHV.SHV, i_row);
+    MyVector<Tint> V = GetMatrixRow(po.rec_shv.SHV, i_row);
     T norm = EvaluationQuadForm<T, Tint>(po.Gram, V);
     if (min != norm) {
       std::cerr << "PERF: inconsistency at i_row=" << i_row << "\n";
@@ -77,7 +77,7 @@ void check_correctness(PerfectTspace_Obj<T, Tint, Tgroup> const &po) {
 template <typename T, typename Tint> struct PerfectTspace_AdjI {
   Face eInc;
   MyMatrix<T> Gram;
-  Tshortest<T, Tint> RecSHV;
+  Tshortest<T, Tint> rec_shv;
 };
 
 template <typename Tint> struct PerfectTspace_AdjO {
@@ -141,7 +141,7 @@ get_reduced_gram(OnlineHierarchicalMatrixReduction<Tint> const &onl_gens,
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PerfectTspace_AdjI<T, Tint>>
 TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
-                      Tshortest<T, Tint> const &RecSHV, Tgroup const &GRP,
+                      Tshortest<T, Tint> const &rec_shv, Tgroup const &GRP,
                       std::ostream &os) {
 #ifdef TIMINGS_PERFECT_TSPACE
   HumanTime time;
@@ -149,22 +149,22 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
 #ifdef DEBUG_PERFECT_TSPACE
   os << "PERF_TSPACE: TSPACE_GetAdjacencies, begin\n";
 #endif
-  MyMatrix<T> SHV_T = conversion_and_duplication<T, Tint>(RecSHV.SHV);
+  MyMatrix<T> SHV_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetAdj_shv_t|=" << time << "\n";
 #endif
 #ifdef SANITY_CHECK_PERFECT_TSPACE
-  if (!is_perfect_in_space(LinSpa, RecSHV)) {
+  if (!is_perfect_in_space(LinSpa, rec_shv)) {
     std::cerr << "Error in input of TSPACE_GetAdjacencies, the input matrix is "
                  "not perfect\n";
     throw TerminalException{1};
   }
 #endif
 #ifdef DEBUG_PERFECT_TSPACE
-  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, RecSHV);
+  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, rec_shv);
   os << "PERF_TSPACE: The ScalMat is the following\n";
   WriteMatrix(os, ScalMat);
-  bool test = is_perfect_in_space<T, Tint>(LinSpa, RecSHV);
+  bool test = is_perfect_in_space<T, Tint>(LinSpa, rec_shv);
   os << "PERF_TSPACE: RankMat(ScalMat)=" << RankMat(ScalMat) << " test=" << test
      << "\n";
 #endif
@@ -254,7 +254,7 @@ struct DataPerfectTspaceFunc {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: Before f_hash\n";
 #endif
-    return SimplePerfect_Invariant<T, Tint>(seed, data.LinSpa, x.Gram, x.RecSHV,
+    return SimplePerfect_Invariant<T, Tint>(seed, data.LinSpa, x.Gram, x.rec_shv,
                                             os);
   }
 
@@ -262,7 +262,7 @@ struct DataPerfectTspaceFunc {
     std::ostream &os = get_os();
     std::optional<MyMatrix<Tint>> opt =
         SimplePerfect_TestEquivalence<T, Tint, Tgroup>(
-            data.LinSpa, x.Gram, y.Gram, x.RecSHV, y.RecSHV, os);
+            data.LinSpa, x.Gram, y.Gram, x.rec_shv, y.rec_shv, os);
     if (!opt) {
       return {};
     }
@@ -278,7 +278,7 @@ struct DataPerfectTspaceFunc {
   }
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
-    Tobj x_ret{y.Gram, y.RecSHV, {}};
+    Tobj x_ret{y.Gram, y.rec_shv, {}};
 #ifdef DEBUG_PERFECT_TSPACE
     check_correctness(x_ret);
 #endif
@@ -286,8 +286,8 @@ struct DataPerfectTspaceFunc {
       std::pair<MyMatrix<Tint>, MyMatrix<T>> pair =
           get_reduced_gram(data.onl_gens, y.Gram);
       MyMatrix<Tint> Pinv = Inverse(pair.first);
-      Tshortest<T, Tint> RecSHV = apply_transformation(y.RecSHV, Pinv);
-      Tobj x_reduced{pair.second, RecSHV, {}};
+      Tshortest<T, Tint> rec_shv = apply_transformation(y.rec_shv, Pinv);
+      Tobj x_reduced{pair.second, rec_shv, {}};
 #ifdef DEBUG_PERFECT_TSPACE
       check_correctness(x_reduced);
 #endif
@@ -304,7 +304,7 @@ struct DataPerfectTspaceFunc {
   std::vector<TadjI> f_adj(Tobj &x) {
     std::ostream &os = get_os();
     std::pair<Tgroup, std::vector<MyMatrix<Tint>>> pair =
-        SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.RecSHV,
+        SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.rec_shv,
                                                   os);
     x.GRP = pair.first;
 #ifdef DEBUG_PERFECT_TSPACE
@@ -318,12 +318,12 @@ struct DataPerfectTspaceFunc {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: B, |onl_gens|=" << data.onl_gens.size() << "\n";
 #endif
-    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.RecSHV, x.GRP,
+    return TSPACE_GetAdjacencies<T, Tint>(data.LinSpa, x.Gram, x.rec_shv, x.GRP,
                                           os);
   }
 
   Tobj f_adji_obj(TadjI const &x) {
-    Tobj x_ret{x.Gram, x.RecSHV, {}};
+    Tobj x_ret{x.Gram, x.rec_shv, {}};
     return x_ret;
   }
 };

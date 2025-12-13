@@ -44,7 +44,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
           [&](SimplePerfect<T, Tint> const &x, SimplePerfect<T, Tint> const &y)
       -> std::optional<MyMatrix<Tint>> {
     return SimplePerfect_TestEquivalence<T, Tint, Tgroup>(
-        eData.LinSpa, x.Gram, y.Gram, x.RecSHV, y.RecSHV, os);
+        eData.LinSpa, x.Gram, y.Gram, x.rec_shv, y.rec_shv, os);
   };
   NewEnumerationWork<SimplePerfect<T, Tint>> ListOrbit(
       AllArr.DD_Saving, AllArr.DD_Memory, eData.PrefixPerfect, CompFCT,
@@ -52,7 +52,7 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
   auto FuncInsert = [&](SimplePerfect<T, Tint> const &x,
                         std::ostream &os) -> int {
     size_t eInv = SimplePerfect_Invariant<T, Tint>(seed, eData.LinSpa, x.Gram,
-                                                   x.RecSHV, os);
+                                                   x.rec_shv, os);
     return ListOrbit.InsertEntry({x, eInv}, os);
   };
   int nbPresentOrbit = ListOrbit.GetNbEntry();
@@ -96,11 +96,11 @@ EnumerationPerfectMatrices(MainProcessor &MProc, int const &TheId,
       if (IsComplete)
         break;
       SimplePerfect<T, Tint> ePERF = ListOrbit.GetRepresentative(eEntry);
-      Tshortest<T, Tint> RecSHV = T_ShortestVectorHalf<T, Tint>(ePERF.Gram, os);
+      Tshortest<T, Tint> rec_shv = T_ShortestVectorHalf<T, Tint>(ePERF.Gram, os);
       NakedPerfect<T, Tint> eNaked =
-          GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, RecSHV, os);
+          GetNakedPerfectCone(eData.LinSpa, ePERF.Gram, rec_shv, os);
       Tgroup GRPshv = SimplePerfect_Stabilizer<T, Tint, Tgroup>(
-                          eData.LinSpa, ePERF.Gram, RecSHV, os)
+                          eData.LinSpa, ePERF.Gram, rec_shv, os)
                           .first;
       Tgroup PerfDomGRP = MapLatticeGroupToConeGroup(eNaked, GRPshv);
       CondTempDirectory eDir(AllArr.DD_Saving, eData.PrefixPolyhedral + "ADM" +
