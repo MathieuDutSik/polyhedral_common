@@ -7,7 +7,7 @@ name: CI(02) of Integral Automorphism groups
 on:
   # One time per month
   schedule:
-    - cron: "0 0 2 * *"
+    - cron: "0 0 14 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -102,12 +102,19 @@ jobs:
           pwd
           ln -s gap-4.14.0/gap gap.sh
 
-      - name: Test integral automorphy
+      - name: Compiling the test programs.
         run: |
           cd src_group && make -f Makefile_integral_automorphy && cd ..
-          pwd
           echo "After compilation of group code"
+          mkdir -p build
+          cd build && ln -s ../src_group/GRP_LinPolytopeIntegral_Automorphism && cd ..
+          cd build && ln -s ../src_group/GRP_LinPolytopeIntegral_Isomorphism && cd ..
+          cd build && ln -s ../src_group/GRP_LinPolytopeIntegral_Automorphism_RightCoset && cd ..
+          pwd
+          echo "After creating the links"
 
+      - name: Test integral automorphy
+        run: |
           cd CI_tests/02_IntegralAutomorphy
           ../../gap.sh < ProcessExamples.g
           if [ ! -f "CI_CONCLUSION" ]; then
@@ -115,4 +122,4 @@ jobs:
             exit 1
           fi
           cd ../..
-          echo "After integral automorphy"
+          echo "After integral automorphy tests"
