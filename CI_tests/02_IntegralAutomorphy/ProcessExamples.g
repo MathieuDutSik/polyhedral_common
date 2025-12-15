@@ -29,7 +29,7 @@ TestCase_Automorphy:=function(EXT)
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism";
+    eProg:="../../build/GRP_LinPolytopeIntegral_Automorphism";
     TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
@@ -57,7 +57,7 @@ TestCase_Isomorphy:=function(EXT)
     FileO:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(File1, EXT);
     WriteMatrixFile(File2, EXT_img);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Isomorphism";
+    eProg:="../../build/GRP_LinPolytopeIntegral_Isomorphism";
     TheCommand:=Concatenation(eProg, " mpz_class ", File1, " ", File2, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
@@ -83,7 +83,7 @@ TestCase_Automorphy_RightCoset:=function(EXT)
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism_RightCoset";
+    eProg:="../../build/GRP_LinPolytopeIntegral_Automorphism_RightCoset";
     TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO);
     Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
