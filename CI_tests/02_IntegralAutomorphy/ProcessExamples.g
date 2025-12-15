@@ -46,6 +46,11 @@ GeneratorsPreservePolytope:=function(TheGRP,EXT)
         if ForAll(Flat(A), x -> x=Int(x))=false then
             return false;
         fi;
+        for i in Difference([1..Length(EXT)], BasisIndices) do
+            if not A*EXT[i] in EXT then
+                return false;
+            fi;
+        od;
     od;
     return true;
 end;
