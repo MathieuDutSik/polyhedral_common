@@ -75,6 +75,10 @@ add_executable(LATT_Canonicalize ${CMAKE_SOURCE_DIR}/src_latt/LATT_Canonicalize.
 add_executable(LATT_FindIsotropic ${CMAKE_SOURCE_DIR}/src_isotropy/LATT_FindIsotropic.cpp)
 add_executable(LATT_SerialComputeDelaunay ${CMAKE_SOURCE_DIR}/src_latt/LATT_SerialComputeDelaunay.cpp)
 add_executable(LATT_SerialLattice_IsoDelaunayDomain ${CMAKE_SOURCE_DIR}/src_latt/LATT_SerialLattice_IsoDelaunayDomain.cpp)
+add_executable(GRP_LinPolytopeIntegral_Automorphism ${CMAKE_SOURCE_DIR}/src_group/GRP_LinPolytopeIntegral_Automorphism.cpp)
+add_executable(GRP_LinPolytopeIntegral_Isomorphism ${CMAKE_SOURCE_DIR}/src_group/GRP_LinPolytopeIntegral_Isomorphism.cpp)
+add_executable(GRP_LinPolytopeIntegral_Automorphism_RightCoset ${CMAKE_SOURCE_DIR}/src_group/GRP_LinPolytopeIntegral_Automorphism_RightCoset.cpp)
+
 
 # ---Delaunay polytopes enumeration (Serial)
 # ---Iso-Delaunay spacse (Serial)
@@ -93,5 +97,8 @@ target_link_libraries(LATT_Canonicalize ${MY_LIBRARIES_GRP})
 target_link_libraries(LATT_FindIsotropic ${MY_LIBRARIES})
 target_link_libraries(LATT_SerialComputeDelaunay ${MY_LIBRARIES_GRP})
 target_link_libraries(LATT_SerialLattice_IsoDelaunayDomain ${MY_LIBRARIES_GRP})
+target_link_libraries(GRP_LinPolytopeIntegral_Automorphism ${MY_LIBRARIES_GRP})
+target_link_libraries(GRP_LinPolytopeIntegral_Isomorphism ${MY_LIBRARIES_GRP})
+target_link_libraries(GRP_LinPolytopeIntegral_Automorphism_RightCoset ${MY_LIBRARIES_GRP})
 
 target_include_directories(POLY_DirectSerialDualDesc PUBLIC ${GMP_INCLUDE_DIRS})
