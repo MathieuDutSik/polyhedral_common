@@ -320,7 +320,7 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
         k++; /* skip zeroes in corr. to linearity */
       inequality[i] = inequality[k++];
     }
-  } /* end if linearity */
+  }
   if (nredundcol > 0) {
     Lin = new T *[nredundcol + 1];
     for (i = 0; i < nredundcol; i++) {
@@ -439,7 +439,7 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
       (*D_p)->lexflag = lexmin(*D_p, Q, 0); /* see if lexmin basis */
       return globals::L_TRUE;
     }
-  } /* end of main while loop for getnextbasis */
+  }
   return globals::L_FALSE;
 }
 
@@ -585,7 +585,7 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
     /*  minratio contains indices of min ratio cols        */
     if (A[Row[j]][col] < 0)
       minratio[degencount++] = j;
-  } /* end of for loop */
+  }
   if (degencount == 0)
     return (degencount); /* non-negative pivot column */
 
@@ -631,14 +631,14 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
           ndegencount = 1;
         } else if (comp == 0) /* repeated minimum */
           minratio[nstart + ndegencount++] = minratio[j];
-      } /* end of  for (j=start.... */
+      }
       degencount = ndegencount;
       start = nstart;
-    } /* end of else perform ratio test statement */
+    }
     basicindex++; /* increment column of basis inverse to check next */
-  } /*end of while loop */
+  }
   return minratio[start];
-} /* end of ratio */
+}
 
 template <typename T>
 int64_t reverse(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t s)
@@ -791,9 +791,9 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
       update(P, &i, &j);
     } else
       primalinfeasible = globals::L_FALSE;
-  } /* end of while primalinfeasibile */
+  }
   return globals::L_TRUE;
-} /* end of primalfeasible */
+}
 
 template <typename T>
 int64_t lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
@@ -860,9 +860,9 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
           linearity[j] = 0;
         else
           return globals::L_FALSE;
-      } /* end if j < nlinearity */
-    } /* end of if i <= m .... */
-  } /* end of for   */
+      }
+    }
+  }
   /* update linearity array to get rid of redundancies */
   i = 0;
   k = 0; /* counters for linearities         */
@@ -901,7 +901,7 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
   }
 
   return globals::L_TRUE;
-} /*  end of getabasis */
+}
 
 template <typename T>
 int64_t removecobasicindex(lrs_dic<T> *P, int64_t k)
@@ -1115,7 +1115,7 @@ int64_t lexmin(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col)
           } else if (A[r][s] < 0 && ismin(P, r, s)) {
             return globals::L_FALSE;
           }
-        } /* end of if B[i] ... */
+        }
       }
   }
   return globals::L_TRUE;
@@ -1184,7 +1184,7 @@ void reorder(int64_t a[], int64_t range) {
       a[i] = a[i + 1];
       a[i + 1] = temp;
     }
-} /* end of reorder */
+}
 
 template <typename T>
 int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
@@ -1220,7 +1220,7 @@ int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
     update(P, &i, &j);
   }
   return !(j < d && i == 0); /* unbounded is also non-redundant */
-} /* end of checkredund  */
+}
 
 template <typename T>
 int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)

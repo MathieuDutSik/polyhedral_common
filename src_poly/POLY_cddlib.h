@@ -2566,7 +2566,7 @@ dd_lpdata<T> *dd_Matrix2Feasibility(dd_matrixdata<T> *M, dd_ErrorType *err)
       dd_LPmax; /* since the objective is zero, this is not important */
   for (j = 1; j <= M->colsize; j++) {
     lp->A[m - 1][j - 1] = 0; /* set the objective to zero. */
-  } /*of j*/
+  }
 
   return lp;
 }
@@ -2632,16 +2632,16 @@ dd_lpdata<T> *dd_Matrix2Feasibility2(dd_matrixdata<T> *M, dd_rowset R,
     }
     for (j = 1; j <= M->colsize; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
-    } /*of j*/
-  } /*of i*/
+    }
+  }
   for (j = 1; j <= d; j++) {
     lp->A[m - 2][j - 1] = 0; /* initialize */
-  } /*of j*/
+  }
   lp->A[m - 2][0] = 1;           /* the bounding constraint. */
   lp->A[m - 2][M->colsize] = -1; /* the bounding constraint. */
   for (j = 1; j <= d; j++) {
     lp->A[m - 1][j - 1] = 0; /* initialize */
-  } /*of j*/
+  }
   lp->A[m - 1][M->colsize] = 1;
 
   set_free(L);
@@ -2883,7 +2883,7 @@ void dd_SelectDualSimplexPivot(dd_rowrange m_size, dd_colrange d_size,
           *lps = dd_Inconsistent;
         }
       }
-    } /* end of while */
+    }
   }
 }
 
@@ -4242,8 +4242,8 @@ dd_lpdata<T> *dd_CreateLP_H_ImplicitLinearity(dd_matrixdata<T> *M) {
     }
     for (j = 1; j <= M->colsize; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 1];
-    } /*of j*/
-  } /*of i*/
+    }
+  }
   lp->A[m - 2][0] = 1;
   lp->A[m - 2][d - 1] = -1;
   /* make the LP bounded.  */
@@ -4288,7 +4288,7 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
       /* the reversed row irev is not in the equality set. */
       for (j = 2; j <= d - 1; j++) {
         lp->A[irev - 1][j - 1] = -M->matrix[i - 1][j - 2];
-      } /*of j*/
+      }
       if (localdebug)
         fprintf(stdout, "equality row %ld generates the reverse row %ld.\n", i,
                 irev);
@@ -4297,8 +4297,8 @@ dd_lpdata<T> *dd_CreateLP_V_ImplicitLinearity(dd_matrixdata<T> *M) {
     }
     for (j = 2; j <= d - 1; j++) {
       lp->A[i - 1][j - 1] = M->matrix[i - 1][j - 2];
-    } /*of j*/
-  } /*of i*/
+    }
+  }
   lp->A[m - 2][0] = 1;
   lp->A[m - 2][d - 1] = -1;
   /* make the LP bounded.  */
@@ -5108,7 +5108,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
           std::cout << "Case already decided\n";
         i++;
       }
-    } /* endwhile */
+    }
   } else {
     if (localdebug)
       std::cout << "dd_Positive=F case\n";
@@ -5342,7 +5342,7 @@ dd_RedundantRowsViaShootingBlocks(dd_matrixdata<T> *M, dd_ErrorType *error,
           std::cout << "Case already decided\n";
         i++;
       }
-    } /* endwhile */
+    }
   } else {
     if (localdebug)
       std::cout << "dd_Positive=F case\n";
@@ -5637,12 +5637,11 @@ void dd_FreeOfImplicitLinearity(dd_matrixdata<T> *M, T *certificate,
             goto _L999;
         }
       }
-    } /* end of if (answer==0) */
+    }
     if (answer == -1) {
       for (i = m; i >= 1; i--)
         set_addelem(*imp_linrows, i);
-    } /* all rows are considered implicit linearity */
-
+    }
     dd_FreeArow(cvec);
   }
 _L999:

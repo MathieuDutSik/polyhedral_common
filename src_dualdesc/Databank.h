@@ -332,11 +332,11 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
 }
 
 template <typename Tkey, typename Tval> struct DataBankAsioClient {
-private:
+ private:
   uint16_t port;
   boost::asio::ip::tcp::endpoint endpoint;
 
-public:
+ public:
   DataBankAsioClient(const uint16_t &_port)
       : port(_port), endpoint(boost::asio::ip::tcp::v4(), port) {}
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
