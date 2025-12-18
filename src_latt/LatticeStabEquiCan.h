@@ -84,10 +84,6 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
   PrintWeightedMatrix(os, WMat);
 #endif
   WMat.ReorderingSetWeight();
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: Weight reordering WMat=\n";
-  PrintWeightedMatrix(os, WMat);
-#endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
 #endif
@@ -96,12 +92,6 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
   //
   std::vector<int> CanonicOrd =
     GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, int>(WMat, os);
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: CanonicOrd=";
-  for (auto &eV : CanonicOrd)
-    os << " " << eV;
-  os << "\n";
-#endif
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CNA
   os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
 #endif
@@ -116,19 +106,6 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
   }
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: SHVcan|=" << time << "\n";
-#endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: SHVred=\n";
-  std::pair<MyMatrix<Tint>, MyMatrix<Tint>> pair_calc =
-      ComputeRowHermiteNormalForm(SHVcan_Tint);
-  MyMatrix<Tint> PrtMat = pair_calc.second;
-  MyMatrix<Tint> eDiff =
-      Inverse(pair_calc.first) * pair_calc.second - SHVcan_Tint;
-  WriteMatrix(os, PrtMat);
-  if (!IsZeroMatrix(eDiff)) {
-    std::cerr << "LSEC: The matrix eDiff should be zero\n";
-    throw TerminalException{1};
-  }
 #endif
   MyMatrix<Tint> BasisCan_Tint_pre =
       ComputeRowHermiteNormalForm(SHVcan_Tint).first;
