@@ -48,7 +48,7 @@ void check_determinant_one([[maybe_unused]] MyMatrix<T> const& M) {
 }
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
+Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMat,
                                                    MyMatrix<Tint> const &SHV,
                                                    std::ostream &os) {
   using Tgr = GraphListAdj;
@@ -58,6 +58,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
+  MyMatrix<T> const& inpMat = ListMat[0];
   int nbRow = SHV.rows();
   int n = SHV.cols();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
@@ -73,8 +74,8 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
   // Computing the scalar product matrix
   //
   using Tidx_value = int16_t;
-  WeightMatrix<true, T, Tidx_value> WMat =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(inpMat, SHV, os);
+  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
+      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: WMat|=" << time << "\n";
 #endif
@@ -94,7 +95,7 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
   // Computing the canonicalization of the scalar product matrix
   //
   std::vector<int> CanonicOrd =
-      GetCanonicalizationVector_Kernel<T, Tgr, int>(WMat, os);
+    GetCanonicalizationVector_Kernel<std::vector<T>, Tgr, int>(WMat, os);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: CanonicOrd=";
   for (auto &eV : CanonicOrd)
@@ -157,7 +158,8 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
-  return ComputeCanonicalForm_inner(inpMat, SHV, os);
+  std::vector<MyMatrix<T>> ListMat{inpMat};
+  return ComputeCanonicalForm_inner(ListMat, SHV, os);
 }
 
 template <typename T, typename Tint>
@@ -178,67 +180,7 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
-  int nbRow = SHV.rows();
-  int n = SHV.cols();
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  if (!CheckCentralSymmetry(SHV)) {
-    std::cerr
-        << "LSEC: The set of vector does not respect the central symmetry "
-           "condition\n";
-    throw TerminalException{1};
-  }
-#endif
-  //
-  // Computing the scalar product matrix
-  //
-  using Tidx_value = int16_t;
-  WeightMatrix<false, std::vector<T>, Tidx_value> WMat =
-      T_TranslateToMatrix_ListMat_SHV<T, Tint, Tidx_value>(ListMat, SHV, os);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: WMat|=" << time << "\n";
-#endif
-  WMat.ReorderingSetWeight();
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
-#endif
-  //
-  // Computing the canonicalization of the scalar product matrix
-  //
-  WeightMatrix<true, std::vector<T>, Tidx_value> WMatSymm =
-      WMat.GetSymmetricWeightMatrix();
-  std::vector<int> CanonicOrdSymm =
-      GetCanonicalizationVector_Kernel<std::vector<T>, GraphBitset, int>(
-          WMatSymm, os);
-  std::vector<int> CanonicOrd =
-      GetCanonicalizationFromSymmetrized(CanonicOrdSymm);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: GetCanonicalizationVector_Kernel|=" << time << "\n";
-#endif
-  //
-  // Building the canonical basis
-  //
-  MyMatrix<Tint> SHVcan_Tint(n, nbRow);
-  for (int iRowCan = 0; iRowCan < nbRow; iRowCan++) {
-    int iRowNative = CanonicOrd[iRowCan];
-    MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
-    AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
-  }
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: SHVcan|=" << time << "\n";
-#endif
-  MyMatrix<Tint> BasisCan_Tint_pre =
-      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
-  MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ReductionMatrix|=" << time << "\n";
-#endif
-  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-  check_determinant_one(BasisCan_T);
-  MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: Matrix products|=" << time << "\n";
-#endif
-  return {BasisCan_Tint, SHVcan_Tint, RetMat};
+  return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
 }
 
 //
