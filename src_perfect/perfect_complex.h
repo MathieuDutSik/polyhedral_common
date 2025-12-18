@@ -57,6 +57,8 @@
   + When we switch from one representation to the
     other, we need to know one triple.
     So, we need to have at least one triple.
+  + Since we are interested in boundaries, we have to keep
+    track of that in the computation.
 
  */
 
@@ -106,9 +108,10 @@ struct PerfectComplexTopDimInfo {
 };
 
 
+template<typename Tint, typename Tgroup>
+std::vector<PerfectAdjInfo<Tint>> generate_perfect_adj_info(Face const& f, std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> const& l_gens, int const& i_adj) {
 
-
-
+}
 
 template<typename T, typename Tint, typename Tgroup>
 PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded) {
@@ -116,7 +119,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
   for (auto & ePerf: l_tot) {
     std::vector<PerfectAdjInfo<Tint>> list_adj_info;
     for (auto & eAdj: ePerf.ListAdj) {
-      
+
     }
     PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
     l_perfect.emplace_back(std::move(perfect));

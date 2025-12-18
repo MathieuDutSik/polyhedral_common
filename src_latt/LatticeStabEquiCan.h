@@ -31,6 +31,22 @@ template <typename T, typename Tint> struct Canonic_PosDef {
   MyMatrix<T> Mat;
 };
 
+//
+// The canonic form
+//
+
+template<typename T>
+void check_determinant_one([[maybe_unused]] MyMatrix<T> const& M) {
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  T eDet = DeterminantMat(M);
+  T eDet_abs = T_abs(eDet);
+  if (eDet_abs != 1) {
+    std::cerr << "LSEC: The matrix should be of determinant 1\n";
+    throw TerminalException{1};
+  }
+#endif
+}
+
 template <typename T, typename Tint>
 Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
                                                    MyMatrix<Tint> const &SHV,
@@ -120,23 +136,10 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(MyMatrix<T> const &inpMat,
   os << "|LSEC: ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  T eDet = DeterminantMat(BasisCan_T);
-  T eDet_abs = T_abs(eDet);
-  if (eDet_abs != 1) {
-    std::cerr << "LSEC: The matrix should be of determinant 1\n";
-    throw TerminalException{1};
-  }
-#endif
+  check_determinant_one(BasisCan_T);
   MyMatrix<T> RetMat = BasisCan_T * inpMat * BasisCan_T.transpose();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: Matrix products|=" << time << "\n";
-#endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  WeightMatrix<true, T, Tidx_value> WMat_B =
-      T_TranslateToMatrix_QM_SHV<T, Tint, Tidx_value>(
-          RetMat, TransposedMat(SHVcan_Tint), os);
-  WMat_B.ReorderingSetWeight();
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
@@ -230,20 +233,17 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   os << "|LSEC: ReductionMatrix|=" << time << "\n";
 #endif
   MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  T eDet = DeterminantMat(BasisCan_T);
-  T eDet_abs = T_abs(eDet);
-  if (eDet_abs != 1) {
-    std::cerr << "LSEC: The matrix should be of determinant 1\n";
-    throw TerminalException{1};
-  }
-#endif
+  check_determinant_one(BasisCan_T);
   MyMatrix<T> RetMat = BasisCan_T * inpMat * TransposedMat(BasisCan_T);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: Matrix products|=" << time << "\n";
 #endif
   return {BasisCan_Tint, SHVcan_Tint, RetMat};
 }
+
+//
+// Automorphism code
+//
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
@@ -310,6 +310,10 @@ ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat{inpMat};
   return ArithmeticAutomorphismGroupMultiple<T, Tint, Tgroup>(ListMat, os);
 }
+
+//
+// Equivalence code
+//
 
 template <typename T, typename Tint>
 std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
