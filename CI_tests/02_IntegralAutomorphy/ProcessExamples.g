@@ -41,13 +41,16 @@ GeneratorsPreservePolytope:=function(TheGRP,EXT)
         ImageIndices:=List(BasisIndices, i -> i^g);
         ImageEXT := List(ImageIndices, i -> EXT[i]);
         Mb:=TransposedMat(BasisEXT);
+        if DeterminantMat(Mb) = 0 then
+            return false;
+        fi;
         Mi:=TransposedMat(ImageEXT);
         A:=Mi*Inverse(Mb);
-        if ForAll(Flat(A), x -> x=Int(x))=false then
+        if not ForAll(Flat(A), IsInt) then
             return false;
         fi;
         for i in Difference([1..Length(EXT)], BasisIndices) do
-            if not A*EXT[i] in EXT then
+            if not A*EXT[i] = EXT[i^g] then
                 return false;
             fi;
         od;
