@@ -311,15 +311,13 @@ ResultReduction<T, Tint> get_individual_reduction(MyMatrix<T> const &M,
     };
     std::pair<int, MyMatrix<T>> pair = get_posdef();
     MyMatrix<T> const &Mpos = pair.second;
-    Canonic_PosDef<T, Tint> cpd = ComputeCanonicalForm<T, Tint>(Mpos, os);
-    MyMatrix<Tint> const &B = cpd.Basis;
-    MyMatrix<T> Mred = T(pair.first) * cpd.Mat;
+    MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(Mpos, os);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+    MyMatrix<T> Mred = T(pair.first) * (B_T * Mpos * B_T.transpose());
 #ifdef DEBUG_INDEX_APPROX_CANONICAL
-    MyMatrix<T> B_T = UniversalMatrixConversion<T, Tint>(B);
     MyMatrix<T> prod = B_T * M * B_T.transpose();
     if (prod != Mred) {
-      std::cerr << "IAC: The reduction did not work out correctly for "
-                   "Canonic_PosDef\n";
+      std::cerr << "IAC: The reduction did not work out correctly\n";
       throw TerminalException{1};
     }
 #endif

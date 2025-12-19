@@ -8,30 +8,29 @@ template <typename T, typename Tint>
 void ComputeCanonical(std::string const &FileI, std::string const &OutFormat,
                       std::ostream &os) {
   MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
-  Canonic_PosDef<T, Tint> RetF = ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+  MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(eMat, std::cerr);
+  MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+  MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
   if (OutFormat == "CPP") {
-    WriteMatrix(os, RetF.Mat);
+    WriteMatrix(os, eMat_red);
     return;
   }
   if (OutFormat == "PYTHON") {
-    os << "{\"Basis\":" << StringMatrixPYTHON(RetF.Basis)
-       << ", \"SHV\":" << StringMatrixPYTHON(TransposedMat(RetF.SHV))
-       << ", \"eG\":" << StringMatrixPYTHON(RetF.Mat) << "}\n";
+    os << "{\"Basis\":" << StringMatrixPYTHON(B)
+       << ", \"eG\":" << StringMatrixPYTHON(eMat_red) << "}\n";
     return;
   }
   if (OutFormat == "GAP") {
     os << "return ";
-    WriteMatrixGAP(os, RetF.Mat);
+    WriteMatrixGAP(os, eMat_red);
     os << ";\n";
     return;
   }
   if (OutFormat == "GAP_full") {
     os << "return rec(Basis:=";
-    WriteMatrixGAP(os, RetF.Basis);
-    os << ", SHV:=";
-    WriteMatrixGAP(os, TransposedMat(RetF.SHV));
+    WriteMatrixGAP(os, B);
     os << ", eG:=";
-    WriteMatrixGAP(os, RetF.Mat);
+    WriteMatrixGAP(os, eMat_red);
     os << ");\n";
     return;
   }

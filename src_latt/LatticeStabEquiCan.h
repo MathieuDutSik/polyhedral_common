@@ -35,22 +35,10 @@ template <typename T, typename Tint> struct Canonic_PosDef {
 // The canonic form
 //
 
-template<typename T>
-void check_determinant_one([[maybe_unused]] MyMatrix<T> const& M) {
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  T eDet = DeterminantMat(M);
-  T eDet_abs = T_abs(eDet);
-  if (eDet_abs != 1) {
-    std::cerr << "LSEC: The matrix should be of determinant 1\n";
-    throw TerminalException{1};
-  }
-#endif
-}
-
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMat,
-                                                   MyMatrix<Tint> const &SHV,
-                                                   std::ostream &os) {
+MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
+                                      MyMatrix<Tint> const &SHV,
+                                      std::ostream &os) {
   using Tgr = GraphListAdj;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: Begining of ComputeCanonicalForm\n";
@@ -58,7 +46,6 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
-  MyMatrix<T> const& inpMat = ListMat[0];
   int nbRow = SHV.rows();
   int n = SHV.cols();
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
@@ -79,10 +66,6 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: WMat|=" << time << "\n";
 #endif
-#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  os << "LSEC: Original WMat=\n";
-  PrintWeightedMatrix(os, WMat);
-#endif
   WMat.ReorderingSetWeight();
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ReorderingSetWeight|=" << time << "\n";
@@ -98,33 +81,45 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> cons
   //
   // Building the canonical basis
   //
-  MyMatrix<Tint> SHVcan_Tint(n, nbRow);
+  MyMatrix<Tint> SHVcan(n, nbRow);
   for (int iRowCan = 0; iRowCan < nbRow; iRowCan++) {
     int iRowNative = CanonicOrd[iRowCan];
     MyVector<Tint> eRow_Tint = GetMatrixRow(SHV, iRowNative);
-    AssignMatrixCol(SHVcan_Tint, iRowCan, eRow_Tint);
+    AssignMatrixCol(SHVcan, iRowCan, eRow_Tint);
   }
+  return SHVcan;
+}
+
+template<typename Tint>
+MyMatrix<Tint> get_canonicallization_matrix(MyMatrix<Tint> const& SHVreordered, [[maybe_unused]] std::ostream &os) {
+  MyMatrix<Tint> BasisCan_pre =
+      ComputeRowHermiteNormalForm(SHVreordered).first;
+  MyMatrix<Tint> BasisCan = TransposedMat(Inverse(BasisCan_pre));
+  return BasisCan;
+}
+
+
+
+template <typename T, typename Tint>
+MyMatrix<Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMat,
+                                          MyMatrix<Tint> const &SHV,
+                                          std::ostream &os) {
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: SHVcan|=" << time << "\n";
+  MicrosecondTime time;
 #endif
-  MyMatrix<Tint> BasisCan_Tint_pre =
-      ComputeRowHermiteNormalForm(SHVcan_Tint).first;
-  MyMatrix<Tint> BasisCan_Tint = TransposedMat(Inverse(BasisCan_Tint_pre));
+  MyMatrix<Tint> SHVreordered = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ReductionMatrix|=" << time << "\n";
+  os << "|LSEC: SHVreordered|=" << time << "\n";
 #endif
-  MyMatrix<T> BasisCan_T = UniversalMatrixConversion<T, Tint>(BasisCan_Tint);
-  check_determinant_one(BasisCan_T);
-  MyMatrix<T> RetMat = BasisCan_T * inpMat * BasisCan_T.transpose();
+  MyMatrix<Tint> BasisCan = get_canonicallization_matrix(SHVreordered, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: Matrix products|=" << time << "\n";
+  os << "|LSEC: BasisCan|=" << time << "\n";
 #endif
-  return {BasisCan_Tint, SHVcan_Tint, RetMat};
+  return BasisCan;
 }
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
-                                             std::ostream &os) {
+MyMatrix<Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat, std::ostream &os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -140,9 +135,8 @@ Canonic_PosDef<T, Tint> ComputeCanonicalForm(MyMatrix<T> const &inpMat,
 }
 
 template <typename T, typename Tint>
-Canonic_PosDef<T, Tint>
-ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
-                             std::ostream &os) {
+MyMatrix<Tint> ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
+                                            std::ostream &os) {
   //
   // Computing the Z-basis on which the computation relies.
   //
@@ -158,6 +152,26 @@ ComputeCanonicalFormMultiple(std::vector<MyMatrix<T>> const &ListMat,
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
   return ComputeCanonicalForm_inner<T, Tint>(ListMat, SHV, os);
+}
+
+template <typename T, typename Tint>
+MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream &os) {
+  int n_tot = inpMat.rows();
+  if (n_tot % 2 == 1) {
+    std::cerr << "LSEC: The dimension is odd\n";
+    throw TerminalException{1};
+  }
+  int n = n_tot / 2;
+  MyMatrix<T> SympFormMat = ZeroMatrix<T>(2 * n, 2 * n);
+  for (int i = 0; i < n; i++) {
+    SympFormMat(i, n + i) = 1;
+    SympFormMat(n + i, i) = -1;
+  }
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
+  std::vector<MyMatrix<T>> ListMat{inpMat, SympFormMat};
+  MyMatrix<Tint> SHVreordered = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
+  MyMatrix<Tint> BasisSymp = SYMPL_ComputeSymplecticBasis(SHVreordered);
+  return BasisSymp;
 }
 
 //
@@ -347,28 +361,6 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1,
   std::vector<MyMatrix<T>> ListMat1{inpMat1};
   std::vector<MyMatrix<T>> ListMat2{inpMat2};
   return ArithmeticEquivalenceMultiple<T, Tint>(ListMat1, ListMat2, os);
-}
-
-template <typename T, typename Tint>
-Canonic_PosDef<T, Tint>
-ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::ostream &os) {
-  int n_tot = inpMat.rows();
-  if (n_tot % 2 == 1) {
-    std::cerr << "LSEC: The dimension is odd\n";
-    throw TerminalException{1};
-  }
-  int n = n_tot / 2;
-  MyMatrix<Tint> SympFormMat = ZeroMatrix<Tint>(2 * n, 2 * n);
-  for (int i = 0; i < n; i++) {
-    SympFormMat(i, n + i) = 1;
-    SympFormMat(n + i, i) = -1;
-  }
-  Canonic_PosDef<T, Tint> CanPosDef =
-      ComputeCanonicalFormMultiple<T, Tint>({inpMat, SympFormMat}, os);
-  MyMatrix<Tint> BasisSymp_Tint = SYMPL_ComputeSymplecticBasis(CanPosDef.SHV);
-  MyMatrix<T> BasisSymp_T = UniversalMatrixConversion<T, Tint>(BasisSymp_Tint);
-  MyMatrix<T> RetMat = BasisSymp_T * inpMat * TransposedMat(BasisSymp_T);
-  return {BasisSymp_Tint, CanPosDef.SHV, RetMat};
 }
 
 // clang-format off

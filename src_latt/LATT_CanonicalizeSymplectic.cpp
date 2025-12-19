@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "OutFile: The filename of the data in output\n";
       return -1;
     }
-    using T = mpz_class;
+    using T = mpq_class;
     //    using T=long;
     // using T=mpq_class;
 
@@ -31,21 +31,20 @@ int main(int argc, char *argv[]) {
     //
     std::ifstream is(argv[2]);
     MyMatrix<T> eMat = ReadMatrix<T>(is);
-    Canonic_PosDef<T, Tint> RetF =
-        ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
+    MyMatrix<Tint> B = ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+    MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
     //
     if (opt == 1) {
       std::ofstream os(argv[3]);
-      WriteMatrix(os, RetF.Mat);
+      WriteMatrix(os, eMat_red);
     }
     if (opt == 2) {
       std::ofstream os(argv[3]);
       os << "return rec(Basis:=";
-      WriteMatrixGAP(os, RetF.Basis);
-      os << ", SHV:=";
-      WriteMatrixGAP(os, TransposedMat(RetF.SHV));
+      WriteMatrixGAP(os, B);
       os << ", eG:=";
-      WriteMatrixGAP(os, RetF.Mat);
+      WriteMatrixGAP(os, eMat_red);
       os << ");\n";
     }
     std::cerr << "Normal termination of LATT_canonicalizeSymplectic\n";

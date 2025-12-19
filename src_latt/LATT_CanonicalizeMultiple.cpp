@@ -37,21 +37,20 @@ int main(int argc, char *argv[]) {
       MyMatrix<T> eMat = ReadMatrix<T>(is);
       ListMatrix.push_back(eMat);
     }
-    Canonic_PosDef<T, Tint> RetF =
-        ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
+    MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+    MyMatrix<T> Mat_red = B_T * ListMatrix[0] * B_T.transpose();
     //
     if (opt == 1) {
       std::ofstream os(argv[3]);
-      WriteMatrix(os, RetF.Mat);
+      WriteMatrix(os, Mat_red);
     }
     if (opt == 2) {
       std::ofstream os(argv[3]);
       os << "return rec(Basis:=";
-      WriteMatrixGAP(os, RetF.Basis);
-      os << ", SHV:=";
-      WriteMatrixGAP(os, TransposedMat(RetF.SHV));
+      WriteMatrixGAP(os, B);
       os << ", eG:=";
-      WriteMatrixGAP(os, RetF.Mat);
+      WriteMatrixGAP(os, Mat_red);
       os << ");\n";
     }
     std::cerr << "Normal termination of LATT_canonicalizeMultiple\n";

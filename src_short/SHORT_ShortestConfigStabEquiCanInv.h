@@ -58,9 +58,9 @@ std::vector<MyMatrix<Tint>> SHORT_GetStabilizer(MyMatrix<Tint> const &M,
 template <typename T, typename Tint>
 MyMatrix<Tint> SHORT_Canonicalize(MyMatrix<Tint> const &M, std::ostream &os) {
   ShortIso<T, Tint> eRec1 = SHORT_GetInformation<T, Tint>(M, os);
-  Canonic_PosDef<T, Tint> eRec2 =
-      ComputeCanonicalForm_inner<T, Tint>(eRec1.GramMat, eRec1.SHVdisc, os);
-  MyMatrix<Tint> BasisInv = Inverse(eRec2.Basis);
+  std::vector<MyMatrix<T>> ListMat{eRec1.GramMat};
+  MyMatrix<Tint> Basis = ComputeCanonicalForm_inner<T, Tint>(ListMat, eRec1.SHVdisc, os);
+  MyMatrix<Tint> BasisInv = Inverse(Basis);
   MyMatrix<Tint> M_can = M * BasisInv;
   return M_can;
 }
