@@ -91,10 +91,18 @@ MyMatrix<Tint> CanonicallyReorder_SHV(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template<typename Tint>
-MyMatrix<Tint> get_canonicallization_matrix(MyMatrix<Tint> const& SHVreordered, [[maybe_unused]] std::ostream &os) {
-  MyMatrix<Tint> BasisCan_pre =
-      ComputeRowHermiteNormalForm(SHVreordered).first;
+MyMatrix<Tint> get_canonicallization_matrix(MyMatrix<Tint> const& SHVcan, [[maybe_unused]] std::ostream &os) {
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  MicrosecondTime time;
+#endif
+  MyMatrix<Tint> BasisCan_pre = ComputeRowHermiteNormalForm_first(SHVcan);
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: get_canonicallization_matrix, BasisCan_pre|=" << time << "\n";
+#endif
   MyMatrix<Tint> BasisCan = TransposedMat(Inverse(BasisCan_pre));
+#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
+  os << "|LSEC: get_canonicallization_matrix, BasisCan|=" << time << "\n";
+#endif
   return BasisCan;
 }
 

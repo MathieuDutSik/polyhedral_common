@@ -15,12 +15,8 @@ int main(int argc, char *argv[]) {
       throw TerminalException{1};
     }
     //
-    using Tmat = mpq_class;
+    using T = mpq_class;
     using Tint = mpz_class;
-    //    using Tmat = mpq_class;
-    //    using Tint = long;
-    // using Tmat = mpq_class;
-    //    using Tint = int64_t;
     //
     std::string FileIn = argv[1];
     std::string FileOut = argv[2];
@@ -32,24 +28,24 @@ int main(int argc, char *argv[]) {
     os << nbPerfect << "\n";
     std::cerr << "nbPerfect=" << nbPerfect << "\n";
     for (int iPerfect = 0; iPerfect < nbPerfect; iPerfect++) {
-      MyMatrix<Tmat> ePerfect_Tmat = ReadMatrix<Tmat>(is);
+      MyMatrix<T> ePerfect_T = ReadMatrix<T>(is);
       //
       int eStatus = 0;
       //
-      Tshortest<Tmat, Tint> eRec =
-          T_ShortestVector<Tmat, Tint>(ePerfect_Tmat, std::cerr);
+      Tshortest<T, Tint> eRec =
+          T_ShortestVector<T, Tint>(ePerfect_T, std::cerr);
       int incd = (eRec.SHV.rows()) / 2;
       //
       HumanTime time;
-      MyMatrix<Tmat> eMatCan_Tmat =
-          ComputeCanonicalForm<Tmat, Tint>(ePerfect_Tmat, std::cerr).Mat;
+      MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(ePerfect_T, std::cerr);
+      MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+      MyMatrix<T> ePerfectCan_T = B_T * ePerfect_T * B_T.transpose();
       std::cerr << "iPerfect=" << iPerfect << " / " << nbPerfect
                 << " elapsed_seconds=" << time << "\n";
-
       //
       os << eStatus << "\n";
       os << incd << "\n";
-      WriteMatrix(os, eMatCan_Tmat);
+      WriteMatrix(os, ePerfectCan_T);
     }
   } catch (TerminalException const &e) {
     exit(e.eVal);

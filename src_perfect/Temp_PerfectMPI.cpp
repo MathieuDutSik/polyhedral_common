@@ -60,7 +60,9 @@ GetAdjacentObjects(TypePerfectExch<Tint> const &eObjIn, std::ostream& os) {
       Flipping_Perfect<T, Tint>(eMat_T, eMatDir, os);
     int incd = ePairAdj.second.SHV.rows() / 2;
     //
-    MyMatrix<T> eMat2 = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr).Mat;
+    MyMatrix<Tint> B = ComputeCanonicalForm<T, Tint>(ePairAdj.first, std::cerr);
+    MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
+    MyMatrix<T> eMat2 = B_T * ePairAdj.first * B_T.transpose();
     MyMatrix<T> eMat3 = RemoveFractionMatrix(eMat2);
     MyMatrix<Tint> eMat4 = UniversalMatrixConversion<Tint, T>(eMat3);
     TypePerfectExch<Tint> RecMat{incd, eMat4};
