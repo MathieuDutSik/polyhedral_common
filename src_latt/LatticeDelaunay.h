@@ -100,7 +100,7 @@ Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const &GramMat,
   Tgroup PreGRPisom =
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
   Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
-  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer(EXT_T, GRPisom, os);
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
   os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
 #endif
@@ -253,7 +253,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   Tgroup GRP1 =
       GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
   std::optional<MyMatrix<T>> eEq =
-      LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, eElt, os);
+      LinPolytopeIntegral_Isomorphism(EXT1_T, EXT2_T, GRP1, eElt, os);
   if (!eEq) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 3 with false\n";

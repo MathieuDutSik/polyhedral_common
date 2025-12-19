@@ -1197,7 +1197,7 @@ LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
   Tgroup GRPisom =
       LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
   Tgroup GRPperm =
-      LinPolytopeIntegral_Stabilizer_Method8(eFamEXT_T, GRPisom, os);
+      LinPolytopeIntegral_Stabilizer(eFamEXT_T, GRPisom, os);
   std::vector<MyMatrix<Tint>> ListGen;
   for (auto &eGen : GRPperm.SmallGeneratingSet()) {
     MyMatrix<Tint> eGenMatr =

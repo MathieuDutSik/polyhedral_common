@@ -94,7 +94,7 @@ stab_info<Tgroup, Tint> f_stab(const Tent<T, Tint, Tidx_value> &eEnt,
           eEnt.WMat, os);
   MyMatrix<T> Concat_T =
       UniversalMatrixConversion<T, Tint>(Concatenate(eEnt.M, eEnt.Spann));
-  Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(Concat_T, GRP1, os);
+  Tgroup GRPfull = LinPolytopeIntegral_Stabilizer(Concat_T, GRP1, os);
   Face subset = f_subset(Concat_T.rows(), eEnt.M.rows());
   std::vector<Telt> LGenRed;
   std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> ListGenMat;
@@ -146,7 +146,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
   Tgroup GRP1 =
       GetStabilizerWeightMatrix<std::vector<Tint>, Tgr, Tgroup, Tidx_value>(
           eEnt.WMat, os);
-  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(
+  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism(
       eConcat_T, fConcat_T, GRP1, ePerm, os);
   if (eRes)
     return UniversalMatrixConversion<Tint, T>(*eRes);

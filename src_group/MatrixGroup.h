@@ -3151,7 +3151,7 @@ MatrixIntegral_DoubleCosets_General(int const &n,
 }
 
 template <typename T, typename Tgroup>
-Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
+Tgroup LinPolytopeIntegral_Stabilizer(MyMatrix<T> const &EXT_T,
                                               Tgroup const &GRPisom,
                                               std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -3178,7 +3178,7 @@ Tgroup LinPolytopeIntegral_Stabilizer_Method8(MyMatrix<T> const &EXT_T,
 
 template <typename T, typename Tgroup>
 std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
-LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
+LinPolytopeIntegral_Stabilizer_RightCoset(MyMatrix<T> const &EXT_T,
                                                   Tgroup const &GRPisom,
                                                   std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -3212,7 +3212,7 @@ LinPolytopeIntegral_Stabilizer_RightCoset_Method8(MyMatrix<T> const &EXT_T,
 
 template <typename T, typename Tgroup>
 std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
-LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(MyMatrix<T> const &EXT_T,
+LinPolytopeIntegral_Stabilizer_DoubleCoset(MyMatrix<T> const &EXT_T,
                                                    Tgroup const &GRPfull,
                                                    Tgroup const &GrpV,
                                                    std::ostream &os) {
@@ -3257,7 +3257,7 @@ template <typename Telt> struct PairCosetStabGens {
 
 template <typename T, typename Tgroup>
 std::pair<Tgroup, std::vector<PairCosetStabGens<typename Tgroup::Telt>>>
-LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(
+LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer(
     MyMatrix<T> const &EXT_T, Tgroup const &GRPfull, Tgroup const &GrpV,
     std::ostream &os) {
   using Telt = typename Tgroup::Telt;
@@ -3394,7 +3394,7 @@ std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Subspaces(
 // We are searching for a transformation h in GRP1 such that
 // h * ePerm is an integral transformation.
 template <typename T, typename Tgroup>
-std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism_Method8(
+std::optional<MyMatrix<T>> LinPolytopeIntegral_Isomorphism(
     MyMatrix<T> const &EXT1_T, MyMatrix<T> const &EXT2_T, Tgroup const &GRP1,
     typename Tgroup::Telt const &ePerm, std::ostream &os) {
   using Telt = typename Tgroup::Telt;

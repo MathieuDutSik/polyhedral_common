@@ -80,7 +80,7 @@ LinPolytopeIntegral_Isomorphism(const MyMatrix<Tint> &EXT1,
   MyMatrix<Tfield> EXT2_T = UniversalMatrixConversion<Tfield, Tint>(EXT2);
   Tgroup GRP1 = LinPolytope_Automorphism<Tfield, Tgroup>(EXT1_T, os);
   std::optional<MyMatrix<Tfield>> eRes =
-      LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, ePerm, os);
+      LinPolytopeIntegral_Isomorphism(EXT1_T, EXT2_T, GRP1, ePerm, os);
   if (eRes)
     return UniversalMatrixConversion<Tint, Tfield>(*eRes);
   return {};
@@ -128,7 +128,7 @@ std::optional<MyMatrix<Tint>> LinPolytopeIntegral_Isomorphism_GramMat(
 
   Tgroup GRP1 = LinPolytope_Automorphism<T, Tgroup>(EXT1_T, os);
   std::optional<MyMatrix<T>> eRes =
-      LinPolytopeIntegral_Isomorphism_Method8(EXT1_T, EXT2_T, GRP1, ePerm, os);
+      LinPolytopeIntegral_Isomorphism(EXT1_T, EXT2_T, GRP1, ePerm, os);
   if (eRes)
     return UniversalMatrixConversion<Tint, T>(*eRes);
   return {};
@@ -140,7 +140,7 @@ Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT,
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  Tgroup GRP = LinPolytopeIntegral_Stabilizer_Method8(EXT_T, GRPisom, os);
+  Tgroup GRP = LinPolytopeIntegral_Stabilizer(EXT_T, GRPisom, os);
   return GRP;
 }
 
@@ -151,7 +151,7 @@ LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT,
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_RightCoset_Method8(EXT_T, GRPisom, os);
+  return LinPolytopeIntegral_Stabilizer_RightCoset(EXT_T, GRPisom, os);
 }
 
 template <typename Tint, typename Tgroup>
@@ -162,7 +162,7 @@ LinPolytopeIntegral_Automorphism_DoubleCoset(const MyMatrix<Tint> &EXT,
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_DoubleCoset_Method8(EXT_T, GRPisom,
+  return LinPolytopeIntegral_Stabilizer_DoubleCoset(EXT_T, GRPisom,
                                                             GrpV, os);
 }
 
@@ -173,7 +173,7 @@ LinPolytopeIntegral_Automorphism_DoubleCosetStabilizer(
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer_Method8(
+  return LinPolytopeIntegral_Stabilizer_DoubleCosetStabilizer(
       EXT_T, GRPisom, GrpV, os);
 }
 
@@ -497,7 +497,7 @@ std::vector<MyMatrix<T>> LinPolytopeIntegralWMat_Automorphism(
   bool test = CheckStabilizerWeightMatrix(ep.second, GRP1);
   os << "PES: test=" << test << "\n";
 #endif
-  Tgroup GRPfull = LinPolytopeIntegral_Stabilizer_Method8(ep.first, GRP1, os);
+  Tgroup GRPfull = LinPolytopeIntegral_Stabilizer(ep.first, GRP1, os);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT
   os << "PES: We have GRPfull\n";
 #endif
@@ -585,10 +585,10 @@ std::optional<MyMatrix<T>> LinPolytopeIntegralWMat_Isomorphism(
        << " eGen_T=" << StringMatrixGAP(eGen_T) << "\n";
   }
 #endif
-  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism_Method8(
+  std::optional<MyMatrix<T>> eRes = LinPolytopeIntegral_Isomorphism(
       ep.first, fp.first, GRP1, ePerm, os);
 #ifdef TIMINGS
-  os << "|PES: LinPolytopeIntegral_Isomorphism_Method8|=" << time << "\n";
+  os << "|PES: LinPolytopeIntegral_Isomorphism|=" << time << "\n";
 #endif
   if (eRes) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB_INT

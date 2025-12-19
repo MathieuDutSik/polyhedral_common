@@ -115,11 +115,11 @@ MyMatrix<Tint> ComputeCanonicalForm_inner(std::vector<MyMatrix<T>> const &ListMa
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
 #endif
-  MyMatrix<Tint> SHVreordered = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
+  MyMatrix<Tint> SHVcan = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: SHVreordered|=" << time << "\n";
+  os << "|LSEC: SHVcan|=" << time << "\n";
 #endif
-  MyMatrix<Tint> BasisCan = get_canonicallization_matrix(SHVreordered, os);
+  MyMatrix<Tint> BasisCan = get_canonicallization_matrix(SHVcan, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: BasisCan|=" << time << "\n";
 #endif
@@ -177,8 +177,8 @@ MyMatrix<Tint> ComputeCanonicalFormSymplectic(MyMatrix<T> const &inpMat, std::os
   }
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(inpMat, os);
   std::vector<MyMatrix<T>> ListMat{inpMat, SympFormMat};
-  MyMatrix<Tint> SHVreordered = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
-  MyMatrix<Tint> BasisSymp = SYMPL_ComputeSymplecticBasis(SHVreordered);
+  MyMatrix<Tint> SHVvan = CanonicallyReorder_SHV<T,Tint>(ListMat, SHV, os);
+  MyMatrix<Tint> BasisSymp = SYMPL_ComputeSymplecticBasis(SHVvan);
   return BasisSymp;
 }
 
