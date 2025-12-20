@@ -107,18 +107,21 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   }
   std::vector<MyVector<Tint>> ListVectTot = VectorAsSet(ListVectTotUnred);
   MyMatrix<T> MatrixValues(nbVect, nbMat);
-  for (int iVect = 0; iVect < nbVect; iVect++)
+  for (int iVect = 0; iVect < nbVect; iVect++) {
     for (int iMat = 0; iMat < nbMat; iMat++) {
       MyVector<Tint> eVect = ListVect[iVect];
       MyMatrix<T> eMat = ListMat[iMat];
       T eVal = EvaluationQuadForm(eMat, eVect);
       MatrixValues(iVect, iMat) = eVal;
     }
+  }
   MyMatrix<T> MatrixValuesDiff(nbVect - 1, nbMat);
-  for (int iVect = 0; iVect < nbVect - 1; iVect++)
-    for (int iMat = 0; iMat < nbMat; iMat++)
+  for (int iVect = 0; iVect < nbVect - 1; iVect++) {
+    for (int iMat = 0; iMat < nbMat; iMat++) {
       MatrixValuesDiff(iVect, iMat) =
           MatrixValues(iVect + 1, iMat) - MatrixValues(0, iMat);
+    }
+  }
   MyMatrix<T> NSP = NullspaceTrMat(MatrixValuesDiff);
   int dimSpa = NSP.rows();
   std::vector<MyMatrix<T>> TheBasis(dimSpa);
@@ -135,7 +138,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   ListForbiddenVector.insert(ZeroVector<Tint>(n));
   std::unordered_set<MyVector<Tint>> TheFamilyVect;
   for (auto &eVect : ListVect) {
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       for (int j = 0; j < 2; j++) {
         int shift = -1 + 2 * j;
         MyVector<Tint> rVect = eVect;
@@ -144,6 +147,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         if (iter == ListForbiddenVector.end())
           TheFamilyVect.insert(rVect);
       }
+    }
   }
 #ifdef DEBUG_SHORTEST_CONFIG
   os << "|TheFamilyVect|=" << TheFamilyVect.size() << "\n";
@@ -535,13 +539,14 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
 
 template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
   std::vector<MyMatrix<T>> ListMat;
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     for (int j = 0; j <= i; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(n, n);
       eMat(i, j) = 1;
       eMat(j, i) = 1;
       ListMat.push_back(eMat);
     }
+  }
   return ListMat;
 }
 
@@ -556,8 +561,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
   std::vector<MyMatrix<T>> StdBasis = StandardSymmetricBasis<T>(n);
   std::vector<MyMatrix<T>> ListGen_T;
-  for (auto &eGen : ListMatrGen)
+  for (auto &eGen : ListMatrGen) {
     ListGen_T.push_back(UniversalMatrixConversion<T, Tint>(eGen));
+  }
 #ifdef DEBUG_SHORTEST_CONFIG
   os << "Before BasisInvariantForm\n";
 #endif
@@ -584,8 +590,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   }
   int InitialSize = ListVectWork.size();
   MyMatrix<T> ListRankOne_mat = MatrixFromVectorFamily(ListRankOne);
-  auto IsNeededInsert =
-      [&StdBasis, &ListRankOne_mat](MyVector<Tint> const &eVect) -> bool {
+  auto IsNeededInsert = [&](MyVector<Tint> const &eVect) -> bool {
     MyVector<T> VectImg = SHORT_GetIneq_Tspace<T, Tint>(StdBasis, eVect);
     std::optional<MyVector<T>> opt = SolutionMat(ListRankOne_mat, VectImg);
     return opt.has_value();
@@ -674,8 +679,9 @@ Tint SHORT_GetMaximumDeterminant(MyMatrix<Tint> const &M) {
       eRet = eDetA;
       IsFirst = false;
     } else {
-      if (eDetA > eRet)
+      if (eDetA > eRet) {
         eRet = eDetA;
+      }
     }
   }
   return eRet;
@@ -769,8 +775,9 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
     for (auto &P2 : ListSpann) {
       std::optional<MyMatrix<Tint>> eResEquiv =
           SHORT_TestEquivalence<T, Tint, Tgroup>(Mnew, P2, os);
-      if (eResEquiv)
+      if (eResEquiv) {
         return;
+      }
     }
     ReplyRealizability<T, Tint> eTestRes =
         SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew,
@@ -888,8 +895,7 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const &n,
     }
     return nCand;
   };
-  auto IsMinimal = [&d,
-                    &Canonicalization](std::vector<int> const &eCand) -> bool {
+  auto IsMinimal = [&](std::vector<int> const &eCand) -> bool {
     for (int mult = 2; mult <= d - 1; mult++) {
       std::vector<int> eProd;
       for (auto &x : eCand) {
@@ -980,8 +986,9 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
         MyVector<int> Vtest(n);
         for (int i = 0; i < n; i++) {
           T sum(0);
-          for (int j = 0; j < n; j++)
+          for (int j = 0; j < n; j++) {
             sum += eV(j) * eInv(j, i);
+          }
           sum *= ord;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (!IsInteger(sum)) {
@@ -993,8 +1000,9 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
           Vtest(i) = sum_i;
         }
         MyVector<int> VtestCan = CyclicCanonicalization_SymN_fact(Vtest, ord);
-        if (!IsCorrectClass(VtestCan))
+        if (!IsCorrectClass(VtestCan)) {
           return false;
+        }
       }
     }
   }

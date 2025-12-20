@@ -2,7 +2,7 @@ PROGRAM		= SHORT_EnumerateCyclicCases \
                   SHORT_GetShortestVector \
                   SHORT_CheckPrimeRealizability \
                   SHORT_TestRealizability \
-                  SHORT_ReduceVectorFamilyGAP \
+                  SHORT_ReduceVectorFamilyGAP SHORT_AutomorphismGroup \
                   SHORT_SplitVectorFamily
 
 OBJECTS		= $(PROGRAM:%=%.o)
