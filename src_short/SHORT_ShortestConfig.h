@@ -153,10 +153,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   //
   // Forming the vector family
   //
-  std::unordered_set<MyVector<Tint>> ListForbiddenVector;
-  for (auto &eVect : ListVectTot) {
-    ListForbiddenVector.insert(eVect);
-  }
+  std::unordered_set<MyVector<Tint>> ListForbiddenVector = SetVectTot;
   ListForbiddenVector.insert(ZeroVector<Tint>(n));
   std::unordered_set<MyVector<Tint>> TheFamilyVect;
   for (auto &eVect : ListVect) {
