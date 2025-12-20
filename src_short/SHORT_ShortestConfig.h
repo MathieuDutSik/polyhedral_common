@@ -412,16 +412,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #endif
           return eRes;
         } else {
-          std::vector<MyVector<Tint>> SHVdiff;
+          std::vector<MyVector<Tint>> DiffNew;
           for (auto &eVect : SetSHV) {
             int pos = PositionVect(ListVectTot, eVect);
-            if (pos == -1) {
-              SHVdiff.push_back(eVect);
-            }
-          }
-          std::vector<MyVector<Tint>> DiffNew;
-          for (auto &eVect : SHVdiff) {
-            if (TheFamilyVect.count(eVect) == 0) {
+            if (pos == -1 && TheFamilyVect.count(eVect) == 0) {
               DiffNew.push_back(eVect);
             }
           }
