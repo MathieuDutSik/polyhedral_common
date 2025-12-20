@@ -92,6 +92,26 @@ MyVector<T> SHORT_GetIneq_Tspace(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 template <typename T, typename Tint>
+T get_single_norm(MyMatrix<T> const& eMat, std::vector<MyVector<Tint>> const& ListVect) {
+  bool IsFirst = true;
+  T singleNorm;
+  for (auto &eVect : ListVect) {
+    T eNorm = EvaluationQuadForm(eMat, eVect);
+    if (IsFirst) {
+      singleNorm = eNorm;
+      IsFirst = false;
+    } else {
+      if (eNorm != singleNorm) {
+        std::cerr << "SHORT: The norms are not consistent\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+  return singleNorm;
+}
+
+
+template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
@@ -161,8 +181,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     int idx = 0;
     for (auto &eVect : TheFamilyVect) {
       MyVector<T> vVect = SHORT_GetIneq_Tspace<T, Tint>(TheBasis, eVect);
-      for (int i = 0; i <= dimSpa; i++)
+      for (int i = 0; i <= dimSpa; i++) {
         RetMat(idx, i) = vVect(i);
+      }
       idx++;
     }
     return RetMat;
@@ -242,6 +263,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       throw TerminalException{1};
     };
     LpSolution<T> eSol = GetLpSolution(SetIneq, ToBeMinimized);
+#ifdef DEBUG_SHORTEST_CONFIG
+    os << "SHORT: DualDefined=" << eSol.DualDefined << " PrimalDefined=" << eSol.PrimalDefined << "\n";
+#endif
     if (!eSol.PrimalDefined && eSol.DualDefined) {
 #ifdef DEBUG_SHORTEST_CONFIG
       os << "SHORT: DualDefined but not primal defined\n";
@@ -315,6 +339,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       MyVector<T> eVectEmb = eSol.DirectSolution;
       MyVector<T> rVect = GetDirectSolutionExt(eSol);
       MyMatrix<T> eMatSec = GetMatrixFromBasis(TheBasis, eVectEmb);
+#ifdef DEBUG_SHORTEST_CONFIG
+      os << "SHORT: eMatSec=\n";
+      WriteMatrix(os, eMatSec);
+#endif
       //
       // Some checks
       //
@@ -338,22 +366,8 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         idx++;
       }
 #endif
-      bool IsFirst = true;
-      T singleNorm;
-      for (auto &eVect : ListVect) {
-        T eNorm = EvaluationQuadForm(eMatSec, eVect);
-        if (IsFirst) {
-          singleNorm = eNorm;
-          IsFirst = false;
-        } else {
-          if (eNorm != singleNorm) {
-            std::cerr << "SHORT: The norms are not consistent\n";
-            throw TerminalException{1};
-          }
-        }
-      }
-      T eOne(1);
-      T CritNorm = std::min(eOne, singleNorm);
+      T singleNorm = get_single_norm(eMatSec, ListVect);
+      T CritNorm = std::min(T(1), singleNorm);
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (CritNorm != eOptimal) {
         std::cerr << "SHORT: CritNorm=" << CritNorm << " eOptimal=" << eOptimal
@@ -454,8 +468,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         if (RankMat(eMatSec) < n) {
           MyVector<Tint> eVect3 =
               GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
-          if (PositionVect(ListVectTot, eVect3) != -1)
+          if (PositionVect(ListVectTot, eVect3) != -1) {
             eVect3 *= 2;
+          }
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (TheFamilyVect.count(eVect3) == 1) {
             std::cerr << "SHORT: eMatSec=\n";
@@ -588,8 +603,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   int nbVect = M.rows();
   std::vector<MyVector<T>> ListRankOne;
   std::vector<MyVector<Tint>> ListVectWork;
-  auto FuncInsertVector = [&StdBasis, &ListVectWork,
-                           &ListRankOne](MyVector<Tint> const &eRow) -> void {
+  auto FuncInsertVector = [&](MyVector<Tint> const &eRow) -> void {
     if (GetPositionAntipodal(ListVectWork, eRow) == -1) {
       ListVectWork.push_back(eRow);
       ListRankOne.push_back(SHORT_GetIneq_Tspace<T, Tint>(StdBasis, eRow));
