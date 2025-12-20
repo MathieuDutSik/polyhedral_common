@@ -132,20 +132,15 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   for (auto & eVect: SetVectTot) {
     ListVectTot.push_back(eVect);
   }
-  MyMatrix<T> MatrixValues(nbVect, nbMat);
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    for (int iMat = 0; iMat < nbMat; iMat++) {
-      MyVector<Tint> eVect = ListVect[iVect];
-      MyMatrix<T> eMat = ListMat[iMat];
-      T eVal = EvaluationQuadForm(eMat, eVect);
-      MatrixValues(iVect, iMat) = eVal;
-    }
-  }
   MyMatrix<T> MatrixValuesDiff(nbVect - 1, nbMat);
-  for (int iVect = 0; iVect < nbVect - 1; iVect++) {
-    for (int iMat = 0; iMat < nbMat; iMat++) {
-      MatrixValuesDiff(iVect, iMat) =
-          MatrixValues(iVect + 1, iMat) - MatrixValues(0, iMat);
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    MyMatrix<T> const& eMat = ListMat[iMat];
+    MyVector<Tint> const& V1 = ListVect[0];
+    T val1 = EvaluationQuadForm(eMat, V1);
+    for (int iVect = 0; iVect < nbVect - 1; iVect++) {
+      MyVector<Tint> const& V2 = ListVect[iVect+1];
+      T val2 = EvaluationQuadForm(eMat, V2);
+      MatrixValuesDiff(iVect, iMat) = val2 - val1;
     }
   }
   MyMatrix<T> NSP = NullspaceTrMat(MatrixValuesDiff);
