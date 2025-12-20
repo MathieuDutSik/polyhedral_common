@@ -28,10 +28,15 @@ end;
 
 
 generate_examples:=function()
-    local ListMat, eSHV, eMat, FileMat;
+    local ListMat, idx, eSHV, eMat, FileMat;
     ListMat:=[];
+    idx:=0;
     for eSHV in ListSHV
     do
+        idx:=idx+1;
+        Print("Before get_mat at idx=", idx, "\n");
+        Print("eSHV=\n");
+        PrintArray(eSHV);
         eMat:=get_mat(eSHV);
         if eMat=fail then
             Print("eSHV=\n");
@@ -43,6 +48,7 @@ generate_examples:=function()
     od;
     FileMat:="ListGram_n10_rnk10";
     SaveDataToFile(FileMat, ListMat);
+    return true;
 end;
 
 test:=generate_examples();
