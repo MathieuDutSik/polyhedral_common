@@ -53,8 +53,8 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
           iColFound = iCol;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
     if (iColFound == -1) {
-      std::cerr << "Bug in SHORT_CleanAntipodality\n";
-      std::cerr << "The vector is 0 which is not allowed\n";
+      std::cerr << "SHORT: Bug in SHORT_CleanAntipodality\n";
+      std::cerr << "SHORT: The vector is 0 which is not allowed\n";
       throw TerminalException{1};
     }
 #endif
@@ -100,6 +100,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   int n = ListVect[0].size();
   int nbVect = ListVect.size();
   int nbMat = ListMat.size();
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << "SHORT: SHORT_TestRealizabilityShortestFamilyEquivariant, n=" << n << " nbVect=" << nbVect << " nbMat=" << nbMat << "\n";
+#endif
   std::vector<MyVector<Tint>> ListVectTotUnred;
   for (auto &eVect : ListVect) {
     ListVectTotUnred.push_back(eVect);
@@ -143,14 +146,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         int shift = -1 + 2 * j;
         MyVector<Tint> rVect = eVect;
         rVect[i] += shift;
-        auto iter = ListForbiddenVector.find(rVect);
-        if (iter == ListForbiddenVector.end())
+        if (ListForbiddenVector.count(rVect) == 0) {
           TheFamilyVect.insert(rVect);
+        }
       }
     }
   }
 #ifdef DEBUG_SHORTEST_CONFIG
-  os << "|TheFamilyVect|=" << TheFamilyVect.size() << "\n";
+  os << "SHORT: |TheFamilyVect|=" << TheFamilyVect.size() << "\n";
 #endif
   auto GetListIneq = [&]() -> MyMatrix<T> {
     int siz = TheFamilyVect.size();
@@ -178,7 +181,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     eRes.reply = false;
     eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-    os << "RETURN case 1\n";
+    os << "SHORT: RETURN case 1\n";
 #endif
     return eRes;
   }
@@ -191,7 +194,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     if (nbIter > 2) {
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (eOptimalPrev > eOptimal) {
-        std::cerr << "Optimal values should be increasing\n";
+        std::cerr << "SHORT: Optimal values should be increasing\n";
         throw TerminalException{1};
       }
 #endif
@@ -199,14 +202,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     }
     nbIter++;
 #ifdef DEBUG_SHORTEST_CONFIG
-    os << "nbIter=" << nbIter << "\n";
+    os << "SHORT: nbIter=" << nbIter << "\n";
 #endif
     MyMatrix<T> ListIneq = GetListIneq();
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
     for (auto &eVect : ListVectTot) {
-      auto iter = TheFamilyVect.find(eVect);
-      if (iter != TheFamilyVect.end()) {
-        std::cerr << "We find one of ListVectTot in TheFamilyVect\n";
+      if (TheFamilyVect.count(eVect) == 1) {
+        std::cerr << "SHORT: We find one of ListVectTot in TheFamilyVect\n";
         throw TerminalException{1};
       }
     }
@@ -219,7 +221,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "RETURN case 2\n";
+        os << "SHORT: RETURN case 2\n";
 #endif
         return eRes;
       }
@@ -236,13 +238,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized, os);
       }
 #endif
-      std::cerr << "We have TheMethod = " << TheMethod << "\n";
+      std::cerr << "SHORT: We have TheMethod = " << TheMethod << "\n";
       throw TerminalException{1};
     };
     LpSolution<T> eSol = GetLpSolution(SetIneq, ToBeMinimized);
     if (!eSol.PrimalDefined && eSol.DualDefined) {
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "DualDefined but not primal defined\n";
+      os << "SHORT: DualDefined but not primal defined\n";
 #endif
       int nbIneqSet = SetIneq.size();
       MyVector<T> SumIneq = ZeroVector<T>(1 + nbIneqSet);
@@ -258,31 +260,31 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "RETURN case 3\n";
+        os << "SHORT: RETURN case 3\n";
 #endif
         return eRes;
       }
-      std::cerr << "It seems we have a big problem here. Please correct\n";
+      std::cerr << "SHORT: It seems we have a big problem here. Please correct\n";
       throw TerminalException{1};
     } else if (eSol.PrimalDefined && !eSol.DualDefined) {
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "PrimalDefined but not dual defined\n";
+      os << "SHORT: PrimalDefined but not dual defined\n";
 #endif
       // This is the primal_direction case
       MyVector<Tint> eVect = ListVect[0];
       MyVector<Tint> eVectB = 2 * eVect;
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "Inserting from PrimalDefined but not dual defined eVectB=";
+      os << "SHORT: Inserting from PrimalDefined but not dual defined eVectB=";
       WriteVectorNoDim(os, eVectB);
 #endif
       TheFamilyVect.insert(eVectB);
     } else {
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "We have optimal value\n";
+      os << "SHORT: We have optimal value\n";
 #endif
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (!eSol.PrimalDefined || !eSol.DualDefined) {
-        std::cerr << "We have a real problem to solve. Please debug\n";
+        std::cerr << "SHORT: We have a real problem to solve. Please debug\n";
         throw TerminalException{1};
       }
 #endif
@@ -290,14 +292,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eOptimalPrev = eOptimal;
       eOptimal = eSol.OptimalValue;
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";
+      os << "SHORT: eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";
 #endif
       if (eOptimal > 1) {
         eRes.eCase = 4;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "RETURN case 4\n";
+        os << "SHORT: RETURN case 4\n";
 #endif
         return eRes;
       }
@@ -306,7 +308,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "RETURN case 5\n";
+        os << "SHORT: RETURN case 5\n";
 #endif
         return eRes;
       }
@@ -324,12 +326,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           T eNorm = EvaluationQuadForm(eMatSec, eVect);
           if (eNorm < 1) {
             std::cerr
-                << "This should not happen if the matrix was well defined\n";
+                << "SHORT: This should not happen if the matrix was well defined\n";
             throw TerminalException{1};
           }
           T eScal1 = ScalarProduct(rVect, eRow) + 1;
           if (eScal1 != eNorm) {
-            std::cerr << "We should have eScal1 != eNorm\n";
+            std::cerr << "SHORT: We should have eScal1 != eNorm\n";
             throw TerminalException{1};
           }
         }
@@ -345,7 +347,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           IsFirst = false;
         } else {
           if (eNorm != singleNorm) {
-            std::cerr << "The norms are not consistent\n";
+            std::cerr << "SHORT: The norms are not consistent\n";
             throw TerminalException{1};
           }
         }
@@ -354,24 +356,24 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       T CritNorm = std::min(eOne, singleNorm);
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
       if (CritNorm != eOptimal) {
-        std::cerr << "CritNorm=" << CritNorm << " eOptimal=" << eOptimal
+        std::cerr << "SHORT: CritNorm=" << CritNorm << " eOptimal=" << eOptimal
                   << "\n";
-        std::cerr << "The value of eOptimal has not been well set\n";
+        std::cerr << "SHORT: The value of eOptimal has not been well set\n";
         throw TerminalException{1};
       }
 #endif
       bool testPosDef = IsPositiveDefinite(eMatSec, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-      os << "testPosDef=" << testPosDef << "\n";
+      os << "SHORT: testPosDef=" << testPosDef << "\n";
 #endif
       if (testPosDef) {
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "Before computation of T_ShortestVector\n";
+        os << "SHORT: Before computation of T_ShortestVector\n";
         WriteMatrix(os, eMatSec);
 #endif
         Tshortest<T, Tint> rec_shv = T_ShortestVector<T, Tint>(eMatSec, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << " After computation of T_ShortestVector\n";
+        os << "SHORT: After computation of T_ShortestVector\n";
 #endif
         int nbRow = rec_shv.SHV.rows();
         std::vector<MyVector<Tint>> SHV(nbRow);
@@ -381,6 +383,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         }
         std::vector<MyVector<Tint>> SetSHV = VectorAsSet(SHV);
         bool testEqua = SetSHV == ListVectTot;
+#ifdef DEBUG_SHORTEST_CONFIG
+        os << "SHORT: testEqua=" << testEqua << "\n";
+#endif
         if (testEqua) {
           eRes.eCase = 6;
           eRes.reply = true;
@@ -389,31 +394,40 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
           eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
-          os << "RETURN case 6\n";
+          os << "SHORT: RETURN case 6\n";
 #endif
           return eRes;
         } else {
           std::vector<MyVector<Tint>> SHVdiff;
           for (auto &eVect : SetSHV) {
             int pos = PositionVect(ListVectTot, eVect);
-            if (pos == -1)
+            if (pos == -1) {
               SHVdiff.push_back(eVect);
+            }
           }
           std::vector<MyVector<Tint>> DiffNew;
           for (auto &eVect : SHVdiff) {
-            auto iter = TheFamilyVect.find(eVect);
-            if (iter == TheFamilyVect.end())
+            if (TheFamilyVect.count(eVect) == 0) {
               DiffNew.push_back(eVect);
+            }
           }
           if (DiffNew.size() > 0) {
             for (auto &eVect : DiffNew) {
 #ifdef DEBUG_SHORTEST_CONFIG
-              os << "Inserting from DiffNew eVect=";
+              os << "SHORT: Inserting from DiffNew eVect=";
               WriteVectorNoDim(os, eVect);
 #endif
               TheFamilyVect.insert(eVect);
             }
           } else {
+#ifdef DEBUG_SHORTEST_CONFIG
+            MyMatrix<Tint> M1 = MatrixFromVectorFamily(SetSHV);
+            os << "SHORT: M1=\n";
+            WriteMatrix(os, M1);
+            MyMatrix<Tint> M2 = MatrixFromVectorFamily(ListVectTot);
+            os << "SHORT: M2=\n";
+            WriteMatrix(os, M2);
+#endif
             if (IsSubset(SetSHV, ListVectTot)) {
               eRes.eCase = 7;
               eRes.reply = false;
@@ -422,7 +436,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
               eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
-              os << "RETURN case 7\n";
+              os << "SHORT: RETURN case 7\n";
 #endif
               return eRes;
             } else {
@@ -430,7 +444,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
               eRes.reply = false;
               eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-              os << "RETURN case 8\n";
+              os << "SHORT: RETURN case 8\n";
 #endif
               return eRes;
             }
@@ -443,17 +457,17 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           if (PositionVect(ListVectTot, eVect3) != -1)
             eVect3 *= 2;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-          if (TheFamilyVect.find(eVect3) != TheFamilyVect.end()) {
-            std::cerr << "eMatSec=\n";
+          if (TheFamilyVect.count(eVect3) == 1) {
+            std::cerr << "SHORT: eMatSec=\n";
             WriteMatrix(std::cerr, eMatSec);
-            std::cerr << "eVect3=";
+            std::cerr << "SHORT: eVect3=";
             WriteVectorNoDim(std::cerr, eVect3);
-            std::cerr << "We have a clear error here\n";
+            std::cerr << "SHORT: We have a clear error here\n";
             throw TerminalException{1};
           }
 #endif
 #ifdef DEBUG_SHORTEST_CONFIG
-          os << "Inserting from GetShortVectorDegenerate eVect3=";
+          os << "SHORT: Inserting from GetShortVectorDegenerate eVect3=";
           WriteVectorNoDim(os, eVect3);
 #endif
           TheFamilyVect.insert(eVect3);
@@ -462,13 +476,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(
               eMatSec, CritNorm, StrictIneq, os);
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-          if (TheFamilyVect.find(eVect) != TheFamilyVect.end()) {
-            std::cerr << "We have a clear error here\n";
+          if (TheFamilyVect.count(eVect) == 1) {
+            std::cerr << "SHORT: We have a clear error here\n";
             throw TerminalException{1};
           }
 #endif
 #ifdef DEBUG_SHORTEST_CONFIG
-          os << "Inserting from GetShortVector eVect=";
+          os << "SHORT: Inserting from GetShortVector eVect=";
           WriteVectorNoDim(os, eVect);
 #endif
           TheFamilyVect.insert(eVect);
@@ -499,7 +513,7 @@ int KissingNumberUpperBound(int const &n) {
     return ListVal[n];
   }
   std::cerr
-      << "The dimension is too large for use to give the kissing number\n";
+      << "SHORT: The dimension is too large for use to give the kissing number upper bound\n";
   throw TerminalException{1};
 }
 
@@ -530,7 +544,7 @@ SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
   MyMatrix<Tint> eSHVred = eSHV * Pmat;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
   if (!TestEqualityMatrix(GetGram(eSHVred), TheRemainder)) {
-    std::cerr << "Matrix error somewhere\n";
+    std::cerr << "SHORT: Matrix error somewhere\n";
     throw TerminalException{1};
   }
 #endif
@@ -565,11 +579,11 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     ListGen_T.push_back(UniversalMatrixConversion<T, Tint>(eGen));
   }
 #ifdef DEBUG_SHORTEST_CONFIG
-  os << "Before BasisInvariantForm\n";
+  os << "SHORT: Before BasisInvariantForm\n";
 #endif
   std::vector<MyMatrix<T>> ListMat = BasisInvariantForm(n, ListGen_T, os);
 #ifdef DEBUG_SHORTEST_CONFIG
-  os << " After BasisInvariantForm\n";
+  os << "SHORT: After BasisInvariantForm\n";
 #endif
   int nbVect = M.rows();
   std::vector<MyVector<T>> ListRankOne;
@@ -582,7 +596,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     }
   };
 #ifdef DEBUG_SHORTEST_CONFIG
-  os << "nbVect=" << nbVect << "\n";
+  os << "SHORT: nbVect=" << nbVect << "\n";
 #endif
   for (int iRow = 0; iRow < nbVect; iRow++) {
     MyVector<Tint> eRow = GetMatrixRow(M, iRow);
@@ -606,7 +620,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       RecTest.reply = false;
       RecTest.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
-      std::cerr << "RETURN case 9\n";
+      std::cerr << "SHORT: RETURN case 9\n";
 #endif
       return RecTest;
     }
@@ -646,7 +660,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     }
     int SizAfter = ListVectWork.size();
 #ifdef DEBUG_SHORTEST_CONFIG
-    std::cerr << "SizPrev=" << SizPrev << " SizAfter=" << SizAfter << "\n";
+    std::cerr << "SHORT: SizPrev=" << SizPrev << " SizAfter=" << SizAfter << "\n";
 #endif
     if (SizAfter == SizPrev) {
       RecTest.reply = false;
@@ -923,7 +937,7 @@ std::vector<std::vector<int>> SHORT_GetCandidateCyclic_Optimized(int const &n,
     }
     ListCand = NewListCand;
 #ifdef DEBUG_SHORTEST_CONFIG
-    std::cerr << "iDim=" << iDim << " |ListCand|=" << ListCand.size() << "\n";
+    std::cerr << "SHORT: iDim=" << iDim << " |ListCand|=" << ListCand.size() << "\n";
 #endif
   }
   return ListCand;
@@ -992,7 +1006,7 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
           sum *= ord;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (!IsInteger(sum)) {
-            std::cerr << "The sum should be integral\n";
+            std::cerr << "SHORT: The sum should be integral\n";
             throw TerminalException{1};
           }
 #endif
