@@ -49,7 +49,7 @@ void test_realizability(std::string const& FileSHV, std::string const& OutFormat
 int main(int argc, char *argv[]) {
   HumanTime time1;
   try {
-    if (argc != 4) {
+    if (argc != 3 && argc != 5) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "SHORT_TestRealizability [arith] [FileIn]\n";
@@ -65,8 +65,12 @@ int main(int argc, char *argv[]) {
     //
     std::string arith = argv[1];
     std::string FileSHV = argv[2];
-    std::string OutFormat = argv[3];
-    std::string OutFile = argv[4];
+    std::string OutFormat = "GAP";
+    std::string OutFile = "stdout";
+    if (argc == 5) {
+      OutFormat = argv[3];
+      OutFile = argv[4];
+    }
     //
     auto f_treat=[&]() -> void {
       if (arith == "gmp") {

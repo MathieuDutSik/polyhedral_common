@@ -1,0 +1,115 @@
+name: CI(21A) of Sampling facets of polytopes
+
+on:
+  # One time per month
+  schedule:
+    - cron: "0 0 21 1,3,5,7,9,11 *"
+  # Manually triggered
+  workflow_dispatch:
+  # Disabled right now, when a push is made on master.
+jobs:
+  build-linux:
+    timeout-minutes: 120  # 2 hours
+    runs-on: ubuntu-latest
+    env:
+      GMP_INCDIR: /usr/include
+      GMP_CXX_LINK: "-lm -lgmp -lgmpxx"
+      BOOST_INCDIR: "/usr/include"
+      BOOST_LINK: "/usr/lib/x86_64-linux-gnu/libboost_serialization.a"
+      EIGEN_PATH: /home/runner/work/opt/eigen
+      GLPK_INCLUDE: "-I/usr/include"
+      GLPK_LINK: "-L/usr/lib -lglpk -Wl,-rpath,/usr/lib"
+      CDDLIB_PATH: "/home/runner/work/opt/cddlib"
+      CDDLIB_INCLUDE: "-I/home/runner/work/opt/cddlib/include/cddlib"
+      CDDLIB_DOUBLE_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcdd -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      CDDLIB_GMP_LINK: "-L/home/runner/work/opt/cddlib/lib  -lcddgmp -Wl,-rpath,/home/runner/work/opt/cddlib/lib"
+      NAUTY_PATH: /home/runner/work/opt/nauty
+      NAUTY_INCLUDE: "-I/home/runner/work/opt/nauty/include"
+      NAUTY_LINK: "/home/runner/work/opt/nauty/lib/libnauty_static.a"
+      LIBBLISS_PATH: /home/runner/opt/libbliss
+      LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
+      LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: recursive
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgdbm-dev libsnappy-dev make pkg-config rlwrap software-properties-common zlib1g-dev
+          sudo apt-get install -y wget
+          sudo apt-get install -y g++ gcc
+          sudo apt-get install -y cmake
+          sudo apt-get install -y libgmp-dev
+          sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
+          sudo apt-get install -y libglpk-dev
+          sudo apt-get install -y autoconf autotools-dev libtool
+          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
+
+      - name: Build test code
+        run: |
+          ls
+          echo "After ls"
+
+          pwd
+          echo "After pwd"
+
+          ls basic_common_cpp
+          echo "After ls basic_common_cpp"
+
+          mkdir basic_common_cpp/ExternalLib/nauty/build
+          cd basic_common_cpp/ExternalLib/nauty/build && cmake -DCMAKE_INSTALL_PREFIX:PATH=$NAUTY_PATH .. && make all install && cd ../../../..
+          pwd
+          echo "After nauty compilation"
+
+          # BLISS
+          cd /home/runner && unzip work/polyhedral_common/polyhedral_common/basic_common_cpp/ExternalLib/bliss-0.77.zip
+          mkdir -p /home/runner/opt/libbliss/lib
+          mkdir -p /home/runner/opt/libbliss/include
+          echo "After directory creation"
+          cd /home/runner/opt/libbliss/lib && cmake /home/runner/bliss-0.77 && make
+          echo "After compilation"
+          cd /home/runner/opt/libbliss/include && cp /home/runner/bliss-0.77/src/*.hh .
+          echo "After header files copy"
+          cd /home/runner/work/polyhedral_common/polyhedral_common
+          echo "After cd"
+          pwd
+          echo "After bliss compilation"
+
+          git clone https://github.com/cddlib/cddlib
+          cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
+          pwd
+          echo "After cddlib compilation"
+
+          # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
+          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
+          tar -xzf eigen-3.3.9.tar.gz
+          mv eigen-3.3.9 /home/runner/work/opt/eigen
+          pwd
+          echo "After eigen-3.3.9 set up"
+
+          # Downloading and compiling gap
+          wget -q https://github.com/gap-system/gap/releases/download/v4.14.0/gap-4.14.0.tar.gz
+          tar -xzf gap-4.14.0.tar.gz
+          cd gap-4.14.0 && ./configure && make && cd ..
+          pwd
+          ln -s gap-4.14.0/gap gap.sh
+
+      - name: Test sampling of facets
+        run: |
+          cd src_dualdesc && make -f Makefile_sampling_facets && cd ..
+          echo "After compilation of sampling facets"
+
+          cd CI_tests/21A_SamplingFacets
+          ../../gap.sh < TestSampling.g
+          if [ ! -f "CI_CONCLUSION" ]; then
+            echo "The gap test code has not created the wanted file" >&2
+            exit 1
+          fi
+          cd ../..
+          echo "After the sampling of facets"
