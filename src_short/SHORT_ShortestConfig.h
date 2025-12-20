@@ -95,7 +95,7 @@ template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
-    std::string const &TheMethod, std::ostream &os) {
+    std::ostream &os) {
   ReplyRealizability<T, Tint> eRes;
   int n = ListVect[0].size();
   int nbVect = ListVect.size();
@@ -223,11 +223,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     MyMatrix<T> SetIneq = SortUnicizeMatrix(ListIneq);
     auto GetLpSolution = [&](MyMatrix<T> const &MatIneq,
                              MyVector<T> const &TheMinimized) -> LpSolution<T> {
-      if (TheMethod == "cdd")
+      std::string TheMethod = "cdd";
+      if (TheMethod == "cdd") {
         return CDD_LinearProgramming(MatIneq, TheMinimized, os);
+      }
 #ifdef USE_GLPK
-      if (TheMethod == "glpk_secure")
+      if (TheMethod == "glpk_secure") {
         return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized, os);
+      }
 #endif
       std::cerr << "We have TheMethod = " << TheMethod << "\n";
       throw TerminalException{1};
@@ -545,7 +548,6 @@ template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
 template <typename T, typename Tint, typename Tgroup>
 ReplyRealizability<T, Tint>
 SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
-                                      std::string const &TheMethod,
                                       std::ostream &os) {
   SHVreduced<Tint> RecLLL = SHORT_GetLLLreduction_Kernel(Minput, os);
   MyMatrix<Tint> M = RecLLL.SHVred;
@@ -604,7 +606,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       return RecTest;
     }
     RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(
-        ListVectWork, ListMat, NoExtension, TheMethod, os);
+        ListVectWork, ListMat, NoExtension, os);
     if (RecTest.reply) {
       bool replyRet = static_cast<int>(ListVectWork.size()) == InitialSize;
       std::vector<MyVector<Tint>> ListVectComplete;
@@ -683,7 +685,7 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>>
 SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
                       std::vector<MyMatrix<Tint>> const &ListSHVinp,
-                      std::string const &TheMethod, std::ostream &os) {
+                      std::ostream &os) {
   Tint eMaxDet = SHORT_GetMaximumDeterminant(M);
   int n = M.cols();
   int nbVect = M.rows();
@@ -771,7 +773,7 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
         return;
     }
     ReplyRealizability<T, Tint> eTestRes =
-        SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew, TheMethod,
+        SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew,
                                                                os);
     if (eTestRes.reply && eTestRes.replyCone)
       ListSpann.push_back(Mnew);

@@ -15,7 +15,7 @@ int main(int argc, char *argv[]) {
     using Tidx = uint16_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, mpz_class>;
-    if (argc != 7) {
+    if (argc != 6) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr
@@ -25,7 +25,6 @@ int main(int argc, char *argv[]) {
       std::cerr << "d          : The dimension of the code subspace\n";
       std::cerr << "iProc      : The processor index\n";
       std::cerr << "NProc      : The number of processors\n";
-      std::cerr << "TheMethod  : can be cdd or glpk_secure\n";
       std::cerr << "[outfile]  : optionary argument for writing GAP readable "
                    "output\n";
       std::cerr
@@ -47,8 +46,6 @@ int main(int argc, char *argv[]) {
     int NProc;
     sscanf(argv[4], "%d", &NProc);
     //
-    std::string TheMethod = argv[5];
-    //
     if (NProc < 1) {
       std::cerr << "NProc=" << NProc << "\n";
       std::cerr << "while it should be at least 1\n";
@@ -59,7 +56,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "while we should have 0<= iProc < NProc \n";
       throw TerminalException{1};
     }
-    std::string outfile = argv[6];
+    std::string outfile = argv[5];
     std::ofstream os(outfile);
     os << "return [";
     bool IsFirst = true;
@@ -96,7 +93,7 @@ int main(int argc, char *argv[]) {
         WriteMatrix(std::cerr, SHV);
         ReplyRealizability<Tfield, Tint> eRes =
             SHORT_TestRealizabilityShortestFamily<Tfield, Tint, Tgroup>(
-                SHV, TheMethod, std::cerr);
+                SHV, std::cerr);
         if (eRes.reply) {
           if (IsFirst == false)
             os << ",\n";
