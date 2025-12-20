@@ -298,7 +298,7 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
   MyVector<T> V(n);
   for (int iVert = 0; iVert < nbVert; iVert++) {
     for (int i = 0; i < n; i++) {
-      T eSum = 0;
+      T eSum(0);
       for (int j = 0; j < n; j++) {
         eSum += eData.GramMat(i, j) * EXT_T(iVert, j);
       }

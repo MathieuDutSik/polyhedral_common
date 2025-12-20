@@ -207,6 +207,15 @@ ComputeFundamentalInvariant(MyMatrix<Tint> const &M,
 }
 
 template <typename Tint>
+FundInvariantVectorFamily<Tint>
+ComputeRankInvariant(MyMatrix<Tint> const &M,
+                     [[maybe_unused]] std::ostream &os) {
+  int rank = RankMat(M);
+  Tint index(1);
+  return {rank, index};
+}
+
+template <typename Tint>
 bool operator>(FundInvariantVectorFamily<Tint> const &x,
                FundInvariantVectorFamily<Tint> const &y) {
   if (x.rank != y.rank) {
@@ -218,24 +227,44 @@ bool operator>(FundInvariantVectorFamily<Tint> const &x,
   return false;
 }
 
-template <typename T, typename Tint, typename Fcorrect>
+template <typename Tint>
+bool operator<(FundInvariantVectorFamily<Tint> const &x,
+               FundInvariantVectorFamily<Tint> const &y) {
+  if (x.rank != y.rank) {
+    return x.rank < y.rank;
+  }
+  if (x.index != y.index) {
+    return x.index > y.index;
+  }
+  return false;
+}
+
+template <typename T, typename Tint, typename Ffinal, typename Finvariant>
 MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
-                                            Fcorrect f_correct,
+                                            Ffinal f_final,
+                                            Finvariant f_invariant,
                                             std::ostream &os) {
   int n = eMat.rows();
   T incr = GetSmallestIncrement(eMat);
   T MaxNorm = GetMaxNorm<T, Tint>(eMat, os);
   T norm = incr;
   MyMatrix<Tint> SHVret(0, n);
+  FundInvariantVectorFamily<Tint> fi_ret = TrivFundamentalInvariant<Tint>();
   while (true) {
     if (norm > MaxNorm) {
       std::cerr << "Failed to find a relevant vector configuration\n";
       throw TerminalException{1};
     }
     MyMatrix<Tint> SHV_f = T_ShortVector_fixed<T, Tint>(eMat, norm, os);
-    SHVret = Concatenate(SHVret, SHV_f);
-    if (f_correct(SHVret))
-      return matrix_duplication(SHVret);
+    MyMatrix<Tint> SHVtest = Concatenate(SHVret, SHV_f);
+    FundInvariantVectorFamily<Tint> fi_test = f_invariant(SHVtest);
+    if (fi_ret < fi_test) {
+      SHVret = SHVtest;
+      fi_ret = fi_test;
+      if (f_final(SHVret, fi_ret)) {
+        return matrix_duplication(SHVret);
+      }
+    }
     norm += incr;
   }
 }
@@ -244,35 +273,33 @@ template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyFullRank(MyMatrix<T> const &eMat,
                                                     std::ostream &os) {
   int n = eMat.rows();
-  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
-    if (RankMat(M) == n)
-      return true;
-    return false;
+  auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M, FundInvariantVectorFamily<Tint> const& fi) -> bool {
+    return fi.rank == n;
   };
-  return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
-      eMat, f_correct, os);
+  auto f_invariant=[&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
+    return ComputeRankInvariant(M, os);
+  };
+  return ExtractInvariantVectorFamily<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
 }
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantVectorFamilyZbasis(MyMatrix<T> const &eMat,
                                                   std::ostream &os) {
-  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
-    return IsFullDimZbasis(M);
+  int n = eMat.cols();
+  auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M, FundInvariantVectorFamily<Tint> const& fi) -> bool {
+    return IsCompleteSystem(fi, n);
   };
-  MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(eMat,
-                                                                 f_correct, os);
-#ifdef SANITY_CHECK_INVARIANT_VECTOR_FAMILY
-  check_antipodality_mymatrix(SHV);
-#endif
-  return SHV;
+  auto f_invariant=[&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
+    return ComputeFundamentalInvariant(M, os);
+  };
+  return ExtractInvariantVectorFamily<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
 }
 
 template <typename T, typename Tint>
 MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     MyMatrix<T> const &eMat, std::vector<MyMatrix<Tint>> const &ListMatr,
     std::ostream &os) {
-  auto f_correct = [&](MyMatrix<Tint> const &M) -> bool {
+  auto f_check = [&](MyMatrix<Tint> const &M) -> bool {
     int n_row = M.rows();
     std::unordered_set<MyVector<Tint>> set;
     for (int i = 0; i < n_row; i++) {
@@ -289,8 +316,18 @@ MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
     }
     return false;
   };
-  return ExtractInvariantVectorFamily<T, Tint, decltype(f_correct)>(
-      eMat, f_correct, os);
+  auto f_invariant = [&](MyMatrix<Tint> const &M) -> FundInvariantVectorFamily<Tint> {
+    int artificial_rank = 0;
+    if (f_check(M)) {
+      artificial_rank = 1;
+    }
+    Tint index(1);
+    return {artificial_rank, index};
+  };
+  auto f_final = [&]([[maybe_unused]] MyMatrix<Tint> const &M, FundInvariantVectorFamily<Tint> const& fi) -> bool {
+    return fi.rank == 1;
+  };
+  return ExtractInvariantVectorFamily<T, Tint, decltype(f_final), decltype(f_invariant)>(eMat, f_final, f_invariant, os);
 }
 
 template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
