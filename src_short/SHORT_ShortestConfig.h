@@ -69,7 +69,6 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
 }
 
 template <typename T, typename Tint> struct ReplyRealizability {
-  int eCase;
   bool reply;
   bool replyCone;
   MyMatrix<T> eMat;
@@ -194,7 +193,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     ToBeMinimized(iDim + 1) = scal;
   }
   if (IsZero) {
-    eRes.eCase = 1;
     eRes.reply = false;
     eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -234,7 +232,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     for (int i = 0; i < sizFamVect; i++) {
       MyVector<T> rVect = GetMatrixRow(ListIneq, i);
       if (rVect == ZerVect) {
-        eRes.eCase = 2;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -276,7 +273,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       for (int i = 0; i < nbIneqSet; i++)
         SumIneqRed(i) = SumIneq(i + 1);
       if (SumIneq(0) < 0 && SumIneqRed == ZeroVector<T>(nbIneqSet)) {
-        eRes.eCase = 3;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -315,7 +311,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       os << "SHORT: eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";
 #endif
       if (eOptimal > 1) {
-        eRes.eCase = 4;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -324,7 +319,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         return eRes;
       }
       if (eOptimal >= 1 && NoExtension) {
-        eRes.eCase = 5;
         eRes.reply = false;
         eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -402,7 +396,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         os << "SHORT: testEqua=" << testEqua << "\n";
 #endif
         if (testEqua) {
-          eRes.eCase = 6;
           eRes.reply = true;
           eRes.replyCone = true;
           eRes.SHV = rec_shv.SHV;
@@ -437,7 +430,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             WriteMatrix(os, M2);
 #endif
             if (IsSubsetUnorderedSet(SetSHV, SetVectTot)) {
-              eRes.eCase = 7;
               eRes.reply = false;
               eRes.replyCone = true;
               eRes.SHV = rec_shv.SHV;
@@ -448,7 +440,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #endif
               return eRes;
             } else {
-              eRes.eCase = 8;
               eRes.reply = false;
               eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -624,7 +615,6 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   while (true) {
     ReplyRealizability<T, Tint> RecTest;
     if (InitialSize > KissingNumberUpperBound(n)) {
-      RecTest.eCase = 9;
       RecTest.reply = false;
       RecTest.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
