@@ -123,12 +123,15 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #ifdef DEBUG_SHORTEST_CONFIG
   os << "SHORT: SHORT_TestRealizabilityShortestFamilyEquivariant, n=" << n << " nbVect=" << nbVect << " nbMat=" << nbMat << "\n";
 #endif
-  std::vector<MyVector<Tint>> ListVectTotUnred;
+  std::unordered_set<MyVector<Tint>> SetVectTot;
   for (auto &eVect : ListVect) {
-    ListVectTotUnred.push_back(eVect);
-    ListVectTotUnred.push_back(-eVect);
+    SetVectTot.insert(eVect);
+    SetVectTot.insert(-eVect);
   }
-  std::vector<MyVector<Tint>> ListVectTot = VectorAsSet(ListVectTotUnred);
+  std::vector<MyVector<Tint>> ListVectTot;
+  for (auto & eVect: SetVectTot) {
+    ListVectTot.push_back(eVect);
+  }
   MyMatrix<T> MatrixValues(nbVect, nbMat);
   for (int iVect = 0; iVect < nbVect; iVect++) {
     for (int iMat = 0; iMat < nbMat; iMat++) {
@@ -156,8 +159,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
   // Forming the vector family
   //
   std::unordered_set<MyVector<Tint>> ListForbiddenVector;
-  for (auto &eVect : ListVectTot)
+  for (auto &eVect : ListVectTot) {
     ListForbiddenVector.insert(eVect);
+  }
   ListForbiddenVector.insert(ZeroVector<Tint>(n));
   std::unordered_set<MyVector<Tint>> TheFamilyVect;
   for (auto &eVect : ListVect) {
@@ -414,8 +418,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         } else {
           std::vector<MyVector<Tint>> DiffNew;
           for (auto &eVect : SetSHV) {
-            int pos = PositionVect(ListVectTot, eVect);
-            if (pos == -1 && TheFamilyVect.count(eVect) == 0) {
+            if (SetVectTot.count(eVect) == 0 && TheFamilyVect.count(eVect) == 0) {
               DiffNew.push_back(eVect);
             }
           }
@@ -462,7 +465,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         if (RankMat(eMatSec) < n) {
           MyVector<Tint> eVect3 =
               GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
-          if (PositionVect(ListVectTot, eVect3) != -1) {
+          if (SetVectTot.count(eVect3) == 1) { // This can happen.
             eVect3 *= 2;
           }
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
