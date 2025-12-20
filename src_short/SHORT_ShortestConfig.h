@@ -386,13 +386,18 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         os << "SHORT: After computation of T_ShortestVector\n";
 #endif
         int nbRow = rec_shv.SHV.rows();
-        std::vector<MyVector<Tint>> SHV(nbRow);
+        std::unordered_set<MyVector<Tint>> SetSHV;
         for (int iRow = 0; iRow < nbRow; iRow++) {
           MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iRow);
-          SHV[iRow] = eVect;
+          SetSHV.insert(eVect);
         }
-        std::vector<MyVector<Tint>> SetSHV = VectorAsSet(SHV);
-        bool testEqua = SetSHV == ListVectTot;
+#ifdef DEBUG_SHORTEST_CONFIG
+        os << "SHORT: SetSHV=\n";
+        WriteMatrix(os, MatrixFromUnorderedSetFamily(SetSHV));
+        os << "SHORT: ListVectTot=\n";
+        WriteMatrix(os, MatrixFromUnorderedSetFamily(SetVectTot));
+#endif
+        bool testEqua = SetSHV == SetVectTot;
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: testEqua=" << testEqua << "\n";
 #endif
@@ -424,14 +429,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             }
           } else {
 #ifdef DEBUG_SHORTEST_CONFIG
-            MyMatrix<Tint> M1 = MatrixFromVectorFamily(SetSHV);
+            MyMatrix<Tint> M1 = MatrixFromUnorderedSetFamily(SetSHV);
             os << "SHORT: M1=\n";
             WriteMatrix(os, M1);
             MyMatrix<Tint> M2 = MatrixFromVectorFamily(ListVectTot);
             os << "SHORT: M2=\n";
             WriteMatrix(os, M2);
 #endif
-            if (IsSubset(SetSHV, ListVectTot)) {
+            if (IsSubsetUnorderedSet(SetSHV, SetVectTot)) {
               eRes.eCase = 7;
               eRes.reply = false;
               eRes.replyCone = true;
