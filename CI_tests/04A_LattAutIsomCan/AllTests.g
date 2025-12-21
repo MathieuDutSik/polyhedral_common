@@ -1,29 +1,37 @@
 Read("../common.g");
 Print("Beginning TestCanonicalization\n");
 
-G_A4:=[ [ 2, -1, 0, 0 ], [ -1, 2, -1, 0 ], [ 0, -1, 2, -1 ], [ 0, 0, -1, 2 ] ];
-G_A5:=[ [ 2, -1, 0, 0, 0 ], [ -1, 2, -1, 0, 0 ], [ 0, -1, 2, -1, 0 ], [ 0, 0, -1, 2, -1 ], [ 0, 0, 0, -1, 2 ] ];
-G_E6:=[ [ 2, 1, 1, 0, 1, 1 ], [ 1, 4, 1, 1, 1, 3 ], [ 1, 1, 2, 1, 1, 1 ], [ 0, 1, 1, 2, 1, 2 ], [ 1, 1, 1, 1, 2, 2 ], [ 1, 3, 1, 2, 2, 4 ] ];
-G_D4:=[ [ 2, 1, 1, 0 ], [ 1, 2, 1, -1 ], [ 1, 1, 2, -1 ], [ 0, -1, -1, 2 ] ];
-G_D5:=[ [ 2, 1, 1, 1, 0 ], [ 1, 2, 1, 1, -1 ], [ 1, 1, 2, 1, -1 ], [ 1, 1, 1, 2, -1 ], [ 0, -1, -1, -1, 2 ] ];
+ListMat:=[];
 
-# Conway/Sloane lattice in dimension 11 with no basis
-G_CS11:=[ [ 60, 5, 5, 5, 5, 5, -12, -12, -12, -12, -7 ],
-  [ 5, 60, 5, 5, 5, 5, -12, -12, -12, -12, -7 ],
-  [ 5, 5, 60, 5, 5, 5, -12, -12, -12, -12, -7 ],
-  [ 5, 5, 5, 60, 5, 5, -12, -12, -12, -12, -7 ],
-  [ 5, 5, 5, 5, 60, 5, -12, -12, -12, -12, -7 ],
-  [ 5, 5, 5, 5, 5, 60, -12, -12, -12, -12, -7 ],
-  [ -12, -12, -12, -12, -12, -12, 60, -1, -1, -1, -13 ],
-  [ -12, -12, -12, -12, -12, -12, -1, 60, -1, -1, -13 ],
-  [ -12, -12, -12, -12, -12, -12, -1, -1, 60, -1, -13 ],
-  [ -12, -12, -12, -12, -12, -12, -1, -1, -1, 60, -13 ],
-  [ -7, -7, -7, -7, -7, -7, -13, -13, -13, -13, 96 ] ];
+ClassicMatrices:=true;
+ConwayExample:=true;
+WellRoundedDim10:=true;
 
-ListMat:=[G_A4, G_A5, G_E6, G_D4, G_D5, G_CS11];
+if ClassicMatrices then
+    Add(ListMat, ClassicalSporadicLattices("A4"));
+    Add(ListMat, ClassicalSporadicLattices("A5"));
+    Add(ListMat, ClassicalSporadicLattices("E6"));
+    Add(ListMat, ClassicalSporadicLattices("D4"));
+    Add(ListMat, ClassicalSporadicLattices("D5"));
+fi;
+
+if ConwayExample then
+    # Conway/Sloane lattice in dimension 11 with no basis
+    Add(ListMat, ClassicalSporadicLattices("ConwaySloane11"));
+fi;
+
+if WellRoundedDim10 then
+    FileSave:="../21B_ShortRealizability/ListGram_n10_rnk10";
+    if IsExistingFile(FileSave) then
+        ListGram:=ReadAsFunction(FileSave)();
+        Append(ListMat, ListGram);
+    fi;
+fi;
 
 
-GetCanonicalForm:=function(eMat)
+
+
+get_canonical_form:=function(eMat)
     local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
     n:=Length(eMat);
     FileIn:="Test.in";
@@ -54,10 +62,9 @@ GetCanonicalForm:=function(eMat)
 end;
 
 
-
-TestMat:=function(eMat)
+test_canonicalization_function:=function(eMat)
     local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B, LGen, i;
-    TheCan:=GetCanonicalForm(eMat);
+    TheCan:=get_canonical_form(eMat);
     if TheCan=fail then
         return false;
     fi;
@@ -74,7 +81,7 @@ TestMat:=function(eMat)
             eP := eP * Random(LGen);
         od;
         eMat_B:=eP * eMat * TransposedMat(eP);
-        TheCan_B:=GetCanonicalForm(eMat_B);
+        TheCan_B:=get_canonical_form(eMat_B);
         if TheCan_B=fail then
             return false;
         fi;
@@ -89,11 +96,12 @@ end;
 
 
 n_error:=0;
-for iMat in [1..Length(ListMat)]
+nMat:=Length(ListMat);
+for iMat in [1..nMat]
 do
     eMat:=ListMat[iMat];
-    Print("iMat=", iMat, " |eMat|=", Length(eMat), "\n");
-    test:=TestMat(eMat);
+    Print("         iMat=", iMat, "/", nMat, " |eMat|=", Length(eMat), "\n");
+    test:=test_canonicalization_function(eMat);
     if test=false then
         n_error:=n_error+1;
     fi;

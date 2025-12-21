@@ -1,4 +1,4 @@
-name: CI(04) of Matrix canonicalization
+name: CI(04) of lattice automorphism isomorphism and canonicalization
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -111,7 +111,7 @@ jobs:
           echo "After compilation of lattice code"
 
           # Running the test
-          cd CI_tests/04A_Canonicalizations && ../../gap.sh < TestCanonicalization.g
+          cd CI_tests/04A_LattAutIsomCan && ../../gap.sh < AllTests.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
