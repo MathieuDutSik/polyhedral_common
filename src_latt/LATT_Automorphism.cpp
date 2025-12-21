@@ -48,15 +48,9 @@ int main(int argc, char *argv[]) {
     //
     auto prt = [&](std::ostream &os) -> void {
       if (OutFormat == "GAP") {
-        os << "return [";
-        bool IsFirst = true;
-        for (auto &eMat : ListGen) {
-          if (!IsFirst)
-            os << ",\n";
-          IsFirst = false;
-          WriteMatrixGAP(os, eMat);
-        }
-        os << "];\n";
+        os << "return ";
+        WriteListMatrixGAP(os, ListGen);
+        os << ";\n";
         return;
       }
       if (OutFormat == "Oscar") {
