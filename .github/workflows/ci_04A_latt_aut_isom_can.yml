@@ -106,7 +106,7 @@ jobs:
 
       - name: Test canonicalization
         run: |
-          cd src_latt && make -f Makefile_canonicalization && cd ..
+          cd src_latt && make -f Makefile_latt_can_aut_iso && cd ..
           pwd
           echo "After compilation of lattice code"
 

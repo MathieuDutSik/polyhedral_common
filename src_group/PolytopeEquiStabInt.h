@@ -138,10 +138,10 @@ template <typename Tint, typename Tgroup>
 Tgroup LinPolytopeIntegral_Automorphism(const MyMatrix<Tint> &EXT,
                                         std::ostream &os) {
   using Tfield = typename overlying_field<Tint>::field_type;
+  using Telt = typename Tgroup::Telt;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  Tgroup GRP = LinPolytopeIntegral_Stabilizer(EXT_T, GRPisom, os);
-  return GRP;
+  std::vector<Telt> LGenIsom = LinPolytope_Automorphism_LGen<Tfield, Tgroup>(EXT_T, os);
+  return LinPolytopeIntegral_Stabilizer_LGen<Tfield,Tgroup>(EXT_T, LGenIsom, os);
 }
 
 template <typename Tint, typename Tgroup>
@@ -149,9 +149,10 @@ std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
 LinPolytopeIntegral_Automorphism_RightCoset(const MyMatrix<Tint> &EXT,
                                             std::ostream &os) {
   using Tfield = typename overlying_field<Tint>::field_type;
+  using Telt = typename Tgroup::Telt;
   MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
-  Tgroup GRPisom = LinPolytope_Automorphism<Tfield, Tgroup>(EXT_T, os);
-  return LinPolytopeIntegral_Stabilizer_RightCoset(EXT_T, GRPisom, os);
+  std::vector<Telt> LGenIsom = LinPolytope_Automorphism_LGen<Tfield, Tgroup>(EXT_T, os);
+  return LinPolytopeIntegral_Stabilizer_RightCoset_LGen<Tfield,Tgroup>(EXT_T, LGenIsom, os);
 }
 
 template <typename Tint, typename Tgroup>

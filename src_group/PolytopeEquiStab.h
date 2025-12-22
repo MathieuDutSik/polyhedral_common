@@ -643,6 +643,14 @@ Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
   return Tgroup(LGen, nbRow);
 }
 
+
+template <typename T, typename Tgroup>
+std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_LGen(MyMatrix<T> const &EXT, std::ostream &os) {
+  MyMatrix<T> EXTred = ColumnReduction(EXT);
+  MyMatrix<T> Qmat = GetQmatrix(EXTred, os);
+  return LinPolytope_Automorphism_GramMat_LGen<T, Tgroup>(EXTred, Qmat, os);
+}
+
 template <typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism(MyMatrix<T> const &EXT, std::ostream &os) {
   MyMatrix<T> EXTred = ColumnReduction(EXT);
