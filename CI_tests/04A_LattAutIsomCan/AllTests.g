@@ -267,6 +267,9 @@ get_isomorphism_test:=function(eMat1, eMat2)
         return fail;
     fi;
     U:=ReadAsFunction(FileOut)();
+#    if U=false then
+#        Error("Stop here");
+#    fi;
     RemoveFile(FileIn1);
     RemoveFile(FileIn2);
     RemoveFile(FileOut);
@@ -324,8 +327,8 @@ test_all:=function()
     local n_error;
     n_error:=0;
 #    n_error:=n_error + test_all_cans();
-    n_error:=n_error + test_all_automs();
-#    n_error:=n_error + test_all_isoms();
+#    n_error:=n_error + test_all_automs();
+    n_error:=n_error + test_all_isoms();
     return n_error;
 end;
 

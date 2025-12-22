@@ -37,7 +37,7 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
     std::cerr << "STAB: iMat=" << iMat << "\n";
     for (size_t jMat = iMat + 1; jMat < nMat; jMat++) {
       std::cerr << "EQUI: Before iMat=" << iMat << " jMat=" << jMat << "\n";
-      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T, Tint>(
+      std::optional<MyMatrix<Tint>> opt = ArithmeticEquivalence<T, Tint, Tgroup>(
           ListMat[iMat], ListMat[jMat], std::cerr);
       std::cerr << "EQUI: After iMat=" << iMat << " jMat=" << jMat << "\n";
       std::pair<size_t, size_t> pair_equiv{iMat, jMat};
@@ -91,7 +91,7 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
     } else {
       std::cerr << "get_equiv_inner, from direct computation\n";
       std::optional<MyMatrix<Tint>> optB =
-          ArithmeticEquivalence<T, Tint>(eMat1, eMat2, std::cerr);
+        ArithmeticEquivalence<T, Tint, Tgroup>(eMat1, eMat2, std::cerr);
       database.insert_equi(eMat1, eMat2, optB);
       return optB;
     }

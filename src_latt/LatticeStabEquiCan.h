@@ -13,6 +13,52 @@
 #include <vector>
 // clang-format on
 
+/*
+  This is the set of algorithms for computing:
+  * Arithmetic equivalence under GL_n(Z) of positive definite quadratic forms.
+  * Stabilizer under GL_n(Z) action of positive definite quadratic forms.
+  * Canonical form under GL_n(Z) action of positive definite form.
+
+  The classic algorithm for iterm 1 and 2 is the Plesken-Souvignier algorithm:
+  W. Plesken, B. Souvignier, Computing isometries of lattices, Journal of
+     Symbolic Computation (1997) 24, 327-344.
+  It works by using the standard basis (e_1, ...., e_n) with e_i the vector
+  having
+  (e_i)_j = | 1 is i=j
+            | 0 if i<>j
+  That standard basis is then looked for possible images in the list of short
+  vectors. This is very efficient. The algorithm of this section are different.
+  Instead we compute the set of pairwise scalar products and use partition
+  backtrack for testing isomorphism and stabilizer:
+  * This approach is not scalable for large lattice such as Leech lattice.
+    Here PS algorithm works better.
+  * But it may be more efficient for small dimensional lattices.
+
+  For the canonical form computation, we have
+  Mathieu Dutour Sikirić, Anna Haensch, John Voight, Wessel Van Woerden,
+  A canonical form for positive definite matrices, Proceedings of the
+  Fourteenth Algorithmic Number Theory Symposium (ANTS-XIV), edited by
+  Steven Galbraith, Open Book Series 4, Mathematical Sciences Publishers,
+  Berkeley, 2020, prepring at https://arxiv.org/abs/2004.14022
+
+  The approach of Plesken-Souvignier does not appear to be feasible for
+  computing canonical form.
+
+  So, the approach of this file is to compute configuration of short
+  vectors and then compute automorphism, isomorphism and canonical forms.
+
+  Computing those configurations of short vectors is a difficult
+  business. Two tricks are available to accelerate it:
+  * Computing also for the dual. The inverse matrix A^(-1) might be
+    easier to compute with.
+  * We do not necessarily need a spanning configuration. Having a full
+    rank one (but not neceessarily spanning) that can then be used for
+    rational stabilizer and equivalence is good enough. Then we can
+    use the finite index algorithm for concluding.
+
+ */
+
+
 #ifdef DEBUG
 #define DEBUG_LATTICE_STAB_EQUI_CAN
 #endif
@@ -265,7 +311,7 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
   MyMatrix<Tint> SHV =
       ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
+  os << "|LSEC: ExtractInvariantVectorFamilyFullRank|=" << time << "\n";
 #endif
   return ArithmeticAutomorphismGroupMultiple_inner<T, Tint, Tgroup>(ListMat,
                                                                     SHV, os);
@@ -282,14 +328,28 @@ ArithmeticAutomorphismGroup(MyMatrix<T> const &inpMat, std::ostream &os) {
 // Equivalence code
 //
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat1, MyMatrix<Tint> const &SHV1,
     std::vector<MyMatrix<T>> const &ListMat2, MyMatrix<Tint> const &SHV2,
     std::ostream &os) {
-  using Tidx = uint32_t;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   MicrosecondTime time;
+#endif
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  auto f_check_mat=[&](MyMatrix<T> const& mat) -> void {
+    for (size_t i = 0; i < ListMat1.size(); i++) {
+      MyMatrix<T> eMat1 = ListMat1[i];
+      MyMatrix<T> eMat2 = ListMat2[i];
+      MyMatrix<T> eProd = mat * eMat1 * mat.transpose();
+      if (eProd != eMat2) {
+        std::cerr << "LSEC: Inconsistency error in the code\n";
+        throw TerminalException{1};
+      }
+    }
+  };
 #endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: |SHV1|=" << SHV1.rows() << " |SHV2|=" << SHV2.rows() << "\n";
@@ -308,65 +368,75 @@ std::optional<MyMatrix<Tint>> ArithmeticEquivalenceMultiple_inner(
 #endif
 
   int n_rows = SHV1_T.rows();
-  std::vector<T> Vdiag1(n_rows, 0);
-  std::vector<T> Vdiag2(n_rows, 0);
+  std::vector<T> Vdiag(n_rows, 0);
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
   os << "LSEC: Before the TestEquivalence_ListMat_Vdiag\n";
 #endif
-  std::optional<std::vector<Tidx>> opt =
-      TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag2,
-                                                SHV1_T, ListMat1, Vdiag1, os);
+  std::optional<std::vector<Tidx>> opt1 =
+      TestEquivalence_ListMat_Vdiag<T, T, Tidx>(SHV2_T, ListMat2, Vdiag,
+                                                SHV1_T, ListMat1, Vdiag, os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: TestEquivalence_ListMat_Vdiag|=" << time << "\n";
 #endif
 
-  if (!opt)
+  if (!opt1)
     return {};
-  std::optional<MyMatrix<T>> optB =
-      FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt);
+  std::optional<MyMatrix<T>> opt2 =
+      FindMatrixTransformationTest(SHV2_T, SHV1_T, *opt1);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: FindMatrixTransformationTest|=" << time << "\n";
 #endif
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  if (!optB) {
+  if (!opt2) {
     std::cerr << "LSEC: We have a matrix bug\n";
     throw TerminalException{1};
   }
 #endif
-  MyMatrix<T> const &M_T = *optB;
+  MyMatrix<T> const &MA_T = *opt2;
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
-  if (!IsIntegralMatrix(M_T)) {
-    std::cerr << "LSEC: The matrix should be integral\n";
+  f_check_mat(MA_T);
+#endif
+  if (IsIntegralMatrix(MA_T)) {
+    // Early termination
+    MyMatrix<Tint> MA = UniversalMatrixConversion<Tint, T>(MA_T);
+    return MA;
+  }
+  std::vector<std::vector<Tidx>> ListGen =
+      GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV2_T, ListMat2, Vdiag, os);
+  std::vector<MyMatrix<T>> ListMatrGens2;
+  for (auto & eGen: ListGen) {
+    Telt elt(eGen);
+    MyMatrix<T> eMatrGen2 = FindTransformation(SHV2_T, SHV2_T, elt);
+    ListMatrGens2.emplace_back(std::move(eMatrGen2));
+  }
+  Telt eEquiv(*opt1);
+  Telt eEquivInv = Inverse(eEquiv);
+  std::optional<MyMatrix<T>> opt3 = LinPolytopeIntegral_Isomorphism_Subspaces<T,Tgroup>(SHV1_T, SHV2_T, ListMatrGens2, eEquivInv, os);
+  if (!opt3) {
+    return {};
+  }
+  MyMatrix<T> MB_T = Inverse(*opt3);
+#ifdef DEBUG_LATTICE_STAB_EQUI_CAN
+  if (!IsIntegralMatrix(MB_T)) {
+    std::cerr << "LSEC: Matrix should be integral\n";
     throw TerminalException{1};
   }
-  for (size_t i = 0; i < ListMat1.size(); i++) {
-    MyMatrix<T> eMat1 = ListMat1[i];
-    MyMatrix<T> eMat2 = ListMat2[i];
-    MyMatrix<T> eProd = M_T * eMat1 * M_T.transpose();
-    if (eProd != eMat2) {
-      std::cerr << "LSEC: Inconsistency error in the code\n";
-      throw TerminalException{1};
-    }
-  }
+  f_check_mat(MB_T);
 #endif
-  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
-#ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ArithmeticEquivalenceMultiple_inner, M|=" << time << "\n";
-#endif
+  MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(MB_T);
   return M;
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> ArithmeticEquivalence_inner(
     MyMatrix<T> const &inpMat1, MyMatrix<Tint> const &SHV1,
     MyMatrix<T> const &inpMat2, MyMatrix<Tint> const &SHV2, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat1{inpMat1};
   std::vector<MyMatrix<T>> ListMat2{inpMat2};
-  return ArithmeticEquivalenceMultiple_inner(ListMat1, SHV1, ListMat2, SHV2,
-                                             os);
+  return ArithmeticEquivalenceMultiple_inner<T,Tint,Tgroup>(ListMat1, SHV1, ListMat2, SHV2, os);
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
                               std::vector<MyMatrix<T>> const &ListMat2,
@@ -375,26 +445,25 @@ ArithmeticEquivalenceMultiple(std::vector<MyMatrix<T>> const &ListMat1,
   MicrosecondTime time;
 #endif
   MyMatrix<Tint> SHV1 =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat1[0], os);
+      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat1[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyZbasis1|=" << time << "\n";
+  os << "|LSEC: ExtractInvariantVectorFamilyFullRank1|=" << time << "\n";
 #endif
   MyMatrix<Tint> SHV2 =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat2[0], os);
+      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat2[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
-  os << "|LSEC: ExtractInvariantVectorFamilyZbasis2|=" << time << "\n";
+  os << "|LSEC: ExtractInvariantVectorFamilyFullRank2|=" << time << "\n";
 #endif
-  return ArithmeticEquivalenceMultiple_inner(ListMat1, SHV1, ListMat2, SHV2,
-                                             os);
+  return ArithmeticEquivalenceMultiple_inner<T,Tint,Tgroup>(ListMat1, SHV1, ListMat2, SHV2, os);
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>> ArithmeticEquivalence(MyMatrix<T> const &inpMat1,
                                                     MyMatrix<T> const &inpMat2,
                                                     std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat1{inpMat1};
   std::vector<MyMatrix<T>> ListMat2{inpMat2};
-  return ArithmeticEquivalenceMultiple<T, Tint>(ListMat1, ListMat2, os);
+  return ArithmeticEquivalenceMultiple<T, Tint, Tgroup>(ListMat1, ListMat2, os);
 }
 
 // clang-format off

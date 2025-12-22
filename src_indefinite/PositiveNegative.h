@@ -101,7 +101,7 @@ INDEF_FORM_AutomorphismGroup_PosNeg(MyMatrix<T> const &Q, std::ostream &os) {
   throw TerminalException{1};
 }
 
-template <typename T, typename Tint>
+template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
                                   std::ostream &os) {
@@ -116,10 +116,10 @@ INDEF_FORM_TestEquivalence_PosNeg(MyMatrix<T> const &Q1, MyMatrix<T> const &Q2,
   if (DSM1.nbPlus == 0 && DSM1.nbZero == 0) {
     MyMatrix<T> Qneg1 = -Q1;
     MyMatrix<T> Qneg2 = -Q2;
-    return ArithmeticEquivalence<T, Tint>(Qneg1, Qneg2, os);
+    return ArithmeticEquivalence<T, Tint, Tgroup>(Qneg1, Qneg2, os);
   }
   if (DSM1.nbMinus == 0 && DSM1.nbZero == 0) {
-    return ArithmeticEquivalence<T, Tint>(Q1, Q2, os);
+    return ArithmeticEquivalence<T, Tint, Tgroup>(Q1, Q2, os);
   }
   std::cerr << "Failed to find a matching entry for PosNeg\n";
   throw TerminalException{1};

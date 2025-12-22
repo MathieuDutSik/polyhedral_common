@@ -1019,7 +1019,7 @@ private:
     MyMatrix<T> const &mat2 = eBlock2.mat;
     if (eBlock1.h == 0) {
       std::optional<MyMatrix<Tint>> opt =
-          INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(mat1, mat2, os);
+        INDEF_FORM_TestEquivalence_PosNeg<T, Tint, Tgroup>(mat1, mat2, os);
 #ifdef TIMINGS_INDEFINITE_COMBINED_ALGORITHMS
       os << "|COMB: INDEF_FORM_TestEquivalence_PosNeg|=" << time << "\n";
 #endif

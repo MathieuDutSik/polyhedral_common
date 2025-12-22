@@ -961,7 +961,7 @@ std::vector<MyMatrix<Tint>> GetEasyIsometries(MyMatrix<T> const &Qmat,
                                               MyMatrix<T> const &)>
       f_isom_pn = [&](MyMatrix<T> const &eQ,
                       MyMatrix<T> const &fQ) -> std::optional<MyMatrix<Tint>> {
-    return INDEF_FORM_TestEquivalence_PosNeg<T, Tint>(eQ, fQ, os);
+    return INDEF_FORM_TestEquivalence_PosNeg<T, Tint, Tgroup>(eQ, fQ, os);
   };
   std::function<std::optional<MyMatrix<Tint>>(MyMatrix<T> const &,
                                               MyMatrix<T> const &)>

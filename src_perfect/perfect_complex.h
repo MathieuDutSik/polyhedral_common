@@ -62,29 +62,9 @@
 
  */
 
-
-
-
-
-
-
-
-template<typename Tint>
-struct PerfectTriple {
-  MyMatrix<Tint> e_mat;
-  int i_perfect;
-  Face f;
-};
-
-template<typename T, typename Tint, Tgroup>
-struct FacePerfectComplex {
-  std::vector<PerfectTriple<Tint>> l_triple; // The containing triples.
-  MyMatrix<T> gram;
-  Tshortest<T, Tint> rec_shv;
-  Tgroup GRP; // Group acting on the
-  std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
-  bool is_well_rounded;
-};
+//
+// The top dimensional complex
+//
 
 template<typename Tint>
 struct PerfectAdjInfo {
@@ -105,6 +85,47 @@ template<typename T, typename Tint, typename Tgroup>
 struct PerfectComplexTopDimInfo {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   bool only_well_rounded;
+  bool compute_boundary;
+};
+
+
+template<typename T, typename Tint, typename Tgroup>
+PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded) {
+  std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
+  for (auto & ePerf: l_tot) {
+    std::vector<PerfectAdjInfo<Tint>> list_adj_info;
+    for (auto & eAdj: ePerf.ListAdj) {
+      int i_adj = eAdj.iOrb;
+      Face f = eAdj.x.eInc;
+      MyMatrix<Tint> e_mat = eAdj.x.eBigMat;
+      PerfectAdjInfo<Tint> pai{e_mat, i_adj, f};
+      list_adj_info.emplace_back(std::move(pai));
+    }
+    PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
+    l_perfect.emplace_back(std::move(perfect));
+  }
+  return {std::move(l_perfect), only_well_rounded};
+}
+
+//
+//
+//
+
+template<typename Tint>
+struct PerfectTriple {
+  MyMatrix<Tint> e_mat;
+  int i_perfect;
+  Face f;
+};
+
+template<typename T, typename Tint, typename Tgroup>
+struct FacePerfectComplex {
+  std::vector<PerfectTriple<Tint>> l_triple; // The containing triples.
+  MyMatrix<T> gram;
+  Tshortest<T, Tint> rec_shv;
+  Tgroup GRP; // Group acting on the
+  std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
+  bool is_well_rounded;
 };
 
 template<typename Tint>
@@ -112,7 +133,6 @@ struct BounEntry {
   MyMatrix<Tint> M;
   int iOrb;
 }
-
 
 template<typename Tint, typename Tgroup>
 struct ListBounEntry {
@@ -132,21 +152,6 @@ template<typename Tint, typename Tgroup>
 std::vector<PerfectAdjInfo<Tint>> generate_perfect_adj_info(Face const& f, std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> const& l_gens, int const& i_adj) {
 
 }
-
-template<typename T, typename Tint, typename Tgroup>
-PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded) {
-  std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
-  for (auto & ePerf: l_tot) {
-    std::vector<PerfectAdjInfo<Tint>> list_adj_info;
-    for (auto & eAdj: ePerf.ListAdj) {
-      
-    }
-    PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
-    l_perfect.emplace_back(std::move(perfect));
-  }
-  return {std::move(l_perfect), only_well_rounded};
-}
-
 
 
 
