@@ -575,12 +575,11 @@ f_for_stab(size_t nbRow, F1 f1, F2 f2, F1tr f1tr, F2tr f2tr, F3 f3, F4 f4,
 }
 
 template <typename T, typename Tgroup, typename Tidx_value>
-Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
-                                                   MyMatrix<T> const &GramMat,
-                                                   std::ostream &os) {
+std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen_Tidx_value(MyMatrix<T> const &EXT,
+                                                                                    MyMatrix<T> const &GramMat,
+                                                                                    std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  size_t nbRow = EXT.rows();
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   HumanTime time;
 #endif
@@ -599,38 +598,49 @@ Tgroup LinPolytope_Automorphism_GramMat_Tidx_value(MyMatrix<T> const &EXT,
 #endif
   std::vector<Telt> LGen;
   for (auto &eList : ListGen) {
-    LGen.push_back(Telt(eList));
+    Telt elt(eList);
+    LGen.emplace_back(std::move(elt));
   }
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   os << "|PES: LinPolytope_Aut : LGen|=" << time << "\n";
 #endif
-  return Tgroup(LGen, nbRow);
+  return LGen;
+}
+
+template <typename T, typename Tgroup>
+std::vector<typename Tgroup::Telt> LinPolytope_Automorphism_GramMat_LGen(MyMatrix<T> const &EXT,
+                                                                         MyMatrix<T> const &GramMat,
+                                                                         std::ostream &os) {
+  size_t nbRow = EXT.rows();
+  size_t max_poss_val = nbRow * nbRow / 2 + 1;
+  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
+    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint8_t>(
+        EXT, GramMat, os);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
+    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint16_t>(
+        EXT, GramMat, os);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
+    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint32_t>(
+        EXT, GramMat, os);
+  }
+  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
+    return LinPolytope_Automorphism_GramMat_LGen_Tidx_value<T, Tgroup, uint64_t>(
+        EXT, GramMat, os);
+  }
+  std::cerr << "PES: Failed to find a matching type\n";
+  throw TerminalException{1};
 }
 
 template <typename T, typename Tgroup>
 Tgroup LinPolytope_Automorphism_GramMat(MyMatrix<T> const &EXT,
                                         MyMatrix<T> const &GramMat,
                                         std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = LinPolytope_Automorphism_GramMat_LGen<T,Tgroup>(EXT, GramMat, os);
   size_t nbRow = EXT.rows();
-  size_t max_poss_val = nbRow * nbRow / 2 + 1;
-  if (max_poss_val < size_t(std::numeric_limits<uint8_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_Tidx_value<T, Tgroup, uint8_t>(
-        EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint16_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_Tidx_value<T, Tgroup, uint16_t>(
-        EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint32_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_Tidx_value<T, Tgroup, uint32_t>(
-        EXT, GramMat, os);
-  }
-  if (max_poss_val < size_t(std::numeric_limits<uint64_t>::max() - 1)) {
-    return LinPolytope_Automorphism_GramMat_Tidx_value<T, Tgroup, uint64_t>(
-        EXT, GramMat, os);
-  }
-  std::cerr << "PES: Failed to find a matching type\n";
-  throw TerminalException{1};
+  return Tgroup(LGen, nbRow);
 }
 
 template <typename T, typename Tgroup>
