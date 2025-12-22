@@ -1,5 +1,6 @@
 #PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_getMatrixScalProd
+PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
@@ -12,7 +13,7 @@
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain
-PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
+#PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
 #PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain LATT_MPI_Lattice_IsoDelaunayDomain
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex

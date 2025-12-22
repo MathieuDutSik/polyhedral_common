@@ -190,7 +190,11 @@ template <typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
     std::vector<MyMatrix<T>> const &ListMat, MyMatrix<Tint> const &SHV,
     std::ostream &os) {
-  using Tidx = typename Tgroup::Telt::Tidx;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  using TintGroup = typename Tgroup::Tint;
+  using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
+  
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, 0);
@@ -198,8 +202,8 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
   std::vector<std::vector<Tidx>> ListGen =
       GetListGenAutomorphism_ListMat_Vdiag<T, T, Tgroup>(SHV_T, ListMat, Vdiag,
                                                          os);
-
-  std::vector<MyMatrix<Tint>> ListGenRet;
+  bool all_matrices_integral = true;
+  std::vector<MyMatrix<T>> ListGenRet_T;
   for (auto &eList : ListGen) {
     std::optional<MyMatrix<T>> opt =
         FindMatrixTransformationTest(SHV_T, SHV_T, eList);
@@ -208,6 +212,28 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
       throw TerminalException{1};
     }
     MyMatrix<T> const &M_T = *opt;
+    if (all_matrices_integral) {
+      if (!IsIntegralMatrix(M_T)) {
+        all_matrices_integral = false;
+      }
+    }
+    ListGenRet_T.push_back(M_T);
+  }
+  std::vector<MyMatrix<Tint>> ListGenRet;
+  if (all_matrices_integral) {
+    for (auto &M_T : ListGenRet_T) {
+      MyMatrix<Tint> M = UniversalMatrixConversion<Tint, T>(M_T);
+      ListGenRet.push_back(M);
+    }
+    return ListGenRet;
+  }
+  //
+  // Not integral, computing the integral stabilizer
+  //
+  Thelper helper = ComputeFiniteMatrixGroupHelper<T, Telt, TintGroup>(SHV_T);
+  RetMI_S<T, Tgroup> ret =
+    LinPolytopeIntegral_Automorphism_Subspaces<T, Tgroup>(ListGenRet_T, SHV_T, os);
+  for (auto &M_T : ret.LGen) {
 #ifdef DEBUG_LATTICE_STAB_EQUI_CAN
     if (!IsIntegralMatrix(M_T)) {
       std::cerr << "LSEC: Bug: The matrix should be integral\n";
@@ -237,7 +263,7 @@ ArithmeticAutomorphismGroupMultiple(std::vector<MyMatrix<T>> const &ListMat,
   MicrosecondTime time;
 #endif
   MyMatrix<Tint> SHV =
-      ExtractInvariantVectorFamilyZbasis<T, Tint>(ListMat[0], os);
+      ExtractInvariantVectorFamilyFullRank<T, Tint>(ListMat[0], os);
 #ifdef TIMINGS_LATTICE_STAB_EQUI_CAN
   os << "|LSEC: ExtractInvariantVectorFamilyZbasis|=" << time << "\n";
 #endif
