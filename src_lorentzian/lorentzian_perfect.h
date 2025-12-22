@@ -1190,24 +1190,23 @@ template <typename T, typename Tint, typename Tgroup>
 ResultStabilizer<Tint, Tgroup>
 LORENTZ_ComputeStabilizer(MyMatrix<T> const &LorMat,
                           MyMatrix<Tint> const &eFamEXT, std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   MicrosecondTime time;
 #endif
   MyMatrix<T> eFamEXT_T = UniversalMatrixConversion<T, Tint>(eFamEXT);
-  Tgroup GRPisom =
-      LinPolytope_Automorphism_GramMat<T, Tgroup>(eFamEXT_T, LorMat, os);
-  Tgroup GRPperm =
-      LinPolytopeIntegral_Stabilizer(eFamEXT_T, GRPisom, os);
+  std::vector<Telt> LGenIsom = LinPolytope_Automorphism_GramMat_LGen<T, Tgroup>(eFamEXT_T, LorMat, os);
+  Tgroup GRPperm = LinPolytopeIntegral_Stabilizer_LGen<T,Tgroup>(eFamEXT_T, LGenIsom, os);
   std::vector<MyMatrix<Tint>> ListGen;
   for (auto &eGen : GRPperm.SmallGeneratingSet()) {
     MyMatrix<Tint> eGenMatr =
         RepresentVertexPermutation(eFamEXT, eFamEXT, eGen);
-    ListGen.push_back(eGenMatr);
+    ListGen.emplace_back(std::move(eGenMatr));
   }
 #ifdef TIMINGS_LORENTZIAN_PERFECT
   os << "|LORPERF: LORENTZ_ComputeStabilizer|=" << time << "\n";
 #endif
-  return {ListGen, GRPperm};
+  return {std::move(ListGen), std::move(GRPperm)};
 }
 
 template <typename T, typename Tint>
