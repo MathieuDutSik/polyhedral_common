@@ -551,10 +551,8 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
   static_assert(std::is_integral<Tidx_value>::value,
                 "Tidx_value should be integral");
   std::vector<FaceDesc> ListDomain;
-  size_t dim;
   for (size_t i = 0; i < ListCones.size(); i++) {
     size_t len = ListCones[i].FAC.rows();
-    dim = ListCones[i].FAC.cols();
     Face f_fac(len);
     FaceDesc fd = {i, f_fac};
     ListDomain.push_back(fd);
@@ -572,6 +570,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::vector<Tface> list_face;
     size_t n_equiv_found = 0;
+    size_t dim = ListCones[0].FAC.cols();
     auto f_insert_face = [&](const FaceDesc &fd_A) -> void {
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd_A.iCone];
       Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(),

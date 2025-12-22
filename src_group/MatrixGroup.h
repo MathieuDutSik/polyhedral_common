@@ -3151,14 +3151,14 @@ MatrixIntegral_DoubleCosets_General(int const &n,
 }
 
 template <typename T, typename Tgroup>
-Tgroup LinPolytopeIntegral_Stabilizer(MyMatrix<T> const &EXT_T,
-                                              Tgroup const &GRPisom,
-                                              std::ostream &os) {
+Tgroup LinPolytopeIntegral_Stabilizer_LGen(MyMatrix<T> const &EXT_T,
+                                           std::vector<typename Tgroup::Telt> const& LGen,
+                                           std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();
   std::vector<MyMatrix<T>> ListMatrGen;
-  for (auto &eGen : GRPisom.SmallGeneratingSet()) {
+  for (auto &eGen : LGen) {
     MyMatrix<T> eMat = FindTransformation(EXT_T, EXT_T, eGen);
     ListMatrGen.push_back(eMat);
   }
@@ -3177,10 +3177,19 @@ Tgroup LinPolytopeIntegral_Stabilizer(MyMatrix<T> const &EXT_T,
 }
 
 template <typename T, typename Tgroup>
+Tgroup LinPolytopeIntegral_Stabilizer(MyMatrix<T> const &EXT_T,
+                                      Tgroup const &GRPisom,
+                                      std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = GRPisom.SmallGeneratingSet();
+  return LinPolytopeIntegral_Stabilizer_LGen<T,Tgroup>(EXT_T, LGen, os);
+}
+
+template <typename T, typename Tgroup>
 std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
 LinPolytopeIntegral_Stabilizer_RightCoset(MyMatrix<T> const &EXT_T,
-                                                  Tgroup const &GRPisom,
-                                                  std::ostream &os) {
+                                          Tgroup const &GRPisom,
+                                          std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   int nbVert = EXT_T.rows();

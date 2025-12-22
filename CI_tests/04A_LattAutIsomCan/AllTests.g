@@ -323,8 +323,8 @@ end;
 test_all:=function()
     local n_error;
     n_error:=0;
-    n_error:=n_error + test_all_cans();
-#    n_error:=n_error + test_all_automs();
+#    n_error:=n_error + test_all_cans();
+    n_error:=n_error + test_all_automs();
 #    n_error:=n_error + test_all_isoms();
     return n_error;
 end;

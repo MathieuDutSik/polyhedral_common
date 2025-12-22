@@ -118,10 +118,14 @@ template<typename Tint, typename Tgroup>
 struct ListBounEntry {
   Tgroup RotationSubgroup;
   std::vector<BoundEntry<Tint>> l_bound;
-}
+};
+
+template<typename Tint, typename Tgroup>
+struct FullBoundary {
+  std::vector<ListBoundEntry<Tint,Tgroup>> ll_bound;
+};
 
 
-  
 
 
 template<typename Tint, typename Tgroup>
