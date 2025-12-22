@@ -240,22 +240,24 @@ bool operator<(FundInvariantVectorFamily<Tint> const &x,
 }
 
 template <typename T, typename Tint, typename Ffinal, typename Finvariant>
-MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &eMat,
+MyMatrix<Tint> ExtractInvariantVectorFamily(MyMatrix<T> const &GramMat,
                                             Ffinal f_final,
                                             Finvariant f_invariant,
                                             std::ostream &os) {
-  int n = eMat.rows();
-  T incr = GetSmallestIncrement(eMat);
-  T MaxNorm = GetMaxNorm<T, Tint>(eMat, os);
+  int n = GramMat.rows();
+  T incr = GetSmallestIncrement(GramMat);
+  T MaxNorm = GetMaxNorm<T, Tint>(GramMat, os);
   T norm = incr;
   MyMatrix<Tint> SHVret(0, n);
   FundInvariantVectorFamily<Tint> fi_ret = TrivFundamentalInvariant<Tint>();
+  CVPSolver<T, Tint> solver(GramMat, os);
   while (true) {
     if (norm > MaxNorm) {
       std::cerr << "Failed to find a relevant vector configuration\n";
       throw TerminalException{1};
     }
-    MyMatrix<Tint> SHV_f = T_ShortVector_fixed<T, Tint>(eMat, norm, os);
+    std::vector<MyVector<Tint>> ListVect = solver.fixed_norm_vectors(norm);
+    MyMatrix<Tint> SHV_f = MatrixFromVectorFamilyDim(n, ListVect);
     MyMatrix<Tint> SHVtest = Concatenate(SHVret, SHV_f);
     FundInvariantVectorFamily<Tint> fi_test = f_invariant(SHVtest);
     if (fi_ret < fi_test) {

@@ -107,6 +107,22 @@ struct PerfectComplexTopDimInfo {
   bool only_well_rounded;
 };
 
+template<typename Tint>
+struct BounEntry {
+  MyMatrix<Tint> M;
+  int iOrb;
+}
+
+
+template<typename Tint, typename Tgroup>
+struct ListBounEntry {
+  Tgroup RotationSubgroup;
+  std::vector<BoundEntry<Tint>> l_bound;
+}
+
+
+  
+
 
 template<typename Tint, typename Tgroup>
 std::vector<PerfectAdjInfo<Tint>> generate_perfect_adj_info(Face const& f, std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> const& l_gens, int const& i_adj) {
@@ -119,7 +135,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
   for (auto & ePerf: l_tot) {
     std::vector<PerfectAdjInfo<Tint>> list_adj_info;
     for (auto & eAdj: ePerf.ListAdj) {
-
+      
     }
     PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
     l_perfect.emplace_back(std::move(perfect));

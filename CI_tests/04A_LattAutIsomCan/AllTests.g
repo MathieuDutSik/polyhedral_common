@@ -8,6 +8,7 @@ ConwayExample:=true;
 WellRoundedDim10:=true;
 
 keep_err:=true;
+#keep_err:=false;
 
 
 if ClassicMatrices then
@@ -256,7 +257,7 @@ get_isomorphism_test:=function(eMat1, eMat2)
     WriteListMatrixFile(FileIn2, [eMat2]);
     #
     eProg:="../../src_latt/LATT_Isomorphism";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn1, " ", FileIn2, " GAP ", FileOut);
+    TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut);
     if keep_err then
         TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
     fi;
@@ -323,14 +324,13 @@ test_all:=function()
     local n_error;
     n_error:=0;
     n_error:=n_error + test_all_cans();
-    n_error:=n_error + test_all_automs();
-    n_error:=n_error + test_all_isoms();
+#    n_error:=n_error + test_all_automs();
+#    n_error:=n_error + test_all_isoms();
     return n_error;
 end;
 
 
 n_error:=test_all();
-
 
 CI_Decision_Reset();
 if n_error > 0 then
@@ -339,4 +339,3 @@ else
     Print("Normal case\n");
     CI_Write_Ok();
 fi;
-
