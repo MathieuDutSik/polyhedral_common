@@ -66,11 +66,11 @@ int main(int argc, char *argv[]) {
     is >> n_domain;
     for (size_t i = 0; i < n_domain; i++) {
       std::cerr << "i=" << i << " / " << n_domain << "\n";
-      MyMatrix<T> EXT = ReadMatrix<T>(is);
+      MyMatrix<T> EXT_T = ReadMatrix<T>(is);
+      MyMatrix<Tint> EXT = UniversalMatrixConversion<Tint, T>(EXT_T);
       size_t n_ext = EXT.rows();
       std::cerr << "We have read EXT, |EXT|=" << EXT.rows() << "/" << EXT.cols()
                 << "\n";
-      MyMatrix<Tint> EXT_i = UniversalMatrixConversion<Tint, T>(EXT);
       MyMatrix<T> FAC = ReadMatrix<T>(is);
       size_t n_fac = FAC.rows();
       std::cerr << "We have read FAC, |FAC|=" << FAC.rows() << "/" << FAC.cols()
@@ -78,7 +78,7 @@ int main(int argc, char *argv[]) {
       Tgroup GRP_ext = ReadGroup<Tgroup>(is);
       Tgroup GRP_fac = ReadGroup<Tgroup>(is);
       //
-      Face extfac_incd = Compute_extfac_incd(FAC, EXT);
+      Face extfac_incd = Compute_extfac_incd(FAC, EXT_T);
       std::cerr << "List(|FAC|) =";
       for (size_t iFac = 0; iFac < n_fac; iFac++) {
         Face f = GetFacet_extfac(extfac_incd, n_fac, n_ext, iFac);
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "\n";
       Face facext_incd = Compute_facext(extfac_incd, FAC.rows(), EXT.rows());
       std::vector<sing_adj<Tint>> l_sing_adj;
-      ConeDesc<T, Tint, Tgroup> eCone{EXT,         EXT_i,   FAC,    extfac_incd,
+      ConeDesc<T, Tint, Tgroup> eCone{EXT_T, EXT, FAC, extfac_incd,
                                       facext_incd, GRP_ext, GRP_fac, l_sing_adj};
       ListCones.push_back(eCone);
     }
@@ -134,7 +134,7 @@ int main(int argc, char *argv[]) {
           Face f_ext = Compute_faceEXT_from_faceFAC(
               eC.extfac_incd, eC.FAC.rows(), eC.EXT_T.rows(), fd.f_fac);
           //
-          MyMatrix<Tint> EXT_sel = SelectRow(eC.EXT_i, f_ext);
+          MyMatrix<Tint> EXT_sel = SelectRow(eC.EXT, f_ext);
           os_out << "i_orbit=" << i_orbit << " |EXT|=" << EXT_sel.rows()
                  << " iCone=" << fd.iCone << "\n";
           WriteMatrix(os_out, EXT_sel);

@@ -36,7 +36,7 @@ template <typename Tint> struct sing_adj {
 
 template <typename T, typename Tint, typename Tgroup> struct ConeDesc {
   MyMatrix<T> EXT_T;
-  MyMatrix<Tint> EXT_i;
+  MyMatrix<Tint> EXT;
   MyMatrix<T> FAC;
   Face extfac_incd;
   Face facext_incd;
@@ -172,7 +172,7 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   int nbExt = ListCones[fd.iCone].EXT_T.rows();
   Face face_ext = Compute_faceEXT_from_faceFAC(ListCones[fd.iCone].extfac_incd,
                                                nbFac, nbExt, fd.f_fac);
-  MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, face_ext);
+  MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT, face_ext);
   MyMatrix<Tint> P = M * G;
   MyMatrix<Tint> Spann;
   MyMatrix<Tint> Concat = M;
@@ -406,7 +406,7 @@ get_spanning_list_ent_face(
   std::set<MyVector<Tint>> set_EXT;
   // That value of dim should be overwritten later
   for (auto &ePt : FaceToVector<int>(ef_input.f_ext)) {
-    MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT_i, ePt);
+    MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT, ePt);
     // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
     set_EXT.insert(Vimg);
@@ -501,7 +501,7 @@ get_spanning_list_ent_face(
           size_t jCone = e_sing_adj.jCone;
           const ConeDesc<T, Tint, Tgroup> &fC = ListCones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
-          MyMatrix<Tint> EXTimg = fC.EXT_i * eMatAdj;
+          MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;
           ContainerMatrix<Tint> Cont(EXTimg);
           Face faceNew(EXTimg.rows());
           for (auto &e_line : set_EXT) {
