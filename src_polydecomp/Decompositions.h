@@ -10,6 +10,7 @@
 #include "POLY_RecursiveDualDesc.h"
 #include "Permutation.h"
 #include "PolytopeEquiStabInt.h"
+#include "triples.h"
 #include "Namelist.h"
 #include <string>
 #include <set>
@@ -28,13 +29,9 @@
 
 // possible strategies for computing isomorphsim
 
-template <typename Tint> struct sing_adj {
-  size_t jCone;
-  Face f_ext;
-  MyMatrix<Tint> eMat;
-};
-
-template <typename T, typename Tint, typename Tgroup> struct ConeDesc {
+template <typename T, typename Tint_inp, typename Tgroup_inp> struct ConeDesc {
+  using Tint = Tint_inp;
+  using Tgroup = Tgroup_inp;
   MyMatrix<T> EXT_T;
   MyMatrix<Tint> EXT;
   MyMatrix<T> FAC;
@@ -364,176 +361,6 @@ void compute_adjacency_structure(
     }
     ListCones[i_domain].l_sing_adj = l_sing_adj;
   }
-}
-
-// A face of the cellular complex is determined by all the ways in which
-// f_ext is the subset of the corresponding face
-template <typename Tint> struct triple {
-  size_t iCone;
-  Face f_ext;
-  MyMatrix<Tint> eMat;
-};
-
-template <typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>>
-test_equiv_triple(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-                    triple<Tint> const &ef1, triple<Tint> const &ef2) {
-  using Telt = typename Tgroup::Telt;
-  if (ef1.iCone != ef2.iCone)
-    return {};
-  size_t iC = ef1.iCone;
-  const ConeDesc<T, Tint, Tgroup> &eC = ListCones[iC];
-  std::optional<Telt> test =
-      eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
-  if (!test)
-    return {};
-  MyMatrix<Tint> eMat = FindTransformation(eC.EXT, eC.EXT, *test);
-  return Inverse(ef1.eMat) * eMat * ef2.eMat;
-}
-
-/*
-  Generate the list of entries in the face and the list of stabilizer generators
- */
-template <typename T, typename Tint, typename Tgroup>
-std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>
-get_spanning_list_triple(
-    std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    const triple<Tint> &ef_input) {
-  //  std::cerr << "Beginning of get_spanning_list_triple\n";
-  using Telt = typename Tgroup::Telt;
-  std::vector<MyMatrix<Tint>> ListMatrGen;
-  std::set<MyVector<Tint>> set_EXT;
-  // That value of dim should be overwritten later
-  for (auto &ePt : FaceToVector<int>(ef_input.f_ext)) {
-    MyVector<Tint> V = GetMatrixRow(ListCones[ef_input.iCone].EXT, ePt);
-    // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
-    MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
-    set_EXT.insert(Vimg);
-  }
-  auto f_insert_generator = [&](const MyMatrix<Tint> &eMatrGen) -> void {
-    ListMatrGen.push_back(eMatrGen);
-    for (auto &eV : set_EXT) {
-      MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
-      if (set_EXT.count(Vimg) != 1) {
-        std::cerr
-            << "Error: The generator does not preserve the face globally\n";
-        throw TerminalException{1};
-      }
-    }
-  };
-  std::vector<triple<Tint>> l_triple;
-  auto f_insert = [&](const triple<Tint> &ef_A) -> void {
-    for (const auto &ef_B : l_triple) {
-      std::optional<MyMatrix<Tint>> equiv_opt =
-          test_equiv_triple(ListCones, ef_A, ef_B);
-      if (equiv_opt) {
-        f_insert_generator(*equiv_opt);
-        return;
-      }
-    }
-    l_triple.push_back(ef_A);
-    const ConeDesc<T, Tint, Tgroup> &uC = ListCones[ef_A.iCone];
-    Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
-    MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
-    for (auto &eGen : stab.GeneratorsOfGroup()) {
-      MyMatrix<Tint> eMatGen = FindTransformation(uC.EXT, uC.EXT, eGen);
-      MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
-      f_insert_generator(TransGen);
-    }
-  };
-  f_insert(ef_input);
-  size_t curr_pos = 0;
-  while (true) {
-    size_t len = l_triple.size();
-    if (curr_pos == len)
-      break;
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-    std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
-#endif
-    for (size_t i = curr_pos; i < len; i++) {
-      // We cannot use const& for triple for mysterious
-      // reasons (3 hours debugging)
-      triple<Tint> ef = l_triple[i];
-      const ConeDesc<T, Tint, Tgroup> &eC = ListCones[ef.iCone];
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-      std::cerr << "i=" << i << " iCone=" << ef.iCone
-                << "\n";
-      size_t n_facet = 0;
-#endif
-      for (auto &e_sing_adj : ListCones[ef.iCone].l_sing_adj) {
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-        std::cerr << "|ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
-#endif
-        std::vector<std::pair<Face, Telt>> l_pair =
-            FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-        vectface vfo =
-            OrbitFace(e_sing_adj.f_ext, eC.GRP_ext.GeneratorsOfGroup());
-        n_facet += vfo.size();
-        Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
-        std::cerr << "|vfo|=" << vfo.size() << " |stab|=" << stab.size()
-                  << "\n";
-        size_t n_match = 0;
-        vectface vfcont(vfo.get_n());
-        for (auto &eFace : vfo) {
-          if (is_subset(ef.f_ext, eFace)) {
-            std::cerr << "V=" << StringFace(eFace) << "\n";
-            vfcont.push_back(eFace);
-            n_match++;
-          }
-        }
-        vectface vfs = OrbitSplittingSet(vfcont, stab);
-        std::cerr << "|l_pair|=" << l_pair.size()
-                  << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext)
-                  << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
-                  << " n_match=" << n_match << " |vfs|=" << vfs.size() << "\n";
-        if (vfs.size() != l_pair.size()) {
-          std::cerr << "We have a size error\n";
-          throw TerminalException{1};
-        }
-#endif
-        for (auto &e_pair : l_pair) {
-          MyMatrix<Tint> eMat1 =
-              FindTransformation(eC.EXT, eC.EXT, e_pair.second);
-          size_t jCone = e_sing_adj.jCone;
-          const ConeDesc<T, Tint, Tgroup> &fC = ListCones[jCone];
-          MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
-          MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;
-          ContainerMatrix<Tint> Cont(EXTimg);
-          Face faceNew(EXTimg.rows());
-          for (auto &e_line : set_EXT) {
-            std::optional<size_t> opt = Cont.GetIdx_v(e_line);
-            if (!opt) {
-              std::cerr << "The vector is not in the image. Clear bug\n";
-              throw TerminalException{1};
-            }
-            size_t idx = *opt;
-            faceNew[idx] = 1;
-          }
-          triple<Tint> efNew{jCone, faceNew, eMatAdj};
-          f_insert(efNew);
-        }
-      }
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-      std::cerr << "iCone=" << ef.iCone
-                << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
-                << " n_facet=" << n_facet << "\n";
-#endif
-    }
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-    std::cerr << "Now |l_triple|=" << l_triple.size() << "\n";
-#endif
-    curr_pos = len;
-  }
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-  std::cerr << "|l_triple|=" << l_triple.size()
-            << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
-  std::cerr << "l_triple.iCon =";
-  for (auto &e_ent : l_triple)
-    std::cerr << " " << e_ent.iCone;
-  std::cerr << "\n";
-#endif
-  return {l_triple, ListMatrGen};
 }
 
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
