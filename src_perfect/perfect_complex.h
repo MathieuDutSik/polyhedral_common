@@ -3,6 +3,7 @@
 #define SRC_PERFECT_PERFECT_COMPLEX_H_
 
 #include "perfect_tspace.h"
+#include "triples.h"
 
 /*
   Construction of the perfect form complex.
@@ -67,19 +68,12 @@
 // The top dimensional complex
 //
 
-template<typename Tint>
-struct PerfectAdjInfo {
-  MyMatrix<Tint> e_mat;
-  int i_adj;
-  Face f;
-};
-
 template<typename T, typename Tint, typename Tgroup>
 struct PerfectFormInfoForComplex {
   MyMatrix<T> gram;
-  Tshortest<T, Tint> rec_shv;
-  Tgroup GRP; // Group acting on the shortest vectors
-  std::vector<PerfectAdjInfo<Tint>> list_adj_info;
+  MyMatrix<Tint> EXT;
+  Tgroup GRP_ext; // Group acting on the shortest vectors
+  std::vector<sing_adj<Tint>> l_sing_adj;
 };
 
 template<typename T, typename Tint, typename Tgroup>
@@ -94,47 +88,20 @@ template<typename T, typename Tint, typename Tgroup>
 PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded, bool const& compute_boundary) {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   for (auto & ePerf: l_tot) {
-    std::vector<PerfectAdjInfo<Tint>> list_adj_info;
+    std::vector<sing_adj<Tint>> l_sing_adj;
     for (auto & eAdj: ePerf.ListAdj) {
-      int i_adj = eAdj.iOrb;
-      Face f = eAdj.x.eInc;
-      MyMatrix<Tint> e_mat = eAdj.x.eBigMat;
-      PerfectAdjInfo<Tint> pai{e_mat, i_adj, f};
-      // WRONG: We need to span the orbits.
-      list_adj_info.emplace_back(std::move(pai));
+      int jCone = eAdj.iOrb;
+      Face f_ext = eAdj.x.eInc;
+      MyMatrix<Tint> eMat = eAdj.x.eBigMat;
+      sing_adj<Tint> adj{jCone, f_ext, eMat};
+      l_sing_adj.emplace_back(std::move(adj));
     }
-    PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
+    MyMatrix<Tint> const& EXT = ePerf.x.rec_shv.SHV;
+    Tgroup const& GRP_ext = ePerf.x.grp;
+    PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
   return {std::move(l_perfect), only_well_rounded, compute_boundary};
-}
-
-//
-// The triple business (adapted from Decomposition.h)
-//
-
-template<typename Tint>
-struct PerfectTriple {
-  MyMatrix<Tint> e_mat;
-  int i_perfect;
-  Face f;
-};
-
-template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> test_triple_equivalence(PerfectTriple<Tint> const& pt1, PerfectTriple<Tint> const& pt2, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi) {
-  if (pt1.i_perfect != pt2.i_perfect) {
-    return {};
-  }
-  int i_perfect = pt1.i_perfect;
-  PerfectFormInfoForComplex<T,Tint,Tgroup> const& perf = pctdi.l_perfect[i_perfect];
-
-  std::optional<Telt> opt = perf.grp.RepresentativeAction_OnSets(pt1.f, pt2.f);
-  if (!opt) {
-    return {};
-  }
-  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, *opt);
-  MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint, T>(eMat_T);
-  return Inverse(pt1.eMat) * eMat * pt2.eMat;
 }
 
 
@@ -146,11 +113,10 @@ std::optional<MyMatrix<Tint>> test_triple_equivalence(PerfectTriple<Tint> const&
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {
-  std::vector<PerfectTriple<Tint>> l_triple; // The containing triples.
-  MyMatrix<T> gram;
-  Tshortest<T, Tint> rec_shv;
-  Tgroup GRP; // Group acting on the
+  std::vector<triple<Tint>> l_triple; // The containing triples.
   std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
+  Tgroup GRP_ext; // Group acting on the vectors.
+  MyMatrix<T> gram;
   bool is_well_rounded;
 };
 

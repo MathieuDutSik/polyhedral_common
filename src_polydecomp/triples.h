@@ -153,8 +153,8 @@ get_spanning_list_triple(
     std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
 #endif
     for (size_t i = curr_pos; i < len; i++) {
-      // We cannot use const& for triple for mysterious
-      // reasons (3 hours debugging)
+      // We cannot use const& for triple because the underlying array
+      // of std::vector can be freed and reallocated.
       triple<Tint> ef = l_triple[i];
       const Ttopcone &eC = l_cones[ef.iCone];
 #ifdef DEBUG_TRIPLE
