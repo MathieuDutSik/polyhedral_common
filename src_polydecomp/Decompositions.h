@@ -436,8 +436,7 @@ get_spanning_list_ent_face(
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
     for (auto &eGen : stab.GeneratorsOfGroup()) {
-      MyMatrix<T> eMatGen_T = FindTransformation(uC.EXT_T, uC.EXT_T, eGen);
-      MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint, T>(eMatGen_T);
+      MyMatrix<Tint> eMatGen = FindTransformation(uC.EXT, uC.EXT, eGen);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       f_insert_generator(TransGen);
     }
@@ -494,9 +493,8 @@ get_spanning_list_ent_face(
         }
 #endif
         for (auto &e_pair : l_pair) {
-          MyMatrix<T> eMat1_T =
-              FindTransformation(eC.EXT_T, eC.EXT_T, e_pair.second);
-          MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint, T>(eMat1_T);
+          MyMatrix<Tint> eMat1 =
+              FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           size_t jCone = e_sing_adj.jCone;
           const ConeDesc<T, Tint, Tgroup> &fC = ListCones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
