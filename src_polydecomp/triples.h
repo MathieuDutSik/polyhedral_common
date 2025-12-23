@@ -91,6 +91,22 @@ test_equiv_triple(std::vector<Ttopcone> const &l_cones,
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
+template <typename Ttopcone>
+std::optional<MyMatrix<typename Ttopcone::Tint>>
+test_triple_in_listtriple(std::vector<Ttopcone> const &l_cones,
+                          std::vector<triple<typename Ttopcone::Tint>> const &lt1,
+                          triple<typename Ttopcone::Tint> const &ef2) {
+  using Tint = typename Topcone::Tint;
+  for (auto &ef1: lt1) {
+    std::optional<MyMatrix<Tint>> opt = test_equiv_triple(l_cones, ef1, ef2);
+    if (opt) {
+      MyMatrix<Tint> const& M = *opt;
+      return M;
+    }
+  }
+  return {};
+}
+
 /*
   Generate the list of entries in the face and the list of stabilizer generators
  */

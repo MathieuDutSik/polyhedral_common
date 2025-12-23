@@ -79,13 +79,14 @@ struct PerfectFormInfoForComplex {
 template<typename T, typename Tint, typename Tgroup>
 struct PerfectComplexTopDimInfo {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
+  LinSpaceMatrix<T> LinSpa;
   bool only_well_rounded;
   bool compute_boundary;
 };
 
 
 template<typename T, typename Tint, typename Tgroup>
-PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded, bool const& compute_boundary) {
+PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary) {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   for (auto & ePerf: l_tot) {
     std::vector<sing_adj<Tint>> l_sing_adj;
@@ -101,15 +102,12 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
-  return {std::move(l_perfect), only_well_rounded, compute_boundary};
+  return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};
 }
 
-
-
-
-
-
-
+//
+// The intermediate dimensional faces.
+//
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {
@@ -119,6 +117,53 @@ struct FacePerfectComplex {
   MyMatrix<T> gram;
   bool is_well_rounded;
 };
+
+template<typename T, typename Tint, typename Tgroup>
+struct FacesPerfectComplex {
+  std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
+};
+
+template<typename T, typename Tint, typename Tgroup>
+FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
+  std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
+  int n = pctdi.LinSpa.n;
+  auto get_l_triple=[&](int i_domain) -> std::vector<triple<Tint>> {
+    std::vector<triple<Tint>> l_triple;
+    if (!pctdi.only_well_rounded) {
+      int n_ext = pctdi.l_perfect[i_domain].EXT.rows();
+      Face f_ext(n_ext);
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        f_ext[i_ext] = 1;
+      }
+      MyMatrix<Tint> eMat = IdentityMat<Tint>(n);
+      triple<Tint> t{i_domain, f_ext, eMat};
+      l_triple.push_back(t);
+    }
+    return l_triple;
+  };
+  auto get_l_gens=[&](int i_domain) -> std::vector<MyMatrix<Tint>> {
+    std::vector<MyMatrix<Tint>> l_gens;
+    PerfectFormInfoForComplex<T,Tint,Tgroup>> const& top = pctdi.l_perfect[i_domain];
+    for (auto & ePermGen: top.GRP_ext.SmallGeneratingSet()) {
+      MyMatrix<Tint> eMatrGen = FindTransformation(top.EXT, top.EXT, ePermGen);
+      l_gens.push_back(eMatrGen);
+    }
+    return l_gens;
+  };
+  int i_domain = 0;
+  for (auto & perfect: pctdi.l_perfect) {
+    std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
+    std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
+    Tgroup GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
+    MyMatrix<T> gram = pctdi.l_perfect[i_domain].gram;
+    bool is_well_rounded = true; // Yes, the top dimensional cells are
+    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, GRP_ext, gram, is_well_rounded};
+    l_faces.push_back(face);
+    i_domain += 1;
+  }
+  return l_faces;
+}
+
 
 template<typename Tint>
 struct BounEntry {
