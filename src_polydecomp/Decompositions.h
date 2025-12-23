@@ -28,6 +28,12 @@
 
 // possible strategies for computing isomorphsim
 
+template <typename Tint> struct sing_adj {
+  size_t jCone;
+  Face f_ext;
+  MyMatrix<Tint> eMat;
+};
+
 template <typename T, typename Tint, typename Tgroup> struct ConeDesc {
   MyMatrix<T> EXT;
   MyMatrix<Tint> EXT_i;
@@ -36,6 +42,7 @@ template <typename T, typename Tint, typename Tgroup> struct ConeDesc {
   Face facext_incd;
   Tgroup GRP_ext;
   Tgroup GRP_fac;
+  std::vector<sing_adj<Tint>> l_sing_adj;
 };
 
 struct FaceDesc {
@@ -208,12 +215,6 @@ size_t f_inv(const Tent<T, Tint, Tidx_value> &eEnt) {
   return std::hash<WeightMatrix<true, std::vector<Tint>, Tidx_value>>()(WMat);
 }
 
-template <typename Tint> struct sing_adj {
-  size_t jCone;
-  Face f_ext;
-  MyMatrix<Tint> eMat;
-};
-
 template <typename T> MyVector<T> GetFirstNonZeroVector(const MyMatrix<T> &M) {
   size_t n_rows = M.rows();
   for (size_t i_row = 0; i_row < n_rows; i_row++) {
@@ -226,8 +227,8 @@ template <typename T> MyVector<T> GetFirstNonZeroVector(const MyMatrix<T> &M) {
 }
 
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
-std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
-    std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
+void compute_adjacency_structure(
+    std::vector<ConeDesc<T, Tint, Tgroup>> & ListCones,
     MyMatrix<Tint> const &G, std::ostream &os) {
   static_assert(std::is_integral<Tidx_value>::value,
                 "Tidx_value should be integral");
@@ -356,15 +357,13 @@ std::vector<std::vector<sing_adj<Tint>>> compute_adjacency_structure(
     }
     return get_mapped(e_ent);
   };
-  std::vector<std::vector<sing_adj<Tint>>> ll_adj_struct;
   for (size_t i_domain = 0; i_domain < n_domain; i_domain++) {
-    std::vector<sing_adj<Tint>> l_adj_struct;
+    std::vector<sing_adj<Tint>> l_sing_adj;
     for (size_t i_adj = 0; i_adj < l_n_orb_adj[i_domain]; i_adj++) {
-      l_adj_struct.push_back(get_sing_adj(i_domain, i_adj));
+      l_sing_adj.push_back(get_sing_adj(i_domain, i_adj));
     }
-    ll_adj_struct.push_back(l_adj_struct);
+    ListCones[i_domain].l_sing_adj = l_sing_adj;
   }
-  return ll_adj_struct;
 }
 
 // A face of the cellular complex is determined by all the ways in which
@@ -400,7 +399,6 @@ template <typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<ent_face<Tint>>, std::vector<MyMatrix<Tint>>>
 get_spanning_list_ent_face(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    std::vector<std::vector<sing_adj<Tint>>> const &ll_sing_adj,
     const ent_face<Tint> &ef_input) {
   //  std::cerr << "Beginning of get_spanning_list_ent_face\n";
   using Telt = typename Tgroup::Telt;
@@ -461,11 +459,10 @@ get_spanning_list_ent_face(
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[ef.iCone];
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "i=" << i << " iCone=" << ef.iCone
-                << " |ll_sing_adj[ef.iCone]|=" << ll_sing_adj[ef.iCone].size()
                 << "\n";
       size_t n_facet = 0;
 #endif
-      for (auto &e_sing_adj : ll_sing_adj[ef.iCone]) {
+      for (auto &e_sing_adj : ListCones[ef.iCone].l_sing_adj) {
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
         std::cerr << "|ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
 #endif
@@ -545,9 +542,7 @@ get_spanning_list_ent_face(
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    MyMatrix<Tint> const &G,
-    std::vector<std::vector<sing_adj<Tint>>> const &ll_sing_adj, int TheLev,
-    std::ostream &os) {
+    MyMatrix<Tint> const &G, int TheLev, std::ostream &os) {
   static_assert(std::is_integral<Tidx_value>::value,
                 "Tidx_value should be integral");
   std::vector<FaceDesc> ListDomain;
@@ -604,7 +599,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
         }
       }
       list_face.push_back(
-          get_spanning_list_ent_face(ListCones, ll_sing_adj, ef_A));
+          get_spanning_list_ent_face(ListCones, ef_A));
     };
 #endif
     auto f_insert = [&](Tent<T, Tint, Tidx_value> &&eEnt) -> void {
@@ -666,9 +661,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
 std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    MyMatrix<Tint> const &G,
-    const std::vector<std::vector<sing_adj<Tint>>> &ll_sing_adj, int TheLev,
-    std::ostream &os) {
+    MyMatrix<Tint> const &G, int TheLev, std::ostream &os) {
   std::vector<std::vector<FaceDesc>> ListListDomain;
   size_t n_col = G.rows();
   using Tface =
@@ -687,7 +680,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
         }
       }
       list_face.push_back(
-          get_spanning_list_ent_face(ListCones, ll_sing_adj, ef_A));
+          get_spanning_list_ent_face(ListCones, ef_A));
     };
     if (iLev == 1) {
       for (size_t iCone = 0; iCone < ListCones.size(); iCone++) {

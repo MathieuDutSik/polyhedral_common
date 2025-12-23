@@ -40,6 +40,7 @@
       - Lorentzian.g for the perfect cones.
       - SaturationAndStabilizer of ProjectiveSystem.g
         for the symplectic story.
+      - Decomposition.h file in that codebase.
       Notes:
       - We cannot use the lower dimensional cells
         for that equivalence realistically. First
@@ -90,7 +91,7 @@ struct PerfectComplexTopDimInfo {
 
 
 template<typename T, typename Tint, typename Tgroup>
-PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded) {
+PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, bool const& only_well_rounded, bool const& compute_boundary) {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   for (auto & ePerf: l_tot) {
     std::vector<PerfectAdjInfo<Tint>> list_adj_info;
@@ -99,16 +100,17 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       Face f = eAdj.x.eInc;
       MyMatrix<Tint> e_mat = eAdj.x.eBigMat;
       PerfectAdjInfo<Tint> pai{e_mat, i_adj, f};
+      // WRONG: We need to span the orbits.
       list_adj_info.emplace_back(std::move(pai));
     }
     PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, ePerf.x.rec_shv, ePerf.x.grp, std::move(list_adj_info)};
     l_perfect.emplace_back(std::move(perfect));
   }
-  return {std::move(l_perfect), only_well_rounded};
+  return {std::move(l_perfect), only_well_rounded, compute_boundary};
 }
 
 //
-//
+// The triple business (adapted from Decomposition.h)
 //
 
 template<typename Tint>
@@ -117,6 +119,30 @@ struct PerfectTriple {
   int i_perfect;
   Face f;
 };
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> test_triple_equivalence(PerfectTriple<Tint> const& pt1, PerfectTriple<Tint> const& pt2, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi) {
+  if (pt1.i_perfect != pt2.i_perfect) {
+    return {};
+  }
+  int i_perfect = pt1.i_perfect;
+  PerfectFormInfoForComplex<T,Tint,Tgroup> const& perf = pctdi.l_perfect[i_perfect];
+
+  std::optional<Telt> opt = perf.grp.RepresentativeAction_OnSets(pt1.f, pt2.f);
+  if (!opt) {
+    return {};
+  }
+  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, *opt);
+  MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint, T>(eMat_T);
+  return Inverse(pt1.eMat) * eMat * pt2.eMat;
+}
+
+
+
+
+
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {

@@ -86,8 +86,9 @@ int main(int argc, char *argv[]) {
       }
       std::cerr << "\n";
       Face facext_incd = Compute_facext(extfac_incd, FAC.rows(), EXT.rows());
+      std::vector<sing_adj<Tint>> l_sing_adj;
       ConeDesc<T, Tint, Tgroup> eCone{EXT,         EXT_i,   FAC,    extfac_incd,
-                                      facext_incd, GRP_ext, GRP_fac};
+                                      facext_incd, GRP_ext, GRP_fac, l_sing_adj};
       ListCones.push_back(eCone);
     }
     //
@@ -96,22 +97,15 @@ int main(int argc, char *argv[]) {
     if (opt == "strategy2_from_high") {
       std::cerr << "Matching strategy2_from_high\n";
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-      std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
-          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G,
-                                                                   std::cerr);
-#else
-      std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj;
+      compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G, std::cerr);
 #endif
       ListListDomain =
           Compute_ListListDomain_strategy2<T, Tint, Tgroup, Tidx_value>(
-              ListCones, G, ll_sing_adj, TheLev, std::cerr);
+              ListCones, G, TheLev, std::cerr);
     }
     if (opt == "strategy1_from_low" || opt == "strategy1_from_high") {
       std::cerr << "Matching strategy1\n";
-      std::vector<std::vector<sing_adj<Tint>>> ll_sing_adj =
-          compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G,
-                                                                   std::cerr);
-      std::cerr << "We have ll_sing_adj\n";
+      compute_adjacency_structure<T, Tint, Tgroup, Tidx_value>(ListCones, G, std::cerr);
       if (opt == "strategy1_from_high") {
         std::cerr << "Matching strategy1_from_high\n";
         std::cerr << "This needs to be implemented as it does not appear "
@@ -123,7 +117,7 @@ int main(int argc, char *argv[]) {
         std::cerr << "Matching strategy1_from_low\n";
         ListListDomain =
             Compute_ListListDomain_strategy1<T, Tint, Tgroup, Tidx_value>(
-                ListCones, G, ll_sing_adj, TheLev, std::cerr);
+                ListCones, G, TheLev, std::cerr);
       }
     }
     //
