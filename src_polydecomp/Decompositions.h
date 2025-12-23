@@ -368,7 +368,7 @@ void compute_adjacency_structure(
 
 // A face of the cellular complex is determined by all the ways in which
 // f_ext is the subset of the corresponding face
-template <typename Tint> struct ent_face {
+template <typename Tint> struct triple {
   size_t iCone;
   Face f_ext;
   MyMatrix<Tint> eMat;
@@ -376,8 +376,8 @@ template <typename Tint> struct ent_face {
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
-test_equiv_ent_face(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-                    ent_face<Tint> const &ef1, ent_face<Tint> const &ef2) {
+test_equiv_triple(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
+                    triple<Tint> const &ef1, triple<Tint> const &ef2) {
   using Telt = typename Tgroup::Telt;
   if (ef1.iCone != ef2.iCone)
     return {};
@@ -395,11 +395,11 @@ test_equiv_ent_face(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
   Generate the list of entries in the face and the list of stabilizer generators
  */
 template <typename T, typename Tint, typename Tgroup>
-std::pair<std::vector<ent_face<Tint>>, std::vector<MyMatrix<Tint>>>
-get_spanning_list_ent_face(
+std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>
+get_spanning_list_triple(
     std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
-    const ent_face<Tint> &ef_input) {
-  //  std::cerr << "Beginning of get_spanning_list_ent_face\n";
+    const triple<Tint> &ef_input) {
+  //  std::cerr << "Beginning of get_spanning_list_triple\n";
   using Telt = typename Tgroup::Telt;
   std::vector<MyMatrix<Tint>> ListMatrGen;
   std::set<MyVector<Tint>> set_EXT;
@@ -421,17 +421,17 @@ get_spanning_list_ent_face(
       }
     }
   };
-  std::vector<ent_face<Tint>> l_ent_face;
-  auto f_insert = [&](const ent_face<Tint> &ef_A) -> void {
-    for (const auto &ef_B : l_ent_face) {
+  std::vector<triple<Tint>> l_triple;
+  auto f_insert = [&](const triple<Tint> &ef_A) -> void {
+    for (const auto &ef_B : l_triple) {
       std::optional<MyMatrix<Tint>> equiv_opt =
-          test_equiv_ent_face(ListCones, ef_A, ef_B);
+          test_equiv_triple(ListCones, ef_A, ef_B);
       if (equiv_opt) {
         f_insert_generator(*equiv_opt);
         return;
       }
     }
-    l_ent_face.push_back(ef_A);
+    l_triple.push_back(ef_A);
     const ConeDesc<T, Tint, Tgroup> &uC = ListCones[ef_A.iCone];
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
@@ -444,16 +444,16 @@ get_spanning_list_ent_face(
   f_insert(ef_input);
   size_t curr_pos = 0;
   while (true) {
-    size_t len = l_ent_face.size();
+    size_t len = l_triple.size();
     if (curr_pos == len)
       break;
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
 #endif
     for (size_t i = curr_pos; i < len; i++) {
-      // We cannot use const& for ent_face for mysterious
+      // We cannot use const& for triple for mysterious
       // reasons (3 hours debugging)
-      ent_face<Tint> ef = l_ent_face[i];
+      triple<Tint> ef = l_triple[i];
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[ef.iCone];
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
       std::cerr << "i=" << i << " iCone=" << ef.iCone
@@ -510,7 +510,7 @@ get_spanning_list_ent_face(
             size_t idx = *opt;
             faceNew[idx] = 1;
           }
-          ent_face<Tint> efNew{jCone, faceNew, eMatAdj};
+          triple<Tint> efNew{jCone, faceNew, eMatAdj};
           f_insert(efNew);
         }
       }
@@ -521,19 +521,19 @@ get_spanning_list_ent_face(
 #endif
     }
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-    std::cerr << "Now |l_ent_face|=" << l_ent_face.size() << "\n";
+    std::cerr << "Now |l_triple|=" << l_triple.size() << "\n";
 #endif
     curr_pos = len;
   }
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-  std::cerr << "|l_ent_face|=" << l_ent_face.size()
+  std::cerr << "|l_triple|=" << l_triple.size()
             << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
-  std::cerr << "l_ent_face.iCon =";
-  for (auto &e_ent : l_ent_face)
+  std::cerr << "l_triple.iCon =";
+  for (auto &e_ent : l_triple)
     std::cerr << " " << e_ent.iCone;
   std::cerr << "\n";
 #endif
-  return {l_ent_face, ListMatrGen};
+  return {l_triple, ListMatrGen};
 }
 
 template <typename T, typename Tint, typename Tgroup, typename Tidx_value>
@@ -554,7 +554,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
   //
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
   using Tface =
-      std::pair<std::vector<ent_face<Tint>>, std::vector<MyMatrix<Tint>>>;
+      std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
 #endif
   for (int i = 1; i < TheLev; i++) {
     std::cerr << "i=" << i << "\n";
@@ -567,11 +567,11 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd_A.iCone];
       Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(),
                                                 eC.EXT_T.rows(), fd_A.f_fac);
-      ent_face<Tint> ef_A{fd_A.iCone, f_ext, IdentityMat<Tint>(dim)};
+      triple<Tint> ef_A{fd_A.iCone, f_ext, IdentityMat<Tint>(dim)};
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
-              test_equiv_ent_face(ListCones, ef_A, ef_B);
+              test_equiv_triple(ListCones, ef_A, ef_B);
           if (equiv_opt) {
             n_equiv_found++;
             Tent<T, Tint, Tidx_value> ent_A =
@@ -596,7 +596,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
         }
       }
       list_face.push_back(
-          get_spanning_list_ent_face(ListCones, ef_A));
+          get_spanning_list_triple(ListCones, ef_A));
     };
 #endif
     auto f_insert = [&](Tent<T, Tint, Tidx_value> &&eEnt) -> void {
@@ -662,22 +662,22 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
   std::vector<std::vector<FaceDesc>> ListListDomain;
   size_t n_col = G.rows();
   using Tface =
-      std::pair<std::vector<ent_face<Tint>>, std::vector<MyMatrix<Tint>>>;
+      std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   std::vector<std::vector<Tface>> list_list_face;
   for (int iLev = 1; iLev <= TheLev; iLev++) {
     std::cerr << "iLev=" << iLev << "\n";
     std::vector<Tface> list_face;
-    auto f_insert = [&](const ent_face<Tint> &ef_A) -> void {
+    auto f_insert = [&](const triple<Tint> &ef_A) -> void {
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
-              test_equiv_ent_face(ListCones, ef_A, ef_B);
+              test_equiv_triple(ListCones, ef_A, ef_B);
           if (equiv_opt)
             return;
         }
       }
       list_face.push_back(
-          get_spanning_list_ent_face(ListCones, ef_A));
+          get_spanning_list_triple(ListCones, ef_A));
     };
     if (iLev == 1) {
       for (size_t iCone = 0; iCone < ListCones.size(); iCone++) {
@@ -688,7 +688,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
           boost::dynamic_bitset<>::size_type eVal = eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
-          ent_face<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
+          triple<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
           f_insert(e_ent);
         }
       }
@@ -702,7 +702,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
               SPAN_face_ExtremeRays(eRepr.f_ext, StabFace_ext, RankFace_ext,
                                     eC.facext_incd, eC.EXT_T, eC.FAC, os);
           for (auto &f_ext_new : vf) {
-            ent_face<Tint> e_ent{eRepr.iCone, f_ext_new,
+            triple<Tint> e_ent{eRepr.iCone, f_ext_new,
                                  IdentityMat<Tint>(n_col)};
             f_insert(e_ent);
           }
@@ -711,7 +711,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
     }
     std::vector<FaceDesc> ListDomain;
     for (auto &eOrbit : list_face) {
-      ent_face<Tint> e_ent = eOrbit.first[0];
+      triple<Tint> e_ent = eOrbit.first[0];
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[e_ent.iCone];
       Face f_fac = Compute_faceFAC_from_faceEXT(eC.extfac_incd, eC.FAC.rows(),
                                                 eC.EXT_T.rows(), e_ent.f_ext);
