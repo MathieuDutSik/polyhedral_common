@@ -35,7 +35,7 @@ template <typename Tint> struct sing_adj {
 };
 
 template <typename T, typename Tint, typename Tgroup> struct ConeDesc {
-  MyMatrix<T> EXT;
+  MyMatrix<T> EXT_T;
   MyMatrix<Tint> EXT_i;
   MyMatrix<T> FAC;
   Face extfac_incd;
@@ -169,7 +169,7 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
       const MyMatrix<Tint> &G, const FaceDesc &fd, std::ostream &os) {
   using Tidx = typename Tgroup::Telt::Tidx;
   int nbFac = ListCones[fd.iCone].FAC.rows();
-  int nbExt = ListCones[fd.iCone].EXT.rows();
+  int nbExt = ListCones[fd.iCone].EXT_T.rows();
   Face face_ext = Compute_faceEXT_from_faceFAC(ListCones[fd.iCone].extfac_incd,
                                                nbFac, nbExt, fd.f_fac);
   MyMatrix<Tint> M = SelectRow(ListCones[fd.iCone].EXT_i, face_ext);
@@ -245,7 +245,7 @@ void compute_adjacency_structure(
   std::vector<size_t> l_n_orb_adj;
   for (size_t i_domain = 0; i_domain < n_domain; i_domain++) {
     size_t n_fac = ListCones[i_domain].FAC.rows();
-    size_t n_ext = ListCones[i_domain].EXT.rows();
+    size_t n_ext = ListCones[i_domain].EXT_T.rows();
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
     std::cerr << "i_domain=" << i_domain << " n_ext=" << n_ext
               << " n_fac=" << n_fac << "\n";
@@ -387,7 +387,7 @@ test_equiv_ent_face(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
       eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
   if (!test)
     return {};
-  MyMatrix<T> eMat_T = FindTransformation(eC.EXT, eC.EXT, *test);
+  MyMatrix<T> eMat_T = FindTransformation(eC.EXT_T, eC.EXT_T, *test);
   MyMatrix<Tint> eMat = UniversalMatrixConversion<Tint, T>(eMat_T);
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
@@ -437,7 +437,7 @@ get_spanning_list_ent_face(
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
     for (auto &eGen : stab.GeneratorsOfGroup()) {
-      MyMatrix<T> eMatGen_T = FindTransformation(uC.EXT, uC.EXT, eGen);
+      MyMatrix<T> eMatGen_T = FindTransformation(uC.EXT_T, uC.EXT_T, eGen);
       MyMatrix<Tint> eMatGen = UniversalMatrixConversion<Tint, T>(eMatGen_T);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       f_insert_generator(TransGen);
@@ -496,7 +496,7 @@ get_spanning_list_ent_face(
 #endif
         for (auto &e_pair : l_pair) {
           MyMatrix<T> eMat1_T =
-              FindTransformation(eC.EXT, eC.EXT, e_pair.second);
+              FindTransformation(eC.EXT_T, eC.EXT_T, e_pair.second);
           MyMatrix<Tint> eMat1 = UniversalMatrixConversion<Tint, T>(eMat1_T);
           size_t jCone = e_sing_adj.jCone;
           const ConeDesc<T, Tint, Tgroup> &fC = ListCones[jCone];
@@ -569,7 +569,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
     auto f_insert_face = [&](const FaceDesc &fd_A) -> void {
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd_A.iCone];
       Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(),
-                                                eC.EXT.rows(), fd_A.f_fac);
+                                                eC.EXT_T.rows(), fd_A.f_fac);
       ent_face<Tint> ef_A{fd_A.iCone, f_ext, IdentityMat<Tint>(dim)};
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
@@ -581,7 +581,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
                 f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_A, os);
             const ConeDesc<T, Tint, Tgroup> &eC_B = ListCones[ef_B.iCone];
             Face f_fac = Compute_faceFAC_from_faceEXT(
-                eC_B.extfac_incd, eC_B.FAC.rows(), eC_B.EXT.rows(), ef_B.f_ext);
+                eC_B.extfac_incd, eC_B.FAC.rows(), eC_B.EXT_T.rows(), ef_B.f_ext);
             FaceDesc fd_B{ef_B.iCone, f_fac};
             Tent<T, Tint, Tidx_value> ent_B =
                 f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd_B, os);
@@ -631,7 +631,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       int RankFace = i - 1;
       vectface ListFace = SPAN_face_ExtremeRays(
           eDomain.f_fac, StabFace_fac, RankFace, ListCones[iCone].extfac_incd,
-          ListCones[iCone].FAC, ListCones[iCone].EXT, os);
+          ListCones[iCone].FAC, ListCones[iCone].EXT_T, os);
       for (auto &eFace_fac : ListFace) {
         FaceDesc fdn{iCone, eFace_fac};
         Tent<T, Tint, Tidx_value> fEnt =
@@ -685,7 +685,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
     if (iLev == 1) {
       for (size_t iCone = 0; iCone < ListCones.size(); iCone++) {
         vectface vf = DecomposeOrbitPoint_Full(ListCones[iCone].GRP_ext);
-        size_t nExt = ListCones[iCone].EXT.rows();
+        size_t nExt = ListCones[iCone].EXT_T.rows();
         for (auto &eOrb : vf) {
           Face f_ext(nExt);
           boost::dynamic_bitset<>::size_type eVal = eOrb.find_first();
@@ -703,7 +703,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
           int RankFace_ext = iLev - 1;
           vectface vf =
               SPAN_face_ExtremeRays(eRepr.f_ext, StabFace_ext, RankFace_ext,
-                                    eC.facext_incd, eC.EXT, eC.FAC, os);
+                                    eC.facext_incd, eC.EXT_T, eC.FAC, os);
           for (auto &f_ext_new : vf) {
             ent_face<Tint> e_ent{eRepr.iCone, f_ext_new,
                                  IdentityMat<Tint>(n_col)};
@@ -717,7 +717,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
       ent_face<Tint> e_ent = eOrbit.first[0];
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[e_ent.iCone];
       Face f_fac = Compute_faceFAC_from_faceEXT(eC.extfac_incd, eC.FAC.rows(),
-                                                eC.EXT.rows(), e_ent.f_ext);
+                                                eC.EXT_T.rows(), e_ent.f_ext);
       FaceDesc fd{e_ent.iCone, f_fac};
       ListDomain.push_back(fd);
     }
@@ -815,8 +815,9 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
   int pos = 0;
   for (auto &kv : MapEXT) {
     MyVector<T> const &eEXT = kv.first;
-    for (int i = 0; i < dim; i++)
+    for (int i = 0; i < dim; i++) {
       EXTtot(pos, i) = eEXT(i);
+    }
     pos++;
   }
 #ifdef TIMINGS_POLYHEDRAL_DECOMPOSITIONS
@@ -870,7 +871,7 @@ TestPolyhedralPartition(bool const &TestPairwiseIntersection,
 #endif
   auto is_matching_facet = [&](MyVector<T> const &eFAC) -> bool {
     for (int i_ext_tot = 0; i_ext_tot < n_ext_tot; i_ext_tot++) {
-      T sum = 0;
+      T sum(0);
       for (int i = 0; i < dim; i++) {
         sum += eFAC(i) * EXTtot(i_ext_tot, i);
       }

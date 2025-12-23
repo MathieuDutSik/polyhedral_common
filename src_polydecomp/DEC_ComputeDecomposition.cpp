@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
           const FaceDesc &fd = ListListDomain[i_lev][i_orbit];
           const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd.iCone];
           Face f_ext = Compute_faceEXT_from_faceFAC(
-              eC.extfac_incd, eC.FAC.rows(), eC.EXT.rows(), fd.f_fac);
+              eC.extfac_incd, eC.FAC.rows(), eC.EXT_T.rows(), fd.f_fac);
           //
           MyMatrix<Tint> EXT_sel = SelectRow(eC.EXT_i, f_ext);
           os_out << "i_orbit=" << i_orbit << " |EXT|=" << EXT_sel.rows()
