@@ -6,7 +6,6 @@
 #PROGRAM		= POLY_process_csdp
 #PROGRAM		= POLY_lrs
 #PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
-#PROGRAM		= TEST_GeometricallyUniquePoint
 #PROGRAM		= POLY_LinearDetermineByInequalities
 PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyGroup

@@ -1,4 +1,4 @@
-PROGRAM		= TEST_GeometricallyUniquePoint
+PROGRAM		= POLY_GeometricallyUniqueInteriorPoint
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
