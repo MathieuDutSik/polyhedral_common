@@ -101,9 +101,10 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   //
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens, os);
+  std::optional<SelfDualInfo<T>> self_dual_info;
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
-          ListComm, ListSubspaces, PtStabGens};
+          ListComm, ListSubspaces, PtStabGens, self_dual_info};
 }
 
 template <typename T>
@@ -245,9 +246,15 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (SuperMatMethod == "Compute") {
-      LinSpaRet.SuperMat =
-          GetOnePositiveDefiniteMatrix<T, Tint>(LinSpaRet.ListMat, os);
-      return;
+      std::optional<MyMatrix<T>> opt =
+        GetOnePositiveDefiniteMatrix<T, Tint>(LinSpaRet.ListMat, os);
+      if (opt) {
+        LinSpaRet.SuperMat = *opt;
+        return;
+      }
+      std::cerr << "TSPACE: Failed to find a positive definite matrix\n";
+      std::cerr << "in the space\n";
+      throw TerminalException{1};
     }
     if (SuperMatMethod == "File") {
       std::string FileSuperMat = Blk.get_string("FileSuperMat");
@@ -263,6 +270,9 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     std::cerr << "TSPACE: SuperMatMethod=" << SuperMatMethod << "\n";
     std::cerr << "TSPACE: Allowed options: NotNeeded, Compute, File\n";
     throw TerminalException{1};
+  };
+  auto set_self_dual=[&]() -> void {
+    set_self_dual_info(LinSpaRet);
   };
   auto get_linspace = [&]() -> LinSpaceMatrix<T> {
 #ifdef DEBUG_TSPACE_NAMELIST
@@ -287,6 +297,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       set_subspaces();
       set_pt_stab();
       set_is_bravais();
+      set_self_dual(); // Those spaces are indeed self-dual
       return LinSpaRet;
     }
     if (TypeTspace == "InvGroup") {

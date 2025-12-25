@@ -42,6 +42,7 @@
 #define SANITY_CHECK_FLIP
 #define SANITY_CHECK_INITIAL_PERFECT
 #define SANITY_CHECK_PERFECT_REPR
+#define SANITY_CHECK_BOUNDED_FACE
 #endif
 
 #ifdef TIMINGS
@@ -119,8 +120,9 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
     int iSHV = ListBlock[iBlock][0];
     MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iSHV);
     AssignMatrixRow(SHVred, iBlock, eVect);
-    for (int iMat = 0; iMat < nbMat; iMat++)
+    for (int iMat = 0; iMat < nbMat; iMat++) {
       PerfDomEXT(iBlock, iMat) = RyshkovLoc(iSHV, iMat);
+    }
   }
   return {eGram, rec_shv.SHV, SHVred, PerfDomEXT, ListBlock, ListPos};
 }
@@ -128,19 +130,20 @@ NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
 template <typename T, typename Tgroup> struct RyshkovGRP {
   MyMatrix<T> PerfDomEXT;
   Tgroup GRPsub;
+  vectface ListIncd;
 };
 
 template <typename T, typename Tgroup>
 RyshkovGRP<T, Tgroup>
 GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
-                        MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
+                        MyMatrix<T> const &SHV_T,
                         Tgroup const &GRP, [[maybe_unused]] std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int nbSHV = SHV_T.rows();
   std::vector<int> ListPos(nbSHV);
   int nbMat = LinSpa.ListMat.size();
-  int n = eGram.rows();
+  int n = LinSpa.n;
   MyMatrix<T> RyshkovLoc(nbSHV, nbMat);
   for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
     MyVector<T> eVect = GetMatrixRow(SHV_T, iSHV);
@@ -193,7 +196,9 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
     l_gens.push_back(eElt);
   }
   Tgroup GRPsub(l_gens, nbBlock);
-  return {PerfDomEXT, GRPsub};
+  vectface ListIncd =
+    DualDescriptionStandard<T, Tgroup>(PerfDomEXT, GRPsub, os);
+  return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd)};
 }
 
 struct PerfEquivInfo {
@@ -659,6 +664,125 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
   MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, rec_shv);
   return RankMat(ScalMat) == nbMat;
 }
+
+
+
+template<typename T, typename Tint>
+bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+  int n = LinSpa.n;
+  int n_vect = SHV.rows();
+  int n_mat = LinSpa.ListMat.size();
+  MyMatrix<T> MatScal(n_mat, n_vect);
+  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+    MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], V);
+      MatScal(i_mat, i_vect) = val;
+    }
+  }
+  MyMatrix<T> NSP = NullspaceMat(MatScal);
+  std::vector<MyMatrix<T>> BasisSpace;
+  for (int i_nsp=0; i_nsp<NSP.rows(); i_nsp++) {
+    MyMatrix<T> mat = ZeroMatrix<T>(n, n);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      mat += NSP(i_nsp, i_mat) * LinSpa.ListMat[i_mat];
+    }
+#ifdef SANITY_CHECK_BOUNDED_FACE
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
+      T val = EvaluationQuadForm<T, Tint>(mat, V);
+      if (val != 0) {
+        std::cerr << "PERF: The vector should have value 0\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
+    BasisSpace.push_back(mat);
+  }
+  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix(BasisSpace, os);
+  if (opt) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+
+/*
+  A set of vectors define a bounded face if the conditions
+  A in LinSpa, Min(A) = SHV
+  defines a bounded face of the complex.
+  ---
+  What do we mean by bounded face?
+  * The condition A >= 0,
+    A = t_1 A_1 + .... + t_m A_m
+    and A[v] = 1 for v in SHV
+    implies that Tr(A) <= C for some constant C.
+  * An equivalent condition is that
+    A in LinSpa, A[v] = 0 for v in SHV
+    A >= 0 implies that A = 0.
+
+  For the cone of positive definite matrices, the necessary
+  and sufficient condition is that SHV is of full rank.
+
+  For self-dual, we have a fast algorithm.
+
+  For non self-dual, we have a more expensive iterative
+  algorithm.
+ */
+template<typename T, typename Tint>
+bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+  int n = LinSpa.n;
+  int rnk = RankMat(SHV);
+  if (rnk == n) {
+    // For the case of classic Voronoi, that would be a necessary and
+    // sufficient condition.
+    return true;
+  }
+  int n_vect = SHV.rows();
+  int n_mat = LinSpa.ListMat.size();
+  if (LinSpa.self_dual_info) {
+    // For self-dual, we can apply a more direct algorithm.
+    SelfDualInfo<T> const& self_dual_info = *LinSpa.self_dual_info;
+    MyVector<T> SumRay = ZeroVector<T>(n_mat);
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
+      for (int i_mat=0; i_mat<n_mat; i_mat++) {
+        T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], V);
+        SumRay(i_mat) += val;
+      }
+    }
+    MyVector<T> ExprBasis = self_dual_info.PairwiseScalarInv * SumRay;
+    MyMatrix<T> SumMat = ZeroMatrix<T>(n,n);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      SumMat += ExprBasis(i_mat) * LinSpa.ListMat[i_mat];
+    }
+#ifdef SANITY_CHECK_BOUNDED_FACE
+    DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(SumMat, os);
+    if (dsm.nbMinus > 0) {
+      std::cerr << "The matrix should be positive semi-definite\n";
+      std::cerr << "So, maybe the cone is not self-dual\n";
+      throw TerminalException{1};
+    }
+#endif
+    int rnk = RankMat(SumMat);
+    bool is_bounded_self_dual = rnk == n;
+#ifdef SANITY_CHECK_BOUNDED_FACE
+    bool is_bounded_iterative = is_bounded_face_iterative(LinSpa, SHV, os);
+    if (is_bounded_self_dual != is_bounded_iterative) {
+      std::cerr << "TSPACE: Incoherent results\n";
+      std::cerr << "TSPACE: is_bounded_self_dual=" << is_bounded_self_dual << "\n";
+      std::cerr << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
+      throw TerminalException{1};
+    }
+#endif
+    return is_bounded_self_dual;
+  }
+  // Not self-dual. So use instead the iterative
+  return is_bounded_face_iterative(LinSpa, SHV, os);
+}
+
+
 
 /*
   Finds a perfect form by starting from the super matrix of the space

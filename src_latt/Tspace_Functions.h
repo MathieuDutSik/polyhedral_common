@@ -114,6 +114,12 @@
   have this in the GAP code.
  */
 
+template<typename T>
+struct SelfDualInfo {
+  MyMatrix<T> PairwiseScalar;
+  MyMatrix<T> PairwiseScalarInv;
+};
+
 /*
   The structure of a T-space (see the papers by Mathieu Dutour Sikiric,
   Frank Vallentin and Achill Schuermann).
@@ -145,6 +151,8 @@ template <typename T> struct LinSpaceMatrix {
   std::vector<MyMatrix<T>> ListSubspaces;
   // The point stabilizer of the T-space
   std::vector<MyMatrix<T>> PtStabGens;
+  // Whether the T-space is known to be self-dual
+  std::optional<SelfDualInfo<T>> self_dual_info;
 };
 
 template <typename T>
@@ -255,8 +263,9 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
   // It may be actually a Bravais space, but setting up to false avoids
   // potential problems.
   bool isBravais = false;
+  std::optional<SelfDualInfo<T>> self_dual_info;
   return {n,      isBravais, SuperMat,      ListMat, ListLineMat,
-          BigMat, ListComm,  ListSubspaces, PtStab};
+          BigMat, ListComm,  ListSubspaces, PtStab, self_dual_info};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -288,7 +297,7 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   is provided.
  */
 template <typename T, typename Tint>
-MyMatrix<T>
+std::optional<MyMatrix<T>>
 GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
                              std::ostream &os) {
   int n_mat = ListMat.size();
@@ -341,9 +350,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     //
     LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.PrimalDefined || !eSol.DualDefined) {
-      std::cerr << "TSPACE: The LpSolution dual and primal solutions should be "
-                   "defined\n";
-      throw TerminalException{1};
+      return {};
     }
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
@@ -368,6 +375,29 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     MyVector<Tint> V = get_one_vect();
     ListV.push_back(V);
   }
+}
+
+template <typename T>
+void set_self_dual_info(LinSpaceMatrix<T> & LinSpa) {
+  int n_mat = LinSpa.ListMat.size();
+  int n = LinSpa.n;
+  MyMatrix<T> PairwiseScalar(n_mat, n_mat);
+  for (int i=0; i<n_mat; i++) {
+    for (int j=i; j<n_mat; j++) {
+      T sum(0);
+      MyMatrix<T> const& M1 = LinSpa.ListMat[i];
+      MyMatrix<T> const& M2 = LinSpa.ListMat[j];
+      for (int u=0; u<n; u++) {
+        for (int v=0; v<n; v++) {
+          sum += M1(u,v) * M2(u,v);
+        }
+      }
+      PairwiseScalar(i, j) = sum;
+    }
+  }
+  MyMatrix<T> PairwiseScalarInv = Inverse(PairwiseScalar);
+  SelfDualInfo<T> self_dual_info{PairwiseScalar, PairwiseScalarInv};
+  LinSpa.self_dual_info = self_dual_info;
 }
 
 template <typename T>
@@ -1441,7 +1471,14 @@ LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const &ListMat,
   LinSpaceMatrix<T> LinSpa;
   LinSpa.ListMat = ListMat;
   reset_paperwork(LinSpa);
-  LinSpa.SuperMat = GetOnePositiveDefiniteMatrix<T, Tint>(LinSpa.ListMat, os);
+  std::optional<MyMatrix<T>> opt =
+    GetOnePositiveDefiniteMatrix<T, Tint>(LinSpa.ListMat, os);
+  if (opt) {
+    LinSpa.SuperMat = *opt;
+  } else {
+    std::cerr << "TSPACE: Failed to find a positive definite matrix\n";
+    throw TerminalException{1};
+  }
   // ListComm not set as it cannot be guessed.
   // Same for ListSubspaces.
   reset_pt_stab_gens<T, Tint, Tgroup>(LinSpa, os);

@@ -130,6 +130,7 @@ get_spanning_list_triple(
   }
   auto f_insert_generator = [&](const MyMatrix<Tint> &eMatrGen) -> void {
     ListMatrGen.push_back(eMatrGen);
+#ifdef DEBUG_TRIPLE
     for (auto &eV : set_EXT) {
       MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
       if (set_EXT.count(Vimg) != 1) {
@@ -138,6 +139,7 @@ get_spanning_list_triple(
         throw TerminalException{1};
       }
     }
+#endif
   };
   std::vector<triple<Tint>> l_triple;
   auto f_insert = [&](const triple<Tint> &ef_A) -> void {

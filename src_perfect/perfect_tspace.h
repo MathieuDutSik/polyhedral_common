@@ -170,14 +170,9 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
 #endif
 
   RyshkovGRP<T, Tgroup> eCone =
-      GetNakedPerfectCone_GRP<T, Tgroup>(LinSpa, eGram, SHV_T, GRP, os);
+      GetNakedPerfectCone_GRP<T, Tgroup>(LinSpa, SHV_T, GRP, os);
 #ifdef TIMINGS_PERFECT_TSPACE
-  os << "|PERF_TSPACE: GetAdj_eCone|=" << time << "\n";
-#endif
-  vectface ListIncd =
-      DualDescriptionStandard<T, Tgroup>(eCone.PerfDomEXT, eCone.GRPsub, os);
-#ifdef TIMINGS_PERFECT_TSPACE
-  os << "|PERF_TSPACE: GetAdj_ListIncd|=" << time << "\n";
+  os << "|PERF_TSPACE: GetNakedPerfectCone_GRP|=" << time << "\n";
 #endif
 #ifdef DEBUG_PERFECT_TSPACE_DISABLE
   os << "PERF_TSPACE: The eCone.PerfDomEXT is the following\n";
@@ -195,7 +190,7 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
   size_t pos = 0;
 #endif
 
-  for (auto &eIncd : ListIncd) {
+  for (auto &eIncd : eCone.ListIncd) {
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: pos=" << pos << " eIncd=" << eIncd << "\n";
     pos += 1;

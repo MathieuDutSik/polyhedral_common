@@ -5,6 +5,10 @@
 #include "perfect_tspace.h"
 #include "triples.h"
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_PERFECT_COMPLEX
+#endif
+
 /*
   Construction of the perfect form complex.
   We compute the faces of the oerfect domain
@@ -27,40 +31,31 @@
   The main difficulty is the test of equivalence.
   There are two methods:
   + For the well rounded faces, computing
-    can be done with the classic algorithm.
-    It is the faster algorithm.
+    could be done with the classic algorithm.
+    It has some advantages, but it is not
+    necessarily the fastest algorithm since
+    computing equivalences requires a partition
+    backtrack call. Other inconveniences:
+    . It does not work with degenerate faces.
+    . The quadratic form used for the computation
+      is not necessarily well defined as we
+      experienced when working on that issue
+      in GAP.
   + For the other faces we can apply the
     algorithm of using the top dimensional
     faces.
+    That algorithm has several advantages:
+    . We can work with degenerate faces.
+    . We can work with stabilizers having
+      infinite size.
+    . No backtracking algorithm is required
+      for computing equivalence.
+    . The inconvenience is that we would need
+      to store all the triples. But 
 
-  Ideally we would like to use both. But this
-  has serious implications:
-  + To use the second algorithm, we have two choices:
-    . Computes all the facets of the cone.
-      That approach is used in
-      - Lorentzian.g for the perfect cones.
-      - SaturationAndStabilizer of ProjectiveSystem.g
-        for the symplectic story.
-      - Decomposition.h file in that codebase.
-      Notes:
-      - We cannot use the lower dimensional cells
-        for that equivalence realistically. First
-        those not well rounded faces will start occurring
-        in relatively high rank. Second, the computation
-        of the adjacency is likely a relatively tricky
-        matter.
-    . Compute the orbit and do some orbit splitting
-      when the opportunity arise.
-      This is likely much more complicated and would
-      require a lot of double coset computation.
-      And it would be a gain only for the cones that
-      are symmetric and have a lot of facets.
-      So, let us forget about that method.
-  + When we switch from one representation to the
-    other, we need to know one triple.
-    So, we need to have at least one triple.
-  + Since we are interested in boundaries, we have to keep
-    track of that in the computation.
+
+
+  Therefore, we use the second algorithm
 
  */
 
@@ -97,7 +92,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
-    MyMatrix<Tint> const& EXT = ePerf.x.rec_shv.SHV;
+    MyMatrix<Tint> EXT = conversion_and_duplication<Tint,Tint>(ePerf.x.rec_shv.SHV);
     Tgroup const& GRP_ext = ePerf.x.grp;
     PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
@@ -113,10 +108,21 @@ template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {
   std::vector<triple<Tint>> l_triple; // The containing triples.
   std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
+  MyMatrix<Tint> EXT;
   Tgroup GRP_ext; // Group acting on the vectors.
-  MyMatrix<T> gram;
   bool is_well_rounded;
 };
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>> test_equivalence_pfc(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacePerfectComplex<T,Tint,Tgroup> const& pfc1, FacePerfectComplex<T,Tint,Tgroup> const& pfc2, std::ostream& os) {
+  if (pfc1.is_well_rounded != pfc2.is_well_rounded) {
+    return {};
+  }
+  triple<Tint> const& ef2 = pfc2.l_triple[0];
+  return test_triple_in_listtriple(pctdi.l_perfect, pfc1.l_triple, ef2);
+}
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacesPerfectComplex {
@@ -155,20 +161,21 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
     std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
     Tgroup GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
-    MyMatrix<T> gram = pctdi.l_perfect[i_domain].gram;
     bool is_well_rounded = true; // Yes, the top dimensional cells are
-    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, GRP_ext, gram, is_well_rounded};
+    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, GRP_ext, is_well_rounded};
     l_faces.push_back(face);
     i_domain += 1;
   }
-  return l_faces;
+  FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
+  return pfc;
 }
 
 
 template<typename Tint>
 struct BounEntry {
-  MyMatrix<Tint> M;
   int iOrb;
+  int sign;
+  MyMatrix<Tint> M;
 }
 
 template<typename Tint, typename Tgroup>
@@ -182,15 +189,135 @@ struct FullBoundary {
   std::vector<ListBoundEntry<Tint,Tgroup>> ll_bound;
 };
 
+template<typename T, typename Tint, typename Tgroup>
+struct ResultStepEnumeration {
+  FacesPerfectComplex<T,Tint,Tgroup> level;
+  std::optional<FullBoundary<Tint,Tgroup>> boundary;
+};
 
 
 
-template<typename Tint, typename Tgroup>
-std::vector<PerfectAdjInfo<Tint>> generate_perfect_adj_info(Face const& f, std::vector<std::pair<typename Tgroup::Telt, MyMatrix<Tint>>> const& l_gens, int const& i_adj) {
-
+template<typename T, typename Tint, typename Tgroup>
+ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  int n = pctdi.LinSpa.n;
+  std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
+  std::vector<ListBoundEntry<Tint,Tgroup>> ll_bound;
+  auto find_matching_entry=[&](triple<Tint> const& t, bool is_well_rounded) -> std::optional<BoundEntry<Tint>> {
+    int i_domain = 0;
+    for (auto & face1: l_faces) {
+      if (is_well_rounded == face1.is_well_rounded) {
+        std::optional<MyMatrix<Tint>> opt =
+          test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t);
+        if (opt) {
+          MyMatrix<Tint> const& M = *opt;
+          BoundEntry<Tint> be{i_domain, M};
+          return be;
+        }
+      }
+      i_domain += 1;
+    }
+    return {};
+  };
+  auto is_insertable=[&](bool is_well_rounded) -> bool {
+    if (pctdi.only_well_rounded) {
+      return is_well_rounded;
+    }
+    return true;
+  };
+  auto get_initial_triple=[&](FacePerfectComplex<T,Tint,Tgroup> const& face, Face const& eIncd) -> triple<Tint> {
+    triple<Tint> const& t_big = face.l_triple[0];
+    int iCone = t_big.iCone;
+    int n_ext = pctdi.l_perfect[iCone].EXT.rows();
+    Face f(n_ext);
+    size_t index = 0;
+    for (int i=0; i<n_ext; i++) {
+      if (t_big.f_ext[i] == 1) {
+        if (eIncd[index] == 1) {
+          f[i] = 1;
+        }
+        index += 1;
+      }
+    }
+    triple<Tint> t{iCone, f_ext, t_big.eMat};
+    return t;
+  };
+  auto f_insert=[&](triple<Tint> const& t, bool is_well_rounded) -> BoundEntry<Tint> {
+    std::optional<BoundEntry<Tint>> opt = find_matching_entry(t, is_well_rounded);
+    if (opt) {
+      return *opt;
+    }
+    std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>> pair = get_spanning_list_triple(pctdi.l_perfect, t);
+    int iCone = t.iCone;
+    int n_ext = t.f_ext.count();
+    int n_ext_big = pctdi.l_perfect[iCone].EXT.rows();
+    MyMatrix<T> EXT(n_ext, n);
+    int pos = 0;
+    for (int i_big=0; i_big<n_ext_big; i_big++) {
+      if (t.f_ext[i] == 1) {
+        MyVector<Tint> V1 = GetMatrixRow(pctdi.l_perfect[iCone].EXT, i_big);
+        MyVector<Tint> V2 = t.eMat.transpose() * V1;
+        AssignMatrixRow(EXT, pos, V2);
+        pos += 1;
+      }
+    }
+    ContainerMatrix<Tint> cont(EXT);
+    std::vector<Telt> l_gens;
+    for (auto & eMatrGen: pair.second) {
+      std::vector<Tidx> v(n_ext);
+      for (int u=0; u<n_ext; u++) {
+        MyVector<Tint> V1 = GetMatrixRow(EXT, u);
+        MyVector<Tint> V2 = eMatrGen.transpose() * V1;
+        std::optional<size_t> opt = cont.GetIdx_v(V2);
+        size_t pos = unfold_opt(opt, "PERFCOMPL: Failed to find the index");
+        v[u] = pos;
+      }
+      Telt elt(v);
+      l_gens.push_back(elt);
+    }
+    Tgroup GRP_ext(l_gens, n_ext);
+    FacePerfectComplex<T,Tint,Tgroup> face{
+      pair.first,
+      pair.second,
+      EXT,
+      GRP_ext,
+      is_well_rounded};
+    l_faces.push_back(face2);
+    MyMatrix<Tint> M = IdentityMat<Tint>(n);
+    int sign = 1;
+    BoundEntry<Tint> be{i_domain, sign, M};
+    return be;
+  };
+  for (size_t i=0; i<level.l_faces.size(); i++) {
+    FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
+    std::vector<BoundEntry<Tint>> l_bound;
+    MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(face.EXT);
+    RyshkovGRP<T, Tgroup> eCone =
+      GetNakedPerfectCone_GRP<T, Tgroup>(pctdi.LinSpa, EXT_T, face.GRP_ext, os);
+    for (auto& eIncd: eCone.ListIncd) {
+      MyMatrix<Tint> EXTincd = SelectRow(face.EXT, eIncd);
+      bool is_well_rounded = is_bounded_face(pctdi.LinSpa, EXTincd, os);
+      if (is_insertable(is_well_rounded)) {
+        triple<Tint> t = get_initial_triple(face, eIncd);
+        BoundEntry<Tint> be = f_insert(t, is_well_rounded);
+        if (pctdi.compute_boundary) {
+          l_bound.push_back(be);
+        }
+      }
+    }
+    if (pctdi.compute_boundary) {
+      ll_bound.push_back(l_bound);
+    }
+  }
+  FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
+  if (pctdi.compute_boundary) {
+    FullBoundary<Tint,Tgroup>> boundary{ll_bound};
+    return {pfc, boundary};
+  } else {
+    return {pfc, {}};
+  }
 }
-
-
 
 
 
