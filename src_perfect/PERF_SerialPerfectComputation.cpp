@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "perfect_tspace.h"
+#include "perfect_complex.h"
 #include "Permutation.h"
 #include "Group.h"
 // clang-format on
@@ -30,6 +30,10 @@ void process_A(FullNamelist const &eFull) {
                                                          std::cerr);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   //
+  bool compute_complex = BlockDATA.get_bool("ComputeComplex");
+  bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
+  bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
+  //
   bool keep_generators = false;
   bool reduce_gram_matrix = false;
   DataPerfectTspace<T, Tint, Tgroup> data{
@@ -46,15 +50,27 @@ void process_A(FullNamelist const &eFull) {
   std::vector<Tout> l_tot =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
-  auto f_print = [&](std::ostream &os_out) -> void {
-    bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
-    if (result) {
-      std::cerr << "PERFSERIAL: Failed to find a matching entry for OutFormat="
-                << OutFormat << "\n";
-      throw TerminalException{1};
+  if (!compute_complex) {
+    auto f_print = [&](std::ostream &os_out) -> void {
+      bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
+      if (result) {
+        std::cerr << "PERFSERIAL: Failed to find a matching entry for OutFormat="
+                  << OutFormat << "\n";
+        throw TerminalException{1};
+      }
+    };
+    print_stderr_stdout_file(OutFile, f_print);
+  } else {
+    PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary);
+    int dim_spa = LinSpa.ListMat.size();
+    FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, std::cerr);
+    std::vector<FacesPerfectComplex<T,Tint,Tgroup>> l_level{level};
+    for (int i=1; i<dim_spa; i++) {
+      ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, l_level[i-1], std::cerr);
+      std::cerr << "i=" << i << " |result.level|=" << result.level.l_faces.size() << "\n";
+      l_level.push_back(result.level);
     }
-  };
-  print_stderr_stdout_file(OutFile, f_print);
+  }
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
@@ -98,26 +114,23 @@ void process_D(FullNamelist const &eFull) {
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE();
+    FullNamelist eFull = NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE();
     if (argc != 2) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "PERF_SerialEnumeratePerfectCones [file.nml]\n";
-      std::cerr << "\n";
-      std::cerr << "        --- or with a custom template ---\n";
-      std::cerr << "\n";
+      std::cerr << "PERF_SerialPerfectComputation [file.nml]\n";
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       return -1;
     }
     std::string eFileName = argv[1];
     NAMELIST_ReadNamelistFile(eFileName, eFull);
     process_D(eFull);
-    std::cerr << "Normal termination of PERF_SerialEnumeratePerfectCones\n";
+    std::cerr << "Normal termination of PERF_SerialPerfectComputation\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in PERF_SerialEnumeratePerfectCones\n";
+    std::cerr << "Error in PERF_SerialPerfectComputation\n";
     exit(e.eVal);
   } catch (std::runtime_error const &e) {
-    std::cerr << "Runtime error in PERF_SerialEnumeratePerfectCones\n";
+    std::cerr << "Runtime error in PERF_SerialPerfectComputation\n";
     std::cerr << "error: " << e.what() << "\n";
     exit(EXIT_FAILURE);
   }

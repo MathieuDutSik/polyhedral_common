@@ -63,8 +63,10 @@
 // The top dimensional complex
 //
 
-template<typename T, typename Tint, typename Tgroup>
+template<typename T, typename Tint_impl, typename Tgroup_impl>
 struct PerfectFormInfoForComplex {
+  using Tint = Tint_impl;
+  using Tgroup = Tgroup_impl;
   MyMatrix<T> gram;
   MyMatrix<Tint> EXT;
   Tgroup GRP_ext; // Group acting on the shortest vectors
@@ -86,15 +88,15 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
   for (auto & ePerf: l_tot) {
     std::vector<sing_adj<Tint>> l_sing_adj;
     for (auto & eAdj: ePerf.ListAdj) {
-      int jCone = eAdj.iOrb;
+      size_t jCone = eAdj.iOrb;
       Face f_ext = eAdj.x.eInc;
       MyMatrix<Tint> eMat = eAdj.x.eBigMat;
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint,Tint>(ePerf.x.rec_shv.SHV);
-    Tgroup const& GRP_ext = ePerf.x.grp;
-    PerfectFormInfoForComplex<T,Tint,Tgroup>> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
+    Tgroup const& GRP_ext = ePerf.x.GRP;
+    PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
   return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};
@@ -113,16 +115,6 @@ struct FacePerfectComplex {
   bool is_well_rounded;
 };
 
-template<typename T, typename Tint, typename Tgroup>
-std::optional<MyMatrix<Tint>> test_equivalence_pfc(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacePerfectComplex<T,Tint,Tgroup> const& pfc1, FacePerfectComplex<T,Tint,Tgroup> const& pfc2, std::ostream& os) {
-  if (pfc1.is_well_rounded != pfc2.is_well_rounded) {
-    return {};
-  }
-  triple<Tint> const& ef2 = pfc2.l_triple[0];
-  return test_triple_in_listtriple(pctdi.l_perfect, pfc1.l_triple, ef2);
-}
-
-
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacesPerfectComplex {
@@ -130,10 +122,10 @@ struct FacesPerfectComplex {
 };
 
 template<typename T, typename Tint, typename Tgroup>
-FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
+FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, [[maybe_unused]] std::ostream & os) {
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   int n = pctdi.LinSpa.n;
-  auto get_l_triple=[&](int i_domain) -> std::vector<triple<Tint>> {
+  auto get_l_triple=[&](size_t i_domain) -> std::vector<triple<Tint>> {
     std::vector<triple<Tint>> l_triple;
     if (!pctdi.only_well_rounded) {
       int n_ext = pctdi.l_perfect[i_domain].EXT.rows();
@@ -147,22 +139,22 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     }
     return l_triple;
   };
-  auto get_l_gens=[&](int i_domain) -> std::vector<MyMatrix<Tint>> {
+  auto get_l_gens=[&](size_t i_domain) -> std::vector<MyMatrix<Tint>> {
     std::vector<MyMatrix<Tint>> l_gens;
-    PerfectFormInfoForComplex<T,Tint,Tgroup>> const& top = pctdi.l_perfect[i_domain];
+    PerfectFormInfoForComplex<T,Tint,Tgroup> const& top = pctdi.l_perfect[i_domain];
     for (auto & ePermGen: top.GRP_ext.SmallGeneratingSet()) {
       MyMatrix<Tint> eMatrGen = FindTransformation(top.EXT, top.EXT, ePermGen);
       l_gens.push_back(eMatrGen);
     }
     return l_gens;
   };
-  int i_domain = 0;
-  for (auto & perfect: pctdi.l_perfect) {
+  for (size_t i_domain=0; i_domain<pctdi.l_perfect.size(); i_domain++) {
     std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
     std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
+    MyMatrix<Tint> EXT = pctdi.l_perfect[i_domain].EXT;
     Tgroup GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
-    bool is_well_rounded = true; // Yes, the top dimensional cells are
-    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, GRP_ext, is_well_rounded};
+    bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
+    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded};
     l_faces.push_back(face);
     i_domain += 1;
   }
@@ -172,27 +164,26 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
 
 
 template<typename Tint>
-struct BounEntry {
+struct BoundEntry {
   int iOrb;
   int sign;
   MyMatrix<Tint> M;
-}
+};
 
-template<typename Tint, typename Tgroup>
-struct ListBounEntry {
-  Tgroup RotationSubgroup;
+template<typename Tint>
+struct ListBoundEntry {
   std::vector<BoundEntry<Tint>> l_bound;
 };
 
-template<typename Tint, typename Tgroup>
+template<typename Tint>
 struct FullBoundary {
-  std::vector<ListBoundEntry<Tint,Tgroup>> ll_bound;
+  std::vector<ListBoundEntry<Tint>> ll_bound;
 };
 
 template<typename T, typename Tint, typename Tgroup>
 struct ResultStepEnumeration {
   FacesPerfectComplex<T,Tint,Tgroup> level;
-  std::optional<FullBoundary<Tint,Tgroup>> boundary;
+  std::optional<FullBoundary<Tint>> boundary;
 };
 
 
@@ -203,7 +194,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   using Tidx = typename Telt::Tidx;
   int n = pctdi.LinSpa.n;
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
-  std::vector<ListBoundEntry<Tint,Tgroup>> ll_bound;
+  std::vector<ListBoundEntry<Tint>> ll_bound;
   auto find_matching_entry=[&](triple<Tint> const& t, bool is_well_rounded) -> std::optional<BoundEntry<Tint>> {
     int i_domain = 0;
     for (auto & face1: l_faces) {
@@ -212,7 +203,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
           test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t);
         if (opt) {
           MyMatrix<Tint> const& M = *opt;
-          BoundEntry<Tint> be{i_domain, M};
+          int sign = 1;
+          BoundEntry<Tint> be{i_domain, sign, M};
           return be;
         }
       }
@@ -228,7 +220,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   };
   auto get_initial_triple=[&](FacePerfectComplex<T,Tint,Tgroup> const& face, Face const& eIncd) -> triple<Tint> {
     triple<Tint> const& t_big = face.l_triple[0];
-    int iCone = t_big.iCone;
+    size_t iCone = t_big.iCone;
     int n_ext = pctdi.l_perfect[iCone].EXT.rows();
     Face f(n_ext);
     size_t index = 0;
@@ -240,7 +232,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         index += 1;
       }
     }
-    triple<Tint> t{iCone, f_ext, t_big.eMat};
+    triple<Tint> t{iCone, f, t_big.eMat};
     return t;
   };
   auto f_insert=[&](triple<Tint> const& t, bool is_well_rounded) -> BoundEntry<Tint> {
@@ -252,10 +244,10 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     int iCone = t.iCone;
     int n_ext = t.f_ext.count();
     int n_ext_big = pctdi.l_perfect[iCone].EXT.rows();
-    MyMatrix<T> EXT(n_ext, n);
+    MyMatrix<Tint> EXT(n_ext, n);
     int pos = 0;
     for (int i_big=0; i_big<n_ext_big; i_big++) {
-      if (t.f_ext[i] == 1) {
+      if (t.f_ext[i_big] == 1) {
         MyVector<Tint> V1 = GetMatrixRow(pctdi.l_perfect[iCone].EXT, i_big);
         MyVector<Tint> V2 = t.eMat.transpose() * V1;
         AssignMatrixRow(EXT, pos, V2);
@@ -283,7 +275,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       EXT,
       GRP_ext,
       is_well_rounded};
-    l_faces.push_back(face2);
+    int i_domain = l_faces.size();
+    l_faces.push_back(face);
     MyMatrix<Tint> M = IdentityMat<Tint>(n);
     int sign = 1;
     BoundEntry<Tint> be{i_domain, sign, M};
@@ -307,12 +300,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
     if (pctdi.compute_boundary) {
-      ll_bound.push_back(l_bound);
+      ListBoundEntry<Tint> lbe{l_bound};
+      ll_bound.push_back(lbe);
     }
   }
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
   if (pctdi.compute_boundary) {
-    FullBoundary<Tint,Tgroup>> boundary{ll_bound};
+    FullBoundary<Tint> boundary{ll_bound};
     return {pfc, boundary};
   } else {
     return {pfc, {}};

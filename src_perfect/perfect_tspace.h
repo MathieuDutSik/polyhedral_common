@@ -403,6 +403,29 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   return FullNamelist(ListBlock);
 }
 
+FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
+  std::map<std::string, SingleBlock> ListBlock;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
+  // DATA
+  std::map<std::string, std::string> ListStringValues1;
+  std::map<std::string, bool> ListBoolValues1;
+  ListStringValues1["arithmetic_T"] = "gmp_rational";
+  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
+  ListStringValues1["FileDualDescription"] = "unset";
+  ListBoolValues1["ComputeComplex"] = false;
+  ListBoolValues1["OnlyWellRounded"] = true;
+  ListBoolValues1["ComputeBoundary"] = false;
+  SingleBlock BlockDATA;
+  BlockDATA.setListStringValues(ListStringValues1);
+  BlockDATA.setListBoolValues(ListBoolValues1);
+  ListBlock["DATA"] = BlockDATA;
+  // TSPACE
+  ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  // Merging all data
+  return FullNamelist(ListBlock);
+}
+
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_TSPACE_H_
 // clang-format on

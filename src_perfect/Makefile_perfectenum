@@ -1,4 +1,4 @@
-PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialEnumeratePerfectCones
+PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialPerfectComputation
 
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)

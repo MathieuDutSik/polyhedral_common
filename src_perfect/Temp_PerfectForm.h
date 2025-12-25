@@ -699,7 +699,7 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
 #endif
     BasisSpace.push_back(mat);
   }
-  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix(BasisSpace, os);
+  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix<T,Tint>(BasisSpace, os);
   if (opt) {
     return false;
   } else {
