@@ -1,4 +1,4 @@
-name: CI(02) of Integral Automorphism groups
+name: CI(02A) of Integral Automorphism groups
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(02) of Integral Automorphism groups
 on:
   # One time per month
   schedule:
-    - cron: "0 0 14 * *"
+    - cron: "0 0 2 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -115,7 +115,7 @@ jobs:
 
       - name: Test integral automorphy
         run: |
-          cd CI_tests/02_IntegralAutomorphy
+          cd CI_tests/02A_IntegralAutomorphy
           ../../gap.sh < ProcessExamples.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2

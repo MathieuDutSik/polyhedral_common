@@ -58,6 +58,7 @@ do
     if result=false then
         n_error:=n_error + 1;
     fi;
+    iFile:=iFile+1;
     Print("iFile=", iFile, "/", n_file, " n_error=", n_error, "\n");
 od;
 CI_Decision_Reset();
