@@ -4,11 +4,11 @@
 
 // clang-format off>
 #include "MatrixGroup.h"
-#include "Parallel_Classes_Types.h"
 #include "PolytopeEquiStab.h"
 #include "Positivity.h"
 #include "Tspace_General.h"
 #include "fractions.h"
+#include "POLY_RecursiveDualDesc.h"
 #include <map>
 #include <string>
 #include <utility>
@@ -676,7 +676,7 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
   for (int i_vect=0; i_vect<n_vect; i_vect++) {
     MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
     for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], V);
+      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
       MatScal(i_mat, i_vect) = val;
     }
   }
@@ -748,7 +748,7 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
     for (int i_vect=0; i_vect<n_vect; i_vect++) {
       MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
       for (int i_mat=0; i_mat<n_mat; i_mat++) {
-        T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], V);
+        T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
         SumRay(i_mat) += val;
       }
     }

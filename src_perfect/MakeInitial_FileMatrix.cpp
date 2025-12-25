@@ -5,7 +5,6 @@
 #include "MAT_Matrix.h"
 #include "LatticeStabEquiCan.h"
 #include "Namelist.h"
-#include "Temp_PerfectForm_Enum.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

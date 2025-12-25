@@ -4,7 +4,6 @@
 #include "LatticeStabEquiCan.h"
 #include "Namelist.h"
 #include "PerfectMPI_types.h"
-#include "Temp_PerfectForm_Enum.h"
 #include <unordered_map>
 // clang-format on
 

@@ -8,7 +8,6 @@
 #include "Temp_PerfectForm.h"
 #include "POLY_lrslib.h"
 #include "Positivity.h"
-#include "POLY_RecursiveDualDesc.h"
 #include "POLY_AdjacencyScheme.h"
 #include "hash_functions.h"
 #include "Tspace_Namelist.h"
