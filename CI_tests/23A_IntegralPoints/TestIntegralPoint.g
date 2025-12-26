@@ -8,8 +8,7 @@ get_integral_interior_point:=function(FAC, method)
     FileO:=Filename(TmpDir, "Test.vertint");
     WriteMatrixFile(FileI, FAC);
     eProg:="../../src_poly/POLY_IntegralPoints";
-    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " GAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
+    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " CPP ", FileO);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
@@ -47,6 +46,7 @@ TestIntegralPoint:=function(FileEXT)
     local EXT, FAC, EXT_vert1, EXT_vert2;
     EXT:=ReadMatrixFile(FileEXT);
     FAC:=get_dual_desc(EXT);
+    Print("|EXT|=", Length(EXT), " |FAC|=", Length(FAC), "\n");
     EXT_vert1:=get_integral_interior_point(FAC, "LP_no_LLL");
     if EXT_vert1=false then
         return false;
@@ -61,7 +61,7 @@ TestIntegralPoint:=function(FileEXT)
     return true;
 end;
 
-ListFile:=["ER35.ext", "G6.txt"];
+ListFile:=["G6.txt", "ER35.ext"];
 for i in [1..27]
 do
     eFile:=Concatenation("Perfect8_", String(i));

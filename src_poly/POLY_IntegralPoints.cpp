@@ -20,7 +20,7 @@ void process(std::string const& FileFac, std::string const& method, std::string 
     throw TerminalException{1};
   };
   std::vector<MyVector<Tint>> ListVert = get_vert();
-  MyMatrix<Tint> M_vert = MatrixFromVectorFamilyDim(n_col, ListVert);
+  MyMatrix<Tint> M_vert = MatrixFromVectorFamilyDim(n_col-1, ListVert);
   auto f_print=[&](std::ostream& osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return ";

@@ -15,8 +15,14 @@
 
 template<typename T, typename Tint>
 void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std::vector<Tint> & ListUpp, std::vector<Tint> & ListLow, std::ostream& os) {
+#ifdef DEBUG_POLYTOPE_INT
+  os << "POLYINT: set_bound_lp, step 1\n";
+#endif
   MyVector<T> Vminimize = ZeroVector<T>(1 + dim - pos);
   LpSolution<T> eSol;
+#ifdef DEBUG_POLYTOPE_INT
+  os << "POLYINT: set_bound_lp, step 2\n";
+#endif
   for (int i = 0; i < dim - pos; i++) {
     Vminimize(1 + i) = 1;
     eSol = CDD_LinearProgramming(FACin, Vminimize, os);
@@ -47,6 +53,9 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
     //
     Vminimize(1 + i) = 0;
   }
+#ifdef DEBUG_POLYTOPE_INT
+  os << "POLYINT: set_bound_lp, step 3\n";
+#endif
 }
 
 
@@ -73,7 +82,7 @@ void Kernel_GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
   }
   Tint eProd = 1;
   for (int iDim = 0; iDim < dim; iDim++) {
-    Tint eSiz = UniversalScalarConversion<Tint, int>(eSiz);
+    Tint eSiz = ListSize[iDim];
     eProd *= eSiz;
   }
   os << " dim=" << dim << " eProd=" << eProd << "\n";

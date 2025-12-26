@@ -30,7 +30,9 @@ OUTPUTFLAG 	= -o
 
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I../src_latt -I../src_lorentzian -I../permutalib/src -I.
 #CDEFS           = -DEIGEN_NO_DEBUG -DTIMINGS -DDEBUG_SPECIFIC
-CDEFS           =
+#CDEFS           = -DTIMINGS -DDEBUG -DSANITY_CHECK
+CDEFS           = -DSANITY_CHECK
+#CDEFS           =
 
 
 
