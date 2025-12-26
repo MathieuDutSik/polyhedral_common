@@ -1,33 +1,61 @@
 Read("../common.g");
 Print("Beginning TestIntegralPoint\n");
 
-TestIntegralPoint:=function(FileEXT)
-    local FileOut, FileFAC, eProg1, command, TheCommand1, eProg2, TheCommand2, EXT, answer;
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    FileFAC:=Filename(DirectoryTemporary(), "Test.fac");
-    #
-    eProg1:="../../src_poly/POLY_dual_description";
+get_integral_interior_point:=function(FAC, method)
+    local TmpDir, FileI, FileO, eProg, TheCommand, EXTint;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.fac");
+    FileO:=Filename(TmpDir, "Test.vertint");
+    WriteMatrixFile(FileI, FAC);
+    eProg:="../../src_poly/POLY_IntegralPoints";
+    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " GAP ", FileO);
+    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        Print("The output file is not existing. That qualifies as a fail\n");
+        return false;
+    fi;
+    EXTint:=ReadMatrixFile(FileO);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    return EXTint;
+end;
+
+get_dual_desc:=function(EXT)
+    local TmpDir, FileEXT, FileFAC, eProg, command, TheCommand, FAC;
+    TmpDir:=DirectoryTemporary();
+    FileEXT:=Filename(TmpDir, "Test.out");
+    FileFAC:=Filename(TmpDir, "Test.fac");
+    WriteMatrixFile(FileEXT, EXT);
+    eProg:="../../src_poly/POLY_dual_description";
     command:="cdd";
-    TheCommand1:=Concatenation(eProg1, " rational  ", command, " CPP ", FileEXT, " ", FileFAC);
-    Exec(TheCommand1);
+    TheCommand:=Concatenation(eProg, " rational  ", command, " CPP ", FileEXT, " ", FileFAC);
+    Exec(TheCommand);
     if IsExistingFile(FileFAC)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
         return false;
     fi;
-    #
-    eProg2:="../../src_poly/POLY_IntegralPoints";
-    TheCommand2:=Concatenation(eProg2, " ", FileFAC, " ", FileEXT, " ", FileOut);
-    Exec(TheCommand2);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    FAC:=ReadMatrixFile(FileFAC);
+    RemoveFile(FileEXT);
+    RemoveFile(FileFAC);
+    return FAC;
+end;
+
+
+
+TestIntegralPoint:=function(FileEXT)
+    local EXT, FAC, EXT_vert1, EXT_vert2;
+    EXT:=ReadMatrixFile(FileEXT);
+    FAC:=get_dual_desc(EXT);
+    EXT_vert1:=get_integral_interior_point(FAC, "LP_no_LLL");
+    if EXT_vert1=false then
         return false;
     fi;
-    EXT:=ReadMatrixFile(FileEXT);
-    answer:=ReadAsFunction(FileOut)();
-    RemoveFile(FileOut);
-    RemoveFile(FileFAC);
-    if Length(EXT)<>Length(answer) then
-        Print("For the Delaunay polytopes, the set of integer points should be equal to the vertices");
+    EXT_vert2:=get_integral_interior_point(FAC, "ITER_no_LLL");
+    if EXT_vert1=false then
+        return false;
+    fi;
+    if Set(EXT_vert1)<>Set(EXT_vert2) then
         return false;
     fi;
     return true;

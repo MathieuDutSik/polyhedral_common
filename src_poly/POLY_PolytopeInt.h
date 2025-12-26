@@ -13,53 +13,69 @@
 #define DEBUG_POLYTOPE_INT
 #endif
 
-template <typename T, typename Tint, typename Finsert>
-void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
-                                 Finsert f_insert,
-                                 [[maybe_unused]] std::ostream &os) {
-  int nbVert = EXT.rows();
-  int n = EXT.cols();
-  int dim = n - 1;
-  MyMatrix<T> EXTnorm(nbVert, n);
-  for (int iVert = 0; iVert < nbVert; iVert++) {
-    T eVal = EXT(iVert, 0);
-    if (eVal <= 0) {
-      std::cerr << "We have eVal=" << eVal << "\n";
-      std::cerr << "which means the enumeration of integer points does not "
-                   "make sense\n";
+template<typename T, typename Tint>
+void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std::vector<Tint> & ListUpp, std::vector<Tint> & ListLow, std::ostream& os) {
+  MyVector<T> Vminimize = ZeroVector<T>(1 + dim - pos);
+  LpSolution<T> eSol;
+  for (int i = 0; i < dim - pos; i++) {
+    Vminimize(1 + i) = 1;
+    eSol = CDD_LinearProgramming(FACin, Vminimize, os);
+    if (!eSol.DualDefined || !eSol.PrimalDefined) {
+      std::cerr << "eSol.DualDefined=" << eSol.DualDefined
+                << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
+      std::cerr << "Failed computation of ListLow at i=" << i
+                << " which means that\n";
+      std::cerr << "the polytope is unbounded and thus the integer point "
+        "enumeration will not work\n";
       throw TerminalException{1};
     }
-    T eValInv = 1 / eVal;
-    for (int i = 0; i < n; i++)
-      EXTnorm(iVert, i) = eValInv * EXT(iVert, i);
+    ListLow[i + pos] = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
+    //
+    Vminimize(1 + i) = -1;
+    eSol = CDD_LinearProgramming(FACin, Vminimize, os);
+    if (!eSol.DualDefined || !eSol.PrimalDefined) {
+      std::cerr << "eSol.DualDefined=" << eSol.DualDefined
+                << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
+      std::cerr << "Failed computation of ListUpp at i=" << i
+                << " which means that\n";
+      std::cerr << "the polytope is unbounded and thus the integer point "
+        "enumeration will not work\n";
+      throw TerminalException{1};
+    }
+    ListUpp[i + pos] =
+      UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);
+    //
+    Vminimize(1 + i) = 0;
   }
+}
+
+
+template <typename T, typename Tint, typename Finsert>
+void Kernel_GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
+                                      Finsert f_insert,
+                                      std::ostream &os) {
+  int n = FAC.cols();
+  int dim = n - 1;
   std::vector<Tint> ListLow(dim);
   std::vector<Tint> ListUpp(dim);
+  set_bound_lp(FAC, dim, 0, ListUpp, ListLow, os);
   std::vector<int> ListSize(dim);
-  Tint eProd = 1;
   for (int iDim = 0; iDim < dim; iDim++) {
-    T val = EXTnorm(0, iDim + 1);
-    Tint eLow = UniversalCeilScalarInteger<Tint, T>(val);
-    Tint eUpp = UniversalFloorScalarInteger<Tint, T>(val);
-    for (int iVert = 1; iVert < nbVert; iVert++) {
-      T val_B = EXTnorm(iVert, iDim + 1);
-      Tint eLow_B = UniversalCeilScalarInteger<Tint, T>(val_B);
-      Tint eUpp_B = UniversalFloorScalarInteger<Tint, T>(val_B);
-      if (eLow_B < eLow)
-        eLow = eLow_B;
-      if (eUpp_B > eUpp)
-        eUpp = eUpp_B;
-    }
-    ListLow[iDim] = eLow;
-    ListUpp[iDim] = eUpp;
+    Tint const& eLow = ListLow[iDim];
+    Tint const& eUpp = ListUpp[iDim];
     Tint eSiz = 1 + eUpp - eLow;
     ListSize[iDim] = UniversalScalarConversion<int, Tint>(eSiz);
-    eProd *= eSiz;
   }
 #ifdef DEBUG_POLYTOPE_INT
   os << "ListBound =";
-  for (int iDim = 0; iDim < dim; iDim++)
+  for (int iDim = 0; iDim < dim; iDim++) {
     os << " [" << ListLow[iDim] << "," << ListUpp[iDim] << "]";
+  }
+  Tint eProd = 1;
+  for (int iDim = 0; iDim < dim; iDim++) {
+    Tint eSiz = UniversalScalarConversion<Tint, int>(eSiz);
+    eProd *= eSiz;
+  }
   os << " dim=" << dim << " eProd=" << eProd << "\n";
 #endif
   int nbFac = FAC.rows();
@@ -76,28 +92,29 @@ void Kernel_GetListIntegralPoint(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
   MyVector<Tint> ePoint(dim);
   BlockIterationMultiple BlIter(ListSize);
   for (auto const &eVect : BlIter) {
-    for (int iDim = 0; iDim < dim; iDim++)
+    for (int iDim = 0; iDim < dim; iDim++) {
       ePoint(iDim) = ListLow[iDim] + eVect[iDim];
+    }
     bool test = IsCorrect(ePoint);
     if (test) {
       bool retval = f_insert(ePoint);
-      if (!retval)
+      if (!retval) {
         return;
+      }
     }
   }
 }
 
 template <typename T, typename Tint>
-std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const &FAC,
-                                                 MyMatrix<T> const &EXT,
-                                                 std::ostream &os) {
+std::vector<MyVector<Tint>> GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
+                                                      std::ostream &os) {
   std::vector<MyVector<Tint>> ListPoint;
   auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
     ListPoint.push_back(ePoint);
     return true;
   };
-  Kernel_GetListIntegralPoint<T, Tint, decltype(f_insert)>(FAC, EXT, f_insert,
-                                                           os);
+  Kernel_GetListIntegralPoint_ITER<T, Tint, decltype(f_insert)>(FAC, f_insert,
+                                                                os);
   return ListPoint;
 }
 
@@ -124,38 +141,7 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert,
       for (size_t i = 0; i < dim - pos; i++)
         FACred(i_row, 1 + i) = FAC(i_row, 1 + pos + i);
     }
-    MyVector<T> Vminimize = ZeroVector<T>(1 + dim - pos);
-    LpSolution<T> eSol;
-    for (size_t i = 0; i < dim - pos; i++) {
-      Vminimize(1 + i) = 1;
-      eSol = CDD_LinearProgramming(FACred, Vminimize, os);
-      if (!eSol.DualDefined || !eSol.PrimalDefined) {
-        std::cerr << "eSol.DualDefined=" << eSol.DualDefined
-                  << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
-        std::cerr << "Failed computation of ListLow at i=" << i
-                  << " which means that\n";
-        std::cerr << "the polytope is unbounded and thus the integer point "
-                     "enumeration will not work\n";
-        throw TerminalException{1};
-      }
-      ListLow[i + pos] = UniversalCeilScalarInteger<Tint, T>(eSol.OptimalValue);
-      //
-      Vminimize(1 + i) = -1;
-      eSol = CDD_LinearProgramming(FACred, Vminimize, os);
-      if (!eSol.DualDefined || !eSol.PrimalDefined) {
-        std::cerr << "eSol.DualDefined=" << eSol.DualDefined
-                  << " eSol.PrimalDefined=" << eSol.PrimalDefined << "\n";
-        std::cerr << "Failed computation of ListUpp at i=" << i
-                  << " which means that\n";
-        std::cerr << "the polytope is unbounded and thus the integer point "
-                     "enumeration will not work\n";
-        throw TerminalException{1};
-      }
-      ListUpp[i + pos] =
-          UniversalFloorScalarInteger<Tint, T>(-eSol.OptimalValue);
-      //
-      Vminimize(1 + i) = 0;
-    }
+    set_bound_lp(FACred, dim, pos, ListUpp, ListLow, os);
   };
   auto get_number_poss = [&](const size_t &pos) -> size_t {
     size_t nb_pos = 1;
