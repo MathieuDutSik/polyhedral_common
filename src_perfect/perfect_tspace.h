@@ -181,7 +181,6 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
 #endif
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
 #ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: |ListIncd|=" << ListIncd.size() << "\n";
   os << "PERF_TSPACE: |eCone.PerfDomEXT|=" << eCone.PerfDomEXT.cols() << " / "
      << eCone.PerfDomEXT.rows() << "\n";
   os << "PERF_TSPACE: rk(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT)

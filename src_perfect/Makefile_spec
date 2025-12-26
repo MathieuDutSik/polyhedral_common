@@ -1,5 +1,5 @@
-#PROGRAM		= CheckPerfectInput MakeInitial_FileMatrix MergePartialLogs
-#PROGRAM		= CheckPerfectInput MakeInitial_FileMatrix MergePartialLogs PERF_MPI_EnumeratePerfectCones
+#PROGRAM		= CheckPerfectInput
+#PROGRAM		= CheckPerfectInput PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialPerfectComputation
 PROGRAM		= PERF_SerialPerfectComputation

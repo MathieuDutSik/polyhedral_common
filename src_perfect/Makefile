@@ -1,4 +1,4 @@
-PROGRAM		= MakeInitial_FileMatrix PERF_MPI_EnumeratePerfectCones IsEutactic MergePartialLogs PERF_SerialPerfectComputation
+PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic PERF_SerialPerfectComputation
 
 # REquire TBB to compile
 #PROGRAM		= ComputePerfect

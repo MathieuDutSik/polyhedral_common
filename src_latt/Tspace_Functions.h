@@ -295,6 +295,9 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   Find one positive definite matrix in the space assuming that one exists.
   If one of the matrix of the basis is positive definite then the first one
   is provided.
+  ---
+  Maybe we should use semidefinite programming? Is that absolutely
+  needed? Or just slower?
  */
 template <typename T, typename Tint>
 std::optional<MyMatrix<T>>

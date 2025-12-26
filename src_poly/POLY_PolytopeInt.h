@@ -48,8 +48,7 @@ MyMatrix<T> apply_lll_reduction(MyMatrix<T> const&FAC, MyMatrix<Tint> const& Pma
     }
   }
 #ifdef DEBUG_POLYTOPE_INT
-  os << "L1(FAC)    = " << L1_norm_mat(FAC) << "\n";
-  os << "L1(FACred) = " << L1_norm_mat(FACred) << "\n";
+  os << "POLYINT: L1(FAC)    = " << L1_norm_mat(FAC) << " L1(FACred) = " << L1_norm_mat(FACred) << "\n";
 #endif
   return FACred;
 }
@@ -353,6 +352,15 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_LP(MyMatrix<T> const &FAC,
                                                               os);
   return ListPoint;
 }
+
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> GetListIntegralPoint(MyMatrix<T> const &FAC, std::ostream &os) {
+  // Use the iteration systematically. Combined with LLL, that is quite powerful.
+  return GetListIntegralPoint_ITER<T,Tint>(FAC, os);
+}
+
+
 
 /*
   We are looking for the 01 solutions X of the equation XA = B.
