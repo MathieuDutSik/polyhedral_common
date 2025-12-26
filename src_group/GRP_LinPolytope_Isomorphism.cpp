@@ -77,7 +77,7 @@ int main(int argc, char *argv[]) {
     std::string FileExt2 = argv[3];
     std::string OutFormat = "GAP";
     std::string FileO = "stderr";
-    if (argc == 5) {
+    if (argc == 6) {
       OutFormat = argv[4];
       FileO = argv[5];
     }
