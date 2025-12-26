@@ -112,15 +112,17 @@ end;
 TestCase_Canonic:=function(EXT)
     local EXT_img, EXT_can1, EXT_can2;
     EXT_img:=scramble_ext(EXT);
-    EXT_can1:=get_automorphism_result(EXT);
+    EXT_can1:=get_canonic_form(EXT);
     if EXT_can1=false then
         return false;
     fi;
-    EXT_can2:=get_automorphism_result(EXT_img);
+    EXT_can2:=get_canonic_form(EXT_img);
     if EXT_can2=false then
+        Print("No result, returning false\n");
         return false;
     fi;
     if EXT_can1<>EXT_can2 then
+        Print("Different canonical form\n");
         return false;
     fi;
     return true;
