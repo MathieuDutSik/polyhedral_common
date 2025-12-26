@@ -1,5 +1,4 @@
 #PROGRAM		= GRP_LinPolytope_Automorphism
-#PROGRAM		= TEST_LinPolytope_WMatCanonic
 #PROGRAM		= GRP_OrbitSplittingPerfect
 #PROGRAM		= GRP_LinPolytope_Isomorphism
 #PROGRAM		= TEST_WeightMatrixLimited

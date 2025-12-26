@@ -1,5 +1,4 @@
 PROGRAM		= TEST_WeightMatrixLimited \
-		  TEST_LinPolytope_WMatCanonic \
                   GRP_OrbitSplitting GRP_VectorSplitting \
                   GRP_LinearSpace_Equivalence GRP_LinearSpace_Stabilizer \
                   GRP_LinearSpace_Stabilizer_RightCoset \
