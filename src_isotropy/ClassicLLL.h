@@ -1,8 +1,10 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #ifndef SRC_LATT_CLASSICLLL_H_
 #define SRC_LATT_CLASSICLLL_H_
-
+// clang-format off
 #include "MAT_Matrix.h"
+#include "SignatureSymmetric.h"
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_CLASSIC_LLL

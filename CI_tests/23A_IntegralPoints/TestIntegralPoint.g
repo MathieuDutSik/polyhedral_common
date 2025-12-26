@@ -43,19 +43,47 @@ end;
 
 
 TestIntegralPoint:=function(FileEXT)
-    local EXT, FAC, EXT_vert1, EXT_vert2;
+    local EXT, FAC, EXT_vert1, EXT_vert2, EXT_vert3, EXT_vert4;
     EXT:=ReadMatrixFile(FileEXT);
     FAC:=get_dual_desc(EXT);
     Print("|EXT|=", Length(EXT), " |FAC|=", Length(FAC), "\n");
+    #
     EXT_vert1:=get_integral_interior_point(FAC, "LP_no_LLL");
     if EXT_vert1=false then
+        Print("Failure for LP_no_LLL\n");
         return false;
     fi;
+    #
     EXT_vert2:=get_integral_interior_point(FAC, "ITER_no_LLL");
-    if EXT_vert1=false then
+    if EXT_vert2=false then
+        Print("Failure for ITER_no_LLL\n");
         return false;
     fi;
+    #
+    EXT_vert3:=get_integral_interior_point(FAC, "ITER");
+    if EXT_vert3=false then
+        Print("Failure for ITER\n");
+        return false;
+    fi;
+    #
+    EXT_vert4:=get_integral_interior_point(FAC, "LP");
+    if EXT_vert4=false then
+        Print("Failure for LP\n");
+        return false;
+    fi;
+    #
     if Set(EXT_vert1)<>Set(EXT_vert2) then
+        Print("Inconsistency between LP_no_LLL and ITER_no_LLL\n");
+        return false;
+    fi;
+    #
+    if Set(EXT_vert2)<>Set(EXT_vert3) then
+        Print("Inconsistency between ITER_no_LLL and ITER\n");
+        return false;
+    fi;
+    #
+    if Set(EXT_vert3)<>Set(EXT_vert4) then
+        Print("Inconsistency between ITER and LP\n");
         return false;
     fi;
     return true;

@@ -5,6 +5,7 @@
 // clang-format off
 #include "COMB_Combinatorics.h"
 #include "POLY_LinearProgramming.h"
+#include "ClassicLLL.h"
 #include <limits>
 #include <vector>
 // clang-format on
@@ -14,9 +15,44 @@
 #endif
 
 template<typename T, typename Tint>
-MyMatrix<Tint> lll_reduction_ma
+MyMatrix<Tint> lll_reduction_matrix(MyMatrix<T> const& FAC, std::ostream& os) {
+  int dim = FAC.cols() - 1;
+  int nbRow = FAC.rows();
+  MyMatrix<T> TheGram = ZeroMatrix<T>(dim, dim);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int i = 0; i < dim; i++) {
+      for (int j = 0; j < dim; j++) {
+        TheGram(i,j) += FAC(iRow, i+1) * FAC(iRow, j+1);
+      }
+    }
+  }
+  LLLreduction<T, Tint> res = LLLreducedBasis<T, Tint>(TheGram, os);
+  return TransposedMat(res.Pmat);
+}
 
-
+template<typename T, typename Tint>
+MyMatrix<T> apply_lll_reduction(MyMatrix<T> const&FAC, MyMatrix<Tint> const& Pmat, [[maybe_unused]] std::ostream& os) {
+  MyMatrix<T> Pmat_T = UniversalMatrixConversion<T,Tint>(Pmat);
+  int nbRow = FAC.rows();
+  int dim = FAC.cols() - 1;
+  MyMatrix<T> FACred(nbRow, dim + 1);
+  MyVector<T> V1(dim), V2(dim);
+  for (int iRow=0; iRow<nbRow; iRow++) {
+    for (int i=0; i<dim; i++) {
+      V1(i) = FAC(iRow, i+1);
+    }
+    FACred(iRow, 0) = FAC(iRow, 0);
+    V2 = Pmat_T.transpose() * V1;
+    for (int i=0; i<dim; i++) {
+      FACred(iRow, i+1) = V2(i);
+    }
+  }
+#ifdef DEBUG_POLYTOPE_INT
+  os << "L1(FAC)    = " << L1_norm_mat(FAC) << "\n";
+  os << "L1(FACred) = " << L1_norm_mat(FACred) << "\n";
+#endif
+  return FACred;
+}
 
 
 template<typename T, typename Tint>
@@ -66,9 +102,9 @@ void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std:
 
 
 template <typename T, typename Tint, typename Finsert>
-void Kernel_GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
-                                      Finsert f_insert,
-                                      std::ostream &os) {
+void Kernel_GetListIntegralPoint_ITER_no_LLL(MyMatrix<T> const &FAC,
+                                             Finsert f_insert,
+                                             std::ostream &os) {
   int n = FAC.cols();
   int dim = n - 1;
   std::vector<Tint> ListLow(dim);
@@ -120,6 +156,35 @@ void Kernel_GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
   }
 }
 
+template <typename T, typename Tint, typename Finsert>
+void Kernel_GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
+                                      Finsert f_insert,
+                                      std::ostream &os) {
+  int dim = FAC.cols() - 1;
+  MyMatrix<Tint> Pmat = lll_reduction_matrix<T,Tint>(FAC, os);
+  MyMatrix<T> FACred = apply_lll_reduction(FAC, Pmat, os);
+  MyVector<Tint> V(dim);
+  auto f_insert_bis=[&](MyVector<Tint> const& Vred) -> bool {
+    V = Pmat * Vred;
+    return f_insert(V);
+  };
+  Kernel_GetListIntegralPoint_ITER_no_LLL<T,Tint,decltype(f_insert_bis)>(FACred, f_insert_bis, os);
+}
+
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> GetListIntegralPoint_ITER_no_LLL(MyMatrix<T> const &FAC,
+                                                             std::ostream &os) {
+  std::vector<MyVector<Tint>> ListPoint;
+  auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
+    ListPoint.push_back(ePoint);
+    return true;
+  };
+  Kernel_GetListIntegralPoint_ITER_no_LLL<T, Tint, decltype(f_insert)>(FAC, f_insert,
+                                                                       os);
+  return ListPoint;
+}
+
 template <typename T, typename Tint>
 std::vector<MyVector<Tint>> GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
                                                       std::ostream &os) {
@@ -133,9 +198,11 @@ std::vector<MyVector<Tint>> GetListIntegralPoint_ITER(MyMatrix<T> const &FAC,
   return ListPoint;
 }
 
+
+
 template <typename T, typename Tint, typename Finsert>
-void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert,
-                                    std::ostream &os) {
+void Kernel_GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC, Finsert f_insert,
+                                           std::ostream &os) {
   //
   // Basic functionality
   //
@@ -244,6 +311,34 @@ void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC, Finsert f_insert,
       set_bound(ePoint, pos);
     }
   }
+}
+
+template <typename T, typename Tint, typename Finsert>
+void Kernel_GetListIntegralPoint_LP(MyMatrix<T> const &FAC,
+                                    Finsert f_insert,
+                                    std::ostream &os) {
+  int dim = FAC.cols() - 1;
+  MyMatrix<Tint> Pmat = lll_reduction_matrix<T,Tint>(FAC, os);
+  MyMatrix<T> FACred = apply_lll_reduction(FAC, Pmat, os);
+  MyVector<Tint> V(dim);
+  auto f_insert_bis=[&](MyVector<Tint> const& Vred) -> bool {
+    V = Pmat * Vred;
+    return f_insert(V);
+  };
+  Kernel_GetListIntegralPoint_LP_no_LLL<T,Tint,decltype(f_insert_bis)>(FACred, f_insert_bis, os);
+}
+
+template <typename T, typename Tint>
+std::vector<MyVector<Tint>> GetListIntegralPoint_LP_no_LLL(MyMatrix<T> const &FAC,
+                                                           std::ostream &os) {
+  std::vector<MyVector<Tint>> ListPoint;
+  auto f_insert = [&](const MyVector<Tint> &ePoint) -> bool {
+    ListPoint.push_back(ePoint);
+    return true;
+  };
+  Kernel_GetListIntegralPoint_LP_no_LLL<T, Tint, decltype(f_insert)>(FAC, f_insert,
+                                                                     os);
+  return ListPoint;
 }
 
 template <typename T, typename Tint>

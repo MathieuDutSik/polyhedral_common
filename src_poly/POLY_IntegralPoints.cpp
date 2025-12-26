@@ -11,10 +11,16 @@ void process(std::string const& FileFac, std::string const& method, std::string 
 
   auto get_vert=[&]() -> std::vector<MyVector<Tint>> {
     if (method == "LP_no_LLL") {
-      return GetListIntegralPoint_LP<T,Tint>(FAC, std::cerr);
+      return GetListIntegralPoint_LP_no_LLL<T,Tint>(FAC, std::cerr);
     }
     if (method == "ITER_no_LLL") {
+      return GetListIntegralPoint_ITER_no_LLL<T,Tint>(FAC, std::cerr);
+    }
+    if (method == "ITER") {
       return GetListIntegralPoint_ITER<T,Tint>(FAC, std::cerr);
+    }
+    if (method == "LP") {
+      return GetListIntegralPoint_LP<T,Tint>(FAC, std::cerr);
     }
     std::cerr << "POLYINT: Failed to find a matching entry for get_vert\n";
     throw TerminalException{1};
