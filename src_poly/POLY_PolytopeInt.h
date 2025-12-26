@@ -14,6 +14,12 @@
 #endif
 
 template<typename T, typename Tint>
+MyMatrix<Tint> lll_reduction_ma
+
+
+
+
+template<typename T, typename Tint>
 void set_bound_lp(MyMatrix<T> const& FACin, int const& dim, int const& pos, std::vector<Tint> & ListUpp, std::vector<Tint> & ListLow, std::ostream& os) {
 #ifdef DEBUG_POLYTOPE_INT
   os << "POLYINT: set_bound_lp, step 1\n";

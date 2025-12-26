@@ -11,7 +11,6 @@ PROGRAM		= POLY_redundancy
 #PROGRAM		= POLY_redundancyGroup
 #PROGRAM		= POLY_redundancyGroup GRP_LinPolytope_Automorphism
 #PROGRAM		= POLY_IntegralPoints
-#PROGRAM		= TEST_PolytopeIntegralPoints
 #PROGRAM		= POLY_GetFullRankFacetSet
 #PROGRAM		= POLY_IsomorphismReduction
 #PROGRAM		= POLY_SolutionMatNonnegative

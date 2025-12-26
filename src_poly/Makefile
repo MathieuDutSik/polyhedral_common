@@ -1,5 +1,4 @@
-PROGRAM		= TEST_PolytopeIntegralPoints \
-		  POLY_CreateAffineBasis \
+PROGRAM		= POLY_CreateAffineBasis \
 		  POLY_cdd_skeletons POLY_SolutionMatNonnegativeComplete \
 		  POLY_redundancy POLY_redundancyGroup \
 		  POLY_IntegralPoints POLY_SkelettonClarkson \
