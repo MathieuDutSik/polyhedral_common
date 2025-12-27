@@ -1,0 +1,588 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{geometry}
+\geometry{margin=1in}
+
+\lstset{
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    frame=single,
+    language=C++,
+    commentstyle=\color{gray},
+    keywordstyle=\color{blue},
+    stringstyle=\color{red}
+}
+
+\title{Polyhedral Common Library\\
+\large Computational Tools for Polytopes, Lattices, and Quadratic Forms\\
+Documentation}
+\author{Mathieu Dutour Sikiric}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+\newpage
+
+\section{Introduction}
+
+The Polyhedral Common Library is a comprehensive set of computational tools designed for advanced mathematical computations involving polytopes, quadratic forms, and lattices. The library is optimized for extreme performance to tackle record-breaking problems in computational mathematics.
+
+\subsection{Key Features}
+
+\begin{itemize}
+    \item High-performance algorithms for polyhedral computations
+    \item Extensive group theory functionality for polytope symmetries
+    \item Lattice theory implementations (Delaunay domains, canonicalization)
+    \item Copositivity and strict copositivity testing
+    \item Short vector computations and enumeration
+    \item Perfect form computations
+    \item Indefinite and Lorentzian form reductions
+    \item Support for multiple arithmetic types (exact rational, algebraic numbers, safe integers)
+\end{itemize}
+
+\subsection{Design Philosophy}
+
+The library follows these core principles:
+\begin{itemize}
+    \item \textbf{Performance-First}: All algorithms are optimized for speed using group theory and polyhedral structures
+    \item \textbf{Modularity}: Independent subdirectories for different functionalities
+    \item \textbf{Flexibility}: Template-based design supporting multiple arithmetic types
+    \item \textbf{Exactness}: Preference for exact arithmetic to avoid numerical errors
+\end{itemize}
+
+\section{Project Organization}
+
+The project is organized into several independent subdirectories, each focusing on a specific mathematical domain:
+
+\begin{description}
+    \item[\texttt{src\_group}] Group theory computations for polytopes
+    \item[\texttt{src\_poly}] Polyhedral computations (dual descriptions, facets, vertices)
+    \item[\texttt{src\_latt}] Lattice computations (Delaunay, canonicalization, isomorphism)
+    \item[\texttt{src\_dualdesc}] Dual description algorithms for serial computers
+    \item[\texttt{src\_copos}] Copositivity and complete positivity testing
+    \item[\texttt{src\_short}] Short vector enumeration and computations
+    \item[\texttt{src\_perfect}] Perfect form computations
+    \item[\texttt{src\_ctype}] C-type enumeration and classification
+    \item[\texttt{src\_indefinite}] Indefinite quadratic form reduction
+    \item[\texttt{src\_lorentzian}] Lorentzian/hyperbolic form algorithms (Vinberg, Edgewalk)
+    \item[\texttt{src\_isotropy}] Isotropic vector finding and reduction
+    \item[\texttt{src\_poincare\_polyhedron}] Poincaré polyhedron computations
+    \item[\texttt{src\_sparse\_solver}] Sparse linear system solvers
+\end{description}
+
+\section{Module Documentation}
+
+\subsection{Group Theory Module (\texttt{src\_group})}
+
+This module provides comprehensive functionality for computing and manipulating groups acting on polytopes and lattices.
+
+\subsubsection{Core Functionalities}
+
+\paragraph{Matrix Group Operations}
+The module implements efficient representations and operations on matrix groups:
+
+\begin{itemize}
+    \item \textbf{Group generation}: Constructing groups from generators
+    \item \textbf{Orbit enumeration}: Computing orbits under group actions
+    \item \textbf{Stabilizer computation}: Finding stabilizer subgroups
+    \item \textbf{Double coset enumeration}: Computing double coset decompositions
+    \item \textbf{Group simplification}: Reducing group representations
+\end{itemize}
+
+\paragraph{Key Functions}
+
+\begin{lstlisting}
+// Write matrix group to file
+template <typename T>
+void write_matrix_group(
+    std::vector<MyMatrix<T>> const &list_mat,
+    std::string const &context);
+
+// Compute rational invariant of matrix group
+template <typename T>
+size_t GetRationalInvariant(
+    std::vector<MyMatrix<T>> const &ListGen);
+
+// LLL reduction for matrix groups
+template <typename T, typename Tint, typename Thelper>
+std::pair<std::vector<MyMatrix<T>>, MyMatrix<Tint>>
+LLLMatrixGroupReduction(
+    Thelper const &helper,
+    std::vector<MyMatrix<T>> const &ListMatr,
+    std::ostream &os);
+
+// Compute L1 norm of matrix group
+template <typename T, typename Thelper>
+T L1normMatrixGroup(
+    Thelper const &helper,
+    std::vector<MyMatrix<T>> const &ListMatr);
+\end{lstlisting}
+
+\subsubsection{Key Header Files}
+
+\begin{description}
+    \item[\texttt{MatrixGroupBasic.h}] Basic matrix group operations and utilities
+    \item[\texttt{MatrixGroup.h}] Core matrix group data structures
+    \item[\texttt{OrbitEnumeration.h}] Orbit computation algorithms
+    \item[\texttt{GRP\_DoubleCoset.h}] Double coset enumeration
+    \item[\texttt{MatrixGroupSimplification.h}] Group simplification algorithms
+\end{description}
+
+\subsection{Polyhedral Module (\texttt{src\_poly})}
+
+This module handles all aspects of polyhedral computations, including dual descriptions, face enumeration, and linear programming.
+
+\subsubsection{Core Functionalities}
+
+\paragraph{Basic Operations}
+\begin{itemize}
+    \item \textbf{Row selection}: Extracting submatrices based on face specifications
+    \item \textbf{Facet testing}: Verifying facet inequalities
+    \item \textbf{Face enumeration}: Computing all faces of a polytope
+    \item \textbf{Dual description}: Converting between vertex and facet representations
+\end{itemize}
+
+\paragraph{Key Functions}
+
+\begin{lstlisting}
+// Select rows from matrix based on face
+template <typename T>
+MyMatrix<T> SelectRow(
+    MyMatrix<T> const &TheMat,
+    Face const &eList);
+
+// Select rows and drop a column
+template <typename T>
+MyMatrix<T> SelectRowDropColumnFace(
+    MyMatrix<T> const &TheMat,
+    Face const &eList,
+    int const &idx_drop);
+
+// Test if a face defines a valid facet
+template <typename T>
+bool TestFacetInequality(
+    MyMatrix<T> const &EXT,
+    Face const &eList);
+\end{lstlisting}
+
+\subsubsection{Algorithms}
+
+\begin{description}
+    \item[cddlib integration] Interface to cddlib for dual description
+    \item[Direct dual description] Custom implementation for specific cases
+    \item[Redundancy removal] Identifying and removing redundant constraints
+    \item[Linear programming] Solving linear programs over polytopes
+\end{description}
+
+\subsection{Lattice Module (\texttt{src\_latt})}
+
+The lattice module provides advanced algorithms for lattice computations, particularly focusing on positive definite quadratic forms.
+
+\subsubsection{Core Functionalities}
+
+\paragraph{Shortest Vectors}
+The module implements efficient algorithms for computing shortest vectors in lattices:
+
+\begin{lstlisting}
+// Data structure for shortest vectors
+template <typename T, typename Tint>
+struct Tshortest {
+    T min;                  // Minimum norm
+    MyMatrix<Tint> SHV;     // Shortest vectors
+};
+
+// Select shortest vectors from a set
+template <typename T, typename Tint>
+Tshortest<T, Tint> SelectShortestVector(
+    MyMatrix<T> const &eMat,
+    MyMatrix<Tint> const &SHV);
+
+// Apply transformation to shortest vectors
+template <typename T, typename Tint>
+Tshortest<T, Tint> apply_transformation(
+    Tshortest<T, Tint> const &rec_shv,
+    MyMatrix<Tint> const &P);
+
+// Get half of the shortest vectors (exploit symmetry)
+template <typename T, typename Tint>
+Tshortest<T, Tint> shortest_get_half(
+    Tshortest<T, Tint> const &rec_shv);
+\end{lstlisting}
+
+\paragraph{Delaunay Computations}
+\begin{itemize}
+    \item \textbf{Delaunay domain enumeration}: Computing Delaunay polytopes
+    \item \textbf{Isodelaunay domains}: Finding isomorphism classes
+    \item \textbf{Fundamental domains}: Computing fundamental Delaunay domains
+\end{itemize}
+
+\paragraph{Canonicalization}
+\begin{itemize}
+    \item \textbf{Matrix canonicalization}: Computing canonical forms of positive definite matrices
+    \item \textbf{Automorphism groups}: Finding symmetries of lattices
+    \item \textbf{Isomorphism testing}: Determining lattice equivalence
+\end{itemize}
+
+\subsubsection{Key Header Files}
+
+\begin{description}
+    \item[\texttt{LatticeDefinitions.h}] Core data structures and basic operations
+    \item[\texttt{LatticeDelaunay.h}] Delaunay domain computations
+    \item[\texttt{LatticeStabEquiCan.h}] Stabilizer, equivalence, and canonicalization
+    \item[\texttt{FundamentalDelaunay.h}] Fundamental Delaunay domains
+\end{description}
+
+\subsection{Dual Description Module (\texttt{src\_dualdesc})}
+
+Specialized module for computing dual descriptions of polytopes on serial computers with optimizations for large-scale problems.
+
+\subsubsection{Algorithms}
+\begin{itemize}
+    \item Serial dual description
+    \item MPI-based parallel dual description
+    \item Database-backed enumeration
+    \item Balinski enumeration
+\end{itemize}
+
+\subsection{Copositivity Module (\texttt{src\_copos})}
+
+This module implements tests for copositivity and complete positivity of matrices.
+
+\subsubsection{Core Functionalities}
+\begin{itemize}
+    \item \textbf{Copositivity testing}: Determining if a matrix is copositive
+    \item \textbf{Strict copositivity}: Testing for strict copositivity
+    \item \textbf{Complete positivity}: Verifying complete positivity
+    \item \textbf{Copositive kernel}: Computing the kernel in copositive cone
+\end{itemize}
+
+\subsection{Short Vector Module (\texttt{src\_short})}
+
+Focuses on computing and enumerating short vectors in lattices.
+
+\subsubsection{Main Programs}
+\begin{description}
+    \item[\texttt{SHORT\_GetShortestVector}] Finds shortest vectors in a lattice
+    \item[\texttt{SHORT\_AutomorphismGroup}] Computes automorphism group from short vectors
+    \item[\texttt{SHORT\_CheckPrimeRealizability}] Tests realizability over finite fields
+    \item[\texttt{SHORT\_EnumerateCyclicCases}] Enumerates special cyclic cases
+\end{description}
+
+\subsection{Perfect Forms Module (\texttt{src\_perfect})}
+
+Implements algorithms for perfect quadratic forms, which are critical points of the Hermite function.
+
+\subsubsection{Functionalities}
+\begin{itemize}
+    \item Perfect form enumeration
+    \item Perfect cone computations
+    \item T-space analysis
+    \item MPI-based parallel enumeration
+\end{itemize}
+
+\subsection{Indefinite Forms Module (\texttt{src\_indefinite})}
+
+Handles computations with indefinite quadratic forms.
+
+\subsubsection{Core Operations}
+\begin{itemize}
+    \item Automorphism group computation
+    \item Isotropic plane stabilizers
+    \item Canonical form computation
+    \item Equivalence testing
+\end{itemize}
+
+\subsection{Lorentzian Module (\texttt{src\_lorentzian})}
+
+Implements algorithms specific to Lorentzian (hyperbolic) quadratic forms.
+
+\subsubsection{Algorithms}
+\begin{itemize}
+    \item \textbf{Vinberg algorithm}: Computing fundamental domains for reflection groups
+    \item \textbf{Edgewalk algorithm}: Alternative approach using edge enumeration
+    \item \textbf{Allcock algorithm}: Specialized 2-dimensional anisotropic cases
+    \item \textbf{Coxeter dynamics}: Analysis of Coxeter diagrams and symbols
+\end{itemize}
+
+\subsection{Isotropy Module (\texttt{src\_isotropy})}
+
+Focuses on finding isotropic vectors and reduction of quadratic forms.
+
+\subsubsection{Functionalities}
+\begin{itemize}
+    \item Finding isotropic vectors
+    \item Indefinite LLL reduction
+    \item Diophantine approximation
+    \item Determinant minimization
+    \item Positivity testing
+\end{itemize}
+
+\section{Arithmetic Types}
+
+The library supports multiple arithmetic types through templates, allowing users to choose the appropriate precision and performance trade-offs.
+
+\subsection{Functional Types}
+
+For exact computations over algebraic number fields:
+
+\begin{description}
+    \item[\texttt{Qsqrt2}] The field $\mathbb{Q}(\sqrt{2})$
+    \item[\texttt{Qsqrt3}] The field $\mathbb{Q}(\sqrt{3})$
+    \item[\texttt{Qsqrt5}] The field $\mathbb{Q}(\sqrt{5})$
+    \item[\texttt{RealAlgebraic}] General real algebraic numbers (via continued fractions)
+\end{description}
+
+\textbf{Syntax}: Coefficients are written as: \texttt{1}, \texttt{1+x}, \texttt{x/4}, \texttt{-3-3x/4}, \texttt{3+(3*4)*x\^{}3}
+
+\subsection{Speed Types}
+
+For high-performance computations:
+
+\begin{description}
+    \item[\texttt{mpq\_class}] GMP rational numbers (recommended default)
+    \item[\texttt{mpz\_class}] GMP arbitrary precision integers
+    \item[\texttt{cpp\_rational}] Boost multiprecision rational (header-only)
+    \item[\texttt{cpp\_int}] Boost multiprecision integer (header-only)
+    \item[\texttt{SafeInt64}] Protected 64-bit integers with overflow detection
+    \item[\texttt{Rational<SafeInt64>}] Safe rational arithmetic
+\end{description}
+
+\section{Compilation and Usage}
+
+\subsection{Dependencies}
+
+The following libraries are required:
+
+\begin{itemize}
+    \item \textbf{Eigen}: Linear algebra library (\url{http://eigen.tuxfamily.org/})
+    \item \textbf{Boost}: C++ utility libraries (\url{http://www.boost.org/})
+    \item \textbf{GMP}: GNU Multiple Precision Library (\url{https://gmplib.org/})
+    \item \textbf{nauty}: Graph automorphism library (\url{https://pallini.di.uniroma1.it/})
+\end{itemize}
+
+\subsection{Building the Library}
+
+The repository uses submodules. Clone with:
+
+\begin{lstlisting}[language=bash]
+git clone https://github.com/MathieuDutSik/polyhedral_common --recursive
+\end{lstlisting}
+
+Or if already cloned:
+
+\begin{lstlisting}[language=bash]
+./init.sh
+\end{lstlisting}
+
+Update submodules:
+
+\begin{lstlisting}[language=bash]
+./update.sh
+\end{lstlisting}
+
+Compilation details are provided in the Dockerfile at \texttt{docker\_files/Dockerfile}.
+
+\subsection{Debug and Runtime Options}
+
+Several environment variables control debugging and profiling:
+
+\begin{description}
+    \item[\texttt{DEBUG}] Enable debugging output and fast checks
+    \item[\texttt{TIMINGS}] Print runtime information
+    \item[\texttt{SANITY\_CHECK}] Perform consistency checks
+    \item[\texttt{SANITY\_CHECK\_EXTENSIVE}] Perform expensive consistency checks
+    \item[\texttt{KEY\_VALUE}] Print key-value pairs for optimization
+    \item[\texttt{TRACK\_INFO}] Print tracking information
+    \item[\texttt{METHOD\_COMPARISON}] Compare different method implementations
+\end{description}
+
+For granular control, use module-specific flags like \texttt{DEBUG\_LINEAR\_PROGRAM}.
+
+\section{Testing}
+
+\subsection{Test Organization}
+
+\begin{description}
+    \item[\texttt{CI\_tests/}] Continuous integration tests (5 min - 1 hour runtime)
+    \item[\texttt{Exmpl\_Bench/}] Development and experimental tests
+\end{description}
+
+Tests are run via GitHub Actions with scheduled monthly execution to manage compute credits.
+
+\section{Integration with Computer Algebra Systems}
+
+The library can be interfaced with:
+
+\begin{itemize}
+    \item \textbf{GAP} (Group Algebra Programming)
+    \item \textbf{Oscar} (Julia-based)
+    \item \textbf{Sage} (Python-based)
+\end{itemize}
+
+Primary usage remains through CLI programs.
+
+\section{Common Data Structures}
+
+\subsection{Matrix Types}
+
+\begin{lstlisting}
+template <typename T>
+class MyMatrix;  // Dense matrix
+
+template <typename T>
+class MyVector;  // Vector type
+\end{lstlisting}
+
+\subsection{Face Representation}
+
+\begin{lstlisting}
+using Face = boost::dynamic_bitset<>;  // Bitset for faces
+\end{lstlisting}
+
+Faces represent subsets of vertices or facets as bitsets for efficiency.
+
+\subsection{Group Types}
+
+Matrix groups are represented as vectors of generators:
+
+\begin{lstlisting}
+template <typename T>
+using MatrixGroup = std::vector<MyMatrix<T>>;
+\end{lstlisting}
+
+\section{Performance Considerations}
+
+\subsection{Group Exploitation}
+
+A key optimization strategy is using group theory:
+\begin{itemize}
+    \item Orbit-based enumeration reduces redundant computation
+    \item Canonical forms enable efficient isomorphism testing
+    \item Stabilizer chains optimize group operations
+\end{itemize}
+
+\subsection{Memory Management}
+
+The library uses:
+\begin{itemize}
+    \item Bitsets for compact face representation
+    \item Move semantics for efficient memory transfer
+    \item Template specialization for type-specific optimizations
+\end{itemize}
+
+\subsection{Parallelization}
+
+Selected modules support MPI-based parallelization:
+\begin{itemize}
+    \item \texttt{LATT\_MPI\_ComputeDelaunay}
+    \item \texttt{POLY\_MPI\_DualDesc}
+    \item \texttt{PERF\_MPI\_EnumeratePerfectCones}
+\end{itemize}
+
+\section{Error Handling}
+
+\subsection{Exception Types}
+
+The library uses \texttt{TerminalException} for unrecoverable errors:
+
+\begin{lstlisting}
+throw TerminalException{1};
+\end{lstlisting}
+
+\subsection{Output Streams}
+
+Functions accept \texttt{std::ostream\& os} parameters for flexible output:
+\begin{itemize}
+    \item Serial programs: pass \texttt{std::cerr}
+    \item Parallel programs: pass process-specific streams
+\end{itemize}
+
+This prevents output mixing in parallel execution.
+
+\section{Contributing and Development}
+
+\subsection{Code Style}
+
+\begin{itemize}
+    \item Template-based generic programming
+    \item Header-only when possible
+    \item Clear separation of interface and implementation
+    \item Extensive use of \texttt{const} correctness
+    \item No trailing whitespace
+\end{itemize}
+
+\subsection{Adding New Functionality}
+
+To add new functionality:
+
+\begin{enumerate}
+    \item Choose appropriate module or create new subdirectory
+    \item Define template interfaces for arithmetic flexibility
+    \item Add CI tests in \texttt{CI\_tests/}
+    \item Document in header files
+    \item Consider MPI parallelization for expensive operations
+\end{enumerate}
+
+\section{References and Further Reading}
+
+\subsection{Theoretical Background}
+
+\begin{itemize}
+    \item \textbf{Lattice theory}: Gruber, M., \textit{Convex and Discrete Geometry}
+    \item \textbf{Polytope theory}: Ziegler, G.M., \textit{Lectures on Polytopes}
+    \item \textbf{Quadratic forms}: Cassels, J.W.S., \textit{Rational Quadratic Forms}
+    \item \textbf{Vinberg algorithm}: Vinberg, E.B., \textit{Hyperbolic reflection groups}
+\end{itemize}
+
+\subsection{Repository}
+
+\begin{itemize}
+    \item GitHub: \url{https://github.com/MathieuDutSik/polyhedral_common}
+    \item Issues and bug reports: GitHub issue tracker
+\end{itemize}
+
+\section{Appendix: Function Index}
+
+\subsection{Group Module Functions}
+
+\begin{description}
+    \item[\texttt{write\_matrix\_group}] Write matrix group to file
+    \item[\texttt{GetRationalInvariant}] Compute rational invariant
+    \item[\texttt{LLLMatrixGroupReduction}] Apply LLL reduction to matrix group
+    \item[\texttt{L1normMatrixGroup}] Compute L1 norm of matrix group
+\end{description}
+
+\subsection{Polyhedral Module Functions}
+
+\begin{description}
+    \item[\texttt{SelectRow}] Extract rows based on face
+    \item[\texttt{SelectRowDropColumnFace}] Select rows and drop column
+    \item[\texttt{TestFacetInequality}] Verify facet inequality
+\end{description}
+
+\subsection{Lattice Module Functions}
+
+\begin{description}
+    \item[\texttt{SelectShortestVector}] Find shortest vectors
+    \item[\texttt{apply\_transformation}] Transform shortest vectors
+    \item[\texttt{shortest\_get\_half}] Get half of shortest vectors
+    \item[\texttt{EvaluationQuadForm}] Evaluate quadratic form
+\end{description}
+
+\section{Conclusion}
+
+The Polyhedral Common Library provides a comprehensive, high-performance toolkit for computational mathematics research. Its modular design, support for multiple arithmetic types, and emphasis on group-theoretic optimization make it suitable for tackling challenging problems in polytope theory, lattice theory, and quadratic forms.
+
+For questions, contributions, or bug reports, please visit the GitHub repository or contact the maintainer.
+
+\end{document}
