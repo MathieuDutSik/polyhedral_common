@@ -27,6 +27,43 @@ template <typename T, typename Tint> struct TestStrictPositivity {
 };
 
 template <typename T, typename Tint>
+MyMatrix<T> copos_flipping(MyMatrix<Tint> const &InitialBasis,
+                           MyMatrix<T> const& mat,
+                           MyMatrix<T> const& mat_dir,
+                           std::ostream &os) {
+  auto f_admissible = [&](MyMatrix<T> const &eMatI) -> bool {
+#ifdef DEBUG_STRICT_POSITIVITY
+    os << "STR: IsAdmissible eMatI=\n";
+    WriteMatrix(os, eMatI);
+#endif
+    CopositivityTestResult<Tint> result =
+        TestStrictCopositivity<T, Tint>(eMatI, InitialBasis, os);
+#ifdef DEBUG_STRICT_POSITIVITY
+    os << "STR: IsAdmissible result=" << result.test << "\n";
+#endif
+    return result.test;
+  };
+  auto f_shortest = [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
+#ifdef DEBUG_STRICT_POSITIVITY
+    os << "STR: ShortestFunction eMatI=\n";
+    WriteMatrix(os, eMatI);
+#endif
+    return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
+  };
+  std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePair =
+    Kernel_Flipping_Perfect<T, Tint, decltype(f_admissible),
+                            decltype(f_shortest)>(f_admissible, f_shortest, mat, mat_dir, os);
+#ifdef DEBUG_STRICT_POSITIVITY
+  os << "STR: NewMat=\n";
+  WriteMatrix(os, ePair.first);
+#endif
+  return ePair.first;
+}
+
+
+
+
+template <typename T, typename Tint>
 PosRelRes<T> SearchForExistenceStrictPositiveRelation(MyMatrix<Tint> const &SHV,
                                                       MyMatrix<T> const &eMat,
                                                       std::ostream &os) {
@@ -63,25 +100,6 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
   WriteVectorNoDim(os, eMatExpr);
 #endif
   //
-  auto f_admissible = [&](MyMatrix<T> const &eMatI) -> bool {
-#ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: IsAdmissible eMatI=\n";
-    WriteMatrix(os, eMatI);
-#endif
-    CopositivityTestResult<Tint> result =
-        TestStrictCopositivity<T, Tint>(eMatI, InitialBasis, os);
-#ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: IsAdmissible result=" << result.test << "\n";
-#endif
-    return result.test;
-  };
-  auto f_shortest = [&](MyMatrix<T> const &eMatI) -> Tshortest<T, Tint> {
-#ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: ShortestFunction eMatI=\n";
-    WriteMatrix(os, eMatI);
-#endif
-    return CopositiveShortestVector<T, Tint>(eMatI, InitialBasis, os);
-  };
   MyMatrix<T> SearchMatrix = AnLattice<T>(n) / T(2);
 #ifdef DEBUG_STRICT_POSITIVITY
   int nbIter = 0;
@@ -178,21 +196,10 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
     for (int i = 0; i < dimSymm; i++)
       Vexpand(i) = eFacet(i) / Wvect(i);
     MyMatrix<T> eMatDir = VectorToSymmetricMatrix(Vexpand, n);
-    T ScalDir = MatrixScalarProduct(eMatDir, eMat);
 #ifdef DEBUG_STRICT_POSITIVITY
     os << "STR: Before KernelFlipping nbIter=" << nbIter << "\n";
 #endif
-    std::pair<MyMatrix<T>, Tshortest<T, Tint>> ePair =
-        Kernel_Flipping_Perfect<T, Tint, decltype(f_admissible),
-                                decltype(f_shortest)>(
-            f_admissible, f_shortest, SearchMatrix, eMatDir, os);
-#ifdef DEBUG_STRICT_POSITIVITY
-    os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
-    os << "STR: NewMat=\n";
-    WriteMatrix(os, ePair.first);
-    os << "STR: Before SearchMatrix assignation nbIter=" << nbIter << "\n";
-#endif
-    SearchMatrix = ePair.first;
+    SearchMatrix = copos_flipping(InitialBasis, SearchMatrix, eMatDir, os);
   }
 }
 
