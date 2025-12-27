@@ -89,7 +89,7 @@ This module provides comprehensive functionality for computing and manipulating 
 \subsubsection{Core Functionalities}
 
 \paragraph{Matrix Group Operations}
-The module implements efficient representations and operations on matrix groups:
+The module implements efficient representations and operations on matrix groups, with algorithms for computing symmetry groups based on \cite{Bremner2014}:
 
 \begin{itemize}
     \item \textbf{Group generation}: Constructing groups from generators
@@ -97,6 +97,7 @@ The module implements efficient representations and operations on matrix groups:
     \item \textbf{Stabilizer computation}: Finding stabilizer subgroups
     \item \textbf{Double coset enumeration}: Computing double coset decompositions
     \item \textbf{Group simplification}: Reducing group representations
+    \item \textbf{Linear, projective, and combinatorial symmetries}: Computation methods from \cite{Bremner2014}
 \end{itemize}
 
 \paragraph{Key Functions}
@@ -128,9 +129,221 @@ T L1normMatrixGroup(
     std::vector<MyMatrix<T>> const &ListMatr);
 \end{lstlisting}
 
+\subsubsection{Weighted Matrix Framework}
+
+The weighted matrix framework is the foundation for computing equivalences, canonical orderings, and automorphism groups. A weighted matrix encodes the structure of a mathematical object (polytope, graph, etc.) as a matrix of discrete weights, enabling efficient graph-theoretic algorithms.
+
+\paragraph{WeightMatrix Data Structure}
+
+The \texttt{WeightMatrix} class is a template parameterized by:
+\begin{itemize}
+    \item \texttt{is\_symmetric}: Boolean indicating if the matrix is symmetric
+    \item \texttt{T}: Type of the weights (can be numeric or vector types)
+    \item \texttt{Tidx\_value}: Index type for weight storage (uint8\_t, uint16\_t, etc.)
+\end{itemize}
+
+\textbf{Construction}: A \texttt{WeightMatrix} is constructed from a function \texttt{f(i,j)} that computes the weight at position $(i,j)$. The constructor automatically:
+\begin{enumerate}
+    \item Enumerates all unique weight values
+    \item Creates a compact index representation
+    \item Stores weights in a compressed format
+\end{enumerate}
+
+\begin{lstlisting}
+template <bool is_symmetric, typename T, typename Tidx_value>
+struct WeightMatrix {
+    // Constructor from function
+    template <typename F>
+    WeightMatrix(size_t const &nbRow, F f, std::ostream &os);
+
+    // Get value at position (i,j)
+    T GetValue(size_t iRow, size_t iCol) const;
+
+    // Get number of rows
+    size_t rows() const;
+
+    // Get number of unique weights
+    size_t GetWeightSize() const;
+private:
+    size_t nbRow;
+    std::vector<T> ListWeight;          // Unique weights
+    std::vector<Tidx_value> TheMat;     // Index matrix
+    bool weight_ordered;
+    std::ostream &os;
+};
+\end{lstlisting}
+
+\paragraph{Core Functions for Weighted Matrices}
+
+\begin{lstlisting}
+// Compute stabilizer of a weighted matrix
+template <typename T, typename Tgr, typename Tgroup,
+          typename Tidx_value>
+Tgroup GetStabilizerWeightMatrix(
+    WeightMatrix<true, T, Tidx_value> const &WMat,
+    std::ostream &os);
+
+// Test equivalence between two weighted matrices
+template <typename T, typename Telt, typename Tidx_value>
+std::optional<Telt> TestEquivalenceWeightMatrix(
+    WeightMatrix<true, T, Tidx_value> const &WMat1,
+    WeightMatrix<true, T, Tidx_value> const &WMat2,
+    std::ostream &os);
+
+// Get canonical ordering of rows/columns
+template <typename Tgr, typename Tidx>
+std::vector<Tidx> GRAPH_GetCanonicalOrdering(
+    Tgr const &eGR,
+    std::ostream &os);
+\end{lstlisting}
+
+\subsubsection{Polytope Equivalence and Automorphism Groups}
+
+\paragraph{Rational (Linear) Case}
+
+For polytopes defined over fields (rationals, algebraic numbers), the module computes:
+
+\begin{description}
+    \item[Automorphism Group] The group of linear transformations preserving the polytope
+    \item[Isomorphism] Whether two polytopes are linearly equivalent
+    \item[Canonical Form] A unique representative for the isomorphism class. The canonical form algorithm is based on Dutour Sikirić et al. \cite{DutourSikiric2020}.
+\end{description}
+
+\textbf{Key Functions}:
+
+\begin{lstlisting}
+// Compute automorphism group of a polytope
+template <typename T, typename Tgroup>
+Tgroup LinPolytope_Automorphism(
+    MyMatrix<T> const &EXT,
+    std::ostream &os);
+
+// With explicit Gram matrix (for optimization)
+template <typename T, typename Tgroup>
+Tgroup LinPolytope_Automorphism_GramMat(
+    MyMatrix<T> const &EXT,
+    MyMatrix<T> const &GramMat,
+    std::ostream &os);
+
+// Compute canonical ordering of vertices
+template <typename T, typename Tidx>
+std::vector<Tidx> LinPolytope_CanonicOrdering(
+    MyMatrix<T> const &EXT,
+    size_t threshold,
+    std::ostream &os);
+
+// With explicit Gram matrix
+template <typename T, typename Tidx>
+std::vector<Tidx> LinPolytope_CanonicOrdering_GramMat(
+    MyMatrix<T> const &EXT,
+    MyMatrix<T> const &GramMat,
+    size_t threshold,
+    std::ostream &os);
+\end{lstlisting}
+
+\paragraph{Integral Case}
+
+For lattice polytopes (vertices with integer coordinates), we distinguish:
+\begin{itemize}
+    \item \textbf{Linear equivalence}: Equivalence under any invertible linear map
+    \item \textbf{Integral equivalence}: Equivalence under unimodular (det=$\pm 1$) integer matrices
+\end{itemize}
+
+The integral automorphism group is a \emph{finite} subgroup of the linear automorphism group.
+
+\textbf{Key Functions}:
+
+\begin{lstlisting}
+// Compute integral automorphism group
+template <typename Tint, typename Tgroup>
+Tgroup LinPolytopeIntegral_Automorphism(
+    const MyMatrix<Tint> &EXT,
+    std::ostream &os);
+
+// Test integral isomorphism between polytopes
+template <typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LinPolytopeIntegral_Isomorphism(
+    const MyMatrix<Tint> &EXT1,
+    const MyMatrix<Tint> &EXT2,
+    std::ostream &os);
+
+// With explicit Gram matrices
+template <typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+LinPolytopeIntegral_Isomorphism_GramMat(
+    const MyMatrix<Tint> &EXT1,
+    const MyMatrix<T> &GramMat1,
+    const MyMatrix<Tint> &EXT2,
+    const MyMatrix<T> &GramMat2,
+    std::ostream &os);
+
+// Automorphism with right coset representatives
+template <typename Tint, typename Tgroup>
+std::pair<Tgroup, std::vector<typename Tgroup::Telt>>
+LinPolytopeIntegral_Automorphism_RightCoset(
+    const MyMatrix<Tint> &EXT,
+    std::ostream &os);
+\end{lstlisting}
+
+\paragraph{Algorithm Overview}
+
+The computation proceeds in several steps:
+
+\begin{enumerate}
+    \item \textbf{Weight Matrix Construction}: From the polytope vertex matrix \texttt{EXT}, construct a weighted matrix encoding pairwise distances or inner products
+    \item \textbf{Graph Automorphism}: Convert the weighted matrix to a colored graph and compute its automorphism group using nauty/Traces
+    \item \textbf{Filtering}: For integral equivalence, filter the linear automorphisms to retain only unimodular transformations
+    \item \textbf{Group Construction}: Build the group from generators
+\end{enumerate}
+
+For isomorphism testing:
+\begin{enumerate}
+    \item Compute canonical orderings of both polytopes
+    \item Compare canonical forms; if different, polytopes are non-isomorphic
+    \item If canonical forms match, construct and verify the isomorphism
+    \item For integral isomorphism, verify the transformation is unimodular
+\end{enumerate}
+
+\paragraph{Subset Operations}
+
+The module also supports operations on subsets (faces) of polytopes:
+
+\begin{lstlisting}
+// Test equivalence of two subsets
+template <typename T, typename Telt, typename Tidx_value>
+std::optional<Telt> TestEquivalenceSubset(
+    WeightMatrix<true, T, Tidx_value> const &WMat,
+    Face const &f1,
+    Face const &f2,
+    std::ostream &os);
+
+// Compute stabilizer of a subset
+template <typename T, typename Tgroup, typename Tidx_value>
+Tgroup StabilizerSubset(
+    WeightMatrix<true, T, Tidx_value> const &WMat,
+    Face const &f,
+    std::ostream &os);
+\end{lstlisting}
+
+\subsubsection{Performance Optimizations}
+
+\begin{itemize}
+    \item \textbf{Index type selection}: Automatically choose \texttt{uint8\_t}, \texttt{uint16\_t}, \texttt{uint32\_t}, or \texttt{uint64\_t} based on the number of unique weights
+    \item \textbf{Symmetric exploitation}: For symmetric matrices, store only upper/lower triangle
+    \item \textbf{Threshold schemes}: Use subset-based algorithms for large polytopes (threshold = 1000 by default)
+    \item \textbf{Gram matrix caching}: Pre-compute and reuse Gram matrices for repeated queries
+    \item \textbf{Centrally symmetric polytopes}: Exploit absolute value trick to reduce computation
+\end{itemize}
+
 \subsubsection{Key Header Files}
 
 \begin{description}
+    \item[\texttt{WeightMatrix.h}] Core weighted matrix data structure and algorithms
+    \item[\texttt{WeightMatrixLimited.h}] Memory-limited variants for large matrices
+    \item[\texttt{WeightMatrixSpecified.h}] Specialized weighted matrix constructions
+    \item[\texttt{PolytopeEquiStab.h}] Polytope equivalence and stabilizer (rational case)
+    \item[\texttt{PolytopeEquiStabInt.h}] Integral equivalence and automorphism groups
     \item[\texttt{MatrixGroupBasic.h}] Basic matrix group operations and utilities
     \item[\texttt{MatrixGroup.h}] Core matrix group data structures
     \item[\texttt{OrbitEnumeration.h}] Orbit computation algorithms
@@ -221,16 +434,19 @@ Tshortest<T, Tint> shortest_get_half(
 
 \paragraph{Delaunay Computations}
 \begin{itemize}
-    \item \textbf{Delaunay domain enumeration}: Computing Delaunay polytopes
-    \item \textbf{Isodelaunay domains}: Finding isomorphism classes
+    \item \textbf{Delaunay domain enumeration}: Computing Delaunay polytopes and Voronoi cells \cite{DutourSikiric2008a}
+    \item \textbf{Isodelaunay domains}: Finding isomorphism classes using generalized Voronoi reduction \cite{DutourSikiric2007}
     \item \textbf{Fundamental domains}: Computing fundamental Delaunay domains
 \end{itemize}
 
+The algorithms for Voronoi cell computation are particularly effective for lattices up to dimension 12 and symmetric lattices, as established in \cite{DutourSikiric2008a}.
+
 \paragraph{Canonicalization}
 \begin{itemize}
-    \item \textbf{Matrix canonicalization}: Computing canonical forms of positive definite matrices
+    \item \textbf{Matrix canonicalization}: Computing canonical forms of positive definite matrices \cite{DutourSikiric2020}
     \item \textbf{Automorphism groups}: Finding symmetries of lattices
     \item \textbf{Isomorphism testing}: Determining lattice equivalence
+    \item \textbf{Reduction with symmetry}: Voronoi reduction for forms with prescribed symmetries \cite{DutourSikiric2007}
 \end{itemize}
 
 \subsubsection{Key Header Files}
@@ -249,21 +465,25 @@ Specialized module for computing dual descriptions of polytopes on serial comput
 \subsubsection{Algorithms}
 \begin{itemize}
     \item Serial dual description
-    \item MPI-based parallel dual description
+    \item MPI-based parallel dual description \cite{Deza2015}
     \item Database-backed enumeration
     \item Balinski enumeration
+    \item Perfect form enumeration methods \cite{DutourSikiric2007b}
 \end{itemize}
+
+\textbf{References}: The MPI parallelization strategies are based on methods from \cite{Deza2015}, and the enumeration techniques for perfect forms from \cite{DutourSikiric2007b}.
 
 \subsection{Copositivity Module (\texttt{src\_copos})}
 
-This module implements tests for copositivity and complete positivity of matrices.
+This module implements tests for copositivity and complete positivity of matrices based on the simplex algorithm for CP-factorization \cite{DutourSikiric2018}.
 
 \subsubsection{Core Functionalities}
 \begin{itemize}
     \item \textbf{Copositivity testing}: Determining if a matrix is copositive
     \item \textbf{Strict copositivity}: Testing for strict copositivity
-    \item \textbf{Complete positivity}: Verifying complete positivity
+    \item \textbf{Complete positivity}: Verifying complete positivity using the algorithm from \cite{DutourSikiric2018}
     \item \textbf{Copositive kernel}: Computing the kernel in copositive cone
+    \item \textbf{CP-factorization}: Rational cp-factorization for completely positive matrices
 \end{itemize}
 
 \subsection{Short Vector Module (\texttt{src\_short})}
@@ -280,13 +500,13 @@ Focuses on computing and enumerating short vectors in lattices.
 
 \subsection{Perfect Forms Module (\texttt{src\_perfect})}
 
-Implements algorithms for perfect quadratic forms, which are critical points of the Hermite function.
+Implements algorithms for perfect quadratic forms, which are critical points of the Hermite function. The classification methods are based on \cite{DutourSikiric2007b} and T-space analysis from \cite{Gangl2013}.
 
 \subsubsection{Functionalities}
 \begin{itemize}
-    \item Perfect form enumeration
+    \item Perfect form enumeration using symmetry exploitation \cite{DutourSikiric2007b}
     \item Perfect cone computations
-    \item T-space analysis
+    \item T-space analysis and polyhedral reduction \cite{Gangl2013}
     \item MPI-based parallel enumeration
 \end{itemize}
 
@@ -309,22 +529,24 @@ Implements algorithms specific to Lorentzian (hyperbolic) quadratic forms.
 \subsubsection{Algorithms}
 \begin{itemize}
     \item \textbf{Vinberg algorithm}: Computing fundamental domains for reflection groups
-    \item \textbf{Edgewalk algorithm}: Alternative approach using edge enumeration
+    \item \textbf{Edgewalk algorithm}: Alternative approach using edge enumeration, based on Allcock's faster alternative to Vinberg's algorithm \cite{Allcock2021}. This method can significantly outperform the classical Vinberg algorithm, especially for computationally demanding cases.
     \item \textbf{Allcock algorithm}: Specialized 2-dimensional anisotropic cases
     \item \textbf{Coxeter dynamics}: Analysis of Coxeter diagrams and symbols
 \end{itemize}
 
+\textbf{Reference}: For the edgewalk algorithm, see Allcock, D. (2021). \textit{An Alternative to Vinberg's Algorithm}. arXiv:2110.03784.
+
 \subsection{Isotropy Module (\texttt{src\_isotropy})}
 
-Focuses on finding isotropic vectors and reduction of quadratic forms.
+Focuses on finding isotropic vectors of quadratic forms and computing approximate reduction and canonical forms for indefinite quadratic forms.
 
 \subsubsection{Functionalities}
 \begin{itemize}
-    \item Finding isotropic vectors
-    \item Indefinite LLL reduction
+    \item Finding isotropic vectors of quadratic forms
+    \item Indefinite LLL reduction (approximate reduction and canonical form)
     \item Diophantine approximation
     \item Determinant minimization
-    \item Positivity testing
+    \item Positivity testing and computation of signature
 \end{itemize}
 
 \section{Arithmetic Types}
@@ -370,7 +592,7 @@ The following libraries are required:
     \item \textbf{nauty}: Graph automorphism library (\url{https://pallini.di.uniroma1.it/})
 \end{itemize}
 
-\subsection{Building the Library}
+\subsection{Accessing the Source Code}
 
 The repository uses submodules. Clone with:
 
@@ -378,7 +600,7 @@ The repository uses submodules. Clone with:
 git clone https://github.com/MathieuDutSik/polyhedral_common --recursive
 \end{lstlisting}
 
-Or if already cloned:
+Or if already cloned without \texttt{--recursive}:
 
 \begin{lstlisting}[language=bash]
 ./init.sh
@@ -390,7 +612,103 @@ Update submodules:
 ./update.sh
 \end{lstlisting}
 
-Compilation details are provided in the Dockerfile at \texttt{docker\_files/Dockerfile}.
+\subsection{Compilation Methods}
+
+There are three ways to compile the code, listed from simplest to most flexible:
+
+\subsubsection{Method 1: Docker (Recommended for Quick Start)}
+
+This is the simplest method as all dependencies are handled automatically by Docker.
+
+\begin{lstlisting}[language=bash]
+# Build using Docker
+./compile_docker.sh
+\end{lstlisting}
+
+The Dockerfile contains the complete build environment specification and can be found at \texttt{docker\_files/Dockerfile}. This method is ideal for:
+\begin{itemize}
+    \item First-time users
+    \item Ensuring reproducible builds
+    \item Avoiding manual dependency installation
+\end{itemize}
+
+\subsubsection{Method 2: CMake (Requires Eigen3)}
+
+Use CMake for a system-wide build. This method requires Eigen3 to be installed on your system.
+
+\textbf{Prerequisites:}
+\begin{itemize}
+    \item CMake $\geq$ 3.30
+    \item Eigen3 $\geq$ 3.3
+    \item Boost (with serialization component)
+    \item GMP and GMPXX libraries
+\end{itemize}
+
+\textbf{Build commands:}
+
+\begin{lstlisting}[language=bash]
+# Using the provided script
+./compile.sh
+
+# Or manually
+mkdir -p build
+cd build
+cmake ..
+make -j$(nproc)
+\end{lstlisting}
+
+The \texttt{CMakeLists.txt} file automatically:
+\begin{itemize}
+    \item Finds required packages (Eigen3, Boost, GMP)
+    \item Sets C++17 standard
+    \item Configures include paths and link libraries
+    \item Builds all modules
+\end{itemize}
+
+\subsubsection{Method 3: Individual Makefiles (Most Flexible)}
+
+Each subdirectory (\texttt{src\_group}, \texttt{src\_poly}, \texttt{src\_latt}, etc.) contains its own Makefile for independent compilation.
+
+This method allows:
+\begin{itemize}
+    \item Compiling only specific modules
+    \item Custom compiler flags and optimizations
+    \item Fine-grained control over the build process
+\end{itemize}
+
+\textbf{Example:}
+
+\begin{lstlisting}[language=bash]
+# Compile only the group module
+cd src_group
+make
+
+# Compile a specific program
+cd src_latt
+make LATT_Automorphism
+
+# Clean build artifacts
+make clean
+\end{lstlisting}
+
+\textbf{Note:} When using individual Makefiles, ensure:
+\begin{itemize}
+    \item All dependencies are installed and accessible
+    \item Include paths point to Eigen3, Boost, and other headers
+    \item The \texttt{basic\_common\_cpp} submodule is initialized
+\end{itemize}
+
+\subsection{Compilation Options}
+
+Regardless of the method chosen, you can enable various compilation options by setting environment variables or modifying the Makefile/CMakeLists.txt:
+
+\begin{description}
+    \item[\texttt{-DDEBUG}] Enable all debugging output
+    \item[\texttt{-DTIMINGS}] Enable timing measurements
+    \item[\texttt{-DSANITY\_CHECK}] Enable runtime sanity checks
+    \item[\texttt{-O3}] Enable aggressive optimizations (recommended for production)
+    \item[\texttt{-g}] Include debugging symbols
+\end{description}
 
 \subsection{Debug and Runtime Options}
 
@@ -535,15 +853,6 @@ To add new functionality:
 
 \section{References and Further Reading}
 
-\subsection{Theoretical Background}
-
-\begin{itemize}
-    \item \textbf{Lattice theory}: Gruber, M., \textit{Convex and Discrete Geometry}
-    \item \textbf{Polytope theory}: Ziegler, G.M., \textit{Lectures on Polytopes}
-    \item \textbf{Quadratic forms}: Cassels, J.W.S., \textit{Rational Quadratic Forms}
-    \item \textbf{Vinberg algorithm}: Vinberg, E.B., \textit{Hyperbolic reflection groups}
-\end{itemize}
-
 \subsection{Repository}
 
 \begin{itemize}
@@ -551,38 +860,159 @@ To add new functionality:
     \item Issues and bug reports: GitHub issue tracker
 \end{itemize}
 
-\section{Appendix: Function Index}
+\section{Appendix: Main Programs}
 
-\subsection{Group Module Functions}
+This appendix lists the main executable programs provided by each module. Each program can be compiled independently and provides specific functionality.
 
-\begin{description}
-    \item[\texttt{write\_matrix\_group}] Write matrix group to file
-    \item[\texttt{GetRationalInvariant}] Compute rational invariant
-    \item[\texttt{LLLMatrixGroupReduction}] Apply LLL reduction to matrix group
-    \item[\texttt{L1normMatrixGroup}] Compute L1 norm of matrix group
-\end{description}
-
-\subsection{Polyhedral Module Functions}
+\subsection{Group Module (\texttt{src\_group})}
 
 \begin{description}
-    \item[\texttt{SelectRow}] Extract rows based on face
-    \item[\texttt{SelectRowDropColumnFace}] Select rows and drop column
-    \item[\texttt{TestFacetInequality}] Verify facet inequality
+    \item[\texttt{GRP\_LinPolytope\_Automorphism}] Compute automorphism group of a polytope
+    \item[\texttt{GRP\_LinPolytope\_Isomorphism}] Test isomorphism between polytopes
+    \item[\texttt{GRP\_LinPolytope\_Canonic}] Compute canonical form of a polytope
+    \item[\texttt{GRP\_LinPolytopeIntegral\_Automorphism}] Compute integral automorphism group
+    \item[\texttt{GRP\_LinPolytopeIntegral\_Isomorphism}] Test integral isomorphism
+    \item[\texttt{GRP\_LinearSpace\_Stabilizer}] Compute stabilizer of a linear space
+    \item[\texttt{GRP\_LinearSpace\_Equivalence}] Test equivalence of linear spaces
 \end{description}
 
-\subsection{Lattice Module Functions}
+\subsection{Polyhedral Module (\texttt{src\_poly})}
 
 \begin{description}
-    \item[\texttt{SelectShortestVector}] Find shortest vectors
-    \item[\texttt{apply\_transformation}] Transform shortest vectors
-    \item[\texttt{shortest\_get\_half}] Get half of shortest vectors
-    \item[\texttt{EvaluationQuadForm}] Evaluate quadratic form
+    \item[\texttt{POLY\_dual\_description}] Compute dual description (vertices $\leftrightarrow$ facets)
+    \item[\texttt{POLY\_dual\_description\_group}] Dual description with group exploitation
+    \item[\texttt{POLY\_redundancy}] Remove redundant inequalities
+    \item[\texttt{POLY\_cdd\_LinearProgramming}] Solve linear programs over polytopes
+    \item[\texttt{POLY\_FaceLatticeGen}] Generate face lattice of a polytope
+    \item[\texttt{POLY\_IntegralPoints}] Enumerate integral points in a polytope
+    \item[\texttt{POLY\_lrs}] Interface to lrs for vertex/facet enumeration
 \end{description}
 
-\section{Conclusion}
+\subsection{Lattice Module (\texttt{src\_latt})}
 
-The Polyhedral Common Library provides a comprehensive, high-performance toolkit for computational mathematics research. Its modular design, support for multiple arithmetic types, and emphasis on group-theoretic optimization make it suitable for tackling challenging problems in polytope theory, lattice theory, and quadratic forms.
+\begin{description}
+    \item[\texttt{LATT\_Automorphism}] Compute automorphism group of a lattice
+    \item[\texttt{LATT\_Isomorphism}] Test isomorphism between lattices
+    \item[\texttt{LATT\_Canonicalize}] Compute canonical form of a positive definite matrix
+    \item[\texttt{LATT\_SerialComputeDelaunay}] Compute Delaunay polytopes (serial)
+    \item[\texttt{LATT\_MPI\_ComputeDelaunay}] Compute Delaunay polytopes (MPI parallel)
+    \item[\texttt{LATT\_SerialLattice\_IsoDelaunayDomain}] Enumerate IsoDelaunay domains (serial)
+    \item[\texttt{LATT\_MPI\_Lattice\_IsoDelaunayDomain}] Enumerate IsoDelaunay domains (MPI)
+    \item[\texttt{TSPACE\_Stabilizer}] Compute stabilizer of a T-space
+    \item[\texttt{TSPACE\_Equivalence}] Test equivalence of T-spaces
+\end{description}
 
-For questions, contributions, or bug reports, please visit the GitHub repository or contact the maintainer.
+\subsection{Dual Description Module (\texttt{src\_dualdesc})}
+
+\begin{description}
+    \item[\texttt{POLY\_SerialDualDesc}] Serial dual description with database
+    \item[\texttt{POLY\_MPI\_DualDesc}] MPI-based parallel dual description
+    \item[\texttt{POLY\_DirectSerialDualDesc}] Direct serial dual description
+    \item[\texttt{POLY\_EvaluateDualDesc}] Evaluate dual description methods
+    \item[\texttt{POLY\_RunTheBank}] Bank-based enumeration system
+\end{description}
+
+\subsection{Copositivity Module (\texttt{src\_copos})}
+
+\begin{description}
+    \item[\texttt{CP\_TestCopositivity}] Test if a matrix is copositive
+    \item[\texttt{CP\_TestStrictCopositivity}] Test if a matrix is strictly copositive
+    \item[\texttt{CP\_TestCompletePositivity}] Test if a matrix is completely positive
+    \item[\texttt{CP\_CopositiveMin}] Find minimum over copositive cone
+\end{description}
+
+\subsection{Perfect Forms Module (\texttt{src\_perfect})}
+
+\begin{description}
+    \item[\texttt{PERF\_MPI\_EnumeratePerfectCones}] Enumerate perfect cones (MPI parallel)
+    \item[\texttt{PERF\_SerialPerfectComputation}] Perfect form computations (serial)
+\end{description}
+
+\subsection{Lorentzian Module (\texttt{src\_lorentzian})}
+
+\begin{description}
+    \item[\texttt{LORENTZ\_FundDomain\_AllcockEdgewalk\_Isomorphism}] Edgewalk algorithm for fundamental domains
+    \item[\texttt{LORENTZ\_ComputeStabilizer\_Vertex}] Compute stabilizer of a vertex
+    \item[\texttt{COXDYN\_ComputeSymbol}] Compute Coxeter diagram symbol
+    \item[\texttt{COXDYN\_FindExtensions}] Find extensions of Coxeter diagrams
+\end{description}
+
+\subsection{Short Vector Module (\texttt{src\_short})}
+
+\begin{description}
+    \item[\texttt{SHORT\_GetShortestVector}] Find shortest vectors in a lattice
+    \item[\texttt{SHORT\_AutomorphismGroup}] Compute automorphism group from short vectors
+    \item[\texttt{SHORT\_CheckPrimeRealizability}] Test realizability over finite fields
+\end{description}
+
+\begin{thebibliography}{99}
+
+\bibitem{DutourSikiric2020}
+M.~Dutour Sikirić, A.~Haensch, J.~Voight, and W.~P.~J.~van Woerden.
+\newblock A canonical form for positive definite matrices.
+\newblock \textit{arXiv preprint arXiv:2004.14022}, 2020.
+\newblock This paper presents the explicit, deterministic algorithm used in this library for computing canonical forms of positive definite matrices under unimodular integral transformations. The method leverages characteristic sets of short vectors and partition-backtracking graph software (nauty/Traces). Implemented in \texttt{src\_group} for polytope canonicalization and \texttt{src\_latt} for lattice canonical forms.
+
+\bibitem{Allcock2021}
+D.~Allcock.
+\newblock An alternative to Vinberg's algorithm.
+\newblock \textit{arXiv preprint arXiv:2110.03784}, 2021.
+\newblock This paper introduces a faster alternative to Vinberg's algorithm for finding fundamental domains of reflection groups acting on hyperbolic space. The edgewalk method is implemented in the Lorentzian module (\texttt{src\_lorentzian}) and can significantly outperform the classical Vinberg algorithm.
+
+\bibitem{Bremner2014}
+D.~Bremner, M.~Dutour Sikirić, D.~V.~Pasechnik, T.~Rehn, and A.~Schürmann.
+\newblock Computing symmetry groups of polyhedra.
+\newblock \textit{arXiv preprint arXiv:1210.0206}, 2012. Published in LMS J. Comput. Math. 17 (2014), 565-581.
+\newblock This paper presents algorithms for computing linear, projective, and combinatorial symmetry groups of polyhedra. The methods are implemented in \texttt{src\_group} and form the foundation for automorphism group computations throughout the library.
+
+\bibitem{DutourSikiric2008a}
+M.~Dutour Sikirić, A.~Schürmann, and F.~Vallentin.
+\newblock Complexity and algorithms for computing Voronoi cells of lattices.
+\newblock \textit{arXiv preprint arXiv:0804.0036}, 2008. Published in Math. Comp. 78 (2009), 1713-1731.
+\newblock This paper establishes that computing vertices of Voronoi cells is \#P-hard but presents practical algorithms effective for lattices up to dimension 12 and symmetric lattices. Implemented in \texttt{src\_latt} for Delaunay polytope computations.
+
+\bibitem{DutourSikiric2007}
+M.~Dutour Sikirić, A.~Schürmann, and F.~Vallentin.
+\newblock A generalization of Voronoi's reduction theory and its application.
+\newblock \textit{arXiv preprint arXiv:math/0601084}, 2006. Published in Duke Math. J. 142 (2008), 127-164.
+\newblock This paper generalizes Voronoi reduction theory to forms with prescribed symmetry constraints and Delone subdivisions. The algorithms are used in \texttt{src\_latt} for computing isoDelaunay domains and lattice reduction with symmetry.
+
+\bibitem{Gangl2013}
+H.~Gangl, P.~E.~Gunnells, J.~Hanke, A.~Schürmann, M.~Dutour Sikirić, and D.~Yasaki.
+\newblock On the cohomology of linear groups over imaginary quadratic fields.
+\newblock \textit{arXiv preprint arXiv:1307.1165}, 2013.
+\newblock This paper computes cohomology groups using polyhedral reduction techniques. The T-space methods are implemented in \texttt{src\_latt} and \texttt{src\_perfect} for analyzing perfect forms and lattice structures.
+
+\bibitem{Deza2015}
+M.~Deza and M.~Dutour Sikirić.
+\newblock Enumeration of the facets of cut polytopes over some highly symmetric graphs.
+\newblock \textit{arXiv preprint arXiv:1501.05407}, 2015.
+\newblock This paper presents computational results for facet enumeration of cut polytopes, demonstrating large-scale polyhedral computations. The techniques are implemented in \texttt{src\_dualdesc} for MPI-based parallel dual description.
+
+\bibitem{DutourSikiric2007b}
+M.~Dutour Sikirić, A.~Schürmann, and F.~Vallentin.
+\newblock Classification of eight dimensional perfect forms.
+\newblock \textit{arXiv preprint arXiv:math/0609388}, 2006. Published in Electron. Res. Announc. Amer. Math. Soc. 13 (2007), 21-32.
+\newblock This paper classifies all 10,916 perfect lattices in dimension 8 using symmetry-exploiting algorithms. The enumeration methods are implemented in \texttt{src\_perfect} and \texttt{src\_dualdesc}.
+
+\bibitem{DutourSikiric2018}
+M.~Dutour Sikirić, A.~Schürmann, and F.~Vallentin.
+\newblock A simplex algorithm for rational cp-factorization.
+\newblock \textit{arXiv preprint arXiv:1807.01382}, 2018. Published in Math. Program. 187 (2021), 483-498.
+\newblock This paper presents a simplex-inspired algorithm for rational CP-factorizations and proves that every integral completely positive $2 \times 2$ matrix has an integral cp-factorization. Implemented in \texttt{src\_copos}.
+
+\bibitem{DutourSikiric2022}
+M.~Dutour Sikirić.
+\newblock The Birkhoff polytope of the groups $F_4$ and $H_4$.
+\newblock \textit{arXiv preprint arXiv:2212.08452}, 2022.
+\newblock This paper computes facets of Birkhoff polytopes associated with Coxeter groups, refuting previous conjectures. The computational techniques use methods from \texttt{src\_poly} and \texttt{src\_group}.
+
+\bibitem{DutourSikiric2023}
+M.~Dutour Sikirić and K.~Hulek.
+\newblock Moduli of polarized Enriques surfaces -- computational aspects.
+\newblock \textit{arXiv preprint arXiv:2302.01679}, 2023.
+\newblock This paper demonstrates applications of algorithms for indefinite quadratic forms and groups to compute the Tits building and classify 87 arithmetic groups underlying moduli spaces. Uses methods from \texttt{src\_indefinite} and \texttt{src\_lorentzian}.
+
+\end{thebibliography}
 
 \end{document}
