@@ -108,7 +108,7 @@ jobs:
 
       - name: Test enumeration of Lattice Delaunay polytopes
         run: |
-          cd src_latt && make -f Makefile_ComputeDelaunay && cd ..
+          cd src_delaunay && make -f Makefile_ComputeDelaunay && cd ..
           echo "After compilation of LATT_*_ComputeDelaunay"
 
           cd CI_tests/29_CoveringPerfectDim9

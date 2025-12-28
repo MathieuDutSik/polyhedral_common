@@ -16,12 +16,12 @@ get_nb_domains:=function(eFile)
     Exec(TheCommand);
     #
     if method = "serial" then
-        eProg:="../../src_latt/LATT_SerialLattice_IsoDelaunayDomain";
+        eProg:="../../src_delaunay/LATT_SerialLattice_IsoDelaunayDomain";
         TheCommand:=Concatenation(eProg, " ", FileNml);
         Exec(TheCommand);
     fi;
     if method = "mpi" then
-        eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
+        eProg:="../../src_delaunay/LATT_MPI_Lattice_IsoDelaunayDomain";
         TheCommand:=Concatenation(eProg, " ", FileNml);
         Exec(TheCommand);
     fi;

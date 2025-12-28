@@ -33,10 +33,10 @@ TestComputation:=function(eRec)
         WriteStringFile(FileNml, strOut);
         Print("TestEnumeration, FileNml created\n");
         #
-        eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";
+        eProg:="../../src_delaunay/LATT_MPI_ComputeDelaunay";
         TheCommand:=Concatenation(eProg, " ", FileNml);
     else
-        eProg:="../../src_latt/LATT_SerialComputeDelaunay";
+        eProg:="../../src_delaunay/LATT_SerialComputeDelaunay";
         TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP_covering ", FileOut);
     fi;
     Print("TheCommand=", TheCommand, "\n");

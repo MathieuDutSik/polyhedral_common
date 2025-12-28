@@ -32,7 +32,7 @@ TestEnumeration:=function(eRec)
 #    TheCommand:=Concatenation("cat ", FileNml);
 #    Exec(TheCommand);
     #
-    eProg:="../../src_latt/LATT_MPI_ComputeDelaunay";
+    eProg:="../../src_delaunay/LATT_MPI_ComputeDelaunay";
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

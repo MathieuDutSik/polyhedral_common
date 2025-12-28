@@ -12,7 +12,7 @@ GetRecInfo:=function(FileLinSpa_input)
     TheCommand:=Concatenation("cp ", FileLinSpa_input, " ", FileLinSpa);
     Exec(TheCommand);
     #
-    eProg:="../../src_latt/LATT_MPI_Lattice_IsoDelaunayDomain";
+    eProg:="../../src_delaunay/LATT_MPI_Lattice_IsoDelaunayDomain";
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     #
