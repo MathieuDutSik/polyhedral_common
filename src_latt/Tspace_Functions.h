@@ -396,13 +396,25 @@ T frobenius_inner(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
   return sum;
 }
 
+
 template <typename T>
 void set_self_dual_info(LinSpaceMatrix<T> & LinSpa) {
+  int n = LinSpa.n;
   int n_mat = LinSpa.ListMat.size();
   MyMatrix<T> PairwiseScalar(n_mat, n_mat);
+  MyMatrix<T> InvSuperMat = Inverse(LinSpa.SuperMat);
+  std::vector<MyMatrix<T>> l_mat;
+  for (auto & M1: LinSpa.ListMat) {
+    MyMatrix<T> M2 = M1 * InvSuperMat;
+    l_mat.push_back(M2);
+  }
   for (int i=0; i<n_mat; i++) {
     for (int j=i; j<n_mat; j++) {
-      T scal = frobenius_inner(LinSpa.ListMat[i], LinSpa.ListMat[j]);
+      MyMatrix<T> prod = l_mat[i] * l_mat[j];
+      T scal(0);
+      for (int i=0; i<n; i++) {
+        scal += prod(i,i);
+      }
       PairwiseScalar(i, j) = scal;
       PairwiseScalar(j, i) = scal;
     }

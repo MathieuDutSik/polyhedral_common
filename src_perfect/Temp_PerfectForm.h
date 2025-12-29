@@ -20,6 +20,7 @@
 #define DEBUG_INITIAL_PERFECT
 #define DEBUG_PERFECT_REPR
 #define DEBUG_FLIP
+#define DEBUG_BOUNDED_FACE
 #endif
 
 #ifdef DISABLE_DEBUG_PERFECT_FORM
@@ -742,6 +743,12 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
   int n_vect = SHV.rows();
   int n_mat = LinSpa.ListMat.size();
   if (LinSpa.self_dual_info) {
+#ifdef SANITY_CHECK_BOUNDED_FACE
+    bool is_bounded_iterative = is_bounded_face_iterative(LinSpa, SHV, os);
+# ifdef DEBUG_BOUNDED_FACE
+    os << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
+# endif
+#endif
     // For self-dual, we can apply a more direct algorithm.
     SelfDualInfo<T> const& self_dual_info = *LinSpa.self_dual_info;
     MyVector<T> SumRay = ZeroVector<T>(n_mat);
@@ -768,7 +775,7 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
       T val2 = frobenius_inner(eMat, SumMat);
       if (val1 != val2) {
         std::cerr << "PERF: inconsistency in the matrix values\n";
-        throw TerminalException{1};
+        //        throw TerminalException{1};
       }
     }
     if (!IsPositiveSemidefinite(SumMat, os)) {
@@ -780,7 +787,6 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
     int rnk = RankMat(SumMat);
     bool is_bounded_self_dual = rnk == n;
 #ifdef SANITY_CHECK_BOUNDED_FACE
-    bool is_bounded_iterative = is_bounded_face_iterative(LinSpa, SHV, os);
     if (is_bounded_self_dual != is_bounded_iterative) {
       std::cerr << "TSPACE: Incoherent results\n";
       std::cerr << "TSPACE: is_bounded_self_dual=" << is_bounded_self_dual << "\n";

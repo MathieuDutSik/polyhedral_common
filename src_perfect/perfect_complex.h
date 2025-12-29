@@ -9,6 +9,10 @@
 #define SANITY_CHECK_PERFECT_COMPLEX
 #endif
 
+#ifdef DEBUG
+#define DEBUG_PERFECT_COMPLEX
+#endif
+
 /*
   Construction of the perfect form complex.
   We compute the faces of the oerfect domain
@@ -126,18 +130,14 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   int n = pctdi.LinSpa.n;
   auto get_l_triple=[&](size_t i_domain) -> std::vector<triple<Tint>> {
-    std::vector<triple<Tint>> l_triple;
-    if (!pctdi.only_well_rounded) {
-      int n_ext = pctdi.l_perfect[i_domain].EXT.rows();
-      Face f_ext(n_ext);
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
-        f_ext[i_ext] = 1;
-      }
-      MyMatrix<Tint> eMat = IdentityMat<Tint>(n);
-      triple<Tint> t{i_domain, f_ext, eMat};
-      l_triple.push_back(t);
+    int n_ext = pctdi.l_perfect[i_domain].EXT.rows();
+    Face f_ext(n_ext);
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      f_ext[i_ext] = 1;
     }
-    return l_triple;
+    MyMatrix<Tint> eMat = IdentityMat<Tint>(n);
+    triple<Tint> t{i_domain, f_ext, eMat};
+    return {t};
   };
   auto get_l_gens=[&](size_t i_domain) -> std::vector<MyMatrix<Tint>> {
     std::vector<MyMatrix<Tint>> l_gens;
@@ -219,11 +219,29 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     return true;
   };
   auto get_initial_triple=[&](FacePerfectComplex<T,Tint,Tgroup> const& face, Face const& eIncd) -> triple<Tint> {
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 1 |face.l_triple|=" << face.l_triple.size() << "\n";
+#endif
     triple<Tint> const& t_big = face.l_triple[0];
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 2\n";
+#endif
     size_t iCone = t_big.iCone;
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 3\n";
+#endif
     int n_ext = pctdi.l_perfect[iCone].EXT.rows();
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 4\n";
+#endif
     Face f(n_ext);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 5\n";
+#endif
     size_t index = 0;
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 6\n";
+#endif
     for (int i=0; i<n_ext; i++) {
       if (t_big.f_ext[i] == 1) {
         if (eIncd[index] == 1) {
@@ -232,7 +250,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         index += 1;
       }
     }
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 7\n";
+#endif
     triple<Tint> t{iCone, f, t_big.eMat};
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_initial_triple, step 8\n";
+#endif
     return t;
   };
   auto f_insert=[&](triple<Tint> const& t, bool is_well_rounded) -> BoundEntry<Tint> {
