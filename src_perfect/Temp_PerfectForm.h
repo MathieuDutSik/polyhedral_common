@@ -132,6 +132,7 @@ template <typename T, typename Tgroup> struct RyshkovGRP {
   MyMatrix<T> PerfDomEXT;
   Tgroup GRPsub;
   vectface ListIncd;
+  std::vector<int> ListPos;
 };
 
 template <typename T, typename Tgroup>
@@ -194,13 +195,29 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
       eList[iBlock] = jBlock;
     }
     Telt eElt(eList);
-    l_gens.push_back(eElt);
+    l_gens.emplace_back(std::move(eElt));
   }
   Tgroup GRPsub(l_gens, nbBlock);
   vectface ListIncd =
     DualDescriptionStandard<T, Tgroup>(PerfDomEXT, GRPsub, os);
-  return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd)};
+  return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd), std::move(ListPos)};
 }
+
+template <typename T, typename Tgroup>
+Face get_big_incd(RyshkovGRP<T,Tgroup> const& ryshk, Face const& f_sma) {
+  int n_shv = ryshk.ListPos.size();
+  Face f_big(n_shv);
+  for (int i=0; i<n_shv; i++) {
+    int i_block = ryshk.ListPos[i];
+    if (f_sma[i_block] == 1) {
+      f_big[i] = 1;
+    }
+  }
+  return f_big;
+}
+
+
+
 
 struct PerfEquivInfo {
   int iOrbit;
