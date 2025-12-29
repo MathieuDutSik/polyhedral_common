@@ -758,8 +758,20 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
       SumMat += ExprBasis(i_mat) * LinSpa.ListMat[i_mat];
     }
 #ifdef SANITY_CHECK_BOUNDED_FACE
-    DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(SumMat, os);
-    if (dsm.nbMinus > 0) {
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      MyMatrix<T> const& eMat = LinSpa.ListMat[i_mat];
+      T val1(0);
+      for (int i_vect=0; i_vect<n_vect; i_vect++) {
+        MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
+        val1 += EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
+      }
+      T val2 = frobenius_inner(eMat, SumMat);
+      if (val1 != val2) {
+        std::cerr << "PERF: inconsistency in the matrix values\n";
+        throw TerminalException{1};
+      }
+    }
+    if (!IsPositiveSemidefinite(SumMat, os)) {
       std::cerr << "The matrix should be positive semi-definite\n";
       std::cerr << "So, maybe the cone is not self-dual\n";
       throw TerminalException{1};

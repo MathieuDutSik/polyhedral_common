@@ -380,22 +380,31 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
   }
 }
 
+/*
+  The Frobenius scalar product is defined as Tr(AB^T)
+ */
+template <typename T>
+T frobenius_inner(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
+  int n_row = M1.rows();
+  int n_col = M1.cols();
+  T sum(0);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    for (int i_col=0; i_col<n_col; i_col++) {
+      sum += M1(i_row,i_col) * M2(i_row,i_col);
+    }
+  }
+  return sum;
+}
+
 template <typename T>
 void set_self_dual_info(LinSpaceMatrix<T> & LinSpa) {
   int n_mat = LinSpa.ListMat.size();
-  int n = LinSpa.n;
   MyMatrix<T> PairwiseScalar(n_mat, n_mat);
   for (int i=0; i<n_mat; i++) {
     for (int j=i; j<n_mat; j++) {
-      T sum(0);
-      MyMatrix<T> const& M1 = LinSpa.ListMat[i];
-      MyMatrix<T> const& M2 = LinSpa.ListMat[j];
-      for (int u=0; u<n; u++) {
-        for (int v=0; v<n; v++) {
-          sum += M1(u,v) * M2(u,v);
-        }
-      }
-      PairwiseScalar(i, j) = sum;
+      T scal = frobenius_inner(LinSpa.ListMat[i], LinSpa.ListMat[j]);
+      PairwiseScalar(i, j) = scal;
+      PairwiseScalar(j, i) = scal;
     }
   }
   MyMatrix<T> PairwiseScalarInv = Inverse(PairwiseScalar);
