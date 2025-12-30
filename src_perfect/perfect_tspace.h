@@ -168,32 +168,32 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
      << "\n";
 #endif
 
-  RyshkovGRP<T, Tgroup> eCone =
+  RyshkovGRP<T, Tgroup> ryshk =
       GetNakedPerfectCone_GRP<T, Tgroup>(LinSpa, SHV_T, GRP, os);
 #ifdef TIMINGS_PERFECT_TSPACE
   os << "|PERF_TSPACE: GetNakedPerfectCone_GRP|=" << time << "\n";
 #endif
 #ifdef DEBUG_PERFECT_TSPACE_DISABLE
-  os << "PERF_TSPACE: The eCone.PerfDomEXT is the following\n";
-  WriteMatrix(os, eCone.PerfDomEXT);
-  os << "PERF_TSPACE: RankMat(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT)
+  os << "PERF_TSPACE: The ryshk.PerfDomEXT is the following\n";
+  WriteMatrix(os, ryshk.PerfDomEXT);
+  os << "PERF_TSPACE: RankMat(ryshk.PerfDomEXT)=" << RankMat(ryshk.PerfDomEXT)
      << "\n";
 #endif
   std::vector<PerfectTspace_AdjI<T, Tint>> ListAdj;
 #ifdef DEBUG_PERFECT_TSPACE
-  os << "PERF_TSPACE: |eCone.PerfDomEXT|=" << eCone.PerfDomEXT.cols() << " / "
-     << eCone.PerfDomEXT.rows() << "\n";
-  os << "PERF_TSPACE: rk(eCone.PerfDomEXT)=" << RankMat(eCone.PerfDomEXT)
+  os << "PERF_TSPACE: |ryshk.PerfDomEXT|=" << ryshk.PerfDomEXT.cols() << " / "
+     << ryshk.PerfDomEXT.rows() << "\n";
+  os << "PERF_TSPACE: rk(ryshk.PerfDomEXT)=" << RankMat(ryshk.PerfDomEXT)
      << "\n";
   size_t pos = 0;
 #endif
 
-  for (auto &eIncd : eCone.ListIncd) {
+  for (auto &incd_sma : ryshk.ListIncd) {
 #ifdef DEBUG_PERFECT_TSPACE
-    os << "PERF_TSPACE: pos=" << pos << " eIncd=" << eIncd << "\n";
+    os << "PERF_TSPACE: pos=" << pos << " incd_sma=" << incd_sma << "\n";
     pos += 1;
 #endif
-    MyVector<T> eFacet = FindFacetInequality(eCone.PerfDomEXT, eIncd);
+    MyVector<T> eFacet = FindFacetInequality(ryshk.PerfDomEXT, incd_sma);
     MyMatrix<T> eMatDir = LINSPA_GetMatrixInTspace(LinSpa, eFacet);
     // That seems to slow down things
     //    MyMatrix<T> eMatDirScal = ScalarCanonicalizationMatrix(eMatDir);
@@ -216,8 +216,8 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
       throw TerminalException{1};
     }
 #endif
-
-    PerfectTspace_AdjI<T, Tint> eAdj{eIncd, pair.first, pair.second};
+    Face incd_big = get_big_incd(ryshk, incd_sma);
+    PerfectTspace_AdjI<T, Tint> eAdj{incd_big, pair.first, pair.second};
     ListAdj.push_back(eAdj);
   }
 #ifdef TIMINGS_PERFECT_TSPACE

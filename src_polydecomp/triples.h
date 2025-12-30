@@ -181,7 +181,8 @@ get_spanning_list_triple(
 #endif
       for (auto &e_sing_adj : l_cones[ef.iCone].l_sing_adj) {
 #ifdef DEBUG_TRIPLE
-        os << "TRIP: |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
+        os << "TRIP: |        ef.f_ext|=" << SignatureFace(        ef.f_ext) << "\n";
+        os << "TRIP: |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext) << "\n";
         int n_act = eC.GRP_ext.n_act();
         os << "TRIP: n_act=" << n_act << "\n";
 #endif
