@@ -216,15 +216,6 @@ Face get_big_incd(RyshkovGRP<T,Tgroup> const& ryshk, Face const& f_sma) {
   return f_big;
 }
 
-
-
-
-struct PerfEquivInfo {
-  int iOrbit;
-  MyMatrix<int> eMatEquiv;
-  Face eInc;
-};
-
 template <typename T, typename Tint, typename Tgroup>
 Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T, Tint> const &eNaked,
                                   Tgroup const &GRPshv) {
@@ -245,12 +236,6 @@ Tgroup MapLatticeGroupToConeGroup(NakedPerfect<T, Tint> const &eNaked,
   }
   return Tgroup(ListGen, nbBlock);
 }
-
-struct QueryEquivInfo {
-  bool result;
-  int nbOrbit;
-  PerfEquivInfo eEquiv;
-};
 
 // Use a set, better asymptotics, but copy needed
 template <typename Tint>
@@ -911,10 +896,6 @@ std::ostream &operator<<(std::ostream &os, SimplePerfect<T, Tint> const &obj) {
   WriteMatrix(os, obj.rec_shv.SHV);
   return os;
 }
-
-template <typename T, typename Tint> struct equiv_info<SimplePerfect<T, Tint>> {
-  typedef MyMatrix<Tint> equiv_type;
-};
 
 template <typename T, typename Tint>
 MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const &SHV) {
