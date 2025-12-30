@@ -422,8 +422,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
           }
         }
       }
-      list_face.push_back(
-          get_spanning_list_triple(ListCones, ef_A));
+      list_face.push_back(get_spanning_list_triple(ListCones, ef_A, os));
     };
 #endif
     auto f_insert = [&](Tent<T, Tint, Tidx_value> &&eEnt) -> void {
@@ -503,8 +502,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
             return;
         }
       }
-      list_face.push_back(
-          get_spanning_list_triple(ListCones, ef_A));
+      list_face.push_back(get_spanning_list_triple(ListCones, ef_A, os));
     };
     if (iLev == 1) {
       for (size_t iCone = 0; iCone < ListCones.size(); iCone++) {

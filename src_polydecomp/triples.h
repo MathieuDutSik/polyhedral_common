@@ -114,8 +114,8 @@ template <typename Ttopcone>
 std::pair<std::vector<triple<typename Ttopcone::Tint>>, std::vector<MyMatrix<typename Ttopcone::Tint>>>
 get_spanning_list_triple(
     std::vector<Ttopcone> const &l_cones,
-    const triple<typename Ttopcone::Tint> &ef_input) {
-  //  std::cerr << "Beginning of get_spanning_list_triple\n";
+    const triple<typename Ttopcone::Tint> &ef_input, [[maybe_unused]] std::ostream& os) {
+  //  os << "Beginning of get_spanning_list_triple\n";
   using Tgroup = typename Ttopcone::Tgroup;
   using Telt = typename Tgroup::Telt;
   using Tint = typename Ttopcone::Tint;
@@ -168,7 +168,7 @@ get_spanning_list_triple(
     if (curr_pos == len)
       break;
 #ifdef DEBUG_TRIPLE
-    std::cerr << "curr_pos=" << curr_pos << " len=" << len << "\n";
+    os << "TRIP: curr_pos=" << curr_pos << " len=" << len << "\n";
 #endif
     for (size_t i = curr_pos; i < len; i++) {
       // We cannot use const& for triple because the underlying array
@@ -176,37 +176,40 @@ get_spanning_list_triple(
       triple<Tint> ef = l_triple[i];
       const Ttopcone &eC = l_cones[ef.iCone];
 #ifdef DEBUG_TRIPLE
-      std::cerr << "i=" << i << " iCone=" << ef.iCone
-                << "\n";
+      os << "TRIP: i=" << i << " iCone=" << ef.iCone << "\n";
       size_t n_facet = 0;
 #endif
       for (auto &e_sing_adj : l_cones[ef.iCone].l_sing_adj) {
 #ifdef DEBUG_TRIPLE
-        std::cerr << "|ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
+        os << "TRIP: |ef.f_ext|=" << SignatureFace(ef.f_ext) << "\n";
+        int n_act = eC.GRP_ext.n_act();
+        os << "TRIP: n_act=" << n_act << "\n";
 #endif
         std::vector<std::pair<Face, Telt>> l_pair =
             FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
+#ifdef DEBUG_TRIPLE
+        os << "TRIP: |l_pair|=" << l_pair.size() << "\n";
+#endif
 #ifdef DEBUG_TRIPLE
         vectface vfo =
             OrbitFace(e_sing_adj.f_ext, eC.GRP_ext.GeneratorsOfGroup());
         n_facet += vfo.size();
         Tgroup stab = eC.GRP_ext.Stabilizer_OnSets(ef.f_ext);
-        std::cerr << "|vfo|=" << vfo.size() << " |stab|=" << stab.size()
-                  << "\n";
+        os << "TRIP: |vfo|=" << vfo.size() << " |stab|=" << stab.size() << "\n";
         size_t n_match = 0;
         vectface vfcont(vfo.get_n());
         for (auto &eFace : vfo) {
           if (is_subset(ef.f_ext, eFace)) {
-            std::cerr << "V=" << StringFace(eFace) << "\n";
+            os << "TRIP: V=" << StringFace(eFace) << "\n";
             vfcont.push_back(eFace);
             n_match++;
           }
         }
         vectface vfs = OrbitSplittingSet(vfcont, stab);
-        std::cerr << "|l_pair|=" << l_pair.size()
-                  << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext)
-                  << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
-                  << " n_match=" << n_match << " |vfs|=" << vfs.size() << "\n";
+        os << "TRIP: |l_pair|=" << l_pair.size()
+           << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext)
+           << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
+           << " n_match=" << n_match << " |vfs|=" << vfs.size() << "\n";
         if (vfs.size() != l_pair.size()) {
           std::cerr << "We have a size error\n";
           throw TerminalException{1};
@@ -224,7 +227,7 @@ get_spanning_list_triple(
           for (auto &e_line : set_EXT) {
             std::optional<size_t> opt = Cont.GetIdx_v(e_line);
             if (!opt) {
-              std::cerr << "The vector is not in the image. Clear bug\n";
+              std::cerr << "TRIP: The vector is not in the image. Clear bug\n";
               throw TerminalException{1};
             }
             size_t idx = *opt;
@@ -235,25 +238,25 @@ get_spanning_list_triple(
         }
       }
 #ifdef DEBUG_TRIPLE
-      std::cerr << "iCone=" << ef.iCone
-                << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
-                << " n_facet=" << n_facet << "\n";
+      os << "TRIP: iCone=" << ef.iCone
+         << " |ef.f_ext|=" << SignatureFace(ef.f_ext)
+         << " n_facet=" << n_facet << "\n";
 #endif
     }
 #ifdef DEBUG_TRIPLE
-    std::cerr << "Now |l_triple|=" << l_triple.size() << "\n";
+    os << "TRIP: Now |l_triple|=" << l_triple.size() << "\n";
 #endif
     curr_pos = len;
   }
 #ifdef DEBUG_TRIPLE
-  std::cerr << "|l_triple|=" << l_triple.size()
-            << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
-  std::cerr << "l_triple.iCon =";
+  os << "TRIP: |l_triple|=" << l_triple.size()
+     << " |ListMatrGen|=" << ListMatrGen.size() << "\n";
+  os << "l_triple.iCon =";
   for (auto &e_ent : l_triple)
-    std::cerr << " " << e_ent.iCone;
-  std::cerr << "\n";
+    os << " " << e_ent.iCone;
+  os << "\n";
 #endif
-  return {l_triple, ListMatrGen};
+  return {std::move(l_triple), std::move(ListMatrGen)};
 }
 
 // clang-format off

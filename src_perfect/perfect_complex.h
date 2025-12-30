@@ -275,7 +275,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 3\n";
 #endif
-    std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>> pair = get_spanning_list_triple(pctdi.l_perfect, t);
+    std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>> pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 4\n";
 #endif
