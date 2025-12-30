@@ -6,7 +6,7 @@
 #include "LatticeStabEquiCan.h"
 #include "Namelist.h"
 #include "PerfectMPI_types.h"
-#include "Temp_PerfectForm.h"
+#include "PerfectForm.h"
 #include "rational.h"
 #include "Positivity.h"
 #include "POLY_lrslib.h"

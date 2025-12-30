@@ -5,6 +5,7 @@
 // clang-format off>
 #include "MatrixGroup.h"
 #include "PolytopeEquiStab.h"
+#include "EquiStabMemoization.h"
 #include "Positivity.h"
 #include "Tspace_General.h"
 #include "fractions.h"
@@ -299,42 +300,6 @@ bool TestInclusionSHV(MyMatrix<Tint> const &TheSHVbig,
     return TestInclusionSHV_quad(TheSHVbig, TheSHVsma);
   }
 }
-
-// Memoization procedure. The computation with f_shortest is expensive
-// so keeping track of what has been computed is a good idea.
-// We are using the std::list for storing the data since it makes the
-// const& references stable when the ListShort gets extended.
-// This is a problem of std::vector that if you have a reference to an entry
-// and the std::vector gets extended then the reference may get invalidated
-// when we pass a threshold like 1, 2, 4, 8, 16. When we pass the threshold
-// the underlying vector gets deallocated and a newer larger gets
-// allocated.
-template <typename Fcomp, typename Tin, typename Tout> struct Memoization {
-  Fcomp f_comp;
-  std::vector<Tin> ListI;
-  std::list<Tout> ListO;
-  Memoization(Fcomp _f_comp) : f_comp(_f_comp) {}
-  size_t get_index(Tin const &input) {
-    size_t len = ListI.size();
-    for (size_t i = 0; i < len; i++) {
-      if (ListI[i] == input) {
-        return i;
-      }
-    }
-    Tout output = f_comp(input);
-    ListI.push_back(input);
-    ListO.push_back(output);
-    return len;
-  }
-  Tout const &comp(Tin const &input) {
-    size_t index = get_index(input);
-    auto iter = ListO.cbegin();
-    for (size_t u = 0; u < index; u++) {
-      iter++;
-    }
-    return *iter;
-  }
-};
 
 /*
   This is the code for given a form eMatIn, a direction of change eMatDir,
@@ -1017,7 +982,7 @@ SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(A), We have GRP\n";
 #endif
-    return {GRP, l_matr};
+    return {std::move(GRP), std::move(l_matr)};
   } else {
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), Case SHVorig_T != SHV_T\n";
@@ -1037,7 +1002,7 @@ SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), We have GRP\n";
 #endif
-    return {GRP, l_matr};
+    return {std::move(GRP), std::move(l_matr)};
   }
 }
 

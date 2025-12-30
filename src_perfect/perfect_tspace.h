@@ -5,7 +5,7 @@
 // clang-format off
 #include "LatticeStabEquiCan.h"
 #include "OnlineExhaustiveReduction.h"
-#include "Temp_PerfectForm.h"
+#include "PerfectForm.h"
 #include "POLY_lrslib.h"
 #include "Positivity.h"
 #include "POLY_AdjacencyScheme.h"
