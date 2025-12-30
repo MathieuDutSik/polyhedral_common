@@ -154,7 +154,7 @@ get_spanning_list_triple(
         return;
       }
     }
-    l_triple.push_back(ef_A);
+    l_triple.emplace_back(std::move(ef_A));
     const Ttopcone &uC = l_cones[ef_A.iCone];
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
