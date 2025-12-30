@@ -120,20 +120,23 @@ get_spanning_list_triple(
   using Telt = typename Tgroup::Telt;
   using Tint = typename Ttopcone::Tint;
   std::vector<MyMatrix<Tint>> ListMatrGen;
-  std::set<MyVector<Tint>> set_EXT;
+  std::vector<MyVector<Tint>> EXTinner;
   // That value of dim should be overwritten later
   for (auto &ePt : FaceToVector<int>(ef_input.f_ext)) {
     MyVector<Tint> V = GetMatrixRow(l_cones[ef_input.iCone].EXT, ePt);
     // In GAP Vimg = V A and in transpose we get Vimg^T = A^T V^T
     MyVector<Tint> Vimg = ef_input.eMat.transpose() * V;
-    set_EXT.insert(Vimg);
+    EXTinner.push_back(std::move(Vimg));
   }
+#ifdef DEBUG_TRIPLE
+  os << "TRIP: |EXTinner|=" << EXTinner.size() << "\n";
+#endif
   auto f_insert_generator = [&](const MyMatrix<Tint> &eMatrGen) -> void {
     ListMatrGen.push_back(eMatrGen);
 #ifdef DEBUG_TRIPLE
-    for (auto &eV : set_EXT) {
+    for (auto &eV : EXTinner) {
       MyVector<Tint> Vimg = eMatrGen.transpose() * eV;
-      if (set_EXT.count(Vimg) != 1) {
+      if (std::find(EXTinner.begin(), EXTinner.end(), Vimg) == EXTinner.end()) {
         std::cerr
             << "Error: The generator does not preserve the face globally\n";
         throw TerminalException{1};
@@ -206,6 +209,7 @@ get_spanning_list_triple(
             n_match++;
           }
         }
+        os << "TRIP: |vfcont|=" << vfcont.size() << "\n";
         vectface vfs = OrbitSplittingSet(vfcont, stab);
         os << "TRIP: |l_pair|=" << l_pair.size()
            << " |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext)
@@ -217,6 +221,9 @@ get_spanning_list_triple(
         }
 #endif
         for (auto &e_pair : l_pair) {
+#ifdef DEBUG_TRIPLE
+          os << "TRIP: face=" << StringFace(e_pair.first) << " elt=" << e_pair.second << "\n";
+#endif
           MyMatrix<Tint> eMat1 =
               FindTransformation(eC.EXT, eC.EXT, e_pair.second);
           size_t jCone = e_sing_adj.jCone;
@@ -225,7 +232,7 @@ get_spanning_list_triple(
           MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;
           ContainerMatrix<Tint> Cont(EXTimg);
           Face faceNew(EXTimg.rows());
-          for (auto &e_line : set_EXT) {
+          for (auto &e_line : EXTinner) {
             std::optional<size_t> opt = Cont.GetIdx_v(e_line);
             if (!opt) {
               std::cerr << "TRIP: The vector is not in the image. Clear bug\n";
