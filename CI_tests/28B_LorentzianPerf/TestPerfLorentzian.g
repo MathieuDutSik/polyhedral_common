@@ -17,6 +17,9 @@ GetNumberPerfectLorentzian:=function(eRec, choice)
     strOut:="&DATA\n";
     strOut:=Concatenation(strOut, "  LorMatFile = \"", FileIn, "\"\n");
     strOut:=Concatenation(strOut, "  Option = \"", choice, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&SYSTEM\n");
     strOut:=Concatenation(strOut, "  OutFormat = \"NumberGAP\"\n");
     strOut:=Concatenation(strOut, "  OutFile = \"", FileOut, "\"\n");
     strOut:=Concatenation(strOut, "/\n");
