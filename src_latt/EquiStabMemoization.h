@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
+#include <list>
 #include <utility>
 #include <vector>
 // clang-format on
@@ -278,7 +279,6 @@ template <typename Fcomp, typename Tin, typename Tout> struct Memoization {
     return *iter;
   }
 };
-
 
 // clang-format off
 #endif  // SRC_INDEFINITE_MODELS_EQUISTABMEMOIZATION_H_

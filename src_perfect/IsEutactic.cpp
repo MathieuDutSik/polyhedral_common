@@ -5,7 +5,7 @@
 #include "NumberTheoryRealField.h"
 #include "NumberTheoryQuadField.h"
 #include "NumberTheorySafeInt.h"
-#include "PerfectForm.h"
+#include "eutacticity.h"
 // clang-format on
 
 template <typename T, typename Tint>
