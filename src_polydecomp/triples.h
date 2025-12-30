@@ -29,9 +29,11 @@
     + ProjectiveSystem.g for SaturationAndStabilizer
 
   Decisions:
-  * We decide to keep track of all the facets. Generating facets
-    when needed, double coset and similar are a big pain in the
-    ass and likely counterproductive.
+  * In that code we use the symmetries in order to compute
+    the possible mappings. This is different from Lorentzian.g
+    and ProjectiveSystem.g where we generate the full set of
+    facets, without trying to exploit the symmetries.
+    It is unsure whether this is the right strategy.
   * We want that code to be used whenever useful. Of course we
     want to avoid code duplication.
   * But at the same time the types must contain the relevant
@@ -158,7 +160,7 @@ get_spanning_list_triple(
     const Ttopcone &uC = l_cones[ef_A.iCone];
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
-    for (auto &eGen : stab.GeneratorsOfGroup()) {
+    for (auto &eGen : stab.SmallGeneratingSet()) {
       MyMatrix<Tint> eMatGen = FindTransformation(uC.EXT, uC.EXT, eGen);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       f_insert_generator(TransGen);
@@ -168,8 +170,9 @@ get_spanning_list_triple(
   size_t curr_pos = 0;
   while (true) {
     size_t len = l_triple.size();
-    if (curr_pos == len)
+    if (curr_pos == len) {
       break;
+    }
 #ifdef DEBUG_TRIPLE
     os << "TRIP: curr_pos=" << curr_pos << " len=" << len << "\n";
 #endif
@@ -183,11 +186,12 @@ get_spanning_list_triple(
       size_t n_facet = 0;
 #endif
       for (auto &e_sing_adj : l_cones[ef.iCone].l_sing_adj) {
+        size_t jCone = e_sing_adj.jCone;
 #ifdef DEBUG_TRIPLE
         os << "TRIP: |        ef.f_ext|=" << SignatureFace(        ef.f_ext) << "\n";
         os << "TRIP: |e_sing_adj.f_ext|=" << SignatureFace(e_sing_adj.f_ext) << "\n";
         int n_act = eC.GRP_ext.n_act();
-        os << "TRIP: n_act=" << n_act << "\n";
+        os << "TRIP: n_act=" << n_act << " jCone=" << jCone << "\n";
 #endif
         std::vector<std::pair<Face, Telt>> l_pair =
             FindContainingOrbit(eC.GRP_ext, e_sing_adj.f_ext, ef.f_ext);
@@ -226,10 +230,15 @@ get_spanning_list_triple(
 #endif
           MyMatrix<Tint> eMat1 =
               FindTransformation(eC.EXT, eC.EXT, e_pair.second);
-          size_t jCone = e_sing_adj.jCone;
           const Ttopcone &fC = l_cones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
           MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;
+#ifdef DEBUG_TRIPLE
+          os << "TRIP: EXTinner=\n";
+          WriteMatrix(os, MatrixFromVectorFamily(EXTinner));
+          os << "TRIP: EXTimg=\n";
+          WriteMatrix(os, EXTimg);
+#endif
           ContainerMatrix<Tint> Cont(EXTimg);
           Face faceNew(EXTimg.rows());
           for (auto &e_line : EXTinner) {
