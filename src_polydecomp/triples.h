@@ -93,6 +93,48 @@ test_equiv_triple(std::vector<Ttopcone> const &l_cones,
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
+
+template <typename Ttopcone>
+triple<typename Ttopcone::Tint>
+canonicalize_triple(std::vector<Ttopcone> const &l_cones,
+                    triple<typename Ttopcone::Tint> const &t1,
+                    [[maybe_unused]] std::ostream& os) {
+  using Tgroup = typename Ttopcone::Tgroup;
+  using Telt = typename Tgroup::Telt;
+  using Tint = typename Ttopcone::Tint;
+  size_t iC = t1.iCone;
+  const Ttopcone &eC = l_cones[iC];
+  Face f_can = eC.GRP_ext.OptCanonicalImage(t1.f_ext);
+  std::optional<Telt> test =
+      eC.GRP_ext.RepresentativeAction_OnSets(t1.f_ext, f_can);
+#ifdef SANITY_CHECK_TRIPLE
+  if (!test) {
+    std::cerr << "TRIP: Failed to find the equivalence\n";
+    throw TerminalException{1};
+  }
+#endif
+  Telt const& x = *test;
+  MyMatrix<Tint> x_mat = FindTransformation(eC.EXT, eC.EXT, x);
+  MyMatrix<Tint> eMat = t1.eMat * x_mat;
+  triple<Tint> t2{iC, f_can, eMat};
+#ifdef SANITY_CHECK_TRIPLE
+  auto get_ext=[&](triple<Tint> const& t) -> std::set<MyVector<Tint>> {
+    std::set<MyVector<Tint>> set;
+    for (auto &ePt : FaceToVector<int>(t.f_ext)) {
+      MyVector<Tint> V = GetMatrixRow(l_cones[t.iCone].EXT, ePt);
+      MyVector<Tint> Vimg = t.eMat.transpose() * V;
+      set.insert(Vimg);
+    }
+    return set;
+  };
+  if (get_ext(t1) != get_ext(t2)) {
+    std::cerr << "TRIP: The canonicalization failed\n";
+    throw TerminalException{1};
+  }
+#endif
+  return t2;
+}
+
 template <typename Ttopcone>
 std::optional<MyMatrix<typename Ttopcone::Tint>>
 test_triple_in_listtriple(std::vector<Ttopcone> const &l_cones,
@@ -108,6 +150,10 @@ test_triple_in_listtriple(std::vector<Ttopcone> const &l_cones,
   }
   return {};
 }
+
+
+
+
 
 /*
   Generate the list of entries in the face and the list of stabilizer generators
@@ -238,6 +284,19 @@ get_spanning_list_triple(
           WriteMatrix(os, MatrixFromVectorFamily(EXTinner));
           os << "TRIP: EXTimg=\n";
           WriteMatrix(os, EXTimg);
+          std::set<MyVector<Tint>> setEXTinner;
+          for (auto & V: EXTinner) {
+            setEXTinner.insert(V);
+          }
+          std::vector<MyVector<Tint>> EXTinner_int_EXTimg;
+          for (int iV=0; iV<EXTimg.rows(); iV++) {
+            MyVector<Tint> V = GetMatrixRow(EXTimg, iV);
+            if (setEXTinner.count(V) == 1) {
+              EXTinner_int_EXTimg.push_back(V);
+            }
+          }
+          os << "TRIP: EXTinner_int_EXTimg=\n";
+          WriteMatrix(os, MatrixFromVectorFamilyDim(EXTimg.cols(), EXTinner));
 #endif
           ContainerMatrix<Tint> Cont(EXTimg);
           Face faceNew(EXTimg.rows());

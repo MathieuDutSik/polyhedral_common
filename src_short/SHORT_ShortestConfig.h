@@ -304,8 +304,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         throw TerminalException{1};
       }
 #endif
-      if (nbIter == 1)
+      if (nbIter == 1) {
         eOptimalPrev = eOptimal;
+      }
       eOptimal = eSol.OptimalValue;
 #ifdef DEBUG_SHORTEST_CONFIG
       os << "SHORT: eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";

@@ -756,6 +756,7 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
 #ifdef SANITY_CHECK_BOUNDED_FACE
     if (is_bounded_self_dual != is_bounded_iterative) {
       std::cerr << "TSPACE: Incoherent results\n";
+      std::cerr << "TSPACE: rnk=" << rnk << " n=" << n << "\n";
       std::cerr << "TSPACE: is_bounded_self_dual=" << is_bounded_self_dual << "\n";
       std::cerr << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
       throw TerminalException{1};

@@ -94,7 +94,9 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     for (auto & eAdj: ePerf.ListAdj) {
       size_t jCone = eAdj.iOrb;
       Face f_ext = eAdj.x.eInc;
-      MyMatrix<Tint> eMat = eAdj.x.eBigMat;
+      // This inverse is because the eBigMat is acting on perfect forms
+      // but for the complex, we work on vector configurations.
+      MyMatrix<Tint> eMat = Inverse(eAdj.x.eBigMat);
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
