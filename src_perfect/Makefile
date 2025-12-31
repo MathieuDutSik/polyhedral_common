@@ -1,4 +1,4 @@
-PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic PERF_SerialPerfectComputation
+PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic PERF_SerialPerfectComputation PERF_IsBoundedFace
 
 # REquire TBB to compile
 #PROGRAM		= ComputePerfect

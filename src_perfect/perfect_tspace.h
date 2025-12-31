@@ -404,8 +404,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
 
 FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
   std::map<std::string, SingleBlock> ListBlock;
-  // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
   std::map<std::string, std::string> ListStringValues1;
   std::map<std::string, bool> ListBoolValues1;
@@ -419,6 +417,8 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
   BlockDATA.setListStringValues(ListStringValues1);
   BlockDATA.setListBoolValues(ListBoolValues1);
   ListBlock["DATA"] = BlockDATA;
+  // SYSTEM
+  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data

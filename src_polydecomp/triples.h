@@ -105,6 +105,10 @@ canonicalize_triple(std::vector<Ttopcone> const &l_cones,
   size_t iC = t1.iCone;
   const Ttopcone &eC = l_cones[iC];
   Face f_can = eC.GRP_ext.OptCanonicalImage(t1.f_ext);
+  // It is somewhat suboptimal to have to compute the equivalence.
+  // It seems possible to modify NewCanonicImage in nsi.h
+  // of permutalib in order to get the canonicalizing element
+  // directly. But there is some work required for that.
   std::optional<Telt> test =
       eC.GRP_ext.RepresentativeAction_OnSets(t1.f_ext, f_can);
 #ifdef SANITY_CHECK_TRIPLE

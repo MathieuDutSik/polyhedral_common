@@ -1483,10 +1483,8 @@ void reset_pt_stab_gens(LinSpaceMatrix<T> &LinSpa, std::ostream &os) {
   std::vector<MyMatrix<Tint>> ListGens =
       ComputePointStabilizerTspace<T, Tint, Tgroup>(LinSpa.SuperMat,
                                                     LinSpa.ListMat, os);
-  LinSpa.PtStabGens.clear();
-  for (auto &eGen : ListGens) {
-    LinSpa.PtStabGens.push_back(UniversalMatrixConversion<T, Tint>(eGen));
-  }
+  LinSpa.PtStabGens =
+    UniversalStdVectorMatrixConversion<T,Tint>(ListGens);
 }
 
 template <typename T, typename Tint, typename Tgroup>
