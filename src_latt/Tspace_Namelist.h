@@ -31,8 +31,10 @@ RealQuad: The space corresponding to a real quadratic field\n   \
 ImagQuad: The space corresponding to a real quadratic field\n   \
 Raw     : the space given by matrices\n    \
 File    : A file containing the Tspace";
+  ListIntValues1_doc["ClassicDim"] = "Default: 0\n\
+The dimension d of the space corresponding to GL_d(Z)";
   ListIntValues1_doc["RealImagDim"] = "Default: 0\n\
-The dimension d of the space GL_d(R) for R a number ring";
+The dimension d of the space corresponding to GL_d(R) for R a number ring";
   ListIntValues1_doc["RealImagSum"] = "Default: 0\n\
 The sum of the two roots of the polynomial. Only relevant for RealQuad and ImagQuad";
   ListIntValues1_doc["RealImagProd"] = "Default: 0\n\
@@ -266,6 +268,12 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #ifdef DEBUG_TSPACE_NAMELIST
     os << "TSPACE: Beginning of get_linspace TypeTspace=" << TypeTspace << "\n";
 #endif
+    if (TypeTspace == "Classic") {
+      int n = Blk.get_int("ClassicDim");
+      LinSpaRet = ComputeCanonicalSpace<T>(n);
+      set_self_dual();
+      return LinSpaRet;
+    }
     if (TypeTspace == "RealQuad" || TypeTspace == "ImagQuad") {
       int n = Blk.get_int("RealImagDim");
       int eSum_i = Blk.get_int("RealImagSum");

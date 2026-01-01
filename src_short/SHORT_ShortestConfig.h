@@ -577,10 +577,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   std::vector<MyMatrix<Tint>> ListMatrGen =
       SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
   std::vector<MyMatrix<T>> StdBasis = StandardSymmetricBasis<T>(n);
-  std::vector<MyMatrix<T>> ListGen_T;
-  for (auto &eGen : ListMatrGen) {
-    ListGen_T.push_back(UniversalMatrixConversion<T, Tint>(eGen));
-  }
+  std::vector<MyMatrix<T>> ListGen_T = UniversalStdVectorMatrixConversion<T,Tint>(ListMatrGen);
 #ifdef DEBUG_SHORTEST_CONFIG
   os << "SHORT: Before BasisInvariantForm\n";
 #endif
@@ -613,8 +610,9 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
   };
   int TheRank = RankMat(ListRankOne_mat);
   bool NoExtension = false;
-  if (PositionVect({n, n + 1, n + 2}, TheRank) != -1)
+  if (PositionVect({n, n + 1, n + 2}, TheRank) != -1) {
     NoExtension = true;
+  }
   while (true) {
     ReplyRealizability<T, Tint> RecTest;
     if (InitialSize > KissingNumberUpperBound(n)) {

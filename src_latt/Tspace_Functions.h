@@ -291,6 +291,29 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   return ListGenMatr;
 }
 
+template<typename Tint>
+std::vector<MyVector<Tint>> get_initial_shv(int const& n) {
+  std::vector<MyVector<Tint>> ListV;
+  for (int i = 0; i < n; i++) {
+    MyVector<Tint> V = ZeroVector<Tint>(n);
+    V(i) = 1;
+    ListV.push_back(V);
+  }
+  for (int i = 0; i < n; i++) {
+    for (int j = i + 1; j < n; j++) {
+      for (int sign = 0; sign < 2; sign++) {
+        int signB = -1 + 2 * sign;
+        MyVector<Tint> V = ZeroVector<Tint>(n);
+        V(i) = 1;
+        V(j) = signB;
+        ListV.push_back(V);
+      }
+    }
+  }
+  return ListV;
+}
+
+
 /*
   Find one positive definite matrix in the space assuming that one exists.
   If one of the matrix of the basis is positive definite then the first one
@@ -320,23 +343,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       return eMat;
     }
   }
-  std::vector<MyVector<Tint>> ListV;
-  for (int i = 0; i < n; i++) {
-    MyVector<Tint> V = ZeroVector<Tint>(n);
-    V(i) = 1;
-    ListV.push_back(V);
-  }
-  for (int i = 0; i < n; i++) {
-    for (int j = i + 1; j < n; j++) {
-      for (int sign = 0; sign < 2; sign++) {
-        int signB = -1 + 2 * sign;
-        MyVector<Tint> V = ZeroVector<Tint>(n);
-        V(i) = 1;
-        V(j) = signB;
-        ListV.push_back(V);
-      }
-    }
-  }
+  std::vector<MyVector<Tint>> ListV = get_initial_shv<Tint>(n);
 #ifdef DEBUG_TSPACE_FUNCTIONS
   int iter=0;
 #endif
@@ -346,7 +353,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     iter += 1;
     os << "TSPFCT: GetOnePositiveDefiniteMatrix iter=" << iter << " n_vect=" << n_vect << "\n";
 #endif
-    MyMatrix<T> ListIneq(n_vect, 1 + n_mat);
+    MyMatrix<T> ListIneq = ZeroMatrix<T>(n_vect, 1 + n_mat);
     MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_mat);
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
       ListIneq(i_vect, 0) = -1;
@@ -388,12 +395,95 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       }
     } else {
       T CritNorm(0);
-      bool StrictIneq = true;
+      bool StrictIneq = false;
       MyVector<Tint> V = GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm, StrictIneq, os);
       ListV.push_back(V);
     }
   }
 }
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
+                                 [[maybe_unused]] std::ostream &os) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr
+        << "TSPACE: The number of matrices is 0 so we cannot build a positive "
+           "definite matrix\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix n_mat=" << n_mat << " n=" << n << "\n";
+#endif
+  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+    MyMatrix<T> const &eMat = ListMat[i_mat];
+    if (IsPositiveSemiDefinite(eMat, os)) {
+      return eMat;
+    }
+  }
+  std::vector<MyVector<Tint>> ListV = get_initial_shv<Tint>(n);
+  int n_vect_init = ListV.size();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  int iter=0;
+#endif
+  while (true) {
+    int n_vect = ListV.size();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    iter += 1;
+    os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix iter=" << iter << " n_vect=" << n_vect << "\n";
+#endif
+    MyMatrix<T> ListIneq = ZeroMatrix<T>(n_vect + 1, 1 + n_mat);
+    for (int i_vect = 0; i_vect < n_vect; i_vect++) {
+      MyVector<Tint> const& V = ListV[i_vect];
+      MyVector<T> V_T = UniversalVectorConversion<T, Tint>(V);
+      for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+        T val = EvaluationQuadForm(ListMat[i_mat], V_T);
+        ListIneq(i_vect, 1 + i_mat) = val;
+      }
+    }
+    ListIneq(n_vect, 0) = -1;
+    MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_mat);
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      T sum(0);
+      for (int i_vect=0; i_vect<n_vect_init; i_vect++) {
+        sum += ListIneq(i_vect, 1 + i_mat);
+      }
+      ListIneq(n_vect, 1 + i_mat) = sum;
+      ToBeMinimized(1 + i_mat) = sum;
+    }
+    //
+    // Solving the linear program
+    //
+    LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
+    if (!eSol.PrimalDefined || !eSol.DualDefined) {
+      return {};
+    }
+    MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
+    }
+    if (IsPositiveSemiDefinite(TrySuperMat, os)) {
+      return TrySuperMat;
+    }
+    //
+    // Failed, trying to find a vector
+    //
+    MyMatrix<T> NSP_T = NullspaceMat(TrySuperMat);
+    MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
+    MyMatrix<Tint> Compl = SubspaceCompletionInt<Tint>(NSP, n);
+    MyMatrix<T> Compl_T = UniversalMatrixConversion<T,Tint>(Compl);
+    MyMatrix<T> M = Compl_T * TrySuperMat * Compl_T.transpose();
+    T CritNorm(0);
+    bool StrictIneq = true;
+    MyVector<Tint> V1 = GetShortIntegralVector<T, Tint>(M, CritNorm, StrictIneq, os);
+    MyVector<Tint> V2 = Compl.transpose() * V1;
+    ListV.push_back(V1);
+  }
+}
+
+
 
 /*
   The Frobenius scalar product is defined as Tr(AB^T)

@@ -633,17 +633,19 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
   return RankMat(ScalMat) == nbMat;
 }
 
-
-
+/*
+  Look for a positive definite matrix in the T-space such that
+  lambda = A[v] for v in SHV
+ */
 template<typename T, typename Tint>
 bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
   int n = LinSpa.n;
   int n_vect = SHV.rows();
   int n_mat = LinSpa.ListMat.size();
   MyMatrix<T> MatScal(n_mat, n_vect);
-  for (int i_vect=0; i_vect<n_vect; i_vect++) {
-    MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
+      MyVector<Tint> V = GetMatrixRow(SHV, i_vect+1);
       T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
       MatScal(i_mat, i_vect) = val;
     }
@@ -674,6 +676,57 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
     return true;
   }
 }
+
+/*
+  Look for a positive semi-definite matrix in the T-space such that
+  0 = A[v] for v in SHV
+ */
+template<typename T, typename Tint>
+bool is_bounded_face_iterative_bis(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+  int n = LinSpa.n;
+  int n_vect = SHV.rows();
+  int n_mat = LinSpa.ListMat.size();
+  MyMatrix<T> MatScal(n_mat, n_vect);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    MyVector<Tint> V0 = GetMatrixRow(SHV, 0);
+    T val0 = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V0);
+    for (int i_vect=0; i_vect<n_vect-1; i_vect++) {
+      MyVector<Tint> V = GetMatrixRow(SHV, i_vect+1);
+      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
+      MatScal(i_mat, i_vect) = val - val0;
+    }
+  }
+  MyMatrix<T> NSP = NullspaceMat(MatScal);
+  std::vector<MyMatrix<T>> BasisSpace;
+  for (int i_nsp=0; i_nsp<NSP.rows(); i_nsp++) {
+    MyMatrix<T> mat = ZeroMatrix<T>(n, n);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      mat += NSP(i_nsp, i_mat) * LinSpa.ListMat[i_mat];
+    }
+    BasisSpace.push_back(mat);
+  }
+  std::optional<MyMatrix<T>> opt = GetOnePositiveSemiDefiniteMatrix<T,Tint>(BasisSpace, os);
+  if (opt) {
+    return false;
+  } else {
+    return true;
+  }
+}
+
+/*
+  Look for a positive semi-definite matrix in the T-space such that
+  Min(A) = SHV
+ */
+template<typename T, typename Tint>
+bool is_bounded_face_iterative_thi(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+  // Need to write the code using src_short.
+
+  return true;
+}
+
+
+
+
 
 
 /*
