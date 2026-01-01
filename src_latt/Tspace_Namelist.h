@@ -221,20 +221,8 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #ifdef DEBUG_TSPACE_NAMELIST
     os << "TSPACE: set_supermat, SuperMatMethod=" << SuperMatMethod << "\n";
 #endif
-    if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad" &&
-        TypeTspace != "InvGroup") {
-      if (SuperMatMethod == "NotNeeded") {
-        std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
-        std::cerr << "For NotNeeded, the option needs to be RealQuad, ImagQuad "
-                     "or InvGroup\n";
-        throw TerminalException{1};
-      }
-    } else {
-      if (SuperMatMethod != "NotNeeded") {
-        std::cerr << "For the options RealQuad, ImageQuad and InvGroup, the "
-                     "option has to be NotNeeded\n";
-        throw TerminalException{1};
-      }
+    if (SuperMatMethod == "NotNeeded") {
+      return;
     }
     if (TypeTspace == "InvGroup") {
       MyMatrix<T> eMat = IdentityMat<T>(LinSpaRet.n);

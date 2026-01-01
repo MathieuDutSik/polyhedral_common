@@ -29,13 +29,16 @@ void process(FullNamelist const &eFull) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
   SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
+  std::cerr << "Before ReadTspace\n";
   LinSpaceMatrix<T> LinSpa =
       ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
+  std::cerr << "We have LinSpa\n";
   //
   // SHV and is_bounded
   //
   std::string FileSHV = BlockDATA.get_string("FileSHV");
   MyMatrix<Tint> SHV = ReadMatrixFile<Tint>(FileSHV);
+  std::cerr << "We have SHV\n";
   bool result = is_bounded_face_iterative<T,Tint>(LinSpa, SHV, std::cerr);
   //
   // Output the data

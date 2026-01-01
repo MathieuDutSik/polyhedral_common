@@ -452,26 +452,28 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         }
       } else {
         if (RankMat(eMatSec) < n) {
-          MyVector<Tint> eVect3 =
-              GetShortVectorDegenerate<T, Tint>(eMatSec, CritNorm, os);
-          if (SetVectTot.count(eVect3) == 1) { // This can happen.
-            eVect3 *= 2;
-          }
+          std::vector<MyVector<Tint>> list_v3 =
+              GetShortVectorDegenerate<T, Tint>(eMatSec, os);
+          for (auto& eVect3 : list_v3) {
+            if (SetVectTot.count(eVect3) == 1) { // This can happen.
+              eVect3 *= 2;
+            }
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-          if (TheFamilyVect.count(eVect3) == 1) {
-            std::cerr << "SHORT: eMatSec=\n";
-            WriteMatrix(std::cerr, eMatSec);
-            std::cerr << "SHORT: eVect3=";
-            WriteVectorNoDim(std::cerr, eVect3);
-            std::cerr << "SHORT: We have a clear error here\n";
-            throw TerminalException{1};
-          }
+            if (TheFamilyVect.count(eVect3) == 1) {
+              std::cerr << "SHORT: eMatSec=\n";
+              WriteMatrix(std::cerr, eMatSec);
+              std::cerr << "SHORT: eVect3=";
+              WriteVectorNoDim(std::cerr, eVect3);
+              std::cerr << "SHORT: We have a clear error here\n";
+              throw TerminalException{1};
+            }
 #endif
 #ifdef DEBUG_SHORTEST_CONFIG
-          os << "SHORT: Inserting from GetShortVectorDegenerate eVect3=";
-          WriteVectorNoDim(os, eVect3);
+            os << "SHORT: Inserting from GetShortVectorDegenerate eVect3=";
+            WriteVectorNoDim(os, eVect3);
 #endif
-          TheFamilyVect.insert(eVect3);
+            TheFamilyVect.insert(eVect3);
+          }
         } else {
           bool StrictIneq = true;
           MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(

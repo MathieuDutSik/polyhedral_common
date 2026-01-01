@@ -736,20 +736,20 @@ MyVector<Tint> GetShortVector(MyMatrix<T> const &M, T const &MaxNorm,
 }
 
 template <typename T, typename Tint>
-MyVector<Tint> GetShortVectorDegenerate(MyMatrix<T> const &M, T const &MaxNorm,
-                                        std::ostream &os) {
+std::vector<MyVector<Tint>> GetShortVectorDegenerate(MyMatrix<T> const &M,
+                                                     std::ostream &os) {
 #ifdef DEBUG_POSITIVITY
   os << "POS: GetShortVectorDegenerate: beginning\n";
 #endif
-  MyMatrix<T> NSP = NullspaceMat(M);
-  int nbRow = NSP.rows();
-  std::vector<MyVector<T>> ListVect(nbRow);
-  for (int i = 0; i < nbRow; i++) {
-    MyVector<T> eVect = GetMatrixRow(NSP, i);
-    T eMax = eVect.maxCoeff();
-    ListVect[i] = eVect / eMax;
+  MyMatrix<T> NSP = NullspaceIntMat(M);
+  LLLbasis<T, Tint> pair = LLLbasisReduction<T,Tint>(NSP, os);
+  std::vector<MyVector<Tint>> list_v;
+  for (int iV=0; iV<pair.LattRed.rows(); iV++) {
+    MyVector<T> V_T = GetMatrixRow(pair.LattRed, iV);
+    MyVector<Tint> V = UniversalVectorConversion<Tint,T>(V_T);
+    list_v.push_back(V);
   }
-  return GetShortVectorSpecified<T, Tint>(M, ListVect, MaxNorm, os);
+  return list_v;
 }
 
 template <typename T> std::vector<T> GetLineVector(MyMatrix<T> const &M) {

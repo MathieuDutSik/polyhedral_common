@@ -310,13 +310,16 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
            "definite matrix\n";
     throw TerminalException{1};
   }
+  int n = ListMat[0].rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPFCT: GetOnePositiveDefiniteMatrix n_mat=" << n_mat << " n=" << n << "\n";
+#endif
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     MyMatrix<T> const &eMat = ListMat[i_mat];
     if (IsPositiveDefinite(eMat, os)) {
       return eMat;
     }
   }
-  int n = ListMat[0].rows();
   std::vector<MyVector<Tint>> ListV;
   for (int i = 0; i < n; i++) {
     MyVector<Tint> V = ZeroVector<Tint>(n);
@@ -334,8 +337,15 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       }
     }
   }
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  int iter=0;
+#endif
   while (true) {
     int n_vect = ListV.size();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    iter += 1;
+    os << "TSPFCT: GetOnePositiveDefiniteMatrix iter=" << iter << " n_vect=" << n_vect << "\n";
+#endif
     MyMatrix<T> ListIneq(n_vect, 1 + n_mat);
     MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_mat);
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -365,18 +375,23 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     //
     // Failed, trying to find a vector
     //
-    auto get_one_vect = [&]() -> MyVector<Tint> {
-      T CritNorm = 0;
-      if (RankMat(TrySuperMat) < n) {
-        return GetShortVectorDegenerate<T, Tint>(TrySuperMat, CritNorm, os);
-      } else {
-        bool StrictIneq = true;
-        return GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm,
-                                               StrictIneq, os);
+    int rnk = RankMat(TrySuperMat);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPFCT: GetOnePositiveDefiniteMatrix get_one_vect, rnk=" << rnk << " n=" << n << "\n";
+    os << "TSPFCT: TrySuperMat=\n";
+    WriteMatrix(os, TrySuperMat);
+#endif
+    if (rnk < n) {
+      std::vector<MyVector<Tint>> list_v = GetShortVectorDegenerate<T, Tint>(TrySuperMat, os);
+      for (auto & eV: list_v) {
+        ListV.push_back(eV);
       }
-    };
-    MyVector<Tint> V = get_one_vect();
-    ListV.push_back(V);
+    } else {
+      T CritNorm(0);
+      bool StrictIneq = true;
+      MyVector<Tint> V = GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm, StrictIneq, os);
+      ListV.push_back(V);
+    }
   }
 }
 
