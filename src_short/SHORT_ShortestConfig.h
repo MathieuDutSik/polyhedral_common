@@ -178,23 +178,18 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     int idx = 0;
     for (auto &eVect : TheFamilyVect) {
       MyVector<T> vVect = SHORT_GetIneq_Tspace<T, Tint>(TheBasis, eVect);
-      for (int i = 0; i <= dimSpa; i++) {
-        RetMat(idx, i) = vVect(i);
-      }
+      AssignMatrixRow(RetMat, idx, vVect);
       idx++;
     }
     return RetMat;
   };
   MyVector<T> ToBeMinimized(dimSpa + 1);
   ToBeMinimized(0) = 0;
-  bool IsZero = true;
   for (int iDim = 0; iDim < dimSpa; iDim++) {
     T scal = EvaluationQuadForm(TheBasis[iDim], ListVect[0]);
-    if (scal != 0)
-      IsZero = false;
     ToBeMinimized(iDim + 1) = scal;
   }
-  if (IsZero) {
+  if (IsZeroVector(ToBeMinimized)) {
     eRes.reply = false;
     eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
@@ -243,21 +238,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       }
     }
     MyMatrix<T> SetIneq = SortUnicizeMatrix(ListIneq);
-    auto GetLpSolution = [&](MyMatrix<T> const &MatIneq,
-                             MyVector<T> const &TheMinimized) -> LpSolution<T> {
-      std::string TheMethod = "cdd";
-      if (TheMethod == "cdd") {
-        return CDD_LinearProgramming(MatIneq, TheMinimized, os);
-      }
-#ifdef USE_GLPK
-      if (TheMethod == "glpk_secure") {
-        return GLPK_LinearProgramming_Secure(MatIneq, TheMinimized, os);
-      }
-#endif
-      std::cerr << "SHORT: We have TheMethod = " << TheMethod << "\n";
-      throw TerminalException{1};
-    };
-    LpSolution<T> eSol = GetLpSolution(SetIneq, ToBeMinimized);
+    LpSolution<T> eSol = CDD_LinearProgramming(SetIneq, ToBeMinimized, os);
 #ifdef DEBUG_SHORTEST_CONFIG
     os << "SHORT: DualDefined=" << eSol.DualDefined << " PrimalDefined=" << eSol.PrimalDefined << "\n";
 #endif
