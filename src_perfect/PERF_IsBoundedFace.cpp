@@ -39,7 +39,10 @@ void process(FullNamelist const &eFull) {
   std::string FileSHV = BlockDATA.get_string("FileSHV");
   MyMatrix<Tint> SHV = ReadMatrixFile<Tint>(FileSHV);
   std::cerr << "We have SHV\n";
-  bool result = is_bounded_face_iterative<T,Tint>(LinSpa, SHV, std::cerr);
+  bool test1 = is_bounded_face_iterative<T,Tint>(LinSpa, SHV, std::cerr);
+  std::cerr << "test1=" << test1 << "\n";
+  bool test2 = is_bounded_face_iterative_bis<T,Tint>(LinSpa, SHV, std::cerr);
+  std::cerr << "test2=" << test2 << "\n";
   //
   // Output the data
   //
@@ -47,11 +50,12 @@ void process(FullNamelist const &eFull) {
   std::string OutFile = BlockSYSTEM.get_string("OutFile");
   auto f_print = [&](std::ostream &os_out) -> void {
     if (OutFormat == "GAP") {
-      os_out << "return " << GAP_logical(result) << ";\n";
+      os_out << "return [" << GAP_logical(test1) << ", " << GAP_logical(test2) << "];\n";
       return;
     }
     if (OutFormat == "CPP") {
-      os_out << result << "\n";
+      os_out << test1 << "\n";
+      os_out << test2 << "\n";
       return;
     }
     std::cerr << "PERF: No matching output for OutFormat=" << OutFormat << "\n";

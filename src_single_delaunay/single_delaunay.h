@@ -279,7 +279,7 @@ ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, 
   MyMatrix<T> GramMat = sd_get_gram_matrix(QuadFunc);
   int n = GramMat.rows();
   // Testing for positive semidefiniteness
-  if (!IsPositiveSemidefinite(sd, os)) {
+  if (!IsPositiveSemiDefinite(sd, os)) {
     T MaxNorm(0);
     MyVector<Tint> V = GetShortVector<T,Tint>(GramMat, MaxNorm, os);
     MyVector<Tint> Vret = ConcatenateScalVec(Tint(0), V);

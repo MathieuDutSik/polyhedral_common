@@ -433,6 +433,7 @@ GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 #ifdef DEBUG_TSPACE_FUNCTIONS
     iter += 1;
     os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix iter=" << iter << " n_vect=" << n_vect << "\n";
+    os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix n_mat=" << n_mat << " n=" << n << "\n";
 #endif
     MyMatrix<T> ListIneq = ZeroMatrix<T>(n_vect + 1, 1 + n_mat);
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -470,7 +471,7 @@ GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     //
     // Failed, trying to find a vector
     //
-    MyMatrix<T> NSP_T = NullspaceMat(TrySuperMat);
+    MyMatrix<T> NSP_T = NullspaceIntMat(TrySuperMat);
     MyMatrix<Tint> NSP = UniversalMatrixConversion<Tint,T>(NSP_T);
     MyMatrix<Tint> Compl = SubspaceCompletionInt<Tint>(NSP, n);
     MyMatrix<T> Compl_T = UniversalMatrixConversion<T,Tint>(Compl);
@@ -479,7 +480,20 @@ GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
     bool StrictIneq = true;
     MyVector<Tint> V1 = GetShortIntegralVector<T, Tint>(M, CritNorm, StrictIneq, os);
     MyVector<Tint> V2 = Compl.transpose() * V1;
-    ListV.push_back(V1);
+#ifdef DEBUG_TSPACE_FUNCTIONS
+    os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix V2=" << StringVectorGAP(V2) << "\n";
+    os << "TSPFCT: GetOnePositiveSemiDefiniteMatrix TrySuperMat=\n";
+    WriteMatrixGAP(os, TrySuperMat);
+    os << "\n";
+#endif
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+    T norm = EvaluationQuadForm(TrySuperMat, V2);
+    if (norm >= 0) {
+      std::cerr << "TSPFCT: The norm should be negative since it should be a counter example\n";
+      throw TerminalException{1};
+    }
+#endif
+    ListV.push_back(V2);
   }
 }
 

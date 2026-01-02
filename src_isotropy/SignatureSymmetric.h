@@ -241,7 +241,7 @@ bool IsPositiveDefinite(MyMatrix<T> const &SymMat,
 }
 
 template <typename T>
-bool IsPositiveSemidefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
+bool IsPositiveSemiDefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
   MyMatrix<T> const &SymMat2 = NSP1.NonDegenerate;
   DiagSymMat<T> NSP2 = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);

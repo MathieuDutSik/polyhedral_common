@@ -1044,7 +1044,7 @@ TestCopositivity(MyMatrix<T> const &eSymmMat,
     CopositivityTestResult<Tint> result{true, "positive coeff", {}};
     return result;
   }
-  if (IsPositiveSemidefinite(eSymmMat, os)) {
+  if (IsPositiveSemiDefinite(eSymmMat, os)) {
     CopositivityTestResult<Tint> result{true, "positive semidefinite", {}};
     return result;
   }
