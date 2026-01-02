@@ -16,7 +16,6 @@
 #include "POLY_LinearProgramming_GLPK.h"
 #endif
 #include "POLY_PolytopeInt.h"
-#include "Parallel_Classes_Types.h"
 #include "Positivity.h"
 #include "Tspace_General.h"
 #include <algorithm>
