@@ -435,33 +435,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           }
         }
       } else {
-        if (RankMat(eMatSec) < n) {
-          std::vector<MyVector<Tint>> list_v3 =
-              GetShortVectorDegenerate<T, Tint>(eMatSec, os);
-          for (auto& eVect3 : list_v3) {
-            if (SetVectTot.count(eVect3) == 1) { // This can happen.
-              eVect3 *= 2;
-            }
-#ifdef SANITY_CHECK_SHORTEST_CONFIG
-            if (TheFamilyVect.count(eVect3) == 1) {
-              std::cerr << "SHORT: eMatSec=\n";
-              WriteMatrix(std::cerr, eMatSec);
-              std::cerr << "SHORT: eVect3=";
-              WriteVectorNoDim(std::cerr, eVect3);
-              std::cerr << "SHORT: We have a clear error here\n";
-              throw TerminalException{1};
-            }
-#endif
-#ifdef DEBUG_SHORTEST_CONFIG
-            os << "SHORT: Inserting from GetShortVectorDegenerate eVect3=";
-            WriteVectorNoDim(os, eVect3);
-#endif
-            TheFamilyVect.insert(eVect3);
-          }
-        } else {
-          bool StrictIneq = true;
-          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(
-              eMatSec, CritNorm, StrictIneq, os);
+        auto f_insert=[&](MyVector<Tint> const& eVect) -> void {
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
           if (TheFamilyVect.count(eVect) == 1) {
             std::cerr << "SHORT: We have a clear error here\n";
@@ -473,6 +447,21 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
           WriteVectorNoDim(os, eVect);
 #endif
           TheFamilyVect.insert(eVect);
+        };
+        if (RankMat(eMatSec) < n) {
+          std::vector<MyVector<Tint>> list_v3 =
+              GetShortVectorDegenerate<T, Tint>(eMatSec, os);
+          for (auto& eVect3 : list_v3) {
+            if (SetVectTot.count(eVect3) == 1) { // This can happen.
+              eVect3 *= 2;
+            }
+            f_insert(eVect3);
+          }
+        } else {
+          bool StrictIneq = true;
+          MyVector<Tint> eVect = GetShortIntegralVector<T, Tint>(
+              eMatSec, CritNorm, StrictIneq, os);
+          f_insert(eVect);
         }
       }
     }
