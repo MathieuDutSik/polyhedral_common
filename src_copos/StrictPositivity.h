@@ -4,7 +4,7 @@
 
 // clang-format off
 #include "Copositivity.h"
-#include "PerfectForm.h"
+#include "shortest_flipping.h"
 #include "Tspace_General.h"
 #include <string>
 #include <utility>
@@ -18,6 +18,66 @@
 #ifdef DISABLE_DEBUG_STRICT_POSITIVITY
 #undef DEBUG_STRICT_POSITIVITY
 #endif
+
+template <typename T, typename Tint> struct NakedPerfect {
+  MyMatrix<T> eGram;
+  MyMatrix<Tint> SHV;
+  MyMatrix<Tint> SHVred;
+  MyMatrix<T> PerfDomEXT;
+  std::vector<std::vector<int>> ListBlock;
+  std::vector<int> ListPos;
+};
+
+template <typename T, typename Tint>
+NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
+                                          MyMatrix<T> const &eGram,
+                                          Tshortest<T, Tint> const &rec_shv,
+                                          [[maybe_unused]] std::ostream &os) {
+  int nbSHV = rec_shv.SHV.rows();
+  std::vector<int> ListPos(nbSHV);
+  int nbMat = LinSpa.ListMat.size();
+  int n = eGram.rows();
+  MyMatrix<T> RyshkovLoc(nbSHV, nbMat);
+  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
+    MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iSHV);
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      T eSum = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVect);
+      RyshkovLoc(iSHV, iMat) = eSum;
+    }
+  }
+  //  os << "RyshkovLoc=\n";
+  //  WriteMatrix(os, RyshkovLoc);
+  std::map<MyVector<T>, std::vector<int>> map;
+  for (int iSHV = 0; iSHV < nbSHV; iSHV++) {
+    MyVector<T> V = GetMatrixRow(RyshkovLoc, iSHV);
+    map[V].push_back(iSHV);
+  }
+  std::vector<std::vector<int>> ListBlock;
+  int i_block = 0;
+  for (auto &kv : map) {
+    ListBlock.push_back(kv.second);
+    for (auto &iSHV : kv.second) {
+      ListPos[iSHV] = i_block;
+    }
+    i_block += 1;
+  }
+  int nbBlock = i_block;
+#ifdef DEBUG_PERFECT_FORM
+  os << "m=" << n << " nbBlock=" << nbBlock << " nbSHV=" << nbSHV
+     << " nbMat=" << nbMat << "\n";
+#endif
+  MyMatrix<T> PerfDomEXT(nbBlock, nbMat);
+  MyMatrix<Tint> SHVred(nbBlock, n);
+  for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+    int iSHV = ListBlock[iBlock][0];
+    MyVector<Tint> eVect = GetMatrixRow(rec_shv.SHV, iSHV);
+    AssignMatrixRow(SHVred, iBlock, eVect);
+    for (int iMat = 0; iMat < nbMat; iMat++) {
+      PerfDomEXT(iBlock, iMat) = RyshkovLoc(iSHV, iMat);
+    }
+  }
+  return {eGram, rec_shv.SHV, SHVred, PerfDomEXT, ListBlock, ListPos};
+}
 
 template <typename T, typename Tint> struct TestStrictPositivity {
   bool result;
