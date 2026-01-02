@@ -46,11 +46,13 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
   std::unordered_set<MyVector<Tint>> setVect;
   for (int i = 0; i < nbRow; i++) {
     MyVector<Tint> eRow = GetMatrixRow(M, i);
-    int iColFound = -1;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      if (iColFound == -1)
+    auto get_icol=[&]() -> int {
+      for (int iCol = 0; iCol < nbCol; iCol++)
         if (eRow(iCol) != 0)
-          iColFound = iCol;
+          return iCol;
+      return -1;
+    };
+    int iColFound = get_icol();
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
     if (iColFound == -1) {
       std::cerr << "SHORT: Bug in SHORT_CleanAntipodality\n";
@@ -58,8 +60,9 @@ MyMatrix<Tint> SHORT_CleanAntipodality(MyMatrix<Tint> const &M) {
       throw TerminalException{1};
     }
 #endif
-    if (eRow(iColFound) < 0)
+    if (eRow(iColFound) < 0) {
       eRow = -eRow;
+    }
     setVect.insert(eRow);
   }
   std::vector<MyVector<Tint>> ListVect;
@@ -270,8 +273,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         SumIneq += eSol.DualSolution(i) * eRow;
       }
       MyVector<T> SumIneqRed = ZeroVector<T>(nbIneqSet);
-      for (int i = 0; i < nbIneqSet; i++)
+      for (int i = 0; i < nbIneqSet; i++) {
         SumIneqRed(i) = SumIneq(i + 1);
+      }
       if (SumIneq(0) < 0 && SumIneqRed == ZeroVector<T>(nbIneqSet)) {
         eRes.reply = false;
         eRes.replyCone = false;

@@ -13,12 +13,11 @@ template <typename T, typename Tint> struct ShortIso {
 };
 
 template <typename T, typename Tint>
-ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
-                                       std::ostream &os) {
+MyMatrix<T> SHORT_GetGram(MyMatrix<Tint> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.cols();
   int nbVect = M.rows();
 #ifdef DEBUG_SHORTEST_CONFIG
-  std::cerr << "nbVect=" << nbVect << "\n";
+  os << "nbVect=" << nbVect << "\n";
 #endif
   MyMatrix<T> Amat = ZeroMatrix<T>(n, n);
   for (int iVect = 0; iVect < nbVect; iVect++) {
@@ -28,6 +27,13 @@ ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
     Amat += pMat;
   }
   MyMatrix<T> TheGramMat = Inverse(Amat);
+  return TheGramMat;
+}
+
+template <typename T, typename Tint>
+ShortIso<T, Tint> SHORT_GetInformation(MyMatrix<Tint> const &M,
+                                       std::ostream &os) {
+  MyMatrix<T> TheGramMat = SHORT_GetGram<T,Tint>(M, os);
   MyMatrix<Tint> SHV =
       ExtractInvariantVectorFamilyZbasis<T, Tint>(TheGramMat, os);
   MyMatrix<Tint> Mc1 = 2 * M;

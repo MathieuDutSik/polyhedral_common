@@ -41,8 +41,9 @@ void process(FullNamelist const &eFull) {
   std::cerr << "We have SHV\n";
   bool test1 = is_bounded_face_iterative<T,Tint>(LinSpa, SHV, std::cerr);
   std::cerr << "test1=" << test1 << "\n";
-  bool test2 = is_bounded_face_iterative_bis<T,Tint>(LinSpa, SHV, std::cerr);
-  std::cerr << "test2=" << test2 << "\n";
+  bool test2 = false;
+  //  bool test2 = is_bounded_face_iterative_bis<T,Tint>(LinSpa, SHV, std::cerr);
+  //  std::cerr << "test2=" << test2 << "\n";
   //
   // Output the data
   //

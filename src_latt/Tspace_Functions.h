@@ -402,6 +402,15 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
   }
 }
 
+
+/*
+  Tries to find a semi-definite matrix.
+  Unfortunately, we tend to go into infinite loops.
+  And that seems to be an intrinsic problem since
+  S_{n,>0} is not a polyhedral cone.
+  ---
+  But it works sometimes.
+ */
 template <typename T, typename Tint>
 std::optional<MyMatrix<T>>
 GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
