@@ -56,24 +56,6 @@ template <typename T, typename Tint> struct NakedPerfect {
 };
 
 template <typename T, typename Tint>
-MyMatrix<T> GetNakedPerfectConeClassical(MyMatrix<Tint> const &M) {
-  int nbRow = M.rows();
-  int n = M.cols();
-  int dimSymm = n * (n + 1) / 2;
-  MyMatrix<T> RetMat(nbRow, dimSymm);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    MyVector<Tint> V = GetMatrixRow(M, iRow);
-    MyMatrix<T> M(n, n);
-    for (int u = 0; u < n; u++)
-      for (int v = 0; v < n; v++)
-        M(u, v) = V(u) * V(v);
-    MyVector<T> Vm = SymmetricMatrixToVector(M);
-    AssignMatrixRow(RetMat, iRow, Vm);
-  }
-  return RetMat;
-}
-
-template <typename T, typename Tint>
 NakedPerfect<T, Tint> GetNakedPerfectCone(LinSpaceMatrix<T> const &LinSpa,
                                           MyMatrix<T> const &eGram,
                                           Tshortest<T, Tint> const &rec_shv,
@@ -380,9 +362,6 @@ bool is_bounded_face_iterative_thi(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tin
   MyMatrix<T> TheGramMat = SHORT_GetGram<T,Tint>(SHV, os);
   std::vector<MyMatrix<T>> ListMat = LinSpa.Basis;
   ListMat.push_back(TheGramMat);
-
-  
-
 }
 
 

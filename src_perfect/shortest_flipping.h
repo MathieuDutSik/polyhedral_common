@@ -28,6 +28,26 @@
 #define TIMINGS_FLIP
 #endif
 
+template <typename T, typename Tint>
+MyMatrix<T> GetNakedPerfectConeClassical(MyMatrix<Tint> const &M) {
+  int nbRow = M.rows();
+  int n = M.cols();
+  int dimSymm = n * (n + 1) / 2;
+  MyMatrix<T> RetMat(nbRow, dimSymm);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    MyVector<Tint> V = GetMatrixRow(M, iRow);
+    MyVector<T> V_T = UniversalVectorConversion<T,Tint>(V);
+    MyMatrix<T> M(n, n);
+    for (int u = 0; u < n; u++)
+      for (int v = 0; v < n; v++)
+	M(u, v) = V_T(u) * V_T(v);
+    MyVector<T> Vm = SymmetricMatrixToVector(M);
+    AssignMatrixRow(RetMat, iRow, Vm);
+  }
+  return RetMat;
+}
+
+
 // Use a set, better asymptotics, but copy needed
 template <typename Tint>
 bool TestInclusionSHV_set(MyMatrix<Tint> const &TheSHVbig,
