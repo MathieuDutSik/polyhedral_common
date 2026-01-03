@@ -112,12 +112,86 @@ T get_single_norm(MyMatrix<T> const& eMat, std::vector<MyVector<Tint>> const& Li
 }
 
 
+/*
+  It is an initial set of vector used for linear programming purposes.
+  So, for the shortest vector but also for other searches.
+  It is supposed to be full-dimensional in T-space, even if ListVect is empty.
+ */
+template <typename Tint>
+std::unordered_set<MyVector<Tint>> get_initial_vector_test_s(int const& n, std::vector<MyVector<Tint>> const &ListVect, [[maybe_unused]] std::ostream &os) {
+  auto f_can=[&](MyVector<Tint> const& V) -> MyVector<Tint> {
+    for (int i=0; i<n; i++) {
+      if (V(i) != 0) {
+        if (V(i) > 0) {
+          return V;
+        }
+        if (V(i) < 0) {
+          return -V;
+        }
+      }
+    }
+    // Zero vector, nothing to be done!
+    return V;
+  };
+  std::unordered_set<MyVector<Tint>> ListForbiddenVector;
+  ListForbiddenVector.insert(ZeroVector<Tint>(n));
+  for (auto & eV: ListVect) {
+    MyVector<Tint> eVcan = f_can(eV);
+    ListForbiddenVector.insert(eVcan);
+  }
+  std::vector<MyVector<Tint>> TestVect1;
+  for (int i = 0; i < n; i++) {
+    for (int j = 0; j < 2; j++) {
+      int shift = -1 + 2 * j;
+      MyVector<Tint> tVect1 = ZeroVector<Tint>(n);
+      tVect1[i] += shift;
+      TestVect1.push_back(tVect1);
+    }
+  }
+  std::vector<MyVector<Tint>> TestVect2;
+  for (size_t i_v = 0; i_v < TestVect1.size(); i_v++) {
+    MyVector<Tint> tVect1 = TestVect1[i_v];
+    for (size_t j_v = i_v+1; j_v < TestVect1.size(); j_v++) {
+      MyVector<Tint> tVect2 = tVect1 + TestVect1[j_v];
+      TestVect2.push_back(tVect2);
+    }
+    TestVect2.push_back(tVect1);
+  }
+  std::unordered_set<MyVector<Tint>> TestVect3;
+  for (auto & eVect: ListVect) {
+    for (auto &tVect2: TestVect2) {
+      MyVector<Tint> tVect3_A = eVect + tVect2;
+      MyVector<Tint> tVect3 = f_can(tVect3_A);
+      if (!IsZeroVector(tVect3) && ListForbiddenVector.count(tVect3) == 0) {
+        TestVect3.insert(tVect3);
+      }
+    }
+  }
+  return TestVect3;
+}
+
+template <typename Tint>
+std::vector<MyVector<Tint>> get_initial_vector_test_v(int const& n, std::vector<MyVector<Tint>> const &ListVect, std::ostream &os) {
+  std::unordered_set<MyVector<Tint>> vectors_s = get_initial_vector_test_s(n, ListVect, os);
+  std::vector<MyVector<Tint>> vectors_v;
+  for (auto & eV: vectors_s) {
+    vectors_v.push_back(eV);
+  }
+  return vectors_v;
+}
+
 template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
     std::ostream &os) {
   ReplyRealizability<T, Tint> eRes;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
+  if (ListVect.size() == 0) {
+    std::cerr << "SHORT: ListVect should not be empty\n";
+    throw TerminalException{1};
+  }
+#endif
   int n = ListVect[0].size();
   int nbVect = ListVect.size();
   int nbMat = ListMat.size();
@@ -152,23 +226,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
   }
   //
-  // Forming the vector family
+  // Forming the vector family. Start with something and extend later on.
   //
-  std::unordered_set<MyVector<Tint>> ListForbiddenVector = SetVectTot;
-  ListForbiddenVector.insert(ZeroVector<Tint>(n));
-  std::unordered_set<MyVector<Tint>> TheFamilyVect;
-  for (auto &eVect : ListVect) {
-    for (int i = 0; i < n; i++) {
-      for (int j = 0; j < 2; j++) {
-        int shift = -1 + 2 * j;
-        MyVector<Tint> rVect = eVect;
-        rVect[i] += shift;
-        if (ListForbiddenVector.count(rVect) == 0) {
-          TheFamilyVect.insert(rVect);
-        }
-      }
-    }
-  }
+  std::unordered_set<MyVector<Tint>> TheFamilyVect = get_initial_vector_test_s(n, ListVect, os);
 #ifdef DEBUG_SHORTEST_CONFIG
   os << "SHORT: |TheFamilyVect|=" << TheFamilyVect.size() << "\n";
 #endif
