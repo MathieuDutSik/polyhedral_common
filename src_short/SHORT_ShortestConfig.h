@@ -181,32 +181,9 @@ std::vector<MyVector<Tint>> get_initial_vector_test_v(int const& n, std::vector<
 }
 
 template <typename T, typename Tint>
-ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
-    std::vector<MyVector<Tint>> const &ListVect,
-    std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
-    std::ostream &os) {
-  ReplyRealizability<T, Tint> eRes;
-#ifdef SANITY_CHECK_SHORTEST_CONFIG
-  if (ListVect.size() == 0) {
-    std::cerr << "SHORT: ListVect should not be empty\n";
-    throw TerminalException{1};
-  }
-#endif
-  int n = ListVect[0].size();
+std::vector<MyMatrix<T>> get_spec_shv_basis(std::vector<MyMatrix<T>> const& ListMat, std::vector<MyVector<Tint>> const &ListVect) {
   int nbVect = ListVect.size();
   int nbMat = ListMat.size();
-#ifdef DEBUG_SHORTEST_CONFIG
-  os << "SHORT: SHORT_TestRealizabilityShortestFamilyEquivariant, n=" << n << " nbVect=" << nbVect << " nbMat=" << nbMat << "\n";
-#endif
-  std::unordered_set<MyVector<Tint>> SetVectTot;
-  for (auto &eVect : ListVect) {
-    SetVectTot.insert(eVect);
-    SetVectTot.insert(-eVect);
-  }
-  std::vector<MyVector<Tint>> ListVectTot;
-  for (auto & eVect: SetVectTot) {
-    ListVectTot.push_back(eVect);
-  }
   MyMatrix<T> MatrixValuesDiff(nbVect - 1, nbMat);
   for (int iMat = 0; iMat < nbMat; iMat++) {
     MyMatrix<T> const& eMat = ListMat[iMat];
@@ -225,6 +202,34 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     MyVector<T> eRow = GetMatrixRow(NSP, iDim);
     TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
   }
+  return TheBasis;
+}
+
+
+
+template <typename T, typename Tint>
+ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
+    std::vector<MyVector<Tint>> const &ListVect,
+    std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
+    std::ostream &os) {
+  ReplyRealizability<T, Tint> eRes;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
+  if (ListVect.size() == 0) {
+    std::cerr << "SHORT: ListVect should not be empty\n";
+    throw TerminalException{1};
+  }
+#endif
+  int n = ListVect[0].size();
+#ifdef DEBUG_SHORTEST_CONFIG
+  os << "SHORT: SHORT_TestRealizabilityShortestFamilyEquivariant, n=" << n << " nbVect=" << ListVect.size() << " nbMat=" << ListMat.size() << "\n";
+#endif
+  std::unordered_set<MyVector<Tint>> SetVectTot;
+  for (auto &eVect : ListVect) {
+    SetVectTot.insert(eVect);
+    SetVectTot.insert(-eVect);
+  }
+  std::vector<MyMatrix<T>> TheBasis = get_spec_shv_basis(ListMat, ListVect);
+  int dimSpa = TheBasis.size();
   //
   // Forming the vector family. Start with something and extend later on.
   //
@@ -278,9 +283,9 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #endif
     MyMatrix<T> ListIneq = GetListIneq();
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-    for (auto &eVect : ListVectTot) {
+    for (auto &eVect : SetVectTot) {
       if (TheFamilyVect.count(eVect) == 1) {
-        std::cerr << "SHORT: We find one of ListVectTot in TheFamilyVect\n";
+        std::cerr << "SHORT: We find one of SetVectTot in TheFamilyVect\n";
         throw TerminalException{1};
       }
     }
@@ -433,7 +438,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: SetSHV=\n";
         WriteMatrix(os, MatrixFromUnorderedSetFamily(SetSHV));
-        os << "SHORT: ListVectTot=\n";
+        os << "SHORT: SetVectTot=\n";
         WriteMatrix(os, MatrixFromUnorderedSetFamily(SetVectTot));
 #endif
         bool testEqua = SetSHV == SetVectTot;
@@ -470,7 +475,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             MyMatrix<Tint> M1 = MatrixFromUnorderedSetFamily(SetSHV);
             os << "SHORT: M1=\n";
             WriteMatrix(os, M1);
-            MyMatrix<Tint> M2 = MatrixFromVectorFamily(ListVectTot);
+            MyMatrix<Tint> M2 = MatrixFromUnorderedSetFamily(SetVectTot);
             os << "SHORT: M2=\n";
             WriteMatrix(os, M2);
 #endif
