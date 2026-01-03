@@ -76,6 +76,14 @@ template <typename T, typename Tint> struct ReplyRealizability {
 };
 
 template <typename T, typename Tint>
+ReplyRealizability<T,Tint> not_realizable_family() {
+  ReplyRealizability<T,Tint> eRes{false, false, {}, {}, {}};
+  return eRes;
+}
+
+
+
+template <typename T, typename Tint>
 MyVector<T> SHORT_GetIneq_Tspace(std::vector<MyMatrix<T>> const &ListMat,
                                  MyVector<Tint> const &eVect) {
   int nbMat = ListMat.size();
@@ -209,7 +217,6 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
     std::ostream &os) {
-  ReplyRealizability<T, Tint> eRes;
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
   if (ListVect.size() == 0) {
     std::cerr << "SHORT: ListVect should not be empty\n";
@@ -252,12 +259,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     ToBeMinimized(iDim + 1) = scal;
   }
   if (IsZeroVector(ToBeMinimized)) {
-    eRes.reply = false;
-    eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
     os << "SHORT: RETURN case 1\n";
 #endif
-    return eRes;
+    return not_realizable_family<T,Tint>();
   }
   MyVector<T> ZerVect =
       SHORT_GetIneq_Tspace<T, Tint>(TheBasis, ZeroVector<Tint>(n));
@@ -291,12 +296,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
     for (int i = 0; i < sizFamVect; i++) {
       MyVector<T> rVect = GetMatrixRow(ListIneq, i);
       if (rVect == ZerVect) {
-        eRes.reply = false;
-        eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: RETURN case 2\n";
 #endif
-        return eRes;
+        return not_realizable_family<T,Tint>();
       }
     }
     MyMatrix<T> SetIneq = SortUnicizeMatrix(ListIneq);
@@ -319,12 +322,10 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         SumIneqRed(i) = SumIneq(i + 1);
       }
       if (SumIneq(0) < 0 && SumIneqRed == ZeroVector<T>(nbIneqSet)) {
-        eRes.reply = false;
-        eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: RETURN case 3\n";
 #endif
-        return eRes;
+        return not_realizable_family<T,Tint>();
       }
       std::cerr << "SHORT: It seems we have a big problem here. Please correct\n";
       throw TerminalException{1};
@@ -358,20 +359,16 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
       os << "SHORT: eOptimal=" << eOptimal << " eOptimalPrev=" << eOptimalPrev << "\n";
 #endif
       if (eOptimal > 1) {
-        eRes.reply = false;
-        eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: RETURN case 4\n";
 #endif
-        return eRes;
+        return not_realizable_family<T,Tint>();
       }
       if (eOptimal >= 1 && NoExtension) {
-        eRes.reply = false;
-        eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: RETURN case 5\n";
 #endif
-        return eRes;
+        return not_realizable_family<T,Tint>();
       }
       MyVector<T> eVectEmb = eSol.DirectSolution;
       MyVector<T> rVect = GetDirectSolutionExt(eSol);
@@ -443,6 +440,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         os << "SHORT: testEqua=" << testEqua << "\n";
 #endif
         if (testEqua) {
+          ReplyRealizability<T, Tint> eRes;
           eRes.reply = true;
           eRes.replyCone = true;
           eRes.SHV = rec_shv.SHV;
@@ -477,22 +475,21 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
             WriteMatrix(os, M2);
 #endif
             if (IsSubsetUnorderedSet(SetSHV, SetVectTot)) {
+              ReplyRealizability<T, Tint> eRes;
               eRes.reply = false;
               eRes.replyCone = true;
+              eRes.eMat = eMatSec;
               eRes.SHV = rec_shv.SHV;
               eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
-              eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
               os << "SHORT: RETURN case 7\n";
 #endif
               return eRes;
             } else {
-              eRes.reply = false;
-              eRes.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
               os << "SHORT: RETURN case 8\n";
 #endif
-              return eRes;
+              return not_realizable_family<T,Tint>();
             }
           }
         }
@@ -553,40 +550,6 @@ int KissingNumberUpperBound(int const &n) {
   std::cerr
       << "SHORT: The dimension is too large for use to give the kissing number upper bound\n";
   throw TerminalException{1};
-}
-
-template <typename Tint> struct SHVreduced {
-  MyMatrix<Tint> SHVred;
-  MyMatrix<Tint> ReductionMatrix;
-};
-
-template <typename Tint>
-SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
-                                              std::ostream &os) {
-  int n = eSHV.rows();
-  int nbVect = eSHV.cols();
-  using Tfield = typename overlying_field<Tint>::field_type;
-  auto GetGram = [&](MyMatrix<Tint> const &uSHV) -> MyMatrix<Tfield> {
-    MyMatrix<Tfield> TheGram = ZeroMatrix<Tfield>(n, n);
-    for (int iVect = 0; iVect < nbVect; iVect++)
-      for (int i = 0; i < n; i++)
-        for (int j = 0; j < n; j++)
-          TheGram(i, j) += uSHV(iVect, i) * uSHV(iVect, j);
-    return TheGram;
-  };
-  MyMatrix<Tfield> TheGram = GetGram(eSHV);
-  LLLreduction<Tfield, Tint> res = LLLreducedBasis<Tfield, Tint>(TheGram, os);
-  MyMatrix<Tfield> TheRemainder = res.GramMatRed;
-  MyMatrix<Tint> TheTrans = res.Pmat;
-  MyMatrix<Tint> Pmat = TransposedMat(TheTrans);
-  MyMatrix<Tint> eSHVred = eSHV * Pmat;
-#ifdef SANITY_CHECK_SHORTEST_CONFIG
-  if (!TestEqualityMatrix(GetGram(eSHVred), TheRemainder)) {
-    std::cerr << "SHORT: Matrix error somewhere\n";
-    throw TerminalException{1};
-  }
-#endif
-  return {std::move(eSHVred), std::move(Pmat)};
 }
 
 template <typename T> std::vector<MyMatrix<T>> StandardSymmetricBasis(int n) {
@@ -847,28 +810,6 @@ SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
     }
   }
   return ListSpann;
-}
-
-template <typename Tint>
-void WriteListConfigurationShortestVector(
-    std::string const &eFile, std::vector<MyMatrix<Tint>> const &ListConf) {
-  std::ofstream os(eFile);
-  int nbConf = ListConf.size();
-  os << nbConf << "\n";
-  for (int i = 0; i < nbConf; i++)
-    WriteMatrix(os, ListConf[i]);
-}
-
-template <typename Tint>
-std::vector<MyMatrix<Tint>>
-ReadListConfigurationShortestVector(std::string const &eFile) {
-  std::ifstream is(eFile);
-  int nbConf;
-  is >> nbConf;
-  std::vector<MyMatrix<Tint>> ListConf(nbConf);
-  for (int i = 0; i < nbConf; i++)
-    ListConf[i] = ReadMatrix<Tint>(is);
-  return ListConf;
 }
 
 // clang-format off

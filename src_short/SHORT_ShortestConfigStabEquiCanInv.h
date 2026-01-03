@@ -7,6 +7,40 @@
 #include "LatticeStabEquiCan.h"
 // clang-format on
 
+template <typename Tint> struct SHVreduced {
+  MyMatrix<Tint> SHVred;
+  MyMatrix<Tint> ReductionMatrix;
+};
+
+template <typename Tint>
+SHVreduced<Tint> SHORT_GetLLLreduction_Kernel(MyMatrix<Tint> const &eSHV,
+                                              std::ostream &os) {
+  int n = eSHV.rows();
+  int nbVect = eSHV.cols();
+  using Tfield = typename overlying_field<Tint>::field_type;
+  auto GetGram = [&](MyMatrix<Tint> const &uSHV) -> MyMatrix<Tfield> {
+    MyMatrix<Tfield> TheGram = ZeroMatrix<Tfield>(n, n);
+    for (int iVect = 0; iVect < nbVect; iVect++)
+      for (int i = 0; i < n; i++)
+        for (int j = 0; j < n; j++)
+          TheGram(i, j) += uSHV(iVect, i) * uSHV(iVect, j);
+    return TheGram;
+  };
+  MyMatrix<Tfield> TheGram = GetGram(eSHV);
+  LLLreduction<Tfield, Tint> res = LLLreducedBasis<Tfield, Tint>(TheGram, os);
+  MyMatrix<Tfield> TheRemainder = res.GramMatRed;
+  MyMatrix<Tint> TheTrans = res.Pmat;
+  MyMatrix<Tint> Pmat = TransposedMat(TheTrans);
+  MyMatrix<Tint> eSHVred = eSHV * Pmat;
+#ifdef SANITY_CHECK_SHORTEST_CONFIG
+  if (!TestEqualityMatrix(GetGram(eSHVred), TheRemainder)) {
+    std::cerr << "SHORT: Matrix error somewhere\n";
+    throw TerminalException{1};
+  }
+#endif
+  return {std::move(eSHVred), std::move(Pmat)};
+}
+
 template <typename T, typename Tint> struct ShortIso {
   MyMatrix<T> GramMat;
   MyMatrix<Tint> SHVdisc;
