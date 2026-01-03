@@ -182,6 +182,8 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
   int n = LinSpa.n;
   int n_vect = SHV.rows();
   int n_mat = LinSpa.ListMat.size();
+  std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
+  std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
   MyMatrix<T> MatScal(n_mat, n_vect);
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
     MyVector<Tint> V0 = GetMatrixRow(SHV, 0);
@@ -201,7 +203,7 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
     }
     BasisSpace.push_back(mat);
   }
-  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix<T,Tint>(BasisSpace, os);
+  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix_ListV<T,Tint>(BasisSpace, TestV_init, os);
   if (opt) {
     return false;
   } else {
@@ -219,6 +221,8 @@ bool is_bounded_face_iterative_bis(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tin
   os << "PERF: is_bounded_face_iterative_bis, step 1\n";
 #endif
   int n = LinSpa.n;
+  std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
+  std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
   int n_vect = SHV.rows();
   int n_mat = LinSpa.ListMat.size();
 #ifdef DEBUG_BOUNDED_FACE
@@ -260,7 +264,7 @@ bool is_bounded_face_iterative_bis(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tin
 #ifdef DEBUG_BOUNDED_FACE
   os << "PERF: is_bounded_face_iterative_bis, step 5\n";
 #endif
-  std::optional<MyMatrix<T>> opt = GetOnePositiveSemiDefiniteMatrix<T,Tint>(BasisSpace, os);
+  std::optional<MyMatrix<T>> opt = GetOnePositiveSemiDefiniteMatrix_ListV<T,Tint>(BasisSpace, TestV_init, os);
   if (opt) {
     return false;
   } else {
