@@ -24,8 +24,7 @@ int main(int argc, char *argv[]) {
     using Tint = int;
     //
     std::string FileIn = argv[1];
-    std::vector<MyMatrix<Tint>> ListSHV =
-        ReadListConfigurationShortestVector<Tint>(FileIn);
+    std::vector<MyMatrix<Tint>> ListSHV = ReadListMatrixFile<Tint>(FileIn);
     std::unordered_set<MyMatrix<Tint>> set;
     for (auto &SHV : ListSHV) {
       MyMatrix<Tint> SHV_can = SHORT_Canonicalize<T, Tint>(SHV, std::cerr);

@@ -12,9 +12,6 @@
 #include "MAT_functions.h"
 #include "MatrixGroup.h"
 #include "POLY_LinearProgramming.h"
-#ifdef USE_GLPK
-#include "POLY_LinearProgramming_GLPK.h"
-#endif
 #include "POLY_PolytopeInt.h"
 #include "Positivity.h"
 #include "Tspace_InvariantForm.h"

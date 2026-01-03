@@ -19,8 +19,7 @@ int main(int argc, char *argv[]) {
     using Tint = int;
     //
     std::string FileIn = argv[1];
-    std::vector<MyMatrix<Tint>> ListSHV =
-        ReadListConfigurationShortestVector<Tint>(FileIn);
+    std::vector<MyMatrix<Tint>> ListSHV = ReadListMatrixFile<Tint>(FileIn);
     int nbShort = ListSHV.size();
     //
     int N;
