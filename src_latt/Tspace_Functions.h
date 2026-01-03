@@ -291,29 +291,6 @@ ComputePointStabilizerTspace(MyMatrix<T> const &SuperMat,
   return ListGenMatr;
 }
 
-template<typename Tint>
-std::vector<MyVector<Tint>> get_initial_shv(int const& n) {
-  std::vector<MyVector<Tint>> ListV;
-  for (int i = 0; i < n; i++) {
-    MyVector<Tint> V = ZeroVector<Tint>(n);
-    V(i) = 1;
-    ListV.push_back(V);
-  }
-  for (int i = 0; i < n; i++) {
-    for (int j = i + 1; j < n; j++) {
-      for (int sign = 0; sign < 2; sign++) {
-        int signB = -1 + 2 * sign;
-        MyVector<Tint> V = ZeroVector<Tint>(n);
-        V(i) = 1;
-        V(j) = signB;
-        ListV.push_back(V);
-      }
-    }
-  }
-  return ListV;
-}
-
-
 /*
   Find one positive definite matrix in the space assuming that one exists.
   If one of the matrix of the basis is positive definite then the first one
@@ -324,8 +301,9 @@ std::vector<MyVector<Tint>> get_initial_shv(int const& n) {
  */
 template <typename T, typename Tint>
 std::optional<MyMatrix<T>>
-GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
-                             std::ostream &os) {
+GetOnePositiveDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
+                                   std::vector<MyVector<Tint>> const& ListV_init,
+                                   std::ostream &os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
     std::cerr
@@ -343,7 +321,7 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       return eMat;
     }
   }
-  std::vector<MyVector<Tint>> ListV = get_initial_shv<Tint>(n);
+  std::vector<MyVector<Tint>> ListV = ListV_init;
 #ifdef DEBUG_TSPACE_FUNCTIONS
   int iter=0;
 #endif
@@ -402,6 +380,21 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
   }
 }
 
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
+                             std::ostream &os) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr
+        << "TSPACE: The number of matrices is 0 so we cannot build a positive "
+           "definite matrix\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+  std::vector<MyVector<Tint>> ListV_init = get_initial_vector_test_v<Tint>(n, {}, os);
+  return GetOnePositiveDefiniteMatrix_ListV(ListMat, ListV_init, os);
+}
 
 /*
   Tries to find a semi-definite matrix.
@@ -413,8 +406,9 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
  */
 template <typename T, typename Tint>
 std::optional<MyMatrix<T>>
-GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
-                                 [[maybe_unused]] std::ostream &os) {
+GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
+                                       std::vector<MyVector<Tint>> const& ListV_init,
+                                       [[maybe_unused]] std::ostream &os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
     std::cerr
@@ -432,7 +426,7 @@ GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
       return eMat;
     }
   }
-  std::vector<MyVector<Tint>> ListV = get_initial_shv<Tint>(n);
+  std::vector<MyVector<Tint>> ListV = ListV_init;
   int n_vect_init = ListV.size();
 #ifdef DEBUG_TSPACE_FUNCTIONS
   int iter=0;
@@ -504,6 +498,22 @@ GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 #endif
     ListV.push_back(V2);
   }
+}
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+GetOnePositiveSemiDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
+                                 [[maybe_unused]] std::ostream &os) {
+  int n_mat = ListMat.size();
+  if (n_mat == 0) {
+    std::cerr
+        << "TSPACE: The number of matrices is 0 so we cannot build a positive "
+           "definite matrix\n";
+    throw TerminalException{1};
+  }
+  int n = ListMat[0].rows();
+  std::vector<MyVector<Tint>> ListV_init = get_initial_vector_test_v<Tint>(n, {}, os);
+  return GetOnePositiveSemiDefiniteMatrix_ListV(ListMat, ListV_init, os);
 }
 
 
