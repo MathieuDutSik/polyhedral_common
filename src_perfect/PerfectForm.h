@@ -180,29 +180,9 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
 template<typename T, typename Tint>
 bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
   int n = LinSpa.n;
-  int n_vect = SHV.rows();
-  int n_mat = LinSpa.ListMat.size();
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
-  MyMatrix<T> MatScal(n_mat, n_vect);
-  for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    MyVector<Tint> V0 = GetMatrixRow(SHV, 0);
-    T val0 = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V0);
-    for (int i_vect=0; i_vect<n_vect-1; i_vect++) {
-      MyVector<Tint> V = GetMatrixRow(SHV, i_vect+1);
-      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
-      MatScal(i_mat, i_vect) = val - val0;
-    }
-  }
-  MyMatrix<T> NSP = NullspaceMat(MatScal);
-  std::vector<MyMatrix<T>> BasisSpace;
-  for (int i_nsp=0; i_nsp<NSP.rows(); i_nsp++) {
-    MyMatrix<T> mat = ZeroMatrix<T>(n, n);
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      mat += NSP(i_nsp, i_mat) * LinSpa.ListMat[i_mat];
-    }
-    BasisSpace.push_back(mat);
-  }
+  std::vector<MyMatrix<T>> BasisSpace = get_spec_shv_basis(LinSpa.ListMat, ListVect);
   std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix_ListV<T,Tint>(BasisSpace, TestV_init, os);
   if (opt) {
     return false;
