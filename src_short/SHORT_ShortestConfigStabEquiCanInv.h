@@ -105,6 +105,13 @@ MyMatrix<Tint> SHORT_Canonicalize(MyMatrix<Tint> const &M, std::ostream &os) {
   return M_can;
 }
 
+template <typename T, typename Tint>
+size_t SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream &os) {
+  ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
+  size_t seed = 146;
+  return GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
+}
+
 // clang-format off
 #endif  // SRC_SHORT_SHORT_SHORTESTCONFIGSTABEQUICANINV_H_
 // clang-format on

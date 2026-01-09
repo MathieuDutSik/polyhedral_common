@@ -178,7 +178,7 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
   lambda = A[v] for v in SHV
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool is_bounded_face_iterative_atp1(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
   int n = LinSpa.n;
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
@@ -196,7 +196,7 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
   0 = A[v] for v in SHV
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative_bis(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool is_bounded_face_iterative_atp2(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
 #ifdef DEBUG_BOUNDED_FACE
   os << "PERF: is_bounded_face_iterative_bis, step 1\n";
 #endif
@@ -255,13 +255,20 @@ bool is_bounded_face_iterative_bis(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tin
 /*
   Look for a positive semi-definite matrix in the T-space such that
   Min(A) = SHV
+  ---
+  The difficulty is that the set SHV is not necessarily full dimensional.
+  * This makes computing the symmetry group extremely difficult.
+  * One possible improvement could be to find a quadratic form which
+    is positive semidefinite and whose kernel is equal to the SHV.
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative_thi(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
-  // We look for the full stabilizer of the subspace and the quadratic forms.
-  MyMatrix<T> TheGramMat = SHORT_GetGram<T,Tint>(SHV, os);
-  std::vector<MyMatrix<T>> ListMat = LinSpa.Basis;
-  ListMat.push_back(TheGramMat);
+bool is_bounded_face_iterative_atp3(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+
+  std::vector<MyVector<Tint>> ListVectWork = VectorFamilyFromMatrix(SHV);
+  std::vector<MyMatrix<T>> const& ListMat = LinSpa.Basis;
+  bool NoExtension = true;
+  ReplyRealizability<T, Tint> RecTest = SHORT_TestRealizabilityShortestFamily_Raw<T, Tint>(ListVectWork, ListMat, NoExtension, os);
+
 }
 
 

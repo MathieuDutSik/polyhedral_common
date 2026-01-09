@@ -190,6 +190,144 @@ bool IsMatchingListOfPrimes(std::vector<PrimeListAllowed> const &ListPrime,
   return true;
 }
 
+template <typename Tint>
+Tint SHORT_GetMaximumDeterminant(MyMatrix<Tint> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  IteratorBinomial<mpz_class> eIter(nbRow, nbCol);
+  std::vector<Face> ListFace = eIter.ListAllFace();
+  bool IsFirst = true;
+  Tint eRet = -2;
+  for (auto &eFace : ListFace) {
+    MyMatrix<Tint> Mred = SelectRow(M, eFace);
+    Tint eDet = DeterminantMat(Mred);
+    Tint eDetA = T_abs(eDet);
+    if (IsFirst) {
+      eRet = eDetA;
+      IsFirst = false;
+    } else {
+      if (eDetA > eRet) {
+        eRet = eDetA;
+      }
+    }
+  }
+  return eRet;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>>
+SHORT_SpannSimplicial(MyMatrix<Tint> const &M,
+                      std::vector<MyMatrix<Tint>> const &ListSHVinp,
+                      std::ostream &os) {
+  Tint eMaxDet = SHORT_GetMaximumDeterminant(M);
+  int n = M.cols();
+  int nbVect = M.rows();
+  std::vector<MyMatrix<Tint>> ListMatrGen =
+      SHORT_GetStabilizer<T, Tint, Tgroup>(M, os);
+  //
+  // Building the set of inequalities
+  //
+  IteratorBinomial<mpz_class> eIter(nbVect, n - 1);
+  std::vector<Face> ListAllFace = eIter.ListAllFace();
+  std::vector<MyVector<T>> ListIneq;
+  MyMatrix<T> M_T = UniversalMatrixConversion<T, Tint>(M);
+  for (auto const &eFace : ListAllFace) {
+    MyMatrix<T> Mred = SelectRow(M_T, eFace);
+    if (RankMat(Mred) == n - 1) {
+      MyVector<T> eVect(n);
+      for (int i = 0; i < n; i++) {
+        MyMatrix<T> eLine(n, 1);
+        for (int j = 0; j < n; j++)
+          eLine(j, 0) = 0;
+        eLine(i, 0) = 1;
+        MyMatrix<T> Mdet = Concatenate(Mred, eLine);
+        T eDet = DeterminantMat(Mdet);
+        eVect(i) = eDet;
+      }
+      MyVector<T> eIneq(n + 1), fIneq(n + 1);
+      eIneq(0) = eMaxDet;
+      fIneq(0) = eMaxDet;
+      for (int i = 0; i < n; i++) {
+        eIneq(i + 1) = eVect(i);
+        fIneq(i + 1) = -eVect(i);
+      }
+      ListIneq.push_back(eIneq);
+      ListIneq.push_back(fIneq);
+    }
+  }
+  MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
+  MyMatrix<T> EXT = cdd::DualDescription(FAC, os);
+  std::vector<MyVector<Tint>> ListPt =
+      GetListIntegralPoint<T, Tint>(FAC, EXT, os);
+  //
+  // Breaking into orbits
+  //
+  std::vector<MyMatrix<Tint>> ListGen;
+  for (auto &eGen : ListMatrGen)
+    ListGen.push_back(TransposedMat(eGen));
+  std::function<MyVector<Tint>(MyVector<Tint> const &, MyMatrix<Tint> const &)>
+      TheAct = [](MyVector<Tint> const &x,
+                  MyMatrix<Tint> const &M) -> MyVector<Tint> { return M * x; };
+  std::vector<MyVector<Tint>> ListRepr =
+      OrbitSplittingGeneralized(ListPt, ListGen, TheAct);
+  //
+  // Building the set of inequalities
+  //
+  auto IsPresent = [&](MyMatrix<Tint> const &P) -> bool {
+    for (auto &P2 : ListSHVinp) {
+      std::optional<MyMatrix<Tint>> eResEquiv =
+          SHORT_TestEquivalence<T, Tint, Tgroup>(P, P2, os);
+      if (eResEquiv)
+        return true;
+    }
+    return false;
+  };
+  auto PassFacetIsoCheck = [&](MyMatrix<Tint> const &U) -> bool {
+    int len = U.rows();
+    for (int i = 0; i < len; i++) {
+      Face eFace(len);
+      for (int j = 0; j < len; j++)
+        eFace[j] = 1;
+      eFace[i] = 0;
+      MyMatrix<Tint> Usel = SelectRow(U, eFace);
+      if (!IsPresent(Usel))
+        return false;
+    }
+    return true;
+  };
+  std::vector<MyMatrix<Tint>> ListSpann;
+  auto FuncInsert = [&](MyMatrix<Tint> const &Mnew) -> void {
+    if (!PassFacetIsoCheck(Mnew))
+      return;
+    for (auto &P2 : ListSpann) {
+      std::optional<MyMatrix<Tint>> eResEquiv =
+          SHORT_TestEquivalence<T, Tint, Tgroup>(Mnew, P2, os);
+      if (eResEquiv) {
+        return;
+      }
+    }
+    ReplyRealizability<T, Tint> eTestRes =
+        SHORT_TestRealizabilityShortestFamily<T, Tint, Tgroup>(Mnew,
+                                                               os);
+    if (eTestRes.reply && eTestRes.replyCone)
+      ListSpann.push_back(Mnew);
+  };
+  for (auto &ePt : ListRepr) {
+    MyMatrix<Tint> eLine(n, 1);
+    Tint eNorm = 0;
+    for (int i = 0; i < n; i++) {
+      Tint eVal = ePt(i);
+      eNorm += eVal * eVal;
+      eLine(i) = eVal;
+    }
+    if (eNorm > 0) {
+      MyMatrix<Tint> eCand = Concatenate(M, eLine);
+      FuncInsert(eCand);
+    }
+  }
+  return ListSpann;
+}
+
 // clang-format off
 #endif  // SRC_SHORT_SHORT_ENUMERATION_H_
 // clang-format on
