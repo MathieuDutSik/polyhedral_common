@@ -55,12 +55,9 @@
     . No backtracking algorithm is required
       for computing equivalence.
     . The inconvenience is that we would need
-      to store all the triples. But 
-
-
+      to store all the triples.
 
   Therefore, we use the second algorithm
-
  */
 
 //
@@ -195,27 +192,26 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   int n = pctdi.LinSpa.n;
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
-  auto find_matching_entry=[&](triple<Tint> const& t, bool is_well_rounded) -> std::optional<BoundEntry<Tint>> {
+  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<BoundEntry<Tint>> {
     int i_domain = 0;
     for (auto & face1: l_faces) {
-      if (is_well_rounded == face1.is_well_rounded) {
-        std::optional<MyMatrix<Tint>> opt =
-          test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t);
-        if (opt) {
-          MyMatrix<Tint> const& M = *opt;
-          int sign = 1;
-          BoundEntry<Tint> be{i_domain, sign, M};
-          return be;
-        }
+      std::optional<MyMatrix<Tint>> opt =
+        test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t);
+      if (opt) {
+        MyMatrix<Tint> const& M = *opt;
+        int sign = 1;
+        BoundEntry<Tint> be{i_domain, sign, M};
+        return be;
       }
       i_domain += 1;
     }
     return {};
   };
   auto is_insertable=[&](bool is_well_rounded) -> bool {
+    /*
     if (pctdi.only_well_rounded) {
       return is_well_rounded;
-    }
+      }*/
     return true;
   };
   auto get_initial_triple=[&](FacePerfectComplex<T,Tint,Tgroup> const& face, Face const& eIncd) -> triple<Tint> {
@@ -265,7 +261,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 1\n";
 #endif
-    std::optional<BoundEntry<Tint>> opt = find_matching_entry(t, is_well_rounded);
+    std::optional<BoundEntry<Tint>> opt = find_matching_entry(t);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 2\n";
 #endif
@@ -279,6 +275,15 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 4\n";
 #endif
+    bool is_finite = test_finiteness_group<T,Tint>(pair.second, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: f_insert, is_well_rounded=" << is_well_rounded << " is_finite=" << is_finite << "\n";
+#endif
+    if (is_well_rounded != is_finite) {
+      std::cerr << "PERFCOMP: f_insert, is_well_rounded=" << is_well_rounded << "\n";
+      std::cerr << "PERFCOMP: f_insert,       is_finite=" << is_finite << "\n";
+      throw TerminalException{1};
+    }
     int iCone = t.iCone;
     int n_ext = t.f_ext.count();
     int n_ext_big = pctdi.l_perfect[iCone].EXT.rows();

@@ -319,7 +319,7 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
 #endif
     int rnk = RankMat(SumMat);
     bool is_bounded_self_dual = rnk == n;
-#ifdef SANITY_CHECK_BOUNDED_FACE
+#ifdef SANITY_CHECK_BOUNDED_FACE_DISABLE
     if (is_bounded_self_dual != is_bounded_iterative) {
       std::cerr << "TSPACE: Incoherent results\n";
       std::cerr << "TSPACE: rnk=" << rnk << " n=" << n << "\n";

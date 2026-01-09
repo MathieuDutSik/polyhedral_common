@@ -8,6 +8,7 @@
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
 #include "Tspace_ListMatTransform.h"
+#include "Tspace_ListMatSaturation.h"
 #include "SHORT_Realizability.h"
 #include <set>
 #include <vector>
@@ -347,6 +348,10 @@ bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGens, std::ost
   int n = ListGens[0].rows();
   std::vector<MyMatrix<T>> ListGens_T = UniversalStdVectorMatrixConversion<T,Tint>(ListGens);
   std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, ListGens_T, os);
+  if (ListMat.size() == 0) {
+    // No invariant matrix
+    return false;
+  }
   std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix<T,Tint>(ListMat, os);
   if (opt) {
     return true;
@@ -367,7 +372,7 @@ template <typename T, typename Tint>
 std::optional<MyMatrix<T>>
 GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
                                        std::vector<MyVector<Tint>> const& ListV_init,
-                                       [[maybe_unused]] std::ostream &os) {
+                                       std::ostream &os) {
   int n_mat = ListMat.size();
   if (n_mat == 0) {
     std::cerr
@@ -661,151 +666,6 @@ GetRandomPositiveDefiniteNoNontrivialSymm(LinSpaceMatrix<T> const &LinSpa,
 }
 
 template <typename T>
-bool is_integrally_saturated_matrix_space(
-    std::vector<MyMatrix<T>> const &ListMat) {
-  int n_mat = ListMat.size();
-  if (n_mat == 0) {
-    std::cerr << "TSPACE: We have n_mat=0\n";
-    std::cerr
-        << "TSPACE: The code could work with n_mat=0 but we are not sure it "
-           "makes sense\n";
-    throw TerminalException{1};
-  }
-  int n = ListMat[0].rows();
-  int sym_dim = (n + 1) * n / 2;
-  if (n_mat == sym_dim) {
-    std::cerr << "TSPACE: We have n_mat=" << n_mat
-              << " equal to sym_dim=" << sym_dim << "\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<T> BigMat(n_mat, sym_dim);
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    if (!IsIntegralMatrix(ListMat[i_mat])) {
-      return false;
-    }
-    int pos = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = i; j < n; j++) {
-        BigMat(i_mat, pos) = ListMat[i_mat](i, j);
-        pos++;
-      }
-    }
-  }
-  MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
-  MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);
-  int dim_space = BigMat_renorm.rows();
-  MyMatrix<T> sol_mat(dim_space, dim_space);
-  for (int i = 0; i < dim_space; i++) {
-    MyVector<T> V = GetMatrixRow(BigMat, i);
-    std::optional<MyVector<T>> opt = SolutionMat(BigMat_renorm, V);
-    if (!opt) {
-      std::cerr << "TSP_FCT: IntegralSaturationSpace, no solution at i=" << i
-                << "\n";
-      throw TerminalException{1};
-    }
-    MyVector<T> const &V2 = *opt;
-    AssignMatrixRow(sol_mat, i, V2);
-  }
-  if (!IsIntegralMatrix(sol_mat)) {
-    std::cerr << "TSP_FCT: IntegralSaturationSpace, The matrix sol_mat should "
-                 "be integral\n";
-    throw TerminalException{1};
-  }
-  T det = T_abs(DeterminantMat(sol_mat));
-  if (det == 1) {
-    return true;
-  } else {
-    return false;
-  }
-}
-
-/*
-  We need the space of matrices to be spanning the integral saturation so that
-  the elements of GlStab are integral.
- */
-template <typename T>
-std::vector<MyMatrix<T>>
-IntegralSaturationSpace(std::vector<MyMatrix<T>> const &ListMat,
-                        [[maybe_unused]] std::ostream &os) {
-  int n_mat = ListMat.size();
-  if (n_mat == 0) {
-    std::cerr << "TSPACE: We have n_mat=0\n";
-    std::cerr
-        << "TSPACE: The code could work with n_mat=0 but we are not sure it "
-           "makes sense\n";
-    throw TerminalException{1};
-  }
-  int n = ListMat[0].rows();
-  int sym_dim = (n + 1) * n / 2;
-  if (n_mat == sym_dim) {
-    std::cerr << "TSPACE: We have n_mat=" << n_mat
-              << " equal to sym_dim=" << sym_dim << "\n";
-    throw TerminalException{1};
-  }
-  MyMatrix<T> BigMat(n_mat, sym_dim);
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    int pos = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = i; j < n; j++) {
-        BigMat(i_mat, pos) = ListMat[i_mat](i, j);
-        pos++;
-      }
-    }
-  }
-  MyMatrix<T> NSP1 = NullspaceIntTrMat(BigMat);
-  MyMatrix<T> BigMat_renorm = NullspaceIntTrMat(NSP1);
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-  int dim_space = BigMat_renorm.rows();
-  MyMatrix<T> sol_mat(dim_space, dim_space);
-  for (int i = 0; i < dim_space; i++) {
-    MyVector<T> V = GetMatrixRow(BigMat, i);
-    std::optional<MyVector<T>> opt = SolutionMat(BigMat_renorm, V);
-    if (!opt) {
-      std::cerr << "TSP_FCT: IntegralSaturationSpace, no solution at i=" << i
-                << "\n";
-      throw TerminalException{1};
-    }
-    MyVector<T> const &V2 = *opt;
-    AssignMatrixRow(sol_mat, i, V2);
-  }
-  if (!IsIntegralMatrix(sol_mat)) {
-    std::cerr << "TSP_FCT: BigMat=\n";
-    WriteMatrix(std::cerr, BigMat);
-    std::cerr << "TSP_FCT: BigMat_renorm=\n";
-    WriteMatrix(std::cerr, BigMat_renorm);
-    std::cerr << "TSP_FCT: sol_mat=\n";
-    WriteMatrix(std::cerr, sol_mat);
-    std::cerr << "TSP_FCT: IntegralSaturationSpace, The matrix sol_mat should "
-                 "be integral\n";
-    throw TerminalException{1};
-  }
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSP_FCT: IntegralSaturationSpace, det=" << DeterminantMat(sol_mat)
-     << "\n";
-#endif
-#endif
-  if (BigMat_renorm.rows() != n_mat) {
-    std::cerr << "TSPACE: Incoherence in the dimensions\n";
-    throw TerminalException{1};
-  }
-  std::vector<MyMatrix<T>> ListMatRet;
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> eMat(n, n);
-    int pos = 0;
-    for (int i = 0; i < n; i++) {
-      for (int j = i; j < n; j++) {
-        T val = BigMat_renorm(i_mat, pos);
-        eMat(i, j) = val;
-        eMat(j, i) = val;
-        pos++;
-      }
-    }
-    ListMatRet.push_back(eMat);
-  }
-  return ListMatRet;
-}
-
-template <typename T>
 MyMatrix<T> LINSPA_GetMatrixInTspace(LinSpaceMatrix<T> const &LinSpa,
                                      MyVector<T> const &eVect) {
   return GetMatrixFromBasis(LinSpa.ListMat, eVect);
@@ -1004,7 +864,7 @@ Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
        << " ePerm=" << ePerm << "\n";
     pos += 1;
 #endif
-    LGenGlobStab_perm.push_back(ePerm);
+    LGenGlobStab_perm.emplace_back(std::move(ePerm));
   }
   return Tgroup(LGenGlobStab_perm, n_row);
 }
