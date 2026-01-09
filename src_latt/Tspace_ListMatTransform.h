@@ -1,7 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_LATT_TSPACE_INVARIANTFORM_H_
-#define SRC_LATT_TSPACE_INVARIANTFORM_H_
-
+#ifndef SRC_LATT_TSPACE_LISTMATTRANSFORM_H_
+#define SRC_LATT_TSPACE_LISTMATTRANSFORM_H_
 
 template <typename T>
 MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
@@ -17,8 +16,9 @@ MyMatrix<T> GetMatrixFromBasis(std::vector<MyMatrix<T>> const &ListMat,
     std::cerr << "TSPACE: But they should be both equal\n";
     throw TerminalException{1};
   }
-  for (int iMat = 0; iMat < nbMat; iMat++)
+  for (int iMat = 0; iMat < nbMat; iMat++) {
     RetMat += eVect(iMat) * ListMat[iMat];
+  }
   return RetMat;
 }
 
@@ -96,6 +96,83 @@ BasisInvariantForm(int const &n, std::vector<MyMatrix<T>> const &ListGen,
   return TheBasis;
 }
 
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> get_spec_basis_shv_equal(std::vector<MyMatrix<T>> const& ListMat, std::vector<MyVector<Tint>> const &ListVect) {
+  int nbVect = ListVect.size();
+  int nbMat = ListMat.size();
+  MyMatrix<T> MatrixValuesDiff(nbVect - 1, nbMat);
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    MyMatrix<T> const& eMat = ListMat[iMat];
+    MyVector<Tint> const& V1 = ListVect[0];
+    T val1 = EvaluationQuadForm(eMat, V1);
+    for (int iVect = 0; iVect < nbVect - 1; iVect++) {
+      MyVector<Tint> const& V2 = ListVect[iVect+1];
+      T val2 = EvaluationQuadForm(eMat, V2);
+      MatrixValuesDiff(iVect, iMat) = val2 - val1;
+    }
+  }
+  MyMatrix<T> NSP = NullspaceTrMat(MatrixValuesDiff);
+  int dimSpa = NSP.rows();
+  std::vector<MyMatrix<T>> TheBasis(dimSpa);
+  for (int iDim = 0; iDim < dimSpa; iDim++) {
+    MyVector<T> eRow = GetMatrixRow(NSP, iDim);
+    TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
+  }
+  return TheBasis;
+}
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> get_spec_basis_shv_zero(std::vector<MyMatrix<T>> const& ListMat, std::vector<MyVector<Tint>> const &ListVect) {
+  int nbVect = ListVect.size();
+  int nbMat = ListMat.size();
+  MyMatrix<T> MatrixValues(nbVect, nbMat);
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    MyMatrix<T> const& eMat = ListMat[iMat];
+    for (int iVect = 0; iVect < nbVect; iVect++) {
+      MyVector<Tint> const& V = ListVect[iVect];
+      T val = EvaluationQuadForm(eMat, V);
+      MatrixValues(iVect, iMat) = val;
+    }
+  }
+  MyMatrix<T> NSP = NullspaceTrMat(MatrixValues);
+  int dimSpa = NSP.rows();
+  std::vector<MyMatrix<T>> TheBasis(dimSpa);
+  for (int iDim = 0; iDim < dimSpa; iDim++) {
+    MyVector<T> eRow = GetMatrixRow(NSP, iDim);
+    TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
+  }
+  return TheBasis;
+}
+
+
+template <typename T, typename Tint>
+std::vector<MyMatrix<T>> get_spec_basis_shv_kernel(std::vector<MyMatrix<T>> const& ListMat, std::vector<MyVector<Tint>> const &ListVect) {
+  int nbVect = ListVect.size();
+  int nbMat = ListMat.size();
+  MyMatrix<T> MatrixScalars(nbVect * nbVect, nbMat);
+  for (int iMat = 0; iMat < nbMat; iMat++) {
+    MyMatrix<T> const& eMat = ListMat[iMat];
+    int pos = 0;
+    for (int iVect = 0; iVect < nbVect; iVect++) {
+      MyVector<Tint> const& V0 = ListVect[iVect];
+      for (int jVect = 0; jVect < nbVect; jVect++) {
+        MyVector<Tint> const& V1 = ListVect[jVect];
+        T val = ScalarProductQuadForm(eMat, V0, V1);
+        MatrixScalars(pos, iMat) = val;
+        pos += 1;
+      }
+    }
+  }
+  MyMatrix<T> NSP = NullspaceTrMat(MatrixScalars);
+  int dimSpa = NSP.rows();
+  std::vector<MyMatrix<T>> TheBasis(dimSpa);
+  for (int iDim = 0; iDim < dimSpa; iDim++) {
+    MyVector<T> eRow = GetMatrixRow(NSP, iDim);
+    TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
+  }
+  return TheBasis;
+}
+
 // clang-format off
-#endif  // SRC_LATT_TSPACE_INVARIANTFORM_H_
+#endif  // SRC_LATT_TSPACE_LISTMATTRANSFORM_H_
 // clang-format on

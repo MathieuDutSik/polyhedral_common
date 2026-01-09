@@ -188,8 +188,6 @@ struct ResultStepEnumeration {
   std::optional<FullBoundary<Tint>> boundary;
 };
 
-
-
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
   using Telt = typename Tgroup::Telt;

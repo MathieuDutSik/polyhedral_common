@@ -186,7 +186,7 @@ bool find_positive_definite_shv_equal(LinSpaceMatrix<T> const &LinSpa, MyMatrix<
   int n = LinSpa.n;
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
-  std::vector<MyMatrix<T>> BasisSpace = get_spec_shv_basis(LinSpa.ListMat, ListVect);
+  std::vector<MyMatrix<T>> BasisSpace = get_spec_basis_shv_equal(LinSpa.ListMat, ListVect);
   std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix_ListV<T,Tint>(BasisSpace, TestV_init, os);
   if (opt) {
     return false;
@@ -211,44 +211,7 @@ bool find_positive_semidefinite_shv_zero(LinSpaceMatrix<T> const &LinSpa, MyMatr
   int n = LinSpa.n;
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
-  int n_vect = SHV.rows();
-  int n_mat = LinSpa.ListMat.size();
-#ifdef DEBUG_BOUNDED_FACE
-  os << "PERF: is_bounded_face_iterative_bis, step 2\n";
-#endif
-  MyMatrix<T> MatScal(n_mat, n_vect);
-  for (int i_mat=0; i_mat<n_mat; i_mat++) {
-    for (int i_vect=0; i_vect<n_vect; i_vect++) {
-      MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
-      T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
-      MatScal(i_mat, i_vect) = val;
-    }
-  }
-#ifdef DEBUG_BOUNDED_FACE
-  os << "PERF: is_bounded_face_iterative_bis, step 3\n";
-#endif
-  MyMatrix<T> NSP = NullspaceMat(MatScal);
-  std::vector<MyMatrix<T>> BasisSpace;
-#ifdef DEBUG_BOUNDED_FACE
-  os << "PERF: is_bounded_face_iterative_bis, step 4\n";
-#endif
-  for (int i_nsp=0; i_nsp<NSP.rows(); i_nsp++) {
-    MyMatrix<T> mat = ZeroMatrix<T>(n, n);
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      mat += NSP(i_nsp, i_mat) * LinSpa.ListMat[i_mat];
-    }
-#ifdef SANITY_CHECK_BOUNDED_FACE
-    for (int i_vect=0; i_vect<n_vect; i_vect++) {
-      MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
-      T val = EvaluationQuadForm<T, Tint>(mat, V);
-      if (val != 0) {
-        std::cerr << "PERF: The vector should have value 0\n";
-        throw TerminalException{1};
-      }
-    }
-#endif
-    BasisSpace.push_back(mat);
-  }
+  std::vector<MyMatrix<T>> BasisSpace = get_spec_basis_shv_zero<T,Tint>(LinSpa.ListMat, ListVect);
 #ifdef DEBUG_BOUNDED_FACE
   os << "PERF: is_bounded_face_iterative_bis, step 5\n";
 #endif
@@ -360,6 +323,8 @@ bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV,
     if (is_bounded_self_dual != is_bounded_iterative) {
       std::cerr << "TSPACE: Incoherent results\n";
       std::cerr << "TSPACE: rnk=" << rnk << " n=" << n << "\n";
+      std::cerr << "TSPACE: SHV=\n";
+      WriteMatrix(os, SHV);
       std::cerr << "TSPACE: is_bounded_self_dual=" << is_bounded_self_dual << "\n";
       std::cerr << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
       throw TerminalException{1};

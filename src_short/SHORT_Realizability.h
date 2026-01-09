@@ -14,7 +14,7 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_PolytopeInt.h"
 #include "Positivity.h"
-#include "Tspace_InvariantForm.h"
+#include "Tspace_ListMatTransform.h"
 #include <algorithm>
 #include <map>
 #include <string>
@@ -186,33 +186,6 @@ std::vector<MyVector<Tint>> get_initial_vector_test_v(int const& n, std::vector<
 }
 
 template <typename T, typename Tint>
-std::vector<MyMatrix<T>> get_spec_shv_basis(std::vector<MyMatrix<T>> const& ListMat, std::vector<MyVector<Tint>> const &ListVect) {
-  int nbVect = ListVect.size();
-  int nbMat = ListMat.size();
-  MyMatrix<T> MatrixValuesDiff(nbVect - 1, nbMat);
-  for (int iMat = 0; iMat < nbMat; iMat++) {
-    MyMatrix<T> const& eMat = ListMat[iMat];
-    MyVector<Tint> const& V1 = ListVect[0];
-    T val1 = EvaluationQuadForm(eMat, V1);
-    for (int iVect = 0; iVect < nbVect - 1; iVect++) {
-      MyVector<Tint> const& V2 = ListVect[iVect+1];
-      T val2 = EvaluationQuadForm(eMat, V2);
-      MatrixValuesDiff(iVect, iMat) = val2 - val1;
-    }
-  }
-  MyMatrix<T> NSP = NullspaceTrMat(MatrixValuesDiff);
-  int dimSpa = NSP.rows();
-  std::vector<MyMatrix<T>> TheBasis(dimSpa);
-  for (int iDim = 0; iDim < dimSpa; iDim++) {
-    MyVector<T> eRow = GetMatrixRow(NSP, iDim);
-    TheBasis[iDim] = GetMatrixFromBasis(ListMat, eRow);
-  }
-  return TheBasis;
-}
-
-
-
-template <typename T, typename Tint>
 ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
@@ -232,7 +205,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     SetVectTot.insert(eVect);
     SetVectTot.insert(-eVect);
   }
-  std::vector<MyMatrix<T>> TheBasis = get_spec_shv_basis(ListMat, ListVect);
+  std::vector<MyMatrix<T>> TheBasis = get_spec_basis_shv_equal(ListMat, ListVect);
   int dimSpa = TheBasis.size();
   //
   // Forming the vector family. Start with something and extend later on.
@@ -325,7 +298,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       }
       if (SumIneq(0) < 0 && IsZeroVector) {
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "SHORT: RETURN case 3\n";
+        os << "SHORT: RETURN case 3. Not realizable, no primal solution\n";
 #endif
         return not_realizable_family<T,Tint>();
       }
@@ -362,13 +335,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
 #endif
       if (eOptimal > 1) {
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "SHORT: RETURN case 4\n";
+        os << "SHORT: RETURN case 4. Not realizable. Too large minimum > 1\n";
 #endif
         return not_realizable_family<T,Tint>();
       }
       if (eOptimal >= 1 && NoExtension) {
 #ifdef DEBUG_SHORTEST_CONFIG
-        os << "SHORT: RETURN case 5\n";
+        os << "SHORT: RETURN case 5. Not realizable. Too large minimum >= 1 && NoExtension\n";
 #endif
         return not_realizable_family<T,Tint>();
       }
@@ -449,7 +422,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
           eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
           eRes.eMat = eMatSec;
 #ifdef DEBUG_SHORTEST_CONFIG
-          os << "SHORT: RETURN case 6\n";
+          os << "SHORT: eMatSec=\n";
+          WriteMatrix(os, eMatSec);
+          os << "SHORT: ListVect=\n";
+          WriteMatrix(os, MatrixFromVectorFamily(ListVect));
+          os << "SHORT: rec_shv.SHV=\n";
+          WriteMatrix(os, rec_shv.SHV);
+          os << "SHORT: RETURN case 6. Fully realizable\n";
 #endif
           return eRes;
         } else {
@@ -484,12 +463,12 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
               eRes.SHV = rec_shv.SHV;
               eRes.SHVclean = SHORT_CleanAntipodality(rec_shv.SHV);
 #ifdef DEBUG_SHORTEST_CONFIG
-              os << "SHORT: RETURN case 7\n";
+              os << "SHORT: RETURN case 7. Not realizable, but extensible to a realizable one\n";
 #endif
               return eRes;
             } else {
 #ifdef DEBUG_SHORTEST_CONFIG
-              os << "SHORT: RETURN case 8\n";
+              os << "SHORT: RETURN case 8. Not realizable\n";
 #endif
               return not_realizable_family<T,Tint>();
             }

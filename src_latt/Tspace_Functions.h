@@ -7,7 +7,7 @@
 #include "Shvec_exact.h"
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
-#include "Tspace_InvariantForm.h"
+#include "Tspace_ListMatTransform.h"
 #include "SHORT_Realizability.h"
 #include <set>
 #include <vector>
@@ -350,6 +350,7 @@ GetOnePositiveSemiDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
   for (int i_mat = 0; i_mat < n_mat; i_mat++) {
     MyMatrix<T> const &eMat = ListMat[i_mat];
     if (IsPositiveSemiDefinite(eMat, os)) {
+      // A useful ansatz
       return eMat;
     }
   }
