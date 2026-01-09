@@ -176,9 +176,13 @@ bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
 /*
   Look for a positive definite matrix in the T-space such that
   lambda = A[v] for v in SHV
+  ---
+  That function does not address the issue for which it was created
+  (finding bounded
+  but it has independent interest.
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative_atp1(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool find_positive_definite_shv_equal(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
   int n = LinSpa.n;
   std::vector<MyVector<Tint>> ListVect = VectorFamilyFromMatrix(SHV);
   std::vector<MyVector<Tint>> TestV_init = get_initial_vector_test_v<Tint>(n, ListVect, os);
@@ -194,9 +198,13 @@ bool is_bounded_face_iterative_atp1(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Ti
 /*
   Look for a positive semi-definite matrix in the T-space such that
   0 = A[v] for v in SHV
+  ---
+  That function does not address the issue for which it was created
+  but it has independent interest.
+
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative_atp2(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool find_positive_semidefinite_shv_zero(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
 #ifdef DEBUG_BOUNDED_FACE
   os << "PERF: is_bounded_face_iterative_bis, step 1\n";
 #endif
@@ -262,19 +270,14 @@ bool is_bounded_face_iterative_atp2(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Ti
     is positive semidefinite and whose kernel is equal to the SHV.
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative_atp3(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
 
   std::vector<MyVector<Tint>> ListVectWork = VectorFamilyFromMatrix(SHV);
-  std::vector<MyMatrix<T>> const& ListMat = LinSpa.Basis;
+  std::vector<MyMatrix<T>> const& ListMat = LinSpa.ListMat;
   bool NoExtension = true;
   ReplyRealizability<T, Tint> RecTest = SHORT_TestRealizabilityShortestFamily_Raw<T, Tint>(ListVectWork, ListMat, NoExtension, os);
-
+  return RecTest.reply;
 }
-
-
-
-
-
 
 /*
   A set of vectors define a bounded face if the conditions
