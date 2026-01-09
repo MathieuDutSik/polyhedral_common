@@ -324,6 +324,38 @@ GetOnePositiveDefiniteMatrix(std::vector<MyMatrix<T>> const &ListMat,
 }
 
 /*
+  Test group finiteness.
+  An integral matrix group G is finite if and only if it preserves
+  a positive definite quadratic form.
+  Proof:
+  * If G is finite then take the identity and the average under G. The average
+    is positive definite and is preserved.
+  * If G preserves a positive definite quadratic form Q, then G is a subgroup
+    of the stabilizer of Q. The stabilizer of Q is finite so that follows.
+
+  If a matrix group is finite then it preserves a positive definite quadratic form
+  ---
+  We only need to determine finiteness, so no need to care too much about issues
+  of transpose and similar.
+ */
+template<typename T, typename Tint>
+bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGens, std::ostream &os) {
+  if (ListGens.size() == 0) {
+    // No generators, so the group is trivial.
+    return true;
+  }
+  int n = ListGens[0].rows();
+  std::vector<MyMatrix<T>> ListGens_T = UniversalStdVectorMatrixConversion<T,Tint>(ListGens);
+  std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, ListGens_T, os);
+  std::optional<MyMatrix<T>> opt = GetOnePositiveDefiniteMatrix<T,Tint>(ListMat, os);
+  if (opt) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+/*
   Tries to find a semi-definite matrix.
   Unfortunately, we tend to go into infinite loops.
   And that seems to be an intrinsic problem since
