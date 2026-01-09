@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 #include "NumberTheory.h"
-#include "SHORT_ShortestConfig.h"
+#include "SHORT_Realizability.h"
 
 int main(int argc, char *argv[]) {
   HumanTime time1;

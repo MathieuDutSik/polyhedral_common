@@ -4,7 +4,7 @@
 #include "Group.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
-#include "SHORT_ShortestConfig.h"
+#include "SHORT_Realizability.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

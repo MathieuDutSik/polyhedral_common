@@ -2,7 +2,7 @@
 #include "Group.h"
 #include "NumberTheory.h"
 #include "Permutation.h"
-#include "SHORT_ShortestConfig.h"
+#include "SHORT_Realizability.h"
 #include "rational.h"
 
 template<typename T, typename Tint>

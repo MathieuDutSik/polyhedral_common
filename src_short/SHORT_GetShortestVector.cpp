@@ -2,7 +2,7 @@
 // clang-format off
 #include "NumberTheory.h"
 #include "rational.h"
-#include "SHORT_ShortestConfig.h"
+#include "SHORT_Realizability.h"
 // clang-format on
 
 int main(int argc, char *argv[]) {

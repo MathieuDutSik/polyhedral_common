@@ -8,7 +8,7 @@
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
 #include "Tspace_InvariantForm.h"
-#include "SHORT_ShortestConfig.h"
+#include "SHORT_Realizability.h"
 #include <set>
 #include <vector>
 #include <unordered_map>
