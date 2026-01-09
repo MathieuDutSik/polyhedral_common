@@ -213,7 +213,7 @@ std::vector<MyMatrix<T>> get_spec_shv_basis(std::vector<MyMatrix<T>> const& List
 
 
 template <typename T, typename Tint>
-ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
+ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     std::vector<MyVector<Tint>> const &ListVect,
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
     std::ostream &os) {
@@ -225,7 +225,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
 #endif
   int n = ListVect[0].size();
 #ifdef DEBUG_SHORTEST_CONFIG
-  os << "SHORT: SHORT_TestRealizabilityShortestFamilyEquivariant, n=" << n << " nbVect=" << ListVect.size() << " nbMat=" << ListMat.size() << "\n";
+  os << "SHORT: SHORT_TestRealizabilityShortestFamily_Raw, n=" << n << " nbVect=" << ListVect.size() << " nbMat=" << ListMat.size() << "\n";
 #endif
   std::unordered_set<MyVector<Tint>> SetVectTot;
   for (auto &eVect : ListVect) {
@@ -317,11 +317,13 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamilyEquivariant(
         MyMatrix<T> eRow = GetMatrixRow(SetIneq, i);
         SumIneq += eSol.DualSolution(i) * eRow;
       }
-      MyVector<T> SumIneqRed = ZeroVector<T>(nbIneqSet);
+      bool IsZeroVector = true;
       for (int i = 0; i < nbIneqSet; i++) {
-        SumIneqRed(i) = SumIneq(i + 1);
+        if (SumIneq(i + 1) != 0) {
+          IsZeroVector = false;
+        }
       }
-      if (SumIneq(0) < 0 && SumIneqRed == ZeroVector<T>(nbIneqSet)) {
+      if (SumIneq(0) < 0 && IsZeroVector) {
 #ifdef DEBUG_SHORTEST_CONFIG
         os << "SHORT: RETURN case 3\n";
 #endif
@@ -612,16 +614,13 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     NoExtension = true;
   }
   while (true) {
-    ReplyRealizability<T, Tint> RecTest;
     if (InitialSize > KissingNumberUpperBound(n)) {
-      RecTest.reply = false;
-      RecTest.replyCone = false;
 #ifdef DEBUG_SHORTEST_CONFIG
       std::cerr << "SHORT: RETURN case 9\n";
 #endif
-      return RecTest;
+      return not_realizable_family<T,Tint>();
     }
-    RecTest = SHORT_TestRealizabilityShortestFamilyEquivariant<T, Tint>(
+    ReplyRealizability<T, Tint> RecTest = SHORT_TestRealizabilityShortestFamily_Raw<T, Tint>(
         ListVectWork, ListMat, NoExtension, os);
     if (RecTest.reply) {
       bool replyRet = static_cast<int>(ListVectWork.size()) == InitialSize;
@@ -644,9 +643,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
       return RecTest;
     }
     if (!RecTest.replyCone) {
-      RecTest.reply = false;
-      RecTest.replyCone = false;
-      return RecTest;
+      return not_realizable_family<T,Tint>();
     }
     int SizPrev = ListVectWork.size();
     int nbSHVclean = RecTest.SHVclean.rows();
@@ -660,9 +657,7 @@ SHORT_TestRealizabilityShortestFamily(MyMatrix<Tint> const &Minput,
     std::cerr << "SHORT: SizPrev=" << SizPrev << " SizAfter=" << SizAfter << "\n";
 #endif
     if (SizAfter == SizPrev) {
-      RecTest.reply = false;
-      RecTest.replyCone = false;
-      return RecTest;
+      return not_realizable_family<T,Tint>();
     }
   }
 }
