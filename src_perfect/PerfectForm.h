@@ -11,6 +11,7 @@
 #include "Tspace_General.h"
 #include "fractions.h"
 #include "POLY_RecursiveDualDesc.h"
+#include "MatrixGroupAverage.h"
 #include <map>
 #include <string>
 #include <utility>
@@ -243,99 +244,217 @@ bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> c
 }
 
 /*
-  A set of vectors define a bounded face if the conditions
-  A in LinSpa, Min(A) = SHV
-  defines a bounded face of the complex.
-  ---
-  What do we mean by bounded face?
-  * The condition A >= 0,
-    A = t_1 A_1 + .... + t_m A_m
-    and A[v] = 1 for v in SHV
-    implies that Tr(A) <= C for some constant C.
-  * An equivalent condition is that
-    A in LinSpa, A[v] = 0 for v in SHV
-    A >= 0 implies that A = 0.
+  We consider here the question of well roundedness of
+  the faces of the cellular complex.
 
-  For the cone of positive definite matrices, the necessary
-  and sufficient condition is that SHV is of full rank.
+  Known properties of those vector configurations:
+  * Any cell is the set of minimum vectors of a positive
+    definite quadratic form. This can be proved by taking
+    the average of the quadratic forms corresponding to
+    the perfect domains containing it.
 
-  For self-dual, we have a fast algorithm.
+  * The key property in question has to be descending.
+    That is if X does not satisfy P, then faces of X do
+    not satisfy it as well.
+    + The infinite stabilizer. If a face F has an
+      infinite stabilizer and a subface G\subset F has
+      a finite stabilizer. That seems impossible.
+    + The condition that there exist a positive semidefinite
+      form in the T-space which is zero on F. It is of
+      course true for the subface trivially. [It does
+      not appear sensible to consider the form being
+      zero on the whole linear span of the subset]
+      . That property appears very hard to prove on its
+        own.
+      . However, if the cell in question might be maximal
+        for the property, then for each cell containing G
+        and which does not have this property, we can provide
+        some vectors which should be strictly positive. This
+        might help the linear program if this is something we
+        want to pursue
+    + Whether the set of shortest vectors are of full rank.
+      That property can be tested relatively easily. It is
+      not an adequate notion, but it exists.
 
-  For non self-dual, we have a more expensive iterative
-  algorithm.
+  Specific notions:
+  * The self-duality of some cones. Some cones are self-dual
+    and some are not.
+    + The theory seems to align very well:
+      . The real places, we embed into S^n, the complex in
+        H^n.
+      . The expression of the quadratic form as a sum of
+        individual quadratic forms appear sensible and not
+        break the self-duality.
+      . For the case of groups
+    + The imaginary quadratic case might be the typical
+      example of this kind. It does appear to work.
+    + We have to understand how this works out because the
+      use of the inverse matrix A0 is specific.
+    + Meanwhile the check that the corresponding matrix
+      is positive semidefinite is a good test of
+      correctness of the algorithm.
+    + Then the face is bounded if and only if the
+      corresponding form is positive definite.
+
+  * The span of the vectors is full dimensional.
+    This property on page 462 of
+    A. Ash, "Small dimensional classifying spaces for
+    arithmetic subgroups of general linear groups"
+    is M(L) S = S^n.
+    Points:
+    + That property can be interpreted in our setting.
+    + We provide a number of generators of the ring.
+      If the rank of the span of the shortest vectors
+      under it is full dimensional, then we are in
+      the bounded case.
+
+  So, we have 3 properties that should be equivalent
+  for the bounded face:
+  * finite stabilizer.
+  * self-dual property.
+  * spanning property.
+  If we pass those tests, then we should be reasonably
+  confident about our understanding of the situation.
+
+  ----
+
+  Design:
+  * Self-dual property and spanning property are easy
+    to resolve.
+  * But the finite stabilizer requires computing the
+    stabilizer. That is expensive.
+  * So, the self-dual and spanning properties are
+    determined if they are available. If they cannot
+    be computed, then marked as None.
+  * If full dimensional directly, then mark everything
+    as {true}
+  * The bounded finite stabilizer requires more work.
+    But may be needed if we have neither spanning nor
+    self-duality.
  */
+struct PerfectBoundednessProperty {
+  std::optional<bool> bounded_self_dual;
+  std::optional<bool> bounded_spanning;
+  std::optional<bool> bounded_finite_stabilizer;
+};
+
+void check_pbp(PerfectBoundednessProperty const& pbp) {
+  std::unordered_map<std::string, bool> map_result;
+  std::set<bool> results;
+  if (pbp.bounded_self_dual) {
+    bool val = *pbp.bounded_self_dual;
+    map_result["self_dual"] = val;
+    results.insert(val);
+  }
+  if (pbp.bounded_spanning) {
+    bool val = *pbp.bounded_spanning;
+    map_result["spanning"] = val;
+    results.insert(val);
+  }
+  if (pbp.bounded_finite_stabilizer) {
+    bool val = *pbp.bounded_finite_stabilizer;
+    map_result["finite_stabilizer"] = val;
+    results.insert(val);
+  }
+  if (results.size() != 1) {
+    std::cerr << "Inconsistent results\n";
+    for (auto & kv: map_result) {
+      std::cerr << "key=" << kv.first << " result=" << kv.second << "\n";
+    }
+    throw TerminalException{1};
+  }
+}
+
+bool get_result(PerfectBoundednessProperty const& pbp) {
+  if (pbp.bounded_self_dual) {
+    return *pbp.bounded_self_dual;
+  }
+  if (pbp.bounded_spanning) {
+    return *pbp.bounded_spanning;
+  }
+  if (pbp.bounded_finite_stabilizer) {
+    return *pbp.bounded_finite_stabilizer;
+  }
+  std::cerr << "One of the methods should have worked\n";
+  throw TerminalException{1};
+}
+
 template<typename T, typename Tint>
-bool is_bounded_face(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+bool is_bounded_self_dual(SelfDualInfo<T> const& self_dual_info, std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, [[maybe_unused]] std::ostream &os) {
+  int n_vect = SHV.rows();
+  int n = SHV.cols();
+  int n_mat = ListMat.size();
+  MyVector<T> SumRay = ZeroVector<T>(n_mat);
+  for (int i_vect=0; i_vect<n_vect; i_vect++) {
+    MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      T val = EvaluationQuadForm<T, Tint>(ListMat[i_mat], V);
+      SumRay(i_mat) += val;
+    }
+  }
+  MyVector<T> ExprBasis = self_dual_info.PairwiseScalarInv * SumRay;
+  MyMatrix<T> SumMat = ZeroMatrix<T>(n,n);
+  for (int i_mat=0; i_mat<n_mat; i_mat++) {
+    SumMat += ExprBasis(i_mat) * ListMat[i_mat];
+  }
+#ifdef SANITY_CHECK_BOUNDED_FACE
+  if (!IsPositiveSemiDefinite(SumMat, os)) {
+    std::cerr << "The matrix should be positive semi-definite\n";
+    std::cerr << "So, maybe the cone is not self-dual\n";
+    throw TerminalException{1};
+  }
+#endif
+  int rnk = RankMat(SumMat);
+  if (rnk == n) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+template<typename T, typename Tint>
+bool is_bounded_spanning_elements(std::vector<MyMatrix<T>> const& l_spanning_elements, MyMatrix<Tint> const& SHV, [[maybe_unused]] std::ostream &os) {
+  int n = SHV.cols();
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(SHV);
+  MyMatrix<T> SHV_spann = DirectSpannEquivariantSpace(SHV_T, l_spanning_elements);
+  int rnk = RankMat(SHV_spann);
+  if (rnk == n) {
+    return true;
+  } else {
+    return false;
+  }
+}
+
+
+template<typename T, typename Tint>
+PerfectBoundednessProperty initial_bounded_property(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
   int n = LinSpa.n;
   int rnk = RankMat(SHV);
+  std::optional<bool> bounded_self_dual;
+  std::optional<bool> bounded_spanning;
+  std::optional<bool> bounded_finite_stabilizer;
+  PerfectBoundednessProperty pbp{bounded_self_dual, bounded_spanning, bounded_finite_stabilizer};
+
   if (rnk == n) {
     // For the case of classic Voronoi, that would be a necessary and
     // sufficient condition.
-    return true;
+    // That case should be very frequent and so this accelerate.
+    pbp.bounded_self_dual = {true};
+    pbp.bounded_spanning = {true};
+    pbp.bounded_finite_stabilizer = {true};
+    return pbp;
   }
-  int n_vect = SHV.rows();
-  int n_mat = LinSpa.ListMat.size();
   if (LinSpa.self_dual_info) {
-#ifdef SANITY_CHECK_BOUNDED_FACE
-    bool is_bounded_iterative = is_bounded_face_iterative(LinSpa, SHV, os);
-# ifdef DEBUG_BOUNDED_FACE
-    os << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
-# endif
-#endif
-    // For self-dual, we can apply a more direct algorithm.
     SelfDualInfo<T> const& self_dual_info = *LinSpa.self_dual_info;
-    MyVector<T> SumRay = ZeroVector<T>(n_mat);
-    for (int i_vect=0; i_vect<n_vect; i_vect++) {
-      MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
-      for (int i_mat=0; i_mat<n_mat; i_mat++) {
-        T val = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
-        SumRay(i_mat) += val;
-      }
-    }
-    MyVector<T> ExprBasis = self_dual_info.PairwiseScalarInv * SumRay;
-    MyMatrix<T> SumMat = ZeroMatrix<T>(n,n);
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      SumMat += ExprBasis(i_mat) * LinSpa.ListMat[i_mat];
-    }
-#ifdef SANITY_CHECK_BOUNDED_FACE
-    for (int i_mat=0; i_mat<n_mat; i_mat++) {
-      MyMatrix<T> const& eMat = LinSpa.ListMat[i_mat];
-      T val1(0);
-      for (int i_vect=0; i_vect<n_vect; i_vect++) {
-        MyVector<Tint> V = GetMatrixRow(SHV, i_vect);
-        val1 += EvaluationQuadForm<T, Tint>(LinSpa.ListMat[i_mat], V);
-      }
-      T val2 = frobenius_inner(eMat, SumMat);
-      if (val1 != val2) {
-        std::cerr << "PERF: inconsistency in the matrix values\n";
-        //        throw TerminalException{1};
-      }
-    }
-    if (!IsPositiveSemiDefinite(SumMat, os)) {
-      std::cerr << "The matrix should be positive semi-definite\n";
-      std::cerr << "So, maybe the cone is not self-dual\n";
-      throw TerminalException{1};
-    }
-#endif
-    int rnk = RankMat(SumMat);
-    bool is_bounded_self_dual = rnk == n;
-#ifdef SANITY_CHECK_BOUNDED_FACE_DISABLE
-    if (is_bounded_self_dual != is_bounded_iterative) {
-      std::cerr << "TSPACE: Incoherent results\n";
-      std::cerr << "TSPACE: rnk=" << rnk << " n=" << n << "\n";
-      std::cerr << "TSPACE: SHV=\n";
-      WriteMatrix(os, SHV);
-      std::cerr << "TSPACE: is_bounded_self_dual=" << is_bounded_self_dual << "\n";
-      std::cerr << "TSPACE: is_bounded_iterative=" << is_bounded_iterative << "\n";
-      throw TerminalException{1};
-    }
-#endif
-    return is_bounded_self_dual;
+    bool val = is_bounded_self_dual(self_dual_info, LinSpa.ListMat, SHV, os);
+    pbp.bounded_self_dual = val;
   }
-  // Not self-dual. So use instead the iterative
-  return is_bounded_face_iterative(LinSpa, SHV, os);
+  if (LinSpa.l_spanning_elements.size() > 0) {
+    bool val = is_bounded_spanning_elements(LinSpa.l_spanning_elements, SHV, os);
+    pbp.bounded_spanning = val;
+  }
+  return pbp;
 }
-
 
 
 /*

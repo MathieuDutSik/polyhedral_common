@@ -103,10 +103,12 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   //
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens, os);
+  std::vector<MyMatrix<T>> l_spanning_elements = ReadListMatrix<T>(is);
   std::optional<SelfDualInfo<T>> self_dual_info;
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
-          ListComm, ListSubspaces, PtStabGens, self_dual_info};
+          ListComm, ListSubspaces, PtStabGens,
+          l_spanning_elements, self_dual_info};
 }
 
 template <typename T>

@@ -207,11 +207,36 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     }
     return {};
   };
+  auto need_opt_t=[&](PerfectBoundednessProperty const& pbp) -> bool {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    return true;
+#else
+    if (pbp.bounded_self_dual) {
+      return false;
+    }
+    if (pbp.bounded_spanning) {
+      return false;
+    }
+    return true;
+#endif
+  };
+  using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
+  auto f_is_well_rounded=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, PerfectBoundednessProperty & pbp) -> bool {
+    if (need_opt_t(pbp)) {
+      Tfull_triple pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
+      bool is_finite = test_finiteness_group<T,Tint>(pair.second, os);
+      pbp.bounded_finite_stabilizer = is_finite;
+      opt_t = pair;
+    }
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    check_pbp(pbp);
+#endif
+    return get_result(pbp);
+  };
   auto is_insertable=[&](bool is_well_rounded) -> bool {
-    /*
     if (pctdi.only_well_rounded) {
       return is_well_rounded;
-      }*/
+    }
     return true;
   };
   auto get_initial_triple=[&](FacePerfectComplex<T,Tint,Tgroup> const& face, Face const& eIncd) -> triple<Tint> {
@@ -219,21 +244,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     os << "PERFCOMP: get_initial_triple, step 1 |face.l_triple|=" << face.l_triple.size() << "\n";
 #endif
     triple<Tint> const& t_big = face.l_triple[0];
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 2\n";
-#endif
     size_t iCone = t_big.iCone;
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 3\n";
-#endif
     int n_ext = pctdi.l_perfect[iCone].EXT.rows();
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 4\n";
-#endif
     Face f(n_ext);
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 5\n";
-#endif
     size_t index = 0;
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: get_initial_triple, step 6\n";
@@ -248,42 +261,27 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         index += 1;
       }
     }
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 7\n";
-#endif
     triple<Tint> t{iCone, f, t_big.eMat};
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_initial_triple, step 8\n";
-#endif
     return t;
   };
-  auto f_insert=[&](triple<Tint> const& t, bool is_well_rounded) -> BoundEntry<Tint> {
+  auto f_insert=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, bool const& is_well_rounded) -> BoundEntry<Tint> {
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 1\n";
 #endif
     std::optional<BoundEntry<Tint>> opt = find_matching_entry(t);
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: f_insert, step 2\n";
-#endif
     if (opt) {
       return *opt;
     }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 3\n";
 #endif
-    std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>> pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
+    if (!opt_t) {
+      opt_t = get_spanning_list_triple(pctdi.l_perfect, t, os);
+    }
+    Tfull_triple const& pair = *opt_t;
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 4\n";
 #endif
-    bool is_finite = test_finiteness_group<T,Tint>(pair.second, os);
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: f_insert, is_well_rounded=" << is_well_rounded << " is_finite=" << is_finite << "\n";
-#endif
-    if (is_well_rounded != is_finite) {
-      std::cerr << "PERFCOMP: f_insert, is_well_rounded=" << is_well_rounded << "\n";
-      std::cerr << "PERFCOMP: f_insert,       is_finite=" << is_finite << "\n";
-      throw TerminalException{1};
-    }
     int iCone = t.iCone;
     int n_ext = t.f_ext.count();
     int n_ext_big = pctdi.l_perfect[iCone].EXT.rows();
@@ -349,10 +347,12 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     for (auto& incd_sma: eCone.ListIncd) {
       Face incd_big = get_big_incd(eCone, incd_sma);
       MyMatrix<Tint> EXTincd = SelectRow(face.EXT, incd_big);
-      bool is_well_rounded = is_bounded_face(pctdi.LinSpa, EXTincd, os);
+      PerfectBoundednessProperty pbp = initial_bounded_property(pctdi.LinSpa, EXTincd, os);
+      std::optional<Tfull_triple> opt_t;
+      triple<Tint> t = get_initial_triple(face, incd_big);
+      bool is_well_rounded = f_is_well_rounded(t, opt_t, pbp);
       if (is_insertable(is_well_rounded)) {
-        triple<Tint> t = get_initial_triple(face, incd_big);
-        BoundEntry<Tint> be = f_insert(t, is_well_rounded);
+        BoundEntry<Tint> be = f_insert(t, opt_t, is_well_rounded);
         if (pctdi.compute_boundary) {
           l_bound.push_back(be);
         }
@@ -371,10 +371,6 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     return {pfc, {}};
   }
 }
-
-
-
-
 
 // clang-format off
 #endif  // SRC_PERFECT_PERFECT_COMPLEX_H_

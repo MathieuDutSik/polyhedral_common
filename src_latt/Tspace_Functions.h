@@ -153,6 +153,9 @@ template <typename T> struct LinSpaceMatrix {
   std::vector<MyMatrix<T>> ListSubspaces;
   // The point stabilizer of the T-space
   std::vector<MyMatrix<T>> PtStabGens;
+  // The list of spanning elements. If empty, does not apply. This is used
+  // for the T-spaces coming from
+  std::vector<MyMatrix<T>> l_spanning_elements;
   // Whether the T-space is known to be self-dual
   std::optional<SelfDualInfo<T>> self_dual_info;
 };
@@ -191,9 +194,11 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
   // It may be actually a Bravais space, but setting up to false avoids
   // potential problems.
   bool isBravais = false;
+  std::vector<MyMatrix<T>> l_spanning_elements;
   std::optional<SelfDualInfo<T>> self_dual_info;
   return {n,      isBravais, SuperMat,      ListMat, ListLineMat,
-          BigMat, ListComm,  ListSubspaces, PtStab, self_dual_info};
+          BigMat, ListComm,  ListSubspaces, PtStab,
+          l_spanning_elements, self_dual_info};
 }
 
 template <typename T, typename Tint, typename Tgroup>

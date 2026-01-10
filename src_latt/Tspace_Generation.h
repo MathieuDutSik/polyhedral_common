@@ -112,7 +112,9 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     eComm(n + i, n + i) = eSum;
   }
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
-  return BuildLinSpace(SuperMat, ListMatRet, {eComm});
+  LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
+  LinSpa.l_spanning_elements.push_back(eComm);
+  return LinSpa;
 }
 
 template <typename T>
@@ -169,7 +171,9 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     eComm(n + i, n + i) = eSum;
   }
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
-  return BuildLinSpace(SuperMat, ListMatRet, {eComm});
+  LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
+  LinSpa.l_spanning_elements.push_back(eComm);
+  return LinSpa;
 }
 
 // clang-format off
