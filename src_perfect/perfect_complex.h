@@ -228,9 +228,10 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       pbp.bounded_finite_stabilizer = is_finite;
       opt_t = pair;
     }
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    //#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    // That check is really cheap. Do it all the time.
     check_pbp(pbp);
-#endif
+    //#endif
     return get_result(pbp);
   };
   auto is_insertable=[&](bool is_well_rounded) -> bool {
@@ -351,6 +352,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       std::optional<Tfull_triple> opt_t;
       triple<Tint> t = get_initial_triple(face, incd_big);
       bool is_well_rounded = f_is_well_rounded(t, opt_t, pbp);
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: pbp=" << to_string(pbp) << "\n";
+#endif
       if (is_insertable(is_well_rounded)) {
         BoundEntry<Tint> be = f_insert(t, opt_t, is_well_rounded);
         if (pctdi.compute_boundary) {

@@ -379,6 +379,29 @@ bool get_result(PerfectBoundednessProperty const& pbp) {
   throw TerminalException{1};
 }
 
+std::string to_string(PerfectBoundednessProperty const& pbp) {
+  std::string str_out;
+  //
+  auto str_opt_bool=[&](std::optional<bool> const& opt) -> std::string {
+    if (opt) {
+      bool val = *opt;
+      return "Some(" + GAP_logical(val) + ")";
+    } else {
+      return "None";
+    }
+  };
+  //
+  str_out += "bounded_self_dual=";
+  str_out += str_opt_bool(pbp.bounded_self_dual);
+  str_out += ", bounded_spanning=";
+  str_out += str_opt_bool(pbp.bounded_spanning);
+  str_out += ", bounded_finite_stabilizer=";
+  str_out += str_opt_bool(pbp.bounded_finite_stabilizer);
+  //
+  return str_out;
+}
+
+
 template<typename T, typename Tint>
 bool is_bounded_self_dual(SelfDualInfo<T> const& self_dual_info, std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, [[maybe_unused]] std::ostream &os) {
   int n_vect = SHV.rows();
