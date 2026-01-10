@@ -207,7 +207,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     }
     return {};
   };
-  auto need_opt_t=[&](PerfectBoundednessProperty const& pbp) -> bool {
+  auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp) -> bool {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     return true;
 #else
