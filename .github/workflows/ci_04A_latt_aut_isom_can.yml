@@ -1,4 +1,4 @@
-name: CI(04) of lattice automorphism isomorphism and canonicalization
+name: CI(04A) of lattice automorphism isomorphism and canonicalization
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -84,11 +84,6 @@ jobs:
           echo "After cd"
           pwd
           echo "After bliss compilation"
-
-          git clone https://github.com/cddlib/cddlib
-          cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
-          pwd
-          echo "After cddlib compilation"
 
           # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
           wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz

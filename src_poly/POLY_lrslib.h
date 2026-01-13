@@ -563,7 +563,7 @@ int64_t lrs_ratio(lrs_dic<T> *P, lrs_dat<T> *Q,
 {
   int64_t i, j, comp, ratiocol, basicindex, start, nstart, cindex, bindex;
   int64_t firstime; /*For ratio test, true on first pass,else false */
-  T Nmin, Dmin;
+  T Nmin(0), Dmin(0);
   int64_t degencount, ndegencount;
   /* assign local variables to structures */
   T **A = P->A;
