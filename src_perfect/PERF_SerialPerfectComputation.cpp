@@ -62,8 +62,10 @@ void process_A(FullNamelist const &eFull) {
     print_stderr_stdout_file(OutFile, f_print);
   } else {
     PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary);
+    std::cerr << "We have pctdi\n";
     int dim_spa = LinSpa.ListMat.size();
     FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, std::cerr);
+    std::cerr << "We have the first level\n";
     std::vector<FacesPerfectComplex<T,Tint,Tgroup>> l_level{level};
     for (int i=1; i<dim_spa; i++) {
       ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, l_level[i-1], std::cerr);

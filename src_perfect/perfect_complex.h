@@ -126,8 +126,12 @@ struct FacesPerfectComplex {
 
 template<typename T, typename Tint, typename Tgroup>
 FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, [[maybe_unused]] std::ostream & os) {
+  using Telt = typename Tgroup::Telt;
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   int n = pctdi.LinSpa.n;
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: get_first_step_perfect_complex_enumeration n=" << n << "\n";
+#endif
   auto get_l_triple=[&](size_t i_domain) -> std::vector<triple<Tint>> {
     int n_ext = pctdi.l_perfect[i_domain].EXT.rows();
     Face f_ext(n_ext);
@@ -141,13 +145,35 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
   auto get_l_gens=[&](size_t i_domain) -> std::vector<MyMatrix<Tint>> {
     std::vector<MyMatrix<Tint>> l_gens;
     PerfectFormInfoForComplex<T,Tint,Tgroup> const& top = pctdi.l_perfect[i_domain];
-    for (auto & ePermGen: top.GRP_ext.SmallGeneratingSet()) {
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: |top.GRP_ext|=" << top.GRP_ext.size() << "\n";
+#endif
+    std::vector<Telt> l_elt = top.GRP_ext.SmallGeneratingSet();
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: |l_elt|=" << l_elt.size() << "\n";
+#endif
+    for (auto & ePermGen: l_elt) {
+      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(top.EXT);
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: Before FindTransformation\n";
+#endif
+      MyMatrix<T> eMatrGen_T = FindTransformation(EXT_T, EXT_T, ePermGen);
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: eMatrGen_T=\n";
+      WriteMatrix(os, eMatrGen_T);
+#endif
       MyMatrix<Tint> eMatrGen = FindTransformation(top.EXT, top.EXT, ePermGen);
       l_gens.push_back(eMatrGen);
     }
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: Returning l_gens\n";
+#endif
     return l_gens;
   };
   for (size_t i_domain=0; i_domain<pctdi.l_perfect.size(); i_domain++) {
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: get_first_step i_domain=" << i_domain << "\n";
+#endif
     std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
     std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
     MyMatrix<Tint> EXT = pctdi.l_perfect[i_domain].EXT;
@@ -190,6 +216,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int n = pctdi.LinSpa.n;
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
+#endif
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
   auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<BoundEntry<Tint>> {
