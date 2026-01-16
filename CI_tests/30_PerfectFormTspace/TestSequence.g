@@ -33,6 +33,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, "&DATA\n");
     AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
     AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " ComputeComplex = F\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     AppendTo(output, "&TSPACE\n");
@@ -47,6 +48,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, " RealImagProd = ", info.eProd, "\n");
     AppendTo(output, "/\n");
     CloseStream(output);
+    Print("info=", info, "\n");
     #
     eProg:=Concatenation("../../src_perfect/", fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);
@@ -160,8 +162,8 @@ end;
 
 
 
-#insert_imag_examples();
-insert_imag_nocomm_examples();
+insert_imag_examples();
+#insert_imag_nocomm_examples();
 #insert_real_examples(3, 10);
 #insert_extensive_imag_examples_part1();
 #insert_extensive_imag_examples_part2();
@@ -170,7 +172,7 @@ insert_imag_nocomm_examples();
 
 
 #ListProg:=["PERF_SerialEnumeratePerfectCones", "PERF_MPI_EnumeratePerfectCones"];
-ListProg:=["PERF_SerialEnumeratePerfectCones"];
+ListProg:=["PERF_SerialPerfectComputation"];
 
 
 f_compute:=function()

@@ -50,6 +50,7 @@ void process_A(FullNamelist const &eFull) {
   std::vector<Tout> l_tot =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
+  std::cerr << "|l_tot|=" << l_tot.size() << "\n";
   if (!compute_complex) {
     auto f_print = [&](std::ostream &os_out) -> void {
       bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
@@ -62,7 +63,7 @@ void process_A(FullNamelist const &eFull) {
     print_stderr_stdout_file(OutFile, f_print);
   } else {
     PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, std::cerr);
-    std::cerr << "We have pctdi\n";
+    std::cerr << "We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
     int dim_spa = LinSpa.ListMat.size();
     FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, std::cerr);
     std::cerr << "We have the first level |level|=" << level.l_faces.size() << "\n";

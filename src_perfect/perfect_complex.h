@@ -182,7 +182,9 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
 #endif
     return l_gens;
   };
-  for (size_t i_domain=0; i_domain<pctdi.l_perfect.size(); i_domain++) {
+  size_t n_domain = pctdi.l_perfect.size();
+  os << "PERFCOMP: get_first_step n_domain=" << n_domain << "\n";
+  for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: get_first_step i_domain=" << i_domain << "\n";
 #endif
@@ -193,7 +195,6 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
     FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded};
     l_faces.push_back(face);
-    i_domain += 1;
   }
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
   return pfc;
