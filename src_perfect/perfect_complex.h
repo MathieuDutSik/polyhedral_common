@@ -68,16 +68,20 @@ template<typename T, typename Tint_impl, typename Tgroup_impl>
 struct PerfectFormInfoForComplex {
   using Tint = Tint_impl;
   using Tgroup = Tgroup_impl;
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
   MyMatrix<T> gram;
   MyMatrix<Tint> EXT; // Not necessarily full-dimensional
-  MyMatrix<Tint> EXT_fd; // This is full-dimensional or empty.
+  std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
-  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x) const {
-    if (EXT_fd.rows() == 0) {
-      return FindTransformation(EXT, EXT, x);
+  MyMatrix<Tint> find_matrix(Telt const& x) const {
+    if (opt_pre_imager) {
+      permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup> const& pre_imager = *opt_pre_imager;
+      std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
+      return unfold_opt(opt, "The element elt should belong to the group");
     }
-    return FindTransformation(EXT_fd, EXT_fd, x);
+    return FindTransformation(EXT, EXT, x);
   }
 };
 
@@ -92,6 +96,8 @@ struct PerfectComplexTopDimInfo {
 
 template<typename T, typename Tint, typename Tgroup>
 PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   for (auto & ePerf: l_tot) {
     std::vector<sing_adj<Tint>> l_sing_adj;
@@ -105,13 +111,16 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       l_sing_adj.emplace_back(std::move(adj));
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
-    // The vector family for the determination.
-    MyMatrix<Tint> EXT_fd = get_fulldim_shv_tint<T,Tint>(ePerf.x.Gram, ePerf.x.rec_shv, os);
-    if (RankMat(EXT) == EXT.cols()) { // EXT is already full dimensional, no need for EXT_fd
-      EXT_fd = MyMatrix<Tint>(0, EXT.cols());
+    // In some cases, EXT it not 
+    std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
+    if (RankMat(EXT) < EXT.cols()) {
+      std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
+      std::vector<Telt> l_perm = get_list_elt_from_list_matrices<Tint,Telt>(l_matr, EXT, os);
+      MyMatrix<Tint> id = IdentityMat<Tint>(EXT.cols());
+      opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(l_matr, l_perm, id);
     }
     Tgroup const& GRP_ext = ePerf.x.GRP;
-    PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, std::move(EXT), std::move(EXT_fd), GRP_ext, std::move(l_sing_adj)};
+    PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, std::move(EXT), opt_pre_imager, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
   return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};

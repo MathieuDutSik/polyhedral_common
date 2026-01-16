@@ -56,6 +56,7 @@ template <typename T, typename Tint, typename Tgroup> struct PerfectTspace_Obj {
   MyMatrix<T> Gram;
   Tshortest<T, Tint> rec_shv;
   Tgroup GRP;
+  std::vector<MyMatrix<Tint>> GRP_matr;
 };
 
 template <typename T, typename Tint, typename Tgroup>
@@ -238,7 +239,7 @@ struct DataPerfectTspaceFunc {
     std::ostream &os = get_os();
     std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair =
         GetOnePerfectForm<T, Tint>(data.LinSpa, os);
-    Tobj x{pair.first, pair.second, {}};
+    Tobj x{pair.first, pair.second, {}, {}};
     return x;
   }
 
@@ -271,7 +272,7 @@ struct DataPerfectTspaceFunc {
   }
 
   std::pair<Tobj, TadjO> f_spann(TadjI const &y) {
-    Tobj x_ret{y.Gram, y.rec_shv, {}};
+    Tobj x_ret{y.Gram, y.rec_shv, {}, {}};
 #ifdef DEBUG_PERFECT_TSPACE
     check_correctness(x_ret);
 #endif
@@ -280,7 +281,7 @@ struct DataPerfectTspaceFunc {
           get_reduced_gram(data.onl_gens, y.Gram);
       MyMatrix<Tint> Pinv = Inverse(pair.first);
       Tshortest<T, Tint> rec_shv = apply_transformation(y.rec_shv, Pinv);
-      Tobj x_reduced{pair.second, rec_shv, {}};
+      Tobj x_reduced{pair.second, rec_shv, {}, {}};
 #ifdef DEBUG_PERFECT_TSPACE
       check_correctness(x_reduced);
 #endif
@@ -300,6 +301,7 @@ struct DataPerfectTspaceFunc {
         SimplePerfect_Stabilizer<T, Tint, Tgroup>(data.LinSpa, x.Gram, x.rec_shv,
                                                   os);
     x.GRP = pair.first;
+    x.GRP_matr = pair.second;
 #ifdef DEBUG_PERFECT_TSPACE
     os << "PERF_TSPACE: After x.GRP set\n";
 #endif
@@ -316,7 +318,7 @@ struct DataPerfectTspaceFunc {
   }
 
   Tobj f_adji_obj(TadjI const &x) {
-    Tobj x_ret{x.Gram, x.rec_shv, {}};
+    Tobj x_ret{x.Gram, x.rec_shv, {}, {}};
     return x_ret;
   }
 };

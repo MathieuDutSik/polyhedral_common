@@ -850,27 +850,37 @@ public:
   }
 };
 
-template <typename T, typename Tgroup>
-Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
-                                         MyMatrix<T> const &SHV_T,
-                                         std::ostream &os) {
-  using Telt = typename Tgroup::Telt;
+template <typename T, typename Telt>
+std::vector<Telt> get_list_elt_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
+                                                  MyMatrix<T> const &SHV_T,
+                                                  std::ostream &os) {
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
-  int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
   size_t pos = 0;
-  os << "TSPACE: get_perm_group_from_list_matrices n_row=" << n_row << "\n";
 #endif
   for (auto &eGen : l_matr) {
     Telt ePerm = builder.get_permutation(eGen, os);
 #ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: get_perm_group_from_list_matrices pos=" << pos
+    os << "TSPACE: get_list_elt_from_list_matrices pos=" << pos
        << " ePerm=" << ePerm << "\n";
     pos += 1;
 #endif
     LGenGlobStab_perm.emplace_back(std::move(ePerm));
   }
+  return LGenGlobStab_perm;
+}
+
+template <typename T, typename Tgroup>
+Tgroup get_perm_group_from_list_matrices(std::vector<MyMatrix<T>> const &l_matr,
+                                         MyMatrix<T> const &SHV_T,
+                                         std::ostream &os) {
+  using Telt = typename Tgroup::Telt;
+  int n_row = SHV_T.rows();
+#ifdef DEBUG_TSPACE_FUNCTIONS
+  os << "TSPACE: get_perm_group_from_list_matrices n_row=" << n_row << "\n";
+#endif
+  std::vector<Telt> LGenGlobStab_perm = get_list_elt_from_list_matrices<T,Telt>(l_matr, SHV_T, os);
   return Tgroup(LGenGlobStab_perm, n_row);
 }
 
