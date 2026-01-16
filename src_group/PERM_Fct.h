@@ -771,7 +771,7 @@ template <typename T, typename F>
 MyMatrix<T> FindTransformation_f(MyMatrix<T> const &EXT1,
                                  MyMatrix<T> const &EXT2, F f) {
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral_f(EXT1, EXT2, f);
-  MyMatrix<T> eMatr = unfold_opt(opt, "FindTransformationGeneral fails");
+  MyMatrix<T> eMatr = unfold_opt(opt, "FindTransformation_f fails");
   return eMatr;
 }
 
@@ -797,7 +797,7 @@ MyMatrix<T> FindTransformation_Kernel(MyMatrix<T> const &EXT1, MyMatrix<T> const
   }
 #endif
   std::optional<MyMatrix<T>> opt = FindTransformationGeneral(EXT1, EXT2, ePerm);
-  MyMatrix<T> eMatr = unfold_opt(opt, "PERM: FindTransformationGeneral fails");
+  MyMatrix<T> eMatr = unfold_opt(opt, "PERM: FindTransformation_Kernel fails");
   return eMatr;
 }
 

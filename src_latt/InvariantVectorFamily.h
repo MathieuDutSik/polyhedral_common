@@ -155,16 +155,35 @@ template <typename T> void check_antipodality_mymatrix(MyMatrix<T> const &SHV) {
   }
 }
 
-template <typename Tint> bool IsFullDimZbasis(MyMatrix<Tint> const &M) {
+template <typename Tint> bool IsFullDimZbasis(MyMatrix<Tint> const &M, [[maybe_unused]] std::ostream &os) {
   int n = M.cols();
-  if (RankMat(M) < n) {
+  int rnk = RankMat(M);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: IsFullDimZbasis rnk=" << rnk << " n=" << n << "\n";
+#endif
+  if (rnk < n) {
     return false;
   }
   Tint indx = Int_IndexLattice(M);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: IsFullDimZbasis indx=" << indx << "\n";
+#endif
   if (T_NormGen(indx) == 1) {
     return true;
   }
   return false;
+}
+
+template <typename Tint> bool IsFullDim(MyMatrix<Tint> const &M, [[maybe_unused]] std::ostream &os) {
+  int n = M.cols();
+  int rnk = RankMat(M);
+#ifdef DEBUG_INVARIANT_VECTOR_FAMILY
+  os << "IVF: IsFullDimZbasis rnk=" << rnk << " n=" << n << "\n";
+#endif
+  if (rnk < n) {
+    return false;
+  }
+  return true;
 }
 
 template <typename Tint>

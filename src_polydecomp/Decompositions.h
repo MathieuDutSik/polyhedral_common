@@ -40,6 +40,9 @@ template <typename T, typename Tint_inp, typename Tgroup_inp> struct ConeDesc {
   Tgroup GRP_ext;
   Tgroup GRP_fac;
   std::vector<sing_adj<Tint>> l_sing_adj;
+  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x) const {
+    return FindTransformation(EXT, EXT, x);
+  }
 };
 
 struct FaceDesc {

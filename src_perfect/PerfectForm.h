@@ -40,6 +40,7 @@
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_INITIAL_PERFECT
 #define SANITY_CHECK_PERFECT_REPR
+#define SANITY_CHECK_PERFECT_FORM
 #define SANITY_CHECK_BOUNDED_FACE
 #endif
 
@@ -589,14 +590,25 @@ MyMatrix<T> conversion_and_duplication(MyMatrix<Tint> const &SHV) {
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> get_shv_t(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &rec_shv,
+MyMatrix<T> get_fulldim_zbasis_shv_t(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &rec_shv,
                       std::ostream &os) {
   MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(rec_shv.SHV);
-  if (IsFullDimZbasis(rec_shv.SHV)) {
+  if (IsFullDimZbasis(rec_shv.SHV, os)) {
     return conversion_and_duplication<T, Tint>(rec_shv.SHV);
   }
   MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat, os);
   return UniversalMatrixConversion<T, Tint>(SHV);
+}
+
+template <typename T, typename Tint>
+MyMatrix<Tint> get_fulldim_shv_tint(MyMatrix<T> const &eMat, Tshortest<T, Tint> const &rec_shv,
+                              std::ostream &os) {
+  MyMatrix<T> SHVorig_T = UniversalMatrixConversion<T, Tint>(rec_shv.SHV);
+  if (IsFullDim(rec_shv.SHV, os)) {
+    return conversion_and_duplication<Tint, Tint>(rec_shv.SHV);
+  }
+  MyMatrix<Tint> SHV = ExtractInvariantVectorFamilyFullRank<T, Tint>(eMat, os);
+  return SHV;
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -604,8 +616,8 @@ std::optional<MyMatrix<Tint>> SimplePerfect_TestEquivalence(
     LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eMat1,
     MyMatrix<T> const &eMat2, Tshortest<T, Tint> const &rec_shv1,
     Tshortest<T, Tint> const &rec_shv2, std::ostream &os) {
-  MyMatrix<T> SHV1_T = get_shv_t(eMat1, rec_shv1, os);
-  MyMatrix<T> SHV2_T = get_shv_t(eMat2, rec_shv2, os);
+  MyMatrix<T> SHV1_T = get_fulldim_zbasis_shv_t(eMat1, rec_shv1, os);
+  MyMatrix<T> SHV2_T = get_fulldim_zbasis_shv_t(eMat2, rec_shv2, os);
 #ifdef SANITY_CHECK_PERFECT_REPR
   if (has_duplication(SHV1_T)) {
     std::cerr << "PERF: SHV1 has duplication\n";
@@ -652,7 +664,7 @@ size_t
 SimplePerfect_Invariant(size_t const &seed, LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &eMat,
                         Tshortest<T, Tint> const &rec_shv, std::ostream &os) {
-  MyMatrix<T> SHV_T = get_shv_t(eMat, rec_shv, os);
+  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(eMat, rec_shv, os);
   return LINSPA_Invariant_SHV<T>(seed, LinSpa, eMat, SHV_T, os);
 }
 
@@ -665,7 +677,7 @@ SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
   // Functionality for checking quality of equivalences
   //
   MyMatrix<T> SHVorig_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
-  MyMatrix<T> SHV_T = get_shv_t(eMat, rec_shv, os);
+  MyMatrix<T> SHV_T = get_fulldim_zbasis_shv_t(eMat, rec_shv, os);
   Result_ComputeStabilizer_SHV<T, Tgroup> result =
       LINSPA_ComputeStabilizer_SHV<T, Tgroup>(LinSpa, eMat, SHV_T, os);
 #ifdef DEBUG_PERFECT_FORM
@@ -712,6 +724,10 @@ SimplePerfect_Stabilizer(LinSpaceMatrix<T> const &LinSpa,
         get_perm_group_from_list_matrices<T, Tgroup>(l_matr_t, SHVorig_T, os);
 #ifdef DEBUG_PERFECT_FORM
     os << "PERFECT: SimplePerfect_Stabilizer(B), We have GRP\n";
+    os << "PERFECT: SimplePerfect_Stabilizer(B), |SHVorig_T|=" << SHVorig_T.rows() << " / " << SHVorig_T.cols() << "\n";
+    WriteMatrix(os, SHVorig_T);
+    os << "PERFECT: SimplePerfect_Stabilizer(B),     |SHV_T|=" << SHV_T.rows() << " / " << SHV_T.cols() << "\n";
+    WriteMatrix(os, SHV_T);
 #endif
     return {std::move(GRP), std::move(l_matr)};
   }

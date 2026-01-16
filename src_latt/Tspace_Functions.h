@@ -1228,8 +1228,9 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size()
      << "\n";
 #endif
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
+#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
   auto f_exhaustive = [&]() -> std::optional<MyMatrix<T>> {
+    os << "TSPACE: Starting extensive check over |FullGRP1|=" << FullGRP1.order() << "\n";
     for (auto &elt : FullGRP1) {
       MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
       MyMatrix<T> eProd_T = OneEquiv * eMatr;
@@ -1296,7 +1297,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
 #endif
     if (p_sol.sol) {
       MyMatrix<T> const &Pmat_T = *p_sol.sol;
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
+#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
       if (!f_exhaustive()) {
         std::cerr << "TSPACE: We found equiv with one method but the "
                      "exhaustive does not\n";
@@ -1309,7 +1310,7 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
       return Pmat_T;
     }
     if (!p_sol.new_gen) {
-#ifdef SANITY_CHECK_TSPACE_FUNCTIONS_DISABLE
+#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
       if (f_exhaustive()) {
         std::cerr << "TSPACE: We found non-equiv with one method but the "
                      "exhaustive does\n";

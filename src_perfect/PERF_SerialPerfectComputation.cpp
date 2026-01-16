@@ -61,7 +61,7 @@ void process_A(FullNamelist const &eFull) {
     };
     print_stderr_stdout_file(OutFile, f_print);
   } else {
-    PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary);
+    PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, std::cerr);
     std::cerr << "We have pctdi\n";
     int dim_spa = LinSpa.ListMat.size();
     FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, std::cerr);

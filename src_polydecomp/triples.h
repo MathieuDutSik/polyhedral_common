@@ -57,10 +57,14 @@ template <typename Tint> struct sing_adj {
 // The minimal types used for 
 template<typename Tint, typename Tgroup>
 struct TopConeMin {
+  using Telt = typename Tgroup::Telt;
   // EXT is used for checks, mapping representation from Tgroup to MyMatrix and finding matching elements.
   MyMatrix<Tint> EXT;
   Tgroup GRP_ext;
   std::vector<sing_adj<Tint>> l_sing_adj;
+  MyMatrix<Tint> find_matrix(Telt const& x) const {
+    return FindTransformation(EXT, EXT, x);
+  }
 };
 
 
@@ -89,7 +93,7 @@ test_equiv_triple(std::vector<Ttopcone> const &l_cones,
       eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
   if (!test)
     return {};
-  MyMatrix<Tint> eMat = FindTransformation(eC.EXT, eC.EXT, *test);
+  MyMatrix<Tint> eMat = eC.find_matrix(*test);
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
@@ -118,7 +122,7 @@ canonicalize_triple(std::vector<Ttopcone> const &l_cones,
   }
 #endif
   Telt const& x = *test;
-  MyMatrix<Tint> x_mat = FindTransformation(eC.EXT, eC.EXT, x);
+  MyMatrix<Tint> x_mat = eC.find_matrix(x);
   MyMatrix<Tint> eMat = t1.eMat * x_mat;
   triple<Tint> t2{iC, f_can, eMat};
 #ifdef SANITY_CHECK_TRIPLE
@@ -211,7 +215,7 @@ get_spanning_list_triple(
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
     for (auto &eGen : stab.SmallGeneratingSet()) {
-      MyMatrix<Tint> eMatGen = FindTransformation(uC.EXT, uC.EXT, eGen);
+      MyMatrix<Tint> eMatGen = uC.find_matrix(eGen);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       f_insert_generator(TransGen);
     }
@@ -278,8 +282,7 @@ get_spanning_list_triple(
 #ifdef DEBUG_TRIPLE
           os << "TRIP: face=" << StringFace(e_pair.first) << " elt=" << e_pair.second << "\n";
 #endif
-          MyMatrix<Tint> eMat1 =
-              FindTransformation(eC.EXT, eC.EXT, e_pair.second);
+          MyMatrix<Tint> eMat1 = eC.find_matrix(e_pair.second);
           const Ttopcone &fC = l_cones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
           MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;

@@ -69,9 +69,16 @@ struct PerfectFormInfoForComplex {
   using Tint = Tint_impl;
   using Tgroup = Tgroup_impl;
   MyMatrix<T> gram;
-  MyMatrix<Tint> EXT;
+  MyMatrix<Tint> EXT; // Not necessarily full-dimensional
+  MyMatrix<Tint> EXT_fd; // This is full-dimensional or empty.
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
+  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x) const {
+    if (EXT_fd.rows() == 0) {
+      return FindTransformation(EXT, EXT, x);
+    }
+    return FindTransformation(EXT_fd, EXT_fd, x);
+  }
 };
 
 template<typename T, typename Tint, typename Tgroup>
@@ -84,7 +91,7 @@ struct PerfectComplexTopDimInfo {
 
 
 template<typename T, typename Tint, typename Tgroup>
-PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary) {
+PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
   for (auto & ePerf: l_tot) {
     std::vector<sing_adj<Tint>> l_sing_adj;
@@ -97,9 +104,14 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       sing_adj<Tint> adj{jCone, f_ext, eMat};
       l_sing_adj.emplace_back(std::move(adj));
     }
-    MyMatrix<Tint> EXT = conversion_and_duplication<Tint,Tint>(ePerf.x.rec_shv.SHV);
+    MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
+    // The vector family for the determination.
+    MyMatrix<Tint> EXT_fd = get_fulldim_shv_tint<T,Tint>(ePerf.x.Gram, ePerf.x.rec_shv, os);
+    if (RankMat(EXT) == EXT.cols()) { // EXT is already full dimensional, no need for EXT_fd
+      EXT_fd = MyMatrix<Tint>(0, EXT.cols());
+    }
     Tgroup const& GRP_ext = ePerf.x.GRP;
-    PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, EXT, GRP_ext, std::move(l_sing_adj)};
+    PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, std::move(EXT), std::move(EXT_fd), GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
   return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};
@@ -153,16 +165,7 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     os << "PERFCOMP: |l_elt|=" << l_elt.size() << "\n";
 #endif
     for (auto & ePermGen: l_elt) {
-      MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(top.EXT);
-#ifdef DEBUG_PERFECT_COMPLEX
-      os << "PERFCOMP: Before FindTransformation\n";
-#endif
-      MyMatrix<T> eMatrGen_T = FindTransformation(EXT_T, EXT_T, ePermGen);
-#ifdef DEBUG_PERFECT_COMPLEX
-      os << "PERFCOMP: eMatrGen_T=\n";
-      WriteMatrix(os, eMatrGen_T);
-#endif
-      MyMatrix<Tint> eMatrGen = FindTransformation(top.EXT, top.EXT, ePermGen);
+      MyMatrix<Tint> eMatrGen = top.find_matrix(ePermGen);
       l_gens.push_back(eMatrGen);
     }
 #ifdef DEBUG_PERFECT_COMPLEX
@@ -176,8 +179,8 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
 #endif
     std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
     std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
-    MyMatrix<Tint> EXT = pctdi.l_perfect[i_domain].EXT;
-    Tgroup GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
+    MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
+    Tgroup const& GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
     bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
     FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded};
     l_faces.push_back(face);
