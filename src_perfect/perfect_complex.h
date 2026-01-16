@@ -248,8 +248,15 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     }
     return {};
   };
-  auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp) -> bool {
-#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
+  auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp, [[maybe_unused]] triple<Tint> const& t) -> bool {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX_EXTENSIVE
+    std::cerr << "Returning true because we want to compute whether the group is finite\n";
+    Tfull_triple pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
+    std::vector<MyMatrix<Tint>> l_matr = pair.second;
+    std::string Prefix = "FinitenessMatrixGroupTest_" + std::to_string(l_matr.size()) + "_n" + std::to_string(n) + "_";
+    std::string FileOut = FindAvailableFileFromPrefix(Prefix);
+    WriteListMatrixFile(FileOut, l_matr);
     return true;
 #else
     if (pbp.bounded_self_dual) {
@@ -261,9 +268,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     return true;
 #endif
   };
-  using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   auto f_is_well_rounded=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, PerfectBoundednessProperty & pbp) -> bool {
-    if (need_opt_t(pbp)) {
+    if (need_opt_t(pbp, t)) {
       Tfull_triple pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
       bool is_finite = test_finiteness_group<T,Tint>(pair.second, os);
       pbp.bounded_finite_stabilizer = is_finite;
