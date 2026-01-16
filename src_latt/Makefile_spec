@@ -1,7 +1,8 @@
 #PROGRAM		= LATT_Canonicalize
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= LATT_Automorphism
-PROGRAM		= LATT_Isomorphism
+#PROGRAM		= LATT_Isomorphism
+PROGRAM		= GRP_TestFiniteness
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
