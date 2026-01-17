@@ -40,7 +40,7 @@ template <typename T, typename Tint_inp, typename Tgroup_inp> struct ConeDesc {
   Tgroup GRP_ext;
   Tgroup GRP_fac;
   std::vector<sing_adj<Tint>> l_sing_adj;
-  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x) const {
+  MyMatrix<Tint> find_matrix(typename Tgroup::Telt const& x, [[maybe_unused]] std::ostream &os) const {
     return FindTransformation(EXT, EXT, x);
   }
 };
@@ -382,14 +382,14 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
   std::vector<std::vector<FaceDesc>> ListListDomain;
   ListListDomain.push_back(ListDomain);
   //
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
-  using Tface =
-      std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
-#endif
   for (int i = 1; i < TheLev; i++) {
-    std::cerr << "i=" << i << "\n";
-    std::vector<std::pair<size_t, Tent<T, Tint, Tidx_value>>> NewListCand;
 #ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+    os << "i=" << i << "\n";
+#endif
+    std::vector<std::pair<size_t, Tent<T, Tint, Tidx_value>>> NewListCand;
+#ifdef SANITY_CHECK_POLYEDRAL_DECOMPOSITION
+    using Tface =
+      std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
     std::vector<Tface> list_face;
     size_t n_equiv_found = 0;
     size_t dim = ListCones[0].FAC.cols();
@@ -401,7 +401,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
-              test_equiv_triple(ListCones, ef_A, ef_B);
+            test_equiv_triple(ListCones, ef_A, ef_B, os);
           if (equiv_opt) {
             n_equiv_found++;
             Tent<T, Tint, Tidx_value> ent_A =
@@ -500,7 +500,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
-              test_equiv_triple(ListCones, ef_A, ef_B);
+            test_equiv_triple(ListCones, ef_A, ef_B, os);
           if (equiv_opt)
             return;
         }

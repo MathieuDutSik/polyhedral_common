@@ -62,7 +62,7 @@ struct TopConeMin {
   MyMatrix<Tint> EXT;
   Tgroup GRP_ext;
   std::vector<sing_adj<Tint>> l_sing_adj;
-  MyMatrix<Tint> find_matrix(Telt const& x) const {
+  MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
     return FindTransformation(EXT, EXT, x);
   }
 };
@@ -81,7 +81,8 @@ template <typename Ttopcone>
 std::optional<MyMatrix<typename Ttopcone::Tint>>
 test_equiv_triple(std::vector<Ttopcone> const &l_cones,
                   triple<typename Ttopcone::Tint> const &ef1,
-                  triple<typename Ttopcone::Tint> const &ef2) {
+                  triple<typename Ttopcone::Tint> const &ef2,
+                  std::ostream& os) {
   using Tgroup = typename Ttopcone::Tgroup;
   using Telt = typename Tgroup::Telt;
   using Tint = typename Ttopcone::Tint;
@@ -93,7 +94,7 @@ test_equiv_triple(std::vector<Ttopcone> const &l_cones,
       eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
   if (!test)
     return {};
-  MyMatrix<Tint> eMat = eC.find_matrix(*test);
+  MyMatrix<Tint> eMat = eC.find_matrix(*test, os);
   return Inverse(ef1.eMat) * eMat * ef2.eMat;
 }
 
@@ -102,7 +103,7 @@ template <typename Ttopcone>
 triple<typename Ttopcone::Tint>
 canonicalize_triple(std::vector<Ttopcone> const &l_cones,
                     triple<typename Ttopcone::Tint> const &t1,
-                    [[maybe_unused]] std::ostream& os) {
+                    std::ostream& os) {
   using Tgroup = typename Ttopcone::Tgroup;
   using Telt = typename Tgroup::Telt;
   using Tint = typename Ttopcone::Tint;
@@ -122,7 +123,7 @@ canonicalize_triple(std::vector<Ttopcone> const &l_cones,
   }
 #endif
   Telt const& x = *test;
-  MyMatrix<Tint> x_mat = eC.find_matrix(x);
+  MyMatrix<Tint> x_mat = eC.find_matrix(x, os);
   MyMatrix<Tint> eMat = t1.eMat * x_mat;
   triple<Tint> t2{iC, f_can, eMat};
 #ifdef SANITY_CHECK_TRIPLE
@@ -147,10 +148,11 @@ template <typename Ttopcone>
 std::optional<MyMatrix<typename Ttopcone::Tint>>
 test_triple_in_listtriple(std::vector<Ttopcone> const &l_cones,
                           std::vector<triple<typename Ttopcone::Tint>> const &lt1,
-                          triple<typename Ttopcone::Tint> const &ef2) {
+                          triple<typename Ttopcone::Tint> const &ef2,
+                          std::ostream& os) {
   using Tint = typename Ttopcone::Tint;
   for (auto &ef1: lt1) {
-    std::optional<MyMatrix<Tint>> opt = test_equiv_triple(l_cones, ef1, ef2);
+    std::optional<MyMatrix<Tint>> opt = test_equiv_triple(l_cones, ef1, ef2, os);
     if (opt) {
       MyMatrix<Tint> const& M = *opt;
       return M;
@@ -170,7 +172,7 @@ template <typename Ttopcone>
 std::pair<std::vector<triple<typename Ttopcone::Tint>>, std::vector<MyMatrix<typename Ttopcone::Tint>>>
 get_spanning_list_triple(
     std::vector<Ttopcone> const &l_cones,
-    const triple<typename Ttopcone::Tint> &ef_input, [[maybe_unused]] std::ostream& os) {
+    const triple<typename Ttopcone::Tint> &ef_input, std::ostream& os) {
   //  os << "Beginning of get_spanning_list_triple\n";
   using Tgroup = typename Ttopcone::Tgroup;
   using Telt = typename Tgroup::Telt;
@@ -204,7 +206,7 @@ get_spanning_list_triple(
   auto f_insert = [&](const triple<Tint> &ef_A) -> void {
     for (const auto &ef_B : l_triple) {
       std::optional<MyMatrix<Tint>> equiv_opt =
-          test_equiv_triple(l_cones, ef_A, ef_B);
+        test_equiv_triple(l_cones, ef_A, ef_B, os);
       if (equiv_opt) {
         f_insert_generator(*equiv_opt);
         return;
@@ -215,7 +217,7 @@ get_spanning_list_triple(
     Tgroup stab = uC.GRP_ext.Stabilizer_OnSets(ef_A.f_ext);
     MyMatrix<Tint> eInv = Inverse(ef_A.eMat);
     for (auto &eGen : stab.SmallGeneratingSet()) {
-      MyMatrix<Tint> eMatGen = uC.find_matrix(eGen);
+      MyMatrix<Tint> eMatGen = uC.find_matrix(eGen, os);
       MyMatrix<Tint> TransGen = eInv * eMatGen * ef_A.eMat;
       f_insert_generator(TransGen);
     }
@@ -282,7 +284,7 @@ get_spanning_list_triple(
 #ifdef DEBUG_TRIPLE
           os << "TRIP: face=" << StringFace(e_pair.first) << " elt=" << e_pair.second << "\n";
 #endif
-          MyMatrix<Tint> eMat1 = eC.find_matrix(e_pair.second);
+          MyMatrix<Tint> eMat1 = eC.find_matrix(e_pair.second, os);
           const Ttopcone &fC = l_cones[jCone];
           MyMatrix<Tint> eMatAdj = e_sing_adj.eMat * eMat1 * ef.eMat;
           MyMatrix<Tint> EXTimg = fC.EXT * eMatAdj;

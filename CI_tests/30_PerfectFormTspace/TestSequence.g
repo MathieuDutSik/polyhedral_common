@@ -48,7 +48,6 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, " RealImagProd = ", info.eProd, "\n");
     AppendTo(output, "/\n");
     CloseStream(output);
-    Print("info=", info, "\n");
     #
     eProg:=Concatenation("../../src_perfect/", fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);

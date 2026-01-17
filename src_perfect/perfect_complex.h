@@ -75,11 +75,19 @@ struct PerfectFormInfoForComplex {
   std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
   Tgroup GRP_ext; // Group acting on the shortest vectors
   std::vector<sing_adj<Tint>> l_sing_adj;
-  MyMatrix<Tint> find_matrix(Telt const& x) const {
+  MyMatrix<Tint> find_matrix(Telt const& x, [[maybe_unused]] std::ostream& os) const {
     if (opt_pre_imager) {
       permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup> const& pre_imager = *opt_pre_imager;
       std::optional<MyMatrix<Tint>> opt = pre_imager.get_preimage(x);
-      return unfold_opt(opt, "The element elt should belong to the group");
+      MyMatrix<Tint> M = unfold_opt(opt, "The element elt should belong to the group");
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+      Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
+      if (x_img != x) {
+        std::cerr << "Inconsistency in the pre_image computation\n";
+        throw TerminalException{1};
+      }
+#endif
+      return M;
     }
     return FindTransformation(EXT, EXT, x);
   }
@@ -146,7 +154,7 @@ struct FacesPerfectComplex {
 };
 
 template<typename T, typename Tint, typename Tgroup>
-FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, [[maybe_unused]] std::ostream & os) {
+FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   int n = pctdi.LinSpa.n;
@@ -174,7 +182,7 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     os << "PERFCOMP: |l_elt|=" << l_elt.size() << "\n";
 #endif
     for (auto & ePermGen: l_elt) {
-      MyMatrix<Tint> eMatrGen = top.find_matrix(ePermGen);
+      MyMatrix<Tint> eMatrGen = top.find_matrix(ePermGen, os);
       l_gens.push_back(eMatrGen);
     }
 #ifdef DEBUG_PERFECT_COMPLEX
@@ -238,7 +246,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     int i_domain = 0;
     for (auto & face1: l_faces) {
       std::optional<MyMatrix<Tint>> opt =
-        test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t);
+        test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t, os);
       if (opt) {
         MyMatrix<Tint> const& M = *opt;
         int sign = 1;
