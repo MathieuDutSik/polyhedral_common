@@ -119,7 +119,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
       l_sing_adj.emplace_back(std::move(adj));
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
-    // In some cases, EXT it not 
+    // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
     std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
     if (RankMat(EXT) < EXT.cols()) {
       std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
@@ -319,7 +319,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
     triple<Tint> t{iCone, f, t_big.eMat};
-    return t;
+    triple<Tint> t_can = canonicalize_triple(pctdi.l_perfect, t, os);
+    return t_can;
   };
   auto f_insert=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, bool const& is_well_rounded) -> BoundEntry<Tint> {
 #ifdef DEBUG_PERFECT_COMPLEX

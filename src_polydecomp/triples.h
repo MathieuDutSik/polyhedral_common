@@ -79,23 +79,16 @@ struct triple {
 
 template <typename Ttopcone>
 std::optional<MyMatrix<typename Ttopcone::Tint>>
-test_equiv_triple(std::vector<Ttopcone> const &l_cones,
+test_equiv_triple([[maybe_unused]] std::vector<Ttopcone> const &l_cones,
                   triple<typename Ttopcone::Tint> const &ef1,
                   triple<typename Ttopcone::Tint> const &ef2,
-                  std::ostream& os) {
-  using Tgroup = typename Ttopcone::Tgroup;
-  using Telt = typename Tgroup::Telt;
-  using Tint = typename Ttopcone::Tint;
+                  [[maybe_unused]] std::ostream& os) {
   if (ef1.iCone != ef2.iCone)
     return {};
-  size_t iC = ef1.iCone;
-  const Ttopcone &eC = l_cones[iC];
-  std::optional<Telt> test =
-      eC.GRP_ext.RepresentativeAction_OnSets(ef1.f_ext, ef2.f_ext);
-  if (!test)
+  if (ef1.f_ext != ef2.f_ext) {
     return {};
-  MyMatrix<Tint> eMat = eC.find_matrix(*test, os);
-  return Inverse(ef1.eMat) * eMat * ef2.eMat;
+  }
+  return Inverse(ef1.eMat) * ef2.eMat;
 }
 
 
@@ -205,7 +198,6 @@ get_spanning_list_triple(
   };
   std::vector<triple<Tint>> l_triple;
   auto f_insert = [&](const triple<Tint> &ef_A) -> void {
-    triple<Tint> ef_A_can = canonicalize_triple(l_cones, ef_A, os);
     for (const auto &ef_B : l_triple) {
       std::optional<MyMatrix<Tint>> equiv_opt =
         test_equiv_triple(l_cones, ef_A, ef_B, os);
@@ -224,7 +216,7 @@ get_spanning_list_triple(
       f_insert_generator(TransGen);
     }
   };
-  f_insert(ef_input);
+  f_insert(ef_input); // It is assumed to be already canonicalized
   size_t curr_pos = 0;
   while (true) {
     size_t len = l_triple.size();
@@ -321,7 +313,8 @@ get_spanning_list_triple(
             faceNew[idx] = 1;
           }
           triple<Tint> efNew{jCone, faceNew, eMatAdj};
-          f_insert(efNew);
+          triple<Tint> efNew_can = canonicalize_triple(l_cones, efNew, os);
+          f_insert(efNew_can);
         }
       }
 #ifdef DEBUG_TRIPLE
