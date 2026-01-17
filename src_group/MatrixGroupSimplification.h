@@ -2334,3 +2334,4 @@ DoubleCosetSimplification<T> ExhaustiveMatrixDoubleCosetSimplifications(
 
 // clang-format off
 #endif  // SRC_GROUP_MATRIXGROUP_H_
+// clang-format on

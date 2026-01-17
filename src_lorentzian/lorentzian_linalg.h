@@ -3,6 +3,7 @@
 #define SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
 
 #include "COMB_Combinatorics.h"
+#include "FiniteMatrixGroupTest.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
@@ -1017,103 +1018,6 @@ std::vector<MyMatrix<T>> GetOrthogonalTotallyIsotropicKernelSubspace(
      << "\n";
 #endif
   return ListGens;
-}
-
-/*
-  For a dimension N, we want to find all the possible integers k such that there
-  exist an integer matrix A of order k. The solution is given in
-  https://en.wikipedia.org/wiki/Crystallographic_restriction_theorem
-  and involves the Psi function
- */
-template <typename T>
-std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
-  auto is_prime = [](T const &x) -> bool {
-    if (x == 1)
-      return false;
-    if (x == 2)
-      return true;
-    T div = 2;
-    while (true) {
-      T res = ResInt(x, div);
-      if (res == 0)
-        return false;
-      div += 1;
-      if (div * div > x)
-        break;
-    }
-    return true;
-  };
-  std::vector<T> ListPrime;
-  for (T val = 2; val <= N + 1; val++) {
-    bool test = is_prime(val);
-#ifdef DEBUG_LORENTZIAN_LINALG
-    std::cerr << "LORLIN: val=" << val << " test=" << test << "\n";
-#endif
-    if (test)
-      ListPrime.push_back(val);
-  }
-  //
-  struct pair {
-    T fact;
-    T dim_cost;
-  };
-  struct Desc {
-    T prime;
-    std::vector<pair> l_pair;
-  };
-  auto get_pair = [&](T const &eprime, int const &k) -> pair {
-    if (eprime == 2 && k == 1)
-      return {2, 0};
-    T pow1 = MyPow(eprime, k - 1);
-    T fact = pow1 * eprime;
-    T dim_cost = pow1 * (eprime - 1);
-    return {fact, dim_cost};
-  };
-  auto get_l_pair = [&](T const &eprime) -> std::vector<pair> {
-    std::vector<pair> l_pair;
-    l_pair.push_back({1, 0});
-    int k = 1;
-    while (true) {
-      pair epair = get_pair(eprime, k);
-      if (epair.dim_cost > N)
-        break;
-      l_pair.push_back(epair);
-      k++;
-    }
-    return l_pair;
-  };
-  std::vector<Desc> l_desc;
-  for (auto &ePrime : ListPrime)
-    l_desc.push_back({ePrime, get_l_pair(ePrime)});
-#ifdef DEBUG_LORENTZIAN_LINALG
-  size_t n_case = 1;
-#endif
-  std::vector<int> VectSiz;
-  for (auto eDesc : l_desc) {
-    size_t len = eDesc.l_pair.size();
-#ifdef DEBUG_LORENTZIAN_LINALG
-    n_case *= len;
-#endif
-    VectSiz.push_back(len);
-  }
-#ifdef DEBUG_LORENTZIAN_LINALG
-  std::cerr << "LORLIN: n_case=" << n_case << "\n";
-#endif
-  std::vector<T> l_order;
-  for (auto &V : BlockIterationMultiple(VectSiz)) {
-    T tot_dim = 0;
-    T order = 1;
-    for (size_t iPrime = 0; iPrime < ListPrime.size(); iPrime++) {
-      int pos = V[iPrime];
-      pair epair = l_desc[iPrime].l_pair[pos];
-      tot_dim += epair.dim_cost;
-      order *= epair.fact;
-    }
-    if (tot_dim <= N)
-      l_order.push_back(order);
-  }
-  std::sort(l_order.begin(), l_order.end());
-  return l_order;
 }
 
 template <typename T>

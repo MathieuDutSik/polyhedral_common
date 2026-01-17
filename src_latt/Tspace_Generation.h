@@ -104,6 +104,8 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
     }
   }
   // That choice of SuperMat matters in the self-duality.
+  // It represents the identity x identity in the space S^n x S^n
+  // where it lives.
   eMatB = IdentityMat<T>(n);
   ZeroAssignation(eMatC);
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
@@ -159,6 +161,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     }
   }
   // That choice of SuperMat matters in the self-duality.
+  // It corresponds to the identity matrix in the H^n space
+  // in which the SuperMat truly lives.
   MyMatrix<T> SuperMat_pre = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
     SuperMat_pre(i, i) = 1;
