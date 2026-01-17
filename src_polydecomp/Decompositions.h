@@ -501,8 +501,9 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
             test_equiv_triple(ListCones, ef_A, ef_B, os);
-          if (equiv_opt)
+          if (equiv_opt) {
             return;
+          }
         }
       }
       list_face.push_back(get_spanning_list_triple(ListCones, ef_A, os));

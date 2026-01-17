@@ -123,8 +123,9 @@ canonicalize_triple(std::vector<Ttopcone> const &l_cones,
   }
 #endif
   Telt const& x = *test;
-  MyMatrix<Tint> x_mat = eC.find_matrix(x, os);
-  MyMatrix<Tint> eMat = t1.eMat * x_mat;
+  Telt x_inv = Inverse(x);
+  MyMatrix<Tint> x_mat = eC.find_matrix(x_inv, os);
+  MyMatrix<Tint> eMat = x_mat * t1.eMat;
   triple<Tint> t2{iC, f_can, eMat};
 #ifdef SANITY_CHECK_TRIPLE
   auto get_ext=[&](triple<Tint> const& t) -> std::set<MyVector<Tint>> {
@@ -204,6 +205,7 @@ get_spanning_list_triple(
   };
   std::vector<triple<Tint>> l_triple;
   auto f_insert = [&](const triple<Tint> &ef_A) -> void {
+    triple<Tint> ef_A_can = canonicalize_triple(l_cones, ef_A, os);
     for (const auto &ef_B : l_triple) {
       std::optional<MyMatrix<Tint>> equiv_opt =
         test_equiv_triple(l_cones, ef_A, ef_B, os);
