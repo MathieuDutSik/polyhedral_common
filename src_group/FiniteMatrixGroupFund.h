@@ -1,6 +1,6 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
-#ifndef SRC_GROUP_FINITEMATRIXGROUPTEST_H_
-#define SRC_GROUP_FINITEMATRIXGROUPTEST_H_
+#ifndef SRC_GROUP_FINITEMATRIXGROUPFUND_H_
+#define SRC_GROUP_FINITEMATRIXGROUPFUND_H_
 
 // clang-format off
 #include "COMB_Combinatorics.h"
@@ -229,5 +229,5 @@ public:
 };
 
 // clang-format off
-#endif  // SRC_GROUP_FINITEMATRIXGROUPTEST_H_
+#endif  // SRC_GROUP_FINITEMATRIXGROUPFUND_H_
 // clang-format on

@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "FiniteMatrixGroupTest.h"
+#include "FiniteMatrixGroupFund.h"
 // clang-format on
 
 template<typename Tint>

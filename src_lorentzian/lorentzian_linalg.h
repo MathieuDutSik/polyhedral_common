@@ -3,7 +3,7 @@
 #define SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
 
 #include "COMB_Combinatorics.h"
-#include "FiniteMatrixGroupTest.h"
+#include "FiniteMatrixGroupFund.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
