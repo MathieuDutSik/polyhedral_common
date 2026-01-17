@@ -1,4 +1,4 @@
-PROGRAM		= LATT_Canonicalize LATT_CanonicalizeMultiple LATT_CanonicalizeSymplectic LATT_Automorphism LATT_Isomorphism LATT_near LATT_GenerateCharacteristicVectorSet TSPACE_FileFormatConversion TSPACE_Stabilizer TSPACE_Equivalence TEST_EquiStabFamily LATT_ComputeShortestOrbits
+PROGRAM		= LATT_Canonicalize LATT_CanonicalizeMultiple LATT_CanonicalizeSymplectic LATT_Automorphism LATT_Isomorphism LATT_near LATT_GenerateCharacteristicVectorSet TSPACE_FileFormatConversion TSPACE_Stabilizer TSPACE_Equivalence TEST_EquiStabFamily LATT_ComputeShortestOrbits GRP_TestFiniteness
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
