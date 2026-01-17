@@ -18,37 +18,35 @@
   needed? Or just slower?
  */
 template <typename T, typename Tint>
-std::optional<MyMatrix<T>>
-GetOnePositiveDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
-                                   std::vector<MyVector<Tint>> const& ListV_init,
-                                   std::ostream &os) {
-  int n_mat = ListMat.size();
-  if (n_mat == 0) {
-    std::cerr
+struct SearcherPositiveDefiniteMatrix {
+private:
+  std::vector<MyMatrix<T>> ListMat;
+  std::vector<MyVector<Tint>> ListV;
+  int n;
+  int n_mat;
+  std::optional<std::optional<MyMatrix<T>>> pos_def;
+  std::ostream &os;
+public:
+  SearcherPositiveDefiniteMatrix(std::vector<MyMatrix<T>> _ListMat, std::vector<MyVector<Tint>> ListV_init, std::ostream& _os) : ListMat(_ListMat), ListV(ListV_init), os(_os) {
+    n_mat = ListMat.size();
+    if (n_mat == 0) {
+      std::cerr
         << "TSPACE: The number of matrices is 0 so we cannot build a positive "
-           "definite matrix\n";
-    throw TerminalException{1};
-  }
-  int n = ListMat[0].rows();
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPFCT: GetOnePositiveDefiniteMatrix n_mat=" << n_mat << " n=" << n << "\n";
-#endif
-  for (int i_mat = 0; i_mat < n_mat; i_mat++) {
-    MyMatrix<T> const &eMat = ListMat[i_mat];
-    if (IsPositiveDefinite(eMat, os)) {
-      return eMat;
+        "definite matrix\n";
+      throw TerminalException{1};
+    }
+    n = ListMat[0].rows();
+    for (int i_mat = 0; i_mat < n_mat; i_mat++) {
+      MyMatrix<T> const &eMat = ListMat[i_mat];
+      if (IsPositiveDefinite(eMat, os)) {
+        std::optional<MyMatrix<T>> reply = eMat;
+        pos_def = reply;
+        return;
+      }
     }
   }
-  std::vector<MyVector<Tint>> ListV = ListV_init;
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  int iter=0;
-#endif
-  while (true) {
+  void one_iteration() {
     int n_vect = ListV.size();
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    iter += 1;
-    os << "TSPFCT: GetOnePositiveDefiniteMatrix iter=" << iter << " n_vect=" << n_vect << "\n";
-#endif
     MyMatrix<T> ListIneq = ZeroMatrix<T>(n_vect, 1 + n_mat);
     MyVector<T> ToBeMinimized = ZeroVector<T>(1 + n_mat);
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -66,14 +64,18 @@ GetOnePositiveDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
     //
     LpSolution<T> eSol = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (!eSol.PrimalDefined || !eSol.DualDefined) {
-      return {};
+      std::optional<MyMatrix<T>> reply = {};
+      pos_def = reply;
+      return;
     }
     MyMatrix<T> TrySuperMat = ZeroMatrix<T>(n, n);
     for (int i_mat = 0; i_mat < n_mat; i_mat++) {
       TrySuperMat += eSol.DirectSolution(i_mat) * ListMat[i_mat];
     }
     if (IsPositiveDefinite(TrySuperMat, os)) {
-      return TrySuperMat;
+      std::optional<MyMatrix<T>> reply = TrySuperMat;
+      pos_def = reply;
+      return;
     }
     //
     // Failed, trying to find a vector
@@ -94,6 +96,25 @@ GetOnePositiveDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
       bool StrictIneq = false;
       MyVector<Tint> V = GetShortIntegralVector<T, Tint>(TrySuperMat, CritNorm, StrictIneq, os);
       ListV.push_back(V);
+    }
+  }
+  std::optional<std::optional<MyMatrix<T>>> const& get_pos_def() const {
+    return pos_def;
+  }
+};
+
+
+template <typename T, typename Tint>
+std::optional<MyMatrix<T>>
+GetOnePositiveDefiniteMatrix_ListV(std::vector<MyMatrix<T>> const &ListMat,
+                                   std::vector<MyVector<Tint>> const& ListV_init,
+                                   std::ostream &os) {
+  SearcherPositiveDefiniteMatrix<T,Tint> spdm(ListMat, ListV_init, os);
+  while(true) {
+    spdm.one_iteration();
+    std::optional<std::optional<MyMatrix<T>>> const& pos_def = spdm.get_pos_def();
+    if (pos_def) {
+      return *pos_def;
     }
   }
 }
