@@ -42,6 +42,7 @@
 #define SANITY_CHECK_PERFECT_REPR
 #define SANITY_CHECK_PERFECT_FORM
 #define SANITY_CHECK_BOUNDED_FACE
+#define SANITY_CHECK_POSITIVE_SEMIDEFINITE_SELF_DUAL
 #endif
 
 #ifdef TIMINGS
@@ -421,7 +422,7 @@ bool is_bounded_self_dual(SelfDualInfo<T> const& self_dual_info, std::vector<MyM
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
     SumMat += ExprBasis(i_mat) * ListMat[i_mat];
   }
-#ifdef SANITY_CHECK_BOUNDED_FACE
+#ifdef SANITY_CHECK_POSITIVE_SEMIDEFINITE_SELF_DUAL
   if (!IsPositiveSemiDefinite(SumMat, os)) {
     std::cerr << "The matrix should be positive semi-definite\n";
     std::cerr << "So, maybe the cone is not self-dual\n";

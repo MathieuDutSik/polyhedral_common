@@ -34,7 +34,7 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
                                MyMatrix<T> const &eMatC, int n, T const &eSum,
                                T const &eProd) {
   MyMatrix<T> eMatN = ZeroMatrix<T>(2 * n, 2 * n);
-  for (int i2 = 0; i2 < n; i2++)
+  for (int i2 = 0; i2 < n; i2++) {
     for (int j2 = 0; j2 < n; j2++) {
       T bVal = eMatB(i2, j2);
       T cVal = eMatC(i2, j2);
@@ -46,6 +46,7 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
       eMatN(i2, j2 + n) = eVal2;
       eMatN(i2 + n, j2) = eVal2;
     }
+  }
   return eMatN;
 }
 
@@ -83,7 +84,7 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   std::vector<MyMatrix<T>> ListMat;
   MyMatrix<T> eMatB(n, n);
   MyMatrix<T> eMatC(n, n);
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
       ZeroAssignation(eMatB);
       ZeroAssignation(eMatC);
@@ -101,6 +102,8 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
       MyMatrix<T> fMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
       ListMat.push_back(fMat);
     }
+  }
+  // That choice of SuperMat matters in the self-duality.
   eMatB = IdentityMat<T>(n);
   ZeroAssignation(eMatC);
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
@@ -127,7 +130,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
     std::cerr << "Impossible for an imaginary space\n";
     throw TerminalException{1};
   }
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
       eMat(i, j) = 1;
@@ -143,7 +146,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
       MyMatrix<T> fMat = RemoveFractionMatrix(eMat);
       ListMat.push_back(fMat);
     }
-  for (int i = 0; i < n - 1; i++)
+  }
+  for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
       MyMatrix<T> eMat(2 * n, 2 * n);
       ZeroAssignation(eMat);
@@ -153,6 +157,8 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
       eMat(i, n + j) = -1;
       ListMat.push_back(eMat);
     }
+  }
+  // That choice of SuperMat matters in the self-duality.
   MyMatrix<T> SuperMat_pre = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
     SuperMat_pre(i, i) = 1;
