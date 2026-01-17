@@ -397,7 +397,8 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       const ConeDesc<T, Tint, Tgroup> &eC = ListCones[fd_A.iCone];
       Face f_ext = Compute_faceEXT_from_faceFAC(eC.extfac_incd, eC.FAC.rows(),
                                                 eC.EXT_T.rows(), fd_A.f_fac);
-      triple<Tint> ef_A{fd_A.iCone, f_ext, IdentityMat<Tint>(dim)};
+      triple<Tint> ef_A_pre{fd_A.iCone, f_ext, IdentityMat<Tint>(dim)};
+      triple<Tint> ef_A = canonicalize_triple(ListCones, ef_A_pre, os);
       for (auto &eOrbit : list_face) {
         for (auto &ef_B : eOrbit.first) {
           std::optional<MyMatrix<Tint>> equiv_opt =
@@ -517,7 +518,8 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
           boost::dynamic_bitset<>::size_type eVal = eOrb.find_first();
           size_t iExt = eVal;
           f_ext[iExt] = 1;
-          triple<Tint> e_ent{iCone, f_ext, IdentityMat<Tint>(n_col)};
+          triple<Tint> e_ent_pre{iCone, f_ext, IdentityMat<Tint>(n_col)};
+          triple<Tint> e_ent = canonicalize_triple(ListCones, e_ent_pre, os);
           f_insert(e_ent);
         }
       }
@@ -531,8 +533,9 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
               SPAN_face_ExtremeRays(eRepr.f_ext, StabFace_ext, RankFace_ext,
                                     eC.facext_incd, eC.EXT_T, eC.FAC, os);
           for (auto &f_ext_new : vf) {
-            triple<Tint> e_ent{eRepr.iCone, f_ext_new,
-                                 IdentityMat<Tint>(n_col)};
+            triple<Tint> e_ent_pre{eRepr.iCone, f_ext_new,
+                                   IdentityMat<Tint>(n_col)};
+            triple<Tint> e_ent = canonicalize_triple(ListCones, e_ent_pre, os);
             f_insert(e_ent);
           }
         }
