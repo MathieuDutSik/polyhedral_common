@@ -1,7 +1,7 @@
 // Copyright (C) 2022 Mathieu Dutour Sikiric <mathieu.dutour@gmail.com>
 // clang-format off
 #include "NumberTheory.h"
-#include "Tspace_Functions.h"
+#include "FiniteMatrixGroupTest.h"
 // clang-format on
 
 template<typename Tint>
@@ -49,9 +49,8 @@ int main(int argc, char *argv[]) {
     }
     auto f=[&]() -> void {
       if (arith == "gmp") {
-        using T = mpq_class;
         using Tint = mpz_class;
-        return process<T,Tint>(FileListMat, OutFormat, OutFile);
+        return process<Tint>(FileListMat, OutFormat, OutFile);
       }
       std::cerr << "Failed to find a matching entry for arith=" << arith << "\n";
       throw TerminalException{1};

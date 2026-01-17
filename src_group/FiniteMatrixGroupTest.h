@@ -3,8 +3,13 @@
 #define SRC_GROUP_FINITEMATRIXGROUPTEST_H_
 
 // clang-format off
+#include "COMB_Combinatorics.h"
 #include "MatrixGroupSimplification.h"
 // clang-format on
+
+#ifdef DEBUG
+#define DEBUG_FINITE_MATRIX_GROUP
+#endif
 
 /*
   For a dimension N, we want to find all the possible integers k such that there
@@ -33,8 +38,8 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   std::vector<T> ListPrime;
   for (T val = 2; val <= N + 1; val++) {
     bool test = is_prime(val);
-#ifdef DEBUG_LORENTZIAN_LINALG
-    std::cerr << "LORLIN: val=" << val << " test=" << test << "\n";
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+    std::cerr << "FMGT: val=" << val << " test=" << test << "\n";
 #endif
     if (test)
       ListPrime.push_back(val);
@@ -72,19 +77,19 @@ std::vector<T> GetIntegralMatricesPossibleOrders(T const &N) {
   std::vector<Desc> l_desc;
   for (auto &ePrime : ListPrime)
     l_desc.push_back({ePrime, get_l_pair(ePrime)});
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef DEBUG_FINITE_MATRIX_GROUP
   size_t n_case = 1;
 #endif
   std::vector<int> VectSiz;
   for (auto eDesc : l_desc) {
     size_t len = eDesc.l_pair.size();
-#ifdef DEBUG_LORENTZIAN_LINALG
+#ifdef DEBUG_FINITE_MATRIX_GROUP
     n_case *= len;
 #endif
     VectSiz.push_back(len);
   }
-#ifdef DEBUG_LORENTZIAN_LINALG
-  std::cerr << "LORLIN: n_case=" << n_case << "\n";
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+  std::cerr << "FMGT: n_case=" << n_case << "\n";
 #endif
   std::vector<T> l_order;
   for (auto &V : BlockIterationMultiple(VectSiz)) {
@@ -142,6 +147,9 @@ private:
       }
       insert_one_elt(x_work);
     }
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+    os << "FMGT: FiniteMatrixGroupTest, setting is_finite=false by bad element\n";
+#endif
     is_finite = false; // element of infinite order. Cannot be finite
     return true;
   }
@@ -162,6 +170,9 @@ private:
     }
     n_done += 1;
     if (n_done == l_elts.size()) { // Enumeration has finished.
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+      os << "FMGT: FiniteMatrixGroupTest, setting is_finite=true by enumeration n_done=" << n_done << "\n";
+#endif
       is_finite = true;
     }
     return false;
@@ -174,6 +185,9 @@ public:
     }
     int N = l_gens[0].rows();
     max_elt_order = max_torsion_order_gl_nz(N);
+#ifdef DEBUG_FINITE_MATRIX_GROUP
+    os << "FMGT: FiniteMatrixGroupTest, N=" << N << " max_elt_order=" << max_elt_order << " |l_gens|=" << l_gens.size() << "\n";
+#endif
     Id = IdentityMat<T>(N);
     n_done = 0;
     for (auto & egen: l_gens) {
