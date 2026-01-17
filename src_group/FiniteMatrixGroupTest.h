@@ -120,6 +120,7 @@ private:
   size_t n_done;
   std::optional<bool> is_finite;
   int max_elt_order;
+  std::ostream& os;
   bool insert_one_elt(MyMatrix<T> const& x) {
     bool was_inserted = set_elts.insert(x).second;
     if (!was_inserted) { // already present
@@ -166,7 +167,7 @@ private:
     return false;
   }
 public:
-  FiniteMatrixGroupTest(std::vector<MyMatrix<T>> const& _l_gens) : l_gens(_l_gens) {
+  FiniteMatrixGroupTest(std::vector<MyMatrix<T>> const& _l_gens, std::ostream& _os) : l_gens(_l_gens), os(_os) {
     if (l_gens.size() == 0) { // no generator, group is trivial and so empty
       is_finite = true;
       return;
