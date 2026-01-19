@@ -1094,11 +1094,6 @@ std::optional<MyMatrix<Tint>>
 LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
                                  MyMatrix<T> const &eMat1,
                                  MyMatrix<T> const &eMat2, std::ostream &os) {
-  T det1 = DeterminantMat(eMat1);
-  T det2 = DeterminantMat(eMat2);
-  if (det1 != det2) {
-    return {};
-  }
   MyMatrix<Tint> SHV1 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat1, os);
   MyMatrix<Tint> SHV2 = ExtractInvariantVectorFamilyZbasis<T, Tint>(eMat2, os);
   MyMatrix<T> SHV1_T = UniversalMatrixConversion<T, Tint>(SHV1);

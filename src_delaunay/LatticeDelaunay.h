@@ -40,78 +40,39 @@ template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   RecordDualDescOperation<T, Tgroup> rddo;
 };
 
-template <typename T, typename Tidx_value>
-WeightMatrix<true, T, Tidx_value>
-GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
-                           MyMatrix<T> const &SHV, std::ostream &os) {
+template <typename T>
+MyMatrix<T> get_reduced_delaunay_shv(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
+                                     MyMatrix<T> const &SHV, CP<T> const& eCP) {
   int n = GramMat.rows();
-  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
-  MyVector<T> TheCenter = eCP.eCent;
-  std::vector<MyMatrix<T>> CharPair =
-      CharacterizingPair(GramMat, TheCenter, os);
-  MyMatrix<T> Qmat = CharPair[0];
+  MyVector<T> const& TheCenter = eCP.eCent;
   int nbVect = SHV.rows();
   int nbVert = EXT.rows();
-  MyMatrix<T> EXText(nbVect + nbVert, n + 1);
-  for (int iVert = 0; iVert < nbVert; iVert++)
-    EXText.row(iVert) = EXT.row(iVert);
+  MyMatrix<T> EXText(nbVect + nbVert, n);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
+    for (int i=0; i<n; i++) {
+      EXText(iVert, i) = EXT(iVert, i+1) - TheCenter(i);
+    }
+  }
   for (int iVect = 0; iVect < nbVect; iVect++) {
-    EXText(nbVert + iVect, 0) = 0;
-    for (int i = 0; i < n; i++)
-      EXText(nbVert + iVect, i + 1) = SHV(iVect, i);
+    for (int i = 0; i < n; i++) {
+      EXText(nbVert + iVect, i) = SHV(iVect, i);
+    }
   }
-  return GetSimpleWeightMatrix<T, Tidx_value>(EXText, Qmat, os);
+  return EXText;
 }
 
-template <typename T, typename Tgroup>
-bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
-  using Telt = typename Tgroup::Telt;
-  std::vector<Telt> LGen = eGRP.GeneratorsOfGroup();
-  for (auto &eGen : LGen) {
-    MyMatrix<T> eMat = FindTransformation<T, Telt>(EXT_T, EXT_T, eGen);
-    if (!IsIntegralMatrix(eMat))
-      return false;
-  }
-  return true;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const &GramMat,
-                                 MyMatrix<T> const &SHV,
-                                 MyMatrix<Tint> const &EXT, std::ostream &os) {
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-  MicrosecondTime time;
-#endif
-  using Tidx_value = int16_t;
-  using Tgr = GraphListAdj;
-  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
-  //
-  // Now extending with the SHV vector set
-  //
-  WeightMatrix<true, T, Tidx_value> WMat =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT_T, GramMat, SHV, os);
-  int nbVert = EXT_T.rows();
-  int nbSHV = SHV.rows();
-  Face eFace(nbVert + nbSHV);
-  for (int iVert = 0; iVert < nbVert; iVert++)
+template <typename T>
+Face get_face_delaunay_shv(MyMatrix<T> const &EXT, MyMatrix<T> const &SHV) {
+  int nbVect = SHV.rows();
+  int nbVert = EXT.rows();
+  Face eFace(nbVert + nbVect);
+  for (int iVert = 0; iVert < nbVert; iVert++) {
     eFace[iVert] = 1;
-  for (int iSHV = 0; iSHV < nbSHV; iSHV++)
-    eFace[nbVert + iSHV] = 0;
-  Tgroup PreGRPisom =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
-  Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
-  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer(EXT_T, GRPisom, os);
-#ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
-#endif
-  return GRPlatt;
-}
-
-template <typename T, typename Tint, typename Tgroup>
-Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
-                           MyMatrix<Tint> const &EXT, std::ostream &os) {
-  return Delaunay_StabilizerKernel<T, Tint, Tgroup>(eData.GramMat, eData.SHV,
-                                                    EXT, os);
+  }
+  for (int iVect = 0; iVect < nbVect; iVect++) {
+    eFace[nbVert + iVect] = 0;
+  }
+  return eFace;
 }
 
 template <typename T> bool is_affine_integral(MyMatrix<T> const &M) {
@@ -136,6 +97,63 @@ template <typename T> bool is_affine_integral(MyMatrix<T> const &M) {
   return true;
 }
 
+template <typename T, typename Tidx_value>
+WeightMatrix<true, T, Tidx_value>
+GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
+                           MyMatrix<T> const &SHV, std::ostream &os) {
+  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
+  MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT, GramMat, SHV, eCP);
+  return GetSimpleWeightMatrix<T, Tidx_value>(EXText, GramMat, os);
+}
+
+template <typename T, typename Tgroup>
+bool IsGroupCorrect(MyMatrix<T> const &EXT_T, Tgroup const &eGRP) {
+  using Telt = typename Tgroup::Telt;
+  std::vector<Telt> LGen = eGRP.GeneratorsOfGroup();
+  for (auto &eGen : LGen) {
+    MyMatrix<T> eMat = FindTransformation<T, Telt>(EXT_T, EXT_T, eGen);
+    if (!IsIntegralMatrix(eMat))
+      return false;
+  }
+  return true;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const &GramMat,
+                                 MyMatrix<T> const &SHV,
+                                 MyMatrix<Tint> const &EXT, std::ostream &os) {
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  MicrosecondTime time;
+#endif
+  using Tidx_value = int16_t;
+  using Tgr = GraphListAdj;
+  //
+  // Now extending with the SHV vector set
+  //
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT_T);
+  MyMatrix<T> EXText = get_reduced_delaunay_shv(EXT_T, GramMat, SHV, eCP);
+  WeightMatrix<true, T, Tidx_value> WMat =
+    GetSimpleWeightMatrix<T, Tidx_value>(EXText, GramMat, os);
+  Face eFace = get_face_delaunay_shv(EXT_T, SHV);
+  Tgroup PreGRPisom =
+      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat, os);
+  Tgroup GRPisom = ReducedGroupActionFace(PreGRPisom, eFace);
+  MyMatrix<T> EXTextInt = RemoveFractionMatrix(EXText);
+  Tgroup GRPlatt = LinPolytopeIntegral_Stabilizer(EXTextInt, GRPisom, os);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|DEL_ENUM: Delaunay_Stabilizer|=" << time << "\n";
+#endif
+  return GRPlatt;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
+                           MyMatrix<Tint> const &EXT, std::ostream &os) {
+  return Delaunay_StabilizerKernel<T, Tint, Tgroup>(eData.GramMat, eData.SHV,
+                                                    EXT, os);
+}
+
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>>
 Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
@@ -150,15 +168,33 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: Begin Delaunay_TestEquivalence\n";
 #endif
+  MyMatrix<T> const& GramMat = eData.GramMat;
   //
   // Now extending by adding more vectors.
   //
+  CP<T> eCP1 = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT1_T);
+  CP<T> eCP2 = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT2_T);
+  auto extend_linear_transform=[&](MyMatrix<T> const& M) -> MyMatrix<T> {
+    int n = GramMat.rows();
+    MyMatrix<T> eMatRet = ZeroMatrix<T>(n+1, n+1);
+    eMatRet(0,0) = 1;
+    for (int i=0; i<n; i++) {
+      for (int j=0; j<n; j++) {
+        eMatRet(i+1, j+1) = M(i,j);
+      }
+    }
+    MyVector<T> delta = eCP2.TheCenter - M.transpose() * eCP1.TheCenter;
+    for (int i = 0; i<n; i++) {
+      eMatRet(0, i+1) = delta(i);
+    }
+    return eMatRet;
+  };
+  MyMatrix<T> EXText1 = get_reduced_delaunay_shv(EXT1_T, GramMat, eData.SHV, eCP1);
+  MyMatrix<T> EXText2 = get_reduced_delaunay_shv(EXT2_T, GramMat, eData.SHV, eCP2);
   WeightMatrix<true, T, Tidx_value> WMat1 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat,
-                                                eData.SHV, os);
+    GetSimpleWeightMatrix<T, Tidx_value>(EXText1, GramMat, os);
   WeightMatrix<true, T, Tidx_value> WMat2 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat,
-                                                eData.SHV, os);
+    GetSimpleWeightMatrix<T, Tidx_value>(EXText2, GramMat, os);
   std::optional<Telt> eRes =
       TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
   if (!eRes) {
@@ -170,32 +206,48 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
 #endif
     return {};
   }
+  Face eFace = get_face_delaunay_shv(EXT1_T, eData.SHV);
   Telt const &eElt = *eRes;
-  MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXT1_T, EXT2_T, eElt);
-  if (is_affine_integral(MatEquiv_T)) {
+  Telt eEltRed = ReduceElementActionFace(eElt, eFace);
+  MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
+  if (IsIntegralMatrix(MatEquiv_T)) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
     os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
+#endif
+    MyMatrix<T> eMatRet = extend_linear_transform(MatEquiv_T);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+#endif
+    return eMatRet;
+  }
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: Trying other strategy\n";
+#endif
+  Tgroup GRP1 =
+      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
+  Tgroup GRPisom1 =
+      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
+  MyMatrix<T> EXTextInt1 = RemoveFractionMatrix(EXText1);
+  MyMatrix<T> EXTextInt2 = RemoveFractionMatrix(EXText2);
+  std::optional<MyMatrix<T>> opt =
+    LinPolytopeIntegral_Isomorphism<T,Tgroup>(EXTextInt1, EXTextInt2, GRPisom1, eElt, os);
+  if (!opt) {
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 3 with false\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
     os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
 #endif
-    return MatEquiv_T;
+    return {};
   }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: Trying other strategies\n";
+  os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 4 with true\n";
 #endif
-  Tgroup GRP1 =
-      GetStabilizerWeightMatrix<T, Tgr, Tgroup, Tidx_value>(WMat1, os);
-  // We iterate over the group elements since we do not have yet have a
-  // way to encode that the want integrality only on the linear part.
-  for (auto &eElt1 : GRP1) {
-    Telt fElt = eElt1 * eElt;
-    MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXT1_T, EXT2_T, fElt);
-    if (is_affine_integral(MatEquiv_T)) {
-      return MatEquiv_T;
-    }
-  }
-  return {};
+  MyMatrix<T> eMatRet = extend_linear_transform(*opt);
+#ifdef TIMINGS_DELAUNAY_ENUMERATION
+  os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+#endif
+  return eMatRet;
 }
 
 template <typename T, typename Tint, typename Tgroup>
