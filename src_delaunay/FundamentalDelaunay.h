@@ -38,7 +38,7 @@ MyVector<T> FuncRandomDirection(int const &n, int const &siz) {
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
-                                    CVPSolver<T, Tint> &solver,
+                                    CVPSolver<T, Tint> const& solver,
                                     std::ostream &os) {
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int dim = GramMat.rows();
@@ -320,7 +320,7 @@ public:
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindAdjacentDelaunayPolytope(
-    MyMatrix<T> const &GramMat, CVPSolver<T, Tint> &solver,
+    MyMatrix<T> const &GramMat, CVPSolver<T, Tint> const& solver,
     MyMatrix<Tint> const &ShvGraverBasis, MyMatrix<T> const &EXT,
     Face const &eInc, std::ostream &os) {
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
@@ -421,7 +421,7 @@ MyMatrix<Tint> FindAdjacentDelaunayPolytope(
 
 template <typename T, typename Tint>
 MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
-                                           CVPSolver<T, Tint> &solver,
+                                           CVPSolver<T, Tint> const& solver,
                                            MyMatrix<Tint> const &ShvGraverBasis,
                                            int const &target_ext, int max_iter,
                                            std::string method,

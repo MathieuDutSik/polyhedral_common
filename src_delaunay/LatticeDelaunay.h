@@ -32,7 +32,6 @@
 
 template <typename T, typename Tint, typename Tgroup> struct DataLattice {
   int n;
-  MyMatrix<T> GramMat;
   MyMatrix<T> SHV;
   CVPSolver<T, Tint> solver;
   MyMatrix<Tint> ShvGraverBasis;
@@ -150,7 +149,7 @@ Tgroup Delaunay_StabilizerKernel(MyMatrix<T> const &GramMat,
 template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
                            MyMatrix<Tint> const &EXT, std::ostream &os) {
-  return Delaunay_StabilizerKernel<T, Tint, Tgroup>(eData.GramMat, eData.SHV,
+  return Delaunay_StabilizerKernel<T, Tint, Tgroup>(eData.solver.GramMat, eData.SHV,
                                                     EXT, os);
 }
 
@@ -168,7 +167,7 @@ Polytope_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: Begin Delaunay_TestEquivalence\n";
 #endif
-  MyMatrix<T> const& GramMat = eData.GramMat;
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
   //
   // Now extending by adding more vectors.
   //
@@ -271,10 +270,10 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   // Now extending by adding more vectors.
   //
   WeightMatrix<true, T, Tidx_value> WMat1 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.GramMat,
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT1_T, eData.solver.GramMat,
                                                 eData.SHV, os);
   WeightMatrix<true, T, Tidx_value> WMat2 =
-      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.GramMat,
+      GetWeightMatrixFromGramEXT<T, Tidx_value>(EXT2_T, eData.solver.GramMat,
                                                 eData.SHV, os);
   std::optional<Telt> eRes =
       TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
@@ -336,8 +335,9 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
   int n = EXT.cols() - 1;
   Tint PreIndex = Int_IndexLattice(EXT);
   Tint eIndex = T_abs(PreIndex);
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
   MyMatrix<T> EXT_fullT = UniversalMatrixConversion<T, Tint>(EXT);
-  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(eData.GramMat, EXT_fullT);
+  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT_fullT);
   MyMatrix<T> EXT_T(nbVert, n);
   for (int iVert = 0; iVert < nbVert; iVert++) {
     for (int i = 0; i < n; i++) {
@@ -352,7 +352,7 @@ size_t ComputeInvariantDelaunay(DataLattice<T, Tint, Tgroup> const &eData,
     for (int i = 0; i < n; i++) {
       T eSum(0);
       for (int j = 0; j < n; j++) {
-        eSum += eData.GramMat(i, j) * EXT_T(iVert, j);
+        eSum += GramMat(i, j) * EXT_T(iVert, j);
       }
       V(i) = eSum;
     }
@@ -625,6 +625,7 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
                            MyMatrix<Tint> const &x) {
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(x);
   std::ostream &os = eData.rddo.os;
+  MyMatrix<T> const& GramMat = eData.solver.GramMat;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
   os << "DEL_ENUM: |EXT_T|=" << EXT_T.rows() << " / " << EXT_T.cols() << "\n";
 #endif
@@ -639,7 +640,7 @@ ComputeGroupAndAdjacencies(DataLattice<T, Tint, Tgroup> &eData,
   std::vector<Delaunay_AdjI<Tint>> ListAdj;
   for (auto &eOrbB : TheOutput) {
     MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
-        eData.GramMat, eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
+        GramMat, eData.solver, eData.ShvGraverBasis, EXT_T, eOrbB, os);
     Delaunay_AdjI<Tint> eAdj{eOrbB, EXTadj};
     ListAdj.push_back(eAdj);
   }
@@ -666,8 +667,8 @@ inline void serialize(Archive &ar, Delaunay_Obj<Tint, Tgroup> &eRec,
 template <typename T, typename Tint, typename Tgroup>
 MyMatrix<Tint>
 FindDelaunayPolytopeExtended(DataLattice<T, Tint, Tgroup> &data) {
-  MyMatrix<T> const &GramMat = data.GramMat;
-  CVPSolver<T, Tint> &solver = data.solver;
+  MyMatrix<T> const &GramMat = data.solver.GramMat;
+  CVPSolver<T, Tint> const& solver = data.solver;
   MyMatrix<Tint> const &ShvGraverBasis = data.ShvGraverBasis;
   std::string const &choice = data.choice_initial;
   std::ostream &os = data.rddo.os;
@@ -886,7 +887,6 @@ GetDataLattice(MyMatrix<T> const &GramMat,
   os << "DEL_ENUM: GetDataLattice, AllArr.OutFile=" << AllArr.OutFile << "\n";
 #endif
   return {n,
-          GramMat,
           SHV,
           solver,
           ShvGraverBasis,
@@ -931,7 +931,6 @@ get_data_lattice(FullNamelist const &eFull,
   std::string choice_initial = BlockDATA.get_string("choice_initial");
   DataLattice<T, Tint, Tgroup> data{
       n,
-      GramMat,
       SVR,
       solver,
       ShvGraverBasis,

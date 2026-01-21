@@ -2,8 +2,8 @@
 #PROGRAM		= CheckPerfectInput PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones
 #PROGRAM		= PERF_MPI_EnumeratePerfectCones PERF_SerialPerfectComputation
-#PROGRAM		= PERF_SerialPerfectComputation
-PROGRAM		= PERF_IsBoundedFace
+PROGRAM		= PERF_SerialPerfectComputation
+#PROGRAM		= PERF_IsBoundedFace
 #PROGRAM		= IsEutactic
 
 
@@ -30,7 +30,8 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH
 
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
+#CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
+CDEFS           = -DSANITY_CHECK_POSITIVE_SEMIDEFINITE_SELF_DUAL
 #CDEFS           = -DDEBUG -DTIMINGS
 #CDEFS           = -DDEBUG -DSANITY_CHECK
 #CDEFS           = -DSANITY_CHECK

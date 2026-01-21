@@ -625,7 +625,7 @@ compute_test_shortest(const FullGramInfo<T> &request, MyVector<T> const &coset,
 
 template <typename T, typename Tint> struct CVPSolver {
 public:
-  MyMatrix<T> const &GramMat;
+  MyMatrix<T> GramMat;
 
 private:
   int dim;
@@ -654,6 +654,14 @@ public:
     for (int i = 0; i < dim; i++) {
       eDiff(i) = UniversalScalarConversion<T, Tint>(x(i)) - v(i);
     }
+#ifdef DEBUG_SHVEC
+    std::cerr << "SHVEC: Debug, dim=" << dim << "\n";
+    std::cerr << "SHVEC: Debug, |GramMat|=" << GramMat.rows() << " / " << GramMat.cols() << "\n";
+    std::cerr << "SHVEC: Debug, eDiff=\n";
+    WriteVector(std::cerr, eDiff);
+    std::cerr << "SHVEC: Debug, GramMat=\n";
+    WriteMatrix(std::cerr, GramMat);
+#endif
     return EvaluationQuadForm<T, T>(GramMat, eDiff);
   }
   ResultShortest<Tint> ShortestAtDistance(MyVector<T> const &eV,

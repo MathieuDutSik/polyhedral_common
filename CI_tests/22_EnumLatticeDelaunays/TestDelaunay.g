@@ -29,8 +29,7 @@ TestEnumeration:=function(eRec)
     #
     WriteStringFile(FileNml, strOut);
     #
-#    TheCommand:=Concatenation("cat ", FileNml);
-#    Exec(TheCommand);
+    Print(NullMat(5));
     #
     eProg:="../../src_delaunay/LATT_MPI_ComputeDelaunay";
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);
@@ -57,7 +56,7 @@ FullTest:=function()
     iRec:=0;
     for eRec in ListRec
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
+        Print("iRec=", iRec, " / ", Length(ListRec), " name=", eRec.name, "\n");
         RecReply:=TestEnumeration(eRec);
         Print("RecReply(B)=", RecReply, "\n");
         if RecReply.is_correct=false then
