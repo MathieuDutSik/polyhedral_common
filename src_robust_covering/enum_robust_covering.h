@@ -1362,7 +1362,7 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
                           PpolytopeVoronoiData<T, Tint> const &pvd) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
-  int dim = eData.GramMat.rows();
+  int dim = eData.solver.GramMat.rows();
   auto get_adj_p_polytope = [&](MyVector<T> const &TestFAC,
                                 MyVector<T> const &x,
                                 std::unordered_set<MyVector<T>> const &set)
@@ -1512,7 +1512,7 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
   std::vector<PpolytopeVoronoiData<T, Tint>> l_ppoly =
       compute_all_p_polytopes(eData);
   T max_sqr_radius(0);
-  MyMatrix<T> const &GramMat = eData.GramMat;
+  MyMatrix<T> const &GramMat = eData.solver.GramMat;
   int dim = GramMat.rows();
   MyVector<T> diff(dim);
   for (auto &ppoly : l_ppoly) {
