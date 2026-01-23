@@ -95,6 +95,32 @@ template <typename T> bool is_affine_integral(MyMatrix<T> const &M) {
   return true;
 }
 
+template<typename T>
+MyVector<T> get_reduced_isobarycenter(MyMatrix<T> const& EXT) {
+  int n_col = EXT.cols();
+  int n_row = EXT.rows();
+  MyVector<T> eIso(n_col-1);
+  for (int i_col=0; i_col<n_col-1; i_col++) {
+    T scal(0);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      scal += EXT(i_row, i_col+1);
+    }
+    eIso(i_col) = scal / n_row;
+  }
+  return eIso;
+}
+
+template<typename T>
+MyVector<T> get_reduced_center(MyMatrix<T> const& GramMat, MyMatrix<T> const& EXT) {
+  CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT);
+  int n = GramMat.rows();
+  MyVector<T> V(n);
+  for (int i=0; i<n; i++) {
+    V(i) = eCP.eCent(i+1);
+  }
+  return V;
+}
+
 template <typename T, typename Tidx_value>
 WeightMatrix<true, T, Tidx_value>
 GetWeightMatrixFromGramEXT(MyMatrix<T> const &EXT, MyMatrix<T> const &GramMat,
@@ -150,8 +176,7 @@ Tgroup Polytope_StabilizerKernel(MyMatrix<T> const &GramMat,
                                  MyMatrix<T> const &SHV,
                                  MyMatrix<T> const &EXT_T, std::ostream &os) {
   auto f_cent=[&](MyMatrix<T> const& EXT_T) -> MyVector<T> {
-    CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(GramMat, EXT_T);
-    return eCP.eCent;
+    return get_reduced_isobarycenter(EXT_T);
   };
   return PolytopeGen_StabilizerKernel<T,Tint,Tgroup, decltype(f_cent)>(GramMat, f_cent, SHV, EXT_T, os);
 }
@@ -162,8 +187,7 @@ template <typename T, typename Tint, typename Tgroup>
 Tgroup Delaunay_Stabilizer(DataLattice<T, Tint, Tgroup> const &eData,
                            MyMatrix<T> const &EXT_T, std::ostream &os) {
   auto f_cent=[&](MyMatrix<T> const& EXT_T) -> MyVector<T> {
-    CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(eData.solver.GramMat, EXT_T);
-    return eCP.eCent;
+    return get_reduced_center(eData.solver.GramMat, EXT_T);
   };
   return PolytopeGen_StabilizerKernel<T, Tint, Tgroup, decltype(f_cent)>(eData.solver.GramMat, f_cent, eData.SHV, EXT_T, os);
 }
@@ -181,7 +205,7 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   using Tgr = GraphListAdj;
   using Tidx_value = int16_t;
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: Begin Delaunay_TestEquivalence\n";
+  os << "DEL_ENUM: Begin PolytopeGen_TestEquivalence\n";
 #endif
   MyMatrix<T> const& GramMat = eData.solver.GramMat;
   //
@@ -191,6 +215,11 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   MyVector<T> Cent2 = f_cent(EXT2_T);
   auto extend_linear_transform=[&](MyMatrix<T> const& M) -> MyMatrix<T> {
     int n = GramMat.rows();
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: extend_linear_transform |Cent1|=" << Cent1.size()
+    << " |Cent2|=" << Cent2.size()
+    << " |M|=" << M.rows() << " / " << M.cols() << "\n";
+#endif
     MyMatrix<T> eMatRet = ZeroMatrix<T>(n+1, n+1);
     eMatRet(0,0) = 1;
     for (int i=0; i<n; i++) {
@@ -214,10 +243,10 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
       TestEquivalenceWeightMatrix<T, Telt, Tidx_value>(WMat1, WMat2, os);
   if (!eRes) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 1 with false\n";
+    os << "DEL_ENUM: Leaving PolytopeGen_TestEquivalence 1 with false\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: PolytopeGen_TestEquivalence|=" << time << "\n";
 #endif
     return {};
   }
@@ -227,11 +256,14 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
   MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 2 with true\n";
+    os << "DEL_ENUM: Leaving PolytopeGen_TestEquivalence 2 with true\n";
 #endif
     MyMatrix<T> eMatRet = extend_linear_transform(MatEquiv_T);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+    os << "DEL_ENUM: We have eMatr\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: PolytopeGen_TestEquivalence|=" << time << "\n";
 #endif
     return eMatRet;
   }
@@ -248,38 +280,25 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
     LinPolytopeIntegral_Isomorphism<T,Tgroup>(EXTextInt1, EXTextInt2, GRPisom1, eElt, os);
   if (!opt) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-    os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 3 with false\n";
+    os << "DEL_ENUM: Leaving PolytopeGen_TestEquivalence 3 with false\n";
 #endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-    os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+    os << "|DEL_ENUM: PolytopeGen_TestEquivalence|=" << time << "\n";
 #endif
     return {};
   }
 #ifdef DEBUG_DELAUNAY_ENUMERATION
-  os << "DEL_ENUM: Leaving Delaunay_TestEquivalence 4 with true\n";
+  os << "DEL_ENUM: Leaving PolytopeGen_TestEquivalence 4 with true\n";
 #endif
   MyMatrix<T> eMatRet = extend_linear_transform(*opt);
+#ifdef DEBUG_DELAUNAY_ENUMERATION
+  os << "DEL_ENUM: We have eMatrRet\n";
+#endif
 #ifdef TIMINGS_DELAUNAY_ENUMERATION
-  os << "|DEL_ENUM: Delaunay_TestEquivalence|=" << time << "\n";
+  os << "|DEL_ENUM: PolytopeGen_TestEquivalence|=" << time << "\n";
 #endif
   return eMatRet;
 }
-
-template<typename T>
-MyVector<T> get_reduced_isobarycenter(MyMatrix<T> const& EXT) {
-  int n_col = EXT.cols();
-  int n_row = EXT.rows();
-  MyVector<T> eIso(n_col-1);
-  for (int i_col=0; i_col<n_col-1; i_col++) {
-    T scal(0);
-    for (int i_row=0; i_row<n_row; i_row++) {
-      scal += EXT(i_row, i_col+1);
-    }
-    eIso(i_col) = scal / n_row;
-  }
-  return eIso;
-}
-
 
 template <typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<T>>
@@ -299,8 +318,7 @@ Delaunay_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
                          MyMatrix<T> const &EXT1_T,
                          MyMatrix<T> const &EXT2_T) {
   auto f_cent=[&](MyMatrix<T> const& EXT_T) -> MyVector<T> {
-    CP<T> eCP = CenterRadiusDelaunayPolytopeGeneral(eData.solver.GramMat, EXT_T);
-    return eCP.eCent;
+    return get_reduced_center(eData.solver.GramMat, EXT_T);
   };
   return PolytopeGen_TestEquivalence<T,Tint,Tgroup,decltype(f_cent)>(eData, f_cent, EXT1_T, EXT2_T);
 }
