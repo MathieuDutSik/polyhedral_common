@@ -58,7 +58,7 @@ jobs:
           sudo apt install -y libgmp-dev
           sudo apt install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt install -y libglpk-dev
-          sudo apt install -y autoconf automake autotools-dev libtool
+          sudo apt install -y autoconf autoconf-archive automake autotools-dev libtool
           sudo apt install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt install -y openmpi-bin libopenmpi-dev
           sudo apt install -y xz-utils
