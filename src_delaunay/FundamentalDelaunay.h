@@ -440,7 +440,6 @@ MyMatrix<Tint> FindDelaunayPolytope_random(MyMatrix<T> const &GramMat,
     auto get_adj_cand = [&]() -> MyMatrix<Tint> {
       MyMatrix<Tint> EXTwork;
       int n_max = std::numeric_limits<int>::max();
-      ;
       for (auto &eFace : vf) {
         MyMatrix<Tint> EXTadj = FindAdjacentDelaunayPolytope<T, Tint>(
             GramMat, solver, ShvGraverBasis, EXTret_T, eFace, os);

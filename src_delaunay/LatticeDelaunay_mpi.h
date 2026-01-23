@@ -19,13 +19,13 @@
 #undef DEBUG_MPI_DELAUNAY_ENUMERATION
 #endif
 
-template <typename T, typename Tvert, typename Tgroup>
+template <typename T, typename Tint, typename Tgroup>
 void WriteFamilyDelaunay_Mpi(
     boost::mpi::communicator &comm, MyMatrix<T> const &GramMat,
     std::string const &OutFormat, std::ostream &os_out,
     std::vector<DatabaseEntry_MPI<
-        typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
-        typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>> const &ListDel,
+        typename DataLatticeFunc<T, Tint, Tgroup>::Tobj,
+        typename DataLatticeFunc<T, Tint, Tgroup>::TadjO>> const &ListDel,
     std::ostream &os) {
   int i_rank = comm.rank();
   if (OutFormat == "nothing") {
@@ -33,14 +33,14 @@ void WriteFamilyDelaunay_Mpi(
     return;
   }
   using Tout =
-      DatabaseEntry_Serial<typename DataLatticeFunc<T, Tvert, Tgroup>::Tobj,
-                           typename DataLatticeFunc<T, Tvert, Tgroup>::TadjO>;
+      DatabaseEntry_Serial<typename DataLatticeFunc<T, Tint, Tgroup>::Tobj,
+                           typename DataLatticeFunc<T, Tint, Tgroup>::TadjO>;
   if (OutFormat == "CheckMergedOutput") {
     int i_proc_out = 0;
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
-      DelaunayTesselation<Tvert, Tgroup> DT =
-          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(
+      DelaunayTesselation<T, Tgroup> DT =
+          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
               l_ent);
       check_delaunay_tessellation(DT, os);
     }
@@ -51,8 +51,8 @@ void WriteFamilyDelaunay_Mpi(
     int i_proc_out = 0;
     std::vector<Tout> l_ent = my_mpi_gather(comm, ListDel, i_proc_out);
     if (i_proc_out == i_rank) {
-      DelaunayTesselation<Tvert, Tgroup> DT =
-          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tvert, Tgroup>(
+      DelaunayTesselation<T, Tgroup> DT =
+          DelaunayTesselation_From_DatabaseEntries_Serial<T, Tint, Tgroup>(
               l_ent);
       os_out << "return ";
       WriteEntryGAP(os_out, DT);
@@ -72,9 +72,8 @@ void WriteFamilyDelaunay_Mpi(
   if (OutFormat == "GAP_Covering") {
     T max_radius(0);
     for (auto &eDel : ListDel) {
-      MyMatrix<Tvert> const &EXT = eDel.x.EXT;
-      MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tvert>(EXT);
-      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT_T);
+      MyMatrix<T> const &EXT = eDel.x.EXT;
+      CP<T> cp = CenterRadiusDelaunayPolytopeGeneral<T>(GramMat, EXT);
       T SquareRadius = cp.SquareRadius;
       if (SquareRadius > max_radius) {
         max_radius = SquareRadius;

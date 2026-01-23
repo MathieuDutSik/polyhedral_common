@@ -18,14 +18,14 @@ void process(std::string const &GramFile, std::string const &OutFormat,
   DataLattice<T, Tint, Tgroup> data_lattice =
       GetDataLattice<T, Tint, Tgroup>(GramMat, AllArr, std::cerr);
   auto f_incorrect =
-      [&]([[maybe_unused]] Delaunay_Obj<Tint, Tgroup> const &x) -> bool {
+      [&]([[maybe_unused]] Delaunay_Obj<T, Tgroup> const &x) -> bool {
     return false;
   };
   int max_runtime_second = 0;
-  std::optional<DelaunayTesselation<Tint, Tgroup>> opt =
+  std::optional<DelaunayTesselation<T, Tgroup>> opt =
       EnumerationDelaunayPolytopes<T, Tint, Tgroup, decltype(f_incorrect)>(
           data_lattice, f_incorrect, max_runtime_second);
-  DelaunayTesselation<Tint, Tgroup> DT =
+  DelaunayTesselation<T, Tgroup> DT =
       unfold_opt(opt, "The Delaunay tesselation");
   WriteDelaunayTesselation(OutFormat, os_out, GramMat, DT);
 }
