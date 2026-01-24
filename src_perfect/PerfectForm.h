@@ -405,7 +405,7 @@ std::string to_string(PerfectBoundednessProperty const& pbp) {
 
 
 template<typename T, typename Tint>
-bool is_bounded_self_dual(SelfDualInfo<T> const& self_dual_info, std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, [[maybe_unused]] std::ostream &os) {
+bool is_bounded_self_dual(PairwiseScalarInfo<T> const& psi, std::vector<MyMatrix<T>> const& ListMat, MyMatrix<Tint> const& SHV, [[maybe_unused]] std::ostream &os) {
   int n_vect = SHV.rows();
   int n = SHV.cols();
   int n_mat = ListMat.size();
@@ -417,7 +417,7 @@ bool is_bounded_self_dual(SelfDualInfo<T> const& self_dual_info, std::vector<MyM
       SumRay(i_mat) += val;
     }
   }
-  MyVector<T> ExprBasis = self_dual_info.PairwiseScalarInv * SumRay;
+  MyVector<T> ExprBasis = psi.PairwiseScalarInv * SumRay;
   MyMatrix<T> SumMat = ZeroMatrix<T>(n,n);
   for (int i_mat=0; i_mat<n_mat; i_mat++) {
     SumMat += ExprBasis(i_mat) * ListMat[i_mat];
@@ -469,9 +469,8 @@ PerfectBoundednessProperty initial_bounded_property(LinSpaceMatrix<T> const &Lin
     pbp.bounded_finite_stabilizer = {true};
     return pbp;
   }
-  if (LinSpa.self_dual_info) {
-    SelfDualInfo<T> const& self_dual_info = *LinSpa.self_dual_info;
-    bool val = is_bounded_self_dual(self_dual_info, LinSpa.ListMat, SHV, os);
+  if (LinSpa.is_self_dual) {
+    bool val = is_bounded_self_dual(LinSpa.pairwise_scalar_info, LinSpa.ListMat, SHV, os);
     pbp.bounded_self_dual = val;
   }
   if (LinSpa.l_spanning_elements.size() > 0) {
