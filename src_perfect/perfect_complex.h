@@ -134,9 +134,16 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
   return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};
 }
 
+struct OrientationInfo {
+  int sign;
+  std::vector<int> ListRowSelect;
+  std::vector<int> ListColSelect;
+};
+
+
 //
 // The intermediate dimensional faces.
-// This is the orientation as it is built.
+// This is the orientation coming from the 
 //
 
 template<typename T, typename Tint, typename Tgroup>
@@ -146,7 +153,7 @@ struct FacePerfectComplex {
   MyMatrix<Tint> EXT; // The list of vectors of the perfect form.
   Tgroup GRP_ext; // Group acting on the vectors (NOT on the rays of the cone)
   bool is_well_rounded;
-  std::vector<int> spa; // The index of vectors determining the orientation.
+  OrientationInfo or_info; // The info for determining the orientation.
   bool is_orientable; // Whether the cell was orientable.
 };
 
@@ -158,7 +165,7 @@ struct FacesPerfectComplex {
 
 
 template<typename T, typename Tint>
-std::vector<int> get_spanning_indices(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> const& ListMat) {
+OrientationInfo get_orientation_info(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> const& ListMat) {
   int n_row = EXT.rows();
   int n_mat = ListMat.size();
   MyMatrix<T> MatScal(n_row, n_mat);
@@ -170,12 +177,77 @@ std::vector<int> get_spanning_indices(MyMatrix<Tint> const& EXT, std::vector<MyM
     }
   }
   SelectionRowCol<T> eSelect = TMat_SelectRowCol(MatScal);
-  return eSelect.ListRowSelect;
+  int dim = eSelect.ListRowSelect.size();
+  MyMatrix<T> M(dim, dim);
+  for (int i=0; i<dim; i++) {
+    for (int j=0; j<dim; j++) {
+      int i2 = eSelect.ListRowSelect[i];
+      int j2 = eSelect.ListColSelect[j];
+      M(i, j) = MatScal(i2, j2);
+    }
+  }
+  T det = DeterminantMat(M);
+  int sign = 1;
+  if (det < 0) {
+    sign = -1;
+  }
+  return {sign, std::move(eSelect.ListRowSelect), std::move(eSelect.ListColSelect)};
 }
 
 
 
 
+
+template<typename T, typename Tint>
+int get_face_orientation(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> const& ListMat,
+                         OrientationInfo const& or_info, MyMatrix<Tint> const& t) {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  int n_row = EXT.rows();
+  std::unordered_set<MyVector<Tint>> set;
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = GetMatrixRow(EXT, i_row);
+    set.insert(V);
+  }
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = GetMatrixRow(EXT, i_row);
+    MyVector<Tint> Vimg = t.transpose() * V;
+    if (set.count(Vimg) != 1) {
+      std::cerr << "PERFCOMP: Vimg should belong to V\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  int dim = or_info.ListRowSelect.size();
+  MyMatrix<T> M(dim, dim);
+  for (int i=0; i<dim; i++) {
+    int i_row = or_info.ListRowSelect[i];
+    MyVector<Tint> V = GetMatrixRow(EXT, i_row);
+    MyVector<Tint> Vimg = t.transpose() * V;
+    for (int j=0; j<dim; j++) {
+      int i_mat = or_info.ListColSelect[j];
+      T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], Vimg);
+      M(i, j) = scal;
+    }
+  }
+  T det = DeterminantMat(M);
+  if (det > 0) {
+    return or_info.sign;
+  } else {
+    return -or_info.sign;
+  }
+}
+
+template<typename T, typename Tint>
+bool is_face_orientable(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> const& ListMat,
+                        OrientationInfo const& or_info, std::vector<MyMatrix<Tint>> const& l_t) {
+  for (auto & t: l_t) {
+    int sign = get_face_orientation(EXT, ListMat, or_info, t);
+    if (sign == -1) {
+      return false;
+    }
+  }
+  return true;
+}
 
 
 
@@ -216,10 +288,15 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
 #endif
     return l_gens;
   };
-  auto get_spa=[&](size_t i_domain) -> std::vector<int> {
+  auto get_or_info=[&](size_t i_domain) -> OrientationInfo {
     MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
     std::vector<MyMatrix<T>> const& ListMat = pctdi.LinSpa.ListMat;
-    return get_spanning_indices(EXT, ListMat);
+    return get_orientation_info(EXT, ListMat);
+  };
+  auto get_is_orientable=[&](size_t i_domain, std::vector<MyMatrix<Tint>> const& l_gens, OrientationInfo const& or_info) -> bool {
+    MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
+    std::vector<MyMatrix<T>> const& ListMat = pctdi.LinSpa.ListMat;
+    return is_face_orientable(EXT, ListMat, or_info, l_gens);
   };
   size_t n_domain = pctdi.l_perfect.size();
   os << "PERFCOMP: get_first_step n_domain=" << n_domain << "\n";
@@ -232,9 +309,9 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
     Tgroup const& GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
     bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
-    std::vector<int> spa = get_spa(i_domain);
-    bool is_orientable = false; // TODO: Find the value
-    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded, spa, is_orientable};
+    OrientationInfo or_info = get_or_info(i_domain);
+    bool is_orientable = get_is_orientable(i_domain, l_gens, or_info);
+    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded, or_info, is_orientable};
     l_faces.push_back(face);
   }
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
@@ -419,15 +496,15 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     os << "PERFCOMP: f_insert, step 7\n";
 #endif
     Tgroup GRP_ext(l_gens, n_ext);
-    std::vector<int> spa = get_spanning_indices(EXT, pctdi.LinSpa.ListMat);
-    bool is_orientable = false; // TODO: Find the value
+    OrientationInfo or_info = get_orientation_info(EXT, pctdi.LinSpa.ListMat);
+    bool is_orientable = is_face_orientable(EXT, pctdi.LinSpa.ListMat, or_info, pair.second);
     FacePerfectComplex<T,Tint,Tgroup> face{
       pair.first,
       pair.second,
       EXT,
       GRP_ext,
       is_well_rounded,
-      spa,
+      or_info,
       is_orientable};
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 8\n";
