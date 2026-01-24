@@ -2,13 +2,13 @@ Read("../common.g");
 Print("Beginning Test for testing finiteness of matrix groups\n");
 
 Finiteness_SingleTest:=function(eRecFin)
-    local mat1, mat2, test, DirTemp, FileMat1, FileMat2, FileTest, eProg, TheCommand, U;
+    local DirTemp, FileMat, FileTest, eProg, TheCommand, U;
     #
     DirTemp:=DirectoryTemporary();
     FileMat:=Filename(DirTemp, "Finiteness_test.input");
     FileTest:=Filename(DirTemp, "Finiteness_test.result");
     #
-    WriteMatrixFile(FileMat, ErecFin.GRPmatr);
+    WriteListMatrixFile(FileMat, eRecFin.GRPmatr);
     #
     eProg:="../../src_latt/GRP_TestFiniteness";
     TheCommand:=Concatenation(eProg, " gmp ", FileMat, " GAP ", FileTest);
@@ -31,7 +31,7 @@ Finiteness_SingleTest:=function(eRecFin)
 end;
 
 Finiteness_AllTests:=function()
-    local TheDir, ListFinitenessFiles, n_error, iRec, eFile, FullFile, eRec, test;
+    local TheDir, ListFinitenessFiles, n_error, iRec, eFile, FullFile, eRecFin, test;
     TheDir:="Finiteness";
     ListFinitenessFiles:=ListFileDirectory(TheDir);
     n_error:=0;
@@ -40,7 +40,7 @@ Finiteness_AllTests:=function()
     do
         FullFile:=Concatenation(TheDir, "/", eFile);
         eRecFin:=ReadAsFunction(FullFile)();
-        Print("iRec=", iRec, " / ", Length(ListStabFiles), "\n");
+        Print("iRec=", iRec, " / ", Length(ListFinitenessFiles), "\n");
         test:=Finiteness_SingleTest(eRecFin);
         if test=false then
             n_error:=n_error+1;
