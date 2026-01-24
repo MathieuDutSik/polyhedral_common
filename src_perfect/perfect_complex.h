@@ -136,16 +136,17 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
 
 //
 // The intermediate dimensional faces.
+// This is the orientation as it is built.
 //
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacePerfectComplex {
   std::vector<triple<Tint>> l_triple; // The containing triples.
   std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
-  MyMatrix<Tint> EXT;
+  MyMatrix<Tint> EXT; // The list of vectors of the perfect form.
   Tgroup GRP_ext; // Group acting on the vectors (NOT on the rays of the cone)
   bool is_well_rounded;
-  MyMatrix<Tint> spa; // The space in the T-space.
+  std::vector<int> spa; // The index of vectors determining the orientation.
   bool is_orientable; // Whether the cell was orientable.
 };
 
@@ -154,6 +155,29 @@ template<typename T, typename Tint, typename Tgroup>
 struct FacesPerfectComplex {
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
 };
+
+
+template<typename T, typename Tint>
+std::vector<int> get_spanning_indices(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> const& ListMat) {
+  int n_row = EXT.rows();
+  int n_mat = ListMat.size();
+  MyMatrix<T> MatScal(n_row, n_mat);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<Tint> V = GetMatrixRow(EXT, i_row);
+    for (int i_mat=0; i_mat<n_mat; i_mat++) {
+      T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], V);
+      MatScal(i_row, i_mat) = scal;
+    }
+  }
+  SelectionRowCol<T> eSelect = TMat_SelectRowCol(MatScal);
+  return eSelect.ListRowSelect;
+}
+
+
+
+
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
@@ -192,6 +216,11 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
 #endif
     return l_gens;
   };
+  auto get_spa=[&](size_t i_domain) -> std::vector<int> {
+    MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
+    std::vector<MyMatrix<T>> const& ListMat = pctdi.LinSpa.ListMat;
+    return get_spanning_indices(EXT, ListMat);
+  };
   size_t n_domain = pctdi.l_perfect.size();
   os << "PERFCOMP: get_first_step n_domain=" << n_domain << "\n";
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
@@ -203,7 +232,7 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
     Tgroup const& GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
     bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
-    MyMatrix<Tint> spa; // TODO: Find the value
+    std::vector<int> spa = get_spa(i_domain);
     bool is_orientable = false; // TODO: Find the value
     FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded, spa, is_orientable};
     l_faces.push_back(face);
@@ -390,7 +419,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     os << "PERFCOMP: f_insert, step 7\n";
 #endif
     Tgroup GRP_ext(l_gens, n_ext);
-    MyMatrix<Tint> spa; // TODO: Find the value
+    std::vector<int> spa = get_spanning_indices(EXT, pctdi.LinSpa.ListMat);
     bool is_orientable = false; // TODO: Find the value
     FacePerfectComplex<T,Tint,Tgroup> face{
       pair.first,
