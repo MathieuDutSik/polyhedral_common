@@ -1,4 +1,4 @@
-name: CI(26) of Ctypes for small dimensions.
+name: CI(26B) of test of group finiteness
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(26) of Ctypes for small dimensions.
 on:
   # One time per month
   schedule:
-    - cron: "0 0 26 * *"
+    - cron: "0 0 26 2,4,6,7,10,12 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -53,8 +53,6 @@ jobs:
           sudo apt-get install -y libgmp-dev
           sudo apt-get install -y libboost-dev libboost-mpi-dev libboost-serialization-dev
           sudo apt-get install -y libglpk-dev
-          sudo apt-get install -y autoconf autoconf-archive autotools-dev libtool
-          sudo apt-get install -y texlive-latex-base # needed for the CDD manual to be compiled
           sudo apt-get install -y openmpi-bin libopenmpi-dev
 
       - name: Build test code
@@ -87,11 +85,6 @@ jobs:
           pwd
           echo "After bliss compilation"
 
-          git clone https://github.com/cddlib/cddlib
-          cd cddlib && ./bootstrap && ./configure --prefix=$CDDLIB_PATH && make && make install && cd ..
-          pwd
-          echo "After cddlib compilation"
-
           # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
           wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
           tar -xzf eigen-3.3.9.tar.gz
@@ -106,17 +99,18 @@ jobs:
           pwd
           ln -s gap-4.14.0/gap gap.sh
 
-      - name: Test enumeration of Ctypes
+      - name: Running the Matrix group finiteness test
         run: |
-          cd src_ctype && make -f Makefile_MPI_AdjScheme && cd ..
+          cd src_ctype && make -f Makefile_grp_finiteness && cd ..
           pwd
-          echo "After compilation of CTYP_MPI_AdjScheme"
+          echo "After compilation of GRP_TestFiniteness"
 
-          cd CI_tests/26_CTYPE_AdjSch
-          ../../gap.sh TestEnumeration.g
+          cd CI_tests/26B_Matrix_group_finiteness
+          tar -vxzf Finiteness.tar.gz
+          ../../gap.sh TestFiniteness.g
           if [ ! -f "CI_CONCLUSION" ]; then
             echo "The gap test code has not created the wanted file" >&2
             exit 1
           fi
           cd ../..
-          echo "After the Ctype tests"
+          echo "After the GRP finiteness tests"

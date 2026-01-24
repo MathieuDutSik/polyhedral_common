@@ -145,6 +145,8 @@ struct FacePerfectComplex {
   MyMatrix<Tint> EXT;
   Tgroup GRP_ext; // Group acting on the vectors.
   bool is_well_rounded;
+  MyMatrix<Tint> spa; // The space in the T-space.
+  bool is_orientable; // Whether the cell was orientable.
 };
 
 
@@ -201,7 +203,9 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     MyMatrix<Tint> const& EXT = pctdi.l_perfect[i_domain].EXT;
     Tgroup const& GRP_ext = pctdi.l_perfect[i_domain].GRP_ext;
     bool is_well_rounded = true; // Yes, the top dimensional cells are well rounded.
-    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded};
+    MyMatrix<Tint> spa; // TODO: Find the value
+    bool is_orientable = false; // TODO: Find the value
+    FacePerfectComplex<T,Tint,Tgroup> face{l_triple, l_gens, EXT, GRP_ext, is_well_rounded, spa, is_orientable};
     l_faces.push_back(face);
   }
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
@@ -265,7 +269,16 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     std::vector<MyMatrix<Tint>> l_matr = pair.second;
     std::string Prefix = "FinitenessMatrixGroupTest_" + std::to_string(l_matr.size()) + "_n" + std::to_string(n) + "_";
     std::string FileOut = FindAvailableFileFromPrefix(Prefix);
-    WriteListMatrixFile(FileOut, l_matr);
+    bool write_test_case = false;
+    if (write_test_case) {
+      bool is_finite = test_finiteness_group<T,Tint>(l_matr, os);
+      std::ofstream os_out(FileOut);
+      os_out << "return rec(GRPmatr:=";
+      WriteListMatrixGAP(os_out, l_matr);
+      os_out << ", is_finite:=" << GAP_logical(is_finite) << ");\n";
+    } else {
+      WriteListMatrixFile(FileOut, l_matr);
+    }
     return true;
 #else
     if (pbp.bounded_self_dual) {
@@ -377,12 +390,16 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     os << "PERFCOMP: f_insert, step 7\n";
 #endif
     Tgroup GRP_ext(l_gens, n_ext);
+    MyMatrix<Tint> spa; // TODO: Find the value
+    bool is_orientable = false; // TODO: Find the value
     FacePerfectComplex<T,Tint,Tgroup> face{
       pair.first,
       pair.second,
       EXT,
       GRP_ext,
-      is_well_rounded};
+      is_well_rounded,
+      spa,
+      is_orientable};
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 8\n";
 #endif
