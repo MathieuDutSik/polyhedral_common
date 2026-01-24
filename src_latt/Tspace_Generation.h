@@ -16,7 +16,7 @@
 
 template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
   std::vector<MyMatrix<T>> ListMat;
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     for (int j = i; j < n; j++) {
       MyMatrix<T> eMat(n, n);
       ZeroAssignation(eMat);
@@ -24,6 +24,7 @@ template <typename T> LinSpaceMatrix<T> ComputeCanonicalSpace(int const &n) {
       eMat(j, i) = 1;
       ListMat.push_back(eMat);
     }
+  }
   MyMatrix<T> SuperMat = IdentityMat<T>(n);
   std::vector<MyMatrix<T>> ListComm;
   return BuildLinSpace(SuperMat, ListMat, ListComm);

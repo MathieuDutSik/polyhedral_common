@@ -104,11 +104,13 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens, os);
   std::vector<MyMatrix<T>> l_spanning_elements = ReadListMatrix<T>(is);
-  std::optional<SelfDualInfo<T>> self_dual_info;
+  MyMatrix<T> PairwiseScalarInv = ReadMatrix<T>(is);
+  PairwiseScalarInfo<T> pairwise_scalar_info{PairwiseScalarInv};
+  bool is_self_dual = false;
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
           ListComm, ListSubspaces, PtStabGens,
-          l_spanning_elements, self_dual_info};
+          l_spanning_elements, pairwise_scalar_info, is_self_dual};
 }
 
 template <typename T>
@@ -264,7 +266,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     throw TerminalException{1};
   };
   auto set_self_dual=[&]() -> void {
-    set_self_dual_info(LinSpaRet);
+    LinSpaRet.is_self_dual = true;
   };
   auto get_linspace = [&]() -> LinSpaceMatrix<T> {
 #ifdef DEBUG_TSPACE_NAMELIST

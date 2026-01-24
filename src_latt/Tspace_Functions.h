@@ -118,9 +118,13 @@
   have this in the GAP code.
  */
 
+
+/*
+  The matrix of pairwise scalar products.
+  It is useful for the self-duality, but not only.
+ */
 template<typename T>
-struct SelfDualInfo {
-  MyMatrix<T> PairwiseScalar;
+struct PairwiseScalarInfo {
   MyMatrix<T> PairwiseScalarInv;
 };
 
@@ -158,8 +162,10 @@ template <typename T> struct LinSpaceMatrix {
   // The list of spanning elements. If empty, does not apply. This is used
   // for the T-spaces coming from
   std::vector<MyMatrix<T>> l_spanning_elements;
+  // Pairwise scalar info.
+  PairwiseScalarInfo<T> pairwise_scalar_info;
   // Whether the T-space is known to be self-dual
-  std::optional<SelfDualInfo<T>> self_dual_info;
+  bool is_self_dual;
 };
 
 template <typename T>
@@ -179,6 +185,39 @@ MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {
   return BigMat;
 }
 
+
+/*
+  This information is used for self-duality but also for
+  representing evaluation functions in a matrix space.
+ */
+template <typename T>
+PairwiseScalarInfo<T> get_pairwise_scalar_info(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& SuperMat) {
+  int n_mat = ListMat.size();
+  MyMatrix<T> PairwiseScalar(n_mat, n_mat);
+  MyMatrix<T> InvSuperMat = Inverse(SuperMat);
+  std::vector<MyMatrix<T>> l_mat;
+  for (auto & M1: ListMat) {
+    MyMatrix<T> M2 = M1 * InvSuperMat;
+    l_mat.push_back(M2);
+  }
+  for (int i=0; i<n_mat; i++) {
+    for (int j=i; j<n_mat; j++) {
+      MyMatrix<T> prod = l_mat[i] * l_mat[j];
+      T scal(0);
+      for (int i=0; i<prod.rows(); i++) {
+        scal += prod(i,i);
+      }
+      PairwiseScalar(i, j) = scal;
+      PairwiseScalar(j, i) = scal;
+    }
+  }
+  MyMatrix<T> PairwiseScalarInv = Inverse(PairwiseScalar);
+  PairwiseScalarInfo<T> psi{PairwiseScalarInv};
+  return psi;
+}
+
+
+
 template <typename T>
 LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
                                 std::vector<MyMatrix<T>> const &ListMat,
@@ -197,10 +236,11 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
   // potential problems.
   bool isBravais = false;
   std::vector<MyMatrix<T>> l_spanning_elements;
-  std::optional<SelfDualInfo<T>> self_dual_info;
+  PairwiseScalarInfo<T> pairwise_scalar_info = get_pairwise_scalar_info(ListMat, SuperMat);
+  bool is_self_dual = false;
   return {n,      isBravais, SuperMat,      ListMat, ListLineMat,
           BigMat, ListComm,  ListSubspaces, PtStab,
-          l_spanning_elements, self_dual_info};
+          l_spanning_elements, pairwise_scalar_info, is_self_dual};
 }
 
 template <typename T, typename Tint, typename Tgroup>
@@ -241,34 +281,6 @@ T frobenius_inner(MyMatrix<T> const& M1, MyMatrix<T> const& M2) {
     }
   }
   return sum;
-}
-
-
-template <typename T>
-void set_self_dual_info(LinSpaceMatrix<T> & LinSpa) {
-  int n = LinSpa.n;
-  int n_mat = LinSpa.ListMat.size();
-  MyMatrix<T> PairwiseScalar(n_mat, n_mat);
-  MyMatrix<T> InvSuperMat = Inverse(LinSpa.SuperMat);
-  std::vector<MyMatrix<T>> l_mat;
-  for (auto & M1: LinSpa.ListMat) {
-    MyMatrix<T> M2 = M1 * InvSuperMat;
-    l_mat.push_back(M2);
-  }
-  for (int i=0; i<n_mat; i++) {
-    for (int j=i; j<n_mat; j++) {
-      MyMatrix<T> prod = l_mat[i] * l_mat[j];
-      T scal(0);
-      for (int i=0; i<n; i++) {
-        scal += prod(i,i);
-      }
-      PairwiseScalar(i, j) = scal;
-      PairwiseScalar(j, i) = scal;
-    }
-  }
-  MyMatrix<T> PairwiseScalarInv = Inverse(PairwiseScalar);
-  SelfDualInfo<T> self_dual_info{PairwiseScalar, PairwiseScalarInv};
-  LinSpa.self_dual_info = self_dual_info;
 }
 
 template <typename T>

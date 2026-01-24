@@ -143,7 +143,7 @@ struct FacePerfectComplex {
   std::vector<triple<Tint>> l_triple; // The containing triples.
   std::vector<MyMatrix<Tint>> l_gens; // generating set of the stabilizer
   MyMatrix<Tint> EXT;
-  Tgroup GRP_ext; // Group acting on the vectors.
+  Tgroup GRP_ext; // Group acting on the vectors (NOT on the rays of the cone)
   bool is_well_rounded;
   MyMatrix<Tint> spa; // The space in the T-space.
   bool is_orientable; // Whether the cell was orientable.
