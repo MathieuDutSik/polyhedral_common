@@ -54,6 +54,21 @@ template <typename T, typename Tgroup> struct RyshkovGRP {
   Tgroup GRPsub;
   vectface ListIncd;
   std::vector<int> ListPos;
+  std::vector<typename Tgroup::Telt::Tidx> ListBlockFirst;
+  typename Tgroup::Telt map_elt(typename Tgroup::Telt const& x) const {
+    using Telt = typename Tgroup::Telt;
+    using Tidx = typename Telt::Tidx;
+    size_t nbBlock = ListBlockFirst.size();
+    std::vector<Tidx> eList(nbBlock);
+    for (size_t iBlock = 0; iBlock < nbBlock; iBlock++) {
+      Tidx iSHV = ListBlockFirst[iBlock];
+      Tidx jSHV = x.at(iSHV);
+      Tidx jBlock = ListPos[jSHV];
+      eList[iBlock] = jBlock;
+    }
+    Telt elt(eList);
+    return elt;
+  }
 };
 
 template <typename T, typename Tgroup>
@@ -107,10 +122,15 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
     }
   }
   std::vector<Telt> l_gens;
+  std::vector<Tidx> ListBlockFirst;
+  for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
+    Tidx iSHV = ListBlock[iBlock][0];
+    ListBlockFirst.push_back(iSHV);
+  }
   for (auto &eGen : GRP.GeneratorsOfGroup()) {
     std::vector<Tidx> eList(nbBlock);
     for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
-      Tidx iSHV = ListBlock[iBlock][0];
+      Tidx iSHV = ListBlockFirst[iBlock];
       Tidx jSHV = eGen.at(iSHV);
       Tidx jBlock = ListPos[jSHV];
       eList[iBlock] = jBlock;
@@ -121,7 +141,7 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
   Tgroup GRPsub(l_gens, nbBlock);
   vectface ListIncd =
     DualDescriptionStandard<T, Tgroup>(PerfDomEXT, GRPsub, os);
-  return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd), std::move(ListPos)};
+  return {std::move(PerfDomEXT), std::move(GRPsub), std::move(ListIncd), std::move(ListPos), std::move(ListBlockFirst)};
 }
 
 template <typename T, typename Tgroup>
