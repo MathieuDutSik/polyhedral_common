@@ -140,7 +140,6 @@ struct OrientationInfo {
   std::vector<int> ListColSelect;
 };
 
-
 //
 // The intermediate dimensional faces.
 // This is the orientation coming from the 
@@ -155,6 +154,21 @@ struct FacePerfectComplex {
   bool is_well_rounded;
   OrientationInfo or_info; // The info for determining the orientation.
   bool is_orientable; // Whether the cell was orientable.
+  MyVector<T> get_interior_point(std::vector<MyMatrix<T>> const& ListMat) const {
+    int n_row = or_info.ListRowSelect.size();
+    int n_col = or_info.ListColSelect.size();
+    MyVector<T> interior_pt = ZeroVector<T>(n_col);
+    for (int i_row=0; i_row<n_row; i_row++) {
+      int j_row = or_info.ListRowSelect[i_row];
+      MyVector<Tint> V = GetMatrixRow(EXT, j_row);
+      for (int i_col=0; i_col<n_col; i_col++) {
+        int i_mat = or_info.ListColSelect[i_col];
+        T scal = EvaluationQuadForm<T,Tint>(ListMat[i_mat], V);
+        interior_pt(i_col) += scal;
+      }
+    }
+    return interior_pt;
+  }
 };
 
 
@@ -519,12 +533,50 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
     return be;
   };
+  auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, BoundEntry<Tint> const& be) -> int {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    std::unordered_set<MyVector<Tint>> set;
+    for (int i_row=0; i_row<face.EXT.rows(); i_row++) {
+      MyVector<Tint> V = GetMatrixRow(face.EXT, i_row);
+      set.insert(V);
+    }
+#endif
+    int dim = face.or_info.ListRowSelect.size();
+    MyMatrix<T> M(dim, dim);
+    for (int i=0; i<dim; i++) {
+      M(dim-1, i) = interior_pt(i);
+    }
+    int iOrb = be.iOrb;
+    for (int u=0; u<dim-1; u++) {
+      int i_row = l_faces[iOrb].or_info.ListRowSelect[u];
+      MyVector<Tint> V = GetMatrixRow(l_faces[iOrb].EXT, i_row);
+      MyVector<Tint> Vimg = be.M.transpose() * V;
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+      if (set.count(Vimg) != 1) {
+        std::cerr << "PERFCOMP: The vector does not belong to set\n";
+        throw TerminalException{1};
+      }
+#endif
+      for (int i_col=0; i_col<dim; i_col++) {
+        int i_mat = face.or_info.ListColSelect[i_col];
+        T scal = EvaluationQuadForm<T,Tint>(pctdi.LinSpa.ListMat[i_mat], Vimg);
+        M(u, i_col) = scal;
+      }
+    }
+    T det = DeterminantMat(M);
+    if (det > 0) {
+      return face.or_info.sign;
+    } else {
+      return -face.or_info.sign;
+    }
+  };
   for (size_t i=0; i<level.l_faces.size(); i++) {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     std::vector<BoundEntry<Tint>> l_bound;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(face.EXT);
     RyshkovGRP<T, Tgroup> eCone =
       GetNakedPerfectCone_GRP<T, Tgroup>(pctdi.LinSpa, EXT_T, face.GRP_ext, os);
+    MyVector<T> interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
     for (auto& incd_sma: eCone.ListIncd) {
       Face incd_big = get_big_incd(eCone, incd_sma);
       MyMatrix<Tint> EXTincd = SelectRow(face.EXT, incd_big);
@@ -538,6 +590,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       if (is_insertable(is_well_rounded)) {
         BoundEntry<Tint> be = f_insert(t, opt_t, is_well_rounded);
         if (pctdi.compute_boundary) {
+          be.sign = get_sign(interior_pt, face, be);
           l_bound.push_back(be);
         }
       }
