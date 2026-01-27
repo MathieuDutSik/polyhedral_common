@@ -356,26 +356,49 @@ struct ResultStepEnumeration {
   std::optional<FullBoundary<Tint>> boundary;
 };
 
+template<typename Tint, typename Telt>
+struct ElementMapper {
+private:
+  MyMatrix<Tint> EXT;
+  ContainerMatrix<Tint> cont;
+public:
+  ElementMapper(MyMatrix<Tint> const& _EXT) : EXT(_EXT), cont(EXT) {
+  }
+  Telt map_elt(MyMatrix<Tint> const& M) const {
+    using Tidx = typename Telt::Tidx;
+    int n_ext = EXT.rows();
+    std::vector<Tidx> v(n_ext);
+    for (int u=0; u<n_ext; u++) {
+      MyVector<Tint> V1 = GetMatrixRow(EXT, u);
+      MyVector<Tint> V2 = M.transpose() * V1;
+      std::optional<size_t> opt = cont.GetIdx_v(V2);
+      size_t pos = unfold_opt(opt, "PERFCOMPL: Failed to find the index");
+      v[u] = pos;
+    }
+    Telt elt(v);
+    return elt;
+  }
+};
+
+
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
-  using Tidx = typename Telt::Tidx;
   int n = pctdi.LinSpa.n;
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
 #endif
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
-  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<BoundEntry<Tint>> {
+  auto find_matching_entry=[&](triple<Tint> const& t) -> std::optional<std::pair<int,MyMatrix<Tint>>> {
     int i_domain = 0;
     for (auto & face1: l_faces) {
       std::optional<MyMatrix<Tint>> opt =
         test_triple_in_listtriple(pctdi.l_perfect, face1.l_triple, t, os);
       if (opt) {
         MyMatrix<Tint> const& M = *opt;
-        int sign = 1;
-        BoundEntry<Tint> be{i_domain, sign, M};
-        return be;
+        std::pair<int,MyMatrix<Tint>> p{i_domain, M};
+        return p;
       }
       i_domain += 1;
     }
@@ -455,11 +478,11 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     triple<Tint> t_can = canonicalize_triple(pctdi.l_perfect, t, os);
     return t_can;
   };
-  auto f_insert=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, bool const& is_well_rounded) -> BoundEntry<Tint> {
+  auto f_insert=[&](triple<Tint> const& t, std::optional<Tfull_triple> & opt_t, bool const& is_well_rounded) -> std::pair<int, MyMatrix<Tint>> {
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 1\n";
 #endif
-    std::optional<BoundEntry<Tint>> opt = find_matching_entry(t);
+    std::optional<std::pair<int,MyMatrix<Tint>>> opt = find_matching_entry(t);
     if (opt) {
       return *opt;
     }
@@ -489,22 +512,11 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 5\n";
 #endif
-    ContainerMatrix<Tint> cont(EXT);
-#ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: f_insert, step 6\n";
-#endif
+    ElementMapper<Tint,Telt> elt_mapper(EXT);
     std::vector<Telt> l_gens;
     for (auto & eMatrGen: pair.second) {
-      std::vector<Tidx> v(n_ext);
-      for (int u=0; u<n_ext; u++) {
-        MyVector<Tint> V1 = GetMatrixRow(EXT, u);
-        MyVector<Tint> V2 = eMatrGen.transpose() * V1;
-        std::optional<size_t> opt = cont.GetIdx_v(V2);
-        size_t pos = unfold_opt(opt, "PERFCOMPL: Failed to find the index");
-        v[u] = pos;
-      }
-      Telt elt(v);
-      l_gens.push_back(elt);
+      Telt elt = elt_mapper.map_elt(eMatrGen);
+      l_gens.emplace_back(std::move(elt));
     }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 7\n";
@@ -526,14 +538,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     int i_domain = l_faces.size();
     l_faces.push_back(face);
     MyMatrix<Tint> M = IdentityMat<Tint>(n);
-    int sign = 1;
-    BoundEntry<Tint> be{i_domain, sign, M};
+    std::pair<int, MyMatrix<Tint>> p{i_domain, M};
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: f_insert, step 9\n";
 #endif
-    return be;
+    return p;
   };
-  auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, BoundEntry<Tint> const& be) -> int {
+  auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, std::pair<int, MyMatrix<Tint>> const& p) -> int {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     std::unordered_set<MyVector<Tint>> set;
     for (int i_row=0; i_row<face.EXT.rows(); i_row++) {
@@ -546,11 +557,11 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     for (int i=0; i<dim; i++) {
       M(dim-1, i) = interior_pt(i);
     }
-    int iOrb = be.iOrb;
+    int iOrb = p.first;
     for (int u=0; u<dim-1; u++) {
       int i_row = l_faces[iOrb].or_info.ListRowSelect[u];
       MyVector<Tint> V = GetMatrixRow(l_faces[iOrb].EXT, i_row);
-      MyVector<Tint> Vimg = be.M.transpose() * V;
+      MyVector<Tint> Vimg = p.second.transpose() * V;
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
       if (set.count(Vimg) != 1) {
         std::cerr << "PERFCOMP: The vector does not belong to set\n";
@@ -570,15 +581,70 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       return -face.or_info.sign;
     }
   };
+  MyVector<T> interior_pt;
+  std::vector<Telt> l_gens_perm;
+  std::vector<int> l_status;
+  auto initial_boundary_setup=[&](size_t const& i, RyshkovGRP<T, Tgroup> const& cone) -> void {
+    FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
+    interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
+    l_gens_perm.clear();
+    ElementMapper<Tint,Telt> elt_mapper(face.EXT);
+    for (auto & eMatrGen: face.l_gens) {
+      Telt elt1 = elt_mapper.map_elt(eMatrGen);
+      Telt elt2 = cone.map_elt(elt1);
+      int sign = get_face_orientation(face.EXT, pctdi.LinSpa.ListMat, face.or_info, eMatrGen);
+      l_gens_perm.push_back(elt2);
+      l_status.push_back(sign);
+    }
+  };
+  auto append_boundary=[&](size_t const& i, std::pair<int,MyMatrix<Tint>> const& p, Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
+    FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
+    int sign = get_sign(interior_pt, face, p);
+    std::unordered_set<Face> set_faces;
+    std::vector<Face> l_faces;
+    std::vector<int> l_sign;
+    std::vector<MyMatrix<Tint>> l_mat;
+    auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
+      if (set_faces.count(new_incd_sma) == 0) {
+        set_faces.insert(new_incd_sma);
+        l_faces.push_back(new_incd_sma);
+        l_sign.push_back(new_sign);
+        l_mat.push_back(new_mat);
+        BoundEntry<Tint> be{p.first, sign, new_mat};
+        l_bound.push_back(be);
+      }
+    };
+    insert_entry(incd_sma, sign, p.second);
+    std::vector<MyMatrix<Tint>> const& l_gens = face.l_gens;
+    size_t n_gen = l_gens.size();
+    size_t start=0;
+    while(true) {
+      size_t len = l_faces.size();
+      for (size_t u=start; u<len; u++) {
+        for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
+          Face new_incd_sma = OnFace(l_faces[u], l_gens_perm[i_gen]);
+          int new_sign = l_sign[u] * l_status[i_gen];
+          MyMatrix<Tint> new_mat = l_mat[u] * l_gens[i_gen];
+          insert_entry(new_incd_sma, new_sign, new_mat);
+        }
+      }
+      start = len;
+      if (start == l_faces.size()) {
+        break;
+      }
+    }
+  };
   for (size_t i=0; i<level.l_faces.size(); i++) {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     std::vector<BoundEntry<Tint>> l_bound;
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(face.EXT);
-    RyshkovGRP<T, Tgroup> eCone =
+    RyshkovGRP<T, Tgroup> cone =
       GetNakedPerfectCone_GRP<T, Tgroup>(pctdi.LinSpa, EXT_T, face.GRP_ext, os);
-    MyVector<T> interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
-    for (auto& incd_sma: eCone.ListIncd) {
-      Face incd_big = get_big_incd(eCone, incd_sma);
+    if (pctdi.compute_boundary) {
+      initial_boundary_setup(i, cone);
+    }
+    for (auto& incd_sma: cone.ListIncd) {
+      Face incd_big = get_big_incd(cone, incd_sma);
       MyMatrix<Tint> EXTincd = SelectRow(face.EXT, incd_big);
       PerfectBoundednessProperty pbp = initial_bounded_property(pctdi.LinSpa, EXTincd, os);
       std::optional<Tfull_triple> opt_t;
@@ -588,10 +654,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       os << "PERFCOMP: pbp=" << to_string(pbp) << "\n";
 #endif
       if (is_insertable(is_well_rounded)) {
-        BoundEntry<Tint> be = f_insert(t, opt_t, is_well_rounded);
+        std::pair<int, MyMatrix<Tint>> p = f_insert(t, opt_t, is_well_rounded);
         if (pctdi.compute_boundary) {
-          be.sign = get_sign(interior_pt, face, be);
-          l_bound.push_back(be);
+          append_boundary(i, p, incd_sma, l_bound);
         }
       }
     }
