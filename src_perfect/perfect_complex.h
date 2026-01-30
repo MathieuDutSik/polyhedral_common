@@ -614,7 +614,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         l_mat.push_back(new_mat);
         BoundEntry<Tint> be{p.first, sign, new_mat};
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-        MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * Inverse(be.M);
+        MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * be.M;
         for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
           MyVector<Tint> Vimg = GetMatrixRow(EXTimg, iRow);
           if (set_EXT.count(Vimg) != 1) {
@@ -636,7 +636,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
           Face new_incd_sma = OnFace(l_faces_gen[u], l_gens_perm[i_gen]);
           int new_sign = l_sign[u] * l_status[i_gen];
-          MyMatrix<Tint> new_mat = l_gens[i_gen] * l_mat[u];
+          MyMatrix<Tint> new_mat = l_mat[u] * l_gens[i_gen];
           insert_entry(new_incd_sma, new_sign, new_mat);
         }
       }
