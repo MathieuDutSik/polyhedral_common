@@ -3,6 +3,7 @@
 #define SRC_PERFECT_PERFECT_COMPLEX_H_
 
 #include "perfect_tspace.h"
+#include "complex_and_contraction.h"
 #include "triples.h"
 
 #ifdef SANITY_CHECK
@@ -331,24 +332,6 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
   return pfc;
 }
-
-
-template<typename Tint>
-struct BoundEntry {
-  int iOrb;
-  int sign;
-  MyMatrix<Tint> M;
-};
-
-template<typename Tint>
-struct ListBoundEntry {
-  std::vector<BoundEntry<Tint>> l_bound;
-};
-
-template<typename Tint>
-struct FullBoundary {
-  std::vector<ListBoundEntry<Tint>> ll_bound;
-};
 
 template<typename T, typename Tint, typename Tgroup>
 struct ResultStepEnumeration {
