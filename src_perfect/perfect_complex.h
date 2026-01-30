@@ -544,14 +544,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
     return p;
   };
-  auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, std::pair<int, MyMatrix<Tint>> const& p) -> int {
+  MyVector<T> interior_pt;
+  std::vector<Telt> l_gens_perm;
+  std::vector<int> l_status;
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-    std::unordered_set<MyVector<Tint>> set;
-    for (int i_row=0; i_row<face.EXT.rows(); i_row++) {
-      MyVector<Tint> V = GetMatrixRow(face.EXT, i_row);
-      set.insert(V);
-    }
+  std::unordered_set<MyVector<Tint>> set_EXT;
 #endif
+  auto get_sign=[&](MyVector<T> const& interior_pt, FacePerfectComplex<T,Tint,Tgroup> const& face, std::pair<int, MyMatrix<Tint>> const& p) -> int {
     int dim = face.or_info.ListRowSelect.size();
     MyMatrix<T> M(dim, dim);
     for (int i=0; i<dim; i++) {
@@ -563,7 +562,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       MyVector<Tint> V = GetMatrixRow(l_faces[iOrb].EXT, i_row);
       MyVector<Tint> Vimg = p.second.transpose() * V;
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-      if (set.count(Vimg) != 1) {
+      if (set_EXT.count(Vimg) != 1) {
         std::cerr << "PERFCOMP: The vector does not belong to set\n";
         throw TerminalException{1};
       }
@@ -581,9 +580,6 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       return -face.or_info.sign;
     }
   };
-  MyVector<T> interior_pt;
-  std::vector<Telt> l_gens_perm;
-  std::vector<int> l_status;
   auto initial_boundary_setup=[&](size_t const& i, RyshkovGRP<T, Tgroup> const& cone) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
@@ -596,21 +592,37 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       l_gens_perm.push_back(elt2);
       l_status.push_back(sign);
     }
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    for (int i_row=0; i_row<face.EXT.rows(); i_row++) {
+      MyVector<Tint> V = GetMatrixRow(face.EXT, i_row);
+      set_EXT.insert(V);
+    }
+#endif
   };
   auto append_boundary=[&](size_t const& i, std::pair<int,MyMatrix<Tint>> const& p, Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     int sign = get_sign(interior_pt, face, p);
-    std::unordered_set<Face> set_faces;
-    std::vector<Face> l_faces;
+    std::unordered_set<Face> set_faces_gen;
+    std::vector<Face> l_faces_gen;
     std::vector<int> l_sign;
     std::vector<MyMatrix<Tint>> l_mat;
     auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
-      if (set_faces.count(new_incd_sma) == 0) {
-        set_faces.insert(new_incd_sma);
-        l_faces.push_back(new_incd_sma);
+      if (set_faces_gen.count(new_incd_sma) == 0) {
+        set_faces_gen.insert(new_incd_sma);
+        l_faces_gen.push_back(new_incd_sma);
         l_sign.push_back(new_sign);
         l_mat.push_back(new_mat);
         BoundEntry<Tint> be{p.first, sign, new_mat};
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+        MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * Inverse(be.M);
+        for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
+          MyVector<Tint> Vimg = GetMatrixRow(EXTimg, iRow);
+          if (set_EXT.count(Vimg) != 1) {
+            std::cerr << "PERFCOMP: The vector should belong to the image\n";
+            throw TerminalException{1};
+          }
+        }
+#endif
         l_bound.push_back(be);
       }
     };
@@ -619,17 +631,17 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     size_t n_gen = l_gens.size();
     size_t start=0;
     while(true) {
-      size_t len = l_faces.size();
+      size_t len = l_faces_gen.size();
       for (size_t u=start; u<len; u++) {
         for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
-          Face new_incd_sma = OnFace(l_faces[u], l_gens_perm[i_gen]);
+          Face new_incd_sma = OnFace(l_faces_gen[u], l_gens_perm[i_gen]);
           int new_sign = l_sign[u] * l_status[i_gen];
-          MyMatrix<Tint> new_mat = l_mat[u] * l_gens[i_gen];
+          MyMatrix<Tint> new_mat = l_gens[i_gen] * l_mat[u];
           insert_entry(new_incd_sma, new_sign, new_mat);
         }
       }
       start = len;
-      if (start == l_faces.size()) {
+      if (start == l_faces_gen.size()) {
         break;
       }
     }
