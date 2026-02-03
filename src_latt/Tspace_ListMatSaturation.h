@@ -2,6 +2,10 @@
 #ifndef SRC_LATT_TSPACE_LISTMATSATURATION_H_
 #define SRC_LATT_TSPACE_LISTMATSATURATION_H_
 
+// clang-format off
+#include "MAT_MatrixInt.h"
+// clang-format on
+
 template <typename T>
 bool is_integrally_saturated_matrix_space(
     std::vector<MyMatrix<T>> const &ListMat) {

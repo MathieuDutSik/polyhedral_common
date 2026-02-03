@@ -2,7 +2,7 @@
 #PROGRAM		= LATT_getMatrixScalProd
 #PROGRAM		= LATT_Automorphism
 #PROGRAM		= LATT_Isomorphism
-PROGRAM		= GRP_TestFiniteness
+#PROGRAM		= GRP_TestFiniteness
 #PROGRAM		= LATT_Automorphism LATT_Isomorphism
 #PROGRAM		= LATT_DiophantApprox
 #PROGRAM		= LATT_MPI_ComputeDelaunay
@@ -20,6 +20,7 @@ PROGRAM		= GRP_TestFiniteness
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
+PROGRAM		= TSPACE_IntegralSaturation
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

@@ -110,7 +110,11 @@ jobs:
         run: |
           cd src_delaunay && make -f Makefile_tspace_isodelaunay && cd ..
           pwd
-          echo "After compilation of LATT_MPI_Lattice_IsoDelaunayDomain"
+          echo "After compilation of LATT_*_IsoDelaunayDomain"
+
+          cd src_latt && make -f Makefile_int_saturation && cd ..
+          pwd
+          echo "After compilation of TSPACE_IntegralSaturation"
 
           cd CI_tests/03_Tspaces_IsoDelaunay
           ../../gap.sh < TestEnumIsoDelaunayDomain.g

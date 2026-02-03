@@ -5,6 +5,25 @@ method:="serial";
 #method:="mpi";
 
 
+get_saturated_space:=function(ListMat)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, ListMatRet;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Saturation.in");
+    FileO:=Filename(TmpDir, "Saturation.out");
+    FileE:=Filename(TmpDir, "Saturation.err");
+    WriteListMatrixFile(FileI, ListMat);
+
+    eProg:="../../src_latt/TSPACE_IntegralSaturation";
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO);
+    Exec(TheCommand);
+
+    ListMatRet:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListMatRet;
+end;
+
 get_pairwise_scalar_inv:=function(ListMat, SuperMat)
     local ListB, pairwise_scalar, eB, eLine;
     ListB:=List(ListMat, x->x*Inverse(SuperMat));
@@ -21,10 +40,11 @@ end;
 # Reading the files from the storage
 # It is fixed because we do not want to change them
 read_existing_file:=function(eFile)
-    local is, SuperMat, ListMat, ListComm, ListSubspaces, PtStabGens, l_spanning_elements, PairwiseScalarInv;
+    local is, SuperMat, ListMat_pre, ListMat, ListComm, ListSubspaces, PtStabGens, l_spanning_elements, PairwiseScalarInv;
     is:=InputTextFile(eFile);
     SuperMat:=InputStreamMatrix(is);
-    ListMat:=InputStreamListMatrix(is);
+    ListMat_pre:=InputStreamListMatrix(is);
+    ListMat:=get_saturated_space(ListMat_pre);
     ListComm:=InputStreamListMatrix(is);
     ListSubspaces:=InputStreamListMatrix(is);
     PtStabGens:=InputStreamListMatrix(is);
@@ -64,14 +84,12 @@ get_nb_domains:=function(eFile)
     #
     if method = "serial" then
         eProg:="../../src_delaunay/LATT_SerialLattice_IsoDelaunayDomain";
-        TheCommand:=Concatenation(eProg, " ", FileNml);
-        Exec(TheCommand);
     fi;
     if method = "mpi" then
         eProg:="../../src_delaunay/LATT_MPI_Lattice_IsoDelaunayDomain";
-        TheCommand:=Concatenation(eProg, " ", FileNml);
-        Exec(TheCommand);
     fi;
+    TheCommand:=Concatenation(eProg, " ", FileNml);
+    Exec(TheCommand);
     #
     if IsExistingFile(FileResult)=false then
         Print("method=", method, "\n");
@@ -111,6 +129,8 @@ do
         Add(ListRec, eRec);
     od;
 od;
+
+ListRec:=ListRec{[1..3]};
 
 Recompute:=function(eData)
     local Lst, ListEntries, iter, elst, eFile, comp_nb, eEntry;
