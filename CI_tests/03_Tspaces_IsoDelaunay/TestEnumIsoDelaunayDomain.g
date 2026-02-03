@@ -130,8 +130,6 @@ do
     od;
 od;
 
-ListRec:=ListRec{[1..3]};
-
 Recompute:=function(eData)
     local Lst, ListEntries, iter, elst, eFile, comp_nb, eEntry;
     Lst:=ReadAsFunction(eData.FileS)();
