@@ -100,16 +100,16 @@ end;
 
 
 
-StreamMatrixFile:=function(file)
+InputStreamMatrix:=function(is)
     local line, LStr, nbRow, nbCol, TheMat, iRow, eLine, eStr, val;
-    line:=ReadLineRed(file);
+    line:=ReadLineRed(is);
     LStr:=SplitString(line, " ");
     nbRow:=Int(LStr[1]);
     nbCol:=Int(LStr[2]);
     TheMat:=[];
     for iRow in [1..nbRow]
     do
-        line:=ReadLineRed(file);
+        line:=ReadLineRed(is);
         LStr:=SplitString(line, " ");
         eLine:=[];
         for eStr in LStr
@@ -128,27 +128,59 @@ StreamMatrixFile:=function(file)
     return TheMat;
 end;
 
+OutputStreamMatrix:=function(os, m)
+    local n_row, n_col, i_row, i_col;
+    n_row:=Length(m);
+    n_col:=Length(m[1]);
+    AppendTo(os, n_row, " ", n_col, "\n");
+    for i_row in [1..n_row]
+    do
+        for i_col in [1..n_col]
+        do
+            AppendTo(os, " ", m[i_row][i_col]);
+        od;
+        AppendTo(os, "\n");
+    od;
+end;
+
 ReadMatrixFile:=function(eFile)
-    local file, TheMat;
-    file:=InputTextFile(eFile);
-    TheMat:=StreamMatrixFile(file);
-    CloseStream(file);
+    local is, TheMat;
+    is:=InputTextFile(eFile);
+    TheMat:=InputStreamMatrix(is);
+    CloseStream(is);
     return TheMat;
 end;
 
-
-ReadListMatrixFile:=function(eFile)
-    local file, line, n_matrix, ListMat, iMat, TheMat;
-    file:=InputTextFile(eFile);
-    line:=ReadLineRed(file);
+InputStreamListMatrix:=function(is)
+    local line, n_matrix, ListMat, iMat, TheMat;
+    line:=ReadLineRed(is);
     n_matrix:=Int(line);
     ListMat:=[];
     for iMat in [1..n_matrix]
     do
-        TheMat:=StreamMatrixFile(file);
+        TheMat:=InputStreamMatrix(is);
         Add(ListMat, TheMat);
     od;
-    CloseStream(file);
+    return ListMat;
+end;
+
+OutputStreamListMatrix:=function(os, list_m)
+    local n_mat, i_mat;
+    n_mat:=Length(list_m);
+    AppendTo(os, n_mat, "\n");
+    for i_mat in [1..n_mat]
+    do
+        OutputStreamMatrix(os, list_m[i_mat]);
+    od;
+end;
+
+
+
+ReadListMatrixFile:=function(eFile)
+    local is, ListMat;
+    is:=InputTextFile(eFile);
+    ListMat:=InputStreamListMatrix(is);
+    CloseStream(is);
     return ListMat;
 end;
 
@@ -231,7 +263,7 @@ ReadTextFile:=function(FileIn)
         Print("ReadTextFile error, the file FileIn=", FileIn, " is missing\n");
         Error("Correct your stuff");
     fi;
-    file := InputTextFile(FileIn);
+    file:=InputTextFile(FileIn);
     while(true)
     do
         TheRead:=ReadLine(file);

@@ -5,15 +5,62 @@ method:="serial";
 #method:="mpi";
 
 
+get_pairwise_scalar_inv:=function(ListMat, SuperMat)
+    local ListB, pairwise_scalar, eB, eLine;
+    ListB:=List(ListMat, x->x*Inverse(SuperMat));
+    pairwise_scalar:=[];
+    for eB in ListB
+    do
+        eLine:=List(ListB, x->Trace(x * eB));
+        Add(pairwise_scalar, eLine);
+    od;
+    return Inverse(pairwise_scalar);
+end;
+
+
+# Reading the files from the storage
+# It is fixed because we do not want to change them
+read_existing_file:=function(eFile)
+    local is, SuperMat, ListMat, ListComm, ListSubspaces, PtStabGens, l_spanning_elements, PairwiseScalarInv;
+    is:=InputTextFile(eFile);
+    SuperMat:=InputStreamMatrix(is);
+    ListMat:=InputStreamListMatrix(is);
+    ListComm:=InputStreamListMatrix(is);
+    ListSubspaces:=InputStreamListMatrix(is);
+    PtStabGens:=InputStreamListMatrix(is);
+    l_spanning_elements:=[];
+    PairwiseScalarInv:=get_pairwise_scalar_inv(ListMat, SuperMat);
+    return rec(SuperMat:=SuperMat, ListMat:=ListMat, ListComm:=ListComm, ListSubspaces:=ListSubspaces, PtStabGens:=PtStabGens, l_spanning_elements:=l_spanning_elements, PairwiseScalarInv:=PairwiseScalarInv);
+end;
+
+
+# Write to the file. That should follow the update to the C++ code.
+write_linear_space_input:=function(eFile, RecLinSpa)
+    local os;
+    os:=OutputTextFile(eFile, true);
+    OutputStreamMatrix(os, RecLinSpa.SuperMat);
+    OutputStreamListMatrix(os, RecLinSpa.ListMat);
+    OutputStreamListMatrix(os, RecLinSpa.ListComm);
+    OutputStreamListMatrix(os, RecLinSpa.ListSubspaces);
+    OutputStreamListMatrix(os, RecLinSpa.PtStabGens);
+    OutputStreamListMatrix(os, RecLinSpa.l_spanning_elements);
+    OutputStreamMatrix(os, RecLinSpa.PairwiseScalarInv);
+    CloseStream(os);
+end;
+
+
+
+
+
 get_nb_domains:=function(eFile)
-    local FileLinSpa, FileNml, FileResult, output, eProg, TheCommand, U, is_correct;
+    local FileLinSpa, FileNml, FileResult, RecLinSpa, eProg, TheCommand, U, is_correct;
     #
     FileLinSpa:="TSPACE_LinSpa";
     FileNml:="Enum_Tspaces_CI.nml";
     FileResult:="Result";
-    Print("eFile=", eFile, "\n");
-    TheCommand:=Concatenation("cp ", eFile, " ", FileLinSpa);
-    Exec(TheCommand);
+    RecLinSpa:=read_existing_file(eFile);
+    RemoveFileIfExist(FileLinSpa);
+    write_linear_space_input(FileLinSpa, RecLinSpa);
     #
     if method = "serial" then
         eProg:="../../src_delaunay/LATT_SerialLattice_IsoDelaunayDomain";
