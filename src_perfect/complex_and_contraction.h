@@ -141,15 +141,31 @@ bool is_product_zero(int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> co
   }
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<FaceEntry<Tint>> contracting_homotopy_kernel(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
+  
 
 
-
-
+}
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<FaceEntry<Tint>> contracting_homotopy(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
-  
-
+#ifdef SANITY_CHECK_COMPLEX_CONTRACTION
+  std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, pctdi, rse, os);
+  if (chain3.size() > 0) {
+    std::cerr << "COMPCONT: The chain should have a zero boundary\n";
+    throw TerminalException{1};
+  }
+#endif
+  std::vector<FaceEntry<Tint>> one_sol = contracting_homotopy_kernel(c_idim, idim, pctdi, rse, os);
+#ifdef SANITY_CHECK_COMPLEX_CONTRACTION
+  std::vector<FaceEntry<Tint>> one_sol_img = compute_boundary(one_sol, idim - 1, pctdi, rse, os);
+  if (is_equal_chain(one_sol_img, c_idim, idim, pctdi, rse, os)) {
+    std::cerr << "COMPCONT: The proposed preimage is not a solution\n";
+    throw TerminalException{1};
+  }
+#endif
+  return one_sol;
 }
 
 
