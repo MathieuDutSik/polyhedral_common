@@ -795,12 +795,20 @@ public:
   }
   std::vector<FaceEntry<Tint>> get_faces() const {
     std::vector<FaceEntry<Tint>> chain_ret;
-    for (auto & fe: chain_ret) {
+    for (auto & fe: chain) {
       if (fe.value != 0) {
         chain_ret.push_back(fe);
       }
     }
     return chain_ret;
+  }
+  bool is_zero_chain() const {
+    for (auto & fe: chain) {
+      if (fe.value != 0) {
+        return false;
+      }
+    }
+    return true;
   }
 };
 
@@ -814,12 +822,7 @@ bool is_equal_chain(std::vector<FaceEntry<Tint>> const& chain1, std::vector<Face
   for (auto & fe: chain2) {
     chain_builder(-fe.value, fe.iOrb, fe.M);
   }
-  std::vector<FaceEntry<Tint>> l_faces = chain_builder.get_faces();
-  if (l_faces.size() == 0) {
-    return true;
-  } else {
-    return false;
-  }
+  return chain_builder.is_zero_chain();
 }
 
 
