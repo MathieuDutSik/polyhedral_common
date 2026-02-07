@@ -787,7 +787,7 @@ public:
     } else {
       int sign = 1;
       if (face.is_orientable) {
-        MyMatrix<Tint> t = Inverse(M) * chain[idx - 1].M;
+        MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);;
         sign = get_face_orientation(EXT1, ListMat, or_info, t);
       }
       chain[idx - 1].value += sign * value;
