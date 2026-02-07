@@ -34,7 +34,7 @@
 // clang-format on
 
 #ifdef PRINT
-#define PRINT_LRS_ANALYSIS
+//#define PRINT_LRS_ANALYSIS
 #endif
 
 #ifdef DEBUG
