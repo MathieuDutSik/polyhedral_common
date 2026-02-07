@@ -692,6 +692,33 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   }
 }
 
+template<typename T>
+MyMatrix<T> tot_set(MyMatrix<Tint> const& EXTin) {
+  std::set<MyVector<T>> set;
+  int dim = EXTin.cols();
+  auto f_insert=[&](int i_row) -> void {
+    for (int i=0; i<dim; i++) {
+      if (EXTin(i_row, i) > 0) {
+        MyVector<T> V = GetMatrixRow(EXTin, i_row);
+        set.insert(V);
+        return;
+      }
+    }
+  };
+  for (int i_row=0; i_row<EXTin.rows(); i_row++) {
+    f_insert(i_row);
+  }
+  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
+  int pos = 0;
+  for (auto & V: set) {
+    AssignMatrixRow(M, pos, V);
+    pos += 1;
+  }
+  return M;
+}
+
+
+
 template<typename T, typename Tint, typename Tgroup>
 struct ChainBuilder {
 private:
@@ -705,20 +732,6 @@ public:
   ChainBuilder(int _idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& _pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& _rse, std::ostream& _os) : idim(_idim), pctdi(_pctdi), rse(_rse), os(_os) {
   }
   void f_insert(Tint const& value, int const& iOrb, MyMatrix<Tint> const& M) {
-    auto tot_set=[&](MyMatrix<Tint> const& EXTin) -> MyMatrix<Tint> {
-      std::set<MyVector<Tint>> set;
-      for (int i_row=0; i_row<EXTin.rows(); i_row++) {
-        MyVector<Tint> V = GetMatrixRow(EXTin, i_row);
-        set.insert(V);
-      }
-      MyMatrix<Tint> M(EXTin.rows(), EXTin.cols());
-      int pos = 0;
-      for (auto & V: set) {
-        AssignMatrixRow(M, pos, V);
-        pos += 1;
-      }
-      return M;
-    };
     MyMatrix<Tint> const& EXT1 = rse.level[idim][iOrb].EXT;
     OrientationInfo const& or_info = rse.level[idim][iOrb].or_info;
     std::vector<MyMatrix<T>> const& ListMat = pctdi.ListMat;

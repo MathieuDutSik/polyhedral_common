@@ -73,6 +73,10 @@ void process_A(FullNamelist const &eFull) {
       std::cerr << "i=" << i << " |result.level|=" << result.level.l_faces.size() << "\n";
       l_level.push_back(result.level);
     }
+    for (int idim=0; idim<dim_spa-2; idim++) {
+      bool test = is_product_zero(idim, pctdi, rse, std::cerr);
+      std::cerr << "idim=" << idim << " test=" << GAP_logical(test) << "\n";
+    }
   }
 }
 
