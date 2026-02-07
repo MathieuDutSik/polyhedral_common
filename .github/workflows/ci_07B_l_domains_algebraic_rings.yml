@@ -108,7 +108,7 @@ jobs:
 
       - name: Test enumeration of Lattice Delaunay polytopes
         run: |
-          cd src_latt && make -f Makefile_tspace_isodelaunay && cd ..
+          cd src_delaunay && make -f Makefile_tspace_isodelaunay && cd ..
           pwd
           echo "After compilation of LATT_MPI_Lattice_IsoDelaunayDomain"
 
