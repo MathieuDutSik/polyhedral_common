@@ -62,21 +62,9 @@ void process_A(FullNamelist const &eFull) {
     };
     print_stderr_stdout_file(OutFile, f_print);
   } else {
-    PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, std::cerr);
-    std::cerr << "We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
-    int dim_spa = LinSpa.ListMat.size();
-    FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, std::cerr);
-    std::cerr << "We have the first level |level|=" << level.l_faces.size() << "\n";
-    std::vector<FacesPerfectComplex<T,Tint,Tgroup>> l_level{level};
-    for (int i=1; i<dim_spa; i++) {
-      ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, l_level[i-1], std::cerr);
-      std::cerr << "i=" << i << " |result.level|=" << result.level.l_faces.size() << "\n";
-      l_level.push_back(result.level);
-    }
-    for (int idim=0; idim<dim_spa-2; idim++) {
-      bool test = is_product_zero(idim, pctdi, rse, std::cerr);
-      std::cerr << "idim=" << idim << " test=" << GAP_logical(test) << "\n";
-    }
+    FullComplexEnumeration<T,Tint,Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, only_well_rounded, compute_boundary, std::cerr);
+    bool test = are_product_zeros(fce, std::cerr);
+    std::cerr << "are_product_zeros, test=" << GAP_logical(test) << "\n";
   }
 }
 

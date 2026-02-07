@@ -13,6 +13,10 @@
 #define DEBUG_PERFECT_COMPLEX
 #endif
 
+#ifdef PRINT
+#define PRINT_PERFECT_COMPLEX_DIMENSION
+#endif
+
 /*
   Construction of the perfect form complex.
   We compute the faces of the oerfect domain
@@ -58,6 +62,11 @@
       to store all the triples.
 
   Therefore, we use the second algorithm
+
+  - - - - - - - - - - - - -
+
+  
+  
  */
 
 //
@@ -692,8 +701,41 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   }
 }
 
+template<typename T, typename Tint, typename Tgroup>
+struct FullComplexEnumeration {
+  PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi;
+  std::vector<FacesPerfectComplex<T,Tint,Tgroup>> levels;
+  std::vector<FullBoundary<Tint>> boundaries;
+};
+
+template<typename T, typename Tint, typename Tgroup>
+FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
+  PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, os);
+#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+  os << "We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
+#endif
+  int dim_spa = LinSpa.ListMat.size();
+  FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, os);
+#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+  os << "We have the first level |level|=" << level.l_faces.size() << "\n";
+#endif
+  std::vector<FacesPerfectComplex<T,Tint,Tgroup>> levels{level};
+  std::vector<FullBoundary<Tint>> boundaries;
+  for (int i=1; i<dim_spa; i++) {
+    ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, levels[i-1], os);
+#ifdef PRINT_PERFECT_COMPLEX_DIMENSION
+    os << "i=" << i << " |result.level|=" << result.level.l_faces.size() << "\n";
+#endif
+    levels.push_back(result.level);
+    if (result.boundary) {
+      boundaries.push_back(*result.boundary);
+    }
+  }
+  return {pctdi, levels, boundaries};
+}
+
 template<typename T>
-MyMatrix<T> tot_set(MyMatrix<Tint> const& EXTin) {
+MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
   std::set<MyVector<T>> set;
   int dim = EXTin.cols();
   auto f_insert=[&](int i_row) -> void {
@@ -724,27 +766,27 @@ struct ChainBuilder {
 private:
   std::unordered_map<MyMatrix<Tint>, size_t> map_ext_set;
   int idim;
-  PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi;
-  ResultStepEnumeration<T, Tint, Tgroup> const& rse;
+  FullComplexEnumeration<T,Tint,Tgroup> const& fce;
   std::ostream& os;
 public:
   std::vector<FaceEntry<Tint>> chain;
-  ChainBuilder(int _idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& _pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& _rse, std::ostream& _os) : idim(_idim), pctdi(_pctdi), rse(_rse), os(_os) {
+  ChainBuilder(int _idim, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : idim(_idim), fce(_fce), os(_os) {
   }
   void f_insert(Tint const& value, int const& iOrb, MyMatrix<Tint> const& M) {
-    MyMatrix<Tint> const& EXT1 = rse.level[idim][iOrb].EXT;
-    OrientationInfo const& or_info = rse.level[idim][iOrb].or_info;
-    std::vector<MyMatrix<T>> const& ListMat = pctdi.ListMat;
+    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[idim].l_faces[iOrb];
+    MyMatrix<Tint> const& EXT1 = face.EXT;
+    OrientationInfo const& or_info = face.or_info;
+    std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
-    int& idx = map_ext_set[EXT3];
+    size_t& idx = map_ext_set[EXT3];
     if (idx == 0) {
       idx = map_ext_set.size();
       FaceEntry<Tint> fe{iOrb, value, M};
       chain.emplace_back(std::move(fe));
     } else {
       int sign = 1;
-      if (rse.level[idim][iOrb].is_orientable) {
+      if (face.is_orientable) {
         MyMatrix<Tint> t = Inverse(M) * chain[idx - 1].M;
         sign = get_face_orientation(EXT1, ListMat, or_info, t);
       }
@@ -754,7 +796,7 @@ public:
   std::vector<FaceEntry<Tint>> get_faces() const {
     std::vector<FaceEntry<Tint>> chain_ret;
     for (auto & fe: chain_ret) {
-      if (fe.multiplicity != 0) {
+      if (fe.value != 0) {
         chain_ret.push_back(fe);
       }
     }
@@ -764,8 +806,8 @@ public:
 
 
 template<typename T, typename Tint, typename Tgroup>
-bool is_equal_chain(std::vector<FaceEntry<Tint>> const& chain1, std::vector<FaceEntry<Tint>> const& chain2, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
-  ChainBuilder<T,Tint,Tgroup> chain_builder(idim, pctdi, rse, os);
+bool is_equal_chain(std::vector<FaceEntry<Tint>> const& chain1, std::vector<FaceEntry<Tint>> const& chain2, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  ChainBuilder<T,Tint,Tgroup> chain_builder(idim, fce, os);
   for (auto & fe: chain1) {
     chain_builder(fe.value, fe.iOrb, fe.M);
   }
@@ -785,16 +827,12 @@ bool is_equal_chain(std::vector<FaceEntry<Tint>> const& chain1, std::vector<Face
 
 // Compute the boundary d(c) for c a part of the full complex.
 template<typename T, typename Tint, typename Tgroup>
-std::vector<FaceEntry<Tint>> compute_boundary(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
-  ChainBuilder<T,Tint,Tgroup> chain_builder(idim+1, pctdi, rse, os);
-  if (!rse.boundary) {
-    std::cerr << "COMPCONT: The boundary should have been constructed\n";
-    throw TerminalException{1};
-  }
-  FullBoundary<Tint> const& bnd = *rse.boundary;
+std::vector<FaceEntry<Tint>> compute_boundary(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  ChainBuilder<T,Tint,Tgroup> chain_builder(idim+1, fce, os);
+  FullBoundary<Tint> const& bnd = fce.boundaries[idim];
   for (auto & fe: c_idim) {
     int iOrb = fe.iOrb;
-    for (auto & ebnd: bnd.ll_bound[idim].l_bound[iOrb]) {
+    for (auto & ebnd: bnd.ll_bound[iOrb].l_bound) {
       Tint value = fe.value * ebnd.sign;
       MyMatrix<Tint> M = ebnd.M * fe.M;
       chain_builder.f_insert(value, ebnd.iOrb, M);
@@ -805,37 +843,52 @@ std::vector<FaceEntry<Tint>> compute_boundary(std::vector<FaceEntry<Tint>> const
 
 // We should have d_{i+1}(d_i(c)) = 0 consistently.
 template<typename T, typename Tint, typename Tgroup>
-bool is_product_zero(int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
-  int dim = rse.level[idim].size();
-  int n = pctdi.LinSpa.n;
+bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  int dim = fce.levels[idim].l_faces.size();
+  int n = fce.pctdi.LinSpa.n;
   for (int iOrb=0; iOrb<dim; iOrb++) {
     FaceEntry<Tint> fe{iOrb, Tint(1), IdentityMat<Tint>(n)};
     std::vector<FaceEntry<Tint>> chain1{fe};
-    std::vector<FaceEntry<Tint>> chain2 = compute_boundary(chain1, idim, pctdi, rse, os);
-    std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, pctdi, rse, os);
+    std::vector<FaceEntry<Tint>> chain2 = compute_boundary(chain1, idim, fce, os);
+    std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, fce, os);
     if (chain3.size() > 0) {
       return false;
     }
   }
+  return true;
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<FaceEntry<Tint>> contracting_homotopy_kernel(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
-
+bool are_product_zeros(FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  int dim_spa = fce.pctdi.LinSpa.ListMat.size();
+  for (int idim=0; idim<dim_spa-2; idim++) {
+    bool test = is_product_zero(idim, fce, os);
+    if (!test) {
+      return false;
+    }
+  }
+  return true;
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<FaceEntry<Tint>> contracting_homotopy(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, ResultStepEnumeration<T, Tint, Tgroup> const& rse, std::ostream& os) {
+std::vector<FaceEntry<Tint>> contracting_homotopy_kernel(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+
+}
+
+
+
+template<typename T, typename Tint, typename Tgroup>
+std::vector<FaceEntry<Tint>> contracting_homotopy(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
 #ifdef SANITY_CHECK_COMPLEX_CONTRACTION
-  std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, pctdi, rse, os);
+  std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, fce, os);
   if (chain3.size() > 0) {
     std::cerr << "COMPCONT: The chain should have a zero boundary\n";
     throw TerminalException{1};
   }
 #endif
-  std::vector<FaceEntry<Tint>> one_sol = contracting_homotopy_kernel(c_idim, idim, pctdi, rse, os);
+  std::vector<FaceEntry<Tint>> one_sol = contracting_homotopy_kernel(c_idim, idim, fce, os);
 #ifdef SANITY_CHECK_COMPLEX_CONTRACTION
-  std::vector<FaceEntry<Tint>> one_sol_img = compute_boundary(one_sol, idim - 1, pctdi, rse, os);
+  std::vector<FaceEntry<Tint>> one_sol_img = compute_boundary(one_sol, idim - 1, fce, os);
   if (is_equal_chain(one_sol_img, c_idim, idim, pctdi, rse, os)) {
     std::cerr << "COMPCONT: The proposed preimage is not a solution\n";
     throw TerminalException{1};
