@@ -158,7 +158,7 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const &Q, std::ostream &os) {
     test_basis.push_back(v);
     MyMatrix<T> test_M = MatrixFromVectorFamily(test_basis);
     MyMatrix<T> QuadM = test_M * Q * test_M.transpose();
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(QuadM, os);
+    DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(QuadM, os);
     if (DiagInfo.nbPlus > max_one_sign) {
       return false;
     }
@@ -204,7 +204,7 @@ MyMatrix<T> compute_fifth_basis(MyMatrix<T> const &Q, std::ostream &os) {
       return M;
     }
     MyMatrix<T> QuadM = M * Q * M.transpose();
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(QuadM, os);
+    DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(QuadM, os);
     if (DiagInfo.nbPlus < max_one_sign) {
       MyVector<T> v = get_sign_vector(1);
       insert_vector(v);

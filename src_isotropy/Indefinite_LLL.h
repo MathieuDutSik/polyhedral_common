@@ -582,7 +582,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
 
 template <typename T>
 std::pair<int, int> GetSignature(MyMatrix<T> const &M, std::ostream &os) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(M, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(M, os);
   int nbPlus = DiagInfo.nbPlus;
   int nbMinus = DiagInfo.nbMinus;
   return {nbPlus, nbMinus};

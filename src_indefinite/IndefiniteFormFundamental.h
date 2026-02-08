@@ -11,7 +11,7 @@ template <typename T> struct AttackScheme {
 template <typename T>
 AttackScheme<T> INDEF_FORM_GetAttackScheme(MyMatrix<T> const &Qmat,
                                            std::ostream &os) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Qmat, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(Qmat, os);
   int nbPlus = DiagInfo.nbPlus;
   int nbMinus = DiagInfo.nbMinus;
   if (nbMinus < nbPlus) {
@@ -79,7 +79,7 @@ size_t INDEF_FORM_Invariant(MyMatrix<T> const &Qmat, std::ostream &os) {
   MyMatrix<T> TheCompl = SubspaceCompletionInt(NSP, n);
   MyMatrix<T> GramRed = TheCompl * Qmat * TheCompl.transpose();
   T eDet = DeterminantMat(GramRed);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Qmat, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(Qmat, os);
   int nbPlus = DiagInfo.nbPlus;
   int nbMinus = DiagInfo.nbMinus;
   int nbZero = DiagInfo.nbZero;

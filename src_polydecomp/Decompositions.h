@@ -144,7 +144,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
       IsomorphismFromCanonicReord<T, Tfield, Tidx>(
           eConcat_T, fConcat_T, eCanonicReord, fCanonicReord, os);
   if (!IsoInfo) {
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "Failed isomorphism at the graph level\n";
 #endif
     return {};
@@ -157,7 +157,7 @@ std::optional<MyMatrix<Tint>> f_equiv(const Tent<T, Tint, Tidx_value> &eEnt,
       eConcat_T, fConcat_T, GRP1, ePerm, os);
   if (eRes)
     return UniversalMatrixConversion<Tint, T>(*eRes);
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "Failed isomorphism at the integral level\n";
 #endif
   return {};
@@ -184,7 +184,7 @@ f_ent(std::vector<ConeDesc<T, Tint, Tgroup>> const &ListCones,
     MyMatrix<Tint> SHV =
         ExtractInvariantVectorFamilyZbasis<T, Tint>(Gres_T, os);
     Spann = SHV * NSP;
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "Gres_T=\n";
     WriteMatrix(std::cerr, Gres_T);
     std::cerr << "NSP=\n";
@@ -246,7 +246,7 @@ void compute_adjacency_structure(
   for (size_t i_domain = 0; i_domain < n_domain; i_domain++) {
     size_t n_fac = ListCones[i_domain].FAC.rows();
     size_t n_ext = ListCones[i_domain].EXT_T.rows();
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "i_domain=" << i_domain << " n_ext=" << n_ext
               << " n_fac=" << n_fac << "\n";
 #endif
@@ -266,7 +266,7 @@ void compute_adjacency_structure(
           f_ent<T, Tint, Tgroup, Tidx_value>(ListCones, G, fd, os);
       size_t hash = f_inv<T, Tint, Tgroup, Tidx_value>(eEnt);
       ent_info e_ent_info{i_domain, i_adj, f_ext, std::move(eEnt), hash};
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       std::cerr << "  i_domain=" << i_domain << " i_adj=" << i_adj
                 << " i_fac=" << i_fac << " |f_ext|=" << f_ext.count()
                 << " hash=" << hash << "\n";
@@ -281,7 +281,7 @@ void compute_adjacency_structure(
     }
     l_n_orb_adj.push_back(i_adj);
   }
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
   std::cerr << "First block of data built\n";
 #endif
   auto get_ent_info = [&](size_t const &i_domain,
@@ -296,7 +296,7 @@ void compute_adjacency_structure(
       -> std::optional<MyMatrix<Tint>> {
     stab_info<Tgroup, Tint> e_stab_info =
         f_stab<T, Tint, Tgroup, Tidx_value>(eEnt, os);
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "After f_stab call |GRPfull|=" << e_stab_info.GRPfull.size()
               << " |GRPres|=" << e_stab_info.GRPres.size() << "\n";
 #endif
@@ -304,7 +304,7 @@ void compute_adjacency_structure(
     for (auto &ePair : e_stab_info.ListGenMat) {
       MyVector<Tint> eSpannImg = ePair.second.transpose() * eSpann;
       if (eSpannImg == -eSpann) {
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
         std::cerr << "It is opposite\n";
 #endif
         return ePair.second;
@@ -346,7 +346,7 @@ void compute_adjacency_structure(
   auto get_sing_adj = [&](size_t const &i_domain,
                           size_t const &i_adj) -> sing_adj<Tint> {
     const ent_info &e_ent = get_ent_info(i_domain, i_adj);
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     std::cerr << "get_sing_adj i_domain=" << i_domain << " i_adj=" << i_adj
               << "\n";
 #endif
@@ -383,7 +383,7 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
   ListListDomain.push_back(ListDomain);
   //
   for (int i = 1; i < TheLev; i++) {
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     os << "i=" << i << "\n";
 #endif
     std::vector<std::pair<size_t, Tent<T, Tint, Tidx_value>>> NewListCand;
@@ -439,13 +439,13 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
             return;
         }
       }
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       f_insert_face(eEnt.fd);
 #endif
       std::pair<size_t, Tent<T, Tint, Tidx_value>> e_pair{e_inv,
                                                           std::move(eEnt)};
       NewListCand.emplace_back(std::move(e_pair));
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
       std::cerr << "Now |NewListCand|=" << NewListCand.size() << "\n";
 #endif
     };
@@ -467,9 +467,10 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy2(
       }
     }
     std::vector<FaceDesc> NewListDomain;
-    for (auto &eEnt : NewListCand)
+    for (auto &eEnt : NewListCand) {
       NewListDomain.push_back(eEnt.second.fd);
-#ifdef DEBUG_POLYEDRAL_DECOMPOSITION
+    }
+#ifdef DEBUG_POLYHEDRAL_DECOMPOSITION
     if (list_face.size() != NewListDomain.size()) {
       std::cerr << "Inconsistent sizes\n";
       std::cerr << "|list_face|=" << list_face.size()

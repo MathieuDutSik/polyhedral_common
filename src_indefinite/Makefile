@@ -12,9 +12,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-#CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK -DPERMUTALIB_BLOCKING_SANITY_CHECK
-#CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_APPROXIMATE_MODELS -DTIMINGS
-CDEFS           =
+#CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
+CDEFS           = $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

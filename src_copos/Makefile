@@ -17,7 +17,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -static-libgcc -static-libstdc++
 
 #COPTIONS        = -DDEBUG -DSANITY_CHECK
-COPTIONS        =
+COPTIONS        = $(CHOICE_COMPILATION)
 
 
 NOLINKFLAG 	= -c

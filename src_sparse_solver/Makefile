@@ -16,7 +16,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix
 CFLAGS 		= -I$(BOOST_INCDIR) -I$(EIGEN_PATH) -I$(GMP_INCDIR)
 
 #CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
-CDEFS           =
+CDEFS           = $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CDEFS)
 

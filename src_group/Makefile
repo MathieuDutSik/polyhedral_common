@@ -36,8 +36,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-CDEFS           =
 #CDEFS           = -DTIMINGS -DDEBUG
+CDEFS           = $(CHOICE_COMPILATION)
 
 CTOTAL = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

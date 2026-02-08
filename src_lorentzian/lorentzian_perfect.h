@@ -55,7 +55,7 @@ std::string GetNatureOption(int const &TheOption) {
 template <typename T>
 void check_correctness_lorentzian_perfect(MyMatrix<T> const &G,
                                           std::ostream &os) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(G, os);
   if (DiagInfo.nbZero != 0) {
     std::cerr << "LORPERF: matrix has non-zero kernel";
     throw TerminalException{1};
@@ -119,7 +119,7 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
      << DeterminantMat(LorMat) << "\n";
   os << "LORPERF: LORENTZ_FindPositiveVectors: LorMat=\n";
   WriteMatrix(os, LorMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(LorMat, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(LorMat, os);
   os << "LORPERF: LORENTZ_FindPositiveVectors: nbPlus=" << DiagInfo.nbPlus
      << " nbZero=" << DiagInfo.nbZero << " nbMinus=" << DiagInfo.nbMinus
      << "\n";
@@ -851,7 +851,7 @@ MyVector<T> LORENTZ_GetOneOutsideRay(MyMatrix<T> const &LorMat,
 #endif
   MyMatrix<T> TheMat = SpannBasis * LorMat * SpannBasis.transpose();
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-  DiagSymMat<T> dsm = DiagonalizeSymmetricMatrix(TheMat, os);
+  DiagSymMatSymbolic dsm = DiagonalizeSymmetricMatrixSymbolic(TheMat, os);
   if (dsm.nbMinus == 0) {
     std::cerr << "LORPERF: We should have a negative in the entry\n";
     throw TerminalException{1};
@@ -1872,7 +1872,7 @@ size_t INDEF_FORM_Invariant_NonDeg(MyMatrix<T> const &SymMat, size_t seed,
 #endif
   int n = SymMat.rows();
   T det = DeterminantMat<T>(SymMat);
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(SymMat, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(SymMat, os);
   auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
     seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
   };

@@ -211,6 +211,12 @@ OrientationInfo get_orientation_info(MyMatrix<Tint> const& EXT, std::vector<MyMa
     }
   }
   T det = DeterminantMat(M);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  if (det == 0) {
+    std::cerr << "PERFCOMP: determinant is 0, big error A\n";
+    throw TerminalException{1};
+  }
+#endif
   int sign = 1;
   if (det < 0) {
     sign = -1;
@@ -254,6 +260,12 @@ int get_face_orientation(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> con
     }
   }
   T det = DeterminantMat(M);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  if (det == 0) {
+    std::cerr << "PERFCOMP: determinant is 0, big error B\n";
+    throw TerminalException{1};
+  }
+#endif
   if (det > 0) {
     return or_info.sign;
   } else {
@@ -272,8 +284,6 @@ bool is_face_orientable(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> cons
   }
   return true;
 }
-
-
 
 template<typename T, typename Tint, typename Tgroup>
 FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, std::ostream & os) {
@@ -588,10 +598,18 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
     T det = DeterminantMat(M);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    if (det == 0) {
+      std::cerr << "PERFCOMP: determinant is 0, big error C\n";
+      throw TerminalException{1};
+    }
+#endif
+    //    int sign = face.or_info.sign;
+    int sign = 1;
     if (det > 0) {
-      return face.or_info.sign;
+      return sign;
     } else {
-      return -face.or_info.sign;
+      return -sign;
     }
   };
   auto initial_boundary_setup=[&](size_t const& i, RyshkovGRP<T, Tgroup> const& cone) -> void {

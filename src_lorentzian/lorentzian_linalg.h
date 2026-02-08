@@ -32,7 +32,7 @@
 template <typename T>
 std::optional<std::string> ReasonNonLorentzian(MyMatrix<T> const &G,
                                                std::ostream &os) {
-  DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(G, os);
+  DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(G, os);
   if (DiagInfo.nbZero != 0) {
     std::string reason_non_lorentzian = "matrix has non-zero kernel";
     return reason_non_lorentzian;
@@ -1098,7 +1098,7 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
         InvariantBasis = MyMatrix<Tint>(0, G.rows());
       } else {
         InvariantBasis = NSP * InvariantBasis;
-        DiagSymMat<T> DiagInfo = get_diag_info();
+        DiagSymMatSymbolic DiagInfo = get_diag_info();
         if (DiagInfo.nbMinus == 0) {
           is_finite = false;
         }
@@ -1109,11 +1109,11 @@ template <typename T, typename Tint> struct LorentzianFinitenessGroupTester {
     std::cerr << "|LORLIN: InvariantSpace|=" << ms(time2, time3) << "\n";
 #endif
   }
-  DiagSymMat<T> get_diag_info() const {
+  DiagSymMatSymbolic get_diag_info() const {
     MyMatrix<T> InvariantBasis_T =
         UniversalMatrixConversion<T, Tint>(InvariantBasis);
     MyMatrix<T> Ginv = InvariantBasis_T * G * InvariantBasis_T.transpose();
-    DiagSymMat<T> DiagInfo = DiagonalizeSymmetricMatrix(Ginv, os);
+    DiagSymMatSymbolic DiagInfo = DiagonalizeSymmetricMatrixSymbolic(Ginv, os);
     return DiagInfo;
   }
   size_t get_max_finite_order() const { return max_finite_order; }

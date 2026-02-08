@@ -31,7 +31,7 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 #CDEFS           = -DTIMINGS -DDEBUG_SPECIFIC
-CDEFS           =
+CDEFS           = $(CHOICE_COMPILATION)
 
 CTOTAL = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

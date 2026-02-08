@@ -16,9 +16,8 @@ OUTPUTFLAG 	= -o
 CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -I../src_graph -I.
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-#CDEFS           = -DDEBUG_ISOTROPIC
-#CDEFS           = -DDEBUG
-CDEFS           =
+#CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
+CDEFS           = $(CHOICE_COMPILATION)
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CDEFS)
 
