@@ -75,7 +75,7 @@ template <typename T, typename Tgroup>
 RyshkovGRP<T, Tgroup>
 GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
                         MyMatrix<T> const &SHV_T,
-                        Tgroup const &GRP, [[maybe_unused]] std::ostream &os) {
+                        Tgroup const &GRP, std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   int nbSHV = SHV_T.rows();

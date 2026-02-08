@@ -410,6 +410,7 @@ struct FaceEntry {
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
+  using TintGroup = typename Tgroup::Tint;
   int n = pctdi.LinSpa.n;
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
@@ -604,8 +605,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       throw TerminalException{1};
     }
 #endif
-    //    int sign = face.or_info.sign;
-    int sign = 1;
+    int sign = face.or_info.sign;
     if (det > 0) {
       return sign;
     } else {
@@ -633,7 +633,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     }
 #endif
   };
-  auto append_boundary=[&](size_t const& i, std::pair<int,MyMatrix<Tint>> const& p, Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
+  auto append_boundary=[&](size_t const& i, std::pair<int,MyMatrix<Tint>> const& p,
+                           RyshkovGRP<T, Tgroup> const& cone,
+                           Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     int sign = get_sign(interior_pt, face, p);
     std::unordered_set<Face> set_faces_gen;
@@ -679,6 +681,15 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         break;
       }
     }
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    Tgroup stab = cone.GRPsub.Stabilizer_OnSets(incd_sma);
+    TintGroup size1 = cone.GRPsub.size() / stab.size();
+    TintGroup size2 = l_faces_gen.size();
+    if (size1 != size2) {
+      std::cerr << "PERFCOMP: Inconsistent orbit sizes size1=" << size1 << " size2=" << size2 << "\n";
+      throw TerminalException{1};
+    }
+#endif
   };
   for (size_t i=0; i<level.l_faces.size(); i++) {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
@@ -702,10 +713,24 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       if (is_insertable(is_well_rounded)) {
         std::pair<int, MyMatrix<Tint>> p = f_insert(t, opt_t, is_well_rounded);
         if (pctdi.compute_boundary) {
-          append_boundary(i, p, incd_sma, l_bound);
+          append_boundary(i, p, cone, incd_sma, l_bound);
         }
       }
     }
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    if (pctdi.compute_boundary && !pctdi.only_well_rounded) {
+      std::vector<Telt> gens;
+      Tgroup GRPtriv(gens, cone.PerfDomEXT.rows());
+      vectface ListIncd_triv =
+        DualDescriptionStandard<T, Tgroup>(cone.PerfDomEXT, GRPtriv, os);
+      size_t size1 = ListIncd_triv.size();
+      size_t size2 = l_bound.size();
+      if (size1 != size2) {
+        std::cerr << "PERFCOMP: inconsistent size size1=" << size1 << " size2=" << size2 << "\n";
+        throw TerminalException{1};
+      }
+    }
+#endif
     if (pctdi.compute_boundary) {
       ListBoundEntry<Tint> lbe{l_bound};
       ll_bound.push_back(lbe);
