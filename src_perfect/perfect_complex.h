@@ -65,6 +65,7 @@
 
   - - - - - - - - - - - - -
 
+  Computation of the contracting homotopy.
   
   
  */
@@ -92,7 +93,7 @@ struct PerfectFormInfoForComplex {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
       Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
       if (x_img != x) {
-        std::cerr << "Inconsistency in the pre_image computation\n";
+        std::cerr << "PERFCOMP: Inconsistency in the pre_image computation\n";
         throw TerminalException{1};
       }
 #endif
@@ -422,7 +423,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   using Tfull_triple = std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>;
   auto need_opt_t=[&]([[maybe_unused]] PerfectBoundednessProperty const& pbp, [[maybe_unused]] triple<Tint> const& t) -> bool {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX_EXTENSIVE
-    std::cerr << "Returning true because we want to compute whether the group is finite\n";
+    std::cerr << "PERFCOMP: Returning true because we want to compute whether the group is finite\n";
     Tfull_triple pair = get_spanning_list_triple(pctdi.l_perfect, t, os);
     std::vector<MyMatrix<Tint>> l_matr = pair.second;
     std::string Prefix = "FinitenessMatrixGroupTest_" + std::to_string(l_matr.size()) + "_n" + std::to_string(n) + "_";
@@ -455,10 +456,8 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       pbp.bounded_finite_stabilizer = is_finite;
       opt_t = pair;
     }
-    //#ifdef SANITY_CHECK_PERFECT_COMPLEX
     // That check is really cheap. Do it all the time.
     check_pbp(pbp);
-    //#endif
     return get_result(pbp);
   };
   auto is_insertable=[&](bool is_well_rounded) -> bool {
@@ -599,6 +598,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
     l_gens_perm.clear();
+    l_status.clear();
     ElementMapper<Tint,Telt> elt_mapper(face.EXT);
     for (auto & eMatrGen: face.l_gens) {
       Telt elt1 = elt_mapper.map_elt(eMatrGen);
@@ -608,6 +608,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       l_status.push_back(sign);
     }
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
+    set_EXT.clear();
     for (int i_row=0; i_row<face.EXT.rows(); i_row++) {
       MyVector<Tint> V = GetMatrixRow(face.EXT, i_row);
       set_EXT.insert(V);
@@ -644,7 +645,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     insert_entry(incd_sma, sign, p.second);
     std::vector<MyMatrix<Tint>> const& l_gens = face.l_gens;
     size_t n_gen = l_gens.size();
-    size_t start=0;
+    size_t start = 0;
     while(true) {
       size_t len = l_faces_gen.size();
       for (size_t u=start; u<len; u++) {
@@ -712,19 +713,25 @@ template<typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
   PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, os);
 #ifdef PRINT_PERFECT_COMPLEX_DIMENSION
-  os << "We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
+  os << "PERFCOMP: We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
 #endif
   int dim_spa = LinSpa.ListMat.size();
   FacesPerfectComplex<T,Tint,Tgroup> level = get_first_step_perfect_complex_enumeration(pctdi, os);
 #ifdef PRINT_PERFECT_COMPLEX_DIMENSION
-  os << "We have the first level |level|=" << level.l_faces.size() << "\n";
+  os << "PERFCOMP: We have the first level |level|=" << level.l_faces.size() << "\n";
 #endif
   std::vector<FacesPerfectComplex<T,Tint,Tgroup>> levels{level};
   std::vector<FullBoundary<Tint>> boundaries;
   for (int i=1; i<dim_spa; i++) {
     ResultStepEnumeration<T,Tint,Tgroup> result = compute_next_level(pctdi, levels[i-1], os);
 #ifdef PRINT_PERFECT_COMPLEX_DIMENSION
-    os << "i=" << i << " |result.level|=" << result.level.l_faces.size() << "\n";
+    int n_orientable = 0;
+    for (auto & ent: result.level.l_faces) {
+      if (ent.is_orientable) {
+        n_orientable += 1;
+      }
+    }
+    os << "PERFCOMP: i=" << i << " |result.level|=" << result.level.l_faces.size() << " n_orientable=" << n_orientable << "\n";
 #endif
     levels.push_back(result.level);
     if (result.boundary) {

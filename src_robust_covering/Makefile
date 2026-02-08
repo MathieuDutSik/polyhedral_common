@@ -15,13 +15,8 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_graph 
 CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(GLPK_INCLUDE) $(NAUTY_INCLUDE) $(shell pkg-config --cflags ompi)
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
-#CDEFS           = -DDEBUG_CANONIC -DTIMINGS
-#CDEFS           = -DCHECK_SHVEC
-#CDEFS           =
-#CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING
-CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING -DDEBUG_ENUM_ROBUST_COVERING_INCIDENCE
-#CDEFS           = -DDEBUG_ENUM_ROBUST_COVERING -DDEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
-#CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
+#CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK
+CDEFS           =
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 

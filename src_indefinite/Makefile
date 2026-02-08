@@ -1,5 +1,3 @@
-#PROGRAM		= INDEF_ApproximateOrbitRepresentative
-#PROGRAM		= TEST_EquiStabFamily
 PROGRAM		= INDEF_FORM_GetOrbit_IsotropicKplane INDEF_ApproximateOrbitRepresentative INDEF_FORM_GetOrbitRepresentative INDEF_FORM_TestEquivalence INDEF_FORM_AutomorphismGroup INDEF_FORM_TestEquivalenceVector INDEF_FORM_ApproxCanonicalForm INDEF_FORM_InvariantIsotropicPlane INDEF_FORM_StabilizerIsotropicPlane
 
 OBJECTS		= $(PROGRAM:%=%.o)
@@ -14,10 +12,7 @@ CLOCAL          = -I../src_basic -I../src_number -I../src_matrix -I../src_comb -
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 CFLAGS 		= -I$(GMP_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH) $(NAUTY_INCLUDE)
 
-#CDEFS           = -DDEBUG_LATTICE_STAB_EQUI_CAN -DDEBUG_EQUI_STAB_MEMOIZATION
 #CDEFS           = -DDEBUG -DTIMINGS -DSANITY_CHECK -DPERMUTALIB_BLOCKING_SANITY_CHECK
-#CDEFS           = -DSANITY_CHECK
-#CDEFS           = -DSANITY_CHECK -DPERMUTALIB_BLOCKING_SANITY_CHECK
 #CDEFS           = -DDEBUG_INDEFINITE_COMBINED_ALGORITHMS -DDEBUG_LORENTZIAN_PERFECT -DDEBUG_APPROXIMATE_MODELS -DTIMINGS
 CDEFS           =
 

@@ -1,8 +1,5 @@
 PROGRAM		= PERF_MPI_EnumeratePerfectCones IsEutactic PERF_SerialPerfectComputation PERF_IsBoundedFace
 
-# REquire TBB to compile
-#PROGRAM		= ComputePerfect
-
 SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
@@ -18,7 +15,6 @@ CFLAGS 		= -I$(GMP_INCDIR) -I$(LIBBLISS_INCDIR) -I$(BOOST_INCDIR) -I$(EIGEN_PATH
 CHASHMAP        = -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/robin-map/include/tsl/ -I../basic_common_cpp/hopscotch-map/include/tsl/
 
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
-#CDEFS           = -DSANITY_CHECK -DTIMINGS -DDEBUG_PERFECT_TSPACE
 CDEFS           =
 
 CTOTAL          = $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
