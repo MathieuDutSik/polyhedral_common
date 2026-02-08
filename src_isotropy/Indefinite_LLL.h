@@ -510,7 +510,7 @@ SimpleIndefiniteReduction(MyMatrix<T> const &M,
       [&](ResSearch const &x) -> std::pair<MyMatrix<Tint>, MyMatrix<T>> {
     int i = x.i;
     int j = x.j;
-    T c = x.c;
+    Tint const& c = x.c;
     MyMatrix<Tint> eUnit = IdentityMat<Tint>(n);
     eUnit(i, j) = c;
     MyMatrix<Tint> Btest = eUnit * B;
