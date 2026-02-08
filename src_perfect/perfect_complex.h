@@ -414,6 +414,12 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   int n = pctdi.LinSpa.n;
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
+  int i_level = 0;
+  if (level.l_faces.size() > 0) {
+    int dim_spa = pctdi.LinSpa.ListMat.size();
+    int dim_ext = level.l_faces[0].or_info.ListRowSelect.size();
+    i_level = dim_spa - dim_ext;
+  }
 #endif
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
   std::vector<ListBoundEntry<Tint>> ll_bound;
@@ -571,7 +577,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
   };
   MyVector<T> interior_pt;
   std::vector<Telt> l_gens_perm;
-  std::vector<int> l_status;
+  std::vector<int> l_gens_sign;
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
   std::unordered_set<MyVector<Tint>> set_EXT;
 #endif
@@ -616,14 +622,14 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     interior_pt = face.get_interior_point(pctdi.LinSpa.ListMat);
     l_gens_perm.clear();
-    l_status.clear();
+    l_gens_sign.clear();
     ElementMapper<Tint,Telt> elt_mapper(face.EXT);
     for (auto & eMatrGen: face.l_gens) {
       Telt elt1 = elt_mapper.map_elt(eMatrGen);
       Telt elt2 = cone.map_elt(elt1);
       int sign = get_face_orientation(face.EXT, pctdi.LinSpa.ListMat, face.or_info, eMatrGen);
       l_gens_perm.push_back(elt2);
-      l_status.push_back(sign);
+      l_gens_sign.push_back(sign);
     }
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     set_EXT.clear();
@@ -671,7 +677,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       for (size_t u=start; u<len; u++) {
         for (size_t i_gen=0; i_gen<n_gen; i_gen++) {
           Face new_incd_sma = OnFace(l_faces_gen[u], l_gens_perm[i_gen]);
-          int new_sign = l_sign[u] * l_status[i_gen];
+          int new_sign = l_sign[u] * l_gens_sign[i_gen];
           MyMatrix<Tint> new_mat = l_mat[u] * l_gens[i_gen];
           insert_entry(new_incd_sma, new_sign, new_mat);
         }
@@ -717,6 +723,14 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         }
       }
     }
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: i_level=" << i_level << " i=" << i << " |cone|=" << cone.PerfDomEXT.rows() << " |l_bound|=" << l_bound.size() << "\n";
+    os << "PERFCOMP: i_level=" << i_level << " i=" << i << " status=";
+    for (auto & e_sign: l_gens_sign) {
+      os << " " << e_sign;
+    }
+    os << "\n";
+#endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     if (pctdi.compute_boundary && !pctdi.only_well_rounded) {
       std::vector<Telt> gens;
@@ -905,7 +919,11 @@ bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> cons
 #ifdef DEBUG_PERFECT_COMPLEX
       os << "PERFCOMP: |chain1|=" << chain1.size() << "\n";
       os << "PERFCOMP: |chain2|=" << chain2.size() << "\n";
-      os << "PERFCOMP: |chain3|=" << chain3.size() << "\n";
+      os << "PERFCOMP: |chain3|=" << chain3.size() << " values=";
+      for (auto& fe: chain3) {
+        os << " " << fe.value;
+      }
+      os << "\n";
       os << "PERFCOMP: not zero at i=" << idim << " iOrb=" << iOrb << "\n";
 #endif
       return false;
