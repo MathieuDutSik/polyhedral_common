@@ -696,6 +696,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       throw TerminalException{1};
     }
 #endif
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: append_boundary l_sign=";
+    for (auto &esign: l_sign) {
+      os << " " << esign;
+    }
+    os << "\n";
+#endif
   };
   for (size_t i=0; i<level.l_faces.size(); i++) {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
@@ -724,7 +731,11 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
 #ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: i_level=" << i_level << " i=" << i << " |cone|=" << cone.PerfDomEXT.rows() << " |l_bound|=" << l_bound.size() << "\n";
+    os << "PERFCOMP: i_level=" << i_level << " i=" << i
+       << " |cone|=" << cone.PerfDomEXT.rows()
+       << " |GRPsub|=" << cone.GRPsub.size()
+       << " |ListIncd|=" << cone.ListIncd.size()
+       << " |l_bound|=" << l_bound.size() << "\n";
     os << "PERFCOMP: i_level=" << i_level << " i=" << i << " status=";
     for (auto & e_sign: l_gens_sign) {
       os << " " << e_sign;
@@ -851,6 +862,9 @@ public:
     } else {
       MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);;
       int sign = get_face_orientation(EXT1, ListMat, or_info, t);
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: ChainBuilder sign=" << sign << "\n";
+#endif
       chain[idx - 1].value += sign * value;
     }
   }
@@ -908,9 +922,9 @@ std::vector<FaceEntry<Tint>> compute_boundary(std::vector<FaceEntry<Tint>> const
 // We should have d_{i+1}(d_i(c)) = 0 consistently.
 template<typename T, typename Tint, typename Tgroup>
 bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
-  int dim = fce.levels[idim].l_faces.size();
+  int nOrb = fce.levels[idim].l_faces.size();
   int n = fce.pctdi.LinSpa.n;
-  for (int iOrb=0; iOrb<dim; iOrb++) {
+  for (int iOrb=0; iOrb<nOrb; iOrb++) {
     FaceEntry<Tint> fe{iOrb, Tint(1), IdentityMat<Tint>(n)};
     std::vector<FaceEntry<Tint>> chain1{fe};
     std::vector<FaceEntry<Tint>> chain2 = compute_boundary(chain1, idim, fce, os);
@@ -945,7 +959,7 @@ bool are_product_zeros(FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::os
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<FaceEntry<Tint>> contracting_homotopy_kernel(std::vector<FaceEntry<Tint>> const& c_idim, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<FaceEntry<Tint>> contracting_homotopy_kernel(std::vector<FaceEntry<Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
 
 }
 
