@@ -103,17 +103,23 @@ struct PerfectFormInfoForComplex {
   }
 };
 
-template<typename T, typename Tint, typename Tgroup>
-struct PerfectComplexTopDimInfo {
-  std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
-  LinSpaceMatrix<T> LinSpa;
+struct PerfectComplexOptions {
   bool only_well_rounded;
   bool compute_boundary;
+  bool compute_contracting_homotopy;
 };
 
 
 template<typename T, typename Tint, typename Tgroup>
-PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
+struct PerfectComplexTopDimInfo {
+  std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
+  LinSpaceMatrix<T> LinSpa;
+  PerfectComplexOptions pco;
+};
+
+
+template<typename T, typename Tint, typename Tgroup>
+PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using TintGroup = typename Tgroup::Tint;
   std::vector<PerfectFormInfoForComplex<T,Tint,Tgroup>> l_perfect;
@@ -141,7 +147,7 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     PerfectFormInfoForComplex<T,Tint,Tgroup> perfect{ePerf.x.Gram, std::move(EXT), opt_pre_imager, GRP_ext, std::move(l_sing_adj)};
     l_perfect.emplace_back(std::move(perfect));
   }
-  return {std::move(l_perfect), LinSpa, only_well_rounded, compute_boundary};
+  return {std::move(l_perfect), LinSpa, pco};
 }
 
 struct OrientationInfo {
@@ -478,7 +484,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     return get_result(pbp);
   };
   auto is_insertable=[&](bool is_well_rounded) -> bool {
-    if (pctdi.only_well_rounded) {
+    if (pctdi.pco.only_well_rounded) {
       return is_well_rounded;
     }
     return true;
@@ -710,7 +716,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     MyMatrix<T> EXT_T = UniversalMatrixConversion<T,Tint>(face.EXT);
     RyshkovGRP<T, Tgroup> cone =
       GetNakedPerfectCone_GRP<T, Tgroup>(pctdi.LinSpa, EXT_T, face.GRP_ext, os);
-    if (pctdi.compute_boundary) {
+    if (pctdi.pco.compute_boundary) {
       initial_boundary_setup(i, cone);
     }
     for (auto& incd_sma: cone.ListIncd) {
@@ -725,7 +731,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
       if (is_insertable(is_well_rounded)) {
         std::pair<int, MyMatrix<Tint>> p = f_insert(t, opt_t, is_well_rounded);
-        if (pctdi.compute_boundary) {
+        if (pctdi.pco.compute_boundary) {
           append_boundary(i, p, cone, incd_sma, l_bound);
         }
       }
@@ -743,7 +749,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     os << "\n";
 #endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-    if (pctdi.compute_boundary && !pctdi.only_well_rounded) {
+    if (pctdi.pco.compute_boundary && !pctdi.pco.only_well_rounded) {
       std::vector<Telt> gens;
       Tgroup GRPtriv(gens, cone.PerfDomEXT.rows());
       vectface ListIncd_triv =
@@ -756,13 +762,13 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
 #endif
-    if (pctdi.compute_boundary) {
+    if (pctdi.pco.compute_boundary) {
       ListBoundEntry<Tint> lbe{l_bound};
       ll_bound.push_back(lbe);
     }
   }
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
-  if (pctdi.compute_boundary) {
+  if (pctdi.pco.compute_boundary) {
     FullBoundary<Tint> boundary{ll_bound};
     return {pfc, boundary};
   } else {
@@ -778,8 +784,8 @@ struct FullComplexEnumeration {
 };
 
 template<typename T, typename Tint, typename Tgroup>
-FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, bool const& only_well_rounded, bool const& compute_boundary, std::ostream& os) {
-  PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, only_well_rounded, compute_boundary, os);
+FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {
+  PerfectComplexTopDimInfo<T,Tint,Tgroup> pctdi = generate_perfect_complex_top_dim_info(l_tot, LinSpa, pco, os);
 #ifdef PRINT_PERFECT_COMPLEX_DIMENSION
   os << "PERFCOMP: We have pctdi, |pctdi.l_perfect|=" << pctdi.l_perfect.size() << "\n";
 #endif
@@ -862,9 +868,6 @@ public:
     } else {
       MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);;
       int sign = get_face_orientation(EXT1, ListMat, or_info, t);
-#ifdef DEBUG_PERFECT_COMPLEX
-      //      os << "PERFCOMP: ChainBuilder idim=" << idim << " sign=" << sign << " value=" << value << "\n";
-#endif
       chain[idx - 1].value += sign * value;
     }
   }
