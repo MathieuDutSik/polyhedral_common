@@ -654,7 +654,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         l_faces_gen.push_back(new_incd_sma);
         l_sign.push_back(new_sign);
         l_mat.push_back(new_mat);
-        BoundEntry<Tint> be{p.first, sign, new_mat};
+        BoundEntry<Tint> be{p.first, new_sign, new_mat};
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
         MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * be.M;
         for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
@@ -863,12 +863,15 @@ public:
       MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);;
       int sign = get_face_orientation(EXT1, ListMat, or_info, t);
 #ifdef DEBUG_PERFECT_COMPLEX
-      os << "PERFCOMP: ChainBuilder sign=" << sign << "\n";
+      //      os << "PERFCOMP: ChainBuilder idim=" << idim << " sign=" << sign << " value=" << value << "\n";
 #endif
       chain[idx - 1].value += sign * value;
     }
   }
   std::vector<FaceEntry<Tint>> get_faces() const {
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: ChainBuilder get_faces |chain|=" << chain.size() << "\n";
+#endif
     std::vector<FaceEntry<Tint>> chain_ret;
     for (auto & fe: chain) {
       if (fe.value != 0) {
@@ -913,6 +916,9 @@ std::vector<FaceEntry<Tint>> compute_boundary(std::vector<FaceEntry<Tint>> const
     for (auto & ebnd: bnd.ll_bound[iOrb].l_bound) {
       Tint value = fe.value * ebnd.sign;
       MyMatrix<Tint> M = ebnd.M * fe.M;
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: compute_boundary fe.value=" << fe.value << " sign=" << ebnd.sign << "\n";
+#endif
       chain_builder.f_insert(value, ebnd.iOrb, M);
     }
   }
@@ -924,11 +930,35 @@ template<typename T, typename Tint, typename Tgroup>
 bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   int nOrb = fce.levels[idim].l_faces.size();
   int n = fce.pctdi.LinSpa.n;
+#ifdef DEBUG_PERFECT_COMPLEX
+  {
+    size_t tot_dim = fce.boundaries.size();
+    os << "PERFCOMP: tot_dim=" << tot_dim << "\n";
+    for (size_t i_dim=0; i_dim<tot_dim; i_dim++) {
+      FullBoundary<Tint> const& bnd = fce.boundaries[i_dim];
+      size_t n_orb = bnd.ll_bound.size();
+      os << "PERFCOMP: i_dim=" << i_dim << " n_orb=" << n_orb << "\n";
+      for (size_t i_orb=0; i_orb<n_orb; i_orb++) {
+        os << "PERFCOMP:   i_orb=" << i_orb << " status=";
+        for (auto & ebnd: bnd.ll_bound[i_orb].l_bound) {
+          os << " " << ebnd.sign;
+        }
+        os << "\n";
+      }
+    }
+  }
+#endif
   for (int iOrb=0; iOrb<nOrb; iOrb++) {
     FaceEntry<Tint> fe{iOrb, Tint(1), IdentityMat<Tint>(n)};
     std::vector<FaceEntry<Tint>> chain1{fe};
     std::vector<FaceEntry<Tint>> chain2 = compute_boundary(chain1, idim, fce, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: We have chain2\n";
+#endif
     std::vector<FaceEntry<Tint>> chain3 = compute_boundary(chain2, idim+1, fce, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: We have chain3\n";
+#endif
     if (chain3.size() > 0) {
 #ifdef DEBUG_PERFECT_COMPLEX
       os << "PERFCOMP: |chain1|=" << chain1.size() << "\n";
