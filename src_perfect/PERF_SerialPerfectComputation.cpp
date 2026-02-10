@@ -31,9 +31,10 @@ void process_A(FullNamelist const &eFull) {
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
   //
   bool compute_complex = BlockDATA.get_bool("ComputeComplex");
-  bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
   bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
-  PerfectComplexOptions pco{only_well_rounded, compute_boundary, false};
+  bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
+  bool compute_contracting_homotopy = BlockDATA.get_bool("ComputeContractingHomotopy");
+  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
   //
   bool keep_generators = false;
   bool reduce_gram_matrix = false;
@@ -64,8 +65,12 @@ void process_A(FullNamelist const &eFull) {
     print_stderr_stdout_file(OutFile, f_print);
   } else {
     FullComplexEnumeration<T,Tint,Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, pco, std::cerr);
-    bool test = are_product_zeros(fce, std::cerr);
-    std::cerr << "are_product_zeros, test=" << GAP_logical(test) << "\n";
+    if (compute_boundary) {
+      bool test = are_product_zeros(fce, std::cerr);
+      std::cerr << "are_product_zeros, test=" << GAP_logical(test) << "\n";
+    } else {
+      std::cerr << "no boundary available\n";
+    }
   }
 }
 

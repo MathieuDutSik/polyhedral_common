@@ -76,7 +76,7 @@ ENV FLINT_LINK -lflint
 
 
 # CDDLIB
-RUN apt-get install -y autoconf autotools-dev libtool
+RUN apt-get install -y autoconf autoconf-archive autotools-dev libtool
 RUN apt-get install -y texlive-latex-base # needed for the manual to be compiled
 RUN git clone https://github.com/cddlib/cddlib
 RUN cd cddlib && ./bootstrap && ./configure --prefix=/opt/cddlib && make && make install

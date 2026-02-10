@@ -415,6 +415,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
   ListBoolValues1["ComputeComplex"] = false;
   ListBoolValues1["OnlyWellRounded"] = true;
   ListBoolValues1["ComputeBoundary"] = false;
+  ListBoolValues1["ComputeContractingHomotopy"] = false;
   SingleBlock BlockDATA;
   BlockDATA.setListStringValues(ListStringValues1);
   BlockDATA.setListBoolValues(ListBoolValues1);
