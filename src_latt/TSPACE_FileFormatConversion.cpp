@@ -16,26 +16,45 @@ int main(int argc, char *argv[]) {
     using TintGroup = mpz_class;
     using Tgroup = permutalib::Group<Telt, TintGroup>;
     FullNamelist eFull = NAMELIST_GetOneTSPACE();
-    if (argc != 3) {
+    if (argc != 3 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
+      std::cerr << "LATT_ConvertTspace [TspaceNamelistFile] [OutFormat] [FILEOUT]\n";
+      std::cerr << "or\n";
       std::cerr << "LATT_ConvertTspace [TspaceNamelistFile] [FILEOUT]\n";
       std::cerr << "\n";
       std::cerr << "TspaceNamelistFile : The namelist file containing the "
                    "description of the T-space\n";
+      std::cerr << "OutFormat          : CPP or GAP\n";
       std::cerr << "FILEOUT            : The output file of the T-space\n";
       return -1;
     }
     //
     std::string TspaceNamelistFile = argv[1];
+    std::string OutFormat = "CPP";
     std::string FILEOUT = argv[2];
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FILEOUT = argv[3];
+    }
     //
     NAMELIST_ReadNamelistFile(TspaceNamelistFile, eFull);
     //
     SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
     LinSpaceMatrix<T> LinSpa =
         ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
-    WriteLinSpaceFile(FILEOUT, LinSpa);
+    std::ofstream os(FILEOUT);
+    if (OutFormat == "CPP") {
+      WriteLinSpace(os, LinSpa);
+    } else if (OutFormat == "GAP") {
+      os << "return ";
+      WriteLinSpaceGAP(os, LinSpa);
+      os << ";\n";
+    } else {
+      std::cerr << "Failed to find a matching entry for OutFormat\n";
+      std::cerr << "Allowed choices: CPP, GAP\n";
+      throw TerminalException{1};
+    }
     std::cerr << "Normal termination of LATT_ConvertTspace\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_ConvertTspace\n";

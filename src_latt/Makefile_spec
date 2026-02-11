@@ -20,7 +20,8 @@
 #PROGRAM		= LATT_ComputeShortestOrbits
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
-PROGRAM		= TSPACE_IntegralSaturation
+#PROGRAM		= TSPACE_IntegralSaturation
+PROGRAM		= TSPACE_FileFormatConversion
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
