@@ -123,6 +123,25 @@ void WriteLinSpace(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
 }
 
 template <typename T>
+void WriteLinSpaceGAP(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
+  os << "rec(SuperMat:=";
+  WriteMatrixGAP(os, LinSpa.SuperMat);
+  os << ", ListMat:=";
+  WriteListMatrixGAP(os, LinSpa.ListMat);
+  os << ", ListComm:=";
+  WriteListMatrixGAP(os, LinSpa.ListComm);
+  os << ", ListSubspaces:=";
+  WriteListMatrixGAP(os, LinSpa.ListSubspaces);
+  os << ", PtStabGens:=";
+  WriteListMatrixGAP(os, LinSpa.PtStabGens);
+  os << ", l_spanning_elements:=";
+  WriteListMatrixGAP(os, LinSpa.l_spanning_elements);
+  os << ", PairwiseScalarInv:=";
+  WriteMatrixGAP(os, LinSpa.pairwise_scalar_info.PairwiseScalarInv);
+  os << ")";
+}
+
+template <typename T>
 void WriteLinSpaceFile(std::string const &eFile,
                        LinSpaceMatrix<T> const &LinSpa) {
   std::ofstream os(eFile);

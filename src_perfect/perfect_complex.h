@@ -419,7 +419,6 @@ struct PerfectFaceEntry {
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
   using Telt = typename Tgroup::Telt;
-  using TintGroup = typename Tgroup::Tint;
   int n = pctdi.LinSpa.n;
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
@@ -697,6 +696,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       }
     }
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
+    using TintGroup = typename Tgroup::Tint;
     Tgroup stab = cone.GRPsub.Stabilizer_OnSets(incd_sma);
     TintGroup size1 = cone.GRPsub.size() / stab.size();
     TintGroup size2 = l_faces_gen.size();
