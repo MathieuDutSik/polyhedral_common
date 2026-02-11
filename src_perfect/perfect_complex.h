@@ -848,44 +848,53 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
       ll_pair.push_back(l_pair);
     }
     for (size_t i_dim=0; i_dim<dim; i_dim++) {
-      for (auto &level: levels) {
-        int n_face = level.l_faces.size();
-        for (int i_face=0; i_face<n_face; i_face++) {
-          FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i_face];
-          for (auto & triple: face.l_triple) {
-            size_t i_perfect = triple.iCone;
-            std::unordered_set<Face> set;
-            std::vector<Face> l_set;
-            std::vector<PerfectFace<Tint>>& l_pf = l_topdims[i_perfect].ll_faces[i_dim];
-            size_t n_exist = l_pf.size();
-            auto g_insert=[&](Face const& f, MyMatrix<Tint> const& M) -> void {
-              if (set.count(f) == 0) {
-                set.insert(f);
-                l_set.push_back(f);
-                PerfectFace<Tint> pf{i_face, M};
-                l_pf.push_back(pf);
+      FacesPerfectComplex<T,Tint,Tgroup> const& level = levels[i_dim];
+      int n_face = level.l_faces.size();
+      for (int i_face=0; i_face<n_face; i_face++) {
+        FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i_face];
+        for (auto & triple: face.l_triple) {
+          size_t i_perfect = triple.iCone;
+          std::unordered_set<Face> set;
+          std::vector<Face> l_set;
+          std::vector<PerfectFace<Tint>>& l_pf = l_topdims[i_perfect].ll_faces[i_dim];
+          size_t n_exist = l_pf.size();
+          auto g_insert=[&](Face const& f, MyMatrix<Tint> const& M) -> void {
+            if (set.count(f) == 0) {
+              set.insert(f);
+              l_set.push_back(f);
+              PerfectFace<Tint> pf{i_face, M};
+              l_pf.push_back(pf);
+            }
+          };
+          g_insert(triple.f_ext, triple.eMat);
+          size_t start = 0;
+          while(true) {
+            size_t len = l_pf.size() - n_exist;
+            for (size_t u=start; u<len; u++) {
+              for (auto & pair: ll_pair[i_perfect]) {
+                Face set_img = OnFace(l_set[u], pair.ePerm);
+#ifdef DEBUG_PERFECT_COMPLEX
+                os << "PERFCOMP: n_exist=" << n_exist << " |l_pf|=" << l_pf.size() << "\n";
+                os << "PERFCOMP: l_pf[n_exist + u].M=\n";
+                WriteMatrix(os, l_pf[n_exist + u].M);
+                os << "PERFCOMP: pair.eMatr=\n";
+                WriteMatrix(os, pair.eMatr);
+#endif
+                MyMatrix<Tint> M_img = l_pf[n_exist + u].M * pair.eMatr;
+                g_insert(set_img, M_img);
               }
-            };
-            g_insert(triple.f_ext, triple.eMat);
-            size_t start = 0;
-            while(true) {
-              size_t len = l_pf.size();
-              for (size_t u=start; u<len; u++) {
-                for (auto & pair: ll_pair[i_perfect]) {
-                  Face set_img = OnFace(l_set[u], pair.ePerm);
-                  MyMatrix<Tint> M_img = l_pf[n_exist + u].M * pair.eMatr;
-                  g_insert(set_img, M_img);
-                }
-              }
-              start = len;
-              if (start == l_pf.size()) {
-                break;
-              }
+            }
+            start = len;
+            if (n_exist + start == l_pf.size()) {
+              break;
             }
           }
         }
       }
     }
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: full_perfect_complex_enumeration, we have l_topdims\n";
+#endif
   }
   return {pctdi, levels, boundaries, l_topdims};
 }
