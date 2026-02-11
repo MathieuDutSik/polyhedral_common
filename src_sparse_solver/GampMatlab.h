@@ -2,10 +2,12 @@
 #ifndef SRC_SPARSE_SOLVER_GAMPMATLAB_H_
 #define SRC_SPARSE_SOLVER_GAMPMATLAB_H_
 
+// clang-format off>
 #include "MAT_Matrix.h"
 #include <algorithm>
 #include <string>
 #include <vector>
+// clang-format on
 
 template <typename T> T L1_Norm(MyVector<T> const &b) {
   T eNorm = 0;
@@ -554,7 +556,7 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
 
 template <typename T>
 MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
-                                     MyVector<T> const &eVect) {
+                                     MyVector<T> const &Bvect, [[maybe_unused]] std::ostream& os) {
   RecSparse<double> eRecSparse = AMP_linear_operators(SpMat);
   //
   RecOptSparse<double> eRecOpt;
@@ -574,7 +576,7 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   eRecOpt.stepfreq = 1;
   eRecOpt.maxit = 99999;
   eRecOpt.xs = -1;
-  OutSolver<double> eRecOut = AMP_yall1(eRecSparse, eVect, eRecOpt);
+  OutSolver<double> eRecOut = AMP_yall1(eRecSparse, Bvect, eRecOpt);
   //
   return eRecOut.x;
 }
