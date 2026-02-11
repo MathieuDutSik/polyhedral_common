@@ -18,7 +18,7 @@ int main(int argc, char *argv[]) {
     std::ifstream INvect(argv[2]);
     MyVector<double> eVect = ReadVector<double>(INvect);
     // creating the RecSparse operators.
-    MyVector<double> x = AMP_SolutionSparseSystem(SpMat, eVect);
+    MyVector<double> x = AMP_SolutionSparseSystem(SpMat, eVect, std::cerr);
     //
     std::ofstream OUTvect(argv[3]);
     WriteVector(OUTvect, x);
