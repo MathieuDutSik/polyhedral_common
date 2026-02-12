@@ -130,6 +130,7 @@ struct PairwiseScalarInfo {
 };
 
 namespace boost::serialization {
+
 template <class Archive, typename T>
 inline void serialize(Archive &ar, PairwiseScalarInfo<T> &val,
                       [[maybe_unused]] const unsigned int version) {
@@ -176,6 +177,37 @@ template <typename T> struct LinSpaceMatrix {
   // Whether the T-space is known to be self-dual
   bool is_self_dual;
 };
+
+// Equality check for LinSpaceMatrix
+template <typename T>
+bool LinSpaceMatrixEqual(LinSpaceMatrix<T> const &a, LinSpaceMatrix<T> const &b) {
+  if (a.n != b.n)
+    return false;
+  if (a.isBravais != b.isBravais)
+    return false;
+  if (a.is_self_dual != b.is_self_dual)
+    return false;
+  if (a.SuperMat != b.SuperMat)
+    return false;
+  if (a.ListMat != b.ListMat)
+    return false;
+  if (a.ListLineMat != b.ListLineMat)
+    return false;
+  if (a.ListMatAsBigMat != b.ListMatAsBigMat)
+    return false;
+  if (a.ListComm != b.ListComm)
+    return false;
+  if (a.ListSubspaces != b.ListSubspaces)
+    return false;
+  if (a.PtStabGens != b.PtStabGens)
+    return false;
+  if (a.l_spanning_elements != b.l_spanning_elements)
+    return false;
+  if (a.pairwise_scalar_info.PairwiseScalarInv !=
+      b.pairwise_scalar_info.PairwiseScalarInv)
+    return false;
+  return true;
+}
 
 namespace boost::serialization {
 template <class Archive, typename T>

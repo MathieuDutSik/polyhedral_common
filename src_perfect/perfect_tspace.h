@@ -406,24 +406,39 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
 
 FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
   std::map<std::string, SingleBlock> ListBlock;
-  // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["FileDualDescription"] = "unset";
-  ListBoolValues1["ComputeComplex"] = false;
-  ListBoolValues1["OnlyWellRounded"] = true;
-  ListBoolValues1["ComputeBoundary"] = false;
-  ListBoolValues1["ComputeContractingHomotopy"] = false;
-  SingleBlock BlockDATA;
-  BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListBoolValues(ListBoolValues1);
-  ListBlock["DATA"] = BlockDATA;
-  // SYSTEM
-  ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
+  // DATA
+  {
+    std::map<std::string, std::string> ListStringValues;
+    std::map<std::string, bool> ListBoolValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["FileDualDescription"] = "unset";
+    ListBoolValues["ComputeComplex"] = false;
+    ListBoolValues["OnlyWellRounded"] = true;
+    ListBoolValues["ComputeBoundary"] = false;
+    ListBoolValues["ComputeContractingHomotopy"] = false;
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    BlockDATA.setListBoolValues(ListBoolValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
+  // SYSTEM
+  {
+    std::map<std::string, std::string> ListStringValues;
+    std::map<std::string, std::vector<int>> ListListIntValues;
+    std::map<std::string, bool> ListBoolValues;
+    ListStringValues["CacheFile"] = "none";
+    ListStringValues["FileStabilizerQueries"] = "none";
+    ListStringValues["FileEquivalenceQueries"] = "none";
+    ListListIntValues["ListUpperBoundary"] = {};
+    ListListIntValues["ListLowerBoundary"] = {};
+    SingleBlock BlockQUERIES;
+    BlockQUERIES.setListStringValues(ListStringValues);
+    BlockQUERIES.setListListIntValues(ListListIntValues);
+    ListBlock["QUERIES"] = SINGLEBLOCK_Get_System();
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

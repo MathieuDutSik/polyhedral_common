@@ -167,6 +167,17 @@ struct PerfectComplexOptions {
   bool compute_contracting_homotopy;
 };
 
+inline bool PerfectComplexOptionsEqual(PerfectComplexOptions const &a,
+                                       PerfectComplexOptions const &b) {
+  if (a.only_well_rounded != b.only_well_rounded)
+    return false;
+  if (a.compute_boundary != b.compute_boundary)
+    return false;
+  if (a.compute_contracting_homotopy != b.compute_contracting_homotopy)
+    return false;
+  return true;
+}
+
 namespace boost::serialization {
 template <class Archive>
 inline void serialize(Archive &ar, PerfectComplexOptions &val,
@@ -981,15 +992,15 @@ inline void serialize(Archive &ar, FullComplexEnumeration<T, Tint, Tgroup> &val,
 }  // namespace boost::serialization
 
 template<typename T, typename Tint, typename Tgroup>
-void WriteFullComplexEnumeration(std::string const &file,
-                                 FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
+void write_fce_to_file(std::string const &file,
+                       FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
   std::ofstream ofs(file);
   boost::archive::text_oarchive oa(ofs);
   oa << fce;
 }
 
 template<typename T, typename Tint, typename Tgroup>
-FullComplexEnumeration<T, Tint, Tgroup> ReadFullComplexEnumeration(
+FullComplexEnumeration<T, Tint, Tgroup> read_fce_from_file(
     std::string const &file) {
   FullComplexEnumeration<T, Tint, Tgroup> fce;
   std::ifstream ifs(file);
@@ -997,7 +1008,6 @@ FullComplexEnumeration<T, Tint, Tgroup> ReadFullComplexEnumeration(
   ia >> fce;
   return fce;
 }
-
 
 template<typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {

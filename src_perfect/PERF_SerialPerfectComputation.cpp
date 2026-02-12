@@ -7,35 +7,16 @@
 // clang-format on
 
 template <typename T, typename Tint, typename Tgroup>
-void process_A(FullNamelist const &eFull) {
+FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration_kernel(LinSpaceMatrix<T> const& LinSpa,
+                                                                            PerfectComplexOptions const& pco,
+                                                                            std::ostream& os) {
   using TintGroup = typename Tgroup::Tint;
-  SingleBlock const &BlockDATA = eFull.get_block("DATA");
-  SingleBlock const &BlockSYSTEM = eFull.get_block("SYSTEM");
-  SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
-  LinSpaceMatrix<T> LinSpa =
-      ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
   int n = LinSpa.n;
-  int dimEXT = n * (n + 1) / 2;
-  //
-  int max_runtime_second = BlockSYSTEM.get_int("max_runtime_second");
-  std::string OutFormat = BlockSYSTEM.get_string("OutFormat");
-  std::string OutFile = BlockSYSTEM.get_string("OutFile");
-  std::string STORAGE_Prefix = BlockSYSTEM.get_string("Prefix");
-  CreateDirectory(STORAGE_Prefix);
-  //
-  //
-  std::string FileDualDesc = BlockDATA.get_string("FileDualDescription");
+  int dimEXT = LinSpa.ListMat.size();
   PolyHeuristicSerial<TintGroup> AllArr =
-      Read_AllStandardHeuristicSerial_File<T, TintGroup>(FileDualDesc, dimEXT,
-                                                         std::cerr);
-  RecordDualDescOperation<T, Tgroup> rddo(AllArr, std::cerr);
+      AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   //
-  bool compute_complex = BlockDATA.get_bool("ComputeComplex");
-  bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
-  bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
-  bool compute_contracting_homotopy = BlockDATA.get_bool("ComputeContractingHomotopy");
-  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
-  //
+  RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
   bool keep_generators = false;
   bool reduce_gram_matrix = false;
   DataPerfectTspace<T, Tint, Tgroup> data{
@@ -49,29 +30,72 @@ void process_A(FullNamelist const &eFull) {
   auto f_incorrect = [&]([[maybe_unused]] Tobj const &x) -> bool {
     return false;
   };
+  int max_runtime_second = 0;
   std::vector<Tout> l_tot =
       EnumerateAndStore_Serial<Tdata, decltype(f_incorrect)>(
           data_func, f_incorrect, max_runtime_second);
-  std::cerr << "|l_tot|=" << l_tot.size() << "\n";
-  if (!compute_complex) {
-    auto f_print = [&](std::ostream &os_out) -> void {
-      bool result = WriteFamilyObjects(data, OutFormat, os_out, l_tot, std::cerr);
-      if (result) {
-        std::cerr << "PERFSERIAL: Failed to find a matching entry for OutFormat="
-                  << OutFormat << "\n";
-        throw TerminalException{1};
-      }
-    };
-    print_stderr_stdout_file(OutFile, f_print);
+  os << "|l_tot|=" << l_tot.size() << "\n";
+  FullComplexEnumeration<T, Tint, Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, pco, os);
+  if (pco.compute_boundary) {
+    bool test = are_product_zeros(fce, os);
+    os << "are_product_zeros, test=" << GAP_logical(test) << "\n";
   } else {
-    FullComplexEnumeration<T,Tint,Tgroup> fce = full_perfect_complex_enumeration(l_tot, LinSpa, pco, std::cerr);
-    if (compute_boundary) {
-      bool test = are_product_zeros(fce, std::cerr);
-      std::cerr << "are_product_zeros, test=" << GAP_logical(test) << "\n";
-    } else {
-      std::cerr << "no boundary available\n";
+    os << "no boundary available\n";
+  }
+  return fce;
+}
+
+template <typename T, typename Tint, typename Tgroup>
+bool is_correct_fce(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                    LinSpaceMatrix<T> const& LinSpa,
+                    PerfectComplexOptions const& pco) {
+  if (!LinSpaceMatrixEqual(LinSpa, fce.pctdi.LinSpa)) {
+    return false;
+  }
+  if (!PerfectComplexOptionsEqual(pco, fce.pctdi.pco)) {
+    return false;
+  }
+  return true;
+}
+
+
+template <typename T, typename Tint, typename Tgroup>
+FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMatrix<T> const& LinSpa,
+                                                                     PerfectComplexOptions const& pco,
+                                                                     std::string const& CacheFile,
+                                                                     std::ostream& os) {
+  if (CacheFile == "none") {
+    return get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
+  }
+  if (IsExistingFile(CacheFile)) {
+    FullComplexEnumeration<T, Tint, Tgroup> fce = read_fce_from_file<T,Tint,Tgroup>(CacheFile);
+    if (is_correct_fce(fce, LinSpa, pco)) {
+      return fce;
     }
   }
+  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration_kernel<T,Tint,Tgroup>(LinSpa, pco, os);
+  write_fce_to_file(CacheFile, fce);
+  return fce;
+}
+
+
+
+template <typename T, typename Tint, typename Tgroup>
+void process_A(FullNamelist const &eFull) {
+  SingleBlock const &BlockDATA = eFull.get_block("DATA");
+  SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
+  SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
+  LinSpaceMatrix<T> LinSpa =
+      ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
+  //
+  bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
+  bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
+  bool compute_contracting_homotopy = BlockDATA.get_bool("ComputeContractingHomotopy");
+  PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
+  //
+  std::string CacheFile = BlockQUERIES.get_string("CacheFile");
+  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, std::cerr);
+
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
