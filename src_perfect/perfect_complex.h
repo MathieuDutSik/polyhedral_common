@@ -215,9 +215,9 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
     // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
-    std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
     std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
-    if (RankMat(EXT) < EXT.cols() && !l_matr.empty()) {
+    if (RankMat(EXT) < EXT.cols()) {
+      std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
       std::vector<Telt> l_perm = get_list_elt_from_list_matrices<Tint,Telt>(l_matr, EXT, os);
       MyMatrix<Tint> id = IdentityMat<Tint>(EXT.cols());
       opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(l_matr, l_perm, id);
