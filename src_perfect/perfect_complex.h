@@ -6,6 +6,9 @@
 #include "perfect_tspace.h"
 #include "triples.h"
 #include "GampMatlab.h"
+#include "boost_serialization.h"
+#include <boost/dynamic_bitset/serialization.hpp>
+#include <fstream>
 // clang-format on
 
 #ifdef SANITY_CHECK
@@ -106,11 +109,73 @@ struct PerfectFormInfoForComplex {
   }
 };
 
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void save(Archive &ar, PerfectFormInfoForComplex<T, Tint, Tgroup> const &val,
+                 [[maybe_unused]] const unsigned int version) {
+  bool has_pre_imager = val.opt_pre_imager.has_value();
+  ar &make_nvp("gram", val.gram);
+  ar &make_nvp("EXT", val.EXT);
+  ar &make_nvp("GRP_ext", val.GRP_ext);
+  ar &make_nvp("l_sing_adj", val.l_sing_adj);
+  ar &make_nvp("has_pre_imager", has_pre_imager);
+  if (has_pre_imager) {
+    std::vector<MyMatrix<Tint>> l_matr =
+        val.opt_pre_imager->get_list_matr_gens();
+    ar &make_nvp("l_matr", l_matr);
+  }
+}
+
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void load(Archive &ar, PerfectFormInfoForComplex<T, Tint, Tgroup> &val,
+                 [[maybe_unused]] const unsigned int version) {
+  bool has_pre_imager = false;
+  ar &make_nvp("gram", val.gram);
+  ar &make_nvp("EXT", val.EXT);
+  ar &make_nvp("GRP_ext", val.GRP_ext);
+  ar &make_nvp("l_sing_adj", val.l_sing_adj);
+  ar &make_nvp("has_pre_imager", has_pre_imager);
+  if (has_pre_imager) {
+    std::vector<MyMatrix<Tint>> l_matr;
+    ar &make_nvp("l_matr", l_matr);
+    if (l_matr.empty()) {
+      std::cerr << "PERFCOMP: Missing l_matr for preimage reconstruction\n";
+      throw TerminalException{1};
+    }
+    using Telt = typename Tgroup::Telt;
+    using TintGroup = typename Tgroup::Tint;
+    std::vector<Telt> l_perm =
+        get_list_elt_from_list_matrices<Tint, Telt>(l_matr, val.EXT, std::cerr);
+    MyMatrix<Tint> id = IdentityMat<Tint>(val.EXT.cols());
+    val.opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(
+        l_matr, l_perm, id);
+  } else {
+    val.opt_pre_imager = {};
+  }
+}
+
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, PerfectFormInfoForComplex<T, Tint, Tgroup> &val,
+                      const unsigned int version) {
+  split_free(ar, val, version);
+}
+}  // namespace boost::serialization
+
 struct PerfectComplexOptions {
   bool only_well_rounded;
   bool compute_boundary;
   bool compute_contracting_homotopy;
 };
+
+namespace boost::serialization {
+template <class Archive>
+inline void serialize(Archive &ar, PerfectComplexOptions &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("only_well_rounded", val.only_well_rounded);
+  ar &make_nvp("compute_boundary", val.compute_boundary);
+  ar &make_nvp("compute_contracting_homotopy", val.compute_contracting_homotopy);
+}
+}  // namespace boost::serialization
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -119,6 +184,17 @@ struct PerfectComplexTopDimInfo {
   LinSpaceMatrix<T> LinSpa;
   PerfectComplexOptions pco;
 };
+
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, PerfectComplexTopDimInfo<T, Tint, Tgroup> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("l_perfect", val.l_perfect);
+  ar &make_nvp("LinSpa", val.LinSpa);
+  ar &make_nvp("pco", val.pco);
+}
+}  // namespace boost::serialization
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -139,9 +215,9 @@ PerfectComplexTopDimInfo<T,Tint,Tgroup> generate_perfect_complex_top_dim_info(st
     }
     MyMatrix<Tint> EXT = conversion_and_duplication<Tint, Tint>(ePerf.x.rec_shv.SHV);
     // In some cases, EXT is not full dimensional. We need an alternate strategy for that.
+    std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
     std::optional<permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>> opt_pre_imager;
-    if (RankMat(EXT) < EXT.cols()) {
-      std::vector<MyMatrix<Tint>> const& l_matr = ePerf.x.GRP_matr;
+    if (RankMat(EXT) < EXT.cols() && !l_matr.empty()) {
       std::vector<Telt> l_perm = get_list_elt_from_list_matrices<Tint,Telt>(l_matr, EXT, os);
       MyMatrix<Tint> id = IdentityMat<Tint>(EXT.cols());
       opt_pre_imager = permutalib::PreImagerElement<Telt, MyMatrix<Tint>, TintGroup>(l_matr, l_perm, id);
@@ -158,6 +234,17 @@ struct OrientationInfo {
   std::vector<int> ListRowSelect;
   std::vector<int> ListColSelect;
 };
+
+namespace boost::serialization {
+template <class Archive>
+inline void serialize(Archive &ar, OrientationInfo &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("sign", val.sign);
+  ar &make_nvp("ListRowSelect", val.ListRowSelect);
+  ar &make_nvp("ListColSelect", val.ListColSelect);
+}
+}  // namespace boost::serialization
+
 
 //
 // The intermediate dimensional faces.
@@ -190,11 +277,35 @@ struct FacePerfectComplex {
   }
 };
 
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, FacePerfectComplex<T, Tint, Tgroup> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("l_triple", val.l_triple);
+  ar &make_nvp("l_gens", val.l_gens);
+  ar &make_nvp("EXT", val.EXT);
+  ar &make_nvp("GRP_ext", val.GRP_ext);
+  ar &make_nvp("is_well_rounded", val.is_well_rounded);
+  ar &make_nvp("or_info", val.or_info);
+  ar &make_nvp("is_orientable", val.is_orientable);
+}
+}  // namespace boost::serialization
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 struct FacesPerfectComplex {
   std::vector<FacePerfectComplex<T,Tint,Tgroup>> l_faces;
 };
+
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, FacesPerfectComplex<T, Tint, Tgroup> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("l_faces", val.l_faces);
+}
+}  // namespace boost::serialization
+
 
 
 template<typename T, typename Tint>
@@ -368,15 +479,44 @@ struct BoundEntry {
   MyMatrix<Tint> M;
 };
 
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, BoundEntry<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("iOrb", val.iOrb);
+  ar &make_nvp("sign", val.sign);
+  ar &make_nvp("M", val.M);
+}
+}  // namespace boost::serialization
+
+
 template<typename Tint>
 struct ListBoundEntry {
   std::vector<BoundEntry<Tint>> l_bound;
 };
 
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, ListBoundEntry<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("l_bound", val.l_bound);
+}
+}  // namespace boost::serialization
+
+
 template<typename Tint>
 struct FullBoundary {
   std::vector<ListBoundEntry<Tint>> ll_bound;
 };
+
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, FullBoundary<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("ll_bound", val.ll_bound);
+}
+}  // namespace boost::serialization
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -415,6 +555,17 @@ struct PerfectFaceEntry {
   T value;
   MyMatrix<Tint> M;
 };
+
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, PerfectFaceEntry<T, Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("iOrb", val.iOrb);
+  ar &make_nvp("value", val.value);
+  ar &make_nvp("M", val.M);
+}
+}  // namespace boost::serialization
+
 
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {
@@ -785,10 +936,29 @@ struct PerfectFace {
   MyMatrix<Tint> M;
 };
 
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, PerfectFace<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("iOrb", val.iOrb);
+  ar &make_nvp("M", val.M);
+}
+}  // namespace boost::serialization
+
+
 template<typename Tint>
 struct TopDimensional {
   std::vector<std::vector<PerfectFace<Tint>>> ll_faces;
 };
+
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, TopDimensional<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("ll_faces", val.ll_faces);
+}
+}  // namespace boost::serialization
+
 
 
 template<typename T, typename Tint, typename Tgroup>
@@ -798,6 +968,36 @@ struct FullComplexEnumeration {
   std::vector<FullBoundary<Tint>> boundaries;
   std::vector<TopDimensional<Tint>> l_topdims;
 };
+
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint, typename Tgroup>
+inline void serialize(Archive &ar, FullComplexEnumeration<T, Tint, Tgroup> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("pctdi", val.pctdi);
+  ar &make_nvp("levels", val.levels);
+  ar &make_nvp("boundaries", val.boundaries);
+  ar &make_nvp("l_topdims", val.l_topdims);
+}
+}  // namespace boost::serialization
+
+template<typename T, typename Tint, typename Tgroup>
+void WriteFullComplexEnumeration(std::string const &file,
+                                 FullComplexEnumeration<T, Tint, Tgroup> const &fce) {
+  std::ofstream ofs(file);
+  boost::archive::text_oarchive oa(ofs);
+  oa << fce;
+}
+
+template<typename T, typename Tint, typename Tgroup>
+FullComplexEnumeration<T, Tint, Tgroup> ReadFullComplexEnumeration(
+    std::string const &file) {
+  FullComplexEnumeration<T, Tint, Tgroup> fce;
+  std::ifstream ifs(file);
+  boost::archive::text_iarchive ia(ifs);
+  ia >> fce;
+  return fce;
+}
+
 
 template<typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {

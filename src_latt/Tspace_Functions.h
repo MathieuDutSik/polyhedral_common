@@ -12,6 +12,7 @@
 #include "Tspace_SearchPositiveMatrices.h"
 #include "FiniteMatrixGroupTest.h"
 #include "SHORT_Realizability.h"
+#include "boost_serialization.h"
 #include <set>
 #include <vector>
 #include <unordered_map>
@@ -128,6 +129,14 @@ struct PairwiseScalarInfo {
   MyMatrix<T> PairwiseScalarInv;
 };
 
+namespace boost::serialization {
+template <class Archive, typename T>
+inline void serialize(Archive &ar, PairwiseScalarInfo<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("PairwiseScalarInv", val.PairwiseScalarInv);
+}
+}  // namespace boost::serialization
+
 /*
   The structure of a T-space (see the papers by Mathieu Dutour Sikiric,
   Frank Vallentin and Achill Schuermann).
@@ -167,6 +176,25 @@ template <typename T> struct LinSpaceMatrix {
   // Whether the T-space is known to be self-dual
   bool is_self_dual;
 };
+
+namespace boost::serialization {
+template <class Archive, typename T>
+inline void serialize(Archive &ar, LinSpaceMatrix<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("n", val.n);
+  ar &make_nvp("isBravais", val.isBravais);
+  ar &make_nvp("SuperMat", val.SuperMat);
+  ar &make_nvp("ListMat", val.ListMat);
+  ar &make_nvp("ListLineMat", val.ListLineMat);
+  ar &make_nvp("ListMatAsBigMat", val.ListMatAsBigMat);
+  ar &make_nvp("ListComm", val.ListComm);
+  ar &make_nvp("ListSubspaces", val.ListSubspaces);
+  ar &make_nvp("PtStabGens", val.PtStabGens);
+  ar &make_nvp("l_spanning_elements", val.l_spanning_elements);
+  ar &make_nvp("pairwise_scalar_info", val.pairwise_scalar_info);
+  ar &make_nvp("is_self_dual", val.is_self_dual);
+}
+}  // namespace boost::serialization
 
 template <typename T>
 MyMatrix<T> GetListMatAsBigMat(std::vector<MyMatrix<T>> const &ListMat) {

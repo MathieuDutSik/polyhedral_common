@@ -2,6 +2,11 @@
 #ifndef SRC_POLYDECOMP_TRIPLES_H_
 #define SRC_POLYDECOMP_TRIPLES_H_
 
+// clang-format off
+#include "boost_serialization.h"
+#include <boost/dynamic_bitset/serialization.hpp>
+// clang-format on
+
 
 #ifdef DEBUG
 #define DEBUG_TRIPLE
@@ -54,6 +59,16 @@ template <typename Tint> struct sing_adj {
   MyMatrix<Tint> eMat;
 };
 
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, sing_adj<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("jCone", val.jCone);
+  ar &make_nvp("f_ext", val.f_ext);
+  ar &make_nvp("eMat", val.eMat);
+}
+}  // namespace boost::serialization
+
 // The minimal types used for 
 template<typename Tint, typename Tgroup>
 struct TopConeMin {
@@ -76,6 +91,16 @@ struct triple {
   Face f_ext;
   MyMatrix<Tint> eMat;
 };
+
+namespace boost::serialization {
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, triple<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("iCone", val.iCone);
+  ar &make_nvp("f_ext", val.f_ext);
+  ar &make_nvp("eMat", val.eMat);
+}
+}  // namespace boost::serialization
 
 template <typename Ttopcone>
 std::optional<MyMatrix<typename Ttopcone::Tint>>
