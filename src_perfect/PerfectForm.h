@@ -173,15 +173,15 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> get_scal_mat(LinSpaceMatrix<T> const &LinSpa,
+MyMatrix<T> get_scal_mat(std::vector<MyMatrix<T>> const &ListMat,
                          Tshortest<T, Tint> const &rec_shv) {
-  int nbMat = LinSpa.ListMat.size();
+  int nbMat = ListMat.size();
   int nbShort = rec_shv.SHV.rows();
   MyMatrix<T> ScalMat(nbShort, nbMat);
   for (int iShort = 0; iShort < nbShort; iShort++) {
     MyVector<Tint> eVectShort = rec_shv.SHV.row(iShort);
     for (int iMat = 0; iMat < nbMat; iMat++) {
-      T eNorm = EvaluationQuadForm<T, Tint>(LinSpa.ListMat[iMat], eVectShort);
+      T eNorm = EvaluationQuadForm<T, Tint>(ListMat[iMat], eVectShort);
       ScalMat(iShort, iMat) = eNorm;
     }
   }
@@ -192,7 +192,7 @@ template <typename T, typename Tint>
 bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
                          Tshortest<T, Tint> const &rec_shv) {
   int nbMat = LinSpa.ListMat.size();
-  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, rec_shv);
+  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa.ListMat, rec_shv);
   return RankMat(ScalMat) == nbMat;
 }
 
@@ -256,13 +256,16 @@ bool find_positive_semidefinite_shv_zero(LinSpaceMatrix<T> const &LinSpa, MyMatr
     is positive semidefinite and whose kernel is equal to the SHV.
  */
 template<typename T, typename Tint>
-bool is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
+std::optional<MyMatrix<T>> is_bounded_face_iterative(LinSpaceMatrix<T> const &LinSpa, MyMatrix<Tint> const& SHV, std::ostream& os) {
 
   std::vector<MyVector<Tint>> ListVectWork = VectorFamilyFromMatrix(SHV);
   std::vector<MyMatrix<T>> const& ListMat = LinSpa.ListMat;
   bool NoExtension = true;
   ReplyRealizability<T, Tint> RecTest = SHORT_TestRealizabilityShortestFamily_Raw<T, Tint>(ListVectWork, ListMat, NoExtension, os);
-  return RecTest.reply;
+  if (!RecTest.reply) {
+    return {};
+  }
+  return RecTest.eMat;
 }
 
 /*
@@ -517,9 +520,9 @@ PerfectBoundednessProperty initial_bounded_property(LinSpaceMatrix<T> const &Lin
  */
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
-GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
-  int nbMat = LinSpa.ListMat.size();
-  MyMatrix<T> ThePerfMat = LinSpa.SuperMat;
+GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& InitialMat, std::ostream &os) {
+  int nbMat = ListMat.size();
+  MyMatrix<T> ThePerfMat = InitialMat;
   Tshortest<T, Tint> rec_shv = T_ShortestVectorHalf<T, Tint>(ThePerfMat, os);
 #ifdef SANITY_CHECK_INITIAL_PERFECT
   T TheMin = rec_shv.min;
@@ -528,7 +531,7 @@ GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
   int iter = 0;
 #endif
   while (true) {
-    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, rec_shv);
+    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(ListMat, rec_shv);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
 #ifdef DEBUG_INITIAL_PERFECT
@@ -543,7 +546,7 @@ GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
     }
     MyVector<T> V = eSelect.NSP.row(0);
     auto iife_get_dir = [&]() -> MyMatrix<T> {
-      MyMatrix<T> M = LINSPA_GetMatrixInTspace(LinSpa, V);
+      MyMatrix<T> M = GetMatrixFromBasis(ListMat, V);
       if (IsPositiveDefinite<T>(M, os)) {
         // For a positive definite matrix, we need to take the opposite
         // because we need a direction outside of the cone.
@@ -570,6 +573,14 @@ GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
 #endif
   }
 }
+
+template <typename T, typename Tint>
+std::pair<MyMatrix<T>, Tshortest<T, Tint>>
+GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
+  return GetOnePerfectForm_Kernel<T,Tint>(LinSpa.ListMat, LinSpa.SuperMat, os);
+}
+
+
 
 template <typename T, typename Tint> struct SimplePerfect {
   MyMatrix<T> Gram;

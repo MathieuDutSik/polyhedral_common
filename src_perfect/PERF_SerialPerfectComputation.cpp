@@ -96,6 +96,31 @@ void process_A(FullNamelist const &eFull) {
   std::string CacheFile = BlockQUERIES.get_string("CacheFile");
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, std::cerr);
 
+  std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
+  if (FileStabilizerQueries != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileStabilizerQueries);
+    std::string OutFile = FileStabilizerQueries + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      auto opt = compute_stabilizer_ext<T, Tint, Tgroup>(fce, EXT, std::cerr);
+      if (!opt) {
+        std::cerr << "PERFSERIAL: Failed to compute stabilizer for entry\n";
+        throw TerminalException{1};
+      }
+      os_out << "Group(";
+      WriteListMatrixGAP(os_out, opt->second);
+      os_out << ")";
+    }
+    os_out << "];\n";
+  }
+
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {

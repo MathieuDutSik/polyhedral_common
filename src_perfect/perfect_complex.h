@@ -810,7 +810,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #endif
   };
   auto append_boundary=[&](size_t const& i, std::pair<int,MyMatrix<Tint>> const& p,
-                           RyshkovGRP<T, Tgroup> const& cone,
+                           [[maybe_unused]] RyshkovGRP<T, Tgroup> const& cone,
                            Face const& incd_sma, std::vector<BoundEntry<Tint>> & l_bound) -> void {
     FacePerfectComplex<T,Tint,Tgroup> const& face = level.l_faces[i];
     int sign = get_sign(interior_pt, face, p);
@@ -1007,6 +1007,55 @@ FullComplexEnumeration<T, Tint, Tgroup> read_fce_from_file(
   boost::archive::text_iarchive ia(ifs);
   ia >> fce;
   return fce;
+}
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>>
+compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                       MyMatrix<Tint> const& EXT, std::ostream& os) {
+  LinSpaceMatrix<T> const& LinSpa = fce.pctdi.LinSpa;
+  std::optional<MyMatrix<T>> opt_init =
+      is_bounded_face_iterative<T, Tint>(LinSpa, EXT, os);
+  if (!opt_init) {
+    return {};
+  }
+  auto pair = GetOnePerfectForm_Kernel<T, Tint>(LinSpa.ListMat, *opt_init, os);
+  MyMatrix<T> const& eMatPerf = pair.first;
+  Tshortest<T, Tint> const& rec_shv = pair.second;
+  MyMatrix<T> SHV1_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
+  MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
+  size_t n_perfect = fce.pctdi.l_perfect.size();
+  for (size_t i_cone = 0; i_cone < n_perfect; i_cone++) {
+    PerfectFormInfoForComplex<T, Tint, Tgroup> const& cone =
+        fce.pctdi.l_perfect[i_cone];
+    MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(cone.EXT);
+    std::optional<MyMatrix<T>> opt =
+        LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+            LinSpa, eMatPerf, cone.gram, SHV1_T, SHV2_T, os);
+    if (!opt) {
+      continue;
+    }
+    MyMatrix<T> const& P = *opt;
+    MyMatrix<T> P_inv_T = Inverse(P).transpose();
+    ContainerMatrix<T> cont(SHV2_T);
+    Face f_ext(SHV2_T.rows());
+    for (int i_row = 0; i_row < EXT_T.rows(); i_row++) {
+      MyVector<T> V = GetMatrixRow(EXT_T, i_row);
+      MyVector<T> V_top = P_inv_T * V;
+      std::optional<size_t> opt_idx = cont.GetIdx_v(V_top);
+      if (!opt_idx) {
+        std::cerr << "PERFCOMP: Failed to match vector in perfect cone\n";
+        throw TerminalException{1};
+      }
+      f_ext[*opt_idx] = 1;
+    }
+    MyMatrix<Tint> P_tint = UniversalMatrixConversion<Tint, T>(P);
+    triple<Tint> t{i_cone, f_ext, P_tint};
+    triple<Tint> t_can = canonicalize_triple(fce.pctdi.l_perfect, t, os);
+    auto pair_triple = get_spanning_list_triple(fce.pctdi.l_perfect, t_can, os);
+    return pair_triple;
+  }
+  return {};
 }
 
 template<typename T, typename Tint, typename Tgroup>

@@ -161,7 +161,7 @@ TSPACE_GetAdjacencies(LinSpaceMatrix<T> const &LinSpa, MyMatrix<T> const &eGram,
   }
 #endif
 #ifdef DEBUG_PERFECT_TSPACE
-  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa, rec_shv);
+  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa.ListMat, rec_shv);
   os << "PERF_TSPACE: The ScalMat is the following\n";
   WriteMatrix(os, ScalMat);
   bool test = is_perfect_in_space<T, Tint>(LinSpa, rec_shv);
