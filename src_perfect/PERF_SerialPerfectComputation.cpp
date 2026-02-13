@@ -81,12 +81,12 @@ FullComplexEnumeration<T, Tint, Tgroup> get_full_complex_enumeration(LinSpaceMat
 
 
 template <typename T, typename Tint, typename Tgroup>
-void process_A(FullNamelist const &eFull) {
+void process_A(FullNamelist const &eFull, std::ostream& os) {
   SingleBlock const &BlockDATA = eFull.get_block("DATA");
   SingleBlock const &BlockQUERIES = eFull.get_block("QUERIES");
   SingleBlock const &BlockTSPACE = eFull.get_block("TSPACE");
   LinSpaceMatrix<T> LinSpa =
-      ReadTspace<T, Tint, Tgroup>(BlockTSPACE, std::cerr);
+      ReadTspace<T, Tint, Tgroup>(BlockTSPACE, os);
   //
   bool compute_boundary = BlockDATA.get_bool("ComputeBoundary");
   bool only_well_rounded = BlockDATA.get_bool("OnlyWellRounded");
@@ -94,9 +94,10 @@ void process_A(FullNamelist const &eFull) {
   PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
   //
   std::string CacheFile = BlockQUERIES.get_string("CacheFile");
-  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, std::cerr);
+  FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);
 
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
+  std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
         ReadListMatrixFile<Tint>(FileStabilizerQueries);
@@ -109,18 +110,36 @@ void process_A(FullNamelist const &eFull) {
         os_out << ",\n";
       }
       is_first = false;
-      auto opt = compute_stabilizer_ext<T, Tint, Tgroup>(fce, EXT, std::cerr);
-      if (!opt) {
-        std::cerr << "PERFSERIAL: Failed to compute stabilizer for entry\n";
-        throw TerminalException{1};
-      }
+      auto result = compute_stabilizer_ext<T, Tint, Tgroup>(fce, EXT, os);
       os_out << "Group(";
-      WriteListMatrixGAP(os_out, opt->second);
+      WriteListMatrixGAP(os_out, result.second);
       os_out << ")";
     }
     os_out << "];\n";
   }
-
+  if (FileEquivalenceQueries != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+      ReadListMatrixFile<Tint>(FileEquivalenceQueries);
+    std::string OutFile = FileEquivalenceQueries + ".output";
+    std::ofstream os_out(OutFile);
+    size_t n_case = l_ext.size() / 2;
+    os_out << "return [";
+    for (size_t i_case=0; i_case<n_case; i_case++) {
+      if (i_case > 0) {
+        os_out << ",\n";
+      }
+      MyMatrix<Tint> const& EXT1 = l_ext[2*i_case];
+      MyMatrix<Tint> const& EXT2 = l_ext[2*i_case];
+      std::optional<MyMatrix<Tint>> opt =
+        find_equivalence_ext(fce, EXT1, EXT2, os);
+      if (opt) {
+        WriteMatrixGAP(os_out, *opt);
+      } else {
+        os_out << "fail";
+      }
+    }
+    os_out << "];\n";
+  }
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
@@ -128,7 +147,7 @@ template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
   using Telt = permutalib::SingleSidedPerm<Tidx>;
   using TintGroup = mpz_class;
   using Tgroup = permutalib::Group<Telt, TintGroup>;
-  return process_A<T, Tint, Tgroup>(eFull);
+  return process_A<T, Tint, Tgroup>(eFull, std::cerr);
 }
 
 template <typename T> void process_C(FullNamelist const &eFull) {

@@ -430,8 +430,8 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     std::map<std::string, std::vector<int>> ListListIntValues;
     std::map<std::string, bool> ListBoolValues;
     ListStringValues["CacheFile"] = "none";
-    ListStringValues["FileStabilizerQueries"] = "none";
-    ListStringValues["FileEquivalenceQueries"] = "none";
+    ListStringValues["FileStabilizerQueries"] = "null";
+    ListStringValues["FileEquivalenceQueries"] = "null";
     ListListIntValues["ListUpperBoundary"] = {};
     ListListIntValues["ListLowerBoundary"] = {};
     SingleBlock BlockQUERIES;

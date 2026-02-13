@@ -1010,9 +1010,8 @@ FullComplexEnumeration<T, Tint, Tgroup> read_fce_from_file(
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>>
-compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
-                       MyMatrix<Tint> const& EXT, std::ostream& os) {
+triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                            MyMatrix<Tint> const& EXT, std::ostream& os) {
   LinSpaceMatrix<T> const& LinSpa = fce.pctdi.LinSpa;
   std::optional<MyMatrix<T>> opt_init =
       is_bounded_face_iterative<T, Tint>(LinSpa, EXT, os);
@@ -1051,12 +1050,34 @@ compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
     }
     MyMatrix<Tint> P_tint = UniversalMatrixConversion<Tint, T>(P);
     triple<Tint> t{i_cone, f_ext, P_tint};
-    triple<Tint> t_can = canonicalize_triple(fce.pctdi.l_perfect, t, os);
-    auto pair_triple = get_spanning_list_triple(fce.pctdi.l_perfect, t_can, os);
-    return pair_triple;
+    return canonicalize_triple(fce.pctdi.l_perfect, t, os);
   }
-  return {};
+  std::cerr << "We should never reach that stage\n";
+  throw TerminalException{1};
 }
+
+template<typename T, typename Tint, typename Tgroup>
+std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>
+compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                       MyMatrix<Tint> const& EXT, std::ostream& os) {
+  triple<Tint> t = get_one_triple<T,Tint,Tgroup>(fce, EXT, os);
+  return get_spanning_list_triple(fce.pctdi.l_perfect, t, os);
+}
+
+template<typename T, typename Tint, typename Tgroup>
+std::optional<MyMatrix<Tint>>
+find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                     MyMatrix<Tint> const& EXT1,
+                     MyMatrix<Tint> const& EXT2,
+                     std::ostream& os) {
+  triple<Tint> t1 = get_one_triple<T,Tint,Tgroup>(fce, EXT1, os);
+  triple<Tint> t2 = get_one_triple<T,Tint,Tgroup>(fce, EXT2, os);
+  std::vector<triple<Tint>> l_triple1 = get_spanning_list_triple(fce.pctdi.l_perfect, t1, os).first;
+  return test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
+}
+
+
+
 
 template<typename T, typename Tint, typename Tgroup>
 FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vector<DatabaseEntry_Serial<PerfectTspace_Obj<T,Tint,Tgroup>,PerfectTspace_AdjO<Tint>>> const& l_tot, LinSpaceMatrix<T> const& LinSpa, PerfectComplexOptions const& pco, std::ostream& os) {
