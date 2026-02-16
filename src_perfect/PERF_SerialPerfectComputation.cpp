@@ -105,7 +105,6 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     WriteListMatrixGAP(os_out, list_gen);
     os_out << ";\n";
   }
-
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
@@ -150,10 +149,39 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
-  std::vector<int> ListUpperBoundary = BlockQUERIES.get_list_int("ListUpperBoundary");
-  
+  std::string FileListUpperBoundary = BlockQUERIES.get_list_int("FileListUpperBoundary");
+  if (FileListUpperBoundary != "null") {
+    int idim = BlockQUERIES.get_int("DimUpperBoundary");
+    int n_orb = fce.levels[idim].l_faces.size();
+    std::string OutFile = FileListUpperBoundary + ".output";
+    std::ofstream os_out(OutFile);
+    os_out << "return [";
+    for (int iOrb=0; iOrb<n_orb; iOrb++) {
+      if (i_orb > 0) {
+        os_out << ",\n";
+      }
+      os_out << "rec(iOrb:=" << i_orb;
+      std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>> pair =
+        get_all_upper_faces(fce, idim, iOrb, os);
+      os_out << ", ListEXT:=";
+      WriteListMatrixGAP(os_out, pair.first);
+      os_out << ", ListMap:=[";
+      int len = pair.second.size();
+      for (int i=0; i<len; i++) {
+        if (i>0) {
+          os_out << ",\n";
+        }
+        os_out << "rec(jOrb:=" << pair.second[i].iOrb;
+        os_out << ", M:=";
+        WriteMatrixGAP(os_out, pair.second[i].M);
+        os_out << ")";
+      }
+      os_out << "]";
+      os_out << ")";
+    }
+    os_out << "];\n";
+  }
 
-  
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
