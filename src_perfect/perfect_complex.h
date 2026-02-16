@@ -6,6 +6,7 @@
 #include "perfect_tspace.h"
 #include "triples.h"
 #include "GampMatlab.h"
+#include "MatrixGroupSimplification.h"
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <fstream>
@@ -1064,6 +1065,33 @@ compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   return get_spanning_list_triple(fce.pctdi.l_perfect, t, os);
 }
 
+// Collect generators from equivalences and stabilizers, then reduce them.
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> get_reduced_generators_fce(
+    FullComplexEnumeration<T, Tint, Tgroup> const& fce, std::ostream& os) {
+  std::vector<MyMatrix<Tint>> list_gen;
+  // Equivalences from top-dimensional cones.
+  for (auto &cone : fce.pctdi.l_perfect) {
+    for (auto &ePerm : cone.GRP_ext.GeneratorsOfGroup()) {
+      MyMatrix<Tint> eMatr = cone.find_matrix(ePerm, os);
+      list_gen.push_back(eMatr);
+    }
+  }
+  // Stabilizer generators from faces.
+  for (auto &level : fce.levels) {
+    for (auto &face : level.l_faces) {
+      for (auto &eGen : face.l_gens) {
+        list_gen.push_back(eGen);
+      }
+    }
+  }
+  if (list_gen.empty()) {
+    return list_gen;
+  }
+  return ExhaustiveReductionComplexityGroupMatrix(list_gen, os);
+}
+
+
 template<typename T, typename Tint, typename Tgroup>
 std::optional<MyMatrix<Tint>>
 find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
@@ -1076,6 +1104,23 @@ find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   return test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
 }
 
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFace<Tint>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                                                   int idim, int iOrb, std::ostream& os) {
+  std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[idim].l_faces[iOrb].l_gens;
+  int mOrb = fce.l_faces[idim-1].size();
+  std::vector<PerfectFace<Tint>> list_upper;
+  auto f_insert=[&]() -> void {
+    std::unordered_set<MyMatrix<Tint>> set;
+    
+    while(true) {
+    }
+  };
+  for (int jOrb=0; jOrb<mOrb; jOrb++) {
+    for (auto& t: 
+  }
+    return list_upper;
+}
 
 
 

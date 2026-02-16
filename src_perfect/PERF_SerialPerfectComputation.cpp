@@ -97,7 +97,6 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);
 
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
-  std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
         ReadListMatrixFile<Tint>(FileStabilizerQueries);
@@ -117,6 +116,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileEquivalenceQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
       ReadListMatrixFile<Tint>(FileEquivalenceQueries);
@@ -140,6 +140,10 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::vector<int> ListUpperBoundary = BlockQUERIES.get_list_int("ListUpperBoundary");
+  
+
+  
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {
