@@ -96,6 +96,16 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string CacheFile = BlockQUERIES.get_string("CacheFile");
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);
 
+  std::string FileGroupGenerators = BlockQUERIES.get_string("FileGroupGenerators");
+  if (FileGroupGenerators != "null") {
+    std::vector<MyMatrix<Tint>> list_gen =
+        get_reduced_generators_fce<T, Tint, Tgroup>(fce, os);
+    std::ofstream os_out(FileGroupGenerators);
+    os_out << "return ";
+    WriteListMatrixGAP(os_out, list_gen);
+    os_out << ";\n";
+  }
+
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =

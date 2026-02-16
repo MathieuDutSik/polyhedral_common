@@ -1105,21 +1105,67 @@ find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
 }
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFace<Tint>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
-                                                   int idim, int iOrb, std::ostream& os) {
+std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
+                                                                                           int idim, int iOrb, std::ostream& os) {
   std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[idim].l_faces[iOrb].l_gens;
-  int mOrb = fce.l_faces[idim-1].size();
-  std::vector<PerfectFace<Tint>> list_upper;
-  auto f_insert=[&]() -> void {
-    std::unordered_set<MyMatrix<Tint>> set;
-    
-    while(true) {
-    }
-  };
+  std::vector<MyMatrix<Tint>> list_upper_ext;
+  std::vector<PerfectFace<Tint>> list_upper_mapping;
+  int mOrb = fce.levels[idim-1].l_faces.size();
   for (int jOrb=0; jOrb<mOrb; jOrb++) {
-    for (auto& t: 
+    for (auto& t: fce.levels[idim-1].l_faces[jOrb].l_triple) {
+      if (t.iCone == iOrb) {
+        MyMatrix<Tint> InvMat = Inverse(t.eMat);
+        MyMatrix<Tint> const& EXT_upp = fce.levels[idim-1].l_faces[jOrb].EXT;
+        std::unordered_set<MyMatrix<Tint>> set_EXT;
+        size_t s_len = list_upper_ext.size();
+        auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
+          MyMatrix<Tint> EXTins = EXT_upp * P;
+          MyMatrix<Tint> EXTcan = tot_ext(EXTins);
+          if (set_ext.count(EXTcan) == 0) {
+            set_ext.insert(EXTcan);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+            {
+              MatrixContainer<Tint> cont(EXTcan);
+              if (!cont.contains_mat(fce.levels[idim].l_faces[iOrb].EXT)) {
+                std::cerr << "PERFCOMP: The matrix should be contains in the other\n";
+                throw TerminalException{1};
+              }
+            }
+#endif
+            list_upper_ext.push_back(EXTcan);
+            PerfectFace<Tint> pf{jOrb, P};
+            list_upper_mapping.push_back(pf};
+          }
+        };
+        f_insert(InvMat);
+        size_t start = 0;
+        while (true) {
+          size_t len = list_upper_ext.size() - s_len;
+          for (size_t i=start; i<len; i++) {
+            for (auto & eGen: l_gens) {
+              MyMatrix<Tint> P = list_upper_mapping[i + s_len].M * eGen;
+              f_insert(InvMat);
+            }
+          }
+        }
+        start = len;
+        if (start + s_len == list_upper_ext.size()) {
+          break;
+        }
+      }
+    }
   }
-    return list_upper;
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  std::unordered_set<MyMatrix<Tint>> total_set;
+  for (auto & EXT: list_upper_ext) {
+    total_set.insert(EXT);
+  }
+  if (total_set.size() != list_upper_ext.size()) {
+    std::cerr << "PERFCOMP: Error in the computation of list_upper_ext\n";
+    throw TerminalException{1};
+  }
+#endif
+  return {std::move(list_upper_ext), std::move(list_upper_mapping)};
 }
 
 
