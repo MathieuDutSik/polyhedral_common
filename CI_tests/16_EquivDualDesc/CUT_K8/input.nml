@@ -1,7 +1,7 @@
 &DATA
  EXTfile = "CutK8.ext"
  GRPfile = "CutK8.grp"
- OUTfile = "orbits"
+ OutFile = "orbits"
  DeterministicRuntime = T
  max_runtime = -1
  AdvancedTerminationCriterion = T
