@@ -591,14 +591,25 @@ std::optional<MyVector<T>> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpM
   MyVector<double> x_out = AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, os);
   double thr = 1e-4;
   std::vector<int> l_rows;
-  for (int i_row=0; i_row<x_out.size(); i_row++) {
+  int nbRow = x_out.size();
+  for (int i_row=0; i_row<nbRow; i_row++) {
     if (T_abs(x_out(i_row)) > thr) {
       l_rows.push_back(i_row);
     }
   }
+  int nbRowRed = l_rows.size();
   MySparseMatrix<T> SpMatRed = SparseMatrixSelectRows(SpMat, l_rows);
   MyMatrix<T> Mred = MyMatrixFromSparseMatrix(SpMatRed);
-  return SolutionMat(Mred, Bvect);
+  std::optional<MyVector<T>> opt = SolutionMat(Mred, Bvect);
+  if (!opt) {
+    return {};
+  }
+  MyVector<T> const& sol_red = *opt;
+  MyVector<T> sol = ZeroVector<T>(nbRow);
+  for (int u=0; u<nbRowRed; u++) {
+    sol(l_rows[u]) = sol_red(u);
+  }
+  return sol;
 }
 
 // clang-format off
