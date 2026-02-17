@@ -554,10 +554,10 @@ OutSolver<T> yall1_solve(RecSparse<T> const &eRecSparse, MyVector<T> const &b,
   return Out;
 }
 
-template <typename T>
-MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
-                                     MyVector<T> const &Bvect, [[maybe_unused]] std::ostream& os) {
-  RecSparse<double> eRecSparse = AMP_linear_operators(SpMat);
+
+MyVector<double> AMP_SolutionSparseSystem_d(MySparseMatrix<double> const &SpMat_d,
+                                            MyVector<double> const &Bvect_d, [[maybe_unused]] std::ostream& os) {
+  RecSparse<double> eRecSparse = AMP_linear_operators(SpMat_d);
   //
   RecOptSparse<double> eRecOpt;
   eRecOpt.delta = 0;
@@ -576,9 +576,29 @@ MyVector<T> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
   eRecOpt.stepfreq = 1;
   eRecOpt.maxit = 99999;
   eRecOpt.xs = -1;
-  OutSolver<double> eRecOut = AMP_yall1(eRecSparse, Bvect, eRecOpt);
-  //
+  OutSolver<double> eRecOut = AMP_yall1(eRecSparse, Bvect_d, eRecOpt);
   return eRecOut.x;
+}
+
+
+
+
+template <typename T>
+std::optional<MyVector<T>> AMP_SolutionSparseSystem(MySparseMatrix<T> const &SpMat,
+                                     MyVector<T> const &Bvect, std::ostream& os) {
+  MySparseMatrix<double> SpMat_d = UniversalSparseMatrixConversion<double,T>(SpMat);
+  MyVector<double> Bvect_d = UniversalVectorConversion<double,T>(Bvect);
+  MyVector<double> x_out = AMP_SolutionSparseSystem_d(SpMat_d, Bvect_d, os);
+  double thr = 1e-4;
+  std::vector<int> l_rows;
+  for (int i_row=0; i_row<x_out.size(); i_row++) {
+    if (T_abs(x_out(i_row)) > thr) {
+      l_rows.push_back(i_row);
+    }
+  }
+  MySparseMatrix<T> SpMatRed = SparseMatrixSelectRows(SpMat, l_rows);
+  MyMatrix<T> Mred = MyMatrixFromSparseMatrix(SpMatRed);
+  return SolutionMat(Mred, Bvect);
 }
 
 // clang-format off

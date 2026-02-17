@@ -1586,9 +1586,9 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
     PerfectFace<Tint> const& face1 = faces1[i1];
     int iRow = i1;
     for (auto & ebnd: fce.boundaries[idim-1].ll_bound[face1.iOrb].l_bound) {
-      MyMatrix<T> M = ebnd.M * face1.M;
+      MyMatrix<Tint> M = ebnd.M * face1.M;
       std::pair<size_t, int> p = cb2.get_position(ebnd.iOrb, M);
-      T value = p.second * ebnd.value;
+      T value = p.second * ebnd.sign;
       int iCol = p.first;
       T2 entry(iRow, iCol, value);
       tripletList.push_back(entry);
@@ -1596,7 +1596,11 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
   }
   MySparseMatrix<T> SpMat(nbRow, nbCol);
   SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
-  MyVector<T> eSol1 = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+  std::optional<MyVector<T>> opt = AMP_SolutionSparseSystem(SpMat, Bvect, os);
+  if (!opt) {
+    return {};
+  }
+  MyVector<T> const& eSol1 = *opt;
 
   std::vector<PerfectFaceEntry<T, Tint>> chain_ret;
   for (int i1=0; i1<dim1; i1++) {
@@ -1617,7 +1621,42 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
-
+  std::unordered_set<MyMatrix<Tint>> set_ext;
+  std::vector<MyMatrix<Tint>> list_ext;
+  std::vector<TopPerfectCone<Tint>> l_top;
+  auto f_insert=[&](TopPerfectCone<Tint> const& tpc) -> void {
+    MyMatrix<Tint> EXT = fce.pctdi.l_perfect[tpc.i_perfect].EXT * tpc.M;
+    MyMatrix<Tint> EXTcan = tot_set(EXT);
+    if (set_ext.count(EXTcan) == 0) {
+      set_ext.insert(EXTcan);
+      l_top.push_back(tpc);
+    }
+  };
+  for (auto & pfe: chain) {
+    std::vector<triple<Tint>> const& l_triple = fce.levels[idim].l_faces[pfe.iOrb].l_triple;
+    int i_perfect = l_triple[0].iCone;
+    MyMatrix<Tint> M = l_triple[0].eMat * pfe.M;
+    TopPerfectCone<Tint> tpc{i_perfect, M};
+    f_insert(tpc);
+  }
+  size_t start = 0;
+  while(true) {
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(chain, idim, fce, l_top, os);
+    if (opt) {
+      return *opt;
+    }
+    size_t len = l_top.size();
+    for (size_t u=start; u<len; u++) {
+      int i_perfect = l_top[u].i_perfect;
+      for (auto & sing_adj: fce.pctdi.l_perfect[i_perfect].l_sing_adj) {
+        int j_perfect = sing_adj.jCone;
+        MyMatrix<Tint> M = sing_adj.eMat * l_top[u].M;
+        TopPerfectCone<Tint> tpc{j_perfect, M};
+        f_insert(tpc);
+      }
+    }
+    start = len;
+  }
 }
 
 
