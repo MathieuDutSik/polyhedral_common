@@ -578,6 +578,48 @@ inline void serialize(Archive &ar, PerfectFaceEntry<T, Tint> &val,
 }
 }  // namespace boost::serialization
 
+template<typename T, typename Tint>
+PerfectFaceEntry<T,Tint> ReadPerfectFaceEntry(std::istream& is) {
+  int iOrb;
+  T value;
+  is >> iOrb;
+  is >> value;
+  MyMatrix<Tint> M = ReadMatrix<Tint>(is);
+  return {iOrb, value, std::move(M)};
+}
+
+template<typename T, typename Tint>
+std::vector<PerfectFaceEntry<T,Tint>> ReadListPerfectFaceEntry(std::istream& is) {
+  int len_chain;
+  is >> len_chain;
+  std::vector<PerfectFaceEntry<T, Tint>> chain;
+  for (int i_ent=0; i_ent<len_chain; i_ent++) {
+    PerfectFaceEntry<T, Tint> pfe = ReadPerfectFaceEntry<T,Tint>(is);
+    chain.push_back(pfe);
+  }
+  return chain;
+}
+
+template<typename T, typename Tint>
+void WritePerfectFaceEntryGAP(std::ostream& os_out, PerfectFaceEntry<T,Tint> const& r) {
+  os_out << "rec(iOrb:=" << r.iOrb << ", value:=" << r.value << ", M:=";
+  WriteMatrixGAP(os_out, r.M);
+  os_out << ")";
+}
+
+template<typename T, typename Tint>
+void WriteListPerfectFaceEntryGAP(std::ostream& os_out, std::vector<PerfectFaceEntry<T,Tint>> const& chain) {
+  os_out << "[";
+  size_t len_chain = chain.size();
+  for (size_t u=0; u<len_chain; u++) {
+    if (u>0) {
+      os_out << ",\n";
+    }
+    WritePerfectFaceEntryGAP(os_out, chain[u]);
+  }
+  os_out << "]";
+}
+
 
 template<typename T, typename Tint, typename Tgroup>
 ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo<T,Tint,Tgroup> const& pctdi, FacesPerfectComplex<T,Tint,Tgroup> const& level, std::ostream & os) {

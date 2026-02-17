@@ -220,6 +220,26 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileContractingHomotopies = BlockQUERIES.get_string("FileContractingHomotopies");
+  if (FileContractingHomotopies != "null") {
+    std::ifstream is(FileContractingHomotopies);
+    int idim, n_chains;
+    is >> idim;
+    is >> n_chains;
+    //
+    std::string OutFile = FileContractingHomotopies + ".output";
+    std::ofstream os_out(OutFile);
+    os_out << "return [";
+    for (int i_chain=0; i_chain<n_chains; i_chain++) {
+      if (i_chain > 0) {
+        os_out << ",\n";
+      }
+      std::vector<PerfectFaceEntry<T, Tint>> chain1 = ReadListPerfectFaceEntry<T,Tint>(is);
+      std::vector<PerfectFaceEntry<T, Tint>> chain2 = contracting_homotopy(chain1, idim, fce, os);
+      WriteListPerfectFaceEntryGAP(os_out, chain2);
+    }
+    os_out << "];\n";
+  }
 
 }
 
