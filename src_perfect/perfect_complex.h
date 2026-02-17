@@ -1104,23 +1104,49 @@ find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   return test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
 }
 
+template<typename T>
+MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
+  std::set<MyVector<T>> set;
+  int dim = EXTin.cols();
+  auto f_insert=[&](int i_row) -> void {
+    for (int i=0; i<dim; i++) {
+      if (EXTin(i_row, i) > 0) {
+        MyVector<T> V = GetMatrixRow(EXTin, i_row);
+        set.insert(V);
+        return;
+      }
+    }
+  };
+  for (int i_row=0; i_row<EXTin.rows(); i_row++) {
+    f_insert(i_row);
+  }
+  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
+  int pos = 0;
+  for (auto & V: set) {
+    AssignMatrixRow(M, pos, V);
+    pos += 1;
+  }
+  return M;
+}
+
 template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
-                                                                                           int idim, int iOrb, std::ostream& os) {
+                                                                                           int idim, int iOrb, [[maybe_unused]] std::ostream& os) {
+  size_t iOrb_s = iOrb;
   std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[idim].l_faces[iOrb].l_gens;
   std::vector<MyMatrix<Tint>> list_upper_ext;
   std::vector<PerfectFace<Tint>> list_upper_mapping;
   int mOrb = fce.levels[idim-1].l_faces.size();
   for (int jOrb=0; jOrb<mOrb; jOrb++) {
     for (auto& t: fce.levels[idim-1].l_faces[jOrb].l_triple) {
-      if (t.iCone == iOrb) {
+      if (t.iCone == iOrb_s) {
         MyMatrix<Tint> InvMat = Inverse(t.eMat);
         MyMatrix<Tint> const& EXT_upp = fce.levels[idim-1].l_faces[jOrb].EXT;
-        std::unordered_set<MyMatrix<Tint>> set_EXT;
+        std::unordered_set<MyMatrix<Tint>> set_ext;
         size_t s_len = list_upper_ext.size();
         auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
           MyMatrix<Tint> EXTins = EXT_upp * P;
-          MyMatrix<Tint> EXTcan = tot_ext(EXTins);
+          MyMatrix<Tint> EXTcan = tot_set(EXTins);
           if (set_ext.count(EXTcan) == 0) {
             set_ext.insert(EXTcan);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
@@ -1134,7 +1160,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
 #endif
             list_upper_ext.push_back(EXTcan);
             PerfectFace<Tint> pf{jOrb, P};
-            list_upper_mapping.push_back(pf};
+            list_upper_mapping.push_back(pf);
           }
         };
         f_insert(InvMat);
@@ -1147,10 +1173,10 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
               f_insert(InvMat);
             }
           }
-        }
-        start = len;
-        if (start + s_len == list_upper_ext.size()) {
-          break;
+          start = len;
+          if (start + s_len == list_upper_ext.size()) {
+            break;
+          }
         }
       }
     }
@@ -1272,32 +1298,6 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
   }
   return {pctdi, levels, boundaries, l_topdims};
 }
-
-template<typename T>
-MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
-  std::set<MyVector<T>> set;
-  int dim = EXTin.cols();
-  auto f_insert=[&](int i_row) -> void {
-    for (int i=0; i<dim; i++) {
-      if (EXTin(i_row, i) > 0) {
-        MyVector<T> V = GetMatrixRow(EXTin, i_row);
-        set.insert(V);
-        return;
-      }
-    }
-  };
-  for (int i_row=0; i_row<EXTin.rows(); i_row++) {
-    f_insert(i_row);
-  }
-  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
-  int pos = 0;
-  for (auto & V: set) {
-    AssignMatrixRow(M, pos, V);
-    pos += 1;
-  }
-  return M;
-}
-
 
 
 template<typename T, typename Tint, typename Tgroup>

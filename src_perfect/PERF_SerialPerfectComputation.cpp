@@ -149,7 +149,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
-  std::string FileListUpperBoundary = BlockQUERIES.get_list_int("FileListUpperBoundary");
+  std::string FileListUpperBoundary = BlockQUERIES.get_string("FileListUpperBoundary");
   if (FileListUpperBoundary != "null") {
     int idim = BlockQUERIES.get_int("DimUpperBoundary");
     int n_orb = fce.levels[idim].l_faces.size();
@@ -157,11 +157,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     std::ofstream os_out(OutFile);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
-      if (i_orb > 0) {
+      if (iOrb > 0) {
         os_out << ",\n";
       }
-      os_out << "rec(iOrb:=" << i_orb;
-      std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>> pair =
+      os_out << "rec(iOrb:=" << iOrb;
+      std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
         get_all_upper_faces(fce, idim, iOrb, os);
       os_out << ", ListEXT:=";
       WriteListMatrixGAP(os_out, pair.first);
