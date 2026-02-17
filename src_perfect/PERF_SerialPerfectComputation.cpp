@@ -181,6 +181,45 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileListLowerBoundary = BlockQUERIES.get_string("FileListLowerBoundary");
+  if (FileListLowerBoundary != "null") {
+    int idim = BlockQUERIES.get_int("DimLowerBoundary");
+    int n_orb = fce.levels[idim].l_faces.size();
+    std::string OutFile = FileListUpperBoundary + ".output";
+    std::ofstream os_out(OutFile);
+    os_out << "return [";
+    for (int iOrb=0; iOrb<n_orb; iOrb++) {
+      if (iOrb > 0) {
+        os_out << ",\n";
+      }
+      std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[idim].ll_bound[iOrb].l_bound;
+      os_out << "rec(iOrb:=" << iOrb;
+      MyMatrix<Tint> EXT = fce.levels[idim].l_faces[iOrb].EXT;
+      os_out << ", EXT:=";
+      WriteMatrixGAP(os_out, EXT);
+      //
+      int n_bnd = l_bound.size();
+      os_out << ", ListBnd:=[";
+      for (int i_bnd=0; i_bnd<n_bnd; i_bnd++) {
+        if (i_bnd > 0) {
+          os_out << ",\n";
+        }
+        int jOrb = l_bound[i_bnd].iOrb;
+        MyMatrix<Tint> const& M = l_bound[i_bnd].M;
+        MyMatrix<Tint> EXT = fce.levels[idim-1].l_faces[jOrb].EXT * M;
+        os_out << "rec(sign:=" << l_bound[i_bnd].sign;
+        os_out << ", jOrb:=" << jOrb;
+        os_out << ", M:=";
+        WriteMatrixGAP(os_out, l_bound[i_bnd].M);
+        os_out << ", EXT:=";
+        WriteMatrixGAP(os_out, EXT);
+        os_out << ")";
+      }
+      os_out << "]";
+      os_out << ")";
+    }
+    os_out << "];\n";
+  }
 
 }
 
