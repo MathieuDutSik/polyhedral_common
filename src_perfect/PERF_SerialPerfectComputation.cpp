@@ -149,12 +149,28 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileCells = BlockQUERIES.get_string("FileCells");
+  if (FileCells != "null") {
+    int idim = BlockQUERIES.get_int("DimCell");
+    int n_orb = fce.levels[idim].l_faces.size();
+    std::ofstream os_out(FileCells);
+    os_out << "return [";
+    for (int iOrb=0; iOrb<n_orb; iOrb++) {
+      if (iOrb > 0) {
+        os_out << ",\n";
+      }
+      MyMatrix<Tint> const& EXT = fce.levels[idim].l_faces[iOrb].EXT;
+      os_out << "rec(EXT:=";
+      WriteMatrixGAP(os_out, EXT);
+      os_out << ")";
+    }
+    os_out << "];\n";
+  }
   std::string FileListUpperBoundary = BlockQUERIES.get_string("FileListUpperBoundary");
   if (FileListUpperBoundary != "null") {
     int idim = BlockQUERIES.get_int("DimUpperBoundary");
     int n_orb = fce.levels[idim].l_faces.size();
-    std::string OutFile = FileListUpperBoundary + ".output";
-    std::ofstream os_out(OutFile);
+    std::ofstream os_out(FileListUpperBoundary);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
       if (iOrb > 0) {
@@ -185,8 +201,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   if (FileListLowerBoundary != "null") {
     int idim = BlockQUERIES.get_int("DimLowerBoundary");
     int n_orb = fce.levels[idim].l_faces.size();
-    std::string OutFile = FileListUpperBoundary + ".output";
-    std::ofstream os_out(OutFile);
+    std::ofstream os_out(FileListLowerBoundary);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
       if (iOrb > 0) {

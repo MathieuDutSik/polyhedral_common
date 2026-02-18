@@ -425,7 +425,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     BlockDATA.setListBoolValues(ListBoolValues);
     ListBlock["DATA"] = BlockDATA;
   }
-  // SYSTEM
+  // QUERIES
   {
     std::map<std::string, std::string> ListStringValues;
     std::map<std::string, int> ListIntValues;
@@ -434,12 +434,14 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileStabilizerQueries"] = "null";
     ListStringValues["FileEquivalenceQueries"] = "null";
     ListStringValues["FileContractingHomotopies"] = "null";
+    ListStringValues["FileCells"] = "null";
     ListStringValues["FileGroupGenerators"] = "null";
     ListStringValues["FileListUpperBoundary"] = "null";
     ListStringValues["FileListLowerBoundary"] = "null";
     ListStringValues["FileHeckeOperators"] = "null";
     ListIntValues["DimUpperBoundary"] = 0;
     ListIntValues["DimLowerBoundary"] = 0;
+    ListIntValues["DimCell"] = 0;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);
