@@ -445,7 +445,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);
-    ListBlock["QUERIES"] = SINGLEBLOCK_Get_System();
+    ListBlock["QUERIES"] = BlockQUERIES;
   }
   // Merging all data
   return FullNamelist(ListBlock);
