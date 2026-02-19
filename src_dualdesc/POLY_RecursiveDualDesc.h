@@ -2711,123 +2711,131 @@ size_t evaluate_subset_hash(const std::vector<Tidx> &subset_index,
 FullNamelist NAMELIST_GetStandard_RecursiveDualDescription() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, std::string> ListStringValues1_doc;
-  std::map<std::string, std::string> ListBoolValues1_doc;
-  std::map<std::string, std::string> ListIntValues1_doc;
-  ListStringValues1_doc["NumericalType"] = "Default: rational\n\
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    ListStringValues_doc["NumericalType"] = "Default: rational\n\
 The numerical type being used for the computation. Possible values:\n\
 rational: the rational type, what you want in 99.999\% of cases\n\
 safe_rational: The safe rational type. Based on int64_t but failing gracefully\n\
 Qsqrt5: coordinates in the field Q(sqrt(5))\n\
 Qsqrt2: coordinates in the field Q(sqrt(2))\n\
 RealAlgebraic: coordinate in a real algebraic field";
-  ListStringValues1_doc["FileAlgebraicField"] = "Default: unset\n\
+    ListStringValues_doc["FileAlgebraicField"] = "Default: unset\n\
 The file containing the description of the real algebraic field.\n\
 This is needed of RealAlgebraic is selected";
-  ListStringValues1_doc["EXTfile"] =
+    ListStringValues_doc["EXTfile"] =
       "The file containing the coordinate of the output file";
-  ListStringValues1_doc["GRPfile"] =
+    ListStringValues_doc["GRPfile"] =
       "The file containing the symmetry group used in the computation";
-  ListStringValues1_doc["OutFile"] =
+    ListStringValues_doc["OutFile"] =
       "The file containing the output of the result";
-  ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
 The formatting used for the output. Possible values:\n\
 Magma: a file to be read in magma\n\
 GAP: a file encoding the incidence as list and made a file openable in GAP\n\
 SetInt: a file encoding the incidence as a single integer\n\
 BankEntry: a file encoding the dual description as a bank entry that can be used for the bank system";
-  ListBoolValues1_doc["DeterministicRuntime"] = "Default: F\n\
+    ListBoolValues_doc["DeterministicRuntime"] = "Default: F\n\
 There is some randomness in several algorithms. With DeterministicRuntime:\n\
 T: If you run again the program you will get exactly the same result which is good for debugging\n\
 F: Running again the program will get you something different";
-  ListBoolValues1_doc["ApplyStdUnitbuf"] = "Default: F\n\
+    ListBoolValues_doc["ApplyStdUnitbuf"] = "Default: F\n\
 There is some logging being done in the running of the program. With AppluStdUnit\n\
 T: the output is done character by character which is slower but useful for debugging\n\
 F: the output is buffered which is typically faster";
-  ListBoolValues1_doc["InterceptCtrlC"] = "Default: T\n\
+    ListBoolValues_doc["InterceptCtrlC"] = "Default: T\n\
 If a CtrlC command is thrown then the program will handle it and stop and\n\
 leave a usable database that can be rerun afterwards (it seems not to work anymore)\n\
 T: Activate the CtrlC mechanism\n\
 F: Do not activate the interception of CtrlC";
-  ListStringValues1_doc["bank_parallelization_method"] = "Default: serial\n\
+    ListStringValues_doc["bank_parallelization_method"] = "Default: serial\n\
 The method used for parallelizing the banking system\n\
 serial: Every thread has its own banking system, which may be suboptimal\n\
   since other thread may have the dual description you computed\n\
 bank_asio: a parallel bank used by several process\n\
 bank_mpi: a bank shared by all the mpi threads";
-  ListIntValues1_doc["port"] = "Default: 1234\n\
+    ListIntValues_doc["port"] = "Default: 1234\n\
 The port used for the bank_asio";
-  ListIntValues1_doc["max_runtime"] = "Default: -1\n\
+    ListIntValues_doc["max_runtime"] = "Default: -1\n\
 The maximum runtime of the run in seconds.\n\
 If data is saved then you can rerun with the saved state\n\
 if max_runtime is negative then there is no maximum runtime";
-  ListBoolValues1_doc["AdvancedTerminationCriterion"] = "Default: F\n\
+    ListBoolValues_doc["AdvancedTerminationCriterion"] = "Default: F\n\
 This is about whether to used the advanced Balinski termination criterion";
-  ListBoolValues1_doc["SimpleExchangeScheme"] = "Default: F\n\
+    ListBoolValues_doc["SimpleExchangeScheme"] = "Default: F\n\
 If selected then a message sent to another node can be sent only after the previously sent is marked as finished";
-  SingleBlock BlockDATA;
-  BlockDATA.setListStringValues_doc(ListStringValues1_doc);
-  BlockDATA.setListBoolValues_doc(ListBoolValues1_doc);
-  BlockDATA.setListIntValues_doc(ListIntValues1_doc);
-  ListBlock["DATA"] = BlockDATA;
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues_doc(ListStringValues_doc);
+    BlockDATA.setListBoolValues_doc(ListBoolValues_doc);
+    BlockDATA.setListIntValues_doc(ListIntValues_doc);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // HEURISTIC
-  std::map<std::string, std::string> ListStringValuesH_doc;
-  ListStringValuesH_doc["SplittingHeuristicFile"] = "Default: unset.heu\n\
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListStringValues_doc["SplittingHeuristicFile"] = "Default: unset.heu\n\
 The splitting heuristic file.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["AdditionalSymmetryHeuristicFile"] =
+    ListStringValues_doc["AdditionalSymmetryHeuristicFile"] =
       "Default: unset.heu\n\
 The additional symmetry heuristic file\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["DualDescriptionThompsonFile"] = "Default: unset.ts\n\
+    ListStringValues_doc["DualDescriptionThompsonFile"] = "Default: unset.ts\n\
 The Thompson samspling heuristic file for choosing the dual description program.\n\
 If set to unset.ts then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["MethodInitialFacetSetFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["MethodInitialFacetSetFile"] = "Default: unset.heu\n\
 The heuristic for computing the initial set of facets.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["BankSaveHeuristicFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["BankSaveHeuristicFile"] = "Default: unset.heu\n\
 The heuristic file whether to save computed data to the bank or not.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["CheckDatabaseBankFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["CheckDatabaseBankFile"] = "Default: unset.heu\n\
 The heuristic file file for checking if entries are present in the bank.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["ChosenDatabaseFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["ChosenDatabaseFile"] = "Default: unset.heu\n\
 The heuristic for choosing between canonic or repr.\n\
 If set to unset.heu then basic heuristics are applied which should be fine for small case";
-  ListStringValuesH_doc["OrbitSplitTechniqueFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["OrbitSplitTechniqueFile"] = "Default: unset.heu\n\
 The heuristic for choosing the orbit splitting technique.\n\
 If set to unset.heu then basic heuristics are applied which should be fine";
-  ListStringValuesH_doc["CommThreadHeuristicFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["CommThreadHeuristicFile"] = "Default: unset.heu\n\
 The heuristic for choosing when the communication thread is launched.\n\
 If set to unset.heu then disabled";
-  ListStringValuesH_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
+    ListStringValues_doc["ChoiceCanonicalizationFile"] = "Default: unset.heu\n\
 The heuristic for choosing the canonicalization method used.\n\
 If set to unset.heu then disabled";
-  SingleBlock BlockHEURIS;
-  BlockHEURIS.setListStringValues_doc(ListStringValuesH_doc);
-  ListBlock["HEURISTIC"] = BlockHEURIS;
+    SingleBlock BlockHEURIS;
+    BlockHEURIS.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["HEURISTIC"] = BlockHEURIS;
+  }
   // METHOD
-  std::map<std::string, std::string> ListBoolValues2_doc;
-  std::map<std::string, std::string> ListStringValues2_doc;
-  ListBoolValues2_doc["Saving"] = "Default: F\n\
+  {
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListBoolValues_doc["Saving"] = "Default: F\n\
 Whether to save the bank information to a disk for further reuse";
-  ListStringValues2_doc["Prefix"] = "Default: /irrelevant/\n\
+    ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
 The directory in which the bank is saved. Put something significant if Saving = T";
-  SingleBlock BlockMETHOD;
-  BlockMETHOD.setListBoolValues_doc(ListBoolValues2_doc);
-  BlockMETHOD.setListStringValues_doc(ListStringValues2_doc);
-  ListBlock["METHOD"] = BlockMETHOD;
+    SingleBlock BlockMETHOD;
+    BlockMETHOD.setListBoolValues_doc(ListBoolValues_doc);
+    BlockMETHOD.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["METHOD"] = BlockMETHOD;
+  }
   // BANK
-  std::map<std::string, std::string> ListBoolValues3_doc;
-  std::map<std::string, std::string> ListStringValues3_doc;
-  ListBoolValues3_doc["Saving"] = "Default: F\n\
+  {
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListBoolValues_doc["Saving"] = "Default: F\n\
 Whether to track the computation on file or not";
-  ListStringValues3_doc["Prefix"] = "Default: /irrelevant/\n\
+    ListStringValues_doc["Prefix"] = "Default: /irrelevant/\n\
 The prefix in which data is saved. Put something significant if Saving = T";
-  SingleBlock BlockBANK;
-  BlockBANK.setListBoolValues_doc(ListBoolValues3_doc);
-  BlockBANK.setListStringValues_doc(ListStringValues3_doc);
-  ListBlock["BANK"] = BlockBANK;
+    SingleBlock BlockBANK;
+    BlockBANK.setListBoolValues_doc(ListBoolValues_doc);
+    BlockBANK.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["BANK"] = BlockBANK;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }
@@ -2835,17 +2843,19 @@ The prefix in which data is saved. Put something significant if Saving = T";
 FullNamelist NAMELIST_GetStandard_BankingSystem() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListBoolValues1["Saving"] = false;
-  ListStringValues1["Prefix"] = "/irrelevant/";
-  ListIntValues1["port"] = 1234;
-  SingleBlock BlockPROC;
-  BlockPROC.setListIntValues(ListIntValues1);
-  BlockPROC.setListBoolValues(ListBoolValues1);
-  BlockPROC.setListStringValues(ListStringValues1);
-  ListBlock["PROC"] = BlockPROC;
+  {
+    std::map<std::string, int> ListIntValues;
+    std::map<std::string, bool> ListBoolValues;
+    std::map<std::string, std::string> ListStringValues;
+    ListBoolValues["Saving"] = false;
+    ListStringValues["Prefix"] = "/irrelevant/";
+    ListIntValues["port"] = 1234;
+    SingleBlock BlockPROC;
+    BlockPROC.setListIntValues(ListIntValues);
+    BlockPROC.setListBoolValues(ListBoolValues);
+    BlockPROC.setListStringValues(ListStringValues);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

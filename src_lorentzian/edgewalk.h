@@ -44,31 +44,33 @@
 FullNamelist NAMELIST_GetStandard_EDGEWALK() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["FileLorMat"] = "the lorentzian matrix used";
-  ListStringValues1["OptionInitialVertex"] =
+  {
+    std::map<std::string, bool> ListBoolValues;
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["FileLorMat"] = "the lorentzian matrix used";
+    ListStringValues["OptionInitialVertex"] =
       "vinberg or FileVertex or FileVertexRoots and if FileVertex or "
       "FileVertexRoots selected use FileVertDomain as initial vertex";
-  ListStringValues1["FileInitialVertex"] =
+    ListStringValues["FileInitialVertex"] =
       "unset put the name of the file used for the initial vertex";
-  ListStringValues1["OptionNorms"] =
+    ListStringValues["OptionNorms"] =
       "possible option K3 (then just 2) or all where all norms are considered";
-  ListStringValues1["DualDescProg"] = "lrs_iterate";
-  ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
-  ListStringValues1["FileOut"] =
+    ListStringValues["DualDescProg"] = "lrs_iterate";
+    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
+    ListStringValues["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
   // Sometimes we can terminate by proving that it is not reflective
-  ListBoolValues1["EarlyTerminationIfNotReflective"] = false;
+    ListBoolValues["EarlyTerminationIfNotReflective"] = false;
   // Normally, we want to ApplyReduction, this is for debug only
-  ListBoolValues1["ApplyReduction"] = true;
-  ListBoolValues1["ComputeAllSimpleRoots"] = true;
-  ListStringValues1["FileHeuristicIdealStabEquiv"] = "unset.heu";
-  ListStringValues1["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
-  SingleBlock BlockPROC;
-  BlockPROC.setListStringValues(ListStringValues1);
-  BlockPROC.setListBoolValues(ListBoolValues1);
-  ListBlock["PROC"] = BlockPROC;
+    ListBoolValues["ApplyReduction"] = true;
+    ListBoolValues["ComputeAllSimpleRoots"] = true;
+    ListStringValues["FileHeuristicIdealStabEquiv"] = "unset.heu";
+    ListStringValues["FileHeuristicTryTerminateDualDescription"] = "unset.heu";
+    SingleBlock BlockPROC;
+    BlockPROC.setListStringValues(ListStringValues);
+    BlockPROC.setListBoolValues(ListBoolValues);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }
@@ -76,22 +78,24 @@ FullNamelist NAMELIST_GetStandard_EDGEWALK() {
 FullNamelist NAMELIST_GetStandard_EDGEWALK_Isomorphism() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["FileLorMat1"] = "the lorentzian matrix used";
-  ListStringValues1["FileLorMat2"] = "the lorentzian matrix used";
-  ListStringValues1["OptionNorms"] =
+  {
+    std::map<std::string, bool> ListBoolValues;
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["FileLorMat1"] = "the lorentzian matrix used";
+    ListStringValues["FileLorMat2"] = "the lorentzian matrix used";
+    ListStringValues["OptionNorms"] =
       "possible option K3 (then just 2) or all where all norms are considered";
-  ListStringValues1["DualDescProg"] = "lrs_iterate";
-  ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
-  ListStringValues1["FileOut"] =
+    ListStringValues["DualDescProg"] = "lrs_iterate";
+    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
+    ListStringValues["FileOut"] =
       "stdout, or stderr or the filename of the file you want to write to";
   // Normally, we want to ApplyReduction, this is for debug only
-  ListBoolValues1["ApplyReduction"] = true;
-  SingleBlock BlockPROC;
-  BlockPROC.setListStringValues(ListStringValues1);
-  BlockPROC.setListBoolValues(ListBoolValues1);
-  ListBlock["PROC"] = BlockPROC;
+    ListBoolValues["ApplyReduction"] = true;
+    SingleBlock BlockPROC;
+    BlockPROC.setListStringValues(ListStringValues);
+    BlockPROC.setListBoolValues(ListBoolValues);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

@@ -697,53 +697,57 @@ void OutputFaces_stream(const std::vector<vectface> &TheOutput,
 FullNamelist NAMELIST_GetStandard_FaceLattice() {
   std::map<std::string, SingleBlock> ListBlock;
   // PROC
-  std::map<std::string, std::string> ListStringValues1_doc;
-  std::map<std::string, std::string> ListIntValues1_doc;
-  std::map<std::string, std::string> ListBoolValues1_doc;
-  ListStringValues1_doc["EXTfile"] = "Default: unset.ext\n\
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["EXTfile"] = "Default: unset.ext\n\
 The input file for the vertices of the polytope.\n\
 This is needed for method_spann being ExtremeRays or ExtremeRaysNonSimplicial";
-  ListStringValues1_doc["FACfile"] = "The list of facets and this is mandatory";
-  ListStringValues1_doc["GRPfile"] =
+    ListStringValues_doc["FACfile"] = "The list of facets and this is mandatory";
+    ListStringValues_doc["GRPfile"] =
       "The symmetry group used for the computation. It is a permutation group "
       "acting on the facets";
-  ListStringValues1_doc["OutFile"] = "The output file for the computation";
-  ListStringValues1_doc["OutFormat"] = "Default: GAP\n\
+    ListStringValues_doc["OutFile"] = "The output file for the computation";
+    ListStringValues_doc["OutFormat"] = "Default: GAP\n\
 Only GAP so far is provided.";
-  ListStringValues1_doc["method_spann"] = "Default: LinearProgramming\n\
+    ListStringValues_doc["method_spann"] = "Default: LinearProgramming\n\
 The available options are LinearProgramming, ExtremeRays or ExtremeRaysNonSimplicial";
-  ListStringValues1_doc["method_final"] = "Default: all\n\
+    ListStringValues_doc["method_final"] = "Default: all\n\
 Available options are all and stop_nonsimplicial";
-  ListStringValues1_doc["Arithmetic"] = "Default: rational\n\
+    ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are safe_rational, Qsqrt2, Qsqrt5 and\n\
 RealAlgebraic=FileDesc where FileDesc is the description";
-  ListIntValues1_doc["LevSearch"] = "Default: -1\n\
+    ListIntValues_doc["LevSearch"] = "Default: -1\n\
 The level of the search. If set to -1 then the full lattice is computed";
-  ListBoolValues1_doc["ComputeTotalNumberFaces"] = "Default: false\n\
+    ListBoolValues_doc["ComputeTotalNumberFaces"] = "Default: false\n\
 Whether to compute the total number of faces by stabilizer computation";
-  SingleBlock BlockPROC;
-  BlockPROC.setListIntValues_doc(ListIntValues1_doc);
-  BlockPROC.setListBoolValues_doc(ListBoolValues1_doc);
-  BlockPROC.setListStringValues_doc(ListStringValues1_doc);
-  ListBlock["PROC"] = BlockPROC;
+    SingleBlock BlockPROC;
+    BlockPROC.setListIntValues_doc(ListIntValues_doc);
+    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
+    BlockPROC.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // GROUP
-  std::map<std::string, std::string> ListStringValues2_doc;
-  std::map<std::string, std::string> ListBoolValues2_doc;
-  ListBoolValues2_doc["ComputeAutGroup"] = "Default: false\n\
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListBoolValues_doc["ComputeAutGroup"] = "Default: false\n\
 Whether to compute the automorphism group of the graph determined by the faces";
-  ListStringValues2_doc["OutFormat"] = "Default: CPP\n\
+    ListStringValues_doc["OutFormat"] = "Default: CPP\n\
 Format for the output of the group. Two possibilities:\n\
 GAP (for the GAP programming system)\n\
 CPP (for polyhedral)";
-  ListStringValues2_doc["FileGroup"] = "Default: stdout\n\
+    ListStringValues_doc["FileGroup"] = "Default: stdout\n\
 File for output of the group.\n\
 stdout for std::cout,\n\
 stderr for std::cerr and\n\
 otherwise to the file";
-  SingleBlock BlockGROUP;
-  BlockGROUP.setListBoolValues_doc(ListBoolValues2_doc);
-  BlockGROUP.setListStringValues_doc(ListStringValues2_doc);
-  ListBlock["GROUP"] = BlockGROUP;
+    SingleBlock BlockGROUP;
+    BlockGROUP.setListBoolValues_doc(ListBoolValues_doc);
+    BlockGROUP.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["GROUP"] = BlockGROUP;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

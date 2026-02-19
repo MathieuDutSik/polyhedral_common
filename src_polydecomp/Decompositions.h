@@ -560,22 +560,22 @@ std::vector<std::vector<FaceDesc>> Compute_ListListDomain_strategy1(
 FullNamelist NAMELIST_TestUnionCones() {
   std::map<std::string, SingleBlock> ListBlock;
   // PROC
-  std::map<std::string, std::string> ListStringValues1_doc;
-  std::map<std::string, std::string> ListIntValues1_doc;
-  std::map<std::string, std::string> ListBoolValues1_doc;
-  ListStringValues1_doc["FileI"] = "Default: unset.ext\n\
+  {
+    std::map<std::string, std::string> ListStringValues_doc;
+    std::map<std::string, std::string> ListBoolValues_doc;
+    ListStringValues_doc["FileI"] = "Default: unset.ext\n\
 The input file for the list of polyhedral cone (EXT first, then FAC)";
-  ListStringValues1_doc["FileO"] = "Default: stderr\n\
+    ListStringValues_doc["FileO"] = "Default: stderr\n\
 The output file. stderr means writing to std::cerr, stdout means for std::cout and otherwise to FileO";
-  ListBoolValues1_doc["TestPairwiseIntersection"] = "Default: true\n\
+    ListBoolValues_doc["TestPairwiseIntersection"] = "Default: true\n\
 Whether to test for pairwise intersection of cones. That test can be expensive and so it can be disabled";
-  ListBoolValues1_doc["BreakConnectedComponents"] = "Default: false\n\
+    ListBoolValues_doc["BreakConnectedComponents"] = "Default: false\n\
 It can be that the cones are union of disjoint cones. In that first process this";
-  SingleBlock BlockPROC;
-  BlockPROC.setListIntValues_doc(ListIntValues1_doc);
-  BlockPROC.setListBoolValues_doc(ListBoolValues1_doc);
-  BlockPROC.setListStringValues_doc(ListStringValues1_doc);
-  ListBlock["PROC"] = BlockPROC;
+    SingleBlock BlockPROC;
+    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
+    BlockPROC.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

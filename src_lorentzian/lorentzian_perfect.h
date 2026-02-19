@@ -1484,15 +1484,17 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_PERFECT_LORENTZIAN() {
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["LorMatFile"] = "unset.gram";
-  ListStringValues1["Option"] = "unset";
-  ListStringValues1["FileDualDescription"] = "unset";
-  SingleBlock BlockDATA;
-  BlockDATA.setListStringValues(ListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["LorMatFile"] = "unset.gram";
+    ListStringValues["Option"] = "unset";
+    ListStringValues["FileDualDescription"] = "unset";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

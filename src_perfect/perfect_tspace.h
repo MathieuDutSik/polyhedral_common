@@ -391,13 +391,15 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_TSPACE() {
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["FileDualDescription"] = "unset";
-  SingleBlock BlockDATA;
-  BlockDATA.setListStringValues(ListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["FileDualDescription"] = "unset";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data

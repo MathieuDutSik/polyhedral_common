@@ -851,20 +851,18 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_DELAUNAY() {
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, double> ListDoubleValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["GRAMfile"] = "unset.gram";
-  ListStringValues1["SVRfile"] = "unset.svr";
-  ListStringValues1["choice_initial"] = "direct";
-  ListStringValues1["FileDualDescription"] = "unset";
-  SingleBlock BlockDATA;
-  BlockDATA.setListDoubleValues(ListDoubleValues1);
-  BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListListStringValues(ListListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["GRAMfile"] = "unset.gram";
+    ListStringValues["SVRfile"] = "unset.svr";
+    ListStringValues["choice_initial"] = "direct";
+    ListStringValues["FileDualDescription"] = "unset";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

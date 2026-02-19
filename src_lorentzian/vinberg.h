@@ -1530,25 +1530,24 @@ MyVector<Tint> FindOneInitialRay(const VinbergTot<T, Tint> &Vtot,
 FullNamelist NAMELIST_GetStandard_VINBERG() {
   std::map<std::string, SingleBlock> ListBlock;
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, bool> ListBoolValues1;
-  std::map<std::string, double> ListDoubleValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListStringValues1["FileLorMat"] = "the lorentzian matrix used";
-  ListStringValues1["FileV0"] = "the file for the initial vector v0. Put "
-                                "compute if you want to compute it";
-  ListStringValues1["OptionNorms"] =
+  {
+    std::map<std::string, bool> ListBoolValues;
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["FileLorMat"] = "the lorentzian matrix used";
+    ListStringValues["FileV0"] = "the file for the initial vector v0. Put "
+      "compute if you want to compute it";
+    ListStringValues["OptionNorms"] =
       "possible option K3 (then just 2) or all where all norms are considered";
-  ListStringValues1["DualDescProg"] = "lrs_iterate";
-  ListStringValues1["OutFormat"] = "GAP for gap use or TXT for text output";
-  ListStringValues1["FileOut"] =
+    ListStringValues["DualDescProg"] = "lrs_iterate";
+    ListStringValues["OutFormat"] = "GAP for gap use or TXT for text output";
+    ListStringValues["FileOut"] =
       "stdout, or stderr or the filename you want to write to";
-  ListBoolValues1["ReflectivityEarlyTermination"] = false;
-  SingleBlock BlockPROC;
-  BlockPROC.setListStringValues(ListStringValues1);
-  BlockPROC.setListBoolValues(ListBoolValues1);
-  ListBlock["PROC"] = BlockPROC;
+    ListBoolValues["ReflectivityEarlyTermination"] = false;
+    SingleBlock BlockPROC;
+    BlockPROC.setListStringValues(ListStringValues);
+    BlockPROC.setListBoolValues(ListBoolValues);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

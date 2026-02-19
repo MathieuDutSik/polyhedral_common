@@ -29,15 +29,17 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoEdgeDomains() {
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, int> ListIntValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListIntValues1["n"] = -1;
-  SingleBlock BlockDATA;
-  BlockDATA.setListIntValues(ListIntValues1);
-  BlockDATA.setListStringValues(ListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, int> ListIntValues;
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListIntValues["n"] = -1;
+    SingleBlock BlockDATA;
+    BlockDATA.setListIntValues(ListIntValues);
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

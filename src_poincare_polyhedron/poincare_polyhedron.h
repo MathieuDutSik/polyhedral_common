@@ -1650,39 +1650,41 @@ GetGroupPresentation(StepEnum<T> const &se, AdjacencyInfo<T> const &ai,
 FullNamelist NAMELIST_GetPoincareInput() {
   std::map<std::string, SingleBlock> ListBlock;
   // METHOD
-  std::map<std::string, std::string> ListBoolValues_doc;
-  std::map<std::string, std::string> ListIntValues_doc;
-  std::map<std::string, std::string> ListStringValues_doc;
-  ListBoolValues_doc["ComputeStabilizerPermutation"] = "Default: F\n\
+  {
+    std::map<std::string, std::string> ListBoolValues_doc;
+    std::map<std::string, std::string> ListIntValues_doc;
+    std::map<std::string, std::string> ListStringValues_doc;
+    ListBoolValues_doc["ComputeStabilizerPermutation"] = "Default: F\n\
 Compute the action of its stabilizer on the facets as permutation group";
-  ListBoolValues_doc["ComputeGroupPresentation"] = "Default: F\n\
+    ListBoolValues_doc["ComputeGroupPresentation"] = "Default: F\n\
 Compute the presentation of the greoup from facets and ridges";
-  ListIntValues_doc["n_iter_max"] = "Default: -1\n\
+    ListIntValues_doc["n_iter_max"] = "Default: -1\n\
 The maximum number of iteration. If negative then infinite";
-  ListIntValues_doc["n_expand"] = "Default: 0\n\
+    ListIntValues_doc["n_expand"] = "Default: 0\n\
 The number of iteration to expand the initial set of group elements";
-  ListStringValues_doc["method_adjacent"] =
+    ListStringValues_doc["method_adjacent"] =
       "method_adjacent: linear_programming\n\
 The available methods are linear_programming and dual_description";
-  ListStringValues_doc["eCommand_DD"] = "eCommand_DD: lrs\n\
+    ListStringValues_doc["eCommand_DD"] = "eCommand_DD: lrs\n\
 The serial program for computing the dual description. Possibilities: lrs, cdd";
-  ListStringValues_doc["PrefixSave"] = "Default: unset\n\
+    ListStringValues_doc["PrefixSave"] = "Default: unset\n\
 The step enum current state";
-  ListStringValues_doc["FileDataPoincare"] = "Default: unset\n\
+    ListStringValues_doc["FileDataPoincare"] = "Default: unset\n\
 The input file of the computation";
-  ListStringValues_doc["FileO"] = "The output file of the computation";
-  ListStringValues_doc["Arithmetic"] = "Default: rational\n\
+    ListStringValues_doc["FileO"] = "The output file of the computation";
+    ListStringValues_doc["Arithmetic"] = "Default: rational\n\
 Other possibilities are Qsqrt2, Qsqrt5 and RealAlgebraic=FileDesc where FileDesc is the description";
-  ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
-  ListStringValues_doc["MethodMissingI"] = "Default: Gen1\n\
+    ListStringValues_doc["Approach"] = "IncrementallyAdd or FacetAdjacencies";
+    ListStringValues_doc["MethodMissingI"] = "Default: Gen1\n\
 Method used for computing TypeI neighbors";
-  ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
+    ListStringValues_doc["MethodVertexMatching"] = "Default: none\n\
 Whether to generate new elements from vertex matchings";
-  SingleBlock BlockPROC;
-  BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
-  BlockPROC.setListIntValues_doc(ListIntValues_doc);
-  BlockPROC.setListStringValues_doc(ListStringValues_doc);
-  ListBlock["PROC"] = BlockPROC;
+    SingleBlock BlockPROC;
+    BlockPROC.setListBoolValues_doc(ListBoolValues_doc);
+    BlockPROC.setListIntValues_doc(ListIntValues_doc);
+    BlockPROC.setListStringValues_doc(ListStringValues_doc);
+    ListBlock["PROC"] = BlockPROC;
+  }
   // Merging all data
   return FullNamelist(ListBlock);
 }

@@ -1857,19 +1857,17 @@ FullNamelist NAMELIST_GetStandard_COMPUTE_LATTICE_IsoDelaunayDomains() {
   // SYSTEM
   ListBlock["SYSTEM"] = SINGLEBLOCK_Get_System();
   // DATA
-  std::map<std::string, double> ListDoubleValues1;
-  std::map<std::string, std::string> ListStringValues1;
-  std::map<std::string, std::vector<std::string>> ListListStringValues1;
-  ListStringValues1["arithmetic_T"] = "gmp_rational";
-  ListStringValues1["arithmetic_Tint"] = "gmp_integer";
-  ListStringValues1["FileDualDescription"] = "unset";
-  ListStringValues1["CommonGramMat"] = "unset";
-  ListStringValues1["CVPmethod"] = "SVexact";
-  SingleBlock BlockDATA;
-  BlockDATA.setListDoubleValues(ListDoubleValues1);
-  BlockDATA.setListStringValues(ListStringValues1);
-  BlockDATA.setListListStringValues(ListListStringValues1);
-  ListBlock["DATA"] = BlockDATA;
+  {
+    std::map<std::string, std::string> ListStringValues;
+    ListStringValues["arithmetic_T"] = "gmp_rational";
+    ListStringValues["arithmetic_Tint"] = "gmp_integer";
+    ListStringValues["FileDualDescription"] = "unset";
+    ListStringValues["CommonGramMat"] = "unset";
+    ListStringValues["CVPmethod"] = "SVexact";
+    SingleBlock BlockDATA;
+    BlockDATA.setListStringValues(ListStringValues);
+    ListBlock["DATA"] = BlockDATA;
+  }
   // TSPACE
   ListBlock["TSPACE"] = SINGLEBLOCK_Get_Tspace_Description();
   // Merging all data
