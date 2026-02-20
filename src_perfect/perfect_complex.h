@@ -1058,12 +1058,16 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   LinSpaceMatrix<T> const& LinSpa = fce.pctdi.LinSpa;
   std::optional<MyMatrix<T>> opt_init =
       is_bounded_face_iterative<T, Tint>(LinSpa, EXT, os);
-  if (!opt_init) {
-    return {};
-  }
-  auto pair = GetOnePerfectForm_Kernel<T, Tint>(LinSpa.ListMat, *opt_init, os);
+  MyMatrix<T> Mat_pd_ext = unfold_opt(opt_init, "Failed to get a pos def matrix with that minimum");
+  Tshortest<T, Tint> rec_shv_in = T_ShortestVectorHalf<T, Tint>(Mat_pd_ext, os);
+  Mat_pd_ext = Mat_pd_ext / rec_shv_in.min;
+  rec_shv_in.min = T(1);
+  std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm_Kernel<T, Tint>(LinSpa.ListMat, Mat_pd_ext, rec_shv_in, os);
   MyMatrix<T> const& eMatPerf = pair.first;
   Tshortest<T, Tint> const& rec_shv = pair.second;
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: rec_shv.min=" << rec_shv.min << "\n";
+#endif
   MyMatrix<T> SHV1_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
   size_t n_perfect = fce.pctdi.l_perfect.size();
@@ -1095,7 +1099,7 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
     triple<Tint> t{i_cone, f_ext, P_tint};
     return canonicalize_triple(fce.pctdi.l_perfect, t, os);
   }
-  std::cerr << "We should never reach that stage\n";
+  std::cerr << "We should never reach that stage in get_one_triple\n";
   throw TerminalException{1};
 }
 

@@ -152,8 +152,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   }
   for (int i = 0; i < n - 1; i++) {
     for (int j = i + 1; j < n; j++) {
-      MyMatrix<T> eMat(2 * n, 2 * n);
-      ZeroAssignation(eMat);
+      MyMatrix<T> eMat = ZeroMatrix<T>(2 * n, 2 * n);
       eMat(n + i, j) = 1;
       eMat(j, n + i) = 1;
       eMat(n + j, i) = -1;

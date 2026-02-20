@@ -520,10 +520,10 @@ PerfectBoundednessProperty initial_bounded_property(LinSpaceMatrix<T> const &Lin
  */
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
-GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& InitialMat, std::ostream &os) {
+GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> const& InitialMat, Tshortest<T,Tint> const& rec_shv_in, std::ostream &os) {
   int nbMat = ListMat.size();
   MyMatrix<T> ThePerfMat = InitialMat;
-  Tshortest<T, Tint> rec_shv = T_ShortestVectorHalf<T, Tint>(ThePerfMat, os);
+  Tshortest<T, Tint> rec_shv = rec_shv_in;
 #ifdef SANITY_CHECK_INITIAL_PERFECT
   T TheMin = rec_shv.min;
 #endif
@@ -577,7 +577,8 @@ GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> co
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
-  return GetOnePerfectForm_Kernel<T,Tint>(LinSpa.ListMat, LinSpa.SuperMat, os);
+  Tshortest<T, Tint> rec_shv_in = T_ShortestVectorHalf<T, Tint>(LinSpa.SuperMat, os);
+  return GetOnePerfectForm_Kernel<T,Tint>(LinSpa.ListMat, LinSpa.SuperMat, rec_shv_in, os);
 }
 
 
