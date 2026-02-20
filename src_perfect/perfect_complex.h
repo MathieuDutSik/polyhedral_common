@@ -1247,10 +1247,20 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
   std::vector<PerfectFace<Tint>> list_upper_mapping;
   int mOrb = fce.levels[index-1].l_faces.size();
   for (int jOrb=0; jOrb<mOrb; jOrb++) {
+    MyMatrix<Tint> const& EXT_upp = fce.levels[index-1].l_faces[jOrb].EXT;
     for (auto& t: fce.boundaries[index-1].ll_bound[jOrb].l_bound) {
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+      {
+        ContainerMatrix<Tint> cont(EXT_upp);
+        MyMatrix<Tint> EXTsub = fce.levels[index].l_faces[t.iOrb].EXT * t.M;
+        if (!cont.contains_mat(EXTsub)) {
+          std::cerr << "PERFCOMP: EXTsub does not appear to be in the right place\n";
+          throw TerminalException{1};
+        }
+      }
+#endif
       if (t.iOrb == iOrb) {
         MyMatrix<Tint> InvMat = Inverse(t.M);
-        MyMatrix<Tint> const& EXT_upp = fce.levels[index-1].l_faces[jOrb].EXT;
         std::unordered_set<MyMatrix<Tint>> set_ext;
         size_t s_len = list_upper_ext.size();
         auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
@@ -1260,7 +1270,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
             set_ext.insert(EXTcan);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
             {
-              ContainerMatrix<Tint> cont(EXTcan);
+              ContainerMatrix<Tint> cont(EXTins);
               MyMatrix<Tint> const& EXT_curr = fce.levels[index].l_faces[iOrb].EXT;
               if (!cont.contains_mat(EXT_curr)) {
                 std::cerr << "PERFCOMP: The matrix should be contained in the other\n";
@@ -1280,7 +1290,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           for (size_t i=start; i<len; i++) {
             for (auto & eGen: l_gens) {
               MyMatrix<Tint> P = list_upper_mapping[i + s_len].M * eGen;
-              f_insert(InvMat);
+              f_insert(P);
             }
           }
           start = len;
