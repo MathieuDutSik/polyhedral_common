@@ -1170,7 +1170,21 @@ std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>>
 compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
                        MyMatrix<Tint> const& EXT, std::ostream& os) {
   triple<Tint> t = get_one_triple<T,Tint,Tgroup>(fce, EXT, os);
-  return get_spanning_list_triple(fce.pctdi.l_perfect, t, os);
+  std::pair<std::vector<triple<Tint>>, std::vector<MyMatrix<Tint>>> pair = get_spanning_list_triple(fce.pctdi.l_perfect, t, os);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  {
+    MyMatrix<Tint> EXT_s = tot_set(EXT);
+    for (auto & eGen: pair.second) {
+      MyMatrix<Tint> EXT_img = EXT * eGen;
+      MyMatrix<Tint> EXT_img_s = tot_set(EXT_img);
+      if (EXT_img_s != EXT_s) {
+        std::cerr << "PERFCOMP: The matrix is not an equivalence\n";
+        throw TerminalException{1};
+      }
+    }
+  }
+#endif
+  return pair;
 }
 
 // Collect generators from equivalences and stabilizers, then reduce them.
