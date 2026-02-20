@@ -3322,7 +3322,12 @@ vectface DualDescriptionStandard(const MyMatrix<T> &EXT, const Tgroup &GRP,
   WriteMatrix(os, EXT2);
 #endif
   //
+  int nbRow = EXT.rows();
   int dimEXT = EXTred.cols();
+  if (dimEXT == 1) { // Extremal case, no facets here.
+    vectface vf(nbRow);
+    return vf;
+  }
   PolyHeuristicSerial<TintGroup> AllArr =
       AllStandardHeuristicSerial<T, TintGroup>(dimEXT, os);
   RecordDualDescOperation<T, Tgroup> rddo(AllArr, os);
