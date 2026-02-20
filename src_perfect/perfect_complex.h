@@ -1243,6 +1243,14 @@ template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
                                                                                            int index, int iOrb, [[maybe_unused]] std::ostream& os) {
   std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[index].l_faces[iOrb].l_gens;
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  bool test = test_finiteness_group<T,Tint>(l_gens, os);
+  if (!test) {
+    std::cerr << "PERFCOMP: The group is not finite.\n";
+    std::cerr << "PERFCOMP: Therefore, the set of containing faces is infinite and cannot be enumerated\n";
+    throw TerminalException{1};
+  }
+#endif
   std::vector<MyMatrix<Tint>> list_upper_ext;
   std::unordered_set<MyMatrix<Tint>> set_ext;
   std::vector<PerfectFace<Tint>> list_upper_mapping;
