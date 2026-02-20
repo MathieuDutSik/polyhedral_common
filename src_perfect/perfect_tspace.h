@@ -417,6 +417,7 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["arithmetic_T"] = "gmp_rational";
     ListStringValues["arithmetic_Tint"] = "gmp_integer";
     ListStringValues["FileDualDescription"] = "unset";
+    ListStringValues["CacheFile"] = "none";
     ListBoolValues["ComputeComplex"] = false;
     ListBoolValues["OnlyWellRounded"] = true;
     ListBoolValues["ComputeBoundary"] = false;
@@ -432,7 +433,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     std::map<std::string, std::string> ListStringValues;
     std::map<std::string, int> ListIntValues;
     std::map<std::string, bool> ListBoolValues;
-    ListStringValues["CacheFile"] = "none";
     ListStringValues["FileStabilizerQueries"] = "null";
     ListStringValues["FileEquivalenceQueries"] = "null";
     ListStringValues["FileContractingHomotopies"] = "null";

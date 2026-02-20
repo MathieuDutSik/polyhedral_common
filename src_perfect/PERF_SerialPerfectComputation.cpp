@@ -93,7 +93,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   bool compute_contracting_homotopy = BlockDATA.get_bool("ComputeContractingHomotopy");
   PerfectComplexOptions pco{only_well_rounded, compute_boundary, compute_contracting_homotopy};
   //
-  std::string CacheFile = BlockQUERIES.get_string("CacheFile");
+  std::string CacheFile = BlockDATA.get_string("CacheFile");
   FullComplexEnumeration<T, Tint, Tgroup> fce = get_full_complex_enumeration<T,Tint,Tgroup>(LinSpa, pco, CacheFile, os);
 
   std::string FileGroupGenerators = BlockQUERIES.get_string("FileGroupGenerators");
