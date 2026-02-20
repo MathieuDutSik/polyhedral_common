@@ -1242,15 +1242,14 @@ find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
 template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
                                                                                            int index, int iOrb, [[maybe_unused]] std::ostream& os) {
-  size_t iOrb_s = iOrb;
   std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[index].l_faces[iOrb].l_gens;
   std::vector<MyMatrix<Tint>> list_upper_ext;
   std::vector<PerfectFace<Tint>> list_upper_mapping;
   int mOrb = fce.levels[index-1].l_faces.size();
   for (int jOrb=0; jOrb<mOrb; jOrb++) {
-    for (auto& t: fce.levels[index-1].l_faces[jOrb].l_triple) {
-      if (t.iCone == iOrb_s) {
-        MyMatrix<Tint> InvMat = Inverse(t.eMat);
+    for (auto& t: fce.boundaries[index-1].ll_bound[jOrb].l_bound) {
+      if (t.iOrb == iOrb) {
+        MyMatrix<Tint> InvMat = Inverse(t.M);
         MyMatrix<Tint> const& EXT_upp = fce.levels[index-1].l_faces[jOrb].EXT;
         std::unordered_set<MyMatrix<Tint>> set_ext;
         size_t s_len = list_upper_ext.size();
@@ -1262,7 +1261,8 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
             {
               ContainerMatrix<Tint> cont(EXTcan);
-              if (!cont.contains_mat(fce.levels[index].l_faces[iOrb].EXT)) {
+              MyMatrix<Tint> const& EXT_curr = fce.levels[index].l_faces[iOrb].EXT;
+              if (!cont.contains_mat(EXT_curr)) {
                 std::cerr << "PERFCOMP: The matrix should be contained in the other\n";
                 throw TerminalException{1};
               }
@@ -1274,7 +1274,6 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           }
         };
         f_insert(InvMat);
-        /*
         size_t start = 0;
         while (true) {
           size_t len = list_upper_ext.size() - s_len;
@@ -1288,7 +1287,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           if (start + s_len == list_upper_ext.size()) {
             break;
           }
-          }*/
+        }
       }
     }
   }
