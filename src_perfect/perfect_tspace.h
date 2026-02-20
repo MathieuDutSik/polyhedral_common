@@ -441,9 +441,9 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileListUpperBoundary"] = "null";
     ListStringValues["FileListLowerBoundary"] = "null";
     ListStringValues["FileHeckeOperators"] = "null";
-    ListIntValues["DimUpperBoundary"] = 0;
-    ListIntValues["DimLowerBoundary"] = 0;
-    ListIntValues["DimCell"] = 0;
+    ListIntValues["IndexUpperBoundary"] = 0;
+    ListIntValues["IndexLowerBoundary"] = 0;
+    ListIntValues["IndexCell"] = 0;
     SingleBlock BlockQUERIES;
     BlockQUERIES.setListStringValues(ListStringValues);
     BlockQUERIES.setListIntValues(ListIntValues);

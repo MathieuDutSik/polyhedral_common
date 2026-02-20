@@ -138,7 +138,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         os_out << ",\n";
       }
       MyMatrix<Tint> const& EXT1 = l_ext[2*i_case];
-      MyMatrix<Tint> const& EXT2 = l_ext[2*i_case];
+      MyMatrix<Tint> const& EXT2 = l_ext[2*i_case+1];
       std::optional<MyMatrix<Tint>> opt =
         find_equivalence_ext(fce, EXT1, EXT2, os);
       if (opt) {
@@ -151,15 +151,15 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   }
   std::string FileCells = BlockQUERIES.get_string("FileCells");
   if (FileCells != "null") {
-    int idim = BlockQUERIES.get_int("DimCell");
-    int n_orb = fce.levels[idim].l_faces.size();
+    int index = BlockQUERIES.get_int("IndexCell");
+    int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileCells);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
       if (iOrb > 0) {
         os_out << ",\n";
       }
-      MyMatrix<Tint> const& EXT = fce.levels[idim].l_faces[iOrb].EXT;
+      MyMatrix<Tint> const& EXT = fce.levels[index].l_faces[iOrb].EXT;
       os_out << "rec(EXT:=";
       WriteMatrixGAP(os_out, EXT);
       os_out << ")";
@@ -168,8 +168,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   }
   std::string FileListUpperBoundary = BlockQUERIES.get_string("FileListUpperBoundary");
   if (FileListUpperBoundary != "null") {
-    int idim = BlockQUERIES.get_int("DimUpperBoundary");
-    int n_orb = fce.levels[idim].l_faces.size();
+    int index = BlockQUERIES.get_int("IndexUpperBoundary");
+    int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileListUpperBoundary);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
@@ -178,7 +178,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       }
       os_out << "rec(iOrb:=" << iOrb;
       std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
-        get_all_upper_faces(fce, idim, iOrb, os);
+        get_all_upper_faces(fce, index, iOrb, os);
       os_out << ", ListEXT:=";
       WriteListMatrixGAP(os_out, pair.first);
       os_out << ", ListMap:=[";
@@ -199,17 +199,17 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   }
   std::string FileListLowerBoundary = BlockQUERIES.get_string("FileListLowerBoundary");
   if (FileListLowerBoundary != "null") {
-    int idim = BlockQUERIES.get_int("DimLowerBoundary");
-    int n_orb = fce.levels[idim].l_faces.size();
+    int index = BlockQUERIES.get_int("IndexLowerBoundary");
+    int n_orb = fce.levels[index].l_faces.size();
     std::ofstream os_out(FileListLowerBoundary);
     os_out << "return [";
     for (int iOrb=0; iOrb<n_orb; iOrb++) {
       if (iOrb > 0) {
         os_out << ",\n";
       }
-      std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[idim].ll_bound[iOrb].l_bound;
+      std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
       os_out << "rec(iOrb:=" << iOrb;
-      MyMatrix<Tint> EXT = fce.levels[idim].l_faces[iOrb].EXT;
+      MyMatrix<Tint> EXT = fce.levels[index].l_faces[iOrb].EXT;
       os_out << ", EXT:=";
       WriteMatrixGAP(os_out, EXT);
       //
@@ -221,7 +221,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         }
         int jOrb = l_bound[i_bnd].iOrb;
         MyMatrix<Tint> const& M = l_bound[i_bnd].M;
-        MyMatrix<Tint> EXT = fce.levels[idim-1].l_faces[jOrb].EXT * M;
+        MyMatrix<Tint> EXT = fce.levels[index-1].l_faces[jOrb].EXT * M;
         os_out << "rec(sign:=" << l_bound[i_bnd].sign;
         os_out << ", jOrb:=" << jOrb;
         os_out << ", M:=";
@@ -238,8 +238,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   std::string FileContractingHomotopies = BlockQUERIES.get_string("FileContractingHomotopies");
   if (FileContractingHomotopies != "null") {
     std::ifstream is(FileContractingHomotopies);
-    int idim, n_chains;
-    is >> idim;
+    int index, n_chains;
+    is >> index;
     is >> n_chains;
     //
     std::string OutFile = FileContractingHomotopies + ".output";
@@ -250,7 +250,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         os_out << ",\n";
       }
       std::vector<PerfectFaceEntry<T, Tint>> chain1 = ReadListPerfectFaceEntry<T,Tint>(is);
-      std::vector<PerfectFaceEntry<T, Tint>> chain2 = contracting_homotopy(chain1, idim, fce, os);
+      std::vector<PerfectFaceEntry<T, Tint>> chain2 = contracting_homotopy(chain1, index, fce, os);
       WriteListPerfectFaceEntryGAP(os_out, chain2);
     }
     os_out << "];\n";

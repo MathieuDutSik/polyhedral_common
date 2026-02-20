@@ -465,10 +465,12 @@ FacesPerfectComplex<T,Tint,Tgroup> get_first_step_perfect_complex_enumeration(Pe
     return is_face_orientable(EXT, ListMat, or_info, l_gens);
   };
   size_t n_domain = pctdi.l_perfect.size();
+#ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: get_first_step n_domain=" << n_domain << "\n";
+#endif
   for (size_t i_domain=0; i_domain<n_domain; i_domain++) {
 #ifdef DEBUG_PERFECT_COMPLEX
-    os << "PERFCOMP: get_first_step i_domain=" << i_domain << "\n";
+    os << "PERFCOMP: get_first_step i_domain=" << i_domain << " / " << n_domain << "\n";
 #endif
     std::vector<triple<Tint>> l_triple = get_l_triple(i_domain);
     std::vector<MyMatrix<Tint>> l_gens = get_l_gens(i_domain);
@@ -1077,6 +1079,31 @@ FullComplexEnumeration<T, Tint, Tgroup> read_fce_from_file(
   return fce;
 }
 
+template<typename T>
+MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
+  std::set<MyVector<T>> set;
+  int dim = EXTin.cols();
+  auto f_insert=[&](int i_row) -> void {
+    for (int i=0; i<dim; i++) {
+      if (EXTin(i_row, i) > 0) {
+        MyVector<T> V = GetMatrixRow(EXTin, i_row);
+        set.insert(V);
+        return;
+      }
+    }
+  };
+  for (int i_row=0; i_row<EXTin.rows(); i_row++) {
+    f_insert(i_row);
+  }
+  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
+  int pos = 0;
+  for (auto & V: set) {
+    AssignMatrixRow(M, pos, V);
+    pos += 1;
+  }
+  return M;
+}
+
 template<typename T, typename Tint, typename Tgroup>
 triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
                             MyMatrix<Tint> const& EXT, std::ostream& os) {
@@ -1182,32 +1209,20 @@ find_equivalence_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   triple<Tint> t1 = get_one_triple<T,Tint,Tgroup>(fce, EXT1, os);
   triple<Tint> t2 = get_one_triple<T,Tint,Tgroup>(fce, EXT2, os);
   std::vector<triple<Tint>> l_triple1 = get_spanning_list_triple(fce.pctdi.l_perfect, t1, os).first;
-  return test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
-}
-
-template<typename T>
-MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
-  std::set<MyVector<T>> set;
-  int dim = EXTin.cols();
-  auto f_insert=[&](int i_row) -> void {
-    for (int i=0; i<dim; i++) {
-      if (EXTin(i_row, i) > 0) {
-        MyVector<T> V = GetMatrixRow(EXTin, i_row);
-        set.insert(V);
-        return;
-      }
+  std::optional<MyMatrix<Tint>> opt = test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  if (opt) {
+    MyMatrix<Tint> const& P = *opt;
+    MyMatrix<Tint> EXT1_img = EXT1 * P;
+    MyMatrix<Tint> EXT1_img_s = tot_set(EXT1_img);
+    MyMatrix<Tint> EXT2_s = tot_set(EXT2);
+    if (EXT1_img_s != EXT2_s) {
+      std::cerr << "PERFCOMP: EXT1 is not mapped to EXT2 by P\n";
+      throw TerminalException{1};
     }
-  };
-  for (int i_row=0; i_row<EXTin.rows(); i_row++) {
-    f_insert(i_row);
   }
-  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
-  int pos = 0;
-  for (auto & V: set) {
-    AssignMatrixRow(M, pos, V);
-    pos += 1;
-  }
-  return M;
+#endif
+  return opt;
 }
 
 template<typename T, typename Tint, typename Tgroup>
