@@ -1193,7 +1193,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
             set_ext.insert(EXTcan);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
             {
-              MatrixContainer<Tint> cont(EXTcan);
+              ContainerMatrix<Tint> cont(EXTcan);
               if (!cont.contains_mat(fce.levels[idim].l_faces[iOrb].EXT)) {
                 std::cerr << "PERFCOMP: The matrix should be contains in the other\n";
                 throw TerminalException{1};
@@ -1398,10 +1398,10 @@ template<typename T, typename Tint, typename Tgroup>
 bool is_equal_chain(std::vector<PerfectFaceEntry<T, Tint>> const& chain1, std::vector<PerfectFaceEntry<T, Tint>> const& chain2, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   ChainBuilder<T,Tint,Tgroup> chain_builder(idim, fce, os);
   for (auto & fe: chain1) {
-    chain_builder(fe.value, fe.iOrb, fe.M);
+    chain_builder.f_insert(fe.value, fe.iOrb, fe.M);
   }
   for (auto & fe: chain2) {
-    chain_builder(-fe.value, fe.iOrb, fe.M);
+    chain_builder.f_insert(-fe.value, fe.iOrb, fe.M);
   }
   return chain_builder.is_zero_chain();
 }
