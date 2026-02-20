@@ -561,6 +561,31 @@ public:
   }
 };
 
+
+/*
+  Tjhis is an entry of the chain complex.
+  * iOrb is the entry into the list of orbits of the specified dimension
+  * M is the mapping matrix.
+  * value is the coefficient.
+
+  So, what we will have for a chain is some expression of the form
+  sum_i value_i F_{iOrb(i)} M_i
+  For the corresponding vector std::vector<PerfectFaceEntry>
+  iOrb_i is the i-th entry into the list of orbit
+  value_i is the i-th coefficient
+  M_i is the i-th mapping matrix in the vector.
+  ----
+  We can have
+  5 F_1 M_1 + 34 F_1 M_2
+  one-edge + another edge
+
+  ----
+  If an entry has a coefficient 0, then we drop it from the vector.
+  Also: If we have have two cells occurring but with different
+  coefficient, we write their sum.
+  5 F_1 M + 4 F_1 M = 9 F_1 M.
+
+ */
 template<typename T, typename Tint>
 struct PerfectFaceEntry {
   int iOrb;
@@ -1075,10 +1100,20 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
     PerfectFormInfoForComplex<T, Tint, Tgroup> const& cone =
         fce.pctdi.l_perfect[i_cone];
     MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(cone.EXT);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: i_cone=" << i_cone << " |SHV1_T|=" << SHV1_T.rows() << " |SHV2_T|=" << SHV2_T.rows() << "\n";
+    os << "PERFCOMP: cone.gram=\n";
+    WriteMatrix(os, cone.gram);
+    os << "PERFCOMP: eMatPerf=\n";
+    WriteMatrix(os, eMatPerf);
+#endif
     std::optional<MyMatrix<T>> opt =
         LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
             LinSpa, eMatPerf, cone.gram, SHV1_T, SHV2_T, os);
     if (!opt) {
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: Not equivalent\n";
+#endif
       continue;
     }
     MyMatrix<T> const& P = *opt;
@@ -1177,17 +1212,17 @@ MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
 
 template<typename T, typename Tint, typename Tgroup>
 std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_upper_faces(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
-                                                                                           int idim, int iOrb, [[maybe_unused]] std::ostream& os) {
+                                                                                           int index, int iOrb, [[maybe_unused]] std::ostream& os) {
   size_t iOrb_s = iOrb;
-  std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[idim].l_faces[iOrb].l_gens;
+  std::vector<MyMatrix<Tint>> const& l_gens = fce.levels[index].l_faces[iOrb].l_gens;
   std::vector<MyMatrix<Tint>> list_upper_ext;
   std::vector<PerfectFace<Tint>> list_upper_mapping;
-  int mOrb = fce.levels[idim-1].l_faces.size();
+  int mOrb = fce.levels[index-1].l_faces.size();
   for (int jOrb=0; jOrb<mOrb; jOrb++) {
-    for (auto& t: fce.levels[idim-1].l_faces[jOrb].l_triple) {
+    for (auto& t: fce.levels[index-1].l_faces[jOrb].l_triple) {
       if (t.iCone == iOrb_s) {
         MyMatrix<Tint> InvMat = Inverse(t.eMat);
-        MyMatrix<Tint> const& EXT_upp = fce.levels[idim-1].l_faces[jOrb].EXT;
+        MyMatrix<Tint> const& EXT_upp = fce.levels[index-1].l_faces[jOrb].EXT;
         std::unordered_set<MyMatrix<Tint>> set_ext;
         size_t s_len = list_upper_ext.size();
         auto f_insert=[&](MyMatrix<Tint> const& P) -> void {
@@ -1198,7 +1233,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
             {
               ContainerMatrix<Tint> cont(EXTcan);
-              if (!cont.contains_mat(fce.levels[idim].l_faces[iOrb].EXT)) {
+              if (!cont.contains_mat(fce.levels[index].l_faces[iOrb].EXT)) {
                 std::cerr << "PERFCOMP: The matrix should be contains in the other\n";
                 throw TerminalException{1};
               }
@@ -1350,15 +1385,15 @@ template<typename T, typename Tint, typename Tgroup>
 struct ChainBuilder {
 private:
   std::unordered_map<MyMatrix<Tint>, size_t> map_ext_set;
-  int idim;
+  int index;
   FullComplexEnumeration<T,Tint,Tgroup> const& fce;
   std::ostream& os;
 public:
   std::vector<PerfectFaceEntry<T, Tint>> chain;
-  ChainBuilder(int _idim, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : idim(_idim), fce(_fce), os(_os) {
+  ChainBuilder(int _index, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : index(_index), fce(_fce), os(_os) {
   }
   void f_insert(T const& value, int const& iOrb, MyMatrix<Tint> const& M) {
-    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[idim].l_faces[iOrb];
+    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
     MyMatrix<Tint> const& EXT1 = face.EXT;
     OrientationInfo const& or_info = face.or_info;
     std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
@@ -1366,11 +1401,22 @@ public:
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
     size_t& idx = map_ext_set[EXT3];
     if (idx == 0) {
+      // This cell was not already present. So, we insert it.
+      // Here M will be the reference mapping for future comparison.
       idx = map_ext_set.size();
       PerfectFaceEntry<T, Tint> fe{iOrb, value, M};
       chain.emplace_back(std::move(fe));
     } else {
-      MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);;
+      // The cell is already present. But what is the sign?
+      //
+      // We already have alpha F M_1
+      // We are adding beta F M_2
+      // Since we are in this section we know that F M_1 = F M_2 as a set
+      // But we could have F M_1 = sign F M_2 with sign = -1 for the orientation.
+      // F M_1 = sign F M_2    <=> F = sign F t     with    t = M_2 M_1^(-1)
+      // And now we need to determine if t reverses the orientation.
+      // So we call get_face_orientation which gets us the signs.
+      MyMatrix<Tint> t = chain[idx - 1].M * Inverse(M);
       int sign = get_face_orientation(EXT1, ListMat, or_info, t);
       chain[idx - 1].value += sign * value;
     }
@@ -1399,8 +1445,8 @@ public:
 
 
 template<typename T, typename Tint, typename Tgroup>
-bool is_equal_chain(std::vector<PerfectFaceEntry<T, Tint>> const& chain1, std::vector<PerfectFaceEntry<T, Tint>> const& chain2, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
-  ChainBuilder<T,Tint,Tgroup> chain_builder(idim, fce, os);
+bool is_equal_chain(std::vector<PerfectFaceEntry<T, Tint>> const& chain1, std::vector<PerfectFaceEntry<T, Tint>> const& chain2, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  ChainBuilder<T,Tint,Tgroup> chain_builder(index, fce, os);
   for (auto & fe: chain1) {
     chain_builder.f_insert(fe.value, fe.iOrb, fe.M);
   }
@@ -1415,9 +1461,9 @@ bool is_equal_chain(std::vector<PerfectFaceEntry<T, Tint>> const& chain1, std::v
 
 // Compute the boundary d(c) for c a part of the full complex.
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> compute_boundary(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
-  ChainBuilder<T,Tint,Tgroup> chain_builder(idim+1, fce, os);
-  FullBoundary<Tint> const& bnd = fce.boundaries[idim];
+std::vector<PerfectFaceEntry<T, Tint>> compute_boundary(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  ChainBuilder<T,Tint,Tgroup> chain_builder(index+1, fce, os);
+  FullBoundary<Tint> const& bnd = fce.boundaries[index];
   for (auto & fe: chain) {
     int iOrb = fe.iOrb;
     for (auto & ebnd: bnd.ll_bound[iOrb].l_bound) {
@@ -1434,8 +1480,8 @@ std::vector<PerfectFaceEntry<T, Tint>> compute_boundary(std::vector<PerfectFaceE
 
 // We should have d_{i+1}(d_i(c)) = 0 consistently.
 template<typename T, typename Tint, typename Tgroup>
-bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
-  int nOrb = fce.levels[idim].l_faces.size();
+bool is_product_zero(int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  int nOrb = fce.levels[index].l_faces.size();
   int n = fce.pctdi.LinSpa.n;
 #ifdef DEBUG_PERFECT_COMPLEX
   {
@@ -1458,11 +1504,11 @@ bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> cons
   for (int iOrb=0; iOrb<nOrb; iOrb++) {
     PerfectFaceEntry<T, Tint> fe{iOrb, T(1), IdentityMat<Tint>(n)};
     std::vector<PerfectFaceEntry<T, Tint>> chain1{fe};
-    std::vector<PerfectFaceEntry<T, Tint>> chain2 = compute_boundary(chain1, idim, fce, os);
+    std::vector<PerfectFaceEntry<T, Tint>> chain2 = compute_boundary(chain1, index, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: We have chain2\n";
 #endif
-    std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain2, idim+1, fce, os);
+    std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain2, index+1, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: We have chain3\n";
 #endif
@@ -1475,7 +1521,7 @@ bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> cons
         os << " " << fe.value;
       }
       os << "\n";
-      os << "PERFCOMP: not zero at i=" << idim << " iOrb=" << iOrb << "\n";
+      os << "PERFCOMP: not zero at i=" << index << " iOrb=" << iOrb << "\n";
 #endif
       return false;
     }
@@ -1486,8 +1532,8 @@ bool is_product_zero(int const& idim, FullComplexEnumeration<T,Tint,Tgroup> cons
 template<typename T, typename Tint, typename Tgroup>
 bool are_product_zeros(FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   int dim_spa = fce.pctdi.LinSpa.ListMat.size();
-  for (int idim=0; idim<dim_spa-2; idim++) {
-    bool test = is_product_zero(idim, fce, os);
+  for (int index=0; index<dim_spa-2; index++) {
+    bool test = is_product_zero(index, fce, os);
     if (!test) {
       return false;
     }
@@ -1499,15 +1545,15 @@ template<typename T, typename Tint, typename Tgroup>
 struct ComplexBuilder {
 private:
   std::unordered_map<MyMatrix<Tint>, size_t> map_ext_set;
-  int idim;
+  int index;
   FullComplexEnumeration<T,Tint,Tgroup> const& fce;
   std::ostream& os;
 public:
   std::vector<PerfectFace<Tint>> faces;
-  ComplexBuilder(int _idim, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : idim(_idim), fce(_fce), os(_os) {
+  ComplexBuilder(int _index, FullComplexEnumeration<T,Tint,Tgroup> const& _fce, std::ostream& _os) : index(_index), fce(_fce), os(_os) {
   }
   void f_insert(int const& iOrb, MyMatrix<Tint> const& M) {
-    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[idim].l_faces[iOrb];
+    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
     MyMatrix<Tint> const& EXT1 = face.EXT;
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
@@ -1525,7 +1571,7 @@ public:
     return faces;
   }
   std::pair<size_t, int> get_position(int const& iOrb, MyMatrix<Tint> const& M) const {
-    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[idim].l_faces[iOrb];
+    FacePerfectComplex<T,Tint,Tgroup> const& face = fce.levels[index].l_faces[iOrb];
     MyMatrix<Tint> const& EXT1 = face.EXT;
     OrientationInfo const& or_info = face.or_info;
     std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
@@ -1549,23 +1595,23 @@ struct TopPerfectCone {
 
 
 /*
-  chain is of index idim and we are looking for a chain of index idim-1 which induces it.
-  By idim we mean of course, the index in the list, not the dimension
+  chain is of index "index" and we are looking for a chain of index "index-1" which induces it.
+  By index we mean of course, the index in the list, not the dimension
   ----
   Here we try to solve the equation in a specific set of top dimensional cells.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
-  ComplexBuilder<T,Tint,Tgroup> cb1(idim-1, fce, os);
-  ComplexBuilder<T,Tint,Tgroup> cb2(idim, fce, os);
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
+  ComplexBuilder<T,Tint,Tgroup> cb1(index-1, fce, os);
+  ComplexBuilder<T,Tint,Tgroup> cb2(index, fce, os);
   for (auto &top: l_top) {
     int i_perfect = top.i_perfect;
-    for (auto & face1: fce.l_topdims[i_perfect].ll_faces[idim-1]) {
+    for (auto & face1: fce.l_topdims[i_perfect].ll_faces[index-1]) {
       int iOrb = face1.iOrb;
       MyMatrix<Tint> M = face1.M * top.M;
       cb1.f_insert(iOrb, M);
     }
-    for (auto & face2: fce.l_topdims[i_perfect].ll_faces[idim]) {
+    for (auto & face2: fce.l_topdims[i_perfect].ll_faces[index]) {
       int iOrb = face2.iOrb;
       MyMatrix<Tint> M = face2.M * top.M;
       cb2.f_insert(iOrb, M);
@@ -1589,7 +1635,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
   for (int i1=0; i1<dim1; i1++) {
     PerfectFace<Tint> const& face1 = faces1[i1];
     int iRow = i1;
-    for (auto & ebnd: fce.boundaries[idim-1].ll_bound[face1.iOrb].l_bound) {
+    for (auto & ebnd: fce.boundaries[index-1].ll_bound[face1.iOrb].l_bound) {
       MyMatrix<Tint> M = ebnd.M * face1.M;
       std::pair<size_t, int> p = cb2.get_position(ebnd.iOrb, M);
       T value = p.second * ebnd.sign;
@@ -1624,10 +1670,10 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   std::unordered_set<MyMatrix<Tint>> set_ext;
   std::vector<MyMatrix<Tint>> list_ext;
-  std::vector<TopPerfectCone<Tint>> l_top;
+  std::vector<TopPerfectCone<Tint>> l_top; // The covering top dimensional cells.
   auto f_insert=[&](TopPerfectCone<Tint> const& tpc) -> void {
     MyMatrix<Tint> EXT = fce.pctdi.l_perfect[tpc.i_perfect].EXT * tpc.M;
     MyMatrix<Tint> EXTcan = tot_set(EXT);
@@ -1637,7 +1683,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<P
     }
   };
   for (auto & pfe: chain) {
-    std::vector<triple<Tint>> const& l_triple = fce.levels[idim].l_faces[pfe.iOrb].l_triple;
+    std::vector<triple<Tint>> const& l_triple = fce.levels[index].l_faces[pfe.iOrb].l_triple;
     int i_perfect = l_triple[0].iCone;
     MyMatrix<Tint> M = l_triple[0].eMat * pfe.M;
     TopPerfectCone<Tint> tpc{i_perfect, M};
@@ -1645,7 +1691,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<P
   }
   size_t start = 0;
   while(true) {
-    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(chain, idim, fce, l_top, os);
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(chain, index, fce, l_top, os);
     if (opt) {
       return *opt;
     }
@@ -1664,25 +1710,28 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<P
 }
 
 
-
+/*
+  We want to solve d(x) = chain.
+  Necessary condition is d(chain) = 0
+ */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& idim, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-  std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain, idim+1, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain, index, fce, os);
   if (chain3.size() > 0) {
     std::cerr << "PERFCOMP: The chain should have a zero boundary\n";
     throw TerminalException{1};
   }
 #endif
-  std::vector<PerfectFaceEntry<T, Tint>> one_sol = contracting_homotopy_kernel(chain, idim, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(chain, index, fce, os);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-  std::vector<PerfectFaceEntry<T, Tint>> one_sol_img = compute_boundary(one_sol, idim - 1, fce, os);
-  if (is_equal_chain(one_sol_img, chain, idim, fce, os)) {
+  std::vector<PerfectFaceEntry<T, Tint>> x_img = compute_boundary(x, index - 1, fce, os);
+  if (is_equal_chain(x_img, chain, index, fce, os)) {
     std::cerr << "PERFCOMP: The proposed preimage is not a solution\n";
     throw TerminalException{1};
   }
 #endif
-  return one_sol;
+  return x;
 }
 
 // clang-format off

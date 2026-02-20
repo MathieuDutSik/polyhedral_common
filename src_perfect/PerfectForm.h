@@ -535,12 +535,14 @@ GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> co
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
 #ifdef DEBUG_INITIAL_PERFECT
-    os << "PERF: GetOnePerfectForm, iter=" << iter << " min=" << rec_shv.min
+    os << "PERF: GetOnePerfectForm_Kernel, iter=" << iter << " min=" << rec_shv.min
        << " |SHV|=" << rec_shv.SHV.rows() << "\n";
 #endif
     if (TheRank == nbMat) {
 #ifdef DEBUG_INITIAL_PERFECT
-      os << "PERF: GetOnePerfectForm, returning at iter=" << iter << "\n";
+      os << "PERF: GetOnePerfectForm_Kernel, returning at iter=" << iter << "\n";
+      os << "PERF: GetOnePerfectForm_Kernel, ThePerfMat=\n";
+      WriteMatrix(os, ThePerfMat);
 #endif
       return {std::move(ThePerfMat), std::move(rec_shv)};
     }
@@ -556,7 +558,7 @@ GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> co
     };
     MyMatrix<T> DirMat = iife_get_dir();
 #ifdef DEBUG_INITIAL_PERFECT
-    os << "PERF: GetOnePerfectForm, iter=" << iter << " DirMat=\n";
+    os << "PERF: GetOnePerfectForm_Kernel, iter=" << iter << " DirMat=\n";
     WriteMatrix(os, DirMat);
 #endif
     auto pair = Flipping_Perfect<T, Tint>(ThePerfMat, DirMat, os);
@@ -574,11 +576,21 @@ GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> co
   }
 }
 
+/*
+  Normalize the matrix so that the minimum should be 1.
+ */
 template <typename T, typename Tint>
 std::pair<MyMatrix<T>, Tshortest<T, Tint>>
 GetOnePerfectForm(LinSpaceMatrix<T> const &LinSpa, std::ostream &os) {
   Tshortest<T, Tint> rec_shv_in = T_ShortestVectorHalf<T, Tint>(LinSpa.SuperMat, os);
-  return GetOnePerfectForm_Kernel<T,Tint>(LinSpa.ListMat, LinSpa.SuperMat, rec_shv_in, os);
+  std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm_Kernel<T,Tint>(LinSpa.ListMat, LinSpa.SuperMat, rec_shv_in, os);
+  pair.first = pair.first / pair.second.min;
+  pair.second.min = T(1);
+#ifdef DEBUG_INITIAL_PERFECT
+  os << "PERF: pair_first=\n";
+  WriteMatrix(os, pair.first);
+#endif
+  return pair;
 }
 
 
