@@ -1263,7 +1263,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
             {
               ContainerMatrix<Tint> cont(EXTcan);
               if (!cont.contains_mat(fce.levels[index].l_faces[iOrb].EXT)) {
-                std::cerr << "PERFCOMP: The matrix should be contains in the other\n";
+                std::cerr << "PERFCOMP: The matrix should be contained in the other\n";
                 throw TerminalException{1};
               }
             }
@@ -1274,6 +1274,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           }
         };
         f_insert(InvMat);
+        /*
         size_t start = 0;
         while (true) {
           size_t len = list_upper_ext.size() - s_len;
@@ -1287,7 +1288,7 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           if (start + s_len == list_upper_ext.size()) {
             break;
           }
-        }
+          }*/
       }
     }
   }
