@@ -1130,7 +1130,8 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
 #endif
   MyMatrix<T> SHV1_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
   MyMatrix<T> SHVfd1_T;
-  if (!IsFullDimZbasis(rec_shv.SHV, os)) {
+  bool test1 = IsFullDimZbasis(rec_shv.SHV, os);
+  if (!test1) {
     MyMatrix<Tint> SHVfd1_Tint = ExtractInvariantVectorFamilyFullRank<T,Tint>(eMatPerf, os);
     SHVfd1_T = UniversalMatrixConversion<T, Tint>(SHVfd1_Tint);
   }
@@ -1147,12 +1148,19 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
 #endif
       continue;
     }
+    bool test2 = IsFullDimZbasis(SHV2_T, os);
+    if (test1 != test2) {
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: We have test1=" << test1 << " test2=" << test2 << "\n";
+#endif
+      continue;
+    }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: i_cone=" << i_cone << " |SHV1_T|=" << SHV1_T.rows() << " |SHV2_T|=" << SHV2_T.rows() << "\n";
-    bool test1 = IsPositiveDefinite(cone.gram, os);
-    bool test2 = IsPositiveDefinite(eMatPerf, os);
-    os << "PERFCOMP: IsPosDef(cone.gram)=" << test1 << "\n";
-    os << "PERFCOMP:  IsPosDef(eMatPerf)=" << test2 << "\n";
+    bool test_pd1 = IsPositiveDefinite(cone.gram, os);
+    bool test_pd2 = IsPositiveDefinite(eMatPerf, os);
+    os << "PERFCOMP: IsPosDef(cone.gram)=" << test_pd1 << "\n";
+    os << "PERFCOMP:  IsPosDef(eMatPerf)=" << test_pd2 << "\n";
     os << "PERFCOMP: rank(SHV1_T)=" << RankMat(SHV1_T) << " rank(SHV2_T)=" << RankMat(SHV2_T) << "\n";
     os << "PERFCOMP: cone.gram=\n";
     WriteMatrix(os, cone.gram);

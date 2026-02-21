@@ -958,6 +958,16 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   using Tidx = typename Telt::Tidx;
   using LeftCosets = typename Tgroup::LeftCosets;
   //  using Tfield = T;
+#ifdef SANITY_CHECK_TSPACE_FUNCTIONS
+  int nbCol = SHV1_T.cols();
+  int rnk1 = RankMat(SHV1_T);
+  int rnk2 = RankMat(SHV2_T);
+  if (nbCol != rnk1 || nbCol != rnk2) {
+    std::cerr << "TSPACE: Equiv, rnk1=" << rnk1 << " rnk2=" << rnk2 << " nbCol=" << nbCol << "\n";
+    std::cerr << "TSPACE: SHV1_T and SHV2_T should be of full rank\n";
+    throw TerminalException{1};
+  }
+#endif
   if (SHV1_T.rows() != SHV2_T.rows()) {
 #ifdef DEBUG_TSPACE_FUNCTIONS
     os << "TSPACE: Equiv, Exiting here at |SHV1| <> |SHV2|\n";
