@@ -616,6 +616,14 @@ template <typename T, typename Tfield, typename Tidx>
 MyMatrix<Tfield> GetBasisFromOrdering(const MyMatrix<T> &EXT,
                                       const std::vector<Tidx> &Vsubset) {
   size_t nbCol = EXT.cols();
+#ifdef SANITY_CHECK_PERM_FCT
+  size_t rnk = RankMat(EXT);
+  if (rnk != nbCol) {
+    std::cerr << "PERM: GetBasisFromOrdering error, We have rnk=" << rnk << " nbCol=" << nbCol << " nbRow=" << EXT.rows() << "\n";
+    std::cerr << "PERM: The matrix should be of full rank\n";
+    throw TerminalException{1};
+  }
+#endif
   auto f = [&](MyMatrix<Tfield> &M, size_t eRank, size_t iRow) -> void {
     size_t pos = Vsubset[iRow];
     for (size_t iCol = 0; iCol < nbCol; iCol++) {

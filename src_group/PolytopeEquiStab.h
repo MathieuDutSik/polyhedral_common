@@ -310,6 +310,9 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
                             const std::vector<Tidx> &CanonicReord1,
                             const std::vector<Tidx> &CanonicReord2,
                             std::ostream &os) {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, begin\n";
+#endif
   if (EXT1.rows() != EXT2.rows()) {
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
     os << "PES: IsomorphismFromCanonicReord, false by "
@@ -322,12 +325,26 @@ IsomorphismFromCanonicReord(const MyMatrix<T> &EXT1, const MyMatrix<T> &EXT2,
   std::vector<Tidx> ListIdx(nbRow);
   for (size_t idx = 0; idx < nbRow; idx++)
     ListIdx[CanonicReord1[idx]] = CanonicReord2[idx];
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, We have ListIdx\n";
+#endif
   // Building the matrix equivalence
   MyMatrix<Tfield> Basis1 =
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT1, CanonicReord1);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, We have Basis1=\n";
+  WriteMatrix(os, Basis1);
+#endif
   MyMatrix<Tfield> Basis2 =
       GetBasisFromOrdering<T, Tfield, Tidx>(EXT2, CanonicReord2);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, We have Basis2=\n";
+  WriteMatrix(os, Basis2);
+#endif
   MyMatrix<Tfield> P = Inverse(Basis1) * Basis2;
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+  os << "PES: IsomorphismFromCanonicReord, We have P\n";
+#endif
   // Now testing the obtained mappings
   bool test = CheckEquivalence(EXT1, EXT2, ListIdx, P, os);
 #ifdef DEBUG_POLYTOPE_EQUI_STAB
@@ -1440,16 +1457,30 @@ std::optional<std::vector<Tidx>> TestEquivalence_ListMat_Vdiag_Tidx_value(
   SecondTime time;
 #endif
   size_t nbRow = EXT1.rows();
+  using Tret = std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>>;
   auto f_eval = [&](size_t threshold)
-      -> std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> {
+      -> Tret {
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "PES: TestEquivalence_ListMat_Vdiag_Tidx_value, f_eval, step 1\n";
+#endif
     std::vector<Tidx> CanonicReord1 =
         Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT1, ListMat1, Vdiag1,
                                                         threshold, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "PES: TestEquivalence_ListMat_Vdiag_Tidx_value, f_eval, step 2\n";
+#endif
     std::vector<Tidx> CanonicReord2 =
         Canonicalization_ListMat_Vdiag<T, Tfield, Tidx>(EXT2, ListMat2, Vdiag2,
                                                         threshold, os);
-    return IsomorphismFromCanonicReord<T, Tfield, Tidx>(
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "PES: TestEquivalence_ListMat_Vdiag_Tidx_value, f_eval, step 3\n";
+#endif
+    Tret ret_val = IsomorphismFromCanonicReord<T, Tfield, Tidx>(
         EXT1, EXT2, CanonicReord1, CanonicReord2, os);
+#ifdef DEBUG_POLYTOPE_EQUI_STAB
+    os << "PES: TestEquivalence_ListMat_Vdiag_Tidx_value, f_eval, step 4\n";
+#endif
+    return ret_val;
   };
   std::optional<std::pair<std::vector<Tidx>, MyMatrix<Tfield>>> IsoInfo =
       f_eval(THRESHOLD_USE_SUBSET_SCHEME_CANONIC);

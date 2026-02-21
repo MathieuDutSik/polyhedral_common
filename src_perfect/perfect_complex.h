@@ -7,6 +7,7 @@
 #include "triples.h"
 #include "GampMatlab.h"
 #include "MatrixGroupSimplification.h"
+#include "SignatureSymmetric.h"
 #include "boost_serialization.h"
 #include <boost/dynamic_bitset/serialization.hpp>
 #include <fstream>
@@ -1116,27 +1117,70 @@ triple<Tint> get_one_triple(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   rec_shv_in.min = T(1);
   std::pair<MyMatrix<T>, Tshortest<T, Tint>> pair = GetOnePerfectForm_Kernel<T, Tint>(LinSpa.ListMat, Mat_pd_ext, rec_shv_in, os);
   MyMatrix<T> const& eMatPerf = pair.first;
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+  bool test = IsPositiveDefinite(eMatPerf, os);
+  if (!test) {
+    std::cerr << "PERFCOMP: eMatPerf should be positive definite\n";
+    throw TerminalException{1};
+  }
+#endif
   Tshortest<T, Tint> const& rec_shv = pair.second;
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: rec_shv.min=" << rec_shv.min << "\n";
 #endif
   MyMatrix<T> SHV1_T = conversion_and_duplication<T, Tint>(rec_shv.SHV);
+  MyMatrix<T> SHVfd1_T;
+  if (!IsFullDimZbasis(rec_shv.SHV, os)) {
+    MyMatrix<Tint> SHVfd1_Tint = ExtractInvariantVectorFamilyFullRank<T,Tint>(eMatPerf, os);
+    SHVfd1_T = UniversalMatrixConversion<T, Tint>(SHVfd1_Tint);
+  }
+  //  size_t hash1 = SimplePerfect_Invariant<T, Tint>(seed, data.LinSpa, x.Gram, x.rec_shv, os);
   MyMatrix<T> EXT_T = UniversalMatrixConversion<T, Tint>(EXT);
   size_t n_perfect = fce.pctdi.l_perfect.size();
   for (size_t i_cone = 0; i_cone < n_perfect; i_cone++) {
     PerfectFormInfoForComplex<T, Tint, Tgroup> const& cone =
         fce.pctdi.l_perfect[i_cone];
     MyMatrix<T> SHV2_T = UniversalMatrixConversion<T, Tint>(cone.EXT);
+    if (SHV1_T.rows() != SHV2_T.rows()) {
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERFCOMP: The vector configuration SHV1_T and SHV2_T have different size\n";
+#endif
+      continue;
+    }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: i_cone=" << i_cone << " |SHV1_T|=" << SHV1_T.rows() << " |SHV2_T|=" << SHV2_T.rows() << "\n";
+    bool test1 = IsPositiveDefinite(cone.gram, os);
+    bool test2 = IsPositiveDefinite(eMatPerf, os);
+    os << "PERFCOMP: IsPosDef(cone.gram)=" << test1 << "\n";
+    os << "PERFCOMP:  IsPosDef(eMatPerf)=" << test2 << "\n";
+    os << "PERFCOMP: rank(SHV1_T)=" << RankMat(SHV1_T) << " rank(SHV2_T)=" << RankMat(SHV2_T) << "\n";
     os << "PERFCOMP: cone.gram=\n";
     WriteMatrix(os, cone.gram);
     os << "PERFCOMP: eMatPerf=\n";
     WriteMatrix(os, eMatPerf);
+    os << "PERCOMP: Before LINSPA_TestEquivalenceGramMatrix_SHV\n";
 #endif
-    std::optional<MyMatrix<T>> opt =
-        LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+    auto f_get_equiv=[&]() -> std::optional<MyMatrix<T>> {
+      if (SHVfd1_T.rows() == 0) {
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: f_get_equiv case 1\n";
+#endif
+        return LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
             LinSpa, eMatPerf, cone.gram, SHV1_T, SHV2_T, os);
+      } else {
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: f_get_equiv case 2\n";
+#endif
+        MyMatrix<Tint> SHVfd2_Tint = ExtractInvariantVectorFamilyFullRank<T,Tint>(cone.gram, os);
+        MyMatrix<T> SHVfd2_T = UniversalMatrixConversion<T, Tint>(SHVfd2_Tint);
+        return LINSPA_TestEquivalenceGramMatrix_SHV<T, Tgroup>(
+            LinSpa, eMatPerf, cone.gram, SHVfd1_T, SHVfd2_T, os);
+      }
+    };
+    std::optional<MyMatrix<T>> opt = f_get_equiv();
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERCOMP: After LINSPA_TestEquivalenceGramMatrix_SHV\n";
+#endif
     if (!opt) {
 #ifdef DEBUG_PERFECT_COMPLEX
       os << "PERFCOMP: Not equivalent\n";
@@ -1286,7 +1330,6 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
     size_t start = 0;
     while (true) {
       size_t len = list_upper_ext.size() - s_len;
-      os << "iOrb=" << iOrb << " s_len=" << s_len << " start=" << start << " len=" << len << "\n";
       for (size_t i=start; i<len; i++) {
         for (auto & eGen: l_gens) {
           MyMatrix<Tint> P = list_upper_mapping[i + s_len].M * eGen;
