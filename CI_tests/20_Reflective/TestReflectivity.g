@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_functions.g");
 Print("Beginning TestReflectivity\n");
 
 GeneratePoincareFundamentalInput:=false;
@@ -63,56 +64,9 @@ WritePoincareCase:=function(PrefixPoincare, ThePt, ListGen)
     WriteStringFile(FilePoincare_Nml, strOut);
 end;
 
-
-
-GetReflectivityInformation:=function(eRec)
-    local n, TmpDir, FileIn, FileNml, FileOut, strOut, eProg, TheCommand, U;
-    n:=Length(eRec.LorMat);
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "Test.in");
-    FileNml:=Filename(TmpDir, "Test.nml");
-    FileOut:=Filename(TmpDir, "Test.out");
-    Print("FileIn=", FileIn, "\n");
-    Print("FileNml=", FileNml, "\n");
-    Print("FileOut=", FileOut, "\n");
-    RemoveFileIfExist(FileIn);
-    RemoveFileIfExist(FileNml);
-    RemoveFileIfExist(FileOut);
-    #
-    WriteMatrixFile(FileIn, eRec.LorMat);
-    #
-    strOut:="&PROC\n";
-    strOut:=Concatenation(strOut, " FileLorMat = \"", FileIn, "\"\n");
-    strOut:=Concatenation(strOut, " OptionInitialVertex = \"isotropic_vinberg\"\n");
-    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
-    strOut:=Concatenation(strOut, " FileOut = \"", FileOut, "\"\n");
-    strOut:=Concatenation(strOut, " OptionNorms = \"all\"\n");
-    strOut:=Concatenation(strOut, " EarlyTerminationIfNotReflective = T\n");
-    strOut:=Concatenation(strOut, " ComputeAllSimpleRoots = T\n");
-    strOut:=Concatenation(strOut, "/\n");
-    #
-    WriteStringFile(FileNml, strOut);
-    #
-    eProg:="../../src_lorentzian/LORENTZ_FundDomain_AllcockEdgewalk";
-    TheCommand:=Concatenation(eProg, " ", FileNml);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileNml);
-    RemoveFile(FileOut);
-    return U;
-end;
-
-
-
-
 TestReflectivity:=function(eRec)
     local U, ListVertNorm, isCocompact, n, PrefixPoincare, ListGen, ListGenTot, eRoot, ThePt, hasIsotropic, is_correct;
-    U:=GetReflectivityInformation(eRec);
+    U:=GetReflectivityInformation(eRec.LorMat);
     ListVertNorm:=List(U.ListVertices, x->x.norm);
     isCocompact:=Maximum(ListVertNorm) < 0;
     n:=Length(eRec.LorMat);

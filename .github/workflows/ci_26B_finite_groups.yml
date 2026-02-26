@@ -101,7 +101,7 @@ jobs:
 
       - name: Running the Matrix group finiteness test
         run: |
-          cd src_ctype && make -f Makefile_grp_finiteness && cd ..
+          cd src_latt && make -f Makefile_grp_finiteness && cd ..
           pwd
           echo "After compilation of GRP_TestFiniteness"
 
