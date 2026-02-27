@@ -12,8 +12,8 @@ void compute_orbit_partition(std::string const &list_matrix_file,
                              std::string const &OutFormat,
                              std::ostream &os_out) {
   std::vector<MyMatrix<T>> l_gens = ReadListMatrixFile<T>(list_matrix_file);
-  int dim = list_m[0].rows();
-  T mod_val = parse_scalar<T>(mod_val_string);
+  int dim = l_gens[0].rows();
+  T mod_val = ParseScalar<T>(mod_val_string);
   ResultModEnumeration rme = get_partition(dim, l_gens, mod_val);
   if (OutFormat == "GAP") {
     os_out << "return [";
@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "    where\n";
       std::cerr << "arith: mpz_class\n";
       std::cerr << "list_matrix_file: The input matrix file\n";
-      std::cerr << "mod_val: The residue
+      std::cerr << "mod_val: The modulo considered\n";
       std::cerr << "OutFormat: GAP or simple (optional, default: simple)\n";
       std::cerr << "OutFile: Output file or stderr/stdout (optional, "
                    "default: stderr)\n";

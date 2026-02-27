@@ -21,7 +21,8 @@
 #PROGRAM		= LATT_FindOneVertex
 #PROGRAM		= LATT_SerialComputeDelaunay
 #PROGRAM		= TSPACE_IntegralSaturation
-PROGRAM		= TSPACE_FileFormatConversion
+#PROGRAM		= TSPACE_FileFormatConversion
+PROGRAM		= LATT_ResolveModAction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

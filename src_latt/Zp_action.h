@@ -5,21 +5,22 @@
 // clang-format off
 #include "Boost_bitset.h"
 #include "COMB_Stor.h"
+#include "MAT_Matrix.h"
 // clang-format on
 
 template<typename T>
 size_t vector_to_size_t(int dim, MyVector<T> const& v, size_t const& mod_val_s) {
   size_t pos = 0;
   size_t eProd = 1;
-  for (int i = 0; i < n; i++) {
-    pos += eProd * V(i);
+  for (int i = 0; i < dim; i++) {
+    pos += eProd * v(i);
     eProd *= mod_val_s;
   }
   return pos;
 }
 
 template<typename T>
-void size_t_to_vector(int dim, size_t const& x, size_t const& mod_val_s, MyVector<T> const& v_out) {
+void size_t_to_vector(int dim, size_t const& x, size_t const& mod_val_s, MyVector<T> & v_out) {
   size_t v_work = x;
   for (int u=0; u<dim; u++) {
     size_t res = v_work % mod_val_s;
@@ -28,25 +29,14 @@ void size_t_to_vector(int dim, size_t const& x, size_t const& mod_val_s, MyVecto
   }
 }
 
-
-template<typename T>
-size_t OnPoints(size_t const& x, ContainerMatrix<T> const& gen) {
-  int dim = gen.rows();
-  MyVector<T> v = size_t_to_vector(dim, x, gen.mod_val);
-  MyVector<T> v_img = gen.elt.transpose() * v;
-  return vector_to_size_t(dim, v_img, mod_val);
-}
-
-
-
 struct ResultModEnumeration {
   std::vector<size_t> vect_orbits;
   std::vector<size_t> orbit_sizes;
-}
+};
 
 
 template<typename T>
-ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T> const& l_gens, T const& mod_val) {
+ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
   size_t mod_val_s = UniversalScalarConversion<int32_t,T>(mod_val);
   size_t nbPoint = 1;
   for (int u=0; u<dim; u++) {
@@ -63,8 +53,12 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T> con
   gen_orbit.reserve(nbPoint);
   MyVector<T> v1(dim), v2(dim);
   auto f_act=[&](size_t const& x, MyMatrix<T> const& gen) -> size_t {
-    size_t_to_vector(dim, x, mod_val_s, v_out);
+    size_t_to_vector(dim, x, mod_val_s, v1);
     v2 = gen.transpose() * v1;
+    for (int u=0; u<dim; u++) {
+      T val = ResInt(v2[u], mod_val);
+      v2[u] = val;
+    }
     return vector_to_size_t(dim, v2, mod_val_s);
   };
   size_t i_orbit = 0;
@@ -108,7 +102,7 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T> con
 }
 
 template<typename T, typename Twork>
-ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T> const& l_gens, T const& mod_val) {
+ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
   std::vector<MyMatrix<Twork>> l_gens_b;
   for (auto & gen: l_gens) {
     MyMatrix<Twork> M(dim, dim);
@@ -123,28 +117,32 @@ ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T> con
     l_gens_b.push_back(M);
   }
   Twork mod_val_b = UniversalScalarConversion<Twork,T>(mod_val);
-  return get_partition_section2(dim, l_gens_b, mod_val_b);
+  return get_partition_section1(dim, l_gens_b, mod_val_b);
 }
 
 
 
 template<typename T>
-ResultModEnumeration get_partition(int dim, std::vector<MyMatrix<T> const& l_gens, T const& mod_val) {
+ResultModEnumeration get_partition(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
   T max_coeff = mod_val * mod_val * dim;
-  int8_t max_val_i8 = std::numeric_limits<int8_t>::max;
-  int16_t max_val_i16 = std::numeric_limits<int16_t>::max;
-  int32_t max_val_i32 = std::numeric_limits<int32_t>::max;
-  int64_t max_val_i64 = std::numeric_limits<int64_t>::max;
-  if (max_coeff < mod_val_i8) {
+  int8_t max_val_i8 = std::numeric_limits<int8_t>::max();
+  int16_t max_val_i16 = std::numeric_limits<int16_t>::max();
+  int32_t max_val_i32 = std::numeric_limits<int32_t>::max();
+  int64_t max_val_i64 = std::numeric_limits<int64_t>::max();
+  T max_val_i8_T = UniversalScalarConversion<T,int8_t>(max_val_i8);
+  T max_val_i16_T = UniversalScalarConversion<T,int16_t>(max_val_i16);
+  T max_val_i32_T = UniversalScalarConversion<T,int32_t>(max_val_i32);
+  T max_val_i64_T = UniversalScalarConversion<T,int64_t>(max_val_i64);
+  if (max_coeff < max_val_i8_T) {
     return get_partition_section2<T,int8_t>(dim, l_gens, mod_val);
   }
-  if (max_coeff < mod_val_i16) {
+  if (max_coeff < max_val_i16_T) {
     return get_partition_section2<T,int16_t>(dim, l_gens, mod_val);
   }
-  if (max_coeff < mod_val_i32) {
+  if (max_coeff < max_val_i32_T) {
     return get_partition_section2<T,int32_t>(dim, l_gens, mod_val);
   }
-  if (max_coeff < mod_val_i64) {
+  if (max_coeff < max_val_i64_T) {
     return get_partition_section2<T,int64_t>(dim, l_gens, mod_val);
   }
   std::cerr << "Failed to find a matching entry. Very unlikely to happen. Probably a bug\n";
