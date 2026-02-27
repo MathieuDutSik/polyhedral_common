@@ -1,28 +1,9 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning Test enumeration of iso-Delaunay domains\n");
 
 method:="serial";
 #method:="mpi";
-
-
-get_saturated_space:=function(ListMat)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, ListMatRet;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Saturation.in");
-    FileO:=Filename(TmpDir, "Saturation.out");
-    FileE:=Filename(TmpDir, "Saturation.err");
-    WriteListMatrixFile(FileI, ListMat);
-
-    eProg:="../../src_latt/TSPACE_IntegralSaturation";
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO);
-    Exec(TheCommand);
-
-    ListMatRet:=ReadAsFunction(FileO)();
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileE);
-    return ListMatRet;
-end;
 
 get_pairwise_scalar_inv:=function(ListMat, SuperMat)
     local ListB, pairwise_scalar, eB, eLine;
@@ -83,10 +64,10 @@ get_nb_domains:=function(eFile)
     write_linear_space_input(FileLinSpa, RecLinSpa);
     #
     if method = "serial" then
-        eProg:="../../src_delaunay/LATT_SerialLattice_IsoDelaunayDomain";
+        eProg:=GetBinaryFilename("LATT_SerialLattice_IsoDelaunayDomain");
     fi;
     if method = "mpi" then
-        eProg:="../../src_delaunay/LATT_MPI_Lattice_IsoDelaunayDomain";
+        eProg:=GetBinaryFilename("LATT_MPI_Lattice_IsoDelaunayDomain");
     fi;
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);

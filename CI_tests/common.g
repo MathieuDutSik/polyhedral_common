@@ -1,3 +1,68 @@
+GetBinaryFilename:=function(FileName)
+    local TmpDir, TmpFile, eProg, path, TmpFileB, command;
+    # If accessible, use the path;
+    TmpDir:=DirectoryTemporary();
+    TmpFile:=Filename(TmpDir, "Test.in");
+    Exec("which ", FileName, " > ", TmpFile);
+    read_text_file:=function(TheFile)
+        local list_lines;
+        list_lines:=ReadTextFile(TheFile);
+        if Length(list_lines)>1 then
+            Print("list_lines=", list_lines, "\n");
+            Error("Two programs available, odd case in my opinion");
+        fi;
+        if Length(list_lines)=1 then
+            return list_lines[1];
+        fi;
+        return fail;
+    end;
+    eProg:=read_text_file(TmpFile);
+    if eProg<fail then
+        return eProg;
+    fi;
+    # Querying the environment variable
+    if IsBound(GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE) then
+        path:=GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE;
+        TmpFileB:=Filename(TmpDir, "TestB.in");
+        command:=Concatenation("(cd ", path, " && find . -name ", FileName, " 2> ", TmpFileB, ")");
+        Exec(command);
+        eProg:=read_text_file(TmpFileB);
+	FullProg:=Concatenation(path, eProg);
+        if eProg<>fail then
+            return eProg;
+        fi;
+    fi;
+    return fail;
+end;
+
+
+starts_with:=function(big_str, small_str)
+    local len_sma, len_big, red_str;
+    len_sma:=Length(small_str);
+    len_big:=Length(big_str);
+    if len_sma > len_big then
+        return fail;
+    fi;
+    red_str:=big_str{[1..len_sma]};
+    if red_str<>small_str then
+        return fail;
+    fi;
+    return big_str{[len_sma+1..len_big]};
+end;
+
+is_error:=function(input)
+    local test;
+    if IsString(input)=false then
+        return false;
+    fi;
+    test:=starts_with(input, "program failure");
+    if test then
+        Print("Something went wrong with error=", input, "\n");
+    fi;
+    return test;
+end;
+
+
 CI_Decision_Reset:=function()
     local FileName;
     FileName:="CI_CONCLUSION";

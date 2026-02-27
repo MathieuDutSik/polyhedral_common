@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestCanonicalization\n");
 
 ListMat:=[];
@@ -33,40 +34,10 @@ if WellRoundedDim10 then
 fi;
 
 
-
-
-get_canonical_form:=function(eMat)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "Can.in");
-    FileOut:=Filename(TmpDir, "Can.out");
-    FileErr:=Filename(TmpDir, "Can.err");
-    WriteMatrixFile(FileIn, eMat);
-    #
-    eProg:="../../src_latt/LATT_Canonicalize";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP_full ", FileOut);
-    if keep_err then
-        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
-    fi;
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("get_canonical_form, no return file\n");
-        return fail;
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
-    if keep_err then
-        RemoveFile(FileErr);
-    fi;
-    return U.eG;
-end;
-
-
 test_canonicalization_function:=function(eMat)
     local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B, LGen, i;
-    TheCan:=get_canonical_form(eMat);
-    if TheCan=fail then
+    TheCan:=get_latt_canonical_form(eMat);
+    if is_error(TheCan) then
         return fail;
     fi;
     n:=Length(eMat);
@@ -82,11 +53,11 @@ test_canonicalization_function:=function(eMat)
             eP := eP * Random(LGen);
         od;
         eMat_B:=eP * eMat * TransposedMat(eP);
-        TheCan_B:=get_canonical_form(eMat_B);
-        if TheCan_B=fail then
+        TheCan_B:=get_latt_canonical_form(eMat_B);
+        if is_error(TheCan_B) then
             return fail;
         fi;
-        if TheCan_B<>TheCan then
+        if TheCan_B.eG<>TheCan.eG then
             return fail;
         fi;
     od;
@@ -112,79 +83,22 @@ test_all_cans:=function()
 end;
 
 
-get_automorphism_group:=function(eMat)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "Aut.in");
-    FileOut:=Filename(TmpDir, "Aut.out");
-    FileErr:=Filename(TmpDir, "Aut.err");
-    WriteListMatrixFile(FileIn, [eMat]);
-    #
-    eProg:="../../src_latt/LATT_Automorphism";
-    TheCommand:=Concatenation(eProg, " ", FileIn, " GAP ", FileOut);
-    if keep_err then
-        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
-    fi;
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("get_automorphism_group, no return file\n");
-        return fail;
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
-    if keep_err then
-        RemoveFile(FileErr);
-    fi;
-    return U;
-end;
-
-
-get_fullrank_invariant_family:=function(eMat)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "Fullrank.in");
-    FileOut:=Filename(TmpDir, "Fullrank.out");
-    FileErr:=Filename(TmpDir, "Fullrank.err");
-    WriteMatrixFile(FileIn, eMat);
-    #
-    eProg:="../../src_latt/LATT_GenerateCharacteristicVectorSet";
-    TheCommand:=Concatenation(eProg, " mpq_class mpz_class fullrank ", FileIn, " GAP ", FileOut);
-    if keep_err then
-        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
-    fi;
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("get_fullrank_invariant_family, no return file\n");
-        return fail;
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
-    if keep_err then
-        RemoveFile(FileErr);
-    fi;
-    return Set(U);
-end;
-
-
-
-get_automorphism_perm_group:=function(eMat)
-    local LmatrGens, ListVect, ListPermGens, eGenMatr, ePerm, GRPperm;
-    LmatrGens:=get_automorphism_group(eMat);
+get_latt_automorphism_perm_group:=function(eMat)
+    local LmatrGens, ListVect, ListPermGens, eGenMatr, ePerm, GRPperm, SetVect;
+    LmatrGens:=get_latt_automorphism_group(eMat);
     if LmatrGens=fail then
-        Print("get_automorphism_perm_group, LmatrGens=fail\n");
+        Print("get_latt_automorphism_perm_group, LmatrGens=fail\n");
         return fail;
     fi;
-    ListVect:=get_fullrank_invariant_family(eMat);
-    if ListVect=fail then
-        Print("get_automorphism_perm_group, ListVect=fail\n");
+    ListVect:=get_fullrank_invariant_family(eMat, "fullrank");
+    if is_error(ListVect) then
         return fail;
     fi;
+    SetVect:=Set(ListVect);
     ListPermGens:=[];
     for eGenMatr in LmatrGens
     do
-        ePerm:=SortingPerm(ListVect * eGenMatr);
+        ePerm:=SortingPerm(SetVect * eGenMatr);
         Add(ListPermGens, ePerm);
     od;
     GRPperm:=Group(ListPermGens);
@@ -194,7 +108,7 @@ end;
 
 test_canonicalization_function:=function(eMat)
     local GRPperm, ord_grp, n, GRP, iter, len, eP, eMat_B, GRPperm_B, ord_grp_b, LGen, i;
-    GRPperm:=get_automorphism_perm_group(eMat);
+    GRPperm:=get_latt_automorphism_perm_group(eMat);
     if GRPperm=fail then
         Print("test_canonicalization_function, inconsistent GRPperm\n");
         return fail;
@@ -213,7 +127,7 @@ test_canonicalization_function:=function(eMat)
             eP := eP * Random(LGen);
         od;
         eMat_B:=eP * eMat * TransposedMat(eP);
-        GRPperm_B:=get_automorphism_perm_group(eMat_B);
+        GRPperm_B:=get_latt_automorphism_perm_group(eMat_B);
         if GRPperm_B=fail then
             Print("test_canonicalization_function, inconsistent GRPperm_B\n");
             return fail;
@@ -246,40 +160,6 @@ test_all_automs:=function()
 end;
 
 
-get_isomorphism_test:=function(eMat1, eMat2)
-    local TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileIn1:=Filename(TmpDir, "Isom1.in");
-    FileIn2:=Filename(TmpDir, "Isom2.in");
-    FileOut:=Filename(TmpDir, "Aut.out");
-    FileErr:=Filename(TmpDir, "Aut.err");
-    WriteListMatrixFile(FileIn1, [eMat1]);
-    WriteListMatrixFile(FileIn2, [eMat2]);
-    #
-    eProg:="../../src_latt/LATT_Isomorphism";
-    TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut);
-    if keep_err then
-        TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);
-    fi;
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("get_isomorphism_test, no return file\n");
-        return fail;
-    fi;
-    U:=ReadAsFunction(FileOut)();
-#    if U=false then
-#        Error("Stop here");
-#    fi;
-    RemoveFile(FileIn1);
-    RemoveFile(FileIn2);
-    RemoveFile(FileOut);
-    if keep_err then
-        RemoveFile(FileErr);
-    fi;
-    return U;
-end;
-
-
 test_isomorphism_function:=function(eMat)
     local TheCan, n, GRP, iter, len, eP, eMat_B, TheCan_B, LGen, i, test_iso;
     n:=Length(eMat);
@@ -295,7 +175,7 @@ test_isomorphism_function:=function(eMat)
             eP := eP * Random(LGen);
         od;
         eMat_B:=eP * eMat * TransposedMat(eP);
-        test_iso:=get_isomorphism_test(eMat, eMat_B);
+        test_iso:=get_latt_isomorphism_test(eMat, eMat_B);
         if test_iso=fail or test_iso=false then
             Print("test_isomorphism_function, incorrect result\n");
             return fail;

@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_points.g");
 
 ListEXT:=[];
 for n in [5..7]
@@ -7,44 +8,6 @@ do
     PartListEXT:=ReadAsFunction(FileName)();
     Append(ListEXT, PartListEXT);
 od;
-
-get_grp_automorphy:=function(EXT)
-    local FileI, FileO, arith, eProg, TheCommand, TheGRP_rat;
-    FileI:=Filename(DirectoryTemporary(), "Test.in");
-    FileO:=Filename(DirectoryTemporary(), "Test.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytope_Automorphism";
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        return fail;
-    fi;
-    TheGRP_rat:=ReadAsFunction(FileO)();
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    Print("|TheGRP_rat|=", Order(TheGRP_rat.GAPperm), "\n");
-    return TheGRP_rat;
-end;
-
-get_grp_integral_automorphy:=function(EXT)
-    local FileI, FileO, arith, eProg, TheCommand, TheGRP_int;
-    FileI:=Filename(DirectoryTemporary(), "Test.in");
-    FileO:=Filename(DirectoryTemporary(), "Test.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism";
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        return fail;
-    fi;
-    TheGRP_int:=ReadAsFunction(FileO)();
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    Print("|TheGRP_int|=", Order(TheGRP_int.GAPperm), "\n");
-    return TheGRP_int;
-end;
 
 # Compute the double cosets of G_rat = \cup_i G_int g_i G_int.
 
@@ -128,10 +91,11 @@ end;
 
 
 TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
-    local FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult;
-    FileI:=Filename(DirectoryTemporary(), "Test.in");
-    FileO:=Filename(DirectoryTemporary(), "Test.out");
-    FileGRP_V:=Filename(DirectoryTemporary(), "Test.grp_V");
+    local TmpDir, FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileGRP_V:=Filename(TmpDir, "Test.grp_V");
     WriteMatrixFile(FileI, EXT);
     Print("Begin TestCase_Automorphy_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     GRP_rat:=get_grp_automorphy(EXT);

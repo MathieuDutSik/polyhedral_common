@@ -1,5 +1,5 @@
 Read("../common.g");
-
+Read("../access_points.g");
 
 AppendDelaunaySimplices:=true;
 AppendReflectiveDim45:=true;
@@ -60,23 +60,11 @@ end;
 
 TestCase_Automorphy:=function(EXT)
     local TmpDir, FileI, FileO, arith, eProg, TheCommand, TheGRP;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../build/GRP_LinPolytopeIntegral_Automorphism";
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        RemoveFileIfExist(FileI);
-        Print("FileO does not exist\n");
+    TheGRP:=get_grp_integral_automorphy(EXT);
+    if is_error(TheGRP) then
         return false;
     fi;
-    TheGRP:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
-    if not GeneratorsPreservePolytope(TheGRP,EXT) then
+    if not GeneratorsPreservePolytope(TheGRP, EXT) then
         return false;
     fi;
     Print("|TheGRP|=", Order(TheGRP), "\n");
@@ -84,31 +72,15 @@ TestCase_Automorphy:=function(EXT)
 end;
 
 TestCase_Isomorphy:=function(EXT)
-    local n, n_vert, P, EXT_img, TmpDir, File1, File2, FileO, arith, eProg, TheCommand, TheGRP;
+    local n, n_vert, P, EXT_img, result;
     n:=Length(EXT[1]);
     n_vert:=Length(EXT);
     P:=RandomIntegralUnimodularMatrix(n);
     EXT_img:=Permuted(EXT * P, Random(SymmetricGroup(n_vert)));
-    TmpDir:=DirectoryTemporary();
-    File1:=Filename(TmpDir, "Test1.in");
-    File2:=Filename(TmpDir, "Test2.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    WriteMatrixFile(File1, EXT);
-    WriteMatrixFile(File2, EXT_img);
-    eProg:="../../build/GRP_LinPolytopeIntegral_Isomorphism";
-    TheCommand:=Concatenation(eProg, " mpz_class ", File1, " ", File2, " GAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        RemoveFileIfExist(File1);
-        RemoveFileIfExist(File2);
-        Print("FileO does not exist\n");
+    result:=test_polytope_integral_equivalence(EXT, EXT_img);
+    if is_error(TheGRP) then
         return false;
     fi;
-    result:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(File1);
-    RemoveFileIfExist(File2);
-    RemoveFileIfExist(FileO);
     if result=fail then
         return false;
     fi;

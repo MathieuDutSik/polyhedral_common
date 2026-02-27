@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_points.g");
 
 
 AppendDelaunaySimplices:=true;
@@ -21,69 +22,6 @@ if AppendReflectiveDim45 then
     Append(ListEXT, OneBlock);
 fi;
 
-
-get_automorphism_result:=function(EXT)
-    local TmpDir, FileI, FileO, eProg, TheCommand, rec_gap;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Can.in");
-    FileO:=Filename(TmpDir, "Can.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytope_Automorphism";
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("FileO does not exist, qualifies as a fail\n");
-        return false;
-    fi;
-    rec_gap:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
-    return rec_gap;
-end;
-
-
-get_canonic_form:=function(EXT)
-    local TmpDir, FileI, FileO, eProg, TheCommand, EXT_can;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Can.in");
-    FileO:=Filename(TmpDir, "Can.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../src_group/GRP_LinPolytope_Canonic";
-    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("FileO does not exist, qualifies as a fail\n");
-        return false;
-    fi;
-    EXT_can:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
-    return EXT_can;
-end;
-
-get_isomorphism_result:=function(EXT1, EXT2)
-    local TmpDir, File1, File2, FileO, eProg, TheCommand, result;
-    TmpDir:=DirectoryTemporary();
-    File1:=Filename(TmpDir, "Test1.in");
-    File2:=Filename(TmpDir, "Test2.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    WriteMatrixFile(File1, EXT1);
-    WriteMatrixFile(File2, EXT2);
-    eProg:="../../src_group/GRP_LinPolytope_Isomorphism";
-    TheCommand:=Concatenation(eProg, " rational ", File1, " ", File2, " GAP ", FileO);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("FileO does not exist, qualifies as a fail\n");
-        return false;
-    fi;
-    result:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(File1);
-    RemoveFileIfExist(File2);
-    RemoveFileIfExist(FileO);
-    return result;
-end;
-
-
 scramble_ext:=function(EXT)
     local n, n_vert, P;
     n:=Length(EXT[1]);
@@ -95,12 +33,12 @@ end;
 TestCase_Automorphy:=function(EXT)
     local EXT_img, rec_gap1, rec_gap2;
     EXT_img:=scramble_ext(EXT);
-    rec_gap1:=get_automorphism_result(EXT);
-    if rec_gap1=false then
+    rec_gap1:=get_grp_automorphy(EXT);
+    if is_error(rec_gap1) then
         return false;
     fi;
-    rec_gap2:=get_automorphism_result(EXT_img);
-    if rec_gap2=false then
+    rec_gap2:=get_grp_automorphy(EXT_img);
+    if is_error(rec_gap2) then
         return false;
     fi;
     if Order(rec_gap1.GAPperm)<>Order(rec_gap2.GAPperm) then
@@ -113,12 +51,11 @@ TestCase_Canonic:=function(EXT)
     local EXT_img, EXT_can1, EXT_can2;
     EXT_img:=scramble_ext(EXT);
     EXT_can1:=get_canonic_form(EXT);
-    if EXT_can1=false then
+    if is_error(EXT_can1) then
         return false;
     fi;
     EXT_can2:=get_canonic_form(EXT_img);
-    if EXT_can2=false then
-        Print("No result, returning false\n");
+    if is_error(EXT_can2) then
         return false;
     fi;
     if EXT_can1<>EXT_can2 then
@@ -135,8 +72,7 @@ TestCase_Isomorphy:=function(EXT)
     local EXT_img, result;
     EXT_img:=scramble_ext(EXT);
     result:=get_isomorphism_result(EXT, EXT_img);
-    if result=false then
-        # No result obtained
+    if is_error(result) then
         return false;
     fi;
     if result=fail then
