@@ -1,5 +1,5 @@
 GetBinaryFilename:=function(FileName)
-    local TmpDir, TmpFile, eProg, path, TmpFileB, command;
+    local TmpDir, TmpFile, eProg, path, TmpFileB, command, read_text_file, FullProg;
     # If accessible, use the path;
     TmpDir:=DirectoryTemporary();
     TmpFile:=Filename(TmpDir, "Test.in");
@@ -18,18 +18,28 @@ GetBinaryFilename:=function(FileName)
     end;
     eProg:=read_text_file(TmpFile);
     if eProg<fail then
+        if IsExistingFile(eProg)=false then
+            Print("eProg=", eProg, "\n");
+            Error("The file should exist A");
+        fi;
         return eProg;
     fi;
     # Querying the environment variable
     if IsBound(GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE) then
         path:=GAPInfo.SystemEnvironment.POLYHEDRAL_COMMON_SOURCE_CODE;
         TmpFileB:=Filename(TmpDir, "TestB.in");
-        command:=Concatenation("(cd ", path, " && find . -name ", FileName, " 2> ", TmpFileB, ")");
+        command:=Concatenation("(cd ", path, " && find . -name ", FileName, " > ", TmpFileB, ")");
+#        Print("command=", command, "\n");
         Exec(command);
         eProg:=read_text_file(TmpFileB);
-	FullProg:=Concatenation(path, eProg);
+#        Print("eProg=", eProg, "\n");
         if eProg<>fail then
-            return eProg;
+            FullProg:=Concatenation(path, "/", eProg);
+            if IsExistingFile(FullProg)=false then
+                Print("FullProg=", FullProg, "\n");
+                Error("The file should exist B");
+            fi;
+            return FullProg;
         fi;
     fi;
     return fail;

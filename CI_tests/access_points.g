@@ -35,13 +35,13 @@ get_grp_integral_automorphy:=function(EXT)
 end;
 
 test_polytope_integral_equivalence:=function(EXT1, EXT2)
-    local TmpDir, File1, File2, FileO, eProg, TheCommand;
+    local TmpDir, File1, File2, FileO, eProg, TheCommand, result;
     TmpDir:=DirectoryTemporary();
     File1:=Filename(TmpDir, "Test1.in");
     File2:=Filename(TmpDir, "Test2.in");
     FileO:=Filename(TmpDir, "Test.out");
-    WriteMatrixFile(File1, EXT);
-    WriteMatrixFile(File2, EXT_img);
+    WriteMatrixFile(File1, EXT1);
+    WriteMatrixFile(File2, EXT2);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Isomorphism");
     TheCommand:=Concatenation(eProg, " mpz_class ", File1, " ", File2, " GAP ", FileO);
 #    Print("TheCommand=", TheCommand, "\n");
@@ -116,12 +116,12 @@ get_saturated_space:=function(ListMat)
 end;
 
 get_latt_canonical_form:=function(eMat)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Can.in");
     FileO:=Filename(TmpDir, "Can.out");
     FileE:=Filename(TmpDir, "Can.err");
-    WriteMatrixFile(FileIn, eMat);
+    WriteMatrixFile(FileI, eMat);
     #
     eProg:=GetBinaryFilename("LATT_Canonicalize");
     TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_full ", FileO, " 2> ", FileE);
@@ -137,17 +137,17 @@ get_latt_canonical_form:=function(eMat)
 end;
 
 get_latt_automorphism_group:=function(eMat)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Aut.in");
     FileO:=Filename(TmpDir, "Aut.out");
     FileE:=Filename(TmpDir, "Aut.err");
-    WriteListMatrixFile(FileIn, [eMat]);
+    WriteListMatrixFile(FileI, [eMat]);
     #
     eProg:=GetBinaryFilename("LATT_Automorphism");
     TheCommand:=Concatenation(eProg, " ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
+    if IsExistingFile(FileO)=false then
         Print("get_latt_automorphism_group, no return file\n");
         return fail;
     fi;
@@ -159,15 +159,15 @@ get_latt_automorphism_group:=function(eMat)
 end;
 
 get_fullrank_invariant_family:=function(eMat, method)
-    local TmpDir, FileIn, FileOut, FileErr, eProg, TheCommand, U;
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Fullrank.in");
     FileO:=Filename(TmpDir, "Fullrank.out");
     FileE:=Filename(TmpDir, "Fullrank.err");
-    WriteMatrixFile(FileIn, eMat);
+    WriteMatrixFile(FileI, eMat);
     eProg:=GetBinaryFilename("LATT_GenerateCharacteristicVectorSet");
     TheCommand:=Concatenation(eProg, " mpq_class mpz_class ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
-    if IsExistingFile(FileOut)=false then
+    if IsExistingFile(FileO)=false then
         return "program failure: LATT_GenerateCharacteristicVectorSet did not return anything";
     fi;
     U:=ReadAsFunction(FileO)();
@@ -205,12 +205,12 @@ end;
 
 
 INDEF_FORM_Stabilizer:=function(eGram)
-    local TmpDir, FileI, FileO, FileE, eProg, U;
+    local TmpDir, FileI, FileO, FileE, eProg, U, TheCommand;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=GetFreeFile("Err_indef_form_autom_");
-    WriteMatrixFile(FileIn, eGram);
+    WriteMatrixFile(FileI, eGram);
     eProg:=GetBinaryFilename("INDEF_FORM_AutomorphismGroup");
     TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
@@ -233,7 +233,7 @@ INDEF_FORM_TestEquivalence:=function(eGram1, eGram2)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileM1, eGram1);
     WriteMatrixFile(FileM2, eGram2);
-    eProg:=GetBinaryFileName("INDEF_FORM_TestEquivalence");
+    eProg:=GetBinaryFilename("INDEF_FORM_TestEquivalence");
     TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
@@ -249,13 +249,13 @@ end;
 
 
 INDEF_FORM_GetOrbitRepresentative:=function(eGram, Xnorm)
-    local TmpDir, eProg, FileM1, FileM2, FileO, FileE, TheCommand, U;
+    local TmpDir, eProg, FileM, FileO, FileE, TheCommand, U;
     TmpDir:=DirectoryTemporary();
-    eProg:=GetBinaryFileName("INDEF_FORM_GetOrbitRepresentative");
     FileM:=Filename(TmpDir, "Mat.in");
-    FileOut:=Filename(TmpDir, "Test.out");
-    FileErr:=Filename(TmpDir, "Test.err");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileM, eGram);
+    eProg:=GetBinaryFilename("INDEF_FORM_GetOrbitRepresentative");
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
@@ -274,7 +274,7 @@ INDEF_FORM_GetOrbitIsotropic:=function(eGram, kDim, choice)
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileM, eGram);
-    eProg:=GetBinaryFileName("INDEF_FORM_GetOrbit_IsotropicKplane");
+    eProg:=GetBinaryFilename("INDEF_FORM_GetOrbit_IsotropicKplane");
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
@@ -300,24 +300,25 @@ GetReflectivityInformation:=function(LorMat)
     FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     #
-    WriteMatrixFile(FileIn, LorMat);
+    WriteMatrixFile(FileI, LorMat);
     #
     strOut:="&PROC\n";
-    strOut:=Concatenation(strOut, " FileLorMat = \"", FileIn, "\"\n");
+    strOut:=Concatenation(strOut, " FileLorMat = \"", FileI, "\"\n");
     strOut:=Concatenation(strOut, " OptionInitialVertex = \"isotropic_vinberg\"\n");
     strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
-    strOut:=Concatenation(strOut, " FileOut = \"", FileOut, "\"\n");
+    strOut:=Concatenation(strOut, " FileOut = \"", FileO, "\"\n");
     strOut:=Concatenation(strOut, " OptionNorms = \"all\"\n");
     strOut:=Concatenation(strOut, " EarlyTerminationIfNotReflective = T\n");
     strOut:=Concatenation(strOut, " ComputeAllSimpleRoots = T\n");
     strOut:=Concatenation(strOut, "/\n");
     #
-    WriteStringFile(FileNml, strOut);
+    WriteStringFile(FileN, strOut);
     #
     eProg:=GetBinaryFilename("LORENTZ_FundDomain_AllcockEdgewalk");
     TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
+        Print(NullMat(5));
         return "program failure: Nothing returned by LORENTZ_FundDomain_AllcockEdgewalk, likely crash or something";
     fi;
     U:=ReadAsFunction(FileO)();
