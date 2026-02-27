@@ -80,8 +80,9 @@ void WritePermutationGAP(std::ostream &os, Telt const &ePerm) {
       }
     std::vector<int> TheList(nbMatch);
     TheList[0] = eFirst;
-    for (int i = 1; i < nbMatch; i++)
+    for (int i = 1; i < nbMatch; i++) {
       TheList[i] = OnPoints(TheList[i - 1], ePerm);
+    }
     os << "(";
     for (int i = 0; i < nbMatch; i++) {
       if (i > 0)
@@ -546,24 +547,26 @@ void GROUP_FuncInsertInSet_UseInv(Tgroup const &TheGRP, Face const &eList,
 //
 
 template <typename Telt>
-std::vector<int> ComputeFullOrbitPoint(const size_t &n,
-                                       const std::vector<Telt> &ListGen,
-                                       int const &ePoint) {
+std::vector<size_t> ComputeFullOrbitPoint(const size_t &n,
+                                          const std::vector<Telt> &ListGen,
+                                          size_t const &ePoint) {
   IntegerSubsetStorage Vorb = VSLT_InitializeStorage(n);
   IntegerSubsetStorage Vactive = VSLT_InitializeStorage(n);
-  std::vector<int> eList;
+  std::vector<size_t> eList;
   VSLT_StoreValue(Vactive, ePoint);
   while (true) {
-    if (VSLT_IsEmpty(Vactive))
+    if (VSLT_IsEmpty(Vactive)) {
       break;
-    int TheFirst = VSLT_TheFirstPosition(Vactive);
+    }
+    size_t TheFirst = VSLT_TheFirstPosition(Vactive);
     VSLT_RemoveValue(Vactive, TheFirst);
     VSLT_StoreValue(Vorb, TheFirst);
     eList.push_back(TheFirst);
     for (auto &eGen : ListGen) {
-      int NewPt = OnPoints(TheFirst, eGen);
-      if (!VSLT_IsItInSubset(Vorb, NewPt) && !VSLT_IsItInSubset(Vactive, NewPt))
+      size_t NewPt = OnPoints(TheFirst, eGen);
+      if (!VSLT_IsItInSubset(Vorb, NewPt) && !VSLT_IsItInSubset(Vactive, NewPt)) {
         VSLT_StoreValue(Vactive, NewPt);
+      }
     }
   }
   return eList;
@@ -585,7 +588,7 @@ vectface DecomposeOrbitPoint_Kernel(const std::vector<Telt> &LGen,
     if (VSLT_IsEmpty(Vlist))
       break;
     size_t TheFirst = VSLT_TheFirstPosition(Vlist);
-    std::vector<int> eOrb = ComputeFullOrbitPoint(nbPoint, LGen, TheFirst);
+    std::vector<size_t> eOrb = ComputeFullOrbitPoint(nbPoint, LGen, TheFirst);
     Face vectOrb(nbPoint);
     for (auto &ePt : eOrb) {
       vectOrb[ePt] = 1;
@@ -607,8 +610,9 @@ template <typename Tgroup>
 vectface DecomposeOrbitPoint_Full(Tgroup const &TheGRP) {
   size_t n = TheGRP.n_act();
   Face eList(n);
-  for (size_t i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++) {
     eList[i] = 1;
+  }
   using Telt = typename Tgroup::Telt;
   std::vector<Telt> LGen = TheGRP.GeneratorsOfGroup();
   return DecomposeOrbitPoint_Kernel(LGen, eList);
@@ -629,8 +633,9 @@ template <typename Telt>
 vectface DecomposeOrbitPoint_KernelFull(const size_t &n,
                                         const std::vector<Telt> &LGen) {
   Face eList(n);
-  for (size_t i = 0; i < n; i++)
+  for (size_t i = 0; i < n; i++) {
     eList[i] = 1;
+  }
   return DecomposeOrbitPoint_Kernel(LGen, eList);
 }
 
@@ -640,8 +645,9 @@ std::vector<Tobj> OrbitSplittingGeneralized(
     std::function<Tobj(Tobj const &, Tgen const &)> const &TheAct) {
   std::vector<Tobj> TheReturn;
   std::unordered_set<Tobj> ListTotal;
-  for (auto eObj : PreListTotal)
+  for (auto eObj : PreListTotal) {
     ListTotal.insert(eObj);
+  }
   while (true) {
     auto iter = ListTotal.begin();
     if (iter == ListTotal.end())
@@ -761,8 +767,9 @@ vectface OrbitFace(const Face &f, const std::vector<Telt> &LGen) {
         }
       }
     }
-    if (is_finished)
+    if (is_finished) {
       break;
+    }
   }
   return vf;
 }
