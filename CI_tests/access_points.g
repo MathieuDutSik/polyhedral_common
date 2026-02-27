@@ -1,9 +1,3 @@
-
-Is_CI_mode:=function()
-    return GAPInfo.SystemEnvironment.IS_CI_MODE;
-end;
-
-
 GetBinaryFilename:=function(FileName)
     local TmpDir, TmpFile, eProg, path, TmpFileB, command;
     # If accessible, use the path;
@@ -52,10 +46,7 @@ INDEF_FORM_Stabilizer:=function(eGram)
     TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        if Is_CI_mode() then
-            return "program failure";
-        fi;
-        Error("No output created");
+        return "program failure: INDEF_FORM_Stabilizer did not return anything, likely crash";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
@@ -77,10 +68,7 @@ INDEF_FORM_TestEquivalence:=function(eGram1, eGram2)
     TheCommand:=Concatenation(eProg, " gmp ", FileM1, " ", FileM2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        if Is_CI_mode() then
-            return "program failure";
-        fi;
-        Error("No output created");
+        return "program failure: Nothing returned by INDEF_FORM_TestEquivalence, maybe a crash";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileM1);
@@ -102,10 +90,7 @@ INDEF_FORM_GetOrbitRepresentative:=function(eGram, Xnorm)
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(Xnorm), " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        if Is_CI_mode() then
-            return "program failure";
-        fi;
-        Error("No output created");
+        return "program failure: Nothing returned by INDEF_FORM_GetOrbitRepresentative, likely crash or something";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileM);
@@ -124,10 +109,7 @@ INDEF_FORM_GetOrbitIsotropic:=function(eGram, kDim, choice)
     TheCommand:=Concatenation(eProg, " gmp ", FileM, " ", String(kDim), " ", choice, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        if Is_CI_mode() then
-            return "program failure";
-        fi;
-        Error("No output created");
+        return "program failure: Nothing returned by INDEF_FORM_GetOrbitIsotropic, likely crash or something";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileM);
@@ -167,8 +149,7 @@ GetReflectivityInformation:=function(LorMat)
     TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
+        return "program failure: Nothing returned by LORENTZ_FundDomain_AllcockEdgewalk, likely crash or something";
     fi;
     U:=ReadAsFunction(FileO)();
     RemoveFile(FileI);

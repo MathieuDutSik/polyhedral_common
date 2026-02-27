@@ -1,5 +1,5 @@
 Read("../common.g");
-Read("../access_functions.g");
+Read("../access_points.g");
 Print("Beginning TestReflectivity\n");
 
 GeneratePoincareFundamentalInput:=false;

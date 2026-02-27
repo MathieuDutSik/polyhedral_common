@@ -1,5 +1,5 @@
 Read("../common.g");
-Read("../access_functions.g");
+Read("../access_points.g");
 Print("Beginning of AllTests\n");
 
 TestStab:=function(eList)
