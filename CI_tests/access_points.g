@@ -430,7 +430,7 @@ get_integral_interior_point:=function(FAC, method)
     return EXTint;
 end;
 
-get_dual_desc:=function(EXT)
+get_dual_desc:=function(EXT, method)
     local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.out");
@@ -438,8 +438,7 @@ get_dual_desc:=function(EXT)
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_dual_description");
-    command:="cdd";
-    TheCommand:=Concatenation(eProg, " rational  ", command, " CPP ", FileI, " ", FileO, " 2>", FileE);
+    TheCommand:=Concatenation(eProg, " rational  ", method, " CPP ", FileI, " ", FileO, " 2>", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_dual_description failed to create the file";

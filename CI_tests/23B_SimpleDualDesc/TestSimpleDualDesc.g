@@ -1,27 +1,15 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestSimpleDualDesc\n");
 
 
 TestSimpleDD:=function(EXT, command, n_fac)
     local dim, FileI, FileO, arith, choice, eProg, TheCommand, FAC, eFAC, ListScal, ListIncd;
     dim:=Length(EXT[1]);
-    FileI:="Test.in";
-    FileO:="Test.out";
-    #
-    WriteMatrixFile(FileI, EXT);
-    #
-    arith:="rational";
-    choice:="GAP";
-    eProg:="../../src_poly/POLY_dual_description";
-    TheCommand:=Concatenation(eProg, " ", arith, " ", command, " ", choice, " ", FileI, " ", FileO);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    FAC:=get_dual_desc(EXT, command);
+    if is_error(FAC) then
         return false;
     fi;
-    FAC:=ReadAsFunction(FileO)();
-    RemoveFile(FileI);
-    RemoveFile(FileO);
     if Length(FAC)<>n_fac then
         Print("Incorrect number of facets. That qualifies as a fail\n");
         return false;
@@ -48,11 +36,15 @@ File3:="Example3_48_11432";
 ListFiles:=[File1, File2, File3];
 
 n_error:=0;
-for eFile in ListFiles
+for iFile in [1..Length(ListFiles)]
 do
+    eFile:=ListFiles[iFile];
     eRec:=ReadAsFunction(eFile)();
-    for command in eRec.commands
+    Print("iFile=", iFile, " |EXT|=", Length(eRec.EXT), "/", Length(eRec.EXT[1]), " n_fac=", eRec.n_fac, "\n");
+    for i_command in [1..Length(eRec.commands)]
     do
+        command:=eRec.commands[i_command];
+        Print("   i_command=", i_command, " command=", command, "\n");
         test:=TestSimpleDD(eRec.EXT, command, eRec.n_fac);
         if test=false then
             n_error:=n_error + 1;

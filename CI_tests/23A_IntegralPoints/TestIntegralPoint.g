@@ -6,7 +6,7 @@ Print("Beginning TestIntegralPoint\n");
 TestIntegralPoint:=function(FileEXT)
     local EXT, FAC, EXT_vert1, EXT_vert2, EXT_vert3, EXT_vert4;
     EXT:=ReadMatrixFile(FileEXT);
-    FAC:=get_dual_desc(EXT);
+    FAC:=get_dual_desc(EXT, "cdd");
     Print("|EXT|=", Length(EXT), " |FAC|=", Length(FAC), "\n");
     #
     EXT_vert1:=get_integral_interior_point(FAC, "LP_no_LLL");
