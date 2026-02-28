@@ -387,6 +387,32 @@ sample_facet_polytope:=function(EXT, method)
 end;
 
 
+test_matrix_group_finiteness:=function(GRPmatr)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Finiteness_test.input");
+    FileO:=Filename(TmpDir, "Finiteness_test.result");
+    FileE:=Filename(TmpDir, "Finiteness_test.err");
+    WriteListMatrixFile(FileI, GRPmatr);
+    #
+    eProg:=GetBinaryFilename("GRP_TestFiniteness");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    #
+    if IsExistingFile(FileO)=false then
+        return "program failure: GRP_TestFiniteness failed to create the output";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+
+
+
 
 
 

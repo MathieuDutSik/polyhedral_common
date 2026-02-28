@@ -1,27 +1,14 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning Test for testing finiteness of matrix groups\n");
 
 Finiteness_SingleTest:=function(eRecFin)
     local DirTemp, FileMat, FileTest, eProg, TheCommand, U;
     #
-    DirTemp:=DirectoryTemporary();
-    FileMat:=Filename(DirTemp, "Finiteness_test.input");
-    FileTest:=Filename(DirTemp, "Finiteness_test.result");
-    #
-    WriteListMatrixFile(FileMat, eRecFin.GRPmatr);
-    #
-    eProg:="../../src_latt/GRP_TestFiniteness";
-    TheCommand:=Concatenation(eProg, " gmp ", FileMat, " GAP ", FileTest);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    #
-    if IsExistingFile(FileTest)=false then
-        Print("The output file is not existing. That qualifies as a fail for Equi_SingleTest\n");
+    U:=test_matrix_group_finiteness(eRecFin.GRPmatr);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileTest)();
-    RemoveFile(FileMat);
-    RemoveFile(FileTest);
     if U.is_finite<>eRecFin.is_finite then
         Print("Different finiteness results\n");
         return false;
@@ -40,7 +27,7 @@ Finiteness_AllTests:=function()
     do
         FullFile:=Concatenation(TheDir, "/", eFile);
         eRecFin:=ReadAsFunction(FullFile)();
-        Print("iRec=", iRec, " / ", Length(ListFinitenessFiles), "\n");
+        Print("iRec=", iRec, " / ", Length(ListFinitenessFiles), " n_error=", n_error, " finite=", eRecFin.is_finite, "\n");
         test:=Finiteness_SingleTest(eRecFin);
         if test=false then
             n_error:=n_error+1;
