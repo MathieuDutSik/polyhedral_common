@@ -195,6 +195,8 @@ InputStreamMatrix:=function(is)
             fi;
         od;
         if Length(eLine)<>nbCol then
+            Print("iRow=", iRow, " line=", line, "\n");
+            Print("LStr=", LStr, "\n");
             Print("|eLine|=", Length(eLine), " nbCol=", nbCol, "\n");
             Error("Inconsistent length of vector");
         fi;
@@ -220,6 +222,10 @@ end;
 
 ReadMatrixFile:=function(eFile)
     local is, TheMat;
+    if IsExistingFile(eFile)=false then
+        Print("Failing to read the file eFile=", eFile, "\n");
+        Error("The ReadMatrixFile operation did fail");
+    fi;
     is:=InputTextFile(eFile);
     TheMat:=InputStreamMatrix(is);
     CloseStream(is);
