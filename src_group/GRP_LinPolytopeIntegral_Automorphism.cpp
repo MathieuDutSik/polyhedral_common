@@ -16,7 +16,6 @@ void process_A(std::string const &FileExt, std::string const &OutFormat,
   MyMatrix<Tint> EXT = ReadMatrixFile<Tint>(FileExt);
   size_t nbCol = EXT.cols();
   size_t nbRow = EXT.rows();
-  std::cerr << "nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
   //
   Tgroup GRP = LinPolytopeIntegral_Automorphism<Tint, Tgroup>(EXT, std::cerr);
   if (OutFormat == "GAP") {

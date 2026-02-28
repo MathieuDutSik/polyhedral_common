@@ -23,7 +23,7 @@ get_grp_integral_automorphy:=function(EXT)
     FileO:=Filename(TmpDir, "Test.out");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism");
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " RecGAP ", FileO);
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " RecGAP ", FileO);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: GRP_LinPolytopeIntegral_Automorphism did not return anything, likely crash";
@@ -33,6 +33,56 @@ get_grp_integral_automorphy:=function(EXT)
     RemoveFile(FileO);
     return TheGRP_int;
 end;
+
+get_double_cosets_matrix_group:=function(EXT, GRPperm)
+    local TmpDir, FileI, FileO, FileGRP_V, eProg, TheCommand, RecResult;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileGRP_V:=Filename(TmpDir, "Test.grp_V");
+    WriteMatrixFile(FileI, EXT);
+    WriteGroupFile(FileGRP_V, Length(EXT), GRPperm);
+    eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism_DoubleCoset");
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", FileGRP_V, " RecGAP ", FileO);
+#    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: GRP_LinPolytopeIntegral_Automorphism_DoubleCoset should have created a file";
+    fi;
+    RecResult:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileGRP_V);
+    return RecResult;
+end;
+
+get_linear_space_stabilizer_double_cosets:=function(GRPmatr, TheSpace, GRP_Vmatr)
+    local TmpDir, FileGRP, FileSPA, FileGRP_V, FileO, eProg, TheCommand, RecResult;
+    TmpDir:=DirectoryTemporary();
+    FileGRP:=Filename(TmpDir, "Test.grp");
+    FileSPA:=Filename(TmpDir, "Test.space");
+    FileGRP_V:=Filename(TmpDir, "Test.grp_V");
+    FileO:=Filename(TmpDir, "Test.out");
+    WriteListMatrixFile(FileGRP, GRPmatr);
+    WriteMatrixFile(FileSPA, TheSpace);
+    WriteListMatrixFile(FileGRP_V, GRP_Vmatr);
+    eProg:=GetBinaryFilename("GRP_LinearSpace_Stabilizer_DoubleCoset");
+
+    TheCommand:=Concatenation(eProg, " ", FileGRP, " ", FileSPA, " ", FileGRP_V, " ", FileO);
+#    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: GRP_LinearSpace_Stabilizer_DoubleCoset should have created a file";
+    fi;
+    RecResult:=ReadAsFunction(FileO)();
+    RemoveFile(FileGRP);
+    RemoveFile(FileSPA);
+    RemoveFile(FileGRP_V);
+    RemoveFile(FileO);
+    return RecResult;
+end;
+
+
 
 test_polytope_integral_equivalence:=function(EXT1, EXT2)
     local TmpDir, File1, File2, FileO, eProg, TheCommand, result;

@@ -91,12 +91,7 @@ end;
 
 
 TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
-    local TmpDir, FileI, FileO, FileGRP_V, arith, OutFormat, eProg, TheCommand, GRP_rat, GRP_V, GRP_U, RecResult;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    FileGRP_V:=Filename(TmpDir, "Test.grp_V");
-    WriteMatrixFile(FileI, EXT);
+    local GRP_rat, GRP_V, GRP_U, RecResult;
     Print("Begin TestCase_Automorphy_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     GRP_rat:=get_grp_automorphy(EXT);
     if GRP_rat=fail then
@@ -117,25 +112,15 @@ TestCase_LinPolytopeIntegral_Automorphy_DoubleCoset:=function(EXT)
         Print("The integral group should be a subgroup of the rational group\n");
         return false;
     fi;
-    WriteGroupFile(FileGRP_V, Length(EXT), GRP_V.GAPperm);
-    eProg:="../../src_group/GRP_LinPolytopeIntegral_Automorphism_DoubleCoset";
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " ", FileGRP_V, " RecGAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("The FileO does not exist\n");
+    RecResult:=get_double_cosets_matrix_group(EXT, GRP_V.GAPperm);
+    if is_error(RecResult) then
         return false;
     fi;
-    RecResult:=ReadAsFunction(FileO)();
-    Print("We have RecResult\n");
     GRP_U:=RecResult.GAPperm;
     if GRP_U<>GRP_V.GAPperm then
         Print("GRP_U and GRP_V should be equal\n");
         return false;
     fi;
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileGRP_V);
     return TestDoubleCosetPermDecomposition(GRP_rat.GAPperm, GRP_U, GRP_V.GAPperm, RecResult.DoubleCosetsPerm);
 end;
 
@@ -143,10 +128,6 @@ end;
 TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
     local dim, FileGRP, FileSPA, FileGRP_V, FileO, arith, OutFormat, eProg, TheCommand, GRP_rat, TheSpace, GRP_V, GRP_U, RecResult, DoubleCosetsPerm;
     dim:=Length(EXT[1]);
-    FileGRP:=Filename(DirectoryTemporary(), "Test.grp");
-    FileSPA:=Filename(DirectoryTemporary(), "Test.space");
-    FileGRP_V:=Filename(DirectoryTemporary(), "Test.grp_V");
-    FileO:=Filename(DirectoryTemporary(), "Test.out");
     Print("Begin TestCase_Automorphy_DoubleCoset, Det(BaseIntMat(EXT))=", DeterminantMat(BaseIntMat(EXT)), "\n");
     GRP_rat:=get_grp_automorphy(EXT);
     if GRP_rat=fail then
@@ -168,22 +149,10 @@ TestCase_LinearSpace_Stabilizer_DoubleCoset:=function(EXT)
         Print("The integral group should be a subgroup of the rational group\n");
         return false;
     fi;
-    WriteListMatrixFile(FileGRP, GRP_rat.GAPmatr);
-    WriteMatrixFile(FileSPA, TheSpace);
-    WriteListMatrixFile(FileGRP_V, GRP_V.GAPmatr);
-    eProg:="../../src_group/GRP_LinearSpace_Stabilizer_DoubleCoset";
-    TheCommand:=Concatenation(eProg, " ", FileGRP, " ", FileSPA, " ", FileGRP_V, " ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("The FileO does not exist\n");
+    RecResult:=get_linear_space_stabilizer_double_cosets(GRP_rat.GAPmatr, TheSpace, GRP_V.GAPmatr);
+    if is_error(RecResult) then
         return false;
     fi;
-    RecResult:=ReadAsFunction(FileO)();
-    RemoveFile(FileGRP);
-    RemoveFile(FileSPA);
-    RemoveFile(FileGRP_V);
-    RemoveFile(FileO);
     Print("We have RecResult\n");
     DoubleCosetsPerm:=List(RecResult.ListCos, xMat->PermList(List(EXT, xVert->Position(EXT, xVert*xMat))));
     GRP_U:=Group(List(GeneratorsOfGroup(RecResult.GRPmatr), xMat->PermList(List(EXT, xVert->Position(EXT, xVert*xMat)))));
