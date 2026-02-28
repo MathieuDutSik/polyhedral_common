@@ -452,6 +452,27 @@ get_dual_desc:=function(EXT)
 end;
 
 
+test_shortest_realizability:=function(SHV)
+    local TmpDir, FileIn, FileOut, eProg, TheCommand, eRec;
+    TmpDir:=DirectoryTemporary();
+    FileIn:=Filename(TmpDir, "Test.in");
+    FileOut:=Filename(TmpDir, "Test.out");
+    #
+    WriteMatrixFile(FileIn, SHV);
+    eProg:=GetBinaryFilename("SHORT_TestRealizability");
+    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
+    Exec(TheCommand);
+    if IsExistingFile(FileOut)=false then
+        return "program failure: SHORT_TestRealizability did not return a file";
+    fi;
+    #
+    eRec:=ReadAsFunction(FileOut)();
+    RemoveFile(FileIn);
+    RemoveFile(FileOut);
+    return eRec;
+end;
+
+
 
 
 

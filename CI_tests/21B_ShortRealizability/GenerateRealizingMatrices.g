@@ -1,25 +1,16 @@
 Read("../common.g");
+Read("../access_points.g");
 
 ListSHV:=ReadAsFunction("ListSHV_n10_rnk10")();
 
 get_mat:=function(SHV)
     local TmpDir, FileIn, FileOut, eProg, TheCommand, eRec;
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "Test.in");
-    FileOut:=Filename(TmpDir, "Test.out");
-    #
-    WriteMatrixFile(FileIn, SHV);
-    eProg:="../../src_short/SHORT_TestRealizability";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    eRec:=test_shortest_realizability(SHV);
+    if is_error(eRec) then
         return false;
     fi;
-    #
-    eRec:=ReadAsFunction(FileOut)();
     if eRec.realizable=false then
-        return fail;
+        return false;
     fi;
     RemoveFile(FileIn);
     RemoveFile(FileOut);
@@ -34,11 +25,11 @@ generate_examples:=function()
     for eSHV in ListSHV
     do
         idx:=idx+1;
-        Print("Before get_mat at idx=", idx, "\n");
+        Print("Before get_mat at idx=", idx, " det=", DeterminantMat(eSHV), "\n");
         Print("eSHV=\n");
         PrintArray(eSHV);
-        eMat:=get_mat(eSHV);
-        if eMat=fail then
+        eMat:=test_shortest_realizability(eSHV);
+        if eMat=false then
             Print("eSHV=\n");
             PrintArray(eSHV);
             Print("eSHV is not realizable. Returning fail\n");
