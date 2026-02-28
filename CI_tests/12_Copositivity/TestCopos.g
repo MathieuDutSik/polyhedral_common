@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning Test copositivity\n");
 
 
@@ -61,23 +62,8 @@ ListCase:=Concatenation(ListCase_block1, ListCase_block2);
 
 
 TestCopositivity:=function(eCase)
-    local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U, test;
-    n:=Length(eCase.eMat);
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    #
-    WriteMatrixFile(FileIn, eCase.eMat);
-    #
-    eProg:="../../src_copos/CP_TestCopositivity";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return false;
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
+    local U, test;
+    U:=test_copositivity(eCase.eMat);
     test:=eCase.reply = U.isCopositive;
     if test=false then
         Print("We have eCase.reply=", eCase.reply, " but U.isCopositive=", U.isCopositive, "\n");

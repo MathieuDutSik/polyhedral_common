@@ -603,6 +603,51 @@ GetReflectivityInformation:=function(LorMat)
 end;
 
 
+
+test_copositivity:=function(eMat)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, eMat);
+    #
+    eProg:=GetBinaryFilename("CP_TestCopositivity");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: CP_TestCopositivity did not return anything";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+test_complete_positivity:=function(eMat)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, eMat);
+    #
+    eProg:=GetBinaryFilename("CP_TestCompletePositivity");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: CP_TestCompletePositivity did not return anything";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+
 get_matrix_group_mod_information:=function(ListGen, p_val)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();

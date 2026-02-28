@@ -1,4 +1,5 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestCompletePositivity\n");
 
 
@@ -35,23 +36,11 @@ case13:=rec(eMat:=[ [ 3, 0, 0, 1, 1, 1 ], [ 0, 3, 0, 1, 1, 1 ], [ 0, 0, 3, 1, 1,
 
 
 TestCompletePositivity:=function(eCase)
-    local n, FileIn, FileOut, output, i, j, eProg, TheCommand, U;
-    n:=Length(eCase.eMat);
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    #
-    WriteMatrixFile(FileIn, eCase.eMat);
-    #
-    eProg:="../../src_copos/CP_TestCompletePositivity";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    local U;
+    U:=test_complete_positivity(eCase.eMat);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
     return U.result = eCase.reply;
 end;
 
@@ -60,8 +49,10 @@ ListCase:=[case1, case2, case3, case4, case5, case6,
            case7, case8, case9, case10, case11, case12, case13];;
 
 n_error:=0;
-for eCase in ListCase
+for iCase in [1..Length(ListCase)]
 do
+    eCase:=ListCase[iCase];
+    Print("iCase=", iCase, " name=", eCase.name, "\n");
     test:=TestCompletePositivity(eCase);
     if test=false then
         n_error:=n_error + 1;
