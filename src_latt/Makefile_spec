@@ -10,7 +10,7 @@
 #PROGRAM		= TSPACE_Stabilizer TSPACE_Equivalence
 #PROGRAM		= TSPACE_Stabilizer
 #PROGRAM		= TSPACE_Equivalence
-#PROGRAM		= LATT_GenerateCharacteristicVectorSet
+PROGRAM		= LATT_GenerateCharacteristicVectorSet
 #PROGRAM		= LATT_MPI_Lattice_IsoDelaunayDomain LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay
 #PROGRAM		= LATT_MPI_ComputeDelaunay LATT_SerialComputeDelaunay
@@ -23,7 +23,7 @@
 #PROGRAM		= TSPACE_IntegralSaturation
 #PROGRAM		= TSPACE_FileFormatConversion
 #PROGRAM		= LATT_ResolveModAction
-PROGRAM		= LATT_ComputeGroupModAction
+#PROGRAM		= LATT_ComputeGroupModAction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 

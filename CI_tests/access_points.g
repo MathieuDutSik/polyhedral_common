@@ -84,7 +84,7 @@ end;
 
 
 get_linpolytopeintegral_aut_rightcoset:=function(EXT)
-    local TmpDir, FileI, FileO, eProg, TheCommand, TheGRP;
+    local TmpDir, FileI, FileO, eProg, TheCommand, result;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Test.in");
     FileO:=Filename(TmpDir, "Test.out");
@@ -230,15 +230,16 @@ get_latt_automorphism_group:=function(eMat)
     return U;
 end;
 
-get_fullrank_invariant_family:=function(eMat, method)
+get_fullrank_invariant_family:=function(eG, method)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();
     FileI:=Filename(TmpDir, "Fullrank.in");
     FileO:=Filename(TmpDir, "Fullrank.out");
     FileE:=Filename(TmpDir, "Fullrank.err");
-    WriteMatrixFile(FileI, eMat);
+    WriteMatrixFile(FileI, eG);
     eProg:=GetBinaryFilename("LATT_GenerateCharacteristicVectorSet");
     TheCommand:=Concatenation(eProg, " mpq_class mpz_class ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: LATT_GenerateCharacteristicVectorSet did not return anything";
     fi;

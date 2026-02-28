@@ -65,7 +65,7 @@ is_error:=function(input)
     if IsString(input)=false then
         return false;
     fi;
-    test:=starts_with(input, "program failure");
+    test:=starts_with(input, "program failure")<>fail;
     if test then
         Print("Something went wrong with error=", input, "\n");
     fi;
