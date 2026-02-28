@@ -8,6 +8,10 @@
 #include "MAT_Matrix.h"
 // clang-format on
 
+#ifdef DEBUG
+#define DEBUG_ZP_ACTION
+#endif
+
 template<typename T>
 size_t vector_to_size_t(int dim, MyVector<T> const& v, size_t const& mod_val_s) {
   size_t pos = 0;
@@ -36,18 +40,24 @@ struct ResultModEnumeration {
 
 
 template<typename T>
-ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
+ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, [[maybe_unused]] std::ostream& os) {
   size_t mod_val_s = UniversalScalarConversion<int32_t,T>(mod_val);
   size_t nbPoint = 1;
   for (int u=0; u<dim; u++) {
     nbPoint *= mod_val;
   }
+#ifdef DEBUG_ZP_ACTION
+  os << "ZPA: get_partition_section1, nbPoint=" << nbPoint << "\n";
+#endif
   IntegerSubsetStorage Vlist = VSLT_InitializeStorage(nbPoint);
   std::vector<size_t> vect_orbits(nbPoint);
   std::vector<size_t> orbit_sizes;
   for (size_t i = 0; i < nbPoint; i++) {
     VSLT_StoreValue(Vlist, i);
   }
+#ifdef DEBUG_ZP_ACTION
+  os << "ZPA: Initial Vlist built\n";
+#endif
   IntegerSubsetStorage set_orbit = VSLT_InitializeStorage(nbPoint);
   std::vector<size_t> gen_orbit;
   gen_orbit.reserve(nbPoint);
@@ -68,6 +78,7 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> co
     auto f_insert=[&](size_t pt) -> void {
       if (!VSLT_IsItInSubset(set_orbit, pt)) {
         VSLT_StoreValue(set_orbit, pt);
+        VSLT_RemoveValue(Vlist, pt);
         gen_orbit.push_back(pt);
         vect_orbits[pt] = i_orbit;
       }
@@ -88,7 +99,11 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> co
         break;
       }
     }
-    orbit_sizes.push_back(gen_orbit.size());
+    size_t orb_size = gen_orbit.size();
+#ifdef DEBUG_ZP_ACTION
+    os << "ZPA: inserting an orbit of size=" << orb_size << "\n";
+#endif
+    orbit_sizes.push_back(orb_size);
   };
   while (true) {
     if (VSLT_IsEmpty(Vlist)) {
@@ -101,8 +116,47 @@ ResultModEnumeration get_partition_section1(int dim, std::vector<MyMatrix<T>> co
   return {std::move(vect_orbits), std::move(orbit_sizes)};
 }
 
+template<typename T, typename Tgroup>
+std::vector<typename Tgroup::Telt> get_grp_generators_section1(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, [[maybe_unused]] std::ostream& os) {
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
+  size_t mod_val_s = UniversalScalarConversion<int32_t,T>(mod_val);
+  size_t nbPoint = 1;
+  for (int u=0; u<dim; u++) {
+    nbPoint *= mod_val;
+  }
+  MyVector<T> v1(dim), v2(dim);
+  auto f_act=[&](size_t const& x, MyMatrix<T> const& gen) -> size_t {
+    size_t_to_vector(dim, x, mod_val_s, v1);
+    v2 = gen.transpose() * v1;
+    for (int u=0; u<dim; u++) {
+      T val = ResInt(v2[u], mod_val);
+      v2[u] = val;
+    }
+    return vector_to_size_t(dim, v2, mod_val_s);
+  };
+  std::vector<Telt> l_gens_b;
+#ifdef DEBUG_ZP_ACTION
+  size_t i_gen = 0;
+#endif
+  for (auto & gen: l_gens) {
+    std::vector<Tidx> elist(nbPoint);
+    for (size_t u=0; u<nbPoint; u++) {
+      size_t u_img = f_act(u, gen);
+      elist[u] = u_img;
+    }
+    Telt elt(elist);
+    l_gens_b.emplace_back(std::move(elt));
+#ifdef DEBUG_ZP_ACTION
+    os << "ZPA: get_grp_size, i_gen=" << i_gen << "\n";
+    i_gen += 1;
+#endif
+  }
+  return l_gens_b;
+}
+
 template<typename T, typename Twork>
-ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
+std::vector<MyMatrix<Twork>> reduction_modulo_p_l_gens(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
   std::vector<MyMatrix<Twork>> l_gens_b;
   for (auto & gen: l_gens) {
     MyMatrix<Twork> M(dim, dim);
@@ -116,14 +170,22 @@ ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T>> co
     }
     l_gens_b.push_back(M);
   }
+  return l_gens_b;
+}
+
+
+
+template<typename T, typename Twork>
+ResultModEnumeration get_partition_section2(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, std::ostream& os) {
+  std::vector<MyMatrix<Twork>> l_gens_b = reduction_modulo_p_l_gens<T,Twork>(dim, l_gens, mod_val);
   Twork mod_val_b = UniversalScalarConversion<Twork,T>(mod_val);
-  return get_partition_section1(dim, l_gens_b, mod_val_b);
+  return get_partition_section1(dim, l_gens_b, mod_val_b, os);
 }
 
 
 
 template<typename T>
-ResultModEnumeration get_partition(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val) {
+ResultModEnumeration get_partition(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, std::ostream& os) {
   T max_coeff = mod_val * mod_val * dim;
   int8_t max_val_i8 = std::numeric_limits<int8_t>::max();
   int16_t max_val_i16 = std::numeric_limits<int16_t>::max();
@@ -134,20 +196,58 @@ ResultModEnumeration get_partition(int dim, std::vector<MyMatrix<T>> const& l_ge
   T max_val_i32_T = UniversalScalarConversion<T,int32_t>(max_val_i32);
   T max_val_i64_T = UniversalScalarConversion<T,int64_t>(max_val_i64);
   if (max_coeff < max_val_i8_T) {
-    return get_partition_section2<T,int8_t>(dim, l_gens, mod_val);
+    return get_partition_section2<T,int8_t>(dim, l_gens, mod_val, os);
   }
   if (max_coeff < max_val_i16_T) {
-    return get_partition_section2<T,int16_t>(dim, l_gens, mod_val);
+    return get_partition_section2<T,int16_t>(dim, l_gens, mod_val, os);
   }
   if (max_coeff < max_val_i32_T) {
-    return get_partition_section2<T,int32_t>(dim, l_gens, mod_val);
+    return get_partition_section2<T,int32_t>(dim, l_gens, mod_val, os);
   }
   if (max_coeff < max_val_i64_T) {
-    return get_partition_section2<T,int64_t>(dim, l_gens, mod_val);
+    return get_partition_section2<T,int64_t>(dim, l_gens, mod_val, os);
   }
   std::cerr << "Failed to find a matching entry. Very unlikely to happen. Probably a bug\n";
   throw TerminalException{1};
 }
+
+
+
+template<typename T, typename Twork, typename Tgroup>
+std::vector<typename Tgroup::Telt> get_grp_generators_section2(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, std::ostream& os) {
+  std::vector<MyMatrix<Twork>> l_gens_b = reduction_modulo_p_l_gens<T,Twork>(dim, l_gens, mod_val);
+  Twork mod_val_b = UniversalScalarConversion<Twork,T>(mod_val);
+  return get_grp_generators_section1<Twork,Tgroup>(dim, l_gens_b, mod_val_b, os);
+}
+
+template<typename T, typename Tgroup>
+std::vector<typename Tgroup::Telt> get_grp_generators(int dim, std::vector<MyMatrix<T>> const& l_gens, T const& mod_val, std::ostream& os) {
+  T max_coeff = mod_val * mod_val * dim;
+  int8_t max_val_i8 = std::numeric_limits<int8_t>::max();
+  int16_t max_val_i16 = std::numeric_limits<int16_t>::max();
+  int32_t max_val_i32 = std::numeric_limits<int32_t>::max();
+  int64_t max_val_i64 = std::numeric_limits<int64_t>::max();
+  T max_val_i8_T = UniversalScalarConversion<T,int8_t>(max_val_i8);
+  T max_val_i16_T = UniversalScalarConversion<T,int16_t>(max_val_i16);
+  T max_val_i32_T = UniversalScalarConversion<T,int32_t>(max_val_i32);
+  T max_val_i64_T = UniversalScalarConversion<T,int64_t>(max_val_i64);
+  if (max_coeff < max_val_i8_T) {
+    return get_grp_generators_section2<T,int8_t,Tgroup>(dim, l_gens, mod_val, os);
+  }
+  if (max_coeff < max_val_i16_T) {
+    return get_grp_generators_section2<T,int16_t,Tgroup>(dim, l_gens, mod_val, os);
+  }
+  if (max_coeff < max_val_i32_T) {
+    return get_grp_generators_section2<T,int32_t,Tgroup>(dim, l_gens, mod_val, os);
+  }
+  if (max_coeff < max_val_i64_T) {
+    return get_grp_generators_section2<T,int64_t,Tgroup>(dim, l_gens, mod_val, os);
+  }
+  std::cerr << "Failed to find a matching entry. Very unlikely to happen. Probably a bug\n";
+  throw TerminalException{1};
+}
+
+
 
 
 

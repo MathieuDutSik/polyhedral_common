@@ -318,7 +318,7 @@ GetReflectivityInformation:=function(LorMat)
     TheCommand:=Concatenation(eProg, " ", FileN, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
-        Print(NullMat(5));
+#        Print(NullMat(5));
         return "program failure: Nothing returned by LORENTZ_FundDomain_AllcockEdgewalk, likely crash or something";
     fi;
     U:=ReadAsFunction(FileO)();
@@ -329,3 +329,46 @@ GetReflectivityInformation:=function(LorMat)
     return U;
 end;
 
+
+get_matrix_group_mod_information:=function(ListGen, p_val)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(FileI, ListGen);
+    eProg:=GetBinaryFilename("LATT_ResolveModAction");
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
+#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(FileI, ListGen);
+    eProg:=GetBinaryFilename("LATT_ComputeGroupModAction");
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
+#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;

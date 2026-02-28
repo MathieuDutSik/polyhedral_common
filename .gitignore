@@ -125,3 +125,4 @@ basic_common_cpp/
 *.g
 !CI_tests/**/*.g
 !scripts/**/*.g
+.aider*

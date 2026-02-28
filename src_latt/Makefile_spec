@@ -22,7 +22,8 @@
 #PROGRAM		= LATT_SerialComputeDelaunay
 #PROGRAM		= TSPACE_IntegralSaturation
 #PROGRAM		= TSPACE_FileFormatConversion
-PROGRAM		= LATT_ResolveModAction
+#PROGRAM		= LATT_ResolveModAction
+PROGRAM		= LATT_ComputeGroupModAction
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
