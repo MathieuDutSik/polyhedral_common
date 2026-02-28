@@ -83,6 +83,28 @@ get_linear_space_stabilizer_double_cosets:=function(GRPmatr, TheSpace, GRP_Vmatr
 end;
 
 
+get_linpolytopeintegral_aut_rightcoset:=function(EXT)
+    local TmpDir, FileI, FileO, eProg, TheCommand, TheGRP;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    WriteMatrixFile(FileI, EXT);
+    eProg:=GetBinaryFilename("GRP_LinPolytopeIntegral_Automorphism_RightCoset");
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO);
+#    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: GRP_LinPolytopeIntegral_Automorphism_RightCoset should have created a file";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    return result;
+end;
+
+
+
+
 
 test_polytope_integral_equivalence:=function(EXT1, EXT2)
     local TmpDir, File1, File2, FileO, eProg, TheCommand, result;

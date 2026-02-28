@@ -21,8 +21,8 @@ if AppendReflectiveDim45 then
     Append(ListEXT, OneBlock);
 fi;
 
-GeneratorsPreservePolytope:=function(TheGRP,EXT)
-    local gens, BasisExt, i, j, ImageExt, Mb, Mi, A;
+GeneratorsPreservePolytope:=function(TheGRP, EXT)
+    local gens, BasisEXT, BasisIndices, M, i, j, ImageEXT, ImageIndices, Mb, Mi, A, g;
     BasisEXT:=[];
     BasisIndices:=[];
     n:=Length(EXT[1]);
@@ -64,10 +64,10 @@ TestCase_Automorphy:=function(EXT)
     if is_error(TheGRP) then
         return false;
     fi;
-    if not GeneratorsPreservePolytope(TheGRP, EXT) then
+    if not GeneratorsPreservePolytope(TheGRP.GAPperm, EXT) then
         return false;
     fi;
-    Print("|TheGRP|=", Order(TheGRP), "\n");
+    Print("|TheGRP|=", Order(TheGRP.GAPperm), "\n");
     return true;
 end;
 
@@ -78,7 +78,7 @@ TestCase_Isomorphy:=function(EXT)
     P:=RandomIntegralUnimodularMatrix(n);
     EXT_img:=Permuted(EXT * P, Random(SymmetricGroup(n_vert)));
     result:=test_polytope_integral_equivalence(EXT, EXT_img);
-    if is_error(TheGRP) then
+    if is_error(result) then
         return false;
     fi;
     if result=fail then
@@ -88,24 +88,11 @@ TestCase_Isomorphy:=function(EXT)
 end;
 
 TestCase_Automorphy_RightCoset:=function(EXT)
-    local TmpDir, FileI, FileO, arith, OutFormat, eProg, TheCommand, TheGRP;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    WriteMatrixFile(FileI, EXT);
-    eProg:="../../build/GRP_LinPolytopeIntegral_Automorphism_RightCoset";
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " GAP ", FileO);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        RemoveFileIfExist(FileI);
-        Print("FileO does not exist\n");
+    local result;
+    result:=get_linpolytopeintegral_aut_rightcoset(EXT);
+    if is_error(result) then
         return false;
     fi;
-    TheGRP:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
-    Print("|TheGRP|=", Order(TheGRP), "\n");
     return true;
 end;
 
