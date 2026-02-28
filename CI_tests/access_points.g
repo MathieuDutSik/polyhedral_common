@@ -268,6 +268,25 @@ get_ext_volume:=function(EXT)
     return the_volume;
 end;
 
+get_interior_point:=function(FAC)
+    local TmpDir, FileI, FileO, eProg, TheCommand, TheV;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Interior.in");
+    FileO:=Filename(TmpDir, "Interior.out");
+    WriteMatrixFile(FileI, FAC);
+    eProg:=GetBinaryFilename("POLY_GeometricallyUniqueInteriorPoint");
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_GeometricallyUniqueInteriorPoint failed to create an output file";
+    fi;
+    TheV:=ReadAsFunction(FileO)();
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    return TheV;
+end;
+
+
 
 
 get_latt_isomorphism_test:=function(eMat1, eMat2)

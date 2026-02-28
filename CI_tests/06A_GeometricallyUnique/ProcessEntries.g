@@ -1,34 +1,20 @@
 Read("../common.g");
+Read("../access_points.g");
 
 TheDir:="AllExamples";
 ListFiles:=ListFileDirectory(TheDir);
 
 Print("ListFiles=", ListFiles);
 
-GetInteriorPoint:=function(FAC)
-    local TmpDir, FileI, FileO, eProg, TheCommand, TheV;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Interior.in");
-    FileO:=Filename(TmpDir, "Interior.out");
-    WriteMatrixFile(FileI, FAC);
-    eProg:="../../src_poly/POLY_GeometricallyUniqueInteriorPoint";
-    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
-    Exec(TheCommand);
-    TheV:=ReadAsFunction(FileO)();
-    RemoveFileIfExist(FileI);
-    RemoveFileIfExist(FileO);
-    return TheV;
-end;
-
-
-
-
 TestOneMat:=function(FAC)
     local n_fac, dim, GRP_fac, eCent, i, ePerm, eMatr, eMatr_cgr, FACprod, NewFAC, eCentProd, eCentMap;
     n_fac:=Length(FAC);
     dim:=Length(FAC[1]);
     GRP_fac:=SymmetricGroup(n_fac);
-    eCent:=GetInteriorPoint(FAC);
+    eCent:=get_interior_point(FAC);
+    if is_error(eCent) then
+        return false;
+    fi;
     for i in [1..20]
     do
         ePerm:=Random(GRP_fac);
@@ -36,7 +22,10 @@ TestOneMat:=function(FAC)
         eMatr_cgr:=Inverse(TransposedMat(eMatr));
         FACprod:=FAC * eMatr;
         NewFAC:=Permuted(FACprod, ePerm);
-        eCentProd:=GetInteriorPoint(NewFAC);
+        eCentProd:=get_interior_point(NewFAC);
+        if is_error(eCentProd) then
+            return false;
+        fi;
         eCentMap:=eCent * eMatr_cgr;
         if eCentMap<>eCentProd then
             return false;
