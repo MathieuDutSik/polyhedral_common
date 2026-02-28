@@ -1,35 +1,29 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestSampling\n");
 
-TestSampling:=function(FileIn, command)
-    local FileOut, TheLen, eProg, TheCommand, answer;
-    Print("Running FileIn=", FileIn, " with command=", command, "\n");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    #
-    eProg:="../../src_dualdesc/POLY_sampling_facets";
-    TheCommand:=Concatenation(eProg, " rational ", command, " ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+TestSampling:=function(FileIn, method)
+    local EXT, list_facets, TheLen;
+    EXT:=ReadMatrixFile(FileIn);
+#    Print("EXT=", EXT, "\n");
+    list_facets:=sample_facet_polytope(EXT, method);
+    if is_error(list_facets) then
         return false;
     fi;
-    answer:=ReadAsFunction(FileOut)();
-    TheLen:=Length(answer);
-    Print("TheLen=", TheLen, "\n");
+    TheLen:=Length(list_facets);
     if TheLen = 0 then
         return false;
     fi;
-    RemoveFile(FileOut);
     return true;
 end;
 
 TestRecord:=function(eRec)
     local EXT, command, test;
     EXT:=ReadMatrixFile(eRec.FileIn);
-    Print("\n");
     Print("|EXT|=", Length(EXT), " / ", Length(EXT[1]), "\n");
     for command in eRec.l_command
     do
+        Print("  command=", command, "\n");
         test:=TestSampling(eRec.FileIn, command);
         if test=false then
             return false;
@@ -61,7 +55,8 @@ FullTest:=function()
     iRec:=0;
     for eRec in ListRec
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
+        Print("\n");
+        Print("iRec=", iRec, " / ", Length(ListRec), " FileIn=", eRec.FileIn, "\n");
         test:=TestRecord(eRec);
         if test=false then
             return false;

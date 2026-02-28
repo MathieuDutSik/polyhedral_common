@@ -365,6 +365,29 @@ get_group_skeleton:=function(EXT, GRP, LevSearch)
 end;
 
 
+sample_facet_polytope:=function(EXT, method)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, result;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, EXT);
+    #
+    eProg:=GetBinaryFilename("POLY_sampling_facets");
+    TheCommand:=Concatenation(eProg, " rational ", method, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_sampling_facets failed to create the output";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return result;
+end;
+
+
+
 
 
 INDEF_FORM_Stabilizer:=function(eGram)
