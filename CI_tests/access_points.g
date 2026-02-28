@@ -250,6 +250,26 @@ get_fullrank_invariant_family:=function(eG, method)
     return U;
 end;
 
+get_ext_volume:=function(EXT)
+    local TmpDir, FileI, FileO, eProg, TheCommand, the_volume;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    WriteMatrixFile(FileI, EXT);
+    eProg:=GetBinaryFilename("POLY_lrs_volume");
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_lrs_volume should have created a file";
+    fi;
+    the_volume:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    return the_volume;
+end;
+
+
+
 get_latt_isomorphism_test:=function(eMat1, eMat2)
     local TmpDir, FileIn1, FileIn2, FileOut, FileErr, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();

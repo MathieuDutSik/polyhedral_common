@@ -1,19 +1,13 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning of TestVolume\n");
 
 TestVolume:=function(eRec)
-    local FileOut, eProg, TheCommand, the_volume;
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    #
-    eProg:="../../src_poly/POLY_lrs_volume";
-    TheCommand:=Concatenation(eProg, " rational ", eRec.FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    local the_volume;
+    the_volume:=get_ext_volume(eRec.EXT);
+    if is_error(the_volume) then
         return false;
     fi;
-    the_volume:=ReadAsFunction(FileOut)();
-    RemoveFile(FileOut);
     if the_volume<>eRec.the_volume then
         Print("Thevolume is incorrect\n");
         return false;
@@ -24,7 +18,13 @@ end;
 eRec1:=rec(FileIn:="G6.ext", the_volume:=1/2);
 eRec2:=rec(FileIn:="24cell_poly.ext", the_volume:=8);
 eRec3:=rec(FileIn:="H3.ext", the_volume:=1);
-ListRec:=[eRec1, eRec2, eRec3];
+ListRec:=[];
+for eRec in [eRec1, eRec2, eRec3]
+do
+    EXT:=ReadMatrixFile(eRec.FileIn);
+    fRec:=rec(EXT:=EXT, the_volume:=eRec.the_volume);
+    Add(ListRec, fRec);
+od;
 
 FullTest:=function()
     local iRec, eRec, test;
