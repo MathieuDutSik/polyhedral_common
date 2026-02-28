@@ -1,45 +1,6 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestIntegralPoint\n");
-
-get_integral_interior_point:=function(FAC, method)
-    local TmpDir, FileI, FileO, eProg, TheCommand, EXTint;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.fac");
-    FileO:=Filename(TmpDir, "Test.vertint");
-    WriteMatrixFile(FileI, FAC);
-    eProg:="../../src_poly/POLY_IntegralPoints";
-    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " CPP ", FileO);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return false;
-    fi;
-    EXTint:=ReadMatrixFile(FileO);
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    return EXTint;
-end;
-
-get_dual_desc:=function(EXT)
-    local TmpDir, FileEXT, FileFAC, eProg, command, TheCommand, FAC;
-    TmpDir:=DirectoryTemporary();
-    FileEXT:=Filename(TmpDir, "Test.out");
-    FileFAC:=Filename(TmpDir, "Test.fac");
-    WriteMatrixFile(FileEXT, EXT);
-    eProg:="../../src_poly/POLY_dual_description";
-    command:="cdd";
-    TheCommand:=Concatenation(eProg, " rational  ", command, " CPP ", FileEXT, " ", FileFAC);
-    Exec(TheCommand);
-    if IsExistingFile(FileFAC)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return false;
-    fi;
-    FAC:=ReadMatrixFile(FileFAC);
-    RemoveFile(FileEXT);
-    RemoveFile(FileFAC);
-    return FAC;
-end;
-
 
 
 TestIntegralPoint:=function(FileEXT)
@@ -49,26 +10,22 @@ TestIntegralPoint:=function(FileEXT)
     Print("|EXT|=", Length(EXT), " |FAC|=", Length(FAC), "\n");
     #
     EXT_vert1:=get_integral_interior_point(FAC, "LP_no_LLL");
-    if EXT_vert1=false then
-        Print("Failure for LP_no_LLL\n");
+    if is_error(EXT_vert1) then
         return false;
     fi;
     #
     EXT_vert2:=get_integral_interior_point(FAC, "ITER_no_LLL");
-    if EXT_vert2=false then
-        Print("Failure for ITER_no_LLL\n");
+    if is_error(EXT_vert2) then
         return false;
     fi;
     #
     EXT_vert3:=get_integral_interior_point(FAC, "ITER");
-    if EXT_vert3=false then
-        Print("Failure for ITER\n");
+    if is_error(EXT_vert3) then
         return false;
     fi;
     #
     EXT_vert4:=get_integral_interior_point(FAC, "LP");
-    if EXT_vert4=false then
-        Print("Failure for LP\n");
+    if is_error(EXT_vert4) then
         return false;
     fi;
     #

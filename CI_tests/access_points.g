@@ -411,6 +411,47 @@ end;
 
 
 
+get_integral_interior_point:=function(FAC, method)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, EXTint;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.fac");
+    FileO:=Filename(TmpDir, "Test.vertint");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, FAC);
+    eProg:=GetBinaryFilename("POLY_IntegralPoints");
+    TheCommand:=Concatenation(eProg, " gmp ", method, " ", FileI, " CPP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_IntegralPoints failed to create the file";
+    fi;
+    EXTint:=ReadMatrixFile(FileO);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    return EXTint;
+end;
+
+get_dual_desc:=function(EXT)
+    local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.out");
+    FileO:=Filename(TmpDir, "Test.fac");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, EXT);
+    eProg:=GetBinaryFilename("POLY_dual_description");
+    command:="cdd";
+    TheCommand:=Concatenation(eProg, " rational  ", command, " CPP ", FileI, " ", FileO, " 2>", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_dual_description failed to create the file";
+    fi;
+    FAC:=ReadMatrixFile(FileO);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return FAC;
+end;
+
+
 
 
 
