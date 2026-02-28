@@ -1,72 +1,38 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Doing the computation of skeleton and groups\n");
 
 TestGroupSkeleton:=function(eRec)
-    local FileInputNml, FileGrpOut, FileResultOut, strOut, output, eProg, TheCommand, GRPout;
-    FileInputNml:=Filename(DirectoryTemporary(), "TestInput.nml");
-    FileGrpOut:=Filename(DirectoryTemporary(), "TestGrp.out");
-    FileResultOut:=Filename(DirectoryTemporary(), "TestResult.out");
-    RemoveFileIfExist(FileInputNml);
-    RemoveFileIfExist(FileGrpOut);
-    RemoveFileIfExist(FileResultOut);
-    #
-    strOut:="&PROC\n";
-    strOut:=Concatenation(strOut, " FACfile = \"", eRec.FileExt, "\"\n");
-    strOut:=Concatenation(strOut, " EXTfile = \"unset.ext\"\n");
-    strOut:=Concatenation(strOut, " GRPfile = \"", eRec.FileGrp, "\"\n");
-    strOut:=Concatenation(strOut, " OutFile =\"", FileResultOut, "\"\n");
-    strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
-    strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
-    strOut:=Concatenation(strOut, " method_final = \"all\"\n");
-    strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
-    strOut:=Concatenation(strOut, " LevSearch = ", String(eRec.LevSearch), "\n");
-    strOut:=Concatenation(strOut, "/\n");
-    strOut:=Concatenation(strOut, "\n");
-    strOut:=Concatenation(strOut, "&GROUP\n");
-    strOut:=Concatenation(strOut, " ComputeAutGroup = T\n");
-    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
-    strOut:=Concatenation(strOut, " FileGroup = \"", FileGrpOut, "\"\n");
-    strOut:=Concatenation(strOut, "/\n");
-    #
-    WriteStringFile(FileInputNml, strOut);
-    #
-    TheCommand:=Concatenation("cat ", FileInputNml);
-    Exec(TheCommand);
-    #
-    eProg:="../../src_poly/POLY_FaceLatticeGen";
-    TheCommand:=Concatenation(eProg, " ", FileInputNml);
-    Exec(TheCommand);
-    if IsExistingFile(FileGrpOut)=false then
-        Print("The Group output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
+    local GRP, pair_ans;
+    GRP:=get_grp_automorphy(eRec.EXT);
+    pair_ans:=get_group_skeleton(eRec.EXT, GRP.GAPperm, eRec.LevSearch);
+    if is_error(pair_ans) then
+        return false;
     fi;
-    if IsExistingFile(FileResultOut)=false then
-        Print("The Result output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
+    if Order(pair_ans[1]) <> eRec.GRPoutOrder then
+        return false;
     fi;
-    GRPout:=ReadAsFunction(FileGrpOut)();
-    if Order(GRPout)<>eRec.GRPoutOrder then
-        Print("The group order is not what we expect\n");
-        return rec(is_correct:=false);
-    fi;
-    return rec(is_correct:=true);
+    return true;
 end;
 
-ListRec:=[
- rec(FileExt:="G6.ext", FileGrp:="G6.grp", LevSearch:=2, GRPoutOrder:=51840),
- rec(FileExt:="Pent.ext", FileGrp:="Pent.grp", LevSearch:=1, GRPoutOrder:=10)
-];
+EXT_G6:=ReadMatrixFile("G6.ext");
+rec1:=rec(EXT:=EXT_G6, LevSearch:=2, GRPoutOrder:=51840);
+
+EXT_Pent:=ReadMatrixFile("Pent.ext");
+rec2:=rec(EXT:=EXT_Pent, LevSearch:=1, GRPoutOrder:=10);
+
+ListRec:=[rec1, rec2];
 
 FullTest:=function()
-    local n_error, iRec, eRec, RecReply, ListIsotropicCases, eIsotropicCase;
+    local n_error, iRec, eRec, test, ListIsotropicCases, eIsotropicCase;
     n_error:=0;
     iRec:=0;
     ListIsotropicCases:=[];
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestGroupSkeleton(eRec);
-        if RecReply.is_correct=false then
+        test:=TestGroupSkeleton(eRec);
+        if test=false then
             n_error:=n_error+1;
             return n_error;
         fi;

@@ -302,8 +302,7 @@ get_latt_isomorphism_test:=function(eMat1, eMat2)
     eProg:=GetBinaryFilename("LATT_Isomorphism");
     TheCommand:=Concatenation(eProg, " ", FileIn1, " ", FileIn2, " GAP ", FileOut, " 2> ", FileErr);
     if IsExistingFile(FileOut)=false then
-        Print("get_latt_isomorphism_test, no return file\n");
-        return fail;
+        return "program failure: LATT_Isomorphism failed to create a file";
     fi;
     U:=ReadAsFunction(FileOut)();
     RemoveFile(FileIn1);
@@ -311,6 +310,58 @@ get_latt_isomorphism_test:=function(eMat1, eMat2)
     RemoveFile(FileOut);
     RemoveFile(FileErr);
     return U;
+end;
+
+
+
+get_group_skeleton:=function(EXT, GRP, LevSearch)
+    local TmpDir, FileEXT, FileGRP, FileInputNml, FileGrpOut, FileResultOut, strOut, output, eProg, TheCommand, GRPout, result;
+    TmpDir:=DirectoryTemporary();
+    FileEXT:=Filename(TmpDir, "Test.ext");
+    FileGRP:=Filename(TmpDir, "Test.grp");
+    FileInputNml:=Filename(TmpDir, "Test.nml");
+    FileGrpOut:=Filename(TmpDir, "Test.grp");
+    FileResultOut:=Filename(TmpDir, "Test.result");
+    WriteMatrixFile(FileEXT, EXT);
+    WriteGroupFile(FileGRP, Length(EXT), GRP);
+    #
+    strOut:="&PROC\n";
+    strOut:=Concatenation(strOut, " FACfile = \"", FileEXT, "\"\n");
+    strOut:=Concatenation(strOut, " EXTfile = \"unset.ext\"\n");
+    strOut:=Concatenation(strOut, " GRPfile = \"", FileGRP, "\"\n");
+    strOut:=Concatenation(strOut, " OutFile =\"", FileResultOut, "\"\n");
+    strOut:=Concatenation(strOut, " ComputeTotalNumberFaces = T\n");
+    strOut:=Concatenation(strOut, " method_spann = \"LinearProgramming\"\n");
+    strOut:=Concatenation(strOut, " method_final = \"all\"\n");
+    strOut:=Concatenation(strOut, " Arithmetic = \"rational\"\n");
+    strOut:=Concatenation(strOut, " LevSearch = ", String(LevSearch), "\n");
+    strOut:=Concatenation(strOut, "/\n");
+    strOut:=Concatenation(strOut, "\n");
+    strOut:=Concatenation(strOut, "&GROUP\n");
+    strOut:=Concatenation(strOut, " ComputeAutGroup = T\n");
+    strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+    strOut:=Concatenation(strOut, " FileGroup = \"", FileGrpOut, "\"\n");
+    strOut:=Concatenation(strOut, "/\n");
+    #
+    WriteStringFile(FileInputNml, strOut);
+    #
+    eProg:=GetBinaryFilename("POLY_FaceLatticeGen");
+    TheCommand:=Concatenation(eProg, " ", FileInputNml);
+    Exec(TheCommand);
+    if IsExistingFile(FileGrpOut)=false then
+        return "program failure: POLY_FaceLatticeGen failed to create the group file";
+    fi;
+    if IsExistingFile(FileResultOut)=false then
+        return "program failure: POLY_FaceLatticeGen failed to create the result file";
+    fi;
+    GRPout:=ReadAsFunction(FileGrpOut)();
+    result:=ReadAsFunction(FileResultOut)();
+    RemoveFile(FileEXT);
+    RemoveFile(FileGRP);
+    RemoveFile(FileInputNml);
+    RemoveFile(FileGrpOut);
+    RemoveFile(FileResultOut);
+    return [GRPout, result];
 end;
 
 
