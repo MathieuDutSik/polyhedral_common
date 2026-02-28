@@ -1,5 +1,0 @@
-&DATA
- EXTfile = "Example_07_CUT7.ext"
- GRPfile = "Example_07_CUT7.grp"
- OUTfile = "ListOrbit"
-/
