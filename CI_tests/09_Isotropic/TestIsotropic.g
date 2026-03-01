@@ -1,50 +1,47 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestIsotropic\n");
 
-OnlyTestExistence:=false;
-
 TestIsotropic:=function(eRec)
-    local n, FileIn, FileOut, eProg, TheCommand, U, V, eNorm, eNormSqr;
-    n:=Length(eRec.M);
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileIn);
-    RemoveFileIfExist(FileOut);
-    #
-    WriteMatrixFile(FileIn, eRec.M);
-    #
-    if OnlyTestExistence then
-        eProg:="../../src_isotropy/LATT_TestIsotropic";
-    else
-        eProg:="../../src_isotropy/LATT_FindIsotropic";
+    local test_result, find_result, eNorm, eNormSqr;
+    test_result:=quadratic_form_is_isotropic(eRec.M);
+    if is_error(test_result) then
+        return false;
     fi;
-    TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
+    find_result:=quadratic_form_isotropic_vector(eRec.M);
+    if is_error(find_result) then
+        return false;
     fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
-    if eRec.has_isotropic<>U.has_isotropic then
-        Print("The result of has_isotropic is inconsistent\n");
-        return rec(is_correct:=false);
-    fi;
-    if U.has_isotropic and OnlyTestExistence=false then
-        V:=U.V;
-        eNorm:=V * eRec.M * V;
+    if eRec.has_isotropic then
+        if test_result<>true then
+            Print("We should have found an isotropic vector A");
+            return false;
+        fi;
+        if find_result=fail then
+            Print("We should have found an isotropic vector B");
+            return false;
+        fi;
+        eNorm:=find_result * eRec.M * find_result;
         if eNorm<>0 then
             Print("The vector is not isotropic\n");
-            return rec(is_correct:=false);
+            return false;
         fi;
-        eNormSqr:=V * V;
+        eNormSqr:=find_result * find_result;
         if eNormSqr=0 then
             Print("The vector is zero\n");
-            return rec(is_correct:=false);
+            return false;
+        fi;
+    else
+        if test_result<>false then
+            Print("We should not have found an isotropic vector A");
+            return false;
+        fi;
+        if find_result<>fail then
+            Print("We should not have found an isotropic vector B");
+            return false;
         fi;
     fi;
-    return rec(is_correct:=true);
+    return true;
 end;
 
 ListRec:=ReadAsFunction("../DATA/IsotropicCases")();;
@@ -66,16 +63,15 @@ ListDim5gt:=Filtered(ListRec, x->Length(x.M) > 5);
 
 
 FullTest:=function()
-    local n_error, iRec, eRec, RecReply;
+    local n_error, iRec, eRec, reply;
     n_error:=0;
     iRec:=0;
     for eRec in ListRec
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestIsotropic(eRec);
-        if RecReply.is_correct=false then
+        Print("iRec=", iRec, " / ", Length(ListRec), " n_error=", n_error, "\n");
+        reply:=TestIsotropic(eRec);
+        if reply=false then
             n_error:=n_error+1;
-            return n_error;
         fi;
         iRec:=iRec + 1;
     od;

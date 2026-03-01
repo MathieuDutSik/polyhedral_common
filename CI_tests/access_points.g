@@ -472,6 +472,54 @@ test_shortest_realizability:=function(SHV)
 end;
 
 
+quadratic_form_isotropic_test_generic:=function(eProg, mat)
+    local TmpDir, FileI, FileO, FileE, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    RemoveFileIfExist(FileI);
+    RemoveFileIfExist(FileO);
+    RemoveFileIfExist(FileE);
+    #
+    WriteMatrixFile(FileI, mat);
+    #
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: Isotropic program errors";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    return U;
+end;
+
+quadratic_form_is_isotropic:=function(mat)
+    local eProg, result;
+    eProg:=GetBinaryFilename("LATT_TestIsotropic");
+    result:=quadratic_form_isotropic_test_generic(eProg, mat);
+    if is_error(result) then
+        return result;
+    fi;
+    return result.has_isotropic;
+end;
+
+
+quadratic_form_isotropic_vector:=function(mat)
+    local eProg, result;
+    eProg:=GetBinaryFilename("LATT_FindIsotropic");
+    result:=quadratic_form_isotropic_test_generic(eProg, mat);
+    if is_error(result) then
+        return result;
+    fi;
+    if result.has_isotropic then
+        return result.V;
+    else
+        return fail;
+    fi;
+end;
+
 
 
 

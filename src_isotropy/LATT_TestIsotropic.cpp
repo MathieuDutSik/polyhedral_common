@@ -30,10 +30,9 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 3 && argc != 5) {
-      std::cerr
-          << "LATT_TestIsotropic arithmetic [FileI] [OutFormat] [FileO]\n";
+      std::cerr << "LATT_TestIsotropic [arith] [FileI] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
-      std::cerr << "LATT_TestIsotropic arithmetic [FileI]\n";
+      std::cerr << "LATT_TestIsotropic [arith] [FileI]\n";
       throw TerminalException{1};
     }
     std::string arith = argv[1];
@@ -72,8 +71,8 @@ int main(int argc, char *argv[]) {
         return process<T>(FileI, OutFormat, os);
       }
       */
-      std::cerr
-          << "Failed to find matching type for arith. Possibility: rational\n";
+      std::cerr << "Failed to find matching type for arith.\n";
+      std::cerr << "Possibility: rational\n";
       throw TerminalException{1};
     };
     print_stderr_stdout_file(FileO, f);
