@@ -1,25 +1,14 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestDelaunayEnumeration\n");
 
 
 TestGeneration:=function(matrix, method)
-    local n, TmpDir, FileMat, FileOut, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileMat:=Filename(TmpDir, "GenerateVectorSet.mat");
-    FileOut:=Filename(TmpDir, "GenerateVectorSet.out");
-    #
-    WriteMatrixFile(FileMat, matrix);
-    #
-    eProg:="../../src_latt/LATT_GenerateCharacteristicVectorSet";
-    TheCommand:=Concatenation(eProg, " mpq_class mpz_class ", method, " ", FileMat, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    local U;
+    U:=get_fullrank_invariant_family(matrix, method);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileMat);
-    RemoveFile(FileOut);
     Print("|U|=", Length(U), "\n");
     return true;
 end;
