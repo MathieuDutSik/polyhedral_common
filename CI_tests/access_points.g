@@ -670,6 +670,60 @@ get_matrix_group_mod_information:=function(ListGen, p_val)
 end;
 
 
+test_equivalent_lorentzian_matrices:=function(mat1, mat2)
+    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, U;
+    #
+    TmpDir:=DirectoryTemporary();
+    File1:=Filename(TmpDir, "Indef_Equi.mat1");
+    File2:=Filename(TmpDir, "Indef_Equi.mat2");
+    FileO:=Filename(TmpDir, "Indef_Equi.out");
+    FileE:=Filename(TmpDir, "Indef_Equi.err");
+    WriteMatrixFile(File1, mat1);
+    WriteMatrixFile(File2, mat2);
+    #
+    eProg:=GetBinaryFilename("LORENTZ_PERF_Isomorphism");
+    TheCommand:=Concatenation(eProg, " ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    #
+    if IsExistingFile(FileO)=false then
+        return "program failure: LORENTZ_PERF_Isomorphism failure for perfect matrices";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(File1);
+    RemoveFile(File2);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+stabilizer_lorentzian_matrix:=function(mat)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    #
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Indef_Stab.mat");
+    FileO:=Filename(TmpDir, "Indef_Stab.out");
+    FileE:=Filename(TmpDir, "Indef_Stab.err");
+    #
+    WriteMatrixFile(FileI, mat);
+    #
+    eProg:=GetBinaryFilename("LORENTZ_PERF_Automorphism");
+    TheCommand:=Concatenation(eProg, " ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    #
+    if IsExistingFile(FileO)=false then
+        return "program failure: LORENTZ_PERF_Automorphism failed to create a file";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+
+
+
 get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
     TmpDir:=DirectoryTemporary();

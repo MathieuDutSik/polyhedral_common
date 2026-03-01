@@ -1,8 +1,9 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning Test enumeration of Lorentzian indefinite equivalence\n");
 
 Equi_SingleTest:=function(eRecEqui)
-    local mat1, mat2, test, DirTemp, FileMat1, FileMat2, FileTest, eProg, TheCommand, U;
+    local mat1, mat2, test, U;
     #
     mat1:=eRecEqui.mat1;
     mat2:=eRecEqui.mat2;
@@ -13,27 +14,10 @@ Equi_SingleTest:=function(eRecEqui)
         fi;
     fi;
     #
-    DirTemp:=DirectoryTemporary();
-    FileMat1:=Filename(DirTemp, "Indef_Equi.mat1");
-    FileMat2:=Filename(DirTemp, "Indef_Equi.mat2");
-    FileTest:=Filename(DirTemp, "Indef_Equi.test");
-    #
-    WriteMatrixFile(FileMat1, mat1);
-    WriteMatrixFile(FileMat2, mat2);
-    #
-    eProg:="../../src_lorentzian/LORENTZ_PERF_Isomorphism";
-    TheCommand:=Concatenation(eProg, " ", FileMat1, " ", FileMat2, " GAP ", FileTest);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    #
-    if IsExistingFile(FileTest)=false then
-        Print("The output file is not existing. That qualifies as a fail for Equi_SingleTest\n");
+    U:=test_equivalent_lorentzian_matrices(mat1, mat2);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileTest)();
-    RemoveFile(FileMat1);
-    RemoveFile(FileMat2);
-    RemoveFile(FileTest);
     if U=fail then
         if test<>fail then
             Print("Different equivalence conclusions\n");
@@ -55,25 +39,10 @@ Stab_SingleTest:=function(eRecStab)
     local mat, DirTemp, FileMat, FileOut, eProg, TheCommand, U, eMat;
     #
     mat:=eRecStab.mat;
-    #
-    DirTemp:=DirectoryTemporary();
-    FileMat:=Filename(DirTemp, "Indef_Stab.mat");
-    FileOut:=Filename(DirTemp, "Indef_Stab.out");
-    RemoveFileIfExist(FileMat);
-    RemoveFileIfExist(FileOut);
-    #
-    WriteMatrixFile(FileMat, mat);
-    #
-    eProg:="../../src_lorentzian/LORENTZ_PERF_Automorphism";
-    TheCommand:=Concatenation(eProg, " ", FileMat, " GAP ", FileOut);
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    #
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail for Stab_SingleTest\n");
+    U:=stabilizer_lorentzian_matrix(mat);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileOut)();
     for eMat in U
     do
         if mat <> eMat * mat * TransposedMat(eMat) then
