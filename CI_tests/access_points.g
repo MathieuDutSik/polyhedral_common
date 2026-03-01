@@ -521,6 +521,29 @@ quadratic_form_isotropic_vector:=function(mat)
 end;
 
 
+find_positive_vectors:=function(M, CritNorm, StrictIneq)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, V;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    #
+    WriteMatrixFile(FileI, M);
+    #
+    eProg:=GetBinaryFilename("LATT_FindPositiveVector");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " ", String(CritNorm), " ", String(StrictIneq), " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_FindPositiveVector did not return anything, likely crash";
+    fi;
+    V:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return V;
+end;
+
+
 
 
 

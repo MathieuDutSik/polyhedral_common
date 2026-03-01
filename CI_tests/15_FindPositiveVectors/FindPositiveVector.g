@@ -1,25 +1,13 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning FindIsotropicVector\n");
 
 SingleTest:=function(M, CritNorm, StrictIneq)
     local FileIn, FileOut, eProg, TheCommand, V, eNorm;
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    RemoveFileIfExist(FileIn);
-    RemoveFileIfExist(FileOut);
-    #
-    WriteMatrixFile(FileIn, M);
-    #
-    eProg:="../../src_isotropy/LATT_FindPositiveVector";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " ", String(CritNorm), " ", String(StrictIneq), " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    V:=find_positive_vectors(M, CritNorm, StrictIneq);
+    if is_error(V) then
         return false;
     fi;
-    V:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
     eNorm:=V * M * V;
     Print("V=", V, " eNorm=", eNorm, " StrictIneq=", StrictIneq, " CritNorm=", CritNorm, "\n");
     if StrictIneq then
