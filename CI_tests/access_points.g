@@ -544,6 +544,29 @@ find_positive_vectors:=function(M, CritNorm, StrictIneq)
 end;
 
 
+get_orbit_shortest:=function(eG)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, eG);
+    #
+    eProg:=GetBinaryFilename("LATT_ComputeShortestOrbits");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: LATT_ComputeShortestOrbits did not return anything, likely crash";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+
 
 
 

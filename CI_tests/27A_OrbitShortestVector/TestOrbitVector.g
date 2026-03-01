@@ -1,23 +1,14 @@
 Read("../common.g");
+Read("../access_points.g");
 
 
 TestOrbitShortest:=function(eRec)
-    local GramMat, FileIn, FileOut, eProg, TheCommand, U, V, eNorm, eNormSqr;
+    local GramMat, U;
     GramMat:=GetGramMatrixFromString(eRec.name);
-    FileIn:=Filename(DirectoryTemporary(), "Test.in");
-    FileOut:=Filename(DirectoryTemporary(), "Test.out");
-    WriteMatrixFile(FileIn, GramMat);
-    #
-    eProg:="../../src_latt/LATT_ComputeShortestOrbits";
-    TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP ", FileOut);
-    Exec(TheCommand);
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
+    U:=get_orbit_shortest(GramMat);
+    if is_error(U) then
         return false;
     fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileOut);
     Print("|U.vf|=", Length(U.vf), " n_orbit=", eRec.n_orbit, "\n");
     if Length(U.vf)<>eRec.n_orbit then
         Print("The number of orbits is incorrect\n");

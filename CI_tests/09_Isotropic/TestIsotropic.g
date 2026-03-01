@@ -14,11 +14,11 @@ TestIsotropic:=function(eRec)
     fi;
     if eRec.has_isotropic then
         if test_result<>true then
-            Print("We should have found an isotropic vector A");
+            Print("We should have found an isotropic vector A\n");
             return false;
         fi;
         if find_result=fail then
-            Print("We should have found an isotropic vector B");
+            Print("We should have found an isotropic vector B\n");
             return false;
         fi;
         eNorm:=find_result * eRec.M * find_result;
@@ -33,11 +33,11 @@ TestIsotropic:=function(eRec)
         fi;
     else
         if test_result<>false then
-            Print("We should not have found an isotropic vector A");
+            Print("We should not have found an isotropic vector A\n");
             return false;
         fi;
         if find_result<>fail then
-            Print("We should not have found an isotropic vector B");
+            Print("We should not have found an isotropic vector B\n");
             return false;
         fi;
     fi;
