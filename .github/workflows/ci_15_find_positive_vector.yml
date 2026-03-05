@@ -33,6 +33,7 @@ jobs:
       LIBBLISS_PATH: /home/runner/opt/libbliss
       LIBBLISS_INCDIR: /home/runner/opt/libbliss/include
       LIBBLISS_LINK: "-L/home/runner/opt/libbliss/lib -lbliss -Wl,-rpath,/home/runner/opt/libbliss/lib"
+      POLYHEDRAL_COMMON_SOURCE_CODE: "/home/runner/work/polyhedral_common/polyhedral_common"
 
     steps:
       - uses: actions/checkout@v2

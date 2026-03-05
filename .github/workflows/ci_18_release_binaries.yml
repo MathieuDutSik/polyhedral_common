@@ -35,6 +35,7 @@ jobs:
       GMP_PATH: /home/runner/work/opt/gmp-6.2.1
       GMP_INCDIR: /home/runner/work/opt/gmp-6.2.1/include
       GMP_CXX_LINK: "/home/runner/work/opt/gmp-6.2.1/lib/libgmpxx.a /home/runner/work/opt/gmp-6.2.1/lib/libgmp.a"
+      POLYHEDRAL_COMMON_SOURCE_CODE: "/home/runner/work/polyhedral_common/polyhedral_common"
 
     steps:
       - uses: actions/checkout@v2
