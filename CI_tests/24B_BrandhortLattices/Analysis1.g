@@ -13,5 +13,5 @@ do
     LorMat:=-eMat;
     RecGRP:=GetReflectivityInformation(LorMat);
     GRPmatr:=RecGRP.GrpIsomCoxMatr;
-    Print("  |GRPmatr|=", Order(GRPmatr), "\n");
+    Print("  |GRPmatr|=", Order(GRPmatr), " |l_simple|=", Length(RecGRP.ListSimpleRoots), "\n");
 od;
