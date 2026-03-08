@@ -1288,6 +1288,39 @@ LinSpaceMatrix<T> BuildLinSpaceMatrix(std::vector<MyMatrix<T>> const &ListMat,
   return LinSpa;
 }
 
+template<typename T, typename Tint>
+MyMatrix<Tint> vector_family_saturation(MyMatrix<Tint> const& SHV, std::vector<MyMatrix<T>> const& l_gen) {
+  std::vector<MyVector<Tint>> l_vect;
+  std::unordered_set<MyVector<Tint>> set_vect;
+  auto f_insert=[&](MyVector<Tint> const& v) -> void {
+    if (set_vect.count(v) == 0) {
+      set_vect.insert(v);
+      l_vect.push_back(v);
+    }
+  };
+  for (int u=0; u<SHV.rows(); u++) {
+    MyVector<Tint> V = GetMatrixRow(SHV, u);
+    f_insert(V);
+  }
+  size_t start = 0;
+  while(true) {
+    size_t len = l_vect.size();
+    for (size_t u=start; u<len; u++) {
+      MyVector<Tint> v1 = l_vect[u];
+      for (auto & eGen_T: l_gen) {
+        MyMatrix<Tint> eGen = UniversalMatrixConversion<Tint,T>(eGen_T);
+        MyVector<Tint> v2 = eGen.transpose() * v1;
+        f_insert(v2);
+      }
+    }
+    start = len;
+    if (start == l_vect.size()) {
+      break;
+    }
+  }
+  return MatrixFromVectorFamily(l_vect);
+}
+
 // clang-format off
 #endif  // SRC_LATT_TSPACE_FUNCTIONS_H_
 // clang-format on

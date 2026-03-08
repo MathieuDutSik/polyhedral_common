@@ -106,10 +106,10 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     os_out << ";\n";
   }
   std::string FileDimensions = BlockQUERIES.get_string("FileDimensions");
-  if (FileDimensionIn != "null") {
+  if (FileDimensions != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
         ReadListMatrixFile<Tint>(FileDimensions);
-    std::string OutFile = FileStabilizerQueries + ".output";
+    std::string OutFile = FileDimensions + ".output";
     std::ofstream os_out(OutFile);
     bool is_first = true;
     os_out << "return [";
@@ -118,11 +118,32 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         os_out << ",\n";
       }
       is_first = false;
-      int n_mat = fce.LinSpa.ListMat.size();
-      MyMatrix<T> ScalMat = Mget_scal_mat(fce.LinSpa.ListMat, EXT);
+      int n_mat = fce.pctdi.LinSpa.ListMat.size();
+      MyMatrix<T> ScalMat = get_scal_mat(fce.pctdi.LinSpa.ListMat, EXT);
       int rnk = RankMat(ScalMat);
       int index = n_mat - rnk;
       os_out << "rec(n_mat:=" << n_mat << ", rnk:=" << rnk << ", index:=" << index << ")";
+    }
+    os_out << "];\n";
+  }
+  std::string FileIsFace = BlockQUERIES.get_string("FileIsFace");
+  if (FileIsFace != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileIsFace);
+    std::string OutFile = FileIsFace + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+      std::optional<MyMatrix<T>> opt =
+        is_bounded_face_iterative<T, Tint>(LinSpa, EXT_sat, os);
+      bool is_face = opt.has_value();
+      os_out << GAP_logical(is_face);
     }
     os_out << "];\n";
   }

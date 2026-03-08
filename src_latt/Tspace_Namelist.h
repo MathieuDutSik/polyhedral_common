@@ -153,6 +153,49 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
   std::string const &TypeTspace = Blk.get_string("TypeTspace");
   LinSpaceMatrix<T> LinSpaRet;
   auto set_paperwork = [&]() -> void { reset_paperwork(LinSpaRet); };
+  auto get_imultiplication = [&]() -> MyMatrix<T> {
+    int n = Blk.get_int("RealImagDim");
+    int eSum_i = Blk.get_int("RealImagSum");
+    int eProd_i = Blk.get_int("RealImagProd");
+    T eSum = UniversalScalarConversion<T, int>(eSum_i);
+    T eProd = UniversalScalarConversion<T, int>(eProd_i);
+    T disc = eSum * eSum - 4 * eProd;
+    if (disc == 0) {
+      std::cerr << "Discriminant is zero, neither totally real, nor imaginary, degenerate\n";
+      throw TerminalException{1};
+    }
+    if (disc < 0) {
+      return GetCommImagQuadratic(n, eSum, eProd);
+    }
+    // It has to be real
+    return GetCommRealQuadratic(n, eSum, eProd);
+  };
+  auto get_is_eisenstein_or_gaussian = [&]() -> bool {
+    int eSum_i = Blk.get_int("RealImagSum");
+    int eProd_i = Blk.get_int("RealImagProd");
+    bool answer = false;
+    if (eSum_i == 0 && eProd_i == 1) {
+      // Gaussian
+      answer = true;
+    }
+    if (eSum_i == 1 && eProd_i == 1) {
+      // Eisenstein
+      answer = true;
+    }
+#ifdef SANITY_CHECK_TSPACE_NAMELIST
+    MyMatrix<T> Imult = get_imultiplication();
+    T det = DeterminantMat(Imult);
+    bool answer_b = false;
+    if (T_abs(det) == 1) {
+      answer_b = true;
+    }
+    if (answer != answer_b) {
+      std::cerr << "TSPACE: Inconsistent result between answer and answer_b\n";
+      throw TerminalException{1};
+    }
+#endif
+    return answer;
+  };
   auto set_listcomm = [&]() -> void {
     std::string const &ListComm = Blk.get_string("ListComm");
     LinSpaRet.ListComm.clear();
@@ -164,24 +207,13 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       return;
     }
     if (ListComm == "Use_realimag") {
-      int n = Blk.get_int("RealImagDim");
-      int eSum_i = Blk.get_int("RealImagSum");
-      int eProd_i = Blk.get_int("RealImagProd");
-      T eSum = UniversalScalarConversion<T, int>(eSum_i);
-      T eProd = UniversalScalarConversion<T, int>(eProd_i);
-      if (TypeTspace == "RealQuad") {
-        MyMatrix<T> Imultiplication = GetCommRealQuadratic(n, eSum, eProd);
-        LinSpaRet.ListComm.push_back(Imultiplication);
-        return;
+      if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad") {
+        std::cerr << "TSPACE: Cannot use the realimag method in a case that is not readl or imaginary\n";
+        throw TerminalException{1};
       }
-      if (TypeTspace == "ImagQuad") {
-        MyMatrix<T> Imultiplication = GetCommImagQuadratic(n, eSum, eProd);
-        LinSpaRet.ListComm.push_back(Imultiplication);
-        return;
-      }
-      std::cerr << "We have TypeTspace=" << TypeTspace << "\n";
-      std::cerr << "But only RealQuad and ImagQuad are allowed\n";
-      throw TerminalException{1};
+      MyMatrix<T> Imultiplication = get_imultiplication();
+      LinSpaRet.ListComm.push_back(Imultiplication);
+      return;
     }
     if (ListComm == "File") {
       std::string const &FileListComm = Blk.get_string("FileListComm");
@@ -206,6 +238,22 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
 #endif
     if (PtGroupMethod == "Trivial") {
       MyMatrix<T> eGen = -IdentityMat<T>(LinSpaRet.n);
+      LinSpaRet.PtStabGens = {eGen};
+      return;
+    }
+    if (PtGroupMethod == "Use_realimag") {
+      if (TypeTspace != "RealQuad" && TypeTspace != "ImagQuad") {
+        std::cerr << "TSPACE: Cannot use the realimag method in a case that is not readl or imaginary\n";
+        throw TerminalException{1};
+      }
+      auto get_generator=[&]() -> MyMatrix<T> {
+        if (get_is_eisenstein_or_gaussian()) {
+          return get_imultiplication();
+        } else {
+          return -IdentityMat<T>(LinSpaRet.n);
+        }
+      };
+      MyMatrix<T> eGen = get_generator();
       LinSpaRet.PtStabGens = {eGen};
       return;
     }
