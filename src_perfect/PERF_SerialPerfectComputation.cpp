@@ -147,6 +147,26 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileIsWellRounded = BlockQUERIES.get_string("FileIsWellRounded");
+  if (FileIsWellRounded != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileIsWellRounded);
+    std::string OutFile = FileIsWellRounded + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+      PerfectBoundednessProperty pbp = initial_bounded_property(fce.pctdi.LinSpa, EXT_sat, os);
+      bool is_well_rounded = get_result(pbp);
+      os_out << GAP_logical(is_well_rounded);
+    }
+    os_out << "];\n";
+  }
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
