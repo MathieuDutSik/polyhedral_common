@@ -206,6 +206,13 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+
+
+
+
+
+
+  
   std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileEquivalenceQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =

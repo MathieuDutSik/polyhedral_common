@@ -29,10 +29,17 @@ In order to update the submodule the command is `./update.sh`.
 Compilation
 -----------
 
-The compilation of the software is relatively complex. However in
-**script_docker/Dockerfile** a dockerfile is given that should make everything
-clear. It should also allow any user to install the system on their
-computer and use it fairly easily.
+The code depends on only a few libraries: Eigen, Boost and nauty.
+
+Several ways to compile the program are made available:
+
+One is to compile **via Dockerfile**. For the complete code, it
+is available at **docker_files/docker_complete/Dockerfile**.
+
+Another way is to use the **CMakeLists.txt** for building the Makefile
+and compiling.
+
+The standard way used by me is to use the Makefile.
 
 
 General organization of the code

@@ -1,0 +1,126 @@
+\documentclass[12pt]{amsart}
+\usepackage{amsfonts, amsmath, latexsym, epic, eepic}
+\usepackage{url}
+\title{Perfect complex functionality}
+\author{}
+
+\begin{document}
+\newcommand{\RR}{\ensuremath{\mathbb{R}}}
+\newcommand{\NN}{\ensuremath{\mathbb{N}}}
+\newcommand{\QQ}{\ensuremath{\mathbb{Q}}}
+\newcommand{\CC}{\ensuremath{\mathbb{C}}}
+\newcommand{\ZZ}{\ensuremath{\mathbb{Z}}}
+\newcommand{\TT}{\ensuremath{\mathbb{T}}}
+\newtheorem{prop}{Proposition}
+\newtheorem{theor}{Theorem}
+\newtheorem{cor}{Corollary}
+\newtheorem{lem}{Lemma}
+\newtheorem{conj}{Conjecture}
+\newtheorem{claim}{Claim}
+\newtheorem{remark}{Remark}
+\newtheorem{definition}{Definition}
+
+\maketitle
+\thispagestyle{empty}
+
+We are able to work with perfect complex effectively. For that, we provide a number of functionality that can be used from GAP for users of the program.
+
+
+
+\section{Installation}
+
+All the code is accessible from the repository {\bf polyhedral\_common} which is available at
+\begin{verbatim}
+https://github.com/MathieuDutSik
+\end{verbatim}
+
+There are two GAP files that need to be read
+\begin{verbatim}
+gap> Read("common.g");
+gap> Read("access_points.g");
+\end{verbatim}
+They contain the GAP code that encapsulates the access to the C++ functions.
+
+Here, the C++ functions in question are provided by the program {\bf PERF\_SerialPerfectComputation.cpp}. There are several ways to compile it which are documented in {\bf README.md}
+
+The compiled program has to be made available in the {\bf PATH} or the environment variable {\bf POLYHEDRAL\_COMMON\_SOURCE\_CODE}.
+
+
+
+\section{$T$-space chosen}
+
+The $T$-space on which the computation is going to be done has to be chosen:
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_classic(4, false);
+\end{verbatim}
+Which will select the classic Voronoi space for $\ZZ^4$.
+
+For selecting the $T$-space of imaginary quadratic, you can do
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_imag_quad(3, -3, false);
+\end{verbatim}
+This will select the $T$-space for imaginary quadratic over the Eisenstein integers.
+
+The second argument specifies whether we want to consider only the well rounded cells, which is usually not the case.
+
+
+
+\section{Usage}
+
+The record {\bf desc} created in the previous operation contains the information as well as the place where the cache is going to be stored. The complex is created at the first call and then reused in subsequent calls. This means that the code is slow at first and then much faster later on. If you want to specify the precise place where the cache is stored, please adjust the entry {\bf FileCache} in the record {\bf desc}.
+
+
+\subsection{Getting generators of the group}
+
+One of the basic output of Voronoi method is that it gives you a generating set of the group.
+
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_imag_quad(3, -3, false);
+gap> ListGen:=PERFCOMP_group_generators(desc);
+\end{verbatim}
+Note that here the argument {\bf false} is needed because we have to compute the.
+
+\subsection{Information on specific vector family}
+
+One wants to find properties of a cell. There are some commands for that
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_imag_quad(3, -3, false);
+gap> EXT:=[[0,0,1, 0,0,0]];
+gap> record_dim:=PERFCOMP_dimension(desc, EXT);
+gap> is_face:=PERFCOMP_is_face(desc, EXT);
+gap> face_index:=PERFCOMP_face_search(desc, EXT);
+\end{verbatim}
+The {\bf record\_dim} is the record containing the information on the dimension. {\bf is\_face} is a boolean indicating if EXT is a face or not in the complex. {\bf face\_index} is a record containing the index, the number of orbit that describes it and the matrix transformation that maps the known representative to that one.
+
+
+
+\subsection{Computing stabilizers and equivalence}
+
+The computation of the perfect complex with the list of triples allow computing the stabilizer as well as testing equivalence of cells.
+
+
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_imag_quad(3, -3, false);
+gap> EXT:=[[0,0,1, 0,0,0]];
+gap> ListGen:=PERFCOMP_stabilizer(desc, EXT);
+\end{verbatim}
+
+for equivalence it works in the same way:
+
+\begin{verbatim}
+gap> desc:=GenerateTspaceDescription_imag_quad(3, -3, false);
+gap> EXT1:=[[1,0,0, 0,0,0]];
+gap> EXT2:=[[0,0,1, 0,0,0]];
+gap> result:=PERFCOMP_test_equivalence(desc, EXT1, EXT2);
+\end{verbatim}
+
+Here it is important to have {\bf only\_well\_rounded = false} since the cells EXT and EXT2 are indeed not well rounded.
+
+
+
+
+
+
+
+
+\end{document}
