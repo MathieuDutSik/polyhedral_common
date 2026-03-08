@@ -42,7 +42,10 @@ GetBinaryFilename:=function(FileName)
             return FullProg;
         fi;
     fi;
-    return fail;
+    Print("We failed to find the program ", FileName, "\n");
+    Print("We did not find it in the PATH nor in the directory\n");
+    Print("POLYHEDRAL_COMMON_SOURCE_CODE\n");
+    Error("Please make it available by compiling or putting the right paths");
 end;
 
 

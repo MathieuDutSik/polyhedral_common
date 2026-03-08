@@ -816,6 +816,221 @@ end;
 
 
 
+GenerateTspaceDescription_classic:=function(n, only_well_rounded)
+    local FileCache;
+    CacheFile:=Concatenation("/tmp/Perfect_classic_", String(n));
+    return rec(nature:="classic",
+               n:=n,
+               only_well_rounded:=only_well_rounded,
+               CacheFile:=CacheFile);
+end;
+
+GenerateTspaceDescription_imag_quad:=function(n, d, only_well_rounded)
+    local info, CacheFile;
+    info:=GetFundamentalInfo(d);
+    CacheFile:=Concatenation("/tmp/Perfect_imag_quad_", String(n), "_", String(d));
+    return rec(nature:="imag_quad",
+               info:=info,
+               n:=n,
+               only_well_rounded:=only_well_rounded,
+               CacheFile:=CacheFile);
+end;
+
+FORTRAN_logical:=function(test)
+    if test=true then
+        return "T";
+    fi;
+    if test=false then
+        return "F";
+    fi;
+    Error("Wrong input to FORTRAN_logical");
+end;
+
+
+__PERFCOMP_Write_t_space:=function(output, desc)
+    AppendTo(output, "&DATA\n");
+    AppendTo(output, " arithmetic_T = \"gmp_rational\"\n");
+    AppendTo(output, " arithmetic_Tint = \"gmp_integer\"\n");
+    AppendTo(output, " OnlyWellRounded = ", FORTRAN_logical(desc.only_well_rounded), "\n");
+    AppendTo(output, " ComputeBoundary = T\n");
+    AppendTo(output, " ComputeContractingHomotopy = T\n");
+    AppendTo(output, " CacheFile = \"", desc.CacheFile, "\"\n");
+    AppendTo(output, "/\n");
+    AppendTo(output, "\n");
+    #
+    if desc.nature = "classic" then
+        AppendTo(output, "&TSPACE\n");
+        AppendTo(output, " TypeTspace = \"Classic\"\n");
+        AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
+        AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
+        AppendTo(output, " ListComm = \"Use_realimag\"\n");
+        AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
+        AppendTo(output, " FileListSubspaces = \"unset\"\n");
+        AppendTo(output, " ClassicDim = ", desc.n, "\n");
+        AppendTo(output, "/\n");
+        AppendTo(output, "\n");
+        return;
+    fi;
+    if desc.nature = "imag_quad" then
+        AppendTo(output, "&TSPACE\n");
+        AppendTo(output, " TypeTspace = \"", desc.info.type_tspace, "\"\n");
+        AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
+        AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
+        AppendTo(output, " ListComm = \"Use_realimag\"\n");
+#    AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
+        AppendTo(output, " PtGroupMethod = \"Compute\"\n");
+        AppendTo(output, " FileListSubspaces = \"unset\"\n");
+        AppendTo(output, " RealImagDim = ", desc.n, "\n");
+        AppendTo(output, " RealImagSum = ", desc.info.eSum, "\n");
+        AppendTo(output, " RealImagProd = ", desc.info.eProd, "\n");
+        AppendTo(output, "/\n");
+        AppendTo(output, "\n");
+        return;
+    fi;
+    Print("nature=", desc.nature, "\n");
+    Print("Supported types: classic and imag_quad\n");
+    Error("Unsupposed type");
+end;
+
+PERFCOMP_group_generators:=function(desc)
+    local TmpDir, FileN, FileO, FileE, output, ListGen;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileO:=Filename(TmpDir, "PerfComp.out");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " FileGroupGenerators = \"", FileO, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListGen:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListGen;
+end;
+
+
+
+
+PERFCOMP_dimension:=function(desc, ListVect)
+    local FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileI:=Filename(TmpDir, "PerfComp.mat");
+    FileO:=Filename(TmpDir, "PerfComp.mat.output");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    WriteListMatrixFile(FileI, [ListVect]);
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " FileDimension = \"", FileI, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListDim:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListDim[1];
+end;
+
+PERFCOMP_is_face:=function(desc, ListVect)
+end;
+
+PERFCOMP_is_well_rounded:=function(desc, ListVect)
+end;
+
+PERFCOMP_stabilizer:=function(desc, ListVect)
+    local TmpDir, FileN, FileI, FileO, FileE, output
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileI:=Filename(TmpDir, "PerfComp.mat");
+    FileO:=Filename(TmpDir, "PerfComp.mat.output");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    WriteListMatrixFile(FileI, [ListVect]);
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " FileStabilizerQueries = \"", FileI, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListStab:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListStab[1];
+end;
+
+PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
+    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListEquiv;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileI:=Filename(TmpDir, "PerfComp.mat");
+    FileO:=Filename(TmpDir, "PerfComp.mat.output");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    WriteListMatrixFile(FileI, [ListVect1, ListVect2]);
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " FileEquivalenceQueries = \"", FileI, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListEquiv:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListEquiv[1];
+end;
+
+PERFCOMP_boundary_cell:=function(desc, ListVect)
+end;
+
+PERFCOMP_upper_cell:=function(desc, ListVect)
+end;
+
+PERFCOMP_boundary_chain:=function(desc, Chain)
+end;
+
+PERFCOMP_contracting_homotopy_chain:=function(desc, Chain)
+end;
+
+
+
+
+
+
+
+
+
+
+
 
 
 get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)

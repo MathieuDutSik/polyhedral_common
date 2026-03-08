@@ -174,12 +174,12 @@ Flipping_Perfect(MyMatrix<T> const &eMatIn, MyMatrix<T> const &eMatDir,
 
 template <typename T, typename Tint>
 MyMatrix<T> get_scal_mat(std::vector<MyMatrix<T>> const &ListMat,
-                         Tshortest<T, Tint> const &rec_shv) {
+                         MyMatrix<Tint> const& SHV) {
   int nbMat = ListMat.size();
-  int nbShort = rec_shv.SHV.rows();
+  int nbShort = SHV.rows();
   MyMatrix<T> ScalMat(nbShort, nbMat);
   for (int iShort = 0; iShort < nbShort; iShort++) {
-    MyVector<Tint> eVectShort = rec_shv.SHV.row(iShort);
+    MyVector<Tint> eVectShort = SHV.row(iShort);
     for (int iMat = 0; iMat < nbMat; iMat++) {
       T eNorm = EvaluationQuadForm<T, Tint>(ListMat[iMat], eVectShort);
       ScalMat(iShort, iMat) = eNorm;
@@ -192,7 +192,7 @@ template <typename T, typename Tint>
 bool is_perfect_in_space(LinSpaceMatrix<T> const &LinSpa,
                          Tshortest<T, Tint> const &rec_shv) {
   int nbMat = LinSpa.ListMat.size();
-  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa.ListMat, rec_shv);
+  MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(LinSpa.ListMat, rec_shv.SHV);
   return RankMat(ScalMat) == nbMat;
 }
 
@@ -531,7 +531,7 @@ GetOnePerfectForm_Kernel(std::vector<MyMatrix<T>> const& ListMat, MyMatrix<T> co
   int iter = 0;
 #endif
   while (true) {
-    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(ListMat, rec_shv);
+    MyMatrix<T> ScalMat = get_scal_mat<T, Tint>(ListMat, rec_shv.SHV);
     SelectionRowCol<T> eSelect = TMat_SelectRowCol(ScalMat);
     int TheRank = eSelect.TheRank;
 #ifdef DEBUG_INITIAL_PERFECT

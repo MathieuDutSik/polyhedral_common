@@ -105,6 +105,27 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     WriteListMatrixGAP(os_out, list_gen);
     os_out << ";\n";
   }
+  std::string FileDimensions = BlockQUERIES.get_string("FileDimensions");
+  if (FileDimensionIn != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileDimensions);
+    std::string OutFile = FileStabilizerQueries + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      int n_mat = fce.LinSpa.ListMat.size();
+      MyMatrix<T> ScalMat = Mget_scal_mat(fce.LinSpa.ListMat, EXT);
+      int rnk = RankMat(ScalMat);
+      int index = n_mat - rnk;
+      os_out << "rec(n_mat:=" << n_mat << ", rnk:=" << rnk << ", index:=" << index << ")";
+    }
+    os_out << "];\n";
+  }
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
@@ -314,10 +335,6 @@ int main(int argc, char *argv[]) {
   } catch (TerminalException const &e) {
     std::cerr << "Error in PERF_SerialPerfectComputation\n";
     exit(e.eVal);
-  } catch (std::runtime_error const &e) {
-    std::cerr << "Runtime error in PERF_SerialPerfectComputation\n";
-    std::cerr << "error: " << e.what() << "\n";
-    exit(EXIT_FAILURE);
   }
   runtime(time);
 }
