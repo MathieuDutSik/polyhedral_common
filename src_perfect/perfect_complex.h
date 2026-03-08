@@ -1239,6 +1239,35 @@ compute_stabilizer_ext(FullComplexEnumeration<T, Tint, Tgroup> const& fce,
   return pair;
 }
 
+template<typename Tint>
+struct FceFaceSearch {
+  int index;
+  int iOrb;
+  MyMatrix<Tint> M;
+};
+
+template<typename T, typename Tint, typename Tgroup>
+FceFaceSearch<Tint> fce_face_search(FullComplexEnumeration<T, Tint, Tgroup> const& fce, MyMatrix<Tint> const& EXT, std::ostream& os) {
+  triple<Tint> t2 = get_one_triple(fce, EXT, os);
+  int n_mat = fce.pctdi.LinSpa.ListMat.size();
+  MyMatrix<T> ScalMat = get_scal_mat(fce.pctdi.LinSpa.ListMat, EXT);
+  int index = n_mat - RankMat(ScalMat);
+  int n_orb = fce.levels[index].l_faces.size();
+  for (int iOrb=0; iOrb<n_orb; iOrb++) {
+    std::vector<triple<Tint>> const& l_triple1 = fce.levels[index].l_faces[iOrb].l_triple;
+    std::optional<MyMatrix<Tint>> opt = test_triple_in_listtriple(fce.pctdi.l_perfect, l_triple1, t2, os);
+    if (opt) {
+      MyMatrix<Tint> const& M = *opt;
+      return {index, iOrb, M};
+    }
+  }
+  std::cerr << "TSPACE: Failed to find a matching entry in fce_face_search\n";
+  throw TerminalException{1};
+}
+
+
+
+
 // Collect generators from equivalences and stabilizers, then reduce them.
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> get_reduced_generators_fce(

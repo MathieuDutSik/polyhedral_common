@@ -167,6 +167,25 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileFaceSearch = BlockQUERIES.get_string("FileFaceSearch");
+  if (FileFaceSearch != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileFaceSearch);
+    std::string OutFile = FileIsWellRounded + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
+      os_out << "rec(index:=" << ffs.index << ", iOrb:=" << ffs.iOrb << ", M:=" << StringMatrixGAP(ffs.M) << ")";
+    }
+    os_out << "];\n";
+  }
   std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
   if (FileStabilizerQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =

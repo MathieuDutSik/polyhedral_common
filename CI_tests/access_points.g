@@ -919,7 +919,7 @@ end;
 
 
 
-PERFCOMP_dimension:=function(desc, ListVect)
+__PERFCOMP_face_query:=function(desc, ListVect, query)
     local FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
@@ -931,7 +931,7 @@ PERFCOMP_dimension:=function(desc, ListVect)
     output:=OutputTextFile(FileN, true);
     __PERFCOMP_Write_t_space(output, desc);
     AppendTo(output, "&QUERIES\n");
-    AppendTo(output, " FileDimension = \"", FileI, "\"\n");
+    AppendTo(output, " ", query, " = \"", FileI, "\"\n");
     AppendTo(output, "/\n");
     CloseStream(output);
     #
@@ -947,93 +947,28 @@ PERFCOMP_dimension:=function(desc, ListVect)
     return ListDim[1];
 end;
 
+PERFCOMP_dimension:=function(desc, ListVect)
+    return __PERFCOMP_face_query(desc, ListVect, "FileDimension");
+end;
+
+
+
 PERFCOMP_is_face:=function(desc, ListVect)
-    local FileN, FileI, FileO, FileE, output, binary, cmd, ListResult;
-    TmpDir:=DirectoryTemporary();
-    FileN:=Filename(TmpDir, "PerfComp.nml");
-    FileI:=Filename(TmpDir, "PerfComp.mat");
-    FileO:=Filename(TmpDir, "PerfComp.mat.output");
-    FileE:=Filename(TmpDir, "PerfComp.err");
-    WriteListMatrixFile(FileI, [ListVect]);
-    #
-    output:=OutputTextFile(FileN, true);
-    __PERFCOMP_Write_t_space(output, desc);
-    AppendTo(output, "&QUERIES\n");
-    AppendTo(output, " FileIsFace = \"", FileI, "\"\n");
-    AppendTo(output, "/\n");
-    CloseStream(output);
-    #
-    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
-    Exec(cmd);
-    #
-    ListResult:=ReadAsFunction(FileO)();
-    RemoveFile(FileN);
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileE);
-    return ListResult[1];
+    return __PERFCOMP_face_query(desc, ListVect, "FileIsFace");
 end;
 
 
 PERFCOMP_is_well_rounded:=function(desc, ListVect)
-    local FileN, FileI, FileO, FileE, output, binary, cmd, ListResult;
-    TmpDir:=DirectoryTemporary();
-    FileN:=Filename(TmpDir, "PerfComp.nml");
-    FileI:=Filename(TmpDir, "PerfComp.mat");
-    FileO:=Filename(TmpDir, "PerfComp.mat.output");
-    FileE:=Filename(TmpDir, "PerfComp.err");
-    WriteListMatrixFile(FileI, [ListVect]);
-    #
-    output:=OutputTextFile(FileN, true);
-    __PERFCOMP_Write_t_space(output, desc);
-    AppendTo(output, "&QUERIES\n");
-    AppendTo(output, " FileIsWellRounded = \"", FileI, "\"\n");
-    AppendTo(output, "/\n");
-    CloseStream(output);
-    #
-    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
-    Exec(cmd);
-    #
-    ListResult:=ReadAsFunction(FileO)();
-    RemoveFile(FileN);
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileE);
-    return ListResult[1];
+    return __PERFCOMP_face_query(desc, ListVect, "FileIsWellRounded");
 end;
 
 
-
-
+PERFCOMP_face_search:=function(desc, ListVect)
+    return __PERFCOMP_face_query(desc, ListVect, "FileFaceSearch");
+end;
 
 PERFCOMP_stabilizer:=function(desc, ListVect)
-    local TmpDir, FileN, FileI, FileO, FileE, output
-    TmpDir:=DirectoryTemporary();
-    FileN:=Filename(TmpDir, "PerfComp.nml");
-    FileI:=Filename(TmpDir, "PerfComp.mat");
-    FileO:=Filename(TmpDir, "PerfComp.mat.output");
-    FileE:=Filename(TmpDir, "PerfComp.err");
-    WriteListMatrixFile(FileI, [ListVect]);
-    #
-    output:=OutputTextFile(FileN, true);
-    __PERFCOMP_Write_t_space(output, desc);
-    AppendTo(output, "&QUERIES\n");
-    AppendTo(output, " FileStabilizerQueries = \"", FileI, "\"\n");
-    AppendTo(output, "/\n");
-    CloseStream(output);
-    #
-    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
-    Exec(cmd);
-    #
-    ListStab:=ReadAsFunction(FileO)();
-    RemoveFile(FileN);
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileE);
-    return ListStab[1];
+    return __PERFCOMP_face_query(desc, ListVect, "FileStabilizerQueries");
 end;
 
 PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
