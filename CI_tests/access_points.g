@@ -1010,11 +1010,70 @@ PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
     return ListEquiv[1];
 end;
 
-PERFCOMP_boundary_chain:=function(desc, Chain)
+
+
+WriteChainStream:=function(output, the_chain)
+    local len_chain, entry;
+    len_chain:=Length(the_chain);
+    AppendTo(output, the_chain, "\n");
+    for entry in the_chain
+    do
+        AppendTo(output, entry.iOrb, "\n");
+        AppendTo(output, entry.value, "\n");
+        WriteMatrix(output, entry.M);
+    od;
 end;
 
-PERFCOMP_contracting_homotopy_chain:=function(desc, Chain)
+
+__PERFCOMP_chain_query:=function(desc, index, the_chain, query)
+    local FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileI:=Filename(TmpDir, "PerfComp.chain");
+    FileO:=Filename(TmpDir, "PerfComp.chain.output");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    output:=OutputTextFile(FileI, true);
+    AppendTo(output, index, "\n");
+    AppendTo(output, "1\n");
+    WriteChainStream(output, the_chain);
+    CloseStream(output);
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " ", query, " = \"", FileI, "\"\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListDim:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListDim[1];
 end;
+
+
+
+
+
+
+PERFCOMP_chain_contracting_homotopy:=function(desc, index, the_chain)
+    return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainContractingHomotopy");
+end;
+
+PERFCOMP_chain_boundary:=function(desc, index, the_chain)
+    return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainBoundary");
+end;
+
+PERFCOMP_chain_simplification:=function(desc, index, the_chain)
+    return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainSimplification");
+end;
+
 
 
 
