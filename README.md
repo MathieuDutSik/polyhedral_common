@@ -32,14 +32,9 @@ Compilation
 The code depends on only a few libraries: Eigen, Boost and nauty.
 
 Several ways to compile the program are made available:
-
-One is to compile **via Dockerfile**. For the complete code, it
-is available at **docker_files/docker_complete/Dockerfile**.
-
-Another way is to use the **CMakeLists.txt** for building the Makefile
-and compiling.
-
-The standard way used by me is to use the Makefile.
+* One is to compile via  **Dockerfile**. For the complete code, it is available at **docker_files/docker_complete/Dockerfile**.
+* Another way is to use the **CMakeLists.txt** for building the Makefile and compiling.
+* The standard way used in CI is to use the **Makefile**.
 
 
 General organization of the code
@@ -49,14 +44,24 @@ The program are in several independent subdirectory. The software of each
 directory can be compiled independently of the others:
   * *src_group*: for computting the groups of a polytope.
   * *src_poly*: for polyhedral computations.
+  * *src_delaunay*: for computing Delaunay polytopes and space of Delaunay tesselations.
   * *src_dualdesc*: for computing dual description on serial computers.
   * *src_copos*: for copositivity / strict copositivity functionalities.
   * *src_short*: for short vector related computations.
-  * *src_latt*: for lattice related computations (canonicalization of positive definite matrices and shortest vector mostly)
+  * *src_latt*: for fundamental lattice related computations (canonicalization of positive definite matrices and shortest vector mostly).
   * *src_ctype*: for computing C-types. This was done for computing all the C-types in dimension 6.
   * *src_perfect*: for perfect form related computations.
   * *src_indefinite*: for indefinite form reduction.
-  * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms.
+  * *src_lorentzian*: for using the Vinberg/Edgewalk algorithm of hyperbolic forms. Also computes perfect hyperbolic forms.
+  * *src_sparse_solver*: Sparse solver for linear equations.
+  * *src_isotropy*: Testing if quadratic forms are isotropic and finding a zero.
+
+Works in Progress:
+  * *src_rankin*: for computing rankin constants.
+  * *src_single_delaunay*: About computing space for a single Delaunay.
+  * *src_poincare_polyhedron*: Applying the Poincare Polyhedron Theorem to some tiling spaces.
+  * *src_robust_covering*: Finding robust covering density.
+  * *src_k_coverings*: Finding k-coverings of lattices.
 
 
 Compilation options related to debug
