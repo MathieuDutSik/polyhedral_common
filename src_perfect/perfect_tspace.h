@@ -435,7 +435,6 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     std::map<std::string, bool> ListBoolValues;
     ListStringValues["FileStabilizerQueries"] = "null";
     ListStringValues["FileEquivalenceQueries"] = "null";
-    ListStringValues["FileContractingHomotopies"] = "null";
     ListStringValues["FileCells"] = "null";
     ListStringValues["FileGroupGenerators"] = "null";
     ListStringValues["FileDimensions"] = "null";
@@ -446,7 +445,9 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileCellUpperBoundary"] = "null";
     ListStringValues["FileListUpperBoundary"] = "null";
     ListStringValues["FileListLowerBoundary"] = "null";
-    ListStringValues["FileHeckeOperators"] = "null";
+    ListStringValues["FileChainContractingHomotopy"] = "null";
+    ListStringValues["FileChainBoundary"] = "null";
+    ListStringValues["FileChainSimplification"] = "null";
     ListIntValues["IndexUpperBoundary"] = 0;
     ListIntValues["IndexLowerBoundary"] = 0;
     ListIntValues["IndexCell"] = 0;

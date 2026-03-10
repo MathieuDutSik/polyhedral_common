@@ -105,161 +105,95 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     WriteListMatrixGAP(os_out, list_gen);
     os_out << ";\n";
   }
-  std::string FileDimensions = BlockQUERIES.get_string("FileDimensions");
-  if (FileDimensions != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileDimensions);
-    std::string OutFile = FileDimensions + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      int n_mat = fce.pctdi.LinSpa.ListMat.size();
-      MyMatrix<T> ScalMat = get_scal_mat(fce.pctdi.LinSpa.ListMat, EXT);
-      int rnk = RankMat(ScalMat);
-      int index = n_mat - rnk;
-      os_out << "rec(n_mat:=" << n_mat << ", rnk:=" << rnk << ", index:=" << index << ")";
-    }
-    os_out << "];\n";
-  }
-  std::string FileIsFace = BlockQUERIES.get_string("FileIsFace");
-  if (FileIsFace != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileIsFace);
-    std::string OutFile = FileIsFace + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
-      std::optional<MyMatrix<T>> opt =
-        is_bounded_face_iterative<T, Tint>(LinSpa, EXT_sat, os);
-      bool is_face = opt.has_value();
-      os_out << GAP_logical(is_face);
-    }
-    os_out << "];\n";
-  }
-  std::string FileIsWellRounded = BlockQUERIES.get_string("FileIsWellRounded");
-  if (FileIsWellRounded != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileIsWellRounded);
-    std::string OutFile = FileIsWellRounded + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
-      PerfectBoundednessProperty pbp = initial_bounded_property(fce.pctdi.LinSpa, EXT_sat, os);
-      bool is_well_rounded = get_result(pbp);
-      os_out << GAP_logical(is_well_rounded);
-    }
-    os_out << "];\n";
-  }
-  std::string FileFaceSearch = BlockQUERIES.get_string("FileFaceSearch");
-  if (FileFaceSearch != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileFaceSearch);
-    std::string OutFile = FileIsWellRounded + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
-      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
-      os_out << "rec(index:=" << ffs.index << ", iOrb:=" << ffs.iOrb << ", M:=" << StringMatrixGAP(ffs.M) << ")";
-    }
-    os_out << "];\n";
-  }
-  std::string FileStabilizerQueries = BlockQUERIES.get_string("FileStabilizerQueries");
-  if (FileStabilizerQueries != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileStabilizerQueries);
-    std::string OutFile = FileStabilizerQueries + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      auto result = compute_stabilizer_ext<T, Tint, Tgroup>(fce, EXT, os);
-      os_out << "Group(";
-      WriteListMatrixGAP(os_out, result.second);
-      os_out << ")";
-    }
-    os_out << "];\n";
-  }
-  std::string FileCellLowerBoundary = BlockQUERIES.get_string("FileCellLowerBoundary");
-  if (FileCellLowerBoundary != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileCellLowerBoundary);
-    std::string OutFile = FileCellLowerBoundary + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
-      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
 
-      std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[ffs.index].ll_bound[ffs.iOrb].l_bound;
-      std::vector<MyMatrix<Tint>> l_extbnd;
-      for (auto & entry: l_bound) {
-        MyMatrix<Tint> const& EXT1 = fce.levels[ffs.index+1].l_faces[entry.iOrb].EXT;
-        MyMatrix<Tint> EXT2 = EXT1 * entry.M * ffs.M;
-        l_extbnd.push_back(EXT2);
+  /*
+    The queries related to individual cells
+   */
+  auto f_cell_oper=[&](std::string const& file_name, std::function<void(std::ostream&,MyMatrix<Tint>)> const&f) -> void {
+    std::string file_oper = BlockQUERIES.get_string(file_name);
+    if (file_oper != "null") {
+      std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(file_oper);
+      std::string OutFile = file_oper + ".output";
+      std::ofstream os_out(OutFile);
+      bool is_first = true;
+      os_out << "return [";
+      for (auto &EXT : l_ext) {
+        if (!is_first) {
+          os_out << ",\n";
+        }
+        is_first = false;
+        MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+        f(os_out, EXT_sat);
       }
-      WriteListMatrixGAP(os_out, l_extbnd);
+      os_out << "];\n";
     }
-    os_out << "];\n";
-  }
-  std::string FileCellUpperBoundary = BlockQUERIES.get_string("FileCellUpperBoundary");
-  if (FileCellUpperBoundary != "null") {
-    std::vector<MyMatrix<Tint>> l_ext =
-        ReadListMatrixFile<Tint>(FileCellUpperBoundary);
-    std::string OutFile = FileCellUpperBoundary + ".output";
-    std::ofstream os_out(OutFile);
-    bool is_first = true;
-    os_out << "return [";
-    for (auto &EXT : l_ext) {
-      if (!is_first) {
-        os_out << ",\n";
-      }
-      is_first = false;
-      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
-      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
-      std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
-        get_all_upper_faces(fce, ffs.index, ffs.iOrb, os);
-
-      std::vector<MyMatrix<Tint>> l_ext_upper;
-      for (auto & EXT1: pair.first) {
-        MyMatrix<Tint> EXT2 = EXT1 * ffs.M;
-        l_ext_upper.push_back(EXT2);
-      }
-      WriteListMatrixGAP(os_out, l_ext_upper);
+  };
+  // Dimension of the cell
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_dim=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    int n_mat = fce.pctdi.LinSpa.ListMat.size();
+    MyMatrix<T> ScalMat = get_scal_mat(fce.pctdi.LinSpa.ListMat, EXT);
+    int rnk = RankMat(ScalMat);
+    int index = n_mat - rnk;
+    os_out << "rec(n_mat:=" << n_mat << ", rnk:=" << rnk << ", index:=" << index << ")";
+  };
+  f_cell_oper("FileDimensions", f_dim);
+  // Whether it is a face or not
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_is_face=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    std::optional<MyMatrix<T>> opt =
+      is_bounded_face_iterative<T, Tint>(LinSpa, EXT, os);
+    bool is_face = opt.has_value();
+    os_out << GAP_logical(is_face);
+  };
+  f_cell_oper("FileIsFace", f_is_face);
+  // Whether it is well rounded or not
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_wr=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    PerfectBoundednessProperty pbp = initial_bounded_property(fce.pctdi.LinSpa, EXT, os);
+    bool is_well_rounded = get_result(pbp);
+    os_out << GAP_logical(is_well_rounded);
+  };
+  f_cell_oper("FileIsWellRounded", f_wr);
+  // Finding the index and position in the cell complex
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_ffs=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT, os);
+    os_out << "rec(index:=" << ffs.index << ", iOrb:=" << ffs.iOrb << ", M:=" << StringMatrixGAP(ffs.M) << ")";
+  };
+  f_cell_oper("FileFaceSearch", f_ffs);
+  // Determining the stabilizer
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_stab=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    auto result = compute_stabilizer_ext<T, Tint, Tgroup>(fce, EXT, os);
+    os_out << "Group(";
+    WriteListMatrixGAP(os_out, result.second);
+    os_out << ")";
+  };
+  f_cell_oper("FileStabilizerQueries", f_stab);
+  // Determining the lower boundary
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_lower=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT, os);
+    std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[ffs.index].ll_bound[ffs.iOrb].l_bound;
+    std::vector<MyMatrix<Tint>> l_extbnd;
+    for (auto & entry: l_bound) {
+      MyMatrix<Tint> const& EXT1 = fce.levels[ffs.index+1].l_faces[entry.iOrb].EXT;
+      MyMatrix<Tint> EXT2 = EXT1 * entry.M * ffs.M;
+      l_extbnd.push_back(EXT2);
     }
-    os_out << "];\n";
-  }
+    WriteListMatrixGAP(os_out, l_extbnd);
+  };
+  f_cell_oper("FileCellLowerBoundary", f_lower);
+  // Determining the upper boundary
+  std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_upper=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
+    FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT, os);
+    std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
+      get_all_upper_faces(fce, ffs.index, ffs.iOrb, os);
+    std::vector<MyMatrix<Tint>> l_ext_upper;
+    for (auto & EXT1: pair.first) {
+      MyMatrix<Tint> EXT2 = EXT1 * ffs.M;
+      l_ext_upper.push_back(EXT2);
+    }
+    WriteListMatrixGAP(os_out, l_ext_upper);
+  };
+  f_cell_oper("FileCellUpperBoundary", f_lower);
+  // Computing the equivalence
   std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileEquivalenceQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =
@@ -370,27 +304,47 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
-  std::string FileContractingHomotopies = BlockQUERIES.get_string("FileContractingHomotopies");
-  if (FileContractingHomotopies != "null") {
-    std::ifstream is(FileContractingHomotopies);
-    int index, n_chains;
-    is >> index;
-    is >> n_chains;
-    //
-    std::string OutFile = FileContractingHomotopies + ".output";
-    std::ofstream os_out(OutFile);
-    os_out << "return [";
-    for (int i_chain=0; i_chain<n_chains; i_chain++) {
-      if (i_chain > 0) {
-        os_out << ",\n";
-      }
-      std::vector<PerfectFaceEntry<T, Tint>> chain1 = ReadListPerfectFaceEntry<T,Tint>(is);
-      std::vector<PerfectFaceEntry<T, Tint>> chain2 = contracting_homotopy(chain1, index, fce, os);
-      WriteListPerfectFaceEntryGAP(os_out, chain2);
-    }
-    os_out << "];\n";
-  }
+  /*
+    Now the operations on chains
+   */
+  using Tchain = std::vector<PerfectFaceEntry<T, Tint>>;
+  auto f_chain_oper=[&](std::string const& file_name, std::function<Tchain(int,Tchain const&)> const&f) -> void {
+    std::string file_oper = BlockQUERIES.get_string(file_name);
+    if (file_oper != "null") {
+      std::ifstream is(file_oper);
+      int index, n_chains;
+      is >> index;
+      is >> n_chains;
 
+      std::string OutFile = file_oper + ".output";
+      std::ofstream os_out(OutFile);
+      os_out << "return [";
+      for (int i_chain=0; i_chain<n_chains; i_chain++) {
+        if (i_chain > 0) {
+          os_out << ",\n";
+        }
+        std::vector<PerfectFaceEntry<T, Tint>> chain1 = ReadListPerfectFaceEntry<T,Tint>(is);
+        std::vector<PerfectFaceEntry<T, Tint>> chain2 = f(index, chain1);
+        WriteListPerfectFaceEntryGAP(os_out, chain2);
+      }
+      os_out << "];\n";
+    }
+  };
+  // The contracting homotopy.
+  std::function<Tchain(int,Tchain const&)> f_ch=[&](int index, Tchain const& chain) -> Tchain {
+    return contracting_homotopy(index, chain, fce, os);
+  };
+  f_chain_oper("FileChainContractingHomotopy", f_ch);
+  // The chain boundary
+  std::function<Tchain(int,Tchain const&)> f_bnd=[&](int index, Tchain const& chain) -> Tchain {
+    return chain_boundary(index, chain, fce, os);
+  };
+  f_chain_oper("FileChainBoundary", f_bnd);
+  // The chain simplification
+  std::function<Tchain(int,Tchain const&)> f_simp=[&](int index, Tchain const& chain) -> Tchain {
+    return chain_simplification(index, chain, fce, os);
+  };
+  f_chain_oper("FileChainSimplification", f_simp);
 }
 
 template <typename T, typename Tint> void process_B(FullNamelist const &eFull) {

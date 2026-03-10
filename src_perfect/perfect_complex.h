@@ -74,8 +74,6 @@
   - - - - - - - - - - - - -
 
   Computation of the contracting homotopy.
-  
-  
  */
 
 //
@@ -1572,12 +1570,18 @@ bool is_equal_chain(std::vector<PerfectFaceEntry<T, Tint>> const& chain1, std::v
   return chain_builder.is_zero_chain();
 }
 
-
-
+template<typename T, typename Tint, typename Tgroup>
+std::vector<PerfectFaceEntry<T, Tint>> chain_simplification(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+  ChainBuilder<T,Tint,Tgroup> chain_builder(index, fce, os);
+  for (auto & fe: chain) {
+    chain_builder.f_insert(fe.value, fe.iOrb, fe.M);
+  }
+  return chain_builder.get_faces();
+}
 
 // Compute the boundary d(c) for c a part of the full complex.
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> compute_boundary(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> chain_boundary(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   ChainBuilder<T,Tint,Tgroup> chain_builder(index+1, fce, os);
   FullBoundary<Tint> const& bnd = fce.boundaries[index];
   for (auto & fe: chain) {
@@ -1586,7 +1590,7 @@ std::vector<PerfectFaceEntry<T, Tint>> compute_boundary(std::vector<PerfectFaceE
       T value = fe.value * ebnd.sign;
       MyMatrix<Tint> M = ebnd.M * fe.M;
 #ifdef DEBUG_PERFECT_COMPLEX
-      os << "PERFCOMP: compute_boundary fe.value=" << fe.value << " sign=" << ebnd.sign << "\n";
+      os << "PERFCOMP: chain_boundary fe.value=" << fe.value << " sign=" << ebnd.sign << "\n";
 #endif
       chain_builder.f_insert(value, ebnd.iOrb, M);
     }
@@ -1620,11 +1624,11 @@ bool is_product_zero(int const& index, FullComplexEnumeration<T,Tint,Tgroup> con
   for (int iOrb=0; iOrb<nOrb; iOrb++) {
     PerfectFaceEntry<T, Tint> fe{iOrb, T(1), IdentityMat<Tint>(n)};
     std::vector<PerfectFaceEntry<T, Tint>> chain1{fe};
-    std::vector<PerfectFaceEntry<T, Tint>> chain2 = compute_boundary(chain1, index, fce, os);
+    std::vector<PerfectFaceEntry<T, Tint>> chain2 = chain_boundary(index, chain1, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: We have chain2\n";
 #endif
-    std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain2, index+1, fce, os);
+    std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index+1, chain2, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: We have chain3\n";
 #endif
@@ -1717,7 +1721,7 @@ struct TopPerfectCone {
   Here we try to solve the equation in a specific set of top dimensional cells.
  */
 template<typename T, typename Tint, typename Tgroup>
-std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
+std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
   ComplexBuilder<T,Tint,Tgroup> cb1(index-1, fce, os);
   ComplexBuilder<T,Tint,Tgroup> cb2(index, fce, os);
   for (auto &top: l_top) {
@@ -1786,7 +1790,7 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 
 
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
   std::unordered_set<MyMatrix<Tint>> set_ext;
   std::vector<MyMatrix<Tint>> list_ext;
   std::vector<TopPerfectCone<Tint>> l_top; // The covering top dimensional cells.
@@ -1807,7 +1811,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<P
   }
   size_t start = 0;
   while(true) {
-    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(chain, index, fce, l_top, os);
+    std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(index, chain, fce, l_top, os);
     if (opt) {
       return *opt;
     }
@@ -1831,17 +1835,17 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(std::vector<P
   Necessary condition is d(chain) = 0
  */
 template<typename T, typename Tint, typename Tgroup>
-std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(std::vector<PerfectFaceEntry<T, Tint>> const& chain, int const& index, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-  std::vector<PerfectFaceEntry<T, Tint>> chain3 = compute_boundary(chain, index, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index, chain, fce, os);
   if (chain3.size() > 0) {
     std::cerr << "PERFCOMP: The chain should have a zero boundary\n";
     throw TerminalException{1};
   }
 #endif
-  std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(chain, index, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(index, chain, fce, os);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-  std::vector<PerfectFaceEntry<T, Tint>> x_img = compute_boundary(x, index - 1, fce, os);
+  std::vector<PerfectFaceEntry<T, Tint>> x_img = chain_boundary(index - 1, x, fce, os);
   if (is_equal_chain(x_img, chain, index, fce, os)) {
     std::cerr << "PERFCOMP: The proposed preimage is not a solution\n";
     throw TerminalException{1};
