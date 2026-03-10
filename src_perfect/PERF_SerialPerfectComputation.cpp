@@ -206,13 +206,60 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     }
     os_out << "];\n";
   }
+  std::string FileCellLowerBoundary = BlockQUERIES.get_string("FileCellLowerBoundary");
+  if (FileCellLowerBoundary != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileCellLowerBoundary);
+    std::string OutFile = FileCellLowerBoundary + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
 
+      std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[ffs.index].ll_bound[ffs.iOrb].l_bound;
+      std::vector<MyMatrix<Tint>> l_extbnd;
+      for (auto & entry: l_bound) {
+        MyMatrix<Tint> const& EXT1 = fce.levels[ffs.index+1].l_faces[entry.iOrb].EXT;
+        MyMatrix<Tint> EXT2 = EXT1 * entry.M * ffs.M;
+        l_extbnd.push_back(EXT2);
+      }
+      WriteListMatrixGAP(os_out, l_extbnd);
+    }
+    os_out << "];\n";
+  }
+  std::string FileCellUpperBoundary = BlockQUERIES.get_string("FileCellUpperBoundary");
+  if (FileCellUpperBoundary != "null") {
+    std::vector<MyMatrix<Tint>> l_ext =
+        ReadListMatrixFile<Tint>(FileCellUpperBoundary);
+    std::string OutFile = FileCellUpperBoundary + ".output";
+    std::ofstream os_out(OutFile);
+    bool is_first = true;
+    os_out << "return [";
+    for (auto &EXT : l_ext) {
+      if (!is_first) {
+        os_out << ",\n";
+      }
+      is_first = false;
+      MyMatrix<Tint> EXT_sat = vector_family_saturation(EXT, fce.pctdi.LinSpa.PtStabGens);
+      FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT_sat, os);
+      std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
+        get_all_upper_faces(fce, ffs.index, ffs.iOrb, os);
 
-
-
-
-
-  
+      std::vector<MyMatrix<Tint>> l_ext_upper;
+      for (auto & EXT1: pair.first) {
+        MyMatrix<Tint> EXT2 = EXT1 * ffs.M;
+        l_ext_upper.push_back(EXT2);
+      }
+      WriteListMatrixGAP(os_out, l_ext_upper);
+    }
+    os_out << "];\n";
+  }
   std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileEquivalenceQueries != "null") {
     std::vector<MyMatrix<Tint>> l_ext =

@@ -442,6 +442,8 @@ FullNamelist NAMELIST_GetStandard_ENUMERATE_PERFECT_COMPLEX_TSPACE() {
     ListStringValues["FileIsFace"] = "null";
     ListStringValues["FileIsWellRounded"] = "null";
     ListStringValues["FileFaceSearch"] = "null";
+    ListStringValues["FileCellLowerBoundary"] = "null";
+    ListStringValues["FileCellUpperBoundary"] = "null";
     ListStringValues["FileListUpperBoundary"] = "null";
     ListStringValues["FileListLowerBoundary"] = "null";
     ListStringValues["FileHeckeOperators"] = "null";

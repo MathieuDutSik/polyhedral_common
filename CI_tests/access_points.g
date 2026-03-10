@@ -971,6 +971,17 @@ PERFCOMP_stabilizer:=function(desc, ListVect)
     return __PERFCOMP_face_query(desc, ListVect, "FileStabilizerQueries");
 end;
 
+PERFCOMP_lower_boundary_cell:=function(desc, ListVect)
+    return __PERFCOMP_face_query(desc, ListVect, "FileCellLowerBoundary");
+end;
+
+PERFCOMP_upper_boundary_cell:=function(desc, ListVect)
+    return __PERFCOMP_face_query(desc, ListVect, "FileCellUpperBoundary");
+end;
+
+
+
+
 PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
     local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListEquiv;
     TmpDir:=DirectoryTemporary();
@@ -997,12 +1008,6 @@ PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
     RemoveFile(FileO);
     RemoveFile(FileE);
     return ListEquiv[1];
-end;
-
-PERFCOMP_boundary_cell:=function(desc, ListVect)
-end;
-
-PERFCOMP_upper_cell:=function(desc, ListVect)
 end;
 
 PERFCOMP_boundary_chain:=function(desc, Chain)
