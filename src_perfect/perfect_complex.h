@@ -1491,6 +1491,13 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
     }
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: full_perfect_complex_enumeration, we have l_topdims\n";
+    for (size_t i_perfect=0; i_perfect<n_perfect; i_perfect++) {
+      os << "i_perfect=" << i_perfect << " ll_faces =";
+      for (auto & l_face: l_topdims[i_perfect].ll_faces) {
+        os << " " << l_face.size();
+      }
+      os << "\n";
+    }
 #endif
   }
   return {pctdi, levels, boundaries, l_topdims};
