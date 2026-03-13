@@ -816,6 +816,29 @@ end;
 
 
 
+get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(FileI, ListGen);
+    eProg:=GetBinaryFilename("LATT_ComputeGroupModAction");
+    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
+#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+
+
 GenerateTspaceDescription_classic:=function(n, only_well_rounded)
     local CacheFile;
     CacheFile:=Concatenation("/tmp/Perfect_classic_", String(n));
@@ -877,7 +900,7 @@ __PERFCOMP_Write_t_space:=function(output, desc)
         AppendTo(output, " FileLinSpa = \"unset.linspa\"\n");
         AppendTo(output, " SuperMatMethod = \"NotNeeded\"\n");
         AppendTo(output, " ListComm = \"Use_realimag\"\n");
-#    AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
+#        AppendTo(output, " PtGroupMethod = \"Trivial\"\n");
         AppendTo(output, " PtGroupMethod = \"Compute\"\n");
         AppendTo(output, " FileListSubspaces = \"unset\"\n");
         AppendTo(output, " RealImagDim = ", desc.n, "\n");
@@ -906,8 +929,7 @@ PERFCOMP_group_generators:=function(desc)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-#    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
-    cmd:=Concatenation(binary, " ", FileN);
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
     #
     ListGen:=ReadAsFunction(FileO)();
@@ -949,7 +971,7 @@ __PERFCOMP_face_query:=function(desc, ListVect, query)
 end;
 
 PERFCOMP_dimension:=function(desc, ListVect)
-    return __PERFCOMP_face_query(desc, ListVect, "FileDimension");
+    return __PERFCOMP_face_query(desc, ListVect, "FileDimensions");
 end;
 
 
@@ -1010,6 +1032,44 @@ PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
     RemoveFile(FileE);
     return ListEquiv[1];
 end;
+
+
+
+PERFCOMP_get_cells:=function(desc, index)
+    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListCells;
+    TmpDir:=DirectoryTemporary();
+    FileN:=Filename(TmpDir, "PerfComp.nml");
+    FileO:=Filename(TmpDir, "PerfComp.out");
+    FileE:=Filename(TmpDir, "PerfComp.err");
+    #
+    output:=OutputTextFile(FileN, true);
+    __PERFCOMP_Write_t_space(output, desc);
+    AppendTo(output, "&QUERIES\n");
+    AppendTo(output, " FileCells = \"", FileO, "\"\n");
+    AppendTo(output, " IndexCell = ", index, "\n");
+    AppendTo(output, "/\n");
+    CloseStream(output);
+    #
+    binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
+    Exec(cmd);
+    #
+    ListCells:=ReadAsFunction(FileO)();
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return ListCells;
+end;
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1085,26 +1145,3 @@ end;
 
 
 
-
-
-
-get_grp_size_matrix_group_mod_action:=function(ListGen, p_val)
-    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, U;
-    TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.in");
-    FileO:=Filename(TmpDir, "Test.out");
-    FileE:=Filename(TmpDir, "Test.err");
-    WriteListMatrixFile(FileI, ListGen);
-    eProg:=GetBinaryFilename("LATT_ComputeGroupModAction");
-    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO);
-#    TheCommand:=Concatenation(eProg, " mpz_class ", FileI, " ", String(p_val), " GAP ", FileO, " 2> ", FileE);
-    Exec(TheCommand);
-    if IsExistingFile(FileO)=false then
-        return "program failure: Nothing returned by LATT_ResolveModAction, likely crash or something";
-    fi;
-    U:=ReadAsFunction(FileO)();
-    RemoveFile(FileI);
-    RemoveFile(FileO);
-    RemoveFile(FileE);
-    return U;
-end;
