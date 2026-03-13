@@ -1699,6 +1699,20 @@ public:
     std::vector<MyMatrix<T>> const& ListMat = fce.pctdi.LinSpa.ListMat;
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
+#ifdef DEBUG_PERFECT_COMPLEX
+    if (map_ext_set.count(EXT3) == 0) {
+      std::cerr << "PERFCOMP: We fail to find EXT3 in map_ext_set\n";
+      std::cerr << "PERFCOMP: |map_ext_set|=" << map_ext_set.size() << "\n";
+      std::unordered_map<int, size_t> map_siz;
+      for (auto & kv: map_ext_set) {
+        map_siz[kv.first.rows()] += 1;
+      }
+      for (auto & kv: map_siz) {
+        std::cerr << "size " << kv.first << " attained " << kv.second << " times\n";
+      }
+      throw TerminalException{1};
+    }
+#endif
     size_t idx = map_ext_set.at(EXT3);
     MyMatrix<Tint> t = faces[idx - 1].M * Inverse(M);;
     int sign = get_face_orientation(EXT1, ListMat, or_info, t);
