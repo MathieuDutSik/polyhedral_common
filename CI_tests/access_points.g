@@ -1099,9 +1099,6 @@ __PERFCOMP_chain_query:=function(desc, index, the_chain, query)
     WriteChainStream(output, the_chain);
     CloseStream(output);
     #
-#    cmd:=Concatenation("cat ", FileI);
-#    Exec(cmd);
-    #
     output:=OutputTextFile(FileN, true);
     __PERFCOMP_Write_t_space(output, desc);
     AppendTo(output, "&QUERIES\n");

@@ -109,7 +109,7 @@ jobs:
           cd CI_tests/20_Reflective
           ../../gap.sh < TestReflectivity.g
           if [ ! -f "CI_CONCLUSION" ]; then
-            echo "The gap test code has not created the wanted file" >&2
+            echo "The gap test code has not created the expected file" >&2
             exit 1
           fi
           cd ../..
