@@ -316,7 +316,9 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       int index, n_chains;
       is >> index;
       is >> n_chains;
-
+#ifdef DEBUG_PERFECT_COMPLEX
+      os << "PERF: f_chain_oper, index=" << index << " n_chains=" << n_chains << "\n";
+#endif
       std::string OutFile = file_oper + ".output";
       std::ofstream os_out(OutFile);
       os_out << "return [";
@@ -325,6 +327,9 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
           os_out << ",\n";
         }
         std::vector<PerfectFaceEntry<T, Tint>> chain1 = ReadListPerfectFaceEntry<T,Tint>(is);
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERF: f_chain_oper, i_chain=" << i_chain << " |chain1|=" << chain1.size() << "\n";
+#endif
         std::vector<PerfectFaceEntry<T, Tint>> chain2 = f(index, chain1);
         WriteListPerfectFaceEntryGAP(os_out, chain2);
       }

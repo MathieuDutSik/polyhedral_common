@@ -20,7 +20,7 @@ end;
 
 
 test_series:=function(desc)
-    local l_gens, GRPmatr, index, list_cells, eElt, EXT, EXT2, e_equiv, rec_dim, is_face, is_well_rounded, ffs, list_lower_cell1, list_lower_cell2, eStab;
+    local l_gens, GRPmatr, index, list_cells, eElt, EXT, EXT2, e_equiv, rec_dim, is_face, is_well_rounded, ffs, list_lower_cell1, list_lower_cell2, eStab, list_upper_cell, the_chain1, chain2, l_ffs, EXT_index1;
     #
     l_gens:=PERFCOMP_group_generators(desc);
     Print("|l_gens|=", Length(l_gens), "\n");
@@ -75,8 +75,27 @@ test_series:=function(desc)
         Print("We should have a length equal to 2\n");
         return false;
     fi;
-
-
+    Print("------------------------------\n");
+    #
+    # Testing the simplification
+    the_chain1:=[rec(iOrb:=1, value:=2, M:=eElt)];
+    chain1_simp:=PERFCOMP_chain_simplification(desc, 0, the_chain1);
+    Print("chain1_simp=", chain1_simp, "\n");
+    if Length(chain1_simp)<>1 then
+        Print("chain1_simp should be of length 1\n");
+        return false;
+    fi;
+    chain1_bnd:=PERFCOMP_chain_boundary(desc, 0, the_chain1);
+    Print("|chain1_bnd|=", Length(chain1_bnd), "\n");
+    if Length(chain1_bnd)=1 then
+        Print("chain1_bnd should be of length 1\n");
+        return false;
+    fi;
+    chain1_bnd_ch:=PERFCOMP_chain_contracting_homotopy(desc, 1, chain1_bnd);
+    if Length(chain1_bnd_ch)<>1 then
+        Print("chain1_bnd_ch is likely to be of length 1\n");
+        return false;
+    fi;
     #    Print("l_gens=", l_gens, "\n");
     return true;
 end;

@@ -1076,7 +1076,7 @@ end;
 WriteChainStream:=function(output, the_chain)
     local len_chain, entry;
     len_chain:=Length(the_chain);
-    AppendTo(output, the_chain, "\n");
+    AppendTo(output, len_chain, "\n");
     for entry in the_chain
     do
         AppendTo(output, entry.iOrb - 1, "\n");
@@ -1099,6 +1099,9 @@ __PERFCOMP_chain_query:=function(desc, index, the_chain, query)
     WriteChainStream(output, the_chain);
     CloseStream(output);
     #
+#    cmd:=Concatenation("cat ", FileI);
+#    Exec(cmd);
+    #
     output:=OutputTextFile(FileN, true);
     __PERFCOMP_Write_t_space(output, desc);
     AppendTo(output, "&QUERIES\n");
@@ -1107,7 +1110,8 @@ __PERFCOMP_chain_query:=function(desc, index, the_chain, query)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
+#    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", FileN);
     Exec(cmd);
     #
     ListDim:=ReadAsFunction(FileO)();
