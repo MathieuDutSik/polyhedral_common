@@ -1497,6 +1497,23 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
         os << " " << l_face.size();
       }
       os << "\n";
+#endif
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+      for (size_t i_dim=0; i_dim<dim; i_dim++) {
+        std::unordered_set<MyMatrix<Tint>> set;
+        for (auto & ent: l_topdims[i_perfect].ll_faces[i_dim]) {
+          MyMatrix<Tint> const& EXT1 = levels[i_dim].l_faces[ent.iOrb].EXT;
+          MyMatrix<Tint> EXT2 = EXT1 * ent.M;
+          MyMatrix<Tint> EXT3 = tot_set(EXT2);
+          set.insert(EXT3);
+        }
+        size_t size1 = set.size();
+        size_t size2 = l_topdims[i_perfect].ll_faces[i_dim].size();
+        if (size1 != size2) {
+          std::cerr << "PERFCOMP: We have duplication, size1=" << size1 << " size2=" << size2 << "\n";
+          throw TerminalException{1};
+        }
+      }
     }
 #endif
   }
@@ -1751,10 +1768,14 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
   ComplexBuilder<T,Tint,Tgroup> cb1(index-1, fce, os);
   ComplexBuilder<T,Tint,Tgroup> cb2(index, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
-  os << "PERFCOMP: contracting_homotopy_specified, step 2\n";
+  os << "PERFCOMP: contracting_homotopy_specified, step 2 |l_top|=" << l_top.size() << "\n";
 #endif
   for (auto &top: l_top) {
     int i_perfect = top.i_perfect;
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: contracting_homotopy_specified, step 2.1 |ll_faces[index-1]|=" << fce.l_topdims[i_perfect].ll_faces[index-1].size() << "\n";
+    os << "PERFCOMP: contracting_homotopy_specified, step 2.1 |ll_faces[index]|=" << fce.l_topdims[i_perfect].ll_faces[index].size() << "\n";
+#endif
     for (auto & face1: fce.l_topdims[i_perfect].ll_faces[index-1]) {
       int iOrb = face1.iOrb;
       MyMatrix<Tint> M = face1.M * top.M;
