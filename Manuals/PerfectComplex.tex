@@ -89,9 +89,16 @@ gap> EXT:=[[0,0,1, 0,0,0]];
 gap> record_dim:=PERFCOMP_dimension(desc, EXT);
 gap> is_face:=PERFCOMP_is_face(desc, EXT);
 gap> face_index:=PERFCOMP_face_search(desc, EXT);
+gap> list_lower_cell:=PERFCOMP_lower_boundary_cell(desc, EXT);
+gap> list_upper_cell:=PERFCOMP_upper_boundary_cell(desc, EXT);
 \end{verbatim}
-The {\bf record\_dim} is the record containing the information on the dimension. {\bf is\_face} is a boolean indicating if EXT is a face or not in the complex. {\bf face\_index} is a record containing the index, the number of orbit that describes it and the matrix transformation that maps the known representative to that one.
+The {\bf record\_dim} is the record containing the information on the dimension. The {\bf index} in that record is what matters when calling for a chain or something. index=0 corresponds to the perfect matrices.
 
+{\bf is\_face} is a boolean indicating if EXT is a face or not in the complex.
+{\bf face\_index} is a record containing the index, the number of orbit that describes it and the matrix transformation that maps the known representative to that one.
+
+{\bf list\_lower\_cell} is the list of cells contained in EXT. Note that if we select well rounded or not, it will change.
+{\bf list\_upper\_cell} is the list of cells containing EXT. This requires EXT to be well rounded since otherwise, we would have an infinity of cells.
 
 
 \subsection{Computing stabilizers and equivalence}
@@ -118,6 +125,34 @@ Here it is important to have {\bf only\_well\_rounded = false} since the cells E
 
 
 
+
+\subsection{Chain boundaries, contracting homotopy and simplification}
+
+A chain is expressed as a vector of entries for example
+
+\begin{verbatim}
+gap> chain1:=[rec(iOrb:=1, value:=1, M:=M1),
+              rec(iOrb:=2, value:=-1, M:=M2)];
+\end{verbatim}
+That is we select some group element M1, M2 in the group being considered. iOrb is the index of the orbit. value is the coefficient in front.
+The length of the chain can be arbitrary large.
+
+
+
+\begin{verbatim}
+gap> chain2:=PERFCOMP_chain_simplification(desc, 2, chain1);
+gap> chain3:=PERFCOMP_chain_boundary(desc, 2, chain1);
+gap> chain4:=PERFCOMP_chain_contracting_homotopy(desc, 2, chain1);
+\end{verbatim}
+The meaning of those operations should be clear here. The simplification leaves the chain at the same index.
+The contracting homotopy returns a chain of one index lower. The boundary increases the index.
+
+Here is a few ideas on how to use those functions:
+\begin{enumerate}
+\item If you want to test if a chain is zero, then you call the simplification. The chain will be zero if and only if the length is 0.
+\item You want to compute the boundary. First make sure that the dimension is higher than 1. Then use the above operation.
+\item You want to compute the contracting homotopy. You need to first compute the boundary which has to be zero, and then you can compute the contracting homotopy.
+\end{enumerate}
 
 
 

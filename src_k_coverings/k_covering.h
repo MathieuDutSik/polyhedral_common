@@ -59,7 +59,7 @@
   * The theory of the polytopes Q_k. For each of the Voronoi
     polytopes, we form the points
       (sum(S), p(S)) in R^(d+1) with
-      sum(S) = sum_{x\in S} x
+      sum(S) = sum_{x\in S} x / |S|
       and p(S) = sum_{x\in S} ||x||^2
     + It is quite obvious just from stating it that this is
       the right construction for us.
@@ -67,6 +67,13 @@
       by hexagon and triangles. Very nice. This is what we want
     + But it requires some work since we need to find the
       adjacent (L,k)-polytopes.
+    + If we have a configuration of independent points from Q_k
+      that define an hyperplane, we want to find the center and
+      radius. The function to optimize is r^2 subject to ||v-x|| >= r^2
+      for x in S for the defining vertices (sum(S), p(S)).
+      This is a classic problem. Emo Welzl algorithm is what
+      should be introduced.
+    + 
   * Theory of (L,k)-types:
     + We need that theory because otherwise, we cannot do much
       with respect to publishing.

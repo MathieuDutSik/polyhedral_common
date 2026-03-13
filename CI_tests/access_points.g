@@ -817,7 +817,7 @@ end;
 
 
 GenerateTspaceDescription_classic:=function(n, only_well_rounded)
-    local FileCache;
+    local CacheFile;
     CacheFile:=Concatenation("/tmp/Perfect_classic_", String(n));
     return rec(nature:="classic",
                n:=n,
@@ -893,7 +893,7 @@ __PERFCOMP_Write_t_space:=function(output, desc)
 end;
 
 PERFCOMP_group_generators:=function(desc)
-    local TmpDir, FileN, FileO, FileE, output, ListGen;
+    local TmpDir, FileN, FileO, FileE, output, ListGen, binary, cmd;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileO:=Filename(TmpDir, "PerfComp.out");
@@ -906,7 +906,8 @@ PERFCOMP_group_generators:=function(desc)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+#    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", FileN);
     Exec(cmd);
     #
     ListGen:=ReadAsFunction(FileO)();
@@ -920,7 +921,7 @@ end;
 
 
 __PERFCOMP_face_query:=function(desc, ListVect, query)
-    local FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
+    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileI:=Filename(TmpDir, "PerfComp.mat");
@@ -936,7 +937,7 @@ __PERFCOMP_face_query:=function(desc, ListVect, query)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
     #
     ListDim:=ReadAsFunction(FileO)();
@@ -999,7 +1000,7 @@ PERFCOMP_test_equivalence:=function(desc, ListVect1, ListVect2)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
     #
     ListEquiv:=ReadAsFunction(FileO)();
@@ -1018,7 +1019,7 @@ WriteChainStream:=function(output, the_chain)
     AppendTo(output, the_chain, "\n");
     for entry in the_chain
     do
-        AppendTo(output, entry.iOrb, "\n");
+        AppendTo(output, entry.iOrb - 1, "\n");
         AppendTo(output, entry.value, "\n");
         WriteMatrix(output, entry.M);
     od;
@@ -1026,7 +1027,7 @@ end;
 
 
 __PERFCOMP_chain_query:=function(desc, index, the_chain, query)
-    local FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
+    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileI:=Filename(TmpDir, "PerfComp.chain");
@@ -1046,7 +1047,7 @@ __PERFCOMP_chain_query:=function(desc, index, the_chain, query)
     CloseStream(output);
     #
     binary:=GetBinaryFilename("PERF_SerialPerfectComputation");
-    cmd:=Concatenation(binary, " ", FileNml, " 2> ", FileE);
+    cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
     #
     ListDim:=ReadAsFunction(FileO)();

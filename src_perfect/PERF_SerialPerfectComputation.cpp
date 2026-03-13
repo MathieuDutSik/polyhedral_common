@@ -156,7 +156,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
   // Finding the index and position in the cell complex
   std::function<void(std::ostream&,MyMatrix<Tint> const&)> f_ffs=[&](std::ostream& os_out, MyMatrix<Tint> const& EXT) -> void {
     FceFaceSearch<Tint> ffs = fce_face_search(fce, EXT, os);
-    os_out << "rec(index:=" << ffs.index << ", iOrb:=" << ffs.iOrb << ", M:=" << StringMatrixGAP(ffs.M) << ")";
+    int iOrb = ffs.iOrb + 1;
+    os_out << "rec(index:=" << ffs.index << ", iOrb:=" << iOrb << ", M:=" << StringMatrixGAP(ffs.M) << ")";
   };
   f_cell_oper("FileFaceSearch", f_ffs);
   // Determining the stabilizer

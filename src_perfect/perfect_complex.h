@@ -628,7 +628,8 @@ std::vector<PerfectFaceEntry<T,Tint>> ReadListPerfectFaceEntry(std::istream& is)
 
 template<typename T, typename Tint>
 void WritePerfectFaceEntryGAP(std::ostream& os_out, PerfectFaceEntry<T,Tint> const& r) {
-  os_out << "rec(iOrb:=" << r.iOrb << ", value:=" << r.value << ", M:=";
+  int iOrb = r.iOrb + 1;
+  os_out << "rec(iOrb:=" << iOrb << ", value:=" << r.value << ", M:=";
   WriteMatrixGAP(os_out, r.M);
   os_out << ")";
 }
@@ -1279,11 +1280,9 @@ std::vector<MyMatrix<Tint>> get_reduced_generators_fce(
     }
   }
   // Stabilizer generators from faces.
-  for (auto &level : fce.levels) {
-    for (auto &face : level.l_faces) {
-      for (auto &eGen : face.l_gens) {
-        list_gen.push_back(eGen);
-      }
+  for (auto &face : fce.levels[0].l_faces) {
+    for (auto &eGen : face.l_gens) {
+      list_gen.push_back(eGen);
     }
   }
   if (list_gen.empty()) {
