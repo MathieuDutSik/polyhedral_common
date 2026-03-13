@@ -1724,8 +1724,14 @@ struct TopPerfectCone {
  */
 template<typename T, typename Tint, typename Tgroup>
 std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_specified(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::vector<TopPerfectCone<Tint>> const& l_top, std::ostream& os) {
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 1, index=" << index << "\n";
+#endif
   ComplexBuilder<T,Tint,Tgroup> cb1(index-1, fce, os);
   ComplexBuilder<T,Tint,Tgroup> cb2(index, fce, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 2\n";
+#endif
   for (auto &top: l_top) {
     int i_perfect = top.i_perfect;
     for (auto & face1: fce.l_topdims[i_perfect].ll_faces[index-1]) {
@@ -1739,8 +1745,14 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
       cb2.f_insert(iOrb, M);
     }
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 3\n";
+#endif
   int dim1 = cb1.dimension();
   int dim2 = cb2.dimension();
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 4, dim1=" << dim1 << " dim2=" << dim2 << "\n";
+#endif
   // Building the B vector which is solution of XA = B
   // We have nbRow (A) = dim1 and nbCol(A) = dim2;
   int nbRow = dim1;
@@ -1750,6 +1762,9 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
     std::pair<size_t, int> p = cb2.get_position(fe.iOrb, fe.M);
     Bvect(p.first) = p.second * fe.value; // No duplication allowed in chain.
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 5\n";
+#endif
   // Now building the differential operator
   std::vector<PerfectFace<Tint>> const& faces1 = cb1.get_faces();
   using T2 = Eigen::Triplet<T>;
@@ -1766,12 +1781,18 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
       tripletList.push_back(entry);
     }
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 6\n";
+#endif
   MySparseMatrix<T> SpMat(nbRow, nbCol);
   SpMat.setFromTriplets(tripletList.begin(), tripletList.end());
   std::optional<MyVector<T>> opt = AMP_SolutionSparseSystem(SpMat, Bvect, os);
   if (!opt) {
     return {};
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 7\n";
+#endif
   MyVector<T> const& eSol1 = *opt;
 
   std::vector<PerfectFaceEntry<T, Tint>> chain_ret;
@@ -1783,6 +1804,9 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
       chain_ret.push_back(ent);
     }
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_specified, step 8\n";
+#endif
   return chain_ret;
 }
 
@@ -1793,6 +1817,9 @@ std::optional<std::vector<PerfectFaceEntry<T, Tint>>> contracting_homotopy_speci
 
 template<typename T, typename Tint, typename Tgroup>
 std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_kernel, step 1\n";
+#endif
   std::unordered_set<MyMatrix<Tint>> set_ext;
   std::vector<MyMatrix<Tint>> list_ext;
   std::vector<TopPerfectCone<Tint>> l_top; // The covering top dimensional cells.
@@ -1811,9 +1838,18 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
     TopPerfectCone<Tint> tpc{i_perfect, M};
     f_insert(tpc);
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy_kernel, step 2 |l_top|=" << l_top.size() << "\n";
+#endif
   size_t start = 0;
   while(true) {
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: contracting_homotopy_kernel, start=" << start << "\n";
+#endif
     std::optional<std::vector<PerfectFaceEntry<T, Tint>>> opt = contracting_homotopy_specified(index, chain, fce, l_top, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+    os << "PERFCOMP: contracting_homotopy_kernel, we have opt\n";
+#endif
     if (opt) {
       return *opt;
     }
@@ -1838,6 +1874,9 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
  */
 template<typename T, typename Tint, typename Tgroup>
 std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, std::vector<PerfectFaceEntry<T, Tint>> const& chain, FullComplexEnumeration<T,Tint,Tgroup> const& fce, std::ostream& os) {
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy, step 1\n";
+#endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
   std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index, chain, fce, os);
   if (chain3.size() > 0) {
@@ -1845,13 +1884,22 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, st
     throw TerminalException{1};
   }
 #endif
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy, step 2\n";
+#endif
   std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(index, chain, fce, os);
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy, step 3\n";
+#endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
   std::vector<PerfectFaceEntry<T, Tint>> x_img = chain_boundary(index - 1, x, fce, os);
   if (is_equal_chain(x_img, chain, index, fce, os)) {
     std::cerr << "PERFCOMP: The proposed preimage is not a solution\n";
     throw TerminalException{1};
   }
+#endif
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: contracting_homotopy, step 4\n";
 #endif
   return x;
 }
