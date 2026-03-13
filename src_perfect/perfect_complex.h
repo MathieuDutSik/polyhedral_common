@@ -105,7 +105,15 @@ struct PerfectFormInfoForComplex {
 #endif
       return M;
     }
-    return FindTransformation(EXT, EXT, x);
+    MyMatrix<Tint> M = FindTransformation(EXT, EXT, x);
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+    Telt x_img = get_elt_from_matrix<Tint,Telt>(M, EXT, os);
+    if (x_img != x) {
+      std::cerr << "PERFCOMP: Inconsistency in the pre_image computation\n";
+      throw TerminalException{1};
+    }
+#endif
+    return M;
   }
 };
 
@@ -1460,6 +1468,27 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               set.insert(f);
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
+              std::cerr << "PAssing through the f check\n";
+              int n_vert = pctdi.l_perfect[i_perfect].EXT.rows();
+              Face f_img(n_vert);
+              std::unordered_map<MyVector<Tint>, int> map;
+              for (int i_vert=0; i_vert<n_vert; i_vert++) {
+                MyVector<Tint> V = GetMatrixRow(pctdi.l_perfect[i_perfect].EXT, i_vert);
+                map[V] = i_vert;
+              }
+              MyMatrix<Tint> const& EXT1 = levels[i_dim].l_faces[i_face].EXT;
+              MyMatrix<Tint> EXT2 = EXT1 * M;
+              for (int i_row=0; i_row<EXT2.rows(); i_row++) {
+                MyVector<Tint> V = GetMatrixRow(EXT2, i_row);
+                int pos = map.at(V);
+                f_img[pos] = 1;
+              }
+              if (f != f_img) {
+                std::cerr << "PERFCOMP: f is different from f_img\n";
+                throw TerminalException{1};
+              }
+#endif
               l_pf.push_back(pf);
             }
           };
