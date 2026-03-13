@@ -943,7 +943,7 @@ end;
 
 
 __PERFCOMP_face_query:=function(desc, ListVect, query)
-    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListDim;
+    local TmpDir, FileN, FileI, FileO, FileE, output, binary, cmd, ListResult;
     TmpDir:=DirectoryTemporary();
     FileN:=Filename(TmpDir, "PerfComp.nml");
     FileI:=Filename(TmpDir, "PerfComp.mat");
@@ -962,12 +962,12 @@ __PERFCOMP_face_query:=function(desc, ListVect, query)
     cmd:=Concatenation(binary, " ", FileN, " 2> ", FileE);
     Exec(cmd);
     #
-    ListDim:=ReadAsFunction(FileO)();
+    ListResult:=ReadAsFunction(FileO)();
     RemoveFile(FileN);
     RemoveFile(FileI);
     RemoveFile(FileO);
     RemoveFile(FileE);
-    return ListDim[1];
+    return ListResult[1];
 end;
 
 PERFCOMP_dimension:=function(desc, ListVect)

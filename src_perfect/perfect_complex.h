@@ -1355,6 +1355,9 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
           }
         }
 #endif
+#ifdef DEBUG_PERFECT_COMPLEX
+        os << "PERFCOMP: |list_upper_ext|=" << list_upper_ext.size() << " |EXTins|=" << EXTins.rows() << "\n";
+#endif
         list_upper_ext.push_back(EXTins);
         PerfectFace<Tint> pf{jOrb, P};
         list_upper_mapping.push_back(pf);

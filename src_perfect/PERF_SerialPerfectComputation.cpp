@@ -176,7 +176,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     for (auto & entry: l_bound) {
       MyMatrix<Tint> const& EXT1 = fce.levels[ffs.index+1].l_faces[entry.iOrb].EXT;
       MyMatrix<Tint> EXT2 = EXT1 * entry.M * ffs.M;
-      l_extbnd.push_back(EXT2);
+      l_extbnd.emplace_back(std::move(EXT2));
     }
     WriteListMatrixGAP(os_out, l_extbnd);
   };
@@ -189,11 +189,11 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
     std::vector<MyMatrix<Tint>> l_ext_upper;
     for (auto & EXT1: pair.first) {
       MyMatrix<Tint> EXT2 = EXT1 * ffs.M;
-      l_ext_upper.push_back(EXT2);
+      l_ext_upper.emplace_back(std::move(EXT2));
     }
     WriteListMatrixGAP(os_out, l_ext_upper);
   };
-  f_cell_oper("FileCellUpperBoundary", f_lower);
+  f_cell_oper("FileCellUpperBoundary", f_upper);
   // Computing the equivalence
   std::string FileEquivalenceQueries = BlockQUERIES.get_string("FileEquivalenceQueries");
   if (FileEquivalenceQueries != "null") {

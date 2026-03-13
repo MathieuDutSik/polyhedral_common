@@ -69,7 +69,8 @@ test_series:=function(desc)
     EXT_index1:=list_lower_cell2[1];
     list_upper_cell:=PERFCOMP_upper_boundary_cell(desc, EXT_index1);
     Print("|list_upper_cell|=", Length(list_upper_cell), "\n");
-    Print(NullMat(5));
+    l_ffs:=List(list_upper_cell, x->PERFCOMP_face_search(desc, x));
+    Print("l_ffs=", l_ffs, "\n");
     if Length(list_upper_cell)<>2 then
         Print("We should have a length equal to 2\n");
         return false;
