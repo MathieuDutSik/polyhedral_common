@@ -246,7 +246,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
       if (iOrb > 0) {
         os_out << ",\n";
       }
-      os_out << "rec(iOrb:=" << iOrb;
+      os_out << "rec(iOrb:=" << (iOrb + 1);
       std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> pair =
         get_all_upper_faces(fce, index, iOrb, os);
       os_out << ", ListEXT:=";
@@ -257,8 +257,8 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         if (i>0) {
           os_out << ",\n";
         }
-        os_out << "rec(jOrb:=" << pair.second[i].iOrb;
-        os_out << ", M:=";
+        int jOrb = pair.second[i].iOrb + 1;
+        os_out << "rec(jOrb:=" << jOrb << ", M:=";
         WriteMatrixGAP(os_out, pair.second[i].M);
         os_out << ")";
       }
