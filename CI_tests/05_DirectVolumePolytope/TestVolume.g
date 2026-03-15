@@ -2,6 +2,41 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning of TestVolume\n");
 
+Eulerian:=function(n, k)
+    if n = 0 then
+        if k = 0 then
+            return 1;
+        else
+            return 0;
+        fi;
+    fi;
+
+    if k < 0 or k >= n then
+        return 0;
+    fi;
+
+    return (n - k) * Eulerian(n - 1, k - 1) + (k + 1) * Eulerian(n - 1, k);
+end;
+
+get_hypersimplex_case:=function(n,k)
+    local the_volume, EXT, eSet, eEXT, pos;
+    the_volume:=Eulerian(n-1,k-1) / Factorial(n-1);
+    EXT:=[];
+    for eSet in Combinations([1..n], k)
+    do
+        eEXT:=ListWithIdenticalEntries(n, 0);
+        for pos in eSet
+        do
+            eEXT[pos]:=1;
+        od;
+        eEXT[1]:=1;
+        Add(EXT, eEXT);
+    od;
+    return rec(EXT:=EXT, the_volume:=the_volume);
+end;
+
+
+
 TestVolume:=function(eRec)
     local the_volume;
     the_volume:=get_ext_volume(eRec.EXT);
@@ -9,7 +44,8 @@ TestVolume:=function(eRec)
         return false;
     fi;
     if the_volume<>eRec.the_volume then
-        Print("Thevolume is incorrect\n");
+        Print("the_colume=", the_volume, " eRec.the_volume=", eRec.the_volume, "\n");
+        Print("Incohency in the computation\n");
         return false;
     fi;
     return true;
@@ -25,6 +61,13 @@ do
     fRec:=rec(EXT:=EXT, the_volume:=eRec.the_volume);
     Add(ListRec, fRec);
 od;
+
+# Add the hypersimplex cases.
+Add(ListRec, get_hypersimplex_case(6, 2));
+
+
+
+
 
 FullTest:=function()
     local iRec, eRec, test;

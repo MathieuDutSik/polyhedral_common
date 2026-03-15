@@ -1469,7 +1469,6 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-              std::cerr << "PAssing through the f check\n";
               int n_vert = pctdi.l_perfect[i_perfect].EXT.rows();
               Face f_img(n_vert);
               std::unordered_map<MyVector<Tint>, int> map;

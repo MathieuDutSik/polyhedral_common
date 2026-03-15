@@ -45,7 +45,6 @@
     information but also contain other relevant information.
     The solution to that is to have minimal types which are
     declared before hand and accessed via subscript.
-  * 
 
   The minimal type are going to be
 
