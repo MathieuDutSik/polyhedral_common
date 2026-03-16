@@ -1474,7 +1474,6 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               set.insert(f);
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
-              // Bug not solved, but let us move forward
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
               int n_vert = pctdi.l_perfect[i_perfect].EXT.rows();
               Face f_img(n_vert);
@@ -1539,7 +1538,6 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
       os << "\n";
     }
 #endif
-      // Bug not solved, but let us move forward
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
     for (size_t i_perfect=0; i_perfect<n_perfect; i_perfect++) {
       for (size_t i_dim=0; i_dim<dim; i_dim++) {
@@ -1977,11 +1975,11 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, st
 #endif
   std::vector<PerfectFaceEntry<T, Tint>> x = contracting_homotopy_kernel(index, chain, fce, os);
 #ifdef DEBUG_PERFECT_COMPLEX
-  os << "PERFCOMP: contracting_homotopy, step 3\n";
+  os << "PERFCOMP: contracting_homotopy, step 3 |x|=" << x.size() << "\n";
 #endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
   std::vector<PerfectFaceEntry<T, Tint>> x_img = chain_boundary(index - 1, x, fce, os);
-  if (is_equal_chain(x_img, chain, index, fce, os)) {
+  if (!is_equal_chain(x_img, chain, index, fce, os)) {
     std::cerr << "PERFCOMP: The proposed preimage is not a solution\n";
     throw TerminalException{1};
   }
