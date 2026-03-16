@@ -1010,6 +1010,9 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       ll_bound.push_back(lbe);
     }
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: compute_next_level, before exit\n";
+#endif
   FacesPerfectComplex<T,Tint,Tgroup> pfc{l_faces};
   if (pctdi.pco.compute_boundary) {
     FullBoundary<Tint> boundary{ll_bound};
@@ -1431,6 +1434,9 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
       boundaries.push_back(*result.boundary);
     }
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: We have levels / boundaries\n";
+#endif
   std::vector<TopDimensional<Tint>> l_topdims;
   if (pco.compute_contracting_homotopy) {
     size_t n_perfect = pctdi.l_perfect.size();
@@ -1469,7 +1475,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
               // Bug not solved, but let us move forward
-#ifdef SANITY_CHECK_PERFECT_COMPLEX_DISABLE
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
               int n_vert = pctdi.l_perfect[i_perfect].EXT.rows();
               Face f_img(n_vert);
               std::unordered_map<MyVector<Tint>, int> map;
@@ -1481,6 +1487,10 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               MyMatrix<Tint> EXT2 = EXT1 * M;
               for (int i_row=0; i_row<EXT2.rows(); i_row++) {
                 MyVector<Tint> V = GetMatrixRow(EXT2, i_row);
+                if (map.count(V) == 0) {
+                  std::cerr << "The vector V does not belong to the set. Please correct\n";
+                  throw TerminalException{1};
+                }
                 int pos = map.at(V);
                 f_img[pos] = 1;
               }
@@ -1492,7 +1502,8 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               l_pf.push_back(pf);
             }
           };
-          g_insert(triple.f_ext, triple.eMat);
+          MyMatrix<Tint> fMat = Inverse(triple.eMat);
+          g_insert(triple.f_ext, fMat);
           size_t start = 0;
           while(true) {
             size_t len = l_pf.size() - n_exist;
@@ -1529,7 +1540,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
     }
 #endif
       // Bug not solved, but let us move forward
-#ifdef SANITY_CHECK_PERFECT_COMPLEX_DISABLE
+#ifdef SANITY_CHECK_PERFECT_COMPLEX
     for (size_t i_perfect=0; i_perfect<n_perfect; i_perfect++) {
       for (size_t i_dim=0; i_dim<dim; i_dim++) {
         std::unordered_set<MyMatrix<Tint>> set;
@@ -1549,6 +1560,9 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
     }
 #endif
   }
+#ifdef DEBUG_PERFECT_COMPLEX
+  os << "PERFCOMP: We have l_topdims\n";
+#endif
   return {pctdi, levels, boundaries, l_topdims};
 }
 

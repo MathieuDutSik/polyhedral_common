@@ -939,7 +939,7 @@ __PERFCOMP_Write_t_space:=function(output, desc)
     AppendTo(output, " OnlyWellRounded = ", FORTRAN_logical(desc.only_well_rounded), "\n");
     AppendTo(output, " ComputeBoundary = T\n");
     AppendTo(output, " ComputeContractingHomotopy = T\n");
-    AppendTo(output, " CacheFile = \"", desc.CacheFile, "\"\n");
+#    AppendTo(output, " CacheFile = \"", desc.CacheFile, "\"\n");
     AppendTo(output, "/\n");
     AppendTo(output, "\n");
     #

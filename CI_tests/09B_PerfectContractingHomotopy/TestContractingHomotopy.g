@@ -20,7 +20,7 @@ end;
 
 
 test_series:=function(desc)
-    local l_gens, GRPmatr, index, list_cells, eElt, EXT, EXT2, e_equiv, rec_dim, is_face, is_well_rounded, ffs, list_lower_cell1, list_lower_cell2, eStab, list_upper_cell, the_chain1, chain2, l_ffs, EXT_index1;
+    local l_gens, GRPmatr, index, list_cells, eElt, EXT, EXT2, e_equiv, rec_dim, is_face, is_well_rounded, ffs, list_lower_cell1, list_lower_cell2, eStab, list_upper_cell, the_chain1, chain2, l_ffs, EXT_index1, chain1_simp, chain1_bnd, chain1_bnd_ch;
     #
     l_gens:=PERFCOMP_group_generators(desc);
     Print("|l_gens|=", Length(l_gens), "\n");
@@ -105,9 +105,11 @@ end;
 
 case1:=GenerateTspaceDescription_classic(4, false);
 case2:=GenerateTspaceDescription_imag_quad(3,-7, false);
+case3:=GenerateTspaceDescription_imag_quad(3,-11, false);
 
 #ListCases:=[case1, case2];
 ListCases:=[case1];
+#ListCases:=[case3];
 
 
 f_compute:=function()
