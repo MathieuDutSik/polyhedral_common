@@ -644,57 +644,6 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
   return upper_bound;
 }
 
-/*
-  combined
-  upper_bound <= (sqrt(bound1) + sqrt(bound2) )^2
-    <= bound1 + bound2 + 2 sqrt(bound1 * bound2)
-  If bound1 <= bound2 We bound it by
-    bound1 + 3 bound2
- */
-template <typename T> T combine_two_bounds(T const &bound1, T const &bound2) {
-  auto test_correctness = [&](T const &val) -> bool {
-    // Correct if sqrt(bound1) + sqrt(bound2) <= sqrt(val)
-    // Equivalent to bound1 + bound2 + 2 sqrt(bound1 bound2) <= val
-    // Equivalent to 2 sqrt(bound1 bound2) <= val - bound1 - bound2
-    // Equivalent to 4 bound1 bound2 <= (val - bound1 - bound2)^2
-    if (val < 0) {
-      // Should not occur really.
-      return false;
-    }
-    T delta = val - bound1 - bound2;
-    if (delta < 0) {
-      return false;
-    }
-    T val1 = 4 * bound1 * bound2;
-    T val2 = delta * delta;
-    if (val1 <= val2) {
-      return true;
-    } else {
-      return false;
-    }
-  };
-  T low(0);
-  T upp(1);
-  while (true) {
-    bool test_low = test_correctness(low);
-    bool test_upp = test_correctness(upp);
-    if (!test_low && test_upp) {
-      break;
-    }
-    low += 1;
-    upp += 1;
-  }
-  for (int i = 0; i < 6; i++) {
-    T mid = (low + upp) / 2;
-    bool test_mid = test_correctness(mid);
-    if (test_mid) {
-      upp = mid;
-    } else {
-      low = mid;
-    }
-  }
-  return upp;
-}
 
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
@@ -933,24 +882,6 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
 #endif
     for (size_t j_facet = 0; j_facet < m_facet; j_facet++) {
       if (ppoly.ppfi.l_FAC[j_facet] == TestFAC) {
-        if (set.size() != ppoly.ppfi.l_face[j_facet].count()) {
-          std::cerr
-              << "ROBUST: Different incidence, so this is not what we expect\n";
-          std::cerr << "ROBUST: Non-facetness is a big problem. Rethink the "
-                       "code if not a bug\n";
-          throw TerminalException{1};
-        }
-        for (int j_ext = 0; j_ext < m_ext; j_ext++) {
-          if (ppoly.ppfi.l_face[j_facet][j_ext] == 1) {
-            MyVector<T> fEXT = GetMatrixRow(ppoly.EXT, j_ext);
-            if (set.count(fEXT) == 0) {
-              std::cerr << "ROBUST: Vertex is not contained in the facet.\n";
-              std::cerr << "ROBUST: Non-facetness is a big problem. Rethink "
-                           "the code if not a bug\n";
-              throw TerminalException{1};
-            }
-          }
-        }
         return ppoly;
       }
     }

@@ -76,11 +76,7 @@ template <typename T> struct SinglePolytope {
 };
 
 template <typename T>
-SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
-                                           std::ostream &os) {
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACinput, os);
-  MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
-  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
   int n_fac = FAC.rows();
   int n_ext = EXT.rows();
   int dim = EXT.cols();
@@ -98,7 +94,16 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
     }
     facets.push_back(f);
   }
-  return {std::move(EXT), std::move(FAC), std::move(facets)};
+  return {EXT, FAC, std::move(facets)};
+}
+
+template <typename T>
+SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
+                                           std::ostream &os) {
+  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACinput, os);
+  MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
+  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  return get_single_polytope(FAC, EXT);
 }
 
 template <typename T> struct GeneralizedPolytope {
