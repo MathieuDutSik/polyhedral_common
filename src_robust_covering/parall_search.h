@@ -417,6 +417,19 @@ compute_robust_closest(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV,
   return result;
 }
 
+template <typename T> MyVector<T> get_random_vector(int denom, int dim) {
+  MyVector<T> eV(dim);
+  T denom_T(denom);
+  for (int i = 0; i < dim; i++) {
+    int val1 = random();
+    int val = val1 % denom;
+    T val_T(val);
+    T quot = val_T / denom_T;
+    eV(i) = quot;
+  }
+  return eV;
+}
+
 template <typename T, typename Tint>
 T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
                                     std::ostream &os) {
@@ -426,12 +439,7 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
   MyVector<T> eV(dim);
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random() % 1000000000000000;
-    T denom_T(denom);
-    for (int i = 0; i < dim; i++) {
-      int val = random() % denom;
-      T val_T(val);
-      eV(i) = val_T / denom_T;
-    }
+    MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_ROBUST_COVERING
     os << "ROBUST: Before compute_robust_closest eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";

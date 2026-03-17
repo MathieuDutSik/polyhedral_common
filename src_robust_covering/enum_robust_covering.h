@@ -594,19 +594,6 @@ get_p_polytope_incidence(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT,
   return {l_face, l_FAC, l_Iso};
 }
 
-template <typename T> MyVector<T> get_random_vector(int denom, int dim) {
-  MyVector<T> eV(dim);
-  T denom_T(denom);
-  for (int i = 0; i < dim; i++) {
-    int val1 = random();
-    int val = val1 % denom;
-    T val_T(val);
-    T quot = val_T / denom_T;
-    eV(i) = quot;
-  }
-  return eV;
-}
-
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int denom = 2;
