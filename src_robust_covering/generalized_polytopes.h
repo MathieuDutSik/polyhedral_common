@@ -73,7 +73,39 @@ template <typename T> struct SinglePolytope {
   MyMatrix<T> EXT;
   MyMatrix<T> FAC;
   vectface facets;
+  SinglePolytope(SinglePolytope<T> const& x) : EXT(x.EXT), FAC(x.FAC), facets(x.facets.clone()) {
+  }
+  SinglePolytope(MyMatrix<T> const& _EXT, MyMatrix<T> const& _FAC, vectface const& _facets) : EXT(_EXT), FAC(_FAC), facets(_facets.clone()) {
+  }
+  SinglePolytope() : facets() {
+  }
+  SinglePolytope<T> operator=(SinglePolytope<T> const& x) {
+    return {x.EXT, x.FAC, x.facets.clone()};
+  }
 };
+
+template <typename T>
+MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
+  int dim = sp.EXT.cols();
+  int n_ext = sp.EXT.rows();
+  MyVector<T> V = ZeroVector<T>(dim);
+  Face f = sp.facets[i_facet];
+  int incd = 0;
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    if (f[i_ext] == 1) {
+      for (int i=0; i<dim; i++) {
+        V(i) += sp.EXT(i_ext, i);
+      }
+      incd += 1;
+    }
+  }
+  for (int i=0; i<dim; i++) {
+    V(i) = V(i) / incd;
+  }
+  return V;
+}
+
+
 
 template <typename T>
 SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
@@ -94,7 +126,7 @@ SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const 
     }
     facets.push_back(f);
   }
-  return {EXT, FAC, std::move(facets)};
+  return SinglePolytope<T>(EXT, FAC, std::move(facets));
 }
 
 template <typename T>
