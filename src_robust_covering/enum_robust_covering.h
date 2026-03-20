@@ -321,7 +321,7 @@ template <typename T, typename Tint> struct ExtendedGenericRobustM {
 
 
 template<typename T, typename Tint>
-struct IneqFull {
+struct FullIneq {
   MyVector<T> eIneq;
   // If none, then the inequality is a hard one.
   // If some, then it is a soft one and that indicates what
@@ -346,7 +346,7 @@ struct HardConvexBoundary {
 template<typename T, typename Tint>
 struct SoftConvexBoundary {
   int index_cb; // The corresponding face;
-  ConvexBoundary<T> sp;
+  ConvexBoundary<T> cb;
   GenericRobustM<Tint> robust_m;
 };
 
@@ -573,6 +573,23 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
   return get_single_polytope(FAC, EXT);
 }
 
+template <typename T, typename Tint>
+MyMatrix<T> get_list_ineq(std::vector<FullIneq<T, Tint>> &list_full_ineq) {
+  int n_ineq = list_full_ineq.size();
+  if (n_ineq == 0) {
+    return ZeroMatrix<T>(0,0);
+  }
+  int dim = list_full_ineq[0].eIneq.size();
+  MyMatrix<T> M(n_ineq, dim);
+  for (int i_ineq=0; i_ineq<n_ineq; i_ineq++) {
+    for (int i=0; i<dim; i++) {
+      M(i_ineq, i) = list_full_ineq[i].eIneq(i);
+    }
+  }
+  return M;
+}
+
+
 // Compute 
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
@@ -625,14 +642,17 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
 }
 
 
+
+
+
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
 template <typename T, typename Tint>
 std::optional<PPolytopeVoronoiPart<T, Tint>>
-kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
-                                   std::vector<MyVector<Tint>> const& list_excluded_max,
-                                   MyVector<T> const &eV, std::ostream &os) {
+kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
+                               std::vector<MyVector<Tint>> const& list_excluded_max,
+                               MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const &G = solver.GramMat;
   if (IsIntegralVector(eV)) {
     // Nothing can be done here
@@ -647,6 +667,9 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
   PPolytopeVoronoiPart<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
+    //
+    // Building the set of inequalities from the definition.
+    //
     T const &min = rde.min;
     std::vector<MyMatrix<Tint>> const &list_min_parallelepipeds =
         rde.list_min_parallelepipeds;
@@ -758,8 +781,11 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 2\n";
 #endif
-    MyMatrix<T> FAC = MatrixFromVectorFamily(ListIneq);
-    bool test = is_full_dimensional_bounded_polytope(FAC, os);
+    //
+    // Testing definition of the polytopes.
+    //
+    MyMatrix<T> list_ineq = get_list_ineq(list_full_ineq);
+    bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
     if (!test) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: initial_vertex_data_test_ev, failing by "
@@ -767,19 +793,28 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
 #endif
       return false;
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data_test_ev, before "
-          "get_p_polytope_vertices_and_test_them\n";
-#endif
+    //
+    // Now doing the processing.
+    //
+    std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
+    MyMatrix<T> FAC = SelectRow(list_ineq, list_irred);
     SinglePolytope<T> sp = get_single_p_polytope(solver, FAC, v_short, os);
-    ppoly.robust_m_min = robust_m_min;
-    ppoly.list_robust_m = list_robust_m;
-    ppoly.sp = get_single_polytope(FAC, EXT);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data_test_ev, successful end\n";
-    os << "ROBUST: initial_vertex_data_test_ev, EXT=\n";
-    WriteMatrix(os, EXT);
-#endif
+    std::vector<HardConvexBoundary<T>> l_hcb;
+    std::vector<SoftConvexBoundary<T>> l_scb;
+    for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
+      int j_irred = list_irred[i_irred];
+      FullIneq<T,Tint> const& full_ineq = list_full_ineq[j_irred];
+      ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred);
+      if (full_ineq.opt_soft) {
+        SoftConvexBoundary<T> scb{0, c_bnd, *full_ineq.opt_soft};
+        l_scb.push_back(scb);
+      } else {
+        HardConvexBoundary<T> hcb{0, c_bnd};
+        l_hcb.push_back(hcb);
+      }
+    }
+    ConvexBlock<T> c_bl{list_robust_m, {}, sp};
+    ppoly = PPolytopeVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
@@ -794,7 +829,7 @@ template <typename T, typename Tint>
 std::optional<PPolytopeVoronoi<T, Tint>>
 initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
                             MyVector<T> const &eV, std::ostream &os) {
-  std::optional<PPolytopeVoronoi<T,Tint>> opt = kernel_initial_vertex_data_test_ev<T,Tint>(solver, {}, eV, os);
+  std::optional<PPolytopeVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
   }
