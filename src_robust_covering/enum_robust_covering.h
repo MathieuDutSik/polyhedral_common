@@ -293,6 +293,11 @@
 #define DEBUG_ENUM_P_POLYTOPES
 #endif
 
+
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ENUM_P_POLYTOPES
+#endif
+
 #ifdef DISABLE_DEBUG_ENUM_P_POLYTOPES
 #undef DEBUG_ENUM_P_POLYTOPES
 #endif
@@ -455,7 +460,7 @@ MyVector<T> get_ineq(MyMatrix<T> const &G, MyVector<Tint> const &v_short,
 template <typename T, typename Tint>
 void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MyMatrix<T> const &G,
-                                       std::vector<IneqFullData<T,Tint>> & ListFullIneq,
+                                       std::vector<FullIneq<T,Tint>> & list_full_ineq,
                                        [[maybe_unused]] std::ostream &os) {
   int n_row = robust_m.M.rows();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -472,8 +477,8 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
          << StringVector(eIneq) << " i=" << i << " index=" << robust_m.index
          << "\n";
 #endif
-      IneqFull<T,Tint> ineq_full{eIneq, {}};
-      ListFullIneq.push_back(ineq_full);
+      FullIneq<T,Tint> full_ineq{eIneq, {}};
+      list_full_ineq.push_back(full_ineq);
     }
   }
 }
@@ -484,7 +489,7 @@ template <typename T, typename Tint>
 void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MyMatrix<T> const &G,
                                        MyVector<Tint> const &v_short,
-                                       std::vector<IneqFullData<T>> &ListFullIneq,
+                                       std::vector<FullIneq<T, Tint>> &list_full_ineq,
                                        [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -499,8 +504,8 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
     os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq="
        << StringVector(eIneq) << "\n";
 #endif
-    IneqFull<T,Tint> ineq_full{eIneq, robust_m};
-    ListFullIneq.push_back(ineq_full);
+    FullIneq<T,Tint> full_ineq{eIneq, robust_m};
+    list_full_ineq.push_back(full_ineq);
   } else {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short="
@@ -513,27 +518,33 @@ template <typename T, typename Tint>
 void insert_excluded_max(GenericRobustM<Tint> const &robust_m,
                          MyMatrix<T> const &G,
                          std::vector<MyVector<Tint>> const& list_excluded_max,
-                         std::vector<IneqFullData<T,Tint>> & ListFullIneq,
+                         std::vector<FullIneq<T,Tint>> & list_full_ineq,
                          [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
   for (auto & v_short: list_excluded_max) {
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
-    IneqFull<T,Tint> ineq_full{eIneq, {}};
-    ListFullIneq.push_back(ineq_full);
+    FullIneq<T,Tint> full_ineq{eIneq, {}};
+    list_full_ineq.push_back(full_ineq);
   }
 }
 
-
-template <typename T>
-std::vector<MyVector<T>> get_p_polytope_vertices(MyMatrix<T> const &FAC,
-                                                 std::ostream &os) {
+template <typename T, typename Tint>
+SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> const &solver,
+                                        MyMatrix<T> const &FAC,
+                                        [[maybe_unused]] MyVector<Tint> const &v_short,
+                                        std::ostream &os) {
   std::string ansProg = "lrs";
   MyMatrix<T> EXTbig = DirectFacetComputationInequalities(FAC, ansProg, os);
   int n_ext = EXTbig.rows();
   int dim = EXTbig.cols() - 1;
+  MyMatrix<T> EXT(n_ext, dim + 1);
   std::vector<MyVector<T>> EXT;
   for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-    MyVector<T> v = GetMatrixRow(EXTbig, i_ext);
+    EXT(i_ext, 0) = 1;
+    for (int i = 0; i < dim; i++) {
+      EXT(i_ext, i+1) = EXTbig(i_ext, i + 1) / EXTbig(i_ext, 0);
+    }
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
     if (v(0) <= 0) {
       std::cerr
           << "We should have v(0) > 0, because we expect to have a polytope\n";
@@ -541,25 +552,10 @@ std::vector<MyVector<T>> get_p_polytope_vertices(MyMatrix<T> const &FAC,
     }
     MyVector<T> eEXT(dim);
     for (int i = 0; i < dim; i++) {
-      eEXT(i) = v(i + 1) / v(0);
+      eEXT(i) = EXTbig(i_ext, i + 1) / EXTbig(i_ext, 0);
     }
-    EXT.push_back(eEXT);
-  }
-  return EXT;
-}
-
-template <typename T, typename Tint>
-std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(
-    CVPSolver<T, Tint> const &solver, MyMatrix<T> const &FAC,
-    MyVector<Tint> const &v_short, std::ostream &os) {
-  std::vector<MyVector<T>> EXT = get_p_polytope_vertices(FAC, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: get_p_polytope_vertices_and_test_them |EXT|=" << EXT.size()
-     << "\n";
-#endif
-  MyMatrix<T> const &GramMat = solver.GramMat;
-  MyVector<T> v_short_T = UniversalVectorConversion<T, Tint>(v_short);
-  for (auto &eEXT : EXT) {
+    MyMatrix<T> const &GramMat = solver.GramMat;
+    MyVector<T> v_short_T = UniversalVectorConversion<T, Tint>(v_short);
     MyVector<T> diff = eEXT - v_short_T;
     T norm = EvaluationQuadForm(GramMat, diff);
     std::vector<MyVector<Tint>> ListVect =
@@ -572,17 +568,9 @@ std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(
                    "should have one\n";
       throw TerminalException{1};
     }
+#endif
   }
-  int n_ext = EXT.size();
-  int dim = GramMat.cols();
-  MyMatrix<T> EXTret(n_ext, dim + 1);
-  for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-    EXTret(i_ext, 0) = 1;
-    for (int i = 0; i < dim; i++) {
-      EXTret(i_ext, i + 1) = EXT[i_ext](i);
-    }
-  }
-  return EXTret;
+  return get_single_polytope(FAC, EXT);
 }
 
 // Compute 
@@ -656,7 +644,7 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
 #endif
   // Working variables
   bool is_correct = true;
-  PPolytopeVoronoi<T, Tint> ppoly;
+  PPolytopeVoronoiPart<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
     T const &min = rde.min;
@@ -727,7 +715,7 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
     insert_excluded_max(robust_m_min,
                         eG,
                         list_excluded_max,
-                        ListIneq,
+                        ListFullIneq,
                         os);
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -783,23 +771,9 @@ kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
     os << "ROBUST: initial_vertex_data_test_ev, before "
           "get_p_polytope_vertices_and_test_them\n";
 #endif
-    std::optional<MyMatrix<T>> opt_ext =
-        get_p_polytope_vertices_and_test_them<T, Tint>(solver, FAC, v_short,
-                                                       os);
-    if (!opt_ext) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: initial_vertex_data_test_ev, failing by "
-            "get_p_polytope_vertices_and_test_them\n";
-#endif
-      return false;
-    }
-    MyMatrix<T> const &EXT = *opt_ext;
-    MyVector<T> eIso = Isobarycenter(EXT);
+    SinglePolytope<T> sp = get_single_p_polytope(solver, FAC, v_short, os);
     ppoly.robust_m_min = robust_m_min;
     ppoly.list_robust_m = list_robust_m;
-    ppoly.FAC = FAC;
-    ppoly.EXT = EXT;
-    ppoly.eIso = eIso;
     ppoly.sp = get_single_polytope(FAC, EXT);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: initial_vertex_data_test_ev, successful end\n";

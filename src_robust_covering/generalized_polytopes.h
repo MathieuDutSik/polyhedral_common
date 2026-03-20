@@ -85,6 +85,117 @@ template <typename T> struct SinglePolytope {
 };
 
 template <typename T>
+SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
+  int n_fac = FAC.rows();
+  int n_ext = EXT.rows();
+  int dim = EXT.cols();
+  vectface facets(n_ext);
+  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
+    Face f(n_ext);
+    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
+      T scal(0);
+      for (int i = 0; i < dim; i++) {
+        scal += FAC(i_fac, i) * EXT(i_ext, i);
+      }
+      if (scal == 0) {
+        f[i_ext] = 1;
+      }
+    }
+    facets.push_back(f);
+  }
+  return SinglePolytope<T>(EXT, FAC, std::move(facets));
+}
+
+template<typename T>
+struct ConvexBoundary {
+  MyVector<T> V; // The orthogonal
+  MyMatrix<T> NSP;
+  SinglePolytope<T> sp; // The polytope in the face.
+};
+
+
+template<typename T>
+ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac) {
+  int dim = sp.FAC.cols();
+  MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
+  MyMatrix<T> NSP = NullspaceVector(V);
+  int n_fac = sp.FAC.rows();
+  int n_ext = sp.EXT.rows();
+  std::vector<int> l_idx_facet;
+  Face f1 = sp.facets[i_fac];
+  for (int j_fac=0; j_fac<n_fac; j_fac++) {
+    if (i_fac != j_fac) {
+      Face f2 = sp.facets[j_fac];
+      int n_incd = 0;
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        if (f1[i_ext] == 1 && f2[i_ext] == 1) {
+          n_incd += 1;
+        }
+      }
+      bool is_facet = false;
+      if (n_incd >= dim - 2) {
+        MyMatrix<T> EXTincd(n_incd, dim);
+        int i_incd = 0;
+        for (int i_ext=0; i_ext<n_ext; i_ext++) {
+          if (f1[i_ext] == 1 && f2[i_ext] == 1) {
+            for (int i=0; i<dim; i++) {
+              EXTincd(i_incd, i) = EXT(i_ext, i);
+            }
+            i_incd += 1;
+          }
+        }
+        int rnk = RankMat(EXTincd);
+        if (rnk == dim - 2) {
+          is_facet = true;
+        }
+      }
+      if (is_facet) {
+        l_idx_facet.push_back(j_fac);
+      }
+    }
+  }
+  std::vector<int> f1_map(n_ext, -1);
+  int pos = 0;
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    if (f1[i_ext] == 1) {
+      f1_map[i_ext] = pos;
+      pos += 1;
+    }
+  }
+  MyMatrix<T> EXT2 = SelectRow(sp.EXT, f1);
+  SolutionMatRepetitive<T> smr(NSP);
+  int n_ext_ret = EXT2.rows();
+  MyMatrix<T> EXT_ret(n_ext_ret, dim-1);
+  for (int i_ext=0; i_ext<n_ext_ret; i_ext++) {
+    MyVector<T> v1 = GetMatrixRow(EXT2, i_ext);
+    std::optional<MyVector<T>> opt = smr.GetSolution(v1);
+    if (!opt) {
+      std::cerr << "Failed to find a solution to the system\n";
+      throw TerminalException{1};
+    }
+    AssignMatrixRow(EXT1, i_ext, *opt);
+  }
+  int n_fac_ret = l_idx_facet.size();
+  MyMatrix<T> FAC_ret(n_fac_ret, dim-1);
+  for (int j_fac_ret=0; j_fac_ret<n_fac_ret; j_fac_ret++) {
+    int j_jac = l_idx_facet[j_fac_ret];
+    Face f2 = sp.facets[j_fac];
+    Face f(n_ext_ret);
+    for (int i_ext=0; i_ext<n_ext; i_ext++) {
+      if (f1[i_ext] == 1 && f2[i_ext] == 1) {
+        int pos = f1_map[i_ext];
+        f[pos] = 1;
+      }
+    }
+    MyVector<T> eFAC = FindFacetInequality(EXT_ret, f);
+    AssignMatrixRow(FAC_ret, j_fac_ret, eFAC);
+  }
+  SinglePolytope<T> sp = get_single_polytope(FAC_ret, EXT_ret);
+  return {V, NSP, std::move(sp)};
+}
+
+
+template <typename T>
 MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
   int dim = sp.EXT.cols();
   int n_ext = sp.EXT.rows();
@@ -106,28 +217,6 @@ MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
 }
 
 
-
-template <typename T>
-SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
-  int n_fac = FAC.rows();
-  int n_ext = EXT.rows();
-  int dim = EXT.cols();
-  vectface facets(n_ext);
-  for (int i_fac = 0; i_fac < n_fac; i_fac++) {
-    Face f(n_ext);
-    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      T scal(0);
-      for (int i = 0; i < dim; i++) {
-        scal += FAC(i_fac, i) * EXT(i_ext, i);
-      }
-      if (scal == 0) {
-        f[i_ext] = 1;
-      }
-    }
-    facets.push_back(f);
-  }
-  return SinglePolytope<T>(EXT, FAC, std::move(facets));
-}
 
 template <typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
