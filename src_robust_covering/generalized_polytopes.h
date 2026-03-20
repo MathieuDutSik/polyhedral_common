@@ -139,7 +139,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
 }
 
 template <typename T> struct GeneralizedPolytope {
-  SinglePolytope<T> polytopes;
+  std::vector<SinglePolytope<T>> polytopes;
 };
 
 template <typename T>

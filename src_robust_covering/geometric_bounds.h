@@ -10,7 +10,7 @@
   If bound1 <= bound2 We bound it by
     bound1 + 3 bound2
  */
-template <typename T> T combine_two_bounds(T const &bound1, T const &bound2) {
+template <typename T> T combine_two_bounds(T const &bound1, T const &bound2, int const& num_iter) {
   auto test_correctness = [&](T const &val) -> bool {
     // Correct if sqrt(bound1) + sqrt(bound2) <= sqrt(val)
     // Equivalent to bound1 + bound2 + 2 sqrt(bound1 bound2) <= val
@@ -35,15 +35,13 @@ template <typename T> T combine_two_bounds(T const &bound1, T const &bound2) {
   T low(0);
   T upp(1);
   while (true) {
-    bool test_low = test_correctness(low);
     bool test_upp = test_correctness(upp);
-    if (!test_low && test_upp) {
+    if (test_upp) {
       break;
     }
-    low += 1;
-    upp += 1;
+    upp *= 2;
   }
-  for (int i = 0; i < 6; i++) {
+  for (int i = 0; i < num_iter; i++) {
     T mid = (low + upp) / 2;
     bool test_mid = test_correctness(mid);
     if (test_mid) {

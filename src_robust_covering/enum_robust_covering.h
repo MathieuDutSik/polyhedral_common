@@ -265,7 +265,14 @@
       This is somewhat important as it means that if an
       inequality in two different forms, then they correspond
       to the same vector w.
-    +
+  * What could we work out to make it work:
+    + Keeping track of hard and soft facets is mandatory.
+    + If there is no extension from a soft facet, then we
+      need to convert it to hard.
+    + 
+
+
+    need to switch to
 
   ---- THE L-TYPE THEORY SIDE ----
   Here is what we have:
@@ -306,6 +313,72 @@ template <typename T, typename Tint> struct ExtendedGenericRobustM {
   bool is_correct;
   GenericRobustM<Tint> robust_m;
 };
+
+
+template<typename T, typename Tint>
+struct IneqFull {
+  MyVector<T> eIneq;
+  // If none, then the inequality is a hard one.
+  // If some, then it is a soft one and that indicates what
+  // can change.
+  std::optional<GenericRobustM<Tint>> opt_soft;
+};
+
+
+template <typename T, typename Tint>
+struct ConvexBlock {
+  std::vector<GenericRobustM<Tint>> list_robust_m;
+  std::vector<MyVector<Tint>> l_excluded_max;
+  SinglePolytope<T> sp;
+};
+
+template<typename T>
+struct HardConvexBoundary {
+  int index_cb; // The corresponding face;
+  ConvexBoundary<T> sp;
+};
+
+template<typename T, typename Tint>
+struct SoftConvexBoundary {
+  int index_cb; // The corresponding face;
+  ConvexBoundary<T> sp;
+  GenericRobustM<Tint> robust_m;
+};
+
+
+/*
+  The robust_m_min is defining the P-polytope.
+  This is what we are after in the end.
+  ----
+  It is a full enumeration result.
+ */
+template <typename T, typename Tint> struct PPolytopeVoronoi {
+  GenericRobustM<Tint> robust_m_min;
+  std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
+  std::vector<HardConvexBoundary<T>> l_hcb;
+  GeneralizedPolytope<T> gp;
+  MyMatrix<T> EXT; // The list of vertices as defined from the generalized polytope.
+};
+
+/*
+  The robust_m_min is defining the P-polytope.
+  This is what we are after in the end.
+  ----
+  It is a partial enumeration result.
+ */
+template <typename T, typename Tint> struct PPolytopeVoronoiPart {
+  GenericRobustM<Tint> robust_m_min;
+  std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
+  std::vector<HardConvexBoundary<T>> l_hcb;
+  std::vector<SoftConvexBoundary<T>> l_scb;
+};
+
+
+
+
+
+
+
 
 template <typename T, typename Tint>
 ExtendedGenericRobustM<T, Tint>
@@ -354,19 +427,6 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   return {max, is_correct, robust_m};
 };
 
-template <typename T, typename Tint> struct PpolytopeVoronoiData {
-  GenericRobustM<Tint> robust_m_min;
-  std::vector<GenericRobustM<Tint>> list_robust_m;
-  MyMatrix<T> FAC;
-  MyMatrix<T> EXT;
-  MyVector<T> eIso;
-  SinglePolytope<T> sp;
-  PpolytopeVoronoiData(PpolytopeVoronoiData<T,Tint> const& x) : list_robust_m(x.list_robust_m), FAC(x.FAC), EXT(x.EXT), eIso(x.eIso), sp(x.sp) {
-  }
-  PpolytopeVoronoiData() : sp() {
-  }
-};
-
 /*
   We have G[x - v_short] <= G[x - v_long]
   So,
@@ -395,7 +455,7 @@ MyVector<T> get_ineq(MyMatrix<T> const &G, MyVector<Tint> const &v_short,
 template <typename T, typename Tint>
 void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MyMatrix<T> const &G,
-                                       std::vector<MyVector<T>> &ListIneq,
+                                       std::vector<IneqFullData<T,Tint>> & ListFullIneq,
                                        [[maybe_unused]] std::ostream &os) {
   int n_row = robust_m.M.rows();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -412,7 +472,8 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
          << StringVector(eIneq) << " i=" << i << " index=" << robust_m.index
          << "\n";
 #endif
-      ListIneq.push_back(eIneq);
+      IneqFull<T,Tint> ineq_full{eIneq, {}};
+      ListFullIneq.push_back(ineq_full);
     }
   }
 }
@@ -423,7 +484,7 @@ template <typename T, typename Tint>
 void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MyMatrix<T> const &G,
                                        MyVector<Tint> const &v_short,
-                                       std::vector<MyVector<T>> &ListIneq,
+                                       std::vector<IneqFullData<T>> &ListFullIneq,
                                        [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -438,7 +499,8 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
     os << "ROBUST:   insert_outer_ineqs_parallelepiped, eIneq="
        << StringVector(eIneq) << "\n";
 #endif
-    ListIneq.push_back(eIneq);
+    IneqFull<T,Tint> ineq_full{eIneq, robust_m};
+    ListFullIneq.push_back(ineq_full);
   } else {
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   insert_outer_ineqs_parallelepiped, v_short="
@@ -446,6 +508,21 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
 #endif
   }
 }
+
+template <typename T, typename Tint>
+void insert_excluded_max(GenericRobustM<Tint> const &robust_m,
+                         MyMatrix<T> const &G,
+                         std::vector<MyVector<Tint>> const& list_excluded_max,
+                         std::vector<IneqFullData<T,Tint>> & ListFullIneq,
+                         [[maybe_unused]] std::ostream &os) {
+  MyVector<Tint> v_long = robust_m.v_long();
+  for (auto & v_short: list_excluded_max) {
+    MyVector<T> eIneq = get_ineq(G, v_short, v_long);
+    IneqFull<T,Tint> ineq_full{eIneq, {}};
+    ListFullIneq.push_back(ineq_full);
+  }
+}
+
 
 template <typename T>
 std::vector<MyVector<T>> get_p_polytope_vertices(MyMatrix<T> const &FAC,
@@ -508,6 +585,7 @@ std::optional<MyMatrix<T>> get_p_polytope_vertices_and_test_them(
   return EXTret;
 }
 
+// Compute 
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int denom = 2;
@@ -563,12 +641,13 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
 template <typename T, typename Tint>
-std::optional<PpolytopeVoronoiData<T, Tint>>
-initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
-                            MyVector<T> const &eV, std::ostream &os) {
+std::optional<PPolytopeVoronoiPart<T, Tint>>
+kernel_initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
+                                   std::vector<MyVector<Tint>> const& list_excluded_max,
+                                   MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const &G = solver.GramMat;
   if (IsIntegralVector(eV)) {
-    // Nothing cam be done here
+    // Nothing can be done here
     return {};
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -577,7 +656,7 @@ initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
 #endif
   // Working variables
   bool is_correct = true;
-  PpolytopeVoronoiData<T, Tint> ppoly;
+  PPolytopeVoronoi<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
     T const &min = rde.min;
@@ -638,10 +717,6 @@ initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
     WriteMatrix(os, robust_m_min.M);
 #endif
     insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, Initial FAC=\n";
-    WriteMatrix(os, MatrixFromVectorFamily(ListIneq));
-#endif
     MyVector<Tint> v_short =
         robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -649,6 +724,12 @@ initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
        << StringVectorGAP(v_short) << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
+    insert_excluded_max(robust_m_min,
+                        eG,
+                        list_excluded_max,
+                        ListIneq,
+                        os);
+
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 1\n";
     size_t i_m = 0;
@@ -656,8 +737,7 @@ initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
     for (auto &eM : tot_list_parallelepipeds) {
       if (eM != min_m) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST:   ------------------------- " << i_m
-           << " ------------------------\n";
+        os << "ROBUST:   --------- " << i_m << " ------------\n";
         i_m += 1;
 #endif
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
@@ -737,14 +817,41 @@ initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
 }
 
 template <typename T, typename Tint>
+std::optional<PPolytopeVoronoi<T, Tint>>
+initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
+                            MyVector<T> const &eV, std::ostream &os) {
+  std::optional<PPolytopeVoronoi<T,Tint>> opt = kernel_initial_vertex_data_test_ev<T,Tint>(solver, {}, eV, os);
+  if (!opt) {
+    return {};
+  }
+  PPolytopeVoronoi<T, Tint>> p_voronoi = *opt;
+
+
+  while(true) {
+    
+  }
+
+  
+  
+  auto f_insert=[&](std::vector<MyVector<Tint>> const& list_v) -> bool {
+    std::optional<PPolytopeVoronoi<T,Tint>> opt = 
+  };
+
+
+  
+}
+
+
+
+
+
+template <typename T, typename Tint>
 PpolytopeVoronoiData<T, Tint>
 initial_vertex_data(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int dim = solver.GramMat.rows();
   int denom = 2;
   while (true) {
     MyVector<T> eV = get_random_vector<T>(denom, dim);
-    eV(0) = T(7) / T(12);
-    eV(1) = T(7) / T(13);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: initial_vertex_data, before initial_vertex_data_test_ev, eV="
        << StringVectorGAP(eV) << " denom=" << denom << "\n";
@@ -764,6 +871,10 @@ initial_vertex_data(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     denom += 1;
   }
 }
+
+
+
+
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PpolytopeVoronoiData<T, Tint>>
