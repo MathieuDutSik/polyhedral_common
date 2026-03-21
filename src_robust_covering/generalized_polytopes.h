@@ -103,14 +103,55 @@ SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const 
     }
     facets.push_back(f);
   }
-  return SinglePolytope<T>(EXT, FAC, std::move(facets));
+  MyMatrix<T> EXTret(n_ext, dim);
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    T val0(1);
+    if (EXT(i_ext, 0) > 0) {
+      val0 = EXT(i_ext, 0);
+    }
+    for (int i=0; i<dim; i++) {
+      EXTret(i_ext, i) = EXT(i_ext, i) / val0;
+    }
+  }
+  return SinglePolytope<T>(EXTret, FAC, std::move(facets));
 }
+
+template<typename T>
+std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> const& sp, MyVector<T> const& eFAC, std::ostream &os) {
+  MyMatrix<T> FACtot = ConcatenateMatVec(sp.FAC, eFAC);
+  if (!IsFullDimensional(FACtot, os)) {
+    return {};
+  }
+  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACtot, os);
+  MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
+  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  return get_single_polytope(FAC, EXT);
+}
+
+
+
+
+
 
 template<typename T>
 struct ConvexBoundary {
   MyVector<T> V; // The orthogonal
   MyMatrix<T> NSP;
   SinglePolytope<T> sp; // The polytope in the face.
+  MyVector<T> get_isobarycenter() const {
+    MyVector<T> eIso1 = Isobarycenter(sp.EXT);
+    MyVector<T> eIso2 = NSP.transpose() * eIso1;
+    return eIso2;
+  }
+  std::vector<MyVector<T>> get_list_vertices() const {
+    std::vector<MyVector<T>> l_vertices;
+    MyMatrix<T> EXT2 = sp.EXT * NSP;
+    for (int i_row=0; i_row<EXT2.rows(); i_row++) {
+      MyVector<T> V = GetMatrixRow(EXT2, i_row);
+      l_vertices.emplace_back(std::move(V));
+    }
+    return l_vertices;
+  }
 };
 
 
@@ -194,6 +235,16 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
   return {V, NSP, std::move(sp)};
 }
 
+template<typename T>
+std::optional<ConvexBoundary<T>> convexboundary_halfspace_int(ConvexBoundary<T> const& cb, MyVector<T> const& eFAC, std::ostream &os) {
+  MyVector<T> eFAC_call = cb.NSP * eFAC;
+  std::optional<SinglePolytope<T>> opt = singlepolytope_halfspace_int(cb.sp, eFAC_call, os);
+  if (!opt) {
+    return {};
+  }
+  SinglePolytope<T> sp = *opt;
+  return {cb.V, cb.NSP, sp};
+}
 
 template <typename T>
 MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {

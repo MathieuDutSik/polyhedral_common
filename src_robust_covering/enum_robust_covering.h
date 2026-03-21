@@ -311,6 +311,16 @@ template <typename Tint> struct GenericRobustM {
   int index;
   MyMatrix<Tint> M;
   MyVector<Tint> v_long() const { return GetMatrixRow(M, index); }
+  std::vector<MyVector<Tint>> get_short_vertors() const {
+    std::vector<MyVector<Tint>> l_v;
+    for (int i_row=0; i_row<M.rows(); i_row++) {
+      if (i_row != index) {
+        MyVector<Tint> V = GetMatrixRow(M, i_row);
+        l_v.emplace_back(std::move(V));
+      }
+    }
+    return l_v;
+  }
 };
 
 template <typename T, typename Tint> struct ExtendedGenericRobustM {
@@ -329,11 +339,10 @@ struct FullIneq {
   std::optional<GenericRobustM<Tint>> opt_soft;
 };
 
-
+// The convex block of the construction
 template <typename T, typename Tint>
 struct ConvexBlock {
   std::vector<GenericRobustM<Tint>> list_robust_m;
-  std::vector<MyVector<Tint>> l_excluded_max;
   SinglePolytope<T> sp;
 };
 
@@ -347,6 +356,7 @@ template<typename T, typename Tint>
 struct SoftConvexBoundary {
   int index_cb; // The corresponding face;
   ConvexBoundary<T> cb;
+  std::vector<MyVector<Tint>> l_excluded_max; // The excluded vectors. Cannot use the ConvexBlock since they can vary.
   GenericRobustM<Tint> robust_m;
 };
 
@@ -375,7 +385,7 @@ template <typename T, typename Tint> struct PPolytopeVoronoiPart {
   GenericRobustM<Tint> robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
-  std::vector<SoftConvexBoundary<T>> l_scb;
+  std::vector<SoftConvexBoundary<T,Tint>> l_scb;
 };
 
 
@@ -590,7 +600,7 @@ MyMatrix<T> get_list_ineq(std::vector<FullIneq<T, Tint>> &list_full_ineq) {
 }
 
 
-// Compute 
+// Compute
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int denom = 2;
@@ -640,8 +650,6 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
   }
   return upper_bound;
 }
-
-
 
 
 
@@ -800,20 +808,20 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     MyMatrix<T> FAC = SelectRow(list_ineq, list_irred);
     SinglePolytope<T> sp = get_single_p_polytope(solver, FAC, v_short, os);
     std::vector<HardConvexBoundary<T>> l_hcb;
-    std::vector<SoftConvexBoundary<T>> l_scb;
+    std::vector<SoftConvexBoundary<T,Tint>> l_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
       int j_irred = list_irred[i_irred];
       FullIneq<T,Tint> const& full_ineq = list_full_ineq[j_irred];
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred);
       if (full_ineq.opt_soft) {
-        SoftConvexBoundary<T> scb{0, c_bnd, *full_ineq.opt_soft};
+        SoftConvexBoundary<T,Tint> scb{0, c_bnd, list_excluded_max, *full_ineq.opt_soft};
         l_scb.push_back(scb);
       } else {
         HardConvexBoundary<T> hcb{0, c_bnd};
         l_hcb.push_back(hcb);
       }
     }
-    ConvexBlock<T> c_bl{list_robust_m, {}, sp};
+    ConvexBlock<T> c_bl{list_robust_m, sp};
     ppoly = PPolytopeVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
@@ -825,29 +833,57 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
   }
 }
 
+
+
+
+
 template <typename T, typename Tint>
 std::optional<PPolytopeVoronoi<T, Tint>>
-initial_vertex_data_test_ev(CVPSolver<T, Tint> const &solver,
-                            MyVector<T> const &eV, std::ostream &os) {
+initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
+  MyMatrix<T> const& eG = solver.GramMat;
   std::optional<PPolytopeVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
   }
-  PPolytopeVoronoi<T, Tint>> p_voronoi = *opt;
+  PPolytopeVoronoiPart<T, Tint>> p_voronoi = *opt;
+  MyVector<Tint> v_crit = p_voronoi.robu_m_min.v_long();
 
-
-  while(true) {
+  auto f_process_entry=[&]() -> bool {
+    size_t len = p_voronoi.l_scb.size();
+    if (len == 0) {
+      return true;
+    }
+    SoftConvexBoundary<T,Tint> scb = p_voronoi.l_scb[len-1];
+    p_voronoi.l_scb.pop_back();
+    std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
+    MyVector<Tint> v_long = scb.robust_m.v_long();
+    MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
+    std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
     
-  }
+    MyMatrix<T> FACwork = p_voronoi.l_cb[scb.index].FAC;
+    
+    
+    
+kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
+                               std::vector<MyVector<Tint>> const& list_excluded_max,
+                               MyVector<T> const &eV, std::ostream &os) {
 
-  
-  
-  auto f_insert=[&](std::vector<MyVector<Tint>> const& list_v) -> bool {
-    std::optional<PPolytopeVoronoi<T,Tint>> opt = 
+
+
+
+    
+
+    return false;
   };
 
 
-  
+  while(true) {
+    bool test = f_process_entry();
+    if (test) {
+      break;
+    }
+  }
+
 }
 
 
