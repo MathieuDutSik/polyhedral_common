@@ -278,7 +278,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         os_out << ",\n";
       }
       std::vector<BoundEntry<Tint>> const& l_bound = fce.boundaries[index].ll_bound[iOrb].l_bound;
-      os_out << "rec(iOrb:=" << (iOrb+ 1);
+      os_out << "rec(iOrb:=" << (iOrb+1);
       MyMatrix<Tint> EXT = fce.levels[index].l_faces[iOrb].EXT;
       os_out << ", EXT:=";
       WriteMatrixGAP(os_out, EXT);
@@ -291,7 +291,7 @@ void process_A(FullNamelist const &eFull, std::ostream& os) {
         }
         int jOrb = l_bound[i_bnd].iOrb;
         MyMatrix<Tint> const& M = l_bound[i_bnd].M;
-        MyMatrix<Tint> EXT = fce.levels[index-1].l_faces[jOrb].EXT * M;
+        MyMatrix<Tint> EXT = fce.levels[index+1].l_faces[jOrb].EXT * M;
         os_out << "rec(sign:=" << l_bound[i_bnd].sign;
         os_out << ", jOrb:=" << (jOrb+1);
         os_out << ", M:=";
