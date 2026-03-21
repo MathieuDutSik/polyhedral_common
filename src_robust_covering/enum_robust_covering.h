@@ -833,14 +833,48 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
   }
 }
 
-
+/*
+  Get a possible vector to consider
+ */
+template<typename T, typename Tint>
+std::optional<MyVector<Tint>> get_next_side_vector(MyMatrix<T> const& G,
+                                                   MyVector<Tint> const& v_long,
+                                                   std::vector<MyVector<Tint>> const& l_cand,
+                                                   std::vector<MyVector<T>> const& l_vertices) {
+  T delta(0);
+  MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
+  auto f_max=[&](MyVector<Tint> const& cand) -> T {
+    MyVector<T> cand_T = UniversalVectorConversion<T,Tint>(cand);
+    T delta(0);
+    for (auto & vert: l_vertices) {
+      MyVector<T> diff1 = vert - v_long_T;
+      MyVector<T> diff2 = vert - cand_T;
+      T norm1 = EvaluationQuadForm(G, diff1);
+      T norm2 = EvaluationQuadForm(G, diff2);
+      if (norm2 > norm1) {
+        delta = norm2 - norm1;
+      }
+    }
+    return delta;
+  };
+  std::optional<MyVector<Tint>> opt;
+  for (auto & cand: l_cand) {
+    T del = f_max(cand);
+    if (del > delta) {
+      delta = del;
+      opt = cand;
+    }
+  }
+  return opt;
+}
 
 
 
 template <typename T, typename Tint>
 std::optional<PPolytopeVoronoi<T, Tint>>
 initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
-  MyMatrix<T> const& eG = solver.GramMat;
+  MyMatrix<T> const& G = solver.GramMat;
+  MyMatrix<T> G_inv = Inverse(G);
   std::optional<PPolytopeVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
@@ -857,21 +891,41 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std:
     p_voronoi.l_scb.pop_back();
     std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
     MyVector<Tint> v_long = scb.robust_m.v_long();
+    l_excluded_max.push_back(v_long);
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
+    MyVector<T> eIneq_op = - eIneq;
     std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
-    
-    MyMatrix<T> FACwork = p_voronoi.l_cb[scb.index].FAC;
-    
-    
-    
-kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
-                               std::vector<MyVector<Tint>> const& list_excluded_max,
-                               MyVector<T> const &eV, std::ostream &os) {
+    std::vector<MyVector<Tint>> l_cand = scb.robust_m.get_short_vertors();
+    std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices);
+    if (!opt1) {
+      HardConvexBoundary<T> hcb{scb.index, scb.cb};
+      p_voronoi.l_hcb.push_back(hcb);
+      return false;
+    }
+    MyVector<Tint> const& v_long_new = *opt1;
+    MyVector<T> eIneq_new = get_ineq(G, v_crit, v_long_new);
+    std::optional<ConvexBoundary<T>> opt2 = convexboundary_halfspace_int(scb.cb, eIneq_new, os);
+    if (!opt2) {
+      std::cerr << "ROBUST: The opt2 should be nontrivial\n";
+      throw TerminalException{1};
+    }
+    ConvexBoundary<T> const& cb_new = *opt2;
+    MyVector<T> eIso = cb_new.get_isobarycenter();
+    MyVector<T> dir = G_inv * cb_new.V;
+    T shift(1);
+    while(true) {
+      MyVector<T> fV = eIso + shift * dir;
+      std::optional<PPolytopeVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
+      if (!opt3) {
+        continue;
+      }
+      PPolytopeVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
+      int pos = get_position_vec_in_mat(p_poly_vor_part, eIneq_op);
+      if (pos == -1) {
+        continue;
+      }
 
-
-
-
-    
+    }
 
     return false;
   };
