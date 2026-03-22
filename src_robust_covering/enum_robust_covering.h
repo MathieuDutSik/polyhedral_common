@@ -367,7 +367,7 @@ struct SoftConvexBoundary {
   ----
   It is a full enumeration result.
  */
-template <typename T, typename Tint> struct PPolytopeVoronoi {
+template <typename T, typename Tint> struct PVoronoi {
   GenericRobustM<Tint> robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
@@ -381,7 +381,7 @@ template <typename T, typename Tint> struct PPolytopeVoronoi {
   ----
   It is a partial enumeration result.
  */
-template <typename T, typename Tint> struct PPolytopeVoronoiPart {
+template <typename T, typename Tint> struct PVoronoiPart {
   GenericRobustM<Tint> robust_m_min;
   std::vector<ConvexBlock<T,Tint>> l_cb; // The list of convex blocks.
   std::vector<HardConvexBoundary<T>> l_hcb;
@@ -657,7 +657,7 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
 // It should fail and return None if the point eV is not generic enough.
 // Which should lead to an increase in randomness.
 template <typename T, typename Tint>
-std::optional<PPolytopeVoronoiPart<T, Tint>>
+std::optional<PVoronoiPart<T, Tint>>
 kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
                                std::vector<MyVector<Tint>> const& list_excluded_max,
                                MyVector<T> const &eV, std::ostream &os) {
@@ -672,7 +672,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #endif
   // Working variables
   bool is_correct = true;
-  PPolytopeVoronoiPart<T, Tint> ppoly;
+  PVoronoiPart<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
     //
@@ -822,7 +822,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
     }
     ConvexBlock<T,Tint> c_bl{list_robust_m, sp};
-    ppoly = PPolytopeVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
+    ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
@@ -871,15 +871,15 @@ std::optional<MyVector<Tint>> get_next_side_vector(MyMatrix<T> const& G,
 
 
 template <typename T, typename Tint>
-std::optional<PPolytopeVoronoi<T, Tint>>
-initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
+std::optional<PVoronoi<T, Tint>>
+find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const& G = solver.GramMat;
   MyMatrix<T> G_inv = Inverse(G);
-  std::optional<PPolytopeVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
+  std::optional<PVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
   }
-  PPolytopeVoronoiPart<T, Tint>> p_voronoi = *opt;
+  PVoronoiPart<T, Tint>> p_voronoi = *opt;
   MyVector<Tint> v_crit = p_voronoi.robu_m_min.v_long();
 
   auto f_process_entry=[&]() -> bool {
@@ -915,11 +915,11 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std:
     T shift(1);
     while(true) {
       MyVector<T> fV = eIso + shift * dir;
-      std::optional<PPolytopeVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
+      std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
       if (!opt3) {
         continue;
       }
-      PPolytopeVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
+      PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
       if (pos == -1) {
         continue;
@@ -961,8 +961,8 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std:
 
 
 template <typename T, typename Tint>
-PpolytopeVoronoiData<T, Tint>
-initial_vertex_data(CVPSolver<T, Tint> const &solver, std::ostream &os) {
+PVoronoi<T, Tint>
+initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int dim = solver.GramMat.rows();
   int denom = 2;
   while (true) {
@@ -971,8 +971,7 @@ initial_vertex_data(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     os << "ROBUST: initial_vertex_data, before initial_vertex_data_test_ev, eV="
        << StringVectorGAP(eV) << " denom=" << denom << "\n";
 #endif
-    std::optional<PpolytopeVoronoiData<T, Tint>> opt =
-        initial_vertex_data_test_ev(solver, eV, os);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, eV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     std::cerr << "ROBUST: Stopping the execution\n";
     throw TerminalException{1};
@@ -992,15 +991,15 @@ initial_vertex_data(CVPSolver<T, Tint> const &solver, std::ostream &os) {
 
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<PpolytopeVoronoiData<T, Tint>>
+std::vector<PVoronoi<T, Tint>>
 find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
-                          PpolytopeVoronoiData<T, Tint> const &pvd) {
+                          PVoronoi<T, Tint> const &pvd) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   int dim = eData.solver.GramMat.rows();
   auto get_adj_p_polytope = [&](MyVector<T> const &TestFAC,
                                 MyVector<T> const &x)
-      -> std::optional<PpolytopeVoronoiData<T, Tint>> {
+      -> std::optional<PVoronoi<T, Tint>> {
     MyVector<T> x_red(dim);
     for (int i = 0; i < dim; i++) {
       x_red(i) = x(i + 1);
@@ -1008,12 +1007,12 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: get_adj_p_polytope x_red=" << StringVector(x_red) << "\n";
 #endif
-    std::optional<PpolytopeVoronoiData<T, Tint>> opt =
+    std::optional<PVoronoi<T, Tint>> opt =
         initial_vertex_data_test_ev(solver, x_red, os);
     if (!opt) {
       return {};
     }
-    PpolytopeVoronoiData<T, Tint> const &ppoly = *opt;
+    PVoronoi<T, Tint> const &ppoly = *opt;
     size_t m_facet = ppoly.sp.FAC.rows();
     int m_ext = ppoly.EXT.rows();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1032,7 +1031,7 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
     return {};
   };
   auto get_adj = [&](Face const &f, MyVector<T> const &eFAC,
-                     MyVector<T> const &eIso) -> PpolytopeVoronoiData<T, Tint> {
+                     MyVector<T> const &eIso) -> PVoronoi<T, Tint> {
     std::unordered_set<MyVector<T>> set;
     int n_ext = pvd.EXT.rows();
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
@@ -1059,7 +1058,7 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
          << "\n";
       n_iter += 1;
 #endif
-      std::optional<PpolytopeVoronoiData<T, Tint>> opt =
+      std::optional<PVoronoi<T, Tint>> opt =
           get_adj_p_polytope(TestFAC, x);
       if (opt) {
         return *opt;
@@ -1067,7 +1066,7 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
       factor = factor / 2;
     }
   };
-  std::vector<PpolytopeVoronoiData<T, Tint>> l_adj;
+  std::vector<PVoronoi<T, Tint>> l_adj;
   size_t n_facet = pvd.sp.FAC.rows();
   for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1077,21 +1076,21 @@ find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
     Face facet = pvd.sp.facets[i_facet];
     MyVector<T> eFAC = GetMatrixRow(pvd.sp.FAC, i_facet);
     MyVector<T> eIso = get_interior_facet_pt(pvd.sp, i_facet);
-    PpolytopeVoronoiData<T, Tint> eAdj = get_adj(facet, eFAC, eIso);
+    PVoronoi<T, Tint> eAdj = get_adj(facet, eFAC, eIso);
     l_adj.push_back(eAdj);
   }
   return l_adj;
 }
 
 template <typename T, typename Tint, typename Tgroup>
-std::vector<PpolytopeVoronoiData<T, Tint>>
+std::vector<PVoronoi<T, Tint>>
 compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
-  std::vector<PpolytopeVoronoiData<T, Tint>> l_ppoly;
-  PpolytopeVoronoiData<T, Tint> ppoly = initial_vertex_data(solver, os);
+  std::vector<PVoronoi<T, Tint>> l_ppoly;
+  PVoronoi<T, Tint> ppoly = initial_vertex_data(solver, os);
   l_ppoly.push_back(ppoly);
-  auto f_insert = [&](PpolytopeVoronoiData<T, Tint> const &f_ppoly) -> void {
+  auto f_insert = [&](PVoronoi<T, Tint> const &f_ppoly) -> void {
     for (auto &e_ppoly : l_ppoly) {
       std::optional<MyMatrix<T>> opt_equiv =
           Polytope_TestEquivalence<T, Tint, Tgroup>(eData, e_ppoly.EXT,
@@ -1110,7 +1109,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
        << "\n";
 #endif
     for (size_t i_ppoly = start; i_ppoly < len; i_ppoly++) {
-      std::vector<PpolytopeVoronoiData<T, Tint>> l_adj =
+      std::vector<PVoronoi<T, Tint>> l_adj =
           find_adjacent_p_polytopes(eData, l_ppoly[i_ppoly]);
       for (auto &eAdj : l_adj) {
         f_insert(eAdj);
@@ -1126,7 +1125,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 
 template <typename T, typename Tint, typename Tgroup>
 T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
-  std::vector<PpolytopeVoronoiData<T, Tint>> l_ppoly =
+  std::vector<PVoronoi<T, Tint>> l_ppoly =
       compute_all_p_polytopes(eData);
   T max_sqr_radius(0);
   MyMatrix<T> const &GramMat = eData.solver.GramMat;
