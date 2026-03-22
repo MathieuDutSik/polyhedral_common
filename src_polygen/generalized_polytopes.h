@@ -597,9 +597,9 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
 
 template <typename T>
 GeneralizedPolytope<T>
-intersection_generalized_polytope(GeneralizedPolytope<T> const &gp1,
-                                  GeneralizedPolytope<T> const &gp2,
-                                  std::ostream &os) {
+intersection_gp_gp(GeneralizedPolytope<T> const &gp1,
+                   GeneralizedPolytope<T> const &gp2,
+                   std::ostream &os) {
   size_t n_polytope1 = gp1.polytopes.size();
   size_t n_polytope2 = gp2.polytopes.size();
   std::vector<SinglePolytope<T>> polytopes;
@@ -893,6 +893,16 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
     }
   }
   return l_vertices;
+}
+
+template<typename T>
+T volume_gp(GeneralizedPolytope<T> const& gp, std::ostream& os) {
+  T volume(0);
+  for (auto & sp: gp.polytopes) {
+    T vol = lrs::Kernel_VolumePolytope(sp.EXT);
+    volume += vol;
+  }
+  return volume;
 }
 
 // clang-format off
