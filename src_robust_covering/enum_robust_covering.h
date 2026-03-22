@@ -821,7 +821,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         l_hcb.push_back(hcb);
       }
     }
-    ConvexBlock<T> c_bl{list_robust_m, sp};
+    ConvexBlock<T,Tint> c_bl{list_robust_m, sp};
     ppoly = PPolytopeVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
@@ -895,7 +895,7 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std:
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
     MyVector<T> eIneq_op = - eIneq;
     std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
-    std::vector<MyVector<Tint>> l_cand = scb.robust_m.get_short_vertors();
+    std::vector<MyVector<Tint>> l_cand = DifferenceVect(scb.robust_m.get_short_vertors(), l_excluded_max);
     std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices);
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index, scb.cb};
@@ -920,13 +920,29 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std:
         continue;
       }
       PPolytopeVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
-      int pos = get_position_vec_in_mat(p_poly_vor_part, eIneq_op);
+      int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
       if (pos == -1) {
         continue;
       }
-
+      SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
+      std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
+      for (auto& cb2: l_cb) {
+        SoftConvexBoundary<T,Tint> scb_new{scb.index, cb2, l_excluded_max, scb.robust_m};
+        p_voronoi.l_scb.push_back(scb_new);
+      }
+      for (auto& hcb: p_poly_vor_part.l_hcb) {
+        p_voronoi.l_hcb.push_back(hcb);
+      }
+      p_voronoi.l_cb.push_back(p_poly_vor_part.l_cb[0]);
+      int index = p_voronoi.l_cb.size() - 1;
+      for (auto& scb: p_poly_vor_part.l_scb) {
+        if (scb.cb.V != eIneq_op) {
+          SoftConvexBoundary<T,Tint> scb_new = scb;
+          scb_new.index = index;
+          p_voronoi.l_scb.push_back(scb_new);
+        }
+      }
     }
-
     return false;
   };
 
