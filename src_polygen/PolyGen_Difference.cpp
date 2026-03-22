@@ -9,6 +9,7 @@ template <typename T>
 GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> const& list_ext) {
   std::vector<SinglePolytope<T>> polytopes;
   for (size_t i=0; i<list_ext.size(); i++) {
+    MyMatrix<T> const& EXT = list_ext[i];
     MyMatrix<T> FAC = DirectDualDescription(EXT, std::cerr);
     SinglePolytope<T> sp = get_single_polytope(FAC, EXT);
     polytopes.push_back(sp);
@@ -19,7 +20,7 @@ GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> 
 
 
 
-template <typename T, typename Tint>
+template <typename T>
 void process(std::string const &GenPolyFile1,
              std::string const &GenPolyFile2,
              std::string const &OutFormat,

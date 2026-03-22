@@ -113,7 +113,13 @@ SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const 
       EXTret(i_ext, i) = EXT(i_ext, i) / val0;
     }
   }
-  return SinglePolytope<T>(EXTret, FAC, std::move(facets));
+  MyMatrix<T> FACret(n_fac, dim);
+  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    MyVector<T> eFAC = GetMatrixRow(FAC, i_fac);
+    MyVector<T> fFAC = ScalarCanonicalizationVector(eFAC);
+    AssignMatrixRow(FACret, i_fac, fFAC);
+  }
+  return SinglePolytope<T>(EXTret, FACret, std::move(facets));
 }
 
 template<typename T>
@@ -156,6 +162,49 @@ struct ConvexBoundary {
 
 
 template<typename T>
+std::vector<int> get_adjacent_facet_indices(SinglePolytope<T> const& sp, int const& i_fac) {
+  int dim = sp.FAC.cols();
+  int n_fac = sp.FAC.rows();
+  int n_ext = sp.EXT.rows();
+  std::vector<int> l_idx_facet;
+  Face f1 = sp.facets[i_fac];
+  for (int j_fac=0; j_fac<n_fac; j_fac++) {
+    if (i_fac != j_fac) {
+      Face f2 = sp.facets[j_fac];
+      int n_incd = 0;
+      for (int i_ext=0; i_ext<n_ext; i_ext++) {
+        if (f1[i_ext] == 1 && f2[i_ext] == 1) {
+          n_incd += 1;
+        }
+      }
+      bool is_facet = false;
+      if (n_incd >= dim - 2) {
+        MyMatrix<T> EXTincd(n_incd, dim);
+        int i_incd = 0;
+        for (int i_ext=0; i_ext<n_ext; i_ext++) {
+          if (f1[i_ext] == 1 && f2[i_ext] == 1) {
+            for (int i=0; i<dim; i++) {
+              EXTincd(i_incd, i) = sp.EXT(i_ext, i);
+            }
+            i_incd += 1;
+          }
+        }
+        int rnk = RankMat(EXTincd);
+        if (rnk == dim - 2) {
+          is_facet = true;
+        }
+      }
+      if (is_facet) {
+        l_idx_facet.push_back(j_fac);
+      }
+    }
+  }
+  return l_idx_facet;
+}
+
+
+
+template<typename T>
 ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac) {
   int dim = sp.FAC.cols();
   MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
@@ -180,7 +229,7 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
         for (int i_ext=0; i_ext<n_ext; i_ext++) {
           if (f1[i_ext] == 1 && f2[i_ext] == 1) {
             for (int i=0; i<dim; i++) {
-              EXTincd(i_incd, i) = EXT(i_ext, i);
+              EXTincd(i_incd, i) = sp.EXT(i_ext, i);
             }
             i_incd += 1;
           }
@@ -214,12 +263,12 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
       std::cerr << "Failed to find a solution to the system\n";
       throw TerminalException{1};
     }
-    AssignMatrixRow(EXT1, i_ext, *opt);
+    AssignMatrixRow(EXT_ret, i_ext, *opt);
   }
   int n_fac_ret = l_idx_facet.size();
   MyMatrix<T> FAC_ret(n_fac_ret, dim-1);
   for (int j_fac_ret=0; j_fac_ret<n_fac_ret; j_fac_ret++) {
-    int j_jac = l_idx_facet[j_fac_ret];
+    int j_fac = l_idx_facet[j_fac_ret];
     Face f2 = sp.facets[j_fac];
     Face f(n_ext_ret);
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
@@ -231,8 +280,8 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
     MyVector<T> eFAC = FindFacetInequality(EXT_ret, f);
     AssignMatrixRow(FAC_ret, j_fac_ret, eFAC);
   }
-  SinglePolytope<T> sp = get_single_polytope(FAC_ret, EXT_ret);
-  return {V, NSP, std::move(sp)};
+  SinglePolytope<T> sp_ret = get_single_polytope(FAC_ret, EXT_ret);
+  return {V, NSP, std::move(sp_ret)};
 }
 
 template<typename T>
@@ -247,7 +296,46 @@ std::optional<ConvexBoundary<T>> convexboundary_halfspace_int(ConvexBoundary<T> 
 }
 
 template<typename T>
-std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp, std::ostream &os) {
+int get_matching_face_position(MyMatrix<T> const& FAC, MyVector<T> const& eFAC) {
+  int n_fac = FAC.rows();
+  int dim = FAC.cols();
+  auto f_is_match=[&](int const& j_fac, int sign) -> bool {
+    for (int i=0; i<dim; i++) {
+      T val = sign * eFAC(i);
+      if (FAC(j_fac, i) != val) {
+        return false;
+      }
+    }
+    return true;
+  };
+  for (int i_fac=0; i_fac<n_fac; i_fac++) {
+    if (f_is_match(i_fac, 1)) {
+      return i_fac;
+    }
+    if (f_is_match(i_fac, -1)) {
+      return i_fac;
+    }
+  }
+  return -1;
+}
+
+
+
+template<typename T>
+std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
+  int n_fac = sp.FAC.rows();
+  MyVector<T> eFAC = ScalarCanonicalizationVector(cb.V);
+  int i_fac = get_matching_face_position(sp.FAC, eFAC);
+  
+
+  std::vector<MyVector<T>> list_fac;
+  for (int j_fac=0; j_fac<n_fac; j_fac++) {
+    
+    
+  }
+  for (auto & 
+
+  
   MyVector<T> eFAC_call = cb.NSP * eFAC;
 
 
@@ -699,7 +787,7 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
     std::vector<MyVector<T>> cand_ineqs = l_ineq;
     cand_ineqs.push_back(-eFAC2);
     MyMatrix<T> FACinput = MatrixFromVectorFamily(cand_ineqs);
-    if (IsFullDimensional(FACinput)) {
+    if (IsFullDimensional(FACinput, os)) {
       SinglePolytope<T> sp = generate_single_polytope(FACinput, os);
       new_polytopes.push_back(sp);
     }
@@ -714,8 +802,8 @@ GeneralizedPolytope<T> difference_gp_p(GeneralizedPolytope<T> const &gp,
                                        std::ostream &os) {
   std::vector<SinglePolytope<T>> new_polytopes;
   for (size_t i = 0; i < gp.polytopes.size(); i++) {
-    GeneralizedPolytope<T> gp = difference_p_p(gp.polytopes[i], p, os);
-    for (auto &poly : gp.polytopes) {
+    GeneralizedPolytope<T> gp_out = difference_p_p(gp.polytopes[i], p, os);
+    for (auto &poly : gp_out.polytopes) {
       new_polytopes.push_back(poly);
     }
   }
@@ -728,7 +816,7 @@ GeneralizedPolytope<T> difference_gp_gp(GeneralizedPolytope<T> const &gp1,
                                         GeneralizedPolytope<T> const &gp2,
                                         std::ostream &os) {
   GeneralizedPolytope<T> ret_gp = gp1;
-  for (size_t i2 = 0; i2 < gp2.polytope.size(); i2++) {
+  for (size_t i2 = 0; i2 < gp2.polytopes.size(); i2++) {
     ret_gp = difference_gp_p(ret_gp, gp2.polytopes[i2], os);
   }
   return ret_gp;
@@ -896,7 +984,7 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
 }
 
 template<typename T>
-T volume_gp(GeneralizedPolytope<T> const& gp, std::ostream& os) {
+T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os) {
   T volume(0);
   for (auto & sp: gp.polytopes) {
     T vol = lrs::Kernel_VolumePolytope(sp.EXT);
