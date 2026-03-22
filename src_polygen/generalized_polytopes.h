@@ -211,39 +211,8 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
   MyMatrix<T> NSP = NullspaceVector(V);
   int n_fac = sp.FAC.rows();
   int n_ext = sp.EXT.rows();
-  std::vector<int> l_idx_facet;
+  std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   Face f1 = sp.facets[i_fac];
-  for (int j_fac=0; j_fac<n_fac; j_fac++) {
-    if (i_fac != j_fac) {
-      Face f2 = sp.facets[j_fac];
-      int n_incd = 0;
-      for (int i_ext=0; i_ext<n_ext; i_ext++) {
-        if (f1[i_ext] == 1 && f2[i_ext] == 1) {
-          n_incd += 1;
-        }
-      }
-      bool is_facet = false;
-      if (n_incd >= dim - 2) {
-        MyMatrix<T> EXTincd(n_incd, dim);
-        int i_incd = 0;
-        for (int i_ext=0; i_ext<n_ext; i_ext++) {
-          if (f1[i_ext] == 1 && f2[i_ext] == 1) {
-            for (int i=0; i<dim; i++) {
-              EXTincd(i_incd, i) = sp.EXT(i_ext, i);
-            }
-            i_incd += 1;
-          }
-        }
-        int rnk = RankMat(EXTincd);
-        if (rnk == dim - 2) {
-          is_facet = true;
-        }
-      }
-      if (is_facet) {
-        l_idx_facet.push_back(j_fac);
-      }
-    }
-  }
   std::vector<int> f1_map(n_ext, -1);
   int pos = 0;
   for (int i_ext=0; i_ext<n_ext; i_ext++) {
@@ -321,25 +290,10 @@ int get_matching_face_position(MyMatrix<T> const& FAC, MyVector<T> const& eFAC) 
 
 
 
-template<typename T>
-std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
-  int n_fac = sp.FAC.rows();
-  MyVector<T> eFAC = ScalarCanonicalizationVector(cb.V);
-  int i_fac = get_matching_face_position(sp.FAC, eFAC);
-  
-
-  std::vector<MyVector<T>> list_fac;
-  for (int j_fac=0; j_fac<n_fac; j_fac++) {
-    
-    
-  }
-  for (auto & 
-
-  
-  MyVector<T> eFAC_call = cb.NSP * eFAC;
 
 
-}
+
+
 
 
 
@@ -795,6 +749,36 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
   }
   return {new_polytopes};
 }
+
+
+
+
+template<typename T>
+std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
+  int n_fac = sp.FAC.rows();
+  MyVector<T> eFAC = ScalarCanonicalizationVector(cb.V);
+  int i_fac = get_matching_face_position(sp.FAC, eFAC);
+  if (i_fac == -1) {
+    std::cerr << "GP: The eFAC is not a facet\n";
+    throw TerminalException{1};
+  }
+  std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
+  MyMatrix<T> FAC1 = SelectRow(sp.FAC, l_idx_facet);
+  MyMatrix<T> FAC2 = FAC1 * cb.NSP.transpose();
+  MyMatrix<T> EXT2 = DirectDualDescription(FAC, os);
+  SinglePolytope<T> sp2 = get_single_polytope(FAC2, EXT2);
+  GeneralizedPolytope<T> gp = difference_p_p(cb.sp, sp2, os);
+
+  std::vector<ConvexBoundary<T>> l_cb;
+  for (auto & sp_ent: gp.polytopes) {
+    ConvexBoundar<T> cb_new{cb.V, cb.NSP, sp_ent};
+    l_cb.emplace_back(std::move(cb_new));
+  }
+  return l_cb;
+}
+
+
+
 
 template <typename T>
 GeneralizedPolytope<T> difference_gp_p(GeneralizedPolytope<T> const &gp,
