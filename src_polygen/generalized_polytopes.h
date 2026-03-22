@@ -209,7 +209,6 @@ ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_
   int dim = sp.FAC.cols();
   MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
   MyMatrix<T> NSP = NullspaceVector(V);
-  int n_fac = sp.FAC.rows();
   int n_ext = sp.EXT.rows();
   std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   Face f1 = sp.facets[i_fac];
@@ -755,7 +754,6 @@ GeneralizedPolytope<T> difference_p_p(SinglePolytope<T> const &p1,
 
 template<typename T>
 std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp,  std::ostream &os) {
-  int n_fac = sp.FAC.rows();
   MyVector<T> eFAC = ScalarCanonicalizationVector(cb.V);
   int i_fac = get_matching_face_position(sp.FAC, eFAC);
   if (i_fac == -1) {
@@ -765,13 +763,13 @@ std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const&
   std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   MyMatrix<T> FAC1 = SelectRow(sp.FAC, l_idx_facet);
   MyMatrix<T> FAC2 = FAC1 * cb.NSP.transpose();
-  MyMatrix<T> EXT2 = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXT2 = DirectDualDescription(FAC2, os);
   SinglePolytope<T> sp2 = get_single_polytope(FAC2, EXT2);
   GeneralizedPolytope<T> gp = difference_p_p(cb.sp, sp2, os);
 
   std::vector<ConvexBoundary<T>> l_cb;
   for (auto & sp_ent: gp.polytopes) {
-    ConvexBoundar<T> cb_new{cb.V, cb.NSP, sp_ent};
+    ConvexBoundary<T> cb_new{cb.V, cb.NSP, sp_ent};
     l_cb.emplace_back(std::move(cb_new));
   }
   return l_cb;
