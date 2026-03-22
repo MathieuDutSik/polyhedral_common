@@ -246,6 +246,15 @@ std::optional<ConvexBoundary<T>> convexboundary_halfspace_int(ConvexBoundary<T> 
   return {cb.V, cb.NSP, sp};
 }
 
+template<typename T>
+std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const& cb, SinglePolytope<T> const& sp, std::ostream &os) {
+  MyVector<T> eFAC_call = cb.NSP * eFAC;
+
+
+}
+
+
+
 template <typename T>
 MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
   int dim = sp.EXT.cols();
