@@ -858,6 +858,14 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
   return {n, full_data_facets};
 }
 
+
+template<typename T>
+struct InteriorPtDir {
+  MyVector<T> eIso;
+  MyVector<T> V;
+};
+
+
 template <typename T>
 std::optional<MyVector<T>>
 get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
@@ -867,22 +875,27 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
       std::optional<MyVector<T>> opt1 =
           get_interior_point_gp(kv.second.gp_minus, os);
       if (opt1) {
-        return *opt1;
+        MyVector<T> const& V = kv.first;
+        InteriorPtDir<T> ipd{*opt1, V};
+        return ipd;
       }
       std::optional<MyVector<T>> opt2 =
           get_interior_point_gp(kv.second.gp_plus, os);
       if (opt2) {
-        return *opt2;
+        MyVector<T> V = - kv.first;
+        InteriorPtDir<T> ipd{*opt2, std::move(V)};
+        return ipd;
       }
       std::cerr << "GP: the size should be non-zero. Since otherwise, it "
                    "should be removed from the list\n";
       throw TerminalException{1};
     };
-    std::optional<MyVector<T>> opt = get_opt();
+    std::optional<InzteriorPtDir<T>> opt = get_opt();
     if (opt) {
-      MyVector<T> const &vA = *opt;
-      MyVector<T> vB = kv.second.NSP.transpose() * vA;
-      return vB;
+      InteriorPtDir<T> const &sol_A = *opt;
+      MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.eIso;
+      InteriorPtDir<T> sol_B{eIso_B, sol_A.second};
+      return sol_B;
     }
   }
   return {};
