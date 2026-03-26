@@ -6,7 +6,7 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC		= clang++ -Weverything -std=c++17
 #CC		= clang++ -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
 #CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++17 -Wall -Wextra -O3
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c

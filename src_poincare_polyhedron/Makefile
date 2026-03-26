@@ -6,7 +6,7 @@ OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 # CLANG
-CC		= g++ -std=c++17 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -g -O3
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o

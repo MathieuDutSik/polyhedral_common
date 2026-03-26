@@ -5,7 +5,7 @@ PROGRAM		= RANKIN_Compute_k_min
 OBJECTS		= $(PROGRAM:%=%.o)
 
 #CC		= g++ -std=c++17 -Wall -Wextra -g -fsanitize=address
-CC		= g++ -std=c++17 -Wall -Wextra -g -O2
+CC		= g++ -std=c++20 -Wall -Wextra -g -O2
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 

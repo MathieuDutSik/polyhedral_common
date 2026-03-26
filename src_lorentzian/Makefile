@@ -5,7 +5,7 @@ OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
-CC		= g++ -std=c++17 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -g -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=undefined -fno-sanitize-recover=all -fsanitize=float-divide-by-zero -fsanitize=float-cast-overflow -fno-sanitize=null -fno-sanitize=alignment
 
 NOLINKFLAG 	= -c

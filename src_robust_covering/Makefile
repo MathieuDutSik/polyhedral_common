@@ -2,7 +2,7 @@ PROGRAM		= Robust_RandomEstimation Robust_InitialVoronoiData Robust_ExactRobustC
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -g -O3
+CC		= g++ -std=c++20 -Wall -Wextra -g -O3
 #   APPLE CLANG
 #CC              = g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 #   GCC

@@ -4,7 +4,6 @@ SRCFILES	= POLY_c_cddlib_mpq.cpp
 OBJECTS		= $(SRCFILES:.cpp=.o) $(PROGRAM:%=%.o)
 LINKOBJECTS	= $(SRCFILES:.cpp=.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -O1 -g
 #  GCC
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=bounds-strict -fsanitize=alignment
@@ -14,6 +13,7 @@ CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -g -pg
 #CC		= clang++ -Wall -Wextra -std=c++17
 #CC		= g++ -std=c++17 -Wall -Wextra -g -O2 -static-libgcc -static-libstdc++
+CC		= g++ -std=c++20 -Wall -Wextra -O3 -g
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o

@@ -25,9 +25,9 @@ OBJECTS		= $(PROGRAM:%=%.o)
 #CC              = /usr/share/clang/scan-build-3.8/libexec/c++-analyzer -std=c++17 -O2
 #CC              = /home/mathieu/opt/gcc-6.3.0/bin/g++ -std=c++17 -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
-CC		= g++ -std=c++17 -Wall -Wextra -O3
 #CC		= g++ -std=c++17 -Wall -Wextra -O3 -Wconversion
 #CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -static-libgcc -static-libstdc++
+CC		= g++ -std=c++20 -Wall -Wextra -O3
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
