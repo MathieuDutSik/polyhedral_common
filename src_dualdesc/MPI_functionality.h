@@ -29,8 +29,9 @@
 #endif
 
 template <typename T>
-inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
-my_mpi_gather(boost::mpi::communicator &comm, T const &x, int const &i_proc) {
+  requires(!is_mymatrix<T>::value)
+inline std::vector<T> my_mpi_gather(boost::mpi::communicator &comm,
+                                    T const &x, int const &i_proc) {
   int i_rank = comm.rank();
   std::vector<T> V;
   if (i_rank == i_proc) {
@@ -42,8 +43,9 @@ my_mpi_gather(boost::mpi::communicator &comm, T const &x, int const &i_proc) {
 }
 
 template <typename T>
-inline typename std::enable_if<!is_mymatrix<T>::value, std::vector<T>>::type
-my_mpi_allgather(boost::mpi::communicator &comm, T const &x) {
+  requires(!is_mymatrix<T>::value)
+inline std::vector<T> my_mpi_allgather(boost::mpi::communicator &comm,
+                                       T const &x) {
   std::vector<T> V;
   boost::mpi::all_gather<T>(comm, x, V);
   return V;

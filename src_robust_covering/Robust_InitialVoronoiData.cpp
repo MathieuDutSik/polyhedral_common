@@ -14,7 +14,7 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
   auto f_print = [&](std::ostream &osf) -> void {
     if (OutFormat == "GAP") {
       osf << "return [";
-      for (int i=0; i<p_voronoi.l_cb.size(); i++) {
+      for (size_t i=0; i<p_voronoi.l_cb.size(); i++) {
         if (i > 0) {
           osf << ",";
         }

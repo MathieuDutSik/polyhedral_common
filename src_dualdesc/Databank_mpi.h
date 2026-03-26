@@ -84,8 +84,7 @@ void DataBankMpiServer(boost::mpi::communicator &comm, const bool &Saving,
          << " |ListEnt|=" << ListEnt.size() << "\n";
       Tkey key;
       comm.recv(msg.source(), msg.tag(), key);
-      typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-          ListEnt.find(key);
+      auto iter = ListEnt.find(key);
       if (iter == ListEnt.end()) {
         os << "Not found\n";
         comm.send(msg.source(), tag_mpi_bank_reception, Tval());

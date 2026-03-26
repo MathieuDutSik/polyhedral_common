@@ -682,6 +682,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         rde.list_min_parallelepipeds;
     std::vector<MyMatrix<Tint>> const &tot_list_parallelepipeds =
         rde.tot_list_parallelepipeds;
+    std::vector<FullIneq<T,Tint>> list_full_ineq;
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "--------------------------------------------------------------------"
           "---------------------------\n";
@@ -734,7 +735,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << robust_m_min.index << " M=\n";
     WriteMatrix(os, robust_m_min.M);
 #endif
-    insert_inner_ineqs_parallelepiped(robust_m_min, G, ListIneq, os);
+    insert_inner_ineqs_parallelepiped(robust_m_min, G, list_full_ineq, os);
     MyVector<Tint> v_short =
         robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -742,7 +743,6 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << StringVectorGAP(v_short) << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
-    std::vector<FullIneq<T,Tint>> list_full_ineq;
     insert_excluded_max(robust_m_min,
                         G,
                         list_excluded_max,
@@ -782,7 +782,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
           std::cerr << "ROBUST: The parallelepiped has an even lower minimum\n";
           throw TerminalException{1};
         }
-        insert_outer_ineqs_parallelepiped(robust_m, G, v_short, ListIneq, os);
+        insert_outer_ineqs_parallelepiped(robust_m, G, v_short, list_full_ineq, os);
         list_robust_m.push_back(robust_m);
       }
     }
@@ -880,7 +880,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     return {};
   }
   PVoronoiPart<T, Tint> p_voronoi = *opt;
-  MyVector<Tint> v_crit = p_voronoi.robu_m_min.v_long();
+  MyVector<Tint> v_crit = p_voronoi.robust_m_min.v_long();
 
   auto f_process_entry=[&]() -> bool {
     size_t len = p_voronoi.l_scb.size();
@@ -898,7 +898,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     std::vector<MyVector<Tint>> l_cand = DifferenceVect(scb.robust_m.get_short_vertors(), l_excluded_max);
     std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices);
     if (!opt1) {
-      HardConvexBoundary<T> hcb{scb.index, scb.cb};
+      HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
       p_voronoi.l_hcb.push_back(hcb);
       return false;
     }
@@ -927,7 +927,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
       for (auto& cb2: l_cb) {
-        SoftConvexBoundary<T,Tint> scb_new{scb.index, cb2, l_excluded_max, scb.robust_m};
+        SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.robust_m};
         p_voronoi.l_scb.push_back(scb_new);
       }
       for (auto& hcb: p_poly_vor_part.l_hcb) {
@@ -939,7 +939,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
           SoftConvexBoundary<T,Tint> scb_new = scb;
-          scb_new.index = index;
+          scb_new.index_cb = index;
           p_voronoi.l_scb.push_back(scb_new);
         }
       }
@@ -954,7 +954,8 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       break;
     }
   }
-
+  std::cerr << "ROBUST: find_p_voronoi should never reach that stage\n";
+  throw TerminalException{1};
 }
 
 
@@ -993,8 +994,8 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
-find_adjacent_p_voronois(DataLattice<T, Tint, Tgroup> &eData,
-                         PVoronoi<T, Tint> const &pvd) {
+find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
+                             PVoronoi<T, Tint> const &pvd) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   int dim = eData.solver.GramMat.rows();
@@ -1008,8 +1009,7 @@ find_adjacent_p_voronois(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: get_adj_p_polytope x_red=" << StringVector(x_red) << "\n";
 #endif
-    std::optional<PVoronoi<T, Tint>> opt =
-        initial_vertex_data_test_ev(solver, x_red, os);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x_red, os);
     if (!opt) {
       return {};
     }
@@ -1071,7 +1071,7 @@ find_adjacent_p_voronois(DataLattice<T, Tint, Tgroup> &eData,
   size_t n_facet = pvd.sp.FAC.rows();
   for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: find_adjacent_p_polytopes i_facet=" << i_facet << " / "
+    os << "ROBUST: find_list_adjacent_p_voronoi i_facet=" << i_facet << " / "
        << n_facet << "\n";
 #endif
     Face facet = pvd.sp.facets[i_facet];
@@ -1089,7 +1089,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   std::vector<PVoronoi<T, Tint>> l_ppoly;
-  PVoronoi<T, Tint> ppoly = initial_vertex_data(solver, os);
+  PVoronoi<T, Tint> ppoly = initial_p_polytope(solver, os);
   l_ppoly.push_back(ppoly);
   auto f_insert = [&](PVoronoi<T, Tint> const &f_ppoly) -> void {
     for (auto &e_ppoly : l_ppoly) {
@@ -1111,7 +1111,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
 #endif
     for (size_t i_ppoly = start; i_ppoly < len; i_ppoly++) {
       std::vector<PVoronoi<T, Tint>> l_adj =
-          find_adjacent_p_polytopes(eData, l_ppoly[i_ppoly]);
+          find_list_adjacent_p_voronoi(eData, l_ppoly[i_ppoly]);
       for (auto &eAdj : l_adj) {
         f_insert(eAdj);
       }

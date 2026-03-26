@@ -189,8 +189,7 @@ public:
 #ifdef DEBUG_DATABANK
     os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
 #endif
-    typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-        ListEnt.find(eKey);
+    auto iter = ListEnt.find(eKey);
     if (iter == ListEnt.end()) {
       // If returning empty then it means nothing has been found
       return TrivElt;
