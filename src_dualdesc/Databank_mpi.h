@@ -76,8 +76,7 @@ void DataBankMpiServer(boost::mpi::communicator &comm, const bool &Saving,
           os << "Insert entry to file Prefix=" << Prefix << "\n";
           Write_BankEntry(Prefix, pair.eKey, pair.eVal);
         }
-        ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(pair.eKey),
-                                                   std::move(pair.eVal)));
+        ListEnt.emplace(std::move(pair.eKey), std::move(pair.eVal));
       }
     }
     if (msg.tag() == tag_mpi_bank_request) {

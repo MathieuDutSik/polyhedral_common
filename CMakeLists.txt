@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.30)
 project(MyProject)
 find_package(PkgConfig REQUIRED)
 
-# Set the C++ standard to C++17
-set(CMAKE_CXX_STANDARD 17)
+# Set the C++ standard to C++20
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Find Eigen3 (make sure you have Eigen installed and CMake can find it)

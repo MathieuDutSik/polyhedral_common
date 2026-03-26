@@ -548,14 +548,9 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
   int n_ext = EXTbig.rows();
   int dim = EXTbig.cols() - 1;
   MyMatrix<T> EXT(n_ext, dim + 1);
-  std::vector<MyVector<T>> EXT;
   for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-    EXT(i_ext, 0) = 1;
-    for (int i = 0; i < dim; i++) {
-      EXT(i_ext, i+1) = EXTbig(i_ext, i + 1) / EXTbig(i_ext, 0);
-    }
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-    if (v(0) <= 0) {
+    if (EXTbig(i_ext, 0) <= 0) {
       std::cerr
           << "We should have v(0) > 0, because we expect to have a polytope\n";
       throw TerminalException{1};
@@ -579,6 +574,10 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
       throw TerminalException{1};
     }
 #endif
+    EXT(i_ext, 0) = 1;
+    for (int i = 0; i < dim; i++) {
+      EXT(i_ext, i+1) = EXTbig(i_ext, i + 1) / EXTbig(i_ext, 0);
+    }
   }
   return get_single_polytope(FAC, EXT);
 }
@@ -743,10 +742,11 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << StringVectorGAP(v_short) << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
+    std::vector<FullIneq<T,Tint>> list_full_ineq;
     insert_excluded_max(robust_m_min,
-                        eG,
+                        G,
                         list_excluded_max,
-                        ListFullIneq,
+                        list_full_ineq,
                         os);
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -879,7 +879,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
   if (!opt) {
     return {};
   }
-  PVoronoiPart<T, Tint>> p_voronoi = *opt;
+  PVoronoiPart<T, Tint> p_voronoi = *opt;
   MyVector<Tint> v_crit = p_voronoi.robu_m_min.v_long();
 
   auto f_process_entry=[&]() -> bool {
@@ -935,6 +935,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       }
       p_voronoi.l_cb.push_back(p_poly_vor_part.l_cb[0]);
       int index = p_voronoi.l_cb.size() - 1;
+      // That part needs to be improved, since the inserted faces could match 
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
           SoftConvexBoundary<T,Tint> scb_new = scb;
@@ -992,8 +993,8 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
 
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
-find_adjacent_p_polytopes(DataLattice<T, Tint, Tgroup> &eData,
-                          PVoronoi<T, Tint> const &pvd) {
+find_adjacent_p_voronois(DataLattice<T, Tint, Tgroup> &eData,
+                         PVoronoi<T, Tint> const &pvd) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   int dim = eData.solver.GramMat.rows();

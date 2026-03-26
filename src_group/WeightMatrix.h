@@ -55,53 +55,42 @@
 // The templatized functions
 //
 
-template <bool is_symmetric>
-inline typename std::enable_if<is_symmetric, size_t>::type
-weightmatrix_get_nb(size_t nbRow) {
-  return (nbRow * (nbRow + 1)) / 2;
-}
-
-template <bool is_symmetric>
-inline typename std::enable_if<!is_symmetric, size_t>::type
-weightmatrix_get_nb(size_t nbRow) {
-  return nbRow * nbRow;
-}
-
-// We need to have nbRow as input for template reasons. But it is unused in the
-// symmetric case. So, pragma statement is needed to avoid a warning being
-// thrown.
-template <bool is_symmetric>
-inline typename std::enable_if<is_symmetric, size_t>::type
-weightmatrix_last_idx([[maybe_unused]] size_t nbRow, size_t iRow) {
-  return iRow + 1;
-}
-
-// We need to have nbRow as input for template reasons. But it is unused in the
-// symmetric case. So, pragma statement is needed to avoid a warning being
-// thrown.
-template <bool is_symmetric>
-inline typename std::enable_if<!is_symmetric, size_t>::type
-weightmatrix_last_idx(size_t nbRow, [[maybe_unused]] size_t iRow) {
-  return nbRow;
-}
-
-// We need to have nbRow as input for template reasons. But it is unused in the
-// symmetric case. So, pragma statement is needed to avoid a warning being
-// thrown.
-template <bool is_symmetric>
-inline typename std::enable_if<is_symmetric, size_t>::type
-weightmatrix_idx([[maybe_unused]] size_t nbRow, size_t iRow, size_t iCol) {
-  if (iCol <= iRow) {
-    return (iRow * (iRow + 1)) / 2 + iCol;
+template <bool is_symmetric> inline size_t weightmatrix_get_nb(size_t nbRow) {
+  if constexpr (is_symmetric) {
+    return (nbRow * (nbRow + 1)) / 2;
   } else {
-    return (iCol * (iCol + 1)) / 2 + iRow;
+    return nbRow * nbRow;
   }
 }
 
+// We need to have nbRow as input for template reasons. But it is unused in the
+// symmetric case. So, pragma statement is needed to avoid a warning being
+// thrown.
 template <bool is_symmetric>
-inline typename std::enable_if<!is_symmetric, size_t>::type
-weightmatrix_idx(size_t nbRow, size_t iRow, size_t jRow) {
-  return iRow + nbRow * jRow;
+inline size_t weightmatrix_last_idx([[maybe_unused]] size_t nbRow,
+                                    [[maybe_unused]] size_t iRow) {
+  if constexpr (is_symmetric) {
+    return iRow + 1;
+  } else {
+    return nbRow;
+  }
+}
+
+// We need to have nbRow as input for template reasons. But it is unused in the
+// symmetric case. So, pragma statement is needed to avoid a warning being
+// thrown.
+template <bool is_symmetric>
+inline size_t weightmatrix_idx([[maybe_unused]] size_t nbRow, size_t iRow,
+                               size_t iCol) {
+  if constexpr (is_symmetric) {
+    if (iCol <= iRow) {
+      return (iRow * (iRow + 1)) / 2 + iCol;
+    } else {
+      return (iCol * (iCol + 1)) / 2 + iRow;
+    }
+  } else {
+    return iRow + nbRow * iCol;
+  }
 }
 
 //

@@ -140,8 +140,7 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
       os << "Read iOrbit=" << iOrbit << " Prefix=" << Prefix << "\n";
 #endif
       std::pair<Tkey, Tval> PairKV = Read_BankEntry<Tkey, Tval>(Prefix);
-      ListEnt.emplace(std::make_pair<Tkey, Tval>(std::move(PairKV.first),
-                                                 std::move(PairKV.second)));
+      ListEnt.emplace(std::move(PairKV.first), std::move(PairKV.second));
       iOrbit++;
     }
   }
@@ -184,8 +183,7 @@ public:
 #endif
       Write_BankEntry(Prefix, eKey, eVal);
     }
-    ListEnt.emplace(
-        std::make_pair<Tkey, Tval>(std::move(eKey), std::move(eVal)));
+    ListEnt.emplace(std::move(eKey), std::move(eVal));
   }
   const Tval &GetDualDesc(const Tkey &eKey) const {
 #ifdef DEBUG_DATABANK

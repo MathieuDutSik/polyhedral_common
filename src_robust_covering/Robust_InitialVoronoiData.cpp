@@ -10,13 +10,17 @@ void process_B(std::string const &MatFile, std::string const &OutFormat,
                std::string const &OutFile) {
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
   CVPSolver<T, Tint> solver(GramMat, std::cerr);
-  PpolytopeVoronoiData<T, Tint> ivd =
-      initial_vertex_data<T, Tint>(solver, std::cerr);
+  PVoronoi<T, Tint> p_voronoi = initial_p_polytope<T,Tint>(solver, std::cerr);
   auto f_print = [&](std::ostream &osf) -> void {
     if (OutFormat == "GAP") {
-      osf << "return ";
-      WriteMatrix(osf, ivd.FAC);
-      osf << ";\n";
+      osf << "return [";
+      for (int i=0; i<p_voronoi.l_cb.size(); i++) {
+        if (i > 0) {
+          osf << ",";
+        }
+        WriteMatrixGAP(osf, p_voronoi.l_cb[i].sp.FAC);
+      }
+      osf << "];\n";
       return;
     }
     std::cerr << "Failed to find a matching entry for OutFormat\n";

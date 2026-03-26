@@ -890,7 +890,7 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
                    "should be removed from the list\n";
       throw TerminalException{1};
     };
-    std::optional<InzteriorPtDir<T>> opt = get_opt();
+    std::optional<InteriorPtDir<T>> opt = get_opt();
     if (opt) {
       InteriorPtDir<T> const &sol_A = *opt;
       MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.eIso;
