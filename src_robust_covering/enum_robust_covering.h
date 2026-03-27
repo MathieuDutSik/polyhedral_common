@@ -671,7 +671,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     eV_red(i) = eV(i + 1);
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: initial_vertex_data_test_ev eV=" << StringVectorGAP(eV)
+  os << "ROBUST: kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)
      << "\n";
 #endif
   // Working variables
@@ -691,7 +691,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "--------------------------------------------------------------------"
           "---------------------------\n";
-    os << "ROBUST:   initial_vertex_data_test_ev, |list_min_parallelepipeds|="
+    os << "ROBUST:   kernel_initial_p_polytope_part, |list_min_parallelepipeds|="
        << list_min_parallelepipeds.size()
        << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size()
        << " min=" << min << "\n";
@@ -699,14 +699,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     if (list_min_parallelepipeds.size() > 1) {
       // Terminate the enumeration
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by "
+      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
             "|list_min_parallelepipeds| > 1\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, pass 1\n";
+    os << "ROBUST:   kernel_initial_p_polytope_part, pass 1\n";
 #endif
     std::vector<MyVector<T>> ListIneq;
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
@@ -714,29 +714,29 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         get_generic_robust_m(min_m, G, eV_red, os);
     if (!ext_robust_m_min.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by "
+      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
             "!ext_robust_m_min.is_correct\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, pass 2\n";
+    os << "ROBUST:   kernel_initial_p_polytope_part, pass 2\n";
 #endif
     if (min == 0) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by "
+      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
             "min=0\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, pass 3\n";
+    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3\n";
 #endif
     GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, robust_m_min, index="
+    os << "ROBUST:   kernel_initial_p_polytope_part, robust_m_min, index="
        << robust_m_min.index << " M=\n";
     WriteMatrix(os, robust_m_min.M);
 #endif
@@ -744,7 +744,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     MyVector<Tint> v_short =
         robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, v_short="
+    os << "ROBUST:   kernel_initial_p_polytope_part, v_short="
        << StringVectorGAP(v_short) << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
@@ -755,7 +755,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
                         os);
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 1\n";
+    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3, step 1\n";
     size_t i_m = 0;
 #endif
     for (auto &eM : tot_list_parallelepipeds) {
@@ -767,14 +767,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST:   initial_vertex_data_test_ev, ext_robust_m.robust_m, "
+        os << "ROBUST:   kernel_initial_p_polytope_part, ext_robust_m.robust_m, "
               "index="
            << ext_robust_m.robust_m.index << " M=\n";
         WriteMatrix(os, ext_robust_m.robust_m.M);
 #endif
         if (!ext_robust_m.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-          os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by "
+          os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
                 "!ext_robust_m.is_correct\n";
 #endif
           is_correct = false;
@@ -792,7 +792,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   initial_vertex_data_test_ev, pass 3, step 2\n";
+    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3, step 2\n";
 #endif
     //
     // Testing definition of the polytopes.
@@ -801,7 +801,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
     if (!test) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: initial_vertex_data_test_ev, failing by "
+      os << "ROBUST: kernel_initial_p_polytope_part, failing by "
             "is_full_dimensional_bounded_polytope\n";
 #endif
       return false;
@@ -830,7 +830,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
-  compute_robust_close_f(solver, eV_red, f_insert, os);
+  compute_robust_close_f(solver, eV, f_insert, os);
   if (is_correct) {
     return ppoly;
   } else {
@@ -971,11 +971,11 @@ template <typename T, typename Tint>
 PVoronoi<T, Tint>
 initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int dim = solver.GramMat.rows();
-  int denom = 2;
+  int denom = 20;
   while (true) {
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data, before initial_vertex_data_test_ev, eV="
+    os << "ROBUST: initial_vertex_data, before find_p_voronoi, eV="
        << StringVectorGAP(eV) << " denom=" << denom << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, eV, os);
@@ -984,7 +984,7 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
     throw TerminalException{1};
 #endif
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data, after initial_vertex_data_test_ev\n";
+    os << "ROBUST: initial_vertex_data, after find_p_voronoi\n";
 #endif
     if (opt) {
       return *opt;

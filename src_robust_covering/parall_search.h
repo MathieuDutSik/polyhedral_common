@@ -8,11 +8,15 @@
 // clang-format on
 
 #ifdef DEBUG
-#define DEBUG_ENUM_ROBUST_COVERING
+#define DEBUG_ENUM_PARALL_SEARCH
 #endif
 
-#ifdef DISABLE_DEBUG_ENUM_ROBUST_COVERING
-#undef DEBUG_ENUM_ROBUST_COVERING
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_ENUM_PARALL_SEARCH
+#endif
+
+#ifdef DISABLE_DEBUG_ENUM_PARALL_SEARCH
+#undef DEBUG_ENUM_PARALL_SEARCH
 #endif
 
 struct PartSolution {
@@ -50,7 +54,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
                                      [[maybe_unused]] std::ostream &os) {
   int n_vect = dv.n_vect;
   int miss_val = std::numeric_limits<int>::max();
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   kernel_enumerate_parallelepiped, n_vect=" << n_vect << "\n";
 #endif
 
@@ -78,7 +82,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
 
   auto span_part_solution =
       [&](PartSolution const &psol) -> std::vector<PartSolution> {
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
     os << "ROBUST:   span_part_solution |full_set|=" << psol.full_set.size()
        << " / " << psol.full_set.count() << "\n";
 #endif
@@ -116,7 +120,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
     return {prev_sol, l_sol, choice};
   };
   std::vector<OneLevel> l_levels{get_initial()};
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
   os << "ROBUST:   kernel_enumerate_parallelepiped, l_levels\n";
 #endif
   int i_level = 0;
@@ -134,26 +138,26 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
     }
   };
   auto NextInTree = [&]() -> bool {
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
     os << "ROBUST:   NextInTree, i_level=" << i_level << "\n";
 #endif
     int choice = l_levels[i_level].choice;
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
     os << "ROBUST:   NextInTree, choice=" << choice << "\n";
 #endif
     PartSolution const &psol = l_levels[i_level].l_sol[choice];
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
     os << "ROBUST:   NextInTree, we have psol\n";
 #endif
     if (i_level == p) {
       f_insert(psol);
       return GoUpNextInTree();
     } else {
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
       os << "ROBUST:   NextInTree, before span_part_solution\n";
 #endif
       std::vector<PartSolution> new_sols = span_part_solution(psol);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_DISABLE
+#ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
       os << "ROBUST:   NextInTree, after span_part_solution |new_sols|="
          << new_sols.size() << "\n";
 #endif
@@ -213,11 +217,11 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const &M,
       set_face.insert(psol.full_set);
     }
   };
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   Before kernel_enumerate_parallelepiped\n";
 #endif
   kernel_enumerate_parallelepiped(dv, dim, f_insert, os);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   After kernel_enumerate_parallelepiped\n";
 #endif
   std::vector<Face> l_face;
@@ -283,13 +287,13 @@ std::optional<ResultDirectEnumeration<T, Tint>>
 compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
                                  resultCVP<T, Tint> const &res_cvp,
                                  MyVector<T> const &eV, std::ostream &os) {
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   compute_and_enumerate_structures, beginning, eV="
      << StringVector(eV) << "\n";
 #endif
   int dim = eV.size();
   int pow = pow_two(dim);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   compute_and_enumerate_structures, dim=" << dim
      << " pow=" << pow << "\n";
 #endif
@@ -306,7 +310,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
     return M_sol;
   };
   int n_vect = res_cvp.ListVect.rows();
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   After solver.at_most_dist_vectors res_cvp.TheNorm="
      << res_cvp.TheNorm << " |ListVect|=" << n_vect << "\n";
 #endif
@@ -317,17 +321,17 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
     T norm = EvaluationQuadForm(GramMat, diff);
     l_norm.push_back(norm);
   }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   Before enumerate_parallelepiped\n";
 #endif
   std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size()
      << "\n";
 #endif
   if (l_face.size() > 0) {
     T eff_min = res_cvp.TheNorm + T(1);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
     int i_face = 0;
 #endif
@@ -335,7 +339,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
     std::vector<MyMatrix<Tint>> tot_list_parallelepipeds;
     for (auto &eFace : l_face) {
       T local_max_norm(0);
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
       os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
 #endif
       for (int &vert : FaceToVector<int>(eFace)) {
@@ -343,7 +347,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
           local_max_norm = l_norm[vert];
         }
       }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
       os << "ROBUST:   i_face=" << i_face
          << " local_max_norm=" << local_max_norm << "\n";
       i_face += 1;
@@ -360,7 +364,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
         }
       }
     }
-#ifdef DEBUG_ENUM_ROBUST_COVERING_PARALL_ENUM
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST:   eff_min=" << eff_min << "\n";
 #endif
     ResultDirectEnumeration<T, Tint> rde{eff_min, list_min_parallelepipeds,
@@ -375,20 +379,32 @@ template <typename T, typename Tint, typename Finsert>
 void compute_robust_close_f(CVPSolver<T, Tint> const &solver,
                             MyVector<T> const &eV, Finsert f_insert,
                             std::ostream &os) {
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+  int dim = solver.GramMat.rows();
+#ifdef SANITY_CHECK_ENUM_PARALL_SEARCH
+  int dim2 = eV.size() - 1;
+  if (dim != dim2) {
+    std::cerr << "We have dim=" << dim << " and dim2=" << dim2 << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  MyVector<T> eV_red(dim);
+  for (int i=0; i<dim; i++) {
+    eV_red(i) = eV(i + 1);
+  }
+#ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "ROBUST: compute_robust_close_f, step 1\n";
   int n_iter = 0;
 #endif
   std::optional<T> opt_norm;
   while (true) {
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST: compute_robust_close_f, step 2, n_iter=" << n_iter << "\n";
     n_iter += 1;
 #endif
-    resultCVP<T, Tint> res_cvp = solver.increase_distance_vectors(eV, opt_norm);
+    resultCVP<T, Tint> res_cvp = solver.increase_distance_vectors(eV_red, opt_norm);
     std::optional<ResultDirectEnumeration<T, Tint>> opt_rde =
-        compute_and_enumerate_structures(solver.GramMat, res_cvp, eV, os);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+        compute_and_enumerate_structures(solver.GramMat, res_cvp, eV_red, os);
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST: compute_robust_close_f, After "
           "compute_and_enumerate_structures\n";
 #endif
@@ -418,14 +434,15 @@ compute_robust_closest(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV,
 }
 
 template <typename T> MyVector<T> get_random_vector(int denom, int dim) {
-  MyVector<T> eV(dim);
+  MyVector<T> eV(1 + dim);
+  eV(0) = T(1);
   T denom_T(denom);
   for (int i = 0; i < dim; i++) {
     int val1 = random();
     int val = val1 % denom;
     T val_T(val);
     T quot = val_T / denom_T;
-    eV(i) = quot;
+    eV(i + 1) = quot;
   }
   return eV;
 }
@@ -440,13 +457,13 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random() % 1000000000000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST: Before compute_robust_closest eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";
 #endif
     ResultRobustClosest<T, Tint> rrc =
         compute_robust_closest<T, Tint>(solver, eV, os);
-#ifdef DEBUG_ENUM_ROBUST_COVERING
+#ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "ROBUST: After compute_robust_closest\n";
 #endif
     if (rrc.robust_minimum > max_cov) {
