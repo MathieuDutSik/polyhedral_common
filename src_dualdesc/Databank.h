@@ -132,7 +132,7 @@ void ReadingDatabaseFromPrefix(std::unordered_map<Tkey, Tval> &ListEnt,
   if (Saving) {
     size_t iOrbit = 0;
     while (true) {
-      std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
+      auto Prefix = SavingPrefix + "DualDesc" + std::to_string(iOrbit);
       std::string eFileBank = Prefix + ".ext";
       if (!IsExistingFile(eFileBank))
         break;
@@ -177,7 +177,7 @@ public:
     }
     if (Saving) {
       size_t n_orbit = ListEnt.size();
-      std::string Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+      auto Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
 #ifdef DEBUG_DATABANK
       os << "Insert entry to file Prefix=" << Prefix << "\n";
 #endif

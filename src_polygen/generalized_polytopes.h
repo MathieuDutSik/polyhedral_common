@@ -331,12 +331,15 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
 
 template <typename T> struct GeneralizedPolytope {
   std::vector<SinglePolytope<T>> polytopes;
+  size_t size() const {
+    return polytopes.size();
+  }
 };
 
 template <typename T>
 bool check_pairwise_intersection(GeneralizedPolytope<T> const &gp,
                                  std::ostream &os) {
-  size_t n_comp = gp.polytopes.size();
+  size_t n_comp = gp.size();
   for (size_t i = 0; i < n_comp; i++) {
     for (size_t j = i + 1; j < n_comp; j++) {
       MyMatrix<T> FAC = Concatenate(gp.polytopes[i].FAC, gp.polytopes[j].FAC);
@@ -587,7 +590,7 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
     std::vector<TrackInfo> l_ti;
   };
   std::unordered_map<MyVector<T>, AllTrackInfo> full_track;
-  for (size_t i_poly = 0; i_poly < gp.polytopes.size(); i_poly++) {
+  for (size_t i_poly = 0; i_poly < gp.size(); i_poly++) {
     int n_fac = gp.polytopes[i_poly].FAC.rows();
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i_poly].FAC, i_fac);
@@ -601,7 +604,7 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
       rec.l_ti.push_back(ti);
     }
   }
-  size_t n_polytopes = gp.polytopes.size();
+  size_t n_polytopes = gp.size();
   GraphBitset GR(n_polytopes);
   for (auto &kv : full_track) {
     std::vector<TrackInfo> &l_ti = kv.second.l_ti;
@@ -641,8 +644,8 @@ GeneralizedPolytope<T>
 intersection_gp_gp(GeneralizedPolytope<T> const &gp1,
                    GeneralizedPolytope<T> const &gp2,
                    std::ostream &os) {
-  size_t n_polytope1 = gp1.polytopes.size();
-  size_t n_polytope2 = gp2.polytopes.size();
+  size_t n_polytope1 = gp1.size();
+  size_t n_polytope2 = gp2.size();
   std::vector<SinglePolytope<T>> polytopes;
   for (size_t i1 = 0; i1 < n_polytope1; i1++) {
     for (size_t i2 = 0; i2 < n_polytope2; i2++) {
@@ -678,7 +681,7 @@ bool is_contained_p_vert(SinglePolytope<T> const &p, MyVector<T> const &eEXT,
 template <typename T>
 bool is_interior_gp_vert(GeneralizedPolytope<T> const &gp,
                          MyVector<T> const &eEXT, std::ostream &os) {
-  for (size_t i_polytope = 0; i_polytope < gp.polytopes.size(); i_polytope++) {
+  for (size_t i_polytope = 0; i_polytope < gp.size(); i_polytope++) {
     bool test = is_contained_p_vert(gp.polytopes[i_polytope], eEXT, os);
     if (test) {
       return true;
@@ -691,7 +694,7 @@ template <typename T>
 std::optional<MyVector<T>>
 get_interior_point_gp(GeneralizedPolytope<T> const &gp,
                       [[maybe_unused]] std::ostream &os) {
-  for (size_t i_polytope = 0; i_polytope < gp.polytopes.size(); i_polytope++) {
+  for (size_t i_polytope = 0; i_polytope < gp.size(); i_polytope++) {
     MyVector<T> eEXT = Isobarycenter(gp.polytopes[i_polytope].EXT);
     return eEXT;
   }
@@ -783,7 +786,7 @@ GeneralizedPolytope<T> difference_gp_p(GeneralizedPolytope<T> const &gp,
                                        SinglePolytope<T> const &p,
                                        std::ostream &os) {
   std::vector<SinglePolytope<T>> new_polytopes;
-  for (size_t i = 0; i < gp.polytopes.size(); i++) {
+  for (size_t i = 0; i < gp.size(); i++) {
     GeneralizedPolytope<T> gp_out = difference_p_p(gp.polytopes[i], p, os);
     for (auto &poly : gp_out.polytopes) {
       new_polytopes.push_back(poly);
@@ -798,7 +801,7 @@ GeneralizedPolytope<T> difference_gp_gp(GeneralizedPolytope<T> const &gp1,
                                         GeneralizedPolytope<T> const &gp2,
                                         std::ostream &os) {
   GeneralizedPolytope<T> ret_gp = gp1;
-  for (size_t i2 = 0; i2 < gp2.polytopes.size(); i2++) {
+  for (size_t i2 = 0; i2 < gp2.size(); i2++) {
     ret_gp = difference_gp_p(ret_gp, gp2.polytopes[i2], os);
   }
   return ret_gp;
@@ -821,7 +824,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
   int n = gp.polytopes[0].FAC.cols();
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
-  for (size_t i = 0; i < gp.polytopes.size(); i++) {
+  for (size_t i = 0; i < gp.size(); i++) {
     int n_fac = gp.polytopes[i].FAC.rows();
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
@@ -846,7 +849,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         difference_gp_gp(kv.second.gp_plus, kv.second.gp_minus, os);
     GeneralizedPolytope<T> diff_m_p =
         difference_gp_gp(kv.second.gp_minus, kv.second.gp_plus, os);
-    if (diff_p_m.polytopes.size() + diff_m_p.polytopes.size() == 0) {
+    if (diff_p_m.size() + diff_m_p.size() == 0) {
       to_remove.push_back(kv.first);
     } else {
       kv.second.gp_plus = diff_p_m;
@@ -854,7 +857,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
     }
   }
   for (auto &vect : to_remove) {
-    full_data_facets.remove(vect);
+    full_data_facets.erase(vect);
   }
   return {n, full_data_facets};
 }
@@ -862,29 +865,36 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
 
 template<typename T>
 struct InteriorPtDir {
-  MyVector<T> eIso;
-  MyVector<T> V;
+  MyVector<T> pt;
+  MyVector<T> FacIneq;
 };
+
+template<typename T>
+InteriorPtDir<T> ipd_opposite(InteriorPtDir<T> const& ipd) {
+  MyVector<T> FacIneq = - ipd.FacIneq;
+  return {ipd.pt, FacIneq};
+}
+
 
 
 template <typename T>
-std::optional<MyVector<T>>
+std::optional<InteriorPtDir<T>>
 get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
                        std::ostream &os) {
   for (auto &kv : bnd.full_data_facets) {
-    auto get_opt = [&]() -> std::optional<MyVector<T>> {
+    auto get_opt = [&]() -> std::optional<InteriorPtDir<T>> {
       std::optional<MyVector<T>> opt1 =
           get_interior_point_gp(kv.second.gp_minus, os);
       if (opt1) {
-        MyVector<T> const& V = kv.first;
-        InteriorPtDir<T> ipd{*opt1, V};
+        MyVector<T> const& FacIneq = kv.first;
+        InteriorPtDir<T> ipd{*opt1, FacIneq};
         return ipd;
       }
       std::optional<MyVector<T>> opt2 =
           get_interior_point_gp(kv.second.gp_plus, os);
       if (opt2) {
-        MyVector<T> V = - kv.first;
-        InteriorPtDir<T> ipd{*opt2, std::move(V)};
+        MyVector<T> FacIneq = - kv.first;
+        InteriorPtDir<T> ipd{*opt2, std::move(FacIneq)};
         return ipd;
       }
       std::cerr << "GP: the size should be non-zero. Since otherwise, it "
@@ -894,8 +904,8 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
     std::optional<InteriorPtDir<T>> opt = get_opt();
     if (opt) {
       InteriorPtDir<T> const &sol_A = *opt;
-      MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.eIso;
-      InteriorPtDir<T> sol_B{eIso_B, sol_A.second};
+      MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.pt;
+      InteriorPtDir<T> sol_B{eIso_B, sol_A.FacIneq};
       return sol_B;
     }
   }
@@ -903,10 +913,33 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
 }
 
 template <typename T>
+bool is_boundary_point(InteriorPtDir<T> const& ipd, BoundaryGeneralizedPolytope<T> const &bnd, std::ostream &os) {
+  MyVector<T> V = ScalarCanonicalizationVector(ipd.FacIneq);
+  std::pair<MyVector<T>, int> pair = get_face_can(V);
+  if (bnd.full_data_facets.count(pair.first) == 0) {
+    return false;
+  }
+  DataFacetPlusMinus<T> const& dfpm = bnd.full_data_facets.at(pair.first);
+  std::optional<MyVector<T>> opt = SolutionMat(dfpm.NSP, ipd.pt);
+  if (!opt) {
+    return false;
+  }
+  MyVector<T> const& pt = *opt;
+  if (pair.second == 1) {
+    return is_interior_gp_vert(dfpm.gp_plus, pt, os);
+  } else {
+    return is_interior_gp_vert(dfpm.gp_minus, pt, os);
+  }
+}
+
+
+
+
+template <typename T>
 void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> &bnd,
                                           GeneralizedPolytope<T> const &gp,
                                           std::ostream &os) {
-  for (size_t i = 0; i < gp.polytopes.size(); i++) {
+  for (size_t i = 0; i < gp.size(); i++) {
     int n_fac = gp.polytopes[i].FAC.rows();
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
@@ -930,7 +963,7 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> &bnd,
     }
   }
   for (auto &vect : to_remove) {
-    bnd.full_data_facets.remove(vect);
+    bnd.full_data_facets.erase(vect);
   }
 }
 
@@ -940,7 +973,7 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
                                       std::ostream &os) {
   int dim = gp.polytopes[0].FAC.cols();
   std::unordered_set<MyVector<T>> set_vertices;
-  for (size_t i = 0; i < gp.polytopes.size(); i++) {
+  for (size_t i = 0; i < gp.size(); i++) {
     int n_ext = gp.polytopes[i].EXT.rows();
     for (int i_ext = 0; i_ext < n_ext; i_ext++) {
       MyVector<T> eEXT = GetMatrixRow(gp.polytopes[i].EXT, i_ext);

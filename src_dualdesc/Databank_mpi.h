@@ -71,8 +71,7 @@ void DataBankMpiServer(boost::mpi::communicator &comm, const bool &Saving,
       } else {
         if (Saving) {
           size_t n_orbit = ListEnt.size();
-          std::string Prefix =
-              SavingPrefix + "DualDesc" + std::to_string(n_orbit);
+          auto Prefix = SavingPrefix + "DualDesc" + std::to_string(n_orbit);
           os << "Insert entry to file Prefix=" << Prefix << "\n";
           Write_BankEntry(Prefix, pair.eKey, pair.eVal);
         }

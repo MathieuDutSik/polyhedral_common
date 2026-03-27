@@ -665,6 +665,11 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     // Nothing can be done here
     return {};
   }
+  int dim = G.rows();
+  MyVector<T> eV_red(dim);
+  for (int i=0; i<dim; i++) {
+    eV_red(i) = eV(i + 1);
+  }
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: initial_vertex_data_test_ev eV=" << StringVectorGAP(eV)
      << "\n";
@@ -706,7 +711,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     std::vector<MyVector<T>> ListIneq;
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
     ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
-        get_generic_robust_m(min_m, G, eV, os);
+        get_generic_robust_m(min_m, G, eV_red, os);
     if (!ext_robust_m_min.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   initial_vertex_data_test_ev, is_correct=false by "
@@ -760,7 +765,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         i_m += 1;
 #endif
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
-            get_generic_robust_m(eM, G, eV, os);
+            get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST:   initial_vertex_data_test_ev, ext_robust_m.robust_m, "
               "index="
@@ -825,7 +830,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
     return true;
   };
-  compute_robust_close_f(solver, eV, f_insert, os);
+  compute_robust_close_f(solver, eV_red, f_insert, os);
   if (is_correct) {
     return ppoly;
   } else {
@@ -998,69 +1003,42 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
                              PVoronoi<T, Tint> const &pvd) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
-  int dim = eData.solver.GramMat.rows();
-  auto get_adj_p_polytope = [&](MyVector<T> const &TestFAC,
+  MyMatrix<T> const& G = solver.GramMat;
+  MyMatrix<T> G_inv = Inverse(G);
+  int dim = G.rows();
+  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
+  auto get_adj_p_polytope = [&](InteriorPtDir<T> const& ipd_test,
                                 MyVector<T> const &x)
       -> std::optional<PVoronoi<T, Tint>> {
-    MyVector<T> x_red(dim);
-    for (int i = 0; i < dim; i++) {
-      x_red(i) = x(i + 1);
-    }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj_p_polytope x_red=" << StringVector(x_red) << "\n";
+    os << "ROBUST: get_adj_p_polytope x=" << StringVector(x) << "\n";
 #endif
-    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x_red, os);
+    std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x, os);
     if (!opt) {
       return {};
     }
-    PVoronoi<T, Tint> const &ppoly = *opt;
-    size_t m_facet = ppoly.sp.FAC.rows();
-    int m_ext = ppoly.EXT.rows();
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj_p_polytope m_facet=" << m_facet << " m_ext=" << m_ext
-       << "\n";
-#endif
-    for (size_t j_facet = 0; j_facet < m_facet; j_facet++) {
-      if (GetMatrixRow(ppoly.sp.FAC, j_facet) == TestFAC) {
-        return ppoly;
-      }
+    PVoronoi<T, Tint> const &ppoly_adj = *opt;
+    BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
+    bool test = is_boundary_point(ipd_test, bnd_adj, os);
+    if (!test) {
+      return {};
     }
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj_p_polytope, Failed to find a correct adjacent "
-          "cone\n";
-#endif
-    return {};
+    return opt;
   };
-  auto get_adj = [&](Face const &f, MyVector<T> const &eFAC,
-                     MyVector<T> const &eIso) -> PVoronoi<T, Tint> {
-    std::unordered_set<MyVector<T>> set;
-    int n_ext = pvd.EXT.rows();
-    for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-      if (f[i_ext] == 1) {
-        MyVector<T> eEXT = GetMatrixRow(pvd.EXT, i_ext);
-        set.insert(eEXT);
-      }
+  auto get_adj = [&](InteriorPtDir<T> const& ipd) -> PVoronoi<T, Tint> {
+    InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
+    MyVector<T> delta_x = ZeroVector<T>(dim+1);
+    for (int i=0; i<dim; i++) {
+      delta_x(i+1) = ipd.FacIneq(i + 1);
     }
-    MyVector<T> TestFAC = -eFAC;
-    MyVector<T> delta_x = eIso - pvd.eIso;
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj, eIso=" << StringVector(eIso)
-       << " pvd.eIso=" << StringVector(pvd.eIso) << " delta_x=" << delta_x
-       << "\n";
-#endif
     T factor(1);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    size_t n_iter = 0;
-#endif
     while (true) {
-      MyVector<T> x = eIso + factor * delta_x;
+      MyVector<T> x = ipd.pt + factor * delta_x;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: get_adj, n_iter=" << n_iter << " factor=" << factor
-         << "\n";
-      n_iter += 1;
+      os << "ROBUST: get_adj, factor=" << factor << "\n";
 #endif
       std::optional<PVoronoi<T, Tint>> opt =
-          get_adj_p_polytope(TestFAC, x);
+          get_adj_p_polytope(ipd_opp, x);
       if (opt) {
         return *opt;
       }
@@ -1068,17 +1046,18 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     }
   };
   std::vector<PVoronoi<T, Tint>> l_adj;
-  size_t n_facet = pvd.sp.FAC.rows();
-  for (size_t i_facet = 0; i_facet < n_facet; i_facet++) {
+  while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: find_list_adjacent_p_voronoi i_facet=" << i_facet << " / "
-       << n_facet << "\n";
+    os << "ROBUST: find_list_adjacent_p_voronoi |l_adj|=" << l_adj.size() << "\n";
 #endif
-    Face facet = pvd.sp.facets[i_facet];
-    MyVector<T> eFAC = GetMatrixRow(pvd.sp.FAC, i_facet);
-    MyVector<T> eIso = get_interior_facet_pt(pvd.sp, i_facet);
-    PVoronoi<T, Tint> eAdj = get_adj(facet, eFAC, eIso);
-    l_adj.push_back(eAdj);
+    std::optional<InteriorPtDir<T>> opt = get_interior_point_bnd(bnd, os);
+    if (!opt) {
+      break;
+    }
+    InteriorPtDir<T> const& ipd = *opt;
+    PVoronoi<T, Tint> eadj = get_adj(ipd);
+    reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
+    l_adj.push_back(eadj);
   }
   return l_adj;
 }
