@@ -905,15 +905,26 @@ template<typename T, typename Tint>
 std::optional<MyVector<Tint>> get_next_side_vector(MyMatrix<T> const& G,
                                                    MyVector<Tint> const& v_long,
                                                    std::vector<MyVector<Tint>> const& l_cand,
-                                                   std::vector<MyVector<T>> const& l_vertices) {
+                                                   std::vector<MyVector<T>> const& l_vertices,
+                                                   std::ostream& os) {
   T delta(0);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: get_next_side_vector v_long=" << StringVectorGAP(v_long) << "\n";
+  os << "ROBUST: get_next_side_vector l_cand=\n";
+  WriteMatrix(os, MatrixFromVectorFamily(l_cand));
+#endif
   MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
+  int dim = G.rows();
+  MyVector<T> diff1(dim);
+  MyVector<T> diff2(dim);
   auto f_max=[&](MyVector<Tint> const& cand) -> T {
     MyVector<T> cand_T = UniversalVectorConversion<T,Tint>(cand);
     T delta(0);
     for (auto & vert: l_vertices) {
-      MyVector<T> diff1 = vert - v_long_T;
-      MyVector<T> diff2 = vert - cand_T;
+      for (int i=0; i<dim; i++) {
+        diff1(i) = vert(i + 1) - v_long_T(i);
+        diff2(i) = vert(i + 1) - cand_T(i);
+      }
       T norm1 = EvaluationQuadForm(G, diff1);
       T norm2 = EvaluationQuadForm(G, diff2);
       if (norm2 > norm1) {
@@ -955,31 +966,71 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     if (len == 0) {
       return true;
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 1\n";
+#endif
     SoftConvexBoundary<T,Tint> scb = pvp.l_scb[len-1];
     pvp.l_scb.pop_back();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 2\n";
+#endif
     std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 3\n";
+#endif
     MyVector<Tint> v_long = scb.robust_m.v_long();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 4\n";
+#endif
     l_excluded_max.push_back(v_long);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 5\n";
+#endif
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
     MyVector<T> eIneq_op = - eIneq;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 6\n";
+#endif
     std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 7\n";
+#endif
     std::vector<MyVector<Tint>> l_cand = DifferenceVect(scb.robust_m.get_short_vertors(), l_excluded_max);
-    std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 8 l_vertices=\n";
+    WriteMatrix(os, MatrixFromVectorFamily(l_vertices));
+#endif
+    std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 9\n";
+#endif
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
       pvp.l_hcb.push_back(hcb);
       return false;
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 10\n";
+#endif
     MyVector<Tint> const& v_long_new = *opt1;
     MyVector<T> eIneq_new = get_ineq(G, v_crit, v_long_new);
     std::optional<ConvexBoundary<T>> opt2 = convexboundary_halfspace_int(scb.cb, eIneq_new, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 11\n";
+#endif
     if (!opt2) {
       std::cerr << "ROBUST: The opt2 should be nontrivial\n";
       throw TerminalException{1};
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 12\n";
+#endif
     ConvexBoundary<T> const& cb_new = *opt2;
     MyVector<T> eIso = cb_new.get_isobarycenter();
     MyVector<T> dir = G_inv * cb_new.V;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 13\n";
+#endif
     T shift(1);
     while(true) {
       MyVector<T> fV = eIso + shift * dir;
