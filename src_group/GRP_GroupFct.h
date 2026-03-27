@@ -786,7 +786,7 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
   std::vector<Telt> ListGen = TheGRP.GeneratorsOfGroup();
   Face fSet(TheGRP.n_act());
   while (true) {
-    typename std::unordered_map<Face, T>::iterator iter = ListTotal.begin();
+    auto iter = ListTotal.begin();
     if (iter == ListTotal.end())
       break;
     Face eSet = iter->first;
@@ -832,7 +832,7 @@ vectface OrbitSplittingSet_T(T_hash_set &ListTotal, Tgroup const &TheGRP) {
   Face fSet(n);
   vectface vf_ret(n);
   while (true) {
-    typename T_hash_set::iterator iter = ListTotal.begin();
+    auto iter = ListTotal.begin();
     if (iter == ListTotal.end())
       break;
     Face eSet = *iter;
@@ -882,7 +882,7 @@ void OrbitSplittingSet_Kernel(vectface const &PreListTotal,
   //  std::cerr << "|ListTotal|=" << ListTotal.size() << " |PreListTotal|=" <<
   //  PreListTotal.size() << "\n"; size_t tot_sum = 0;
   while (true) {
-    std::unordered_set<Face>::iterator iter = ListTotal.begin();
+    auto iter = ListTotal.begin();
     if (iter == ListTotal.end())
       break;
     Face eSet = *iter;

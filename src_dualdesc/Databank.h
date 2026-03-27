@@ -312,8 +312,7 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
 #ifdef DEBUG_DATABANK
       os << "Passing by GetDualDesc |ListEnt|=" << ListEnt.size() << "\n";
 #endif
-      typename std::unordered_map<Tkey, Tval>::const_iterator iter =
-          ListEnt.find(eTriple.eKey);
+      auto iter = ListEnt.find(eTriple.eKey);
       if (iter == ListEnt.end()) {
         // If returning empty then it means nothing has been found.
         send_data<Tval>(socket, Tval());

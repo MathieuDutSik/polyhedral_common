@@ -1693,14 +1693,11 @@ public:
   using iterator_index = IteratorIndexType;
   using iterator_face = IteratorFaceType;
   iterator_index begin_index_undone() const {
-    std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
-        iter1 = CompleteList_SetUndone.begin();
-    std::map<size_t, UNORD_MAP<size_t, std::vector<size_t>>>::const_iterator
-        iter1_end = CompleteList_SetUndone.end();
+    auto iter1 = CompleteList_SetUndone.begin();
+    auto iter1_end = CompleteList_SetUndone.end();
     if (iter1 == iter1_end)
       return IteratorIndexType(iter1, iter1_end, {}, 0);
-    UNORD_MAP<size_t, std::vector<size_t>>::const_iterator iter2 =
-        CompleteList_SetUndone.at(iter1->first).begin();
+    auto iter2 = CompleteList_SetUndone.at(iter1->first).begin();
     return IteratorIndexType(iter1, iter1_end, iter2, 0);
   }
   iterator_index end_index_undone() const {
