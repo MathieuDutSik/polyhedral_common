@@ -1199,56 +1199,6 @@ LINSPA_TestEquivalenceGramMatrix(LinSpaceMatrix<T> const &LinSpa,
   return M;
 }
 
-/*
-  Compute an invariant of the gram matrix
-  so that it does not change after arithmetic
-  equivalence.
-  However, it is not invariant under scaling.
-*/
-template <typename T, typename Tint>
-size_t GetInvariantGramShortest(MyMatrix<T> const &eGram,
-                                MyMatrix<Tint> const &SHV, size_t const &seed,
-                                [[maybe_unused]] std::ostream &os) {
-  T eDet = DeterminantMat(eGram);
-  int nbVect = SHV.rows();
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: eDet=" << eDet << " nbVect=" << nbVect << "\n";
-#endif
-  std::vector<MyVector<T>> ListV;
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    MyVector<Tint> V = GetMatrixRow(SHV, iVect);
-    MyVector<T> V_T = UniversalVectorConversion<T, Tint>(V);
-    ListV.push_back(V_T);
-  }
-  std::map<T, size_t> map_diag, map_off_diag;
-  for (int iVect = 0; iVect < nbVect; iVect++) {
-    MyVector<T> Vprod = eGram * ListV[iVect];
-    T eNorm = Vprod.dot(ListV[iVect]);
-    map_diag[eNorm] += 1;
-    for (int jVect = iVect + 1; jVect < nbVect; jVect++) {
-      T eScal = Vprod.dot(ListV[jVect]);
-      map_off_diag[eScal] += 1;
-    }
-  }
-  auto combine_hash = [](size_t &seed, size_t new_hash) -> void {
-    seed ^= new_hash + 0x9e3779b8 + (seed << 6) + (seed >> 2);
-  };
-  size_t hash_ret = seed;
-  size_t hash_det = std::hash<T>()(eDet);
-  combine_hash(hash_ret, hash_det);
-  for (auto &kv : map_diag) {
-    size_t hash_T = std::hash<T>()(kv.first);
-    combine_hash(hash_ret, hash_T);
-    combine_hash(hash_ret, kv.second);
-  }
-  for (auto &kv : map_off_diag) {
-    size_t hash_T = std::hash<T>()(kv.first);
-    combine_hash(hash_ret, hash_T);
-    combine_hash(hash_ret, kv.second);
-  }
-  return hash_ret;
-}
-
 template <typename T> void reset_paperwork(LinSpaceMatrix<T> &LinSpa) {
   LinSpa.ListLineMat.clear();
   for (auto &eMat : LinSpa.ListMat) {

@@ -109,7 +109,11 @@ template <typename T, typename Tint>
 size_t SHORT_Invariant(MyMatrix<Tint> const &eSpann, std::ostream &os) {
   ShortIso<T, Tint> eShIso = SHORT_GetInformation<T, Tint>(eSpann, os);
   size_t seed = 146;
-  return GetInvariantGramShortest(eShIso.GramMat, eShIso.SHVdisc, seed, os);
+  std::vector<MyMatrix<T>> ListMat{eShIso.GramMat};
+  MyMatrix<T> SHV_T = UniversalMatrixConversion<T,Tint>(eShIso.SHVdisc);
+  int n_row = SHV_T.rows();
+  std::vector<T> Vdiag(n_row, 0);
+  return GetInvariant_ListMat_Vdiag<T, T>(seed, SHV_T, ListMat, Vdiag, os);
 }
 
 // clang-format off
