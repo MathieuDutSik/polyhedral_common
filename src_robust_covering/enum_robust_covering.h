@@ -549,11 +549,11 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
 template <typename T, typename Tint>
 void insert_excluded_max(GenericRobustM<Tint> const &robust_m,
                          MyMatrix<T> const &G,
-                         std::vector<MyVector<Tint>> const& list_excluded_max,
+                         std::vector<MyVector<Tint>> const& l_excluded_max,
                          std::vector<FullIneq<T,Tint>> & list_full_ineq,
                          [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
-  for (auto & v_short: list_excluded_max) {
+  for (auto & v_short: l_excluded_max) {
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
     FullIneq<T,Tint> full_ineq{eIneq, {}};
     list_full_ineq.push_back(full_ineq);
@@ -687,7 +687,7 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
 kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
-                               std::vector<MyVector<Tint>> const& list_excluded_max,
+                               std::vector<MyVector<Tint>> const& l_excluded_max,
                                MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const &G = solver.GramMat;
   if (IsIntegralVector(eV)) {
@@ -773,12 +773,12 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, v_short="
        << StringVectorGAP(v_short) << "\n";
-    os << "ROBUST:   kippp, |list_excluded_max|=" << list_excluded_max.size() << "\n";
+    os << "ROBUST:   kippp, |l_excluded_max|=" << l_excluded_max.size() << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
     insert_excluded_max(robust_m_min,
                         G,
-                        list_excluded_max,
+                        l_excluded_max,
                         list_full_ineq,
                         os);
 
@@ -870,7 +870,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       FullIneq<T,Tint> const& full_ineq = list_full_ineq[j_irred];
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred);
       if (full_ineq.opt_soft) {
-        SoftConvexBoundary<T,Tint> scb{0, c_bnd, list_excluded_max, *full_ineq.opt_soft};
+        SoftConvexBoundary<T,Tint> scb{0, c_bnd, l_excluded_max, *full_ineq.opt_soft};
         l_scb.push_back(scb);
       } else {
         HardConvexBoundary<T> hcb{0, c_bnd};
@@ -912,6 +912,8 @@ std::optional<MyVector<Tint>> get_next_side_vector(MyMatrix<T> const& G,
   os << "ROBUST: get_next_side_vector v_long=" << StringVectorGAP(v_long) << "\n";
   os << "ROBUST: get_next_side_vector l_cand=\n";
   WriteMatrix(os, MatrixFromVectorFamily(l_cand));
+  os << "ROBUST: get_next_side_vector l_vertices=\n";
+  WriteMatrix(os, MatrixFromVectorFamily(l_vertices));
 #endif
   MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
   int dim = G.rows();
@@ -941,6 +943,9 @@ std::optional<MyVector<Tint>> get_next_side_vector(MyMatrix<T> const& G,
       opt = cand;
     }
   }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: get_next_side_vector delta=" << delta << "\n";
+#endif
   return opt;
 }
 
@@ -998,8 +1003,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #endif
     std::vector<MyVector<Tint>> l_cand = DifferenceVect(scb.robust_m.get_short_vertors(), l_excluded_max);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 8 l_vertices=\n";
-    WriteMatrix(os, MatrixFromVectorFamily(l_vertices));
+    os << "ROBUST: f_process_entry, step 8\n";
 #endif
     std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
