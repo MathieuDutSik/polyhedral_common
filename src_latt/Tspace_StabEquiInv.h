@@ -10,11 +10,11 @@
  */
 
 // clang-format off
+#include "Tspace_Fundamental.h"
 #include "POLY_Fundamental.h"
 #include "Shvec_exact.h"
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
-#include "Tspace_Functions.h"
 #include <set>
 #include <vector>
 #include <unordered_map>

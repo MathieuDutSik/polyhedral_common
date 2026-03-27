@@ -3,7 +3,7 @@
 #define SRC_LATT_TSPACE_GENERAL_H_
 
 // clang-format off
-#include "Tspace_Functions.h"
+#include "Tspace_Fundamental.h"
 #include "Tspace_StabEquiInv.h"
 #include "Tspace_ListMatTransform.h"
 #include "Tspace_ListMatSaturation.h"
