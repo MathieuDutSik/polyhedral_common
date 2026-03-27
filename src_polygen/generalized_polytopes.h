@@ -69,6 +69,11 @@
   ---
  */
 
+#ifdef DEBUG
+#define DEBUG_GENERALIZED_POLYTOPE
+#endif
+
+
 template <typename T> struct SinglePolytope {
   MyMatrix<T> EXT;
   MyMatrix<T> FAC;
@@ -144,16 +149,37 @@ struct ConvexBoundary {
   MyVector<T> V; // The orthogonal
   MyMatrix<T> NSP;
   SinglePolytope<T> sp; // The polytope in the face.
-  MyVector<T> get_isobarycenter() const {
+  MyVector<T> get_isobarycenter(std::ostream& os) const {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: get_isobarycenter, Before Isobarycenter\n";
+#endif
     MyVector<T> eIso1 = Isobarycenter(sp.EXT);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: get_isobarycenter, eIso1=" << StringVectorGAP(eIso1) << "\n";
+#endif
     MyVector<T> eIso2 = NSP.transpose() * eIso1;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: get_isobarycenter, eIso2=" << StringVectorGAP(eIso2) << "\n";
+#endif
+    T val = eIso2(0);
+    for (int u=0; u<eIso2.size(); u++) {
+      eIso2(u) = eIso2(u) / val;
+    }
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: get_isobarycenter, eIso2_B=" << StringVectorGAP(eIso2) << "\n";
+#endif
     return eIso2;
   }
   std::vector<MyVector<T>> get_list_vertices() const {
     std::vector<MyVector<T>> l_vertices;
     MyMatrix<T> EXT2 = sp.EXT * NSP;
+    int dim = EXT2.cols();
     for (int i_row=0; i_row<EXT2.rows(); i_row++) {
       MyVector<T> V = GetMatrixRow(EXT2, i_row);
+      T val = V(0);
+      for (int u=0; u<dim; u++) {
+        V(u) = V(u) / val;
+      }
       l_vertices.emplace_back(std::move(V));
     }
     return l_vertices;

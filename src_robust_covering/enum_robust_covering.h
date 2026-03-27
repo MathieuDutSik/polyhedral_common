@@ -620,7 +620,7 @@ MyMatrix<T> get_list_ineq(std::vector<FullIneq<T, Tint>> &list_full_ineq, std::o
       M(i_ineq, i) = list_full_ineq[i_ineq].eIneq(i);
     }
   }
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
   os << "ROBUST: get_list_ineq M=\n";
   WriteMatrix(os, M);
 #endif
@@ -950,6 +950,7 @@ template <typename T, typename Tint>
 std::optional<PVoronoi<T, Tint>>
 find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const& G = solver.GramMat;
+  int dim = G.rows();
   MyMatrix<T> G_inv = Inverse(G);
   std::optional<PVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
@@ -1026,25 +1027,51 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     os << "ROBUST: f_process_entry, step 12\n";
 #endif
     ConvexBoundary<T> const& cb_new = *opt2;
-    MyVector<T> eIso = cb_new.get_isobarycenter();
-    MyVector<T> dir = G_inv * cb_new.V;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 12.1\n";
+#endif
+    MyVector<T> eIso = cb_new.get_isobarycenter(os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: f_process_entry, step 12.2\n";
+#endif
+    MyVector<T> dir = ZeroVector<T>(dim + 1);
+    for (int i=0; i<dim; i++) {
+      dir(i + 1) = cb_new.V(i + 1);
+    }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_process_entry, step 13\n";
 #endif
-    T shift(1);
+    T shift = T(1) / T(15);
     while(true) {
       MyVector<T> fV = eIso + shift * dir;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_1\n";
+#endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_2\n";
+#endif
       if (!opt3) {
+        shift = shift / 2;
         continue;
       }
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_3\n";
+#endif
       if (pos == -1) {
+        shift = shift / 2;
         continue;
       }
       SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_4\n";
+#endif
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_5\n";
+#endif
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.robust_m};
         pvp.l_scb.push_back(scb_new);
@@ -1052,8 +1079,14 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       for (auto& hcb: p_poly_vor_part.l_hcb) {
         pvp.l_hcb.push_back(hcb);
       }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_6\n";
+#endif
       pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
       int index = pvp.l_cb.size() - 1;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_7\n";
+#endif
       // That part needs to be improved, since the inserted faces could match 
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
@@ -1062,6 +1095,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
           pvp.l_scb.push_back(scb_new);
         }
       }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 14_8\n";
+#endif
     }
     return false;
   };
