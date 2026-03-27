@@ -125,16 +125,18 @@ MyMatrix<T> RepresentVertexPermutation_Kernel(MyMatrix<T> const &EXT1,
 }
 
 template <typename T, typename Telt>
-inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
-RepresentVertexPermutation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
-                           Telt const &ePerm) {
+  requires(is_ring_field<T>::value)
+inline MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
+                                              MyMatrix<T> const &EXT2,
+                                              Telt const &ePerm) {
   return RepresentVertexPermutation_Kernel(EXT1, EXT2, ePerm);
 }
 
 template <typename T, typename Telt>
-inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
-RepresentVertexPermutation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
-                           Telt const &ePerm) {
+  requires(!is_ring_field<T>::value)
+inline MyMatrix<T> RepresentVertexPermutation(MyMatrix<T> const &EXT1,
+                                              MyMatrix<T> const &EXT2,
+                                              Telt const &ePerm) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXT1_T = UniversalMatrixConversion<Tfield, T>(EXT1);
   MyMatrix<Tfield> EXT2_T = UniversalMatrixConversion<Tfield, T>(EXT2);

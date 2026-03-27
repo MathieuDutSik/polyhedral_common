@@ -172,14 +172,16 @@ template <typename T> MyMatrix<T> Kernel_GetQmatrix(MyMatrix<T> const &TheEXT) {
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
-GetQmatrix(MyMatrix<T> const &TheEXT, [[maybe_unused]] std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline MyMatrix<T> GetQmatrix(MyMatrix<T> const &TheEXT,
+                              [[maybe_unused]] std::ostream &os) {
   return Kernel_GetQmatrix(TheEXT);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
-GetQmatrix(MyMatrix<T> const &TheEXT, [[maybe_unused]] std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline MyMatrix<T> GetQmatrix(MyMatrix<T> const &TheEXT,
+                              [[maybe_unused]] std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
 #ifdef TIMINGS_POLYTOPE_EQUI_STAB
   SecondTime time;
