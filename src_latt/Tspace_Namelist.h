@@ -168,11 +168,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
       std::cerr << "Discriminant is zero, neither totally real, nor imaginary, degenerate\n";
       throw TerminalException{1};
     }
-    if (disc < 0) {
-      return GetCommImagQuadratic(n, eSum, eProd);
-    }
-    // It has to be real
-    return GetCommRealQuadratic(n, eSum, eProd);
+    return GetCommQuadratic(n, eSum, eProd);
   };
   auto get_is_eisenstein_or_gaussian = [&]() -> bool {
     int eSum_i = Blk.get_int("RealImagSum");

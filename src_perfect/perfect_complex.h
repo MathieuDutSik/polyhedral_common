@@ -6,6 +6,7 @@
 #include "perfect_tspace.h"
 #include "triples.h"
 #include "GampMatlab.h"
+#include "FiniteMatrixGroupTest.h"
 #include "MatrixGroupSimplification.h"
 #include "SignatureSymmetric.h"
 #include "boost_serialization.h"

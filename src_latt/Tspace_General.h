@@ -4,6 +4,10 @@
 
 // clang-format off
 #include "Tspace_Functions.h"
+#include "Tspace_StabEquiInv.h"
+#include "Tspace_ListMatTransform.h"
+#include "Tspace_ListMatSaturation.h"
+#include "Tspace_SearchPositiveMatrices.h"
 #include "Tspace_Generation.h"
 #include "Tspace_Namelist.h"
 // clang-format on
