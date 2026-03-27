@@ -388,7 +388,26 @@ template <typename T, typename Tint> struct PVoronoiPart {
   std::vector<SoftConvexBoundary<T,Tint>> l_scb;
 };
 
-
+template <typename T, typename Tint>
+PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::ostream& os) {
+  if (pvp.l_scb.size() > 0) {
+    std::cerr << "ROBUST: We still have soft boundaries\n";
+    throw TerminalException{1};
+  }
+  std::vector<SinglePolytope<T>> polytopes;
+  for (auto & cb: pvp.l_cb) {
+    polytopes.push_back(cb.sp);
+  }
+  GeneralizedPolytope<T> gp{polytopes};
+  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(gp, os);
+  std::vector<MyVector<T>> l_vert = get_vertices(gp, bnd, os);
+  MyMatrix<T> EXT = MatrixFromVectorFamily(l_vert);
+  return {pvp.robust_m_min,
+          pvp.l_cb,
+          pvp.l_hcb,
+          gp,
+          EXT};
+}
 
 
 
@@ -403,6 +422,9 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   int best_index = 0;
   int n_ineq = M.rows();
   size_t n_att = 0;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST:   get_generic_robust_m, eV=" << StringVectorGAP(eV) << "\n";
+#endif
   for (int index = 0; index < n_ineq; index++) {
     MyVector<Tint> fV = GetMatrixRow(M, index);
     MyVector<T> diff = UniversalVectorConversion<T, Tint>(fV) - eV;
@@ -583,18 +605,25 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
 }
 
 template <typename T, typename Tint>
-MyMatrix<T> get_list_ineq(std::vector<FullIneq<T, Tint>> &list_full_ineq) {
+MyMatrix<T> get_list_ineq(std::vector<FullIneq<T, Tint>> &list_full_ineq, std::ostream &os) {
   int n_ineq = list_full_ineq.size();
   if (n_ineq == 0) {
     return ZeroMatrix<T>(0,0);
   }
   int dim = list_full_ineq[0].eIneq.size();
   MyMatrix<T> M(n_ineq, dim);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: get_list_ineq n_ineq=" << n_ineq << " dim=" << dim << "\n";
+#endif
   for (int i_ineq=0; i_ineq<n_ineq; i_ineq++) {
     for (int i=0; i<dim; i++) {
-      M(i_ineq, i) = list_full_ineq[i].eIneq(i);
+      M(i_ineq, i) = list_full_ineq[i_ineq].eIneq(i);
     }
   }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: get_list_ineq M=\n";
+  WriteMatrix(os, M);
+#endif
   return M;
 }
 
@@ -671,8 +700,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     eV_red(i) = eV(i + 1);
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-  os << "ROBUST: kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)
-     << "\n";
+  os << "ROBUST: kippp eV=" << StringVectorGAP(eV) << "\n";
 #endif
   // Working variables
   bool is_correct = true;
@@ -691,7 +719,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "--------------------------------------------------------------------"
           "---------------------------\n";
-    os << "ROBUST:   kernel_initial_p_polytope_part, |list_min_parallelepipeds|="
+    os << "ROBUST:   kippp, |list_min_parallelepipeds|="
        << list_min_parallelepipeds.size()
        << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size()
        << " min=" << min << "\n";
@@ -699,14 +727,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     if (list_min_parallelepipeds.size() > 1) {
       // Terminate the enumeration
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
+      os << "ROBUST:   kippp, is_correct=false by "
             "|list_min_parallelepipeds| > 1\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, pass 1\n";
+    os << "ROBUST:   kippp, pass 1\n";
 #endif
     std::vector<MyVector<T>> ListIneq;
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
@@ -714,29 +742,28 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         get_generic_robust_m(min_m, G, eV_red, os);
     if (!ext_robust_m_min.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
+      os << "ROBUST:   kippp, is_correct=false by "
             "!ext_robust_m_min.is_correct\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, pass 2\n";
+    os << "ROBUST:   kippp, pass 2\n";
 #endif
     if (min == 0) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
-            "min=0\n";
+      os << "ROBUST:   kippp, is_correct=false by min=0\n";
 #endif
       is_correct = false;
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3\n";
+    os << "ROBUST:   kippp, pass 3\n";
 #endif
     GenericRobustM<Tint> const &robust_m_min = ext_robust_m_min.robust_m;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, robust_m_min, index="
+    os << "ROBUST:   kippp, robust_m_min, index="
        << robust_m_min.index << " M=\n";
     WriteMatrix(os, robust_m_min.M);
 #endif
@@ -744,8 +771,9 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     MyVector<Tint> v_short =
         robust_m_min.v_long(); // It is the shortest for the other structures!
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, v_short="
+    os << "ROBUST:   kippp, v_short="
        << StringVectorGAP(v_short) << "\n";
+    os << "ROBUST:   kippp, |list_excluded_max|=" << list_excluded_max.size() << "\n";
 #endif
     std::vector<GenericRobustM<Tint>> list_robust_m;
     insert_excluded_max(robust_m_min,
@@ -755,26 +783,30 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
                         os);
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3, step 1\n";
+    os << "ROBUST:   kippp, pass 3, step 1\n";
     size_t i_m = 0;
 #endif
     for (auto &eM : tot_list_parallelepipeds) {
       if (eM != min_m) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST:   --------- " << i_m << " ------------\n";
+        os << "ROBUST:   --------- "
+           << i_m
+           << "/"
+           << tot_list_parallelepipeds.size()
+           << " ------------\n";
         i_m += 1;
 #endif
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST:   kernel_initial_p_polytope_part, ext_robust_m.robust_m, "
+        os << "ROBUST:   kippp, ext_robust_m.robust_m, "
               "index="
            << ext_robust_m.robust_m.index << " M=\n";
         WriteMatrix(os, ext_robust_m.robust_m.M);
 #endif
         if (!ext_robust_m.is_correct) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-          os << "ROBUST:   kernel_initial_p_polytope_part, is_correct=false by "
+          os << "ROBUST:   kippp, is_correct=false by "
                 "!ext_robust_m.is_correct\n";
 #endif
           is_correct = false;
@@ -792,16 +824,23 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST:   kernel_initial_p_polytope_part, pass 3, step 2\n";
+    os << "ROBUST:   kippp, pass 3, step 2\n";
 #endif
     //
     // Testing definition of the polytopes.
     //
-    MyMatrix<T> list_ineq = get_list_ineq(list_full_ineq);
+    MyMatrix<T> list_ineq = get_list_ineq(list_full_ineq, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST:   kippp, pass 3, step 2(B)\n";
+    {
+      std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
+      os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
+    }
+#endif
     bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
     if (!test) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: kernel_initial_p_polytope_part, failing by "
+      os << "ROBUST: kippp, failing by "
             "is_full_dimensional_bounded_polytope\n";
 #endif
       return false;
@@ -809,9 +848,21 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     //
     // Now doing the processing.
     //
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 1\n";
+#endif
     std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 2\n";
+#endif
     MyMatrix<T> FAC = SelectRow(list_ineq, list_irred);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 3\n";
+#endif
     SinglePolytope<T> sp = get_single_p_polytope(solver, FAC, v_short, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 4\n";
+#endif
     std::vector<HardConvexBoundary<T>> l_hcb;
     std::vector<SoftConvexBoundary<T,Tint>> l_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
@@ -826,8 +877,17 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         l_hcb.push_back(hcb);
       }
     }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 5\n";
+#endif
     ConvexBlock<T,Tint> c_bl{list_robust_m, sp};
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 6\n";
+#endif
     ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 7\n";
+#endif
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
@@ -884,16 +944,19 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
   if (!opt) {
     return {};
   }
-  PVoronoiPart<T, Tint> p_voronoi = *opt;
-  MyVector<Tint> v_crit = p_voronoi.robust_m_min.v_long();
+  PVoronoiPart<T, Tint> pvp = *opt;
+  MyVector<Tint> v_crit = pvp.robust_m_min.v_long();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: find_p_voronoi, step 1\n";
+#endif
 
   auto f_process_entry=[&]() -> bool {
-    size_t len = p_voronoi.l_scb.size();
+    size_t len = pvp.l_scb.size();
     if (len == 0) {
       return true;
     }
-    SoftConvexBoundary<T,Tint> scb = p_voronoi.l_scb[len-1];
-    p_voronoi.l_scb.pop_back();
+    SoftConvexBoundary<T,Tint> scb = pvp.l_scb[len-1];
+    pvp.l_scb.pop_back();
     std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
     MyVector<Tint> v_long = scb.robust_m.v_long();
     l_excluded_max.push_back(v_long);
@@ -904,7 +967,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     std::optional<MyVector<Tint>> opt1 = get_next_side_vector(G, v_long, l_cand, l_vertices);
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
-      p_voronoi.l_hcb.push_back(hcb);
+      pvp.l_hcb.push_back(hcb);
       return false;
     }
     MyVector<Tint> const& v_long_new = *opt1;
@@ -933,19 +996,19 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.robust_m};
-        p_voronoi.l_scb.push_back(scb_new);
+        pvp.l_scb.push_back(scb_new);
       }
       for (auto& hcb: p_poly_vor_part.l_hcb) {
-        p_voronoi.l_hcb.push_back(hcb);
+        pvp.l_hcb.push_back(hcb);
       }
-      p_voronoi.l_cb.push_back(p_poly_vor_part.l_cb[0]);
-      int index = p_voronoi.l_cb.size() - 1;
+      pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
+      int index = pvp.l_cb.size() - 1;
       // That part needs to be improved, since the inserted faces could match 
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
           SoftConvexBoundary<T,Tint> scb_new = scb;
           scb_new.index_cb = index;
-          p_voronoi.l_scb.push_back(scb_new);
+          pvp.l_scb.push_back(scb_new);
         }
       }
     }
@@ -953,14 +1016,24 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
   };
 
 
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  size_t iter = 0;
+#endif
   while(true) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: find_p_voronoi, |l_hcb|=" << pvp.l_hcb.size()
+       << " |l_scb|=" << pvp.l_scb.size() << " iter=" << iter << "\n";
+#endif
     bool test = f_process_entry();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: find_p_voronoi, test=" << test << "\n";
+#endif
     if (test) {
       break;
     }
   }
-  std::cerr << "ROBUST: find_p_voronoi should never reach that stage\n";
-  throw TerminalException{1};
+  PVoronoi<T,Tint> p_voronoi = convert_p_voronoi_part(pvp, os);
+  return p_voronoi;
 }
 
 
