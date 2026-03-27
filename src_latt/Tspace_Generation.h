@@ -52,24 +52,14 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
 }
 
 template <typename T>
-MyMatrix<T> GetCommRealQuadratic(int n, T const &eSum, T const &eProd) {
-  MyMatrix<T> Imultiplication = ZeroMatrix<T>(2 * n, 2 * n);
-  for (int i = 0; i < n; i++) {
-    Imultiplication(i, n + i) = 1;
-    Imultiplication(n + i, i) = -eProd;
-    Imultiplication(n + i, n + i) = eSum;
-  }
-  // Need to write the code for the real quadratic.
-  // Maybe it is the same matrix as the one for the imaginary.
-  // We need to investigate.
-  std::cerr << "We need to code the GetCommRealQuadratic function\n";
-  throw TerminalException{1};
-
-  return Imultiplication;
+MyMatrix<T> GetConjugation(int n, T const &eSum) {
 }
 
+
+
+
 template <typename T>
-MyMatrix<T> GetCommImagQuadratic(int n, T const &eSum, T const &eProd) {
+MyMatrix<T> GetCommQuadratic(int n, T const &eSum, T const &eProd) {
   MyMatrix<T> Imultiplication = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
     Imultiplication(i, n + i) = 1;
@@ -83,40 +73,41 @@ template <typename T>
 LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
                                             T const &eProd, std::ostream &os) {
   std::vector<MyMatrix<T>> ListMat;
-  MyMatrix<T> eMatB(n, n);
-  MyMatrix<T> eMatC(n, n);
+  T Discriminant = eSum * eSum - 4 * eProd;
+  if (Discriminant <= 0) {
+    std::cerr << "Discriminant is negative\n";
+    std::cerr << "Impossible for a real quadratic space\n";
+    throw TerminalException{1};
+  }
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      ZeroAssignation(eMatB);
-      ZeroAssignation(eMatC);
-      eMatB(i, j) = 1;
-      eMatB(j, i) = 1;
+      {
+        MyMatrix<T> eMatB = ZeroMatrix<T>(n,n);
+        MyMatrix<T> eMatC = ZeroMatrix<T>(n,n);
+        eMatB(i, j) = 1;
+        eMatB(j, i) = 1;
+        MyMatrix<T> eMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
+        ListMat.push_back(eMat);
+      }
       //
-      MyMatrix<T> eMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
-      ListMat.push_back(eMat);
-      //
-      ZeroAssignation(eMatB);
-      ZeroAssignation(eMatC);
-      eMatC(i, j) = 1;
-      eMatC(j, i) = 1;
-      //
-      MyMatrix<T> fMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
-      ListMat.push_back(fMat);
+      {
+        MyMatrix<T> eMatB = ZeroMatrix<T>(n,n);
+        MyMatrix<T> eMatC = ZeroMatrix<T>(n,n);
+        eMatC(i, j) = 1;
+        eMatC(j, i) = 1;
+        MyMatrix<T> fMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
+        ListMat.push_back(fMat);
+      }
     }
   }
   // That choice of SuperMat matters in the self-duality.
   // It represents the identity x identity in the space S^n x S^n
   // where it lives.
-  eMatB = IdentityMat<T>(n);
-  ZeroAssignation(eMatC);
+  MyMatrix<T> eMatB = IdentityMat<T>(n);
+  MyMatrix<T> eMatC = ZeroMatrix<T>(n,n);
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
   // The matrix eComm represent multiplication by the primitive element
-  MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
-  for (int i = 0; i < n; i++) {
-    eComm(i, n + i) = 1;
-    eComm(n + i, i) = -eProd;
-    eComm(n + i, n + i) = eSum;
-  }
+  MyMatrix<T> eComm = GetCommQuadratic(n, eSum, eProd);
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
   LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
   LinSpa.l_spanning_elements.push_back(eComm);
@@ -174,12 +165,7 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   }
   MyMatrix<T> SuperMat = RemoveFractionMatrix(SuperMat_pre);
   // The matrix eComm represent multiplication by the primitive element
-  MyMatrix<T> eComm = ZeroMatrix<T>(2 * n, 2 * n);
-  for (int i = 0; i < n; i++) {
-    eComm(i, n + i) = 1;
-    eComm(n + i, i) = -eProd;
-    eComm(n + i, n + i) = eSum;
-  }
+  MyMatrix<T> eComm = GetCommQuadratic(n, eSum, eProd);
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
   LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
   LinSpa.l_spanning_elements.push_back(eComm);

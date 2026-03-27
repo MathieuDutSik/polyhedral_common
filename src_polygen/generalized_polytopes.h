@@ -971,6 +971,9 @@ template <typename T>
 std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
                                       BoundaryGeneralizedPolytope<T> const &bnd,
                                       std::ostream &os) {
+  if (gp.size() == 0) {
+    return {};
+  }
   int dim = gp.polytopes[0].FAC.cols();
   std::unordered_set<MyVector<T>> set_vertices;
   for (size_t i = 0; i < gp.size(); i++) {
