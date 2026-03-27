@@ -104,13 +104,15 @@ LinSpaceMatrix<T> ReadLinSpaceFile(std::string const &eFile, std::ostream &os) {
   MyMatrix<T> ListMatAsBigMat = GetListMatAsBigMat(ListMat);
   bool isBravais = IsBravaisSpace(n, ListMat, PtStabGens, os);
   std::vector<MyMatrix<T>> l_spanning_elements = ReadListMatrix<T>(is);
+  std::vector<MyMatrix<T>> l_outer_elements = ReadListMatrix<T>(is);
   MyMatrix<T> PairwiseScalarInv = ReadMatrix<T>(is);
   PairwiseScalarInfo<T> pairwise_scalar_info{PairwiseScalarInv};
   bool is_self_dual = false;
   return {n,        isBravais,     SuperMat,
           ListMat,  ListLineMat,   ListMatAsBigMat,
           ListComm, ListSubspaces, PtStabGens,
-          l_spanning_elements, pairwise_scalar_info, is_self_dual};
+          l_spanning_elements, l_outer_elements,
+          pairwise_scalar_info, is_self_dual};
 }
 
 template <typename T>
@@ -136,6 +138,8 @@ void WriteLinSpaceGAP(std::ostream &os, LinSpaceMatrix<T> const &LinSpa) {
   WriteListMatrixGAP(os, LinSpa.PtStabGens);
   os << ", l_spanning_elements:=";
   WriteListMatrixGAP(os, LinSpa.l_spanning_elements);
+  os << ", l_outer_elements:=";
+  WriteListMatrixGAP(os, LinSpa.l_outer_elements);
   os << ", PairwiseScalarInv:=";
   WriteMatrixGAP(os, LinSpa.pairwise_scalar_info.PairwiseScalarInv);
   os << ")";

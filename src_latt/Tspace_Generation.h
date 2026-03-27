@@ -141,9 +141,11 @@ LinSpaceMatrix<T> ComputeRealQuadraticSpace(int n, T const &eSum,
   MyMatrix<T> SuperMat = __RealQuadMatSpace(eMatB, eMatC, n, eSum, eProd);
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = GetCommQuadratic(n, eSum, eProd);
+  MyMatrix<T> eConj = GetConjugation(n, eSum);
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
   LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
   LinSpa.l_spanning_elements.push_back(eComm);
+  LinSpa.l_outer_elements.push_back(eConj);
   return LinSpa;
 }
 
@@ -199,9 +201,11 @@ LinSpaceMatrix<T> ComputeImagQuadraticSpace(int n, T const &eSum,
   MyMatrix<T> SuperMat = RemoveFractionMatrix(SuperMat_pre);
   // The matrix eComm represent multiplication by the primitive element
   MyMatrix<T> eComm = GetCommQuadratic(n, eSum, eProd);
+  MyMatrix<T> eConj = GetConjugation(n, eSum);
   std::vector<MyMatrix<T>> ListMatRet = IntegralSaturationSpace(ListMat, os);
   LinSpaceMatrix<T> LinSpa = BuildLinSpace(SuperMat, ListMatRet, {eComm});
   LinSpa.l_spanning_elements.push_back(eComm);
+  LinSpa.l_outer_elements.push_back(eConj);
   return LinSpa;
 }
 

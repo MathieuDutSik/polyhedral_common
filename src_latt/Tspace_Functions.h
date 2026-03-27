@@ -172,6 +172,9 @@ template <typename T> struct LinSpaceMatrix {
   // The list of spanning elements. If empty, does not apply. This is used
   // for the T-spaces coming from
   std::vector<MyMatrix<T>> l_spanning_elements;
+  // The list of outer elements used for stabilizer / isomorphism. For
+  // example for quadratic spaces, the conjugation might be put.
+  std::vector<MyMatrix<T>> l_outer_elements;
   // Pairwise scalar info.
   PairwiseScalarInfo<T> pairwise_scalar_info;
   // Whether the T-space is known to be self-dual
@@ -203,6 +206,8 @@ bool LinSpaceMatrixEqual(LinSpaceMatrix<T> const &a, LinSpaceMatrix<T> const &b)
     return false;
   if (a.l_spanning_elements != b.l_spanning_elements)
     return false;
+  if (a.l_outer_elements != b.l_outer_elements)
+    return false;
   if (a.pairwise_scalar_info.PairwiseScalarInv !=
       b.pairwise_scalar_info.PairwiseScalarInv)
     return false;
@@ -223,6 +228,7 @@ inline void serialize(Archive &ar, LinSpaceMatrix<T> &val,
   ar &make_nvp("ListSubspaces", val.ListSubspaces);
   ar &make_nvp("PtStabGens", val.PtStabGens);
   ar &make_nvp("l_spanning_elements", val.l_spanning_elements);
+  ar &make_nvp("l_outer_elements", val.l_outer_elements);
   ar &make_nvp("pairwise_scalar_info", val.pairwise_scalar_info);
   ar &make_nvp("is_self_dual", val.is_self_dual);
 }
@@ -296,11 +302,13 @@ LinSpaceMatrix<T> BuildLinSpace(MyMatrix<T> const &SuperMat,
   // potential problems.
   bool isBravais = false;
   std::vector<MyMatrix<T>> l_spanning_elements;
+  std::vector<MyMatrix<T>> l_outer_elements;
   PairwiseScalarInfo<T> pairwise_scalar_info = get_pairwise_scalar_info(ListMat, SuperMat);
   bool is_self_dual = false;
   return {n,      isBravais, SuperMat,      ListMat, ListLineMat,
           BigMat, ListComm,  ListSubspaces, PtStab,
-          l_spanning_elements, pairwise_scalar_info, is_self_dual};
+          l_spanning_elements, l_outer_elements,
+          pairwise_scalar_info, is_self_dual};
 }
 
 template <typename T, typename Tint, typename Tgroup>
