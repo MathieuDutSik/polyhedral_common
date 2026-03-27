@@ -111,5 +111,5 @@
 
 
 // clang-format off
-#endif  // SRC_K_COVERING_K_COVERINGS_H_
+#endif  // SRC_K_COVERING_K_COVERING_H_
 // clang-format on

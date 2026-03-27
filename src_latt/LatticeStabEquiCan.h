@@ -14,6 +14,12 @@
 // clang-format on
 
 /*
+  This is code for computing equivalence, canonical form and automorphism
+  group of positive definite quadratic forms.
+  This is not the T-space relevant code.
+ */
+
+/*
   This is the set of algorithms for computing:
   * Arithmetic equivalence under GL_n(Z) of positive definite quadratic forms.
   * Stabilizer under GL_n(Z) action of positive definite quadratic forms.
@@ -240,7 +246,7 @@ std::vector<MyMatrix<Tint>> ArithmeticAutomorphismGroupMultiple_inner(
   using Tidx = typename Telt::Tidx;
   using TintGroup = typename Tgroup::Tint;
   using Thelper = FiniteMatrixGroupHelper<T, Telt, TintGroup>;
-  
+
   MyMatrix<T> SHV_T = UniversalMatrixConversion<T, Tint>(SHV);
   int n_row = SHV_T.rows();
   std::vector<T> Vdiag(n_row, 0);
