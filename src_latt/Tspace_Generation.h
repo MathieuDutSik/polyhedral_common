@@ -51,18 +51,51 @@ MyMatrix<T> __RealQuadMatSpace(MyMatrix<T> const &eMatB,
   return eMatN;
 }
 
+/*
+  Whether in real quadratic space or imaginary quadratic space,
+  we represent the elements as u = x + alpha y with x,y in Z^n.
+  This is represented in Z^{2n} with the first n coordinates as x_i
+  and the last n coordinates y_i.
+  ----
+  This commutes with the multiplication by alpha.
+  We have alpha + alpha^{\sigma} = S
+  We have
+  u^{\sigma} = x + alpha^{\sigma} y
+             = x + (S - alpha) y
+             = [ x + S y ] + alpha [ -y ]
+ */
 template <typename T>
 MyMatrix<T> GetConjugation(int n, T const &eSum) {
+  MyMatrix<T> ConjOper = ZeroMatrix<T>(2 * n, 2 * n);
+  for (int i = 0; i < n; i++) {
+    ConjOper(i, i) = T(1);
+    ConjOper(i, n + i) = eSum;
+    ConjOper(n + i, n + i) = T(-1);
+  }
+  return ConjOper;
 }
 
 
 
+/*
+  Whether in real quadratic space or imaginary quadratic space,
+  we represent the elements as u = x + alpha y with x,y in Z^n.
+  This is represented in Z^{2n} with the first n coordinates as x_i
+  and the last n coordinates y_i.
+  ----
+  This commutes with the multiplication by alpha.
+  We have alpha^2 - S alpha + P = 0.
+  alpha u = alpha x + alpha^2 y
+          = alpha x + (S alpha - P) y
+          = -P y + alpha ( x + S y)
+  which gets us the expression
 
+ */
 template <typename T>
 MyMatrix<T> GetCommQuadratic(int n, T const &eSum, T const &eProd) {
   MyMatrix<T> Imultiplication = ZeroMatrix<T>(2 * n, 2 * n);
   for (int i = 0; i < n; i++) {
-    Imultiplication(i, n + i) = 1;
+    Imultiplication(i, n + i) = T(1);
     Imultiplication(n + i, i) = -eProd;
     Imultiplication(n + i, n + i) = eSum;
   }
