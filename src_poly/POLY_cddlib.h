@@ -50,14 +50,14 @@
 // templatized code of the CDD library
 
 namespace cdd {
-typedef enum { dd_CrissCross, dd_DualSimplex } dd_LPSolverType;
+enum dd_LPSolverType { dd_CrissCross, dd_DualSimplex };
 const dd_LPSolverType dd_choiceLPSolverDefault =
     dd_DualSimplex; /* Default LP solver Algorithm */
 const dd_LPSolverType dd_choiceRedcheckAlgorithm =
     dd_DualSimplex; /* Redundancy Checking Algorithm */
 const bool dd_choiceLexicoPivotQ =
     true; /* whether to use the lexicographic pivot */
-typedef unsigned char set_card_lut_t;
+using set_card_lut_t = unsigned char;
 
 template <typename T> void dd_WriteT(std::ostream &os, T *a, int d) {
   os << "CDD: dd_WriteT a=";
@@ -101,16 +101,16 @@ template <typename T> inline void dd_abs(T &absval, T val) {
     absval = val;
 }
 
-typedef long dd_rowrange;
-typedef long dd_colrange;
-typedef long dd_bigrange;
+using dd_rowrange = long;
+using dd_colrange = long;
+using dd_bigrange = long;
 
-typedef long *dd_rowindex;
-typedef int *dd_rowflag;
-typedef long *dd_colindex;
+using dd_rowindex = long *;
+using dd_rowflag = int *;
+using dd_colindex = long *;
 
 // API for the set systems.
-typedef unsigned long *set_type; /* set type definition */
+using set_type = unsigned long *; /* set type definition */
 
 #define SETBITS (sizeof(long) * 8)
 
@@ -309,12 +309,12 @@ inline long set_card(set_type set) {
   return car;
 }
 
-typedef set_type dd_rowset;
-typedef set_type dd_colset;
-typedef set_type *dd_SetVector;
-typedef set_type *dd_Aincidence;
-typedef set_type rowset; /* set_type defined in setoper.h */
-typedef set_type colset;
+using dd_rowset = set_type;
+using dd_colset = set_type;
+using dd_SetVector = set_type *;
+using dd_Aincidence = set_type *;
+using rowset = set_type; /* set_type defined in setoper.h */
+using colset = set_type;
 
 // More functionalities
 
@@ -341,9 +341,9 @@ template <typename T> struct dd_adjacencydata {
   dd_adjacencydata<T> *Next;
 };
 
-typedef enum { dd_Combinatorial, dd_Algebraic } dd_AdjacencyTestType;
+enum dd_AdjacencyTestType { dd_Combinatorial, dd_Algebraic };
 
-typedef enum {
+enum dd_RowOrderType {
   dd_MaxIndex,
   dd_MinIndex,
   dd_MinCutoff,
@@ -352,38 +352,38 @@ typedef enum {
   dd_LexMin,
   dd_LexMax,
   dd_RandomRow
-} dd_RowOrderType;
+};
 
-typedef enum {
+enum dd_RepresentationType {
   dd_Unspecified = 0,
   dd_Inequality,
   dd_Generator
-} dd_RepresentationType;
+};
 
-typedef enum {
+enum dd_ConversionType {
   dd_IneToGen,
   dd_GenToIne,
   dd_LPMax,
   dd_LPMin,
   dd_InteriorFind
-} dd_ConversionType;
+};
 
-typedef enum {
+enum dd_IncidenceOutputType {
   dd_IncOff = 0,
   dd_IncCardinality,
   dd_IncSet
-} dd_IncidenceOutputType;
+};
 
-typedef enum {
+enum dd_AdjacencyOutputType {
   dd_AdjOff = 0,
   dd_AdjacencyList,
   dd_AdjacencyDegree
-} dd_AdjacencyOutputType;
+};
 
-typedef enum { dd_Auto, dd_SemiAuto, dd_Manual } dd_FileInputModeType;
+enum dd_FileInputModeType { dd_Auto, dd_SemiAuto, dd_Manual };
 /* Auto if a input filename is specified by command arguments */
 
-typedef enum {
+enum dd_ErrorType {
   dd_DimensionTooLarge,
   dd_ImproperInputFormat,
   dd_NegativeMatrixSize,
@@ -403,7 +403,7 @@ typedef enum {
   dd_NumericallyInconsistent,
   dd_NonZeroLinearity,
   dd_NoError
-} dd_ErrorType;
+};
 
 void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
   switch (Error) {
@@ -503,13 +503,13 @@ void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
   }
 }
 
-typedef enum { dd_InProgress, dd_AllFound, dd_RegionEmpty } dd_CompStatusType;
+enum dd_CompStatusType { dd_InProgress, dd_AllFound, dd_RegionEmpty };
 
 /* --- LP types ---- */
 
-typedef enum { dd_LPnone = 0, dd_LPmax, dd_LPmin } dd_LPObjectiveType;
+enum dd_LPObjectiveType { dd_LPnone = 0, dd_LPmax, dd_LPmin };
 
-typedef enum {
+enum dd_LPStatusType {
   dd_LPSundecided,
   dd_Optimal,
   dd_Inconsistent,
@@ -519,7 +519,7 @@ typedef enum {
   dd_Unbounded,
   dd_DualUnbounded,
   dd_TooManyIterations
-} dd_LPStatusType;
+};
 
 template <typename T> struct dd_lpdata {
   //  dd_DataFileType filename;
@@ -827,17 +827,21 @@ void dd_FreeSetFamily(dd_setfamily *F) {
   }
 }
 
-typedef struct dd_nodedata *dd_NodePtr;
-typedef struct dd_nodedata {
+struct dd_nodedata;
+using dd_NodePtr = dd_nodedata *;
+struct dd_nodedata {
   dd_bigrange key;
   dd_NodePtr next;
-} dd_NodeType;
+};
+using dd_NodeType = dd_nodedata;
 
-typedef struct dd_graphdata *dd_GraphPtr;
-typedef struct dd_graphdata {
+struct dd_graphdata;
+using dd_GraphPtr = dd_graphdata *;
+struct dd_graphdata {
   dd_bigrange vsize;
   dd_NodePtr *adjlist; /* should be initialized to have vsize components */
-} dd_GraphType;
+};
+using dd_GraphType = dd_graphdata;
 
 // typedef struct dd_polyhedradata *dd_PolyhedraPtr;
 // typedef struct dd_conedata *dd_ConePtr;
