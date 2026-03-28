@@ -269,10 +269,10 @@ template <typename T, typename Tint> struct ApproxIterator {
     l_step = ZeroVector<T>(len);
     l_next = ZeroVector<T>(len);
     int pos = 0;
-    for (auto &kv : map) {
-      l_step(pos) = kv.first;
-      l_next(pos) = kv.first / 2;
-      ll_coef.push_back(kv.second);
+    for (auto &[step, coef] : map) {
+      l_step(pos) = step;
+      l_next(pos) = step / 2;
+      ll_coef.push_back(coef);
       pos += 1;
     }
 #ifdef DEBUG_POSITIVITY

@@ -77,11 +77,11 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   std::map<size_t, Face> map_undone;         // ordering is important.
   auto get_vectface = [&]() -> vectface {
     vectface ListFace(EXT.rows());
-    for (auto &kv : map_done) {
-      ListFace.push_back(kv.second);
+    for (auto &[incd, face] : map_done) {
+      ListFace.push_back(face);
     }
-    for (auto &kv : map_undone) {
-      ListFace.push_back(kv.second);
+    for (auto &[incd, face] : map_undone) {
+      ListFace.push_back(face);
     }
 #ifdef DEBUG_SAMPLING_FACET
     os << "SAMP: ListFace=";
@@ -111,8 +111,8 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   };
   auto get_undone = [&]() -> vectface {
     vectface vf_undone(EXT.rows());
-    for (auto &kv : map_undone) {
-      vf_undone.push_back(kv.second);
+    for (auto &[incd, face] : map_undone) {
+      vf_undone.push_back(face);
     }
     return vf_undone;
   };

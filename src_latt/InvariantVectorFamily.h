@@ -361,8 +361,8 @@ template <typename Tint> bool CheckCentralSymmetry(MyMatrix<Tint> const &M) {
       map[Vcan]++;
     }
   }
-  for (auto &kv : map) {
-    if (kv.second != 2)
+  for (auto &[vcan, multiplicity] : map) {
+    if (multiplicity != 2)
       return false;
   }
   return true;
@@ -421,12 +421,12 @@ MyMatrix<Tint> FilterByNorm(MyMatrix<T> const &GramMat,
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
   size_t pos = 0;
 #endif
-  for (auto &kv : map) {
+  for (auto &[norm, vectors] : map) {
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
     os << "IVF: FilterByNorm, pos=" << pos
-       << " |kv.second|=" << kv.second.size() << "\n";
+       << " |vectors|=" << vectors.size() << "\n";
 #endif
-    MyMatrix<Tint> BlkMat = MatrixFromVectorFamily(kv.second);
+    MyMatrix<Tint> BlkMat = MatrixFromVectorFamily(vectors);
     MyMatrix<Tint> SHV_new = Concatenate(SHV_ret, BlkMat);
 #ifdef DEBUG_INVARIANT_VECTOR_FAMILY
     os << "IVF: FilterByNorm, We have SHV_new\n";

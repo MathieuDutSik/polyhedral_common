@@ -99,9 +99,9 @@ GetNakedPerfectCone_GRP(LinSpaceMatrix<T> const &LinSpa,
   }
   std::vector<std::vector<int>> ListBlock;
   int i_block = 0;
-  for (auto &kv : map) {
-    ListBlock.push_back(kv.second);
-    for (auto &iSHV : kv.second) {
+  for (auto &[v, block] : map) {
+    ListBlock.push_back(block);
+    for (auto &iSHV : block) {
       ListPos[iSHV] = i_block;
     }
     i_block += 1;

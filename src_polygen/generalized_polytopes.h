@@ -395,8 +395,8 @@ get_map_total_vertices(GeneralizedPolytope<T> const &gp,
       }
     }
   }
-  for (auto &kv : map_total_vertices) {
-    kv.second -= 1;
+  for (auto &[vertex, pos] : map_total_vertices) {
+    pos -= 1;
   }
   return map_total_vertices;
 }
@@ -439,9 +439,9 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
   };
   auto drop_from_list = [&](size_t i_polytope_delete) -> void {
     std::vector<Face> l_delete;
-    for (auto &kv : map_faces) {
+    for (auto &[face, entries] : map_faces) {
       std::vector<EntryContain> l_ec;
-      for (auto &ec : kv.second) {
+      for (auto &ec : entries) {
         if (ec.i_polytope < i_polytope_delete) {
           l_ec.push_back(ec);
         }
@@ -450,9 +450,9 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
           l_ec.push_back(ec);
         }
       }
-      kv.second = l_ec;
-      if (kv.second.size() == 0) {
-        l_delete.push_back(kv.first);
+      entries = l_ec;
+      if (entries.size() == 0) {
+        l_delete.push_back(face);
       }
     }
     for (auto &f_del : l_delete) {

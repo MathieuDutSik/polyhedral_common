@@ -69,12 +69,12 @@ int main(int argc, char *argv[]) {
       map_stabsize[stabSize] += 1;
     }
     std::cerr << "Full data read\n";
-    for (auto &kv : map_incidence) {
-      std::cerr << "incidence " << kv.first << " attained " << kv.second
+    for (auto &[incidence, multiplicity] : map_incidence) {
+      std::cerr << "incidence " << incidence << " attained " << multiplicity
                 << " times\n";
     }
-    for (auto &kv : map_stabsize) {
-      std::cerr << "stbsize " << kv.first << " attained " << kv.second
+    for (auto &[stabsize, multiplicity] : map_stabsize) {
+      std::cerr << "stbsize " << stabsize << " attained " << multiplicity
                 << " times\n";
     }
     MyMatrix<T> EXT;
