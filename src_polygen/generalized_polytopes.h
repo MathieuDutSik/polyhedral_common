@@ -872,6 +872,36 @@ template <typename T> struct BoundaryGeneralizedPolytope {
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
 };
 
+
+
+template <typename T>
+void print_raw_boundary(BoundaryGeneralizedPolytope<T> &bnd,
+                        std::ostream& os_out) {
+  size_t siz = bnd.full_data_facets.size();
+  os_out << "n=" << bnd.n << " siz=" << siz << "\n";
+  int iter = 0;
+  auto f_prt=[&](MyMatrix<T> const& NSP, GeneralizedPolytope<T> const& gp) -> void {
+    for (size_t i_p=0; i_p<gp.polytopes.size(); i_p++) {
+      MyMatrix<T> EXTw = gp.polytopes[i_p].EXT * NSP;
+      os_out << "    EXT" << i_p << "=\n";
+      WriteMatrix(os_out, EXTw);
+    }
+  };
+  for (auto &[k, v]: bnd.full_data_facets) {
+    os_out << "iter=" << iter << " V=" << StringVectorGAP(k) << "\n";
+    os_out << "  gp_minus\n";
+    f_prt(v.NSP, v.gp_minus);
+    os_out << "  gp_plus\n";
+    f_prt(v.NSP, v.gp_plus);
+    iter += 1;
+  }
+}
+
+
+
+
+
+
 template <typename T>
 BoundaryGeneralizedPolytope<T>
 find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
@@ -930,7 +960,14 @@ struct InteriorPtDir {
     }
     return V;
   }
+  std::string to_string() const {
+    std::string ret = " pt=" + StringVectorGAP(pt) + " FacIneq=" + StringVectorGAP(FacIneq);
+    return ret;
+  }
 };
+
+
+
 
 template<typename T>
 InteriorPtDir<T> ipd_opposite(InteriorPtDir<T> const& ipd) {

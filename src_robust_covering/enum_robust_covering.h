@@ -978,6 +978,9 @@ std::optional<InteriorPtDir<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> 
 
   std::vector<std::vector<MyVector<Tint>>> ll_cand_rel;
   std::vector<int> VectSiz;
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  int iter = 0;
+#endif
   for (auto &robust_m: scb.l_robust_m) {
     std::vector<MyVector<Tint>> l_cand = DifferenceVect(robust_m.get_short_vectors(), l_excluded_max);
     std::vector<MyVector<Tint>> l_cand_rel;
@@ -986,10 +989,14 @@ std::optional<InteriorPtDir<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> 
         l_cand_rel.push_back(cand);
       }
     }
-    if (l_cand_rel.size() == 0) {
+    int n_choice = l_cand_rel.size();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: gnsv iter=" << iter << " n_choice=" << n_choice << "\n";
+    iter += 1;
+#endif
+    if (n_choice == 0) {
       return {};
     }
-    int n_choice = l_cand_rel.size();
     VectSiz.push_back(n_choice);
     ll_cand_rel.push_back(l_cand_rel);
   }
@@ -1062,11 +1069,11 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
     MyVector<T> eIneq_op = - eIneq;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 8\n";
+    os << "ROBUST: f_process_entry, step 6\n";
 #endif
     std::optional<InteriorPtDir<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 9\n";
+    os << "ROBUST: f_process_entry, step 7\n";
 #endif
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
@@ -1074,21 +1081,21 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       return false;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 10\n";
+    os << "ROBUST: f_process_entry, step 8\n";
 #endif
     InteriorPtDir<T> const& ipd_new = *opt1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 13\n";
+    os << "ROBUST: f_process_entry, step 9\n";
 #endif
     T shift = T(1) / T(15);
     while(true) {
       MyVector<T> fV = ipd_new.get_point(shift);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_1\n";
+      os << "ROBUST: f_process_entry, step 10_1\n";
 #endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_2\n";
+      os << "ROBUST: f_process_entry, step 10_2\n";
 #endif
       if (!opt3) {
         shift = shift / 2;
@@ -1097,7 +1104,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_3\n";
+      os << "ROBUST: f_process_entry, step 10_3\n";
 #endif
       if (pos == -1) {
         shift = shift / 2;
@@ -1105,11 +1112,11 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       }
       SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_4\n";
+      os << "ROBUST: f_process_entry, step 10_4\n";
 #endif
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_5\n";
+      os << "ROBUST: f_process_entry, step 10_5\n";
 #endif
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.l_robust_m};
@@ -1119,14 +1126,14 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
         pvp.l_hcb.push_back(hcb);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_6\n";
+      os << "ROBUST: f_process_entry, step 10_6\n";
 #endif
       pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
       int index = pvp.l_cb.size() - 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_7\n";
+      os << "ROBUST: f_process_entry, step 10_7\n";
 #endif
-      // That part needs to be improved, since the inserted faces could match 
+      // That part needs to be improved, since the inserted faces could match
       for (auto& scb: p_poly_vor_part.l_scb) {
         if (scb.cb.V != eIneq_op) {
           SoftConvexBoundary<T,Tint> scb_new = scb;
@@ -1135,7 +1142,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
         }
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 14_8\n";
+      os << "ROBUST: f_process_entry, step 10_8\n";
 #endif
     }
     return false;
@@ -1159,6 +1166,10 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     }
   }
   PVoronoi<T,Tint> p_voronoi = convert_p_voronoi_part(pvp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: find_p_voronoi, EXT=\n";
+  WriteMatrix(os, p_voronoi.EXT);
+#endif
   return p_voronoi;
 }
 
@@ -1201,6 +1212,10 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   MyMatrix<T> const& G = solver.GramMat;
   MyMatrix<T> G_inv = Inverse(G);
   BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: flapv, We have bnd\n";
+  print_raw_boundary(bnd, os);
+#endif
   auto get_adj_p_polytope = [&](InteriorPtDir<T> const& ipd_test,
                                 MyVector<T> const &x)
       -> std::optional<PVoronoi<T, Tint>> {
@@ -1221,6 +1236,9 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   };
   auto get_adj = [&](InteriorPtDir<T> const& ipd) -> PVoronoi<T, Tint> {
     InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: get_adj, ipd=" << ipd.to_string() << "\n";
+#endif
     T factor(1);
     while (true) {
       MyVector<T> x = ipd.get_point(factor);
@@ -1275,7 +1293,7 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   while (true) {
     size_t len = l_ppoly.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: compute_all_p_polytopes, start=" << start << " len=" << len
+    os << "ROBUST: capp, start=" << start << " len=" << len
        << "\n";
 #endif
     for (size_t i_ppoly = start; i_ppoly < len; i_ppoly++) {
