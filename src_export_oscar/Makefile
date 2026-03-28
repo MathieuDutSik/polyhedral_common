@@ -16,7 +16,7 @@ CHASHMAP	= -I../basic_common_cpp/sparse-map/include/tsl/ -I../basic_common_cpp/r
 #CDEFS           = -DDEBUG -DSANITY_CHECK -DTIMINGS
 CDEFS           = $(CHOICE_COMPILATION)
 
-CTOTAL          = -std=c++17 $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
+CTOTAL          = -std=c++20 $(CLOCAL) $(CFLAGS) $(CHASHMAP) $(CDEFS)
 
 LIBS		= -lm $(GMP_CXX_LINK) -pthread $(BOOST_LINK) $(NAUTY_LINK) $(GLPK_LINK)
 

@@ -2,12 +2,12 @@ PROGRAM		= StandaloneSparseSolver StandaloneSparseSolver_NNZ
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-#CC		= icpc -std=c++17 -Wall -g -O2
-#CC		= clang++ -Weverything -std=c++17
-#CC		= clang++ -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++17
-#CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
+#CC		= icpc -std=c++20 -Wall -g -O2
+#CC		= clang++ -Weverything -std=c++20
+#CC		= clang++ -Weverything -fsanitize=thread -fsanitize=undefined -fsanitize=bool -fsanitize=bounds -fsanitize=bounds -fsanitize=return -fsanitize=null -std=c++20
+#CC		= g++ -std=c++20 -Wall -Wextra -O2 -g -ftemplate-backtrace-limit=0 -fsanitize=float-divide-by-zero -fsignaling-nans
 CC		= g++ -std=c++20 -Wall -Wextra -O3
-#CC		= g++ -std=c++17 -Wall -Wextra -O2 -g -static-libgcc -static-libstdc++
+#CC		= g++ -std=c++20 -Wall -Wextra -O2 -g -static-libgcc -static-libstdc++
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o

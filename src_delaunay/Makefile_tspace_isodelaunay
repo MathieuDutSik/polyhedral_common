@@ -3,8 +3,8 @@ PROGRAM		= LATT_SerialLattice_IsoDelaunayDomain
 
 OBJECTS		= $(PROGRAM:%=%.o)
 
-CC		= g++ -std=c++17 -Wall -Wextra -O3 -g
-#CC		= g++ -std=c++17 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
+CC		= g++ -std=c++20 -Wall -Wextra -O3 -g
+#CC		= g++ -std=c++20 -Wall -Wextra -g -O3 -fsanitize=address -fsanitize=pointer-subtract -fsanitize=undefined -fsanitize=null -fsanitize=bounds -fsanitize=alignment -Wstrict-aliasing
 
 NOLINKFLAG 	= -c
 OUTPUTFLAG 	= -o
