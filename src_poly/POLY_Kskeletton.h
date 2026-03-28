@@ -782,8 +782,8 @@ Tgroup ComputeGroupFromOrbitFaces(std::vector<vectface> const &l_vf,
     }
 #ifdef DEBUG_POLY_KSKELETTON
     os << "SKEL: MapLenSize =";
-    for (auto &kv : MapLenSize)
-      os << " (" << kv.first << "/" << kv.second << ")";
+    for (auto &[len, count] : MapLenSize)
+      os << " (" << len << "/" << count << ")";
     os << "\n";
 #endif
     n_vert_tot += vf_tot.size();

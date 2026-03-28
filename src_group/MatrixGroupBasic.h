@@ -67,8 +67,8 @@ size_t GetRationalInvariant(std::vector<MyMatrix<T>> const &ListGen) {
   std::set<T> primes;
   for (auto &eDen : set_den) {
     std::map<T, size_t> l_primes = FactorsIntMap(eDen);
-    for (auto &kv : l_primes) {
-      primes.insert(kv.first);
+    for (auto &[prime, multiplicity] : l_primes) {
+      primes.insert(prime);
     }
   }
   T prod(1);

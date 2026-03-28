@@ -139,6 +139,18 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> 
   return get_single_polytope(FAC, EXT);
 }
 
+template<typename T>
+std::optional<SinglePolytope<T>> singlepolytope_halfspaces_int(SinglePolytope<T> const& sp, MyMatrix<T> const& FAC_inp, std::ostream &os) {
+  MyMatrix<T> FACtot = Concatenate(sp.FAC, FAC_inp);
+  if (!IsFullDimensional(FACtot, os)) {
+    return {};
+  }
+  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACtot, os);
+  MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
+  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  return get_single_polytope(FAC, EXT);
+}
+
 
 
 
@@ -289,6 +301,22 @@ std::optional<ConvexBoundary<T>> convexboundary_halfspace_int(ConvexBoundary<T> 
   ConvexBoundary<T> cb_ret{cb.V, cb.NSP, sp};
   return cb_ret;
 }
+
+template<typename T>
+std::optional<ConvexBoundary<T>> convexboundary_halfspaces_int(ConvexBoundary<T> const& cb, MyMatrix<T> const& FAC, std::ostream &os) {
+  MyMatrix<T> FAC_call = FAC * cb.NSP.transpose();
+  std::optional<SinglePolytope<T>> opt = singlepolytope_halfspaces_int(cb.sp, FAC_call, os);
+  if (!opt) {
+    return {};
+  }
+  SinglePolytope<T> sp = *opt;
+  ConvexBoundary<T> cb_ret{cb.V, cb.NSP, sp};
+  return cb_ret;
+}
+
+
+
+
 
 template<typename T>
 int get_matching_face_position(MyMatrix<T> const& FAC, MyVector<T> const& eFAC) {
@@ -893,6 +921,15 @@ template<typename T>
 struct InteriorPtDir {
   MyVector<T> pt;
   MyVector<T> FacIneq;
+  MyVector<T> get_point(T const& shift) const {
+    int dim = pt.size();
+    MyVector<T> V(dim);
+    V(0) = pt(0);
+    for (int u=1; u<dim; u++) {
+      V(u) = pt(u) + shift * FacIneq(u);
+    }
+    return V;
+  }
 };
 
 template<typename T>

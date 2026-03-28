@@ -2467,8 +2467,8 @@ Kernel_DUALDESC_AdjacencyDecomposition(
     for (auto &face : vf) {
       map[face.count()] += 1;
     }
-    for (auto &kv : map) {
-      os << "(" << kv.first << "," << kv.second << ") ";
+    for (auto &[count, multiplicity] : map) {
+      os << "(" << count << "," << multiplicity << ") ";
     }
     os << "\n";
 #endif

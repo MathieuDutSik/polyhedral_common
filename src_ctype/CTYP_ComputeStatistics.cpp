@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
   for (auto &eKey : LKey) {
     std::cerr << "eKey=" << eKey << "\n";
     std::map<int, int> &eMap = RecMap[eKey];
-    for (auto &kv : eMap)
-      std::cerr << "  " << kv.first << " : " << kv.second << "\n";
+    for (auto &[key, value] : eMap)
+      std::cerr << "  " << key << " : " << value << "\n";
   }
 }

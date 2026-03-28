@@ -859,16 +859,15 @@ ExhaustiveReductionComplexityKernelInner_V2(
     map[eM] = blk_int;
   }
   size_t index = 0;
-  for (auto &kv : map) {
-    BlockInterval &blk_int = kv.second;
+  for (auto &[comb, blk_int] : map) {
     blk_int.insert_interval(index + 1, n_matrix);
     index += 1;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   auto get_complexity = [&]() -> Tnorm {
     Tnorm total_complexity(0);
-    for (auto &kv : map) {
-      total_complexity += kv.first.norm;
+    for (auto &[comb, blk_int] : map) {
+      total_complexity += comb.norm;
     }
     return total_complexity;
   };
@@ -878,14 +877,14 @@ ExhaustiveReductionComplexityKernelInner_V2(
   // That is using iterators and advancing them has complexity O(n) for
   // the map but O(1) for the vector.
   std::vector<TcombPair<Ttype, Tnorm>> vect;
-  for (auto &kv : map) {
-    vect.push_back(kv.first);
+  for (auto &[comb, blk_int] : map) {
+    vect.push_back(comb);
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   auto check_map_vect = [&](std::string const &context) -> void {
     size_t index = 0;
-    for (auto &kv : map) {
-      if (kv.first != vect[index]) {
+    for (auto &[comb, blk_int] : map) {
+      if (comb != vect[index]) {
         std::cerr << "SIMP: Error in map/vect at index=" << index
                   << " context=" << context << "\n";
         throw TerminalException{1};
@@ -910,9 +909,7 @@ ExhaustiveReductionComplexityKernelInner_V2(
     size_t n_reduce_calls = 0;
     size_t idx1 = 0;
 #endif
-    for (auto &kv : map) {
-      TcombPair<Ttype, Tnorm> const &x1 = kv.first;
-      BlockInterval &blk_int = kv.second;
+    for (auto &[x1, blk_int] : map) {
       while (true) {
         std::optional<size_t> opt = blk_int.get_first();
         if (opt) {
@@ -1175,8 +1172,8 @@ ExhaustiveReductionComplexityKernel_V1(
     return distance;
   };
   Tnorm total_complexity(0);
-  for (auto &kv : map) {
-    total_complexity += kv.first.norm;
+  for (auto &[comb, nonce] : map) {
+    total_complexity += comb.norm;
   }
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION
   os << "SIMP: total_complexity=" << total_complexity << "\n";
@@ -1210,10 +1207,10 @@ ExhaustiveReductionComplexityKernel_V1(
 #ifdef DEBUG_MATRIX_GROUP_SIMPLIFICATION_EXTENSIVE
     size_t pos = 0;
     os << "SIMP: starting with the following matrices\n";
-    for (auto &kv : map) {
-      os << "SIMP: pos=" << pos << " nonce=" << kv.second
-         << " norm=" << kv.first.second << " eM=\n";
-      WriteMatrix(os, kv.first.first);
+    for (auto &[comb, nonce] : map) {
+      os << "SIMP: pos=" << pos << " nonce=" << nonce
+         << " norm=" << comb.second << " eM=\n";
+      WriteMatrix(os, comb.first);
       pos += 1;
     }
 #endif

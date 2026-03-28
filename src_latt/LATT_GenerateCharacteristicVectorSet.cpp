@@ -48,8 +48,8 @@ void process_C(std::string choice, std::string MatFile,
         map[norm] += 1;
       }
       osf << "norms =";
-      for (auto &kv : map) {
-        osf << " [" << kv.first << " : " << kv.second << " ]";
+      for (auto &[norm, multiplicity] : map) {
+        osf << " [" << norm << " : " << multiplicity << " ]";
       }
       osf << "\n";
       return;
