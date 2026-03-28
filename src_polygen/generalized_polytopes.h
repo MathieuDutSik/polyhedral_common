@@ -1005,6 +1005,10 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
     if (opt) {
       InteriorPtDir<T> const &sol_A = *opt;
       MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.pt;
+      T val = eIso_B(0);
+      for (int u=0; u<eIso_B.size(); u++) {
+        eIso_B(u) = eIso_B(u) / val;
+      }
       InteriorPtDir<T> sol_B{eIso_B, sol_A.FacIneq};
       return sol_B;
     }

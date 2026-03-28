@@ -1220,7 +1220,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
                                 MyVector<T> const &x)
       -> std::optional<PVoronoi<T, Tint>> {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj_p_polytope x=" << StringVector(x) << "\n";
+    os << "ROBUST: flapv, gapp x=" << StringVector(x) << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x, os);
     if (!opt) {
@@ -1237,13 +1237,13 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   auto get_adj = [&](InteriorPtDir<T> const& ipd) -> PVoronoi<T, Tint> {
     InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: get_adj, ipd=" << ipd.to_string() << "\n";
+    os << "ROBUST: flapv, ga, ipd=" << ipd.to_string() << "\n";
 #endif
     T factor(1);
     while (true) {
       MyVector<T> x = ipd.get_point(factor);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: get_adj, factor=" << factor << "\n";
+      os << "ROBUST: flapv, ga, factor=" << factor << "\n";
 #endif
       std::optional<PVoronoi<T, Tint>> opt =
           get_adj_p_polytope(ipd_opp, x);
@@ -1256,7 +1256,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   std::vector<PVoronoi<T, Tint>> l_adj;
   while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: find_list_adjacent_p_voronoi |l_adj|=" << l_adj.size() << "\n";
+    os << "ROBUST: flapv |l_adj|=" << l_adj.size() << "\n";
 #endif
     std::optional<InteriorPtDir<T>> opt = get_interior_point_bnd(bnd, os);
     if (!opt) {
