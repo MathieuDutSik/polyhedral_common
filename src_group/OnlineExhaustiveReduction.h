@@ -212,7 +212,7 @@ public:
     }
     TcombPair<Ttype, Tnorm> comb =
         generate_comb_pair<Ttype, Tnorm, Fcomplexity>(pair, f_complexity);
-    if (map.count(comb) == 1) {
+    if (map.contains(comb)) {
       return true; // Already present
     }
 

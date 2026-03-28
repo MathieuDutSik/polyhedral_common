@@ -55,7 +55,7 @@ IdentifyRightCosets(std::vector<CombElt<T>> const &l_ent,
   auto f_insert = [&](CombElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
       CombElt<T> prod = ProductComb(e_grp_elt, pe);
-      if (s_coset.count(prod) == 1)
+      if (s_coset.contains(prod))
         break;
     }
     s_coset.insert(pe);

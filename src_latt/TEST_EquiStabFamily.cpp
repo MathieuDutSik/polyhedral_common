@@ -109,12 +109,12 @@ void process(std::string const &ListMatFile, std::string const &OutFormat,
         std::cerr << "The matrix is not an equivalene\n";
         throw TerminalException{1};
       }
-      if (set_equiv.count(pair) != 1) {
+      if (!set_equiv.contains(pair)) {
         std::cerr << "This contradicts the previous computation 1\n";
         throw TerminalException{1};
       }
     } else {
-      if (set_equiv.count(pair) != 0) {
+      if (set_equiv.contains(pair)) {
         std::cerr << "This contradicts the previous computation 2\n";
         throw TerminalException{1};
       }

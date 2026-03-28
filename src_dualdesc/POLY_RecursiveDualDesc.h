@@ -1524,8 +1524,8 @@ public:
   void FuncInsert(Face const &face_i) {
     size_t len = face_i.count();
     size_t eInv = f_inv(face_i);
-    if (CompleteList_SetDone.count(len) == 1) {
-      if (CompleteList_SetDone[len].count(eInv) == 1) {
+    if (CompleteList_SetDone.contains(len)) {
+      if (CompleteList_SetDone[len].contains(eInv)) {
         for (size_t &i_orb : CompleteList_SetDone[len][eInv]) {
           Face face_e = foc.RetrieveListOrbitFace(i_orb);
           bool test = f_repr(face_i, face_e);
@@ -1534,8 +1534,8 @@ public:
         }
       }
     }
-    if (CompleteList_SetUndone.count(len) == 1) {
-      if (CompleteList_SetUndone[len].count(eInv) == 1) {
+    if (CompleteList_SetUndone.contains(len)) {
+      if (CompleteList_SetUndone[len].contains(eInv)) {
         for (size_t &i_orb : CompleteList_SetUndone[len][eInv]) {
           Face face_e = foc.RetrieveListOrbitFace(i_orb);
           bool test = f_repr(face_i, face_e);

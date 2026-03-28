@@ -166,7 +166,7 @@ vectface DoubleCosetDescription_Canonic(
   vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &testList) -> void {
     std::pair<Face, Tint> pairCan = SmaGRP.OptCanonicalImageOrbitSize(testList);
-    if (SetFace.count(pairCan.first) > 0)
+    if (SetFace.contains(pairCan.first))
       return;
     CurrList.push_back(pairCan.first);
     SetFace.insert(pairCan.first);
@@ -174,7 +174,7 @@ vectface DoubleCosetDescription_Canonic(
   };
   auto DoubleCosetInsertEntry_second = [&](Face const &testList) -> void {
     std::pair<Face, Tint> pairCan = SmaGRP.OptCanonicalImageOrbitSize(testList);
-    if (SetFace.count(pairCan.first) > 0)
+    if (SetFace.contains(pairCan.first))
       return;
     SetFace.insert(pairCan.first);
     SizeGen += pairCan.second;
@@ -210,7 +210,7 @@ vectface DoubleCosetDescription_Canonic(
     Face eFace = ListListSet.pop();
     for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
-      if (PartialOrbit.count(eFaceImg) == 0) {
+      if (!PartialOrbit.contains(eFaceImg)) {
         PartialOrbit.insert(eFaceImg);
         ListListSet.push_back(eFaceImg);
         DoubleCosetInsertEntry_second(eFaceImg);
@@ -249,7 +249,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   vectface CurrList(n);
   auto DoubleCosetInsertEntry_first = [&](Face const &f) -> void {
     Face f_can = SmaGRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
-    if (SetFace.count(f_can) > 0)
+    if (SetFace.contains(f_can))
       return;
     CurrList.push_back(f_can);
     SetFace.insert(f_can);
@@ -257,7 +257,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   };
   auto DoubleCosetInsertEntry_second = [&](Face const &f) -> void {
     Face f_can = SmaGRP.CanonicalImageInitialTrivLimited(f, LIMIT_INITIAL_TRIV);
-    if (SetFace.count(f_can) > 0)
+    if (SetFace.contains(f_can))
       return;
     SetFace.insert(f_can);
     SizeGen += SmaGRP.OrbitSize_OnSets(f);
@@ -287,7 +287,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
     Face eFace = ListListSet.pop();
     for (auto &eGen : BigGens) {
       OnFace_inplace(eFaceImg, eFace, eGen);
-      if (PartialOrbit.count(eFaceImg) == 0) {
+      if (!PartialOrbit.contains(eFaceImg)) {
         PartialOrbit.insert(eFaceImg);
         ListListSet.push_back(eFaceImg);
         DoubleCosetInsertEntry_second(eFaceImg);
@@ -366,7 +366,7 @@ vectface DoubleCosetDescription_SingleCoset(
   std::unordered_set<Face> SetFace;
   auto f_insert = [&](Face NewF) -> void {
     Face f_can = SmaGRP.OptCanonicalImage(NewF);
-    if (SetFace.count(f_can) == 0) {
+    if (!SetFace.contains(f_can)) {
       vf.push_back(f_can);
       SetFace.insert(f_can);
     }

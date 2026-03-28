@@ -34,7 +34,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
   std::set<MyVector<T>> SetEXT;
   auto f_insert = [&](MyVector<T> const &eEXT) -> void {
     MyVector<T> eEXTred = ScalarCanonicalizationVector(eEXT);
-    if (SetEXT.count(eEXTred) == 0) {
+    if (!SetEXT.contains(eEXTred)) {
       SetEXT.insert(eEXTred);
       ListEXT.push_back(eEXTred);
     }
@@ -72,7 +72,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
       MyVector<T> eFAC = FindFacetInequality(EXT, face);
       MyVector<T> eFACred = ScalarCanonicalizationVector(eFAC);
       // Missing so operation is needed
-      if (SetFAC.count(eFACred) == 0) {
+      if (!SetFAC.contains(eFACred)) {
         // Check if we already had something matching. Finding is
         // expensive, so it has to be done only if we are sure that
         // it is needed.

@@ -576,7 +576,7 @@ std::vector<MyMatrix<T>> LORENTZ_GetStabilizerGenerator(
       MyMatrix<Tint> eGen4_i = UniversalMatrixConversion<Tint, T>(eGen4);
       for (int i = 0; i < MatRoot.rows(); i++) {
         MyVector<Tint> Vimg = eGen4_i.transpose() * ListV[i];
-        if (SetV.count(Vimg) == 0) {
+        if (!SetV.contains(Vimg)) {
           std::cerr << "The vertor at i=" << i << " is not mapped in MatRoot\n";
           throw TerminalException{1};
         }

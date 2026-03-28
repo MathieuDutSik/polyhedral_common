@@ -737,7 +737,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
     os << "ISODEL: FRING: FuncInsertVertex, step 1\n";
 #endif
-    if (ListVertices_rev.count(eVert) == 1) {
+    if (ListVertices_rev.contains(eVert)) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
       os << "ISODEL: FRING: is_present eVert=" << StringVector(eVert) << "\n";
 #endif
@@ -782,7 +782,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
 #endif
     for (size_t i = 0; i < len; i++) {
       MyVector<T> eVimg = eMat.transpose() * ListVertices[i];
-      if (ListVertices_rev.count(eVimg) == 0) {
+      if (!ListVertices_rev.contains(eVimg)) {
 #ifdef DEBUG_ISO_DELAUNAY_DOMAIN
         os << "ISODEL: FRING: get_v_positions, i=" << i
            << " eV=" << StringVector(ListVertices[i])
@@ -823,7 +823,7 @@ FullRepart<T, Tgroup> FindRepartitionningInfoNextGeneration(
         Face f_att(nVert);
         size_t miss_val = std::numeric_limits<size_t>::max();
         auto get_idx = [&](MyVector<T> const &eVert) -> size_t {
-          if (ListVertices_rev.count(eVert) == 0) {
+          if (!ListVertices_rev.contains(eVert)) {
             return miss_val;
           }
           size_t u = ListVertices_rev.at(eVert) - 1;

@@ -663,10 +663,10 @@ std::vector<Tobj> OrbitSplittingGeneralized(
       for (auto const &gObj : Additional) {
         for (auto const &eGen : ListGen) {
           Tobj fObj = TheAct(gObj, eGen);
-          if (SingleOrbit.count(fObj) == 0 && Additional.count(fObj) == 0) {
-            if (NewElts.count(fObj) == 0) {
+          if (!SingleOrbit.contains(fObj) && !Additional.contains(fObj)) {
+            if (!NewElts.contains(fObj)) {
 #ifdef DEBUG_GROUP
-              if (ListTotal.count(fObj) == 0) {
+              if (!ListTotal.contains(fObj)) {
                 std::cerr << "Orbit do not match, PANIC!!!\n";
                 throw TerminalException{1};
               }
@@ -701,7 +701,7 @@ OrbitWithRepresentative(const Telt &id, std::vector<Telt> const &ListGen,
     for (size_t u = curr_pos; u < len; u++) {
       for (auto &eElt : ListGen) {
         Tobj eImg = act(ListObj[u].first, eElt);
-        if (SetObj.count(eImg) == 0) {
+        if (!SetObj.contains(eImg)) {
           Telt NewElt = ListObj[u].second * eElt;
           ListObj.push_back({eImg, NewElt});
           SetObj.insert(eImg);
@@ -799,10 +799,10 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
       for (auto const &gSet : Additional) {
         for (auto const &eGen : ListGen) {
           OnFace_inplace(fSet, gSet, eGen);
-          if (SingleOrbit.count(fSet) == 0 && Additional.count(fSet) == 0) {
-            if (NewElts.count(fSet) == 0) {
+          if (!SingleOrbit.contains(fSet) && !Additional.contains(fSet)) {
+            if (!NewElts.contains(fSet)) {
 #ifdef DEBUG_GROUP
-              if (ListTotal.count(fSet) == 0) {
+              if (!ListTotal.contains(fSet)) {
                 std::cerr << "Orbit do not matched, PANIC!!!\n";
                 throw TerminalException{1};
               }
@@ -840,7 +840,7 @@ vectface OrbitSplittingSet_T(T_hash_set &ListTotal, Tgroup const &TheGRP) {
     vectface vf(n);
     size_t total_len = 0;
     auto f_insert = [&](Face const &f) -> void {
-      if (SingleOrbit.count(f) == 0) {
+      if (!SingleOrbit.contains(f)) {
         SingleOrbit.insert(f);
         ListTotal.erase(f);
         vf.push_back(f);
@@ -890,7 +890,7 @@ void OrbitSplittingSet_Kernel(vectface const &PreListTotal,
     vectface vf(n);
     size_t total_len = 0;
     auto f_insert = [&](Face const &f) -> void {
-      if (SingleOrbit.count(f) == 0) {
+      if (!SingleOrbit.contains(f)) {
         SingleOrbit.insert(f);
         ListTotal.erase(f);
         vf.push_back(f);

@@ -304,7 +304,7 @@ public:
     }
   }
   bool IsPresentInStabilizer(CombElt<T> const &eElt) const {
-    return stabilizerElt_set.count(eElt) == 1;
+    return stabilizerElt_set.contains(eElt);
   }
   bool InsertStabilizerGenerator(CombElt<T> const &eElt, std::ostream &os) {
     if (IsPresentInStabilizer(eElt))
@@ -414,7 +414,7 @@ public:
       }
     };
     auto f_insert = [&](CombElt<T> const &e_elt) -> void {
-      if (known_redundant.count(e_elt) == 1) {
+      if (known_redundant.contains(e_elt)) {
         os << "Exiting f_insert because the element is already known to be "
               "redundant\n";
         return;
@@ -1132,7 +1132,7 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
         for (int i = 0; i < datafac.n_mat; i++) {
           ResultOptim ro_new = f_increment(ro, i + 1);
           if (ro_new.the_scal < ro.the_scal) {
-            if (l_done.count(ro_new.the_x) == 0) {
+            if (!l_done.contains(ro_new.the_x)) {
               l_result.push_back(ro_new);
               l_total.push_back(ro_new);
               l_done.insert(ro_new.the_x);
@@ -1192,7 +1192,7 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
       for (int i = 0; i < n_mat; i++) {
         if (V(i) > 0) {
           ResultOptim ro_new = f_increment(ro, -1 - i);
-          if (l_new_point.count(ro_new.the_x) == 0) {
+          if (!l_new_point.contains(ro_new.the_x)) {
             l_cand.push_back(ro_new);
           }
         }
@@ -1216,7 +1216,7 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
       size_t i_mat = rand() % n_mat;
       int pos = sign * (i_mat + 1);
       ro_new = f_increment(ro_new, pos);
-      if (l_new_point.count(ro_new.the_x) == 0) {
+      if (!l_new_point.contains(ro_new.the_x)) {
         return ro_new;
       }
     }
@@ -1490,7 +1490,7 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
           GetMissingInverseElement(se, datafac, svg, os);
       std::vector<CombElt<T>> ListMissB;
       for (auto &eElt : ListMiss) {
-        if (ListTried.count(eElt) == 0) {
+        if (!ListTried.contains(eElt)) {
           ListMissB.push_back(eElt);
           ListTried.insert(eElt);
         }

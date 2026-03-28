@@ -942,7 +942,7 @@ template <typename T>
 bool is_boundary_point(InteriorPtDir<T> const& ipd, BoundaryGeneralizedPolytope<T> const &bnd, std::ostream &os) {
   MyVector<T> V = ScalarCanonicalizationVector(ipd.FacIneq);
   std::pair<MyVector<T>, int> pair = get_face_can(V);
-  if (bnd.full_data_facets.count(pair.first) == 0) {
+  if (!bnd.full_data_facets.contains(pair.first)) {
     return false;
   }
   DataFacetPlusMinus<T> const& dfpm = bnd.full_data_facets.at(pair.first);
@@ -970,7 +970,7 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> &bnd,
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
-      if (bnd.full_data_facets.count(pair.first) == 1) {
+      if (bnd.full_data_facets.contains(pair.first)) {
         DataFacetPlusMinus<T> &df = bnd.full_data_facets[pair.first];
         MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, df.NSP);
         SinglePolytope<T> sp = generate_single_polytope(FAC, os);

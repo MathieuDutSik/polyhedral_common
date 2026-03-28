@@ -381,7 +381,7 @@ int get_face_orientation(MyMatrix<Tint> const& EXT, std::vector<MyMatrix<T>> con
   for (int i_row=0; i_row<n_row; i_row++) {
     MyVector<Tint> V = GetMatrixRow(EXT, i_row);
     MyVector<Tint> Vimg = t.transpose() * V;
-    if (set.count(Vimg) != 1) {
+    if (!set.contains(Vimg)) {
       std::cerr << "PERFCOMP: Vimg should belong to V\n";
       throw TerminalException{1};
     }
@@ -842,7 +842,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
       MyVector<Tint> V = GetMatrixRow(l_faces[iOrb].EXT, i_row);
       MyVector<Tint> Vimg = p.second.transpose() * V;
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
-      if (set_EXT.count(Vimg) != 1) {
+      if (!set_EXT.contains(Vimg)) {
         std::cerr << "PERFCOMP: The vector does not belong to set\n";
         throw TerminalException{1};
       }
@@ -898,7 +898,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
     std::vector<int> l_sign;
     std::vector<MyMatrix<Tint>> l_mat;
     auto insert_entry=[&](Face const& new_incd_sma, int const& new_sign, MyMatrix<Tint> const& new_mat) -> void {
-      if (set_faces_gen.count(new_incd_sma) == 0) {
+      if (!set_faces_gen.contains(new_incd_sma)) {
         set_faces_gen.insert(new_incd_sma);
         l_faces_gen.push_back(new_incd_sma);
         l_sign.push_back(new_sign);
@@ -908,7 +908,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
         MyMatrix<Tint> EXTimg = l_faces[be.iOrb].EXT * be.M;
         for (int iRow=0; iRow<EXTimg.rows(); iRow++) {
           MyVector<Tint> Vimg = GetMatrixRow(EXTimg, iRow);
-          if (set_EXT.count(Vimg) != 1) {
+          if (!set_EXT.contains(Vimg)) {
             std::cerr << "PERFCOMP: The vector should belong to the image\n";
             throw TerminalException{1};
           }
@@ -1348,14 +1348,14 @@ std::pair<std::vector<MyMatrix<Tint>>, std::vector<PerfectFace<Tint>>> get_all_u
     MyMatrix<Tint> const& EXT_upp = fce.levels[index-1].l_faces[jOrb].EXT;
     MyMatrix<Tint> EXTins = EXT_upp * Pins;
     MyMatrix<Tint> EXTcan = tot_set(EXTins);
-    if (set_ext.count(EXTcan) == 1) {
+    if (set_ext.contains(EXTcan)) {
       return;
     }
     size_t s_len = list_upper_ext.size();
     auto g_insert=[&](MyMatrix<Tint> const& P) -> void {
       MyMatrix<Tint> EXTins = EXT_upp * P;
       MyMatrix<Tint> EXTcan = tot_set(EXTins);
-      if (set_ext.count(EXTcan) == 0) {
+      if (!set_ext.contains(EXTcan)) {
         set_ext.insert(EXTcan);
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
         {
@@ -1471,7 +1471,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
           std::vector<PerfectFace<Tint>>& l_pf = l_topdims[i_perfect].ll_faces[i_dim];
           size_t n_exist = l_pf.size();
           auto g_insert=[&](Face const& f, MyMatrix<Tint> const& M) -> void {
-            if (set.count(f) == 0) {
+            if (!set.contains(f)) {
               set.insert(f);
               l_set.push_back(f);
               PerfectFace<Tint> pf{i_face, M};
@@ -1487,7 +1487,7 @@ FullComplexEnumeration<T,Tint,Tgroup> full_perfect_complex_enumeration(std::vect
               MyMatrix<Tint> EXT2 = EXT1 * M;
               for (int i_row=0; i_row<EXT2.rows(); i_row++) {
                 MyVector<Tint> V = GetMatrixRow(EXT2, i_row);
-                if (map.count(V) == 0) {
+                if (!map.contains(V)) {
                   std::cerr << "The vector V does not belong to the set. Please correct\n";
                   throw TerminalException{1};
                 }
@@ -1769,7 +1769,7 @@ public:
     MyMatrix<Tint> EXT2 = EXT1 * M;
     MyMatrix<Tint> EXT3 = tot_set(EXT2);
 #ifdef DEBUG_PERFECT_COMPLEX
-    if (map_ext_set.count(EXT3) == 0) {
+    if (!map_ext_set.contains(EXT3)) {
       std::cerr << "PERFCOMP: We fail to find EXT3 in map_ext_set\n";
       std::cerr << "PERFCOMP: |map_ext_set|=" << map_ext_set.size() << "\n";
       std::unordered_map<int, size_t> map_siz;
@@ -1913,7 +1913,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy_kernel(int const& in
   auto f_insert=[&](TopPerfectCone<Tint> const& tpc) -> void {
     MyMatrix<Tint> EXT = fce.pctdi.l_perfect[tpc.i_perfect].EXT * tpc.M;
     MyMatrix<Tint> EXTcan = tot_set(EXT);
-    if (set_ext.count(EXTcan) == 0) {
+    if (!set_ext.contains(EXTcan)) {
       set_ext.insert(EXTcan);
       l_top.push_back(tpc);
     }

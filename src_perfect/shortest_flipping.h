@@ -61,7 +61,7 @@ bool TestInclusionSHV_set(MyMatrix<Tint> const &TheSHVbig,
   int nbRowSma = TheSHVsma.rows();
   for (int iRowSma = 0; iRowSma < nbRowSma; iRowSma++) {
     MyVector<Tint> V = GetMatrixRow(TheSHVsma, iRowSma);
-    if (set_big.count(V) == 0) {
+    if (!set_big.contains(V)) {
       return false;
     }
   }

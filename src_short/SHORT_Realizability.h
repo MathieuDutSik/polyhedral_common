@@ -167,7 +167,7 @@ std::unordered_set<MyVector<Tint>> get_initial_vector_test_s(int const& n, std::
     for (auto &tVect2: TestVect2) {
       MyVector<Tint> tVect3_A = eVect + tVect2;
       MyVector<Tint> tVect3 = f_can(tVect3_A);
-      if (!IsZeroVector(tVect3) && ListForbiddenVector.count(tVect3) == 0) {
+      if (!IsZeroVector(tVect3) && !ListForbiddenVector.contains(tVect3)) {
         TestVect3.insert(tVect3);
       }
     }
@@ -259,7 +259,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     MyMatrix<T> ListIneq = GetListIneq();
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
     for (auto &eVect : SetVectTot) {
-      if (TheFamilyVect.count(eVect) == 1) {
+      if (TheFamilyVect.contains(eVect)) {
         std::cerr << "SHORT: We find one of SetVectTot in TheFamilyVect\n";
         throw TerminalException{1};
       }
@@ -434,7 +434,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
         } else {
           std::vector<MyVector<Tint>> DiffNew;
           for (auto &eVect : SetSHV) {
-            if (SetVectTot.count(eVect) == 0 && TheFamilyVect.count(eVect) == 0) {
+            if (!SetVectTot.contains(eVect) && !TheFamilyVect.contains(eVect)) {
               DiffNew.push_back(eVect);
             }
           }
@@ -477,7 +477,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
       } else {
         auto f_insert=[&](MyVector<Tint> const& eVect) -> void {
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-          if (TheFamilyVect.count(eVect) == 1) {
+          if (TheFamilyVect.contains(eVect)) {
             std::cerr << "SHORT: We have a clear error here\n";
             throw TerminalException{1};
           }
@@ -492,7 +492,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
           std::vector<MyVector<Tint>> list_v3 =
               GetShortVectorDegenerate<T, Tint>(eMatSec, os);
           for (auto& eVect3 : list_v3) {
-            if (SetVectTot.count(eVect3) == 1) { // This can happen.
+            if (SetVectTot.contains(eVect3)) { // This can happen.
               eVect3 *= 2;
             }
             f_insert(eVect3);

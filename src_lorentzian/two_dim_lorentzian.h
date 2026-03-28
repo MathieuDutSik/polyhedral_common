@@ -709,7 +709,7 @@ TwoDimIsotropic_OrbitRepresentative(MyMatrix<T> const &F, T const &M) {
       for (size_t pos = pos_start; pos < pos_end; pos++) {
         for (auto &eGen : ListGen) {
           MyVector<Tint> ImgV = eGen.transpose() * TheOrb[pos];
-          if (set.count(ImgV) == 0) {
+          if (!set.contains(ImgV)) {
             f_insert(ImgV);
           }
         }

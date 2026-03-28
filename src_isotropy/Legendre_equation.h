@@ -298,9 +298,9 @@ reduction_information(MyVector<T> const &aV,
   std::map<T, size_t> a_prod_map, b_prod_map, c_prod_map, ab_prod_map,
       ac_prod_map, bc_prod_map;
   for (auto &p : primes) {
-    bool a_in = a_set.count(p) == 1;
-    bool b_in = b_set.count(p) == 1;
-    bool c_in = c_set.count(p) == 1;
+    bool a_in = a_set.contains(p);
+    bool b_in = b_set.contains(p);
+    bool c_in = c_set.contains(p);
     if (a_in && !b_in && !c_in) {
       a_prod *= p;
       a_prod_map[p] += 1;
@@ -354,28 +354,28 @@ reduction_information(MyVector<T> const &aV,
   std::map<T, size_t> c_map2 = FactorsIntMap(T_abs(aRet(2)));
   for (auto &kv : a_map2) {
     T const &p = kv.first;
-    if (b_map2.count(p) == 1) {
+    if (b_map2.contains(p)) {
       std::cerr << "p should not be in the b_map2\n";
     }
-    if (c_map2.count(p) == 1) {
+    if (c_map2.contains(p)) {
       std::cerr << "p should not be in the c_map2\n";
     }
   }
   for (auto &kv : b_map2) {
     T const &p = kv.first;
-    if (a_map2.count(p) == 1) {
+    if (a_map2.contains(p)) {
       std::cerr << "p should not be in the a_map2\n";
     }
-    if (c_map2.count(p) == 1) {
+    if (c_map2.contains(p)) {
       std::cerr << "p should not be in the c_map2\n";
     }
   }
   for (auto &kv : c_map2) {
     T const &p = kv.first;
-    if (a_map2.count(p) == 1) {
+    if (a_map2.contains(p)) {
       std::cerr << "p should not be in the a_map2\n";
     }
-    if (b_map2.count(p) == 1) {
+    if (b_map2.contains(p)) {
       std::cerr << "p should not be in the b_map2\n";
     }
   }

@@ -1017,7 +1017,7 @@ FindDiagramExtensions_Efficient(const MyMatrix<T> &M,
                    "avoid that\n";
       throw TerminalException{1};
     }
-    if (SetExtensions.count(V) != 0) {
+    if (SetExtensions.contains(V)) {
       std::cerr << "V=" << StringVectorGAP(V) << "\n";
       std::cerr << "The diagram is already present. We want to avoid that\n";
       throw TerminalException{1};
@@ -2197,11 +2197,11 @@ ComputePossibleExtensions(MyMatrix<T> const &G,
       std::cerr << "V=" << StringVectorGAP(eV) << " symb=" << symb << "\n";
     };
     for (auto &eV : s_vect)
-      if (s_vect_B.count(eV) == 0)
+      if (!s_vect_B.contains(eV))
         prt(eV);
     std::cerr << "In s_vect_B but not in s_vect=\n";
     for (auto &eV : s_vect_B)
-      if (s_vect.count(eV) == 0)
+      if (!s_vect.contains(eV))
         prt(eV);
     std::cerr << "only_spherical = " << only_spherical << "\n";
     std::cerr << "|l_vect|=" << l_vect.size()

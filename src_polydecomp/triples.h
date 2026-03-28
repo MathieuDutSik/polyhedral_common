@@ -318,7 +318,7 @@ get_spanning_list_triple(
           std::vector<MyVector<Tint>> EXTinner_int_EXTimg;
           for (int iV=0; iV<EXTimg.rows(); iV++) {
             MyVector<Tint> V = GetMatrixRow(EXTimg, iV);
-            if (setEXTinner.count(V) == 1) {
+            if (setEXTinner.contains(V)) {
               EXTinner_int_EXTimg.push_back(V);
             }
           }

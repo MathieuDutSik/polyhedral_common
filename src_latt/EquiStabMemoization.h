@@ -108,7 +108,7 @@ public:
     std::vector<std::pair<Tdata, Tequiv>> l_vertices;
     std::set<Tdata> set_vert;
     auto f_insert = [&](std::pair<Tdata, Tequiv> const &pair) -> void {
-      if (set_vert.count(pair.first) == 1) {
+      if (set_vert.contains(pair.first)) {
         return;
       }
       set_vert.insert(pair.first);
@@ -160,11 +160,11 @@ public:
       std::vector<std::pair<Tdata, Tequiv>> const &eList2) const {
     auto has_noniso_edge = [&](Tdata const &x, Tdata const &y) -> bool {
       std::pair<Tdata, Tdata> pair1{x, y};
-      if (list_non_iso.count(pair1) == 1) {
+      if (list_non_iso.contains(pair1)) {
         return true;
       }
       std::pair<Tdata, Tdata> pair2{y, x};
-      if (list_non_iso.count(pair2) == 1) {
+      if (list_non_iso.contains(pair2)) {
         return true;
       }
       return false;

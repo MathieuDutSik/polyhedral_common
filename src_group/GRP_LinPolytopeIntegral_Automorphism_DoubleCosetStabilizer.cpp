@@ -33,7 +33,7 @@ void process_A(std::string const &FileExt, std::string const &FileGrpV,
     auto check_stab = [&](Telt const &y) {
       for (auto &x : set_cos) {
         Telt x_y = x * y;
-        if (set_cos.count(x_y) != 1) {
+        if (!set_cos.contains(x_y)) {
           std::cerr << "set_cos should contain the x_y\n";
           throw TerminalException{1};
         }

@@ -169,7 +169,7 @@ public:
   void InsertEntry(Tkey &&eKey, Tval &&eVal) {
     // We have to face the situation that what we are trying to insert is
     // already present This can happen because of badly aligned heuristics
-    if (ListEnt.count(eKey) > 0) {
+    if (ListEnt.contains(eKey)) {
 #ifdef DEBUG_DATABANK
       os << "Exiting because the key is already present\n";
 #endif
@@ -290,7 +290,7 @@ void DataBankAsioServer(const bool &Saving, const std::string &SavingPrefix,
       break;
     }
     if (eTriple.nature == 'i') {
-      if (ListEnt.count(eTriple.eKey) > 0) {
+      if (ListEnt.contains(eTriple.eKey)) {
 #ifdef DEBUG_DATABANK
         os << "The entry is already present\n";
 #endif

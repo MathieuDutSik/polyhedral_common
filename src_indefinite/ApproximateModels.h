@@ -1050,7 +1050,7 @@ ResultHyperbolicPlane<T, Tint> GetHyperbolicPlane(MyMatrix<T> const &Qmat,
         throw TerminalException{1};
       }
 #endif
-      if (SetVect.count(NewVect) == 0 || iter == n_iter) {
+      if (!SetVect.contains(NewVect) || iter == n_iter) {
         SetVect.insert(NewVect);
         return NewVect;
       }

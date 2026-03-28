@@ -114,7 +114,7 @@ template <typename T> bool is_antipodal(MyMatrix<T> const &SHV) {
   }
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> V = -GetMatrixRow(SHV, i_row);
-    if (set.count(V) == 0) {
+    if (!set.contains(V)) {
       return false;
     }
   }
@@ -140,7 +140,7 @@ template <typename T> bool has_duplication(MyMatrix<T> const &SHV) {
   std::unordered_set<MyVector<T>> set;
   for (int i_row = 0; i_row < n_row; i_row++) {
     MyVector<T> V = GetMatrixRow(SHV, i_row);
-    if (set.count(V) == 1) {
+    if (set.contains(V)) {
       return true;
     }
     set.insert(V);
@@ -331,7 +331,7 @@ MyMatrix<Tint> ExtractInvariantBreakingVectorFamily(
       MyMatrix<Tint> Mprod = M * eMatr;
       for (int i = 0; i < n_row; i++) {
         MyVector<Tint> V = GetMatrixRow(Mprod, i);
-        if (set.count(V) == 0)
+        if (!set.contains(V))
           return true;
       }
     }

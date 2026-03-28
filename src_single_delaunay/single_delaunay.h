@@ -258,7 +258,7 @@ std::vector<MyVector<Tint>> get_adjacent_vertices(SingleDelaunay<T,Tint> const& 
     MyVector<Tint> v_basis = GetMatrixRow(InvBasis, i_basis);
     for (auto & eV: set_EXT) {
       MyVector<Tint> eW = eV + v_basis;
-      if (set_vert.count(eW) == 0) {
+      if (!set_vert.contains(eW)) {
         adj_set.insert(eW);
       }
     }

@@ -70,7 +70,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
   ListUndone.insert(GetSingleEntry());
 #ifdef USE_CDDLIB
   auto fInsert = [&](Face const &f) -> void {
-    if (ListDone.count(f) != 0)
+    if (ListDone.contains(f))
       return;
     ListUndone.insert(f);
   };

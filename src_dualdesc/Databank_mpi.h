@@ -64,7 +64,7 @@ void DataBankMpiServer(boost::mpi::communicator &comm, const bool &Saving,
       os << "Receiving insert (key,val) from " << msg.source() << "\n";
       PairKV<Tkey, Tval> pair;
       comm.recv(msg.source(), msg.tag(), pair);
-      if (ListEnt.count(pair.eKey) > 0) {
+      if (ListEnt.contains(pair.eKey)) {
         os << "The entry is already present\n";
         os << "Not stopping but suboptimal. Maybe two threads computed the "
               "same thing. Otherwise bug.\n";

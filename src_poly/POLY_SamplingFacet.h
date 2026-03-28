@@ -94,11 +94,11 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
   };
   auto func_insert = [&](Face const &f) -> void {
     size_t incd = f.count();
-    if (map_done.count(incd) == 1) {
+    if (map_done.contains(incd)) {
       // already present
       return;
     }
-    if (map_undone.count(incd) == 1) {
+    if (map_undone.contains(incd)) {
       // already present
       return;
     }

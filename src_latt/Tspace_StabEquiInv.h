@@ -136,7 +136,7 @@ public:
     for (int i_row = 0; i_row < n_row; i_row++) {
       MyVector<T> Vimg = M.transpose() * ListV[i_row];
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
-      if (MapV.count(Vimg) == 0) {
+      if (!MapV.contains(Vimg)) {
         std::cerr << "TSPACE: MapV should contain i_row=" << i_row
                   << " Vimg=" << StringVectorGAP(Vimg) << "\n";
         std::cerr << "TSPACE: M=\n";
