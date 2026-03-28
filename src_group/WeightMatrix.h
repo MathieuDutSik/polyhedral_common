@@ -108,8 +108,8 @@ template <class T> struct is_vector<std::vector<T>> {
 // The generation function
 //
 template <typename T>
-inline typename std::enable_if<is_vector<T>::value, T>::type
-GetSymmGenerateValue(int const &rVal) {
+  requires(is_vector<T>::value)
+inline T GetSymmGenerateValue(int const &rVal) {
   using Tval = typename T::value_type;
   Tval eVal = rVal;
   T eVect;
@@ -118,8 +118,8 @@ GetSymmGenerateValue(int const &rVal) {
 }
 
 template <typename T>
-inline typename std::enable_if<!is_vector<T>::value, T>::type
-GetSymmGenerateValue(int const &rVal) {
+  requires(!is_vector<T>::value)
+inline T GetSymmGenerateValue(int const &rVal) {
   T eVal = rVal;
   return eVal;
 }
@@ -599,7 +599,8 @@ GetLocalInvariantWeightMatrix(WeightMatrix<true, T, Tidx_value> const &WMat,
 }
 
 template <bool is_symmetric, typename T, typename Tidx_value>
-inline typename std::enable_if<is_totally_ordered<T>::value, size_t>::type
+  requires(is_totally_ordered<T>::value)
+inline size_t
 GetInvariantWeightMatrix(size_t const &seed,
                          WeightMatrix<is_symmetric, T, Tidx_value> const &WMat,
                          [[maybe_unused]] std::ostream &os) {
@@ -872,31 +873,32 @@ std::vector<int> Pairs_GetListPair(int N, int nb_color) {
 }
 
 template <bool is_symm>
-inline typename std::enable_if<is_symm, size_t>::type
-get_effective_nb_weight(size_t nbWei) {
+  requires(is_symm)
+inline size_t get_effective_nb_weight(size_t nbWei) {
   return nbWei + 2;
 }
 
 template <bool is_symm>
-inline typename std::enable_if<!is_symm, size_t>::type
-get_effective_nb_weight(size_t nbWei) {
+  requires(!is_symm)
+inline size_t get_effective_nb_weight(size_t nbWei) {
   return nbWei + 3;
 }
 
 template <bool is_symm>
-inline typename std::enable_if<is_symm, size_t>::type
-get_effective_nb_vert(size_t nbRow) {
+  requires(is_symm)
+inline size_t get_effective_nb_vert(size_t nbRow) {
   return nbRow + 2;
 }
 
 template <bool is_symm>
-inline typename std::enable_if<!is_symm, size_t>::type
-get_effective_nb_vert(size_t nbRow) {
+  requires(!is_symm)
+inline size_t get_effective_nb_vert(size_t nbRow) {
   return 2 * nbRow + 1;
 }
 
 template <typename T, typename Tidx_value, bool use_pairs, bool is_symm>
-inline typename std::enable_if<use_pairs, size_t>::type
+  requires(use_pairs)
+inline size_t
 get_total_number_vertices(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
                           [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
@@ -919,7 +921,8 @@ get_total_number_vertices(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
   having it confused with the original vertices.
  */
 template <typename Tidx_value, typename T, bool is_symm>
-inline typename std::enable_if<is_symm, Tidx_value>::type
+  requires(is_symm)
+inline Tidx_value
 get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert,
                            size_t jVert,
                            WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
@@ -960,7 +963,8 @@ get_effective_weight_index(size_t nbWei, size_t nbRow, size_t iVert,
      from V by the colors nWei (or nWei+1, nWei+2)
  */
 template <typename Tidx_value, typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, Tidx_value>::type
+  requires(!is_symm)
+inline Tidx_value
 get_effective_weight_index(size_t nWei, size_t nbRow, size_t iVert,
                            size_t jVert,
                            WeightMatrix<is_symm, T, Tidx_value> const &WMat) {
@@ -1005,8 +1009,8 @@ get_effective_weight_index(size_t nWei, size_t nbRow, size_t iVert,
 
 template <typename T, typename Tidx_value, bool use_pairs, bool is_symm,
           typename Fcolor, typename Fadj>
-inline typename std::enable_if<use_pairs, void>::type
-GetGraphFromWeightedMatrix_color_adj(
+  requires(use_pairs)
+inline void GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color,
     Fadj f_adj, [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
@@ -1091,7 +1095,8 @@ GetGraphFromWeightedMatrix_color_adj(
 }
 
 template <typename T, typename Tidx_value, bool use_pairs, bool is_symm>
-inline typename std::enable_if<!use_pairs, size_t>::type
+  requires(!use_pairs)
+inline size_t
 get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
                           [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
@@ -1129,8 +1134,8 @@ get_total_number_vertices(WeightMatrix<true, T, Tidx_value> const &WMat,
  */
 template <typename T, typename Tidx_value, bool use_pairs, bool is_symm,
           typename Fcolor, typename Fadj>
-inline typename std::enable_if<!use_pairs, void>::type
-GetGraphFromWeightedMatrix_color_adj(
+  requires(!use_pairs)
+inline void GetGraphFromWeightedMatrix_color_adj(
     WeightMatrix<is_symm, T, Tidx_value> const &WMat, Fcolor f_color,
     Fadj f_adj, [[maybe_unused]] std::ostream &os) {
   size_t nbWei = WMat.GetWeightSize();
@@ -1171,10 +1176,10 @@ GetGraphFromWeightedMatrix_color_adj(
 }
 
 template <typename T, typename Tgr, typename Tidx_value, bool is_symm>
-inline
-    typename std::enable_if<!is_functional_graph_class<Tgr>::value, Tgr>::type
-    GetGraphFromWeightedMatrix(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
-                               std::ostream &os) {
+  requires(!is_functional_graph_class<Tgr>::value)
+inline Tgr
+GetGraphFromWeightedMatrix(WeightMatrix<is_symm, T, Tidx_value> const &WMat,
+                           std::ostream &os) {
 #ifdef TIMINGS_WEIGHT_MATRIX
   MicrosecondTime time;
 #endif

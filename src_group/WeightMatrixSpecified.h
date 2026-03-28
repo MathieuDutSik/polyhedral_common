@@ -718,11 +718,11 @@ ComputeVertexSignatures(size_t nbRow, F1 f1, F2 f2,
 
 template <typename T, bool is_symm, typename F1, typename F2, typename F1tr,
           typename F2tr>
-inline
-    typename std::enable_if<is_symm, PairWeightMatrixVertexSignatures<T>>::type
-    ComputePairVertexSignatures(size_t nbRow, bool canonically, F1 f1, F2 f2,
-                                [[maybe_unused]] F1tr f1tr,
-                                [[maybe_unused]] F2tr f2tr, std::ostream &os) {
+  requires(is_symm)
+inline PairWeightMatrixVertexSignatures<T>
+ComputePairVertexSignatures(size_t nbRow, bool canonically, F1 f1, F2 f2,
+                            [[maybe_unused]] F1tr f1tr,
+                            [[maybe_unused]] F2tr f2tr, std::ostream &os) {
   WeightMatrixVertexSignatures<T> WMVS_direct =
       ComputeVertexSignatures<T>(nbRow, f1, f2, os);
   if (canonically) {
@@ -775,11 +775,11 @@ void RenormalizeWMVS(WeightMatrixVertexSignatures<T> &WMVS,
 
 template <typename T, bool is_symm, typename F1, typename F2, typename F1tr,
           typename F2tr>
-inline
-    typename std::enable_if<!is_symm, PairWeightMatrixVertexSignatures<T>>::type
-    ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically,
-                                F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
-                                std::ostream &os) {
+  requires(!is_symm)
+inline PairWeightMatrixVertexSignatures<T>
+ComputePairVertexSignatures(size_t nbRow, [[maybe_unused]] bool canonically,
+                            F1 f1, F2 f2, F1tr f1tr, F2tr f2tr,
+                            std::ostream &os) {
 #ifdef DEBUG_WEIGHT_MATRIX_SPECIFIED_EXTENSIVE
   std::vector<std::vector<T>> Mat_direct;
   for (size_t i = 0; i < nbRow; i++) {
@@ -847,9 +847,10 @@ inline
   See WeightMatrix.h : get_effective_weight_index for underlying logic
  */
 template <typename T, bool is_symm, typename F2>
-inline typename std::enable_if<is_symm, size_t>::type
-evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
-            size_t iVert, size_t jVert, F2 f2) {
+  requires(is_symm)
+inline size_t evaluate_f2(size_t nbRow, size_t nWei,
+                          std::unordered_map<T, size_t> const &map,
+                          size_t iVert, size_t jVert, F2 f2) {
   if (jVert == nbRow + 1) {
     if (iVert == nbRow) {
       return nWei;
@@ -866,9 +867,10 @@ evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
 }
 
 template <typename T, bool is_symm, typename F2>
-inline typename std::enable_if<!is_symm, size_t>::type
-evaluate_f2(size_t nbRow, size_t nWei, std::unordered_map<T, size_t> const &map,
-            size_t iVert, size_t jVert, F2 f2) {
+  requires(!is_symm)
+inline size_t evaluate_f2(size_t nbRow, size_t nWei,
+                          std::unordered_map<T, size_t> const &map,
+                          size_t iVert, size_t jVert, F2 f2) {
 #ifdef SANITY_CHECK_WEIGHT_MATRIX_SPECIFIED
   if (iVert >= jVert) {
     std::cerr << "WMS: iVert=" << iVert << " jVert=" << jVert
@@ -944,7 +946,8 @@ struct ExpandedSymbolic {
 };
 
 template <typename T, bool is_symm>
-inline typename std::enable_if<is_symm, ExpandedSymbolic>::type
+  requires(is_symm)
+inline ExpandedSymbolic
 get_expanded_symbolic(size_t nbWeight,
                       PairWeightMatrixVertexSignatures<T> const &PairWMVS,
                       [[maybe_unused]] std::ostream &os) {
@@ -1018,7 +1021,8 @@ get_expanded_symbolic(size_t nbWeight,
 //
 // The diagonal value is available via WMVS in the first value.
 template <typename T, bool is_symm>
-inline typename std::enable_if<!is_symm, ExpandedSymbolic>::type
+  requires(!is_symm)
+inline ExpandedSymbolic
 get_expanded_symbolic(size_t nWei,
                       PairWeightMatrixVertexSignatures<T> const &PairWMVS,
                       [[maybe_unused]] std::ostream &os) {

@@ -212,16 +212,16 @@ void CheckFacetInequalityKernel(MyMatrix<T> const &EXT, Face const &eList,
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, void>::type
-CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
-                     std::string const &context) {
+  requires(is_ring_field<T>::value)
+inline void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
+                                 std::string const &context) {
   CheckFacetInequalityKernel(EXT, eList, context);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, void>::type
-CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
-                     std::string const &context) {
+  requires(!is_ring_field<T>::value)
+inline void CheckFacetInequality(MyMatrix<T> const &EXT, Face const &eList,
+                                 std::string const &context) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXT_field = UniversalMatrixConversion<Tfield, T>(EXT);
   CheckFacetInequalityKernel(EXT_field, eList, context);
@@ -621,23 +621,15 @@ public:
   }
 };
 
-template <typename T, typename T2 = void> struct flipping_type;
-
 template <typename T>
-struct flipping_type<
-    T, typename std::enable_if<has_reduction_subset_solver<T>::value>::type> {
-  typedef FlippingFramework_Accelerate<T> type;
-};
-
-template <typename T>
-struct flipping_type<
-    T, typename std::enable_if<!has_reduction_subset_solver<T>::value>::type> {
-  typedef FlippingFramework_Field<T> type;
-};
+using flipping_type =
+    std::conditional_t<has_reduction_subset_solver<T>::value,
+                       FlippingFramework_Accelerate<T>,
+                       FlippingFramework_Field<T>>;
 
 template <typename T> class FlippingFramework {
 public:
-  typename flipping_type<T>::type flipping;
+  flipping_type<T> flipping;
   using Text_int = typename SubsetRankOneSolver<T>::Tint;
   MyMatrix<T> const &EXT_face;
   MyMatrix<Text_int> const &EXT_face_int;
@@ -652,17 +644,15 @@ public:
 };
 
 template <typename T>
-inline typename std::enable_if<
-    !has_reduction_subset_solver<T>::value,
-    MyMatrix<typename SubsetRankOneSolver<T>::Tint>>::type
+  requires(!has_reduction_subset_solver<T>::value)
+inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
 Get_EXT_int(MyMatrix<T> const &EXT) {
   return EXT;
 }
 
 template <typename T>
-inline typename std::enable_if<
-    has_reduction_subset_solver<T>::value,
-    MyMatrix<typename SubsetRankOneSolver<T>::Tint>>::type
+  requires(has_reduction_subset_solver<T>::value)
+inline MyMatrix<typename SubsetRankOneSolver<T>::Tint>
 Get_EXT_int(MyMatrix<T> const &EXT) {
   return UniqueRescaleRowsRing(EXT);
 }

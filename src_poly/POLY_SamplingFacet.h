@@ -356,16 +356,18 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, vectface>::type
-DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                 std::string const &ansSamp, std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                                 std::string const &ansSamp,
+                                                 std::ostream &os) {
   return Kernel_DirectComputationInitialFacetSet(EXT, ansSamp, os);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, vectface>::type
-DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
-                                 std::string const &ansSamp, std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline vectface DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
+                                                 std::string const &ansSamp,
+                                                 std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXTfield = UniversalMatrixConversion<Tfield, T>(EXT);
   return Kernel_DirectComputationInitialFacetSet(EXTfield, ansSamp, os);

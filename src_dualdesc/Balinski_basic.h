@@ -357,11 +357,10 @@ bool EvaluationConnectednessCriterion_PreKernel_field(const MyMatrix<T> &FAC,
 }
 
 template <typename T, typename Tgroup>
-inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
-                                           const Tgroup &GRP,
-                                           const vectface &vf_undone,
-                                           std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline bool EvaluationConnectednessCriterion_PreKernel(
+    const MyMatrix<T> &FAC, const Tgroup &GRP, const vectface &vf_undone,
+    std::ostream &os) {
   bool test =
       EvaluationConnectednessCriterion_PreKernel_field(FAC, GRP, vf_undone, os);
 #ifdef DEBUG_BALINSKI
@@ -372,11 +371,10 @@ EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
 }
 
 template <typename T, typename Tgroup>
-inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-EvaluationConnectednessCriterion_PreKernel(const MyMatrix<T> &FAC,
-                                           const Tgroup &GRP,
-                                           const vectface &vf_undone,
-                                           std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline bool EvaluationConnectednessCriterion_PreKernel(
+    const MyMatrix<T> &FAC, const Tgroup &GRP, const vectface &vf_undone,
+    std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
   bool test = EvaluationConnectednessCriterion_PreKernel_field(FACfield, GRP,

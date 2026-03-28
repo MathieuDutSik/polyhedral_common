@@ -347,14 +347,14 @@ template <typename T> TheHeuristic<T> MethodChosenDatabase() {
 }
 
 template <typename T>
-inline typename std::enable_if<is_implementation_of_Q<T>::value, bool>::type
-IsPPLpossible() {
+  requires(is_implementation_of_Q<T>::value)
+inline bool IsPPLpossible() {
   return IsProgramInPath("ppl_lcdd");
 }
 
 template <typename T>
-inline typename std::enable_if<!is_implementation_of_Q<T>::value, bool>::type
-IsPPLpossible() {
+  requires(!is_implementation_of_Q<T>::value)
+inline bool IsPPLpossible() {
   return false;
 }
 

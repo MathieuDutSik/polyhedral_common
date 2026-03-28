@@ -392,10 +392,10 @@ ComputeFiniteIsotropicMatrixGroupHelper(MyMatrix<T> const &G,
 }
 
 template <typename T, typename Telt, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value, Telt>::type
-GetPermutationForFiniteMatrixGroup(Thelper const &helper,
-                                   MyMatrix<T> const &eMatr,
-                                   [[maybe_unused]] std::ostream &os) {
+  requires(has_determining_ext<Thelper>::value)
+inline Telt GetPermutationForFiniteMatrixGroup(Thelper const &helper,
+                                               MyMatrix<T> const &eMatr,
+                                               [[maybe_unused]] std::ostream &os) {
   using Tidx = typename Telt::Tidx;
   Tidx len = helper.EXTfaithful.rows();
   std::vector<Tidx> V(len);
@@ -476,9 +476,9 @@ public:
 };
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
-inline typename std::enable_if<has_determining_ext<Thelper>::value, Telt>::type
-MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm,
-                         MyMatrix<T> const &eMatr, std::ostream &os) {
+  requires(has_determining_ext<Thelper>::value)
+inline Telt MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm,
+                                     MyMatrix<T> const &eMatr, std::ostream &os) {
   using Tidx = typename Telt::Tidx;
   int nbRow = helper.EXTfaithful.rows();
   Tidx nbRow_tidx = nbRow;
@@ -499,10 +499,10 @@ MatrixIntegral_MapMatrix(Thelper const &helper, Fgetperm f_get_perm,
 }
 
 template <typename T, typename Telt, typename Thelper, typename Fgetperm>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value, Telt>::type
-MatrixIntegral_MapMatrix([[maybe_unused]] Thelper const &helper,
-                         Fgetperm f_get_perm, MyMatrix<T> const &eMatr,
-                         [[maybe_unused]] std::ostream &os) {
+  requires(!has_determining_ext<Thelper>::value)
+inline Telt MatrixIntegral_MapMatrix([[maybe_unused]] Thelper const &helper,
+                                     Fgetperm f_get_perm, MyMatrix<T> const &eMatr,
+                                     [[maybe_unused]] std::ostream &os) {
   return f_get_perm(eMatr);
 }
 
@@ -539,9 +539,8 @@ template <typename T, typename Tgroup> struct RetMI_S {
 // We have a finite set on which the group is acting. Therefore, we can apply
 // the partition backtrack algorithms
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               RetMI_S<T, Tgroup>>::type
-MatrixIntegral_Stabilizer(
+  requires(has_determining_ext<Thelper>::value)
+inline RetMI_S<T, Tgroup> MatrixIntegral_Stabilizer(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr,
     [[maybe_unused]] std::function<typename Tgroup::Telt(MyMatrix<T> const &)>
@@ -603,9 +602,8 @@ MatrixIntegral_Stabilizer(
 // We have a finite set on which the group is acting. Therefore, we can apply
 // the partition backtrack algorithms
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<
-    has_determining_ext<Thelper>::value,
-    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>>::type
+  requires(has_determining_ext<Thelper>::value)
+inline std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
 MatrixIntegral_Stabilizer_RightCoset(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr, Tgroup const &GRPperm,
@@ -647,9 +645,8 @@ MatrixIntegral_Stabilizer_RightCoset(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               std::optional<MyMatrix<T>>>::type
-MatrixIntegral_RepresentativeAction(
+  requires(has_determining_ext<Thelper>::value)
+inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr, Tgroup const &GRPperm,
     Thelper const &helper, Face const &eFace1, Face const &eFace2,
@@ -731,9 +728,8 @@ std::vector<Telt> MatrixIntegral_GeneratePermutationGroup(
 
 // We compute the stabilizer by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value,
-                               RetMI_S<T, Tgroup>>::type
-MatrixIntegral_Stabilizer(
+  requires(!has_determining_ext<Thelper>::value)
+inline RetMI_S<T, Tgroup> MatrixIntegral_Stabilizer(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatrGens,
     std::function<typename Tgroup::Telt(MyMatrix<T> const &)> f_get_perm,
@@ -777,9 +773,8 @@ MatrixIntegral_Stabilizer(
 
 // We compute the stabilizer and right cosets by applying the Schreier algorithm
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<
-    !has_determining_ext<Thelper>::value,
-    std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>>::type
+  requires(!has_determining_ext<Thelper>::value)
+inline std::pair<std::vector<MyMatrix<T>>, std::vector<MyMatrix<T>>>
 MatrixIntegral_Stabilizer_RightCoset(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr,
@@ -808,9 +803,8 @@ MatrixIntegral_Stabilizer_RightCoset(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value,
-                               std::optional<MyMatrix<T>>>::type
-MatrixIntegral_RepresentativeAction(
+  requires(!has_determining_ext<Thelper>::value)
+inline std::optional<MyMatrix<T>> MatrixIntegral_RepresentativeAction(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr,
     [[maybe_unused]] Tgroup const &GRPperm, Thelper const &helper,
@@ -989,8 +983,8 @@ DirectSpaceOrbit_Stabilizer(std::vector<MyMatrix<T>> const &ListMatrGen,
 }
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value,
-                               std::optional<std::vector<MyVector<Tmod>>>>::type
+  requires(!has_determining_ext<Thelper>::value)
+inline std::optional<std::vector<MyVector<Tmod>>>
 FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
                   [[maybe_unused]] MyMatrix<T> const &TheSpace, T const &TheMod,
                   MyVector<T> const &x, [[maybe_unused]] Thelper const &helper,
@@ -1012,8 +1006,8 @@ FindingSmallOrbit([[maybe_unused]] std::vector<MyMatrix<T>> const &ListMatrGen,
 }
 
 template <typename T, typename Tmod, typename Tgroup, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               std::optional<std::vector<MyVector<Tmod>>>>::type
+  requires(has_determining_ext<Thelper>::value)
+inline std::optional<std::vector<MyVector<Tmod>>>
 FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
                   MyMatrix<T> const &TheSpace, T const &TheMod,
                   MyVector<T> const &a, Thelper const &helper,
@@ -1538,9 +1532,8 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset_Kernel(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<has_determining_ext<Thelper>::value,
-                               std::vector<MyMatrix<T>>>::type
-MatrixIntegral_PreImageSubgroup(
+  requires(has_determining_ext<Thelper>::value)
+inline std::vector<MyMatrix<T>> MatrixIntegral_PreImageSubgroup(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatr, Tgroup const &eGRP,
     Thelper const &helper,
@@ -1592,9 +1585,8 @@ MatrixIntegral_PreImageSubgroup(
 }
 
 template <typename T, typename Tgroup, typename Thelper>
-inline typename std::enable_if<!has_determining_ext<Thelper>::value,
-                               std::vector<MyMatrix<T>>>::type
-MatrixIntegral_PreImageSubgroup(
+  requires(!has_determining_ext<Thelper>::value)
+inline std::vector<MyMatrix<T>> MatrixIntegral_PreImageSubgroup(
     std::vector<typename Tgroup::Telt> const &ListPermGens,
     std::vector<MyMatrix<T>> const &ListMatrGens, Tgroup const &eGRP,
     Thelper const &helper,

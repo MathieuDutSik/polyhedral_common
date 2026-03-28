@@ -1654,9 +1654,8 @@ ExhaustiveReductionComplexityGroupMatrix_Tfinite(
 }
 
 template <typename T>
-inline typename std::enable_if<!is_implementation_of_Z<T>::value,
-                               std::vector<MyMatrix<T>>>::type
-ExhaustiveReductionComplexityGroupMatrixInner(
+  requires(!is_implementation_of_Z<T>::value)
+inline std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrixInner(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
     std::ostream &os) {
   return ExhaustiveReductionComplexityGroupMatrix_Generic(ListPair, os);
@@ -1668,9 +1667,8 @@ ExhaustiveReductionComplexityGroupMatrixInner(
   If that fails, we cleanly fail and use a slower algorithm.
  */
 template <typename T>
-inline typename std::enable_if<is_implementation_of_Z<T>::value,
-                               std::vector<MyMatrix<T>>>::type
-ExhaustiveReductionComplexityGroupMatrixInner(
+  requires(is_implementation_of_Z<T>::value)
+inline std::vector<MyMatrix<T>> ExhaustiveReductionComplexityGroupMatrixInner(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
     std::ostream &os) {
   // The maximum of the L1 norms of the matrices of ListPair.
@@ -2247,8 +2245,8 @@ ExhaustiveMatrixDoubleCosetSimplifications_Tfinite(
 }
 
 template <typename T>
-inline typename std::enable_if<!is_implementation_of_Z<T>::value,
-                               DoubleCosetSimplification<T>>::type
+  requires(!is_implementation_of_Z<T>::value)
+inline DoubleCosetSimplification<T>
 ExhaustiveMatrixDoubleCosetSimplificationsInner(
     MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
     std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
@@ -2273,8 +2271,8 @@ ExhaustiveMatrixDoubleCosetSimplificationsInner(
   If that fails, we cleanly fail and use a slower algorithm.
  */
 template <typename T>
-inline typename std::enable_if<is_implementation_of_Z<T>::value,
-                               DoubleCosetSimplification<T>>::type
+  requires(is_implementation_of_Z<T>::value)
+inline DoubleCosetSimplification<T>
 ExhaustiveMatrixDoubleCosetSimplificationsInner(
     MyMatrix<T> const &d_cos, std::vector<MyMatrix<T>> const &u_gens_tot,
     std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,

@@ -225,14 +225,16 @@ DiagSymMatSymbolic DiagonalizeSymmetricMatrixSymbolicKernel(MyMatrix<T> const &S
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, DiagSymMatSymbolic>::type
-DiagonalizeSymmetricMatrixSymbolic(MyMatrix<T> const &SymMat, std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline DiagSymMatSymbolic DiagonalizeSymmetricMatrixSymbolic(
+    MyMatrix<T> const &SymMat, std::ostream &os) {
   return DiagonalizeSymmetricMatrixSymbolicKernel(SymMat, os);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, DiagSymMatSymbolic>::type
-DiagonalizeSymmetricMatrixSymbolic(MyMatrix<T> const &SymMat, std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline DiagSymMatSymbolic DiagonalizeSymmetricMatrixSymbolic(
+    MyMatrix<T> const &SymMat, std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> SymMat_f = UniversalMatrixConversion<Tfield, T>(SymMat);
   return DiagonalizeSymmetricMatrixSymbolicKernel(SymMat_f, os);
@@ -286,14 +288,14 @@ bool IsPositiveDefiniteKernel(MyMatrix<T> const &SymMat, std::ostream &os) {
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-IsPositiveDefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline bool IsPositiveDefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
   return IsPositiveDefiniteKernel(SymMat, os);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-IsPositiveDefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline bool IsPositiveDefinite(MyMatrix<T> const &SymMat, std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> SymMat_f = UniversalMatrixConversion<Tfield, T>(SymMat);
   return IsPositiveDefiniteKernel(SymMat_f, os);

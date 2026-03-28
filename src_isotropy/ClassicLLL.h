@@ -376,14 +376,16 @@ MyMatrix<T> SublatticeBasisReductionKernel(MyMatrix<T> const &Latt,
 }
 
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value, MyMatrix<T>>::type
-SublatticeBasisReduction(MyMatrix<T> const &Latt, std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline MyMatrix<T> SublatticeBasisReduction(MyMatrix<T> const &Latt,
+                                            std::ostream &os) {
   return SublatticeBasisReductionKernel(Latt, os);
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value, MyMatrix<T>>::type
-SublatticeBasisReduction(MyMatrix<T> const &Latt, std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline MyMatrix<T> SublatticeBasisReduction(MyMatrix<T> const &Latt,
+                                            std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> Latt_F = UniversalMatrixConversion<Tfield, T>(Latt);
   MyMatrix<Tfield> LattRed_F = SublatticeBasisReductionKernel(Latt_F, os);

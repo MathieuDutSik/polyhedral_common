@@ -229,23 +229,19 @@ bool EvaluationConnectednessCriterion_KernelMPI_field(
 }
 
 template <typename T, typename Tgroup>
-inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
-                                           MyMatrix<T> const &FAC,
-                                           Tgroup const &GRP,
-                                           vectface const &vf_undone_loc,
-                                           std::ostream &os) {
+  requires(is_ring_field<T>::value)
+inline bool EvaluationConnectednessCriterion_KernelMPI(
+    boost::mpi::communicator &comm, MyMatrix<T> const &FAC, Tgroup const &GRP,
+    vectface const &vf_undone_loc, std::ostream &os) {
   return EvaluationConnectednessCriterion_KernelMPI_field(comm, FAC, GRP,
                                                           vf_undone_loc, os);
 }
 
 template <typename T, typename Tgroup>
-inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-EvaluationConnectednessCriterion_KernelMPI(boost::mpi::communicator &comm,
-                                           MyMatrix<T> const &FAC,
-                                           Tgroup const &GRP,
-                                           vectface const &vf_undone_loc,
-                                           std::ostream &os) {
+  requires(!is_ring_field<T>::value)
+inline bool EvaluationConnectednessCriterion_KernelMPI(
+    boost::mpi::communicator &comm, MyMatrix<T> const &FAC, Tgroup const &GRP,
+    vectface const &vf_undone_loc, std::ostream &os) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> FACfield = UniversalMatrixConversion<Tfield, T>(FAC);
   return EvaluationConnectednessCriterion_KernelMPI_field(comm, FACfield, GRP,

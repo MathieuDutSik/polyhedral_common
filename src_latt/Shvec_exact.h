@@ -338,10 +338,11 @@ bool computeIt_Gen_Kernel(const FullGramInfo<T> &request, MyVector<T> const &C,
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-computeIt_Gen(const FullGramInfo<T> &request, MyVector<T> const &coset,
-              bool const &central, const T &bound, Finsert f_insert,
-              Fsetbound f_set_bound) {
+  requires(is_ring_field<T>::value)
+inline bool computeIt_Gen(const FullGramInfo<T> &request,
+                          MyVector<T> const &coset, bool const &central,
+                          const T &bound, Finsert f_insert,
+                          Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (field case)\n";
 #endif
@@ -350,10 +351,11 @@ computeIt_Gen(const FullGramInfo<T> &request, MyVector<T> const &coset,
 }
 
 template <typename T, typename Tint, typename Finsert, typename Fsetbound>
-inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-computeIt_Gen(const FullGramInfo<T> &request, MyVector<T> const &coset,
-              bool const &central, const T &bound, Finsert f_insert,
-              Fsetbound f_set_bound) {
+  requires(!is_ring_field<T>::value)
+inline bool computeIt_Gen(const FullGramInfo<T> &request,
+                          MyVector<T> const &coset, bool const &central,
+                          const T &bound, Finsert f_insert,
+                          Fsetbound f_set_bound) {
 #ifdef DEBUG_SHVEC
   std::cerr << "SHVEC: computeIt (ring case)\n";
 #endif
@@ -460,9 +462,9 @@ bool computeIt_polytope(const FullGramInfo<T> &request,
 }
 
 template <typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<is_ring_field<T>::value, bool>::type
-computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
-          bool const &central, const T &bound, Finsert f_insert) {
+  requires(is_ring_field<T>::value)
+inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
+                      bool const &central, const T &bound, Finsert f_insert) {
   auto f_set_bound =
       [&](const T &eQuot, const T &eSum, [[maybe_unused]] const MyMatrix<T> &q,
           [[maybe_unused]] const MyVector<Tint> &x,
@@ -475,9 +477,9 @@ computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
 }
 
 template <typename T, typename Tint, typename Finsert>
-inline typename std::enable_if<!is_ring_field<T>::value, bool>::type
-computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
-          bool const &central, const T &bound, Finsert f_insert) {
+  requires(!is_ring_field<T>::value)
+inline bool computeIt(const FullGramInfo<T> &request, MyVector<T> const &coset,
+                      bool const &central, const T &bound, Finsert f_insert) {
   using Tfield = typename overlying_field<T>::field_type;
   auto f_set_bound = [&](const Tfield &eQuot, const Tfield &eSum,
                          [[maybe_unused]] const MyMatrix<Tfield> &q,

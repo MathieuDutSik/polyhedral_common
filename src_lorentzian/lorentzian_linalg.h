@@ -490,8 +490,8 @@ LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1_Kernel(
 // This addresses the problem, however in truth the conversion should happen
 // at a deeper level.
 template <typename T>
-inline typename std::enable_if<is_ring_field<T>::value,
-                               std::optional<MyMatrix<T>>>::type
+  requires(is_ring_field<T>::value)
+inline std::optional<MyMatrix<T>>
 LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {
@@ -500,8 +500,8 @@ LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
 }
 
 template <typename T>
-inline typename std::enable_if<!is_ring_field<T>::value,
-                               std::optional<MyMatrix<T>>>::type
+  requires(!is_ring_field<T>::value)
+inline std::optional<MyMatrix<T>>
 LORENTZ_ExtendOrthogonalIsotropicIsomorphism_Dim1(
     MyMatrix<T> const &G1, MyMatrix<T> const &Subspace1, MyMatrix<T> const &G2,
     MyMatrix<T> const &Subspace2) {

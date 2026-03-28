@@ -817,16 +817,18 @@ MyMatrix<T> FindTransformation_Kernel(MyMatrix<T> const &EXT1, MyMatrix<T> const
 // If the conversion to integer fails, then panic.
 //
 template <typename T, typename Telt>
-inline typename std::enable_if<is_ring_field<T>::value,
-                               MyMatrix<T>>::type
-FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2, Telt const &ePerm) {
+  requires(is_ring_field<T>::value)
+inline MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1,
+                                      MyMatrix<T> const &EXT2,
+                                      Telt const &ePerm) {
   return FindTransformation_Kernel<T,Telt>(EXT1, EXT2, ePerm);
 }
 
 template <typename T, typename Telt>
-inline typename std::enable_if<!is_ring_field<T>::value,
-                               MyMatrix<T>>::type
-FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2, Telt const &ePerm) {
+  requires(!is_ring_field<T>::value)
+inline MyMatrix<T> FindTransformation(MyMatrix<T> const &EXT1,
+                                      MyMatrix<T> const &EXT2,
+                                      Telt const &ePerm) {
   using Tfield = typename overlying_field<T>::field_type;
   MyMatrix<Tfield> EXT1_field = UniversalMatrixConversion<Tfield, T>(EXT1);
   MyMatrix<Tfield> EXT2_field = UniversalMatrixConversion<Tfield, T>(EXT2);
@@ -841,8 +843,8 @@ FindTransformation(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2, Telt const 
 // Returns None if the conversion to integer fails.
 //
 template <typename T, typename Telt>
-inline typename std::enable_if<is_ring_field<T>::value,
-                               std::optional<MyMatrix<T>>>::type
+  requires(is_ring_field<T>::value)
+inline std::optional<MyMatrix<T>>
 FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                        Telt const &ePerm) {
   MyMatrix<T> M = FindTransformation(EXT1, EXT2, ePerm);
@@ -850,8 +852,8 @@ FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
 }
 
 template <typename T, typename Telt>
-inline typename std::enable_if<!is_ring_field<T>::value,
-                               std::optional<MyMatrix<T>>>::type
+  requires(!is_ring_field<T>::value)
+inline std::optional<MyMatrix<T>>
 FindTransformationRing(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
                        Telt const &ePerm) {
   using Tfield = typename overlying_field<T>::field_type;
