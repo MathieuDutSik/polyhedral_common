@@ -544,6 +544,78 @@ quadratic_form_isotropic_vector:=function(mat)
     fi;
 end;
 
+get_lattice_covering:=function(eMat)
+    local TmpDir, FileI, FileN, FileO, FileE, output, strOut, eProg, TheCommand, U, UseMpi;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "DelaunayEnum.in");
+    FileN:=Filename(TmpDir, "DelaunayEnum.nml");
+    FileO:=Filename(TmpDir, "DelaunayEnum.out");
+    FileE:=Filename(TmpDir, "DelaunayEnum.err");
+    #
+    WriteMatrixFile(FileI, eMat);
+    Print("TestEnumeration, FileIn created\n");
+    #
+    UseMpi:=false;
+    if UseMpi then
+        strOut:="&DATA\n";
+        strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
+        strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
+        strOut:=Concatenation(strOut, " GRAMfile = \"", FileI, "\"\n");
+        strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
+        strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
+        strOut:=Concatenation(strOut, " OutFile = \"", FileO, "\"\n");
+        strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
+        strOut:=Concatenation(strOut, "/\n");
+        strOut:=Concatenation(strOut, "\n");
+        strOut:=Concatenation(strOut, "&STORAGE\n");
+        strOut:=Concatenation(strOut, " Saving = F\n");
+        strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
+        strOut:=Concatenation(strOut, "/\n");
+        #
+        WriteStringFile(FileN, strOut);
+        Print("TestEnumeration, FileNml created\n");
+        #
+        eProg:=GetBinaryFilename("LATT_MPI_ComputeDelaunay");
+        TheCommand:=Concatenation(eProg, " ", FileN);
+    else
+        eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
+        TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_covering ", FileO, " 2> ", FileE);
+    fi;
+#    Print("TheCommand=", TheCommand, "\n");
+    Exec(TheCommand);
+    #
+    if IsExistingFile(FileO)=false then
+        Print("The output file is not existing. That qualifies as a fail\n");
+        return "program failure: get gap covering";
+    fi;
+    U:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileN);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return U;
+end;
+
+get_robust_lattice_covering_density:=function(eMat)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, the_result;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "RobustEnum.in");
+    FileO:=Filename(TmpDir, "RobustEnum.out");
+    FileE:=Filename(TmpDir, "RobustEnum.err");
+    #
+    WriteMatrixFile(FileI, eMat);
+    Print("TestEnumeration, FileIn created\n");
+
+    eProg:=GetBinaryFilename("Robust_ExactRobustCoveringDensity");
+    TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    the_result:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return the_result;
+end;
+
 
 find_positive_vectors:=function(M, CritNorm, StrictIneq)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, V;
@@ -1254,14 +1326,3 @@ end;
 PERFCOMP_chain_simplification:=function(desc, index, the_chain)
     return __PERFCOMP_chain_query(desc, index, the_chain, "FileChainSimplification");
 end;
-
-
-
-
-
-
-
-
-
-
-

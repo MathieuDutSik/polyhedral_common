@@ -1,57 +1,16 @@
 Read("../common.g");
-Print("Beginning TestDelaunayEnumeration\n");
+Read("../access_points.g");
+Print("Beginning ComputeCoveringDensity\n");
 
 
 TestComputation:=function(eRec)
-    local n, TmpDir, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, is_correct, UseMpi;
-    n:=Length(eRec.eMat);
-    TmpDir:=DirectoryTemporary();
-    FileIn:=Filename(TmpDir, "DelaunayEnum.in");
-    FileNml:=Filename(TmpDir, "DelaunayEnum.nml");
-    FileOut:=Filename(TmpDir, "DelaunayEnum.out");
-    #
-    WriteMatrixFile(FileIn, eRec.eMat);
-    Print("TestEnumeration, FileIn created\n");
-    #
-    UseMpi:=false;
-    if UseMpi then
-        strOut:="&DATA\n";
-        strOut:=Concatenation(strOut, " arithmetic_T = \"gmp_rational\"\n");
-        strOut:=Concatenation(strOut, " arithmetic_Tint = \"gmp_integer\"\n");
-        strOut:=Concatenation(strOut, " GRAMfile = \"", FileIn, "\"\n");
-        strOut:=Concatenation(strOut, " SVRfile = \"unset.svr\"\n");
-        strOut:=Concatenation(strOut, " OutFormat = \"GAP\"\n");
-        strOut:=Concatenation(strOut, " OutFile = \"", FileOut, "\"\n");
-        strOut:=Concatenation(strOut, " max_runtime_second = 10800\n");
-        strOut:=Concatenation(strOut, "/\n");
-        strOut:=Concatenation(strOut, "\n");
-        strOut:=Concatenation(strOut, "&STORAGE\n");
-        strOut:=Concatenation(strOut, " Saving = F\n");
-        strOut:=Concatenation(strOut, " Prefix = \"DATA/\"\n");
-        strOut:=Concatenation(strOut, "/\n");
-        #
-        WriteStringFile(FileNml, strOut);
-        Print("TestEnumeration, FileNml created\n");
-        #
-        eProg:="../../src_delaunay/LATT_MPI_ComputeDelaunay";
-        TheCommand:=Concatenation(eProg, " ", FileNml);
-    else
-        eProg:="../../src_delaunay/LATT_SerialComputeDelaunay";
-        TheCommand:=Concatenation(eProg, " gmp ", FileIn, " GAP_covering ", FileOut);
+    local TmpDir, FileIn, FileNml, FileOut, output, strOut, eProg, TheCommand, U, is_correct, UseMpi;
+    result:=get_lattice_covering(eRec.eMat);
+    if is_error(result) then
+        return false;
     fi;
-    Print("TheCommand=", TheCommand, "\n");
-    Exec(TheCommand);
-    #
-    if IsExistingFile(FileOut)=false then
-        Print("The output file is not existing. That qualifies as a fail\n");
-        return rec(is_correct:=false);
-    fi;
-    U:=ReadAsFunction(FileOut)();
-    RemoveFile(FileIn);
-    RemoveFile(FileNml);
-    RemoveFile(FileOut);
     Print("TheCov=", U.TheCov, "  det=", U.TheDet, "  CovDensity=", U.CovDensity, "\n");
-    return rec(is_correct:=true);
+    return true;
 end;
 
 eDir:="PerfectMatrices";
@@ -72,9 +31,9 @@ FullTest:=function()
     for eRec in ListRec
     do
         Print("iRec=", iRec, " / ", Length(ListRec), "\n");
-        RecReply:=TestComputation(eRec);
-        Print("RecReply(B)=", RecReply, "\n");
-        if RecReply.is_correct=false then
+        reply:=TestComputation(eRec);
+        Print("reply(B)=", reply, "\n");
+        if reply=false then
             n_error:=n_error+1;
             Print("1: n_error=", n_error, "\n");
             return n_error;
