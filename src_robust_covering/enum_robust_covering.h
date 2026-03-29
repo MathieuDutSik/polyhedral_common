@@ -1086,13 +1086,16 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     while(true) {
       MyVector<T> fV = ipd_new.get_point(shift);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_1\n";
+      os << "ROBUST: f_process_entry, step 10_1, shift=" << shift << "\n";
 #endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_2\n";
 #endif
       if (!opt3) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST: f_process_entry, op3 exit\n";
+#endif
         shift = shift / 2;
         continue;
       }
@@ -1102,6 +1105,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       os << "ROBUST: f_process_entry, step 10_3\n";
 #endif
       if (pos == -1) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+        os << "ROBUST: f_process_entry, pos = -1 exit\n";
+#endif
         shift = shift / 2;
         continue;
       }
@@ -1139,8 +1145,8 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: f_process_entry, step 10_8\n";
 #endif
+      return false;
     }
-    return false;
   };
 
 
@@ -1212,7 +1218,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: flapv, We have bnd\n";
-  print_raw_boundary(bnd, os);
+  //  print_raw_boundary(bnd, os);
 #endif
   auto get_adj_p_polytope = [&](InteriorPtDir<T> const& ipd_test,
                                 MyVector<T> const &x)
@@ -1231,7 +1237,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
     bool test = is_boundary_point(ipd_test, bnd_adj, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, test=" << test << "\n"; 
+    os << "ROBUST: flapv, test=" << test << "\n";
 #endif
     if (!test) {
       return {};
