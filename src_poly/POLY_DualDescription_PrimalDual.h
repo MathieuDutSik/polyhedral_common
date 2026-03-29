@@ -84,7 +84,7 @@ MyMatrix<T> POLY_DualDescription_PrimalDual_Kernel(MyMatrix<T> const &FAC,
         }
       }
     }
-    if (ListNewEXT.size() == 0) {
+    if (ListNewEXT.empty()) {
 #ifdef DEBUG_PRIMAL_DUAL
       os << "Exiting the infinite loop\n";
 #endif

@@ -8170,7 +8170,7 @@ KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const &FAC,
   os << "CDD: |ListV|=" << ListV.size() << "\n";
 #endif
   auto get_nsp = [&]() -> MyMatrix<T> {
-    if (ListV.size() > 0) {
+    if (!ListV.empty()) {
       MyMatrix<T> MatEqua = MatrixFromVectorFamily(ListV);
       return NullspaceTrMat(MatEqua);
     } else {

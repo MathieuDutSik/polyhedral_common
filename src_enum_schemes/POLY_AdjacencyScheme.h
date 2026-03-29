@@ -358,7 +358,7 @@ bool compute_adjacency_serial(int const &max_time_second, Fnext f_next,
 #endif
       return false;
     }
-    if (notdone.size() == 0) {
+    if (notdone.empty()) {
 #ifdef DEBUG_ADJACENCY_SCHEME
       os << "ADJ_SCH: returning true due to n_notdone = 0\n";
 #endif

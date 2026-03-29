@@ -154,7 +154,7 @@ private:
     return true;
   }
   bool one_level_increase() {
-    if (l_gens.size() == 0) { // no generator, no increase to do.
+    if (l_gens.empty()) { // no generator, no increase to do.
       return true;
     }
     if (is_finite.has_value()) { // Computation has
@@ -179,7 +179,7 @@ private:
   }
 public:
   FiniteMatrixGroupTest(std::vector<MyMatrix<T>> const& _l_gens, std::ostream& _os) : l_gens(_l_gens), os(_os) {
-    if (l_gens.size() == 0) { // no generator, group is trivial and so empty
+    if (l_gens.empty()) { // no generator, group is trivial and so empty
       is_finite = true;
       return;
     }

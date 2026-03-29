@@ -360,7 +360,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 2\n";
 #endif
-  if (list_degN.size() > 0) {
+  if (!list_degN.empty()) {
     // vertices of degree 5 or more never occurs.
     return {};
   }
@@ -368,7 +368,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
   std::cerr << "RecognizeIrreducibleSphericalEuclideanDiagram, step 3\n";
 #endif
   // Vertex of degree 4 can occur for \tilde{D4} only
-  if (list_deg4.size() > 0) {
+  if (!list_deg4.empty()) {
     // We are now in Euclidean and tilde{D4} is the only solution
     if (n_vert != 5)
       return {};
@@ -389,7 +389,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
 #ifdef DEBUG_COXETER_DYNKIN_COMBINATORICS
   std::cerr << "|ListCycles|=" << ListCycles.size() << "\n";
 #endif
-  if (ListCycles.size() > 0) {
+  if (!ListCycles.empty()) {
     // Only tilde{An} is possible.
     if (ListCycles.size() > 1) {
       // If more than 1 cycle, then not possible
@@ -439,7 +439,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
       << "RecognizeIrreducibleSphericalEuclideanDiagram, step 6 |list_deg3|="
       << list_deg3.size() << "\n";
 #endif
-  if (list_deg3.size() == 0) {
+  if (list_deg3.empty()) {
     // We are in a single path.
     if (multiplicity[val_four] == 2) {
       if (n_higher_edge != 2) {

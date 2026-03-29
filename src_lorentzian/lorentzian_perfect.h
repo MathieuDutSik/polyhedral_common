@@ -421,7 +421,7 @@ LORENTZ_SearchInitialVector(MyMatrix<T> const &LorMat,
   while (true) {
     std::vector<MyVector<Tint>> LVect = LORENTZ_FindPositiveVectors<T, Tint>(
         LorMat, PosVect, MaxScal, TheOption, OnlyShortest, os);
-    if (LVect.size() > 0) {
+    if (!LVect.empty()) {
       return LVect;
     }
     MaxScal *= 2;
@@ -611,7 +611,7 @@ GetUpperBound(MyMatrix<T> const &LorMat, MyVector<T> const &eNSPbas,
 #ifdef DEBUG_LORENTZIAN_PERFECT
   os << "LORPERF: GetUpperBound, step 5\n";
 #endif
-  if (ListUpperBound_Iso.size() > 0) {
+  if (!ListUpperBound_Iso.empty()) {
     UpperBound_isotropic_opt = VectorMin(ListUpperBound_Iso);
     UpperBound_isotropic = *UpperBound_isotropic_opt;
 #ifdef DEBUG_LORENTZIAN_PERFECT
@@ -764,11 +764,11 @@ LORENTZ_Kernel_Flipping(MyMatrix<T> const &LorMat,
                   << " TheOption=" << TheOption
                   << " OnlyShortest=" << OnlyShortest << "\n";
         std::cerr << "LORPERF: |CritSet|=" << CritSet.size() << "\n";
-        if (CritSet.size() > 0) {
+        if (!CritSet.empty()) {
           WriteMatrix(std::cerr, MatrixFromVectorFamily(CritSet));
         }
         std::cerr << "LORPERF: |ListTotal|=" << ListTotal.size() << "\n";
-        if (ListTotal.size() > 0) {
+        if (!ListTotal.empty()) {
           WriteMatrix(std::cerr, MatrixFromVectorFamily(ListTotal));
         }
         std::cerr << "LORPERF: Bug: if included, it should be equal\n";
@@ -800,7 +800,7 @@ LORENTZ_Kernel_Flipping(MyMatrix<T> const &LorMat,
 #endif
   while (true) {
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-    if (ListTotal.size() == 0) {
+    if (ListTotal.empty()) {
       std::cerr << "LORPERF: ListTotal is empty, so that is a bug\n";
       throw TerminalException{1};
     }
@@ -985,7 +985,7 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
   std::vector<MyVector<Tint>> CritSet = LORENTZ_SearchInitialVector<T, Tint>(
       LorMat, CentralVect_T, TheOption, os);
 #ifdef SANITY_CHECK_LORENTZIAN_PERFECT
-  if (CritSet.size() == 0) {
+  if (CritSet.empty()) {
     std::cerr << "LORPERF: CritSet is empty which ruins everything\n";
     throw TerminalException{1};
   }
@@ -1012,7 +1012,7 @@ LorentzianPerfectEntry<T, Tint> LORENTZ_GetOnePerfect(MyMatrix<T> const &LorMat,
 #endif
   while (true) {
     int rnk = 0;
-    if (CritSet.size() > 0) {
+    if (!CritSet.empty()) {
       rnk = RankMat(MatrixFromVectorFamily(CritSet));
     }
 #ifdef DEBUG_LORENTZIAN_PERFECT

@@ -514,7 +514,7 @@ template <typename T, typename T_vector> struct buffered_T_exchanges {
   }
   bool is_completely_clear() {
     for (auto &eEnt : l_message) {
-      if (eEnt.size() > 0) {
+      if (!eEnt.empty()) {
         return false;
       }
     }

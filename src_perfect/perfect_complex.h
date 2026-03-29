@@ -664,7 +664,7 @@ ResultStepEnumeration<T,Tint,Tgroup> compute_next_level(PerfectComplexTopDimInfo
 #ifdef DEBUG_PERFECT_COMPLEX
   os << "PERFCOMP: compute_next_level, start, n=" << n << "\n";
   int i_level = 0;
-  if (level.l_faces.size() > 0) {
+  if (!level.l_faces.empty()) {
     int dim_spa = pctdi.LinSpa.ListMat.size();
     int dim_ext = level.l_faces[0].or_info.ListRowSelect.size();
     i_level = dim_spa - dim_ext;
@@ -1703,7 +1703,7 @@ bool is_product_zero(int const& index, FullComplexEnumeration<T,Tint,Tgroup> con
 #ifdef DEBUG_PERFECT_COMPLEX
     os << "PERFCOMP: We have chain3\n";
 #endif
-    if (chain3.size() > 0) {
+    if (!chain3.empty()) {
 #ifdef DEBUG_PERFECT_COMPLEX
       os << "PERFCOMP: |chain1|=" << chain1.size() << "\n";
       os << "PERFCOMP: |chain2|=" << chain2.size() << "\n";
@@ -1966,7 +1966,7 @@ std::vector<PerfectFaceEntry<T, Tint>> contracting_homotopy(int const& index, st
 #endif
 #ifdef SANITY_CHECK_PERFECT_COMPLEX
   std::vector<PerfectFaceEntry<T, Tint>> chain3 = chain_boundary(index, chain, fce, os);
-  if (chain3.size() > 0) {
+  if (!chain3.empty()) {
     std::cerr << "PERFCOMP: The chain should have a zero boundary\n";
     throw TerminalException{1};
   }

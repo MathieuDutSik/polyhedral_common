@@ -370,7 +370,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
     if (TypeTspace == "InvGroup") {
       std::string FileInvGroup = Blk.get_string("FileInvGroup");
       std::vector<MyMatrix<T>> LGen = ReadListMatrixFile<T>(FileInvGroup);
-      if (LGen.size() == 0) {
+      if (LGen.empty()) {
         std::cerr << "We have 0 matrices\n";
         throw TerminalException{1};
       }

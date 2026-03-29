@@ -356,26 +356,26 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
       return 0;
     }
-    if (unproc_entriesAdjI.size() > 0) {
+    if (!unproc_entriesAdjI.empty()) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
       os << "MPI_ADJ_SCH: the_nonce=0, because unproc_entriesAdjI.size() > 0\n";
 #endif
       return 0;
     }
-    if (map_adjO.size() > 0) {
+    if (!map_adjO.empty()) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
       os << "MPI_ADJ_SCH: the_nonce=0, because map_adjO.size() > 0\n";
 #endif
       return 0;
     }
-    if (notdone.size() > 0 && max_time_second == 0) {
+    if (!notdone.empty() && max_time_second == 0) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
       os << "MPI_ADJ_SCH: the_nonce=0, because notdone.size() > 0 && "
             "max_time_second == 0\n";
 #endif
       return 0;
     }
-    if (notdone.size() > 0 && max_time_second > 0 &&
+    if (!notdone.empty() && max_time_second > 0 &&
         si(start) < max_time_second) {
 #ifdef DEBUG_MPI_ADJACENCY_SCHEME
       os << "MPI_ADJ_SCH: max_time_second=" << max_time_second
@@ -487,7 +487,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
 #endif
       return false;
     }
-    if (notdone.size() == 0) {
+    if (notdone.empty()) {
       return false;
     }
     size_t idx = get_notdone_idx();

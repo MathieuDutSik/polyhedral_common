@@ -40,7 +40,7 @@
 template <typename T>
 void write_matrix_group(std::vector<MyMatrix<T>> const &list_mat,
                         std::string const &context) {
-  if (list_mat.size() == 0) {
+  if (list_mat.empty()) {
     return;
   }
   int dim = list_mat[0].rows();

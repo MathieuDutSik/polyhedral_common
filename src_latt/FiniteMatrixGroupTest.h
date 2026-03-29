@@ -39,14 +39,14 @@
  */
 template<typename T, typename Tint>
 bool test_finiteness_group_posdef(std::vector<MyMatrix<Tint>> const& ListGens, std::ostream &os) {
-  if (ListGens.size() == 0) {
+  if (ListGens.empty()) {
     // No generators, so the group is trivial.
     return true;
   }
   int n = ListGens[0].rows();
   std::vector<MyMatrix<T>> ListGens_T = UniversalStdVectorMatrixConversion<T,Tint>(ListGens);
   std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, ListGens_T, os);
-  if (ListMat.size() == 0) {
+  if (ListMat.empty()) {
     // No invariant matrix
     return false;
   }
@@ -60,7 +60,7 @@ bool test_finiteness_group_posdef(std::vector<MyMatrix<Tint>> const& ListGens, s
 
 template<typename T, typename Tint>
 bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGensInp, std::ostream &os) {
-  if (ListGensInp.size() == 0) {
+  if (ListGensInp.empty()) {
     // No generators, so the group is trivial.
     return true;
   }
@@ -68,7 +68,7 @@ bool test_finiteness_group(std::vector<MyMatrix<Tint>> const& ListGensInp, std::
   int n = ListGens[0].rows();
   std::vector<MyMatrix<T>> ListGens_T = UniversalStdVectorMatrixConversion<T,Tint>(ListGens);
   std::vector<MyMatrix<T>> ListMat = BasisInvariantForm<T>(n, ListGens_T, os);
-  if (ListMat.size() == 0) {
+  if (ListMat.empty()) {
     // No invariant matrix
     return false;
   }

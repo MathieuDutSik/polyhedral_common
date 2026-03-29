@@ -203,7 +203,7 @@ template <typename T> struct ShortVectorGroup {
 
   CombElt<T> GetShortVectorNoDuplication(MyVector<T> const &y,
                                          T const &target_scal) const {
-    if (ListGen.size() == 0) {
+    if (ListGen.empty()) {
       std::cerr << "The number of generators is 0\n";
       std::cerr << "Therefore calling the function does not make sense 1\n";
       throw TerminalException{1};
@@ -253,7 +253,7 @@ template <typename T> struct ShortVectorGroup {
 
   CombElt<T> GetShortVectorIteration(MyVector<T> const &y,
                                      T const &target_scal) const {
-    if (ListGen.size() == 0) {
+    if (ListGen.empty()) {
       std::cerr << "The number of generators is 0\n";
       std::cerr << "Therefore calling the function does not make sense 2\n";
       throw TerminalException{1};

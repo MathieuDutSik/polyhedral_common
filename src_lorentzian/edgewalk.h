@@ -211,7 +211,7 @@ int get_sign_cand(RootCandidate<T, Tint> const &poss1,
 template <typename T, typename Tint>
 RootCandidate<T, Tint>
 get_best_candidate(std::vector<RootCandidate<T, Tint>> const &l_cand) {
-  if (l_cand.size() == 0) {
+  if (l_cand.empty()) {
     std::cerr << "We have zero candidates. Abort\n";
     throw TerminalException{1};
   }
@@ -1068,7 +1068,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
 #ifdef DEBUG_EDGEWALK
   os << "EDGE: |l_candidates|=" << l_candidates.size() << "\n";
 #endif
-  if (l_candidates.size() > 0) {
+  if (!l_candidates.empty()) {
     RootCandidate<T, Tint> best_cand = get_best_candidate(l_candidates);
     return best_cand.fund_v;
   }
@@ -1329,7 +1329,7 @@ void PrintResultEdgewalk(MyMatrix<T> const &G,
     os_out << ", l_norms:=";
     WriteStdVectorGAP(os_out, l_norms);
     os_out << ", GrpIsomCoxMatr:=";
-    if (re.l_gen_isom_cox.size() > 0) {
+    if (!re.l_gen_isom_cox.empty()) {
       os_out << "Group(";
       WriteVectorMatrixGAP(os_out, re.l_gen_isom_cox);
       os_out << ")";
@@ -1970,7 +1970,7 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
 #endif
       pos++;
     }
-    if (list_vect.size() == 0) {
+    if (list_vect.empty()) {
       std::cerr << "The list of vectors is empty. Cannot be reflective. In any "
                    "case, we cannot continue\n";
       std::string reason = "list of roots is empty";

@@ -618,7 +618,7 @@ int main(int argc, char *argv[]) {
       if (!AreBufferFullEnough()) {
         if (MaxRunTimeSecond < 0 || elapsed_seconds < MaxRunTimeSecond) {
           // We pass the first test with respect to runtime
-          if (!StopWhenFinished || ListUndoneIndex.size() > 0) {
+          if (!StopWhenFinished || !ListUndoneIndex.empty()) {
             // We pass the test of being non-empty
             DoSomething = true;
           }

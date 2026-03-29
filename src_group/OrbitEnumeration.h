@@ -165,7 +165,7 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible,
 #ifdef DEBUG_ORBIT_ENUMERATION
       os << "OE: We have 1, |l_extensions|=" << l_extensions.size() << "\n";
 #endif
-      if (ListLevel.size() == 0) {
+      if (ListLevel.empty()) {
         ListLevel.push_back({l_extensions[0], l_extensions, 0});
       } else {
         ListLevel[0] = {l_extensions[0], l_extensions, 0};
@@ -181,7 +181,7 @@ void SubsetOrbitEnumeration_minimal(Tgroup const &GRP, Fextensible f_extensible,
 #ifdef DEBUG_ORBIT_ENUMERATION
       os << "OE: We have 2, |l_extensions|=" << l_extensions.size() << "\n";
 #endif
-      if (l_extensions.size() == 0) {
+      if (l_extensions.empty()) {
         return GoUpNextInTree();
       }
       level += 1;
@@ -254,7 +254,7 @@ void SubsetOrbitEnumeration_canform(Tgroup const &GRP, Fextensible f_extensible,
         }
       }
     }
-    if (list_prev.size() == 0) {
+    if (list_prev.empty()) {
       return;
     }
   }

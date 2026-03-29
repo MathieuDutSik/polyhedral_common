@@ -161,7 +161,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
       os << "PARALL:   NextInTree, after span_part_solution |new_sols|="
          << new_sols.size() << "\n";
 #endif
-      if (new_sols.size() == 0) {
+      if (new_sols.empty()) {
         return GoUpNextInTree();
       }
       size_t new_choice = 0;
@@ -329,7 +329,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
   os << "PARALL:   After enumerate_parallelepiped |l_face|=" << l_face.size()
      << "\n";
 #endif
-  if (l_face.size() > 0) {
+  if (!l_face.empty()) {
     T eff_min = res_cvp.TheNorm + T(1);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "PARALL:   enumerating, eff_min=" << eff_min << "\n";

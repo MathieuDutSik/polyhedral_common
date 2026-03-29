@@ -190,7 +190,7 @@ vectface DoubleCosetDescription_Canonic(
   while (true) {
     if (SizeGen == TotalSize)
       return get_list_list_set();
-    if (CurrList.size() == 0)
+    if (CurrList.empty())
       break;
     Face eFace = CurrList.pop();
     for (auto const &eGen : BigGens) {
@@ -202,7 +202,7 @@ vectface DoubleCosetDescription_Canonic(
   std::unordered_set<Face> PartialOrbit = SetFace;
   while (true) {
 #ifdef DEBUG_DOUBLE_COSET
-    if (ListListSet.size() == 0) {
+    if (ListListSet.empty()) {
       std::cerr << "|ListListSet|=0 before the pop. It cannot work\n";
       throw TerminalException{1};
     }
@@ -273,7 +273,7 @@ vectface DoubleCosetDescription_CanonicInitialTriv(
   while (true) {
     if (SizeGen == TotalSize)
       return get_list_list_set();
-    if (CurrList.size() == 0)
+    if (CurrList.empty())
       break;
     Face eFace = CurrList.pop();
     for (auto const &eGen : BigGens) {

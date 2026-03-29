@@ -44,7 +44,7 @@ int main(int argc, char *argv[]) {
     std::cerr << "index=" << ret.index << "\n";
     //
     {
-      if (LGen.size() == 0)
+      if (LGen.empty())
         LGen.push_back(IdentityMat<T>(n));
       std::ofstream os(OUT_file);
       os << "return Group([";

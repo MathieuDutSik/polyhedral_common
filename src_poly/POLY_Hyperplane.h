@@ -124,7 +124,7 @@ vectface EnumerateHyperplaneRegions(MyMatrix<T> const &ListV) {
 #endif
   };
   while (true) {
-    if (ListUndone.size() == 0)
+    if (ListUndone.empty())
       break;
     Face f = *(ListUndone.begin());
     ProcessAdjacent(f);

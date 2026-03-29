@@ -17,7 +17,7 @@ Tgroup GenerateGroupModuloAction(std::vector<MyMatrix<T>> const &ListM,
                                  int const &N) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  if (ListM.size() == 0) {
+  if (ListM.empty()) {
     std::cerr << "COMB: Not possible to work if zero vectors are available\n";
     throw TerminalException{1};
   }
@@ -95,7 +95,7 @@ template <typename T, typename Tgroup>
 void CheckGroupEquality(std::vector<MyMatrix<T>> const &ListGens1,
                         std::vector<MyMatrix<T>> const &ListGens2,
                         [[maybe_unused]] std::ostream &os) {
-  if (ListGens1.size() == 0) {
+  if (ListGens1.empty()) {
     return;
   }
   int n = ListGens1[0].rows();

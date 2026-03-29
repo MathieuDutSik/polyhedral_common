@@ -191,7 +191,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
     std::vector<MyMatrix<T>> const &ListMat, bool const &NoExtension,
     std::ostream &os) {
 #ifdef SANITY_CHECK_SHORTEST_CONFIG
-  if (ListVect.size() == 0) {
+  if (ListVect.empty()) {
     std::cerr << "SHORT: ListVect should not be empty\n";
     throw TerminalException{1};
   }
@@ -438,7 +438,7 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
               DiffNew.push_back(eVect);
             }
           }
-          if (DiffNew.size() > 0) {
+          if (!DiffNew.empty()) {
             for (auto &eVect : DiffNew) {
 #ifdef DEBUG_SHORTEST_CONFIG
               os << "SHORT: Inserting from DiffNew eVect=";

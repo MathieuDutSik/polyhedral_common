@@ -773,7 +773,7 @@ vectface getdualdesc_in_bank(Tbank &bank, MyMatrix<T> const &EXT,
   std::pair<MyMatrix<T>, std::vector<Tidx>> ePair =
       CanonicalizationPolytopePair<T, Tidx, Tidx_value>(EXT, WMat, os);
   const TripleStore<Tgroup> &RecAns = bank.GetDualDesc(ePair.first);
-  if (RecAns.ListFace.size() == 0) {
+  if (RecAns.ListFace.empty()) {
     return vectface(0);
   }
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
@@ -1289,7 +1289,7 @@ public:
       CompleteList_SetUndone.erase(len);
     } else {
 #ifdef DEBUG_RECURSIVE_DUAL_DESC
-      if (V.size() == 0) {
+      if (V.empty()) {
         std::cerr << "We have V.size = 0 which is not allowed here\n";
         throw TerminalException{1};
       }
@@ -1567,10 +1567,10 @@ public:
     size_t spec_orbit = V[0];
     V[0] = V[V.size() - 1];
     V.pop_back();
-    if (V.size() == 0) {
+    if (V.empty()) {
       CompleteList_SetUndone[len].erase(eInv);
     }
-    if (CompleteList_SetUndone[len].size() == 0) {
+    if (CompleteList_SetUndone[len].empty()) {
       CompleteList_SetUndone.erase(len);
     }
     CompleteList_SetDone[len][eInv].push_back(spec_orbit);
@@ -2547,7 +2547,7 @@ vectface DUALDESC_AdjacencyDecomposition(
   if (ansBankCheck == "yes") {
     vectface ListFace =
         getdualdesc_in_bank(TheBank, EXT, lwm.GetWMat(), GRP, AllArr, os);
-    if (ListFace.size() > 0)
+    if (!ListFace.empty())
       return ListFace;
   }
   //

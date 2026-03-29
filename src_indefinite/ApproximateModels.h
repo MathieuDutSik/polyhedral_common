@@ -1487,7 +1487,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
     MyVector<Tint> const &eRepr = *opt;
     std::vector<MyVector<Tint>> ListV =
         get_vector_representatives(eRepr, X, os);
-    if (ListV.size() > 0) {
+    if (!ListV.empty()) {
       return ListV[0];
     }
     // We wanted to avoid that but sometimes we cannot
@@ -1496,7 +1496,7 @@ INDEF_FORM_GetApproximateModel(MyMatrix<T> const &Qmat, std::ostream &os) {
 #endif
     std::vector<MyVector<Tint>> ListRepr =
         GetCoveringOrbitRepresentatives(X, os);
-    if (ListRepr.size() > 0) {
+    if (!ListRepr.empty()) {
       return ListRepr[0];
     }
     return {};

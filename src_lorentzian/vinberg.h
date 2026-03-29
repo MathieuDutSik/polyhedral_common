@@ -709,7 +709,7 @@ FindRoot_filter(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   };
   //
   int TheRank = 0;
-  if (ListRoot.size() > 0) {
+  if (!ListRoot.empty()) {
     MyMatrix<Tint> RootMat = MatrixFromVectorFamily(ListRoot);
     TheRank = RankMat(RootMat);
   }
@@ -1199,7 +1199,7 @@ std::vector<MyVector<Tint>> FundCone(const VinbergTot<T, Tint> &Vtot,
 #ifdef DEBUG_VINBERG
   os << "FundCone |V1_roots|=" << V1_roots.size() << "\n";
 #endif
-  if (V1_roots.size() == 0) {
+  if (V1_roots.empty()) {
     return {};
   } else {
     return GetFacetOneDomain(V1_roots, os);
@@ -1425,7 +1425,7 @@ void FindRoots_Kernel(const VinbergTot<T, Tint> &Vtot, F f_exit,
 #endif
     std::vector<MyVector<Tint>> list_root_cand =
         FindRoot_filter<T, Tint>(Vtot, a, k, ListRoot, FACfeasible, os);
-    if (list_root_cand.size() > 0) {
+    if (!list_root_cand.empty()) {
       need_consideration = true;
       for (auto &eRoot : list_root_cand) {
         ListRoot.push_back(eRoot);

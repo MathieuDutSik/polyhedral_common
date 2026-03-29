@@ -338,7 +338,7 @@ std::vector<T> get_tp_classes(MyVector<T> const &a,
     os << "QUAD: p=" << p << "\n";
     os << "QUAD: n_cond_12=" << n_cond_12 << " n_cond_34=" << n_cond_34
        << " |matches|=" << matches.size() << "\n";
-    if (matches.size() == 0) {
+    if (matches.empty()) {
       std::cerr << "QUAD: matches should not be empty\n";
       throw TerminalException{1};
     }
@@ -384,7 +384,7 @@ T get_q_val(MyVector<T> const &a, std::vector<T> const &classes,
   std::vector<int> set34 = get_poss_signs(vect34);
   std::vector<int> set = IntersectionVect(set12, set34);
 #ifdef DEBUG_QUATERNARY
-  if (set.size() == 0) {
+  if (set.empty()) {
     std::cerr << "set should not be empty\n";
     throw TerminalException{1};
   }

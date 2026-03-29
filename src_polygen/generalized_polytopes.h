@@ -399,6 +399,9 @@ template <typename T> struct GeneralizedPolytope {
   size_t size() const {
     return polytopes.size();
   }
+  bool empty() const {
+    return polytopes.size() == 0;
+  }
 };
 
 template <typename T>
@@ -490,7 +493,7 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
         }
       }
       entries = l_ec;
-      if (entries.size() == 0) {
+      if (entries.empty()) {
         l_delete.push_back(face);
       }
     }
@@ -960,7 +963,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         difference_gp_gp(kv.second.gp_plus, kv.second.gp_minus, os);
     GeneralizedPolytope<T> diff_m_p =
         difference_gp_gp(kv.second.gp_minus, kv.second.gp_plus, os);
-    if (diff_p_m.size() + diff_m_p.size() == 0) {
+    if (diff_p_m.size() + diff_m_p.empty()) {
       to_remove.push_back(kv.first);
     } else {
       kv.second.gp_plus = diff_p_m;
@@ -1089,7 +1092,7 @@ void reduce_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> &bnd,
   }
   std::vector<MyVector<T>> to_remove;
   for (auto &kv : bnd.full_data_facets) {
-    if (kv.second.gp_plus.size() == 0 && kv.second.gp_minus.size() == 0) {
+    if (kv.second.gp_plus.empty() && kv.second.gp_minus.empty()) {
       to_remove.push_back(kv.first);
     }
   }
@@ -1102,7 +1105,7 @@ template <typename T>
 std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
                                       BoundaryGeneralizedPolytope<T> const &bnd,
                                       std::ostream &os) {
-  if (gp.size() == 0) {
+  if (gp.empty()) {
     return {};
   }
   int dim = gp.polytopes[0].FAC.cols();

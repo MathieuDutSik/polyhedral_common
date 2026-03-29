@@ -17,7 +17,7 @@ void process(std::string const &MatFile, std::string const &XnormStr,
   std::vector<MyVector<Tint>> LVect =
       approx.GetCoveringOrbitRepresentatives(Xnorm, std::cerr);
   if (OutFormat == "GAP") {
-    if (LVect.size() == 0) {
+    if (LVect.empty()) {
       os_out << "return rec(LVect:=[]);\n";
     } else {
       MyMatrix<Tint> MatVect = MatrixFromVectorFamily(LVect);

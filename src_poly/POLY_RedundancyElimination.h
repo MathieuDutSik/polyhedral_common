@@ -376,7 +376,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
         }
       }
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
-      if (WorkLIdx.size() == 0) {
+      if (WorkLIdx.empty()) {
         std::cerr << "WorkLIdx is empty. Not allowed\n";
         throw TerminalException{1};
       }

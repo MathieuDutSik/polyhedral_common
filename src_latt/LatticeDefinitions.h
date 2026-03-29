@@ -190,7 +190,7 @@ void EnumerateOrbitPrimitiveVector(
     };
     FuncInsert(ePos);
     while (true) {
-      if (ActivePoints.size() == 0)
+      if (ActivePoints.empty())
         break;
       Tint ePt = ActivePoints.pop();
       for (auto &M : ListMat) {

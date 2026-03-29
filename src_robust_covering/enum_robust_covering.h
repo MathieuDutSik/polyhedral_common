@@ -405,7 +405,7 @@ struct SoftConvexBoundary {
   std::vector<GenericRobustM<Tint>> l_robust_m;
   MyVector<Tint> v_long() const {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-    if (l_robust_m.size() == 0) {
+    if (l_robust_m.empty()) {
       std::cerr << "ROBUST: l_robust_m should be non-empty for getting the v_long\n";
       throw TerminalException{1};
     }
@@ -456,7 +456,7 @@ template <typename T, typename Tint> struct PVoronoiPart {
 template <typename T, typename Tint>
 PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::ostream& os) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
-  if (pvp.l_scb.size() > 0) {
+  if (!pvp.l_scb.empty()) {
     std::cerr << "ROBUST: We still have soft boundaries\n";
     throw TerminalException{1};
   }
@@ -914,7 +914,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred);
       MyVector<T> const& V = c_bnd.V;
       std::vector<GenericRobustM<Tint>> l_grm = m_full_ineq.get_list_paralls(V);
-      if (l_grm.size() > 0) {
+      if (!l_grm.empty()) {
         SoftConvexBoundary<T,Tint> scb{0, c_bnd, l_excluded_max, l_grm};
         l_scb.push_back(scb);
       } else {

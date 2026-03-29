@@ -317,7 +317,7 @@ ResultKRankinMin<T, Tint> Rankin_k_minimum(MyMatrix<T> const &A, int const &k,
     MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
     T eDet = DeterminantMat(eProdMat);
     os << "RNK: f_insert eDet=" << eDet << "\n";
-    if (set_subspaces.size() == 0) {
+    if (set_subspaces.empty()) {
       DetMin = eDet;
       os << "RNK: Now DetMin=" << DetMin << " Case 1\n";
       set_subspaces.insert(gLatt);

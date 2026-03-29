@@ -679,7 +679,7 @@ std::vector<Tobj> OrbitSplittingGeneralized(
       }
       for (auto &uSet : Additional)
         SingleOrbit.insert(uSet);
-      if (NewElts.size() == 0)
+      if (NewElts.empty())
         break;
       Additional = std::move(NewElts);
     }
@@ -815,7 +815,7 @@ OrbitSplittingMap(std::vector<std::pair<Face, T>> &PreListTotal,
       }
       for (auto &uSet : Additional)
         SingleOrbit.insert(uSet);
-      if (NewElts.size() == 0)
+      if (NewElts.empty())
         break;
       Additional = std::move(NewElts);
     }

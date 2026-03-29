@@ -51,7 +51,7 @@ MyVector<T> solve_fifth_equation(MyVector<T> const &a, std::ostream &os) {
   std::vector<int> poss_quad = get_poss_signs(v_quad);
   std::vector<int> poss = IntersectionVect(poss_tern, poss_quad);
 #ifdef DEBUG_FIFTH_AND_HIGHER_ORDER
-  if (poss.size() == 0) {
+  if (poss.empty()) {
     std::cerr << "FIFTH: No possibilities\n";
     throw TerminalException{1};
   }

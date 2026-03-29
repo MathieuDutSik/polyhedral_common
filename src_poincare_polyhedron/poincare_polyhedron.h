@@ -1145,7 +1145,7 @@ GetMissing_TypeI_Gen2(StepEnum<T> const &se, DataFAC<T> const &datafac,
       }
       os << "   f_all_decrease |l_result|=" << l_result.size()
          << " has_negative=" << has_negative << "\n";
-      if (l_result.size() == 0 || has_negative) {
+      if (l_result.empty() || has_negative) {
         return l_total;
       }
       l_active = std::move(l_result);
@@ -1499,7 +1499,7 @@ void InsertAndCheckRedundancy(StepEnum<T> &se,
          << " |ListMissB|=" << ListMissB.size()
          << " |ListTried|=" << ListTried.size() << "\n";
       os << "|PP: ListMiss/ListMisB/ListTried|=" << time << "\n";
-      if (ListMissB.size() == 0) {
+      if (ListMissB.empty()) {
         os << "|PP: f_inverses_clear|=" << time << "\n";
         return DidSomething;
       }

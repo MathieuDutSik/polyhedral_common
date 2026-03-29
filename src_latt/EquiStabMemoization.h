@@ -179,7 +179,7 @@ public:
     return false;
   }
   std::optional<std::vector<Tequiv>> attempt_stabilizer(Tdata const &x) const {
-    if (list_stab.size() == 0) {
+    if (list_stab.empty()) {
       // No stabilizer computed so no point in computing anything.
       return {};
     }

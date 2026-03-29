@@ -1653,7 +1653,7 @@ void TestPreImageSubgroup(
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
   PreImager pre_imager = helper.pre_imager(ListMatrGen, ListPermGen, os);
-  if (MatrPreImage.size() == 0) {
+  if (MatrPreImage.empty()) {
     if (OrigGRP.size() != 1) {
       std::cerr << "MATGRP: Error, in context=" << context << "\n";
       std::cerr << "MATGRP: If MatrPreImage is empty, then necessarily OrigGRP "
@@ -2151,7 +2151,7 @@ LinearSpace_Stabilizer(std::vector<MyMatrix<T>> const &ListMatr,
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
     ListMatr_C.push_back(eMatr_C);
   }
-  if (ListMatr_C.size() == 0) {
+  if (ListMatr_C.empty()) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
   return {ret.index, ListMatr_C};
@@ -2179,7 +2179,7 @@ Stab_RightCoset<T> LinearSpace_Stabilizer_RightCoset(
     MyMatrix<T> eMatr_C = PmatInv_T * eMatr_B * Pmat_T;
     ListMatr_C.push_back(eMatr_C);
   }
-  if (ListMatr_C.size() == 0) {
+  if (ListMatr_C.empty()) {
     ListMatr_C.push_back(IdentityMat<T>(helper.n));
   }
   CosetDescription<T> coset = pairB.coset_desc;

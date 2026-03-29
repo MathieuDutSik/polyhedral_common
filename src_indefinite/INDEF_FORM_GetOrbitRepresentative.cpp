@@ -23,7 +23,7 @@ void process(std::string const &MatFile, std::string const &XnormStr,
     }
   }
   if (OutFormat == "PYTHON") {
-    if (l_repr.size() == 0) {
+    if (l_repr.empty()) {
       os_out << "[]";
     } else {
       WriteMatrixPYTHON(os_out, MatrixFromVectorFamily(l_repr));
@@ -32,7 +32,7 @@ void process(std::string const &MatFile, std::string const &XnormStr,
   }
   if (OutFormat == "GAP") {
     os_out << "return ";
-    if (l_repr.size() == 0) {
+    if (l_repr.empty()) {
       os_out << "[]";
     } else {
       WriteMatrixGAP(os_out, MatrixFromVectorFamily(l_repr));

@@ -156,7 +156,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
     os << "SAMP: while nbCases=" << get_nbcase() << "\n";
 #endif
     vectface vf_undone = get_undone();
-    if (vf_undone.size() == 0) {
+    if (vf_undone.empty()) {
 #ifdef DEBUG_SAMPLING_FACET
       os << "SAMP: Nothing more to do, exiting\n";
 #endif
@@ -334,7 +334,7 @@ vectface Kernel_DirectComputationInitialFacetSet(MyMatrix<T> const &EXT,
     throw TerminalException{1};
   };
   vectface ListIncd = compute_samp();
-  if (ListIncd.size() == 0) {
+  if (ListIncd.empty()) {
     std::cerr << "SAMP: We found 0 facet and that is not good\n";
     throw TerminalException{1};
   }

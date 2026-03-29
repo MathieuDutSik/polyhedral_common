@@ -56,7 +56,7 @@ std::string compute_complexity_matrix(MyMatrix<T> const &mat) {
 template <typename T>
 std::string
 compute_complexity_listmat(std::vector<MyMatrix<T>> const &list_mat) {
-  if (list_mat.size() == 0) {
+  if (list_mat.empty()) {
     return "zero generators";
   }
   int n = list_mat[0].rows();
@@ -170,7 +170,7 @@ struct BlockInterval {
     }
   }
   std::optional<size_t> get_first() {
-    if (intervals.size() == 0) {
+    if (intervals.empty()) {
       return {};
     }
     Interval &interval = intervals[0];
@@ -1593,7 +1593,7 @@ std::optional<std::vector<MyMatrix<T>>>
 ExhaustiveReductionComplexityGroupMatrix_Tfinite(
     std::vector<std::pair<MyMatrix<T>, MyMatrix<T>>> const &ListPair,
     T const &max_val, std::ostream &os) {
-  if (ListPair.size() == 0) {
+  if (ListPair.empty()) {
     std::vector<MyMatrix<T>> l_ret;
     return l_ret;
   }
@@ -2184,7 +2184,7 @@ ExhaustiveMatrixDoubleCosetSimplifications_Tfinite(
     std::vector<MyMatrix<T>> const &v_gens_tot, size_t const &max_iter,
     T const &max_val, std::ostream &os) {
   int n = d_cos.rows();
-  if (u_gens_tot.size() == 0 && v_gens_tot.size() == 0) {
+  if (u_gens_tot.empty() && v_gens_tot.empty()) {
     return DoubleCosetSimplification<T>{IdentityMat<T>(n), d_cos,
                                         IdentityMat<T>(n)};
   }

@@ -718,7 +718,7 @@ vectface DirectFacetOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef TIMINGS_DUAL_DESC
   os << "|DDD: DualDescription|=" << time << "\n";
 #endif
-  if (ListIncd.size() == 0) {
+  if (ListIncd.empty()) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }
@@ -756,7 +756,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
 #ifdef DEBUG_DUAL_DESC
   os << "DDD: Found  |ListIncd|=" << ListReturn.size() << "\n";
 #endif
-  if (ListReturn.size() == 0) {
+  if (ListReturn.empty()) {
     std::cerr << "We found ListIncd to be empty. A clear error\n";
     throw TerminalException{1};
   }

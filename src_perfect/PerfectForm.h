@@ -496,7 +496,7 @@ PerfectBoundednessProperty initial_bounded_property(LinSpaceMatrix<T> const &Lin
     bool val = is_bounded_self_dual(LinSpa.pairwise_scalar_info, LinSpa.ListMat, SHV, os);
     pbp.bounded_self_dual = val;
   }
-  if (LinSpa.l_spanning_elements.size() > 0) {
+  if (!LinSpa.l_spanning_elements.empty()) {
     bool val = is_bounded_spanning_elements(LinSpa.l_spanning_elements, SHV, os);
     pbp.bounded_spanning = val;
   }
