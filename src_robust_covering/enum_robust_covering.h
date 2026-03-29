@@ -836,7 +836,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #endif
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
         os << "ROBUST:   kippp, ext_robust_m.robust_m, "
               "index="
            << ext_robust_m.robust_m.index << " M=\n";
@@ -875,9 +875,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     {
       std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
       os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
+      bool test = IsFullDimensional(list_ineq, os);
+      os << "ROBUST:   kippp, test=" << test << "\n";
     }
 #endif
     bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, is_full_dim_bounded_p, test=" << test << "\n";
+#endif
     if (!test) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: kippp, failing by "
