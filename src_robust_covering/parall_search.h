@@ -55,7 +55,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   int n_vect = dv.n_vect;
   int miss_val = std::numeric_limits<int>::max();
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   kernel_enumerate_parallelepiped, n_vect=" << n_vect << "\n";
+  os << "PARALL:   kernel_enumerate_parallelepiped, n_vect=" << n_vect << "\n";
 #endif
 
   auto span_new_solution =
@@ -83,7 +83,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   auto span_part_solution =
       [&](PartSolution const &psol) -> std::vector<PartSolution> {
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "ROBUST:   span_part_solution |full_set|=" << psol.full_set.size()
+    os << "PARALL:   span_part_solution |full_set|=" << psol.full_set.size()
        << " / " << psol.full_set.count() << "\n";
 #endif
     std::vector<PartSolution> list_sol;
@@ -121,7 +121,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   };
   std::vector<OneLevel> l_levels{get_initial()};
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-  os << "ROBUST:   kernel_enumerate_parallelepiped, l_levels\n";
+  os << "PARALL:   kernel_enumerate_parallelepiped, l_levels\n";
 #endif
   int i_level = 0;
   auto GoUpNextInTree = [&]() -> bool {
@@ -139,26 +139,26 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   };
   auto NextInTree = [&]() -> bool {
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "ROBUST:   NextInTree, i_level=" << i_level << "\n";
+    os << "PARALL:   NextInTree, i_level=" << i_level << "\n";
 #endif
     int choice = l_levels[i_level].choice;
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "ROBUST:   NextInTree, choice=" << choice << "\n";
+    os << "PARALL:   NextInTree, choice=" << choice << "\n";
 #endif
     PartSolution const &psol = l_levels[i_level].l_sol[choice];
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-    os << "ROBUST:   NextInTree, we have psol\n";
+    os << "PARALL:   NextInTree, we have psol\n";
 #endif
     if (i_level == p) {
       f_insert(psol);
       return GoUpNextInTree();
     } else {
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-      os << "ROBUST:   NextInTree, before span_part_solution\n";
+      os << "PARALL:   NextInTree, before span_part_solution\n";
 #endif
       std::vector<PartSolution> new_sols = span_part_solution(psol);
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
-      os << "ROBUST:   NextInTree, after span_part_solution |new_sols|="
+      os << "PARALL:   NextInTree, after span_part_solution |new_sols|="
          << new_sols.size() << "\n";
 #endif
       if (new_sols.size() == 0) {
@@ -218,11 +218,11 @@ std::vector<Face> enumerate_parallelepiped(MyMatrix<Tint> const &M,
     }
   };
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   Before kernel_enumerate_parallelepiped\n";
+  os << "PARALL:   Before kernel_enumerate_parallelepiped\n";
 #endif
   kernel_enumerate_parallelepiped(dv, dim, f_insert, os);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   After kernel_enumerate_parallelepiped\n";
+  os << "PARALL:   After kernel_enumerate_parallelepiped\n";
 #endif
   std::vector<Face> l_face;
   for (auto &eFace : set_face) {
@@ -261,7 +261,7 @@ T compute_upper_bound_rrc(MyMatrix<T> const &GramMat,
   for (auto &M : rrc.list_parallelepipeds) {
     T value = compute_upper_bound_mat(GramMat, M);
     if (value == 0) {
-      std::cerr << "ROBUST: The value should be non-zero\n";
+      std::cerr << "PARALL: The value should be non-zero\n";
       throw TerminalException{1};
     }
     if (upper_value == 0) {
@@ -288,13 +288,13 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
                                  resultCVP<T, Tint> const &res_cvp,
                                  MyVector<T> const &eV, std::ostream &os) {
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   compute_and_enumerate_structures, beginning, eV="
+  os << "PARALL:   compute_and_enumerate_structures, beginning, eV="
      << StringVector(eV) << "\n";
 #endif
   int dim = eV.size();
   int pow = pow_two(dim);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   compute_and_enumerate_structures, dim=" << dim
+  os << "PARALL:   compute_and_enumerate_structures, dim=" << dim
      << " pow=" << pow << "\n";
 #endif
   MyMatrix<Tint> M_sol(pow, dim);
@@ -311,7 +311,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
   };
   int n_vect = res_cvp.ListVect.rows();
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   After solver.at_most_dist_vectors res_cvp.TheNorm="
+  os << "PARALL:   After solver.at_most_dist_vectors res_cvp.TheNorm="
      << res_cvp.TheNorm << " |ListVect|=" << n_vect << "\n";
 #endif
   std::vector<T> l_norm;
@@ -322,17 +322,17 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
     l_norm.push_back(norm);
   }
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   Before enumerate_parallelepiped\n";
+  os << "PARALL:   Before enumerate_parallelepiped\n";
 #endif
   std::vector<Face> l_face = enumerate_parallelepiped(res_cvp.ListVect, os);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST:   After enumerate_parallelepiped |l_face|=" << l_face.size()
+  os << "PARALL:   After enumerate_parallelepiped |l_face|=" << l_face.size()
      << "\n";
 #endif
   if (l_face.size() > 0) {
     T eff_min = res_cvp.TheNorm + T(1);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST:   enumerating, eff_min=" << eff_min << "\n";
+    os << "PARALL:   enumerating, eff_min=" << eff_min << "\n";
     int i_face = 0;
 #endif
     std::vector<MyMatrix<Tint>> list_min_parallelepipeds;
@@ -340,7 +340,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
     for (auto &eFace : l_face) {
       T local_max_norm(0);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-      os << "ROBUST:   i_face=" << i_face << " eFace=" << eFace << "\n";
+      os << "PARALL:   i_face=" << i_face << " eFace=" << eFace << "\n";
 #endif
       for (int &vert : FaceToVector<int>(eFace)) {
         if (l_norm[vert] > local_max_norm) {
@@ -348,7 +348,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
         }
       }
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-      os << "ROBUST:   i_face=" << i_face
+      os << "PARALL:   i_face=" << i_face
          << " local_max_norm=" << local_max_norm << "\n";
       i_face += 1;
 #endif
@@ -365,7 +365,7 @@ compute_and_enumerate_structures(MyMatrix<T> const &GramMat,
       }
     }
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST:   eff_min=" << eff_min << "\n";
+    os << "PARALL:   eff_min=" << eff_min << "\n";
 #endif
     ResultDirectEnumeration<T, Tint> rde{eff_min, list_min_parallelepipeds,
                                          tot_list_parallelepipeds};
@@ -392,20 +392,20 @@ void compute_robust_close_f(CVPSolver<T, Tint> const &solver,
     eV_red(i) = eV(i + 1);
   }
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-  os << "ROBUST: compute_robust_close_f, step 1\n";
+  os << "PARALL: compute_robust_close_f, step 1\n";
   int n_iter = 0;
 #endif
   std::optional<T> opt_norm;
   while (true) {
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST: compute_robust_close_f, step 2, n_iter=" << n_iter << "\n";
+    os << "PARALL: compute_robust_close_f, step 2, n_iter=" << n_iter << "\n";
     n_iter += 1;
 #endif
     resultCVP<T, Tint> res_cvp = solver.increase_distance_vectors(eV_red, opt_norm);
     std::optional<ResultDirectEnumeration<T, Tint>> opt_rde =
         compute_and_enumerate_structures(solver.GramMat, res_cvp, eV_red, os);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST: compute_robust_close_f, After "
+    os << "PARALL: compute_robust_close_f, After "
           "compute_and_enumerate_structures\n";
 #endif
     opt_norm = res_cvp.TheNorm;
@@ -458,13 +458,13 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
     int denom = random() % 1000000000000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST: Before compute_robust_closest eV=" << StringVectorGAP(eV)
+    os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";
 #endif
     ResultRobustClosest<T, Tint> rrc =
         compute_robust_closest<T, Tint>(solver, eV, os);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "ROBUST: After compute_robust_closest\n";
+    os << "PARALL: After compute_robust_closest\n";
 #endif
     if (rrc.robust_minimum > max_cov) {
       max_cov = rrc.robust_minimum;

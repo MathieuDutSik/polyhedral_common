@@ -1282,6 +1282,9 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   CVPSolver<T, Tint> const &solver = eData.solver;
   std::vector<PVoronoi<T, Tint>> l_ppoly;
   PVoronoi<T, Tint> ppoly = initial_p_polytope(solver, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: capp, After initial_p_polytope\n";
+#endif
   l_ppoly.push_back(ppoly);
   auto f_insert = [&](PVoronoi<T, Tint> const &f_ppoly) -> void {
     for (auto &e_ppoly : l_ppoly) {
@@ -1298,12 +1301,14 @@ compute_all_p_polytopes(DataLattice<T, Tint, Tgroup> &eData) {
   while (true) {
     size_t len = l_ppoly.size();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: capp, start=" << start << " len=" << len
-       << "\n";
+    os << "ROBUST: capp, start=" << start << " len=" << len << "\n";
 #endif
-    for (size_t i_ppoly = start; i_ppoly < len; i_ppoly++) {
+    for (size_t i_p = start; i_p < len; i_p++) {
       std::vector<PVoronoi<T, Tint>> l_adj =
-          find_list_adjacent_p_voronoi(eData, l_ppoly[i_ppoly]);
+          find_list_adjacent_p_voronoi(eData, l_ppoly[i_p]);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: capp, i_p=" << i_p << " |l_adj|=" << l_adj.size() << "\n";
+#endif
       for (auto &eAdj : l_adj) {
         f_insert(eAdj);
       }
