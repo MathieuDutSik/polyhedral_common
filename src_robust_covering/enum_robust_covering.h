@@ -752,8 +752,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         rde.tot_list_parallelepipeds;
     MapFullIneq<T,Tint> m_full_ineq;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "--------------------------------------------------------------------"
-          "---------------------------\n";
+    os << "-----------------------------------------------------------\n";
     os << "ROBUST:   kippp, |list_min_parallelepipeds|="
        << list_min_parallelepipeds.size()
        << " |tot_list_parallelepipeds|=" << tot_list_parallelepipeds.size()
@@ -1222,12 +1221,18 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     os << "ROBUST: flapv, gapp x=" << StringVector(x) << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, x, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: flapv, opt.has_value()=" << opt.has_value() << "\n";
+#endif
     if (!opt) {
       return {};
     }
     PVoronoi<T, Tint> const &ppoly_adj = *opt;
     BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
     bool test = is_boundary_point(ipd_test, bnd_adj, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: flapv, test=" << test << "\n"; 
+#endif
     if (!test) {
       return {};
     }
@@ -1236,11 +1241,12 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   auto get_adj = [&](InteriorPtDir<T> const& ipd) -> PVoronoi<T, Tint> {
     InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, ga, ipd=" << ipd.to_string() << "\n";
+    os << "ROBUST: flapv, ga,     ipd=" << ipd.to_string() << "\n";
+    os << "ROBUST: flapv, ga, ipd_opp=" << ipd_opp.to_string() << "\n";
 #endif
     T factor(1);
     while (true) {
-      MyVector<T> x = ipd.get_point(factor);
+      MyVector<T>  x = ipd_opp.get_point(factor);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: flapv, ga, factor=" << factor << "\n";
 #endif

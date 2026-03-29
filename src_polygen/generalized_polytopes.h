@@ -377,16 +377,16 @@ MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
 template <typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
                                            std::ostream &os) {
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP: generate_single_polytope FACinput=\n";
   WriteMatrix(os, FACinput);
 #endif
   std::vector<int> ListIrred = cdd::RedundancyReductionClarksonExt(FACinput, os);
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP: generate_single_polytope |ListIrred|=" << ListIrred.size() << "\n";
 #endif
   MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP: generate_single_polytope FAC=\n";
   WriteMatrix(os, FAC);
 #endif
@@ -919,11 +919,11 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
   int n = gp.polytopes[0].FAC.cols();
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP:  find_generalized_polytope_boundary(fgpb) start\n";
 #endif
   for (size_t i = 0; i < gp.size(); i++) {
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
     os << "GP: fgpb, polytope " << i << " EXT=\n";
     WriteMatrix(os, gp.polytopes[i].EXT);
     os << "GP:     FAC=\n";
@@ -938,12 +938,12 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         rec.NSP = NullspaceMatSingleVector(eFAC);
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, rec.NSP);
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
       os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " FAC=\n";
       WriteMatrix(os, FAC);
 #endif
       SinglePolytope<T> sp = generate_single_polytope(FAC, os);
-#ifdef DEBUG_GENERALIZED_POLYTOPE
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
       os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " EXT=\n";
       WriteMatrix(os, sp.EXT);
 #endif
@@ -954,7 +954,6 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
       }
     }
   }
-  BoundaryGeneralizedPolytope<T> return_val;
   std::vector<MyVector<T>> to_remove;
   for (auto &kv : full_data_facets) {
     GeneralizedPolytope<T> diff_p_m =
@@ -1012,14 +1011,14 @@ get_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
   for (auto &kv : bnd.full_data_facets) {
     auto get_opt = [&]() -> std::optional<InteriorPtDir<T>> {
       std::optional<MyVector<T>> opt1 =
-          get_interior_point_gp(kv.second.gp_minus, os);
+          get_interior_point_gp(kv.second.gp_plus, os);
       if (opt1) {
         MyVector<T> const& FacIneq = kv.first;
         InteriorPtDir<T> ipd{*opt1, FacIneq};
         return ipd;
       }
       std::optional<MyVector<T>> opt2 =
-          get_interior_point_gp(kv.second.gp_plus, os);
+          get_interior_point_gp(kv.second.gp_minus, os);
       if (opt2) {
         MyVector<T> FacIneq = - kv.first;
         InteriorPtDir<T> ipd{*opt2, std::move(FacIneq)};
