@@ -292,6 +292,7 @@
 
 #ifdef DEBUG
 #define DEBUG_ENUM_P_POLYTOPES
+//#define DEBUG_GET_INEQ_P_POLYTOPES
 #endif
 
 
@@ -488,14 +489,14 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   int best_index = 0;
   int n_ineq = M.rows();
   size_t n_att = 0;
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
   os << "ROBUST:   ggrm, eV=" << StringVectorGAP(eV) << "\n";
 #endif
   for (int index = 0; index < n_ineq; index++) {
     MyVector<Tint> fV = GetMatrixRow(M, index);
     MyVector<T> diff = UniversalVectorConversion<T, Tint>(fV) - eV;
     T norm = EvaluationQuadForm(G, diff);
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
     double norm_d = UniversalScalarConversion<double, T>(norm);
     os << "ROBUST:   ggrm, index=" << index
        << " fV=" << StringVector(fV) << " norm=" << norm << " norm_d=" << norm_d
@@ -521,7 +522,7 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   if (n_att > 1) {
     is_correct = false;
   }
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
   double max_d = UniversalScalarConversion<double, T>(max);
   os << "ROBUST:   ggrm, best_index=" << best_index
      << " max=" << max << " max_d=" << max_d << "\n";
@@ -561,7 +562,7 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MapFullIneq<T,Tint> & m_full_ineq,
                                        [[maybe_unused]] std::ostream &os) {
   int n_row = robust_m.M.rows();
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
   os << "ROBUST:   iiip, M=\n";
   WriteMatrix(os, robust_m.M);
 #endif
@@ -570,7 +571,7 @@ void insert_inner_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
     if (i != robust_m.index) {
       MyVector<Tint> v_short = GetMatrixRow(robust_m.M, i);
       MyVector<T> eIneq = get_ineq(G, v_short, v_long);
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
       os << "ROBUST:   iiip, eIneq="
          << StringVector(eIneq) << " i=" << i << " index=" << robust_m.index
          << "\n";
@@ -589,18 +590,18 @@ void insert_outer_ineqs_parallelepiped(GenericRobustM<Tint> const &robust_m,
                                        MapFullIneq<T, Tint> &m_full_ineq,
                                        [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
   os << "ROBUST:   ioip, v_short=" << StringVector(v_short) << "\n";
   os << "ROBUST:   ioip, v_long=" << StringVector(v_long) << "\n";
 #endif
   if (v_short != v_long) {
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
     os << "ROBUST:   ioip, eIneq=" << StringVector(eIneq) << "\n";
 #endif
     m_full_ineq.insert_soft_ineq(eIneq, robust_m);
   } else {
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
     os << "ROBUST:   ioip, v_short=" << StringVector(v_short) << "\n";
 #endif
   }
@@ -614,6 +615,9 @@ void insert_excluded_max(GenericRobustM<Tint> const &robust_m,
                          [[maybe_unused]] std::ostream &os) {
   MyVector<Tint> v_long = robust_m.v_long();
   for (auto & v_short: l_excluded_max) {
+#ifdef DEBUG_GET_INEQ_P_POLYTOPES
+    os << "ROBUST:   iem, v_short=" << StringVector(v_short) << "\n";
+#endif
     MyVector<T> eIneq = get_ineq(G, v_short, v_long);
     m_full_ineq.insert_hard_ineq(eIneq);
   }
