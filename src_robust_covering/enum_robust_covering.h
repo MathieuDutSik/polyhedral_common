@@ -1169,6 +1169,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, EXT=\n";
   WriteMatrix(os, p_voronoi.EXT);
+  MyMatrix<T> FAC = DirectDualDescription(p_voronoi.EXT, os);
+  os << "ROBUST: find_p_voronoi, FAC=\n";
+  WriteMatrix(os, FAC);
 #endif
   return p_voronoi;
 }

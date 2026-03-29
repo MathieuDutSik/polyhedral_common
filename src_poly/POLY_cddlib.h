@@ -8065,11 +8065,11 @@ void ListFaceIneq_from_poly(dd_polyhedradata<T> const *poly,
 }
 
 template <typename T>
-std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
-                                             std::ostream &os) {
+std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
+                                                   dd_matrixdata<T> *M,
+                                                   std::ostream &os) {
   dd_ErrorType err = dd_NoError;
   int nbRow = TheEXT.rows();
-  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   size_t maxiter = 0;
@@ -8086,13 +8086,31 @@ std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
   std::vector<int> ListIdx;
   for (int i_row = 0; i_row < nbRow; i_row++) {
     bool isin = set_member(i_row + 1, redset);
-    if (!isin)
+    if (!isin) {
       ListIdx.push_back(i_row);
+    }
   }
   dd_FreeMatrix(M);
   set_free(redset);
   return ListIdx;
 }
+
+
+template <typename T>
+std::vector<int> RedundancyReductionClarkson(MyMatrix<T> const &TheEXT,
+                                             std::ostream &os) {
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
+  return RedundancyReductionClarksonKernel(TheEXT, M, os);
+}
+
+template <typename T>
+std::vector<int> RedundancyReductionClarksonExt(MyMatrix<T> const &TheEXT,
+                                                std::ostream &os) {
+  dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(TheEXT);
+  return RedundancyReductionClarksonKernel(TheEXT, M, os);
+}
+
+
 
 template <typename T>
 std::vector<int>

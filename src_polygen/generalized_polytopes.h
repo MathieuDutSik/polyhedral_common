@@ -377,8 +377,19 @@ MyVector<T> get_interior_facet_pt(SinglePolytope<T> const& sp, int i_facet) {
 template <typename T>
 SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
                                            std::ostream &os) {
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACinput, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: generate_single_polytope FACinput=\n";
+  WriteMatrix(os, FACinput);
+#endif
+  std::vector<int> ListIrred = cdd::RedundancyReductionClarksonExt(FACinput, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: generate_single_polytope |ListIrred|=" << ListIrred.size() << "\n";
+#endif
   MyMatrix<T> FAC = SelectRow(FACinput, ListIrred);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: generate_single_polytope FAC=\n";
+  WriteMatrix(os, FAC);
+#endif
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   return get_single_polytope(FAC, EXT);
 }
@@ -908,7 +919,16 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
                                    std::ostream &os) {
   int n = gp.polytopes[0].FAC.cols();
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP:  find_generalized_polytope_boundary(fgpb) start\n";
+#endif
   for (size_t i = 0; i < gp.size(); i++) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: fgpb, polytope " << i << " EXT=\n";
+    WriteMatrix(os, gp.polytopes[i].EXT);
+    os << "GP:     FAC=\n";
+    WriteMatrix(os, gp.polytopes[i].FAC);
+#endif
     int n_fac = gp.polytopes[i].FAC.rows();
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
@@ -918,7 +938,15 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         rec.NSP = NullspaceMatSingleVector(eFAC);
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, rec.NSP);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+      os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " FAC=\n";
+      WriteMatrix(os, FAC);
+#endif
       SinglePolytope<T> sp = generate_single_polytope(FAC, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+      os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " EXT=\n";
+      WriteMatrix(os, sp.EXT);
+#endif
       if (pair.second == 1) {
         rec.gp_plus.polytopes.push_back(sp);
       } else {
