@@ -12,31 +12,6 @@ The goal is to get extreme speed in order to solve record
 problems.
 
 
-Access to the source code
--------------------------
-
-Since this repository uses submodules, the cloning command is
-
-```sh
-$ git clone https://github.com/MathieuDutSik/polyhedral_common --recursive
-```
-
-If you cloned but forgot to put the `--recursive` then run `./init.sh` so as
-to get the subrepositories.
-
-In order to update the submodule the command is `./update.sh`.
-
-Compilation
------------
-
-The code depends on only a few libraries: Eigen, Boost and nauty.
-
-Several ways to compile the program are made available:
-* One is to compile via  **Dockerfile**. For the complete code, it is available at **docker_files/docker_complete/Dockerfile**.
-* Another way is to use the **CMakeLists.txt** for building the Makefile and compiling.
-* The standard way used in CI is to use the **Makefile**.
-
-
 General organization of the code
 --------------------------------
 
@@ -62,30 +37,6 @@ Works in Progress:
   * *src_poincare_polyhedron*: Applying the Poincare Polyhedron Theorem to some tiling spaces.
   * *src_robust_covering*: Finding robust covering density.
   * *src_k_coverings*: Finding k-coverings of lattices.
-
-
-Compilation options related to debug
-------------------------------------
-
-There are several environment variables that can be used during runtime.
-* `DEBUG` for making some print statements and making some checks. Those checks have to be fast.
-* `KEY_VALUE` for printing some `KEY(....) VALUE=(....)` that can be used for postprocessing of the options and heuristic optimization.
-* `TIMINGS` for printing some runtime information.
-* `SANITY_CHECK` for doing some checks and stopping if incoherence are detected.
-* `SANITY_CHECK_EXTENSIVE` for doing some long running checks and stopping if incoherence are detected. Since those are long running, a print statement must mark their beginning and another one their end.
-* `TRACK_INFO` for printing stuff for further work down the line.
-* `METHOD_COMPARISON` for considering two (or more) different methods and comparing their performance (mainly runtime but not only).
-
-The options `TIMINGS` and `DEBUG` enable all the timings and debugging statements.
-For a more granular debugging, stuff like `DEBUG_LINEAR_PROGRAM` can be used. See
-the top of the header files.
-
-A printout to `std::cerr` should occur if an error has been identified and the program
-will terminate with a call to `TerminalException`. Other print statement should be
-encapsulated in `std::ostream & os` that should be passed by reference from the initial
-call. So typically for serial output we pass the `std::cerr` while for the parallel runs
-we pass a stream to the output of that process. That way we avoid mixing between
-different sources.
 
 
 Arithmetics
@@ -116,20 +67,6 @@ Speed types:
 The choice is usually for **mpq_class** which has the least issues.
 
 
-Tests
------
-
-The directory `Exmpl_Bench` contains a bunch of test and development.
-They are typically work in progress and not necessarily in a state of being
-finished.
-
-The directory `CI_tests` contains some tests that are run in CI on GitHub.
-Their runtime should be short, from 5 minutes to 1 hour. Together they
-should cover as much as possible of the functionality of the code. If the
-test is working like normally, then it should be scheduled in the cron to
-run once per month. We do not want to overflow the credit that we have.
-
-
 Usage
 -----
 
@@ -139,14 +76,3 @@ Therefore, we plan to have interfacing with common Computer Algebra Systems:
 * GAP (Group Algebra Programming) which is an independent system.
 * Oscar which is based on Julia.
 * Sage which is based on Python.
-
-
-Dependencies
-------------
-
-Following dependencies are needed for compiling the code:
-
-  * Eigen: http://eigen.tuxfamily.org/
-  * Boost: http://www.boost.org/
-  * GNU MultiPrecision Library (GMP): https://gmplib.org/
-  * nauty : https://pallini.di.uniroma1.it/
