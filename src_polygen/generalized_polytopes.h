@@ -400,7 +400,7 @@ template <typename T> struct GeneralizedPolytope {
     return polytopes.size();
   }
   bool empty() const {
-    return polytopes.size() == 0;
+    return polytopes.empty();
   }
 };
 

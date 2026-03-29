@@ -221,7 +221,7 @@ public:
         connected_component<decltype(f_terminate_x)>(x, f_terminate_x);
     if (opt) {
 #ifdef DEBUG_EQUI_STAB_MEMOIZATION
-      if (l_pair_x.size() != 0) {
+      if (!l_pair_x.empty()) {
         std::cerr << "l_pair_x should be of zero length\n";
         throw TerminalException{1};
       }

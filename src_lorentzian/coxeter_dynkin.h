@@ -373,7 +373,7 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
     if (n_vert != 5)
       return {};
     if (list_deg4.size() != 1 || list_deg1.size() != 4 ||
-        list_deg2.size() != 0 || list_deg3.size() != 0)
+        !list_deg2.empty() || !list_deg3.empty())
       return {};
     size_t i_4 = list_deg4[0];
     for (size_t i = 0; i < n_vert; i++)
