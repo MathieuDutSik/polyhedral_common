@@ -5,7 +5,7 @@ TestLamination:=function(eRec)
     local FileOut, eProg, TheCommand, answer, test1, test2;
     FileOut:=Filename(DirectoryTemporary(), "Test.out");
     #
-    eProg:="../../src_poly/POLY_TwoLaminations";
+    eProg:=GetBinaryFilename("POLY_TwoLaminations");
     TheCommand:=Concatenation(eProg, " rational one ", eRec.FileIn, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

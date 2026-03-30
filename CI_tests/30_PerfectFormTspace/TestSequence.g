@@ -49,7 +49,7 @@ get_rec_info:=function(fProg, d, n, comm_choice, keep_error)
     AppendTo(output, "/\n");
     CloseStream(output);
     #
-    eProg:=Concatenation("../../src_perfect/", fProg);
+    eProg:=GetBinaryFilename(fProg);
     TheCommand:=Concatenation(eProg, " ", FileNml);
     if keep_error then
         TheCommand:=Concatenation(TheCommand, " 2> ", FileErr);

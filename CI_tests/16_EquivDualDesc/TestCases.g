@@ -5,7 +5,7 @@ TestDualDesc:=function(eRec)
     local prefix, FileOut, eProg, TheCommand, LOrb;
     prefix:=eRec.prefix;
     #
-    eProg:="../../../src_dualdesc/POLY_SerialDualDesc";
+    eProg:=GetBinaryFilename("POLY_SerialDualDesc");
     TheCommand:=Concatenation("(cd ", prefix, " && ", eProg, " input.nml)");
     Exec(TheCommand);
     FileOut:=Concatenation(prefix, "/orbits");

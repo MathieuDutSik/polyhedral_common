@@ -27,7 +27,7 @@ TestEquiStabDatabase:=function(ListMat, n_equiv)
     RemoveFileIfExist(FileOut);
     WriteListMatrixFile(FileIn, FullListMat);
     #
-    eProg:="../../src_latt/TEST_EquiStabFamily";
+    eProg:=GetBinaryFilename("TEST_EquiStabFamily");
     Print("Before the Effective run\n");
     TheCommand:=Concatenation(eProg, " rational ", FileIn, " GAP ", FileOut);
     Exec(TheCommand);

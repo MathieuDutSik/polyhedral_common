@@ -11,7 +11,7 @@ TestIdx:=function(i)
     local eFile, eFileGRP, eProg, eCommand, eFileIrred1, fProg, fCommand, U1, eFileIrred2, gProg2, gCommand2, U2, eFileIrred3, gProg3, gCommand3, U3, eFileIrred4, gProg4, gCommand4, U4;
     eFile:=Concatenation("TheCtype_5_", String(i));
     eFileGRP:=Concatenation("TheCtype_5_", String(i), ".grp");
-    eProg:="../../src_group/GRP_LinPolytope_Automorphism";
+    eProg:=GetBinaryFilename("GRP_LinPolytope_Automorphism");
     eCommand:=Concatenation(eProg, " rational ", eFile, " GAP ", eFileGRP);
     Print("eCommand=", eCommand, "\n");
     Exec(eCommand);
@@ -21,7 +21,7 @@ TestIdx:=function(i)
     fi;
     #
     eFileIrred1:=Concatenation("Irred_1_", String(i));
-    fProg:="../../src_poly/POLY_redundancy";
+    fProg:=GetBinaryFilename("POLY_redundancy");
     fCommand:=Concatenation(fProg, " HitAndRun rational ", eFile, " GAP ", eFileIrred1);
     Print("fCommand=", fCommand, "\n");
     Exec(fCommand);
@@ -34,7 +34,7 @@ TestIdx:=function(i)
     #
     if DoTest2_Clarkson then
         eFileIrred2:=Concatenation("Irred_2_", String(i));
-        gProg2:="../../src_poly/POLY_redundancy";
+        gProg2:=GetBinaryFilename("POLY_redundancy");
         gCommand2:=Concatenation(gProg2, " Clarkson rational ", eFile, " GAP ", eFileIrred2);
         Print("gCommand2=", gCommand2, "\n");
         Exec(gCommand2);
@@ -53,7 +53,7 @@ TestIdx:=function(i)
     #
     if DoTest3_Equivariant then
         eFileIrred3:=Concatenation("Irred_3_", String(i));
-        gProg3:="../../src_poly/POLY_redundancyGroup";
+        gProg3:=GetBinaryFilename("POLY_redundancyGroup");
         gCommand3:=Concatenation(gProg3, " Equivariant rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred3);
         Exec(gCommand3);
         Print("gCommand3=", gCommand3, "\n");
@@ -72,7 +72,7 @@ TestIdx:=function(i)
     #
     if DoTest4_ClarksonBlock then
         eFileIrred4:=Concatenation("Irred_4_", String(i));
-        gProg4:="../../src_poly/POLY_redundancyGroup";
+        gProg4:=GetBinaryFilename("POLY_redundancyGroup");
         gCommand4:=Concatenation(gProg4, " ClarksonBlock rational ", eFile, " ", eFileGRP, " GAP ", eFileIrred4);
         Print("gCommand4=", gCommand4, "\n");
         Exec(gCommand4);

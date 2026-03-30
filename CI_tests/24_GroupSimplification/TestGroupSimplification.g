@@ -40,7 +40,7 @@ TestSimplification:=function(eProg, eFile)
     TmpDir:=DirectoryTemporary();
     FileOut:=Filename(TmpDir, "Test.out");
     #
-    fProg:=Concatenation("../../src_group/", eProg);
+    fProg:=GetBinaryFilename(eProg);
     TheCommand:=Concatenation(fProg, " mpz_class ", eFile, " GAP ", FileOut);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

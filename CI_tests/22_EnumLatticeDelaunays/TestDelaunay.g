@@ -31,7 +31,7 @@ TestEnumeration:=function(eRec)
     #
 #    Print(NullMat(5));
     #
-    eProg:="../../src_delaunay/LATT_MPI_ComputeDelaunay";
+    eProg:=GetBinaryFilename("LATT_MPI_ComputeDelaunay");
     TheCommand:=Concatenation("mpirun -np 2 ", eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

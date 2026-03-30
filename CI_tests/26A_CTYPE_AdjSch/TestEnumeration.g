@@ -28,7 +28,7 @@ TestEnumeration:=function(eRec)
     TheCommand:=Concatenation("cat ", FileNml);
     Exec(TheCommand);
     #
-    eProg:="../../src_ctype/CTYP_MPI_AdjScheme";
+    eProg:=GetBinaryFilename("CTYP_MPI_AdjScheme");
     TheCommand:=Concatenation("mpirun -np 1 ", eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then

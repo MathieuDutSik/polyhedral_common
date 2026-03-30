@@ -29,12 +29,11 @@ GetNumberPerfectLorentzian:=function(eRec, choice)
     LorMat:= - eRec.M;
     WriteMatrixFile(FileIn, LorMat);
     #
-    eProg:="../../src_lorentzian/LORENTZ_MPI_PerfectLorentzian";
+    eProg:=GetBinaryFilename("LORENTZ_MPI_PerfectLorentzian");
     TheCommand:=Concatenation(eProg, " ", FileNml);
     Exec(TheCommand);
     if IsExistingFile(FileOut)=false then
         Print("The output file is not existing. That qualifies as a fail\n");
-        Print(NullMat(5));
         return rec(is_correct:=false);
     fi;
     U:=ReadAsFunction(FileOut)();
