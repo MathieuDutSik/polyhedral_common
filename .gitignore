@@ -121,6 +121,50 @@ __pycache__/
 # Submodule changes (track only the submodule reference)
 basic_common_cpp/
 
+# In-tree binaries produced by the legacy per-directory Makefiles.
+# Keep the ignore rules narrow and immediately re-allow real source files.
+src_copos/CP_*
+src_ctype/CTYP_*
+src_ctype/NC_ComputeAverage
+src_delaunay/LATT_*
+src_dualdesc/POLY_*
+src_dualdesc/Read_MPI_sizes
+src_group/GRP_*
+src_group/TEST_WeightMatrixLimited
+src_indefinite/INDEF_*
+src_isotropy/LATT_*
+src_isotropy/CheckPositiveSemiDefinite
+src_isotropy/VectFamily_Reduction
+src_latt/LATT_*
+src_latt/TSPACE_*
+src_latt/GRP_TestFiniteness
+src_latt/TEST_EquiStabFamily
+src_lorentzian/LORENTZ_*
+src_lorentzian/COXDYN_*
+src_lorentzian/LATT_GetIntegralMatricesPossibleOrders
+src_perfect/PERF_*
+src_perfect/IsEutactic
+src_poincare_polyhedron/POINCARE_*
+src_poly/POLY_*
+src_poly/VectFamily_ColumnReduction
+src_polydecomp/DEC_*
+src_polygen/PolyGen_*
+src_rankin/RANKIN_*
+src_robust_covering/Robust_*
+src_short/SHORT_*
+src_sparse_solver/StandaloneSparseSolver*
+
+!src_*/**/*.cpp
+!src_*/**/*.h
+!src_*/**/*.hpp
+!src_*/**/*.hh
+!src_*/**/*.c
+!src_*/**/*.cc
+!src_*/**/*.in
+!src_*/**/*.nml
+!src_*/**/*.md
+!src_*/**/Makefile*
+
 # GAP computation files
 *.g
 !CI_tests/**/*.g
