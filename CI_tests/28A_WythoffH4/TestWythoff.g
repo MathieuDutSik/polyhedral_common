@@ -1,10 +1,11 @@
 Read("../common.g");
+Read("../access_points.g");
 Print("Beginning TestWythoff\n");
 
 TestFCT:=function()
     local eProg, FileI, TheCommand, FileO, ListOrb;
     #
-    eProg:="../../src_dualdesc/POLY_SerialDualDesc";
+    eProg:=GetBinaryFilename("POLY_SerialDualDesc");
     FileI:="FacetsWythoffH4.nml";
     TheCommand:=Concatenation(eProg, " ", FileI);
     Exec(TheCommand);

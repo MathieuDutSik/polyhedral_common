@@ -2,7 +2,7 @@
  NumericalType = "Qsqrt5"
  EXTfile = "WythoffH4.ext"
  GRPfile = "WythoffH4.grp"
- OUTfile = "ListOrbit"
+ OutFile = "ListOrbit"
  OutFormat = "GAP"
  DeterministicRuntime = F
  max_runtime = -1
