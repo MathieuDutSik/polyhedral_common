@@ -1253,24 +1253,34 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     }
     return opt;
   };
-  auto get_adj = [&](InteriorPtDir<T> const& ipd) -> PVoronoi<T, Tint> {
-    InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
-#ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, ga,     ipd=" << ipd.to_string() << "\n";
-    os << "ROBUST: flapv, ga, ipd_opp=" << ipd_opp.to_string() << "\n";
-#endif
+  auto get_adj = [&]() -> PVoronoi<T, Tint> {
     T factor(1);
+    int N = 1;
     while (true) {
+      std::optional<InteriorPtDir<T>> opt1 = get_random_interior_point_bnd(bnd, N, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      if (!opt1) {
+        std::cerr << "ROBUST: Failed to find the random interior point\n";
+        throw TerminalException{1};
+      }
+#endif
+      InteriorPtDir<T> const& ipd = *opt1;
+      InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: flapv, ga,     ipd=" << ipd.to_string() << "\n";
+      os << "ROBUST: flapv, ga, ipd_opp=" << ipd_opp.to_string() << "\n";
+#endif
       MyVector<T>  x = ipd_opp.get_point(factor);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: flapv, ga, factor=" << factor << "\n";
 #endif
-      std::optional<PVoronoi<T, Tint>> opt =
+      std::optional<PVoronoi<T, Tint>> opt2 =
           get_adj_p_polytope(ipd_opp, x);
-      if (opt) {
-        return *opt;
+      if (opt2) {
+        return *opt2;
       }
       factor = factor / 2;
+      N += 1;
     }
   };
   std::vector<PVoronoi<T, Tint>> l_adj;
@@ -1278,12 +1288,11 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: flapv |l_adj|=" << l_adj.size() << "\n";
 #endif
-    std::optional<InteriorPtDir<T>> opt = get_interior_point_bnd(bnd, os);
-    if (!opt) {
+    bool test = bnd.is_empty();
+    if (test) {
       break;
     }
-    InteriorPtDir<T> const& ipd = *opt;
-    PVoronoi<T, Tint> eadj = get_adj(ipd);
+    PVoronoi<T, Tint> eadj = get_adj();
     reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
     l_adj.push_back(eadj);
   }

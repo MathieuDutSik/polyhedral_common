@@ -769,6 +769,18 @@ get_interior_point_gp(GeneralizedPolytope<T> const &gp,
   return {};
 }
 
+template <typename T>
+std::optional<MyVector<T>>
+get_random_interior_point_gp(GeneralizedPolytope<T> const &gp,
+                             int const& N,
+                             std::ostream &os) {
+  for (size_t i_polytope = 0; i_polytope < gp.size(); i_polytope++) {
+    MyVector<T> eEXT = random_interior_pt(gp.polytopes[i_polytope].EXT, N, os);
+    return eEXT;
+  }
+  return {};
+}
+
 // Tests whether p_sma is contained in p_big.
 template <typename T>
 bool is_contained_p_p(SinglePolytope<T> const &p_big,
@@ -884,6 +896,9 @@ template <typename T> struct DataFacetPlusMinus {
 template <typename T> struct BoundaryGeneralizedPolytope {
   int n;
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
+  bool is_empty() const {
+    return full_data_facets.size() == 0;
+  }
 };
 
 
@@ -1003,6 +1018,45 @@ template<typename T>
 InteriorPtDir<T> ipd_opposite(InteriorPtDir<T> const& ipd) {
   MyVector<T> FacIneq = - ipd.FacIneq;
   return {ipd.pt, FacIneq};
+}
+
+
+template <typename T>
+std::optional<InteriorPtDir<T>>
+get_random_interior_point_bnd(BoundaryGeneralizedPolytope<T> const &bnd,
+                              int const& N,
+                              std::ostream &os) {
+  for (auto &kv : bnd.full_data_facets) {
+    auto get_opt = [&]() -> std::optional<InteriorPtDir<T>> {
+      std::optional<MyVector<T>> opt1 = get_random_interior_point_gp(kv.second.gp_plus, N, os);
+      if (opt1) {
+        MyVector<T> const& FacIneq = kv.first;
+        InteriorPtDir<T> ipd{*opt1, FacIneq};
+        return ipd;
+      }
+      std::optional<MyVector<T>> opt2 = get_random_interior_point_gp(kv.second.gp_minus, N, os);
+      if (opt2) {
+        MyVector<T> FacIneq = - kv.first;
+        InteriorPtDir<T> ipd{*opt2, std::move(FacIneq)};
+        return ipd;
+      }
+      std::cerr << "GP: the size should be non-zero. Since otherwise, it "
+                   "should be removed from the list\n";
+      throw TerminalException{1};
+    };
+    std::optional<InteriorPtDir<T>> opt = get_opt();
+    if (opt) {
+      InteriorPtDir<T> const &sol_A = *opt;
+      MyVector<T> eIso_B = kv.second.NSP.transpose() * sol_A.pt;
+      T val = eIso_B(0);
+      for (int u=0; u<eIso_B.size(); u++) {
+        eIso_B(u) = eIso_B(u) / val;
+      }
+      InteriorPtDir<T> sol_B{eIso_B, sol_A.FacIneq};
+      return sol_B;
+    }
+  }
+  return {};
 }
 
 

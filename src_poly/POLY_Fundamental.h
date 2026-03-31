@@ -703,6 +703,37 @@ template <typename T> MyMatrix<T> AddFirstZeroColumn(MyMatrix<T> const &M) {
   return Mret;
 }
 
+template<typename T>
+MyVector<T> random_interior_pt(MyMatrix<T> const& M,
+                               int const& N,
+                               [[maybe_unused]] std::ostream &os) {
+  int sum_val = 0;
+  int n_row = M.rows();
+  int n_col = M.cols();
+  MyVector<T> V = ZeroVector<T>(n_col);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    int val = 1 + random() % N;
+    sum_val += val;
+#ifdef DEBUG_POLY_FUNDAMENTAL
+    os << "POLY: random_interior_pt i_row=" << i_row << " val=" << val << " N=" << N << "\n";
+#endif
+    for (int i_col=0; i_col<n_col; i_col++) {
+      V(i_col) += val * M(i_row, i_col);
+    }
+  }
+  for (int i_col=0; i_col<n_col; i_col++) {
+    V(i_col) /= sum_val;
+  }
+#ifdef DEBUG_POLY_FUNDAMENTAL
+  os << "POLY: random_interior_pt V=" << StringVectorGAP(V) << "\n";
+  os << "POLY: random_interior_pt M=\n";
+  WriteMatrix(os, M);
+#endif
+  return V;
+}
+
+
+
 // clang-format off
 #endif  // SRC_POLY_POLY_FUNDAMENTAL_H_
 // clang-format on
