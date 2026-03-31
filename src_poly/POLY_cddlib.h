@@ -8068,6 +8068,10 @@ template <typename T>
 std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
                                                    dd_matrixdata<T> *M,
                                                    std::ostream &os) {
+#ifdef DEBUG_CDD
+  os << "CDD: RedundancyReductionClarksonKernel TheEXT=\n";
+  WriteMatrix(os, TheEXT);
+#endif
   dd_ErrorType err = dd_NoError;
   int nbRow = TheEXT.rows();
   M->representation = dd_Inequality;
@@ -8075,12 +8079,12 @@ std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
   size_t maxiter = 0;
   dd_rowset redset = dd_RedundantRowsViaShooting(M, &err, maxiter, os);
 #ifdef DEBUG_CDD
-  os << "CDD: RedundancyReductionClarkson err=" << err << "\n";
+  os << "CDD: RedundancyReductionClarksonKernel err=" << err << "\n";
 #endif
   if (err != dd_NoError) {
     std::cerr << "TheEXT=\n";
     WriteMatrix(std::cerr, TheEXT);
-    std::cerr << "RedundancyReductionClarkson internal CDD error\n";
+    std::cerr << "RedundancyReductionClarksonKernel internal CDD error\n";
     throw TerminalException{1};
   }
   std::vector<int> ListIdx;

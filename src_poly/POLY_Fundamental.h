@@ -732,7 +732,37 @@ MyVector<T> random_interior_pt(MyMatrix<T> const& M,
   return V;
 }
 
-
+template<typename T>
+MyMatrix<T> NullspaceMatSingleVectorExt(MyVector<T> const &V) {
+  MyMatrix<T> NSP = NullspaceMatSingleVector(V);
+  int n_row = NSP.rows();
+  int n_col = NSP.cols();
+  for (int i_row=0; i_row<n_row; i_row++) {
+    T val1 = NSP(i_row, 0);
+    if (val1 != 0) {
+      for (int i_col=0; i_col<n_col; i_col++) {
+        NSP(i_row, i_col) = NSP(i_row, i_col) / val1;
+      }
+      if (i_row != 0) {
+        for (int i_col=0; i_col<n_col; i_col++) {
+          T val2 = NSP(0, i_col);
+          NSP(0, i_col) = NSP(i_row, i_col);
+          NSP(i_row, i_col) = val2;
+        }
+      }
+      for (int j_row=1; j_row<n_row; j_row++) {
+        T val3 = NSP(j_row, 0);
+        if (val3 != 0) {
+          for (int i_col=0; i_col<n_col; i_col++) {
+            NSP(j_row, i_col) = NSP(j_row, i_col) - val3 * NSP(0, i_col);
+          }
+        }
+      }
+      return NSP;
+    }
+  }
+  return NSP;
+}
 
 // clang-format off
 #endif  // SRC_POLY_POLY_FUNDAMENTAL_H_

@@ -243,10 +243,14 @@ std::vector<int> get_adjacent_facet_indices(SinglePolytope<T> const& sp, int con
 
 
 template<typename T>
-ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac) {
+ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac, std::ostream& os) {
   int dim = sp.FAC.cols();
   MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
-  MyMatrix<T> NSP = NullspaceMatSingleVector(V);
+  MyMatrix<T> NSP = NullspaceMatSingleVectorExt(V);
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
+  os << "GP: get_convex_boundary, NSP=\n";
+  WriteMatrix(os, NSP);
+#endif
   int n_ext = sp.EXT.rows();
   std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   Face f1 = sp.facets[i_fac];
@@ -665,7 +669,11 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
       AllTrackInfo &rec = full_track[pair.first];
       if (rec.NSP.rows() == 0) {
-        rec.NSP = NullspaceMatSingleVector(eFAC);
+        rec.NSP = NullspaceMatSingleVectorExt(eFAC);
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
+        os << "GP: connected_components_decomposition, rec.NSP=\n";
+        WriteMatrix(os, rec.NSP);
+#endif
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i_poly], i_fac, rec.NSP);
       TrackInfo ti{i_poly, pair.second, FAC};
@@ -953,7 +961,11 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
       DataFacetPlusMinus<T> &rec = full_data_facets[pair.first];
       if (rec.NSP.rows() == 0) {
-        rec.NSP = NullspaceMatSingleVector(eFAC);
+        rec.NSP = NullspaceMatSingleVectorExt(eFAC);
+#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
+        os << "GP: find_generalized_polytope_boundary, rec.NSP=\n";
+        WriteMatrix(os, rec.NSP);
+#endif
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, rec.NSP);
 #ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE

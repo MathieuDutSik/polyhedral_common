@@ -911,7 +911,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     std::vector<HardConvexBoundary<T>> l_hcb;
     std::vector<SoftConvexBoundary<T,Tint>> l_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {
-      ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred);
+      ConvexBoundary<T> c_bnd = get_convex_boundary(sp, i_irred, os);
       MyVector<T> const& V = c_bnd.V;
       std::vector<GenericRobustM<Tint>> l_grm = m_full_ineq.get_list_paralls(V);
       if (!l_grm.empty()) {
