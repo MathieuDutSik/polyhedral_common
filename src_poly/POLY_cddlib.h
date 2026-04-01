@@ -385,25 +385,60 @@ enum dd_FileInputModeType { dd_Auto, dd_SemiAuto, dd_Manual };
 
 enum dd_ErrorType {
   dd_DimensionTooLarge,
-  dd_ImproperInputFormat,
   dd_NegativeMatrixSize,
   dd_EmptyVrepresentation,
-  dd_EmptyHrepresentation,
   dd_EmptyRepresentation,
-  dd_IFileNotFound,
-  dd_OFileNotOpen,
   dd_NoLPObjective,
-  dd_NoRealNumberSupport,
-  dd_NotAvailForH,
   dd_NotAvailForV,
   dd_CannotHandleLinearity,
-  dd_RowIndexOutOfRange,
   dd_ColIndexOutOfRange,
   dd_LPCycling,
   dd_NumericallyInconsistent,
   dd_NonZeroLinearity,
   dd_NoError
 };
+
+std::string dd_ShortErrorMessages(dd_ErrorType Error) {
+  switch (Error) {
+
+  case dd_NonZeroLinearity:
+    return "Input Error: Input entry has a non-zero linearity";
+
+  case dd_DimensionTooLarge:
+    return "Input Error: Input matrix is too large";
+
+  case dd_NegativeMatrixSize:
+    return "Input Error: Input matrix has a negative size";
+
+  case dd_EmptyVrepresentation:
+    return "Input Error: V-representation is empty";
+
+  case dd_EmptyRepresentation:
+    return "Input Error: Representation is empty";
+
+  case dd_NoLPObjective:
+    return "LP Error: No LP objective (max or min) is set";
+
+  case dd_NotAvailForV:
+    return "Error: A function is called with V-rep which does not support an V-representation";
+
+  case dd_CannotHandleLinearity:
+    return "Error: The function called cannot handle linearity";
+
+  case dd_ColIndexOutOfRange:
+    return "Error: Specified column index is out of range";
+
+  case dd_LPCycling:
+    return "Error: Possibly an LP cycling occurs.  Use the Criss-Cross method";
+
+  case dd_NumericallyInconsistent:
+    return "Error: Numerical inconsistency is found.  Use the exact arithmetic";
+
+  case dd_NoError:
+    return "No Error found";
+  }
+}
+
 
 void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
   switch (Error) {
@@ -419,36 +454,15 @@ void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
           "recompile.\n";
     break;
 
-  case dd_IFileNotFound:
-    os << "*Input Error: Specified input file does not exist.\n";
-    break;
-
-  case dd_OFileNotOpen:
-    os << "*Output Error: Specified output file cannot be opened.\n";
-    break;
-
   case dd_NegativeMatrixSize:
     os << "*Input Error: Input matrix has a negative size:\n";
     os << "*Please check rowsize or colsize.\n";
-    break;
-
-  case dd_ImproperInputFormat:
-    os << "*Input Error: Input format is not correct.\n";
-    os << "*Format:\n";
-    os << " begin\n";
-    os << "   m   n  NumberType(real, rational or integer)\n";
-    os << "   b  -A\n";
-    os << " end\n";
     break;
 
   case dd_EmptyVrepresentation:
     os << "*Input Error: V-representation is empty:\n";
     os << "*cddlib does not accept this trivial case for which output can be "
           "any inconsistent system.\n";
-    break;
-
-  case dd_EmptyHrepresentation:
-    os << "*Input Error: H-representation is empty.\n";
     break;
 
   case dd_EmptyRepresentation:
@@ -459,17 +473,6 @@ void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
     os << "*LP Error: No LP objective (max or min) is set.\n";
     break;
 
-  case dd_NoRealNumberSupport:
-    os << "*LP Error: The binary (with GMP Rational) does not support Real "
-          "number input.\n";
-    os << "         : Use a binary compiled without -DGMPRATIONAL option.\n";
-    break;
-
-  case dd_NotAvailForH:
-    os << "*Error: A function is called with H-rep which does not support an "
-          "H-representation.\n";
-    break;
-
   case dd_NotAvailForV:
     os << "*Error: A function is called with V-rep which does not support an "
           "V-representation.\n";
@@ -477,10 +480,6 @@ void dd_WriteErrorMessages(std::ostream &os, dd_ErrorType Error) {
 
   case dd_CannotHandleLinearity:
     os << "*Error: The function called cannot handle linearity.\n";
-    break;
-
-  case dd_RowIndexOutOfRange:
-    os << "*Error: Specified row index is out of range\n";
     break;
 
   case dd_ColIndexOutOfRange:
@@ -4919,7 +4918,7 @@ template <typename T>
 dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
                                       size_t const &maxiter, std::ostream &os) {
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 1 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 1 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
   /*
      For H-representation only and not quite reliable,
@@ -4942,7 +4941,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     std::cout << "ViaShooting : M->colsize=" << M->colsize << "\n";
   }
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 2 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 2 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
 
   if (set_card(M->linset) != 0) {
@@ -4954,7 +4953,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     return redset;
   }
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 3 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 3 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
 
   dd_lpdata<T> *lpw = dd_CreateLPData_from_M<T>(M);
@@ -4966,7 +4965,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   data_temp_simplex<T> *data =
       allocate_data_simplex<T>(get_m_size(M), get_d_size(M));
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 4 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 4 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
   auto dd_Redundant_loc = [&]() -> bool {
     dd_colrange j;
@@ -5008,7 +5007,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
   dd_rowset is_decided;
   set_initialize(&is_decided, m);
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 5 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 5 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
 
   /* First find some (likely) nonredundant inequalities by Interior Point Find.
@@ -5022,7 +5021,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
     dd_WriteT(std::cout, lp->sol, d);
   }
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 6 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 6 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
 
   if (lp->optvalue > 0) {
@@ -5126,7 +5125,7 @@ dd_rowset dd_RedundantRowsViaShooting(dd_matrixdata<T> *M, dd_ErrorType *error,
 #endif
   }
 #ifdef DEBUG_CDD
-  os << "CDD: dd_RedundantRowsViaShooting, step 7 *error=" << *error << "\n";
+  os << "CDD: dd_RedundantRowsViaShooting, step 7 *error=" << dd_ShortErrorMessages(*error) << "\n";
 #endif
   free_data_simplex(data);
 
@@ -8072,19 +8071,20 @@ std::vector<int> RedundancyReductionClarksonKernel(MyMatrix<T> const &TheEXT,
   os << "CDD: RedundancyReductionClarksonKernel TheEXT=\n";
   WriteMatrix(os, TheEXT);
 #endif
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   int nbRow = TheEXT.rows();
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   size_t maxiter = 0;
-  dd_rowset redset = dd_RedundantRowsViaShooting(M, &err, maxiter, os);
+  dd_rowset redset = dd_RedundantRowsViaShooting(M, &error, maxiter, os);
 #ifdef DEBUG_CDD
-  os << "CDD: RedundancyReductionClarksonKernel err=" << err << "\n";
+  os << "CDD: RedundancyReductionClarksonKernel error=" << dd_ShortErrorMessages(error) << "\n";
 #endif
-  if (err != dd_NoError) {
-    std::cerr << "TheEXT=\n";
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in RedundancyReductionClarksonKernel\n";
+    std::cerr << "CDD: TheEXT=\n";
     WriteMatrix(std::cerr, TheEXT);
-    std::cerr << "RedundancyReductionClarksonKernel internal CDD error\n";
     throw TerminalException{1};
   }
   std::vector<int> ListIdx;
@@ -8121,16 +8121,17 @@ std::vector<int>
 RedundancyReductionClarksonBlocks(MyMatrix<T> const &TheEXT,
                                   std::vector<int> const &BlockBelong,
                                   [[maybe_unused]] std::ostream &os) {
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   int nbRow = TheEXT.rows();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   M->representation = dd_Inequality;
   //  M->representation = dd_Generator;
   size_t maxiter = 0;
   dd_rowset redset =
-      dd_RedundantRowsViaShootingBlocks(M, &err, BlockBelong, maxiter, os);
-  if (err != dd_NoError) {
-    std::cerr << "RedundancyReductionClarksonBlocks internal CDD error\n";
+      dd_RedundantRowsViaShootingBlocks(M, &error, BlockBelong, maxiter, os);
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in RedundancyReductionClarksonBlocks\n";
     throw TerminalException{1};
   }
   std::vector<int> ListIdx;
@@ -8149,14 +8150,15 @@ std::pair<MyMatrix<T>, Face>
 KernelLinearDeterminedByInequalitiesAndIndices_DirectLP(MyMatrix<T> const &FAC,
                                                         size_t const &maxiter,
                                                         std::ostream &os) {
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   int nbRow = FAC.rows();
   int nbCol = FAC.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2MatrixExt(FAC);
   M->representation = dd_Inequality;
-  dd_rowset linset = dd_ImplicitLinearityRows(M, &err, maxiter, os);
-  if (err != dd_NoError) {
-    std::cerr << "DualDescription_incd internal CDD error\n";
+  dd_rowset linset = dd_ImplicitLinearityRows(M, &error, maxiter, os);
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in KernelLinearDeterminedByInequalitiesAndIndices_DirectLP\n";
     throw TerminalException{1};
   }
   Face f(nbRow);
@@ -8211,13 +8213,13 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
   os << "CDD: LPandNullspace, nbRow=" << nbRow << " nbCol=" << nbCol << "\n";
 #endif
   auto get_linear_entry = [&]() -> std::optional<int> {
-    dd_ErrorType err = dd_NoError;
+    dd_ErrorType error = dd_NoError;
     for (int iRow = 0; iRow < nbRow; iRow++) {
       long i = iRow + 1;
-      bool test = dd_ImplicitLinearity(M, i, cvec.data(), &err, maxiter, os);
-      if (err != dd_NoError) {
-        std::cerr << "LinearDeterminedByInequalitiesAndIndices_LPandNullspace "
-                     "internal CDD error\n";
+      bool test = dd_ImplicitLinearity(M, i, cvec.data(), &error, maxiter, os);
+      if (error != dd_NoError) {
+        std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+        std::cerr << "CDD: Error occurred in LinearDeterminedByInequalitiesAndIndices_LPandNullspace\n";
         throw TerminalException{1};
       }
       if (test) {
@@ -8323,13 +8325,14 @@ KernelLinearDeterminedByInequalitiesAndIndices_LPandNullspace(
 
 template <typename T>
 MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream &os) {
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   int nbCol = TheEXT.cols();
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
-  if (err != dd_NoError) {
-    std::cerr << "DualDescription internal CDD error\n";
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &error, maxiter, os);
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in DualDescription\n";
     throw TerminalException{1};
   }
   MyMatrix<T> TheFAC = FAC_from_poly(poly, nbCol);
@@ -8340,12 +8343,13 @@ MyMatrix<T> DualDescription(MyMatrix<T> const &TheEXT, std::ostream &os) {
 
 template <typename T>
 vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream &os) {
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
-  if (err != dd_NoError) {
-    std::cerr << "DualDescription_incd internal CDD error\n";
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &error, maxiter, os);
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in DualDescription_incd\n";
     throw TerminalException{1};
   }
   vectface ListIncd = ListIncd_from_poly(poly, TheEXT);
@@ -8357,12 +8361,13 @@ vectface DualDescription_incd(MyMatrix<T> const &TheEXT, std::ostream &os) {
 template <typename T, typename Fprocess>
 void DualDescriptionFaceIneq(MyMatrix<T> const &TheEXT, Fprocess f_process,
                              std::ostream &os) {
-  dd_ErrorType err = dd_NoError;
+  dd_ErrorType error = dd_NoError;
   dd_matrixdata<T> *M = MyMatrix_PolyFile2Matrix(TheEXT);
   size_t maxiter = 0;
-  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &err, maxiter, os);
-  if (err != dd_NoError) {
-    std::cerr << "DualDescriptionFaceIneq internal CDD error\n";
+  dd_polyhedradata<T> *poly = dd_DDMatrix2Poly(M, &error, maxiter, os);
+  if (error != dd_NoError) {
+    std::cerr << "CDD: Internal error=" << dd_ShortErrorMessages(error) << "\n";
+    std::cerr << "CDD: Error occurred in DualDescriptionFaceIneq\n";
     throw TerminalException{1};
   }
   ListFaceIneq_from_poly(poly, TheEXT, f_process);
