@@ -243,7 +243,7 @@ std::vector<int> get_adjacent_facet_indices(SinglePolytope<T> const& sp, int con
 
 
 template<typename T>
-ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac, std::ostream& os) {
+ConvexBoundary<T> get_convex_boundary(SinglePolytope<T> const& sp, int const& i_fac, [[maybe_unused]] std::ostream &os) {
   int dim = sp.FAC.cols();
   MyVector<T> V = GetMatrixRow(sp.FAC, i_fac);
   MyMatrix<T> NSP = NullspaceMatSingleVectorExt(V);
