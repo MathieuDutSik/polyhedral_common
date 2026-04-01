@@ -461,14 +461,29 @@ PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::os
     throw TerminalException{1};
   }
 #endif
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 1\n";
+#endif
   std::vector<SinglePolytope<T>> polytopes;
   for (auto & cb: pvp.l_cb) {
     polytopes.push_back(cb.sp);
   }
   GeneralizedPolytope<T> gp{polytopes};
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 2\n";
+#endif
   BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 3\n";
+#endif
   std::vector<MyVector<T>> l_vert = get_vertices(gp, bnd, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 4\n";
+#endif
   MyMatrix<T> EXT = MatrixFromVectorFamily(l_vert);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: convert_p_voronoi_part, step 5\n";
+#endif
   return {pvp.robust_m_min,
           pvp.l_cb,
           pvp.l_hcb,
@@ -873,7 +888,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 3, step 2(B)\n";
     {
-      std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
+      std::vector<int> list_irred = cdd::RedundancyReductionClarksonExt(list_ineq, os);
       os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
       bool test = IsFullDimensional(list_ineq, os);
       os << "ROBUST:   kippp, test=" << test << "\n";
@@ -1175,6 +1190,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       break;
     }
   }
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: find_p_voronoi, Before convert_p_voronoi_part\n";
+#endif
   PVoronoi<T,Tint> p_voronoi = convert_p_voronoi_part(pvp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, EXT=\n";
