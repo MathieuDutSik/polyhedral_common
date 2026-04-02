@@ -161,7 +161,7 @@ struct ConvexBoundary {
   MyVector<T> V; // The orthogonal
   MyMatrix<T> NSP;
   SinglePolytope<T> sp; // The polytope in the face.
-  MyVector<T> get_isobarycenter(std::ostream& os) const {
+  MyVector<T> get_isobarycenter([[maybe_unused]] std::ostream &os) const {
 #ifdef DEBUG_GENERALIZED_POLYTOPE
     os << "GP: get_isobarycenter, Before Isobarycenter\n";
 #endif
@@ -179,6 +179,27 @@ struct ConvexBoundary {
     }
 #ifdef DEBUG_GENERALIZED_POLYTOPE
     os << "GP: get_isobarycenter, eIso2_B=" << StringVectorGAP(eIso2) << "\n";
+#endif
+    return eIso2;
+  }
+  MyVector<T> random_interior_point(int const&N, std::ostream& os) const {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: random_interior_point, Before Isobarycenter\n";
+#endif
+    MyVector<T> eIso1 = random_interior_pt(sp.EXT, N, os);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: random_interior_point, eIso1=" << StringVectorGAP(eIso1) << "\n";
+#endif
+    MyVector<T> eIso2 = NSP.transpose() * eIso1;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: random_interior_point, eIso2_A=" << StringVectorGAP(eIso2) << "\n";
+#endif
+    T val = eIso2(0);
+    for (int u=0; u<eIso2.size(); u++) {
+      eIso2(u) = eIso2(u) / val;
+    }
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: random_interior_point, eIso2_B=" << StringVectorGAP(eIso2) << "\n";
 #endif
     return eIso2;
   }
@@ -904,16 +925,35 @@ template <typename T> struct DataFacetPlusMinus {
 template <typename T> struct BoundaryGeneralizedPolytope {
   int n;
   std::unordered_map<MyVector<T>, DataFacetPlusMinus<T>> full_data_facets;
+  size_t size() const {
+    return full_data_facets.size();
+  }
   bool is_empty() const {
     return full_data_facets.size() == 0;
   }
 };
 
 
+template <typename T>
+void write_generalized_polytope(GeneralizedPolytope<T> const&gp,
+                                 std::ostream& os_out) {
+  size_t n_p = gp.polytopes.size();
+  os_out << "GP: n_p=" << n_p << "\n";
+  for (size_t i_p=0; i_p<n_p; i_p++) {
+    os_out << "i_p=" << i_p << " EXT=\n";
+    WriteMatrix(os_out, gp.polytopes[i_p].EXT);
+    os_out << "      FAC=\n";
+    WriteMatrix(os_out, gp.polytopes[i_p].FAC);
+  }
+}
+
+
+
+
 
 template <typename T>
-void print_raw_boundary(BoundaryGeneralizedPolytope<T> &bnd,
-                        std::ostream& os_out) {
+void write_boundary_generalized_polytope(BoundaryGeneralizedPolytope<T> const& bnd,
+                                         std::ostream& os_out) {
   size_t siz = bnd.full_data_facets.size();
   os_out << "n=" << bnd.n << " siz=" << siz << "\n";
   int iter = 0;
@@ -959,6 +999,9 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
     for (int i_fac = 0; i_fac < n_fac; i_fac++) {
       MyVector<T> eFAC = GetMatrixRow(gp.polytopes[i].FAC, i_fac);
       std::pair<MyVector<T>, int> pair = get_face_can(eFAC);
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+      os << "GP: find_generalized_polytope_boundary, i_fac=" << i_fac << " eFAC=" << StringVectorGAP(eFAC) << "\n";
+#endif
       DataFacetPlusMinus<T> &rec = full_data_facets[pair.first];
       if (rec.NSP.rows() == 0) {
         rec.NSP = NullspaceMatSingleVectorExt(eFAC);
@@ -968,12 +1011,12 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
 #endif
       }
       MyMatrix<T> FAC = get_fac_subspace(gp.polytopes[i], i_fac, rec.NSP);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
+#ifdef DEBUG_GENERALIZED_POLYTOPE
       os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " FAC=\n";
       WriteMatrix(os, FAC);
 #endif
       SinglePolytope<T> sp = generate_single_polytope(FAC, os);
-#ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
+#ifdef DEBUG_GENERALIZED_POLYTOPE
       os << "GP: fgpb, polytope " << i << " i_fac=" << i_fac << " EXT=\n";
       WriteMatrix(os, sp.EXT);
 #endif
@@ -990,7 +1033,7 @@ find_generalized_polytope_boundary(GeneralizedPolytope<T> const &gp,
         difference_gp_gp(kv.second.gp_plus, kv.second.gp_minus, os);
     GeneralizedPolytope<T> diff_m_p =
         difference_gp_gp(kv.second.gp_minus, kv.second.gp_plus, os);
-    if (diff_p_m.size() + diff_m_p.empty()) {
+    if (diff_p_m.empty() && diff_m_p.empty()) {
       to_remove.push_back(kv.first);
     } else {
       kv.second.gp_plus = diff_p_m;
@@ -1183,6 +1226,11 @@ std::vector<MyVector<T>> get_vertices(GeneralizedPolytope<T> const &gp,
       set_vertices.insert(eEXT);
     }
   }
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: get_vertices, |gp|=" << gp.size() << " |set_vertices|=" << set_vertices.size() << "\n";
+  write_generalized_polytope(gp, os);
+  write_boundary_generalized_polytope(bnd, os);
+#endif
   std::vector<MyVector<T>> l_vertices;
   for (auto &eEXT : set_vertices) {
     std::vector<MyVector<T>> l_fac;

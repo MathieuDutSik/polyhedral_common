@@ -780,8 +780,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     if (list_min_parallelepipeds.size() > 1) {
       // Terminate the enumeration
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST:   kippp, is_correct=false by "
-            "|list_min_parallelepipeds| > 1\n";
+      os << "ROBUST:   kippp, is_correct=false by n_list_min_parallelepipeds > 1\n";
 #endif
       is_correct = false;
       return true;
@@ -951,6 +950,9 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
     return true;
   };
   compute_robust_close_f(solver, eV, f_insert, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: kippp, is_correct=" << is_correct << "\n";
+#endif
   if (is_correct) {
     return ppoly;
   } else {
@@ -962,12 +964,12 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
   Get a possible vector to consider
  */
 template<typename T, typename Tint>
-std::optional<InteriorPtDir<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> const& scb,
-                                                     MyMatrix<T> const& G,
-                                                     MyVector<Tint> const& v_crit,
-                                                     MyVector<Tint> const& v_long,
-                                                     std::vector<MyVector<Tint>> const& l_excluded_max,
-                                                     std::ostream& os) {
+std::optional<ConvexBoundary<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> const& scb,
+                                                      MyMatrix<T> const& G,
+                                                      MyVector<Tint> const& v_crit,
+                                                      MyVector<Tint> const& v_long,
+                                                      std::vector<MyVector<Tint>> const& l_excluded_max,
+                                                      std::ostream& os) {
 
   std::vector<MyVector<T>> l_vertices = scb.cb.get_list_vertices();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1032,9 +1034,7 @@ std::optional<InteriorPtDir<T>> get_next_side_vector(SoftConvexBoundary<T,Tint> 
     std::optional<ConvexBoundary<T>> opt1 = convexboundary_halfspaces_int(scb.cb, FAC_inp, os);
     if (opt1) {
       ConvexBoundary<T> const& cb_new = *opt1;
-      MyVector<T> eIso = cb_new.get_isobarycenter(os);
-      InteriorPtDir<T> ipd{eIso, cb_new.V};
-      return ipd;
+      return cb_new;
     }
   }
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1090,7 +1090,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_process_entry, step 6\n";
 #endif
-    std::optional<InteriorPtDir<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
+    std::optional<ConvexBoundary<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_process_entry, step 7\n";
 #endif
@@ -1102,46 +1102,54 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_process_entry, step 8\n";
 #endif
-    InteriorPtDir<T> const& ipd_new = *opt1;
+    ConvexBoundary<T> const& cb_new = *opt1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: f_process_entry, step 9\n";
 #endif
     T shift = T(1) / T(15);
+    int N = 1;
     while(true) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: f_process_entry, step 10_1, N=" << N << " shift=" << shift << "\n";
+#endif
+      MyVector<T> eIso = cb_new.random_interior_point(N, os);
+      InteriorPtDir<T> ipd_new{eIso, cb_new.V};
       MyVector<T> fV = ipd_new.get_point(shift);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_1, shift=" << shift << "\n";
+      os << "ROBUST: f_process_entry, step 10_2, shift=" << shift << "\n";
 #endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_2\n";
+      os << "ROBUST: f_process_entry, step 10_3\n";
 #endif
       if (!opt3) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST: f_process_entry, op3 exit\n";
 #endif
         shift = shift / 2;
+        N += 1;
         continue;
       }
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_3\n";
+      os << "ROBUST: f_process_entry, step 10_4\n";
 #endif
       if (pos == -1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
         os << "ROBUST: f_process_entry, pos = -1 exit\n";
 #endif
         shift = shift / 2;
+        N += 1;
         continue;
       }
       SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_4\n";
+      os << "ROBUST: f_process_entry, step 10_5\n";
 #endif
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_5\n";
+      os << "ROBUST: f_process_entry, step 10_6\n";
 #endif
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.l_robust_m};
@@ -1151,12 +1159,12 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
         pvp.l_hcb.push_back(hcb);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_6\n";
+      os << "ROBUST: f_process_entry, step 10_7\n";
 #endif
       pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
       int index = pvp.l_cb.size() - 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_7\n";
+      os << "ROBUST: f_process_entry, step 10_8\n";
 #endif
       // That part needs to be improved, since the inserted faces could match
       for (auto& scb: p_poly_vor_part.l_scb) {
@@ -1167,7 +1175,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
         }
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_8\n";
+      os << "ROBUST: f_process_entry, step 10_9\n";
 #endif
       return false;
     }
@@ -1264,7 +1272,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
     bool test = is_boundary_point(ipd_test, bnd_adj, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: flapv, test=" << test << "\n";
+    os << "ROBUST: flapv, ipd_test=" << ipd_test.to_string() << " test=" << test << "\n";
 #endif
     if (!test) {
       return {};
@@ -1285,8 +1293,8 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
       InteriorPtDir<T> const& ipd = *opt1;
       InteriorPtDir<T> ipd_opp = ipd_opposite(ipd);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: flapv, ga,     ipd=" << ipd.to_string() << "\n";
-      os << "ROBUST: flapv, ga, ipd_opp=" << ipd_opp.to_string() << "\n";
+      os << "ROBUST: flapv, ga, N=" << N << "     ipd=" << ipd.to_string() << "\n";
+      os << "ROBUST: flapv, ga, N=" << N << " ipd_opp=" << ipd_opp.to_string() << "\n";
 #endif
       MyVector<T>  x = ipd_opp.get_point(factor);
 #ifdef DEBUG_ENUM_P_POLYTOPES
