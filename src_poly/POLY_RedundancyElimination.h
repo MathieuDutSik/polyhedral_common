@@ -12,6 +12,12 @@
 #include <vector>
 // clang-format on
 
+// Several algorithms for reducing the redundancy
+//
+// If an entry occur several times with a scalar multiple
+// then we return only the first entry occurring.
+
+
 #ifdef DEBUG
 #define DEBUG_ELIMINATION_REDUNDANCY
 #endif
@@ -39,6 +45,7 @@ std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
   int n_col = M.cols();
   size_t limit = n_col - 1;
   std::vector<int> list_irred;
+  std::unordered_set<std::vector<int>> set_incd;
   for (int i_row = 0; i_row < n_row; i_row++) {
     std::vector<int> eIncd;
     for (int i_vert = 0; i_vert < n_vert; i_vert++) {
@@ -56,10 +63,14 @@ std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
       }
 #endif
     }
-    if (eIncd.size() >= limit) {
+    if (eIncd.size() >= limit && !set_incd.contains(eIncd)) {
       MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
       if (RankMat(EXT_face) == n_col - 1) {
         list_irred.push_back(i_row);
+        set_incd.insert(eIncd);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+        os << "REDUND: gnrfdd, i_row=" << i_row << " eIncd=" << StdVectorToString(eIncd) << "\n";
+#endif
       }
     }
   }
@@ -622,7 +633,6 @@ bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> const& l2)
   return true;
 }
 
-
 /*
   The generic function encapsulating all the possible function call
  */
@@ -650,8 +660,6 @@ std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& 
 #endif
   return list_irredA;
 }
-
-
 
 // clang-format off
 #endif  // SRC_POLY_POLY_REDUNDANCYELIMINATION_H_

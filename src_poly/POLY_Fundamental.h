@@ -776,6 +776,19 @@ template <typename T> MyMatrix<T> AddZeroColumn(MyMatrix<T> const &M) {
   return Mret;
 }
 
+template <typename T>
+bool no_duplicated_scalar_multiple(MyMatrix<T> const& M) {
+  std::unordered_set<MyVector<T>> set;
+  int n_row = M.rows();
+  for (int i_row=0; i_row<n_row; i_row++) {
+    MyVector<T> V1 = GetMatrixRow(M, i_row);
+    MyVector<T> V2 = ScalarCanonicalizationVector(V1);
+    set.insert(V2);
+  }
+  int n_ent = set.size();
+  return n_ent == n_row;
+}
+
 // clang-format off
 #endif  // SRC_POLY_POLY_FUNDAMENTAL_H_
 // clang-format on

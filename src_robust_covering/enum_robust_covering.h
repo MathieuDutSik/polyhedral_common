@@ -372,6 +372,13 @@ struct MapFullIneq {
     os << "ROBUST: get_list_ineq M=\n";
     WriteMatrix(os, M);
 #endif
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES_DISABLE
+    bool test = no_duplicated_scalar_multiple(M);
+    if (!test) {
+      std::cerr << "ROBUST: The matrix M has duplication\n";
+      throw TerminalException{1};
+    }
+#endif
     return M;
   }
   std::vector<GenericRobustM<Tint>> get_list_paralls(MyVector<T> const& eIneq) const {
@@ -1321,7 +1328,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     int N = 1;
     while (true) {
       std::optional<InteriorPtDir<T>> opt1 = get_random_interior_point_bnd(bnd, N, os);
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
       if (!opt1) {
         std::cerr << "ROBUST: Failed to find the random interior point\n";
         throw TerminalException{1};
