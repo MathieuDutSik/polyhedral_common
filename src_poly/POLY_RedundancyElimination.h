@@ -24,42 +24,57 @@
 #define PRINT_ELIMINATION_REDUNDANCY
 #endif
 
+template <typename T>
+std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
+                                           MyMatrix<T> const& EXT,
+                                           std::ostream &os) {
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  os << "REDUND: get_non_redundant_from_dd, M=\n";
+  WriteMatrix(os, M);
+  os << "REDUND: get_non_redundant_from_dd, EXT=\n";
+  WriteMatrix(os, EXT);
+#endif
+  int n_row = M.rows();
+  int n_vert = EXT.rows();
+  int n_col = M.cols();
+  size_t limit = n_col - 1;
+  std::vector<int> list_irred;
+  for (int i_row = 0; i_row < n_row; i_row++) {
+    std::vector<int> eIncd;
+    for (int i_vert = 0; i_vert < n_vert; i_vert++) {
+      T scal(0);
+      for (int i_col = 0; i_col < n_col; i_col++) {
+        scal += EXT(i_vert, i_col) * M(i_row, i_col);
+      }
+      if (scal == 0) {
+        eIncd.push_back(i_vert);
+      }
+#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
+      if (scal < 0) {
+        std::cerr << "REDUND: facet of index i_row=" << i_row << " violated by vertex " << i_vert << "\n";
+        throw TerminalException{1};
+      }
+#endif
+    }
+    if (eIncd.size() >= limit) {
+      MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
+      if (RankMat(EXT_face) == n_col - 1) {
+        list_irred.push_back(i_row);
+      }
+    }
+  }
+  return list_irred;
+}
+
+
+
 // Fairly expensive function. But useful for debugging
 template <typename T>
 std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M,
                                             std::ostream &os) {
   MyMatrix<T> Mred = ColumnReduction(M);
   MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
-#ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "REDUND: Kernel_GetNonRedundant_CDD, Mred=\n";
-  WriteMatrix(os, Mred);
-  os << "REDUND: Kernel_GetNonRedundant_CDD, EXT=\n";
-  WriteMatrix(os, EXT);
-#endif
-  int n_row = Mred.rows();
-  int n_vert = EXT.rows();
-  int n_col = Mred.cols();
-  size_t limit = n_col - 1;
-  std::vector<int> TheSel;
-  for (int i_row = 0; i_row < n_row; i_row++) {
-    std::vector<int> eIncd;
-    for (int i_vert = 0; i_vert < n_vert; i_vert++) {
-      T scal(0);
-      for (int i_col = 0; i_col < n_col; i_col++) {
-        scal += EXT(i_vert, i_col) * Mred(i_row, i_col);
-      }
-      if (scal == 0) {
-        eIncd.push_back(i_vert);
-      }
-    }
-    if (eIncd.size() >= limit) {
-      MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
-      if (RankMat(EXT_face) == n_col - 1) {
-        TheSel.push_back(i_row);
-      }
-    }
-  }
-  return TheSel;
+  return get_non_redundant_from_dd(Mred, EXT, os);
 }
 
 template <typename T>
@@ -229,8 +244,9 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     auto HasOneViolatedFacet = [&](int const &h) -> bool {
       for (int i_row = 0; i_row < n_rows; i_row++) {
         T eScal = ListScal(i_row) - h * ListScalInterior(i_row);
-        if (eScal < 0)
+        if (eScal < 0) {
           return true;
+        }
       }
       return false;
     };
@@ -430,8 +446,9 @@ MyMatrix<T> SelectColumnAddZero(MyMatrix<T> const &TheMat,
   size_t nbRow = TheMat.rows();
   size_t nbColRed = eList.size();
   MyMatrix<T> TheProv(nbRow, 1 + nbColRed);
-  for (size_t iRow = 0; iRow < nbRow; iRow++)
+  for (size_t iRow = 0; iRow < nbRow; iRow++) {
     TheProv(iRow, 0) = 0;
+  }
   for (size_t iCol = 0; iCol < nbColRed; iCol++) {
     size_t jCol = eList[iCol];
     TheProv.col(1 + iCol) = TheMat.col(jCol);

@@ -426,7 +426,6 @@ struct SoftConvexBoundary {
   }
 };
 
-
 /*
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
@@ -453,6 +452,33 @@ template <typename T, typename Tint> struct PVoronoiPart {
   std::vector<HardConvexBoundary<T>> l_hcb;
   std::vector<SoftConvexBoundary<T,Tint>> l_scb;
 };
+
+template<typename T>
+T min_pairwise_norm(MyMatrix<T> const& EXT, MyMatrix<T> const& G) {
+  int n_row = EXT.rows();
+  int n_col = EXT.cols();
+  int dim = n_col - 1;
+  T min_norm(0);
+  bool is_first=true;
+  MyVector<T> diff(dim);
+  for (int i_row=0; i_row<n_row; i_row++) {
+    for (int j_row=i_row+1; j_row<n_row; j_row++) {
+      for (int i=0; i<dim; i++) {
+        diff(i) = EXT(i_row, i+1) - EXT(j_row, i+1);
+      }
+      T norm = EvaluationQuadForm(G, diff);
+      if (is_first) {
+        min_norm = norm;
+        is_first = false;
+      } else {
+        if (norm < min_norm) {
+          min_norm = norm;
+        }
+      }
+    }
+  }
+  return min_norm;
+}
 
 template <typename T, typename Tint>
 PVoronoi<T,Tint> convert_p_voronoi_part(PVoronoiPart<T,Tint> const& pvp, std::ostream& os) {
@@ -1058,6 +1084,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
     return {};
   }
   PVoronoiPart<T, Tint> pvp = *opt;
+  T min_norm = min_pairwise_norm(pvp.l_cb[0].sp.EXT, G);
   MyVector<Tint> v_crit = pvp.robust_m_min.v_long();
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, step 1\n";
@@ -1107,9 +1134,9 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #endif
     ConvexBoundary<T> const& cb_new = *opt1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: fpe, step 9\n";
+    os << "ROBUST: fpe, step 9 min_norm=" << min_norm << "\n";
 #endif
-    T shift = T(1) / T(15);
+    T shift = min_norm / T(10);
     int N = 1;
     while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1326,7 +1353,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     bool test = bnd.is_empty();
     if (test) {
       break;
-    }
+     }
     PVoronoi<T, Tint> eadj = get_adj();
     reduce_boundary_generalized_polytope(bnd, eadj.gp, os);
     l_adj.push_back(eadj);
