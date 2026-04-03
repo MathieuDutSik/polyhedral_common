@@ -1283,6 +1283,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   CVPSolver<T, Tint> const &solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
   MyMatrix<T> G_inv = Inverse(G);
+  T min_norm = min_pairwise_norm(pvd.EXT, G);
   BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: flapv, We have bnd\n";
@@ -1316,7 +1317,7 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     return opt;
   };
   auto get_adj = [&]() -> PVoronoi<T, Tint> {
-    T factor(1);
+    T factor = min_norm;
     int N = 1;
     while (true) {
       std::optional<InteriorPtDir<T>> opt1 = get_random_interior_point_bnd(bnd, N, os);

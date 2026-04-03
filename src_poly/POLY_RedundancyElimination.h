@@ -74,6 +74,17 @@ std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M,
                                             std::ostream &os) {
   MyMatrix<T> Mred = ColumnReduction(M);
   MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  MyMatrix<T> FAC = cdd::DualDescription(EXT, os);
+  os << "REDUND: Kernel_GetNonRedundant_CDD_A, M=\n";
+  WriteMatrix(os, M);
+  os << "REDUND: Kernel_GetNonRedundant_CDD_B, Mred=\n";
+  WriteMatrix(os, Mred);
+  os << "REDUND: Kernel_GetNonRedundant_CDD_C, EXT=\n";
+  WriteMatrix(os, EXT);
+  os << "REDUND: Kernel_GetNonRedundant_CDD_D, FAC=\n";
+  WriteMatrix(os, FAC);
+#endif
   return get_non_redundant_from_dd(Mred, EXT, os);
 }
 
