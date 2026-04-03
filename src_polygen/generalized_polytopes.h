@@ -1160,14 +1160,23 @@ bool is_boundary_point(InteriorPtDir<T> const& ipd, BoundaryGeneralizedPolytope<
   MyVector<T> V = ScalarCanonicalizationVector(ipd.FacIneq);
   std::pair<MyVector<T>, int> pair = get_face_can(V);
   if (!bnd.full_data_facets.contains(pair.first)) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: is_boundary_point, false case 1\n";
+#endif
     return false;
   }
   DataFacetPlusMinus<T> const& dfpm = bnd.full_data_facets.at(pair.first);
   std::optional<MyVector<T>> opt = SolutionMat(dfpm.NSP, ipd.pt);
   if (!opt) {
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+    os << "GP: is_boundary_point, false case 2\n";
+#endif
     return false;
   }
   MyVector<T> const& pt = *opt;
+#ifdef DEBUG_GENERALIZED_POLYTOPE
+  os << "GP: is_boundary_point, determining via the is_interior_gp_vert\n";
+#endif
   if (pair.second == 1) {
     return is_interior_gp_vert(dfpm.gp_plus, pt, os);
   } else {

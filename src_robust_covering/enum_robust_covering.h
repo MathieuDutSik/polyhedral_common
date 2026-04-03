@@ -890,7 +890,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
       std::vector<int> list_irred = cdd::RedundancyReductionClarksonExt(list_ineq, os);
       os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
       bool test = IsFullDimensional(list_ineq, os);
-      os << "ROBUST:   kippp, test=" << test << "\n";
+      os << "ROBUST:   kippp, is_full_dim, test=" << test << "\n";
     }
 #endif
     bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
@@ -1270,6 +1270,9 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
     }
     PVoronoi<T, Tint> const &ppoly_adj = *opt;
     BoundaryGeneralizedPolytope<T> bnd_adj = find_generalized_polytope_boundary(ppoly_adj.gp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: flapv, before is_boundary_point\n";
+#endif
     bool test = is_boundary_point(ipd_test, bnd_adj, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: flapv, ipd_test=" << ipd_test.to_string() << " test=" << test << "\n";
