@@ -6,6 +6,7 @@
 #include "generalized_polytopes.h"
 #include "parall_search.h"
 #include "LatticeDelaunay.h"
+#include "POLY_RedundancyElimination.h"
 #include "COMB_Combinatorics.h"
 // clang-format on
 
@@ -887,7 +888,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 3, step 2(B)\n";
     {
-      std::vector<int> list_irred = cdd::RedundancyReductionClarksonExt(list_ineq, os);
+      std::vector<int> list_irred = get_non_redundant_index_ext(list_ineq, os);
       os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
       bool test = IsFullDimensional(list_ineq, os);
       os << "ROBUST:   kippp, is_full_dim, test=" << test << "\n";
@@ -910,7 +911,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 1\n";
 #endif
-    std::vector<int> list_irred = cdd::RedundancyReductionClarkson(list_ineq, os);
+    std::vector<int> list_irred = get_non_redundant_index_ext(list_ineq, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 2\n";
 #endif
@@ -1066,33 +1067,33 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       return true;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 1\n";
+    os << "ROBUST: fpe, step 1\n";
 #endif
     SoftConvexBoundary<T,Tint> scb = pvp.l_scb[len-1];
     pvp.l_scb.pop_back();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 2\n";
+    os << "ROBUST: fpe, step 2\n";
 #endif
     std::vector<MyVector<Tint>> l_excluded_max = scb.l_excluded_max;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 3\n";
+    os << "ROBUST: fpe, step 3\n";
 #endif
     MyVector<Tint> v_long = scb.v_long();
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 4\n";
+    os << "ROBUST: fpe, step 4\n";
 #endif
     l_excluded_max.push_back(v_long);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 5\n";
+    os << "ROBUST: fpe, step 5\n";
 #endif
     MyVector<T> eIneq = get_ineq(G, v_crit, v_long);
     MyVector<T> eIneq_op = - eIneq;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 6\n";
+    os << "ROBUST: fpe, step 6\n";
 #endif
     std::optional<ConvexBoundary<T>> opt1 = get_next_side_vector(scb, G, v_crit, v_long, l_excluded_max, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 7\n";
+    os << "ROBUST: fpe, step 7\n";
 #endif
     if (!opt1) {
       HardConvexBoundary<T> hcb{scb.index_cb, scb.cb};
@@ -1100,31 +1101,31 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       return false;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 8\n";
+    os << "ROBUST: fpe, step 8\n";
 #endif
     ConvexBoundary<T> const& cb_new = *opt1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: f_process_entry, step 9\n";
+    os << "ROBUST: fpe, step 9\n";
 #endif
     T shift = T(1) / T(15);
     int N = 1;
     while(true) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_1, N=" << N << " shift=" << shift << "\n";
+      os << "ROBUST: fpe, step 10_1, N=" << N << " shift=" << shift << "\n";
 #endif
       MyVector<T> eIso = cb_new.random_interior_point(N, os);
       InteriorPtDir<T> ipd_new{eIso, cb_new.V};
       MyVector<T> fV = ipd_new.get_point(shift);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_2, shift=" << shift << "\n";
+      os << "ROBUST: fpe, step 10_2, shift=" << shift << "\n";
 #endif
       std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_3\n";
+      os << "ROBUST: fpe, step 10_3\n";
 #endif
       if (!opt3) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: f_process_entry, op3 exit\n";
+        os << "ROBUST: fpe, op3 exit\n";
 #endif
         shift = shift / 2;
         N += 1;
@@ -1133,11 +1134,14 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       PVoronoiPart<T,Tint> const& p_poly_vor_part = *opt3;
       int pos = get_position_vec_in_mat(p_poly_vor_part.l_cb[0].sp.FAC, eIneq_op);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_4\n";
+      os << "ROBUST: fpe, step 10_4\n";
 #endif
       if (pos == -1) {
 #ifdef DEBUG_ENUM_P_POLYTOPES
-        os << "ROBUST: f_process_entry, pos = -1 exit\n";
+        os << "ROBUST: fpe, p_poly_vor_part.l_cb[0].sp.FAC=\n";
+        WriteMatrix(os, p_poly_vor_part.l_cb[0].sp.FAC);
+        os << "ROBUST: fpe, eIneq_op=" << StringVectorGAP(eIneq_op) << "\n";
+        os << "ROBUST: fpe, pos = -1 exit\n";
 #endif
         shift = shift / 2;
         N += 1;
@@ -1145,11 +1149,11 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
       }
       SinglePolytope<T> const& sp = p_poly_vor_part.l_cb[0].sp;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_5\n";
+      os << "ROBUST: fpe, step 10_5\n";
 #endif
       std::vector<ConvexBoundary<T>> l_cb = convec_boundary_minus_sp(scb.cb, sp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_6\n";
+      os << "ROBUST: fpe, step 10_6\n";
 #endif
       for (auto& cb2: l_cb) {
         SoftConvexBoundary<T,Tint> scb_new{scb.index_cb, cb2, l_excluded_max, scb.l_robust_m};
@@ -1159,12 +1163,12 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
         pvp.l_hcb.push_back(hcb);
       }
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_7\n";
+      os << "ROBUST: fpe, step 10_7\n";
 #endif
       pvp.l_cb.push_back(p_poly_vor_part.l_cb[0]);
       int index = pvp.l_cb.size() - 1;
 #ifdef DEBUG_ENUM_P_POLYTOPES
-      os << "ROBUST: f_process_entry, step 10_8\n";
+      os << "ROBUST: fpe, step 10_8\n";
 #endif
       // That part needs to be improved, since the inserted faces could match
       for (auto& scb: p_poly_vor_part.l_scb) {

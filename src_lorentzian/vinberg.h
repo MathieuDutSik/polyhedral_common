@@ -202,31 +202,7 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot, std::ostream &os) {
   MyMatrix<Tint> M_Tint = MatrixFromVectorFamily(ListRoot);
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> M_Tfield = UniversalMatrixConversion<Tfield, Tint>(M_Tint);
-  int ChosenMethod = 2;
-  auto get_listidx = [&]() -> std::vector<int> {
-    if (ChosenMethod == 1) {
-      return Kernel_GetNonRedundant_CDD(M_Tfield, os);
-    }
-    if (ChosenMethod == 2) {
-      MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
-      return cdd::RedundancyReductionClarkson(M2, os);
-    }
-    if (ChosenMethod == 3) {
-      std::vector<int> ListIdx1 = Kernel_GetNonRedundant_CDD(M_Tfield, os);
-      MyMatrix<Tfield> M2 = lrs::FirstColumnZero(M_Tfield);
-      std::vector<int> ListIdx2 = cdd::RedundancyReductionClarkson(M2, os);
-      if (ListIdx1 != ListIdx2) {
-        std::cerr << "Inequality between ListIdx1 and ListIdx2\n";
-        std::cerr << "ListIdx1=" << ListIdx1 << "\n";
-        std::cerr << "ListIdx2=" << ListIdx2 << "\n";
-        throw TerminalException{1};
-      }
-      return ListIdx1;
-    }
-    std::cerr << "Failed to find a matching entry in ReduceListRoot\n";
-    throw TerminalException{1};
-  };
-  std::vector<int> ListIdx = get_listidx();
+  std::vector<int> ListIdx = get_non_redundant_index_ext(M_Tfield, os);
   std::vector<MyVector<Tint>> ListV;
   for (auto &idx : ListIdx)
     ListV.push_back(ListRoot[idx]);

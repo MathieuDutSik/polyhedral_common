@@ -8,6 +8,7 @@
 #include "POLY_LinearProgramming.h"
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Fundamental.h"
+#include "POLY_RedundancyElimination.h"
 // clang-format on
 
 /*
@@ -133,7 +134,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> 
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACtot, os);
+  std::vector<int> ListIrred = get_non_redundant_index_ext(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   return get_single_polytope(FAC, EXT);
@@ -145,7 +146,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspaces_int(SinglePolytope<T>
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACtot, os);
+  std::vector<int> ListIrred = get_non_redundant_index_ext(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   return get_single_polytope(FAC, EXT);
@@ -406,7 +407,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
   os << "GP: generate_single_polytope FACinput=\n";
   WriteMatrix(os, FACinput);
 #endif
-  std::vector<int> ListIrred = cdd::RedundancyReductionClarksonExt(FACinput, os);
+  std::vector<int> ListIrred = get_non_redundant_index_ext(FACinput, os);
 #ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP: generate_single_polytope |ListIrred|=" << ListIrred.size() << "\n";
 #endif

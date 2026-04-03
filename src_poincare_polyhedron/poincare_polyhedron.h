@@ -216,7 +216,7 @@ struct RecOption {
   process. and then when an insertion is done. But all that seems overkill right
   now because the stabilizer are so far trivial.
   - What should be reasonably accessible for us:
-    - redundancy checks using Clarkson method (based on Linear programming)
+    - redundancy checks using linear programming
     - Linear programming over those special fields has to be doable.
       Maybe we could use shifting to doule precision to help solve those linear
   problems.
@@ -531,10 +531,10 @@ public:
     //
     // Doing the redundancy computation
     //
-    os << "Before RedundancyReductionClarkson n_mat=" << n_mat << "\n";
-    std::vector<int> ListIrred = cdd::RedundancyReductionClarkson(FACexp, os);
+    os << "Before get_non_redundant_index_ext n_mat=" << n_mat << "\n";
+    std::vector<int> ListIrred = get_non_redundant_index_ext(FACexp, os);
     os << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat << "\n";
-    os << "|PP: RedundancyReductionClarkson|=" << time << "\n";
+    os << "|PP: get_non_redundant_index_ext|=" << time << "\n";
     //
     // Paperwork
     //

@@ -67,37 +67,37 @@ FacetizationInfo<T> FacetizationCone(MyMatrix<T> const &EXT,
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+  os << "REDUND: FacetizationCone : n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
 #endif
   MyMatrix<T> TheSum = ZeroMatrix<T>(1, n_cols);
   for (int i_row = 0; i_row < n_rows; i_row++)
     for (int i_col = 0; i_col < n_cols; i_col++)
       TheSum(0, i_col) += EXT(i_row, i_col);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : TheSum\n";
+  os << "REDUND: FacetizationCone : TheSum\n";
 #endif
   MyMatrix<T> EXTtot = Concatenate(TheSum, EXT);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : EXTtot\n";
+  os << "REDUND: FacetizationCone : EXTtot\n";
   os << "|EXTtot|=" << EXTtot.rows() << " / " << EXTtot.cols() << "\n";
 #endif
   MyMatrix<T> EXTbas = RowReduction(EXTtot);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : EXTbas\n";
+  os << "REDUND: FacetizationCone : EXTbas\n";
   os << "|EXTbas|=" << EXTbas.rows() << " / " << EXTbas.cols() << "\n";
 #endif
   MyMatrix<T> eInvMat = Inverse(EXTbas);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : eInvMat\n";
+  os << "REDUND: FacetizationCone : eInvMat\n";
 #endif
   MyMatrix<T> EXT_ret = EXT * eInvMat;
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : EXT_ret\n";
+  os << "REDUND: FacetizationCone : EXT_ret\n";
 #endif
   //
   MyMatrix<T> BoundingFac_ret = BoundingFac * TransposedMat(EXTbas);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "FacetizationCone : BoundingFac_ret\n";
+  os << "REDUND: FacetizationCone : BoundingFac_ret\n";
 #endif
   return {std::move(EXT_ret), std::move(BoundingFac_ret)};
 }
@@ -109,12 +109,12 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   int n_rows = EXT.rows();
   int n_cols = EXT.cols();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
+  os << "REDUND: n_rows=" << n_rows << " n_cols=" << n_cols << "\n";
 #endif
   MyMatrix<T> BoundingFac(0, n_cols);
   FacetizationInfo<T> RegCone = FacetizationCone(EXT, BoundingFac, os);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "We have regCone\n";
+  os << "REDUND: We have regCone\n";
 #endif
   MyMatrix<T> EXT_work = RegCone.EXT;
   // return true if it is redundant. False if irredundant
@@ -154,7 +154,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
       T e_val = -eSol.DualSolution(i_row);
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
       if (e_val < 0) {
-        std::cerr << "The coefficient should be non-negative\n";
+        std::cerr << "REDUND: The coefficient should be non-negative\n";
         for (int j_row = 0; j_row < n_rows_ineq; j_row++) {
           std::cerr << " " << eSol.DualSolution(j_row);
         }
@@ -183,7 +183,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     tool.insert_if_indep(V);
   };
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "We have RankTool\n";
+  os << "REDUND: We have RankTool\n";
 #endif
   //
   // Now computing one interior point.
@@ -194,7 +194,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
   for (int i_row = 0; i_row < n_rows; i_row++) {
     T eScal = ListScalInterior(i_row);
     if (eScal <= 0) {
-      std::cerr << "Inconsistent scalar product\n";
+      std::cerr << "REDUND: Inconsistent scalar product\n";
       throw TerminalException{1};
     }
   }
@@ -260,7 +260,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
     while (true) {
       bool test = HasOneViolatedFacet(h);
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-      os << "HasOneViolatedFacet h=" << h << " test=" << test << "\n";
+      os << "REDUND: HasOneViolatedFacet h=" << h << " test=" << test << "\n";
 #endif
       if (test)
         return GetSmallestValue(h);
@@ -296,7 +296,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
 #endif
   while (true) {
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-    os << "nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
+    os << "REDUND: nbRuns=" << nbRuns << " nbFoundIrred=" << nbFoundIrred << "\n";
 #endif
     SetRandomVector();
     int idxFound = GetRandomOutsideVector_and_HitAndRun();
@@ -403,7 +403,7 @@ std::vector<int> EliminationByRedundance_HitAndRun(MyMatrix<T> const &EXTin,
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
   for (int i_row = 0; i_row < n_rows; i_row++) {
     if (RedundancyStatus[i_row] == -1) {
-      std::cerr << "The algorithm failed to treat all the points\n";
+      std::cerr << "REDUND: The algorithm failed to treat all the points\n";
       throw TerminalException{1};
     }
   }
@@ -456,7 +456,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
   vectface vf = DecomposeOrbitPoint(GRP, work);
   size_t n_orbit = vf.size();
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-  os << "n_rows=" << n_rows << " n_cols=" << n_cols << " |GRP|=" << GRP.size()
+  os << "REDUND: n_rows=" << n_rows << " n_cols=" << n_cols << " |GRP|=" << GRP.size()
      << " n_orbit=" << n_orbit << "\n";
 #endif
   Face status_orbit(n_orbit);
@@ -465,7 +465,7 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
   for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {
     Face e_orbit = vf[i_orbit];
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
-    os << "i_orbit=" << i_orbit << "/" << n_orbit
+    os << "REDUND: i_orbit=" << i_orbit << "/" << n_orbit
        << " |e_orbit|=" << e_orbit.count() << "\n";
     os << "O =";
     for (size_t i_row = 0; i_row < n_rows; i_row++) {
@@ -568,6 +568,35 @@ std::vector<int> GetNonRedundant_Equivariant(const MyMatrix<T> &EXT,
   }
   return ListIrred;
 }
+
+bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> const& l2) {
+  size_t siz1 = l1.size();
+  if (siz1 != l2.size()) {
+    return false;
+  }
+  for (size_t i=0; i<siz1; i++) {
+    if (l1[i] != l2[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+template<typename T>
+std::vector<int> get_non_redundant_index_ext(MyMatrix<T> const& M , std::ostream& os) {
+  std::vector<int> list_irred = cdd::RedundancyReductionClarksonExt(M, os);
+#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
+  std::vector<int> list_irredB = Kernel_GetNonRedundant_CDD(M, os);
+  if (!is_equal_list_irred(list_irred, list_irredB)) {
+    std::cerr << "REDUND: Both method return inconsistent results\n";
+    throw TerminalException{1};
+  }
+#endif
+  return list_irred;
+}
+
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_REDUNDANCYELIMINATION_H_
