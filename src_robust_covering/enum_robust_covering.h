@@ -888,10 +888,12 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 3, step 2(B)\n";
     {
-      std::vector<int> list_irred = get_non_redundant_index_ext(list_ineq, os);
-      os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
       bool test = IsFullDimensional(list_ineq, os);
       os << "ROBUST:   kippp, is_full_dim, test=" << test << "\n";
+      if (test) {
+        std::vector<int> list_irred = get_non_redundant_indices(list_ineq, os);
+        os << "ROBUST:   kippp, |list_irred|=" << list_irred.size() << "\n";
+      }
     }
 #endif
     bool test = is_full_dimensional_bounded_polytope(list_ineq, os);
@@ -911,7 +913,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 1\n";
 #endif
-    std::vector<int> list_irred = get_non_redundant_index_ext(list_ineq, os);
+    std::vector<int> list_irred = get_non_redundant_indices(list_ineq, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 2\n";
 #endif

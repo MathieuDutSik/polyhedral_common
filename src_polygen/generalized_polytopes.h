@@ -134,7 +134,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> 
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
-  std::vector<int> ListIrred = get_non_redundant_index_ext(FACtot, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   return get_single_polytope(FAC, EXT);
@@ -146,7 +146,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspaces_int(SinglePolytope<T>
   if (!IsFullDimensional(FACtot, os)) {
     return {};
   }
-  std::vector<int> ListIrred = get_non_redundant_index_ext(FACtot, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
   MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   return get_single_polytope(FAC, EXT);
@@ -407,7 +407,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
   os << "GP: generate_single_polytope FACinput=\n";
   WriteMatrix(os, FACinput);
 #endif
-  std::vector<int> ListIrred = get_non_redundant_index_ext(FACinput, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FACinput, os);
 #ifdef DEBUG_GENERALIZED_POLYTOPE_DISABLE
   os << "GP: generate_single_polytope |ListIrred|=" << ListIrred.size() << "\n";
 #endif

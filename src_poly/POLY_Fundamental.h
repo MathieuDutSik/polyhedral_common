@@ -764,6 +764,18 @@ MyMatrix<T> NullspaceMatSingleVectorExt(MyVector<T> const &V) {
   return NSP;
 }
 
+template <typename T> MyMatrix<T> AddZeroColumn(MyMatrix<T> const &M) {
+  int nbRow = M.rows();
+  int nbCol = M.cols();
+  MyMatrix<T> Mret(nbRow, nbCol + 1);
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    Mret(iRow, 0) = 0;
+    for (int iCol = 0; iCol < nbCol; iCol++)
+      Mret(iRow, 1 + iCol) = M(iRow, iCol);
+  }
+  return Mret;
+}
+
 // clang-format off
 #endif  // SRC_POLY_POLY_FUNDAMENTAL_H_
 // clang-format on

@@ -2079,7 +2079,7 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   int n = ent.DT_gram.GramMat.rows();
   MyMatrix<T> FAC = GetFACineq(ent.ListIneq);
   MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
-  std::vector<int> ListIrred = get_non_redundant_index_ext(FAC_extend, os);
+  std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
   int nbIneq = FAC.rows();
   MyMatrix<T> const &SHV_T = ent.DT_gram.SHV_T;
   os_out << ", n_ineq:=" << nbIneq;
@@ -2237,9 +2237,9 @@ struct DataIsoDelaunayDomainsFunc {
     // Compute the irredundant ones as well as the l_ineq / map_ineq
     MyMatrix<T> FAC = GetFACineq(ListIneq);
     MyMatrix<T> FAC_extend = AddFirstZeroColumn(FAC);
-    std::vector<int> ListIrred = get_non_redundant_index_ext(FAC_extend, os);
+    std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, get_non_redundant_index_ext|=" << time_f_adj << "\n";
+    os << "|ISODEL: f_adj, get_non_redundant_indices|=" << time_f_adj << "\n";
 #endif
 #ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
     std::vector<int> ListIrred_DD =

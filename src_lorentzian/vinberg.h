@@ -202,7 +202,7 @@ ReduceListRoot(const std::vector<MyVector<Tint>> &ListRoot, std::ostream &os) {
   MyMatrix<Tint> M_Tint = MatrixFromVectorFamily(ListRoot);
   using Tfield = typename overlying_field<Tint>::field_type;
   MyMatrix<Tfield> M_Tfield = UniversalMatrixConversion<Tfield, Tint>(M_Tint);
-  std::vector<int> ListIdx = get_non_redundant_index_ext(M_Tfield, os);
+  std::vector<int> ListIdx = get_non_redundant_indices(M_Tfield, os);
   std::vector<MyVector<Tint>> ListV;
   for (auto &idx : ListIdx)
     ListV.push_back(ListRoot[idx]);

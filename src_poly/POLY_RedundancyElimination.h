@@ -30,22 +30,34 @@ std::vector<int> Kernel_GetNonRedundant_CDD(const MyMatrix<T> &M,
                                             std::ostream &os) {
   MyMatrix<T> Mred = ColumnReduction(M);
   MyMatrix<T> EXT = cdd::DualDescription(Mred, os);
+#ifdef DEBUG_ELIMINATION_REDUNDANCY
+  os << "REDUND: Kernel_GetNonRedundant_CDD, Mred=\n";
+  WriteMatrix(os, Mred);
+  os << "REDUND: Kernel_GetNonRedundant_CDD, EXT=\n";
+  WriteMatrix(os, EXT);
+#endif
   int n_row = Mred.rows();
   int n_vert = EXT.rows();
   int n_col = Mred.cols();
+  size_t limit = n_col - 1;
   std::vector<int> TheSel;
   for (int i_row = 0; i_row < n_row; i_row++) {
     std::vector<int> eIncd;
     for (int i_vert = 0; i_vert < n_vert; i_vert++) {
-      T scal = 0;
-      for (int i_col = 0; i_col < n_col; i_col++)
+      T scal(0);
+      for (int i_col = 0; i_col < n_col; i_col++) {
         scal += EXT(i_vert, i_col) * Mred(i_row, i_col);
-      if (scal == 0)
+      }
+      if (scal == 0) {
         eIncd.push_back(i_vert);
+      }
     }
-    MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
-    if (RankMat(EXT_face) == n_col - 1)
-      TheSel.push_back(i_row);
+    if (eIncd.size() >= limit) {
+      MyMatrix<T> EXT_face = SelectRow(EXT, eIncd);
+      if (RankMat(EXT_face) == n_col - 1) {
+        TheSel.push_back(i_row);
+      }
+    }
   }
   return TheSel;
 }
@@ -583,17 +595,32 @@ bool is_equal_list_irred(std::vector<int> const& l1, std::vector<int> const& l2)
 }
 
 
+/*
+  The generic function encapsulating all the possible function call
+ */
 template<typename T>
-std::vector<int> get_non_redundant_index_ext(MyMatrix<T> const& M , std::ostream& os) {
-  std::vector<int> list_irred = cdd::RedundancyReductionClarksonExt(M, os);
+std::vector<int> get_non_redundant_indices(MyMatrix<T> const& M , std::ostream& os) {
 #ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
-  std::vector<int> list_irredB = Kernel_GetNonRedundant_CDD(M, os);
-  if (!is_equal_list_irred(list_irred, list_irredB)) {
-    std::cerr << "REDUND: Both method return inconsistent results\n";
+  bool test = IsFullDimensional(M, os);
+  if (!test) {
+    std::cerr << "REDUND: The cone must be full dimensional for doing the non-reundant stuff\n";
     throw TerminalException{1};
   }
 #endif
-  return list_irred;
+  std::vector<int> list_irredA = cdd::RedundancyReductionClarksonExt(M, os);
+#ifdef SANITY_CHECK_ELIMINATION_REDUNDANCY
+  MyMatrix<T> M_ext = AddZeroColumn(M);
+  std::vector<int> list_irredB = Kernel_GetNonRedundant_CDD(M_ext, os);
+  if (!is_equal_list_irred(list_irredA, list_irredB)) {
+    std::cerr << "REDUND: Both method return inconsistent results\n";
+    std::cerr << "REDUND: M=\n";
+    WriteMatrix(std::cerr, M);
+    std::cerr << "REDUND: list_irredA=" << StdVectorToString(list_irredA) << "\n";
+    std::cerr << "REDUND: list_irredB=" << StdVectorToString(list_irredB) << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return list_irredA;
 }
 
 

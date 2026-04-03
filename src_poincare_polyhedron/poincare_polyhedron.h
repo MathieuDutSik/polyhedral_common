@@ -125,18 +125,6 @@ template <typename T> MyMatrix<T> Contragredient(MyMatrix<T> const &M) {
   return Inverse(TransposedMat(M));
 }
 
-template <typename T> MyMatrix<T> AddZeroColumn(MyMatrix<T> const &M) {
-  int nbRow = M.rows();
-  int nbCol = M.cols();
-  MyMatrix<T> Mret(nbRow, nbCol + 1);
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    Mret(iRow, 0) = 0;
-    for (int iCol = 0; iCol < nbCol; iCol++)
-      Mret(iRow, 1 + iCol) = M(iRow, iCol);
-  }
-  return Mret;
-}
-
 template <typename T> struct DataFAC {
   int n_mat;
   int rnk;
@@ -531,10 +519,10 @@ public:
     //
     // Doing the redundancy computation
     //
-    os << "Before get_non_redundant_index_ext n_mat=" << n_mat << "\n";
-    std::vector<int> ListIrred = get_non_redundant_index_ext(FACexp, os);
+    os << "Before get_non_redundant_indices n_mat=" << n_mat << "\n";
+    std::vector<int> ListIrred = get_non_redundant_indices(FACexp, os);
+    os << "|PP: get_non_redundant_indices|=" << time << "\n";
     os << "|ListIrred|=" << ListIrred.size() << " n_mat=" << n_mat << "\n";
-    os << "|PP: get_non_redundant_index_ext|=" << time << "\n";
     //
     // Paperwork
     //

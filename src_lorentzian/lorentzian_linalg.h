@@ -316,7 +316,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
       pos++;
     }
   }
-  std::vector<int> list_red = get_non_redundant_index_ext(EXT, os);
+  std::vector<int> list_red = get_non_redundant_indices(EXT, os);
   size_t siz = list_red.size();
   std::vector<size_t> l_idx(siz);
   for (size_t i = 0; i < siz; i++) {
