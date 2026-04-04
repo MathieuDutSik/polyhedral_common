@@ -39,8 +39,8 @@ void process(std::string const &eFileI, std::string const &ansProg,
     os << "|FAC|=" << FAC.rows() << "\n";
     return;
   }
-  std::cerr << "choice=" << choice
-            << " but allowed possibilities are control and CPP\n";
+  std::cerr << "We have choice=" << choice << "\n";
+  std::cerr << "But allowed possibilities are control, CPP, GAP and Number\n";
   std::cerr << "Failed to find a matching entry\n";
   throw TerminalException{1};
 }

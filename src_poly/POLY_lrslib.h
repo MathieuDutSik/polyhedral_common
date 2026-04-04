@@ -52,7 +52,6 @@ const int64_t POS = 1L;
 const int64_t NEG = -1L;
 const int64_t L_FALSE = 0L;
 const int64_t L_TRUE = 1L;
-const int64_t GE = 1L;       /* constraint is >= */
 const int64_t EQ = 0L;       /* constraint is linearity */
 const uint64_t dict_limit = 10;
 } // namespace globals
@@ -94,8 +93,6 @@ template <typename T> struct lrs_dat {
   int64_t dualdeg; /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
-  int64_t maxdepth; /* max depth to search to in treee              */
-  int64_t mindepth; /* do not backtrack above mindepth              */
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
@@ -184,8 +181,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->nredundcol = 0L;
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
-  Q->maxdepth = std::numeric_limits<int64_t>::max();
-  Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->nonnegative = globals::L_FALSE;
   return Q;
 }
@@ -349,7 +344,6 @@ template <typename T>
 int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
                          uint64_t &dict_count)
 /* gets next reverse search tree basis, globals::FALSE if none  */
-/* switches to estimator if maxdepth set               */
 /* backtrack globals::TRUE means backtrack from here            */
 {
   /* assign local variables to structures */
@@ -363,12 +357,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
 
   //  PrintP(*D_p, "Before while loop");
   while ((j < d) || ((*D_p)->B[m] != m)) {
-    if ((*D_p)->depth >= Q->maxdepth) {
-      backtrack = globals::L_TRUE;
-      if (Q->maxdepth == 0) { /* estimate only */
-        return globals::L_FALSE;
-      }
-    }
 
     //      PrintP(*D_p, "Before backtrack test");
     if (backtrack) { /* go back to prev. dictionary, restore i,j */
@@ -385,8 +373,6 @@ int64_t lrs_getnextbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, int64_t backtrack,
     }
     //      PrintP(*D_p, "After backtrack test");
 
-    if ((*D_p)->depth < Q->mindepth)
-      break;
     while ((j < d) && !reverse(*D_p, Q, &i, j))
       j++;
 
@@ -1469,8 +1455,6 @@ template <typename T>
 void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
                     int64_t ineq)
 /* set row of dictionary using num and den arrays for rational input */
-/* ineq = 1 (globals::GE)   - ordinary row  */
-/*      = 0 (globals::EQ)   - linearity     */
 {
   int64_t i, j;
 
