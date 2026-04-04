@@ -8403,7 +8403,9 @@ LpSolution<T>
 CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
                                MyVector<T> const &ToBeMinimized,
                                [[maybe_unused]] std::ostream &os) {
-  std::cerr << "Begin CDD_LinearProgramming_External\n";
+#ifdef DEBUG_CDD
+  os << "Begin CDD_LinearProgramming_External\n";
+#endif
   std::string eStr = random_string(20);
   std::string FileIne = "/tmp/LP_" + eStr + ".ine";
   std::string FileLps = "/tmp/LP_" + eStr + ".lps";

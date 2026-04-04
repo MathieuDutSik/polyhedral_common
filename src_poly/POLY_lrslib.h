@@ -1537,8 +1537,7 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
   int nbRow = M.rows();
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    T eVal = M(iRow, 0);
-    if (eVal != 0) {
+    if (M(iRow, 0) != 0) {
       return AddFirstZeroColumn(M);
     }
   }
