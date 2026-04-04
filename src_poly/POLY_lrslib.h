@@ -52,7 +52,6 @@ const int64_t POS = 1L;
 const int64_t NEG = -1L;
 const int64_t L_FALSE = 0L;
 const int64_t L_TRUE = 1L;
-const int64_t EQ = 0L;       /* constraint is linearity */
 const uint64_t dict_limit = 10;
 } // namespace globals
 
@@ -952,77 +951,6 @@ lrs_dic<T> *resize(lrs_dic<T> *P, lrs_dat<T> *Q)
 }
 
 template <typename T>
-int64_t restartpivots(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* facet contains a list of the inequalities in the cobasis for the restart */
-/* inequality contains the relabelled inequalities after initialization     */
-{
-  int64_t i, j, k;
-  int64_t *Cobasic; /* when restarting, Cobasic[j]=1 if j is in cobasis */
-                    /* assign local variables to structures */
-  T **A = P->A;
-  int64_t *B = P->B;
-  int64_t *C = P->C;
-  int64_t *Row = P->Row;
-  int64_t *Col = P->Col;
-  int64_t *inequality = Q->inequality;
-  int64_t *facet = Q->facet;
-  int64_t nlinearity = Q->nlinearity;
-  int64_t m, d, lastdv;
-  m = P->m;
-  d = P->d;
-  lastdv = Q->lastdv;
-
-  Cobasic = new int64_t[m + d + 2];
-
-  /* set Cobasic flags */
-  for (i = 0; i < m + d + 1; i++)
-    Cobasic[i] = 0;
-  for (i = 0; i < d; i++) { /* find index corresponding to facet[i] */
-    j = 1;
-    while (facet[i + nlinearity] != inequality[j])
-      j++;
-    Cobasic[j + lastdv] = 1;
-  }
-
-  /* Note that the order of doing the pivots is important, as */
-  /* the B and C vectors are reordered after each pivot       */
-
-  /* Suggested new code from db starts */
-  i = m;
-  while (i > d) {
-    while (Cobasic[B[i]]) {
-      k = d - 1;
-      while (k >= 0 && (A[Row[i]][Col[k]] == 0 || Cobasic[C[k]])) {
-        k--;
-      }
-      if (k >= 0) {
-        /*db asks: should i really be modified here? (see old code) */
-        /*da replies: modifying i only makes is larger, and so      */
-        /*the second while loop will put it back where it was       */
-        /*faster (and safer) as done below                          */
-        int64_t ii = i;
-        pivot(P, ii, k);
-        update(P, &ii, &k);
-      } else {
-        delete[] Cobasic;
-        return globals::L_FALSE;
-      }
-    }
-    i--;
-  }
-  /* Suggested new code from db ends */
-
-  /* check restarting from a primal feasible dictionary               */
-  for (i = lastdv + 1; i <= m; i++)
-    if (A[Row[i]][0] < 0) {
-      delete[] Cobasic;
-      return globals::L_FALSE;
-    }
-  delete[] Cobasic;
-  return globals::L_TRUE;
-}
-
-template <typename T>
 int64_t lexmin(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col)
 /*test if basis is lex-min for vertex or ray, if so globals::TRUE */
 /* globals::FALSE if a_r,g=0, a_rs !=0, r > s          */
@@ -1099,106 +1027,6 @@ void update(lrs_dic<T> *P, int64_t *i, int64_t *j)
     ; /*Find basis index */
   for (*j = 0; C[*j] != leave; (*j)++)
     ; /*Find co-basis index */
-}
-
-/*********************************************************/
-/*                 Miscellaneous                         */
-/******************************************************* */
-/*reorder array in increasing order with one misplaced element */
-void reorder(int64_t a[], int64_t range) {
-  int64_t i, temp;
-  for (i = 0; i < range - 1; i++)
-    if (a[i] > a[i + 1]) {
-      temp = a[i];
-      a[i] = a[i + 1];
-      a[i + 1] = temp;
-    }
-  for (i = range - 2; i >= 0; i--)
-    if (a[i] > a[i + 1]) {
-      temp = a[i];
-      a[i] = a[i + 1];
-      a[i + 1] = temp;
-    }
-}
-
-template <typename T>
-int64_t checkredund(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* Solve primal feasible lp by least subscript and lex min basis method */
-/* to check redundancy of a row in objective function                   */
-/* returns globals::TRUE if redundant, else globals::FALSE */
-{
-  T Ns, Nt;
-  int64_t i, j;
-  int64_t r, s;
-
-  /* assign local variables to structures */
-  T **A = P->A;
-  int64_t *Row, *Col;
-  int64_t d = P->d;
-
-  Row = P->Row;
-  Col = P->Col;
-
-  while (selectpivot(P, Q, &i, &j)) {
-
-    /* sign of new value of A[0][0]            */
-    /* is      A[0][s]*A[r][0]-A[0][0]*A[r][s] */
-
-    r = Row[i];
-    s = Col[j];
-    Ns = A[0][s] * A[r][0];
-    Nt = A[0][0] * A[r][s];
-    if (Ns > Nt)
-      return globals::L_FALSE; /* non-redundant */
-
-    pivot(P, i, j);
-    update(P, &i, &j);
-  }
-  return !(j < d && i == 0); /* unbounded is also non-redundant */
-}
-
-template <typename T>
-int64_t checkcobasic(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t index)
-/* globals::TRUE if index is cobasic and nonredundant                         */
-/* globals::FALSE if basic, or degen. cobasic, where it will get pivoted out  */
-
-{
-
-  /* assign local variables to structures */
-
-  T **A = P->A;
-  int64_t *C, *Row, *Col;
-  int64_t d = P->d;
-  int64_t m = P->m;
-  int64_t i = 0;
-  int64_t j = 0;
-  int64_t s;
-
-  C = P->C;
-  Row = P->Row;
-  Col = P->Col;
-
-  while ((j < d) && C[j] != index)
-    j++;
-
-  if (j == d)
-    return globals::L_FALSE; /* not cobasic index */
-
-  /* index is cobasic */
-
-  s = Col[j];
-  i = Q->lastdv + 1;
-
-  while (i <= m && (A[Row[i]][s] == 0 || A[Row[i]][0] != 0))
-    i++;
-
-  if (i > m)
-    return globals::L_TRUE;
-
-  pivot(P, i, j);
-  update(P, &i, &j);
-
-  return globals::L_FALSE; /*index is no longer cobasic */
 }
 
 /***************************************************************/
@@ -1284,22 +1112,6 @@ void pushQ(lrs_dat<T> *global, int64_t m, int64_t d, int64_t m_A,
   } else {
     global->Qtail = global->Qtail->next;
   }
-}
-
-template <typename T> lrs_dic<T> *lrs_getdic(lrs_dat<T> *Q) {
-  lrs_dic<T> *p;
-  int64_t m;
-  m = Q->m;
-  if (Q->nonnegative)
-    m = m + Q->inputd;
-  p = new_lrs_dic<T>(m, Q->inputd, Q->m);
-
-  p->next = p;
-  p->prev = p;
-  Q->Qhead = p;
-  Q->Qtail = p;
-
-  return p;
 }
 
 template <typename T> void lrs_free_dic(lrs_dic<T> *P, lrs_dat<T> *Q) {
@@ -1452,8 +1264,7 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
 }
 
 template <typename T>
-void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
-                    int64_t ineq)
+void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num)
 /* set row of dictionary using num and den arrays for rational input */
 {
   int64_t i, j;
@@ -1473,11 +1284,6 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
     A[i][0] = 0;
   if (A[i][hull] != 0)                 /* for H-rep, are zero in column 0     */
     Q->homogeneous = globals::L_FALSE; /* for V-rep, all zero in column 1     */
-  if (ineq == globals::EQ)             /* input is linearity */
-  {
-    Q->linearity[Q->nlinearity] = row;
-    Q->nlinearity++;
-  }
 }
 
 template <typename T>
@@ -1485,17 +1291,16 @@ void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   int j;
   int iRow, nbRow, nbCol;
   int64_t n;
-  int64_t ineq;
   T *num;
   nbRow = EXT.rows();
   nbCol = EXT.cols();
   n = nbCol;
   num = new T[n + 1];
-  ineq = 1;
   for (iRow = 0; iRow < nbRow; iRow++) {
-    for (j = 0; j < nbCol; ++j)
+    for (j = 0; j < nbCol; ++j) {
       num[j] = EXT(iRow, j);
-    lrs_set_row_mp(P, Q, iRow + 1, num, ineq);
+    }
+    lrs_set_row_mp(P, Q, iRow + 1, num);
   }
   for (j = 0; j < nbCol; j++)
     P->A[0][j] = 1;
