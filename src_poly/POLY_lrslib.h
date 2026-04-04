@@ -74,7 +74,6 @@ template <typename T> struct lrs_dat {
   /* initially holds order used to find starting  */
   /* basis, default: m,m-1,...,2,1                */
   int64_t *redundcol; /* holds columns which are redundant            */
-  int64_t *linearity; /* holds cobasic indices of input linearities   */
   int64_t *minratio;  /* used for lexicographic ratio test            */
   int64_t inputd;     /* input dimension: n-1 for H-rep, n for V-rep  */
 
@@ -83,7 +82,6 @@ template <typename T> struct lrs_dat {
   int64_t lastdv; /* index of last dec. variable after preproc    */
   /* given by inputd-nredundcol                   */
   int64_t nredundcol; /* number of redundant columns                  */
-  int64_t nlinearity; /* number of input linearities                  */
   /**** flags  **********                         */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
@@ -166,7 +164,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->m = 0L;
   Q->n = 0L;
   Q->inputd = 0L;
-  Q->nlinearity = 0L;
   Q->nredundcol = 0L;
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
@@ -210,16 +207,13 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   T **A;
   int64_t *B, *C, *Col;
   int64_t *inequality;
-  int64_t *linearity;
   int64_t hull = Q->hull;
-  int64_t m, d, lastdv, nlinearity, nredundcol;
+  int64_t m, d, lastdv, nredundcol;
   m = (*D_p)->m;
   d = (*D_p)->d;
   lastdv = Q->lastdv;
 
   nredundcol = 0L;            /* will be set after getabasis        */
-  nlinearity = Q->nlinearity; /* may be reset if new linearity read */
-  linearity = Q->linearity;
 
   A = (*D_p)->A;
   B = (*D_p)->B;
@@ -227,15 +221,8 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   Col = (*D_p)->Col;
   inequality = Q->inequality;
 
-  /* default is to look for starting cobasis using linearies first, then     */
-  /* filling in from last rows of input as necessary                         */
-  /* linearity array is assumed sorted here                                  */
-  /* note if restart/given start inequality indices already in place         */
-  /* from nlinearity..d-1                                                    */
-  for (i = 0; i < nlinearity; i++) /* put linearities first in the order */
-    inequality[i] = linearity[i];
-
-  k = nlinearity;
+  /* default is to look for starting cobasis from the last rows of input */
+  k = 0;
   for (i = m; i >= 1; i--) {
     j = 0;
     while (j < k && inequality[j] != i)
@@ -270,16 +257,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
 
   for (i = 1; i <= m; i++)
     inequality[i] = i;
-  if (nlinearity > 0) {              /* some cobasic indices will be removed */
-    for (i = 0; i < nlinearity; i++) /* remove input linearity indices */
-      inequality[linearity[i]] = 0;
-    k = 1; /* counter for linearities         */
-    for (i = 1; i <= m - nlinearity; i++) {
-      while (k <= m && inequality[k] == 0)
-        k++; /* skip zeroes in corr. to linearity */
-      inequality[i] = inequality[k++];
-    }
-  }
   if (nredundcol > 0) {
     Lin = new T *[nredundcol + 1];
     for (i = 0; i < nredundcol; i++) {
@@ -718,12 +695,7 @@ template <typename T>
 int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
 /* Pivot Ax<=b to standard form */
 /*Try to find a starting basis by pivoting in the variables x[1]..x[d]        */
-/*If there are any input linearities, these appear first in order[]           */
-/* Steps: (a) Try to pivot out basic variables using order                    */
-/*            Stop if some linearity cannot be made to leave basis            */
-/*        (b) Permanently remove the cobasic indices of linearities           */
-/*        (c) If some decision variable cobasic, it is a linearity,           */
-/*            and will be removed.                                            */
+/* Steps: Try to pivot out basic variables using order.                       */
 {
   int64_t i, j, k;
   /* assign local variables to structures */
@@ -732,20 +704,16 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
   int64_t *C = P->C;
   int64_t *Row = P->Row;
   int64_t *Col = P->Col;
-  int64_t *linearity = Q->linearity;
   int64_t *redundcol = Q->redundcol;
-  int64_t m, d, nlinearity;
+  int64_t m, d;
   int64_t nredundcol = 0L; /* will be calculated here */
-  nlinearity = Q->nlinearity;
   m = P->m;
   d = P->d;
 
   for (j = 0; j < m; j++) {
     i = 0;
     while (i <= m && B[i] != d + order[j])
-      i++;                       /* find leaving basis index i */
-    if (j < nlinearity && i > m) /* cannot pivot linearity to cobasis */
-      return globals::L_FALSE;
+      i++; /* find leaving basis index i */
     if (i <= m) { /* try to do a pivot */
       k = 0;
       while (C[k] <= d && A[Row[i]][Col[k]] == 0)
@@ -753,24 +721,9 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
       if (C[k] <= d) {
         pivot(P, i, k);
         update(P, &i, &k);
-      } else if (j < nlinearity) { /* cannot pivot linearity to cobasis */
-        if (A[Row[i]][0] == 0)
-          linearity[j] = 0;
-        else
-          return globals::L_FALSE;
       }
     }
   }
-  /* update linearity array to get rid of redundancies */
-  i = 0;
-  k = 0; /* counters for linearities         */
-  while (k < nlinearity) {
-    while (k < nlinearity && linearity[k] == 0)
-      k++;
-    if (k < nlinearity)
-      linearity[i++] = linearity[k++];
-  }
-  nlinearity = i;
   /* column dependencies now can be recorded  */
   /* redundcol contains input column number 0..n-1 where redundancy is */
   k = 0;
@@ -782,21 +735,6 @@ int64_t getabasis(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t order[])
   /* now we know how many decision variables remain in problem */
   Q->nredundcol = nredundcol;
   Q->lastdv = d - nredundcol;
-
-  /* Remove linearities from cobasis for rest of computation */
-  /* This is done in order so indexing is not screwed up */
-
-  for (i = 0; i < nlinearity; i++) { /* find cobasic index */
-    k = 0;
-    while (k < d && C[k] != linearity[i] + d)
-      k++;
-    if (k >= d) {
-      return globals::L_FALSE;
-    }
-    if (!removecobasicindex(P, k))
-      return globals::L_FALSE;
-    d = P->d;
-  }
 
   return globals::L_TRUE;
 }
@@ -1110,7 +1048,6 @@ template <typename T> void lrs_free_dic(lrs_dic<T> *P, lrs_dat<T> *Q) {
 template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
   /* most of these items were allocated in lrs_alloc_dic */
   delete[] Q->inequality;
-  delete[] Q->linearity;
   delete[] Q->redundcol;
   delete[] Q->minratio;
   delete Q;
@@ -1172,10 +1109,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   Q->inequality = new int64_t[m + 1];
   for (i = 0; i <= m; i++)
     Q->inequality[i] = 0;
-  if (Q->nlinearity == 0) /* linearity may already be allocated */
-    Q->linearity = new int64_t[m + 1];
-  for (i = 0; i <= m; i++)
-    Q->linearity[i] = 0;
 
   Q->redundcol = new int64_t[d + 1];
   Q->minratio = new int64_t[m + 1];
