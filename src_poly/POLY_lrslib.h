@@ -195,9 +195,8 @@ void reorder1(int64_t a[], int64_t b[], int64_t newone, int64_t range)
 }
 
 template <typename T>
-int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
+int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q)
 /* gets first basis, globals::FALSE if none              */
-/* P may get changed if lin. space Lin found    */
 /* no_output is globals::TRUE supresses output headers   */
 {
   int64_t i, j, k;
@@ -257,17 +256,9 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
 
   for (i = 1; i <= m; i++)
     inequality[i] = i;
-  if (nredundcol > 0) {
-    Lin = new T *[nredundcol + 1];
-    for (i = 0; i < nredundcol; i++) {
-      Lin[i] = new T[Q->n + 1];
-      if (!(Q->homogeneous && Q->hull &&
-            i == 0)) /* skip redund col 1 for homog. hull */
-        lrs_getray(*D_p, Q, Col[0], (*D_p)->C[0] + i - hull,
-                   Lin[i]); /* adjust index for deletions */
-      if (!removecobasicindex(*D_p, 0)) {
-        return globals::L_FALSE;
-      }
+  for (i = 0; i < nredundcol; i++) {
+    if (!removecobasicindex(*D_p, 0)) {
+      return globals::L_FALSE;
     }
   }
   if (!primalfeasible(*D_p, Q)) {
@@ -1160,21 +1151,17 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num)
 
 template <typename T>
 void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
-  int j;
-  int iRow, nbRow, nbCol;
-  int64_t n;
   T *num;
-  nbRow = EXT.rows();
-  nbCol = EXT.cols();
-  n = nbCol;
-  num = new T[n + 1];
-  for (iRow = 0; iRow < nbRow; iRow++) {
-    for (j = 0; j < nbCol; ++j) {
+  int nbRow = EXT.rows();
+  int nbCol = EXT.cols();
+  num = new T[nbCol + 1];
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    for (int j = 0; j < nbCol; ++j) {
       num[j] = EXT(iRow, j);
     }
     lrs_set_row_mp(P, Q, iRow + 1, num);
   }
-  for (j = 0; j < nbCol; j++)
+  for (int j = 0; j < nbCol; j++)
     P->A[0][j] = 1;
   delete[] num;
 }
@@ -1210,7 +1197,6 @@ void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
 
 template <typename T>
 void initLRS(MyMatrix<T> const &EXT, lrs_dic<T> *&P, lrs_dat<T> *&Q) {
-  T **Lin;
   Q = lrs_alloc_dat<T>();
   if (Q == nullptr) {
     throw TerminalException{1};
@@ -1228,7 +1214,7 @@ void initLRS(MyMatrix<T> const &EXT, lrs_dic<T> *&P, lrs_dat<T> *&Q) {
   fillModelLRS(EXT, P, Q);
   //  PrintP(P, "Before lrs_getfirstbasis", std::cerr);
 
-  if (!lrs_getfirstbasis(&P, Q, Lin)) {
+  if (!lrs_getfirstbasis(&P, Q)) {
     std::cerr << "Error in call to lrs_getfirstbasis\n";
     throw TerminalException{1};
   }
@@ -1291,8 +1277,9 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           Face real_incd(nbRow);
           for (size_t iRow = 0; iRow < nbRow; iRow++) {
             T eScal(0);
-            for (size_t iCol = 0; iCol < nbCol; iCol++)
+            for (size_t iCol = 0; iCol < nbCol; iCol++) {
               eScal += output[iCol] * EXT(iRow, iCol);
+            }
             if (eScal == 0) {
               std::cerr << " " << iRow;
               real_incidence += 1;
@@ -1574,7 +1561,6 @@ template <typename T> vectface DualDescription_incd(MyMatrix<T> const &EXT) {
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
-  T eScal;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
                      [[maybe_unused]] T *out) -> void {
@@ -1613,7 +1599,6 @@ void DualDescriptionFaceIneq(MyMatrix<T> const &EXT, Fprocess f_process) {
   int nbRow = EXTwork.rows();
   int nbColRed = nbCol - shift;
   std::pair<Face, MyVector<T>> pair{Face(nbRow), MyVector<T>(nbColRed)};
-  T eScal;
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
                      T *out) -> void {
     for (int i = 0; i < nbColRed; i++)
@@ -1630,7 +1615,6 @@ vectface DualDescription_incd_limited(MyMatrix<T> const &EXT,
   MyMatrix<T> EXTwork = FirstColumnZero(EXT);
   size_t nbRow = EXTwork.rows();
   vectface ListIncd(nbRow);
-  T eScal;
   int nbFound = 0;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<T> *P, lrs_dat<T> *Q, int const &col,
@@ -1658,7 +1642,6 @@ vectface DualDescription_incd_reduction(MyMatrix<T> const &EXT) {
     AssignMatrixRow(EXTring, iRow, eRow3);
   }
   vectface ListIncd(nbRow);
-  Tring eScal;
   Face face(nbRow);
   auto f_facet = [&](lrs_dic<Tring> *P, lrs_dat<Tring> *Q, int const &col,
                      [[maybe_unused]] Tring *out) -> void {
