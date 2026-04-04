@@ -471,10 +471,9 @@ MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
 #endif
   int n = LinSpa.n;
   int dimSpace = LinSpa.ListMat.size();
-  MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
+  MyMatrix<T> EXT = DirectDualdescription(FAC, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-  os << "|ISODEL: get_interior_gram_matrix_lrs, "
-        "DirectFacetComputationInequalities|="
+  os << "|ISODEL: get_interior_gram_matrix_lrs, DirectDualdescription|="
      << time << "\n";
 #endif
   int n_row = EXT.rows();
@@ -2087,7 +2086,7 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
   os_out << ", n_shv:=" << SHV_T.rows();
   //
-  MyMatrix<T> EXT = DirectFacetComputationInequalities(FAC, "lrs", os);
+  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
   int n_row = EXT.rows();
   std::map<int, size_t> map_rank;
   for (int i_row = 0; i_row < n_row; i_row++) {

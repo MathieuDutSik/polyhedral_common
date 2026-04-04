@@ -630,6 +630,7 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
 template <typename T>
 MyMatrix<T> DirectDualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
   std::string ansProg = "lrs";
+  // We need somewhat better heuristic for choosing the best method.
   return DirectFacetComputationInequalities(EXT, ansProg, os);
 }
 

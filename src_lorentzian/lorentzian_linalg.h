@@ -2,16 +2,19 @@
 #ifndef SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
 #define SRC_LORENTZIAN_LORENTZIAN_LINALG_H_
 
+// clang-format off
 #include "COMB_Combinatorics.h"
 #include "FiniteMatrixGroupFund.h"
 #include "MAT_Matrix.h"
 #include "MAT_MatrixInt.h"
 #include "POLY_cddlib.h"
+#include "POLY_RedundancyElimination.h"
 #include "Positivity.h"
 #include <algorithm>
 #include <string>
 #include <utility>
 #include <vector>
+// clang-format on
 
 #ifdef DEBUG
 #define DEBUG_LORENTZIAN_LINALG

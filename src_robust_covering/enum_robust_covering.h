@@ -685,8 +685,7 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
                                         MyMatrix<T> const &FAC,
                                         [[maybe_unused]] MyVector<Tint> const &v_short,
                                         std::ostream &os) {
-  std::string ansProg = "lrs";
-  MyMatrix<T> EXTbig = DirectFacetComputationInequalities(FAC, ansProg, os);
+  MyMatrix<T> EXTbig = DirectDualDescription(FAC, os);
   int n_ext = EXTbig.rows();
   int dim = EXTbig.cols() - 1;
   MyMatrix<T> EXT(n_ext, dim + 1);
@@ -724,7 +723,9 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
   return get_single_polytope(FAC, EXT);
 }
 
-// Compute
+// When we have a parallelotope, we can compute an upper bound
+// on the robust covering density.
+// Here we iterate 10 times to find better and better upper bounds.
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   int denom = 2;
@@ -1477,7 +1478,6 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
       T max_local(0);
 #ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
       MyVector<T> V_test(dim+1);
-      V_test(0) = 1;
 #endif
       for (int i_row=0; i_row<n_row; i_row++) {
         for (int i=0; i<dim; i++) {
@@ -1487,8 +1487,8 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
         if (norm > max_local) {
           max_local = norm;
 #ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
-          for (int i=0; i<dim; i++) {
-            V_test(i+1) = pvp.l_cb[0].sp.EXT(i_row, i+1);
+          for (int i=0; i<=dim; i++) {
+            V_test(i) = pvp.l_cb[0].sp.EXT(i_row, i);
           }
 #endif
         }

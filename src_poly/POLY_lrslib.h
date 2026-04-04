@@ -1548,20 +1548,6 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
 }
 
 template <typename T>
-void lrs_set_obj_mp(lrs_dic<T> *P, lrs_dat<T> *Q, T *num, int64_t max) {
-  int64_t i;
-
-  if (max == globals::MAXIMIZE)
-    Q->maximize = globals::L_TRUE;
-  else {
-    Q->minimize = globals::L_TRUE;
-    for (i = 0; i <= P->d; i++)
-      num[i] = -num[i];
-  }
-  lrs_set_row_mp(P, Q, 0L, num, globals::GE);
-}
-
-template <typename T>
 int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
 /* select pivot indices using dantzig simplex method             */
 /* largest coefficient with lexicographic rule to avoid cycling  */
