@@ -33,7 +33,11 @@ end;
 File1:="Example1_pd_lrs_1084_26";
 File2:="Example2_lrs_cdd_27_99";
 File3:="Example3_48_11432";
-ListFiles:=[File1, File2, File3];
+File4:="Example4_cdd_lrs_CUTP6";
+File5:="Example5_cdd_lrs_tsp6";
+File6:="Example6_cdd_lrs_METP6";
+File7:="Example7_cdd_lrs_mit41_16";
+ListFiles:=[File1, File2, File3, File4, File5, File6, File7];
 
 n_error:=0;
 for iFile in [1..Length(ListFiles)]

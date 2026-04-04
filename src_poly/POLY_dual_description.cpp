@@ -13,10 +13,10 @@ template <typename T>
 void process(std::string const &eFileI, std::string const &ansProg,
              std::string const &choice, std::ostream &os) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
+  MyMatrix<T> FAC =
+    DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
   if (choice == "control") {
     vectface vf = DirectFacetComputationIncidence(EXT, ansProg, std::cerr);
-    MyMatrix<T> FAC =
-        DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     os << "Obtained results:\n";
     os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
     size_t pos = 0;
@@ -27,17 +27,17 @@ void process(std::string const &eFileI, std::string const &ansProg,
     return WriteMatrix(os, FAC);
   }
   if (choice == "GAP") {
-    MyMatrix<T> FAC =
-        DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     os << "return ";
     WriteMatrixGAP(os, FAC);
     os << ";\n";
     return;
   }
   if (choice == "CPP") {
-    MyMatrix<T> FAC =
-        DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     return WriteMatrix(os, FAC);
+  }
+  if (choice == "Number") {
+    os << "|FAC|=" << FAC.rows() << "\n";
+    return;
   }
   std::cerr << "choice=" << choice
             << " but allowed possibilities are control and CPP\n";

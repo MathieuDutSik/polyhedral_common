@@ -52,8 +52,6 @@ const int64_t POS = 1L;
 const int64_t NEG = -1L;
 const int64_t L_FALSE = 0L;
 const int64_t L_TRUE = 1L;
-const int64_t MAXIMIZE = 1L; /* maximize the lp  */
-const int64_t MINIMIZE = 0L; /* maximize the lp  */
 const int64_t GE = 1L;       /* constraint is >= */
 const int64_t EQ = 0L;       /* constraint is linearity */
 const uint64_t dict_limit = 10;
@@ -75,8 +73,6 @@ template <typename T> struct lrs_dic {
 };
 
 template <typename T> struct lrs_dat {
-  int64_t unbounded; /* lp unbounded */
-
   int64_t *inequality; /* indices of inequalities corr. to cobasic ind */
   /* initially holds order used to find starting  */
   /* basis, default: m,m-1,...,2,1                */
@@ -95,14 +91,10 @@ template <typename T> struct lrs_dat {
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
   /**** flags  **********                         */
-  int64_t bound;   /* globals::TRUE if upper/lower bound on objective given */
   int64_t dualdeg; /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
-  int64_t lponly;   /* true if only lp solution wanted              */
   int64_t maxdepth; /* max depth to search to in treee              */
-  int64_t maximize; /* flag for LP maximization                     */
-  int64_t minimize; /* flag for LP minimization                     */
   int64_t mindepth; /* do not backtrack above mindepth              */
   int64_t
       nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
@@ -160,11 +152,7 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     return lrs_getvertex(P, Q, output);
   }
 
-  if (Q->lponly) {
-    if (A[0][col] <= 0) {
-      return globals::L_FALSE;
-    }
-  } else if (A[0][col] >= 0) {
+  if (A[0][col] >= 0) {
     return globals::L_FALSE;
   }
 
@@ -176,7 +164,7 @@ int64_t lrs_getsolution(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output, int64_t col)
     return globals::L_FALSE;
   }
 
-  if (lexmin(P, Q, col) || Q->lponly)
+  if (lexmin(P, Q, col))
     return lrs_getray(P, Q, col, Q->n, output);
   return globals::L_FALSE; /* no more output in this dictionary */
 }
@@ -194,16 +182,11 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->inputd = 0L;
   Q->nlinearity = 0L;
   Q->nredundcol = 0L;
-  Q->bound =
-      globals::L_FALSE; /* upper/lower bound on objective function given */
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
-  Q->lponly = globals::L_FALSE;
   Q->maxdepth = std::numeric_limits<int64_t>::max();
   Q->mindepth = std::numeric_limits<int64_t>::min();
   Q->nonnegative = globals::L_FALSE;
-  Q->maximize = globals::L_FALSE; /*flag for LP maximization */
-  Q->minimize = globals::L_FALSE; /*flag for LP minimization */
   return Q;
 }
 
@@ -283,9 +266,8 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
    */
   /* note constant term is stored in column d, and column d-1 is all ones */
   /* the other coefficients are multiplied by -2 and shifted one to the right */
-  if (!Q->maximize && !Q->minimize)
-    for (j = 0; j <= d; j++)
-      A[0][j] = 0;
+  for (j = 0; j <= d; j++)
+    A[0][j] = 0;
 
   /* Now we pivot to standard form, and then find a primal feasible basis */
   /* Note these steps MUST be done, even if restarting, in order to get */
@@ -338,23 +320,11 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
     return globals::L_FALSE;
   }
 
-  /* Now solve LP if objective function was given */
-  if (Q->maximize || Q->minimize) {
-    Q->unbounded = !lrs_solvelp(*D_p, Q);
-    if (Q->lponly) {
-      return globals::L_TRUE;
-    } else { /* check to see if objective is dual degenerate */
-      j = 1;
-      while (j <= d && A[0][j] != 0)
-        j++;
-    }
-  } else {
-    for (j = 1; j <= d; j++) {
-      A[0][j] = (*D_p)->det;
-      storesign(A[0][j], globals::NEG);
-    }
-    A[0][0] = 0;
+  for (j = 1; j <= d; j++) {
+    A[0][j] = (*D_p)->det;
+    storesign(A[0][j], globals::NEG);
   }
+  A[0][0] = 0;
   while (C[0] <= m) {
     i = C[0];
     j = inequality[B[i] - lastdv];
@@ -466,7 +436,7 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
   if (hull)
     return globals::L_FALSE; /* skip printing the origin */
 
-  if (!lexflag && !Q->lponly) /* not lexmin, and not printing forced */
+  if (!lexflag) /* not lexmin */
     return globals::L_FALSE;
 
   /* copy column 0 to output */
@@ -791,27 +761,6 @@ int64_t primalfeasible(lrs_dic<T> *P, lrs_dat<T> *Q)
       update(P, &i, &j);
     } else
       primalinfeasible = globals::L_FALSE;
-  }
-  return globals::L_TRUE;
-}
-
-template <typename T>
-int64_t lrs_solvelp(lrs_dic<T> *P, lrs_dat<T> *Q)
-/* Solve primal feasible lp by Dantzig`s rule and lexicographic ratio test */
-/* return globals::TRUE if bounded, globals::FALSE if unbounded */
-{
-  int64_t i, j;
-  /* assign local variables to structures */
-  int64_t d = P->d;
-
-  while (dan_selectpivot(P, Q, &i, &j)) {
-    pivot(P, i, j);
-    update(P, &i, &j);
-  }
-
-  if (j < d &&
-      i == 0) { /* selectpivot gives information on unbounded solution */
-    return globals::L_FALSE;
   }
   return globals::L_TRUE;
 }
@@ -1545,47 +1494,6 @@ void lrs_set_row_mp(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t row, T *num,
     Q->linearity[Q->nlinearity] = row;
     Q->nlinearity++;
   }
-}
-
-template <typename T>
-int64_t dan_selectpivot(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t *r, int64_t *s)
-/* select pivot indices using dantzig simplex method             */
-/* largest coefficient with lexicographic rule to avoid cycling  */
-/* Bohdan Kaluzny's handiwork                                    */
-/* returns globals::TRUE if pivot found else globals::L_FALSE    */
-/* pivot variables are B[*r] C[*s] in locations Row[*r] Col[*s]  */
-{
-  int64_t j, k, col;
-  T coeff;
-  /* assign local variables to structures */
-  T **A = P->A;
-  int64_t *Col = P->Col;
-  int64_t d = P->d;
-
-  *r = 0;
-  *s = d;
-  j = 0;
-  k = 0;
-
-  coeff = 0;
-  /*find positive cost coef */
-  while (k < d) {
-    if (A[0][Col[k]] > coeff) {
-      j = k;
-      coeff = A[0][Col[j]];
-    }
-    k++;
-  }
-
-  if (coeff > 0) {
-    *s = j;
-    col = Col[j];
-    /*find min index ratio */
-    *r = lrs_ratio<T>(P, Q, col);
-    if (*r != 0)
-      return globals::L_TRUE; /* unbounded */
-  }
-  return globals::L_FALSE;
 }
 
 template <typename T>
