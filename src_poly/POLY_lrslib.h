@@ -1179,34 +1179,34 @@ void fillModelLRS(MyMatrix<T> const &EXT, lrs_dic<T> *P, lrs_dat<T> *Q) {
   delete[] num;
 }
 
-template <typename T>
-void PrintP(lrs_dic<T> *&P, std::string const &message, std::ostream &os) {
-  os << "message = " << message << "\n";
-  os << "P->A=\n";
-  for (int i = 0; i <= P->m_A; i++) {
-    for (int j = 0; j <= P->d; j++)
-      os << " " << P->A[i][j];
-    os << "\n";
-  }
-
-  os << "B=";
-  for (int i = 0; i <= P->m; i++)
-    os << P->B[i] << " ";
-  os << "\n";
-  os << "Row=";
-  for (int i = 0; i <= P->m; i++)
-    os << P->Row[i] << " ";
-  os << "\n";
-  //
-  os << "C=";
-  for (int i = 0; i <= P->d; i++)
-    os << P->C[i] << " ";
-  os << "\n";
-  os << "Col=";
-  for (int i = 0; i <= P->d; i++)
-    os << P->Col[i] << " ";
-  os << "\n";
-}
+// template <typename T>
+// void PrintP(lrs_dic<T> *&P, std::string const &message, std::ostream &os) {
+//   os << "message = " << message << "\n";
+//   os << "P->A=\n";
+//   for (int i = 0; i <= P->m_A; i++) {
+//     for (int j = 0; j <= P->d; j++)
+//       os << " " << P->A[i][j];
+//     os << "\n";
+//   }
+//
+//   os << "B=";
+//   for (int i = 0; i <= P->m; i++)
+//     os << P->B[i] << " ";
+//   os << "\n";
+//   os << "Row=";
+//   for (int i = 0; i <= P->m; i++)
+//     os << P->Row[i] << " ";
+//   os << "\n";
+//   //
+//   os << "C=";
+//   for (int i = 0; i <= P->d; i++)
+//     os << P->C[i] << " ";
+//   os << "\n";
+//   os << "Col=";
+//   for (int i = 0; i <= P->d; i++)
+//     os << P->Col[i] << " ";
+//   os << "\n";
+// }
 
 template <typename T>
 void initLRS(MyMatrix<T> const &EXT, lrs_dic<T> *&P, lrs_dat<T> *&Q) {
@@ -1375,8 +1375,7 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
   std::cerr << "max_n_error=" << max_n_error << "\n";
 #endif
   delete[] output;
-  lrs_free_dic(P, Q);
-  lrs_free_dat(Q);
+  freeLRS(P, Q);
 }
 
 template <typename T, typename F>
@@ -1406,8 +1405,7 @@ void Kernel_DualDescription_cond(MyMatrix<T> const &EXT, F const &f) {
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
   delete[] output;
-  lrs_free_dic(P, Q);
-  lrs_free_dat(Q);
+  freeLRS(P, Q);
 }
 
 template <typename T, typename Ftrig>
@@ -1422,8 +1420,7 @@ void Kernel_Simplices_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig) {
       break;
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
-  lrs_free_dic(P, Q);
-  lrs_free_dat(Q);
+  freeLRS(P, Q);
 }
 
 template <typename T, typename Ftrig, typename Ffacet>
@@ -1458,8 +1455,7 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
     }
   } while (lrs_getnextbasis(&P, Q, globals::L_FALSE, dict_count));
   delete[] output;
-  lrs_free_dic(P, Q);
-  lrs_free_dat(Q);
+  freeLRS(P, Q);
 }
 
 template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
