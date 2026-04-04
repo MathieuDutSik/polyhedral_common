@@ -74,7 +74,6 @@ template <typename T> struct lrs_dat {
   int64_t *inequality; /* indices of inequalities corr. to cobasic ind */
   /* initially holds order used to find starting  */
   /* basis, default: m,m-1,...,2,1                */
-  int64_t *facet;     /* cobasic indices for restart in needed        */
   int64_t *redundcol; /* holds columns which are redundant            */
   int64_t *linearity; /* holds cobasic indices of input linearities   */
   int64_t *minratio;  /* used for lexicographic ratio test            */
@@ -92,8 +91,6 @@ template <typename T> struct lrs_dat {
   int64_t dualdeg; /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
-  int64_t
-      nonnegative;  /* globals::TRUE if last d constraints are nonnegativity */
   int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
 
   /* Variables for saving/restoring cobasis,  db */
@@ -180,7 +177,6 @@ template <typename T> lrs_dat<T> *lrs_alloc_dat() {
   Q->nredundcol = 0L;
   Q->homogeneous = globals::L_TRUE;
   Q->hull = globals::L_FALSE;
-  Q->nonnegative = globals::L_FALSE;
   return Q;
 }
 
@@ -268,14 +264,8 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q, T **&Lin)
   /* the same index/inequality correspondance we had for the original prob. */
   /* The inequality array is used to give the insertion order */
 
-  if (Q->nonnegative) {
-    /* no need for initial pivots here, labelling already done */
-    Q->lastdv = d;
-    Q->nredundcol = 0;
-  } else {
-    if (!getabasis(*D_p, Q, inequality)) {
-      return globals::L_FALSE;
-    }
+  if (!getabasis(*D_p, Q, inequality)) {
+    return globals::L_FALSE;
   }
   nredundcol = Q->nredundcol;
   lastdv = Q->lastdv;
@@ -436,7 +426,7 @@ int64_t lrs_getvertex(lrs_dic<T> *P, lrs_dat<T> *Q, T *&output)
       output[ind] = 0;
       ired++;
     } else { /* column not deleted as redundant */
-      getnextoutput(P, Q, i, 0, output[ind]);
+      getnextoutput(P, i, 0, output[ind]);
       i++;
     }
   }
@@ -473,7 +463,7 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
         output[ind] = 0;
       ired++;
     } else { /* column not deleted as redundant */
-      getnextoutput(P, Q, i, col, output[ind]);
+      getnextoutput(P, i, col, output[ind]);
       i++;
     }
   }
@@ -481,32 +471,13 @@ int64_t lrs_getray(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t col, int64_t redcol,
 }
 
 template <typename T>
-void getnextoutput(lrs_dic<T> *P, lrs_dat<T> *Q, int64_t i, int64_t col,
+void getnextoutput(lrs_dic<T> *P, int64_t i, int64_t col,
                    T &out) {
   int64_t row;
-  int64_t m = P->m;
-  int64_t d = P->d;
-  int64_t lastdv = Q->lastdv;
   T **A = P->A;
-  int64_t *B = P->B;
   int64_t *Row = P->Row;
-  int64_t j;
   row = Row[i];
-  if (Q->nonnegative) {
-    for (j = lastdv + 1; j <= m; j++) {
-      if (Q->inequality[B[j] - lastdv] == m - d + i) {
-        out = A[Row[j]][col];
-        return;
-      }
-    }
-    /* did not find inequality m-d+i in basis */
-    if (i == col)
-      out = P->det;
-    else
-      out = 0;
-  } else {
-    out = A[row][col];
-  }
+  out = A[row][col];
 }
 
 template <typename T>
@@ -1149,7 +1120,6 @@ template <typename T> void lrs_free_dat(lrs_dat<T> *Q) {
   /* most of these items were allocated in lrs_alloc_dic */
   delete[] Q->inequality;
   delete[] Q->linearity;
-  delete[] Q->facet;
   delete[] Q->redundcol;
   delete[] Q->minratio;
   delete Q;
@@ -1186,12 +1156,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   d = Q->inputd;
   m_A = m;
 
-  /* nonnegative flag set means that problem is d rows "bigger"     */
-  /* since nonnegative constraints are not kept explicitly          */
-
-  if (Q->nonnegative)
-    m = m + d;
-
   p = new_lrs_dic<T>(m, d, m_A);
 
   p->next = p;
@@ -1222,7 +1186,6 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   for (i = 0; i <= m; i++)
     Q->linearity[i] = 0;
 
-  Q->facet = new int64_t[d + 1];
   Q->redundcol = new int64_t[d + 1];
   Q->minratio = new int64_t[m + 1];
 
@@ -1231,31 +1194,16 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
   Q->lastdv = d; /* last decision variable may be decreased */
                  /* if there are redundant columns          */
 
-  /*initialize basis and co-basis indices, and row col locations */
-  /*if nonnegative, we label differently to avoid initial pivots */
   /* set basic indices and rows */
-  if (Q->nonnegative) {
-    for (i = 0; i <= m; i++) {
-      p->B[i] = i;
-      if (i <= d)
-        p->Row[i] = 0; /* no row for decision variables */
-      else
-        p->Row[i] = i - d;
-    }
-  } else {
-    for (i = 0; i <= m; i++) {
-      if (i == 0)
-        p->B[0] = 0;
-      else
-        p->B[i] = d + i;
-      p->Row[i] = i;
-    }
+  for (i = 0; i <= m; i++) {
+    if (i == 0)
+      p->B[0] = 0;
+    else
+      p->B[i] = d + i;
+    p->Row[i] = i;
   }
   for (j = 0; j < d; j++) {
-    if (Q->nonnegative)
-      p->C[j] = m + j + 1;
-    else
-      p->C[j] = j + 1;
+    p->C[j] = j + 1;
     p->Col[j] = j + 1;
   }
   p->C[d] = m + d + 1;
