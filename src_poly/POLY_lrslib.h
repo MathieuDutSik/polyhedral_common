@@ -60,7 +60,6 @@ template <typename T> struct lrs_dic {
   int64_t m;        /* A has m+1 rows, row 0 is cost row            */
   int64_t m_A;      /* =m or m-d if nonnegative flag set            */
   int64_t d;        /* A has d+1 columns, col 0 is b-vector         */
-  int64_t d_orig;   /* value of d as A was allocated  (E.G.)        */
   int64_t lexflag;  /* true if lexmin basis for this vertex         */
   int64_t depth;    /* depth of basis/vertex in reverse search tree */
   int64_t i, j;     /* last pivot row and column pivot indices      */
@@ -83,19 +82,13 @@ template <typename T> struct lrs_dat {
   int64_t n;      /* number of columns in input file              */
   int64_t lastdv; /* index of last dec. variable after preproc    */
   /* given by inputd-nredundcol                   */
-  int64_t count[10]; /* count[0]=rays [1]=verts. [2]=base [3]=pivots */
-  /* count[4]=integer vertices                    */
   int64_t nredundcol; /* number of redundant columns                  */
   int64_t nlinearity; /* number of input linearities                  */
   /**** flags  **********                         */
-  int64_t dualdeg; /* globals::TRUE if start dictionary is dual degenerate  */
   int64_t homogeneous; /* globals::TRUE if all entries in column one are zero */
   int64_t hull;     /* do convex hull computation if globals::TRUE           */
-  int64_t polytope; /* globals::TRUE for facet computation of a polytope     */
 
   /* Variables for saving/restoring cobasis,  db */
-
-  int64_t id; /* numbered sequentially */
 
   /* Variables for cacheing dictionaries, db */
   lrs_dic<T> *Qhead, *Qtail;
@@ -860,8 +853,6 @@ lrs_dic<T> *new_lrs_dic(int64_t m, int64_t d, int64_t m_A) {
   p->C = new int64_t[d + 1];
   p->Col = new int64_t[d + 1];
 
-  p->d_orig = d;
-
   p->A = new T *[m_A + 1];
   for (int i = 0; i <= m_A; i++)
     p->A[i] = new T[d + 1];
@@ -891,7 +882,7 @@ lrs_dic<T> *resize(lrs_dic<T> *P, lrs_dat<T> *Q)
   P1->j = P->j;
   P1->depth = P->depth;
   P1->m = P->m;
-  P1->d = P1->d_orig = d;
+  P1->d = d;
   P1->lexflag = P->lexflag;
   P1->m_A = P->m_A;
   P1->det = P->det;
@@ -1165,7 +1156,7 @@ template <typename T> lrs_dic<T> *lrs_alloc_dic(lrs_dat<T> *Q) {
 
   /* Initializations */
 
-  p->d = p->d_orig = d;
+  p->d = d;
   p->m = m;
   p->m_A = m_A;
   p->depth = 0L;
