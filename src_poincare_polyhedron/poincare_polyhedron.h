@@ -7,6 +7,7 @@
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Fundamental.h"
 #include "POLY_LinearProgramming.h"
+#include "POLY_RedundancyElimination.h"
 #include "matrix_group_word.h"
 #include "finite_matrix_group.h"
 #include <set>

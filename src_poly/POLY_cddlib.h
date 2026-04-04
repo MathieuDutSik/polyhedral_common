@@ -8613,7 +8613,7 @@ LiftFloatingPointSolution(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     for (i = 0; i < d - 1; i++) {
       M(i, j - 1) = -EXT(idx - 1, i + 1);
     }
-#ifdef DEBUG_CDD_DISABLR
+#ifdef DEBUG_CDD_DISABLE
     os << "CDD: After V and M sets\n";
 #endif
   }
