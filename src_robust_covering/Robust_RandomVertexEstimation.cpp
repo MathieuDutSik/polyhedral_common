@@ -2,7 +2,7 @@
 
 // clang-format off
 #include "NumberTheory.h"
-#include "parall_search.h"
+#include "enum_robust_covering.h"
 // clang-format on
 
 template <typename T, typename Tint>
@@ -11,7 +11,7 @@ void process_B(size_t const &n_iter, std::string const &MatFile,
   MyMatrix<T> GramMat = ReadMatrixFile<T>(MatFile);
 
   T sqr_dist =
-      random_estimation_robust_covering<T, Tint>(GramMat, n_iter, std::cerr);
+      random_vertex_estimation_robust_covering<T, Tint>(GramMat, n_iter, std::cerr);
   T det = DeterminantMat(GramMat);
   int dim = GramMat.rows();
   ResultCov<T> rc = ComputeCoveringDensityFromDimDetCov(dim, det, sqr_dist);

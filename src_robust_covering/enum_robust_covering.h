@@ -14,6 +14,12 @@
   The motivation is explained in
   "New upper bound for lattice covering by spheres"
   https://arxiv.org/pdf/2508.06446
+  ---
+  The quantity of interest in that case is
+  log_2(Theta_n) / n
+  ---
+  In dimension 2, we have for A2
+  Theta_2 = 8 pi / (3 Sqrt(3)).
 */
 
 /*
@@ -342,7 +348,7 @@ struct MapFullIneq {
   void insert_hard_ineq(MyVector<T> const& eIneq) {
 #ifdef SANITY_CHECK_ENUM_P_POLYTOPES
     if (m.contains(eIneq)) {
-      std::cerr << "ROBUST: A hard inequality should be present only once\n";
+      std::cerr << "ROBUST: A hard inequality should be present only once. eIneq=" << StringVectorGAP(eIneq) << "\n";
       throw TerminalException{1};
     }
 #endif
@@ -351,7 +357,7 @@ struct MapFullIneq {
   void insert_soft_ineq(MyVector<T> const& eIneq, GenericRobustM<Tint> const& grm) {
     m[eIneq].push_back(grm);
   }
-  MyMatrix<T> get_list_ineq(std::ostream &os) {
+  MyMatrix<T> get_list_ineq([[maybe_unused]] std::ostream &os) {
     int n_ineq = m.size();
     if (n_ineq == 0) {
       return ZeroMatrix<T>(0,0);
@@ -1439,6 +1445,50 @@ T compute_square_robust_covering_radius(DataLattice<T, Tint, Tgroup> &eData) {
   }
   return max_sqr_radius;
 }
+
+template <typename T, typename Tint>
+T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
+                                           std::ostream &os) {
+  CVPSolver<T, Tint> solver(GramMat, os);
+  int dim = GramMat.rows();
+  T max_cov(0);
+  MyVector<T> eV(dim);
+  std::vector<MyVector<Tint>> l_excluded_max;
+  MyVector<T> diff(dim);
+  for (size_t iter = 0; iter < n_iter; iter++) {
+    int denom = random() % 1000000000000000;
+    MyVector<T> eV = get_random_vector<T>(denom, dim);
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+    os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)
+       << " denom=" << denom << "\n";
+#endif
+    std::optional<PVoronoiPart<T, Tint>> opt =
+      kernel_initial_p_polytope_part(solver, l_excluded_max, eV, os);
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+    os << "PARALL: After compute_robust_closest\n";
+#endif
+    if (opt) {
+      PVoronoiPart<T, Tint> const& pvp = *opt;
+      MyVector<Tint> v_long = pvp.robust_m_min.v_long();
+      MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
+      int n_row = pvp.l_cb[0].sp.EXT.rows();
+      for (int i_row=0; i_row<n_row; i_row++) {
+        for (int i=0; i<dim; i++) {
+          diff(i) = v_long_T(i) - pvp.l_cb[0].sp.EXT(i_row, i+1);
+        }
+        T norm = EvaluationQuadForm(GramMat, diff);
+        if (norm > max_cov) {
+          max_cov = norm;
+        }
+      }
+    }
+  }
+  return max_cov;
+}
+
+
+
+
 
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_

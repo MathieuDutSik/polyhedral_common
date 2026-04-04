@@ -33,7 +33,7 @@
 template <typename T>
 std::vector<int> get_non_redundant_from_dd(const MyMatrix<T> &M,
                                            MyMatrix<T> const& EXT,
-                                           std::ostream &os) {
+                                           [[maybe_unused]] std::ostream &os) {
 #ifdef DEBUG_ELIMINATION_REDUNDANCY
   os << "REDUND: get_non_redundant_from_dd, M=\n";
   WriteMatrix(os, M);
