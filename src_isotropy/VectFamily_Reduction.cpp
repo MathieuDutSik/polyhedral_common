@@ -47,9 +47,10 @@ int main(int argc, char *argv[]) {
     }
     auto matrix_measure = [&](MyMatrix<T> const &Minp) -> void {
       T max_coeff = sqr_estimate_facet_coefficients(Minp);
+      int64_t max_int64 = std::numeric_limits<int64_t>::max();
       double max_coeff_d = UniversalScalarConversion<double, T>(max_coeff);
       double sqr_max = sqrt(max_coeff_d);
-      double max_int64_d = std::numeric_limits<int64_t>::max();
+      double max_int64_d = UniversalScalarConversion<double, int64_t>(max_int64);
       T l1_norm = L1_norm_mat(Minp);
       T linf_norm = Linfinity_norm_mat(Minp);
       std::cerr << "max_coeff=" << max_coeff << "\n";
