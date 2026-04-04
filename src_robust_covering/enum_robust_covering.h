@@ -299,12 +299,14 @@
 
 #ifdef DEBUG
 #define DEBUG_ENUM_P_POLYTOPES
+#define DEBUG_ROBUST_VERTEX_ENUM
 //#define DEBUG_GET_INEQ_P_POLYTOPES
 #endif
 
 
 #ifdef SANITY_CHECK
 #define SANITY_CHECK_ENUM_P_POLYTOPES
+#define SANITY_CHECK_ROBUST_VERTEX_ENUM
 #endif
 
 #ifdef DISABLE_DEBUG_ENUM_P_POLYTOPES
@@ -1458,28 +1460,50 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random() % 1000000000000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
-#ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)
+#ifdef DEBUG_ROBUST_VERTEX_ENUM
+    os << "ROBUST: iter=" << iter << " kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";
 #endif
     std::optional<PVoronoiPart<T, Tint>> opt =
       kernel_initial_p_polytope_part(solver, l_excluded_max, eV, os);
-#ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "PARALL: After compute_robust_closest\n";
+#ifdef DEBUG_ROBUST_VERTEX_ENUM
+    os << "ROBUST: After kernel_initial_p_polytope_part\n";
 #endif
     if (opt) {
       PVoronoiPart<T, Tint> const& pvp = *opt;
       MyVector<Tint> v_long = pvp.robust_m_min.v_long();
       MyVector<T> v_long_T = UniversalVectorConversion<T,Tint>(v_long);
       int n_row = pvp.l_cb[0].sp.EXT.rows();
+      T max_local(0);
+#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
+      MyVector<T> V_test(dim+1);
+      V_test(0) = 1;
+#endif
       for (int i_row=0; i_row<n_row; i_row++) {
         for (int i=0; i<dim; i++) {
           diff(i) = v_long_T(i) - pvp.l_cb[0].sp.EXT(i_row, i+1);
         }
         T norm = EvaluationQuadForm(GramMat, diff);
-        if (norm > max_cov) {
-          max_cov = norm;
+        if (norm > max_local) {
+          max_local = norm;
+#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
+          for (int i=0; i<dim; i++) {
+            V_test(i+1) = pvp.l_cb[0].sp.EXT(i_row, i+1);
+          }
+#endif
         }
+      }
+      if (max_local > max_cov) {
+        max_cov = max_local;
+#ifdef SANITY_CHECK_ROBUST_VERTEX_ENUM
+        ResultRobustClosest<T, Tint> rrc =
+          compute_robust_closest<T, Tint>(solver, V_test, os);
+        if (rrc.robust_minimum != max_local) {
+          std::cerr << "ROBUST: max_local=" << max_local << " robust_minimum=" << rrc.robust_minimum << "\n";
+          std::cerr << "ROBUST: inconsistent norms\n";
+          throw TerminalException{1};
+        }
+#endif
       }
     }
   }
