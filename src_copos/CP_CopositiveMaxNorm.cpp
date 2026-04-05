@@ -49,7 +49,7 @@ int main(int argc, char *argv[]) {
     std::string strMaxNorm = argv[3];
     std::string OutFormat = "classic";
     std::string OutFile = "stderr";
-    if (argc == 5) {
+    if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }

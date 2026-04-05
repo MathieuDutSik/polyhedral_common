@@ -28,9 +28,8 @@ int main(int argc, char *argv[]) {
     //
     MyMatrix<Tint> TheBasis = ReadMatrixFile<Tint>(argv[2]);
     //
-    int MaxNorm_i;
-    sscanf(argv[3], "%d", &MaxNorm_i);
-    T MaxNorm = MaxNorm_i;
+    std::string max_norm_s = argv[3];
+    T MaxNorm = ParseScalar<T>(max_norm_s);
     //
     std::vector<MyVector<Tint>> LVect =
         EnumerateShortVectorInCone_UnderPositivityCond<T, Tint>(
