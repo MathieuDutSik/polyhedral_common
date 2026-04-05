@@ -170,9 +170,9 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
     idx++;
   }
   for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
-    ListB(idx) = eSelect.NSP(idx, 0);
+    ListB(idx) = eSelect.NSP(iNSP, 0);
     for (int i = 0; i < n; i++) {
-      ListEquation(i, idx) = -eSelect.NSP(idx, i + 1);
+      ListEquation(i, idx) = -eSelect.NSP(iNSP, i + 1);
     }
     idx++;
   }
