@@ -107,23 +107,6 @@ ComputeStandardAffineSubspace(MyMatrix<T> const &ListEqua) {
   return AffinizeSubspace(NSP);
 }
 
-template <typename T>
-bool TestRealizabilityInequalitiesEqualities(MyMatrix<T> const &ListIneq,
-                                             MyMatrix<T> const &ListEqua,
-                                             MyVector<T> const &ToBeMinimized,
-                                             std::ostream &os) {
-  std::optional<MyMatrix<T>> EquivArr = ComputeStandardAffineSubspace(ListEqua);
-  if (!EquivArr)
-    return false;
-  MyMatrix<T> NSPred = EquivArr.TheEquiv;
-  MyMatrix<T> ListIneqRed = ListIneq * (NSPred.transpose());
-  MyVector<T> ToBeMinimizedRed = NSPred * ToBeMinimized;
-  LpSolution<T> eSol = CDD_LinearProgramming(ListIneqRed, ToBeMinimizedRed, os);
-  if (eSol.PrimalDefined && eSol.DualDefined)
-    return true;
-  return false;
-}
-
 template <typename T> bool IsPolytopal(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
   for (int iRow = 0; iRow < nbRow; iRow++) {

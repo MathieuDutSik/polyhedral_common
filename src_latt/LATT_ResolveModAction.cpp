@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "arith: mpz_class\n";
       std::cerr << "list_matrix_file: The input matrix file\n";
       std::cerr << "mod_val: The modulo considered\n";
-      std::cerr << "OutFormat: GAP or simple (optional, default: simple)\n";
+      std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: Output file or stderr/stdout (optional, "
                    "default: stderr)\n";
       return -1;
