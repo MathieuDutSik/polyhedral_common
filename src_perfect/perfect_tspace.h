@@ -370,7 +370,9 @@ template <class Archive, typename T, typename Tint, typename Tgroup>
 inline void serialize(Archive &ar, PerfectTspace_Obj<T, Tint, Tgroup> &eRec,
                       [[maybe_unused]] const unsigned int version) {
   ar &make_nvp("Gram", eRec.Gram);
+  ar &make_nvp("rec_shv", eRec.rec_shv);
   ar &make_nvp("GRP", eRec.GRP);
+  ar &make_nvp("GRP_matr", eRec.GRP_matr);
 }
 template <class Archive, typename T, typename Tint>
 inline void serialize(Archive &ar, PerfectTspace_AdjI<T, Tint> &eRec,

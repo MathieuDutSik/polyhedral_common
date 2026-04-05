@@ -17,6 +17,15 @@ template <typename T, typename Tint> struct Tshortest {
   MyMatrix<Tint> SHV;
 };
 
+namespace boost::serialization {
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, Tshortest<T, Tint> &eRec,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("min", eRec.min);
+  ar &make_nvp("SHV", eRec.SHV);
+}
+} // namespace boost::serialization
+
 template <typename T, typename Tint>
 Tshortest<T, Tint> shortest_get_half(Tshortest<T, Tint> const &rec_shv) {
   int n_row = rec_shv.SHV.rows();
