@@ -140,45 +140,6 @@ template <typename Tint> struct hash<TypePerfectExch<Tint>> {
 }  // namespace std
 // clang-format on
 
-template <typename T>
-TypePerfectExch<T> ParseStringToPerfectExch(std::string const &str) {
-  std::vector<std::string> LStr = STRING_Split(str, " ");
-  int incd;
-  std::istringstream(LStr[0]) >> incd;
-  int n;
-  std::istringstream(LStr[1]) >> n;
-  std::vector<T> LVal;
-  for (int i = 2; i < static_cast<int>(LStr.size()); i++) {
-    T eVal;
-    std::istringstream(LStr[i]) >> eVal;
-    LVal.push_back(eVal);
-  }
-  //  int h = LVal.size();
-  // Formula h = n(n+1)/2  and  so  8h + 1 = 4n^2 + 4n + 1 = (2n+1)^2
-  //  int n = (sqrt(8h+1) -1) / 2;
-  MyMatrix<T> eMat(n, n);
-  int idx = 0;
-  for (int iRow = 0; iRow < n; iRow++) {
-    for (int iCol = 0; iCol <= iRow; iCol++) {
-      T eVal = LVal[idx];
-      eMat(iRow, iCol) = eVal;
-      eMat(iCol, iRow) = eVal;
-    }
-  }
-  return {incd, eMat};
-}
-
-TypeIndex ParseStringToTypeIndex(std::string const &str) {
-  std::vector<std::string> LStr = STRING_Split(str, " ");
-  int iProc;
-  std::istringstream(LStr[0]) >> iProc;
-  int idxMatrixF;
-  std::istringstream(LStr[1]) >> idxMatrixF;
-  int iAdj;
-  std::istringstream(LStr[1]) >> iAdj;
-  return {iProc, idxMatrixF, iAdj};
-}
-
 // clang-format off
 #endif  // SRC_PERFECT_MPI_PERFECTMPI_TYPES_H_
 // clang-format on
