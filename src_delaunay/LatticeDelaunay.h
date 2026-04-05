@@ -776,7 +776,7 @@ void WriteDelaunayTesselation(std::string const &OutFormat,
   if (OutFormat == "PYTHON") {
     return WriteEntryPYTHON(os_out, DT);
   }
-  if (OutFormat == "GAP_covering") {
+  if (OutFormat == "GAP_Covering") {
     T TheCovSqr(0);
     for (auto &eDel : DT.l_dels) {
       MyMatrix<T> const &EXT = eDel.EXT;

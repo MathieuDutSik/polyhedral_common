@@ -21,6 +21,10 @@
 #define DEBUG_FUNDAMENTAL_DELAUNAY
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+#endif
+
 #ifdef DISABLE_DEBUG_FUNDAMENTAL_DELAUNAY
 #undef DEBUG_FUNDAMENTAL_DELAUNAY
 #endif
@@ -177,6 +181,13 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
     idx++;
   }
   std::optional<MyVector<T>> opt = SolutionMat(ListEquation, ListB);
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+  if (!opt) {
+    std::cerr << "DEL: Error in CenterRadiusDelaunayPolytopeGeneral\n";
+    std::cerr << "DEL: The linear system has no solution\n";
+    throw TerminalException{1};
+  }
+#endif
   MyVector<T> const &eSol = *opt;
   MyVector<T> eCent(1 + n);
   eCent(0) = 1;

@@ -579,7 +579,7 @@ get_lattice_covering:=function(eMat)
         TheCommand:=Concatenation(eProg, " ", FileN);
     else
         eProg:=GetBinaryFilename("LATT_SerialComputeDelaunay");
-        TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_covering ", FileO, " 2> ", FileE);
+        TheCommand:=Concatenation(eProg, " gmp ", FileI, " GAP_Covering ", FileO, " 2> ", FileE);
     fi;
 #    Print("TheCommand=", TheCommand, "\n");
     Exec(TheCommand);
