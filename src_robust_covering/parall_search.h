@@ -402,6 +402,9 @@ void compute_robust_close_f(CVPSolver<T, Tint> const &solver,
     n_iter += 1;
 #endif
     resultCVP<T, Tint> res_cvp = solver.increase_distance_vectors(eV_red, opt_norm);
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+    os << "PARALL: compute_robust_close_f, we have res_cvp\n";
+#endif
     std::optional<ResultDirectEnumeration<T, Tint>> opt_rde =
         compute_and_enumerate_structures(solver.GramMat, res_cvp, eV_red, os);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
@@ -410,11 +413,18 @@ void compute_robust_close_f(CVPSolver<T, Tint> const &solver,
 #endif
     opt_norm = res_cvp.TheNorm;
     if (opt_rde) {
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+      os << "PARALL: compute_robust_close_f, opt_red.is_some()\n";
+#endif
       ResultDirectEnumeration<T, Tint> const &rde = *opt_rde;
       bool test = f_insert(rde);
       if (test) {
         return;
       }
+    } else {
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+      os << "PARALL: compute_robust_close_f, opt_red.is_none()\n";
+#endif
     }
   }
 }

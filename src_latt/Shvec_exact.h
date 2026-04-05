@@ -880,7 +880,7 @@ public:
     T n_T = T(n);
     T factor = T(1) + T(1) / n_T;
     T previous_norm = *opt_norm;
-    T eff_norm = previous_norm * factor;
+    T eff_norm = previous_norm * factor + T(1);
     while (true) {
       std::vector<MyVector<Tint>> ListV = at_most_dist_vectors(eV, eff_norm);
       std::vector<MyVector<Tint>> list_previous;

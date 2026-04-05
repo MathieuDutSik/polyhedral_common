@@ -777,6 +777,41 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
 }
 
 
+template <typename T, typename Tint>
+bool are_vertices_correct(CVPSolver<T, Tint> const &solver,
+                          MyVector<Tint> const& v_short,
+                          SinglePolytope<T> const& sp,
+                          std::ostream &os) {
+  MyMatrix<T> const& G = solver.GramMat;
+  int dim = G.rows();
+  MyVector<T> v_short_T = UniversalVectorConversion<T,Tint>(v_short);
+  int n_ext=sp.EXT.rows();
+#ifdef DEBUG_ENUM_P_POLYTOPES
+  os << "ROBUST: are_vertices_correct, n_ext=" << n_ext << "\n";
+#endif
+  MyVector<T> diff(dim);
+  for (int i_ext=0; i_ext<n_ext; i_ext++) {
+    MyVector<T> eV = GetMatrixRow(sp.EXT, i_ext);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: are_vertices_correct, i_ext=" << i_ext << " eV=" << StringVectorGAP(eV) << "\n";
+#endif
+    ResultRobustClosest<T, Tint> rrc =
+      compute_robust_closest<T, Tint>(solver, eV, os);
+    for (int i=0; i<dim; i++) {
+      diff(i) = sp.EXT(i_ext, i+1) - v_short_T(i);
+    }
+    T norm = EvaluationQuadForm(G, diff);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: are_vertices_correct, i_ext=" << i_ext << " norm=" << norm << " robust_minimum=" << rrc.robust_minimum << "\n";
+#endif
+    if (norm > rrc.robust_minimum) {
+      return false;
+    }
+  }
+  return true;
+}
+
+
 
 // Find the defining inequalities of a polytope.
 // It should fail and return None if the point eV is not generic enough.
@@ -894,8 +929,7 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
-        os << "ROBUST:   kippp, ext_robust_m.robust_m, "
-              "index="
+        os << "ROBUST:   kippp, ext_robust_m.robust_m, index="
            << ext_robust_m.robust_m.index << " M=\n";
         WriteMatrix(os, ext_robust_m.robust_m.M);
 #endif
@@ -967,6 +1001,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: kippp, final, step 4\n";
 #endif
+    bool test_vert = are_vertices_correct(solver, v_short, sp, os);
+#ifdef DEBUG_ENUM_P_POLYTOPES
+    os << "ROBUST: kippp, final, step 5, test_vert=" << test_vert << "\n";
+#endif
+    if (!test_vert) {
+      is_correct = false;
+      return false;
+    }
     std::vector<HardConvexBoundary<T>> l_hcb;
     std::vector<SoftConvexBoundary<T,Tint>> l_scb;
     for (size_t i_irred=0; i_irred<list_irred.size(); i_irred++) {

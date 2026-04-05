@@ -11,7 +11,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "LATT_GetIntegralMatricesPossibleOrders [dim]\n";
       throw TerminalException{1};
     }
-    using T = mpq_class;
+    using T = mpz_class;
     std::string dim_str = argv[1];
     T dim = ParseScalar<T>(dim_str);
     //

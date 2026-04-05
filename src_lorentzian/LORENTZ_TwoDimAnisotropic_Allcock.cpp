@@ -17,11 +17,10 @@ int main(int argc, char *argv[]) {
     using T = mpq_class;
     using Tint = mpz_class;
     //
-    int a, b, c, M;
-    sscanf(argv[1], "%d", &a);
-    sscanf(argv[2], "%d", &b);
-    sscanf(argv[3], "%d", &c);
-    sscanf(argv[4], "%d", &M);
+    int a = ParseScalar<int>(argv[1]);
+    int b = ParseScalar<int>(argv[2]);
+    int c = ParseScalar<int>(argv[3]);
+    int M = ParseScalar<int>(argv[4]);
     T a_T = a;
     T b_T = b;
     T c_T = c;
