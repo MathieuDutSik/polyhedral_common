@@ -18,6 +18,10 @@
 #define DEBUG_LEGENDRE
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LEGENDRE
+#endif
+
 #ifdef DISABLE_DEBUG_LEGENDRE
 #undef DEBUG_LEGENDRE
 #endif
@@ -212,7 +216,7 @@ template <typename T>
 LegendreReductionInformation<T>
 reduction_information(MyVector<T> const &aV,
                       [[maybe_unused]] std::ostream &os) {
-#ifdef DEBUG_LEGENDRE
+#ifdef SANITY_CHECK_LEGENDRE
   if (aV.size() != 3) {
     std::cerr << "The length should be exactly 3\n";
     throw TerminalException{1};
@@ -394,6 +398,8 @@ std::pair<MyMatrix<T>, MyVector<T>> get_reduced_diagonal(MyMatrix<T> const &M,
   MyVector<T> V2 = RemoveFractionVector(V1);
 #ifdef DEBUG_LEGENDRE
   os << "V2=" << StringVectorGAP(V2) << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
   for (int i = 0; i < 3; i++) {
     if (V2(i) == 0) {
       std::cerr << "LEG: V2(i) should be non-zero\n";
@@ -573,7 +579,7 @@ descent_operation(std::pair<T, T> const &pair) {
   T const &a = pair.first;
   T const &b = pair.second;
   T b_abs = T_abs(b);
-#ifdef DEBUG_LEGENDRE
+#ifdef SANITY_CHECK_LEGENDRE
   T a_abs = T_abs(a);
   if (a_abs > b_abs) {
     std::cerr << "LEG: We should have |a| <= |b|\n";
@@ -598,6 +604,8 @@ descent_operation(std::pair<T, T> const &pair) {
   T bp = pair2.second;
 #ifdef DEBUG_LEGENDRE
   std::cerr << "LEG: descent e=" << e << " bp=" << bp << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
   T delta = b * bp * e * e + a - u * u;
   if (delta != 0) {
     std::cerr << "LEG: quot=" << quot << " e=" << e << " bp=" << bp << "\n";
@@ -667,6 +675,8 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const &diag,
 #ifdef DEBUG_LEGENDRE
   os << "LEG: We have work_pair a=" << work_pair.first
      << " b=" << work_pair.second << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
   if (!satisfy_descent_condition(work_pair)) {
     std::cerr << "LEG: a=" << work_pair.first << " b=" << work_pair.second
               << "\n";
@@ -692,6 +702,8 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const &diag,
       os << "LEG: After V_work=" << StringVector(V_work) << "\n";
       os << "LEG: l_pair[v].first=\n";
       WriteMatrix(std::cerr, l_pair[v].first);
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
       auto get_pair = [&]() -> std::pair<T, T> {
         if (v == 0) {
           return pair3.second;
@@ -722,6 +734,8 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const &diag,
     V_work = pair3.first * V_work;
 #ifdef DEBUG_LEGENDRE
     os << "LEG: V_work=" << StringVector(V_work) << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
     T sum(0);
     for (int i = 0; i < 3; i++) {
       T const &val = V_work(i);
@@ -754,7 +768,7 @@ MyVector<T> TernaryIsotropicViaLagrange(MyVector<T> const &diag,
     std::pair<MyMatrix<T>, std::pair<T, T>> pair_desc =
         descent_operation(work_pair);
     work_pair = pair_desc.second;
-#ifdef DEBUG_LEGENDRE
+#ifdef SANITY_CHECK_LEGENDRE
     if (!satisfy_descent_condition(work_pair)) {
       std::cerr << "LEG: work_pair 2, should satisfy the descent condition\n";
       throw TerminalException{1};
@@ -790,6 +804,8 @@ std::optional<MyVector<T>> TernaryIsotropicVectorDiagonal(MyVector<T> const &a,
 #ifdef DEBUG_LEGENDRE
   os << "LEG: TernaryIsotropicVectorDiagonal sol2=" << StringVector(sol1)
      << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
   T sum(0);
   for (int i = 0; i < 3; i++) {
     sum += a(i) * sol2(i) * sol2(i);
@@ -838,6 +854,8 @@ std::optional<MyVector<T>> TernaryIsotropicVector(MyMatrix<T> const &M,
   MyVector<T> sol4 = pair1.first.transpose() * sol3;
 #ifdef DEBUG_LEGENDRE
   os << "LEG: sol4=" << StringVector(sol4) << "\n";
+#endif
+#ifdef SANITY_CHECK_LEGENDRE
   T sum2 = EvaluationQuadForm(M, sol4);
   if (sum2 != 0) {
     std::cerr << "LEG: sol4 is not a solution of the equation\n";

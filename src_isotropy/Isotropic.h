@@ -270,50 +270,6 @@ std::optional<MyVector<T>> FindIsotropicRankTwo(MyMatrix<T> const &M) {
   return {};
 }
 
-/*
-  The algorithm is purely
- */
-template <typename T>
-MyVector<T> Kernel_FindIsotropic(MyMatrix<T> const &Q, std::ostream &os) {
-  int n = Q.rows();
-#ifdef DEBUG_ISOTROPIC
-  os << "ISOTROP: Before determinant minimization\n";
-#endif
-  ResultDetMin<T> res = DeterminantMinimization(Q, os);
-#ifdef DEBUG_ISOTROPIC
-  os << "ISOTROP: After determinant minimization\n";
-  os << "ISOTROP: res.P=\n";
-  WriteMatrix(os, res.P);
-  os << "ISOTROP: res.Mred=\n";
-  WriteMatrix(os, res.Mred);
-  os << "ISOTROP: det(Mred)=" << DeterminantMat(res.Mred) << "\n";
-#endif
-  MyMatrix<T> Pw = res.P;
-  MyMatrix<T> Qw = res.Mred;
-  while (true) {
-#ifdef DEBUG_ISOTROPIC
-    os << "ISOTROP: Before GetIsotropIndefiniteLLL\n";
-#endif
-    std::optional<MyVector<T>> opt = GetIsotropIndefiniteLLL(Qw, os);
-#ifdef DEBUG_ISOTROPIC
-    os << "ISOTROP: We have opt\n";
-#endif
-    if (opt) {
-      MyVector<T> const &eV = *opt;
-#ifdef DEBUG_ISOTROPIC
-      os << "ISOTROP: Qw=\n";
-      WriteMatrix(os, Qw);
-      os << "ISOTROP: eV=" << StringVector(eV) << "\n";
-#endif
-      MyVector<T> fV = Pw.transpose() * eV;
-      return fV;
-    }
-    MyMatrix<T> U = get_random_int_matrix<T>(n);
-    Pw = U * Pw;
-    Qw = U * Qw * U.transpose();
-  }
-}
-
 template <typename T>
 std::optional<MyVector<T>> FindIsotropic_LLL_nfixed(MyMatrix<T> const &Q,
                                                     std::ostream &os) {

@@ -22,7 +22,7 @@
 #endif
 
 #ifdef SANITY_CHECK
-#define SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+#define SANITY_CHECK_FUNDAMENTAL_DELAUNAY<
 #endif
 
 #ifdef DISABLE_DEBUG_FUNDAMENTAL_DELAUNAY
@@ -84,7 +84,12 @@ MyMatrix<Tint> FindDelaunayPolytope(MyMatrix<T> const &GramMat,
 #ifdef TIMINGS_FUNDAMENTAL_DELAUNAY
     os << "|DEL: Computing LP eSol|=" << time << "\n";
 #endif
-    assert(eSol.PrimalDefined);
+#ifdef SANITY_CHECK_FUNDAMENTAL_DELAUNAY
+    if (!eSol.PrimalDefined) {
+      std::cerr << "DEL: We should have a primal solution\n";
+      throw TerminalException{1};
+    }
+#endif
     MyVector<T> eVect = eSol.DirectSolution;
     T TheNorm = EvaluationQuadForm<T, T>(GramMat, eVect);
     // There has been an attempt to accelerate the computation by stopping
