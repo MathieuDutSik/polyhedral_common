@@ -7,10 +7,12 @@
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 4) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_canonicalizeSymplectic opt [GramI] OutFile\n";
+      std::cerr << "LATT_canonicalizeSymplectic [GramI] [OutFormat] [OutFile]\n";
+      std::cerr << "or\n";
+      std::cerr << "LATT_canonicalizeSymplectic [GramI]\n";
       std::cerr << "\n";
       std::cerr << "If opt=1 then only the matrix is in output.\n";
       std::cerr << "If opt=2 then the basis, list of vectors and matrix is in "
@@ -20,33 +22,38 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     using T = mpq_class;
-    //    using T=long;
-    // using T=mpq_class;
-
-    // using Tint=long;
     using Tint = mpz_class;
     //
-    int opt;
-    sscanf(argv[1], "%d", &opt);
+    std::string FileI = argv[1];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FileO = argv[3];
+    }
     //
-    std::ifstream is(argv[2]);
-    MyMatrix<T> eMat = ReadMatrix<T>(is);
+    MyMatrix<T> eMat = ReadMatrixFile<T>(FileI);
     MyMatrix<Tint> B = ComputeCanonicalFormSymplectic<T, Tint>(eMat, std::cerr);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> eMat_red = B_T * eMat * B_T.transpose();
     //
-    if (opt == 1) {
-      std::ofstream os(argv[3]);
-      WriteMatrix(os, eMat_red);
-    }
-    if (opt == 2) {
-      std::ofstream os(argv[3]);
-      os << "return rec(Basis:=";
-      WriteMatrixGAP(os, B);
-      os << ", eG:=";
-      WriteMatrixGAP(os, eMat_red);
-      os << ");\n";
-    }
+    auto f=[&](std::ostream& os_out) -> void {
+      if (OutFormat == "CPP") {
+        WriteMatrix(os_out, eMat_red);
+        return;
+      }
+      if (OutFormat == "GAP") {
+        os_out << "return rec(Basis:=";
+        WriteMatrixGAP(os_out, B);
+        os_out << ", eG:=";
+        WriteMatrixGAP(os_out, eMat_red);
+        os_out << ");\n";
+        return;
+      }
+      std::cerr << "LATT_CanonicalizeSymplectic: No matching OutFormat\n";
+      throw TerminalException{1};
+    };
+    print_stderr_stdout_file(FileO, f);
     std::cerr << "Normal termination of LATT_canonicalizeSymplectic\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_canonicalizeSymplectic\n";
