@@ -1258,37 +1258,6 @@ template <typename Tint> struct hash<TypeCtypeAdjExch<Tint>> {
 }  // namespace std
 // clang-format on
 
-template <typename T>
-TypeCtypeExch<T> ParseStringToCtypeExch(std::string const &str) {
-  std::vector<std::string> LStr = STRING_Split(str, " ");
-  int nRow;
-  std::istringstream(LStr[0]) >> nRow;
-  int n;
-  std::istringstream(LStr[1]) >> n;
-  MyMatrix<T> eMat(nRow, n);
-  int idx = 2;
-  for (int iRow = 0; iRow < nRow; iRow++) {
-    for (int iCol = 0; iCol < n; iCol++) {
-      T eVal;
-      std::istringstream(LStr[idx]) >> eVal;
-      eMat(iRow, iCol) = eVal;
-      idx++;
-    }
-  }
-  return {eMat};
-}
-
-TypeIndex ParseStringToTypeIndex(std::string const &str) {
-  std::vector<std::string> LStr = STRING_Split(str, " ");
-  size_t iProc;
-  std::istringstream(LStr[0]) >> iProc;
-  int idxMatrixF;
-  std::istringstream(LStr[1]) >> idxMatrixF;
-  int iAdj;
-  std::istringstream(LStr[1]) >> iAdj;
-  return {iProc, idxMatrixF, iAdj};
-}
-
 // clang-format off
 #endif  // SRC_CTYPE_MPI_CTYPEMPI_TYPES_H_
 // clang-format on
