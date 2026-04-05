@@ -41,8 +41,7 @@ int main(int argc, char *argv[]) {
       FileO = argv[3];
     }
     //
-    MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
-    std::cerr << "We have M\n";
+    MyMatrix<T> M = ReadMatrixFile<T>(FileI);
     //
     auto print_result = [&](std::ostream &os) -> void {
       LLLreduction<T, Tint> rec = LLLreducedBasis<T, Tint>(M, std::cerr);

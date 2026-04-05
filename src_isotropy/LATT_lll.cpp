@@ -17,13 +17,15 @@ int main(int argc, char *argv[]) {
                    "matrix (GAP readable)\n";
       return -1;
     }
+    using T = mpq_class;
+    using Tint = mpz_class;
     //
-    std::ifstream is(argv[1]);
-    MyMatrix<mpq_class> GramMat = ReadMatrix<mpq_class>(is);
+    std::string FileI = argv[1];
+    MyMatrix<T> GramMat = ReadMatrixFile<T>(FileI);
     //
     std::ofstream os(argv[2]);
-    LLLreduction<mpq_class, mpz_class> recLLL =
-        LLLreducedBasis<mpq_class, mpz_class>(GramMat, std::cerr);
+    LLLreduction<T, Tint> recLLL =
+        LLLreducedBasis<T, Tint>(GramMat, std::cerr);
     os << "return rec(GramMat:=";
     WriteMatrixGAP(os, recLLL.GramMatRed);
     os << ", Pmat:=";

@@ -42,7 +42,6 @@ int main(int argc, char *argv[]) {
     }
     //
     MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
-    std::cerr << "We have M\n";
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(M, std::cerr);

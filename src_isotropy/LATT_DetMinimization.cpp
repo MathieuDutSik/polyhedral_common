@@ -16,9 +16,8 @@ void process(std::string const &FileI, std::string const &OutFormat,
   ResultDetMin<T> res = DeterminantMinimization(Q, false, std::cerr);
   T det1 = DeterminantMat(Q);
   T det2 = DeterminantMat(res.Mred);
-  std::cerr << "det1=" << det1 << " det2=" << det2 << "\n";
   if (OutFormat == "GAP") {
-    os << "return rec(P:=";
+    os << "return rec(det1:=" << det1 << ", det2:=" << det2 << ", P:=";
     WriteMatrixGAP(os, res.P);
     os << ", Mred:=";
     WriteMatrixGAP(os, res.Mred);

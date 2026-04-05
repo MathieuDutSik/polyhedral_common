@@ -45,11 +45,11 @@ int main(int argc, char *argv[]) {
   HumanTime time;
   try {
     if (argc != 5 && argc != 7) {
-      std::cerr << "LATT_FindPositiveVector arith [FileI] [CritNorm] "
+      std::cerr << "LATT_FindPositiveVector [arith] [FileI] [CritNorm] "
                    "[StrictIneq] [OutFormat] [FileO]\n";
       std::cerr << "or\n";
       std::cerr
-          << "LATT_FindPositiveVector arith [FileI] [CritNorm] [StrictIneq]\n";
+          << "LATT_FindPositiveVector [arith] [FileI] [CritNorm] [StrictIneq]\n";
       std::cerr << "\n";
       std::cerr << "Possibilities for arith: gmp\n";
       throw TerminalException{1};

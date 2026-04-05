@@ -12,13 +12,8 @@ template <typename T, typename Tint>
 void process(std::string const &FileI, std::string const &OutFormat,
              std::ostream &os) {
   MyMatrix<T> M = ReadMatrixFile<T>(FileI);
-  std::cerr << "We have M\n";
 
   ResultIndefiniteLLL<T, Tint> res = Indefinite_LLL<T, Tint>(M, std::cerr);
-  std::cerr << "B_T=\n";
-  WriteMatrix(std::cerr, res.B);
-  std::cerr << "Mred=\n";
-  WriteMatrix(std::cerr, res.Mred);
   if (OutFormat == "GAP") {
     os << "return rec(B:=" << StringMatrixGAP(res.B);
     os << ", Mred:=" << StringMatrixGAP(res.Mred);
@@ -27,6 +22,19 @@ void process(std::string const &FileI, std::string const &OutFormat,
       os << ", Xisotrop:=" << StringVectorGAP(Xisotrop);
     }
     os << ");\n";
+    return;
+  }
+  if (OutFormat == "CPP") {
+    os << "B_T=\n";
+    WriteMatrix(os, res.B);
+    os << "Mred=\n";
+    WriteMatrix(os, res.Mred);
+    if (res.Xisotrop) {
+      MyVector<T> const &Xisotrop = *res.Xisotrop;
+      WriteVector(os, Xisotrop);
+    } else {
+      os << "no isotrop vector found\n";
+    }
     return;
   }
   std::cerr << "Failed to find a matching OutFormat\n";

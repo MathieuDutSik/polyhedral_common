@@ -15,8 +15,8 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     // reading the matrix
-    std::ifstream INmat(argv[1]);
-    MyMatrix<T> TheMat = ReadMatrix<T>(INmat);
+    std::string FileI = argv[1];
+    MyMatrix<T> TheMat = ReadMatrixFile<T>(FileI);
     // computing the kernel
     DiagSymMat<T> eDiag = DiagonalizeSymmetricMatrix(TheMat, std::cerr);
     if (eDiag.nbMinus > 0) {

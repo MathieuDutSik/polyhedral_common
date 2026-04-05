@@ -20,13 +20,11 @@ int main(int argc, char *argv[]) {
     using T = double;
     using Tint = mpz_class;
     //
-    std::ifstream is(argv[1]);
-    MyVector<T> V = ReadVector<T>(is);
+    std::string FileI = argv[1];
+    MyVector<T> V = ReadVectorFile<T>(FileI);
     //
     std::string epsilon_str = argv[2];
-    std::stringstream s(epsilon_str);
-    T epsilon;
-    s >> epsilon;
+    T epsilon = ParseScalar<T>(epsilon_str);
     //
     DiophantResult<Tint> eRes =
         SimultaneousDiophantineApproximation<T, Tint>(V, epsilon, std::cerr);
