@@ -7,10 +7,12 @@
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 4) {
+    if (argc != 2 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "LATT_canonicalizeMultiple opt [FileMatrices] OutFile\n";
+      std::cerr << "LATT_canonicalizeMultiple [FileMatrices] [OutFormat] [OutFile]\n";
+      std::cerr << "or\n";
+      std::cerr << "LATT_canonicalizeMultiple [FileMatrices]\n";
       std::cerr << "\n";
       std::cerr << "If opt=1 then only the matrix is in output.\n";
       std::cerr << "If opt=2 then the basis, list of vectors and matrix is in "
@@ -20,39 +22,37 @@ int main(int argc, char *argv[]) {
       return -1;
     }
     using T = mpz_class;
-    //    using T=long;
-    // using T=mpq_class;
-
-    // using Tint=long;
     using Tint = mpz_class;
-    //
-    int opt;
-    sscanf(argv[1], "%d", &opt);
-    //
-    std::ifstream is(argv[2]);
-    std::vector<MyMatrix<T>> ListMatrix;
-    int nbMat;
-    is >> nbMat;
-    for (int iMat = 0; iMat < nbMat; iMat++) {
-      MyMatrix<T> eMat = ReadMatrix<T>(is);
-      ListMatrix.push_back(eMat);
+    std::string FileI = argv[1];
+    std::string OutFormat = "GAP";
+    std::string FileO = "stderr";
+    if (argc == 4) {
+      OutFormat = argv[2];
+      FileO = argv[3];
     }
+    //
+    std::vector<MyMatrix<T>> ListMatrix = ReadListMatrixFile<T>(FileI);
     MyMatrix<Tint> B = ComputeCanonicalFormMultiple<T, Tint>(ListMatrix, std::cerr);
     MyMatrix<T> B_T = UniversalMatrixConversion<T,Tint>(B);
     MyMatrix<T> Mat_red = B_T * ListMatrix[0] * B_T.transpose();
     //
-    if (opt == 1) {
-      std::ofstream os(argv[3]);
-      WriteMatrix(os, Mat_red);
-    }
-    if (opt == 2) {
-      std::ofstream os(argv[3]);
-      os << "return rec(Basis:=";
-      WriteMatrixGAP(os, B);
-      os << ", eG:=";
-      WriteMatrixGAP(os, Mat_red);
-      os << ");\n";
-    }
+    auto f=[&](std::ostream& os_out) -> void {
+      if (OutFormat == "CPP") {
+        WriteMatrix(os_out, Mat_red);
+        return;
+      }
+      if (OutFormat == "GAP") {
+        os_out << "return rec(Basis:=";
+        WriteMatrixGAP(os_out, B);
+        os_out << ", eG:=";
+        WriteMatrixGAP(os_out, Mat_red);
+        os_out << ");\n";
+        return;
+      }
+      std::cerr << "OutFormat does not match anything\n";
+      throw TerminalException{1};
+    };
+    print_stderr_stdout_file(FileO, f);
     std::cerr << "Normal termination of LATT_canonicalizeMultiple\n";
   } catch (TerminalException const &e) {
     std::cerr << "Error in LATT_canonicalizeMultiple\n";

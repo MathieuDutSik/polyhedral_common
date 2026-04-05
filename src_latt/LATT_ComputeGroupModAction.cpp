@@ -15,6 +15,10 @@ void compute_grp_size(std::string const &list_matrix_file,
                       std::string const &OutFormat,
                       std::ostream &os_out) {
   std::vector<MyMatrix<T>> l_gens = ReadListMatrixFile<T>(list_matrix_file);
+  if (l_gens.size() == 0) {
+    std::cerr << "LATT_ComputeGroupModAction error: list_matrix_file has zero matrices\n";
+    throw TerminalException{1};
+  }
   int dim = l_gens[0].rows();
   T mod_val = ParseScalar<T>(mod_val_string);
   using Tidx = uint64_t;
@@ -37,7 +41,6 @@ void compute_grp_size(std::string const &list_matrix_file,
   }
   std::cerr << "Failed to find a matching entry for OutFormat\n";
   throw TerminalException{1};
-
 }
 
 void process(std::string const &arith,
