@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     //
     using T = mpq_class;
     using Tint = mpz_class;
-    using Tidx = int16_t;
+    using Tidx = uint32_t;
     using Telt = permutalib::DoubleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
     datagap::DataGAP<T, Telt> dataEXT =

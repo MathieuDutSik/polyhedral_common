@@ -10,7 +10,7 @@
 
 template <typename T>
 TypeCtypeExch<T> RandomWalk(TypeCtypeExch<T> const &eMat) {
-  using Tidx = int32_t;
+  using Tidx = uint32_t;
   TypeCtypeExch<T> WorkT = eMat;
   for (int iter = 0; iter < 50; iter++) {
     bool canonicalize = false;

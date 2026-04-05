@@ -100,7 +100,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "FileO     : The file containg the output\n";
       return -1;
     }
-    using Tidx = int32_t;
+    using Tidx = uint32_t;
     using T = mpz_class;
     using Tfield = mpq_class;
     using Telt = permutalib::SingleSidedPerm<Tidx>;

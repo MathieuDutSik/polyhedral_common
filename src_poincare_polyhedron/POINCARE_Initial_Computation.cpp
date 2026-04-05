@@ -54,7 +54,7 @@ int main(int argc, char *argv[]) {
       eFull.NAMELIST_WriteNamelistFile(std::cerr, true);
       throw TerminalException{1};
     }
-    using Tidx = int32_t;
+    using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tint = mpz_class;
     using Tgroup = permutalib::Group<Telt, Tint>;

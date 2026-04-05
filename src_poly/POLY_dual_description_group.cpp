@@ -101,7 +101,7 @@ int main(int argc, char *argv[]) {
     using Trat = mpq_class;
 #endif
     //
-    using Tidx = int32_t;
+    using Tidx = uint32_t;
     using Telt = permutalib::SingleSidedPerm<Tidx>;
     using Tgroup = permutalib::Group<Telt, Tint>;
     std::string arith = argv[1];

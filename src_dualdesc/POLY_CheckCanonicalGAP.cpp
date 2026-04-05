@@ -16,7 +16,7 @@ int main(int argc, char *argv[]) {
     std::string FileIn = argv[1];
     //
     using T = mpq_class;
-    using Tidx = int16_t;
+    using Tidx = uint32_t;
     using Telt = permutalib::DoubleSidedPerm<Tidx>;
     datagap::DataGAP<T, Telt> dataEXT = datagap::ParseGAPFile<T, Telt>(FileIn);
     //
