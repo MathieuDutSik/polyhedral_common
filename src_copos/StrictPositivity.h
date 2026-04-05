@@ -202,6 +202,12 @@ TestingAttemptStrictPositivity(MyMatrix<T> const &eMat,
       os << "STR: TheRelat=";
       WriteVectorNoDim(os, V);
 #endif
+#ifdef SANITY_CHECK_STRICT_POSITIVITY
+      if (V(nbBlock) == 0) {
+        std::cerr << "STR: We should have V(nbBlock) != 0\n";
+        throw TerminalException{1};
+      }
+#endif
       std::vector<int> ListIdx;
       for (int iBlock = 0; iBlock < nbBlock; iBlock++) {
         if (V(iBlock) != 0)

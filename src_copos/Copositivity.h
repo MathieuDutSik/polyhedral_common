@@ -433,7 +433,7 @@ void WriteCopositivityEnumResult(std::ostream &os_out,
                                  MyMatrix<T> const &eSymmMat,
                                  CopositivityEnumResult<Tint> const &CopoRes) {
   if (OutFormat == "classic") {
-    if (CopoRes.test == false) {
+    if (!CopoRes.test) {
       os_out << "Matrix is not Copositive\n";
       os_out << "Nature=" << CopoRes.eResult.strNature << "\n";
       os_out << "eVect1=";
@@ -459,7 +459,7 @@ void WriteCopositivityEnumResult(std::ostream &os_out,
   }
   if (OutFormat == "GAP") {
     os_out << "return rec(isCopositive:=" << GAP_logical(CopoRes.test);
-    if (CopoRes.test) {
+    if (!CopoRes.test) {
       os_out << ", nature:=\"" << CopoRes.eResult.strNature << "\"";
       os_out << ", eVect:=" << StringVectorGAP(CopoRes.eResult.eVectResult1);
     } else {
