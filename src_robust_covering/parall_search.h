@@ -15,6 +15,10 @@
 #define SANITY_CHECK_ENUM_PARALL_SEARCH
 #endif
 
+#ifdef PRINT
+#define PRINT_ENUM_PARALL_SEARCH
+#endif
+
 #ifdef DISABLE_DEBUG_ENUM_PARALL_SEARCH
 #undef DEBUG_ENUM_PARALL_SEARCH
 #endif
@@ -463,7 +467,18 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
   CVPSolver<T, Tint> solver(GramMat, os);
   int dim = GramMat.rows();
   T max_cov(0);
-  MyVector<T> eV(dim);
+  MyVector<T> eV_best;
+  auto f_update=[&](MyVector<T> const& fV) -> void {
+    ResultRobustClosest<T, Tint> rrc =
+        compute_robust_closest<T, Tint>(solver, fV, os);
+#ifdef DEBUG_ENUM_PARALL_SEARCH
+    os << "PARALL: After compute_robust_closest\n";
+#endif
+    if (rrc.robust_minimum > max_cov) {
+      eV_best = fV;
+      max_cov = rrc.robust_minimum;
+    }
+  };
   for (size_t iter = 0; iter < n_iter; iter++) {
     int denom = random() % 1000000000000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
@@ -471,15 +486,14 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
     os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";
 #endif
-    ResultRobustClosest<T, Tint> rrc =
-        compute_robust_closest<T, Tint>(solver, eV, os);
-#ifdef DEBUG_ENUM_PARALL_SEARCH
-    os << "PARALL: After compute_robust_closest\n";
-#endif
-    if (rrc.robust_minimum > max_cov) {
-      max_cov = rrc.robust_minimum;
-    }
+    f_update(eV);
   }
+  MyVector<T> eV = ZeroVector<T>(1 + dim);
+  eV(0) = 1;
+  f_update(eV);
+#ifdef PRINT_ENUM_PARALL_SEARCH
+  os << "PARALL: random_estimation_robust_covering eV_best=" << StringVectorGAP(eV_best) << "\n";
+#endif
   return max_cov;
 }
 
