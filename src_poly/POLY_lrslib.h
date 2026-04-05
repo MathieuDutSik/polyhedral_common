@@ -206,7 +206,6 @@ int64_t lrs_getfirstbasis(lrs_dic<T> **D_p, lrs_dat<T> *Q)
   T **A;
   int64_t *B, *C, *Col;
   int64_t *inequality;
-  int64_t hull = Q->hull;
   int64_t m, d, lastdv, nredundcol;
   m = (*D_p)->m;
   d = (*D_p)->d;

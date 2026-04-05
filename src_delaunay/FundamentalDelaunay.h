@@ -148,11 +148,13 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
   MyMatrix<T> ListEquation(n, nbEqua);
   MyVector<T> ListB(nbEqua);
   int idx = 0;
+  MyVector<T> eV(n);
+  for (int i = 0; i < n; i++) {
+    eV(i) = EXT(0, i + 1);
+  }
   for (int iVert = 1; iVert < nbVert; iVert++) {
-    MyVector<T> eV(n);
     MyVector<T> fV(n);
     for (int i = 0; i < n; i++) {
-      eV(i) = EXT(0, i + 1);
       fV(i) = EXT(iVert, i + 1);
     }
     T Sum = EvaluationQuadForm<T, T>(GramMat, eV) -
@@ -160,28 +162,32 @@ CP<T> CenterRadiusDelaunayPolytopeGeneral(MyMatrix<T> const &GramMat,
     ListB(idx) = Sum;
     for (int i = 0; i < n; i++) {
       T vSum = 0;
-      for (int j = 0; j < n; j++)
+      for (int j = 0; j < n; j++) {
         vSum += GramMat(i, j) * (eV(j) - fV(j));
+      }
       ListEquation(i, idx) = 2 * vSum;
     }
     idx++;
   }
   for (int iNSP = 0; iNSP < dimNSP; iNSP++) {
     ListB(idx) = eSelect.NSP(idx, 0);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       ListEquation(i, idx) = -eSelect.NSP(idx, i + 1);
+    }
     idx++;
   }
   std::optional<MyVector<T>> opt = SolutionMat(ListEquation, ListB);
   MyVector<T> const &eSol = *opt;
   MyVector<T> eCent(1 + n);
   eCent(0) = 1;
-  for (int i = 0; i < n; i++)
+  for (int i = 0; i < n; i++) {
     eCent(i + 1) = eSol(i);
+  }
   auto get_sqr_dist = [&](int iVert) -> T {
     MyVector<T> eW(n);
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < n; i++) {
       eW(i) = eSol(i) - EXT(iVert, i + 1);
+    }
     return EvaluationQuadForm<T, T>(GramMat, eW);
   };
   T SquareRadius = get_sqr_dist(0);
