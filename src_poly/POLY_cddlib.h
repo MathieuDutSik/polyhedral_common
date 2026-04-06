@@ -437,6 +437,7 @@ std::string dd_ShortErrorMessages(dd_ErrorType Error) {
   case dd_NoError:
     return "No Error found";
   }
+  return "Out of scope error";
 }
 
 

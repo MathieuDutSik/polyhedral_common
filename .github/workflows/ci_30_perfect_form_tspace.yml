@@ -7,7 +7,7 @@ name: CI(30) of Perfect Forms in T-spaces
 on:
   # One time per month
   schedule:
-    - cron: "0 0 6 * *"
+    - cron: "0 0 7 * *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -94,11 +94,11 @@ jobs:
           echo "After cddlib compilation"
 
           # We need specific version 3.3.9 because of a bug in 3.4.0 for algebraic data types.
-          wget -q https://gitlab.com/libeigen/eigen/-/archive/3.3.9/eigen-3.3.9.tar.gz
-          tar -xzf eigen-3.3.9.tar.gz
-          mv eigen-3.3.9 /home/runner/work/opt/eigen
+          wget -q https://gitlab.com/libeigen/eigen/-/archive/5.0.0/eigen-5.0.0.tar.gz
+          tar -xzf eigen-5.0.0.tar.gz
+          mv eigen-5.0.0 /home/runner/work/opt/eigen
           pwd
-          echo "After eigen-3.3.9 set up"
+          echo "After eigen-5.0.0 set up"
 
           # Downloading and compiling gap
           wget -q https://github.com/gap-system/gap/releases/download/v4.14.0/gap-4.14.0.tar.gz
