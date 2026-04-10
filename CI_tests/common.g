@@ -1,3 +1,25 @@
+ReadTextFile:=function(FileIn)
+    local ListLines, file, TheRead, len, TheReadRed;
+    ListLines:=[];
+    if IsExistingFile(FileIn)=false then
+        Print("ReadTextFile error, the file FileIn=", FileIn, " is missing\n");
+        Error("Correct your stuff");
+    fi;
+    file:=InputTextFile(FileIn);
+    while(true)
+    do
+        TheRead:=ReadLine(file);
+        if TheRead=fail then
+            break;
+        fi;
+        len:=Length(TheRead);
+        TheReadRed:=TheRead{[1..len-1]};
+        Add(ListLines, TheReadRed);
+    od;
+    CloseStream(file);
+    return ListLines;
+end;
+
 GetBinaryFilename:=function(FileName)
     local TmpDir, TmpFile, eProg, path, TmpFileB, command, read_text_file, FullProg;
     # If accessible, use the path;
@@ -338,28 +360,6 @@ SaveDataToFile:=function(FileName, OBJ)
   output:=OutputTextFile(FileName, true);;
   AppendTo(output, "return ", OBJ, ";\n");
   CloseStream(output);
-end;
-
-ReadTextFile:=function(FileIn)
-    local ListLines, file, TheRead, len, TheReadRed;
-    ListLines:=[];
-    if IsExistingFile(FileIn)= false then
-        Print("ReadTextFile error, the file FileIn=", FileIn, " is missing\n");
-        Error("Correct your stuff");
-    fi;
-    file:=InputTextFile(FileIn);
-    while(true)
-    do
-        TheRead:=ReadLine(file);
-        if TheRead=fail then
-            break;
-        fi;
-        len:=Length(TheRead);
-        TheReadRed:=TheRead{[1..len-1]};
-        Add(ListLines, TheReadRed);
-    od;
-    CloseStream(file);
-    return ListLines;
 end;
 
 GetFreeFile:=function(prefix)
