@@ -236,19 +236,26 @@ LpSolutionSimple<T> GLPK_LinearProgramming_Kernel_Sparse_PROC(
   //
   // Now running the GLPK program
   //
-  std::string eCommand = "glpsol";
+  std::vector<std::string> eCommand;
   if (eGLPKoption.UseExact) {
-    eCommand += " --exact";
+    eCommand.push_back("--exact");
   }
   if (eGLPKoption.UseXcheck) {
-    eCommand += " --xcheck";
+    eCommand.push_back("--xcheck");
   }
-  eCommand += " --output " + FileOut + " --math " + FileMath;
-  eCommand += " > " + FileErr1 + " 2> " + FileErr2;
-  std::cerr << "eCommand=" << eCommand << "\n";
-  int iret = system(eCommand.c_str());
-  if (iret == -1) {
-    printf("Oh dear, something went wrong with glpsol! %s\n", strerror(errno));
+  eCommand.push_back("--output");
+  eCommand.push_back(FileOut);
+  eCommand.push_back("--math");
+  eCommand.push_back(FileMath);
+  std::cerr << "eCommand=glpsol";
+  for (auto const &arg : eCommand) {
+    std::cerr << " " << arg;
+  }
+  std::cerr << "\n";
+  int iret =
+      RunExternalProgram("glpsol", eCommand, std::nullopt, FileErr1, FileErr2);
+  if (iret != 0) {
+    std::cerr << "RunExternalProgram failed for glpsol, iret=" << iret << "\n";
     throw TerminalException{1};
   }
   if (!IsExistingFile(FileErr1) || !IsExistingFile(FileErr2) ||

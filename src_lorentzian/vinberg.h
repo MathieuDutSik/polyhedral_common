@@ -1006,20 +1006,19 @@ bool is_FundPoly_Coxiter(const VinbergTot<T, Tint> &Vtot,
   //
   std::string eCommand = "coxiter";
   std::string opt = "-fv";
-  eCommand += " " + opt;
-  eCommand += " < " + FileI + " > " + FileO;
 #ifdef DEBUG_VINBERG
-  os << "eCommand=" << eCommand << "\n";
+  os << "eCommand=" << eCommand << " " << opt << "\n";
 #endif
 #ifdef TIMINGS_VINBERG
   MicrosecondTime time;
 #endif
-  int iret = system(eCommand.c_str());
+  int iret = RunExternalProgram(eCommand, {opt}, FileI, FileO, std::nullopt);
 #ifdef TIMINGS_VINBERG
-  os << "|VIN: system|=" << time << "\n";
+  os << "|VIN: RunExternalProgram|=" << time << "\n";
 #endif
-  if (iret == -1) {
-    printf("Oh dear, something went wrong with coxiter! %s\n", strerror(errno));
+  if (iret != 0) {
+    std::cerr << "RunExternalProgram failed for coxiter, iret=" << iret
+              << "\n";
     throw TerminalException{1};
   }
 

@@ -113,9 +113,11 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
     std::cerr << "DDD: FileI = " << FileI << "\n";
     std::cerr << "DDD: FileO = " << FileO << "\n";
     std::cerr << "DDD: FileE = " << FileE << "\n";
-    std::string order_b = "cat " + FileE;
-    int iret2 = system(order_b.c_str());
-    std::cerr << "DDD: iret2=" << iret2 << "\n";
+    if (IsExistingFile(FileE)) {
+      for (auto const &line : ReadFullFile(FileE)) {
+        std::cerr << line << "\n";
+      }
+    }
     throw TerminalException{1};
   };
   {
@@ -151,16 +153,17 @@ void DualDescExternalProgramGeneral(MyMatrix<T> const &EXT, Finsert f_insert,
   //
   // Now calling the external program
   //
-  std::string order;
-  if (eCommand == "normaliz") {
-    order = eCommand + " " + FileI;
-  } else {
-    order = eCommand + " " + FileI + " > " + FileO + " 2> " + FileE;
-  }
 #ifdef DEBUG_DUAL_DESC
-  os << "DDD: order=" << order << "\n";
+  os << "DDD: program=" << eCommand << " FileI=" << FileI << " FileO=" << FileO
+     << " FileE=" << FileE << "\n";
 #endif
-  int iret1 = system(order.c_str());
+  int iret1;
+  if (eCommand == "normaliz") {
+    iret1 = RunExternalProgram(eCommand, {FileI}, std::nullopt, std::nullopt,
+                               FileE);
+  } else {
+    iret1 = RunExternalProgram(eCommand, {FileI}, std::nullopt, FileO, FileE);
+  }
 #ifdef TIMINGS_DUAL_DESC
   os << "|DDD: glrs/ppl/cdd|=" << time << "\n";
 #endif

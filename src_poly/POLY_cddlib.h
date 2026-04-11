@@ -8427,22 +8427,19 @@ CDD_LinearProgramming_External(MyMatrix<T> const &InequalitySet,
   WriteInputFileCdd(FileIne, InequalitySet, ToBeMinimized);
   //
   std::string FileTestlp2 = "testlp2_gmp";
-  std::string eComm1 =
-      FileTestlp2 + " " + FileIne + " 2> " + FileErr + " > " + FileLog;
-  int iret1 = system(eComm1.c_str());
+  int iret1 =
+      RunExternalProgram(FileTestlp2, {FileIne}, std::nullopt, FileLog, FileErr);
   if (iret1 != 0) {
     std::cerr << "iret1=" << iret1 << "\n";
     std::cerr << "Call to " << FileTestlp2 << " failed\n";
-    std::cerr << "eComm1=" << eComm1 << "\n";
     throw TerminalException{1};
   }
   std::string FilelpcddcleanerCpp = "lpcddcleanerCpp";
-  std::string eComm2 = FilelpcddcleanerCpp + " < " + FileLog + " > " + FileCpp;
-  int iret2 = system(eComm2.c_str());
+  int iret2 = RunExternalProgram(FilelpcddcleanerCpp, {}, FileLog, FileCpp,
+                                 std::nullopt);
   if (iret2 != 0) {
     std::cerr << "iret2=" << iret2 << "\n";
     std::cerr << "Call to " << FilelpcddcleanerCpp << "\n";
-    std::cerr << "eComm2=" << eComm2 << "\n";
     throw TerminalException{1};
   }
   //
