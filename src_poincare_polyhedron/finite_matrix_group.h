@@ -55,16 +55,16 @@ IdentifyRightCosets(std::vector<CombElt<T>> const &l_ent,
   auto f_insert = [&](CombElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
       CombElt<T> prod = ProductComb(e_grp_elt, pe);
-      if (s_coset.contains(prod))
-        break;
+      if (s_coset.contains(prod)) {
+        return;
+      }
     }
     s_coset.insert(pe);
   };
-  for (auto &pe : l_ent)
+  for (auto &pe : l_ent) {
     f_insert(pe);
-  std::vector<CombElt<T>> l_coset;
-  for (auto &e_coset : s_coset)
-    l_coset.push_back(e_coset);
+  }
+  std::vector<CombElt<T>> l_coset(s_coset.begin(), s_coset.end());
   return l_coset;
 }
 
@@ -77,15 +77,16 @@ IdentifyLeftCosets(std::vector<CombElt<T>> const &l_ent,
   auto f_insert = [&](CombElt<T> const &pe) -> void {
     for (auto &e_grp_elt : list_grp_elt) {
       CombElt<T> prod = ProductComb(pe, e_grp_elt);
-      if (s_coset.find(prod) != s_coset.end()) {
+      if (s_coset.contains(prod)) {
         std::cerr << "find matching\n";
         return;
       }
     }
     s_coset.insert(pe);
   };
-  for (auto &pe : l_ent)
+  for (auto &pe : l_ent) {
     f_insert(pe);
+  }
   std::vector<CombElt<T>> l_coset(s_coset.begin(), s_coset.end());
   std::cerr << "|l_ent|=" << l_ent.size()
             << " |list_grp_elt|=" << list_grp_elt.size()
