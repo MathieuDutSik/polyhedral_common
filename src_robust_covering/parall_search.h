@@ -480,7 +480,7 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
     }
   };
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000;
+    int denom = random() % 1000000 + 1;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)

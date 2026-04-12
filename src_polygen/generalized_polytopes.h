@@ -473,7 +473,7 @@ get_map_total_vertices(GeneralizedPolytope<T> const &gp,
 }
 
 template <typename T>
-size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
+size_t simplify_generalized_polytopes(GeneralizedPolytope<T> &gp,
                                       std::ostream &os) {
   // Determine all the vertices
   std::unordered_map<MyVector<T>, size_t> map_total_vertices =
@@ -527,9 +527,9 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
       }
     }
     for (auto &f_del : l_delete) {
-      map_faces.remove(f_del);
+      map_faces.erase(f_del);
     }
-    gp.polytopes.remove(i_polytope_delete);
+    gp.polytopes.erase(gp.polytopes.begin() + i_polytope_delete);
     n_polytope_ins -= 1;
   };
   auto test_mergeness = [&](MyMatrix<T> const &EXT1, MyMatrix<T> const &FAC2,
@@ -631,6 +631,7 @@ size_t simplify_generalized_polytopes(GeneralizedPolytope<T> const &gp,
   }
   // Simplify them
   iterative_merge();
+  return gp.polytopes.size();
 }
 
 template <typename T>
@@ -736,6 +737,7 @@ connected_components_decomposition(GeneralizedPolytope<T> const &gp,
     for (auto &i_poly : eConn) {
       gp_ins.polytopes.push_back(gp.polytopes[i_poly]);
     }
+    l_gp.push_back(std::move(gp_ins));
   }
   return l_gp;
 }

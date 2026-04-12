@@ -333,7 +333,7 @@ MyVector<Tint> GetPositiveVector(const MyMatrix<T> &G) {
     Tint x_i = UniversalNearestScalarInteger<Tint, double>(mult * x);
     Tint y_i = UniversalNearestScalarInteger<Tint, double>(mult * y);
     T norm =
-        G(0, 0) * x_i * y_i + 2 * G(0, 1) * x_i * y_i + G(1, 1) * y_i * y_i;
+        G(0, 0) * x_i * x_i + 2 * G(0, 1) * x_i * y_i + G(1, 1) * y_i * y_i;
     if (norm > 0) {
       Tint eGcd = GcdPair(x_i, y_i);
       r(0) = x_i / eGcd;

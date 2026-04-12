@@ -1501,7 +1501,7 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
   std::vector<MyVector<Tint>> l_excluded_max;
   MyVector<T> diff(dim);
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000;
+    int denom = random() % 1000000 + 1;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
     os << "ROBUST: iter=" << iter << " kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)
