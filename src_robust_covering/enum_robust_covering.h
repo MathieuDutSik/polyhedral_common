@@ -766,10 +766,10 @@ T get_upper_bound_ext(MyMatrix<T> const &GramMat, MyMatrix<T> const &EXT) {
     for (int j_ext = i_ext + 1; j_ext < n_ext; j_ext++) {
       for (int i = 0; i < n; i++) {
         diff(i) = EXT(i_ext, i + 1) - EXT(j_ext, i + 1);
-        T norm = EvaluationQuadForm(GramMat, diff);
-        if (norm > upper_bound) {
-          upper_bound = norm;
-        }
+      }
+      T norm = EvaluationQuadForm(GramMat, diff);
+      if (norm > upper_bound) {
+        upper_bound = norm;
       }
     }
   }
@@ -1280,6 +1280,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST: find_p_voronoi, |l_hcb|=" << pvp.l_hcb.size()
        << " |l_scb|=" << pvp.l_scb.size() << " iter=" << iter << "\n";
+    iter += 1;
 #endif
     bool test = f_process_entry();
 #ifdef DEBUG_ENUM_P_POLYTOPES
@@ -1497,11 +1498,10 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
   CVPSolver<T, Tint> solver(GramMat, os);
   int dim = GramMat.rows();
   T max_cov(0);
-  MyVector<T> eV(dim);
   std::vector<MyVector<Tint>> l_excluded_max;
   MyVector<T> diff(dim);
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000000000000;
+    int denom = random() % 1000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
     os << "ROBUST: iter=" << iter << " kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)

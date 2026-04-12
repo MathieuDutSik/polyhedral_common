@@ -305,7 +305,7 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
      << "\n";
 #endif
   int n_vect = l_vect.size() / 2;
-  MyMatrix<Tfield> EXT(n_vect, 1 + dimSpace);
+  MyMatrix<Tfield> EXT(n_vect, dimSpace);
   std::vector<size_t> list_idx(n_vect);
   size_t pos = 0;
   for (size_t i = 0; i < l_vect.size(); i++) {
@@ -313,9 +313,9 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
     if (scal > 0) {
       list_idx[pos] = i;
       MyVector<T> const &eV = l_vect[i];
-      EXT(pos, 0);
-      for (int i = 0; i < dimSpace; i++)
-        EXT(pos, i + 1) = UniversalScalarConversion<Tfield, T>(eV(i));
+      for (int col = 0; col < dimSpace; col++) {
+        EXT(pos, col) = UniversalScalarConversion<Tfield, T>(eV(col));
+      }
       pos++;
     }
   }

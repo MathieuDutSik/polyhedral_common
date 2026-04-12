@@ -85,8 +85,11 @@ template <typename T> struct SinglePolytope {
   }
   SinglePolytope() : facets() {
   }
-  SinglePolytope<T> operator=(SinglePolytope<T> const& x) {
-    return {x.EXT, x.FAC, x.facets.clone()};
+  SinglePolytope<T>& operator=(SinglePolytope<T> const& x) {
+    EXT = x.EXT;
+    FAC = x.FAC;
+    facets = x.facets.clone();
+    return *this;
   }
 };
 

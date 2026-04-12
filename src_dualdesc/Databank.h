@@ -219,8 +219,8 @@ void send_data(boost::asio::ip::tcp::socket &socket, const T &data) {
   boost::system::error_code error;
   boost::asio::write(socket, boost::asio::buffer(outbound_data), error);
   if (error) {
-    std::cout << "send failed: " << error.message() << "\n";
-    exit(1);
+    std::cerr << "send failed: " << error.message() << "\n";
+    throw TerminalException{1};
   }
 }
 

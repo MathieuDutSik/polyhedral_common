@@ -188,7 +188,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   }
 }
 
-int pow_two(int dim) {
+inline int pow_two(int dim) {
   int pow = 1;
   for (int u = 0; u < dim; u++) {
     pow *= 2;
@@ -246,9 +246,9 @@ T compute_upper_bound_mat(MyMatrix<T> const &GramMat, MyMatrix<Tint> const &M) {
   T upper_value(0);
   for (int i_ent = 0; i_ent < n_ent; i_ent++) {
     for (int j_ent = i_ent + 1; j_ent < n_ent; j_ent++) {
-      MyMatrix<Tint> v1 = GetMatrixRow(M, i_ent);
-      MyMatrix<Tint> v2 = GetMatrixRow(M, j_ent);
-      MyMatrix<Tint> diff = v1 - v2;
+      MyVector<Tint> v1 = GetMatrixRow(M, i_ent);
+      MyVector<Tint> v2 = GetMatrixRow(M, j_ent);
+      MyVector<Tint> diff = v1 - v2;
       T norm = EvaluationQuadForm(GramMat, diff);
       if (norm > upper_value) {
         upper_value = norm;
@@ -480,7 +480,7 @@ T random_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_iter,
     }
   };
   for (size_t iter = 0; iter < n_iter; iter++) {
-    int denom = random() % 1000000000000000;
+    int denom = random() % 1000000;
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_PARALL_SEARCH
     os << "PARALL: Before compute_robust_closest eV=" << StringVectorGAP(eV)
