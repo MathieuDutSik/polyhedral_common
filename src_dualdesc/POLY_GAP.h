@@ -108,7 +108,7 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
       throw TerminalException{1};
     }
     std::vector<std::string> LStr =
-        ParseStringByComma(full_str.substr(1, n_char - 2));
+        ParseStringByComma(full_str.substr(7, n_char - 9));
     std::vector<DataGAP<T, Telt>> LVal;
     for (auto &estr : LStr) {
       LVal.push_back(ParseGAPString<T, Telt>(estr));
@@ -121,12 +121,12 @@ DataGAP<T, Telt> ParseGAPString(std::string const &full_str) {
       std::cerr << "Parsing error for the record 1\n";
       throw TerminalException{1};
     }
-    if (full_str.substr(n_char - 1, 2) != ")") {
+    if (full_str.substr(n_char - 1, 1) != ")") {
       std::cerr << "Parsing error for the record 2\n";
       throw TerminalException{1};
     }
     std::vector<std::string> LStr =
-        ParseStringByComma(full_str.substr(1, n_char - 2));
+        ParseStringByComma(full_str.substr(4, n_char - 5));
     std::vector<std::pair<std::string, DataGAP<T, Telt>>> LVal;
     for (auto &estr : LStr) {
       size_t pos = estr.find(":=");

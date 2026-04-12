@@ -229,7 +229,7 @@ bool IsExtreme(MyMatrix<T> const &eGram, MyMatrix<T> const &SHV_T,
 #endif
 
   bool perfect = IsPerfect(eGram, SHV_T, os);
-  bool eutactic = IsEutactic(eGram, SHV_T, os);
+  bool eutactic = IsEutactic(eGram, SHV_T, "Eutactic", os);
 
   bool extreme = perfect && eutactic;
 

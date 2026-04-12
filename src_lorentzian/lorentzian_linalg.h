@@ -280,8 +280,9 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   auto is_corr = [&](MyVector<T> const &w) -> bool {
     for (auto &e_root : l_vect) {
       T scal = e_root.dot(w);
-      if (scal == 0)
+      if (scal == 0) {
         return false;
+      }
     }
     return true;
   };
@@ -307,10 +308,16 @@ GetFacetOneDomain_ListIdx(std::vector<MyVector<T>> const &l_vect,
   int n_vect = l_vect.size() / 2;
   MyMatrix<Tfield> EXT(n_vect, dimSpace);
   std::vector<size_t> list_idx(n_vect);
-  size_t pos = 0;
+  int pos = 0;
   for (size_t i = 0; i < l_vect.size(); i++) {
     T scal = selVect.dot(l_vect[i]);
     if (scal > 0) {
+#ifdef SANITY_CHECK_LORENTZIAN_LINALG
+      if (pos == n_vect) {
+        std::cerr << "LORLIN: We have too many vectors\n";
+        throw TerminalException{1};
+      }
+#endif
       list_idx[pos] = i;
       MyVector<T> const &eV = l_vect[i];
       for (int col = 0; col < dimSpace; col++) {

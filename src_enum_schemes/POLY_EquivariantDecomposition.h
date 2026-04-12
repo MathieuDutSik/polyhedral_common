@@ -340,7 +340,7 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
         vec_cd.push_back(fcd);
       }
       //
-      for (auto & eFace
+      //      for (auto & eFace
     }
     n_done = len;
     if (list_stab2.size() == len) {

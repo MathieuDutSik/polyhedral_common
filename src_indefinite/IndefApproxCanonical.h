@@ -176,21 +176,21 @@ compare_ordering_info(OrderingInfoIndefForm<T> const &ord1,
   if (ord1.dim < ord2.dim) {
     return {true, false};
   }
-  if (ord2.dim > ord2.dim) {
+  if (ord1.dim > ord2.dim) {
     return {false, false};
   }
   // Then the sum of the absolute coefficients
   if (ord1.sum_abs_coeff < ord2.sum_abs_coeff) {
     return {true, false};
   }
-  if (ord2.sum_abs_coeff > ord2.sum_abs_coeff) {
+  if (ord1.sum_abs_coeff > ord2.sum_abs_coeff) {
     return {false, false};
   }
   // Then the maximum of the absolute value of the coefficients
   if (ord1.max_abs_coeff < ord2.max_abs_coeff) {
     return {true, false};
   }
-  if (ord2.max_abs_coeff > ord2.max_abs_coeff) {
+  if (ord1.max_abs_coeff > ord2.max_abs_coeff) {
     return {false, false};
   }
   // Nothing works, reporting as such.
@@ -237,7 +237,7 @@ order_blocks_by_signature(MyMatrix<T> const &M,
           return pair.first;
         }
 #ifdef DEBUG_INDEX_APPROX_CANONICAL
-        if (l_block[idx1] != l_block[idx1]) {
+        if (l_block[idx1] != l_block[idx2]) {
           n_false_equality += 1;
         }
 #endif

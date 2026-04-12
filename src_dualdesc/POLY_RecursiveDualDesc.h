@@ -1082,7 +1082,7 @@ public:
       size_t *ptr1 = &hash;
       uint8_t *ptr2 = (uint8_t *)ptr1;
       for (size_t i = 0; i < n_bit_hash; i++) {
-        double idx = pos + size_t(subset_index[i]);
+        size_t idx = pos + size_t(subset_index[i]);
         bool val = getbit_vector(foc.ListOrbit, idx);
         setbit_ptr(ptr2, i, val);
       }

@@ -383,7 +383,7 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
   MyMatrix<T> EXT_ext(nbRow, nbCol + 1);
   MyVector<T> ToMinimize(nbCol + 1);
   for (int iRow = 0; iRow < nbRow; iRow++) {
-    EXT_ext(iRow, 0);
+    EXT_ext(iRow, 0) = 0;
     for (int iCol = 0; iCol < nbCol; iCol++)
       EXT_ext(iRow, iCol + 1) = EXT(iRow, iCol);
   }
@@ -397,8 +397,9 @@ Face FindViolatedFace(MyMatrix<T> const &EXT, MyVector<T> const &eVect,
     for (int i_col = 0; i_col < nbCol; i_col++) {
       sum += EXT(i_row, i_col) * eSol.DirectSolution(i_col);
     }
-    if (sum == 0)
+    if (sum == 0) {
       eFace[i_row] = 1;
+    }
   }
 #ifdef DEBUG_LINEAR_PROGRAM
   MyVector<T> eFAC = FindFacetInequality(EXT, eFace);
@@ -1928,17 +1929,18 @@ bool has_empty_intersection(MyMatrix<T> const &EXT1, MyMatrix<T> const &EXT2,
   for (int i = 0; i < dim; i++) {
     MyVector<T> v1 = v_z;
     v1(1 + i) = -1;
-    v1(1 + 2 * i) = 1;
+    v1(1 + i + dim) = 1;
+    list_v.push_back(v1);
+    //
     MyVector<T> v2 = v_z;
     v2(1 + i) = 1;
-    v2(1 + 2 * i) = 1;
-    list_v.push_back(v1);
+    v2(1 + i + dim) = 1;
     list_v.push_back(v2);
   }
   MyMatrix<T> FAC = MatrixFromVectorFamily(list_v);
   MyVector<T> eMinimize = v_z;
   for (int i = 0; i < dim; i++) {
-    eMinimize(1 + 2 * i) = 1;
+    eMinimize(1 + i + dim) = 1;
   }
   LpSolution<T> eSol = CDD_LinearProgramming(FAC, eMinimize, os);
   if (!eSol.PrimalDefined || !eSol.DualDefined) {
