@@ -2662,13 +2662,13 @@ std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
   // The size of the selection done
   size_t n_ent_bit = 8 * sizeof(size_t);
   size_t n_bit_hash = n_ent_bit;
-  if (n_act <= n_ent_bit)
+  if (n_act <= n_ent_bit) {
     n_bit_hash = n_act;
+  }
   std::vector<size_t> subset_index(n_bit_hash);
   size_t pos_wrt = n_bit_hash;
-  ;
   if (n_act <= n_ent_bit) {
-    for (size_t i = 0; i < n_ent_bit; i++) {
+    for (size_t i = 0; i < n_bit_hash; i++) {
       pos_wrt--;
       subset_index[pos_wrt] = i;
     }
@@ -2678,12 +2678,14 @@ std::vector<size_t> get_subset_index_rev(const size_t &n_act) {
     for (size_t i = 0; i < n_ent_bit; i++) {
       int pos_i = lround(frac * static_cast<double>(i));
       size_t pos;
-      if (pos_i < 0)
+      if (pos_i < 0) {
         pos = 0;
-      else
+      } else {
         pos = pos_i;
-      if (pos >= n_act)
+      }
+      if (pos >= n_act) {
         pos = n_act - 1;
+      }
       pos_wrt--;
       subset_index[pos_wrt] = pos;
     }
@@ -2916,7 +2918,7 @@ void OutputFacets_stream(const MyMatrix<T> &EXT, const vectface &TheOutput,
     using Tnumber = mpz_class;
     for (const Face &f : TheOutput) {
       Tnumber res = getsetasint<Tnumber>(f);
-      os << res << "\n";
+      os_out << res << "\n";
     }
     return;
   }

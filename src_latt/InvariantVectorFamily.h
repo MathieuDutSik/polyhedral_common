@@ -385,15 +385,15 @@ MyMatrix<Tint> ComputeVoronoiRelevantVector(MyMatrix<T> const &GramMat,
       for (int u = 0; u < n; u++) {
         T val = UniversalScalarConversion<T, int>(eVect[u]);
         eV(u) = val / 2;
-        resultCVP<T, Tint> result = solver.nearest_vectors(eV);
-        if (result.ListVect.rows() == 2) {
-          MyVector<Tint> Vins(n);
-          for (int u = 0; u < n; u++) {
-            Vins(u) = result.ListVect(0, u) - result.ListVect(1, u);
-          }
-          ListVect.push_back(Vins);
-          ListVect.push_back(-Vins);
+      }
+      resultCVP<T, Tint> result = solver.nearest_vectors(eV);
+      if (result.ListVect.rows() == 2) {
+        MyVector<Tint> Vins(n);
+        for (int u = 0; u < n; u++) {
+          Vins(u) = result.ListVect(0, u) - result.ListVect(1, u);
         }
+        ListVect.push_back(Vins);
+        ListVect.push_back(-Vins);
       }
     }
   }

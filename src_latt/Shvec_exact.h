@@ -676,8 +676,9 @@ public:
     std::pair<MyVector<Tint>, MyVector<T>> ePair =
         ReductionMod1vector<T, Tint>(cosetRed);
     MyVector<T> const &coset = ePair.second;
+    bool central = false;
     ResultShortest<Tint> res =
-        compute_test_shortest<T, Tint>(request, coset, TheNorm);
+      compute_test_shortest<T, Tint>(request, coset, central, TheNorm);
     if (res.better_vector) {
       MyVector<Tint> const &short_vec = *res.better_vector;
       MyVector<Tint> x = eRec.Pmat.transpose() * (short_vec - ePair.first);

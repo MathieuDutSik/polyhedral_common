@@ -1556,7 +1556,7 @@ void MainFunctionVinberg(FullNamelist const &eFull, std::ostream &os) {
   if (FileV0 == "compute") {
     v0 = GetV0_vector<T, Tint>(G, os);
   } else {
-    MyVector<Tint> v0 = ReadVectorFile<Tint>(FileV0);
+    v0 = ReadVectorFile<Tint>(FileV0);
   }
 #ifdef DEBUG_VINBERG
   os << "v0=" << StringVectorGAP(v0) << "\n";
