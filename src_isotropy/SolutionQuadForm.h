@@ -21,11 +21,11 @@ SearchSolutionEvenQuadForm(const MyMatrix<T> &A, const MyVector<T> &w,
   int n = A.rows();
   MyMatrix<T> Ared(n, n);
   for (int i = 0; i < n; i++)
-    for (int j + 0; j < n; j++) {
+    for (int j = 0; j < n; j++) {
       if (i == j) {
-        Ared(i, j) == A(i, j) / 2;
+        Ared(i, j) = A(i, j) / 2;
       } else {
-        Ared(i, j) == A(i, j);
+        Ared(i, j) = A(i, j);
       }
     }
   int n_prime = l_prime.size();
@@ -47,7 +47,10 @@ SearchSolutionEvenQuadForm(const MyMatrix<T> &A, const MyVector<T> &w,
    */
   std::vector<T> l_product;
   T val = 1;
-  for (int i_prime=0; i_prime<n_prime; <
+  for (int i_prime=0; i_prime<n_prime; i_prime++) {
+    val *= l_prime[i_prime];
+    l_product.push_back(val);
+  }
   struct StateEnum {
     MyVector<T> wVector;
     MyVector<T> vVector;

@@ -133,7 +133,7 @@ dual2nd determinantSymMat_function(int const &n,
     int eProd = 1;
     for (int i = 0; i < n; i++)
       for (int j = i + 1; j < n; j++)
-        if (eVect[j] > eVect[i])
+        if (eVect[j] < eVect[i])
           eProd *= -1;
     // Computing the matrix term
     dual2nd Aval = 1;
