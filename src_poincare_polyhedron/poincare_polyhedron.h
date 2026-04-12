@@ -52,6 +52,8 @@ DataEXT<T> DirectDataExtComputation(MyMatrix<T> const &FAC,
   return {std::move(EXT), std::move(vf), std::move(v_red)};
 }
 
+/*
+// The vf is missing in the output.
 template <typename T>
 DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
   int n = FAC.cols();
@@ -70,6 +72,7 @@ DataEXT<T> GetTransposedDualDesc(vectface const &vf, MyMatrix<T> const &FAC) {
   }
   return {std::move(EXT), std::move(v_red)};
 }
+*/
 
 //
 // The elementary data structures for the Poincare stuff

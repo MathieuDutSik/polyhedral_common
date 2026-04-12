@@ -685,7 +685,7 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
                                         MyMatrix<T> const &FAC,
                                         [[maybe_unused]] MyVector<Tint> const &v_short,
                                         std::ostream &os) {
-  MyMatrix<T> EXTbig = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXTbig = DirectDualDescription_mat(FAC, os);
   int n_ext = EXTbig.rows();
   int dim = EXTbig.cols() - 1;
   MyMatrix<T> EXT(n_ext, dim + 1);
@@ -728,12 +728,11 @@ SinglePolytope<T> get_single_p_polytope([[maybe_unused]] CVPSolver<T, Tint> cons
 // Here we iterate 10 times to find better and better upper bounds.
 template <typename T, typename Tint>
 T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
-  int denom = 2;
+  int denom = 10000;
   int dim = solver.GramMat.rows();
   T upper_bound(0);
-  int iter = 0;
   int max_iter = 10;
-  while (true) {
+  for (int iter=0; iter<max_iter; iter++) {
     MyVector<T> eV = get_random_vector<T>(denom, dim);
     if (!IsIntegralVector(eV)) {
       ResultRobustClosest<T, Tint> rrc =
@@ -745,12 +744,8 @@ T get_upper_bound_covering(CVPSolver<T, Tint> const &solver, std::ostream &os) {
       } else {
         if (value < upper_bound) {
           upper_bound = value;
-          iter += 1;
         }
       }
-    }
-    if (iter == max_iter) {
-      break;
     }
   }
   return upper_bound;
@@ -1297,7 +1292,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: find_p_voronoi, EXT=\n";
   WriteMatrix(os, p_voronoi.EXT);
-  MyMatrix<T> FAC = DirectDualDescription(p_voronoi.EXT, os);
+  MyMatrix<T> FAC = DirectDualDescription_mat(p_voronoi.EXT, os);
   os << "ROBUST: find_p_voronoi, FAC=\n";
   WriteMatrix(os, FAC);
 #endif

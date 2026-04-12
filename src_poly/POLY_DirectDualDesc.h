@@ -630,13 +630,6 @@ MyMatrix<T> DirectFacetComputationInequalities(MyMatrix<T> const &EXT,
   terminate_direct_dual_desc(ansProg, ListProg);
 }
 
-template <typename T>
-MyMatrix<T> DirectDualDescription(MyMatrix<T> const &EXT, std::ostream &os) {
-  std::string ansProg = "lrs";
-  // We need somewhat better heuristic for choosing the best method.
-  return DirectFacetComputationInequalities(EXT, ansProg, os);
-}
-
 template <typename T, typename Fprocess>
 void DirectFacetComputationFaceIneq(MyMatrix<T> const &EXT,
                                     std::string const &ansProg,
@@ -781,50 +774,36 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   return TheOutput;
 }
 
+/*
+  Returns the method that we can use for the dual description.
+  We need somewhat better method for choosing the heuristics.
+ */
 template <typename T>
-std::vector<int> RedundancyReductionDualDescription(MyMatrix<T> const &EXT,
-                                                    std::string const &ansProg,
-                                                    std::ostream &os) {
-  std::vector<std::pair<Face, MyVector<T>>> ListFacet;
-  auto f_process = [&](std::pair<Face, MyVector<T>> const &pair_face) -> void {
-    ListFacet.push_back(pair_face);
-  };
-  DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
-#ifdef DEBUG_DUAL_DESC
-  os << "DDD: redundancy, |ListFacet|=" << ListFacet.size() << "\n";
-#endif
-  int n_ext = EXT.rows();
-  int dim = RankMat(EXT);
-  int crit_quant = dim - 1;
-  size_t crit_quant_s = crit_quant;
-  std::vector<int> ListIrred;
-  for (int i_ext = 0; i_ext < n_ext; i_ext++) {
-    std::vector<MyVector<T>> ListIncd;
-    for (auto &eFacet : ListFacet) {
-      if (eFacet.first[i_ext] == 1) {
-        ListIncd.push_back(eFacet.second);
-      }
-    }
-#ifdef DEBUG_DUAL_DESC
-    os << "DDD: redundancy, i_ext=" << i_ext
-       << " |ListIncd|=" << ListIncd.size() << "\n";
-#endif
-    if (ListIncd.size() >= crit_quant_s) {
-      MyMatrix<T> MatIncd = MatrixFromVectorFamily(ListIncd);
-      int rnk = RankMat(MatIncd);
-#ifdef DEBUG_DUAL_DESC
-      os << "DDD: redundancy, i_ext=" << i_ext << " rnk=" << rnk << "\n";
-#endif
-      if (rnk == crit_quant) {
-        ListIrred.push_back(i_ext);
-      }
-    }
-  }
-#ifdef DEBUG_DUAL_DESC
-  os << "DDD: redundancy, |ListIrred|=" << ListIrred.size() << "\n";
-#endif
-  return ListIrred;
+std::string get_dual_desc_method(MyMatrix<T> const &EXT, std::ostream &os) {
+  std::string ansProg = "lrs";
+  return ansProg;
 }
+
+
+template <typename T>
+MyMatrix<T> DirectDualDescription_mat(MyMatrix<T> const &EXT, std::ostream &os) {
+  std::string ansProg = get_dual_desc_method(EXT, os);
+  return DirectFacetComputationInequalities(EXT, ansProg, os);
+}
+
+template <typename T>
+vectface DirectDualDescription_vf(MyMatrix<T> const &EXT, std::ostream &os) {
+  std::string ansProg = get_dual_desc_method(EXT, os);
+  return DirectFacetComputationIncidence(EXT, ansProg, os);
+}
+
+template <typename T, typename Fprocess>
+void DirectDualDescription_f(MyMatrix<T> const &EXT,
+                             Fprocess f_process, std::ostream &os) {
+  std::string ansProg = get_dual_desc_method(EXT, os);
+  return DirectFacetComputationFaceIneq(EXT, ansProg, f_process, os);
+}
+
 
 // clang-format off
 #endif  // SRC_POLY_POLY_DIRECTDUALDESC_H_

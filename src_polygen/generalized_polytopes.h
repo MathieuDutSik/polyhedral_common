@@ -139,7 +139,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> 
   }
   std::vector<int> ListIrred = get_non_redundant_indices(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
-  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   return get_single_polytope(FAC, EXT);
 }
 
@@ -151,7 +151,7 @@ std::optional<SinglePolytope<T>> singlepolytope_halfspaces_int(SinglePolytope<T>
   }
   std::vector<int> ListIrred = get_non_redundant_indices(FACtot, os);
   MyMatrix<T> FAC = SelectRow(FACtot, ListIrred);
-  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   return get_single_polytope(FAC, EXT);
 }
 
@@ -419,7 +419,7 @@ SinglePolytope<T> generate_single_polytope(MyMatrix<T> const &FACinput,
   os << "GP: generate_single_polytope FAC=\n";
   WriteMatrix(os, FAC);
 #endif
-  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   return get_single_polytope(FAC, EXT);
 }
 
@@ -881,7 +881,7 @@ std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const&
   std::vector<int> l_idx_facet = get_adjacent_facet_indices(sp, i_fac);
   MyMatrix<T> FAC1 = SelectRow(sp.FAC, l_idx_facet);
   MyMatrix<T> FAC2 = FAC1 * cb.NSP.transpose();
-  MyMatrix<T> EXT2 = DirectDualDescription(FAC2, os);
+  MyMatrix<T> EXT2 = DirectDualDescription_mat(FAC2, os);
   SinglePolytope<T> sp2 = get_single_polytope(FAC2, EXT2);
   GeneralizedPolytope<T> gp = difference_p_p(cb.sp, sp2, os);
 

@@ -471,7 +471,7 @@ MyMatrix<T> get_interior_gram_matrix_lrs(LinSpaceMatrix<T> const &LinSpa,
 #endif
   int n = LinSpa.n;
   int dimSpace = LinSpa.ListMat.size();
-  MyMatrix<T> EXT = DirectDualdescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualdescription_mat(FAC, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
   os << "|ISODEL: get_interior_gram_matrix_lrs, DirectDualdescription|="
      << time << "\n";
@@ -2086,7 +2086,7 @@ void WriteDetailedEntryGAP(std::ostream &os_out,
   os_out << ", det:=" << DeterminantMat(ent.DT_gram.GramMat);
   os_out << ", n_shv:=" << SHV_T.rows();
   //
-  MyMatrix<T> EXT = DirectDualDescription(FAC, os);
+  MyMatrix<T> EXT = DirectDualDescription_mat(FAC, os);
   int n_row = EXT.rows();
   std::map<int, size_t> map_rank;
   for (int i_row = 0; i_row < n_row; i_row++) {
@@ -2239,20 +2239,6 @@ struct DataIsoDelaunayDomainsFunc {
     std::vector<int> ListIrred = get_non_redundant_indices(FAC_extend, os);
 #ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
     os << "|ISODEL: f_adj, get_non_redundant_indices|=" << time_f_adj << "\n";
-#endif
-#ifdef SANITY_CHECK_ISO_DELAUNAY_DOMAIN
-    std::vector<int> ListIrred_DD =
-        RedundancyReductionDualDescription(FAC_extend, "lrs", os);
-    Face f_irred = VectorToFace(ListIrred, FAC_extend.rows());
-    Face f_irred_DD = VectorToFace(ListIrred_DD, FAC_extend.rows());
-    if (f_irred != f_irred_DD) {
-      std::cerr << "f_adj, Inconsistency in the computation of redundancy\n";
-      throw TerminalException{1};
-    }
-#ifdef TIMINGS_ISO_DELAUNAY_DOMAIN
-    os << "|ISODEL: f_adj, RedundancyReductionDualDescription|=" << time_f_adj
-       << "\n";
-#endif
 #endif
     size_t nbIrred = ListIrred.size();
     MyMatrix<T> FACred = SelectRow(FAC, ListIrred);
