@@ -50,13 +50,12 @@ template <typename T, typename Tint>
 MyMatrix<T> FindApproximateMatrix(MyMatrix<T> const &A0,
                                   std::vector<MyMatrix<T>> const &B_k,
                                   std::vector<MyMatrix<Tint>> const &ListP,
-                                  tol const &maxDeltaDet) {
+                                  T const &maxDeltaDet) {
   int dim_space = B_k.size();
-  int n_iter = 0;
   std::vector<MyMatrix<T>> ListP_T;
   for (auto &eP : ListP) {
     MyMatrix<T> eP_T = UniversalMatrixConversion<T, Tint>(eP);
-    ListP_T.push_back(EP_T);
+    ListP_T.push_back(eP_T);
   }
   int n_space = ListP.size();
   std::vector<std::vector<MyMatrix<T>>> ll_B_k_P;
@@ -64,7 +63,7 @@ MyMatrix<T> FindApproximateMatrix(MyMatrix<T> const &A0,
     std::vector<MyMatrix<T>> l_B_k_P;
     for (int i_basis = 0; i_basis < dim_space; i_basis++) {
       MyMatrix<T> B_trans =
-          ListP[i_space] * B_k[i_basis] * ListP[i_space].transpose();
+          ListP_T[i_space] * B_k[i_basis] * ListP_T[i_space].transpose();
       l_B_k_P.push_back(B_trans);
     }
     ll_B_k_P.push_back(l_B_k_P);
@@ -76,29 +75,38 @@ MyMatrix<T> FindApproximateMatrix(MyMatrix<T> const &A0,
     MyMatrix<T> Hess_f = ZeroMatrix<T>(dim_space, dim_space);
     //
     for (int i_space = 0; i_space < n_space; i_space++) {
-      MyMatrix<T> const &P = ListP[i_space];
+      MyMatrix<T> const &P = ListP_T[i_space];
       MyMatrix<T> A_P = P * A * P.transpose();
       T det = DeterminantMat(A_P);
       MyMatrix<T> Ainv = Inverse(A_P);
-      f += (det - 1) ^ 2;
+      T diff = det - 1;
+      f += diff * diff;
       for (int i_basis = 0; i_basis < dim_space; i_basis++) {
         MyMatrix<T> const &B1 = ll_B_k_P[i_space][i_basis];
         MyMatrix<T> prod1 = Ainv * B1;
         grad_f(i_basis) += 2 * (det - 1) * det * prod1.trace();
         for (int j_basis = 0; j_basis <= i_basis; j_basis++) {
           MyMatrix<T> const &B2 = ll_B_k_P[i_space][j_basis];
-          MyMatrix<T> prod2 = Ainv * B1;
+          MyMatrix<T> prod2 = Ainv * B2;
           MyMatrix<T> prod12 = prod1 * prod2;
           T h1 = 2 * det * det * prod1.trace() * prod2.trace();
           T h2 = 2 * det * (det - 1) *
                  (prod1.trace() * prod2.trace() - prod12.trace());
           T h = h1 + h2;
-          Hess_F(i_basis, j_basis) += h;
+          Hess_f(i_basis, j_basis) += h;
           if (i_basis != j_basis) {
-            Hess_F(j_basis, i_basis) += h;
+            Hess_f(j_basis, i_basis) += h;
           }
         }
       }
+    }
+    // Newton step: solve Hess_f * delta = -grad_f
+    if (f < maxDeltaDet) {
+      return A;
+    }
+    MyVector<T> delta = -Inverse(Hess_f) * grad_f;
+    for (int i_basis = 0; i_basis < dim_space; i_basis++) {
+      A += delta(i_basis) * B_k[i_basis];
     }
   }
 }

@@ -28,7 +28,7 @@ vectface ReduceVectfaceApproximate(MyMatrix<T> const &EXT, vectface const &vf,
     std::vector<size_t> eList = FaceToVector<size_t>(eFace);
     SelectionRowCol<T> eSelect =
         TMat_SelectRowColMaxPivot_subset(EXT, eList, tolThr);
-    if (eSelect == dim - 1) {
+    if (eSelect.TheRank == dim - 1) {
       Face FullFace(n_row);
       for (int i_row = 0; i_row < n_row; i_row++) {
         T eSum = 0;
@@ -37,13 +37,13 @@ vectface ReduceVectfaceApproximate(MyMatrix<T> const &EXT, vectface const &vf,
         }
         T absSum = T_abs(eSum);
         if (absSum < tolFacet) {
-          FullFacet[i_row] = 1;
+          FullFace[i_row] = 1;
         }
       }
       set.insert(FullFace);
     }
   }
-  vectface vf_ret(m_row);
+  vectface vf_ret(n_row);
   for (auto &eFace : set) {
     vf_ret.push_back(eFace);
   }

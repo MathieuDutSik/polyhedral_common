@@ -41,7 +41,11 @@ template <typename T> T GetUpperBoundHermitePower(int n) {
     return 256;
   }
   int h = n * (n - 1) / 2;
-  return (4 / 3) ^ h;
+  T base = T(4) / T(3);
+  T result(1);
+  for (int i = 0; i < h; i++)
+    result *= base;
+  return result;
 }
 
 /*
@@ -268,7 +272,7 @@ std::vector<MyMatrix<Tint>> Rankin_k_level(MyMatrix<T> const &A, int const &k,
       MyMatrix<Tint> gLatt = ExtendSublattice(vp, eLatt, os);
 #ifdef DEBUG_RANKIN
       MyMatrix<T> gLatt_T = UniversalMatrixConversion<T, Tint>(gLatt);
-      MyMatrix<T> eProdMat = gLatt_T * TheGramMat * gLatt_T.transpose();
+      MyMatrix<T> eProdMat = gLatt_T * A * gLatt_T.transpose();
       T eDet = DeterminantMat(eProdMat);
       if (eDet > MaxDet) {
         std::cerr << "We have eDet=" << eDet << " MaxDet=" << MaxDet << "\n";

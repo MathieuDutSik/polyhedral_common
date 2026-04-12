@@ -44,8 +44,8 @@ MyMatrix<T> sd_get_gram_matrix(MyMatrix<T> const& QuadFunc) {
 }
 
 template<typename T>
-MyMatrix<T> sd_get_linear_term(MyMatrix<T> const& QuadFunc) {
-  int n = sd.QuadFunc.rows() - 1;
+MyVector<T> sd_get_linear_term(MyMatrix<T> const& QuadFunc) {
+  int n = QuadFunc.rows() - 1;
   MyVector<T> V(n);
   for (int i=0; i<n; i++) {
     V(i) = QuadFunc(0, i+1);
@@ -76,11 +76,11 @@ SingleDelaunayReduction<T,Tint> sd_get_single_delaunay_reduction(MyMatrix<T> con
   MyMatrix<T> GramMat_c = Compl_nsp_T * GramMat * Compl_nsp_T.transpose();
   MyMatrix<T> v_lc = Compl_nsp_T * v_lin;
   int dim_compl = NSP.rows();
-  MyMatrix<T> QuadFuncRed(dim_comp+1, dim_compl+1);
+  MyMatrix<T> QuadFuncRed(dim_compl+1, dim_compl+1);
   QuadFuncRed(0, 0) = QuadFunc(0, 0);
   for (int i_compl=0; i_compl<dim_compl; i_compl++) {
-    QuadFuncRed(0, i_compl+1) = v_lc(i);
-    QuadFuncRed(i_compl+1, 0) = v_lc(i);
+    QuadFuncRed(0, i_compl+1) = v_lc(i_compl);
+    QuadFuncRed(i_compl+1, 0) = v_lc(i_compl);
   }
   for (int i_compl=0; i_compl<dim_compl; i_compl++) {
     for (int j_compl=0; j_compl<dim_compl; j_compl++) {
@@ -126,7 +126,7 @@ struct ResultSingleDelaunay {
   std::variant<SingleDelaunay<T,Tint>,SingleDelaunayError<Tint>> res;
   std::optional<SingleDelaunayError<Tint>> get_error() {
     try {
-      return res.get<SingleDelaunayError<Tint>>();
+      return std::get<SingleDelaunayError<Tint>>(res);
     }
     catch (const std::bad_variant_access& ex) {
       return {};
@@ -134,7 +134,7 @@ struct ResultSingleDelaunay {
   }
   std::optional<SingleDelaunay<T,Tint>> get_result() {
     try {
-      return res.get<SingleDelaunay<T,Tint>>();
+      return std::get<SingleDelaunay<T,Tint>>(res);
     }
     catch (const std::bad_variant_access& ex) {
       return {};
@@ -162,12 +162,12 @@ MyVector<T> ConcatenateScalVec(T const& val, MyVector<T> const& v) {
  */
 template<typename T, typename Tint>
 MyVector<Tint> sd_get_negative_vector(T const& a, MyVector<T> const& v_lin, std::ostream& os) {
-  int len = v.size();
+  int len = v_lin.size();
   if (a < 0) {
     return ZeroVector<Tint>(len);
   }
   // We have a >= 0.
-  Myvector<Tint> Vret = ZeroVector<Tint>(len);
+  MyVector<Tint> Vret = ZeroVector<Tint>(len);
   Tint norm(0);
   auto get_val=[](T const& val) -> Tint {
     Tint val_i(1);
@@ -191,7 +191,7 @@ MyVector<Tint> sd_get_negative_vector(T const& a, MyVector<T> const& v_lin, std:
       // a / (2 v_abs) < - x(i)
       //
       Tint val_i = get_val(val);
-      Myvector<Tint> Vtest = ZeroVector<Tint>(len);
+      MyVector<Tint> Vtest = ZeroVector<Tint>(len);
       Vtest(i) = - sign * val_i;
 #ifdef SANITY_CHECK_SINGLE_DELAUNAY
       MyVector<T> Vtest_T = UniversalVectorConversion<T,Tint>(Vtest);
@@ -226,13 +226,13 @@ MyVector<Tint> sd_get_negative_vector(T const& a, MyVector<T> const& v_lin, std:
 template<typename T, typename Tint>
 std::vector<MyVector<Tint>> get_adjacent_vertices(SingleDelaunay<T,Tint> const& sd, std::ostream& os) {
   int n = sd.QuadFunc.rows() - 1;
-  SingleDelaunayReduction<T,Tint> sdr = sd_get_single_delaunay_reduction<T,Tint>(QuadFunc);
+  SingleDelaunayReduction<T,Tint> sdr = sd_get_single_delaunay_reduction<T,Tint>(sd.QuadFunc);
   int dim_compl = sdr.Compl_nsp.rows();
   MyMatrix<Tint> InvBasis = ExtractInvariantVectorFamilyZbasis<T,Tint>(sdr.GramMat_c, os);
   MyMatrix<Tint> Compl_p_NSP = Concatenate(sdr.Compl_nsp, sdr.NSP);
 #ifdef SANITY_CHECK_SINGLE_DELAUNAY
   Tint det = DeterminantMat(Compl_p_NSP);
-  if (T_abs(det) == 1) {
+  if (T_abs(det) != 1) {
     std::cerr << "SD: The determinant should be 1\n";
     throw TerminalException{1};
   }
@@ -258,7 +258,7 @@ std::vector<MyVector<Tint>> get_adjacent_vertices(SingleDelaunay<T,Tint> const& 
     MyVector<Tint> v_basis = GetMatrixRow(InvBasis, i_basis);
     for (auto & eV: set_EXT) {
       MyVector<Tint> eW = eV + v_basis;
-      if (!set_vert.contains(eW)) {
+      if (!set_EXT.contains(eW)) {
         adj_set.insert(eW);
       }
     }
@@ -275,11 +275,11 @@ std::vector<MyVector<Tint>> get_adjacent_vertices(SingleDelaunay<T,Tint> const& 
 
 
 template<typename T, typename Tint>
-ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, std::ostream& os) {
+ResultSingleDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, std::ostream& os) {
   MyMatrix<T> GramMat = sd_get_gram_matrix(QuadFunc);
   int n = GramMat.rows();
   // Testing for positive semidefiniteness
-  if (!IsPositiveSemiDefinite(sd, os)) {
+  if (!IsPositiveSemiDefinite(GramMat, os)) {
     T MaxNorm(0);
     MyVector<Tint> V = GetShortVector<T,Tint>(GramMat, MaxNorm, os);
     MyVector<Tint> Vret = ConcatenateScalVec(Tint(0), V);
@@ -296,7 +296,7 @@ ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, 
   if (!IsZeroVector(v_l_nsp) || cst < 0) {
     MyVector<Tint> V1 = sd_get_negative_vector(cst, v_l_nsp, os);
     MyVector<Tint> V2 = sdr.Compl_nsp.transpose() * V1;
-    MyVector<Tint> V3 = ConcatenateScalVec(T(1), V2);
+    MyVector<Tint> V3 = ConcatenateScalVec(Tint(1), V2);
     std::vector<MyVector<Tint>> ListV{V3};
     std::string reason = "semi-definite, but kernel leads to a non-zero entry";
     SingleDelaunayError<Tint> sde{reason, ListV};
@@ -313,7 +313,7 @@ ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, 
   if (cst_c < 0) {
     std::vector<MyVector<Tint>> ListV;
     int n_vect = result.ListVect.rows();
-    for (int i_vect=0; i_vect<n_evct; i_vect++) {
+    for (int i_vect=0; i_vect<n_vect; i_vect++) {
       MyVector<Tint> V1 = GetMatrixRow(result.ListVect, i_vect);
       MyVector<Tint> V2 = sdr.Compl_nsp.transpose() * V1;
       MyVector<Tint> V3 = ConcatenateScalVec(Tint(1), V2);
@@ -332,7 +332,7 @@ ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, 
   }
   // The vectors to be returned
   int n_ext = result.ListVect.rows();
-  MyMatrix<Tint> EXTred = result.ListVect * Compl_nsp;
+  MyMatrix<Tint> EXTred = result.ListVect * sdr.Compl_nsp;
   MyMatrix<Tint> EXT(n_ext, n + 1);
   for (int i_ext=0; i_ext<n_ext; i_ext++) {
     EXT(i_ext, 0) = 1;
@@ -354,7 +354,7 @@ ResultQuadFuncDelaunay<T,Tint> get_single_delaunay(MyMatrix<T> const& QuadFunc, 
   
  */
 template<typename T, typename Tint>
-SingleDeleunay<T,Tint> flip_evolution(SingleDelaunay<T,Tint> const& sd, MyMatrix<T> const& dir_change, std::ostream& os) {
+SingleDelaunay<T,Tint> flip_evolution(SingleDelaunay<T,Tint> const& sd, MyMatrix<T> const& dir_change, std::ostream& os) {
   int n_ext = sd.EXT.rows();
   std::vector<MyVector<Tint>> ListOutVertices;
   // Finding the vertices that are not in the intersection
@@ -391,8 +391,8 @@ SingleDeleunay<T,Tint> flip_evolution(SingleDelaunay<T,Tint> const& sd, MyMatrix
       MyVector<T> V2 = ScalarCanonicalizationVector(V1);
       set_ineq.insert(V2);
     }
-    std::vector<MyVector<T>> l_ineq.insert(l_ineq.begin(), set_ineq.begin(), set_ineq.end());
-    std::vect<T> EXT1 = l_ineq[0];
+    std::vector<MyVector<T>> l_ineq(set_ineq.begin(), set_ineq.end());
+    MyVector<T> EXT1 = l_ineq[0];
     MyVector<T> EXT2 = l_ineq[1];
     T det12 = get_det(EXT1, EXT2);
     if (det12 == 0) {
@@ -452,12 +452,12 @@ SingleDeleunay<T,Tint> flip_evolution(SingleDelaunay<T,Tint> const& sd, MyMatrix
         ListOutVertices.push_back(eEXT);
       }
     } else {
-      std::optional<SingleDelaunay<T,Tint>> opt = res.get_result();
-      if (!opt) {
+      std::optional<SingleDelaunay<T,Tint>> opt_res = res.get_result();
+      if (!opt_res) {
         std::cerr << "SD: We should have a result\n";
         throw TerminalException{1};
       }
-      return *opt;
+      return *opt_res;
     }
   }
 }
@@ -487,7 +487,7 @@ std::vector<MyMatrix<T>> sd_get_orbit_directions(SingleDelaunay<T,Tint> const& s
     MyVector<T> V(n_ext);
     for (int i_ext=0; i_ext<n_ext; i_ext++) {
       MyVector<T> eEXT = GetMatrixRow(sd.EXT, i_ext);
-      T val = EvaluationQuadForm(basis_dir[i_dir], eEXT);
+      T val = EvaluationQuadForm(M, eEXT);
       V(i_ext) = val;
     }
     return V;

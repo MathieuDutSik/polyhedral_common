@@ -41,6 +41,7 @@ WeightMatrix<true, T, uint32_t> GetWeightMatrix(MyMatrix<T> const &eG,
       M(i_row, j_row) = pos;
     }
   }
+  return M;
 }
 
 // clang-format off

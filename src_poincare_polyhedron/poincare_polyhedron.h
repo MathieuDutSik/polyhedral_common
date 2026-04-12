@@ -39,7 +39,7 @@ DataEXT<T> DirectDataExtComputation(MyMatrix<T> const &FAC,
     ListVert.push_back(pair_face.second);
   };
   DirectFacetComputationFaceIneq(FAC, eCommand_DD, f_process, os);
-  MyVector<T> EXT = MatrixFromVectorFamily(ListVert);
+  MyMatrix<T> EXT = MatrixFromVectorFamily(ListVert);
   int n_ext = EXT.rows();
   std::vector<Face> v_red(n_fac, Face(n_ext));
   size_t pos = 0;
@@ -315,7 +315,7 @@ public:
   CombElt<T> GetElement(std::pair<size_t, size_t> const &val) const {
     size_t i_coset = val.first;
     size_t i_elt = val.second;
-    if (i_coset > ListNeighborCoset.size()) {
+    if (i_coset >= ListNeighborCoset.size()) {
       std::cerr << "Accessing something over the index\n";
       throw TerminalException{1};
     }
