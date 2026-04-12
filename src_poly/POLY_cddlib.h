@@ -91,7 +91,7 @@ template <typename T> inline bool dd_EqualFrac(T val1, T q1, T val2, T q2) {
   assert(q1 > 0);
   assert(q2 > 0);
 #endif
-  return val1 * q2 < val2 * q1;
+  return val1 * q2 == val2 * q1;
 }
 
 template <typename T> inline void dd_abs(T &absval, T val) {
