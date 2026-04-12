@@ -160,7 +160,7 @@ Kernel_DUALDESC_SamplingFacetProcedure(MyMatrix<T> const &EXT,
 #ifdef DEBUG_SAMPLING_FACET
       os << "SAMP: Nothing more to do, exiting\n";
 #endif
-      get_vectface();
+      return get_vectface();
     }
     for (auto &eFace : vf_undone) {
       set_as_done(eFace);

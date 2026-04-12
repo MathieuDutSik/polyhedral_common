@@ -131,7 +131,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
   auto GoUpNextInTree = [&]() -> bool {
     while (true) {
       OneLevel &level = l_levels[i_level];
-      if (level.choice < level.l_sol.size() - 1) {
+      if (level.choice + 1 < level.l_sol.size()) {
         level.choice += 1;
         return true;
       }
