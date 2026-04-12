@@ -810,14 +810,15 @@ get_first_next_vector_isotropic(MyMatrix<T> const &G, MyVector<Tint> const &r0,
       EnumerateVectorFixedNorm_Factorization<T, Tint>(F, SearchNorm);
   auto is_corr = [&](MyVector<Tint> const &x) -> bool {
     T norm = eval_quad(G, x);
-    if (norm != SearchNorm)
+    if (norm != SearchNorm) {
       return false;
+    }
     T scal = eval_scal(G, r0, x);
-    if (scal <= 0)
+    if (scal <= 0) {
       return false;
+    }
     return det_two(r0, x) > 0;
   };
-  std::vector<MyVector<Tint>> l_sol_red;
   std::optional<MyVector<Tint>> e_sol;
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
   size_t n_match = 0;
@@ -828,11 +829,12 @@ get_first_next_vector_isotropic(MyMatrix<T> const &G, MyVector<Tint> const &r0,
       n_match++;
 #endif
       if (e_sol) {
-        if (det_two(e_v, *e_sol) > 0)
+        if (det_two(e_v, *e_sol) > 0) {
           e_sol = e_v;
+        }
+      } else {
+        e_sol = e_v;
       }
-    } else {
-      e_sol = e_v;
     }
   }
 #ifdef DEBUG_TWO_DIM_LORENTZIAN
