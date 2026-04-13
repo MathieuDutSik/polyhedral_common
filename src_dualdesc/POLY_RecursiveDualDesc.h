@@ -2875,7 +2875,7 @@ vectface ReadFacets(std::string const &Format, std::string const &File,
 template <typename T>
 void OutputFacets_stream(const MyMatrix<T> &EXT, const vectface &TheOutput,
                          std::ostream &os_out, const std::string &OutFormat,
-                         std::ostream &os) {
+                         [[maybe_unused]] std::ostream &os) {
   if (OutFormat == "Magma") {
     os_out << "return ";
     VectVectInt_Magma_Print(os_out, TheOutput);

@@ -861,7 +861,6 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 1\n";
 #endif
-    std::vector<MyVector<T>> ListIneq;
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
     ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
         get_generic_robust_m(min_m, G, eV_red, os);
@@ -1131,7 +1130,6 @@ template <typename T, typename Tint>
 std::optional<PVoronoi<T, Tint>>
 find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const& G = solver.GramMat;
-  MyMatrix<T> G_inv = Inverse(G);
   std::optional<PVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
@@ -1336,7 +1334,6 @@ find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
-  MyMatrix<T> G_inv = Inverse(G);
   T min_norm = min_pairwise_norm(pvd.EXT, G);
   BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
