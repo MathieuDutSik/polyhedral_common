@@ -56,10 +56,8 @@ CombineUndoneOrbitInfo(const std::vector<UndoneOrbitInfo<Tint>> &LComb) {
 template <typename Tint>
 bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
                          const Tint &CritSiz) {
-  if (eComb.nbOrbitDone > 0)
-    if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
-      return true;
-  return false;
+  return eComb.nbOrbitDone > 0 &&
+    (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0);
 }
 
 // The condition on nbOrbitDone make the check more complex.
@@ -68,9 +66,7 @@ bool ComputeStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
 template <typename Tint>
 bool MonotonicCheckStatusUndone(const UndoneOrbitInfo<Tint> &eComb,
                                 const Tint &CritSiz) {
-  if (eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0)
-    return true;
-  return false;
+  return eComb.nbUndone <= CritSiz || eComb.eSetUndone.count() > 0;
 }
 
 template <typename Tint> struct StatusUndoneOrbitInfo {

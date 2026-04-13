@@ -2603,10 +2603,7 @@ vectface DUALDESC_AdjacencyDecomposition(
       WeightMatrix<true, int, Tidx_value> WMat =
           WeightMatrixFromPairOrbits<Tgroup, Tidx_value>(TheGRPrelevant, os);
       auto f_repr = [&](const Face &f1, const Face &f2) -> bool {
-        auto test = TheGRPrelevant.RepresentativeAction_OnSets(f1, f2);
-        if (test)
-          return true;
-        return false;
+        return TheGRPrelevant.RepresentativeAction_OnSets(f1, f2).has_value();
       };
       auto f_orbitsize = [&](const Face &f) -> Tint {
         return TheGRPrelevant.OrbitSize_OnSets(f);

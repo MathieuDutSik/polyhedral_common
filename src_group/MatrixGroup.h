@@ -1030,9 +1030,7 @@ FindingSmallOrbit(std::vector<MyMatrix<T>> const &ListMatrGen,
     size_t pos = 0;
     auto f_terminate = [&]([[maybe_unused]] MyVector<Tmod> const &a) -> bool {
       pos++;
-      if (pos == n_limit)
-        return true;
-      return false;
+      return pos == n_limit;
     };
     Tmod TheMod_mod = UniversalScalarConversion<Tmod, T>(TheMod);
     auto f_prod = [&](MyVector<Tmod> const &eClass,

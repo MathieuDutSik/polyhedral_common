@@ -51,18 +51,14 @@ template <typename T> bool IsDiagramSpherical(IrrCoxDyn<T> const &cd) {
 
 template <typename T> bool IsDiagramSimplyLaced(IrrCoxDyn<T> const &cd) {
   std::string type = cd.type;
-  if (type == "A" || type == "D" || type == "E")
-    return true;
-  return false;
+  return type == "A" || type == "D" || type == "E";
 }
 
 template <typename T>
 bool IsDiagramIntegerLorentzianFeasible(IrrCoxDyn<T> const &cd) {
   std::string type = cd.type;
   if (type == "I") {
-    if (cd.dim == 1 && cd.param == practical_infinity<T>())
-      return true;
-    return false;
+    return cd.dim == 1 && cd.param == practical_infinity<T>();
   }
   if (type == "H")
     return false;

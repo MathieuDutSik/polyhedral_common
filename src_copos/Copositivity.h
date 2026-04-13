@@ -70,9 +70,7 @@ Tint FindLargest(T const &a, T const &b, T const &c) {
   Tint eReturn = UniversalScalarConversion<Tint, double>(x1);
   auto f = [&](Tint const &x) -> bool {
     T eDiff = c - a * x - b * x * x;
-    if (eDiff >= 0)
-      return true;
-    return false;
+    return eDiff >= 0;
   };
   bool test1 = f(eReturn);
   bool test2 = f(eReturn + 1);
