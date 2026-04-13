@@ -119,7 +119,7 @@ int main(int argc, char *argv[]) {
   while (true) {
     size_t e_rand = random();
     size_t pos = e_rand % nb_ent;
-    MyMatrix<Tint> eMat = NC_ReadMatrix(pos);
+    (void)NC_ReadMatrix(pos);
     //
     std::chrono::time_point<std::chrono::system_clock> aft =
         std::chrono::system_clock::now();

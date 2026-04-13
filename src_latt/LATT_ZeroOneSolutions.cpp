@@ -10,7 +10,6 @@ void DoProcessing(MyMatrix<T> const &M, MyVector<T> const &B, F f) {
   std::option<MyVector<T>> opt = SolutionIntMat(Mtr, B);
   if (!opt)
     return;
-  MyMatrix<T> NSP = NullspaceIntMat(Mtr);
 }
 
 int main(int argc, char *argv[]) {

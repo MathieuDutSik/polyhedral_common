@@ -187,9 +187,6 @@ void EnumerateShortVectorInCone_UnderPositivityCond_F(
   std::vector<T> ListH(n);
   // values of the Lambda_i:
   std::vector<T> Lambda(n);
-  // PartialSum is defined as
-  // PartialSum[i][j]
-  MyMatrix<T> PartialSum = ZeroMatrix<T>(n + 1, n + 1);
   auto ComputeHXZmaxNorm = [&](int const &nupdt) -> void {
   // First we can compute the ListH just from the X
 #ifdef DEBUG_COPOSITIVITY

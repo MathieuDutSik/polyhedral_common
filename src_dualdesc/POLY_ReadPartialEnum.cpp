@@ -43,8 +43,6 @@ int main(int argc, char *argv[]) {
     std::string eFileFN = DatabaseI + ".nb";
     std::string eFileFB = DatabaseI + ".fb";
     std::string eFileFF = DatabaseI + ".ff";
-    std::string OFileEXT = DatabaseI + ".ext";
-    std::string OFileMethod = DatabaseI + ".method";
     bool overwrite = false;
     FileNumber fn(eFileFN, overwrite);
     size_t n_orbit = fn.getval();

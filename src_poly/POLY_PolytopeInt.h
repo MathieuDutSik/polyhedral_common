@@ -446,7 +446,7 @@ void Kernel_Enumerate01_solutions_Iterate(MyMatrix<T> const &A,
   if (!opt)
     return;
   MyVector<T> const &ePt = *opt;
-  MyMatrix<T> NSP = NullspaceIntMat(A);
+  (void)ePt;
 }
 
 // clang-format off
