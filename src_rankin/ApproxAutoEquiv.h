@@ -11,7 +11,6 @@ template <typename T, typename Tint>
 WeightMatrix<true, T, uint32_t> GetWeightMatrix(MyMatrix<T> const &eG,
                                                 MyMatrix<Tint> const &SHV,
                                                 T const &tol) {
-  int n = eG.rows();
   int n_row = SHV.rows();
   // We have a linear algorithm, but we could use a std::set<T> to get a linear
   // algorithm.

@@ -41,7 +41,7 @@ int main(int argc, char *argv[]) {
       FileO = argv[3];
     }
     //
-    MyMatrix<T> M = ReadMatrixFile<T>(argv[1]);
+    MyMatrix<T> M = ReadMatrixFile<T>(FileI);
     //
     auto print_result = [&](std::ostream &os) -> void {
       ResultReduction<T, Tint> res = IndefiniteReduction<T, Tint>(M, std::cerr);

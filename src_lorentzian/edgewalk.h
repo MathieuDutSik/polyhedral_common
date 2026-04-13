@@ -696,7 +696,6 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   // Determine if the plane P is isotropic and if not compute the set of test
   // vectors
   //
-  MyMatrix<T> G_Pplane = Pplane * G * Pplane.transpose();
   struct SingCompAnisotropic {
     MyMatrix<T> Latt;
     MyVector<Tint> r0_work;
@@ -1101,9 +1100,7 @@ EdgewalkProcedure(CuspidalBank<T, Tint> &cusp_bank, SublattInfos<T> const &si,
   };
   std::vector<MyVector<T>> l_gens;
   for (auto &U : BasisIsotrop) {
-    T sum = U.dot(Gred * U);
     MyVector<T> gen = Pplane.transpose() * U;
-    T sum_B = gen.dot(G * gen);
     if (!IsVectorMultiple(gen, k)) {
       MyVector<T> can_gen = get_can_gen(gen);
       T scal = v_disc_t.dot(G * can_gen);
@@ -1828,7 +1825,6 @@ get_simple_cone_from_lattice(SublattInfos<T> const &si,
 #endif
   int dimSpace = NSP_tint.rows();
   MyMatrix<T> NSP = UniversalMatrixConversion<T, Tint>(NSP_tint);
-  MyMatrix<Tint> G_int = UniversalMatrixConversion<Tint, T>(G);
   std::vector<MyVector<Tint>> l_roots;
   MyVector<T> zeroVect = ZeroVector<T>(dimSpace);
   for (auto &e_norm : l_norms) {
@@ -2027,7 +2023,6 @@ MyMatrix<Tint> get_simple_cone(SublattInfos<T> const &si, MyVector<T> const &V,
 #endif
     auto get_kP = [&]() -> MyVector<T> {
       MyMatrix<T> Gprod = -Pplane * G * Pplane.transpose();
-      T CritNorm = 0;
 #ifdef DEBUG_EDGEWALK
       os << "EDGE: Gprod=\n";
       WriteMatrix(os, Gprod);

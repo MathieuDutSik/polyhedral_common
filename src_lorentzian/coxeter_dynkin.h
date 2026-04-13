@@ -455,7 +455,6 @@ RecognizeIrreducibleSphericalEuclideanDiagram(const MyMatrix<T> &M) {
     if (multiplicity[val_four] == 1) {
       // Possibilities: Bn=Cn, F4, tilde{F4}, and B2 are possible
       if (n_vert == 2) {
-        T param = 4;
         // Case below is actually I2(4)
         return IrrCoxDyn<T>{"B", 2, 0};
       }

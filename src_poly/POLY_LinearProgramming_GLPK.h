@@ -678,8 +678,6 @@ GLPK_LinearProgramming(MyMatrix<T> const &ListIneq,
         AssignMatrixRow(ColumnSpace, pos, eVec);
       }
     }
-    MyMatrix<T> SEC_ListIneq = ListIneq * TransposedMat(ColumnSpace);
-    MyVector<T> SEC_ToBeMinimized = ColumnSpace * ToBeMinimized;
     LpSolution<T> TheLP = CDD_LinearProgramming(ListIneq, ToBeMinimized, os);
     if (TheLP.PrimalDefined && TheLP.DualDefined) {
       MyVector<T> DirectSolutionExt = GetDirectSolutionExt(TheLP);

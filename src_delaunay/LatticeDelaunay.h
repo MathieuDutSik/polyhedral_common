@@ -250,9 +250,7 @@ PolytopeGen_TestEquivalence(DataLattice<T, Tint, Tgroup> &eData,
 #endif
     return {};
   }
-  Face eFace = get_face_delaunay_shv(EXT1_T, eData.SHV);
   Telt const &eElt = *eRes;
-  Telt eEltRed = ReduceElementActionFace(eElt, eFace);
   MyMatrix<T> MatEquiv_T = FindTransformation<T, Telt>(EXText1, EXText2, eElt);
   if (IsIntegralMatrix(MatEquiv_T)) {
 #ifdef DEBUG_DELAUNAY_ENUMERATION

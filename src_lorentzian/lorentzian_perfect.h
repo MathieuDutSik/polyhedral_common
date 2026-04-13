@@ -173,7 +173,6 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 1\n";
 #endif
-  MyVector<Tint> eVect_tint = UniversalVectorConversion<Tint, T>(eVect);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
   os << "LORPERF: LORENTZ_FindPositiveVectors: step 2\n";
 #endif
@@ -256,7 +255,6 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 2\n";
 #endif
-    MyVector<T> eBasSol_T = UniversalVectorConversion<T, Tint>(eBasSol);
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 3\n";
 #endif
@@ -281,7 +279,6 @@ std::vector<MyVector<Tint>> LORENTZ_FindPositiveVectorsKernel(
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 7 eSol="
        << StringVector(eSol) << "\n";
 #endif
-    T beta = eVal * alpha_basic;
     T eSquareDist = eVal * eVal * eSquareDist_basic;
 #ifdef DEBUG_LORENTZIAN_FIND_POSITIVE_VECTORS
     os << "LORPERF: LORENTZ_FindPositiveVectors: while step 8 eSquareDist="
@@ -729,10 +726,6 @@ LORENTZ_Kernel_Flipping(MyMatrix<T> const &LorMat,
 #ifdef DEBUG_LORENTZIAN_PERFECT
   int n_iter = 0;
 #endif
-  MyVector<T> eVectBas = LorMatInv * GetReducedVector(eNSPbas);
-  MyVector<T> eVectDir = LorMatInv * GetReducedVector(eNSPdir);
-  T eNormBas = EvaluationQuadForm<T, T>(LorMat, eVectBas);
-  T eNormDir = EvaluationQuadForm<T, T>(LorMat, eVectDir);
   std::vector<MyVector<Tint>> ListTotal;
   while (true) {
 #ifdef DEBUG_LORENTZIAN_PERFECT

@@ -206,7 +206,6 @@ DiagSymMatSymbolic DiagonalizeSymmetricMatrixSymbolicKernel(MyMatrix<T> const &S
   static_assert(is_ring_field<T>::value, "Requires T to be a field");
   int n1 = SymMat.rows();
   NSPreduction<T> NSP1 = NullspaceReduction(SymMat);
-  MyMatrix<T> RMat1 = NSP1.Transform;
   MyMatrix<T> SymMat2 = NSP1.NonDegenerate;
   DiagSymMat<T> Diag = DiagonalizeNonDegenerateSymmetricMatrix(SymMat2, os);
   int n2 = SymMat2.rows();

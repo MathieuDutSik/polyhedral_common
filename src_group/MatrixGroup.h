@@ -757,7 +757,6 @@ inline RetMI_S<T, Tgroup> MatrixIntegral_Stabilizer(
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: MatrixIntegral_Stabilizer(!has), index=" << index << "\n";
 #endif
-  Telt id_perm = stab.get_identity();
 #ifdef DEBUG_MATRIX_GROUP
   os << "MATGRP: MatrixIntegral_Stabilizer(!has), comp(ListMatrGens)="
      << compute_complexity_listmat(ListMatrGens) << "\n";
@@ -2301,7 +2300,6 @@ std::optional<ResultTestModEquivalence<T>> LinearSpace_ModEquivalence_Tmod(
      << " det(TheSpace2)=" << DeterminantMat(TheSpace2) << "\n";
 #endif
   MyMatrix<T> ModSpace = TheMod * IdentityMat<T>(n);
-  MyMatrix<T> TheSpace1Mod = Concatenate(TheSpace1, ModSpace);
   MyMatrix<T> TheSpace2Mod = Concatenate(TheSpace2, ModSpace);
   std::vector<MyMatrix<T>> ListMatrRet = ListMatr;
 #ifdef DEBUG_MATRIX_GROUP

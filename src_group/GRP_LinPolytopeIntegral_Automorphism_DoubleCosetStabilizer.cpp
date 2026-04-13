@@ -44,7 +44,6 @@ void process_A(std::string const &FileExt, std::string const &FileGrpV,
     }
     l_dcs.push_back(eDCS.cos);
   }
-  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup const &GRP = pair.first;
   auto get_perms_as_string =
       [&](std::vector<Telt> const &l_elt) -> std::string {

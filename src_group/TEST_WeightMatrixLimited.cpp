@@ -46,7 +46,6 @@ int main(int argc, char *argv[]) {
         for (int iter2 = 0; iter2 < n_iter2; iter2++) {
           std::cerr << "    iter2=" << iter2 << " / " << n_iter2 << "\n";
           Telt eElt = GRP.rand();
-          Face fFace = OnFace(eFace, eElt);
           size_t hash2 = WMatLimited.get_hash(eFace);
           if (hash1 != hash2) {
             std::cerr << "hash1=" << hash1 << " hash2=" << hash2 << "\n";

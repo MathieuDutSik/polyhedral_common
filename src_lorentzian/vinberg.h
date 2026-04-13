@@ -530,7 +530,6 @@ Get_DataMapping(const VinbergTot<T, Tint> &Vtot, const MyVector<Tint> &a,
   MyMatrix<T> Gs_T = UniversalMatrixConversion<T, Tint>(Gs);
   MyMatrix<T> InvGs_T = Inverse(Gs_T);
   MyVector<T> Vs = InvGs_T * UniversalVectorConversion<T, Tint>(Ws);
-  MyVector<Tint> Mw0 = Vtot.Morth * w0;
   MyVector<Tint> apMw0 = a + Vtot.Morth * w0;
   Tint term1 = k - apMw0.dot(Vtot.G * apMw0);
   T term2 = Vs.dot(Gs_T * Vs);

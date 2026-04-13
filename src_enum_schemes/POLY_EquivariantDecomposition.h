@@ -207,7 +207,6 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
   //   component of a facet to a
   //
   int nbRow = EXT.rows();
-  int nbCol = EXT.cols();
   MyMatrix<T> EXT = ColumnReduction(EXT);
   MyVector<T> eVect = Isobarycenter(EXT);
   std::string ansSamp = HeuristicEvaluation(TheMap, AllArr.InitialFacetSet);
@@ -284,7 +283,6 @@ std::vector<ComponentDecomposition<T, Tgroup>> get_full_decomposition(
       std::vector<ComponentDecomposition<T, Tgroup>> local_vec_cd =
           get_full_decomposition(EXT2, eStab2, AllArr, os);
       size_t n_orbit = local_vec_cd.size();
-      int nbVect = EXT1.rows();
       list_siz_n_orbit.push_back(n_comp);
       list_shift_n_orbit.push_back(vec_cd.size());
       for (size_t i_orbit = 0; i_orbit < n_orbit; i_orbit++) {

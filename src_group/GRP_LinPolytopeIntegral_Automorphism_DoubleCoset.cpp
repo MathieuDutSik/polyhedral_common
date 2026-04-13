@@ -21,7 +21,6 @@ void process_A(std::string const &FileExt, std::string const &FileGrpV,
   std::pair<Tgroup, std::vector<Telt>> pair =
       LinPolytopeIntegral_Automorphism_DoubleCoset<Tint, Tgroup>(EXT, GrpV,
                                                                  std::cerr);
-  MyMatrix<Tfield> EXT_T = UniversalMatrixConversion<Tfield, Tint>(EXT);
   Tgroup const &GRP = pair.first;
   auto get_perms_as_string =
       [&](std::vector<Telt> const &l_elt) -> std::string {
