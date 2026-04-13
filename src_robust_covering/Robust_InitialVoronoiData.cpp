@@ -44,7 +44,7 @@ void process_A(std::string const &arithmetic, std::string MatFile,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 6 && argc != 4) {
+    if (argc != 5 && argc != 3) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "Robust_InitialPpolytopeVoronoiData arithmetic [MaFile] "

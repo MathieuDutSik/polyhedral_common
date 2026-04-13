@@ -779,7 +779,7 @@ DirectFacetIneqOrbitComputation(MyMatrix<T> const &EXT, Tgroup const &GRP,
   We need somewhat better method for choosing the heuristics.
  */
 template <typename T>
-std::string get_dual_desc_method(MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream &os) {
+std::string get_dual_desc_method([[maybe_unused]] MyMatrix<T> const &EXT, [[maybe_unused]] std::ostream &os) {
   std::string ansProg = "lrs";
   return ansProg;
 }

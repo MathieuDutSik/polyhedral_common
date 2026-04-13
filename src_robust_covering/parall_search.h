@@ -57,7 +57,6 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
                                      Finsert f_insert,
                                      [[maybe_unused]] std::ostream &os) {
   int n_vect = dv.n_vect;
-  int miss_val = std::numeric_limits<int>::max();
 #ifdef DEBUG_ENUM_PARALL_SEARCH
   os << "PARALL:   kernel_enumerate_parallelepiped, n_vect=" << n_vect << "\n";
 #endif
@@ -101,7 +100,6 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
     }
     return list_sol;
   };
-  auto get_empty = [&]() -> PartSolution { return {miss_val, {}, {}}; };
   auto get_all_starts = [&]() -> std::vector<PartSolution> {
     std::vector<PartSolution> l_sol;
     for (int i_vect = 0; i_vect < n_vect; i_vect++) {
@@ -113,15 +111,13 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
     return l_sol;
   };
   struct OneLevel {
-    PartSolution prev_sol;
     std::vector<PartSolution> l_sol;
     size_t choice;
   };
   auto get_initial = [&]() -> OneLevel {
-    PartSolution prev_sol = get_empty();
     std::vector<PartSolution> l_sol = get_all_starts();
     size_t choice = 0;
-    return {prev_sol, l_sol, choice};
+    return {std::move(l_sol), choice};
   };
   std::vector<OneLevel> l_levels{get_initial()};
 #ifdef DEBUG_ENUM_PARALL_SEARCH_DISABLE
@@ -169,7 +165,7 @@ void kernel_enumerate_parallelepiped(DataVect<Tint> const &dv, int const &p,
         return GoUpNextInTree();
       }
       size_t new_choice = 0;
-      OneLevel new_level{psol, new_sols, new_choice};
+      OneLevel new_level{new_sols, new_choice};
       int new_i_level = i_level + 1;
       if (l_levels.size() >= static_cast<size_t>(new_i_level + 1)) {
         l_levels[new_i_level] = new_level;
