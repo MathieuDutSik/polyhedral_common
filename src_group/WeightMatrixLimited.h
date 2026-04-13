@@ -503,7 +503,7 @@ public:
         size_t eVal = eList[u];
         for (size_t v = 0; v < nbVert; v++) {
           if (u != v) {
-            size_t fVal = eList[u];
+            size_t fVal = eList[v];
             insert_offdiag_pair_gen(eVal, fVal, 0);
           }
         }

@@ -1107,7 +1107,7 @@ MyMatrix<T> tot_set(MyMatrix<T> const& EXTin) {
   for (int i_row=0; i_row<EXTin.rows(); i_row++) {
     f_insert(i_row);
   }
-  MyMatrix<T> M(EXTin.rows(), EXTin.cols());
+  MyMatrix<T> M(set.size(), EXTin.cols());
   int pos = 0;
   for (auto & V: set) {
     AssignMatrixRow(M, pos, V);

@@ -553,7 +553,7 @@ bool TestInclusionProperFace(std::vector<int> const &eSet,
       }
     }
     MyMatrix<T> BasisSpann = RowReduction(ListVectSpann);
-    int nbRowSpann = BasisSpann->nbRow;
+    int nbRowSpann = BasisSpann.rows();
     int LPdim = nbCol - nbRowSpann;
     MyMatrix<T> PreTheTot = Concatenate(BasisSpann, eMatId);
     MyMatrix<T> TheTot = RowReduction(PreTheTot);
