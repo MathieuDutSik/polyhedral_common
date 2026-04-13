@@ -284,14 +284,14 @@ ReplyRealizability<T, Tint> SHORT_TestRealizabilityShortestFamily_Raw(
 #ifdef DEBUG_SHORTEST_CONFIG
       os << "SHORT: DualDefined but not primal defined\n";
 #endif
-      int nbIneqSet = SetIneq.size();
-      MyVector<T> SumIneq = ZeroVector<T>(1 + nbIneqSet);
+      int nbIneqSet = SetIneq.rows();
+      MyVector<T> SumIneq = ZeroVector<T>(dimSpa + 1);
       for (int i = 0; i < nbIneqSet; i++) {
-        MyMatrix<T> eRow = GetMatrixRow(SetIneq, i);
+        MyVector<T> eRow = GetMatrixRow(SetIneq, i);
         SumIneq += eSol.DualSolution(i) * eRow;
       }
       bool IsZeroVector = true;
-      for (int i = 0; i < nbIneqSet; i++) {
+      for (int i = 0; i < dimSpa; i++) {
         if (SumIneq(i + 1) != 0) {
           IsZeroVector = false;
         }

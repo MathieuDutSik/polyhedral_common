@@ -445,7 +445,7 @@ bool compute_adjacency_mpi(boost::mpi::communicator &comm,
     }
     if (e_tag == tag_early_termination) {
       int val_recv;
-      comm.recv(e_src, tag_termination, val_recv);
+      comm.recv(e_src, tag_early_termination, val_recv);
       early_termination = true;
 #ifdef TIMINGS_MPI_ADJACENCY_SCHEME
       os << "|MPI_ADJ_SCH: process_mpi_status 6|=" << time << "\n";

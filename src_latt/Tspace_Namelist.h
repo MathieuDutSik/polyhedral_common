@@ -374,6 +374,7 @@ LinSpaceMatrix<T> ReadTspace(SingleBlock const &Blk, std::ostream &os) {
         std::cerr << "We have 0 matrices\n";
         throw TerminalException{1};
       }
+      LinSpaRet.n = LGen[0].rows();
       LinSpaRet.ListMat = BasisInvariantForm(LinSpaRet.n, LGen, os);
       set_paperwork();
       set_supermat();

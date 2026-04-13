@@ -297,7 +297,7 @@ template<typename Tidx> struct hash<triple<Tidx>> {
 
 template <typename Tidx>
 bool operator==(triple<Tidx> const &obj1, triple<Tidx> const &obj2) {
-  return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.j;
+  return obj1.i == obj2.i && obj1.j == obj2.j && obj1.k == obj2.k;
 }
 
 template <typename T> bool CheckCoveringParityClasses(MyMatrix<T> const &M) {

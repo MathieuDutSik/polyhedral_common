@@ -1509,7 +1509,8 @@ dd_matrixdata<T> *dd_MatrixNormalizedSortedCopy(dd_matrixdata<T> *M,
   /* Sort the rows of Amatrix lexicographically, and return a link to this
   sorted copy. The vector newpos is allocated, where newpos[i] returns the new
   row index of the original row i (i=1,...,M->rowsize). */
-  dd_matrixdata<T> *Mcopy = nullptr, Mnorm = nullptr;
+  dd_matrixdata<T> *Mcopy = nullptr;
+  dd_matrixdata<T> *Mnorm = nullptr;
   dd_rowrange m, i;
   dd_colrange d;
 
@@ -1596,7 +1597,8 @@ dd_MatrixNormalizedSortedUniqueCopy(dd_matrixdata<T> *M,
      of the original row i (i=1,...,M->rowsize).  *newpos[i] is negative if the
      original row is dominated by -*newpos[i] and eliminated in the new copy.
   */
-  dd_matrixdata<T> *M1 = nullptr, M2 = nullptr;
+  dd_matrixdata<T> *M1 = nullptr;
+  dd_matrixdata<T> *M2 = nullptr;
   dd_rowrange m, i;
   dd_colrange d;
   dd_rowindex newpos1 = nullptr, newpos2 = nullptr;
@@ -1638,7 +1640,8 @@ dd_matrixdata<T> *dd_MatrixSortedUniqueCopy(dd_matrixdata<T> *M,
   /* Same as dd_MatrixNormalizedSortedUniqueCopy except that it returns a
      unnormalized origial data with original ordering.
   */
-  dd_matrixdata<T> *M1 = nullptr, M2 = nullptr;
+  dd_matrixdata<T> *M1 = nullptr;
+  dd_matrixdata<T> *M2 = nullptr;
   dd_rowrange m, i, k, ii;
   dd_colrange d;
   dd_rowindex newpos1 = nullptr, newpos2 = nullptr;
@@ -2346,7 +2349,9 @@ dd_matrixdata<T> *dd_BlockElimination(dd_matrixdata<T> *M, dd_colset delset,
 
 */
 {
-  dd_matrixdata<T> *Mdual = nullptr, Mproj = nullptr, Gdual = nullptr;
+  dd_matrixdata<T> *Mdual = nullptr;
+  dd_matrixdata<T> *Mproj = nullptr;
+  dd_matrixdata<T> *Gdual = nullptr;
   dd_rowrange i, h, m, mproj, mdual, linsize;
   dd_colrange j, k, d, dproj, ddual, delsize;
   T temp, prod;

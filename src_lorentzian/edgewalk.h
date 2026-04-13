@@ -2279,8 +2279,9 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
         } else {
           os_out << "return fail;\n";
         }
+        return;
       }
-      std::cerr << "We fil to have a matching format. OutFormat=" << OutFormat
+      std::cerr << "We fail to have a matching format. OutFormat=" << OutFormat
                 << "\n";
       throw TerminalException{1};
     };
@@ -2301,7 +2302,7 @@ void MainFunctionEdgewalk_Isomorphism(FullNamelist const &eFull,
   }
   std::vector<T> l_norms = l_norms1;
   SublattInfos<T> si1 = ComputeSublatticeInfos<T, Tint>(G1, l_norms, os);
-  SublattInfos<T> si2 = ComputeSublatticeInfos<T, Tint>(G1, l_norms, os);
+  SublattInfos<T> si2 = ComputeSublatticeInfos<T, Tint>(G2, l_norms, os);
 #ifdef DEBUG_EDGEWALK
   os << "EDGE: We have l_norms\n";
 #endif

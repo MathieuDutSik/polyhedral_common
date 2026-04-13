@@ -698,7 +698,7 @@ struct unlimited_request {
     }
     return n_undone;
   }
-  bool is_empty() { return clear_and_get_nb_undone() > 0; }
+  bool is_empty() { return clear_and_get_nb_undone() == 0; }
   boost::mpi::request &get_entry() {
     (void)clear_and_get_nb_undone();
     for (auto &eList : tot_list) {
