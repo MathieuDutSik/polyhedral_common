@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     bool IsFirst = true;
     std::function<void(std::vector<int> const &, int const &)> FCT =
         [&](std::vector<int> const &V, int const &OrbSize) -> void {
-      if (IsFirst == false)
+      if (!IsFirst)
         os << ",\n";
       IsFirst = false;
       //

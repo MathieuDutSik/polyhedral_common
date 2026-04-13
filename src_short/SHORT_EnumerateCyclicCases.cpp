@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
             SHORT_TestRealizabilityShortestFamily<Tfield, Tint, Tgroup>(
                 SHV, std::cerr);
         if (eRes.reply) {
-          if (IsFirst == false)
+          if (!IsFirst)
             os << ",\n";
           IsFirst = false;
           WriteMatrixGAP(os, SHV);

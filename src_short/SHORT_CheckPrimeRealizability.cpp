@@ -76,7 +76,7 @@ int main(int argc, char *argv[]) {
       bool test = IsMatchingListOfPrimes(ListP, M);
       //      std::cerr << "After IsMathingListOfPrime\n";
       if (test) {
-        if (IsFirst == false)
+        if (!IsFirst)
           osO << ",\n";
         IsFirst = false;
         WriteMatrixGAP(osO, M);
