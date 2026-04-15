@@ -1051,7 +1051,70 @@ std::optional<PVoronoiPart<T, Tint>>
 kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
                                std::vector<MyVector<Tint>> const& l_excluded_max,
                                MyVector<T> const &eV, std::ostream &os) {
-  return kernel_l2_p_polytope_part(solver, l_excluded_max, eV, os);
+  std::optional<PVoronoiPart<T, Tint>> opt =
+      kernel_l2_p_polytope_part(solver, l_excluded_max, eV, os);
+#ifdef SANITY_CHECK_EXTENSIVE_ENUM_P_POLYTOPES
+  if (opt) {
+    PVoronoiPart<T, Tint> const& pvp1 = *opt;
+    MyMatrix<T> const& GramMat = solver.GramMat;
+    int dim = GramMat.rows();
+    // Find the vertex farthest from v_long
+    MyVector<Tint> v_long = pvp1.robust_m_min.v_long();
+    MyMatrix<Tint> M1 = reorder_matrix(pvp1.robust_m_min.M);
+    MyVector<T> v_long_T = UniversalVectorConversion<T, Tint>(v_long);
+    MyMatrix<T> EXT1 = reorder_matrix(pvp1.l_cb[0].sp.EXT);
+    int n_row = EXT1.rows();
+    T max_norm(0);
+    MyVector<T> diff(dim);
+    for (int i_row = 0; i_row < n_row; i_row++) {
+      for (int i = 0; i < dim; i++) {
+        diff(i) = v_long_T(i) - EXT1(i_row, i + 1);
+      }
+      T norm = EvaluationQuadForm(GramMat, diff);
+      if (norm > max_norm) {
+        max_norm = norm;
+      }
+    }
+    // Generate 20 random points inside the polytope and check consistency
+    int n_iter = 20;
+    int N = 10;
+    for (int i_test = 0; i_test < 20; i_test++) {
+      MyVector<T> fV = random_interior_pt(EXT1, N, os);
+      // Check with compute_robust_closest
+      ResultRobustClosest<T, Tint> rrc =
+          compute_robust_closest<T, Tint>(solver, fV, os);
+      if (rrc.robust_minimum > max_norm) {
+        std::cerr << "ROBUST: rrc failed to work fV=" << StringVectorGAP(fV) << "\n";
+        std::cerr << "ROBUST: max_norm=" << max_norm << " robust_minimum=" << rrc.robust_minimum << "\n";
+        throw TerminalException{1};
+      }
+      // Check with kernel_l2_p_polytope_part
+      std::optional<PVoronoiPart<T, Tint>> opt2 =
+          kernel_l2_p_polytope_part(solver, l_excluded_max, fV, os);
+      if (!opt2) {
+        std::cerr << "ROBUST: opt2 failed to be something\n";
+        throw TerminalException{1};
+      }
+      PVoronoiPart<T, Tint> const& pvp2 = *opt2;
+      if (pvp2.robust_m_min.v_long() != v_long) {
+        std::cerr << "ROBUST: Inconsistent values for v_long\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<Tint> M2 = reorder_matrix(pvp2.robust_m_min.M);
+      if (M2 != M1) {
+        std::cerr << "ROBUST: Inconsistent values for M\n";
+        throw TerminalException{1};
+      }
+      MyMatrix<T> EXT2 = reorder_matrix(pvp1.l_cb[0].sp.EXT);
+      if (EXT2 != EXT1) {
+        std::cerr << "ROBUST: Inconsistent values for EXT\n";
+        throw TerminalException{1};
+      }
+      N += 1;
+    }
+  }
+#endif
+  return opt;
 }
 
 /*
