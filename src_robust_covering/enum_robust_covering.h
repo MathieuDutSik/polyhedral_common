@@ -818,7 +818,7 @@ bool are_vertices_correct(CVPSolver<T, Tint> const &solver,
 // Which should lead to an increase in randomness.
 template <typename T, typename Tint>
 std::optional<PVoronoiPart<T, Tint>>
-kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
+kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
                                std::vector<MyVector<Tint>> const& l_excluded_max,
                                MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const &G = solver.GramMat;
@@ -1046,6 +1046,14 @@ kernel_initial_p_polytope_part(CVPSolver<T, Tint> const &solver,
   }
 }
 
+template <typename T, typename Tint>
+std::optional<PVoronoiPart<T, Tint>>
+kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
+                               std::vector<MyVector<Tint>> const& l_excluded_max,
+                               MyVector<T> const &eV, std::ostream &os) {
+  return kernel_l2_p_polytope_part(solver, l_excluded_max, eV, os);
+}
+
 /*
   Get a possible vector to consider
  */
@@ -1135,7 +1143,7 @@ template <typename T, typename Tint>
 std::optional<PVoronoi<T, Tint>>
 find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ostream &os) {
   MyMatrix<T> const& G = solver.GramMat;
-  std::optional<PVoronoiPart<T,Tint>> opt = kernel_initial_p_polytope_part<T,Tint>(solver, {}, eV, os);
+  std::optional<PVoronoiPart<T,Tint>> opt = kernel_l1_p_polytope_part<T,Tint>(solver, {}, eV, os);
   if (!opt) {
     return {};
   }
@@ -1204,7 +1212,7 @@ find_p_voronoi(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV, std::ost
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_2, shift=" << shift << "\n";
 #endif
-      std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_initial_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
+      std::optional<PVoronoiPart<T,Tint>> opt3 = kernel_l1_p_polytope_part<T,Tint>(solver, l_excluded_max, fV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: fpe, step 10_3\n";
 #endif
@@ -1504,13 +1512,13 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
     os << "ROBUST: robust vertex iter=" << iter << "/" << n_iter << "\n";
 #endif
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
-    os << "ROBUST: iter=" << iter << " kernel_initial_p_polytope_part eV=" << StringVectorGAP(eV)
+    os << "ROBUST: iter=" << iter << " kernel_l1_p_polytope_part eV=" << StringVectorGAP(eV)
        << " denom=" << denom << "\n";
 #endif
     std::optional<PVoronoiPart<T, Tint>> opt =
-      kernel_initial_p_polytope_part(solver, l_excluded_max, eV, os);
+      kernel_l1_p_polytope_part(solver, l_excluded_max, eV, os);
 #ifdef DEBUG_ROBUST_VERTEX_ENUM
-    os << "ROBUST: After kernel_initial_p_polytope_part\n";
+    os << "ROBUST: After kernel_l1_p_polytope_part\n";
 #endif
     if (opt) {
       PVoronoiPart<T, Tint> const& pvp = *opt;
