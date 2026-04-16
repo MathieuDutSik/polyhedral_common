@@ -835,13 +835,14 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
   os << "ROBUST: kippp eV=" << StringVectorGAP(eV) << "\n";
 #endif
   // Working variables
-  bool is_correct = true;
+  bool is_correct;
   PVoronoiPart<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
     //
     // Building the set of inequalities from the definition.
     //
+    is_correct = true;
     T const &min = rde.min;
     std::vector<MyMatrix<Tint>> const &list_min_parallelepipeds =
         rde.list_min_parallelepipeds;
@@ -1005,6 +1006,9 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     os << "ROBUST: kippp, final, step 5, test_vert=" << test_vert << "\n";
 #endif
     if (!test_vert) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: kippp, final, is_correct=false because of test_vert\n";
+#endif
       is_correct = false;
       return false;
     }
@@ -1076,9 +1080,10 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       }
     }
     // Generate 20 random points inside the polytope and check consistency
-    int n_iter = 20;
+    int n_test = 20;
     int N = 10;
-    for (int i_test = 0; i_test < 20; i_test++) {
+    for (int i_test = 0; i_test < n_test; i_test++) {
+      std::cerr << "ROBUST: kernel_l1_p_polytope_part i_test=" << i_test << "/" << n_test << "\n";
       MyVector<T> fV = random_interior_pt(EXT1, N, os);
       // Check with compute_robust_closest
       ResultRobustClosest<T, Tint> rrc =
@@ -1092,7 +1097,7 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       std::optional<PVoronoiPart<T, Tint>> opt2 =
           kernel_l2_p_polytope_part(solver, l_excluded_max, fV, os);
       if (!opt2) {
-        std::cerr << "ROBUST: opt2 failed to be something\n";
+        std::cerr << "ROBUST: opt2 failed to be something fV=" << StringVectorGAP(fV) << "\n";
         throw TerminalException{1};
       }
       PVoronoiPart<T, Tint> const& pvp2 = *opt2;
