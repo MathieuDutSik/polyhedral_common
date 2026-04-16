@@ -834,15 +834,18 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: kippp eV=" << StringVectorGAP(eV) << "\n";
 #endif
-  // Working variables
-  bool is_correct;
+  // The is_correct variable indicate whether the initial point eV is correct.
+  // In the course of the enumeration, we encounter some errors. Some merely
+  // indicate that the enumeration is incomplete. That is we keep is_correct=true.
+  // But others indicate that no matter the level of the enumeration, the
+  // point in incorrect.
+  bool is_correct = true;
   PVoronoiPart<T, Tint> ppoly;
   // The lambda function.
   auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
     //
     // Building the set of inequalities from the definition.
     //
-    is_correct = true;
     T const &min = rde.min;
     std::vector<MyMatrix<Tint>> const &list_min_parallelepipeds =
         rde.list_min_parallelepipeds;
@@ -857,10 +860,11 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
        << " min=" << min << "\n";
 #endif
     if (list_min_parallelepipeds.size() > 1) {
-      // Terminate the enumeration
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   kippp, is_correct=false by n_list_min_parallelepipeds > 1\n";
 #endif
+      // We mark is_correct=false since there is no chance that this degeneracy will be
+      // resolved by further enumeration. The degeneracy is there and will remain.
       is_correct = false;
       return true;
     }
@@ -875,6 +879,9 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
       os << "ROBUST:   kippp, is_correct=false by "
             "!ext_robust_m_min.is_correct\n";
 #endif
+      // We mark is_correct=false since the minimal has at least two extremal
+      // vectors. This problem will remain no matter how many other parallelepiped
+      // we have
       is_correct = false;
       return true;
     }
@@ -885,6 +892,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST:   kippp, is_correct=false by min=0\n";
 #endif
+      // Wrong value of "min". This will remain no matter what. So we mark
+      // with is_correct=false
       is_correct = false;
       return true;
     }
@@ -938,6 +947,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
           os << "ROBUST:   kippp, is_correct=false by "
                 "!ext_robust_m.is_correct\n";
 #endif
+          // Wrong parallelepipeds occur with ambiguous input. This will
+          // remain if we have more parallelepipeds. So is_correct=false
           is_correct = false;
           return true;
         }
@@ -1009,7 +1020,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #ifdef DEBUG_ENUM_P_POLYTOPES
       os << "ROBUST: kippp, final, is_correct=false because of test_vert\n";
 #endif
-      is_correct = false;
+      // We do NOT mark is_correct=false since the problem could be addressed
+      // by further enumeration of the parallelepipeds.
       return false;
     }
     std::vector<HardConvexBoundary<T>> l_hcb;
