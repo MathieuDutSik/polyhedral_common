@@ -1105,26 +1105,22 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
         std::cerr << "ROBUST: max_norm=" << max_norm << " robust_minimum=" << rrc.robust_minimum << "\n";
         throw TerminalException{1};
       }
-      // Check with kernel_l2_p_polytope_part
-      std::optional<PVoronoiPart<T, Tint>> opt2 =
-          kernel_l2_p_polytope_part(solver, l_excluded_max, fV, os);
-      if (!opt2) {
-        std::cerr << "ROBUST: opt2 failed to be something fV=" << StringVectorGAP(fV) << "\n";
+      // The polytope kernel_l2_p_polytope_part(solver, l_excluded_max, fV, os);
+      // will not necessarily be the same depending on the chosen point.
+      // So, we cannot make that check. And of course it could return None.
+      if (rrc.list_parallelepipeds.size() > 1) {
+        std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << rrc.list_parallelepipeds.size() << "\n";
+        std::cerr << "ROBUST; That is not what is expected for an inner point\n";
         throw TerminalException{1};
       }
-      PVoronoiPart<T, Tint> const& pvp2 = *opt2;
-      if (pvp2.robust_m_min.v_long() != v_long) {
-        std::cerr << "ROBUST: Inconsistent values for v_long\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<Tint> M2 = reorder_matrix(pvp2.robust_m_min.M);
-      if (M2 != M1) {
-        std::cerr << "ROBUST: Inconsistent values for M\n";
-        throw TerminalException{1};
-      }
-      MyMatrix<T> EXT2 = reorder_matrix(pvp1.l_cb[0].sp.EXT);
-      if (EXT2 != EXT1) {
-        std::cerr << "ROBUST: Inconsistent values for EXT\n";
+      MyMatrix<Tint> M2 = reorder_matrix(rrc.list_parallelepipeds[0]);
+      if (M1 != M2) {
+        std::cerr << "ROBUST: M1=\n";
+        WriteMatrix(std::cerr, M1);
+        std::cerr << "ROBUST: M2=\n";
+        WriteMatrix(std::cerr, M2);
+        std::cerr << "ROBUST: M1 should be equal to M2\n";
+        std::cerr << "ROBUST; That is not what is expected for an inner point\n";
         throw TerminalException{1};
       }
       N += 1;
