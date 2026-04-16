@@ -1084,6 +1084,7 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
     MyVector<Tint> v_long = pvp1.robust_m_min.v_long();
     MyMatrix<Tint> M1 = reorder_matrix(pvp1.robust_m_min.M);
     MyVector<T> v_long_T = UniversalVectorConversion<T, Tint>(v_long);
+    std::cerr << "ROBUST: kernel_l1_p_polytope_part v_long=" << StringVectorGAP(v_long) << "\n";
     MyMatrix<T> EXT1 = reorder_matrix(pvp1.l_cb[0].sp.EXT);
     int n_row = EXT1.rows();
     T max_norm(0);
@@ -1103,6 +1104,10 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
     for (int i_test = 0; i_test < n_test; i_test++) {
       std::cerr << "ROBUST: kernel_l1_p_polytope_part i_test=" << i_test << "/" << n_test << "\n";
       MyVector<T> fV = random_interior_pt(EXT1, N, os);
+      MyVector<T> fV_red(dim);
+      for (int i=0; i<dim; i++) {
+        fV_red(i) = fV(i + 1);
+      }
       // Check with compute_robust_closest
       ResultRobustClosest<T, Tint> rrc =
           compute_robust_closest<T, Tint>(solver, fV, os);
@@ -1115,16 +1120,20 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       // will not necessarily be the same depending on the chosen point.
       // So, we cannot make that check. And of course it could return None.
       if (rrc.list_parallelepipeds.size() > 1) {
-        std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << rrc.list_parallelepipeds.size() << "\n";
+        size_t n_parall = rrc.list_parallelepipeds.size();
+        std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << n_parall << "\n";
+        for (size_t i_parall=0; i_parall<n_parall; i_parall++) {
+          MyMatrix<Tint> const& M_paral = rrc.list_parallelepipeds[i_parall];
+          ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M_paral, GramMat, fV_red, os);
+          MyVector<Tint> v_l = egr.robust_m.v_long();
+          std::cerr << "ROBUST i_parall=" << i_parall << "/" << n_parall << " norm=" << egr.max << " v_long=" << StringVectorGAP(v_l) << " M=\n";
+          WriteMatrix(std::cerr, M_paral);
+        }
         std::cerr << "ROBUST: That is not what is expected for an inner point\n";
         throw TerminalException{1};
       }
 
       MyMatrix<Tint> M2 = reorder_matrix(rrc.list_parallelepipeds[0]);
-      MyVector<T> fV_red(dim);
-      for (int i=0; i<dim; i++) {
-        fV_red(i) = fV(i + 1);
-      }
       ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M2, GramMat, fV_red, os);
       if (v_long != egr.robust_m.v_long()) {
         std::cerr << "ROBUST: v_long is inconsistent\n";
