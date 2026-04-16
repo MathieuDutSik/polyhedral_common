@@ -551,6 +551,12 @@ get_generic_robust_m(MyMatrix<Tint> const &M, MyMatrix<T> const &G,
   int best_index = 0;
   int n_ineq = M.rows();
   size_t n_att = 0;
+#ifdef SANITY_CHECK_ENUM_P_POLYTOPES
+  if (G.rows() != eV.size()) {
+    std::cerr << "ROBUST: G and eV have inconsistent size\n";
+    throw TerminalException{1};
+  }
+#endif
 #ifdef DEBUG_GET_INEQ_P_POLYTOPES
   os << "ROBUST:   ggrm, eV=" << StringVectorGAP(eV) << "\n";
 #endif
@@ -1110,17 +1116,27 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       // So, we cannot make that check. And of course it could return None.
       if (rrc.list_parallelepipeds.size() > 1) {
         std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << rrc.list_parallelepipeds.size() << "\n";
-        std::cerr << "ROBUST; That is not what is expected for an inner point\n";
+        std::cerr << "ROBUST: That is not what is expected for an inner point\n";
         throw TerminalException{1};
       }
+
       MyMatrix<Tint> M2 = reorder_matrix(rrc.list_parallelepipeds[0]);
+      MyVector<T> fV_red(dim);
+      for (int i=0; i<dim; i++) {
+        fV_red(i) = fV(i + 1);
+      }
+      ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M2, GramMat, fV_red, os);
+      if (v_long != egr.robust_m.v_long()) {
+        std::cerr << "ROBUST: v_long is inconsistent\n";
+        throw TerminalException{1};
+      }
       if (M1 != M2) {
         std::cerr << "ROBUST: M1=\n";
         WriteMatrix(std::cerr, M1);
         std::cerr << "ROBUST: M2=\n";
         WriteMatrix(std::cerr, M2);
         std::cerr << "ROBUST: M1 should be equal to M2\n";
-        std::cerr << "ROBUST; That is not what is expected for an inner point\n";
+        std::cerr << "ROBUST: That is not what is expected for an inner point\n";
         throw TerminalException{1};
       }
       N += 1;
