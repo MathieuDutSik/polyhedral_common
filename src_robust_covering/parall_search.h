@@ -417,7 +417,7 @@ void compute_robust_close_f(CVPSolver<T, Tint> const &solver,
       os << "PARALL: compute_robust_close_f, opt_red.is_some()\n";
 #endif
       ResultDirectEnumeration<T, Tint> const &rde = *opt_rde;
-      bool test = f_insert(rde);
+      bool test = f_insert(rde, res_cvp.TheNorm);
       if (test) {
         return;
       }
@@ -435,7 +435,7 @@ ResultRobustClosest<T, Tint>
 compute_robust_closest(CVPSolver<T, Tint> const &solver, MyVector<T> const &eV,
                        std::ostream &os) {
   ResultRobustClosest<T, Tint> result;
-  auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) {
+  auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde, [[maybe_unused]] T const& TheNorm) {
     result = {rde.min, rde.list_min_parallelepipeds};
     return true;
   };

@@ -848,7 +848,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
   bool is_correct = true;
   PVoronoiPart<T, Tint> ppoly;
   // The lambda function.
-  auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde) -> bool {
+  auto f_insert = [&](ResultDirectEnumeration<T, Tint> const &rde, [[maybe_unused]] T const& TheNorm) -> bool {
     //
     // Building the set of inequalities from the definition.
     //
@@ -878,6 +878,7 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
     os << "ROBUST:   kippp, pass 1\n";
 #endif
     MyMatrix<Tint> const &min_m = list_min_parallelepipeds[0];
+    T upper_bound = compute_upper_bound_mat(G, min_m);
     ExtendedGenericRobustM<T, Tint> ext_robust_m_min =
         get_generic_robust_m(min_m, G, eV_red, os);
     if (!ext_robust_m_min.is_correct) {
@@ -929,11 +930,13 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 3, step 1\n";
+#endif
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
     size_t i_m = 0;
 #endif
     for (auto &eM : tot_list_parallelepipeds) {
       if (eM != min_m) {
-#ifdef DEBUG_ENUM_P_POLYTOPES
+#ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
         os << "ROBUST:   --------- "
            << i_m
            << "/"
@@ -941,6 +944,10 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
            << " ------------\n";
         i_m += 1;
 #endif
+        T val = compute_upper_bound_mat(G, eM);
+        if (val < upper_bound) {
+          upper_bound = val;
+        }
         ExtendedGenericRobustM<T, Tint> ext_robust_m =
             get_generic_robust_m(eM, G, eV_red, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES_DISABLE
@@ -970,6 +977,14 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
         insert_outer_ineqs_parallelepiped(robust_m, G, v_short, m_full_ineq, os);
         list_robust_m.push_back(robust_m);
       }
+    }
+    if (upper_bound > TheNorm) {
+      // It is unfortunate that we have to compute that upper bound.
+      // Which is frankly not that good. We need a better upper bound.
+      //
+      // We are below the upper bound, which indicates that we could have some
+      // additional parallelepipeds missing. So, we do not set is_correct=false.
+      return false;
     }
 #ifdef DEBUG_ENUM_P_POLYTOPES
     os << "ROBUST:   kippp, pass 3, step 2\n";
@@ -1053,7 +1068,8 @@ kernel_l2_p_polytope_part(CVPSolver<T, Tint> const &solver,
 #endif
     ppoly = PVoronoiPart<T,Tint>{robust_m_min, {c_bl}, l_hcb, l_scb};
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: kippp, final, step 7\n";
+    os << "ROBUST: kippp, final, step 7 TheNorm=" << TheNorm << "\n";
+    os << "ROBUST: kippp, final, step 7 upper_bound=" << upper_bound << "\n";
 #endif
     return true;
   };
@@ -1080,6 +1096,10 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
     PVoronoiPart<T, Tint> const& pvp1 = *opt;
     MyMatrix<T> const& GramMat = solver.GramMat;
     int dim = GramMat.rows();
+    MyVector<T> eV_red(dim);
+    for (int i=0; i<dim; i++) {
+      eV_red(i) = eV(i + 1);
+    }
     // Find the vertex farthest from v_long
     MyVector<Tint> v_long = pvp1.robust_m_min.v_long();
     MyMatrix<Tint> M1 = reorder_matrix(pvp1.robust_m_min.M);
@@ -1098,7 +1118,13 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
         max_norm = norm;
       }
     }
-    // Generate 20 random points inside the polytope and check consistency
+    std::unordered_set<MyMatrix<Tint>> set;
+    size_t n_robust = pvp1.l_cb[0].list_robust_m.size();
+    for (size_t i_robust=0; i_robust<n_robust; i_robust++) {
+      MyMatrix<Tint> M = reorder_matrix(pvp1.l_cb[0].list_robust_m[i_robust].M);
+      set.insert(M);
+    }
+    // Generate random points inside the polytope and check consistency
     int n_test = 20;
     int N = 10;
     for (int i_test = 0; i_test < n_test; i_test++) {
@@ -1121,13 +1147,15 @@ kernel_l1_p_polytope_part(CVPSolver<T, Tint> const &solver,
       // So, we cannot make that check. And of course it could return None.
       if (rrc.list_parallelepipeds.size() > 1) {
         size_t n_parall = rrc.list_parallelepipeds.size();
-        std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << n_parall << "\n";
+        std::cerr << "ROBUST: |rrc.list_parallelepipeds|=" << n_parall << " fV=" << StringVectorGAP(fV) << " M1=" << StringMatrixGAP_line(M1) << "\n";
         for (size_t i_parall=0; i_parall<n_parall; i_parall++) {
-          MyMatrix<Tint> const& M_paral = rrc.list_parallelepipeds[i_parall];
+          MyMatrix<Tint> M_paral = reorder_matrix(rrc.list_parallelepipeds[i_parall]);
+          bool in_list = set.contains(M_paral);
           ExtendedGenericRobustM<T, Tint> egr = get_generic_robust_m(M_paral, GramMat, fV_red, os);
           MyVector<Tint> v_l = egr.robust_m.v_long();
-          std::cerr << "ROBUST i_parall=" << i_parall << "/" << n_parall << " norm=" << egr.max << " v_long=" << StringVectorGAP(v_l) << " M=\n";
-          WriteMatrix(std::cerr, M_paral);
+          MyVector<T> diff = eV_red - UniversalVectorConversion<T,Tint>(v_l);
+          T norm = EvaluationQuadForm(GramMat, diff);
+          std::cerr << "ROBUST i_parall=" << i_parall << "/" << n_parall << " norm=" << egr.max << " v_long=" << StringVectorGAP(v_l) << " in_list=" << in_list << " norm=" << norm << " M=" << StringMatrixGAP_line(M_paral) << "\n";
         }
         std::cerr << "ROBUST: That is not what is expected for an inner point\n";
         throw TerminalException{1};
