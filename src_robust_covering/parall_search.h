@@ -241,8 +241,8 @@ T compute_upper_bound_mat(MyMatrix<T> const &GramMat, MyMatrix<Tint> const &M) {
   int n_ent = M.rows();
   T upper_value(0);
   for (int i_ent = 0; i_ent < n_ent; i_ent++) {
+    MyVector<Tint> v1 = GetMatrixRow(M, i_ent);
     for (int j_ent = i_ent + 1; j_ent < n_ent; j_ent++) {
-      MyVector<Tint> v1 = GetMatrixRow(M, i_ent);
       MyVector<Tint> v2 = GetMatrixRow(M, j_ent);
       MyVector<Tint> diff = v1 - v2;
       T norm = EvaluationQuadForm(GramMat, diff);

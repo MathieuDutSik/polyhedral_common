@@ -41,6 +41,10 @@
 #define DEBUG_LRSLIB
 #endif
 
+#ifdef SANITY_CHECK
+#define SANITY_CHECK_LRSLIB
+#endif
+
 #ifdef DISABLE_DEBUG_LRSLIB
 #undef DEBUG_LRSLIB
 #endif
@@ -1296,8 +1300,6 @@ void Kernel_DualDescription(MyMatrix<T> const &EXT, F const &f) {
           for (int i = 0; i < P->d; i++) {
             int idx1 = P->C[i];
             int idx2 = Q->lastdv;
-            //          std::cerr << "idx1=" << idx1 << " idx2=" << idx2 <<
-            //          "\n";
             int idx = Q->inequality[idx1 - idx2] - 1;
             int the_col = P->Col[i];
             if (the_col != col) {
@@ -1444,31 +1446,6 @@ void Kernel_Simplices_Facets_cond(MyMatrix<T> const &EXT, Ftrig const &f_trig,
   freeLRS(P, Q);
 }
 
-template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
-  T sum_det(0);
-#ifdef DEBUG_LRSLIB
-  int nbRow = EXT.rows();
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    if (EXT(iRow, 0) != 1) {
-      std::cerr << "EXT(iRow,0) should be equal to 1\n";
-      throw TerminalException{1};
-    }
-  }
-#endif
-  auto f_trig = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
-    sum_det += P->det;
-    return true;
-  };
-  Kernel_Simplices_cond(EXT, f_trig);
-  int dim = EXT.cols() - 1;
-  T fact(1);
-  for (int u = 1; u <= dim; u++) {
-    fact *= u;
-  }
-  T total_volume = sum_det / fact;
-  return total_volume;
-}
-
 template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
   int nbRow = EXT.rows();
   vectface vf(nbRow);
@@ -1483,13 +1460,13 @@ template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
       int idx = Q->inequality[idx1 - idx2] - 1;
       trig[idx] = 1;
     }
-#ifdef DEBUG_LRSLIB
+#ifdef SANITY_CHECK_LRSLIB
     // determinants should be equal but they are not
     MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
     T det = DeterminantMat(EXTtrig);
     if (T_abs(det) != P->det) {
-      std::cerr << "det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
-      std::cerr << "but their absoluite value should be equal\n";
+      std::cerr << "LRS: det(EXTtrig)=" << det << " P->det=" << P->det << "\n";
+      std::cerr << "LRS: but their absoluite value should be equal\n";
       throw TerminalException{1};
     }
 #endif
@@ -1530,7 +1507,106 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
   };
   MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
   Kernel_Simplices_Facets_cond(EXText, f_trig, f_facet);
+#ifdef SANITY_CHECK_LRSLIB
+  auto f_equa=[&](Face const& f) -> MyVector<T> {
+    MyMatrix<T> Mface = SelectRow(EXT, f);
+    MyMatrix<T> NSP = NullspaceTrMat(Mface);
+    if (NSP.rows() != 1) {
+      std::cerr << "LRS: We should have |NSP|=1 but we have |NSP|=" << NSP.rows() << "\n";
+      throw TerminalException{1};
+    }
+    MyVector<T> V1 = GetMatrixRow(NSP, 0);
+    MyVector<T> V2 = ScalarCanonicalizationVector(V1);
+    MyVector<T> V3 = SignCanonicalizeVector(V2);
+    return V3;
+  };
+  std::unordered_set<MyVector<T>> set_facet;
+  for (auto & f: vf_facet) {
+    MyVector<T> V = f_equa(f);
+    set_facet.insert(V);
+  }
+  size_t expected_size = EXT.cols() - 1;
+  std::cerr << "LRS: |set_facet|=" << set_facet.size() << "\n";
+  std::unordered_map<Face, size_t> map;
+  for (auto & f: vf_trig) {
+    std::vector<size_t> f_v = FaceToVector<size_t>(f);
+    for (auto &miss_vert: f_v) {
+      Face f_a = f;
+      f_a[miss_vert] = 0;
+      if (f_a.count() != expected_size) {
+        std::cerr << "LRS: f_a does not have the right size\n";
+        throw TerminalException{1};
+      }
+      MyVector<T> V = f_equa(f_a);
+      if (!set_facet.contains(V)) {
+        map[f_a] += 1;
+      }
+    }
+  }
+  std::cerr << "LRS: |map|=" << map.size() << "\n";
+  for (auto & kv: map) {
+    if (kv.second != 2) {
+      std::cerr << "LRS: We do not have the right size. So, not a facet\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
   return {std::move(vf_trig), std::move(vf_facet)};
+}
+
+
+template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
+  T sum_det(0);
+#ifdef DEBUG_LRSLIB
+  int nbRow = EXT.rows();
+  for (int iRow = 0; iRow < nbRow; iRow++) {
+    if (EXT(iRow, 0) != 1) {
+      std::cerr << "EXT(iRow,0) should be equal to 1\n";
+      throw TerminalException{1};
+    }
+  }
+#endif
+  auto f_trig = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
+    sum_det += P->det;
+#ifdef SANITY_CHECK_LRSLIB
+    Face trig(nbRow);
+    for (int i = 0; i < P->d; i++) {
+      int idx1 = P->C[i];
+      int idx2 = Q->lastdv;
+      int idx = Q->inequality[idx1 - idx2] - 1;
+      trig[idx] = 1;
+    }
+    MyMatrix<T> Mtrig = SelectRow(EXT, trig);
+    T det = DeterminantMat(Mtrig);
+    if (det != P->det) {
+      std::cerr << "LRS: incoherence in the determinants det and P->det\n";
+      std::cerr << "LRS: det=" << det << " P->det=" << P->det << "\n";
+      //      throw TerminalException{1};
+    }
+#endif
+    return true;
+  };
+  Kernel_Simplices_cond(EXT, f_trig);
+  int dim = EXT.cols() - 1;
+  T det_to_vol(1);
+  for (int u = 1; u <= dim; u++) {
+    det_to_vol *= u;
+  }
+  T total_volume = sum_det / det_to_vol;
+#ifdef SANITY_CHECK_LRSLIB
+  std::pair<vectface, vectface> pair = GetTriangulationFacet(EXT);
+  T sum_det_b(0);
+  for (auto & trig: pair.first) {
+    MyMatrix<T> Mtrig = SelectRow(EXT, trig);
+    sum_det_b += DeterminantMat(Mtrig);
+  }
+  if (sum_det != sum_det_b) {
+    std::cerr << "LRS: incoherence in the sum_det / sum_det_b\n";
+    std::cerr << "LRS: sum_det=" << sum_det << " sum_det_b=" << sum_det_b << "\n";
+    throw TerminalException{1};
+  }
+#endif
+  return total_volume;
 }
 
 template <typename T> MyMatrix<T> FirstColumnZero(MyMatrix<T> const &M) {
