@@ -339,11 +339,25 @@ template <typename Tint> struct GenericRobustM {
   }
 };
 
+template <typename Tint>
+std::ostream &operator<<(std::ostream &os, GenericRobustM<Tint> const &grm) {
+  os << "GenericRobustM(index=" << grm.index << " M=\n";
+  WriteMatrix(os, grm.M);
+  os << ")";
+  return os;
+}
+
 template <typename T, typename Tint> struct ExtendedGenericRobustM {
   T max;
   bool is_correct;
   GenericRobustM<Tint> robust_m;
 };
+
+template <typename T, typename Tint>
+std::ostream &operator<<(std::ostream &os, ExtendedGenericRobustM<T, Tint> const &egrm) {
+  os << "ExtendedGenericRobustM(max=" << egrm.max << " is_correct=" << egrm.is_correct << " robust_m=" << egrm.robust_m << ")";
+  return os;
+}
 
 
 template<typename T, typename Tint>
@@ -412,11 +426,27 @@ struct ConvexBlock {
   SinglePolytope<T> sp;
 };
 
+template <typename T, typename Tint>
+std::ostream &operator<<(std::ostream &os, ConvexBlock<T, Tint> const &cb) {
+  os << "ConvexBlock(|list_robust_m|=" << cb.list_robust_m.size() << " FAC=\n";
+  WriteMatrix(os, cb.sp.FAC);
+  os << "EXT=\n";
+  WriteMatrix(os, cb.sp.EXT);
+  os << ")";
+  return os;
+}
+
 template<typename T>
 struct HardConvexBoundary {
   int index_cb; // The corresponding face;
   ConvexBoundary<T> sp;
 };
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, HardConvexBoundary<T> const &hcb) {
+  os << "HardConvexBoundary(index_cb=" << hcb.index_cb << " V=" << StringVectorGAP(hcb.sp.V) << ")";
+  return os;
+}
 
 template<typename T, typename Tint>
 struct SoftConvexBoundary {
@@ -446,6 +476,15 @@ struct SoftConvexBoundary {
   }
 };
 
+template <typename T, typename Tint>
+std::ostream &operator<<(std::ostream &os, SoftConvexBoundary<T, Tint> const &scb) {
+  os << "SoftConvexBoundary(index_cb=" << scb.index_cb
+     << " V=" << StringVectorGAP(scb.cb.V)
+     << " |l_excluded_max|=" << scb.l_excluded_max.size()
+     << " |l_robust_m|=" << scb.l_robust_m.size() << ")";
+  return os;
+}
+
 /*
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
@@ -460,6 +499,23 @@ template <typename T, typename Tint> struct PVoronoi {
   MyMatrix<T> EXT; // The list of vertices as defined from the generalized polytope.
 };
 
+template <typename T, typename Tint>
+std::ostream &operator<<(std::ostream &os, PVoronoi<T, Tint> const &pv) {
+  os << "PVoronoi(\n  robust_m_min=" << pv.robust_m_min << "\n";
+  os << "  |l_cb|=" << pv.l_cb.size() << "\n";
+  for (size_t i = 0; i < pv.l_cb.size(); i++) {
+    os << "  l_cb[" << i << "]=" << pv.l_cb[i] << "\n";
+  }
+  os << "  |l_hcb|=" << pv.l_hcb.size() << "\n";
+  for (size_t i = 0; i < pv.l_hcb.size(); i++) {
+    os << "  l_hcb[" << i << "]=" << pv.l_hcb[i] << "\n";
+  }
+  os << "  EXT=\n";
+  WriteMatrix(os, pv.EXT);
+  os << ")";
+  return os;
+}
+
 /*
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
@@ -472,6 +528,25 @@ template <typename T, typename Tint> struct PVoronoiPart {
   std::vector<HardConvexBoundary<T>> l_hcb;
   std::vector<SoftConvexBoundary<T,Tint>> l_scb;
 };
+
+template <typename T, typename Tint>
+std::ostream &operator<<(std::ostream &os, PVoronoiPart<T, Tint> const &pvp) {
+  os << "PVoronoiPart(\n  robust_m_min=" << pvp.robust_m_min << "\n";
+  os << "  |l_cb|=" << pvp.l_cb.size() << "\n";
+  for (size_t i = 0; i < pvp.l_cb.size(); i++) {
+    os << "  l_cb[" << i << "]=" << pvp.l_cb[i] << "\n";
+  }
+  os << "  |l_hcb|=" << pvp.l_hcb.size() << "\n";
+  for (size_t i = 0; i < pvp.l_hcb.size(); i++) {
+    os << "  l_hcb[" << i << "]=" << pvp.l_hcb[i] << "\n";
+  }
+  os << "  |l_scb|=" << pvp.l_scb.size() << "\n";
+  for (size_t i = 0; i < pvp.l_scb.size(); i++) {
+    os << "  l_scb[" << i << "]=" << pvp.l_scb[i] << "\n";
+  }
+  os << ")";
+  return os;
+}
 
 template<typename T>
 T min_pairwise_norm(MyMatrix<T> const& EXT, MyMatrix<T> const& G) {
@@ -1451,14 +1526,18 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   while (true) {
     MyVector<T> eV = get_random_vector<T>(denom, dim);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data, before find_p_voronoi, eV="
+    os << "ROBUST: ipp, before find_p_voronoi, eV="
        << StringVectorGAP(eV) << " denom=" << denom << "\n";
 #endif
     std::optional<PVoronoi<T, Tint>> opt = find_p_voronoi(solver, eV, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
-    os << "ROBUST: initial_vertex_data, after find_p_voronoi\n";
+    os << "ROBUST: ipp, after find_p_voronoi\n";
 #endif
     if (opt) {
+#ifdef DEBUG_ENUM_P_POLYTOPES
+      os << "ROBUST: ipp, return a PVoronoi\n";
+      os << "ROBUST: ipp, Pvoronoi=" << *opt << "\n";
+#endif
       return *opt;
     }
     denom += 1;
