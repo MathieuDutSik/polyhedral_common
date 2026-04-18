@@ -1458,6 +1458,12 @@ template <typename T> vectface GetTriangulation(MyMatrix<T> const &EXT) {
       int idx1 = P->C[i];
       int idx2 = Q->lastdv;
       int idx = Q->inequality[idx1 - idx2] - 1;
+#ifdef SANITY_CHECK_LRSLIB
+      if (idx >= nbRow) {
+        std::cerr << "LRS: The index idx should be < nbRow\n";
+        throw TerminalException{1};
+      }
+#endif
       trig[idx] = 1;
     }
 #ifdef SANITY_CHECK_LRSLIB
@@ -1494,8 +1500,28 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
       int idx1 = P->C[i];
       int idx2 = Q->lastdv;
       int idx = Q->inequality[idx1 - idx2] - 1;
+#ifdef SANITY_CHECK_LRSLIB
+      if (idx >= nbRow) {
+        std::cerr << "LRS: The index idx should be < nbRow\n";
+        throw TerminalException{1};
+      }
+#endif
       trig[idx] = 1;
     }
+#ifdef SANITY_CHECK_LRSLIB
+    MyMatrix<T> Mtrig = SelectRow(EXT, trig);
+    int rnk = RankMat(Mtrig);
+    if (rnk != EXT.cols()) {
+      std::cerr << "LRS: Mtrig should have maximal rank\n";
+      throw TerminalException{1};
+    }
+    T det = T_abs(DeterminantMat(Mtrig));
+    std::cerr << "LRS: rnk=" << rnk << " det=" << det << "\n";
+    if (det == 0) {
+      std::cerr << "LRS: Mtrig should have non-zero determinant\n";
+      throw TerminalException{1};
+    }
+#endif
     vf_trig.push_back(trig);
     return true;
   };
@@ -1577,16 +1603,17 @@ template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
       trig[idx] = 1;
     }
     MyMatrix<T> Mtrig = SelectRow(EXT, trig);
-    T det = DeterminantMat(Mtrig);
+    T det = T_abs(DeterminantMat(Mtrig));
     if (det != P->det) {
       std::cerr << "LRS: incoherence in the determinants det and P->det\n";
       std::cerr << "LRS: det=" << det << " P->det=" << P->det << "\n";
-      //      throw TerminalException{1};
+      throw TerminalException{1};
     }
 #endif
     return true;
   };
-  Kernel_Simplices_cond(EXT, f_trig);
+  MyMatrix<T> EXText = AddFirstZeroColumn(EXT);
+  Kernel_Simplices_cond(EXText, f_trig);
   int dim = EXT.cols() - 1;
   T det_to_vol(1);
   for (int u = 1; u <= dim; u++) {
