@@ -18,8 +18,13 @@ Eulerian:=function(n, k)
     return (n - k) * Eulerian(n - 1, k - 1) + (k + 1) * Eulerian(n - 1, k);
 end;
 
+
+# It is well known that the volume of the hypersimplex is related to the Eulerian numbers
+# See e.g.
+# 1: Thomas Lam and Alexander Postnikov, "Alcoved Polytopes I", https://arxiv.org/pdf/math/0501246
+# 2: Gaku Liu, "Mixed Volumes of Hypersimplices", https://www.combinatorics.org/ojs/index.php/eljc/article/view/v23i3p19
 get_hypersimplex_case:=function(n,k)
-    local the_volume, EXT, eSet, eEXT, pos;
+    local the_volume, EXT, eSet, eEXT, pos, name;
     the_volume:=Eulerian(n-1,k-1) / Factorial(n-1);
     EXT:=[];
     for eSet in Combinations([1..n], k)
@@ -32,7 +37,8 @@ get_hypersimplex_case:=function(n,k)
         eEXT[1]:=1;
         Add(EXT, eEXT);
     od;
-    return rec(EXT:=EXT, the_volume:=the_volume);
+    name:=Concatenation("Hypersimplex(", String(n), ",", String(k), ")");
+    return rec(EXT:=EXT, the_volume:=the_volume, name:=name);
 end;
 
 
@@ -51,19 +57,21 @@ TestVolume:=function(eRec)
     return true;
 end;
 
-eRec1:=rec(FileIn:="G6.ext", the_volume:=1/2);
-eRec2:=rec(FileIn:="24cell_poly.ext", the_volume:=8);
-eRec3:=rec(FileIn:="H3.ext", the_volume:=1);
+eRec1:=rec(FileIn:="G6.ext", the_volume:=1/2, name:="G6");
+eRec2:=rec(FileIn:="24cell_poly.ext", the_volume:=8, name:="24cell");
+eRec3:=rec(FileIn:="H3.ext", the_volume:=1, name:="H3");
 ListRec:=[];
 for eRec in [eRec1, eRec2, eRec3]
 do
     EXT:=ReadMatrixFile(eRec.FileIn);
-    fRec:=rec(EXT:=EXT, the_volume:=eRec.the_volume);
+    fRec:=rec(EXT:=EXT, the_volume:=eRec.the_volume, name:=eRec.name);
     Add(ListRec, fRec);
 od;
 
 # Add the hypersimplex cases.
 Add(ListRec, get_hypersimplex_case(6, 2));
+Add(ListRec, get_hypersimplex_case(6, 3));
+Add(ListRec, get_hypersimplex_case(6, 3));
 
 
 
@@ -74,7 +82,7 @@ FullTest:=function()
     iRec:=0;
     for eRec in ListRec
     do
-        Print("iRec=", iRec, " / ", Length(ListRec), "\n");
+        Print("iRec=", iRec, " / ", Length(ListRec), " name=", eRec.name, "\n");
         test:=TestVolume(eRec);
         if test=false then
             return false;

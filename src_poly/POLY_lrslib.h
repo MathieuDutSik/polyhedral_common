@@ -1516,9 +1516,8 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
       throw TerminalException{1};
     }
     T det = T_abs(DeterminantMat(Mtrig));
-    std::cerr << "LRS: rnk=" << rnk << " det=" << det << "\n";
-    if (det == 0) {
-      std::cerr << "LRS: Mtrig should have non-zero determinant\n";
+    if (det != P->det) {
+      std::cerr << "LRS: Mtrig should have coherent determinants\n";
       throw TerminalException{1};
     }
 #endif
@@ -1552,7 +1551,6 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
     set_facet.insert(V);
   }
   size_t expected_size = EXT.cols() - 1;
-  std::cerr << "LRS: |set_facet|=" << set_facet.size() << "\n";
   std::unordered_map<Face, size_t> map;
   for (auto & f: vf_trig) {
     std::vector<size_t> f_v = FaceToVector<size_t>(f);
@@ -1569,7 +1567,6 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
       }
     }
   }
-  std::cerr << "LRS: |map|=" << map.size() << "\n";
   for (auto & kv: map) {
     if (kv.second != 2) {
       std::cerr << "LRS: We do not have the right size. So, not a facet\n";
@@ -1625,7 +1622,8 @@ template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det_b(0);
   for (auto & trig: pair.first) {
     MyMatrix<T> Mtrig = SelectRow(EXT, trig);
-    sum_det_b += DeterminantMat(Mtrig);
+    T det = T_abs(DeterminantMat(Mtrig));
+    sum_det_b += det;
   }
   if (sum_det != sum_det_b) {
     std::cerr << "LRS: incoherence in the sum_det / sum_det_b\n";
