@@ -306,6 +306,28 @@ get_triangulation_of_polytope:=function(EXT)
 end;
 
 
+get_polygen_difference:=function(gp1, gp2)
+    local TmpDir, File1, File2, FileO, FileE, eProg, TheCommand, result;
+    TmpDir:=DirectoryTemporary();
+    File1:=Filename(TmpDir, "Test.in1");
+    File2:=Filename(TmpDir, "Test.in2");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(File1, gp1);
+    WriteListMatrixFile(File2, gp2);
+    eProg:=GetBinaryFilename("PolyGen_Difference");
+    TheCommand:=Concatenation(eProg, " rational ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: PolyGen_Difference should have created a file";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFile(File1);
+    RemoveFile(File2);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return result;
+end;
 
 
 get_interior_point:=function(FAC)

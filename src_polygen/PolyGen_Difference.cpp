@@ -55,7 +55,11 @@ void process(std::string const &GenPolyFile1,
              << ", vol2:=" << vol2
              << ", vol_int:=" << vol_int
              << ", vol_d12:=" << vol_d12
-             << ", vol_d21:=" << vol_d21 << ");\n";
+             << ", vol_d21:=" << vol_d21
+             << ",  gp_d12:=" << gp_d12.ext_string_gap()
+             << ",  gp_d21:=" << gp_d21.ext_string_gap()
+             << ",  gp_int:=" << gp_int.ext_string_gap()
+             << ");\n";
       return;
     }
     std::cerr << "Failed to find a matching entry for OutFormat=" << OutFormat << "\n";

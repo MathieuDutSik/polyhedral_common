@@ -91,6 +91,9 @@ template <typename T> struct SinglePolytope {
     facets = x.facets.clone();
     return *this;
   }
+  std::string ext_string_gap() const {
+    return StringMatrixGAP(EXT);
+  }
 };
 
 template <typename T>
@@ -430,6 +433,20 @@ template <typename T> struct GeneralizedPolytope {
   }
   bool empty() const {
     return polytopes.empty();
+  }
+  std::string ext_string_gap() const {
+    std::ostringstream os;
+    bool is_first=true;
+    os << "[";
+    for (auto & sp: polytopes) {
+      if (!is_first) {
+        os << ",";
+      }
+      is_first=false;
+      os << sp.ext_string_gap();
+    }
+    os << "]";
+    return os.str();
   }
 };
 
@@ -884,7 +901,6 @@ std::vector<ConvexBoundary<T>> convec_boundary_minus_sp(ConvexBoundary<T> const&
   MyMatrix<T> EXT2 = DirectDualDescription_mat(FAC2, os);
   SinglePolytope<T> sp2 = get_single_polytope(FAC2, EXT2);
   GeneralizedPolytope<T> gp = difference_p_p(cb.sp, sp2, os);
-
   std::vector<ConvexBoundary<T>> l_cb;
   for (auto & sp_ent: gp.polytopes) {
     ConvexBoundary<T> cb_new{cb.V, cb.NSP, sp_ent};

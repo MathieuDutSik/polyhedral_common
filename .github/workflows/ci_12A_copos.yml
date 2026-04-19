@@ -1,4 +1,4 @@
-name: CI(12) of Copositivity code
+name: CI(12A) of Copositivity code
 
 # https://help.github.com/en/articles/events-that-trigger-workflows#release-event-release
 # model taken from https://github.com/mockersf/kmanb/releases
@@ -7,7 +7,7 @@ name: CI(12) of Copositivity code
 on:
   # One time per month
   schedule:
-    - cron: "0 0 12 * *"
+    - cron: "0 0 12 1,3,5,7,9,11 *"
   # Manually triggered
   workflow_dispatch:
   # Disabled right now, when a push is made on master.
@@ -110,7 +110,7 @@ jobs:
           cd src_copos && make && cd ..
           echo "After compilation of copositivity code"
 
-          cd CI_tests/12_Copositivity
+          cd CI_tests/12A_Copositivity
           ../../gap.sh < TestCompletePositivity.g
           ../../gap.sh < TestCopos.g
           cd ../..
