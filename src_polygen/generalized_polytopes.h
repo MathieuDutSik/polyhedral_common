@@ -451,6 +451,19 @@ template <typename T> struct GeneralizedPolytope {
 };
 
 template <typename T>
+GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> const& list_ext) {
+  std::vector<SinglePolytope<T>> polytopes;
+  for (size_t i=0; i<list_ext.size(); i++) {
+    MyMatrix<T> const& EXT = list_ext[i];
+    MyMatrix<T> FAC = DirectDualDescription_mat(EXT, std::cerr);
+    SinglePolytope<T> sp = get_single_polytope(FAC, EXT);
+    polytopes.push_back(sp);
+  }
+  GeneralizedPolytope<T> gp{polytopes};
+  return gp;
+}
+
+template <typename T>
 bool check_pairwise_intersection(GeneralizedPolytope<T> const &gp,
                                  std::ostream &os) {
   size_t n_comp = gp.size();

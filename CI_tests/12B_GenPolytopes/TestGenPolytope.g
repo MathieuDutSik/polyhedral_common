@@ -1,11 +1,6 @@
 Read("../common.g");
 Read("../access_points.g");
-Print("Beginning Test copositivity\n");
-
-
-
-
-
+Print("Beginning Test generalizedpolytope difference\n");
 
 TreatOneExample:=function(eCase)
     local GRP;
