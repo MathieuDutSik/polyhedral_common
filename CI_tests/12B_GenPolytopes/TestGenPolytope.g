@@ -43,7 +43,7 @@ ProcessAllCases:=function()
     for eCase in ListCase
     do
         i_case:=i_case + 1;
-        Print("TestCopositivity, i_case=", i_case, " name=", eCase.name, "\n");
+        Print("TestDifference, i_case=", i_case, " name=", eCase.name, "\n");
         test:=TreatOneExample(eCase);
         if test=false then
             n_error:=n_error + 1;

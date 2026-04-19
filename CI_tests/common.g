@@ -478,6 +478,60 @@ ClassicalSporadicLattices:=function(TheName)
     Error("Failed to find the entry in the database");
 end;
 
+
+SpecialPolytopes:=function(TheName)
+    local ListNames, ListPoly, i, len;
+    #
+    ListNames:=[];
+    ListPoly:=[];
+    #
+    Add(ListNames, "G6");
+    Add(ListPoly,
+[ [ 1, 0, 0, 0, 0, 0, 0 ], [ 1, -1, 0, 0, 0, 0, -1 ], [ 1, 0, -1, 0, 0, 0, -1 ], [ 1, 0, 0, -1, 0, 0, -1 ], [ 1, 0, 0, 0, -1, 0, -1 ],
+  [ 1, 0, 0, 0, 0, -1, -1 ], [ 1, 1, 1, 0, 0, 0, 1 ], [ 1, 1, 0, 1, 0, 0, 1 ], [ 1, 1, 0, 0, 1, 0, 1 ], [ 1, 1, 0, 0, 0, 1, 1 ], [ 1, 0, 1, 1, 0, 0, 1 ],
+  [ 1, 0, 1, 0, 1, 0, 1 ], [ 1, 0, 1, 0, 0, 1, 1 ], [ 1, 0, 0, 1, 1, 0, 1 ], [ 1, 0, 0, 1, 0, 1, 1 ], [ 1, 0, 0, 0, 1, 1, 1 ],
+  [ 1, 1, 1, 1, 1, 1, 3 ], [ 1, 1, 0, 0, 0, 0, 0 ], [ 1, 0, 1, 0, 0, 0, 0 ], [ 1, 0, 0, 1, 0, 0, 0 ], [ 1, 0, 0, 0, 1, 0, 0 ], [ 1, 0, 0, 0, 0, 1, 0 ],
+  [ 1, 0, 1, 1, 1, 1, 2 ], [ 1, 1, 0, 1, 1, 1, 2 ], [ 1, 1, 1, 0, 1, 1, 2 ], [ 1, 1, 1, 1, 0, 1, 2 ], [ 1, 1, 1, 1, 1, 0, 2 ] ]);
+    #
+    Add(ListNames, "24cell");
+    Add(ListPoly,
+        [ [ 1, -1, -1, 0, 0 ], [ 1, -1, 0, -1, 0 ], [ 1, -1, 0, 0, -1 ], [ 1, -1, 0, 0, 1 ], [ 1, -1, 0, 1, 0 ], [ 1, -1, 1, 0, 0 ], [ 1, 0, -1, -1, 0 ],
+          [ 1, 0, -1, 0, -1 ], [ 1, 0, -1, 0, 1 ], [ 1, 0, -1, 1, 0 ], [ 1, 0, 0, -1, -1 ], [ 1, 0, 0, -1, 1 ], [ 1, 0, 0, 1, -1 ], [ 1, 0, 0, 1, 1 ],
+          [ 1, 0, 1, -1, 0 ], [ 1, 0, 1, 0, -1 ], [ 1, 0, 1, 0, 1 ], [ 1, 0, 1, 1, 0 ], [ 1, 1, -1, 0, 0 ], [ 1, 1, 0, -1, 0 ], [ 1, 1, 0, 0, -1 ], [ 1, 1, 0, 0, 1 ],
+          [ 1, 1, 0, 1, 0 ], [ 1, 1, 1, 0, 0 ] ]);
+    #
+    len:=Length(ListNames);
+    for i in [1..len]
+    do
+        if ListNames[i] = TheName then
+            return ListPoly[i];
+        fi;
+    od;
+    Print("TheName=", TheName, "\n");
+    Error("Failed to find the entry in the database");
+end;
+
+Hypercube:=function(n)
+    local EXT, i, EXTnew, eVert, eVertNew;
+    EXT:=[[]];
+    for i in [1..n]
+    do
+        EXTnew:=[];
+        for eVert in EXT
+        do
+            eVertNew:=Concatenation(eVert, [0]);
+            Add(EXTnew, eVertNew);
+            eVertNew:=Concatenation(eVert, [1]);
+            Add(EXTnew, eVertNew);
+        od;
+        EXT:=EXTnew;
+    od;
+    return List(EXT, x->Concatenation([1], x));
+end;
+
+
+
+
 GetGramMatrixFromString:=function(eStr)
     local ListChar, ListVal, i, GetNumber, eChar, scal, eStrRed;
     ListChar:=[];

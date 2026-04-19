@@ -60,16 +60,10 @@ TestVolume:=function(eRec)
     return true;
 end;
 
-eRec1:=rec(FileIn:="G6.ext", the_volume:=1/2, name:="G6");
-eRec2:=rec(FileIn:="24cell_poly.ext", the_volume:=8, name:="24cell");
-eRec3:=rec(FileIn:="H3.ext", the_volume:=1, name:="H3");
-ListRec:=[];
-for eRec in [eRec1, eRec2, eRec3]
-do
-    EXT:=ReadMatrixFile(eRec.FileIn);
-    fRec:=rec(EXT:=EXT, the_volume:=eRec.the_volume, name:=eRec.name);
-    Add(ListRec, fRec);
-od;
+eRec1:=rec(EXT:=SpecialPolytopes("G6"), the_volume:=1/2, name:="G6");
+eRec2:=rec(EXT:=SpecialPolytopes("24cell"), the_volume:=8, name:="24cell");
+eRec3:=rec(EXT:=Hypercube(3), the_volume:=1, name:="H3");
+ListRec:=[eRec1, eRec2, eRec3];
 
 # Add the hypersimplex cases.
 Add(ListRec, get_hypersimplex_case(6, 2));
