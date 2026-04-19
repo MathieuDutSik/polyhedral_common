@@ -9,14 +9,14 @@
 
 template <typename T>
 void process(std::string const &eFileI, std::string const &OutFormat,
-             std::ostream &os) {
+             std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
   vectface vf = lrs::GetTriangulation(EXT);
   if (OutFormat == "Volume") {
     T sum_det(0);
     for (auto &trig : vf) {
       MyMatrix<T> EXTtrig = SelectRow(EXT, trig);
-      T det = DeterminantMat(EXTtrig);
+      T det = T_abs(DeterminantMat(EXTtrig));
       std::cerr << "det=" << det << "\n";
       sum_det += T_abs(det);
     }
@@ -25,17 +25,23 @@ void process(std::string const &eFileI, std::string const &OutFormat,
     for (int u = 1; u <= dim; u++) {
       fact *= u;
     }
-    os << "sum_det=" << sum_det << " fact=" << fact << "\n";
+    os_out << "sum_det=" << sum_det << " fact=" << fact << "\n";
     T volume = sum_det / fact;
-    os << "volume=" << volume << "\n";
+    os_out << "volume=" << volume << "\n";
     return;
   }
   if (OutFormat == "NbTrig") {
-    os << "NbTrig=" << vf.size() << "\n";
+    os_out << "NbTrig=" << vf.size() << "\n";
     return;
   }
   if (OutFormat == "Trigs") {
-    os << "return " << StringVectfaceGAP(vf) << ";\n";
+    os_out << "return " << StringVectfaceGAP(vf) << ";\n";
+    return;
+  }
+  if (OutFormat == "GAP") {
+    os_out << "return ";
+    VectVectInt_Gap_Print(os_out, vf);
+    os_out << ";\n";
     return;
   }
   std::cerr << "Failed to find a matching output\n";

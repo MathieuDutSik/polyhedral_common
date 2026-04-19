@@ -23,6 +23,9 @@ end;
 # See e.g.
 # 1: Thomas Lam and Alexander Postnikov, "Alcoved Polytopes I", https://arxiv.org/pdf/math/0501246
 # 2: Gaku Liu, "Mixed Volumes of Hypersimplices", https://www.combinatorics.org/ojs/index.php/eljc/article/view/v23i3p19
+#
+# Original reference seems to be from Laplace:
+# M. de Laplace, Oeuvres completes, Vol. 7, reedite par Gauthier-Villars, Paris, 1886
 get_hypersimplex_case:=function(n,k)
     local the_volume, EXT, eSet, eEXT, pos, name;
     the_volume:=Eulerian(n-1,k-1) / Factorial(n-1);

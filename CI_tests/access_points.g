@@ -285,6 +285,29 @@ get_ext_volume:=function(EXT)
     return the_volume;
 end;
 
+get_triangulation_of_polytope:=function(EXT)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, one_triangulation;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteMatrixFile(FileI, EXT);
+    eProg:=GetBinaryFilename("POLY_lrs_triangulation");
+    TheCommand:=Concatenation(eProg, " rational ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: POLY_lrs_volume should have created a file";
+    fi;
+    one_triangulation:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return one_triangulation;
+end;
+
+
+
+
 get_interior_point:=function(FAC)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheV;
     TmpDir:=DirectoryTemporary();
