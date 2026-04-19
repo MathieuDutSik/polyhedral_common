@@ -316,7 +316,7 @@ get_polygen_difference:=function(gp1, gp2)
     WriteListMatrixFile(File1, gp1);
     WriteListMatrixFile(File2, gp2);
     eProg:=GetBinaryFilename("PolyGen_Difference");
-    TheCommand:=Concatenation(eProg, " rational ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
+    TheCommand:=Concatenation(eProg, " mpq_class ", File1, " ", File2, " GAP ", FileO, " 2> ", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: PolyGen_Difference should have created a file";
