@@ -2,14 +2,14 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning Test generalizedpolytope difference\n");
 
-TreatOneExample:=function(eCase)
-    local GRP;
-    GRP:=get_grp_automorphy(EXT);
+TreatOneExample:=function(EXT)
+    local GRP, triang1, eElt, triang2, get_gen_polytope, gp1, gp2, result;
+    GRP:=get_grp_automorphy(EXT).GAPperm;
     triang1:=get_triangulation_of_polytope(EXT);
     eElt:=Random(GRP);
     triang2:=List(triang1, x->OnSets(x, eElt));
-    get_gen_polytope:=function(EXT, the_triang)
-        local ListEXT;
+    get_gen_polytope:=function(the_triang)
+        local ListEXT, trig;
         ListEXT:=[];
         for trig in the_triang
         do
@@ -32,7 +32,10 @@ TreatOneExample:=function(eCase)
     return true;
 end;
 
-ListCase:=[];
+
+eCase1:=rec(EXT:=SpecialPolytopes("24cell"), the_volume:=8, name:="24cell");
+eCase2:=rec(EXT:=Hypercube(3), the_volume:=1, name:="H3");
+ListCase:=[eCase1, eCase2];
 
 
 ProcessAllCases:=function()
@@ -44,7 +47,7 @@ ProcessAllCases:=function()
     do
         i_case:=i_case + 1;
         Print("TestDifference, i_case=", i_case, " name=", eCase.name, "\n");
-        test:=TreatOneExample(eCase);
+        test:=TreatOneExample(eCase.EXT);
         if test=false then
             n_error:=n_error + 1;
             Add(ListCaseError, eCase);

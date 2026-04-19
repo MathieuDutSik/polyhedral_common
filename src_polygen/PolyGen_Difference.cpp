@@ -56,7 +56,7 @@ void process(std::string const &GenPolyFile1,
 int main(int argc, char *argv[]) {
   HumanTime time;
   try {
-    if (argc != 5 && argc != 3) {
+    if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
       std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2] [OutFormat] [OutFile]\n";
@@ -64,7 +64,7 @@ int main(int argc, char *argv[]) {
       std::cerr << "PolyGen_difference arith [ListEXT1] [ListEXT2]\n";
       std::cerr << "\n";
       std::cerr << "allowed choices:\n";
-      std::cerr << "arithmetic: gmp\n";
+      std::cerr << "arithmetic: mpq_class\n";
       std::cerr << "OutFormat: GAP\n";
       std::cerr << "OutFile: stderr, stdout, my_file\n";
       return -1;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
     std::string PolyFile2 = argv[3];
     std::string OutFormat = "GAP";
     std::string OutFile = "stderr";
-    if (argc == 5) {
+    if (argc == 6) {
       OutFormat = argv[4];
       OutFile = argv[5];
     }
