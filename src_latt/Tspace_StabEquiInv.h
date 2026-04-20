@@ -15,6 +15,7 @@
 #include "Shvec_exact.h"
 #include "PolytopeEquiStabInt.h"
 #include "Positivity.h"
+#include "subgroup_algorithms.h"
 #include <set>
 #include <vector>
 #include <unordered_map>
@@ -292,7 +293,6 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
                              std::ostream &os) {
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using LeftCosets = typename Tgroup::LeftCosets;
   using Tfield = T;
   int n_row = SHV_T.rows();
 #ifdef DEBUG_TSPACE_FUNCTIONS
@@ -341,73 +341,25 @@ LINSPA_ComputeStabilizer_SHV(LinSpaceMatrix<T> const &LinSpa,
   std::vector<Telt> LGenPerm;
   for (auto &eList : ListGen) {
     Telt ePerm(eList);
-    LGenPerm.push_back(ePerm);
+    LGenPerm.emplace_back(std::move(ePerm));
   }
-  Tgroup FullGRP(LGenPerm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |FullGRP|=" << FullGRP.size()
-     << "\n";
-#endif
   PermutationBuilder<T, Telt> builder(SHV_T);
   std::vector<Telt> LGenGlobStab_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder.get_permutation(eGen, os);
-    LGenGlobStab_perm.push_back(ePerm);
+    LGenGlobStab_perm.emplace_back(std::move(ePerm));
   }
-  Tgroup GRPsub(LGenGlobStab_perm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: LINSPA_ComputeStabilizer_SHV |GRPsub|=" << GRPsub.size()
-     << "\n";
-#endif
-  auto try_upgrade = [&]() -> std::optional<Telt> {
-    // We can use either the left or right cosets.
-    // This is because the right thing to use is the double cosets.
-    // However, we do not have the formalism for having iterator
-    // over the double cosets. We build all of them.
-    //
-    // For the left/right cosets we have efficient iterators
-    // and that is why we use them here. We cannot afford at all
-    // to enumerate all the double cosets because we will have
-    // some scenario where FullGRP is big, GRPsub very small and
-    // that would mean enumerating all the elements of the group.
-    //
-    // Left  transversals are g H
-    // Right transversals are H g
-    LeftCosets rc = FullGRP.left_cosets(GRPsub);
-    for (auto &eCosReprPerm : rc) {
-      std::optional<MyMatrix<T>> opt =
-          is_corr_and_solve(eCosReprPerm, SHV_T, eMat, LinSpa);
-      if (opt) {
-        // We have this problem that the first cosets is not necessarily the one
-        // of GRPsub and that the coset of the GRPsub is also not necessarily
-        // the identity.
-        if (!GRPsub.isin(eCosReprPerm)) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
-          os << "TSPACE: LINSPA_ComputeStabilizer_SHV Finding a new "
-                "eCosReprPerm\n";
-#endif
-          return eCosReprPerm;
-        }
-      }
-    }
-    return {};
+
+  auto f_correct=[&](Telt const& x) -> bool {
+    std::optional<MyMatrix<T>> opt =
+      is_corr_and_solve(x, SHV_T, eMat, LinSpa);
+    return opt.has_value();
   };
-  while (true) {
-    std::optional<Telt> opt = try_upgrade();
-    if (opt) {
-      // Found another stabilizing element, upgrading the group and retry.
-      LGenGlobStab_perm.push_back(*opt);
-      GRPsub = Tgroup(LGenGlobStab_perm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-      os << "TSPACE: LINSPA_ComputeStabilizer_SHV Now |GRPsub|="
-         << GRPsub.size() << "\n";
-#endif
-    } else {
-      break;
-    }
-  }
-  std::pair<std::vector<typename Tgroup::Telt>, Tgroup> pair{
-      std::move(LGenGlobStab_perm), std::move(GRPsub)};
+
+  std::pair<std::vector<Telt>, Tgroup> pair = get_intermediate_group<Tgroup,decltype(f_correct)>(n_row,
+                                                                                                 LGenGlobStab_perm,
+                                                                                                 LGenPerm,
+                                                                                                 f_correct, os);
   return get_from_perms_and_group<T, Tgroup>(pair);
 }
 

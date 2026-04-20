@@ -1621,6 +1621,24 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   }
 }
 
+/*
+template<typename T, typename Tint, typename Tgroup>
+std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
+                                                     PVoronoi<T, Tint> const &pvd) {
+  std::ostream &os = eData.rddo.os;
+  CVPSolver<T, Tint> const &solver = eData.solver;
+  MyMatrix<T> const& GramMat = solver.GramMat;
+  MyMatrix<T> const& SHV = eData.SHV;
+  MyMatrix<T> const& EXT_T = pvd.EXT;
+  Tgroup grp = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXT_T, os);
+  // Doing a fairly slow algorithm because a priori we cannot treat yet high dimensional
+  // cases.
+  MyMatrix<Tint> 
+
+}
+*/
+
+
 
 
 
