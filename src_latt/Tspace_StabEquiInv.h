@@ -412,7 +412,6 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  using LeftCosets = typename Tgroup::LeftCosets;
   //  using Tfield = T;
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   int nbCol = SHV1_T.cols();
@@ -501,130 +500,48 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     LGenGlobStab1_perm.push_back(ePerm);
   }
   Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-  os << "TSPACE: Equiv, n_row=" << n_row << " |FullGRP1|=" << FullGRP1.size()
-     << " |GRPsub1|=" << GRPsub1.size() << "\n";
-#endif
-#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
-  auto f_get_group_size = [&]() -> size_t {
-    size_t n_elt = 0;
-    for (auto &elt : FullGRP1) {
-      MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
-      if (is_stab_space(eMatr, LinSpa)) {
-        n_elt += 1;
-      }
-    }
-    return n_elt;
+  auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
+    return get_mat_from_shv_perm(x, SHV1_T, eMat1);
   };
-  size_t n_elt = f_get_group_size();
-  os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size() << " n_elt=" << n_elt
-     << " |GRPsub1|=" << GRPsub1.size() << "\n";
-  size_t pos_equiv_grp = 0;
-  os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size()
-     << "\n";
-#endif
+  auto f_is_ok=[&](MyMatrix<T> const& x) -> bool {
+    return is_stab_space(x, LinSpa);
+  };
+  std::optional<MyMatrix<T>> result = get_intermediate_equivalence<MyMatrix<T>,Tgroup,decltype(f_get_out),decltype(f_is_ok)>(n_row,
+                                                                                                                             LGenGlobStab1_perm,
+                                                                                                                             LGenPerm1,
+                                                                                                                             OneEquiv,
+                                                                                                                             f_get_out,
+                                                                                                                             f_is_ok,
+                                                                                                                             os);
 #ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
   auto f_exhaustive = [&]() -> std::optional<MyMatrix<T>> {
     os << "TSPACE: Starting extensive check over |FullGRP1|=" << FullGRP1.order() << "\n";
+    return {};
+  };
+  if (result) {
+    MyMatrix<T> const& eMat_T = *result;
+    if (!is_stab_space(eMat_T, LinSpa)) {
+      std::cerr << "TSPACE: The matrix is not stabilizing the space\n";
+      throw TerminalException{1};
+    }
+    MyMatrix<T> eMat1_img = eMat_T * eMat1 * eMat_T.transpose();
+    if (eMat1_img != eMat2) {
+      std::cerr << "TSPACE: Equiv, we do not have an equivalence\n";
+      throw TerminalException{1};
+    }
+  } else {
+    Tgroup FullGRP1(LGenPerm1, n_row);
     for (auto &elt : FullGRP1) {
       MyMatrix<T> eMatr = get_mat_from_shv_perm(elt, SHV1_T, eMat1);
       MyMatrix<T> eProd_T = OneEquiv * eMatr;
       if (is_stab_space(eProd_T, LinSpa)) {
-        return eProd_T;
-      }
-    }
-    return {};
-  };
-#endif
-  struct PartSol {
-    std::optional<Telt> new_gen;
-    std::optional<MyMatrix<T>> sol;
-  };
-  auto try_solution = [&]() -> PartSol {
-  // The left cosets are the cosets such as G = \cup_c c H
-  // We need to use left cosets for the computation
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Equiv, |FullGRP1|=" << FullGRP1.size()
-       << " |GRPsub1|=" << GRPsub1.size() << "\n";
-#endif
-    LeftCosets rc = FullGRP1.left_cosets(GRPsub1);
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Equiv, we have rc\n";
-#endif
-    for (auto &eCosReprPerm : rc) {
-      MyMatrix<T> eCosReprMatr =
-          get_mat_from_shv_perm(eCosReprPerm, SHV1_T, eMat1);
-      MyMatrix<T> eProd = OneEquiv * eCosReprMatr;
-      if (is_stab_space(eProd, LinSpa)) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
-        os << "TSPACE: Equiv, We found an equivalence\n";
-#endif
-#ifdef DEBUG_TSPACE_FUNCTIONS
-        MyMatrix<T> eMat1_img = eProd * eMat1 * eProd.transpose();
-        if (eMat1_img != eMat2) {
-          std::cerr << "TSPACE: Equiv, we do not have an equivalence\n";
-          throw TerminalException{1};
-        }
-#endif
-        return {{}, eProd};
-      }
-      if (is_stab_space(eCosReprMatr, LinSpa)) {
-        // We have this problem that the first cosets is not necessarily the one
-        // of GRPsub and that the coset of the GRPsub is also not necessarily
-        // the identity.
-        if (!GRPsub1.isin(eCosReprPerm)) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
-          os << "TSPACE: Equiv, We found some new generator\n";
-#endif
-          return {eCosReprPerm, {}};
-        }
-      }
-    }
-    return {{}, {}};
-  };
-  while (true) {
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Equiv, before try_solution\n";
-#endif
-    PartSol p_sol = try_solution();
-#ifdef DEBUG_TSPACE_FUNCTIONS
-    os << "TSPACE: Equiv, after try_solution\n";
-#endif
-    if (p_sol.sol) {
-      MyMatrix<T> const &Pmat_T = *p_sol.sol;
-#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
-      if (!f_exhaustive()) {
-        std::cerr << "TSPACE: We found equiv with one method but the "
-                     "exhaustive does not\n";
+        std::cerr << "TSPACE: We found an equivalence when we do not expect any\n";
         throw TerminalException{1};
       }
-#endif
-#ifdef DEBUG_TSPACE_FUNCTIONS
-      os << "TSPACE: Equiv, before returning Pmat\n";
-#endif
-      return Pmat_T;
     }
-    if (!p_sol.new_gen) {
-#ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
-      if (f_exhaustive()) {
-        std::cerr << "TSPACE: We found non-equiv with one method but the "
-                     "exhaustive does\n";
-        throw TerminalException{1};
-      }
-#endif
-#ifdef DEBUG_TSPACE_FUNCTIONS
-      os << "TSPACE: Equiv, before returning None\n";
-#endif
-      return {};
-    }
-    LGenGlobStab1_perm.push_back(*p_sol.new_gen);
-    GRPsub1 = Tgroup(LGenGlobStab1_perm, n_row);
-#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
-    pos_equiv_grp += 1;
-    os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsub1.size()
-       << "\n";
-#endif
   }
+#endif
+  return result;
 }
 
 template <typename T, typename Tint, typename Tgroup>
