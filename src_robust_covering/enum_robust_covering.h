@@ -1849,6 +1849,129 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
 
 
 
+template <typename Tint>
+void WriteEntryCPP(std::ostream &os, GenericRobustM<Tint> const &grm) {
+  os << grm.index << "\n";
+  WriteMatrix(os, grm.M);
+}
+
+template <typename Tint>
+GenericRobustM<Tint> ReadEntryCPP_GenericRobustM(std::istream &is) {
+  int index;
+  is >> index;
+  MyMatrix<Tint> M = ReadMatrix<Tint>(is);
+  return {index, M};
+}
+
+template <typename T, typename Tint>
+void WriteEntryCPP(std::ostream &os, ConvexBlock<T, Tint> const &cb) {
+  size_t n = cb.list_robust_m.size();
+  os << n << "\n";
+  for (size_t i = 0; i < n; i++) {
+    WriteEntryCPP(os, cb.list_robust_m[i]);
+  }
+  WriteEntryCPP(os, cb.sp);
+}
+
+template <typename T, typename Tint>
+ConvexBlock<T, Tint> ReadEntryCPP_ConvexBlock(std::istream &is) {
+  size_t n;
+  is >> n;
+  std::vector<GenericRobustM<Tint>> list_robust_m;
+  for (size_t i = 0; i < n; i++) {
+    list_robust_m.push_back(ReadEntryCPP_GenericRobustM<Tint>(is));
+  }
+  SinglePolytope<T> sp = ReadEntryCPP_SinglePolytope<T>(is);
+  return {list_robust_m, sp};
+}
+
+template <typename T>
+void WriteEntryCPP(std::ostream &os, HardConvexBoundary<T> const &hcb) {
+  os << hcb.index_cb << "\n";
+  WriteEntryCPP(os, hcb.sp);
+}
+
+template <typename T>
+HardConvexBoundary<T> ReadEntryCPP_HardConvexBoundary(std::istream &is) {
+  int index_cb;
+  is >> index_cb;
+  ConvexBoundary<T> sp = ReadEntryCPP_ConvexBoundary<T>(is);
+  return {index_cb, sp};
+}
+
+template <typename T, typename Tint>
+void WriteEntryCPP(std::ostream &os, SoftConvexBoundary<T, Tint> const &scb) {
+  os << scb.index_cb << "\n";
+  WriteEntryCPP(os, scb.cb);
+  size_t n_excl = scb.l_excluded_max.size();
+  os << n_excl << "\n";
+  for (size_t i = 0; i < n_excl; i++) {
+    WriteVector(os, scb.l_excluded_max[i]);
+  }
+  size_t n_robust = scb.l_robust_m.size();
+  os << n_robust << "\n";
+  for (size_t i = 0; i < n_robust; i++) {
+    WriteEntryCPP(os, scb.l_robust_m[i]);
+  }
+}
+
+template <typename T, typename Tint>
+SoftConvexBoundary<T, Tint> ReadEntryCPP_SoftConvexBoundary(std::istream &is) {
+  int index_cb;
+  is >> index_cb;
+  ConvexBoundary<T> cb = ReadEntryCPP_ConvexBoundary<T>(is);
+  size_t n_excl;
+  is >> n_excl;
+  std::vector<MyVector<Tint>> l_excluded_max;
+  for (size_t i = 0; i < n_excl; i++) {
+    l_excluded_max.push_back(ReadVector<Tint>(is));
+  }
+  size_t n_robust;
+  is >> n_robust;
+  std::vector<GenericRobustM<Tint>> l_robust_m;
+  for (size_t i = 0; i < n_robust; i++) {
+    l_robust_m.push_back(ReadEntryCPP_GenericRobustM<Tint>(is));
+  }
+  return {index_cb, cb, l_excluded_max, l_robust_m};
+}
+
+template <typename T, typename Tint>
+void WriteEntryCPP(std::ostream &os, PVoronoi<T, Tint> const &pv) {
+  WriteEntryCPP(os, pv.robust_m_min);
+  size_t n_cb = pv.l_cb.size();
+  os << n_cb << "\n";
+  for (size_t i = 0; i < n_cb; i++) {
+    WriteEntryCPP(os, pv.l_cb[i]);
+  }
+  size_t n_hcb = pv.l_hcb.size();
+  os << n_hcb << "\n";
+  for (size_t i = 0; i < n_hcb; i++) {
+    WriteEntryCPP(os, pv.l_hcb[i]);
+  }
+  WriteEntryCPP(os, pv.gp);
+  WriteMatrix(os, pv.EXT);
+}
+
+template <typename T, typename Tint>
+PVoronoi<T, Tint> ReadEntryCPP_PVoronoi(std::istream &is) {
+  GenericRobustM<Tint> robust_m_min = ReadEntryCPP_GenericRobustM<Tint>(is);
+  size_t n_cb;
+  is >> n_cb;
+  std::vector<ConvexBlock<T, Tint>> l_cb;
+  for (size_t i = 0; i < n_cb; i++) {
+    l_cb.push_back(ReadEntryCPP_ConvexBlock<T, Tint>(is));
+  }
+  size_t n_hcb;
+  is >> n_hcb;
+  std::vector<HardConvexBoundary<T>> l_hcb;
+  for (size_t i = 0; i < n_hcb; i++) {
+    l_hcb.push_back(ReadEntryCPP_HardConvexBoundary<T>(is));
+  }
+  GeneralizedPolytope<T> gp = ReadEntryCPP_GeneralizedPolytope<T>(is);
+  MyMatrix<T> EXT = ReadMatrix<T>(is);
+  return {robust_m_min, l_cb, l_hcb, gp, EXT};
+}
+
 namespace boost::serialization {
 
 template <class Archive, typename Tint>

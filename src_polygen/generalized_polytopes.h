@@ -1350,6 +1350,56 @@ T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os
   return volume;
 }
 
+template <typename T>
+void WriteEntryCPP(std::ostream &os, SinglePolytope<T> const &sp) {
+  WriteMatrix(os, sp.EXT);
+  WriteMatrix(os, sp.FAC);
+  WriteListFace(os, sp.facets);
+}
+
+template <typename T>
+SinglePolytope<T> ReadEntryCPP_SinglePolytope(std::istream &is) {
+  MyMatrix<T> EXT = ReadMatrix<T>(is);
+  MyMatrix<T> FAC = ReadMatrix<T>(is);
+  vectface facets = ReadListFace(is);
+  return SinglePolytope<T>(EXT, FAC, facets);
+}
+
+template <typename T>
+void WriteEntryCPP(std::ostream &os, ConvexBoundary<T> const &cb) {
+  WriteVector(os, cb.V);
+  WriteMatrix(os, cb.NSP);
+  WriteEntryCPP(os, cb.sp);
+}
+
+template <typename T>
+ConvexBoundary<T> ReadEntryCPP_ConvexBoundary(std::istream &is) {
+  MyVector<T> V = ReadVector<T>(is);
+  MyMatrix<T> NSP = ReadMatrix<T>(is);
+  SinglePolytope<T> sp = ReadEntryCPP_SinglePolytope<T>(is);
+  return {V, NSP, sp};
+}
+
+template <typename T>
+void WriteEntryCPP(std::ostream &os, GeneralizedPolytope<T> const &gp) {
+  size_t n = gp.polytopes.size();
+  os << n << "\n";
+  for (size_t i = 0; i < n; i++) {
+    WriteEntryCPP(os, gp.polytopes[i]);
+  }
+}
+
+template <typename T>
+GeneralizedPolytope<T> ReadEntryCPP_GeneralizedPolytope(std::istream &is) {
+  size_t n;
+  is >> n;
+  std::vector<SinglePolytope<T>> polytopes;
+  for (size_t i = 0; i < n; i++) {
+    polytopes.push_back(ReadEntryCPP_SinglePolytope<T>(is));
+  }
+  return {polytopes};
+}
+
 namespace boost::serialization {
 
 template <class Archive, typename T>

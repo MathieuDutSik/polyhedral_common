@@ -32,6 +32,10 @@ void process_B(std::string const &MatFile,
       os_out << ";\n";
       return;
     }
+    if (OutFormat == "CPP") {
+      WriteEntryCPP(os_out, p_voronoi);
+      return;
+    }
     if (OutFormat == "boost") {
       boost::archive::text_oarchive oa(os_out);
       oa << p_voronoi;
