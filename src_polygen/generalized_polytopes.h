@@ -9,6 +9,8 @@
 #include "POLY_DirectDualDesc.h"
 #include "POLY_Fundamental.h"
 #include "POLY_RedundancyElimination.h"
+#include "boost_serialization.h"
+#include <boost/dynamic_bitset/serialization.hpp>
 // clang-format on
 
 /*
@@ -1315,6 +1317,32 @@ T volume_gp(GeneralizedPolytope<T> const& gp,  [[maybe_unused]] std::ostream& os
   }
   return volume;
 }
+
+namespace boost::serialization {
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, SinglePolytope<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("EXT", val.EXT);
+  ar &make_nvp("FAC", val.FAC);
+  ar &make_nvp("facets", val.facets);
+}
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, ConvexBoundary<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("V", val.V);
+  ar &make_nvp("NSP", val.NSP);
+  ar &make_nvp("sp", val.sp);
+}
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, GeneralizedPolytope<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("polytopes", val.polytopes);
+}
+
+} // namespace boost::serialization
 
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_GENERALIZED_POLYTOPES_H_

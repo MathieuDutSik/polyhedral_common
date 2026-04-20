@@ -8,6 +8,7 @@
 #include "LatticeDelaunay.h"
 #include "POLY_RedundancyElimination.h"
 #include "COMB_Combinatorics.h"
+#include "boost_serialization.h"
 // clang-format on
 
 /*
@@ -1771,6 +1772,50 @@ T random_vertex_estimation_robust_covering(MyMatrix<T> const &GramMat, size_t n_
 
 
 
+
+namespace boost::serialization {
+
+template <class Archive, typename Tint>
+inline void serialize(Archive &ar, GenericRobustM<Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("index", val.index);
+  ar &make_nvp("M", val.M);
+}
+
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, ConvexBlock<T, Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("list_robust_m", val.list_robust_m);
+  ar &make_nvp("sp", val.sp);
+}
+
+template <class Archive, typename T>
+inline void serialize(Archive &ar, HardConvexBoundary<T> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("index_cb", val.index_cb);
+  ar &make_nvp("sp", val.sp);
+}
+
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, SoftConvexBoundary<T, Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("index_cb", val.index_cb);
+  ar &make_nvp("cb", val.cb);
+  ar &make_nvp("l_excluded_max", val.l_excluded_max);
+  ar &make_nvp("l_robust_m", val.l_robust_m);
+}
+
+template <class Archive, typename T, typename Tint>
+inline void serialize(Archive &ar, PVoronoi<T, Tint> &val,
+                      [[maybe_unused]] const unsigned int version) {
+  ar &make_nvp("robust_m_min", val.robust_m_min);
+  ar &make_nvp("l_cb", val.l_cb);
+  ar &make_nvp("l_hcb", val.l_hcb);
+  ar &make_nvp("gp", val.gp);
+  ar &make_nvp("EXT", val.EXT);
+}
+
+} // namespace boost::serialization
 
 // clang-format off
 #endif  // SRC_ROBUST_COVERING_ENUM_ROBUST_COVERING_H_
