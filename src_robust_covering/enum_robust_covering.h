@@ -348,6 +348,13 @@ std::ostream &operator<<(std::ostream &os, GenericRobustM<Tint> const &grm) {
   return os;
 }
 
+template <typename Tint>
+void WriteEntryGAP(std::ostream &os_out, GenericRobustM<Tint> const &grm) {
+  os_out << "rec(index:=" << grm.index << ", M:=";
+  WriteMatrixGAP(os_out, grm.M);
+  os_out << ")";
+}
+
 template <typename T, typename Tint> struct ExtendedGenericRobustM {
   T max;
   bool is_correct;
@@ -437,6 +444,22 @@ std::ostream &operator<<(std::ostream &os, ConvexBlock<T, Tint> const &cb) {
   return os;
 }
 
+template <typename T, typename Tint>
+void WriteEntryGAP(std::ostream &os_out, ConvexBlock<T, Tint> const &cb) {
+  os_out << "rec(list_robust_m:=[";
+  bool IsFirst = true;
+  for (auto &grm : cb.list_robust_m) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryGAP(os_out, grm);
+  }
+  os_out << "], sp:=";
+  WriteEntryGAP(os_out, cb.sp);
+  os_out << ")";
+}
+
 template<typename T>
 struct HardConvexBoundary {
   int index_cb; // The corresponding face;
@@ -447,6 +470,13 @@ template <typename T>
 std::ostream &operator<<(std::ostream &os, HardConvexBoundary<T> const &hcb) {
   os << "HardConvexBoundary(index_cb=" << hcb.index_cb << " V=" << StringVectorGAP(hcb.sp.V) << ")";
   return os;
+}
+
+template <typename T>
+void WriteEntryGAP(std::ostream &os_out, HardConvexBoundary<T> const &hcb) {
+  os_out << "rec(index_cb:=" << hcb.index_cb << ", sp:=";
+  WriteEntryGAP(os_out, hcb.sp);
+  os_out << ")";
 }
 
 template<typename T, typename Tint>
@@ -486,6 +516,27 @@ std::ostream &operator<<(std::ostream &os, SoftConvexBoundary<T, Tint> const &sc
   return os;
 }
 
+template <typename T, typename Tint>
+void WriteEntryGAP(std::ostream &os_out, SoftConvexBoundary<T, Tint> const &scb) {
+  os_out << "rec(index_cb:=" << scb.index_cb << ", cb:=";
+  WriteEntryGAP(os_out, scb.cb);
+  os_out << ", l_excluded_max:=[";
+  for (size_t i = 0; i < scb.l_excluded_max.size(); i++) {
+    if (i > 0) {
+      os_out << ",";
+    }
+    os_out << StringVectorGAP(scb.l_excluded_max[i]);
+  }
+  os_out << "], l_robust_m:=[";
+  for (size_t i = 0; i < scb.l_robust_m.size(); i++) {
+    if (i > 0) {
+      os_out << ",";
+    }
+    WriteEntryGAP(os_out, scb.l_robust_m[i]);
+  }
+  os_out << "])";
+}
+
 /*
   The robust_m_min is defining the P-polytope.
   This is what we are after in the end.
@@ -515,6 +566,31 @@ std::ostream &operator<<(std::ostream &os, PVoronoi<T, Tint> const &pv) {
   WriteMatrix(os, pv.EXT);
   os << ")";
   return os;
+}
+
+template <typename T, typename Tint>
+void WriteEntryGAP(std::ostream &os_out, PVoronoi<T, Tint> const &pv) {
+  os_out << "rec(robust_m_min:=";
+  WriteEntryGAP(os_out, pv.robust_m_min);
+  os_out << ", l_cb:=[";
+  for (size_t i = 0; i < pv.l_cb.size(); i++) {
+    if (i > 0) {
+      os_out << ",";
+    }
+    WriteEntryGAP(os_out, pv.l_cb[i]);
+  }
+  os_out << "], l_hcb:=[";
+  for (size_t i = 0; i < pv.l_hcb.size(); i++) {
+    if (i > 0) {
+      os_out << ",";
+    }
+    WriteEntryGAP(os_out, pv.l_hcb[i]);
+  }
+  os_out << "], gp:=";
+  WriteEntryGAP(os_out, pv.gp);
+  os_out << ", EXT:=";
+  WriteMatrixGAP(os_out, pv.EXT);
+  os_out << ")";
 }
 
 /*

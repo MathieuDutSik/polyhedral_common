@@ -99,6 +99,15 @@ template <typename T> struct SinglePolytope {
 };
 
 template <typename T>
+void WriteEntryGAP(std::ostream &os_out, SinglePolytope<T> const &sp) {
+  os_out << "rec(EXT:=";
+  WriteMatrixGAP(os_out, sp.EXT);
+  os_out << ", FAC:=";
+  WriteMatrixGAP(os_out, sp.FAC);
+  os_out << ", facets:=" << StringVectfaceGAP(sp.facets) << ")";
+}
+
+template <typename T>
 SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const &EXT) {
   int n_fac = FAC.rows();
   int n_ext = EXT.rows();
@@ -228,6 +237,15 @@ struct ConvexBoundary {
   }
 };
 
+template <typename T>
+void WriteEntryGAP(std::ostream &os_out, ConvexBoundary<T> const &cb) {
+  os_out << "rec(V:=" << StringVectorGAP(cb.V);
+  os_out << ", NSP:=";
+  WriteMatrixGAP(os_out, cb.NSP);
+  os_out << ", sp:=";
+  WriteEntryGAP(os_out, cb.sp);
+  os_out << ")";
+}
 
 template<typename T>
 std::vector<int> get_adjacent_facet_indices(SinglePolytope<T> const& sp, int const& i_fac) {
@@ -451,6 +469,20 @@ template <typename T> struct GeneralizedPolytope {
     return os.str();
   }
 };
+
+template <typename T>
+void WriteEntryGAP(std::ostream &os_out, GeneralizedPolytope<T> const &gp) {
+  os_out << "rec(polytopes:=[";
+  bool IsFirst = true;
+  for (auto &sp : gp.polytopes) {
+    if (!IsFirst) {
+      os_out << ",";
+    }
+    IsFirst = false;
+    WriteEntryGAP(os_out, sp);
+  }
+  os_out << "])";
+}
 
 template <typename T>
 GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> const& list_ext) {
