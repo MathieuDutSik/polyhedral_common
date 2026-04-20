@@ -412,7 +412,6 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
   using Tfield = typename overlying_field<T>::field_type;
   using Telt = typename Tgroup::Telt;
   using Tidx = typename Telt::Tidx;
-  //  using Tfield = T;
 #ifdef SANITY_CHECK_TSPACE_FUNCTIONS
   int nbCol = SHV1_T.cols();
   int rnk1 = RankMat(SHV1_T);

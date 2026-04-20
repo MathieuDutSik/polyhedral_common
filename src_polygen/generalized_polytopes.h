@@ -145,6 +145,16 @@ SinglePolytope<T> get_single_polytope(MyMatrix<T> const &FAC, MyMatrix<T> const 
   return SinglePolytope<T>(EXTret, FACret, std::move(facets));
 }
 
+template <typename T>
+SinglePolytope<T> mat_product(SinglePolytope<T> const& sp, MyMatrix<T> const& P) {
+  MyMatrix<T> EXTnew = sp.EXT * P;
+  MyMatrix<T> Pcgr = CongrMap(P);
+  MyMatrix<T> FACnew = sp.FAC * Pcgr;
+  vectface facets = sp.facets.clone();
+  return SinglePolytope<T>(EXTnew, FACnew, std::move(facets));
+}
+
+
 template<typename T>
 std::optional<SinglePolytope<T>> singlepolytope_halfspace_int(SinglePolytope<T> const& sp, MyVector<T> const& eFAC, std::ostream &os) {
   MyMatrix<T> FACtot = ConcatenateMatVec(sp.FAC, eFAC);
@@ -496,6 +506,18 @@ GeneralizedPolytope<T> list_ext_to_generalizedpolytope(std::vector<MyMatrix<T>> 
   GeneralizedPolytope<T> gp{polytopes};
   return gp;
 }
+
+template <typename T>
+GeneralizedPolytope<T> mat_product(GeneralizedPolytope<T> const& gp, MyMatrix<T> const& P) {
+  std::vector<SinglePolytope<T>> polytopes;
+  for (auto &sp : gp.polytopes) {
+    SinglePolytope<T> sp_new = mat_product(sp, P);
+    polytopes.push_back(sp_new);
+  }
+  GeneralizedPolytope<T> gp_new{polytopes};
+  return gp_new;
+}
+
 
 template <typename T>
 bool check_pairwise_intersection(GeneralizedPolytope<T> const &gp,
@@ -984,6 +1006,23 @@ GeneralizedPolytope<T> difference_gp_gp(GeneralizedPolytope<T> const &gp1,
   }
   return ret_gp;
 }
+
+template <typename T>
+bool is_equal(GeneralizedPolytope<T> const &gp1,
+              GeneralizedPolytope<T> const &gp2,
+              std::ostream &os) {
+  GeneralizedPolytope<T> gp_21 = difference_gp_gp(gp2, gp1, os);
+  if (!gp_21.empty()) {
+    return false;
+  }
+  GeneralizedPolytope<T> gp_12 = difference_gp_gp(gp1, gp2, os);
+  if (!gp_12.empty()) {
+    return false;
+  }
+  return true;
+}
+
+
 
 template <typename T> struct DataFacetPlusMinus {
   MyMatrix<T> NSP;

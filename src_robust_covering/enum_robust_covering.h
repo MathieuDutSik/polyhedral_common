@@ -6,6 +6,7 @@
 #include "generalized_polytopes.h"
 #include "parall_search.h"
 #include "LatticeDelaunay.h"
+#include "subgroup_algorithms.h"
 #include "POLY_RedundancyElimination.h"
 #include "COMB_Combinatorics.h"
 #include "boost_serialization.h"
@@ -1621,22 +1622,37 @@ initial_p_polytope(CVPSolver<T, Tint> const &solver, std::ostream &os) {
   }
 }
 
-/*
 template<typename T, typename Tint, typename Tgroup>
 std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup> &eData,
-                                                     PVoronoi<T, Tint> const &pvd) {
+                                                     PVoronoi<T, Tint> const &pv) {
   std::ostream &os = eData.rddo.os;
+  using Telt = typename Tgroup::Telt;
+  using Tidx = typename Telt::Tidx;
   CVPSolver<T, Tint> const &solver = eData.solver;
   MyMatrix<T> const& GramMat = solver.GramMat;
   MyMatrix<T> const& SHV = eData.SHV;
-  MyMatrix<T> const& EXT_T = pvd.EXT;
-  Tgroup grp = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXT_T, os);
+  MyMatrix<T> const& EXT_T = pv.EXT;
+  Tgroup GRPbig = Polytope_StabilizerKernel<T,Tint,Tgroup>(GramMat, SHV, EXT_T, os);
   // Doing a fairly slow algorithm because a priori we cannot treat yet high dimensional
   // cases.
-  MyMatrix<Tint> 
-
+  Tidx n_act = EXT_T.rows();
+  std::vector<Telt> LGenBig = GRPbig.SmallGeneratingSet();
+  std::vector<Telt> LGenSma;
+  auto f_correct=[&](Telt const& x) -> bool {
+    MyMatrix<T> P = RepresentVertexPermutation(EXT_T, EXT_T, x);
+    GeneralizedPolytope<T> gp_img = mat_product(pv.gp, P);
+    return is_equal(pv.gp, gp_img, os);
+  };
+  std::pair<std::vector<Telt>, Tgroup> pair =
+    get_intermediate_group<Tgroup,decltype(f_correct)>(n_act, LGenSma, LGenBig, f_correct, os);
+  std::vector<MyMatrix<Tint>> l_gens;
+  for (auto & eGen: pair.first) {
+    MyMatrix<T> P_T = RepresentVertexPermutation(EXT_T, EXT_T, eGen);
+    MyMatrix<Tint> P = UniversalMatrixConversion<Tint,T>(P_T);
+    l_gens.emplace_back(std::move(P));
+  }
+  return l_gens;
 }
-*/
 
 
 
@@ -1646,12 +1662,12 @@ std::vector<MyMatrix<Tint>> get_p_voronoi_stabilizer(DataLattice<T, Tint, Tgroup
 template <typename T, typename Tint, typename Tgroup>
 std::vector<PVoronoi<T, Tint>>
 find_list_adjacent_p_voronoi(DataLattice<T, Tint, Tgroup> &eData,
-                             PVoronoi<T, Tint> const &pvd) {
+                             PVoronoi<T, Tint> const &pv) {
   std::ostream &os = eData.rddo.os;
   CVPSolver<T, Tint> const &solver = eData.solver;
   MyMatrix<T> const& G = solver.GramMat;
-  T min_norm = min_pairwise_norm(pvd.EXT, G);
-  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pvd.gp, os);
+  T min_norm = min_pairwise_norm(pv.EXT, G);
+  BoundaryGeneralizedPolytope<T> bnd = find_generalized_polytope_boundary(pv.gp, os);
 #ifdef DEBUG_ENUM_P_POLYTOPES
   os << "ROBUST: flapv, We have bnd\n";
   //  print_raw_boundary(bnd, os);
@@ -1988,6 +2004,17 @@ PVoronoi<T, Tint> ReadEntryCPP_PVoronoi(std::istream &is) {
   GeneralizedPolytope<T> gp = ReadEntryCPP_GeneralizedPolytope<T>(is);
   MyMatrix<T> EXT = ReadMatrix<T>(is);
   return {robust_m_min, l_cb, l_hcb, gp, EXT};
+}
+
+template <typename T, typename Tint>
+PVoronoi<T, Tint> ReadEntryCPP_PVoronoi_File(std::string const& file_name) {
+  if (!IsExistingFile(file_name)) {
+    std::cerr << "Error in ReadMatrixFile\n";
+    std::cerr << "file_name=" << file_name << " does not appear to exist\n";
+    throw TerminalException{1};
+  }
+  std::ifstream is(file_name);
+  return ReadEntryCPP_PVoronoi<T,Tint>(is);
 }
 
 namespace boost::serialization {
