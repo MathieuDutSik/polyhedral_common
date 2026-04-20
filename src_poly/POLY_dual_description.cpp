@@ -11,32 +11,45 @@
 
 template <typename T>
 void process(std::string const &eFileI, std::string const &ansProg,
-             std::string const &choice, std::ostream &os) {
+             std::string const &choice, std::ostream &os_out) {
   MyMatrix<T> EXT = ReadMatrixFile<T>(eFileI);
-  MyMatrix<T> FAC =
-    DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
   if (choice == "control") {
+    MyMatrix<T> FAC =
+      DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
     vectface vf = DirectFacetComputationIncidence(EXT, ansProg, std::cerr);
-    os << "Obtained results:\n";
-    os << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
+    os_out << "Obtained results:\n";
+    os_out << "|vf|=" << vf.n << " / " << vf.n_face << "\n";
     size_t pos = 0;
     for (Face f : vf) {
-      os << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count()
+      os_out << "pos=" << pos << " f=" << StringFace(f) << " |f|=" << f.count()
          << "\n";
     }
-    return WriteMatrix(os, FAC);
+    return WriteMatrix(os_out, FAC);
   }
   if (choice == "GAP") {
-    os << "return ";
-    WriteMatrixGAP(os, FAC);
-    os << ";\n";
+    MyMatrix<T> FAC =
+      DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
+    os_out << "return ";
+    WriteMatrixGAP(os_out, FAC);
+    os_out << ";\n";
+    return;
+  }
+  if (choice == "GAPincidence") {
+    vectface vf = DirectFacetComputationIncidence(EXT, ansProg, std::cerr);
+    os_out << "return ";
+    VectVectInt_Gap_Print(os_out, vf);
+    os_out << ";\n";
     return;
   }
   if (choice == "CPP") {
-    return WriteMatrix(os, FAC);
+    MyMatrix<T> FAC =
+      DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
+    return WriteMatrix(os_out, FAC);
   }
   if (choice == "Number") {
-    os << "|FAC|=" << FAC.rows() << "\n";
+    MyMatrix<T> FAC =
+      DirectFacetComputationInequalities(EXT, ansProg, std::cerr);
+    os_out << "|FAC|=" << FAC.rows() << "\n";
     return;
   }
   std::cerr << "We have choice=" << choice << "\n";
@@ -110,32 +123,32 @@ int main(int argc, char *argv[]) {
     std::string eFileO = "stderr";
     if (argc == 6)
       eFileO = argv[5];
-    auto dual_desc = [&](std::ostream &os) -> void {
+    auto dual_desc = [&](std::ostream &os_out) -> void {
       if (arith == "safe_rational") {
         using T = Rational<SafeInt64>;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "cpp_rational") {
         using T = boost::multiprecision::cpp_rational;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "mpq_rational") {
         using T = boost::multiprecision::mpq_rational;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "rational") {
         using T = mpq_class;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "Qsqrt5") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 5>;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       if (arith == "Qsqrt2") {
         using Trat = mpq_class;
         using T = QuadField<Trat, 2>;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       std::optional<std::string> opt_realalgebraic =
           get_postfix(arith, "RealAlgebraic=");
@@ -151,7 +164,7 @@ int main(int argc, char *argv[]) {
         int const idx_real_algebraic_field = 1;
         insert_helper_real_algebraic_field(idx_real_algebraic_field, hcrf);
         using T = RealField<idx_real_algebraic_field>;
-        return process<T>(eFileI, command, choice, os);
+        return process<T>(eFileI, command, choice, os_out);
       }
       std::cerr << "Failed to find a matching field for arith=" << arith
                 << "\n";

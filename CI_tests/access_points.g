@@ -329,6 +329,25 @@ get_polygen_difference:=function(gp1, gp2)
     return result;
 end;
 
+get_polygen_vertices:=function(gp)
+    local TmpDir, FileI, FileO, FileE, eProg, TheCommand, result;
+    TmpDir:=DirectoryTemporary();
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
+    FileE:=Filename(TmpDir, "Test.err");
+    WriteListMatrixFile(FileI, gp);
+    eProg:=GetBinaryFilename("PolyGen_vertices");
+    TheCommand:=Concatenation(eProg, " mpq_class ", FileI, " GAP ", FileO, " 2> ", FileE);
+    Exec(TheCommand);
+    if IsExistingFile(FileO)=false then
+        return "program failure: PolyGen_vertices should have created a file";
+    fi;
+    result:=ReadAsFunction(FileO)();
+    RemoveFile(FileI);
+    RemoveFile(FileO);
+    RemoveFile(FileE);
+    return result;
+end;
 
 get_interior_point:=function(FAC)
     local TmpDir, FileI, FileO, FileE, eProg, TheCommand, TheV;
@@ -496,25 +515,39 @@ get_integral_interior_point:=function(FAC, method)
     return EXTint;
 end;
 
-get_dual_desc:=function(EXT, method)
+get_dual_desc_kernel:=function(EXT, method, choice)
     local TmpDir, FileI, FileO, FileE, eProg, command, TheCommand, FAC;
     TmpDir:=DirectoryTemporary();
-    FileI:=Filename(TmpDir, "Test.out");
-    FileO:=Filename(TmpDir, "Test.fac");
+    FileI:=Filename(TmpDir, "Test.in");
+    FileO:=Filename(TmpDir, "Test.out");
     FileE:=Filename(TmpDir, "Test.err");
     WriteMatrixFile(FileI, EXT);
     eProg:=GetBinaryFilename("POLY_dual_description");
-    TheCommand:=Concatenation(eProg, " rational  ", method, " CPP ", FileI, " ", FileO, " 2>", FileE);
+    TheCommand:=Concatenation(eProg, " rational  ", method, " ", choice, " ", FileI, " ", FileO, " 2>", FileE);
     Exec(TheCommand);
     if IsExistingFile(FileO)=false then
         return "program failure: POLY_dual_description failed to create the file";
     fi;
-    FAC:=ReadMatrixFile(FileO);
+    FAC:=ReadAsFunction(FileO)();
     RemoveFile(FileI);
     RemoveFile(FileO);
     RemoveFile(FileE);
     return FAC;
 end;
+
+get_dual_desc:=function(EXT, method)
+    local choice;
+    choice:="GAP";
+    return get_dual_desc_kernel(EXT, method, choice);
+end;
+
+get_dual_desc_incidence:=function(EXT, method)
+    local choice;
+    choice:="GAPincidence";
+    return get_dual_desc_kernel(EXT, method, choice);
+end;
+
+
 
 
 test_shortest_realizability:=function(SHV)

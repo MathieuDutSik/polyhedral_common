@@ -2,7 +2,7 @@ Read("../common.g");
 Read("../access_points.g");
 Print("Beginning Test generalizedpolytope difference\n");
 
-TreatOneExample:=function(EXT)
+Test_difference:=function(EXT)
     local GRP, triang1, eElt, triang2, get_gen_polytope, gp1, gp2, result;
     GRP:=get_grp_automorphy(EXT).GAPperm;
     triang1:=get_triangulation_of_polytope(EXT);
@@ -31,6 +31,45 @@ TreatOneExample:=function(EXT)
     fi;
     return true;
 end;
+
+
+Test_vertices:=function(EXT)
+    local ListFacet, ListEXT, eIso, eFacet, NewEXT, LVert;
+    ListFacet:=get_dual_desc_incidence(EXT, "lrs");
+    ListEXT:=[];
+    eIso:=Sum(EXT) / Length(EXT);
+    for eFacet in ListFacet
+    do
+        NewEXT:=Concatenation([eIso], EXT{eFacet});
+        Add(ListEXT, NewEXT);
+    od;
+    LVert:=get_polygen_vertices(ListEXT);
+    if is_error(LVert) then
+        return false;
+    fi;
+    if Set(LVert)<>Set(EXT) then
+        return false;
+    fi;
+    return true;
+end;
+
+
+
+
+
+TreatOneExample:=function(EXT)
+    local test1, test2;
+    test1:=Test_difference(EXT);
+    if test1=false then
+        return false;
+    fi;
+    test2:=Test_vertices(EXT);
+    if test2=false then
+        return false;
+    fi;
+    return true;
+end;
+
 
 
 eCase1:=rec(EXT:=SpecialPolytopes("24cell"), the_volume:=8, name:="24cell");
