@@ -111,7 +111,7 @@ std::optional<Tout> get_intermediate_equivalence(typename Tgroup::Telt::Tidx con
     }
     return {{}, {}};
   };
-#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
+#ifdef DEBUG_SUBGROUP_ALGORITHM
   int pos_equiv_grp = 0;
 #endif
   while (true) {
@@ -125,9 +125,9 @@ std::optional<Tout> get_intermediate_equivalence(typename Tgroup::Telt::Tidx con
     }
     LGenSma1_work.push_back(*p_sol.new_gen);
     GRPsma1 = Tgroup(LGenSma1_work, n_act);
-#ifdef DEBUG_TSPACE_FUNCTIONS_DISABLE
+#ifdef DEBUG_SUBGROUP_ALGORITHM
     pos_equiv_grp += 1;
-    os << "TSPACE: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsma1.size()
+    os << "SUBA: Equiv(" << pos_equiv_grp << "), |GRPsub1|=" << GRPsma1.size()
        << "\n";
 #endif
   }

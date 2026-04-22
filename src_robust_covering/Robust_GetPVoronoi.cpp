@@ -42,7 +42,7 @@ void process_B(std::string const &MatFile,
       return;
     }
     std::cerr << "Failed to find a matching entry for OutFormat\n";
-    std::cerr << "Allowed choices: GAP\n";
+    std::cerr << "Allowed choices: GAP, CPP, boost\n";
     throw TerminalException{1};
   };
   print_stderr_stdout_file(OutFile, f_print);
@@ -84,9 +84,9 @@ int main(int argc, char *argv[]) {
       OutFile = argv[5];
     }
     process_A(arithmetic, MatFile, VFile, OutFormat, OutFile);
-    std::cerr << "Normal termination of Robust_InitialPpolytopeVoronoiData\n";
+    std::cerr << "Normal termination of Robust_GetPVoronoi\n";
   } catch (TerminalException const &e) {
-    std::cerr << "Error in Robust_InitialPpolytopeVoronoiData\n";
+    std::cerr << "Error in Robust_GetPVoronoi\n";
     exit(e.eVal);
   }
   runtime(time);

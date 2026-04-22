@@ -491,14 +491,12 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
     Telt ePerm1(eList1);
     LGenPerm1.push_back(ePerm1);
   }
-  Tgroup FullGRP1(LGenPerm1, n_row);
   PermutationBuilder<T, Telt> builder1(SHV1_T);
   std::vector<Telt> LGenGlobStab1_perm;
   for (auto &eGen : LinSpa.PtStabGens) {
     Telt ePerm = builder1.get_permutation(eGen, os);
     LGenGlobStab1_perm.push_back(ePerm);
   }
-  Tgroup GRPsub1(LGenGlobStab1_perm, n_row);
   auto f_get_out=[&](Telt const& x) -> MyMatrix<T> {
     return get_mat_from_shv_perm(x, SHV1_T, eMat1);
   };
@@ -513,10 +511,6 @@ std::optional<MyMatrix<T>> LINSPA_TestEquivalenceGramMatrix_SHV(
                                                                                                                              f_is_ok,
                                                                                                                              os);
 #ifdef SANITY_CHECK_EXTENSIVE_TSPACE_FUNCTIONS
-  auto f_exhaustive = [&]() -> std::optional<MyMatrix<T>> {
-    os << "TSPACE: Starting extensive check over |FullGRP1|=" << FullGRP1.order() << "\n";
-    return {};
-  };
   if (result) {
     MyMatrix<T> const& eMat_T = *result;
     if (!is_stab_space(eMat_T, LinSpa)) {

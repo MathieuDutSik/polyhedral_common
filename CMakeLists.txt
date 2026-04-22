@@ -700,7 +700,8 @@ add_polyhedral_binary(
 set(
   ROBUST_PROGRAMS
   Robust_RandomEstimation
-  Robust_InitialVoronoiData
+  Robust_GetPVoronoi
+  Robust_PVoronoi_Stabilizer
   Robust_ExactRobustCoveringDensity
 )
 foreach(target IN LISTS ROBUST_PROGRAMS)

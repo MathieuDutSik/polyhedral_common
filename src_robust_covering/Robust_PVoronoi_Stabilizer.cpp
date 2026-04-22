@@ -37,7 +37,7 @@ void process(std::string const &MatFile,
       return;
     }
     std::cerr << "Failed to find a matching entry for OutFormat\n";
-    std::cerr << "Allowed choices: GAP\n";
+    std::cerr << "Allowed choices: GAP, CPP\n";
     throw TerminalException{1};
   };
   print_stderr_stdout_file(OutFile, f_print);
@@ -49,9 +49,9 @@ int main(int argc, char *argv[]) {
     if (argc != 6 && argc != 4) {
       std::cerr << "Number of argument is = " << argc << "\n";
       std::cerr << "This program is used as\n";
-      std::cerr << "Robust_GetPVoronoi [arith] [MatFile] [PVoronoiFile] [OutFormat] [OutFile]\n";
+      std::cerr << "Robust_PVoronoi_Stabilizer [arith] [MatFile] [PVoronoiFile] [OutFormat] [OutFile]\n";
       std::cerr << "       or\n";
-      std::cerr << "Robust_GetPVoronoi [arith] [MatFile] [PVoronoiFile]\n";
+      std::cerr << "Robust_PVoronoi_Stabilizer [arith] [MatFile] [PVoronoiFile]\n";
       std::cerr << "allowed choices:\n";
       std::cerr << "arithmetic: gmp\n";
       std::cerr << "OutFormat: GAP\n";
