@@ -12,7 +12,7 @@ std::pair<std::vector<typename Tgroup::Telt>, Tgroup> get_intermediate_group(typ
                                                                              std::vector<typename Tgroup::Telt> const& LGenSma,
                                                                              std::vector<typename Tgroup::Telt> const& LGenBig,
                                                                              Fcorrect f_correct,
-                                                                             std::ostream& os) {
+                                                                             [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using LeftCosets = typename Tgroup::LeftCosets;
   std::vector<Telt> LGenSma_work = LGenSma;
@@ -77,7 +77,7 @@ std::optional<Tout> get_intermediate_equivalence(typename Tgroup::Telt::Tidx con
                                                  Tout const& OneEquiv,
                                                  Fgetout f_get_out,
                                                  Fisok f_is_ok,
-                                                 std::ostream& os) {
+                                                 [[maybe_unused]] std::ostream& os) {
   using Telt = typename Tgroup::Telt;
   using LeftCosets = typename Tgroup::LeftCosets;
   std::vector<Telt> LGenSma1_work = LGenSma1;

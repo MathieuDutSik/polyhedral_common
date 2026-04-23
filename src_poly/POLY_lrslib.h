@@ -1581,17 +1581,20 @@ std::pair<vectface, vectface> GetTriangulationFacet(MyMatrix<T> const &EXT) {
 template <typename T> T Kernel_VolumePolytope(MyMatrix<T> const &EXT) {
   T sum_det(0);
 #ifdef DEBUG_LRSLIB
-  int nbRow = EXT.rows();
-  for (int iRow = 0; iRow < nbRow; iRow++) {
-    if (EXT(iRow, 0) != 1) {
-      std::cerr << "EXT(iRow,0) should be equal to 1\n";
-      throw TerminalException{1};
+  {
+    int nbRow = EXT.rows();
+    for (int iRow = 0; iRow < nbRow; iRow++) {
+      if (EXT(iRow, 0) != 1) {
+        std::cerr << "EXT(iRow,0) should be equal to 1\n";
+        throw TerminalException{1};
+      }
     }
   }
 #endif
   auto f_trig = [&](lrs_dic<T> *P, [[maybe_unused]] lrs_dat<T> *Q) -> bool {
     sum_det += P->det;
 #ifdef SANITY_CHECK_LRSLIB
+    int nbRow = EXT.rows();
     Face trig(nbRow);
     for (int i = 0; i < P->d; i++) {
       int idx1 = P->C[i];
